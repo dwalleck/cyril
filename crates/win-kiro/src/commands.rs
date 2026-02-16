@@ -33,11 +33,6 @@ pub const COMMANDS: &[SlashCommand] = &[
         description: "Exit the application",
         takes_arg: false,
     },
-    SlashCommand {
-        name: "/sessions",
-        description: "List previous sessions",
-        takes_arg: false,
-    },
 ];
 
 /// Parsed slash command from user input.
@@ -48,7 +43,6 @@ pub enum ParsedCommand {
     Load(String),
     New,
     Quit,
-    Sessions,
     Unknown(String),
 }
 
@@ -69,7 +63,6 @@ pub fn parse_command(input: &str) -> Option<ParsedCommand> {
         "/load" => ParsedCommand::Load(arg),
         "/new" => ParsedCommand::New,
         "/quit" => ParsedCommand::Quit,
-        "/sessions" => ParsedCommand::Sessions,
         _ => ParsedCommand::Unknown(cmd.to_string()),
     })
 }

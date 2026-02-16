@@ -209,13 +209,7 @@ impl App {
                 self.input.autocomplete_down();
             }
             KeyCode::Enter if !key.modifiers.contains(KeyModifiers::SHIFT) => {
-                // Check for slash commands first
-                if has_suggestions {
-                    // If autocomplete is showing and there's an exact match, apply it
-                    self.input.apply_suggestion();
-                } else {
-                    self.handle_enter().await?;
-                }
+                self.handle_enter().await?;
             }
             KeyCode::Esc => {
                 if self.toolbar.is_busy {
@@ -277,9 +271,6 @@ impl App {
             }
             ParsedCommand::New => {
                 self.create_new_session().await?;
-            }
-            ParsedCommand::Sessions => {
-                self.list_sessions().await?;
             }
             ParsedCommand::Load(session_id) => {
                 if session_id.is_empty() {
@@ -355,49 +346,14 @@ impl App {
         Ok(())
     }
 
-    /// List available sessions.
-    async fn list_sessions(&mut self) -> Result<()> {
-        let wsl_cwd = path::win_to_wsl(&self.cwd);
-        match self
-            .conn
-            .list_sessions(acp::ListSessionsRequest::new().cwd(wsl_cwd))
-            .await
-        {
-            Ok(response) => {
-                if response.sessions.is_empty() {
-                    self.chat
-                        .add_system_message("No previous sessions found.".to_string());
-                } else {
-                    let mut msg = String::from("Previous sessions:\n");
-                    for session in &response.sessions {
-                        let title = session.title.as_deref().unwrap_or("(untitled)");
-                        let updated = session.updated_at.as_deref().unwrap_or("");
-                        msg.push_str(&format!(
-                            "  {} - {} {}\n",
-                            session.session_id, title, updated
-                        ));
-                    }
-                    msg.push_str("\nUse /load <session-id> to resume a session.");
-                    self.chat.add_system_message(msg);
-                }
-                self.chat.scroll_to_bottom();
-            }
-            Err(e) => {
-                self.chat
-                    .add_system_message(format!("Failed to list sessions: {e}"));
-            }
-        }
-        Ok(())
-    }
-
-    /// Load (resume) a previous session by ID.
+    /// Load a previous session by ID.
     async fn load_session(&mut self, session_id_str: &str) -> Result<()> {
         let wsl_cwd = path::win_to_wsl(&self.cwd);
         let session_id = acp::SessionId::from(session_id_str.to_string());
 
         match self
             .conn
-            .resume_session(acp::ResumeSessionRequest::new(
+            .load_session(acp::LoadSessionRequest::new(
                 session_id.clone(),
                 wsl_cwd,
             ))
@@ -407,7 +363,7 @@ impl App {
                 self.set_session_id(session_id);
                 self.chat = chat::ChatState::default();
                 self.chat.add_system_message(format!(
-                    "Resumed session: {session_id_str}"
+                    "Loaded session: {session_id_str}"
                 ));
                 self.chat.scroll_to_bottom();
             }
