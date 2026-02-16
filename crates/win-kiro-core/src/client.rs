@@ -125,7 +125,7 @@ impl acp::Client for KiroClient {
             content: None,
             command: None,
         };
-        if let HookResult::Blocked { reason } = self.hooks.borrow().run_before(&hook_ctx) {
+        if let HookResult::Blocked { reason } = self.hooks.borrow().run_before(&hook_ctx).await {
             return Err(internal_err(reason));
         }
 
@@ -152,7 +152,7 @@ impl acp::Client for KiroClient {
             content: Some(content.clone()),
             command: None,
         };
-        match self.hooks.borrow().run_before(&hook_ctx) {
+        match self.hooks.borrow().run_before(&hook_ctx).await {
             HookResult::Blocked { reason } => {
                 return Err(internal_err(reason));
             }
@@ -174,8 +174,12 @@ impl acp::Client for KiroClient {
             content: Some(content),
             command: None,
         };
-        let _after_results = self.hooks.borrow().run_after(&after_ctx);
-        // TODO: Handle FeedbackPrompt results by injecting follow-up prompts
+        let after_results = self.hooks.borrow().run_after(&after_ctx).await;
+        for result in after_results {
+            if let HookResult::FeedbackPrompt { text } = result {
+                let _ = self.event_tx.send(AppEvent::HookFeedback { text });
+            }
+        }
 
         Ok(acp::WriteTextFileResponse::new())
     }
@@ -194,7 +198,7 @@ impl acp::Client for KiroClient {
             content: None,
             command: Some(command.clone()),
         };
-        if let HookResult::Blocked { reason } = self.hooks.borrow().run_before(&hook_ctx) {
+        if let HookResult::Blocked { reason } = self.hooks.borrow().run_before(&hook_ctx).await {
             return Err(internal_err(reason));
         }
 

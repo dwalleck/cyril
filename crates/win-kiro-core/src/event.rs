@@ -51,4 +51,9 @@ pub enum AppEvent {
         session_id: acp::SessionId,
         plan: acp::Plan,
     },
+
+    /// Hook feedback to inject as a follow-up prompt to the agent.
+    HookFeedback {
+        text: String,
+    },
 }

@@ -1743,6 +1743,7 @@ dependencies = [
  "agent-client-protocol",
  "anyhow",
  "async-trait",
+ "glob",
  "serde",
  "serde_json",
  "thiserror",

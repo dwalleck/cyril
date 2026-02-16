@@ -278,10 +278,36 @@ impl App {
                 let state = approval::ApprovalState::from_request(&request);
                 self.approval = Some((state, responder));
             }
+            AppEvent::HookFeedback { text } => {
+                self.chat.add_system_message(format!("[Hook] {text}"));
+                self.send_hook_feedback(text);
+            }
             AppEvent::CommandsUpdated { .. } => {}
             AppEvent::ModeChanged { .. } => {}
             AppEvent::PlanUpdated { .. } => {}
         }
+    }
+
+    /// Send hook feedback as a follow-up prompt to the agent.
+    fn send_hook_feedback(&self, text: String) {
+        let session_id = match &self.session_id {
+            Some(id) => id.clone(),
+            None => return,
+        };
+
+        let conn = self.conn.clone();
+        tokio::task::spawn_local(async move {
+            let result = conn
+                .prompt(acp::PromptRequest::new(
+                    session_id,
+                    vec![acp::ContentBlock::Text(acp::TextContent::new(text))],
+                ))
+                .await;
+
+            if let Err(e) = result {
+                tracing::error!("Hook feedback prompt error: {e}");
+            }
+        });
     }
 
     fn on_turn_end(&mut self) {

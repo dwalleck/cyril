@@ -13,7 +13,7 @@ use tokio::sync::mpsc;
 
 use win_kiro_core::client::KiroClient;
 use win_kiro_core::event::AppEvent;
-use win_kiro_core::hooks::HookRegistry;
+use win_kiro_core::hooks::{self, HookRegistry};
 use win_kiro_core::path;
 use win_kiro_core::transport::AgentProcess;
 
@@ -140,8 +140,27 @@ async fn connect() -> Result<(
     agent.check_startup().await?;
 
     let (event_tx, event_rx) = mpsc::unbounded_channel::<AppEvent>();
-    let hooks = HookRegistry::new();
-    let client = KiroClient::new(event_tx, hooks);
+    let mut hook_registry = HookRegistry::new();
+
+    // Load user-configured hooks from hooks.json in cwd
+    let hooks_path = std::env::current_dir()
+        .unwrap_or_default()
+        .join("hooks.json");
+    if hooks_path.exists() {
+        match hooks::load_hooks_config(&hooks_path) {
+            Ok(loaded) => {
+                tracing::info!("Loaded {} hooks from {}", loaded.len(), hooks_path.display());
+                for hook in loaded {
+                    hook_registry.register(hook);
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to load hooks config: {e}");
+            }
+        }
+    }
+
+    let client = KiroClient::new(event_tx, hook_registry);
 
     let stdin = agent.take_stdin()?;
     let stdout = agent.take_stdout()?;

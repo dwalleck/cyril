@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 agent-client-protocol = "0.9"
-tokio = { version = "1", features = ["process", "sync", "rt", "macros", "time"] }
+tokio = { version = "1", features = ["process", "sync", "rt", "macros", "time", "io-util", "fs"] }
 tokio-util = { version = "0.7", features = ["compat"] }
 async-trait = "0.1"
 serde = { version = "1", features = ["derive"] }
@@ -13,6 +13,7 @@ serde_json = "1"
 anyhow = "1"
 thiserror = "2"
 tracing = "0.1"
+glob = "0.3"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use async_trait::async_trait;
+
 use super::types::*;
 
 /// Hook that blocks writes outside a project directory.
@@ -8,6 +10,7 @@ pub struct PathValidationHook {
     pub allowed_root: PathBuf,
 }
 
+#[async_trait(?Send)]
 impl Hook for PathValidationHook {
     fn name(&self) -> &str {
         "path-validation"
@@ -21,7 +24,7 @@ impl Hook for PathValidationHook {
         HookTarget::FsWrite
     }
 
-    fn run(&self, ctx: &HookContext) -> HookResult {
+    async fn run(&self, ctx: &HookContext) -> HookResult {
         if let Some(path) = &ctx.path {
             if !path.starts_with(&self.allowed_root) {
                 return HookResult::Blocked {
