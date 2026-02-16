@@ -1,15 +1,18 @@
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use std::sync::Arc;
+
 use agent_client_protocol::{self as acp, Agent};
 use anyhow::Result;
 use crossterm::event::{EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use futures_util::StreamExt;
+use serde_json::value::RawValue;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
-use win_kiro_core::event::AppEvent;
-use win_kiro_core::path;
+use cyril_core::event::AppEvent;
+use cyril_core::path;
 
 use crate::commands::{self, ParsedCommand};
 use crate::event::Event;
@@ -236,7 +239,7 @@ impl App {
 
         let text = self.input.current_text();
 
-        if let Some(cmd) = commands::parse_command(&text) {
+        if let Some(cmd) = commands::parse_command(&text, &self.input.agent_commands) {
             self.input.take_input();
             self.execute_command(cmd).await?;
         } else {
@@ -257,9 +260,15 @@ impl App {
                 self.chat.add_system_message("Chat cleared.".to_string());
             }
             ParsedCommand::Help => {
-                let mut help = String::from("Available commands:\n");
+                let mut help = String::from("Local commands:\n");
                 for cmd in commands::COMMANDS {
                     help.push_str(&format!("  {:<12} {}\n", cmd.name, cmd.description));
+                }
+                if !self.input.agent_commands.is_empty() {
+                    help.push_str("\nAgent commands:\n");
+                    for cmd in &self.input.agent_commands {
+                        help.push_str(&format!("  {:<20} {}\n", cmd.display_name(), cmd.description));
+                    }
                 }
                 help.push_str("\nKeyboard shortcuts:\n");
                 help.push_str("  Ctrl+C/Q   Quit\n");
@@ -281,6 +290,9 @@ impl App {
                 } else {
                     self.load_session(&session_id).await?;
                 }
+            }
+            ParsedCommand::Agent { name, input } => {
+                self.execute_agent_command(&name, input).await?;
             }
             ParsedCommand::Unknown(cmd) => {
                 self.chat.add_system_message(format!(
@@ -343,6 +355,53 @@ impl App {
                     .add_system_message(format!("Failed to create session: {e}"));
             }
         }
+        Ok(())
+    }
+
+    /// Execute a Kiro agent command via the extension method.
+    async fn execute_agent_command(&mut self, name: &str, input: Option<String>) -> Result<()> {
+        let session_id = match &self.session_id {
+            Some(id) => id.clone(),
+            None => return Ok(()),
+        };
+
+        let params = if let Some(input_text) = input {
+            serde_json::json!({
+                "sessionId": session_id.to_string(),
+                "name": name,
+                "input": input_text
+            })
+        } else {
+            serde_json::json!({
+                "sessionId": session_id.to_string(),
+                "name": name
+            })
+        };
+
+        let raw_params = RawValue::from_string(params.to_string())
+            .map_err(|e| anyhow::anyhow!("Failed to serialize command params: {e}"))?;
+
+        self.chat.begin_streaming();
+        self.chat.scroll_to_bottom();
+        self.toolbar.is_busy = true;
+
+        let conn = self.conn.clone();
+        let done_tx = self.prompt_done_tx.clone();
+        let cmd_name = name.to_string();
+        tokio::task::spawn_local(async move {
+            let result = conn
+                .ext_method(acp::ExtRequest::new(
+                    "kiro.dev/commands/execute",
+                    Arc::from(raw_params),
+                ))
+                .await;
+
+            if let Err(e) = result {
+                tracing::error!("Command /{cmd_name} error: {e}");
+            }
+            let _ = done_tx.send(());
+        });
+
         Ok(())
     }
 
@@ -409,7 +468,17 @@ impl App {
                 self.chat.add_system_message(format!("[Hook] {text}"));
                 self.send_hook_feedback(text);
             }
-            AppEvent::CommandsUpdated { .. } => {}
+            AppEvent::CommandsUpdated { commands, .. } => {
+                self.input.agent_commands = commands
+                    .available_commands
+                    .iter()
+                    .map(commands::AgentCommand::from_available)
+                    .collect();
+                tracing::info!(
+                    "Received {} agent commands",
+                    self.input.agent_commands.len()
+                );
+            }
             AppEvent::ModeChanged { .. } => {}
             AppEvent::PlanUpdated { .. } => {}
         }

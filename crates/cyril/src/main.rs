@@ -12,14 +12,14 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use tokio::sync::mpsc;
 
-use win_kiro_core::client::KiroClient;
-use win_kiro_core::event::AppEvent;
-use win_kiro_core::hooks::{self, HookRegistry};
-use win_kiro_core::path;
-use win_kiro_core::transport::AgentProcess;
+use cyril_core::client::KiroClient;
+use cyril_core::event::AppEvent;
+use cyril_core::hooks::{self, HookRegistry};
+use cyril_core::path;
+use cyril_core::transport::AgentProcess;
 
 #[derive(Parser)]
-#[command(name = "win-kiro", about = "Windows-native ACP client for Kiro CLI")]
+#[command(name = "cyril", about = "Windows-native ACP client for Kiro CLI")]
 struct Cli {
     /// Working directory (defaults to current directory)
     #[arg(short = 'd', long)]
@@ -33,7 +33,7 @@ struct Cli {
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     // Log to file to avoid TUI conflicts
-    if let Ok(file) = std::fs::File::create("win-kiro.log") {
+    if let Ok(file) = std::fs::File::create("cyril.log") {
         tracing_subscriber::fmt()
             .with_max_level(tracing::Level::INFO)
             .with_writer(std::sync::Mutex::new(file))
@@ -193,8 +193,8 @@ async fn connect() -> Result<(
                         .terminal(true),
                 )
                 .client_info(
-                    acp::Implementation::new("win-kiro", env!("CARGO_PKG_VERSION"))
-                        .title("Win Kiro"),
+                    acp::Implementation::new("cyril", env!("CARGO_PKG_VERSION"))
+                        .title("Cyril"),
                 ),
         )
         .await

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/win-kiro-core",
-    "crates/win-kiro",
+    "crates/cyril-core",
+    "crates/cyril",
 ]

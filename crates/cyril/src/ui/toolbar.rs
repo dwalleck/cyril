@@ -26,7 +26,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
         .unwrap_or("none");
 
     let line = Line::from(vec![
-        Span::styled(" win-kiro ", Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(" cyril ", Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)),
         Span::raw(" "),
         Span::styled(&state.agent_name, Style::default().fg(Color::White)),
         Span::styled(

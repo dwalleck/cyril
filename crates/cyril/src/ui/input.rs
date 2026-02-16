@@ -7,13 +7,15 @@ use ratatui::{
 };
 use tui_textarea::TextArea;
 
-use crate::commands;
+use crate::commands::{self, AgentCommand, Suggestion};
 
 /// State for the text input widget.
 pub struct InputState {
     pub textarea: TextArea<'static>,
     /// Index of the currently highlighted autocomplete suggestion.
     pub autocomplete_selected: usize,
+    /// Agent-provided commands (updated via ACP notifications).
+    pub agent_commands: Vec<AgentCommand>,
 }
 
 impl Default for InputState {
@@ -29,6 +31,7 @@ impl Default for InputState {
         Self {
             textarea,
             autocomplete_selected: 0,
+            agent_commands: Vec::new(),
         }
     }
 }
@@ -59,12 +62,12 @@ impl InputState {
     }
 
     /// Get autocomplete suggestions for current input.
-    pub fn suggestions(&self) -> Vec<&'static commands::SlashCommand> {
+    pub fn suggestions(&self) -> Vec<Suggestion> {
         let text = self.current_text();
         let trimmed = text.trim();
         // Only show suggestions when typing a command (starts with / and no space yet)
         if trimmed.starts_with('/') && !trimmed.contains(' ') {
-            commands::matching_commands(trimmed)
+            commands::matching_suggestions(trimmed, &self.agent_commands)
         } else {
             Vec::new()
         }
@@ -76,9 +79,9 @@ impl InputState {
         if let Some(cmd) = suggestions.get(self.autocomplete_selected) {
             // Replace input with the command
             let new_text = if cmd.takes_arg {
-                format!("{} ", cmd.name)
+                format!("{} ", cmd.display_name)
             } else {
-                cmd.name.to_string()
+                cmd.display_name.clone()
             };
             self.textarea = TextArea::default();
             self.textarea.set_block(
@@ -137,11 +140,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &InputState) {
                 };
                 Line::from(vec![
                     Span::styled(
-                        format!("{:<12}", cmd.name),
+                        format!("{:<20}", cmd.display_name),
                         style,
                     ),
                     Span::styled(
-                        cmd.description,
+                        &cmd.description,
                         Style::default().fg(Color::DarkGray),
                     ),
                 ])

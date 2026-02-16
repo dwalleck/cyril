@@ -1,5 +1,5 @@
 use crossterm::event::{Event as CrosstermEvent, KeyEvent, MouseEvent};
-use win_kiro_core::event::AppEvent;
+use cyril_core::event::AppEvent;
 
 /// Unified event type for the TUI application.
 #[derive(Debug)]
