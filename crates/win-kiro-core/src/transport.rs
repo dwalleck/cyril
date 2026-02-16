@@ -4,11 +4,14 @@ use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
+pub type CompatStdin = tokio_util::compat::Compat<tokio::process::ChildStdin>;
+pub type CompatStdout = tokio_util::compat::Compat<tokio::process::ChildStdout>;
+
 /// Wraps the WSL agent subprocess and its compat-wrapped pipes.
 pub struct AgentProcess {
-    child: Child,
-    pub stdin: tokio_util::compat::Compat<tokio::process::ChildStdin>,
-    pub stdout: tokio_util::compat::Compat<tokio::process::ChildStdout>,
+    _child: Child,
+    stdin: Option<CompatStdin>,
+    stdout: Option<CompatStdout>,
     stderr_rx: mpsc::UnboundedReceiver<String>,
 }
 
@@ -52,7 +55,6 @@ impl AgentProcess {
                     Ok(0) => break,
                     Ok(n) => {
                         if let Ok(s) = std::string::String::from_utf8(buf[..n].to_vec()) {
-                            eprint!("{s}"); // still show stderr to user
                             let _ = stderr_tx.send(s);
                         }
                     }
@@ -62,11 +64,21 @@ impl AgentProcess {
         });
 
         Ok(Self {
-            child,
-            stdin,
-            stdout,
+            _child: child,
+            stdin: Some(stdin),
+            stdout: Some(stdout),
             stderr_rx,
         })
+    }
+
+    /// Take the stdin pipe (can only be called once).
+    pub fn take_stdin(&mut self) -> Result<CompatStdin> {
+        self.stdin.take().context("stdin already taken")
+    }
+
+    /// Take the stdout pipe (can only be called once).
+    pub fn take_stdout(&mut self) -> Result<CompatStdout> {
+        self.stdout.take().context("stdout already taken")
     }
 
     /// Drain any stderr output collected so far.
@@ -78,14 +90,9 @@ impl AgentProcess {
         output
     }
 
-    /// Wait for the child process to exit.
-    pub async fn wait(&mut self) -> Result<std::process::ExitStatus> {
-        self.child.wait().await.context("Failed to wait for agent process")
-    }
-
     /// Check if the process has already exited (non-blocking).
     pub fn try_wait(&mut self) -> Result<Option<std::process::ExitStatus>> {
-        self.child.try_wait().context("Failed to check agent process status")
+        self._child.try_wait().context("Failed to check agent process status")
     }
 
     /// Wait briefly for the process to start, returning an error if it exits

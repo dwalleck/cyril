@@ -1726,6 +1726,7 @@ dependencies = [
  "anyhow",
  "clap",
  "crossterm",
+ "futures-util",
  "ratatui",
  "tokio",
  "tracing",
