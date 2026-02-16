@@ -1,7 +1,12 @@
 [package]
 name = "cyril-core"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2021"
+description = "Core protocol logic, path translation, hooks, and capabilities for the Cyril ACP client"
+license = "MIT"
+repository = "https://github.com/dwalleck/cyril"
+keywords = ["acp", "kiro", "wsl", "windows"]
+categories = ["development-tools"]
 
 [dependencies]
 agent-client-protocol = "0.9"

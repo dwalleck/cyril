@@ -1,14 +1,19 @@
 [package]
 name = "cyril"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2021"
+description = "Windows-native TUI client for Kiro CLI via the Agent Client Protocol (ACP)"
+license = "MIT"
+repository = "https://github.com/dwalleck/cyril"
+keywords = ["acp", "kiro", "tui", "windows", "wsl"]
+categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
 name = "cyril"
 path = "src/main.rs"
 
 [dependencies]
-cyril-core = { path = "../cyril-core" }
+cyril-core = { version = "0.1.0-alpha.1", path = "../cyril-core" }
 agent-client-protocol = "0.9"
 tokio = { version = "1", features = ["full"] }
 ratatui = "0.29"

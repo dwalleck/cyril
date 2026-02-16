@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:agentclientprotocol.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:kiro.dev)",
+      "WebSearch",
+      "WebFetch(domain:ratatui.rs)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:ratatui.github.io)",
+      "WebFetch(domain:docs.rs)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(cargo search:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo test:*)",
+      "Bash(npx:*)",
+      "Bash(find:*)",
+      "Bash(cargo check:*)"
+    ]
+  }
+}
