@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use agent_client_protocol::{self as acp, Agent};
@@ -8,7 +9,9 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
 use win_kiro_core::event::AppEvent;
+use win_kiro_core::path;
 
+use crate::commands::{self, ParsedCommand};
 use crate::event::Event;
 use crate::tui::Tui;
 use crate::ui::{approval, chat, input, tool_calls, toolbar};
@@ -24,9 +27,9 @@ pub struct App {
     pub approval: Option<(approval::ApprovalState, oneshot::Sender<acp::RequestPermissionResponse>)>,
     pub should_quit: bool,
     conn: Rc<acp::ClientSideConnection>,
+    cwd: PathBuf,
     session_id: Option<acp::SessionId>,
     event_rx: mpsc::UnboundedReceiver<AppEvent>,
-    /// Receives notifications when a prompt future completes.
     prompt_done_rx: mpsc::UnboundedReceiver<()>,
     prompt_done_tx: mpsc::UnboundedSender<()>,
 }
@@ -34,6 +37,7 @@ pub struct App {
 impl App {
     pub fn new(
         conn: Rc<acp::ClientSideConnection>,
+        cwd: PathBuf,
         event_rx: mpsc::UnboundedReceiver<AppEvent>,
     ) -> Self {
         let (prompt_done_tx, prompt_done_rx) = mpsc::unbounded_channel();
@@ -45,6 +49,7 @@ impl App {
             approval: None,
             should_quit: false,
             conn,
+            cwd,
             session_id: None,
             event_rx,
             prompt_done_rx,
@@ -64,10 +69,8 @@ impl App {
         let mut tick_interval = tokio::time::interval(tick_rate);
 
         loop {
-            // Render
             terminal.draw(|frame| self.render(frame))?;
 
-            // Wait for next event
             let event = tokio::select! {
                 ct_event = crossterm_events.next() => {
                     match ct_event {
@@ -87,7 +90,7 @@ impl App {
                     None
                 }
                 _ = tick_interval.tick() => {
-                    None // just re-render
+                    None
                 }
             };
 
@@ -186,7 +189,9 @@ impl App {
             return Ok(());
         }
 
-        // Normal mode
+        // Check if autocomplete is showing
+        let has_suggestions = !self.input.suggestions().is_empty();
+
         match key.code {
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
@@ -194,8 +199,23 @@ impl App {
             KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
             }
+            KeyCode::Tab if has_suggestions => {
+                self.input.apply_suggestion();
+            }
+            KeyCode::Up if has_suggestions => {
+                self.input.autocomplete_up();
+            }
+            KeyCode::Down if has_suggestions => {
+                self.input.autocomplete_down();
+            }
             KeyCode::Enter if !key.modifiers.contains(KeyModifiers::SHIFT) => {
-                self.send_prompt().await?;
+                // Check for slash commands first
+                if has_suggestions {
+                    // If autocomplete is showing and there's an exact match, apply it
+                    self.input.apply_suggestion();
+                } else {
+                    self.handle_enter().await?;
+                }
             }
             KeyCode::Esc => {
                 if self.toolbar.is_busy {
@@ -206,9 +226,77 @@ impl App {
             }
             _ => {
                 self.input.textarea.input(key);
+                // Reset autocomplete selection when input changes
+                self.input.autocomplete_selected = 0;
             }
         }
 
+        Ok(())
+    }
+
+    /// Handle Enter key — either execute a slash command or send a prompt.
+    async fn handle_enter(&mut self) -> Result<()> {
+        if self.input.is_empty() {
+            return Ok(());
+        }
+
+        let text = self.input.current_text();
+
+        if let Some(cmd) = commands::parse_command(&text) {
+            self.input.take_input();
+            self.execute_command(cmd).await?;
+        } else {
+            self.send_prompt().await?;
+        }
+
+        Ok(())
+    }
+
+    /// Execute a parsed slash command.
+    async fn execute_command(&mut self, cmd: ParsedCommand) -> Result<()> {
+        match cmd {
+            ParsedCommand::Quit => {
+                self.should_quit = true;
+            }
+            ParsedCommand::Clear => {
+                self.chat = chat::ChatState::default();
+                self.chat.add_system_message("Chat cleared.".to_string());
+            }
+            ParsedCommand::Help => {
+                let mut help = String::from("Available commands:\n");
+                for cmd in commands::COMMANDS {
+                    help.push_str(&format!("  {:<12} {}\n", cmd.name, cmd.description));
+                }
+                help.push_str("\nKeyboard shortcuts:\n");
+                help.push_str("  Ctrl+C/Q   Quit\n");
+                help.push_str("  Esc        Cancel current request\n");
+                help.push_str("  Tab        Accept autocomplete suggestion\n");
+                help.push_str("  Shift+Enter  Newline in input\n");
+                self.chat.add_system_message(help);
+                self.chat.scroll_to_bottom();
+            }
+            ParsedCommand::New => {
+                self.create_new_session().await?;
+            }
+            ParsedCommand::Sessions => {
+                self.list_sessions().await?;
+            }
+            ParsedCommand::Load(session_id) => {
+                if session_id.is_empty() {
+                    self.chat.add_system_message(
+                        "Usage: /load <session-id>\nUse /sessions to list available sessions."
+                            .to_string(),
+                    );
+                } else {
+                    self.load_session(&session_id).await?;
+                }
+            }
+            ParsedCommand::Unknown(cmd) => {
+                self.chat.add_system_message(format!(
+                    "Unknown command: {cmd}\nType /help for available commands."
+                ));
+            }
+        }
         Ok(())
     }
 
@@ -245,6 +333,89 @@ impl App {
             let _ = done_tx.send(());
         });
 
+        Ok(())
+    }
+
+    /// Create a new session, replacing the current one.
+    async fn create_new_session(&mut self) -> Result<()> {
+        let wsl_cwd = path::win_to_wsl(&self.cwd);
+        match self.conn.new_session(acp::NewSessionRequest::new(wsl_cwd)).await {
+            Ok(response) => {
+                self.set_session_id(response.session_id);
+                self.chat = chat::ChatState::default();
+                self.chat
+                    .add_system_message("New session started.".to_string());
+                self.chat.scroll_to_bottom();
+            }
+            Err(e) => {
+                self.chat
+                    .add_system_message(format!("Failed to create session: {e}"));
+            }
+        }
+        Ok(())
+    }
+
+    /// List available sessions.
+    async fn list_sessions(&mut self) -> Result<()> {
+        let wsl_cwd = path::win_to_wsl(&self.cwd);
+        match self
+            .conn
+            .list_sessions(acp::ListSessionsRequest::new().cwd(wsl_cwd))
+            .await
+        {
+            Ok(response) => {
+                if response.sessions.is_empty() {
+                    self.chat
+                        .add_system_message("No previous sessions found.".to_string());
+                } else {
+                    let mut msg = String::from("Previous sessions:\n");
+                    for session in &response.sessions {
+                        let title = session.title.as_deref().unwrap_or("(untitled)");
+                        let updated = session.updated_at.as_deref().unwrap_or("");
+                        msg.push_str(&format!(
+                            "  {} - {} {}\n",
+                            session.session_id, title, updated
+                        ));
+                    }
+                    msg.push_str("\nUse /load <session-id> to resume a session.");
+                    self.chat.add_system_message(msg);
+                }
+                self.chat.scroll_to_bottom();
+            }
+            Err(e) => {
+                self.chat
+                    .add_system_message(format!("Failed to list sessions: {e}"));
+            }
+        }
+        Ok(())
+    }
+
+    /// Load (resume) a previous session by ID.
+    async fn load_session(&mut self, session_id_str: &str) -> Result<()> {
+        let wsl_cwd = path::win_to_wsl(&self.cwd);
+        let session_id = acp::SessionId::from(session_id_str.to_string());
+
+        match self
+            .conn
+            .resume_session(acp::ResumeSessionRequest::new(
+                session_id.clone(),
+                wsl_cwd,
+            ))
+            .await
+        {
+            Ok(_) => {
+                self.set_session_id(session_id);
+                self.chat = chat::ChatState::default();
+                self.chat.add_system_message(format!(
+                    "Resumed session: {session_id_str}"
+                ));
+                self.chat.scroll_to_bottom();
+            }
+            Err(e) => {
+                self.chat
+                    .add_system_message(format!("Failed to load session: {e}"));
+            }
+        }
         Ok(())
     }
 
@@ -288,7 +459,6 @@ impl App {
         }
     }
 
-    /// Send hook feedback as a follow-up prompt to the agent.
     fn send_hook_feedback(&self, text: String) {
         let session_id = match &self.session_id {
             Some(id) => id.clone(),

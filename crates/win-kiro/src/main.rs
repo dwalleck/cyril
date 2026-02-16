@@ -1,4 +1,5 @@
 mod app;
+mod commands;
 mod event;
 mod tui;
 mod ui;
@@ -111,7 +112,7 @@ async fn run_tui(cwd: PathBuf) -> Result<()> {
     let conn = Rc::new(conn);
 
     let mut terminal = tui::init()?;
-    let mut app = app::App::new(conn.clone(), event_rx);
+    let mut app = app::App::new(conn.clone(), cwd.clone(), event_rx);
 
     let wsl_cwd = path::win_to_wsl(&cwd);
     let session_response = conn
