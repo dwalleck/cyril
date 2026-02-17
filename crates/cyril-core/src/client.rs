@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use agent_client_protocol as acp;
 use async_trait::async_trait;
@@ -7,14 +8,40 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
 use crate::capabilities;
-use crate::capabilities::terminal::TerminalManager;
-use crate::event::AppEvent;
+use crate::capabilities::terminal::{TerminalId, TerminalManager};
+use crate::event::{AppEvent, KiroExtCommand};
 use crate::hooks::{HookContext, HookRegistry, HookResult, HookTarget, HookTiming};
 use crate::path;
 
 /// Construct an ACP internal error with a message.
 fn internal_err(msg: impl Into<String>) -> acp::Error {
     acp::Error::new(-32603, msg)
+}
+
+/// Payload for `kiro.dev/commands/available` ext_notification.
+/// We try multiple shapes since the format isn't documented.
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum KiroCommandsPayload {
+    /// `{ "commands": [...] }`
+    Wrapped { commands: Vec<KiroExtCommand> },
+    /// `{ "availableCommands": [...] }` (ACP-style)
+    AcpStyle {
+        #[serde(rename = "availableCommands")]
+        commands: Vec<KiroExtCommand>,
+    },
+    /// Top-level array `[...]`
+    Bare(Vec<KiroExtCommand>),
+}
+
+impl KiroCommandsPayload {
+    fn commands(self) -> Vec<KiroExtCommand> {
+        match self {
+            Self::Wrapped { commands } => commands,
+            Self::AcpStyle { commands } => commands,
+            Self::Bare(commands) => commands,
+        }
+    }
 }
 
 /// The central ACP Client implementation.
@@ -60,47 +87,46 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::SessionNotification,
     ) -> acp::Result<()> {
-        let session_id = args.session_id.clone();
         match args.update {
             acp::SessionUpdate::AgentMessageChunk(chunk) => {
                 let _ = self.event_tx.send(AppEvent::AgentMessage {
-                    session_id,
+                    session_id: args.session_id,
                     chunk,
                 });
             }
             acp::SessionUpdate::AgentThoughtChunk(chunk) => {
                 let _ = self.event_tx.send(AppEvent::AgentThought {
-                    session_id,
+                    session_id: args.session_id,
                     chunk,
                 });
             }
             acp::SessionUpdate::ToolCall(tool_call) => {
                 let _ = self.event_tx.send(AppEvent::ToolCallStarted {
-                    session_id,
+                    session_id: args.session_id,
                     tool_call,
                 });
             }
             acp::SessionUpdate::ToolCallUpdate(update) => {
                 let _ = self.event_tx.send(AppEvent::ToolCallUpdated {
-                    session_id,
+                    session_id: args.session_id,
                     update,
                 });
             }
             acp::SessionUpdate::Plan(plan) => {
                 let _ = self.event_tx.send(AppEvent::PlanUpdated {
-                    session_id,
+                    session_id: args.session_id,
                     plan,
                 });
             }
             acp::SessionUpdate::AvailableCommandsUpdate(commands) => {
                 let _ = self.event_tx.send(AppEvent::CommandsUpdated {
-                    session_id,
+                    session_id: args.session_id,
                     commands,
                 });
             }
             acp::SessionUpdate::CurrentModeUpdate(mode) => {
                 let _ = self.event_tx.send(AppEvent::ModeChanged {
-                    session_id,
+                    session_id: args.session_id,
                     mode,
                 });
             }
@@ -108,6 +134,51 @@ impl acp::Client for KiroClient {
                 tracing::debug!("Unhandled session notification variant");
             }
         }
+        Ok(())
+    }
+
+    async fn ext_notification(&self, args: acp::ExtNotification) -> acp::Result<()> {
+        tracing::info!("Received ext_notification: method={}", args.method);
+        tracing::info!("ext_notification params: {}", args.params);
+
+        if args.method.as_ref() == "kiro.dev/commands/available" {
+            match serde_json::from_str::<KiroCommandsPayload>(args.params.get()) {
+                Ok(payload) => {
+                    let commands = payload.commands();
+                    tracing::info!(
+                        "Parsed {} Kiro commands from ext_notification",
+                        commands.len()
+                    );
+                    let _ = self.event_tx.send(AppEvent::KiroCommandsAvailable { commands });
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to parse kiro.dev/commands/available: {e}");
+                }
+            }
+        } else if args.method.as_ref() == "kiro.dev/metadata" {
+            // Log the full raw payload so we can discover all available fields
+            tracing::info!("kiro.dev/metadata raw: {}", args.params.get());
+
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct MetadataPayload {
+                session_id: String,
+                #[serde(default)]
+                context_usage_percentage: f64,
+            }
+            match serde_json::from_str::<MetadataPayload>(args.params.get()) {
+                Ok(payload) => {
+                    let _ = self.event_tx.send(AppEvent::KiroMetadata {
+                        session_id: payload.session_id,
+                        context_usage_pct: payload.context_usage_percentage,
+                    });
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to parse kiro.dev/metadata: {e}");
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -153,12 +224,8 @@ impl acp::Client for KiroClient {
             command: None,
         };
         match self.hooks.borrow().run_before(&hook_ctx).await {
-            HookResult::Blocked { reason } => {
-                return Err(internal_err(reason));
-            }
-            HookResult::ModifiedArgs { content: Some(new_content) } => {
-                content = new_content;
-            }
+            HookResult::Blocked { reason } => return Err(internal_err(reason)),
+            HookResult::ModifiedArgs { content: Some(c), .. } => content = c,
             _ => {}
         }
 
@@ -208,17 +275,20 @@ impl acp::Client for KiroClient {
             .create_terminal(&command)
             .map_err(|e| internal_err(e.to_string()))?;
 
-        Ok(acp::CreateTerminalResponse::new(id))
+        Ok(acp::CreateTerminalResponse::new(id.to_string()))
     }
 
     async fn terminal_output(
         &self,
         args: acp::TerminalOutputRequest,
     ) -> acp::Result<acp::TerminalOutputResponse> {
+        let id = TerminalId::from_str(&args.terminal_id.to_string())
+            .map_err(|e| internal_err(format!("Invalid terminal ID: {e}")))?;
+
         let output = self
             .terminal_manager
             .borrow_mut()
-            .get_output(&args.terminal_id.to_string())
+            .get_output(&id)
             .map_err(|e| internal_err(e.to_string()))?;
 
         Ok(acp::TerminalOutputResponse::new(output, false))
@@ -228,15 +298,18 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::WaitForTerminalExitRequest,
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
+        let id = TerminalId::from_str(&args.terminal_id.to_string())
+            .map_err(|e| internal_err(format!("Invalid terminal ID: {e}")))?;
+
         let exit_code = self
             .terminal_manager
             .borrow_mut()
-            .wait_for_exit(&args.terminal_id.to_string())
+            .wait_for_exit(&id)
             .await
             .map_err(|e| internal_err(e.to_string()))?;
 
         let exit_status = acp::TerminalExitStatus::new()
-            .exit_code(exit_code as u32);
+            .exit_code(exit_code.max(0) as u32);
 
         Ok(acp::WaitForTerminalExitResponse::new(exit_status))
     }
@@ -245,9 +318,12 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::ReleaseTerminalRequest,
     ) -> acp::Result<acp::ReleaseTerminalResponse> {
+        let id = TerminalId::from_str(&args.terminal_id.to_string())
+            .map_err(|e| internal_err(format!("Invalid terminal ID: {e}")))?;
+
         self.terminal_manager
             .borrow_mut()
-            .release(&args.terminal_id.to_string())
+            .release(&id)
             .map_err(|e| internal_err(e.to_string()))?;
 
         Ok(acp::ReleaseTerminalResponse::new())
@@ -257,9 +333,12 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::KillTerminalCommandRequest,
     ) -> acp::Result<acp::KillTerminalCommandResponse> {
+        let id = TerminalId::from_str(&args.terminal_id.to_string())
+            .map_err(|e| internal_err(format!("Invalid terminal ID: {e}")))?;
+
         self.terminal_manager
             .borrow_mut()
-            .kill(&args.terminal_id.to_string())
+            .kill(&id)
             .await
             .map_err(|e| internal_err(e.to_string()))?;
 

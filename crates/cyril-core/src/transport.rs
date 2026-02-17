@@ -18,9 +18,17 @@ pub struct AgentProcess {
 impl AgentProcess {
     /// Spawn `wsl kiro-cli acp` and return compat-wrapped stdin/stdout
     /// suitable for passing to `ClientSideConnection::new`.
-    pub fn spawn() -> Result<Self> {
+    /// If `agent` is provided, passes `--agent <name>` to kiro-cli.
+    pub fn spawn(agent: Option<&str>) -> Result<Self> {
+        let mut args = vec!["kiro-cli", "acp"];
+        let agent_flag;
+        if let Some(name) = agent {
+            agent_flag = name.to_string();
+            args.push("--agent");
+            args.push(&agent_flag);
+        }
         let mut child = Command::new("wsl")
-            .args(["kiro-cli", "acp"])
+            .args(&args)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())

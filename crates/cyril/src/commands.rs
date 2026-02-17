@@ -57,6 +57,16 @@ pub const COMMANDS: &[SlashCommand] = &[
         takes_arg: true,
     },
     SlashCommand {
+        name: "/mode",
+        description: "Switch agent mode (e.g. /mode dotnet-dev)",
+        takes_arg: true,
+    },
+    SlashCommand {
+        name: "/model",
+        description: "Select model (not supported by kiro-cli)",
+        takes_arg: true,
+    },
+    SlashCommand {
         name: "/new",
         description: "Start a new session",
         takes_arg: false,
@@ -75,6 +85,8 @@ pub enum ParsedCommand {
     Clear,
     Help,
     Load(String),
+    Mode(String),
+    ModelSelect,
     New,
     Quit,
     /// Agent-provided command (name, optional input).
@@ -98,6 +110,8 @@ pub fn parse_command(input: &str, agent_commands: &[AgentCommand]) -> Option<Par
         "/clear" => return Some(ParsedCommand::Clear),
         "/help" => return Some(ParsedCommand::Help),
         "/load" => return Some(ParsedCommand::Load(arg)),
+        "/mode" => return Some(ParsedCommand::Mode(arg)),
+        "/model" => return Some(ParsedCommand::ModelSelect),
         "/new" => return Some(ParsedCommand::New),
         "/quit" => return Some(ParsedCommand::Quit),
         _ => {}

@@ -3,7 +3,7 @@ use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::Paragraph,
+    widgets::{Gauge, Paragraph},
 };
 
 /// State for the toolbar/status bar.
@@ -13,6 +13,13 @@ pub struct ToolbarState {
     pub agent_version: String,
     pub session_id: Option<String>,
     pub is_busy: bool,
+    pub context_usage_pct: Option<f64>,
+    /// The --agent value passed at startup (e.g. "sonnet").
+    pub selected_agent: Option<String>,
+    /// Current agent mode (e.g. "kiro_default", "dotnet-dev").
+    pub current_mode: Option<String>,
+    /// Whether mouse capture is active (false = copy mode).
+    pub mouse_captured: bool,
 }
 
 pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
@@ -25,7 +32,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
         .map(|id| &id[..8.min(id.len())])
         .unwrap_or("none");
 
-    let line = Line::from(vec![
+    let mut spans = vec![
         Span::styled(" cyril ", Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)),
         Span::raw(" "),
         Span::styled(&state.agent_name, Style::default().fg(Color::White)),
@@ -33,14 +40,64 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
             format!(" v{}", state.agent_version),
             Style::default().fg(Color::DarkGray),
         ),
-        Span::raw(" | "),
-        Span::styled(format!("session: {session_display}"), Style::default().fg(Color::DarkGray)),
-        Span::raw(" | "),
-        Span::styled(status, Style::default().fg(status_color)),
-    ]);
+    ];
+
+    let mode_display = state.current_mode.as_ref().or(state.selected_agent.as_ref());
+    if let Some(mode) = mode_display {
+        spans.push(Span::raw(" "));
+        spans.push(Span::styled(
+            format!("[{mode}]"),
+            Style::default().fg(Color::Magenta),
+        ));
+    }
+
+    spans.push(Span::raw(" | "));
+    spans.push(Span::styled(format!("session: {session_display}"), Style::default().fg(Color::DarkGray)));
+
+    if !state.mouse_captured {
+        spans.push(Span::raw(" | "));
+        spans.push(Span::styled("COPY", Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD)));
+    }
+
+    spans.push(Span::raw(" | "));
+    spans.push(Span::styled(status, Style::default().fg(status_color)));
+
+    let line = Line::from(spans);
 
     let paragraph = Paragraph::new(line)
         .style(Style::default().bg(Color::DarkGray));
 
     frame.render_widget(paragraph, area);
+}
+
+/// Render a compact context usage gauge (1 row, 40 chars, left-aligned).
+pub fn render_context_bar(frame: &mut Frame, area: Rect, pct: f64) {
+    let bar_color = if pct > 80.0 {
+        Color::Red
+    } else if pct > 50.0 {
+        Color::Yellow
+    } else {
+        Color::Green
+    };
+
+    let label_width: u16 = 8; // "context "
+    let gauge_width: u16 = 32;
+
+    // Render "context " label
+    let label_area = Rect::new(area.x, area.y, label_width.min(area.width), 1);
+    let label = Paragraph::new(Span::styled("context ", Style::default().fg(Color::Gray)));
+    frame.render_widget(label, label_area);
+
+    // Render gauge bar
+    let gauge_x = area.x + label_width;
+    let gauge_area = Rect::new(gauge_x, area.y, gauge_width.min(area.width.saturating_sub(label_width)), 1);
+    let ratio = (pct / 100.0).clamp(0.0, 1.0);
+
+    let gauge = Gauge::default()
+        .gauge_style(Style::default().fg(bar_color).bg(Color::Rgb(60, 60, 60)))
+        .ratio(ratio)
+        .label(Span::styled(format!("{pct:.0}%"), Style::default().fg(Color::White)))
+        .use_unicode(true);
+
+    frame.render_widget(gauge, gauge_area);
 }

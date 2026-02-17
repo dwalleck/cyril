@@ -1,5 +1,7 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::process::Stdio;
+use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use tokio::io::AsyncReadExt;
@@ -7,7 +9,32 @@ use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 
 /// Identifies a managed terminal.
-pub type TerminalId = String;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TerminalId(String);
+
+impl TerminalId {
+    fn new(id: u64) -> Self {
+        Self(format!("term-{id}"))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for TerminalId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl FromStr for TerminalId {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.to_string()))
+    }
+}
 
 /// A running terminal process on Windows.
 #[derive(Debug)]
@@ -64,7 +91,7 @@ impl TerminalManager {
 
     /// Create a terminal and start running a command.
     pub fn create_terminal(&mut self, command: &str) -> Result<TerminalId> {
-        let id = format!("term-{}", self.next_id);
+        let id = TerminalId::new(self.next_id);
         self.next_id += 1;
 
         let mut child = Command::new(self.shell.program())
@@ -107,7 +134,7 @@ impl TerminalManager {
     }
 
     /// Get new output from a terminal since the last call.
-    pub fn get_output(&mut self, id: &str) -> Result<String> {
+    pub fn get_output(&mut self, id: &TerminalId) -> Result<String> {
         let term = self
             .terminals
             .get_mut(id)
@@ -124,7 +151,7 @@ impl TerminalManager {
     }
 
     /// Wait for a terminal to exit and return its exit code.
-    pub async fn wait_for_exit(&mut self, id: &str) -> Result<i32> {
+    pub async fn wait_for_exit(&mut self, id: &TerminalId) -> Result<i32> {
         let term = self
             .terminals
             .get_mut(id)
@@ -140,7 +167,7 @@ impl TerminalManager {
     }
 
     /// Release (remove) a terminal.
-    pub fn release(&mut self, id: &str) -> Result<()> {
+    pub fn release(&mut self, id: &TerminalId) -> Result<()> {
         self.terminals
             .remove(id)
             .with_context(|| format!("Unknown terminal: {id}"))?;
@@ -148,7 +175,7 @@ impl TerminalManager {
     }
 
     /// Kill a terminal process.
-    pub async fn kill(&mut self, id: &str) -> Result<()> {
+    pub async fn kill(&mut self, id: &TerminalId) -> Result<()> {
         let term = self
             .terminals
             .get_mut(id)

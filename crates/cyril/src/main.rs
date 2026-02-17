@@ -1,6 +1,7 @@
 mod app;
 mod commands;
 mod event;
+mod file_completer;
 mod tui;
 mod ui;
 
@@ -28,12 +29,16 @@ struct Cli {
     /// Initial prompt to send (non-interactive mode)
     #[arg(short, long)]
     prompt: Option<String>,
+
+    /// Agent to use (e.g. "sonnet", "claude-sonnet-4-0")
+    #[arg(short, long)]
+    agent: Option<String>,
 }
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     // Log to file to avoid TUI conflicts
-    if let Ok(file) = std::fs::File::create("cyril.log") {
+    if let Ok(file) = std::fs::OpenOptions::new().create(true).append(true).open("cyril.log") {
         tracing_subscriber::fmt()
             .with_max_level(tracing::Level::INFO)
             .with_writer(std::sync::Mutex::new(file))
@@ -48,17 +53,17 @@ async fn main() -> Result<()> {
     local_set
         .run_until(async move {
             if let Some(prompt) = cli.prompt {
-                run_oneshot(cwd, prompt).await
+                run_oneshot(cwd, prompt, cli.agent).await
             } else {
-                run_tui(cwd).await
+                run_tui(cwd, cli.agent).await
             }
         })
         .await
 }
 
 /// Non-interactive mode: send a single prompt and print the response.
-async fn run_oneshot(cwd: PathBuf, prompt_text: String) -> Result<()> {
-    let (conn, event_rx, _agent) = connect().await?;
+async fn run_oneshot(cwd: PathBuf, prompt_text: String, agent: Option<String>) -> Result<()> {
+    let (conn, event_rx, _agent) = connect(agent.as_deref()).await?;
 
     let wsl_cwd = path::win_to_wsl(&cwd);
     let session_response = conn
@@ -107,18 +112,30 @@ async fn run_oneshot(cwd: PathBuf, prompt_text: String) -> Result<()> {
 }
 
 /// Interactive TUI mode.
-async fn run_tui(cwd: PathBuf) -> Result<()> {
-    let (conn, event_rx, _agent) = connect().await?;
+async fn run_tui(cwd: PathBuf, agent: Option<String>) -> Result<()> {
+    let (conn, event_rx, _agent) = connect(agent.as_deref()).await?;
     let conn = Rc::new(conn);
 
     let mut terminal = tui::init()?;
     let mut app = app::App::new(conn.clone(), cwd.clone(), event_rx);
+    app.toolbar.selected_agent = agent;
 
     let wsl_cwd = path::win_to_wsl(&cwd);
     let session_response = conn
         .new_session(acp::NewSessionRequest::new(wsl_cwd))
         .await
         .context("Failed to create session")?;
+
+    if let Some(ref modes) = session_response.modes {
+        app.set_modes(modes);
+    }
+
+    if let Some(ref config_options) = session_response.config_options {
+        tracing::info!(
+            "NewSessionResponse config_options: {}",
+            serde_json::to_string_pretty(config_options).unwrap_or_default()
+        );
+    }
 
     app.set_session_id(session_response.session_id);
 
@@ -132,12 +149,14 @@ async fn run_tui(cwd: PathBuf) -> Result<()> {
 /// Connect to the WSL agent and perform the ACP handshake.
 /// Returns (connection, event_rx, agent_handle).
 /// The agent handle must be kept alive for the duration of the session.
-async fn connect() -> Result<(
+async fn connect(
+    agent_name: Option<&str>,
+) -> Result<(
     acp::ClientSideConnection,
     mpsc::UnboundedReceiver<AppEvent>,
     AgentProcess,
 )> {
-    let mut agent = AgentProcess::spawn()?;
+    let mut agent = AgentProcess::spawn(agent_name)?;
     agent.check_startup().await?;
 
     let (event_tx, event_rx) = mpsc::unbounded_channel::<AppEvent>();
