@@ -5,7 +5,10 @@ use std::sync::Arc;
 
 use agent_client_protocol::{self as acp, Agent};
 use anyhow::Result;
-use crossterm::event::{EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{
+    DisableMouseCapture, EnableMouseCapture, EventStream, KeyCode, KeyEvent, KeyEventKind,
+    KeyModifiers,
+};
 use futures_util::StreamExt;
 use serde_json::value::RawValue;
 use tokio::sync::mpsc;
@@ -16,22 +19,31 @@ use cyril_core::path;
 
 use crate::commands::{self, ParsedCommand};
 use crate::event::Event;
+use crate::file_completer;
 use crate::tui::Tui;
-use crate::ui::{approval, chat, input, tool_calls, toolbar};
+use crate::ui::{approval, chat, input, toolbar};
 
 use ratatui::layout::{Constraint, Layout};
+
+/// An available agent mode from the session.
+#[derive(Debug, Clone)]
+pub struct AvailableMode {
+    pub id: String,
+    pub name: String,
+}
 
 /// Main application state.
 pub struct App {
     pub chat: chat::ChatState,
     pub input: input::InputState,
     pub toolbar: toolbar::ToolbarState,
-    pub tool_calls: tool_calls::ToolCallsState,
     pub approval: Option<(approval::ApprovalState, oneshot::Sender<acp::RequestPermissionResponse>)>,
     pub should_quit: bool,
+    pub mouse_captured: bool,
     conn: Rc<acp::ClientSideConnection>,
     cwd: PathBuf,
     session_id: Option<acp::SessionId>,
+    available_modes: Vec<AvailableMode>,
     event_rx: mpsc::UnboundedReceiver<AppEvent>,
     prompt_done_rx: mpsc::UnboundedReceiver<()>,
     prompt_done_tx: mpsc::UnboundedSender<()>,
@@ -44,16 +56,25 @@ impl App {
         event_rx: mpsc::UnboundedReceiver<AppEvent>,
     ) -> Self {
         let (prompt_done_tx, prompt_done_rx) = mpsc::unbounded_channel();
+
+        let mut input = input::InputState::default();
+        let mut file_completer = file_completer::FileCompleter::new(cwd.clone());
+        if let Err(e) = file_completer.load_files() {
+            tracing::warn!("Failed to load project files: {e}");
+        }
+        input.file_completer = Some(file_completer);
+
         Self {
             chat: chat::ChatState::default(),
-            input: input::InputState::default(),
-            toolbar: toolbar::ToolbarState::default(),
-            tool_calls: tool_calls::ToolCallsState::default(),
+            input,
+            toolbar: toolbar::ToolbarState { mouse_captured: true, ..Default::default() },
             approval: None,
             should_quit: false,
+            mouse_captured: true,
             conn,
             cwd,
             session_id: None,
+            available_modes: Vec::new(),
             event_rx,
             prompt_done_rx,
             prompt_done_tx,
@@ -63,6 +84,19 @@ impl App {
     pub fn set_session_id(&mut self, session_id: acp::SessionId) {
         self.toolbar.session_id = Some(session_id.to_string());
         self.session_id = Some(session_id);
+    }
+
+    /// Store mode info from a NewSessionResponse.
+    pub fn set_modes(&mut self, modes: &acp::SessionModeState) {
+        self.toolbar.current_mode = Some(modes.current_mode_id.to_string());
+        self.available_modes = modes
+            .available_modes
+            .iter()
+            .map(|m| AvailableMode {
+                id: m.id.to_string(),
+                name: m.name.clone(),
+            })
+            .collect();
     }
 
     /// Run the main event loop.
@@ -112,29 +146,20 @@ impl App {
     fn render(&mut self, frame: &mut ratatui::Frame) {
         let area = frame.area();
 
-        let has_tools = self.tool_calls.has_active();
-        let tool_height = if has_tools {
-            (self.tool_calls.active_calls.len() as u16 + 2).min(8)
-        } else {
-            0
-        };
-
         let chunks = Layout::vertical([
-            Constraint::Length(1),           // toolbar
-            Constraint::Min(5),             // chat
-            Constraint::Length(tool_height), // tool calls (0 if none)
-            Constraint::Length(5),           // input
+            Constraint::Length(1),  // toolbar
+            Constraint::Min(5),    // chat (includes inline tool calls)
+            Constraint::Length(5), // input
+            Constraint::Length(1), // context bar
         ])
         .split(area);
 
         toolbar::render(frame, chunks[0], &self.toolbar);
         chat::render(frame, chunks[1], &self.chat);
+        input::render(frame, chunks[2], &mut self.input);
 
-        if has_tools {
-            tool_calls::render(frame, chunks[2], &self.tool_calls);
-        }
-
-        input::render(frame, chunks[3], &self.input);
+        let pct = self.toolbar.context_usage_pct.unwrap_or(0.0);
+        toolbar::render_context_bar(frame, chunks[3], pct);
 
         // Approval overlay on top
         if let Some((ref approval_state, _)) = self.approval {
@@ -193,7 +218,7 @@ impl App {
         }
 
         // Check if autocomplete is showing
-        let has_suggestions = !self.input.suggestions().is_empty();
+        let has_suggestions = self.input.has_suggestions();
 
         match key.code {
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
@@ -201,6 +226,9 @@ impl App {
             }
             KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.should_quit = true;
+            }
+            KeyCode::Char('m') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.toggle_mouse_capture();
             }
             KeyCode::Tab if has_suggestions => {
                 self.input.apply_suggestion();
@@ -210,6 +238,15 @@ impl App {
             }
             KeyCode::Down if has_suggestions => {
                 self.input.autocomplete_down();
+            }
+            KeyCode::Enter if !key.modifiers.contains(KeyModifiers::SHIFT) && has_suggestions => {
+                let is_slash = matches!(self.input.active_popup(), input::ActivePopup::SlashCommand);
+                self.input.apply_suggestion();
+                if is_slash {
+                    // Slash command: accept and execute immediately
+                    self.handle_enter().await?;
+                }
+                // File popup: just accept the path (don't submit)
             }
             KeyCode::Enter if !key.modifiers.contains(KeyModifiers::SHIFT) => {
                 self.handle_enter().await?;
@@ -262,7 +299,7 @@ impl App {
             ParsedCommand::Help => {
                 let mut help = String::from("Local commands:\n");
                 for cmd in commands::COMMANDS {
-                    help.push_str(&format!("  {:<12} {}\n", cmd.name, cmd.description));
+                    help.push_str(&format!("  {:<14} {}\n", cmd.name, cmd.description));
                 }
                 if !self.input.agent_commands.is_empty() {
                     help.push_str("\nAgent commands:\n");
@@ -271,9 +308,10 @@ impl App {
                     }
                 }
                 help.push_str("\nKeyboard shortcuts:\n");
-                help.push_str("  Ctrl+C/Q   Quit\n");
-                help.push_str("  Esc        Cancel current request\n");
-                help.push_str("  Tab        Accept autocomplete suggestion\n");
+                help.push_str("  Ctrl+C/Q     Quit\n");
+                help.push_str("  Ctrl+M       Toggle mouse (off = copy mode)\n");
+                help.push_str("  Esc          Cancel current request\n");
+                help.push_str("  Tab          Accept autocomplete suggestion\n");
                 help.push_str("  Shift+Enter  Newline in input\n");
                 self.chat.add_system_message(help);
                 self.chat.scroll_to_bottom();
@@ -291,8 +329,24 @@ impl App {
                     self.load_session(&session_id).await?;
                 }
             }
+            ParsedCommand::Mode(mode_id) => {
+                self.set_mode(&mode_id).await?;
+            }
+            ParsedCommand::ModelSelect => {
+                self.chat.add_system_message(
+                    "Model selection is not supported by kiro-cli.\n\
+                     Use --agent <name> at startup to pick a model-specific config."
+                        .to_string(),
+                );
+            }
             ParsedCommand::Agent { name, input } => {
-                self.execute_agent_command(&name, input).await?;
+                // Build the full command string: "/name" or "/name input"
+                let command = if let Some(input_text) = input {
+                    format!("/{name} {input_text}")
+                } else {
+                    format!("/{name}")
+                };
+                self.execute_agent_command(&command).await?;
             }
             ParsedCommand::Unknown(cmd) => {
                 self.chat.add_system_message(format!(
@@ -313,21 +367,36 @@ impl App {
         self.chat.begin_streaming();
         self.chat.scroll_to_bottom();
         self.toolbar.is_busy = true;
-        self.tool_calls.clear_completed();
 
         let session_id = match &self.session_id {
             Some(id) => id.clone(),
             None => return Ok(()),
         };
 
+        // Build content blocks: user text + any @-referenced file contents
+        let mut content_blocks = vec![acp::ContentBlock::Text(acp::TextContent::new(text.clone()))];
+
+        if let Some(ref completer) = self.input.file_completer {
+            for path in file_completer::parse_file_references(&text, completer) {
+                match completer.read_file(&path) {
+                    Ok(contents) => {
+                        let file_block = format!("<file path=\"{path}\">\n{contents}\n</file>");
+                        content_blocks
+                            .push(acp::ContentBlock::Text(acp::TextContent::new(file_block)));
+                        tracing::info!("Attached @-referenced file: {path}");
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to read @-referenced file {path}: {e}");
+                    }
+                }
+            }
+        }
+
         let conn = self.conn.clone();
         let done_tx = self.prompt_done_tx.clone();
         tokio::task::spawn_local(async move {
             let result = conn
-                .prompt(acp::PromptRequest::new(
-                    session_id,
-                    vec![acp::ContentBlock::Text(acp::TextContent::new(text))],
-                ))
+                .prompt(acp::PromptRequest::new(session_id, content_blocks))
                 .await;
 
             if let Err(e) = result {
@@ -359,24 +428,17 @@ impl App {
     }
 
     /// Execute a Kiro agent command via the extension method.
-    async fn execute_agent_command(&mut self, name: &str, input: Option<String>) -> Result<()> {
+    /// The `command` should be the full slash command string, e.g. "/compact".
+    async fn execute_agent_command(&mut self, command: &str) -> Result<()> {
         let session_id = match &self.session_id {
             Some(id) => id.clone(),
             None => return Ok(()),
         };
 
-        let params = if let Some(input_text) = input {
-            serde_json::json!({
-                "sessionId": session_id.to_string(),
-                "name": name,
-                "input": input_text
-            })
-        } else {
-            serde_json::json!({
-                "sessionId": session_id.to_string(),
-                "name": name
-            })
-        };
+        let params = serde_json::json!({
+            "sessionId": session_id.to_string(),
+            "command": command
+        });
 
         let raw_params = RawValue::from_string(params.to_string())
             .map_err(|e| anyhow::anyhow!("Failed to serialize command params: {e}"))?;
@@ -387,7 +449,7 @@ impl App {
 
         let conn = self.conn.clone();
         let done_tx = self.prompt_done_tx.clone();
-        let cmd_name = name.to_string();
+        let cmd_str = command.to_string();
         tokio::task::spawn_local(async move {
             let result = conn
                 .ext_method(acp::ExtRequest::new(
@@ -396,12 +458,71 @@ impl App {
                 ))
                 .await;
 
-            if let Err(e) = result {
-                tracing::error!("Command /{cmd_name} error: {e}");
+            match result {
+                Ok(resp) => {
+                    tracing::info!("Command {cmd_str} response: {}", resp.0);
+                }
+                Err(e) => {
+                    tracing::error!("Command {cmd_str} error: {e}");
+                }
             }
             let _ = done_tx.send(());
         });
 
+        Ok(())
+    }
+
+    /// Switch the agent mode via session/set_mode.
+    async fn set_mode(&mut self, mode_id: &str) -> Result<()> {
+        if mode_id.is_empty() {
+            // List available modes
+            if self.available_modes.is_empty() {
+                self.chat.add_system_message(
+                    "No modes available. The agent did not advertise any modes.".to_string(),
+                );
+            } else {
+                let mut msg = String::from("Available modes:\n");
+                for mode in &self.available_modes {
+                    let current = self
+                        .toolbar
+                        .current_mode
+                        .as_deref()
+                        .map_or(false, |c| c == mode.id);
+                    let marker = if current { " (active)" } else { "" };
+                    msg.push_str(&format!("  {:<20} {}{}\n", mode.id, mode.name, marker));
+                }
+                msg.push_str("\nUsage: /mode <id>");
+                self.chat.add_system_message(msg);
+            }
+            return Ok(());
+        }
+
+        let session_id = match &self.session_id {
+            Some(id) => id.clone(),
+            None => {
+                self.chat
+                    .add_system_message("No active session.".to_string());
+                return Ok(());
+            }
+        };
+
+        match self
+            .conn
+            .set_session_mode(acp::SetSessionModeRequest::new(
+                session_id,
+                mode_id.to_string(),
+            ))
+            .await
+        {
+            Ok(_) => {
+                self.toolbar.current_mode = Some(mode_id.to_string());
+                self.chat.add_system_message(format!("Switched to mode: {mode_id}"));
+            }
+            Err(e) => {
+                self.chat
+                    .add_system_message(format!("Failed to set mode: {e}"));
+            }
+        }
         Ok(())
     }
 
@@ -448,17 +569,10 @@ impl App {
                 }
             }
             AppEvent::ToolCallStarted { tool_call, .. } => {
-                self.tool_calls.add_tool_call(
-                    tool_call.tool_call_id.to_string(),
-                    tool_call.title.clone(),
-                );
+                self.chat.add_tool_call(tool_call);
             }
             AppEvent::ToolCallUpdated { update, .. } => {
-                self.tool_calls.update_tool_call(
-                    &update.tool_call_id.to_string(),
-                    update.fields.status.clone(),
-                    update.fields.title.clone(),
-                );
+                self.chat.update_tool_call(update);
             }
             AppEvent::PermissionRequest { request, responder } => {
                 let state = approval::ApprovalState::from_request(&request);
@@ -479,7 +593,41 @@ impl App {
                     self.input.agent_commands.len()
                 );
             }
-            AppEvent::ModeChanged { .. } => {}
+            AppEvent::KiroCommandsAvailable { commands: kiro_cmds } => {
+                // Filter out:
+                // - Commands Cyril handles locally (/clear, /help, /quit, /load, /new)
+                // - Commands needing special UI (inputType: "selection", "panel")
+                // - Local-only commands (meta.local: true)
+                // Strip leading "/" from names (Kiro sends "/compact", but
+                // AgentCommand.display_name() adds its own "/" prefix).
+                const LOCAL_COMMANDS: &[&str] = &["/agent", "/clear", "/help", "/quit", "/load", "/new", "/model"];
+                self.input.agent_commands = kiro_cmds
+                    .into_iter()
+                    .filter(|cmd| {
+                        !LOCAL_COMMANDS.contains(&cmd.name.as_str())
+                            && cmd.is_simple_execute()
+                    })
+                    .map(|cmd| {
+                        let name = cmd.name.strip_prefix('/').unwrap_or(&cmd.name).to_string();
+                        commands::AgentCommand {
+                            name,
+                            description: cmd.description,
+                            input_hint: cmd.input_hint,
+                        }
+                    })
+                    .collect();
+                tracing::info!(
+                    "Loaded {} commands from kiro.dev/commands/available",
+                    self.input.agent_commands.len()
+                );
+            }
+            AppEvent::KiroMetadata { context_usage_pct, .. } => {
+                self.toolbar.context_usage_pct = Some(context_usage_pct);
+            }
+            AppEvent::ModeChanged { mode, .. } => {
+                let mode_id = mode.current_mode_id.to_string();
+                self.toolbar.current_mode = Some(mode_id);
+            }
             AppEvent::PlanUpdated { .. } => {}
         }
     }
@@ -505,9 +653,19 @@ impl App {
         });
     }
 
+    fn toggle_mouse_capture(&mut self) {
+        self.mouse_captured = !self.mouse_captured;
+        self.toolbar.mouse_captured = self.mouse_captured;
+        let mut stdout = std::io::stdout();
+        if self.mouse_captured {
+            let _ = crossterm::execute!(stdout, EnableMouseCapture);
+        } else {
+            let _ = crossterm::execute!(stdout, DisableMouseCapture);
+        }
+    }
+
     fn on_turn_end(&mut self) {
         self.chat.finish_streaming();
         self.toolbar.is_busy = false;
-        self.tool_calls.clear_completed();
     }
 }

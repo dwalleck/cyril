@@ -16,9 +16,9 @@ path = "src/main.rs"
 cyril-core = { version = "0.1.0-alpha.1", path = "../cyril-core" }
 agent-client-protocol = "0.9"
 tokio = { version = "1", features = ["full"] }
-ratatui = "0.29"
+ratatui = { version = "0.29", features = ["unstable-rendered-line-info"] }
 crossterm = { version = "0.28", features = ["event-stream"] }
-tui-markdown = "0.3"
+pulldown-cmark = "0.12"
 tui-textarea = "0.7"
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
@@ -26,3 +26,5 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 futures-util = "0.3"
 serde_json = "1"
+nucleo-matcher = "0.3"
+similar = "2"
