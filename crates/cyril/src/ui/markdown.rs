@@ -4,6 +4,8 @@ use ratatui::{
     text::{Line, Span},
 };
 
+use super::highlight;
+
 /// Convert a markdown string into styled ratatui Lines.
 pub fn render(markdown: &str) -> Vec<Line<'static>> {
     let options = Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES;
@@ -13,6 +15,8 @@ pub fn render(markdown: &str) -> Vec<Line<'static>> {
     let mut current_spans: Vec<Span<'static>> = Vec::new();
     let mut style_stack: Vec<Style> = vec![Style::default()];
     let mut in_code_block = false;
+    let mut code_block_content = String::new();
+    let mut code_block_lang: Option<String> = None;
     let mut list_depth: usize = 0;
     let mut in_blockquote = false;
 
@@ -42,15 +46,20 @@ pub fn render(markdown: &str) -> Vec<Line<'static>> {
                     }
                     Tag::CodeBlock(kind) => {
                         in_code_block = true;
-                        let lang = match &kind {
+                        code_block_content.clear();
+                        code_block_lang = match &kind {
                             CodeBlockKind::Fenced(lang) if !lang.is_empty() => {
-                                format!("┌─ {lang} ")
+                                Some(lang.to_string())
                             }
-                            _ => "┌──".to_string(),
+                            _ => None,
+                        };
+                        let header = match &code_block_lang {
+                            Some(lang) => format!("┌─ {lang} "),
+                            None => "┌──".to_string(),
                         };
                         flush_line(&mut lines, &mut current_spans);
                         lines.push(Line::from(Span::styled(
-                            lang,
+                            header,
                             Style::default().fg(Color::DarkGray),
                         )));
                         style_stack.push(
@@ -91,7 +100,25 @@ pub fn render(markdown: &str) -> Vec<Line<'static>> {
                 TagEnd::CodeBlock => {
                     in_code_block = false;
                     style_stack.pop();
-                    flush_code_line(&mut lines, &mut current_spans);
+
+                    let code = code_block_content.trim_end_matches('\n');
+                    let highlighted = highlight::highlight_block(
+                        code,
+                        code_block_lang.as_deref(),
+                    );
+                    for spans in highlighted {
+                        let mut line_spans = vec![Span::styled(
+                            "│ ".to_string(),
+                            Style::default().fg(Color::DarkGray),
+                        )];
+                        for (style, text) in spans {
+                            line_spans.push(Span::styled(text, style));
+                        }
+                        let mut line = Line::from(line_spans);
+                        line.style = Style::default().bg(Color::Rgb(35, 35, 35));
+                        lines.push(line);
+                    }
+
                     lines.push(Line::from(Span::styled(
                         "└──",
                         Style::default().fg(Color::DarkGray),
@@ -122,15 +149,7 @@ pub fn render(markdown: &str) -> Vec<Line<'static>> {
             Event::Text(text) => {
                 let style = current_style(&style_stack);
                 if in_code_block {
-                    for (i, code_line) in text.lines().enumerate() {
-                        if i > 0 {
-                            flush_code_line(&mut lines, &mut current_spans);
-                        }
-                        current_spans.push(Span::styled(
-                            format!("│ {code_line}"),
-                            style,
-                        ));
-                    }
+                    code_block_content.push_str(&text);
                 } else if in_blockquote {
                     // Prefix blockquote lines with a bar
                     for (i, bq_line) in text.lines().enumerate() {

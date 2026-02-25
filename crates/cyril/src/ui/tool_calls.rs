@@ -1,9 +1,13 @@
+use std::path::Path;
+
 use agent_client_protocol as acp;
 use ratatui::{
     style::{Color, Style},
     text::{Line, Span},
 };
 use similar::{ChangeTag, TextDiff};
+
+use super::highlight;
 
 /// Cached diff summary for a tool call.
 #[derive(Debug, Clone)]
@@ -203,10 +207,15 @@ pub fn render_lines(tc: &TrackedToolCall) -> Vec<Line<'static>> {
 fn render_diff_content(tc: &TrackedToolCall, lines: &mut Vec<Line<'static>>) {
     for content in &tc.tool_call.content {
         if let acp::ToolCallContent::Diff(diff) = content {
+            let ext = Path::new(&diff.path)
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|s| s.to_string());
+
             let old = diff.old_text.as_deref().unwrap_or("");
             let text_diff = TextDiff::from_lines(old, &diff.new_text);
 
-            let indent = Style::default().fg(Color::DarkGray);
+            let overflow_style = Style::default().fg(Color::DarkGray);
             let mut count = 0;
 
             for group in text_diff.grouped_ops(1) {
@@ -215,28 +224,18 @@ fn render_diff_content(tc: &TrackedToolCall, lines: &mut Vec<Line<'static>>) {
                         if count >= MAX_DIFF_LINES {
                             lines.push(Line::from(Span::styled(
                                 "      ...",
-                                indent,
+                                overflow_style,
                             )));
                             return;
                         }
 
                         let line_text = change.value().trim_end_matches('\n');
-                        let (prefix, style) = match change.tag() {
-                            ChangeTag::Delete => (
-                                " -",
-                                Style::default().fg(Color::Red),
-                            ),
-                            ChangeTag::Insert => (
-                                " +",
-                                Style::default().fg(Color::Green),
-                            ),
-                            ChangeTag::Equal => (
-                                "  ",
-                                Style::default().fg(Color::DarkGray),
-                            ),
+                        let (prefix, diff_color) = match change.tag() {
+                            ChangeTag::Delete => (" -", Color::Red),
+                            ChangeTag::Insert => (" +", Color::Green),
+                            ChangeTag::Equal => ("  ", Color::DarkGray),
                         };
 
-                        // Show old line number for context/delete, new line number for insert
                         let line_no = match change.tag() {
                             ChangeTag::Delete => change
                                 .old_index()
@@ -248,10 +247,37 @@ fn render_diff_content(tc: &TrackedToolCall, lines: &mut Vec<Line<'static>>) {
                                 .unwrap_or(0),
                         };
 
-                        lines.push(Line::from(Span::styled(
-                            format!("    {line_no:>4}{prefix} {line_text}"),
-                            style,
-                        )));
+                        let gutter = Span::styled(
+                            format!("    {line_no:>4}{prefix} "),
+                            Style::default().fg(diff_color),
+                        );
+
+                        if change.tag() == ChangeTag::Equal {
+                            lines.push(Line::from(vec![
+                                gutter,
+                                Span::styled(
+                                    line_text.to_string(),
+                                    Style::default().fg(Color::DarkGray),
+                                ),
+                            ]));
+                        } else {
+                            let highlighted = highlight::highlight_line(
+                                line_text,
+                                ext.as_deref(),
+                            );
+                            let mut spans = vec![gutter];
+                            for (style, text) in highlighted {
+                                let tinted_fg = match style.fg {
+                                    Some(fg) => highlight::tint_with_diff_color(fg, diff_color),
+                                    None => diff_color,
+                                };
+                                spans.push(Span::styled(
+                                    text,
+                                    Style::default().fg(tinted_fg),
+                                ));
+                            }
+                            lines.push(Line::from(spans));
+                        }
 
                         count += 1;
                     }
