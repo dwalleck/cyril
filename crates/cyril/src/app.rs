@@ -47,6 +47,9 @@ pub struct App {
     event_rx: mpsc::UnboundedReceiver<AppEvent>,
     prompt_done_rx: mpsc::UnboundedReceiver<()>,
     prompt_done_tx: mpsc::UnboundedSender<()>,
+    /// Channel for command responses to display in chat.
+    cmd_response_rx: mpsc::UnboundedReceiver<String>,
+    cmd_response_tx: mpsc::UnboundedSender<String>,
 }
 
 impl App {
@@ -56,6 +59,7 @@ impl App {
         event_rx: mpsc::UnboundedReceiver<AppEvent>,
     ) -> Self {
         let (prompt_done_tx, prompt_done_rx) = mpsc::unbounded_channel();
+        let (cmd_response_tx, cmd_response_rx) = mpsc::unbounded_channel();
 
         let mut input = input::InputState::default();
         let mut file_completer = file_completer::FileCompleter::new(cwd.clone());
@@ -78,6 +82,8 @@ impl App {
             event_rx,
             prompt_done_rx,
             prompt_done_tx,
+            cmd_response_rx,
+            cmd_response_tx,
         }
     }
 
@@ -124,6 +130,13 @@ impl App {
                 }
                 _ = self.prompt_done_rx.recv() => {
                     self.on_turn_end();
+                    None
+                }
+                msg = self.cmd_response_rx.recv() => {
+                    if let Some(text) = msg {
+                        self.chat.append_streaming(&text);
+                        self.chat.scroll_to_bottom();
+                    }
                     None
                 }
                 _ = tick_interval.tick() => {
@@ -449,6 +462,7 @@ impl App {
 
         let conn = self.conn.clone();
         let done_tx = self.prompt_done_tx.clone();
+        let response_tx = self.cmd_response_tx.clone();
         let cmd_str = command.to_string();
         tokio::task::spawn_local(async move {
             let result = conn
@@ -461,6 +475,12 @@ impl App {
             match result {
                 Ok(resp) => {
                     tracing::info!("Command {cmd_str} response: {}", resp.0);
+                    // Extract the "message" field from the response for display
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
+                        if let Some(msg) = val.get("message").and_then(|m| m.as_str()) {
+                            let _ = response_tx.send(msg.to_string());
+                        }
+                    }
                 }
                 Err(e) => {
                     tracing::error!("Command {cmd_str} error: {e}");
@@ -605,7 +625,7 @@ impl App {
                     .into_iter()
                     .filter(|cmd| {
                         !LOCAL_COMMANDS.contains(&cmd.name.as_str())
-                            && cmd.is_simple_execute()
+                            && cmd.is_executable()
                     })
                     .map(|cmd| {
                         let name = cmd.name.strip_prefix('/').unwrap_or(&cmd.name).to_string();
@@ -628,7 +648,9 @@ impl App {
                 let mode_id = mode.current_mode_id.to_string();
                 self.toolbar.current_mode = Some(mode_id);
             }
-            AppEvent::PlanUpdated { .. } => {}
+            AppEvent::PlanUpdated { plan, .. } => {
+                self.chat.update_plan(plan);
+            }
         }
     }
 

@@ -95,13 +95,15 @@ pub struct KiroCommandMeta {
 }
 
 impl KiroExtCommand {
-    /// Whether this command can be executed as a simple `kiro.dev/commands/execute` call.
-    pub fn is_simple_execute(&self) -> bool {
+    /// Whether this command can be executed via `kiro.dev/commands/execute`.
+    /// Panel commands (like /context, /help) are allowed — they return structured
+    /// data that we display in chat. Only selection commands and local-only
+    /// commands are excluded.
+    pub fn is_executable(&self) -> bool {
         match &self.meta {
             None => true,
             Some(meta) => {
                 !meta.local && meta.input_type.as_deref() != Some("selection")
-                    && meta.input_type.as_deref() != Some("panel")
             }
         }
     }

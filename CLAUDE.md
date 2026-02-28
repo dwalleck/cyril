@@ -64,7 +64,7 @@ All paths crossing the WSL boundary go through `win_to_wsl()` / `wsl_to_win()`. 
 
 ### Chat Model: Interleaved Content Blocks
 
-`ChatState` uses `Vec<ContentBlock>` where `ContentBlock` is either `Text(String)` or `ToolCall(TrackedToolCall)`. During streaming, blocks accumulate in `stream_blocks`; on turn end they move to `messages`. This keeps text and tool calls in chronological order.
+`ChatState` uses `Vec<ContentBlock>` where `ContentBlock` is `Text(String)`, `ToolCall(TrackedToolCall)`, or `Plan(acp::Plan)`. During streaming, blocks accumulate in `stream_blocks`; on turn end they move to `messages`. This keeps text, tool calls, and plans in chronological order. Plan updates replace the existing plan block (the agent sends the full plan each time).
 
 ### Tool Call Display (`cyril/src/ui/tool_calls.rs`)
 
@@ -76,10 +76,49 @@ Hooks intercept agent operations at the protocol boundary. Before-hooks can bloc
 
 ## ACP Protocol Notes
 
-- The `agent-client-protocol` crate (v0.9) from crates.io is the source of truth for ACP types — not the Amazon Q codebase.
-- Actual type definitions live in `agent-client-protocol-schema` (transitive dependency).
-- Kiro sends extension notifications (`kiro.dev/commands/available`, `kiro.dev/metadata`) that are parsed in `KiroClient::ext_notification()`.
+- **Protocol**: JSON-RPC 2.0 over stdio (ACP v2025-01-01)
+- The `agent-client-protocol` crate (v0.9) from crates.io is the source of truth for ACP types. Actual type definitions live in `agent-client-protocol-schema` (transitive dependency).
 - Tool calls with `kind == ToolKind::Other` are "planning" steps from the agent and are filtered from display.
+
+### Session Updates (`session/update`)
+
+Sent as `SessionNotification` containing a `SessionUpdate` enum. **Turn completion is signaled by the `session/prompt` response** (with `stop_reason: EndTurn`), not by a notification.
+
+Key variants: `AgentMessageChunk`, `AgentThoughtChunk`, `ToolCall`, `ToolCallUpdate`, `Plan`, `AvailableCommandsUpdate`, `CurrentModeUpdate`, `ConfigOptionUpdate`.
+
+### Tool Call Lifecycle
+
+Tool calls follow a three-phase lifecycle:
+1. `ToolCall` with `status: InProgress` — tool initiated
+2. `ToolCall` with `status: Pending` — title updated (e.g., "Reading file.rs:1"), awaiting permission if needed
+3. `ToolCallUpdate` with `status: Completed` — execution finished
+
+The agent may initiate multiple tool calls in parallel before waiting for permission responses.
+
+### Permission Requests (`session/request_permission`)
+
+A server-to-client request (has an `id`, expects a JSON-RPC response). The agent asks for permission before executing certain tools.
+
+- **File reads** do not require permission — they execute automatically
+- **Shell commands** require permission — options are typically `Yes(AllowOnce)`, `Always(AllowAlways)`, `No(RejectOnce)`
+- `AllowAlways` makes the agent remember the choice for the rest of the session
+
+### `session/cancel`
+
+A notification (fire-and-forget, no response expected). Cyril sends this on Esc when `is_busy`.
+
+### Kiro Extension Notifications
+
+Parsed in `KiroClient::ext_notification()`:
+- `kiro.dev/commands/available` — slash commands after session creation (multiple payload shapes supported)
+- `kiro.dev/metadata` — session metadata with `contextUsagePercentage` after each turn
+- Panel commands (`/context`) return structured JSON responses with a `message` field for display
+
+### `session/new` Response
+
+Includes more than just `session_id`:
+- `modes` — `SessionModeState` with `current_mode_id` and `available_modes` list (displayed in toolbar)
+- `config_options` — optional session configuration (currently logged only)
 
 ## Platform Constraints
 

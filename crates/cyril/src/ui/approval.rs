@@ -13,6 +13,8 @@ pub struct ApprovalState {
     #[allow(dead_code)]
     pub tool_call_id: String,
     pub title: Option<String>,
+    /// Extra detail line (file path, command, etc.) extracted from the tool call.
+    pub detail: Option<String>,
     pub options: Vec<ApprovalOption>,
     pub selected: usize,
 }
@@ -28,6 +30,10 @@ pub struct ApprovalOption {
 impl ApprovalState {
     pub fn from_request(request: &acp::RequestPermissionRequest) -> Self {
         let title = request.tool_call.fields.title.clone();
+
+        // Extract detail from the tool call: file path or command being run
+        let detail = Self::extract_detail(&request.tool_call);
+
         let options: Vec<ApprovalOption> = request
             .options
             .iter()
@@ -41,9 +47,34 @@ impl ApprovalState {
         Self {
             tool_call_id: request.tool_call.tool_call_id.to_string(),
             title,
+            detail,
             options,
             selected: 0,
         }
+    }
+
+    fn extract_detail(update: &acp::ToolCallUpdate) -> Option<String> {
+        if let Some(ref raw) = update.fields.raw_input {
+            // Shell command
+            if let Some(cmd) = raw.get("command").and_then(|v| v.as_str()) {
+                return Some(format!("Command: {cmd}"));
+            }
+            // File operation
+            if let Some(path) = raw
+                .get("file_path")
+                .or_else(|| raw.get("path"))
+                .and_then(|v| v.as_str())
+            {
+                return Some(format!("Path: {path}"));
+            }
+        }
+        // Try locations
+        if let Some(ref locations) = update.fields.locations {
+            if let Some(loc) = locations.first() {
+                return Some(format!("Path: {}", loc.path.display()));
+            }
+        }
+        None
     }
 
     pub fn select_next(&mut self) {
@@ -77,10 +108,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
 
     let inner = block.inner(popup_area);
 
+    let detail_height = if state.detail.is_some() { 2 } else { 0 };
     let chunks = Layout::vertical([
-        Constraint::Length(3), // description
-        Constraint::Min(1),   // options
-        Constraint::Length(1), // hint
+        Constraint::Length(3),            // description
+        Constraint::Length(detail_height), // detail (file path, command)
+        Constraint::Min(1),              // options
+        Constraint::Length(1),           // hint
     ])
     .split(inner);
 
@@ -93,6 +126,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
         .style(Style::default().fg(Color::White))
         .wrap(Wrap { trim: true });
     frame.render_widget(desc_widget, chunks[0]);
+
+    // Detail line (file path, command, etc.)
+    if let Some(ref detail) = state.detail {
+        let detail_widget = Paragraph::new(detail.as_str())
+            .style(Style::default().fg(Color::Cyan))
+            .wrap(Wrap { trim: true });
+        frame.render_widget(detail_widget, chunks[1]);
+    }
 
     // Options
     let mut option_lines: Vec<Line> = Vec::new();
@@ -112,7 +153,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
         )));
     }
     let options_widget = Paragraph::new(option_lines);
-    frame.render_widget(options_widget, chunks[1]);
+    frame.render_widget(options_widget, chunks[2]);
 
     // Hint
     let hint = Paragraph::new(Line::from(vec![
@@ -124,7 +165,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
         Span::raw(" cancel"),
     ]))
     .style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(hint, chunks[2]);
+    frame.render_widget(hint, chunks[3]);
 
     frame.render_widget(block, popup_area);
 }

@@ -14,6 +14,7 @@ use super::tool_calls::{self, TrackedToolCall};
 pub enum ContentBlock {
     Text(String),
     ToolCall(TrackedToolCall),
+    Plan(acp::Plan),
 }
 
 /// A single message in the chat history.
@@ -80,6 +81,17 @@ impl ChatState {
                 }
             }
         }
+    }
+
+    pub fn update_plan(&mut self, plan: acp::Plan) {
+        // Replace existing plan block or add new one
+        for block in self.stream_blocks.iter_mut().rev() {
+            if let ContentBlock::Plan(_) = block {
+                *block = ContentBlock::Plan(plan);
+                return;
+            }
+        }
+        self.stream_blocks.push(ContentBlock::Plan(plan));
     }
 
     pub fn finish_streaming(&mut self) {
@@ -221,6 +233,40 @@ fn render_blocks(blocks: &[ContentBlock], role: &Role, lines: &mut Vec<Line<'sta
                 // from the agent that lack useful info (no path, no diff).
                 if tc.kind() != acp::ToolKind::Other {
                     lines.extend(tool_calls::render_lines(tc));
+                }
+            }
+            ContentBlock::Plan(plan) => {
+                lines.push(Line::from(Span::styled(
+                    "  Plan:",
+                    Style::default()
+                        .fg(Color::Magenta)
+                        .add_modifier(Modifier::BOLD),
+                )));
+                for entry in &plan.entries {
+                    let (icon, color) = match entry.status {
+                        acp::PlanEntryStatus::Pending => ("○", Color::DarkGray),
+                        acp::PlanEntryStatus::InProgress => ("◐", Color::Yellow),
+                        acp::PlanEntryStatus::Completed => ("●", Color::Green),
+                        _ => ("?", Color::DarkGray),
+                    };
+                    let priority_marker = match entry.priority {
+                        acp::PlanEntryPriority::High => " !",
+                        _ => "",
+                    };
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            format!("    {icon} "),
+                            Style::default().fg(color),
+                        ),
+                        Span::styled(
+                            entry.content.clone(),
+                            Style::default().fg(Color::White),
+                        ),
+                        Span::styled(
+                            priority_marker.to_string(),
+                            Style::default().fg(Color::Red),
+                        ),
+                    ]));
                 }
             }
         }
