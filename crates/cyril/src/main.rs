@@ -38,16 +38,26 @@ struct Cli {
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     // Log to file to avoid TUI conflicts
-    if let Ok(file) = std::fs::OpenOptions::new().create(true).append(true).open("cyril.log") {
-        tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::INFO)
-            .with_writer(std::sync::Mutex::new(file))
-            .with_ansi(false)
-            .init();
+    match std::fs::OpenOptions::new().create(true).append(true).open("cyril.log") {
+        Ok(file) => {
+            tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::INFO)
+                .with_writer(std::sync::Mutex::new(file))
+                .with_ansi(false)
+                .init();
+        }
+        Err(e) => {
+            eprintln!("Warning: Failed to open cyril.log for logging: {e}");
+            eprintln!("Diagnostics will be unavailable for this session.");
+        }
     }
 
     let cli = Cli::parse();
-    let cwd = cli.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get cwd"));
+    let cwd = match cli.cwd {
+        Some(d) => d,
+        None => std::env::current_dir()
+            .context("Failed to determine current directory. Specify one with --cwd.")?,
+    };
 
     let local_set = tokio::task::LocalSet::new();
     local_set

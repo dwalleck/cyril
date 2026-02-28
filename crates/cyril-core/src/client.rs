@@ -66,6 +66,13 @@ impl KiroClient {
             hooks: RefCell::new(hooks),
         })
     }
+
+    /// Send an event to the TUI, logging if the receiver has been dropped.
+    fn emit(&self, event: AppEvent) {
+        if self.event_tx.send(event).is_err() {
+            tracing::error!("Event channel closed — TUI receiver is gone, events are being dropped");
+        }
+    }
 }
 
 #[async_trait(?Send)]
@@ -75,7 +82,7 @@ impl acp::Client for KiroClient {
         args: acp::RequestPermissionRequest,
     ) -> acp::Result<acp::RequestPermissionResponse> {
         let (tx, rx) = oneshot::channel();
-        let _ = self.event_tx.send(AppEvent::PermissionRequest {
+        self.emit(AppEvent::PermissionRequest {
             request: args,
             responder: tx,
         });
@@ -89,49 +96,49 @@ impl acp::Client for KiroClient {
     ) -> acp::Result<()> {
         match args.update {
             acp::SessionUpdate::AgentMessageChunk(chunk) => {
-                let _ = self.event_tx.send(AppEvent::AgentMessage {
+                self.emit(AppEvent::AgentMessage {
                     session_id: args.session_id,
                     chunk,
                 });
             }
             acp::SessionUpdate::AgentThoughtChunk(chunk) => {
-                let _ = self.event_tx.send(AppEvent::AgentThought {
+                self.emit(AppEvent::AgentThought {
                     session_id: args.session_id,
                     chunk,
                 });
             }
             acp::SessionUpdate::ToolCall(tool_call) => {
-                let _ = self.event_tx.send(AppEvent::ToolCallStarted {
+                self.emit(AppEvent::ToolCallStarted {
                     session_id: args.session_id,
                     tool_call,
                 });
             }
             acp::SessionUpdate::ToolCallUpdate(update) => {
-                let _ = self.event_tx.send(AppEvent::ToolCallUpdated {
+                self.emit(AppEvent::ToolCallUpdated {
                     session_id: args.session_id,
                     update,
                 });
             }
             acp::SessionUpdate::Plan(plan) => {
-                let _ = self.event_tx.send(AppEvent::PlanUpdated {
+                self.emit(AppEvent::PlanUpdated {
                     session_id: args.session_id,
                     plan,
                 });
             }
             acp::SessionUpdate::AvailableCommandsUpdate(commands) => {
-                let _ = self.event_tx.send(AppEvent::CommandsUpdated {
+                self.emit(AppEvent::CommandsUpdated {
                     session_id: args.session_id,
                     commands,
                 });
             }
             acp::SessionUpdate::CurrentModeUpdate(mode) => {
-                let _ = self.event_tx.send(AppEvent::ModeChanged {
+                self.emit(AppEvent::ModeChanged {
                     session_id: args.session_id,
                     mode,
                 });
             }
             acp::SessionUpdate::ConfigOptionUpdate(update) => {
-                let _ = self.event_tx.send(AppEvent::ConfigOptionsUpdated {
+                self.emit(AppEvent::ConfigOptionsUpdated {
                     session_id: args.session_id,
                     config_options: update.config_options,
                 });
@@ -155,7 +162,7 @@ impl acp::Client for KiroClient {
                         "Parsed {} Kiro commands from ext_notification",
                         commands.len()
                     );
-                    let _ = self.event_tx.send(AppEvent::KiroCommandsAvailable { commands });
+                    self.emit(AppEvent::KiroCommandsAvailable { commands });
                 }
                 Err(e) => {
                     tracing::warn!("Failed to parse kiro.dev/commands/available: {e}");
@@ -174,7 +181,7 @@ impl acp::Client for KiroClient {
             }
             match serde_json::from_str::<MetadataPayload>(args.params.get()) {
                 Ok(payload) => {
-                    let _ = self.event_tx.send(AppEvent::KiroMetadata {
+                    self.emit(AppEvent::KiroMetadata {
                         session_id: payload.session_id,
                         context_usage_pct: payload.context_usage_percentage,
                     });
@@ -250,7 +257,7 @@ impl acp::Client for KiroClient {
         let after_results = self.hooks.borrow().run_after(&after_ctx).await;
         for result in after_results {
             if let HookResult::FeedbackPrompt { text } = result {
-                let _ = self.event_tx.send(AppEvent::HookFeedback { text });
+                self.emit(AppEvent::HookFeedback { text });
             }
         }
 

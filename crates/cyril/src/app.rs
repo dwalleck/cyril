@@ -414,16 +414,19 @@ impl App {
             return Ok(());
         }
 
+        let session_id = match &self.session_id {
+            Some(id) => id.clone(),
+            None => {
+                self.chat.add_system_message("No active session. Use /new to start one.".to_string());
+                return Ok(());
+            }
+        };
+
         let text = self.input.take_input();
         self.chat.add_user_message(text.clone());
         self.chat.begin_streaming();
         self.chat.scroll_to_bottom();
         self.toolbar.is_busy = true;
-
-        let session_id = match &self.session_id {
-            Some(id) => id.clone(),
-            None => return Ok(()),
-        };
 
         // Build content blocks: user text + any @-referenced file contents
         let mut content_blocks = vec![acp::ContentBlock::Text(acp::TextContent::new(text.clone()))];
@@ -446,6 +449,7 @@ impl App {
 
         let conn = self.conn.clone();
         let done_tx = self.prompt_done_tx.clone();
+        let response_tx = self.cmd_response_tx.clone();
         tokio::task::spawn_local(async move {
             let result = conn
                 .prompt(acp::PromptRequest::new(session_id, content_blocks))
@@ -453,6 +457,7 @@ impl App {
 
             if let Err(e) = result {
                 tracing::error!("Prompt error: {e}");
+                let _ = response_tx.send(format!("[Error] Prompt failed: {e}"));
             }
             let _ = done_tx.send(());
         });
@@ -490,7 +495,10 @@ impl App {
     async fn execute_agent_command(&mut self, command: &str) -> Result<()> {
         let session_id = match &self.session_id {
             Some(id) => id.clone(),
-            None => return Ok(()),
+            None => {
+                self.chat.add_system_message("No active session. Use /new to start one.".to_string());
+                return Ok(());
+            }
         };
 
         let params = serde_json::json!({
@@ -521,14 +529,24 @@ impl App {
                 Ok(resp) => {
                     tracing::info!("Command {cmd_str} response: {}", resp.0);
                     // Extract the "message" field from the response for display
-                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
+                    let displayed = if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
                         if let Some(msg) = val.get("message").and_then(|m| m.as_str()) {
                             let _ = response_tx.send(msg.to_string());
+                            true
+                        } else {
+                            false
                         }
+                    } else {
+                        false
+                    };
+                    if !displayed {
+                        // Show the raw response so the user sees something
+                        let _ = response_tx.send(resp.0.to_string());
                     }
                 }
                 Err(e) => {
                     tracing::error!("Command {cmd_str} error: {e}");
+                    let _ = response_tx.send(format!("[Error] Command {cmd_str} failed: {e}"));
                 }
             }
             let _ = done_tx.send(());

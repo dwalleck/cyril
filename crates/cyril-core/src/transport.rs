@@ -74,11 +74,15 @@ impl AgentProcess {
                 match stderr.read(&mut buf).await {
                     Ok(0) => break,
                     Ok(n) => {
-                        if let Ok(s) = std::string::String::from_utf8(buf[..n].to_vec()) {
-                            let _ = stderr_tx.send(s);
+                        let s = String::from_utf8_lossy(&buf[..n]).into_owned();
+                        if stderr_tx.send(s).is_err() {
+                            break;
                         }
                     }
-                    Err(_) => break,
+                    Err(e) => {
+                        tracing::warn!("Stderr read error: {e}");
+                        break;
+                    }
                 }
             }
         });

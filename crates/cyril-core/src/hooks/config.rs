@@ -46,22 +46,43 @@ impl ShellHookDef {
     }
 }
 
+/// Tracks whether a hook has a glob filter and whether it compiled successfully.
+#[derive(Debug)]
+enum GlobFilter {
+    /// No pattern configured — hook matches all files.
+    MatchAll,
+    /// Pattern compiled successfully.
+    Pattern(Pattern),
+    /// Pattern failed to compile — hook matches no files (fail closed).
+    Invalid,
+}
+
 /// A configured shell hook that implements the Hook trait.
 #[derive(Debug)]
 pub struct ShellHook {
     def: ShellHookDef,
     timing: HookTiming,
     target: HookTarget,
-    glob: Option<Pattern>,
+    glob: GlobFilter,
 }
 
 impl ShellHook {
     pub fn from_def(def: ShellHookDef) -> Option<Self> {
         let (timing, target) = def.parse_event()?;
-        let glob = def
-            .pattern
-            .as_ref()
-            .and_then(|p| Pattern::new(p).ok());
+        let glob = match &def.pattern {
+            None => GlobFilter::MatchAll,
+            Some(p) => match Pattern::new(p) {
+                Ok(pattern) => GlobFilter::Pattern(pattern),
+                Err(e) => {
+                    tracing::warn!(
+                        "Hook '{}': invalid glob pattern '{}': {e} — hook will not match any files",
+                        def.name,
+                        p,
+                    );
+                    GlobFilter::Invalid
+                }
+            },
+        };
         Some(Self {
             def,
             timing,
@@ -73,7 +94,9 @@ impl ShellHook {
     /// Check if the file path matches this hook's glob pattern.
     fn matches_path(&self, path: &Path) -> bool {
         match &self.glob {
-            Some(pattern) => {
+            GlobFilter::MatchAll => true,
+            GlobFilter::Invalid => false,
+            GlobFilter::Pattern(pattern) => {
                 let path_str = path.to_string_lossy();
                 // Try matching against the full path and just the filename
                 pattern.matches(&path_str)
@@ -82,7 +105,6 @@ impl ShellHook {
                         .map(|f| pattern.matches(&f.to_string_lossy()))
                         .unwrap_or(false)
             }
-            None => true, // No pattern means match everything
         }
     }
 

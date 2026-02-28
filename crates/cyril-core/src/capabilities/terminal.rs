@@ -195,11 +195,15 @@ async fn read_stream_to_channel(
         match stream.read(&mut buf).await {
             Ok(0) => break,
             Ok(n) => {
-                if let Ok(s) = String::from_utf8(buf[..n].to_vec()) {
-                    let _ = tx.send(s);
+                let s = String::from_utf8_lossy(&buf[..n]).into_owned();
+                if tx.send(s).is_err() {
+                    break;
                 }
             }
-            Err(_) => break,
+            Err(e) => {
+                tracing::warn!("Terminal stream read error: {e}");
+                break;
+            }
         }
     }
 }
