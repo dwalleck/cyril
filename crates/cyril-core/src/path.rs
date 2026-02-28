@@ -35,8 +35,11 @@ pub enum Direction {
 ///
 /// `C:\Users\foo\bar` → `/mnt/c/Users/foo/bar`
 /// `D:\project` → `/mnt/d/project`
+/// `\\?\C:\Users\foo` → `/mnt/c/Users/foo` (extended-length prefix stripped)
 pub fn win_to_wsl(path: &Path) -> PathBuf {
     let s = path.to_string_lossy();
+    // Strip the \\?\ extended-length path prefix that canonicalize() produces on Windows.
+    let s = s.strip_prefix(r"\\?\").unwrap_or(&s);
     // Handle drive letter paths like C:\ or C:/
     if s.len() >= 2 && s.as_bytes()[1] == b':' {
         let drive = s.as_bytes()[0].to_ascii_lowercase() as char;
@@ -118,6 +121,8 @@ pub fn translate_paths_in_json(value: &mut Value, direction: Direction) {
 }
 
 fn looks_like_windows_path(s: &str) -> bool {
+    // Strip \\?\ extended-length prefix so the drive-letter check below still works.
+    let s = s.strip_prefix(r"\\?\").unwrap_or(s);
     s.len() >= 3
         && s.as_bytes()[0].is_ascii_alphabetic()
         && s.as_bytes()[1] == b':'
@@ -232,5 +237,70 @@ mod tests {
         translate_paths_in_json(&mut val, Direction::WinToWsl);
         assert_eq!(val["path"], "/mnt/c/Users/foo/file.txt");
         assert_eq!(val["count"], 42);
+    }
+
+    // ── \\?\ extended-length prefix tests ──
+
+    #[test]
+    fn test_win_to_wsl_strips_extended_prefix() {
+        assert_eq!(
+            win_to_wsl(Path::new(r"\\?\C:\Users\foo\bar")),
+            PathBuf::from("/mnt/c/Users/foo/bar")
+        );
+    }
+
+    #[test]
+    fn test_win_to_wsl_strips_extended_prefix_d_drive() {
+        assert_eq!(
+            win_to_wsl(Path::new(r"\\?\D:\project\src")),
+            PathBuf::from("/mnt/d/project/src")
+        );
+    }
+
+    #[test]
+    fn test_win_to_wsl_extended_prefix_root() {
+        assert_eq!(
+            win_to_wsl(Path::new(r"\\?\C:\")),
+            PathBuf::from("/mnt/c")
+        );
+    }
+
+    #[test]
+    fn test_roundtrip_extended_prefix() {
+        let original = r"\\?\C:\Users\dwall\repos\project\src\main.rs";
+        let wsl = win_to_wsl(Path::new(original));
+        assert_eq!(wsl, PathBuf::from("/mnt/c/Users/dwall/repos/project/src/main.rs"));
+        let back = wsl_to_win(&wsl.to_string_lossy());
+        // Roundtrip produces the canonical form without \\?\ prefix
+        assert_eq!(back, PathBuf::from(r"C:\Users\dwall\repos\project\src\main.rs"));
+    }
+
+    #[test]
+    fn test_translate_json_extended_prefix() {
+        let mut val = serde_json::json!({
+            "path": r"\\?\C:\Users\foo\file.txt",
+            "normal": r"D:\project\src\main.rs"
+        });
+        translate_paths_in_json(&mut val, Direction::WinToWsl);
+        assert_eq!(val["path"], "/mnt/c/Users/foo/file.txt");
+        assert_eq!(val["normal"], "/mnt/d/project/src/main.rs");
+    }
+
+    #[test]
+    fn test_unc_path_not_mangled() {
+        // UNC paths (\\server\share) should pass through without prefix stripping
+        let result = win_to_wsl(Path::new(r"\\server\share\file.txt"));
+        assert_eq!(result, PathBuf::from("//server/share/file.txt"));
+    }
+
+    #[test]
+    fn test_translate_json_unc_path_not_translated() {
+        let mut val = serde_json::json!({
+            "path": r"\\?\UNC\server\share\file.txt"
+        });
+        translate_paths_in_json(&mut val, Direction::WinToWsl);
+        // \\?\UNC\... after prefix stripping becomes UNC\server\share\file.txt
+        // which doesn't match drive-letter pattern, so it should not be translated
+        assert_eq!(val["path"], r"\\?\UNC\server\share\file.txt");
     }
 }
