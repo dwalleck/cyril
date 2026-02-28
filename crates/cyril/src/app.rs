@@ -16,7 +16,7 @@ use tokio::sync::oneshot;
 
 use cyril_core::event::AppEvent;
 use cyril_core::path;
-use cyril_core::session::SessionContext;
+use cyril_core::session::{CONFIG_KEY_MODEL, SessionContext};
 
 use crate::commands::{self, ParsedCommand};
 use crate::event::Event;
@@ -536,7 +536,7 @@ impl App {
                         .session
                         .current_mode_id
                         .as_deref()
-                        .map_or(false, |c| c == mode.id);
+                        .is_some_and(|c| c == mode.id);
                     let marker = if current { " (active)" } else { "" };
                     msg.push_str(&format!("  {:<20} {}{}\n", mode.id, mode.name, marker));
                 }
@@ -592,7 +592,7 @@ impl App {
         if model_id.is_empty() {
             // Query available models from Kiro
             let params = serde_json::json!({
-                "command": "model",
+                "command": CONFIG_KEY_MODEL,
                 "sessionId": session_id.to_string()
             });
             let raw_params = RawValue::from_string(params.to_string())
@@ -617,9 +617,9 @@ impl App {
             return Ok(());
         }
 
-        // Set model via set_session_config_option (spawned to avoid blocking the event loop)
-        self.toolbar.current_model = Some(model_id.to_string());
-
+        // Set model via set_session_config_option (spawned to avoid blocking the event loop).
+        // No optimistic toolbar update here — the ConfigOptionsUpdated event handler
+        // updates both session.config_options and toolbar.current_model atomically.
         let conn = self.conn.clone();
         let response_tx = self.cmd_response_tx.clone();
         let model_str = model_id.to_string();
@@ -627,7 +627,7 @@ impl App {
             match conn
                 .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
                     session_id,
-                    "model".to_string(),
+                    CONFIG_KEY_MODEL.to_string(),
                     model_str.clone(),
                 ))
                 .await
@@ -719,15 +719,15 @@ impl App {
                     None => return,
                 };
 
-                self.toolbar.current_model = Some(value.clone());
-
+                // No optimistic toolbar update — the ConfigOptionsUpdated event handler
+                // updates both session.config_options and toolbar.current_model atomically.
                 let conn = self.conn.clone();
                 let response_tx = self.cmd_response_tx.clone();
                 tokio::task::spawn_local(async move {
                     match conn
                         .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
                             session_id,
-                            "model".to_string(),
+                            CONFIG_KEY_MODEL.to_string(),
                             value.clone(),
                         ))
                         .await

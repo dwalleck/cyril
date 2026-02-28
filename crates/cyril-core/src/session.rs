@@ -2,6 +2,9 @@ use std::path::PathBuf;
 
 use agent_client_protocol as acp;
 
+/// Config option ID used by the ACP server for the current model selection.
+pub const CONFIG_KEY_MODEL: &str = "model";
+
 /// An available agent mode from the session.
 #[derive(Debug, Clone)]
 pub struct AvailableMode {
@@ -60,7 +63,7 @@ impl SessionContext {
     /// Extract the current model value from stored config options.
     pub fn current_model(&self) -> Option<String> {
         self.config_options.iter().find_map(|opt| {
-            if opt.id.to_string() == "model" {
+            if opt.id.to_string() == CONFIG_KEY_MODEL {
                 if let acp::SessionConfigKind::Select(ref select) = opt.kind {
                     return Some(select.current_value.to_string());
                 }
