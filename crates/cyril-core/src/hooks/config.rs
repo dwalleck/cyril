@@ -151,10 +151,26 @@ impl Hook for ShellHook {
                 let stderr = String::from_utf8_lossy(&output.stderr);
 
                 if !output.status.success() {
+                    let exit_info = match output.status.code() {
+                        Some(code) => format!("exit {code}"),
+                        None => {
+                            #[cfg(unix)]
+                            {
+                                use std::os::unix::process::ExitStatusExt;
+                                match output.status.signal() {
+                                    Some(sig) => format!("killed by signal {sig}"),
+                                    None => "terminated abnormally".to_string(),
+                                }
+                            }
+                            #[cfg(not(unix))]
+                            {
+                                "terminated abnormally".to_string()
+                            }
+                        }
+                    };
                     let combined = format!(
-                        "Hook '{}' failed (exit {}):\n{stdout}{stderr}",
+                        "Hook '{}' failed ({exit_info}):\n{stdout}{stderr}",
                         self.def.name,
-                        output.status.code().unwrap_or(-1)
                     );
                     tracing::warn!("{combined}");
 
