@@ -52,6 +52,8 @@ pub struct App {
     /// Channel for command responses to display in chat.
     cmd_response_rx: mpsc::UnboundedReceiver<String>,
     cmd_response_tx: mpsc::UnboundedSender<String>,
+    /// Queued hook feedback to send after the current turn completes.
+    pending_hook_feedback: Vec<String>,
 }
 
 impl App {
@@ -88,6 +90,7 @@ impl App {
             prompt_done_tx,
             cmd_response_rx,
             cmd_response_tx,
+            pending_hook_feedback: Vec::new(),
         }
     }
 
@@ -833,7 +836,7 @@ impl App {
             }
             AppEvent::HookFeedback { text } => {
                 self.chat.add_system_message(format!("[Hook] {text}"));
-                self.send_hook_feedback(text);
+                self.queue_hook_feedback(text);
             }
             AppEvent::CommandsUpdated { commands, .. } => {
                 self.input.agent_commands = commands
@@ -890,13 +893,31 @@ impl App {
         }
     }
 
-    fn send_hook_feedback(&self, text: String) {
+    fn queue_hook_feedback(&mut self, text: String) {
+        self.pending_hook_feedback.push(text);
+    }
+
+    /// Send the next queued hook feedback as a prompt. Called from on_turn_end().
+    fn flush_next_hook_feedback(&mut self) {
+        if self.pending_hook_feedback.is_empty() {
+            return;
+        }
+
         let session_id = match &self.session_id {
             Some(id) => id.clone(),
-            None => return,
+            None => {
+                self.pending_hook_feedback.clear();
+                return;
+            }
         };
 
+        let text = self.pending_hook_feedback.remove(0);
+        self.toolbar.is_busy = true;
+        self.chat.begin_streaming();
+
         let conn = self.conn.clone();
+        let done_tx = self.prompt_done_tx.clone();
+        let response_tx = self.cmd_response_tx.clone();
         tokio::task::spawn_local(async move {
             let result = conn
                 .prompt(acp::PromptRequest::new(
@@ -907,7 +928,9 @@ impl App {
 
             if let Err(e) = result {
                 tracing::error!("Hook feedback prompt error: {e}");
+                let _ = response_tx.send(format!("[Error] Hook feedback failed: {e}"));
             }
+            let _ = done_tx.send(());
         });
     }
 
@@ -925,5 +948,8 @@ impl App {
     fn on_turn_end(&mut self) {
         self.chat.finish_streaming();
         self.toolbar.is_busy = false;
+
+        // If hook feedback is queued, send the next one now that the turn is done.
+        self.flush_next_hook_feedback();
     }
 }

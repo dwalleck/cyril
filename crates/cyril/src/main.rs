@@ -95,13 +95,19 @@ async fn run_oneshot(cwd: PathBuf, prompt_text: String, agent: Option<String>) -
                         .options
                         .iter()
                         .find(|o| matches!(o.kind, acp::PermissionOptionKind::AllowOnce))
-                        .map(|o| o.option_id.clone())
-                        .unwrap_or_else(|| request.options[0].option_id.clone());
-                    let _ = responder.send(acp::RequestPermissionResponse::new(
-                        acp::RequestPermissionOutcome::Selected(
-                            acp::SelectedPermissionOutcome::new(option_id),
+                        .or_else(|| request.options.first())
+                        .map(|o| o.option_id.clone());
+
+                    let outcome = match option_id {
+                        Some(id) => acp::RequestPermissionOutcome::Selected(
+                            acp::SelectedPermissionOutcome::new(id),
                         ),
-                    ));
+                        None => {
+                            eprintln!("Warning: permission request with no options, cancelling");
+                            acp::RequestPermissionOutcome::Cancelled
+                        }
+                    };
+                    let _ = responder.send(acp::RequestPermissionResponse::new(outcome));
                 }
                 _ => {}
             }

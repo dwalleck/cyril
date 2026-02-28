@@ -85,7 +85,8 @@ impl FileCompleter {
         const MAX_SIZE: u64 = 100 * 1024;
         if metadata.len() > MAX_SIZE {
             let mut contents = std::fs::read_to_string(&full_path)?;
-            contents.truncate(MAX_SIZE as usize);
+            let end = contents.floor_char_boundary(MAX_SIZE as usize);
+            contents.truncate(end);
             contents.push_str("\n... [truncated at 100KB]");
             Ok(contents)
         } else {
@@ -105,18 +106,17 @@ pub fn find_at_trigger(lines: &[String], cursor_row: usize, cursor_col: usize) -
         return None;
     }
 
-    // Scan backward from just before the cursor looking for '@'
-    let line_bytes = line.as_bytes();
-    let end = cursor_col.min(line.len());
+    let chars: Vec<char> = line.chars().collect();
+    let end = cursor_col.min(chars.len());
 
     for i in (0..end).rev() {
-        let ch = line_bytes[i];
-        if ch == b'@' {
+        let ch = chars[i];
+        if ch == '@' {
             // '@' must be at position 0 or preceded by whitespace
-            if i > 0 && !line_bytes[i - 1].is_ascii_whitespace() {
+            if i > 0 && !chars[i - 1].is_whitespace() {
                 return None;
             }
-            let query = &line[i + 1..end];
+            let query: String = chars[i + 1..end].iter().collect();
             // Query must not contain whitespace
             if query.contains(char::is_whitespace) {
                 return None;
@@ -125,11 +125,11 @@ pub fn find_at_trigger(lines: &[String], cursor_row: usize, cursor_col: usize) -
                 row: cursor_row,
                 at_col: i,
                 cursor_col: end,
-                query: query.to_string(),
+                query,
             });
         }
         // If we hit whitespace before finding '@', no trigger
-        if ch.is_ascii_whitespace() {
+        if ch.is_whitespace() {
             return None;
         }
     }

@@ -105,8 +105,9 @@ impl TrackedToolCall {
     fn extract_command(&self) -> Option<String> {
         let raw = self.tool_call.raw_input.as_ref()?;
         let cmd = raw.get("command").and_then(|v| v.as_str())?;
-        if cmd.len() > 40 {
-            Some(format!("{}...", &cmd[..37]))
+        if cmd.chars().count() > 40 {
+            let truncated: String = cmd.chars().take(37).collect();
+            Some(format!("{truncated}..."))
         } else {
             Some(cmd.to_string())
         }

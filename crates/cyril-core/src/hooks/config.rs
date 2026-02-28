@@ -164,7 +164,11 @@ impl Hook for ShellHook {
                     if self.def.feedback {
                         return HookResult::FeedbackPrompt { text: combined };
                     }
-                    // Non-feedback hooks that fail just log and continue
+                    // Before-hooks that fail should block the operation (fail closed).
+                    // After-hooks that fail just log and continue since the operation already happened.
+                    if self.timing == HookTiming::Before {
+                        return HookResult::Blocked { reason: combined };
+                    }
                     return HookResult::Continue;
                 }
 
@@ -184,7 +188,15 @@ impl Hook for ShellHook {
             }
             Err(e) => {
                 tracing::error!("Failed to run hook '{}': {e}", self.def.name);
-                HookResult::Continue
+                // If a before-hook can't even execute, block the operation rather than
+                // silently proceeding without the safety check.
+                if self.timing == HookTiming::Before {
+                    HookResult::Blocked {
+                        reason: format!("Hook '{}' failed to execute: {e}", self.def.name),
+                    }
+                } else {
+                    HookResult::Continue
+                }
             }
         }
     }
