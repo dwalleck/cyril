@@ -144,7 +144,8 @@ async fn run_tui(cwd: PathBuf, agent: Option<String>) -> Result<()> {
         .context("Failed to create session")?;
 
     if let Some(ref modes) = session_response.modes {
-        app.set_modes(modes);
+        app.session.set_modes(modes);
+        app.toolbar.current_mode = app.session.current_mode_id.clone();
     }
 
     if let Some(config_options) = session_response.config_options {
@@ -152,10 +153,12 @@ async fn run_tui(cwd: PathBuf, agent: Option<String>) -> Result<()> {
             "NewSessionResponse config_options: {}",
             serde_json::to_string_pretty(&config_options).unwrap_or_default()
         );
-        app.set_config_options(config_options);
+        app.session.set_config_options(config_options);
+        app.toolbar.current_model = app.session.current_model();
     }
 
-    app.set_session_id(session_response.session_id);
+    app.toolbar.session_id = Some(session_response.session_id.to_string());
+    app.session.set_session_id(session_response.session_id);
 
     let result = app.run(&mut terminal).await;
 

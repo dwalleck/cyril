@@ -16,6 +16,7 @@ use tokio::sync::oneshot;
 
 use cyril_core::event::AppEvent;
 use cyril_core::path;
+use cyril_core::session::SessionContext;
 
 use crate::commands::{self, ParsedCommand};
 use crate::event::Event;
@@ -24,13 +25,6 @@ use crate::tui::Tui;
 use crate::ui::{approval, chat, input, picker, toolbar};
 
 use ratatui::layout::{Constraint, Layout};
-
-/// An available agent mode from the session.
-#[derive(Debug, Clone)]
-pub struct AvailableMode {
-    pub id: String,
-    pub name: String,
-}
 
 /// Main application state.
 pub struct App {
@@ -41,11 +35,8 @@ pub struct App {
     pub picker: Option<picker::PickerState>,
     pub should_quit: bool,
     pub mouse_captured: bool,
+    pub session: SessionContext,
     conn: Rc<acp::ClientSideConnection>,
-    cwd: PathBuf,
-    session_id: Option<acp::SessionId>,
-    available_modes: Vec<AvailableMode>,
-    config_options: Vec<acp::SessionConfigOption>,
     event_rx: mpsc::UnboundedReceiver<AppEvent>,
     prompt_done_rx: mpsc::UnboundedReceiver<()>,
     prompt_done_tx: mpsc::UnboundedSender<()>,
@@ -77,11 +68,8 @@ impl App {
             picker: None,
             should_quit: false,
             mouse_captured: true,
+            session: SessionContext::new(cwd),
             conn,
-            cwd,
-            session_id: None,
-            available_modes: Vec::new(),
-            config_options: Vec::new(),
             event_rx,
             prompt_done_rx,
             prompt_done_tx,
@@ -101,43 +89,6 @@ impl App {
                 ));
             }
         }
-    }
-
-    pub fn set_session_id(&mut self, session_id: acp::SessionId) {
-        self.toolbar.session_id = Some(session_id.to_string());
-        self.session_id = Some(session_id);
-    }
-
-    /// Store mode info from a NewSessionResponse.
-    pub fn set_modes(&mut self, modes: &acp::SessionModeState) {
-        self.toolbar.current_mode = Some(modes.current_mode_id.to_string());
-        self.available_modes = modes
-            .available_modes
-            .iter()
-            .map(|m| AvailableMode {
-                id: m.id.to_string(),
-                name: m.name.clone(),
-            })
-            .collect();
-    }
-
-    /// Store config options (model, etc.) from a session response or update notification.
-    pub fn set_config_options(&mut self, options: Vec<acp::SessionConfigOption>) {
-        self.config_options = options;
-        // Update toolbar with current model if available
-        self.toolbar.current_model = self.current_model_value();
-    }
-
-    /// Extract the current model value from stored config options.
-    fn current_model_value(&self) -> Option<String> {
-        self.config_options.iter().find_map(|opt| {
-            if opt.id.to_string() == "model" {
-                if let acp::SessionConfigKind::Select(ref select) = opt.kind {
-                    return Some(select.current_value.to_string());
-                }
-            }
-            None
-        })
     }
 
     /// Run the main event loop.
@@ -321,7 +272,7 @@ impl App {
             }
             KeyCode::Esc => {
                 if self.toolbar.is_busy {
-                    if let Some(ref session_id) = self.session_id {
+                    if let Some(ref session_id) = self.session.id {
                         let _ = self.conn.cancel(acp::CancelNotification::new(session_id.clone())).await;
                     }
                 }
@@ -426,7 +377,7 @@ impl App {
             return Ok(());
         }
 
-        let session_id = match &self.session_id {
+        let session_id = match &self.session.id {
             Some(id) => id.clone(),
             None => {
                 self.chat.add_system_message("No active session. Use /new to start one.".to_string());
@@ -479,15 +430,18 @@ impl App {
 
     /// Create a new session, replacing the current one.
     async fn create_new_session(&mut self) -> Result<()> {
-        let agent_cwd = path::to_agent(&self.cwd);
+        let agent_cwd = path::to_agent(&self.session.cwd);
         match self.conn.new_session(acp::NewSessionRequest::new(agent_cwd)).await {
             Ok(response) => {
-                self.set_session_id(response.session_id);
+                self.toolbar.session_id = Some(response.session_id.to_string());
+                self.session.set_session_id(response.session_id);
                 if let Some(ref modes) = response.modes {
-                    self.set_modes(modes);
+                    self.session.set_modes(modes);
+                    self.toolbar.current_mode = self.session.current_mode_id.clone();
                 }
                 if let Some(config_options) = response.config_options {
-                    self.set_config_options(config_options);
+                    self.session.set_config_options(config_options);
+                    self.toolbar.current_model = self.session.current_model();
                 }
                 self.chat = chat::ChatState::default();
                 self.chat
@@ -505,7 +459,7 @@ impl App {
     /// Execute a Kiro agent command via the extension method.
     /// The `command` should be the full slash command string, e.g. "/compact".
     async fn execute_agent_command(&mut self, command: &str) -> Result<()> {
-        let session_id = match &self.session_id {
+        let session_id = match &self.session.id {
             Some(id) => id.clone(),
             None => {
                 self.chat.add_system_message("No active session. Use /new to start one.".to_string());
@@ -571,16 +525,16 @@ impl App {
     async fn set_mode(&mut self, mode_id: &str) -> Result<()> {
         if mode_id.is_empty() {
             // List available modes
-            if self.available_modes.is_empty() {
+            if self.session.available_modes.is_empty() {
                 self.chat.add_system_message(
                     "No modes available. The agent did not advertise any modes.".to_string(),
                 );
             } else {
                 let mut msg = String::from("Available modes:\n");
-                for mode in &self.available_modes {
+                for mode in &self.session.available_modes {
                     let current = self
-                        .toolbar
-                        .current_mode
+                        .session
+                        .current_mode_id
                         .as_deref()
                         .map_or(false, |c| c == mode.id);
                     let marker = if current { " (active)" } else { "" };
@@ -592,7 +546,7 @@ impl App {
             return Ok(());
         }
 
-        let session_id = match &self.session_id {
+        let session_id = match &self.session.id {
             Some(id) => id.clone(),
             None => {
                 self.chat
@@ -610,6 +564,7 @@ impl App {
             .await
         {
             Ok(_) => {
+                self.session.current_mode_id = Some(mode_id.to_string());
                 self.toolbar.current_mode = Some(mode_id.to_string());
                 self.chat.add_system_message(format!("Switched to mode: {mode_id}"));
             }
@@ -625,7 +580,7 @@ impl App {
     /// No arg: query `_kiro.dev/commands/options` for available models.
     /// With arg: execute `/model <id>` via `_kiro.dev/commands/execute`.
     async fn set_model(&mut self, model_id: &str) -> Result<()> {
-        let session_id = match &self.session_id {
+        let session_id = match &self.session.id {
             Some(id) => id.clone(),
             None => {
                 self.chat
@@ -759,7 +714,7 @@ impl App {
 
         match state.action {
             picker::PickerAction::SetModel => {
-                let session_id = match &self.session_id {
+                let session_id = match &self.session.id {
                     Some(id) => id.clone(),
                     None => return,
                 };
@@ -793,7 +748,7 @@ impl App {
 
     /// Load a previous session by ID.
     async fn load_session(&mut self, session_id_str: &str) -> Result<()> {
-        let agent_cwd = path::to_agent(&self.cwd);
+        let agent_cwd = path::to_agent(&self.session.cwd);
         let session_id = acp::SessionId::from(session_id_str.to_string());
 
         match self
@@ -805,7 +760,8 @@ impl App {
             .await
         {
             Ok(_) => {
-                self.set_session_id(session_id);
+                self.toolbar.session_id = Some(session_id.to_string());
+                self.session.set_session_id(session_id);
                 self.chat = chat::ChatState::default();
                 self.chat.add_system_message(format!(
                     "Loaded session: {session_id_str}"
@@ -887,17 +843,20 @@ impl App {
                 );
             }
             AppEvent::KiroMetadata { context_usage_pct, .. } => {
+                self.session.context_usage_pct = Some(context_usage_pct);
                 self.toolbar.context_usage_pct = Some(context_usage_pct);
             }
             AppEvent::ModeChanged { mode, .. } => {
                 let mode_id = mode.current_mode_id.to_string();
+                self.session.current_mode_id = Some(mode_id.clone());
                 self.toolbar.current_mode = Some(mode_id);
             }
             AppEvent::PlanUpdated { plan, .. } => {
                 self.chat.update_plan(plan);
             }
             AppEvent::ConfigOptionsUpdated { config_options, .. } => {
-                self.set_config_options(config_options);
+                self.session.set_config_options(config_options);
+                self.toolbar.current_model = self.session.current_model();
             }
         }
     }
@@ -912,7 +871,7 @@ impl App {
             return;
         }
 
-        let session_id = match &self.session_id {
+        let session_id = match &self.session.id {
             Some(id) => id.clone(),
             None => {
                 self.pending_hook_feedback.clear();
