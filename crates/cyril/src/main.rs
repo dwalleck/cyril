@@ -65,9 +65,9 @@ async fn main() -> Result<()> {
 async fn run_oneshot(cwd: PathBuf, prompt_text: String, agent: Option<String>) -> Result<()> {
     let (conn, event_rx, _agent) = connect(agent.as_deref()).await?;
 
-    let wsl_cwd = path::win_to_wsl(&cwd);
+    let agent_cwd = path::to_agent(&cwd);
     let session_response = conn
-        .new_session(acp::NewSessionRequest::new(wsl_cwd))
+        .new_session(acp::NewSessionRequest::new(agent_cwd))
         .await
         .context("Failed to create session")?;
 
@@ -120,9 +120,9 @@ async fn run_tui(cwd: PathBuf, agent: Option<String>) -> Result<()> {
     let mut app = app::App::new(conn.clone(), cwd.clone(), event_rx);
     app.toolbar.selected_agent = agent;
 
-    let wsl_cwd = path::win_to_wsl(&cwd);
+    let agent_cwd = path::to_agent(&cwd);
     let session_response = conn
-        .new_session(acp::NewSessionRequest::new(wsl_cwd))
+        .new_session(acp::NewSessionRequest::new(agent_cwd))
         .await
         .context("Failed to create session")?;
 
@@ -130,11 +130,12 @@ async fn run_tui(cwd: PathBuf, agent: Option<String>) -> Result<()> {
         app.set_modes(modes);
     }
 
-    if let Some(ref config_options) = session_response.config_options {
+    if let Some(config_options) = session_response.config_options {
         tracing::info!(
             "NewSessionResponse config_options: {}",
-            serde_json::to_string_pretty(config_options).unwrap_or_default()
+            serde_json::to_string_pretty(&config_options).unwrap_or_default()
         );
+        app.set_config_options(config_options);
     }
 
     app.set_session_id(session_response.session_id);
@@ -146,7 +147,7 @@ async fn run_tui(cwd: PathBuf, agent: Option<String>) -> Result<()> {
     result
 }
 
-/// Connect to the WSL agent and perform the ACP handshake.
+/// Connect to the agent subprocess and perform the ACP handshake.
 /// Returns (connection, event_rx, agent_handle).
 /// The agent handle must be kept alive for the duration of the session.
 async fn connect(

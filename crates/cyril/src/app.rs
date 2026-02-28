@@ -21,7 +21,7 @@ use crate::commands::{self, ParsedCommand};
 use crate::event::Event;
 use crate::file_completer;
 use crate::tui::Tui;
-use crate::ui::{approval, chat, input, toolbar};
+use crate::ui::{approval, chat, input, picker, toolbar};
 
 use ratatui::layout::{Constraint, Layout};
 
@@ -38,12 +38,14 @@ pub struct App {
     pub input: input::InputState,
     pub toolbar: toolbar::ToolbarState,
     pub approval: Option<(approval::ApprovalState, oneshot::Sender<acp::RequestPermissionResponse>)>,
+    pub picker: Option<picker::PickerState>,
     pub should_quit: bool,
     pub mouse_captured: bool,
     conn: Rc<acp::ClientSideConnection>,
     cwd: PathBuf,
     session_id: Option<acp::SessionId>,
     available_modes: Vec<AvailableMode>,
+    config_options: Vec<acp::SessionConfigOption>,
     event_rx: mpsc::UnboundedReceiver<AppEvent>,
     prompt_done_rx: mpsc::UnboundedReceiver<()>,
     prompt_done_tx: mpsc::UnboundedSender<()>,
@@ -73,12 +75,14 @@ impl App {
             input,
             toolbar: toolbar::ToolbarState { mouse_captured: true, ..Default::default() },
             approval: None,
+            picker: None,
             should_quit: false,
             mouse_captured: true,
             conn,
             cwd,
             session_id: None,
             available_modes: Vec::new(),
+            config_options: Vec::new(),
             event_rx,
             prompt_done_rx,
             prompt_done_tx,
@@ -103,6 +107,25 @@ impl App {
                 name: m.name.clone(),
             })
             .collect();
+    }
+
+    /// Store config options (model, etc.) from a session response or update notification.
+    pub fn set_config_options(&mut self, options: Vec<acp::SessionConfigOption>) {
+        self.config_options = options;
+        // Update toolbar with current model if available
+        self.toolbar.current_model = self.current_model_value();
+    }
+
+    /// Extract the current model value from stored config options.
+    fn current_model_value(&self) -> Option<String> {
+        self.config_options.iter().find_map(|opt| {
+            if opt.id.to_string() == "model" {
+                if let acp::SessionConfigKind::Select(ref select) = opt.kind {
+                    return Some(select.current_value.to_string());
+                }
+            }
+            None
+        })
     }
 
     /// Run the main event loop.
@@ -174,9 +197,11 @@ impl App {
         let pct = self.toolbar.context_usage_pct.unwrap_or(0.0);
         toolbar::render_context_bar(frame, chunks[3], pct);
 
-        // Approval overlay on top
+        // Overlay popups
         if let Some((ref approval_state, _)) = self.approval {
             approval::render(frame, area, approval_state);
+        } else if let Some(ref picker_state) = self.picker {
+            picker::render(frame, area, picker_state);
         }
     }
 
@@ -224,6 +249,24 @@ impl App {
                             acp::RequestPermissionOutcome::Cancelled,
                         ));
                     }
+                }
+                _ => {}
+            }
+            return Ok(());
+        }
+
+        // Handle picker mode
+        if let Some(ref mut picker_state) = self.picker {
+            match key.code {
+                KeyCode::Up => picker_state.select_prev(),
+                KeyCode::Down => picker_state.select_next(),
+                KeyCode::Enter => {
+                    if let Some(picker_state) = self.picker.take() {
+                        self.handle_picker_confirm(picker_state);
+                    }
+                }
+                KeyCode::Esc => {
+                    self.picker = None;
                 }
                 _ => {}
             }
@@ -345,12 +388,8 @@ impl App {
             ParsedCommand::Mode(mode_id) => {
                 self.set_mode(&mode_id).await?;
             }
-            ParsedCommand::ModelSelect => {
-                self.chat.add_system_message(
-                    "Model selection is not supported by kiro-cli.\n\
-                     Use --agent <name> at startup to pick a model-specific config."
-                        .to_string(),
-                );
+            ParsedCommand::ModelSelect(model_id) => {
+                self.set_model(&model_id).await?;
             }
             ParsedCommand::Agent { name, input } => {
                 // Build the full command string: "/name" or "/name input"
@@ -423,10 +462,16 @@ impl App {
 
     /// Create a new session, replacing the current one.
     async fn create_new_session(&mut self) -> Result<()> {
-        let wsl_cwd = path::win_to_wsl(&self.cwd);
-        match self.conn.new_session(acp::NewSessionRequest::new(wsl_cwd)).await {
+        let agent_cwd = path::to_agent(&self.cwd);
+        match self.conn.new_session(acp::NewSessionRequest::new(agent_cwd)).await {
             Ok(response) => {
                 self.set_session_id(response.session_id);
+                if let Some(ref modes) = response.modes {
+                    self.set_modes(modes);
+                }
+                if let Some(config_options) = response.config_options {
+                    self.set_config_options(config_options);
+                }
                 self.chat = chat::ChatState::default();
                 self.chat
                     .add_system_message("New session started.".to_string());
@@ -546,16 +591,186 @@ impl App {
         Ok(())
     }
 
+    /// Switch the model via Kiro extension commands.
+    /// No arg: query `_kiro.dev/commands/options` for available models.
+    /// With arg: execute `/model <id>` via `_kiro.dev/commands/execute`.
+    async fn set_model(&mut self, model_id: &str) -> Result<()> {
+        let session_id = match &self.session_id {
+            Some(id) => id.clone(),
+            None => {
+                self.chat
+                    .add_system_message("No active session.".to_string());
+                return Ok(());
+            }
+        };
+
+        if model_id.is_empty() {
+            // Query available models from Kiro
+            let params = serde_json::json!({
+                "command": "model",
+                "sessionId": session_id.to_string()
+            });
+            let raw_params = RawValue::from_string(params.to_string())
+                .map_err(|e| anyhow::anyhow!("Failed to serialize params: {e}"))?;
+
+            match self
+                .conn
+                .ext_method(acp::ExtRequest::new(
+                    "kiro.dev/commands/options",
+                    Arc::from(raw_params),
+                ))
+                .await
+            {
+                Ok(resp) => {
+                    self.open_model_picker(resp.0.get());
+                }
+                Err(e) => {
+                    self.chat
+                        .add_system_message(format!("Failed to query models: {e}"));
+                }
+            }
+            return Ok(());
+        }
+
+        // Set model via set_session_config_option (spawned to avoid blocking the event loop)
+        self.toolbar.current_model = Some(model_id.to_string());
+
+        let conn = self.conn.clone();
+        let response_tx = self.cmd_response_tx.clone();
+        let model_str = model_id.to_string();
+        tokio::task::spawn_local(async move {
+            match conn
+                .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
+                    session_id,
+                    "model".to_string(),
+                    model_str.clone(),
+                ))
+                .await
+            {
+                Ok(_) => {
+                    tracing::info!("Set model to: {model_str}");
+                    let _ = response_tx.send(format!("Switched to model: {model_str}"));
+                }
+                Err(e) => {
+                    tracing::error!("Failed to set model: {e}");
+                    let _ = response_tx.send(format!("Failed to set model: {e}"));
+                }
+            }
+        });
+        Ok(())
+    }
+
+    /// Parse model options from a `_kiro.dev/commands/options` response and open a picker.
+    fn open_model_picker(&mut self, raw_json: &str) {
+        let val: serde_json::Value = match serde_json::from_str(raw_json) {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::warn!("Failed to parse model options: {e}");
+                self.chat
+                    .add_system_message("Failed to parse model options.".to_string());
+                return;
+            }
+        };
+
+        // Response is typically { "options": [{ "value": "...", "name": "..." }, ...] }
+        // or possibly a bare array.
+        let options = val
+            .get("options")
+            .and_then(|v| v.as_array())
+            .or_else(|| val.as_array());
+
+        match options {
+            Some(opts) if !opts.is_empty() => {
+                let picker_options: Vec<picker::PickerOption> = opts
+                    .iter()
+                    .map(|opt| {
+                        let value = opt
+                            .get("value")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("?")
+                            .to_string();
+                        let name = opt
+                            .get("name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(&value)
+                            .to_string();
+                        let active = opt
+                            .get("current")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                        picker::PickerOption {
+                            label: name,
+                            value,
+                            active,
+                        }
+                    })
+                    .collect();
+                self.picker = Some(picker::PickerState::new(
+                    "Select Model",
+                    picker_options,
+                    picker::PickerAction::SetModel,
+                ));
+            }
+            _ => {
+                tracing::info!("Model options raw response: {raw_json}");
+                self.chat.add_system_message(
+                    "No model options returned. Try /model <model-id> directly.".to_string(),
+                );
+            }
+        }
+    }
+
+    /// Handle a confirmed picker selection.
+    fn handle_picker_confirm(&mut self, state: picker::PickerState) {
+        let value = match state.selected_value() {
+            Some(v) => v.to_string(),
+            None => return,
+        };
+
+        match state.action {
+            picker::PickerAction::SetModel => {
+                let session_id = match &self.session_id {
+                    Some(id) => id.clone(),
+                    None => return,
+                };
+
+                self.toolbar.current_model = Some(value.clone());
+
+                let conn = self.conn.clone();
+                let response_tx = self.cmd_response_tx.clone();
+                tokio::task::spawn_local(async move {
+                    match conn
+                        .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
+                            session_id,
+                            "model".to_string(),
+                            value.clone(),
+                        ))
+                        .await
+                    {
+                        Ok(_) => {
+                            tracing::info!("Set model to: {value}");
+                            let _ = response_tx.send(format!("Switched to model: {value}"));
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to set model: {e}");
+                            let _ = response_tx.send(format!("Failed to set model: {e}"));
+                        }
+                    }
+                });
+            }
+        }
+    }
+
     /// Load a previous session by ID.
     async fn load_session(&mut self, session_id_str: &str) -> Result<()> {
-        let wsl_cwd = path::win_to_wsl(&self.cwd);
+        let agent_cwd = path::to_agent(&self.cwd);
         let session_id = acp::SessionId::from(session_id_str.to_string());
 
         match self
             .conn
             .load_session(acp::LoadSessionRequest::new(
                 session_id.clone(),
-                wsl_cwd,
+                agent_cwd,
             ))
             .await
         {
@@ -650,6 +865,9 @@ impl App {
             }
             AppEvent::PlanUpdated { plan, .. } => {
                 self.chat.update_plan(plan);
+            }
+            AppEvent::ConfigOptionsUpdated { config_options, .. } => {
+                self.set_config_options(config_options);
             }
         }
     }

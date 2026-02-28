@@ -18,6 +18,8 @@ pub struct ToolbarState {
     pub selected_agent: Option<String>,
     /// Current agent mode (e.g. "kiro_default", "dotnet-dev").
     pub current_mode: Option<String>,
+    /// Current model (e.g. "claude-sonnet-4-6").
+    pub current_model: Option<String>,
     /// Whether mouse capture is active (false = copy mode).
     pub mouse_captured: bool,
 }
@@ -48,6 +50,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
         spans.push(Span::styled(
             format!("[{mode}]"),
             Style::default().fg(Color::Magenta),
+        ));
+    }
+
+    if let Some(ref model) = state.current_model {
+        spans.push(Span::raw(" "));
+        spans.push(Span::styled(
+            format!("({model})"),
+            Style::default().fg(Color::Blue),
         ));
     }
 

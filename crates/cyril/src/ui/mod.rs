@@ -5,3 +5,4 @@ pub mod toolbar;
 pub mod tool_calls;
 pub mod approval;
 pub mod markdown;
+pub mod picker;

@@ -130,6 +130,12 @@ impl acp::Client for KiroClient {
                     mode,
                 });
             }
+            acp::SessionUpdate::ConfigOptionUpdate(update) => {
+                let _ = self.event_tx.send(AppEvent::ConfigOptionsUpdated {
+                    session_id: args.session_id,
+                    config_options: update.config_options,
+                });
+            }
             _ => {
                 tracing::debug!("Unhandled session notification variant");
             }
@@ -186,13 +192,13 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::ReadTextFileRequest,
     ) -> acp::Result<acp::ReadTextFileResponse> {
-        let win_path = path::wsl_to_win(&args.path.to_string_lossy());
-        tracing::info!("fs.readTextFile: {} -> {}", args.path.display(), win_path.display());
+        let native_path = path::to_native(&args.path);
+        tracing::info!("fs.readTextFile: {} -> {}", args.path.display(), native_path.display());
 
         let hook_ctx = HookContext {
             target: HookTarget::FsRead,
             timing: HookTiming::Before,
-            path: Some(win_path.clone()),
+            path: Some(native_path.clone()),
             content: None,
             command: None,
         };
@@ -200,7 +206,7 @@ impl acp::Client for KiroClient {
             return Err(internal_err(reason));
         }
 
-        let content = capabilities::fs::read_text_file(&win_path)
+        let content = capabilities::fs::read_text_file(&native_path)
             .await
             .map_err(|e| internal_err(e.to_string()))?;
 
@@ -211,15 +217,15 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::WriteTextFileRequest,
     ) -> acp::Result<acp::WriteTextFileResponse> {
-        let win_path = path::wsl_to_win(&args.path.to_string_lossy());
-        tracing::info!("fs.writeTextFile: {} -> {}", args.path.display(), win_path.display());
+        let native_path = path::to_native(&args.path);
+        tracing::info!("fs.writeTextFile: {} -> {}", args.path.display(), native_path.display());
 
         let mut content = args.content.clone();
 
         let hook_ctx = HookContext {
             target: HookTarget::FsWrite,
             timing: HookTiming::Before,
-            path: Some(win_path.clone()),
+            path: Some(native_path.clone()),
             content: Some(content.clone()),
             command: None,
         };
@@ -229,7 +235,7 @@ impl acp::Client for KiroClient {
             _ => {}
         }
 
-        capabilities::fs::write_text_file(&win_path, &content)
+        capabilities::fs::write_text_file(&native_path, &content)
             .await
             .map_err(|e| internal_err(e.to_string()))?;
 
@@ -237,7 +243,7 @@ impl acp::Client for KiroClient {
         let after_ctx = HookContext {
             target: HookTarget::FsWrite,
             timing: HookTiming::After,
-            path: Some(win_path),
+            path: Some(native_path),
             content: Some(content),
             command: None,
         };

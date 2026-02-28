@@ -7,7 +7,8 @@ use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 pub type CompatStdin = tokio_util::compat::Compat<tokio::process::ChildStdin>;
 pub type CompatStdout = tokio_util::compat::Compat<tokio::process::ChildStdout>;
 
-/// Wraps the WSL agent subprocess and its compat-wrapped pipes.
+/// Wraps the agent subprocess and its compat-wrapped pipes.
+/// On Windows, spawns via `wsl kiro-cli acp`; on Linux, runs `kiro-cli acp` directly.
 pub struct AgentProcess {
     _child: Child,
     stdin: Option<CompatStdin>,
@@ -16,25 +17,36 @@ pub struct AgentProcess {
 }
 
 impl AgentProcess {
-    /// Spawn `wsl kiro-cli acp` and return compat-wrapped stdin/stdout
+    /// Spawn the kiro-cli ACP subprocess and return compat-wrapped stdin/stdout
     /// suitable for passing to `ClientSideConnection::new`.
+    /// On Windows, runs via `wsl kiro-cli acp`; on Linux, runs `kiro-cli acp` directly.
     /// If `agent` is provided, passes `--agent <name>` to kiro-cli.
     pub fn spawn(agent: Option<&str>) -> Result<Self> {
-        let mut args = vec!["kiro-cli", "acp"];
-        let agent_flag;
+        let mut cmd = if cfg!(target_os = "windows") {
+            let mut c = Command::new("wsl");
+            c.arg("kiro-cli");
+            c
+        } else {
+            Command::new("kiro-cli")
+        };
+
+        cmd.arg("acp");
+
         if let Some(name) = agent {
-            agent_flag = name.to_string();
-            args.push("--agent");
-            args.push(&agent_flag);
+            cmd.args(["--agent", name]);
         }
-        let mut child = Command::new("wsl")
-            .args(&args)
+
+        let mut child = cmd
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true)
             .spawn()
-            .context("Failed to spawn `wsl kiro-cli acp`. Is WSL installed and kiro-cli available?")?;
+            .context(if cfg!(target_os = "windows") {
+                "Failed to spawn `wsl kiro-cli acp`. Is WSL installed and kiro-cli available?"
+            } else {
+                "Failed to spawn `kiro-cli acp`. Is kiro-cli installed and on PATH?"
+            })?;
 
         let stdin = child
             .stdin
@@ -112,9 +124,14 @@ impl AgentProcess {
         if let Some(status) = self.try_wait()? {
             let stderr = self.drain_stderr();
             if stderr.contains("not logged in") || stderr.contains("please log in") {
+                let login_cmd = if cfg!(target_os = "windows") {
+                    "wsl kiro-cli login"
+                } else {
+                    "kiro-cli login"
+                };
                 bail!(
                     "kiro-cli requires authentication.\n\
-                     Run `wsl kiro-cli login` first, then try again.\n\n\
+                     Run `{login_cmd}` first, then try again.\n\n\
                      Agent stderr: {stderr}"
                 );
             }

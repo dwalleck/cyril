@@ -63,7 +63,7 @@ pub const COMMANDS: &[SlashCommand] = &[
     },
     SlashCommand {
         name: "/model",
-        description: "Select model (not supported by kiro-cli)",
+        description: "Switch model (e.g. /model claude-sonnet-4-6)",
         takes_arg: true,
     },
     SlashCommand {
@@ -86,7 +86,7 @@ pub enum ParsedCommand {
     Help,
     Load(String),
     Mode(String),
-    ModelSelect,
+    ModelSelect(String),
     New,
     Quit,
     /// Agent-provided command (name, optional input).
@@ -111,7 +111,7 @@ pub fn parse_command(input: &str, agent_commands: &[AgentCommand]) -> Option<Par
         "/help" => return Some(ParsedCommand::Help),
         "/load" => return Some(ParsedCommand::Load(arg)),
         "/mode" => return Some(ParsedCommand::Mode(arg)),
-        "/model" => return Some(ParsedCommand::ModelSelect),
+        "/model" => return Some(ParsedCommand::ModelSelect(arg)),
         "/new" => return Some(ParsedCommand::New),
         "/quit" => return Some(ParsedCommand::Quit),
         _ => {}

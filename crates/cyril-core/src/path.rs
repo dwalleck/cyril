@@ -2,6 +2,28 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+/// Translate an agent-provided path to the native filesystem path.
+/// On Windows (WSL bridge), converts `/mnt/c/...` → `C:\...`.
+/// On Linux (direct), returns the path unchanged.
+pub fn to_native(path: &Path) -> PathBuf {
+    if cfg!(target_os = "windows") {
+        wsl_to_win(&path.to_string_lossy())
+    } else {
+        path.to_path_buf()
+    }
+}
+
+/// Translate a native filesystem path to an agent-compatible path.
+/// On Windows (WSL bridge), converts `C:\...` → `/mnt/c/...`.
+/// On Linux (direct), returns the path unchanged.
+pub fn to_agent(path: &Path) -> PathBuf {
+    if cfg!(target_os = "windows") {
+        win_to_wsl(path)
+    } else {
+        path.to_path_buf()
+    }
+}
+
 /// Direction of path translation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {

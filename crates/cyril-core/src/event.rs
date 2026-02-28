@@ -52,6 +52,12 @@ pub enum AppEvent {
         plan: acp::Plan,
     },
 
+    /// Config options updated (model, etc.).
+    ConfigOptionsUpdated {
+        session_id: acp::SessionId,
+        config_options: Vec<acp::SessionConfigOption>,
+    },
+
     /// Hook feedback to inject as a follow-up prompt to the agent.
     HookFeedback {
         text: String,
