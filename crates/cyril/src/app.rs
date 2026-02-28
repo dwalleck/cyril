@@ -66,10 +66,7 @@ impl App {
         let (cmd_response_tx, cmd_response_rx) = mpsc::unbounded_channel();
 
         let mut input = input::InputState::default();
-        let mut file_completer = file_completer::FileCompleter::new(cwd.clone());
-        if let Err(e) = file_completer.load_files() {
-            tracing::warn!("Failed to load project files: {e}");
-        }
+        let file_completer = file_completer::FileCompleter::new(cwd.clone());
         input.file_completer = Some(file_completer);
 
         Self {
@@ -91,6 +88,18 @@ impl App {
             cmd_response_rx,
             cmd_response_tx,
             pending_hook_feedback: Vec::new(),
+        }
+    }
+
+    /// Load project files for @-completion asynchronously.
+    pub async fn load_project_files(&mut self) {
+        if let Some(ref mut completer) = self.input.file_completer {
+            if let Err(e) = completer.load_files().await {
+                tracing::warn!("Failed to load project files: {e}");
+                self.chat.add_system_message(format!(
+                    "@-file completion unavailable: {e}"
+                ));
+            }
         }
     }
 

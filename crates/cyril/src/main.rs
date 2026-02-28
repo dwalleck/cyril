@@ -135,6 +135,7 @@ async fn run_tui(cwd: PathBuf, agent: Option<String>) -> Result<()> {
     let mut terminal = tui::init()?;
     let mut app = app::App::new(conn.clone(), cwd.clone(), event_rx);
     app.toolbar.selected_agent = agent;
+    app.load_project_files().await;
 
     let agent_cwd = path::to_agent(&cwd);
     let session_response = conn

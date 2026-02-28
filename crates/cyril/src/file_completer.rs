@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
@@ -21,6 +22,7 @@ pub struct AtContext {
 pub struct FileCompleter {
     project_root: PathBuf,
     files: Vec<String>,
+    file_set: HashSet<String>,
     matcher: Matcher,
 }
 
@@ -29,19 +31,25 @@ impl FileCompleter {
         Self {
             project_root,
             files: Vec::new(),
+            file_set: HashSet::new(),
             matcher: Matcher::new(Config::DEFAULT.match_paths()),
         }
     }
 
     /// Populate the file cache by running `git ls-files` in the project root.
-    pub fn load_files(&mut self) -> anyhow::Result<()> {
-        let output = std::process::Command::new("git")
+    pub async fn load_files(&mut self) -> anyhow::Result<()> {
+        let output = tokio::process::Command::new("git")
             .args(["ls-files"])
             .current_dir(&self.project_root)
-            .output()?;
+            .output()
+            .await?;
 
         if !output.status.success() {
-            anyhow::bail!("git ls-files failed: {}", String::from_utf8_lossy(&output.stderr));
+            anyhow::bail!(
+                "git ls-files failed in {}: {}",
+                self.project_root.display(),
+                String::from_utf8_lossy(&output.stderr)
+            );
         }
 
         self.files = String::from_utf8_lossy(&output.stdout)
@@ -49,6 +57,7 @@ impl FileCompleter {
             .filter(|l| !l.is_empty())
             .map(|l| l.to_string())
             .collect();
+        self.file_set = self.files.iter().cloned().collect();
 
         tracing::info!("Loaded {} project files for @-completion", self.files.len());
         Ok(())
@@ -75,7 +84,7 @@ impl FileCompleter {
 
     /// Check if a path exists in the cached file list.
     pub fn file_exists(&self, path: &str) -> bool {
-        self.files.iter().any(|f| f == path)
+        self.file_set.contains(path)
     }
 
     /// Read a file relative to the project root. Caps content at 100KB.
@@ -140,6 +149,7 @@ pub fn find_at_trigger(lines: &[String], cursor_row: usize, cursor_col: usize) -
 /// Scan the full prompt text for `@filepath` tokens, validate each exists, return valid paths.
 pub fn parse_file_references(text: &str, completer: &FileCompleter) -> Vec<String> {
     let mut refs = Vec::new();
+    let mut seen = HashSet::new();
 
     for line in text.lines() {
         let chars: Vec<char> = line.chars().collect();
@@ -157,7 +167,7 @@ pub fn parse_file_references(text: &str, completer: &FileCompleter) -> Vec<Strin
                     }
                     if end > start {
                         let path: String = chars[start..end].iter().collect();
-                        if completer.file_exists(&path) && !refs.contains(&path) {
+                        if completer.file_exists(&path) && seen.insert(path.clone()) {
                             refs.push(path);
                         }
                     }

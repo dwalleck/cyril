@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use agent_client_protocol as acp;
 use ratatui::{
     Frame,
@@ -32,10 +34,12 @@ pub enum Role {
     System,
 }
 
+const MAX_MESSAGES: usize = 500;
+
 /// State for the chat display.
 #[derive(Debug, Default)]
 pub struct ChatState {
-    pub messages: Vec<ChatMessage>,
+    pub messages: VecDeque<ChatMessage>,
     /// Ordered content blocks being streamed (text interleaved with tool calls).
     pub stream_blocks: Vec<ContentBlock>,
     /// Whether the agent is currently streaming.
@@ -46,10 +50,11 @@ pub struct ChatState {
 
 impl ChatState {
     pub fn add_user_message(&mut self, content: String) {
-        self.messages.push(ChatMessage {
+        self.messages.push_back(ChatMessage {
             role: Role::User,
             blocks: vec![ContentBlock::Text(content)],
         });
+        self.enforce_message_limit();
     }
 
     pub fn begin_streaming(&mut self) {
@@ -97,20 +102,28 @@ impl ChatState {
     pub fn finish_streaming(&mut self) {
         if !self.stream_blocks.is_empty() {
             let blocks = std::mem::take(&mut self.stream_blocks);
-            self.messages.push(ChatMessage {
+            self.messages.push_back(ChatMessage {
                 role: Role::Agent,
                 blocks,
             });
+            self.enforce_message_limit();
         }
         self.is_streaming = false;
     }
 
     #[allow(dead_code)]
     pub fn add_system_message(&mut self, content: String) {
-        self.messages.push(ChatMessage {
+        self.messages.push_back(ChatMessage {
             role: Role::System,
             blocks: vec![ContentBlock::Text(content)],
         });
+        self.enforce_message_limit();
+    }
+
+    fn enforce_message_limit(&mut self) {
+        while self.messages.len() > MAX_MESSAGES {
+            self.messages.pop_front();
+        }
     }
 
     pub fn scroll_up(&mut self) {

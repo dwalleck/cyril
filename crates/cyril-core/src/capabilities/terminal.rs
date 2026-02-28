@@ -69,6 +69,9 @@ impl Shell {
     }
 }
 
+/// Maximum accumulated output buffer size (1MB). Older output is truncated.
+const MAX_ACCUMULATED_OUTPUT: usize = 1024 * 1024;
+
 /// Manages terminal processes spawned on Windows.
 #[derive(Debug)]
 pub struct TerminalManager {
@@ -145,6 +148,8 @@ impl TerminalManager {
             term.accumulated_output.push_str(&chunk);
         }
 
+        cap_output(&mut term.accumulated_output, MAX_ACCUMULATED_OUTPUT);
+
         let output = term.accumulated_output.clone();
         term.accumulated_output.clear();
         Ok(output)
@@ -186,6 +191,20 @@ impl TerminalManager {
     }
 }
 
+/// Cap a buffer to `max_len` bytes, keeping the most recent content.
+/// Prepends a truncation marker when content is trimmed.
+fn cap_output(buf: &mut String, max_len: usize) {
+    const PREFIX: &str = "[output truncated]\n";
+    if buf.len() <= max_len {
+        return;
+    }
+    let max_tail = max_len.saturating_sub(PREFIX.len());
+    let start = buf.len() - max_tail;
+    let boundary = buf.ceil_char_boundary(start);
+    let truncated = format!("{PREFIX}{}", &buf[boundary..]);
+    *buf = truncated;
+}
+
 async fn read_stream_to_channel(
     mut stream: impl tokio::io::AsyncRead + Unpin,
     tx: mpsc::UnboundedSender<String>,
@@ -205,6 +224,110 @@ async fn read_stream_to_channel(
                 break;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn terminal_id_display_format() {
+        let id = TerminalId::new(42);
+        assert_eq!(id.as_str(), "term-42");
+        assert_eq!(id.to_string(), "term-42");
+    }
+
+    #[test]
+    fn terminal_id_from_str_roundtrip() {
+        let id: TerminalId = "term-7".parse().expect("infallible");
+        assert_eq!(id.as_str(), "term-7");
+    }
+
+    #[tokio::test]
+    async fn create_terminal_and_get_output() {
+        let mut manager = TerminalManager {
+            shell: Shell::Cmd,
+            terminals: HashMap::new(),
+            next_id: 0,
+        };
+
+        // Use a simple cross-platform command
+        let cmd = if cfg!(target_os = "windows") {
+            "echo hello"
+        } else {
+            // On Linux, cmd.exe doesn't exist, so skip the actual spawn test
+            return;
+        };
+
+        let id = manager.create_terminal(cmd).expect("failed to create terminal");
+        assert_eq!(id.as_str(), "term-0");
+
+        // Wait for process to finish producing output
+        let _exit = manager.wait_for_exit(&id).await.expect("wait failed");
+
+        let output = manager.get_output(&id).expect("get_output failed");
+        assert!(output.contains("hello"), "expected 'hello' in output: {output}");
+
+        manager.release(&id).expect("release failed");
+    }
+
+    #[test]
+    fn release_unknown_terminal_returns_error() {
+        let mut manager = TerminalManager {
+            shell: Shell::Cmd,
+            terminals: HashMap::new(),
+            next_id: 0,
+        };
+
+        let unknown = TerminalId::new(999);
+        let result = manager.release(&unknown);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn get_output_unknown_terminal_returns_error() {
+        let mut manager = TerminalManager {
+            shell: Shell::Cmd,
+            terminals: HashMap::new(),
+            next_id: 0,
+        };
+
+        let unknown = TerminalId::new(999);
+        let result = manager.get_output(&unknown);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn cap_output_no_op_when_under_limit() {
+        let mut buf = "hello".to_string();
+        cap_output(&mut buf, 100);
+        assert_eq!(buf, "hello");
+    }
+
+    #[test]
+    fn cap_output_truncates_and_adds_prefix() {
+        let mut buf = "a".repeat(200);
+        cap_output(&mut buf, 100);
+        assert!(buf.starts_with("[output truncated]\n"));
+        assert!(buf.len() <= 100);
+    }
+
+    #[test]
+    fn cap_output_respects_multibyte_char_boundaries() {
+        // Each emoji is 4 bytes; fill buffer to force truncation mid-character
+        let mut buf = "\u{1F600}".repeat(100); // 400 bytes of emoji
+        cap_output(&mut buf, 50);
+        assert!(buf.starts_with("[output truncated]\n"));
+        // Result must be valid UTF-8 (no panic on the assertion itself proves this)
+        assert!(buf.len() <= 50 + 4); // allow up to one extra char from boundary rounding
+    }
+
+    #[test]
+    fn cap_output_keeps_most_recent_content() {
+        let mut buf = format!("{}{}", "x".repeat(500), "TAIL");
+        cap_output(&mut buf, 100);
+        assert!(buf.ends_with("TAIL"));
     }
 }
 

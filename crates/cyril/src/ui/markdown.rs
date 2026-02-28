@@ -1,13 +1,42 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
+use std::sync::{LazyLock, Mutex};
+
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
 };
 
+use super::cache::HashCache;
 use super::highlight;
 
-/// Convert a markdown string into styled ratatui Lines.
+static MARKDOWN_CACHE: LazyLock<Mutex<HashCache<Vec<Line<'static>>>>> =
+    LazyLock::new(|| Mutex::new(HashCache::new(256)));
+
+/// Convert a markdown string into styled ratatui Lines. Cached by content hash.
 pub fn render(markdown: &str) -> Vec<Line<'static>> {
+    let hash = {
+        let mut h = DefaultHasher::new();
+        markdown.hash(&mut h);
+        h.finish()
+    };
+
+    if let Ok(cache) = MARKDOWN_CACHE.lock() {
+        if let Some(cached) = cache.get(hash) {
+            return cached.clone();
+        }
+    }
+
+    let result = do_render(markdown);
+
+    if let Ok(mut cache) = MARKDOWN_CACHE.lock() {
+        cache.insert(hash, result.clone());
+    }
+
+    result
+}
+
+fn do_render(markdown: &str) -> Vec<Line<'static>> {
     let options = Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES;
     let parser = Parser::new_ext(markdown, options);
 

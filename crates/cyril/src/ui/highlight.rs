@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::{LazyLock, Mutex};
 
@@ -7,13 +6,13 @@ use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style as SynStyle, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
+use super::cache::HashCache;
+
 static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(|| SyntaxSet::load_defaults_newlines());
 static THEME_SET: LazyLock<ThemeSet> = LazyLock::new(ThemeSet::load_defaults);
 
-const CACHE_LIMIT: usize = 256;
-
-static HIGHLIGHT_CACHE: LazyLock<Mutex<HashMap<u64, Vec<Vec<(Style, String)>>>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+static HIGHLIGHT_CACHE: LazyLock<Mutex<HashCache<Vec<Vec<(Style, String)>>>>> =
+    LazyLock::new(|| Mutex::new(HashCache::new(256)));
 
 /// Highlight a full code block. Cached by hash(content, lang).
 pub fn highlight_block(code: &str, lang: Option<&str>) -> Vec<Vec<(Style, String)>> {
@@ -25,7 +24,7 @@ pub fn highlight_block(code: &str, lang: Option<&str>) -> Vec<Vec<(Style, String
     };
 
     if let Ok(cache) = HIGHLIGHT_CACHE.lock() {
-        if let Some(cached) = cache.get(&hash) {
+        if let Some(cached) = cache.get(hash) {
             return cached.clone();
         }
     }
@@ -33,9 +32,6 @@ pub fn highlight_block(code: &str, lang: Option<&str>) -> Vec<Vec<(Style, String
     let result = do_highlight_block(code, lang);
 
     if let Ok(mut cache) = HIGHLIGHT_CACHE.lock() {
-        if cache.len() >= CACHE_LIMIT {
-            cache.clear();
-        }
         cache.insert(hash, result.clone());
     }
 

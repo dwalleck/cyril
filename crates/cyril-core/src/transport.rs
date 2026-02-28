@@ -122,11 +122,23 @@ impl AgentProcess {
     /// Wait briefly for the process to start, returning an error if it exits
     /// immediately (e.g. due to auth failure).
     pub async fn check_startup(&mut self) -> Result<()> {
-        // Give the process a moment to fail
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        // Give the process a moment to fail — 1s accommodates slower WSL startup
+        tokio::time::sleep(std::time::Duration::from_millis(1_000)).await;
+
+        // Surface any early stderr even if the process is still running
+        let early_stderr = self.drain_stderr();
+        if !early_stderr.is_empty() {
+            tracing::warn!("Agent early stderr: {early_stderr}");
+        }
 
         if let Some(status) = self.try_wait()? {
-            let stderr = self.drain_stderr();
+            let extra_stderr = self.drain_stderr();
+            let stderr = if extra_stderr.is_empty() {
+                early_stderr
+            } else {
+                format!("{early_stderr}{extra_stderr}")
+            };
+
             if stderr.contains("not logged in") || stderr.contains("please log in") {
                 let login_cmd = if cfg!(target_os = "windows") {
                     "wsl kiro-cli login"
