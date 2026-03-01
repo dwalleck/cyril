@@ -4,7 +4,7 @@
 //!   - session/set_mode
 //!   - session/set_config_option (for model selection)
 //!
-//! Usage: cargo run --bin test_acp [-- --agent <name>]
+//! Usage: cargo run --example test_acp [-- --agent <name>]
 
 use agent_client_protocol::{self as acp, Agent};
 use anyhow::{Context, Result};

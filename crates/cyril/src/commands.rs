@@ -244,6 +244,7 @@ impl CommandExecutor {
     }
 
     /// Execute a Kiro agent command via the extension method.
+    /// `command` should be the full slash-prefixed string (e.g. `"/context add src/"`).
     pub async fn execute_agent_command(
         session: &SessionContext,
         conn: &Rc<acp::ClientSideConnection>,
@@ -312,7 +313,7 @@ impl CommandExecutor {
         Ok(())
     }
 
-    /// Switch the agent mode via session/set_mode.
+    /// Switch the agent mode via session/set_mode, or list available modes when `mode_id` is empty.
     pub async fn set_mode(
         session: &mut SessionContext,
         conn: &Rc<acp::ClientSideConnection>,
@@ -365,7 +366,7 @@ impl CommandExecutor {
         Ok(())
     }
 
-    /// Switch the model via Kiro extension commands.
+    /// Switch the model via Kiro extension commands, or open a picker when `model_id` is empty.
     pub async fn set_model(
         session: &mut SessionContext,
         conn: &Rc<acp::ClientSideConnection>,
@@ -434,7 +435,7 @@ impl CommandExecutor {
         Ok(())
     }
 
-    /// Parse model options from a `_kiro.dev/commands/options` response and open a picker.
+    /// Parse model options from a `kiro.dev/commands/options` response and open a picker.
     pub fn open_model_picker(
         chat: &mut chat::ChatState,
         picker: &mut Option<picker::PickerState>,
@@ -604,7 +605,7 @@ pub struct SlashCommand {
     pub takes_arg: bool,
 }
 
-/// An agent-provided command from AvailableCommandsUpdate.
+/// An agent-provided command from `AvailableCommandsUpdate` or `kiro.dev/commands/available`.
 #[derive(Debug, Clone)]
 pub struct AgentCommand {
     pub name: String,

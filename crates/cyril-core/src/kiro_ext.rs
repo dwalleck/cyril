@@ -1,6 +1,6 @@
-/// Types specific to Kiro extension notifications and commands.
-/// These are deserialized from `kiro.dev/commands/available` and related
-/// extension notifications that are not part of the standard ACP protocol.
+//! Types specific to Kiro extension notifications and commands.
+//! These are deserialized from `kiro.dev/commands/available` and related
+//! extension notifications that are not part of the standard ACP protocol.
 
 /// A command received from the `kiro.dev/commands/available` extension notification.
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -20,7 +20,7 @@ pub struct KiroExtCommand {
 pub struct KiroCommandMeta {
     /// "selection" requires a dropdown, "panel" needs special rendering.
     pub input_type: Option<String>,
-    /// Extension method to call for options (e.g. `_kiro.dev/commands/model/options`).
+    /// Extension method to call for options (e.g. `kiro.dev/commands/model/options`).
     pub options_method: Option<String>,
     /// If true, the command is purely local (e.g. /quit).
     #[serde(default)]
