@@ -31,6 +31,13 @@ pub enum CommandResult {
 pub struct CommandExecutor;
 
 impl CommandExecutor {
+    /// Send a value on a channel, logging if the receiver has been dropped.
+    fn send_or_log<T>(sender: &mpsc::UnboundedSender<T>, value: T, channel_name: &str) {
+        if sender.send(value).is_err() {
+            tracing::error!("{channel_name} channel closed — receiver dropped");
+        }
+    }
+
     /// Execute a parsed slash command, returning whether the app should continue.
     ///
     /// `agent_commands` is the only piece of input state needed (for `/help` display).
@@ -170,9 +177,9 @@ impl CommandExecutor {
 
             if let Err(e) = result {
                 tracing::error!("Prompt error: {e}");
-                let _ = response_tx.send(format!("[Error] Prompt failed: {e}"));
+                Self::send_or_log(&response_tx, format!("[Error] Prompt failed: {e}"), "cmd-response");
             }
-            let _ = done_tx.send(());
+            Self::send_or_log(&done_tx, (), "prompt-done");
         });
 
         Ok(())
@@ -281,7 +288,7 @@ impl CommandExecutor {
                     tracing::info!("Command {cmd_str} response: {}", resp.0);
                     let displayed = if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
                         if let Some(msg) = val.get("message").and_then(|m| m.as_str()) {
-                            let _ = response_tx.send(msg.to_string());
+                            Self::send_or_log(&response_tx, msg.to_string(), "cmd-response");
                             true
                         } else {
                             false
@@ -290,15 +297,15 @@ impl CommandExecutor {
                         false
                     };
                     if !displayed {
-                        let _ = response_tx.send(resp.0.to_string());
+                        Self::send_or_log(&response_tx, resp.0.to_string(), "cmd-response");
                     }
                 }
                 Err(e) => {
                     tracing::error!("Command {cmd_str} error: {e}");
-                    let _ = response_tx.send(format!("[Error] Command {cmd_str} failed: {e}"));
+                    Self::send_or_log(&response_tx, format!("[Error] Command {cmd_str} failed: {e}"), "cmd-response");
                 }
             }
-            let _ = done_tx.send(());
+            Self::send_or_log(&done_tx, (), "prompt-done");
         });
 
         Ok(())
@@ -414,11 +421,11 @@ impl CommandExecutor {
             {
                 Ok(_) => {
                     tracing::info!("Set model to: {model_str}");
-                    let _ = response_tx.send(format!("Switched to model: {model_str}"));
+                    Self::send_or_log(&response_tx, format!("Switched to model: {model_str}"), "cmd-response");
                 }
                 Err(e) => {
                     tracing::error!("Failed to set model: {e}");
-                    let _ = response_tx.send(format!("Failed to set model: {e}"));
+                    Self::send_or_log(&response_tx, format!("Failed to set model: {e}"), "cmd-response");
                 }
             }
         });
@@ -524,11 +531,11 @@ impl CommandExecutor {
                     {
                         Ok(_) => {
                             tracing::info!("Set model to: {value}");
-                            let _ = response_tx.send(format!("Switched to model: {value}"));
+                            Self::send_or_log(&response_tx, format!("Switched to model: {value}"), "cmd-response");
                         }
                         Err(e) => {
                             tracing::error!("Failed to set model: {e}");
-                            let _ = response_tx.send(format!("Failed to set model: {e}"));
+                            Self::send_or_log(&response_tx, format!("Failed to set model: {e}"), "cmd-response");
                         }
                     }
                 });
@@ -574,9 +581,9 @@ impl CommandExecutor {
 
             if let Err(e) = result {
                 tracing::error!("Hook feedback prompt error: {e}");
-                let _ = response_tx.send(format!("[Error] Hook feedback failed: {e}"));
+                Self::send_or_log(&response_tx, format!("[Error] Hook feedback failed: {e}"), "cmd-response");
             }
-            let _ = done_tx.send(());
+            Self::send_or_log(&done_tx, (), "prompt-done");
         });
     }
 }

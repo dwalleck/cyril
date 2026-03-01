@@ -190,19 +190,25 @@ impl App {
                 KeyCode::Enter => {
                     if let Some((approval_state, responder)) = self.approval.take() {
                         if let Some(option_id) = approval_state.selected_option_id() {
-                            let _ = responder.send(acp::RequestPermissionResponse::new(
+                            let response = acp::RequestPermissionResponse::new(
                                 acp::RequestPermissionOutcome::Selected(
                                     acp::SelectedPermissionOutcome::new(option_id.to_string()),
                                 ),
-                            ));
+                            );
+                            if responder.send(response).is_err() {
+                                tracing::warn!("Permission response could not be delivered — agent may have cancelled");
+                            }
                         }
                     }
                 }
                 KeyCode::Esc => {
                     if let Some((_, responder)) = self.approval.take() {
-                        let _ = responder.send(acp::RequestPermissionResponse::new(
+                        let response = acp::RequestPermissionResponse::new(
                             acp::RequestPermissionOutcome::Cancelled,
-                        ));
+                        );
+                        if responder.send(response).is_err() {
+                            tracing::warn!("Permission response could not be delivered — agent may have cancelled");
+                        }
                     }
                 }
                 _ => {}
@@ -268,7 +274,9 @@ impl App {
             KeyCode::Esc => {
                 if self.toolbar.is_busy {
                     if let Some(ref session_id) = self.session.id {
-                        let _ = self.conn.cancel(acp::CancelNotification::new(session_id.clone())).await;
+                        if let Err(e) = self.conn.cancel(acp::CancelNotification::new(session_id.clone())).await {
+                            tracing::warn!("Failed to send cancel notification: {e}");
+                        }
                     }
                 }
             }
