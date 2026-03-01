@@ -8,40 +8,15 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
 use crate::capabilities;
-use crate::capabilities::terminal::{TerminalId, TerminalManager};
-use crate::event::{AppEvent, KiroExtCommand};
+use crate::event::AppEvent;
 use crate::hooks::{HookContext, HookRegistry, HookResult, HookTarget, HookTiming};
-use crate::path;
+use crate::kiro_ext::KiroCommandsPayload;
+use crate::platform::path;
+use crate::platform::terminal::{TerminalId, TerminalManager};
 
 /// Construct an ACP internal error with a message.
 fn internal_err(msg: impl Into<String>) -> acp::Error {
     acp::Error::new(-32603, msg)
-}
-
-/// Payload for `kiro.dev/commands/available` ext_notification.
-/// We try multiple shapes since the format isn't documented.
-#[derive(serde::Deserialize)]
-#[serde(untagged)]
-enum KiroCommandsPayload {
-    /// `{ "commands": [...] }`
-    Wrapped { commands: Vec<KiroExtCommand> },
-    /// `{ "availableCommands": [...] }` (ACP-style)
-    AcpStyle {
-        #[serde(rename = "availableCommands")]
-        commands: Vec<KiroExtCommand>,
-    },
-    /// Top-level array `[...]`
-    Bare(Vec<KiroExtCommand>),
-}
-
-impl KiroCommandsPayload {
-    fn commands(self) -> Vec<KiroExtCommand> {
-        match self {
-            Self::Wrapped { commands } => commands,
-            Self::AcpStyle { commands } => commands,
-            Self::Bare(commands) => commands,
-        }
-    }
 }
 
 /// The central ACP Client implementation.
