@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
 use crate::capabilities;
-use crate::event::AppEvent;
+use crate::event::{AppEvent, ExtensionEvent, InteractionRequest, InternalEvent, ProtocolEvent};
 use crate::hooks::{HookContext, HookRegistry, HookResult, HookTarget, HookTiming};
 use crate::kiro_ext::KiroCommandsPayload;
 use crate::platform::path;
@@ -57,10 +57,10 @@ impl acp::Client for KiroClient {
         args: acp::RequestPermissionRequest,
     ) -> acp::Result<acp::RequestPermissionResponse> {
         let (tx, rx) = oneshot::channel();
-        self.emit(AppEvent::PermissionRequest {
+        self.emit(AppEvent::Interaction(InteractionRequest::Permission {
             request: args,
             responder: tx,
-        });
+        }));
 
         rx.await.map_err(|_| internal_err("Permission request channel closed"))
     }
@@ -71,52 +71,52 @@ impl acp::Client for KiroClient {
     ) -> acp::Result<()> {
         match args.update {
             acp::SessionUpdate::AgentMessageChunk(chunk) => {
-                self.emit(AppEvent::AgentMessage {
+                self.emit(AppEvent::Protocol(ProtocolEvent::AgentMessage {
                     session_id: args.session_id,
                     chunk,
-                });
+                }));
             }
             acp::SessionUpdate::AgentThoughtChunk(chunk) => {
-                self.emit(AppEvent::AgentThought {
+                self.emit(AppEvent::Protocol(ProtocolEvent::AgentThought {
                     session_id: args.session_id,
                     chunk,
-                });
+                }));
             }
             acp::SessionUpdate::ToolCall(tool_call) => {
-                self.emit(AppEvent::ToolCallStarted {
+                self.emit(AppEvent::Protocol(ProtocolEvent::ToolCallStarted {
                     session_id: args.session_id,
                     tool_call,
-                });
+                }));
             }
             acp::SessionUpdate::ToolCallUpdate(update) => {
-                self.emit(AppEvent::ToolCallUpdated {
+                self.emit(AppEvent::Protocol(ProtocolEvent::ToolCallUpdated {
                     session_id: args.session_id,
                     update,
-                });
+                }));
             }
             acp::SessionUpdate::Plan(plan) => {
-                self.emit(AppEvent::PlanUpdated {
+                self.emit(AppEvent::Protocol(ProtocolEvent::PlanUpdated {
                     session_id: args.session_id,
                     plan,
-                });
+                }));
             }
             acp::SessionUpdate::AvailableCommandsUpdate(commands) => {
-                self.emit(AppEvent::CommandsUpdated {
+                self.emit(AppEvent::Protocol(ProtocolEvent::CommandsUpdated {
                     session_id: args.session_id,
                     commands,
-                });
+                }));
             }
             acp::SessionUpdate::CurrentModeUpdate(mode) => {
-                self.emit(AppEvent::ModeChanged {
+                self.emit(AppEvent::Protocol(ProtocolEvent::ModeChanged {
                     session_id: args.session_id,
                     mode,
-                });
+                }));
             }
             acp::SessionUpdate::ConfigOptionUpdate(update) => {
-                self.emit(AppEvent::ConfigOptionsUpdated {
+                self.emit(AppEvent::Protocol(ProtocolEvent::ConfigOptionsUpdated {
                     session_id: args.session_id,
                     config_options: update.config_options,
-                });
+                }));
             }
             _ => {
                 tracing::debug!("Unhandled session notification variant");
@@ -137,7 +137,7 @@ impl acp::Client for KiroClient {
                         "Parsed {} Kiro commands from ext_notification",
                         commands.len()
                     );
-                    self.emit(AppEvent::KiroCommandsAvailable { commands });
+                    self.emit(AppEvent::Extension(ExtensionEvent::KiroCommandsAvailable { commands }));
                 }
                 Err(e) => {
                     tracing::warn!("Failed to parse kiro.dev/commands/available: {e}");
@@ -156,10 +156,10 @@ impl acp::Client for KiroClient {
             }
             match serde_json::from_str::<MetadataPayload>(args.params.get()) {
                 Ok(payload) => {
-                    self.emit(AppEvent::KiroMetadata {
+                    self.emit(AppEvent::Extension(ExtensionEvent::KiroMetadata {
                         session_id: payload.session_id,
                         context_usage_pct: payload.context_usage_percentage,
-                    });
+                    }));
                 }
                 Err(e) => {
                     tracing::warn!("Failed to parse kiro.dev/metadata: {e}");
@@ -232,7 +232,7 @@ impl acp::Client for KiroClient {
         let after_results = self.hooks.borrow().run_after(&after_ctx).await;
         for result in after_results {
             if let HookResult::FeedbackPrompt { text } = result {
-                self.emit(AppEvent::HookFeedback { text });
+                self.emit(AppEvent::Internal(InternalEvent::HookFeedback { text }));
             }
         }
 
