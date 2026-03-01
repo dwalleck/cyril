@@ -63,6 +63,12 @@ impl SessionContext {
         self.cached_model = self.compute_current_model();
     }
 
+    /// Optimistically update the cached model for immediate UI feedback.
+    /// The server's `ConfigOptionsUpdated` event will confirm or overwrite this.
+    pub fn set_optimistic_model(&mut self, model: String) {
+        self.cached_model = Some(model);
+    }
+
     /// Return the cached model value (O(1) per frame).
     pub fn current_model(&self) -> Option<&str> {
         self.cached_model.as_deref()
@@ -144,6 +150,14 @@ mod tests {
         assert_eq!(ctx.available_modes[0].name, "Code");
         assert_eq!(ctx.available_modes[1].id, "chat");
         assert_eq!(ctx.available_modes[1].name, "Chat");
+    }
+
+    #[test]
+    fn set_optimistic_model_updates_cached_value() {
+        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
+        assert!(ctx.current_model().is_none());
+        ctx.set_optimistic_model("claude-sonnet-4-6".to_string());
+        assert_eq!(ctx.current_model(), Some("claude-sonnet-4-6"));
     }
 
     #[test]

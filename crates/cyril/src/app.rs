@@ -224,7 +224,7 @@ impl App {
                 KeyCode::Enter => {
                     if let Some(picker_state) = self.picker.take() {
                         CommandExecutor::handle_picker_confirm(
-                            &self.session,
+                            &mut self.session,
                             &self.conn,
                             &self.channels,
                             picker_state,

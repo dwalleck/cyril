@@ -367,7 +367,7 @@ impl CommandExecutor {
 
     /// Switch the model via Kiro extension commands.
     pub async fn set_model(
-        session: &SessionContext,
+        session: &mut SessionContext,
         conn: &Rc<acp::ClientSideConnection>,
         chat: &mut chat::ChatState,
         picker: &mut Option<picker::PickerState>,
@@ -406,6 +406,8 @@ impl CommandExecutor {
             }
             return Ok(());
         }
+
+        session.set_optimistic_model(model_id.to_string());
 
         let conn = conn.clone();
         let response_tx = channels.cmd_response_tx.clone();
@@ -495,7 +497,7 @@ impl CommandExecutor {
 
     /// Handle a confirmed picker selection.
     pub fn handle_picker_confirm(
-        session: &SessionContext,
+        session: &mut SessionContext,
         conn: &Rc<acp::ClientSideConnection>,
         channels: &CommandChannels,
         state: picker::PickerState,
@@ -517,6 +519,8 @@ impl CommandExecutor {
                         return;
                     }
                 };
+
+                session.set_optimistic_model(value.clone());
 
                 let conn = conn.clone();
                 let response_tx = channels.cmd_response_tx.clone();
