@@ -14,7 +14,7 @@ use clap::Parser;
 use tokio::sync::mpsc;
 
 use cyril_core::client::KiroClient;
-use cyril_core::event::AppEvent;
+use cyril_core::event::{AppEvent, InteractionRequest, ProtocolEvent};
 use cyril_core::hooks::{self, HookRegistry};
 use cyril_core::path;
 use cyril_core::transport::AgentProcess;
@@ -85,12 +85,12 @@ async fn run_oneshot(cwd: PathBuf, prompt_text: String, agent: Option<String>) -
     let printer = tokio::task::spawn_local(async move {
         while let Some(event) = event_rx.recv().await {
             match event {
-                AppEvent::AgentMessage { chunk, .. } => {
+                AppEvent::Protocol(ProtocolEvent::AgentMessage { chunk, .. }) => {
                     if let acp::ContentBlock::Text(text) = &chunk.content {
                         eprint!("{}", text.text);
                     }
                 }
-                AppEvent::PermissionRequest { request, responder } => {
+                AppEvent::Interaction(InteractionRequest::Permission { request, responder }) => {
                     let option_id = request
                         .options
                         .iter()
@@ -145,7 +145,6 @@ async fn run_tui(cwd: PathBuf, agent: Option<String>) -> Result<()> {
 
     if let Some(ref modes) = session_response.modes {
         app.session.set_modes(modes);
-        app.toolbar.current_mode = app.session.current_mode_id.clone();
     }
 
     if let Some(config_options) = session_response.config_options {
@@ -154,10 +153,8 @@ async fn run_tui(cwd: PathBuf, agent: Option<String>) -> Result<()> {
             serde_json::to_string_pretty(&config_options).unwrap_or_default()
         );
         app.session.set_config_options(config_options);
-        app.toolbar.current_model = app.session.current_model();
     }
 
-    app.toolbar.session_id = Some(session_response.session_id.to_string());
     app.session.set_session_id(session_response.session_id);
 
     let result = app.run(&mut terminal).await;

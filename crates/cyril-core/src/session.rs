@@ -14,8 +14,8 @@ pub struct AvailableMode {
 
 /// Owns all session-level state: IDs, modes, config options, and working directory.
 ///
-/// This is the authoritative source for session data. The toolbar duplicates
-/// some of these fields for display purposes until a future cleanup pass.
+/// This is the single source of truth for session data. The toolbar borrows
+/// from this struct at render time.
 #[derive(Debug)]
 pub struct SessionContext {
     pub id: Option<acp::SessionId>,

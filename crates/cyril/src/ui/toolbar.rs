@@ -1,41 +1,52 @@
 use ratatui::{
-    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Gauge, Paragraph},
+    Frame,
 };
+
+use cyril_core::session::SessionContext;
 
 /// State for the toolbar/status bar.
 #[derive(Debug, Default)]
 pub struct ToolbarState {
     pub agent_name: String,
     pub agent_version: String,
-    pub session_id: Option<String>,
     pub is_busy: bool,
-    pub context_usage_pct: Option<f64>,
     /// The --agent value passed at startup (e.g. "sonnet").
     pub selected_agent: Option<String>,
-    /// Current agent mode (e.g. "kiro_default", "dotnet-dev").
-    pub current_mode: Option<String>,
-    /// Current model (e.g. "claude-sonnet-4-6").
-    pub current_model: Option<String>,
     /// Whether mouse capture is active (false = copy mode).
     pub mouse_captured: bool,
 }
 
-pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &SessionContext) {
     let status = if state.is_busy { "working..." } else { "ready" };
-    let status_color = if state.is_busy { Color::Yellow } else { Color::Green };
+    let status_color = if state.is_busy {
+        Color::Yellow
+    } else {
+        Color::Green
+    };
 
-    let session_display = state
-        .session_id
-        .as_deref()
-        .map(|id| &id[..8.min(id.len())])
-        .unwrap_or("none");
+    let session_id_string = session
+        .id
+        .as_ref()
+        .map(|id| id.to_string())
+        .unwrap_or_default();
+    let session_display = if session_id_string.is_empty() {
+        "none"
+    } else {
+        &session_id_string[..8.min(session_id_string.len())]
+    };
 
     let mut spans = vec![
-        Span::styled(" cyril ", Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            " cyril ",
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(" "),
         Span::styled(&state.agent_name, Style::default().fg(Color::White)),
         Span::styled(
@@ -44,7 +55,10 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
         ),
     ];
 
-    let mode_display = state.current_mode.as_ref().or(state.selected_agent.as_ref());
+    let mode_display = session
+        .current_mode_id
+        .as_ref()
+        .or(state.selected_agent.as_ref());
     if let Some(mode) = mode_display {
         spans.push(Span::raw(" "));
         spans.push(Span::styled(
@@ -53,7 +67,8 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
         ));
     }
 
-    if let Some(ref model) = state.current_model {
+    let current_model = session.current_model();
+    if let Some(ref model) = current_model {
         spans.push(Span::raw(" "));
         spans.push(Span::styled(
             format!("({model})"),
@@ -62,11 +77,20 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
     }
 
     spans.push(Span::raw(" | "));
-    spans.push(Span::styled(format!("session: {session_display}"), Style::default().fg(Color::DarkGray)));
+    spans.push(Span::styled(
+        format!("session: {session_display}"),
+        Style::default().fg(Color::DarkGray),
+    ));
 
     if !state.mouse_captured {
         spans.push(Span::raw(" | "));
-        spans.push(Span::styled("COPY", Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD)));
+        spans.push(Span::styled(
+            "COPY",
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ));
     }
 
     spans.push(Span::raw(" | "));
@@ -74,8 +98,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState) {
 
     let line = Line::from(spans);
 
-    let paragraph = Paragraph::new(line)
-        .style(Style::default().bg(Color::DarkGray));
+    let paragraph = Paragraph::new(line).style(Style::default().bg(Color::DarkGray));
 
     frame.render_widget(paragraph, area);
 }
@@ -100,13 +123,21 @@ pub fn render_context_bar(frame: &mut Frame, area: Rect, pct: f64) {
 
     // Render gauge bar
     let gauge_x = area.x + label_width;
-    let gauge_area = Rect::new(gauge_x, area.y, gauge_width.min(area.width.saturating_sub(label_width)), 1);
+    let gauge_area = Rect::new(
+        gauge_x,
+        area.y,
+        gauge_width.min(area.width.saturating_sub(label_width)),
+        1,
+    );
     let ratio = (pct / 100.0).clamp(0.0, 1.0);
 
     let gauge = Gauge::default()
         .gauge_style(Style::default().fg(bar_color).bg(Color::Rgb(60, 60, 60)))
         .ratio(ratio)
-        .label(Span::styled(format!("{pct:.0}%"), Style::default().fg(Color::White)))
+        .label(Span::styled(
+            format!("{pct:.0}%"),
+            Style::default().fg(Color::White),
+        ))
         .use_unicode(true);
 
     frame.render_widget(gauge, gauge_area);

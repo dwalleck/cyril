@@ -14,7 +14,7 @@ use serde_json::value::RawValue;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
-use cyril_core::event::AppEvent;
+use cyril_core::event::{AppEvent, ExtensionEvent, InteractionRequest, InternalEvent, ProtocolEvent};
 use cyril_core::path;
 use cyril_core::session::{CONFIG_KEY_MODEL, SessionContext};
 
@@ -34,7 +34,6 @@ pub struct App {
     pub approval: Option<(approval::ApprovalState, oneshot::Sender<acp::RequestPermissionResponse>)>,
     pub picker: Option<picker::PickerState>,
     pub should_quit: bool,
-    pub mouse_captured: bool,
     pub session: SessionContext,
     conn: Rc<acp::ClientSideConnection>,
     event_rx: mpsc::UnboundedReceiver<AppEvent>,
@@ -67,7 +66,6 @@ impl App {
             approval: None,
             picker: None,
             should_quit: false,
-            mouse_captured: true,
             session: SessionContext::new(cwd),
             conn,
             event_rx,
@@ -153,11 +151,11 @@ impl App {
         ])
         .split(area);
 
-        toolbar::render(frame, chunks[0], &self.toolbar);
+        toolbar::render(frame, chunks[0], &self.toolbar, &self.session);
         chat::render(frame, chunks[1], &self.chat);
         input::render(frame, chunks[2], &mut self.input);
 
-        let pct = self.toolbar.context_usage_pct.unwrap_or(0.0);
+        let pct = self.session.context_usage_pct.unwrap_or(0.0);
         toolbar::render_context_bar(frame, chunks[3], pct);
 
         // Overlay popups
@@ -433,15 +431,12 @@ impl App {
         let agent_cwd = path::to_agent(&self.session.cwd);
         match self.conn.new_session(acp::NewSessionRequest::new(agent_cwd)).await {
             Ok(response) => {
-                self.toolbar.session_id = Some(response.session_id.to_string());
                 self.session.set_session_id(response.session_id);
                 if let Some(ref modes) = response.modes {
                     self.session.set_modes(modes);
-                    self.toolbar.current_mode = self.session.current_mode_id.clone();
                 }
                 if let Some(config_options) = response.config_options {
                     self.session.set_config_options(config_options);
-                    self.toolbar.current_model = self.session.current_model();
                 }
                 self.chat = chat::ChatState::default();
                 self.chat
@@ -565,7 +560,6 @@ impl App {
         {
             Ok(_) => {
                 self.session.current_mode_id = Some(mode_id.to_string());
-                self.toolbar.current_mode = Some(mode_id.to_string());
                 self.chat.add_system_message(format!("Switched to mode: {mode_id}"));
             }
             Err(e) => {
@@ -618,8 +612,8 @@ impl App {
         }
 
         // Set model via set_session_config_option (spawned to avoid blocking the event loop).
-        // No optimistic toolbar update here — the ConfigOptionsUpdated event handler
-        // updates both session.config_options and toolbar.current_model atomically.
+        // No optimistic update — the ConfigOptionsUpdated event handler
+        // updates session.config_options, and the toolbar reads from session at render time.
         let conn = self.conn.clone();
         let response_tx = self.cmd_response_tx.clone();
         let model_str = model_id.to_string();
@@ -719,8 +713,8 @@ impl App {
                     None => return,
                 };
 
-                // No optimistic toolbar update — the ConfigOptionsUpdated event handler
-                // updates both session.config_options and toolbar.current_model atomically.
+                // No optimistic update — the ConfigOptionsUpdated event handler
+                // updates session.config_options, and the toolbar reads from session at render time.
                 let conn = self.conn.clone();
                 let response_tx = self.cmd_response_tx.clone();
                 tokio::task::spawn_local(async move {
@@ -760,7 +754,6 @@ impl App {
             .await
         {
             Ok(_) => {
-                self.toolbar.session_id = Some(session_id.to_string());
                 self.session.set_session_id(session_id);
                 self.chat = chat::ChatState::default();
                 self.chat.add_system_message(format!(
@@ -778,32 +771,33 @@ impl App {
 
     fn handle_acp_event(&mut self, event: AppEvent) {
         match event {
-            AppEvent::AgentMessage { chunk, .. } => {
+            AppEvent::Protocol(e) => self.handle_protocol_event(e),
+            AppEvent::Interaction(r) => self.handle_interaction(r),
+            AppEvent::Extension(e) => self.handle_extension_event(e),
+            AppEvent::Internal(e) => self.handle_internal_event(e),
+        }
+    }
+
+    fn handle_protocol_event(&mut self, event: ProtocolEvent) {
+        match event {
+            ProtocolEvent::AgentMessage { chunk, .. } => {
                 if let acp::ContentBlock::Text(text) = &chunk.content {
                     self.chat.append_streaming(&text.text);
                     self.chat.scroll_to_bottom();
                 }
             }
-            AppEvent::AgentThought { chunk, .. } => {
+            ProtocolEvent::AgentThought { chunk, .. } => {
                 if let acp::ContentBlock::Text(text) = &chunk.content {
                     self.chat.append_streaming(&text.text);
                 }
             }
-            AppEvent::ToolCallStarted { tool_call, .. } => {
+            ProtocolEvent::ToolCallStarted { tool_call, .. } => {
                 self.chat.add_tool_call(tool_call);
             }
-            AppEvent::ToolCallUpdated { update, .. } => {
+            ProtocolEvent::ToolCallUpdated { update, .. } => {
                 self.chat.update_tool_call(update);
             }
-            AppEvent::PermissionRequest { request, responder } => {
-                let state = approval::ApprovalState::from_request(&request);
-                self.approval = Some((state, responder));
-            }
-            AppEvent::HookFeedback { text } => {
-                self.chat.add_system_message(format!("[Hook] {text}"));
-                self.queue_hook_feedback(text);
-            }
-            AppEvent::CommandsUpdated { commands, .. } => {
+            ProtocolEvent::CommandsUpdated { commands, .. } => {
                 self.input.agent_commands = commands
                     .available_commands
                     .iter()
@@ -814,7 +808,30 @@ impl App {
                     self.input.agent_commands.len()
                 );
             }
-            AppEvent::KiroCommandsAvailable { commands: kiro_cmds } => {
+            ProtocolEvent::ModeChanged { mode, .. } => {
+                self.session.current_mode_id = Some(mode.current_mode_id.to_string());
+            }
+            ProtocolEvent::PlanUpdated { plan, .. } => {
+                self.chat.update_plan(plan);
+            }
+            ProtocolEvent::ConfigOptionsUpdated { config_options, .. } => {
+                self.session.set_config_options(config_options);
+            }
+        }
+    }
+
+    fn handle_interaction(&mut self, request: InteractionRequest) {
+        match request {
+            InteractionRequest::Permission { request, responder } => {
+                let state = approval::ApprovalState::from_request(&request);
+                self.approval = Some((state, responder));
+            }
+        }
+    }
+
+    fn handle_extension_event(&mut self, event: ExtensionEvent) {
+        match event {
+            ExtensionEvent::KiroCommandsAvailable { commands: kiro_cmds } => {
                 // Filter out:
                 // - Commands Cyril handles locally (/clear, /help, /quit, /load, /new)
                 // - Commands needing special UI (inputType: "selection", "panel")
@@ -842,21 +859,17 @@ impl App {
                     self.input.agent_commands.len()
                 );
             }
-            AppEvent::KiroMetadata { context_usage_pct, .. } => {
+            ExtensionEvent::KiroMetadata { context_usage_pct, .. } => {
                 self.session.context_usage_pct = Some(context_usage_pct);
-                self.toolbar.context_usage_pct = Some(context_usage_pct);
             }
-            AppEvent::ModeChanged { mode, .. } => {
-                let mode_id = mode.current_mode_id.to_string();
-                self.session.current_mode_id = Some(mode_id.clone());
-                self.toolbar.current_mode = Some(mode_id);
-            }
-            AppEvent::PlanUpdated { plan, .. } => {
-                self.chat.update_plan(plan);
-            }
-            AppEvent::ConfigOptionsUpdated { config_options, .. } => {
-                self.session.set_config_options(config_options);
-                self.toolbar.current_model = self.session.current_model();
+        }
+    }
+
+    fn handle_internal_event(&mut self, event: InternalEvent) {
+        match event {
+            InternalEvent::HookFeedback { text } => {
+                self.chat.add_system_message(format!("[Hook] {text}"));
+                self.queue_hook_feedback(text);
             }
         }
     }
@@ -903,10 +916,9 @@ impl App {
     }
 
     fn toggle_mouse_capture(&mut self) {
-        self.mouse_captured = !self.mouse_captured;
-        self.toolbar.mouse_captured = self.mouse_captured;
+        self.toolbar.mouse_captured = !self.toolbar.mouse_captured;
         let mut stdout = std::io::stdout();
-        if self.mouse_captured {
+        if self.toolbar.mouse_captured {
             let _ = crossterm::execute!(stdout, EnableMouseCapture);
         } else {
             let _ = crossterm::execute!(stdout, DisableMouseCapture);
