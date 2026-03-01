@@ -189,15 +189,20 @@ impl App {
                 KeyCode::Down => approval_state.select_next(),
                 KeyCode::Enter => {
                     if let Some((approval_state, responder)) = self.approval.take() {
-                        if let Some(option_id) = approval_state.selected_option_id() {
-                            let response = acp::RequestPermissionResponse::new(
+                        let response = if let Some(option_id) = approval_state.selected_option_id() {
+                            acp::RequestPermissionResponse::new(
                                 acp::RequestPermissionOutcome::Selected(
                                     acp::SelectedPermissionOutcome::new(option_id.to_string()),
                                 ),
-                            );
-                            if responder.send(response).is_err() {
-                                tracing::warn!("Permission response could not be delivered — agent may have cancelled");
-                            }
+                            )
+                        } else {
+                            tracing::warn!("Approval confirmed but no option was selected — sending cancellation");
+                            acp::RequestPermissionResponse::new(
+                                acp::RequestPermissionOutcome::Cancelled,
+                            )
+                        };
+                        if responder.send(response).is_err() {
+                            tracing::warn!("Permission response could not be delivered — agent may have cancelled");
                         }
                     }
                 }
