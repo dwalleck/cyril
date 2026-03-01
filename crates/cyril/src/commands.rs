@@ -1,4 +1,585 @@
-use agent_client_protocol as acp;
+use std::rc::Rc;
+use std::sync::Arc;
+
+use agent_client_protocol::{self as acp, Agent};
+use anyhow::Result;
+use serde_json::value::RawValue;
+use tokio::sync::mpsc;
+
+use cyril_core::path;
+use cyril_core::session::{CONFIG_KEY_MODEL, SessionContext};
+
+use crate::file_completer;
+use crate::ui::{chat, input, picker, toolbar};
+
+/// Channels used by command execution to communicate with the event loop.
+pub struct CommandChannels {
+    pub prompt_done_tx: mpsc::UnboundedSender<()>,
+    pub cmd_response_tx: mpsc::UnboundedSender<String>,
+}
+
+/// Result of command execution -- signals whether the app should continue or quit.
+pub enum CommandResult {
+    Continue,
+    Quit,
+}
+
+/// Stateless executor for slash commands and prompts.
+///
+/// Each method is an associated function that takes the dependencies it needs
+/// as parameters, keeping App as a thin coordinator.
+pub struct CommandExecutor;
+
+impl CommandExecutor {
+    /// Execute a parsed slash command, returning whether the app should continue.
+    ///
+    /// `agent_commands` is the only piece of input state needed (for `/help` display).
+    /// The caller should call `take_input()` before invoking this method.
+    pub async fn execute(
+        cmd: ParsedCommand,
+        session: &mut SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
+        agent_commands: &[AgentCommand],
+        toolbar: &mut toolbar::ToolbarState,
+        picker: &mut Option<picker::PickerState>,
+        channels: &CommandChannels,
+    ) -> Result<CommandResult> {
+        match cmd {
+            ParsedCommand::Quit => Ok(CommandResult::Quit),
+            ParsedCommand::Clear => {
+                *chat = chat::ChatState::default();
+                chat.add_system_message("Chat cleared.".to_string());
+                Ok(CommandResult::Continue)
+            }
+            ParsedCommand::Help => {
+                let mut help = String::from("Local commands:\n");
+                for cmd in COMMANDS {
+                    help.push_str(&format!("  {:<14} {}\n", cmd.name, cmd.description));
+                }
+                if !agent_commands.is_empty() {
+                    help.push_str("\nAgent commands:\n");
+                    for cmd in agent_commands {
+                        help.push_str(&format!("  {:<20} {}\n", cmd.display_name(), cmd.description));
+                    }
+                }
+                help.push_str("\nKeyboard shortcuts:\n");
+                help.push_str("  Ctrl+C/Q     Quit\n");
+                help.push_str("  Ctrl+M       Toggle mouse (off = copy mode)\n");
+                help.push_str("  Esc          Cancel current request\n");
+                help.push_str("  Tab          Accept autocomplete suggestion\n");
+                help.push_str("  Shift+Enter  Newline in input\n");
+                chat.add_system_message(help);
+                chat.scroll_to_bottom();
+                Ok(CommandResult::Continue)
+            }
+            ParsedCommand::New => {
+                Self::create_new_session(session, conn, chat).await?;
+                Ok(CommandResult::Continue)
+            }
+            ParsedCommand::Load(session_id) => {
+                if session_id.is_empty() {
+                    chat.add_system_message(
+                        "Usage: /load <session-id>\nUse /sessions to list available sessions."
+                            .to_string(),
+                    );
+                } else {
+                    Self::load_session(session, conn, chat, &session_id).await?;
+                }
+                Ok(CommandResult::Continue)
+            }
+            ParsedCommand::Mode(mode_id) => {
+                Self::set_mode(session, conn, chat, &mode_id).await?;
+                Ok(CommandResult::Continue)
+            }
+            ParsedCommand::ModelSelect(model_id) => {
+                Self::set_model(session, conn, chat, picker, channels, &model_id).await?;
+                Ok(CommandResult::Continue)
+            }
+            ParsedCommand::Agent { name, input: arg } => {
+                let command = if let Some(input_text) = arg {
+                    format!("/{name} {input_text}")
+                } else {
+                    format!("/{name}")
+                };
+                Self::execute_agent_command(session, conn, chat, toolbar, channels, &command).await?;
+                Ok(CommandResult::Continue)
+            }
+            ParsedCommand::Unknown(cmd) => {
+                chat.add_system_message(format!(
+                    "Unknown command: {cmd}\nType /help for available commands."
+                ));
+                Ok(CommandResult::Continue)
+            }
+        }
+    }
+
+    /// Send a user prompt to the agent.
+    pub async fn send_prompt(
+        session: &SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
+        input: &mut input::InputState,
+        toolbar: &mut toolbar::ToolbarState,
+        channels: &CommandChannels,
+    ) -> Result<()> {
+        if input.is_empty() || toolbar.is_busy {
+            return Ok(());
+        }
+
+        let session_id = match &session.id {
+            Some(id) => id.clone(),
+            None => {
+                chat.add_system_message("No active session. Use /new to start one.".to_string());
+                return Ok(());
+            }
+        };
+
+        let text = input.take_input();
+        chat.add_user_message(text.clone());
+        chat.begin_streaming();
+        chat.scroll_to_bottom();
+        toolbar.is_busy = true;
+
+        // Build content blocks: user text + any @-referenced file contents
+        let mut content_blocks = vec![acp::ContentBlock::Text(acp::TextContent::new(text.clone()))];
+
+        if let Some(ref completer) = input.file_completer {
+            for path in file_completer::parse_file_references(&text, completer) {
+                match completer.read_file(&path) {
+                    Ok(contents) => {
+                        let file_block = format!("<file path=\"{path}\">\n{contents}\n</file>");
+                        content_blocks
+                            .push(acp::ContentBlock::Text(acp::TextContent::new(file_block)));
+                        tracing::info!("Attached @-referenced file: {path}");
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to read @-referenced file {path}: {e}");
+                    }
+                }
+            }
+        }
+
+        let conn = conn.clone();
+        let done_tx = channels.prompt_done_tx.clone();
+        let response_tx = channels.cmd_response_tx.clone();
+        tokio::task::spawn_local(async move {
+            let result = conn
+                .prompt(acp::PromptRequest::new(session_id, content_blocks))
+                .await;
+
+            if let Err(e) = result {
+                tracing::error!("Prompt error: {e}");
+                let _ = response_tx.send(format!("[Error] Prompt failed: {e}"));
+            }
+            let _ = done_tx.send(());
+        });
+
+        Ok(())
+    }
+
+    /// Create a new session, replacing the current one.
+    pub async fn create_new_session(
+        session: &mut SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
+    ) -> Result<()> {
+        let agent_cwd = path::to_agent(&session.cwd);
+        match conn.new_session(acp::NewSessionRequest::new(agent_cwd)).await {
+            Ok(response) => {
+                session.set_session_id(response.session_id);
+                if let Some(ref modes) = response.modes {
+                    session.set_modes(modes);
+                }
+                if let Some(config_options) = response.config_options {
+                    session.set_config_options(config_options);
+                }
+                *chat = chat::ChatState::default();
+                chat.add_system_message("New session started.".to_string());
+                chat.scroll_to_bottom();
+            }
+            Err(e) => {
+                chat.add_system_message(format!("Failed to create session: {e}"));
+            }
+        }
+        Ok(())
+    }
+
+    /// Load a previous session by ID.
+    pub async fn load_session(
+        session: &mut SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
+        session_id_str: &str,
+    ) -> Result<()> {
+        let agent_cwd = path::to_agent(&session.cwd);
+        let session_id = acp::SessionId::from(session_id_str.to_string());
+
+        match conn
+            .load_session(acp::LoadSessionRequest::new(
+                session_id.clone(),
+                agent_cwd,
+            ))
+            .await
+        {
+            Ok(_) => {
+                session.set_session_id(session_id);
+                *chat = chat::ChatState::default();
+                chat.add_system_message(format!("Loaded session: {session_id_str}"));
+                chat.scroll_to_bottom();
+            }
+            Err(e) => {
+                chat.add_system_message(format!("Failed to load session: {e}"));
+            }
+        }
+        Ok(())
+    }
+
+    /// Execute a Kiro agent command via the extension method.
+    pub async fn execute_agent_command(
+        session: &SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
+        toolbar: &mut toolbar::ToolbarState,
+        channels: &CommandChannels,
+        command: &str,
+    ) -> Result<()> {
+        let session_id = match &session.id {
+            Some(id) => id.clone(),
+            None => {
+                chat.add_system_message("No active session. Use /new to start one.".to_string());
+                return Ok(());
+            }
+        };
+
+        let params = serde_json::json!({
+            "sessionId": session_id.to_string(),
+            "command": command
+        });
+
+        let raw_params = RawValue::from_string(params.to_string())
+            .map_err(|e| anyhow::anyhow!("Failed to serialize command params: {e}"))?;
+
+        chat.begin_streaming();
+        chat.scroll_to_bottom();
+        toolbar.is_busy = true;
+
+        let conn = conn.clone();
+        let done_tx = channels.prompt_done_tx.clone();
+        let response_tx = channels.cmd_response_tx.clone();
+        let cmd_str = command.to_string();
+        tokio::task::spawn_local(async move {
+            let result = conn
+                .ext_method(acp::ExtRequest::new(
+                    "kiro.dev/commands/execute",
+                    Arc::from(raw_params),
+                ))
+                .await;
+
+            match result {
+                Ok(resp) => {
+                    tracing::info!("Command {cmd_str} response: {}", resp.0);
+                    let displayed = if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
+                        if let Some(msg) = val.get("message").and_then(|m| m.as_str()) {
+                            let _ = response_tx.send(msg.to_string());
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    };
+                    if !displayed {
+                        let _ = response_tx.send(resp.0.to_string());
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Command {cmd_str} error: {e}");
+                    let _ = response_tx.send(format!("[Error] Command {cmd_str} failed: {e}"));
+                }
+            }
+            let _ = done_tx.send(());
+        });
+
+        Ok(())
+    }
+
+    /// Switch the agent mode via session/set_mode.
+    pub async fn set_mode(
+        session: &mut SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
+        mode_id: &str,
+    ) -> Result<()> {
+        if mode_id.is_empty() {
+            if session.available_modes.is_empty() {
+                chat.add_system_message(
+                    "No modes available. The agent did not advertise any modes.".to_string(),
+                );
+            } else {
+                let mut msg = String::from("Available modes:\n");
+                for mode in &session.available_modes {
+                    let current = session
+                        .current_mode_id
+                        .as_deref()
+                        .is_some_and(|c| c == mode.id);
+                    let marker = if current { " (active)" } else { "" };
+                    msg.push_str(&format!("  {:<20} {}{}\n", mode.id, mode.name, marker));
+                }
+                msg.push_str("\nUsage: /mode <id>");
+                chat.add_system_message(msg);
+            }
+            return Ok(());
+        }
+
+        let session_id = match &session.id {
+            Some(id) => id.clone(),
+            None => {
+                chat.add_system_message("No active session.".to_string());
+                return Ok(());
+            }
+        };
+
+        match conn
+            .set_session_mode(acp::SetSessionModeRequest::new(
+                session_id,
+                mode_id.to_string(),
+            ))
+            .await
+        {
+            Ok(_) => {
+                session.current_mode_id = Some(mode_id.to_string());
+                chat.add_system_message(format!("Switched to mode: {mode_id}"));
+            }
+            Err(e) => {
+                chat.add_system_message(format!("Failed to set mode: {e}"));
+            }
+        }
+        Ok(())
+    }
+
+    /// Switch the model via Kiro extension commands.
+    pub async fn set_model(
+        session: &SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
+        picker: &mut Option<picker::PickerState>,
+        channels: &CommandChannels,
+        model_id: &str,
+    ) -> Result<()> {
+        let session_id = match &session.id {
+            Some(id) => id.clone(),
+            None => {
+                chat.add_system_message("No active session.".to_string());
+                return Ok(());
+            }
+        };
+
+        if model_id.is_empty() {
+            let params = serde_json::json!({
+                "command": CONFIG_KEY_MODEL,
+                "sessionId": session_id.to_string()
+            });
+            let raw_params = RawValue::from_string(params.to_string())
+                .map_err(|e| anyhow::anyhow!("Failed to serialize params: {e}"))?;
+
+            match conn
+                .ext_method(acp::ExtRequest::new(
+                    "kiro.dev/commands/options",
+                    Arc::from(raw_params),
+                ))
+                .await
+            {
+                Ok(resp) => {
+                    Self::open_model_picker(chat, picker, resp.0.get());
+                }
+                Err(e) => {
+                    chat.add_system_message(format!("Failed to query models: {e}"));
+                }
+            }
+            return Ok(());
+        }
+
+        let conn = conn.clone();
+        let response_tx = channels.cmd_response_tx.clone();
+        let model_str = model_id.to_string();
+        tokio::task::spawn_local(async move {
+            match conn
+                .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
+                    session_id,
+                    CONFIG_KEY_MODEL.to_string(),
+                    model_str.clone(),
+                ))
+                .await
+            {
+                Ok(_) => {
+                    tracing::info!("Set model to: {model_str}");
+                    let _ = response_tx.send(format!("Switched to model: {model_str}"));
+                }
+                Err(e) => {
+                    tracing::error!("Failed to set model: {e}");
+                    let _ = response_tx.send(format!("Failed to set model: {e}"));
+                }
+            }
+        });
+        Ok(())
+    }
+
+    /// Parse model options from a `_kiro.dev/commands/options` response and open a picker.
+    pub fn open_model_picker(
+        chat: &mut chat::ChatState,
+        picker: &mut Option<picker::PickerState>,
+        raw_json: &str,
+    ) {
+        let val: serde_json::Value = match serde_json::from_str(raw_json) {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::warn!("Failed to parse model options: {e}");
+                chat.add_system_message("Failed to parse model options.".to_string());
+                return;
+            }
+        };
+
+        let options = val
+            .get("options")
+            .and_then(|v| v.as_array())
+            .or_else(|| val.as_array());
+
+        match options {
+            Some(opts) if !opts.is_empty() => {
+                let picker_options: Vec<picker::PickerOption> = opts
+                    .iter()
+                    .map(|opt| {
+                        let value = opt
+                            .get("value")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("?")
+                            .to_string();
+                        let name = opt
+                            .get("name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(&value)
+                            .to_string();
+                        let active = opt
+                            .get("current")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                        picker::PickerOption {
+                            label: name,
+                            value,
+                            active,
+                        }
+                    })
+                    .collect();
+                *picker = Some(picker::PickerState::new(
+                    "Select Model",
+                    picker_options,
+                    picker::PickerAction::SetModel,
+                ));
+            }
+            _ => {
+                tracing::info!("Model options raw response: {raw_json}");
+                chat.add_system_message(
+                    "No model options returned. Try /model <model-id> directly.".to_string(),
+                );
+            }
+        }
+    }
+
+    /// Handle a confirmed picker selection.
+    pub fn handle_picker_confirm(
+        session: &SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        channels: &CommandChannels,
+        state: picker::PickerState,
+    ) {
+        let value = match state.selected_value() {
+            Some(v) => v.to_string(),
+            None => {
+                tracing::warn!("Picker confirmed with no selection");
+                return;
+            }
+        };
+
+        match state.action {
+            picker::PickerAction::SetModel => {
+                let session_id = match &session.id {
+                    Some(id) => id.clone(),
+                    None => {
+                        tracing::warn!("Picker confirmed but no active session");
+                        return;
+                    }
+                };
+
+                let conn = conn.clone();
+                let response_tx = channels.cmd_response_tx.clone();
+                tokio::task::spawn_local(async move {
+                    match conn
+                        .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
+                            session_id,
+                            CONFIG_KEY_MODEL.to_string(),
+                            value.clone(),
+                        ))
+                        .await
+                    {
+                        Ok(_) => {
+                            tracing::info!("Set model to: {value}");
+                            let _ = response_tx.send(format!("Switched to model: {value}"));
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to set model: {e}");
+                            let _ = response_tx.send(format!("Failed to set model: {e}"));
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    /// Send the next queued hook feedback as a prompt.
+    pub fn flush_next_hook_feedback(
+        session: &SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
+        toolbar: &mut toolbar::ToolbarState,
+        channels: &CommandChannels,
+        pending_hook_feedback: &mut Vec<String>,
+    ) {
+        if pending_hook_feedback.is_empty() {
+            return;
+        }
+
+        let session_id = match &session.id {
+            Some(id) => id.clone(),
+            None => {
+                pending_hook_feedback.clear();
+                return;
+            }
+        };
+
+        let text = pending_hook_feedback.remove(0);
+        toolbar.is_busy = true;
+        chat.begin_streaming();
+
+        let conn = conn.clone();
+        let done_tx = channels.prompt_done_tx.clone();
+        let response_tx = channels.cmd_response_tx.clone();
+        tokio::task::spawn_local(async move {
+            let result = conn
+                .prompt(acp::PromptRequest::new(
+                    session_id,
+                    vec![acp::ContentBlock::Text(acp::TextContent::new(text))],
+                ))
+                .await;
+
+            if let Err(e) = result {
+                tracing::error!("Hook feedback prompt error: {e}");
+                let _ = response_tx.send(format!("[Error] Hook feedback failed: {e}"));
+            }
+            let _ = done_tx.send(());
+        });
+    }
+}
 
 /// Built-in slash commands.
 #[derive(Debug, Clone)]
