@@ -24,6 +24,7 @@ pub struct SessionContext {
     pub cwd: PathBuf,
     pub context_usage_pct: Option<f64>,
     pub current_mode_id: Option<String>,
+    cached_model: Option<String>,
 }
 
 impl SessionContext {
@@ -35,6 +36,7 @@ impl SessionContext {
             cwd,
             context_usage_pct: None,
             current_mode_id: None,
+            cached_model: None,
         }
     }
 
@@ -58,10 +60,16 @@ impl SessionContext {
     /// Store config options (model, etc.) from a session response or update notification.
     pub fn set_config_options(&mut self, options: Vec<acp::SessionConfigOption>) {
         self.config_options = options;
+        self.cached_model = self.compute_current_model();
+    }
+
+    /// Return the cached model value (O(1) per frame).
+    pub fn current_model(&self) -> Option<&str> {
+        self.cached_model.as_deref()
     }
 
     /// Extract the current model value from stored config options.
-    pub fn current_model(&self) -> Option<String> {
+    fn compute_current_model(&self) -> Option<String> {
         self.config_options.iter().find_map(|opt| {
             if opt.id.to_string() == CONFIG_KEY_MODEL {
                 if let acp::SessionConfigKind::Select(ref select) = opt.kind {

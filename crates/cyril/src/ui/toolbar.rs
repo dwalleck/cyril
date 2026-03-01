@@ -28,15 +28,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &Ses
         Color::Green
     };
 
-    let session_id_string = session
-        .id
-        .as_ref()
-        .map(|id| id.to_string())
-        .unwrap_or_default();
-    let session_display = if session_id_string.is_empty() {
-        "none"
-    } else {
-        &session_id_string[..8.min(session_id_string.len())]
+    let session_display: &str = match session.id.as_ref() {
+        None => "none",
+        Some(id) => {
+            let s: &str = &id.0;
+            &s[..8.min(s.len())]
+        }
     };
 
     let mut spans = vec![
@@ -67,8 +64,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &Ses
         ));
     }
 
-    let current_model = session.current_model();
-    if let Some(ref model) = current_model {
+    if let Some(model) = session.current_model() {
         spans.push(Span::raw(" "));
         spans.push(Span::styled(
             format!("({model})"),
