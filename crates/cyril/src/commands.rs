@@ -162,6 +162,7 @@ impl CommandExecutor {
                     }
                     Err(e) => {
                         tracing::warn!("Failed to read @-referenced file {path}: {e}");
+                        chat.add_system_message(format!("Could not attach @{path}: {e}"));
                     }
                 }
             }
@@ -562,6 +563,10 @@ impl CommandExecutor {
         let session_id = match &session.id {
             Some(id) => id.clone(),
             None => {
+                tracing::warn!(
+                    count = pending_hook_feedback.len(),
+                    "Discarding hook feedback — no active session"
+                );
                 pending_hook_feedback.clear();
                 return;
             }
