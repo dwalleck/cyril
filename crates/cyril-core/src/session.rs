@@ -19,11 +19,11 @@ pub struct AvailableMode {
 #[derive(Debug)]
 pub struct SessionContext {
     pub id: Option<acp::SessionId>,
-    pub available_modes: Vec<AvailableMode>,
-    pub config_options: Vec<acp::SessionConfigOption>,
     pub cwd: PathBuf,
-    pub context_usage_pct: Option<f64>,
-    pub current_mode_id: Option<String>,
+    available_modes: Vec<AvailableMode>,
+    config_options: Vec<acp::SessionConfigOption>,
+    context_usage_pct: Option<f64>,
+    current_mode_id: Option<String>,
     cached_model: Option<String>,
 }
 
@@ -40,8 +40,34 @@ impl SessionContext {
         }
     }
 
+    /// Set the session ID (typically after creating or loading a session).
     pub fn set_session_id(&mut self, session_id: acp::SessionId) {
         self.id = Some(session_id);
+    }
+
+    /// The available agent modes advertised by the session.
+    pub fn available_modes(&self) -> &[AvailableMode] {
+        &self.available_modes
+    }
+
+    /// The current mode ID, if any.
+    pub fn current_mode_id(&self) -> Option<&str> {
+        self.current_mode_id.as_deref()
+    }
+
+    /// Set the current mode ID (from a `ModeChanged` notification).
+    pub fn set_current_mode_id(&mut self, mode_id: String) {
+        self.current_mode_id = Some(mode_id);
+    }
+
+    /// The current context usage percentage, if reported.
+    pub fn context_usage_pct(&self) -> Option<f64> {
+        self.context_usage_pct
+    }
+
+    /// Set the context usage percentage (from Kiro metadata notifications).
+    pub fn set_context_usage_pct(&mut self, pct: f64) {
+        self.context_usage_pct = Some(pct);
     }
 
     /// Store mode info from a NewSessionResponse.

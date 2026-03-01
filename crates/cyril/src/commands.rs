@@ -319,16 +319,15 @@ impl CommandExecutor {
         mode_id: &str,
     ) -> Result<()> {
         if mode_id.is_empty() {
-            if session.available_modes.is_empty() {
+            if session.available_modes().is_empty() {
                 chat.add_system_message(
                     "No modes available. The agent did not advertise any modes.".to_string(),
                 );
             } else {
                 let mut msg = String::from("Available modes:\n");
-                for mode in &session.available_modes {
+                for mode in session.available_modes() {
                     let current = session
-                        .current_mode_id
-                        .as_deref()
+                        .current_mode_id()
                         .is_some_and(|c| c == mode.id);
                     let marker = if current { " (active)" } else { "" };
                     msg.push_str(&format!("  {:<20} {}{}\n", mode.id, mode.name, marker));
@@ -355,7 +354,7 @@ impl CommandExecutor {
             .await
         {
             Ok(_) => {
-                session.current_mode_id = Some(mode_id.to_string());
+                session.set_current_mode_id(mode_id.to_string());
                 chat.add_system_message(format!("Switched to mode: {mode_id}"));
             }
             Err(e) => {

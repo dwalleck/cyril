@@ -149,7 +149,7 @@ impl App {
         chat::render(frame, chunks[1], &self.chat);
         input::render(frame, chunks[2], &mut self.input);
 
-        let pct = self.session.context_usage_pct.unwrap_or(0.0);
+        let pct = self.session.context_usage_pct().unwrap_or(0.0);
         toolbar::render_context_bar(frame, chunks[3], pct);
 
         // Overlay popups
@@ -374,7 +374,7 @@ impl App {
                 );
             }
             ProtocolEvent::ModeChanged { mode, .. } => {
-                self.session.current_mode_id = Some(mode.current_mode_id.to_string());
+                self.session.set_current_mode_id(mode.current_mode_id.to_string());
             }
             ProtocolEvent::PlanUpdated { plan, .. } => {
                 self.chat.update_plan(plan);
@@ -419,7 +419,7 @@ impl App {
                 );
             }
             ExtensionEvent::KiroMetadata { context_usage_pct, .. } => {
-                self.session.context_usage_pct = Some(context_usage_pct);
+                self.session.set_context_usage_pct(context_usage_pct);
             }
         }
     }

@@ -53,9 +53,8 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &Ses
     ];
 
     let mode_display = session
-        .current_mode_id
-        .as_ref()
-        .or(state.selected_agent.as_ref());
+        .current_mode_id()
+        .or(state.selected_agent.as_deref());
     if let Some(mode) = mode_display {
         spans.push(Span::raw(" "));
         spans.push(Span::styled(
