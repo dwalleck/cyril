@@ -751,3 +751,139 @@ pub fn matching_suggestions(prefix: &str, agent_commands: &[AgentCommand]) -> Ve
 
     suggestions
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn no_agent_commands() -> Vec<AgentCommand> {
+        Vec::new()
+    }
+
+    fn agent_commands_with_compact() -> Vec<AgentCommand> {
+        vec![AgentCommand {
+            name: "compact".to_string(),
+            description: "Compact the context".to_string(),
+            input_hint: Some("instructions".to_string()),
+        }]
+    }
+
+    #[test]
+    fn parse_slash_quit() {
+        let cmd = parse_command("/quit", &no_agent_commands());
+        assert!(matches!(cmd, Some(ParsedCommand::Quit)));
+    }
+
+    #[test]
+    fn parse_slash_clear() {
+        let cmd = parse_command("/clear", &no_agent_commands());
+        assert!(matches!(cmd, Some(ParsedCommand::Clear)));
+    }
+
+    #[test]
+    fn parse_slash_help() {
+        let cmd = parse_command("/help", &no_agent_commands());
+        assert!(matches!(cmd, Some(ParsedCommand::Help)));
+    }
+
+    #[test]
+    fn parse_slash_new() {
+        let cmd = parse_command("/new", &no_agent_commands());
+        assert!(matches!(cmd, Some(ParsedCommand::New)));
+    }
+
+    #[test]
+    fn parse_slash_load_with_arg() {
+        let cmd = parse_command("/load abc-123", &no_agent_commands());
+        match cmd {
+            Some(ParsedCommand::Load(arg)) => assert_eq!(arg, "abc-123"),
+            other => panic!("Expected Load(\"abc-123\"), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_slash_load_no_arg() {
+        let cmd = parse_command("/load", &no_agent_commands());
+        match cmd {
+            Some(ParsedCommand::Load(arg)) => assert_eq!(arg, ""),
+            other => panic!("Expected Load(\"\"), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_slash_mode_with_arg() {
+        let cmd = parse_command("/mode code", &no_agent_commands());
+        match cmd {
+            Some(ParsedCommand::Mode(arg)) => assert_eq!(arg, "code"),
+            other => panic!("Expected Mode(\"code\"), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_slash_model_with_arg() {
+        let cmd = parse_command("/model claude-sonnet", &no_agent_commands());
+        match cmd {
+            Some(ParsedCommand::ModelSelect(arg)) => assert_eq!(arg, "claude-sonnet"),
+            other => panic!("Expected ModelSelect(\"claude-sonnet\"), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_non_slash_returns_none() {
+        let cmd = parse_command("hello world", &no_agent_commands());
+        assert!(cmd.is_none());
+    }
+
+    #[test]
+    fn parse_unknown_command() {
+        let cmd = parse_command("/foobar", &no_agent_commands());
+        match cmd {
+            Some(ParsedCommand::Unknown(name)) => assert_eq!(name, "/foobar"),
+            other => panic!("Expected Unknown(\"/foobar\"), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_agent_command() {
+        let cmd = parse_command("/compact", &agent_commands_with_compact());
+        match cmd {
+            Some(ParsedCommand::Agent { name, input }) => {
+                assert_eq!(name, "compact");
+                assert!(input.is_none());
+            }
+            other => panic!("Expected Agent {{ name: \"compact\" }}, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_agent_command_with_input() {
+        let cmd = parse_command("/compact reduce context", &agent_commands_with_compact());
+        match cmd {
+            Some(ParsedCommand::Agent { name, input }) => {
+                assert_eq!(name, "compact");
+                assert_eq!(input.as_deref(), Some("reduce context"));
+            }
+            other => panic!("Expected Agent with input, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn matching_suggestions_filters_by_prefix() {
+        let suggestions = matching_suggestions("/cl", &no_agent_commands());
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].display_name, "/clear");
+    }
+
+    #[test]
+    fn matching_suggestions_empty_for_non_slash() {
+        let suggestions = matching_suggestions("hello", &no_agent_commands());
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn matching_suggestions_includes_agent_commands() {
+        let suggestions = matching_suggestions("/com", &agent_commands_with_compact());
+        let names: Vec<&str> = suggestions.iter().map(|s| s.display_name.as_str()).collect();
+        assert!(names.contains(&"/compact"));
+    }
+}

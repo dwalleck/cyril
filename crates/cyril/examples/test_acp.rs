@@ -12,7 +12,7 @@ use clap::Parser;
 use tokio::sync::mpsc;
 
 use cyril_core::client::KiroClient;
-use cyril_core::event::AppEvent;
+use cyril_core::event::{AppEvent, ExtensionEvent, ProtocolEvent};
 use cyril_core::hooks::HookRegistry;
 use cyril_core::transport::AgentProcess;
 
@@ -98,13 +98,13 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
     tokio::task::spawn_local(async move {
         while let Some(event) = event_rx.recv().await {
             match &event {
-                AppEvent::ModeChanged { mode, .. } => {
+                AppEvent::Protocol(ProtocolEvent::ModeChanged { mode, .. }) => {
                     println!("  [event] ModeChanged: {:?}", mode);
                 }
-                AppEvent::KiroCommandsAvailable { commands } => {
+                AppEvent::Extension(ExtensionEvent::KiroCommandsAvailable { commands }) => {
                     println!("  [event] KiroCommandsAvailable: {} commands", commands.len());
                 }
-                AppEvent::KiroMetadata { context_usage_pct, .. } => {
+                AppEvent::Extension(ExtensionEvent::KiroMetadata { context_usage_pct, .. }) => {
                     println!("  [event] KiroMetadata: context={context_usage_pct}%");
                 }
                 _ => {

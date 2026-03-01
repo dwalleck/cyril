@@ -80,3 +80,97 @@ impl SessionContext {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_session_has_no_id() {
+        let ctx = SessionContext::new(PathBuf::from("/tmp"));
+        assert!(ctx.id.is_none());
+        assert!(ctx.available_modes.is_empty());
+        assert!(ctx.config_options.is_empty());
+        assert!(ctx.context_usage_pct.is_none());
+        assert!(ctx.current_mode_id.is_none());
+        assert!(ctx.current_model().is_none());
+    }
+
+    #[test]
+    fn set_session_id_stores_id() {
+        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
+        let id = acp::SessionId::from("test-session-123".to_string());
+        ctx.set_session_id(id);
+        assert!(ctx.id.is_some());
+        assert_eq!(ctx.id.unwrap().to_string(), "test-session-123");
+    }
+
+    #[test]
+    fn current_model_returns_none_when_no_config() {
+        let ctx = SessionContext::new(PathBuf::from("/tmp"));
+        assert!(ctx.current_model().is_none());
+    }
+
+    #[test]
+    fn current_model_returns_value_from_config_options() {
+        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
+        let option = acp::SessionConfigOption::select(
+            "model",
+            "Model",
+            "claude-sonnet-4-6",
+            vec![acp::SessionConfigSelectOption::new(
+                "claude-sonnet-4-6",
+                "Claude Sonnet 4.6",
+            )],
+        );
+        ctx.set_config_options(vec![option]);
+        assert_eq!(ctx.current_model(), Some("claude-sonnet-4-6"));
+    }
+
+    #[test]
+    fn set_modes_populates_available_modes() {
+        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
+        let modes = acp::SessionModeState::new(
+            "code",
+            vec![
+                acp::SessionMode::new("code", "Code"),
+                acp::SessionMode::new("chat", "Chat"),
+            ],
+        );
+        ctx.set_modes(&modes);
+        assert_eq!(ctx.current_mode_id.as_deref(), Some("code"));
+        assert_eq!(ctx.available_modes.len(), 2);
+        assert_eq!(ctx.available_modes[0].id, "code");
+        assert_eq!(ctx.available_modes[0].name, "Code");
+        assert_eq!(ctx.available_modes[1].id, "chat");
+        assert_eq!(ctx.available_modes[1].name, "Chat");
+    }
+
+    #[test]
+    fn set_config_options_caches_model() {
+        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
+        let option = acp::SessionConfigOption::select(
+            "model",
+            "Model",
+            "claude-opus-4",
+            vec![
+                acp::SessionConfigSelectOption::new("claude-opus-4", "Claude Opus 4"),
+                acp::SessionConfigSelectOption::new("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+            ],
+        );
+        ctx.set_config_options(vec![option]);
+
+        // current_model() returns the cached value without recomputing
+        assert_eq!(ctx.current_model(), Some("claude-opus-4"));
+
+        // Adding a non-model config option does not affect the model cache
+        let other = acp::SessionConfigOption::select(
+            "thought_level",
+            "Thought Level",
+            "high",
+            vec![acp::SessionConfigSelectOption::new("high", "High")],
+        );
+        ctx.set_config_options(vec![other]);
+        assert!(ctx.current_model().is_none());
+    }
+}
