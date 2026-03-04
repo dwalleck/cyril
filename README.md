@@ -1,29 +1,27 @@
 # Cyril
 
-A Windows-native TUI client for [Kiro CLI](https://kiro.dev) via the [Agent Client Protocol (ACP)](https://agentclientprotocol.com).
+A cross-platform TUI client for [Kiro CLI](https://kiro.dev) via the [Agent Client Protocol (ACP)](https://agentclientprotocol.com).
 
 > **Status:** Alpha — functional but under active development.
 
 ## What is this?
 
-Kiro CLI doesn't run natively on Windows — only in WSL. Cyril bridges the gap by running as a native Windows terminal application that communicates with Kiro CLI in WSL over ACP (JSON-RPC 2.0 over stdio).
+Cyril is a terminal-based frontend for Kiro CLI, communicating over ACP (JSON-RPC 2.0 over stdio). It provides streaming markdown rendering, tool call visibility, and an approval workflow — all from your terminal.
 
-This means you get Kiro's full AI agent capabilities while your file system operations and terminal commands execute natively on Windows — important for workflows like .NET/C# development where you need the Windows SDK.
+- **On Linux** — runs `kiro-cli acp` directly as a subprocess
+- **On Windows** — bridges to `kiro-cli` running inside WSL, with automatic path translation between `C:\` and `/mnt/c/` paths
 
 ```
-Windows (Cyril TUI)  <── stdin/stdout JSON-RPC ──>  WSL (kiro-cli acp)
-       |                                                    |
-       ├── Streaming markdown rendering                     ├── AI reasoning & planning
-       ├── Path translation (C:\ <-> /mnt/c/)               ├── MCP servers
-       ├── Native terminal execution                        ├── Skills & steering rules
-       └── JSON-configurable hook system                    └── Cloud AI model
+Linux:   Cyril TUI  <── stdin/stdout JSON-RPC ──>  kiro-cli acp
+
+Windows: Cyril TUI  <── stdin/stdout JSON-RPC ──>  WSL (kiro-cli acp)
+              + automatic C:\ <-> /mnt/c/ path translation
 ```
 
 ## Features
 
 - **Streaming TUI** — ratatui-based interface with real-time markdown rendering
-- **Path translation** — automatic `C:\` to `/mnt/c/` mapping at the protocol boundary
-- **Native terminal execution** — agent-requested commands run on Windows, not in WSL
+- **Cross-platform** — runs natively on Linux; bridges to WSL on Windows with automatic path translation
 - **Hook system** — JSON-configurable before/after hooks on file writes and terminal commands
 - **Slash commands** — autocomplete-enabled commands from both the client and the Kiro agent
 - **Tool call display** — see what the agent is doing in real time
@@ -32,9 +30,9 @@ Windows (Cyril TUI)  <── stdin/stdout JSON-RPC ──>  WSL (kiro-cli acp)
 
 ## Prerequisites
 
-- Windows 10/11 with [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) installed
-- [Kiro CLI](https://kiro.dev/docs/cli/) installed inside WSL
+- [Kiro CLI](https://kiro.dev/docs/cli/) installed and authenticated (`kiro-cli login`)
 - [Rust toolchain](https://rustup.rs/) (for building from source)
+- **Windows only:** [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with kiro-cli installed inside it
 
 ## Installation
 
@@ -50,7 +48,7 @@ cd cyril
 cargo build --release
 ```
 
-The binary will be at `target/release/cyril.exe`.
+The binary will be at `target/release/cyril` (or `cyril.exe` on Windows).
 
 ## Usage
 
@@ -69,7 +67,8 @@ cyril --prompt "Explain what this project does"
 Specify a working directory:
 
 ```sh
-cyril -d C:\Users\you\project
+cyril -d /path/to/project        # Linux
+cyril -d C:\Users\you\project    # Windows
 ```
 
 ### Keyboard shortcuts

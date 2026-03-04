@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Cyril is a Windows-native TUI client for Kiro CLI, communicating over the Agent Client Protocol (ACP) via JSON-RPC 2.0 over stdio. It spawns `wsl kiro-cli acp` as a subprocess and acts as a thin ACP client — providing filesystem, terminal, and permission capabilities while Kiro handles AI reasoning.
+Cyril is a cross-platform TUI client for Kiro CLI, communicating over the Agent Client Protocol (ACP) via JSON-RPC 2.0 over stdio. On Linux it spawns `kiro-cli acp` directly; on Windows it spawns `wsl kiro-cli acp` and translates paths at the protocol boundary. It acts as a thin ACP client — providing filesystem, terminal, and permission capabilities while Kiro handles AI reasoning.
 
 ## Build & Test Commands
 
@@ -42,7 +42,7 @@ Two crates in a Cargo workspace:
 
 ```
 User input → CommandExecutor::send_prompt() → acp::ClientSideConnection::prompt()
-                                                    ↓ (JSON-RPC over stdio to WSL)
+                                                    ↓ (JSON-RPC over stdio; via WSL on Windows)
                                                kiro-cli acp
                                                     ↓ (callbacks)
 KiroClient (implements acp::Client) ← agent requests fs/terminal/permissions
@@ -61,16 +61,16 @@ KiroClient (implements acp::Client) ← agent requests fs/terminal/permissions
 ### Key Boundary: KiroClient (`cyril-core/src/protocol/client.rs`)
 
 This is the ACP `Client` trait implementation — the single point where all agent callbacks arrive. It:
-- Translates WSL paths to Windows paths on every fs read/write
+- On Windows, translates WSL paths to Windows paths on every fs read/write (no-op on Linux)
 - Runs before/after hooks at the protocol boundary
-- Manages terminal processes (native Windows execution)
+- Manages terminal processes (native execution on the host OS)
 - Sends `AppEvent`s over an mpsc channel to the TUI
 
 Everything is `!Send` — uses `Rc<RefCell<_>>` and `#[async_trait(?Send)]`. The tokio runtime is `current_thread` with a `LocalSet`.
 
 ### Path Translation (`cyril-core/src/platform/path.rs`)
 
-All paths crossing the WSL boundary go through `win_to_wsl()` / `wsl_to_win()`. The agent sees `/mnt/c/...` paths; the client operates on `C:\...` paths. `translate_paths_in_json()` handles recursive translation in JSON payloads.
+On Windows, all paths crossing the WSL boundary go through `win_to_wsl()` / `wsl_to_win()`. The agent sees `/mnt/c/...` paths; the client operates on `C:\...` paths. `translate_paths_in_json()` handles recursive translation in JSON payloads. On Linux, path translation is a no-op — paths pass through unchanged.
 
 ### Event Architecture
 
@@ -181,7 +181,8 @@ Always use `CommandExecutor::send_or_log()` instead of `let _ = sender.send()`. 
 
 ## Platform Constraints
 
-- Windows-only: spawns `wsl` to reach kiro-cli
-- Requires WSL with kiro-cli installed and authenticated (`wsl kiro-cli login`)
-- Terminal commands from the agent run natively on Windows (not in WSL)
+- **Linux:** spawns `kiro-cli acp` directly; requires kiro-cli installed and on PATH
+- **Windows:** spawns `wsl kiro-cli acp`; requires WSL with kiro-cli installed and authenticated (`wsl kiro-cli login`)
+- Path translation (`C:\` ↔ `/mnt/c/`) is active only on Windows; on Linux it's a no-op
+- Terminal commands from the agent run natively on the host OS
 - Logs go to `cyril.log` in the working directory (append mode) to avoid TUI conflicts
