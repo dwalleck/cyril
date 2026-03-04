@@ -1,10 +1,10 @@
 use agent_client_protocol as acp;
 use ratatui::{
-    Frame,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
+    Frame,
 };
 
 /// State for a pending permission request.
@@ -59,6 +59,14 @@ impl ApprovalState {
             if let Some(cmd) = raw.get("command").and_then(|v| v.as_str()) {
                 return Some(format!("Command: {cmd}"));
             }
+            // Search query
+            if let Some(query) = raw.get("query").and_then(|v| v.as_str()) {
+                return Some(format!("Query: {query}"));
+            }
+            // URL fetch
+            if let Some(url) = raw.get("url").and_then(|v| v.as_str()) {
+                return Some(format!("URL: {url}"));
+            }
             // File operation
             if let Some(path) = raw
                 .get("file_path")
@@ -85,7 +93,10 @@ impl ApprovalState {
 
     pub fn select_prev(&mut self) {
         if !self.options.is_empty() {
-            self.selected = self.selected.checked_sub(1).unwrap_or(self.options.len() - 1);
+            self.selected = self
+                .selected
+                .checked_sub(1)
+                .unwrap_or(self.options.len() - 1);
         }
     }
 
@@ -95,10 +106,13 @@ impl ApprovalState {
 }
 
 pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
-    // Center the popup
-    let popup_area = centered_rect(60, 40, area);
+    let detail_height: u16 = if state.detail.is_some() { 1 } else { 0 };
+    let options_height = state.options.len() as u16;
+    // 1 (title) + detail + 1 (blank separator) + options + 1 (hint) + 2 (borders)
+    let content_height = 1 + detail_height + 1 + options_height + 1 + 2;
 
-    // Clear the area behind the popup
+    let popup_area = centered_rect_fixed(60, content_height, area);
+
     frame.render_widget(Clear, popup_area);
 
     let block = Block::default()
@@ -108,26 +122,24 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
 
     let inner = block.inner(popup_area);
 
-    let detail_height = if state.detail.is_some() { 2 } else { 0 };
     let chunks = Layout::vertical([
-        Constraint::Length(3),            // description
-        Constraint::Length(detail_height), // detail (file path, command)
-        Constraint::Min(1),              // options
-        Constraint::Length(1),           // hint
+        Constraint::Length(1),              // title
+        Constraint::Length(detail_height),  // detail (URL, command, etc.)
+        Constraint::Length(1),              // blank separator
+        Constraint::Length(options_height), // options
+        Constraint::Length(1),              // hint
     ])
     .split(inner);
 
-    // Description
+    // Title
     let desc = state
         .title
         .as_deref()
         .unwrap_or("The agent wants to perform an action");
-    let desc_widget = Paragraph::new(desc)
-        .style(Style::default().fg(Color::White))
-        .wrap(Wrap { trim: true });
+    let desc_widget = Paragraph::new(desc).style(Style::default().fg(Color::White));
     frame.render_widget(desc_widget, chunks[0]);
 
-    // Detail line (file path, command, etc.)
+    // Detail line (URL, command, file path, etc.)
     if let Some(ref detail) = state.detail {
         let detail_widget = Paragraph::new(detail.as_str())
             .style(Style::default().fg(Color::Cyan))
@@ -153,7 +165,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
         )));
     }
     let options_widget = Paragraph::new(option_lines);
-    frame.render_widget(options_widget, chunks[2]);
+    frame.render_widget(options_widget, chunks[3]);
 
     // Hint
     let hint = Paragraph::new(Line::from(vec![
@@ -165,16 +177,20 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
         Span::raw(" cancel"),
     ]))
     .style(Style::default().fg(Color::DarkGray));
-    frame.render_widget(hint, chunks[3]);
+    frame.render_widget(hint, chunks[4]);
 
     frame.render_widget(block, popup_area);
 }
 
-fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
+/// Center a popup with a percentage-based width and a fixed pixel height.
+fn centered_rect_fixed(percent_x: u16, height: u16, area: Rect) -> Rect {
+    let clamped_height = height.min(area.height);
+    let vertical_padding = area.height.saturating_sub(clamped_height) / 2;
+
     let popup_layout = Layout::vertical([
-        Constraint::Percentage((100 - percent_y) / 2),
-        Constraint::Percentage(percent_y),
-        Constraint::Percentage((100 - percent_y) / 2),
+        Constraint::Length(vertical_padding),
+        Constraint::Length(clamped_height),
+        Constraint::Min(0),
     ])
     .split(area);
 

@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -28,6 +29,9 @@ pub struct KiroClient {
     event_tx: mpsc::UnboundedSender<AppEvent>,
     terminal_manager: RefCell<TerminalManager>,
     hooks: RefCell<HookRegistry>,
+    /// Cache of `raw_input` from ToolCall/ToolCallUpdate notifications, keyed by tool call ID.
+    /// Permission requests arrive without `raw_input`, so we look it up here to enrich them.
+    tool_call_inputs: RefCell<HashMap<acp::ToolCallId, serde_json::Value>>,
 }
 
 impl KiroClient {
@@ -39,6 +43,7 @@ impl KiroClient {
             event_tx,
             terminal_manager: RefCell::new(TerminalManager::new()),
             hooks: RefCell::new(hooks),
+            tool_call_inputs: RefCell::new(HashMap::new()),
         })
     }
 
@@ -54,8 +59,16 @@ impl KiroClient {
 impl acp::Client for KiroClient {
     async fn request_permission(
         &self,
-        args: acp::RequestPermissionRequest,
+        mut args: acp::RequestPermissionRequest,
     ) -> acp::Result<acp::RequestPermissionResponse> {
+        // Permission requests arrive without raw_input — enrich from our cache
+        // so the approval UI can display details like URLs and commands.
+        if args.tool_call.fields.raw_input.is_none() {
+            if let Some(cached) = self.tool_call_inputs.borrow().get(&args.tool_call.tool_call_id) {
+                args.tool_call.fields.raw_input = Some(cached.clone());
+            }
+        }
+
         let (tx, rx) = oneshot::channel();
         self.emit(AppEvent::Interaction(InteractionRequest::Permission {
             request: args,
@@ -83,12 +96,22 @@ impl acp::Client for KiroClient {
                 }));
             }
             acp::SessionUpdate::ToolCall(tool_call) => {
+                if let Some(ref raw_input) = tool_call.raw_input {
+                    self.tool_call_inputs
+                        .borrow_mut()
+                        .insert(tool_call.tool_call_id.clone(), raw_input.clone());
+                }
                 self.emit(AppEvent::Protocol(ProtocolEvent::ToolCallStarted {
                     session_id: args.session_id,
                     tool_call,
                 }));
             }
             acp::SessionUpdate::ToolCallUpdate(update) => {
+                if let Some(ref raw_input) = update.fields.raw_input {
+                    self.tool_call_inputs
+                        .borrow_mut()
+                        .insert(update.tool_call_id.clone(), raw_input.clone());
+                }
                 self.emit(AppEvent::Protocol(ProtocolEvent::ToolCallUpdated {
                     session_id: args.session_id,
                     update,
