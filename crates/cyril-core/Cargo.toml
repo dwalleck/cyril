@@ -5,6 +5,9 @@ edition = "2021"
 description = "Core protocol logic, path translation, hooks, and capabilities for the Cyril ACP client"
 license = "MIT"
 repository = "https://github.com/dwalleck/cyril"
+readme = "../../README.md"
+homepage = "https://github.com/dwalleck/cyril"
+documentation = "https://docs.rs/cyril-core"
 keywords = ["acp", "kiro", "wsl", "windows"]
 categories = ["development-tools"]
 

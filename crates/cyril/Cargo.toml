@@ -2,9 +2,12 @@
 name = "cyril"
 version = "0.1.0-alpha.1"
 edition = "2021"
-description = "Windows-native TUI client for Kiro CLI via the Agent Client Protocol (ACP)"
+description = "Cross-platform TUI client for Kiro CLI via the Agent Client Protocol (ACP)"
 license = "MIT"
 repository = "https://github.com/dwalleck/cyril"
+readme = "../../README.md"
+homepage = "https://github.com/dwalleck/cyril"
+documentation = "https://docs.rs/cyril"
 keywords = ["acp", "kiro", "tui", "windows", "wsl"]
 categories = ["command-line-utilities", "development-tools"]
 
