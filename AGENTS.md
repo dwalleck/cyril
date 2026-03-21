@@ -2,7 +2,7 @@
 
 > **Purpose:** This file provides AI coding assistants with essential context about the Cyril project that is not covered in README.md or other user-facing documentation. It focuses on development patterns, code organization, testing practices, and assistant-specific guidance.
 
-**Last Updated:** 2026-03-03  
+**Last Updated:** 2026-03-20  
 **Baseline Commit:** 7b8366b1  
 **Documentation Version:** 1.0
 
@@ -46,7 +46,6 @@ Cyril is a **cross-platform TUI client** for Kiro CLI that communicates via the 
 **Library Crate (`cyril-core`):** Protocol and platform logic
 - ACP protocol client implementation
 - Platform abstraction (Windows/WSL path translation)
-- Hook system for extensibility
 - File system capabilities
 
 ### Key Architectural Decisions
@@ -54,8 +53,7 @@ Cyril is a **cross-platform TUI client** for Kiro CLI that communicates via the 
 1. **Two-Crate Design:** Separates UI from protocol logic for reusability and testability
 2. **Event-Driven:** All interactions flow through an event system
 3. **Cross-Platform:** Windows support via WSL bridge with automatic path translation
-4. **Hook System:** Extensible automation at the protocol boundary
-5. **Streaming:** Real-time markdown rendering as content arrives
+4. **Streaming:** Real-time markdown rendering as content arrives
 
 ---
 
@@ -97,10 +95,6 @@ cyril/
 │       │   ├── platform/   # Platform abstraction
 │       │   │   ├── path.rs      # Path translation (306 LOC)
 │       │   │   └── terminal.rs  # Terminal mgmt (361 LOC) ⭐ Highly complex
-│       │   ├── hooks/      # Hook system
-│       │   │   ├── types.rs     # Hook registry (101 LOC)
-│       │   │   ├── config.rs    # Hook loading (452 LOC) ⭐ Most complex in core
-│       │   │   └── builtins.rs  # Built-in hooks (41 LOC)
 │       │   └── capabilities/ # File operations
 │       │       └── fs.rs        # File I/O (73 LOC)
 │       └── Cargo.toml
@@ -160,11 +154,11 @@ cyril/
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                  Cyril Core (Library)                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │   ACP    │  │ Platform │  │   Hook   │  │   File   │   │
-│  │  Client  │  │  Layer   │  │  System  │  │   I/O    │   │
-│  │          │  │(Path/Term)│  │          │  │          │   │
-│  └────┬─────┘  └──────────┘  └──────────┘  └──────────┘   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                  │
+│  │   ACP    │  │ Platform │  │   File   │                  │
+│  │  Client  │  │  Layer   │  │   I/O    │                  │
+│  │          │  │(Path/Term)│  │          │                  │
+│  └────┬─────┘  └──────────┘  └──────────┘                  │
 └───────┼─────────────────────────────────────────────────────┘
         │
         ▼ JSON-RPC 2.0 over stdio
@@ -190,12 +184,6 @@ cyril/
 - Path translation layer for Windows/WSL
 - Platform detection at runtime
 - Transparent path conversion in JSON payloads
-
-**Hook System:**
-- Runs at protocol boundary
-- Before hooks can block operations
-- After hooks provide feedback
-- Glob pattern matching for file filtering
 
 ---
 
@@ -331,9 +319,9 @@ async fn test_file_write() {
 ### Test Organization
 
 **Test Coverage:**
-- 50+ test functions across modules
-- Focus on critical paths (path translation, terminal management, hooks)
-- Integration tests for protocol communication
+- ~50 test functions across modules
+- Focus on critical paths (path translation, command parsing)
+- No integration tests currently
 
 **Test Locations:**
 - Unit tests: Same file as implementation (`#[cfg(test)]` module)
@@ -530,24 +518,7 @@ impl KiroClient {
 }
 ```
 
-### Adding a New Hook Event
-
-1. Add event type to `parse_event()` in `crates/cyril-core/src/hooks/config.rs`
-2. Add hook target variant if needed
-3. Call `run_before()` or `run_after()` at appropriate point
-4. Update documentation
-
-**Example:**
-```rust
-// In parse_event()
-"beforeRead" => Some((HookTiming::Before, HookTarget::Read)),
-"afterRead" => Some((HookTiming::After, HookTarget::Read)),
-
-// In file read operation
-hooks.run_before(HookTarget::Read, &context).await?;
-let content = fs::read_to_string(path).await?;
-let feedback = hooks.run_after(HookTarget::Read, &context).await;
-```
+> **Note:** The hook system was removed in a recent refactor. This section is kept for reference but may be outdated.
 
 ### Adding Path Translation Support
 
@@ -580,10 +551,7 @@ No code changes needed unless adding special path formats.
 - Solution: Check event flow from source to handler
 - Debug: Add logging in `App::handle_event()`
 
-**Issue: Hook not executing**
-- Cause: Glob pattern not matching or hook timing wrong
-- Solution: Check pattern syntax and event type
-- Debug: Add logging in `HookRegistry::run_before/after()`
+> **Note:** The hook system was removed. This troubleshooting entry is outdated.
 
 ### Debugging Tips
 
@@ -649,20 +617,18 @@ For detailed information, see the `.agents/summary/` directory:
 
 ### Most Important Files
 
-1. **main.rs** (245 LOC) - Entry point, CLI parsing
-2. **app.rs** (459 LOC) - Main event loop
-3. **commands.rs** (905 LOC) - Command system (most complex)
-4. **protocol/client.rs** (358 LOC) - ACP client
-5. **platform/path.rs** (306 LOC) - Path translation
-6. **platform/terminal.rs** (361 LOC) - Terminal management
-7. **hooks/config.rs** (452 LOC) - Hook system
+1. **main.rs** - Entry point, CLI parsing
+2. **app.rs** - Main event loop
+3. **commands.rs** - Command system (most complex)
+4. **protocol/client.rs** - ACP client
+5. **platform/path.rs** - Path translation
+6. **platform/terminal.rs** - Terminal management
 
 ### Key Concepts
 
 - **Two-crate architecture:** UI (cyril) + Protocol (cyril-core)
 - **Event-driven:** All interactions via `AppEvent`
 - **Cross-platform:** Windows via WSL bridge with path translation
-- **Hook system:** Extensible automation at protocol boundary
 - **Streaming:** Real-time markdown rendering
 
 ### Common Commands
