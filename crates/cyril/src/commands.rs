@@ -590,12 +590,42 @@ impl CommandExecutor {
                     session.set_optimistic_model(value.clone());
                 }
 
-                // /chat loads a different session — clear chat and update session ID
+                // /chat loads a different session via session/load
                 if command == "chat" {
-                    session.set_session_id(acp::SessionId::from(value.clone()));
+                    let new_session_id = acp::SessionId::from(value.clone());
+                    let agent_cwd = cyril_core::path::to_agent(&session.cwd);
+                    let conn = conn.clone();
+                    let response_tx = channels.cmd_response_tx.clone();
+                    let done_tx = channels.prompt_done_tx.clone();
+
+                    session.set_session_id(new_session_id.clone());
                     *chat = chat::ChatState::default();
                     chat.add_system_message(format!("Resumed session: {label}"));
                     chat.scroll_to_bottom();
+
+                    tokio::task::spawn_local(async move {
+                        match conn
+                            .load_session(acp::LoadSessionRequest::new(
+                                new_session_id,
+                                agent_cwd,
+                            ))
+                            .await
+                        {
+                            Ok(_) => {
+                                tracing::info!("Session loaded successfully");
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to load session: {e}");
+                                Self::send_or_log(
+                                    &response_tx,
+                                    format!("[Error] Failed to load session: {e}"),
+                                    "cmd-response",
+                                );
+                            }
+                        }
+                        Self::send_or_log(&done_tx, (), "prompt-done");
+                    });
+                    return;
                 }
 
                 let args = serde_json::json!({ "value": value });
