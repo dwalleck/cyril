@@ -13,7 +13,6 @@ use tokio::sync::mpsc;
 
 use cyril_core::client::KiroClient;
 use cyril_core::event::{AppEvent, ExtensionEvent, ProtocolEvent};
-use cyril_core::hooks::HookRegistry;
 use cyril_core::transport::AgentProcess;
 
 #[derive(Parser)]
@@ -77,7 +76,7 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
     agent.check_startup().await?;
 
     let (event_tx, mut event_rx) = mpsc::unbounded_channel::<AppEvent>();
-    let client = KiroClient::new(event_tx, HookRegistry::new());
+    let client = KiroClient::new(event_tx);
 
     let stdin = agent.take_stdin()?;
     let stdout = agent.take_stdout()?;
@@ -149,15 +148,7 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
     let init_response = conn
         .initialize(
             acp::InitializeRequest::new(acp::ProtocolVersion::V1)
-                .client_capabilities(
-                    acp::ClientCapabilities::new()
-                        .fs(
-                            acp::FileSystemCapability::new()
-                                .read_text_file(true)
-                                .write_text_file(true),
-                        )
-                        .terminal(true),
-                )
+                .client_capabilities(acp::ClientCapabilities::new())
                 .client_info(
                     acp::Implementation::new("test_acp", env!("CARGO_PKG_VERSION"))
                         .title("ACP Test Harness"),

@@ -66,17 +66,10 @@ pub enum ExtensionEvent {
     },
 }
 
-/// Internal application events (not from the agent).
-#[derive(Debug)]
-pub enum InternalEvent {
-    HookFeedback { text: String },
-}
-
 /// Top-level event sent from KiroClient to the TUI.
 #[derive(Debug)]
 pub enum AppEvent {
     Protocol(ProtocolEvent),
     Interaction(InteractionRequest),
     Extension(ExtensionEvent),
-    Internal(InternalEvent),
 }

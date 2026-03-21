@@ -11,7 +11,7 @@ use futures_util::StreamExt;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
-use cyril_core::event::{AppEvent, ExtensionEvent, InteractionRequest, InternalEvent, ProtocolEvent};
+use cyril_core::event::{AppEvent, ExtensionEvent, InteractionRequest, ProtocolEvent};
 use cyril_core::session::SessionContext;
 
 use crate::commands::{self, CommandChannels, CommandExecutor, CommandResult};
@@ -37,8 +37,6 @@ pub struct App {
     /// Channel for command responses to display in chat.
     cmd_response_rx: mpsc::UnboundedReceiver<String>,
     channels: CommandChannels,
-    /// Queued hook feedback to send after the current turn completes.
-    pending_hook_feedback: Vec<String>,
 }
 
 impl App {
@@ -67,7 +65,6 @@ impl App {
             prompt_done_rx,
             cmd_response_rx,
             channels: CommandChannels { prompt_done_tx, cmd_response_tx },
-            pending_hook_feedback: Vec::new(),
         }
     }
 
@@ -339,7 +336,6 @@ impl App {
             AppEvent::Protocol(e) => self.handle_protocol_event(e),
             AppEvent::Interaction(r) => self.handle_interaction(r),
             AppEvent::Extension(e) => self.handle_extension_event(e),
-            AppEvent::Internal(e) => self.handle_internal_event(e),
         }
     }
 
@@ -430,15 +426,6 @@ impl App {
         }
     }
 
-    fn handle_internal_event(&mut self, event: InternalEvent) {
-        match event {
-            InternalEvent::HookFeedback { text } => {
-                self.chat.add_system_message(format!("[Hook] {text}"));
-                self.pending_hook_feedback.push(text);
-            }
-        }
-    }
-
     fn toggle_mouse_capture(&mut self) {
         self.toolbar.mouse_captured = !self.toolbar.mouse_captured;
         let mut stdout = std::io::stdout();
@@ -452,14 +439,5 @@ impl App {
     fn on_turn_end(&mut self) {
         self.chat.finish_streaming();
         self.toolbar.is_busy = false;
-
-        CommandExecutor::flush_next_hook_feedback(
-            &self.session,
-            &self.conn,
-            &mut self.chat,
-            &mut self.toolbar,
-            &self.channels,
-            &mut self.pending_hook_feedback,
-        );
     }
 }

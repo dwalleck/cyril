@@ -606,53 +606,6 @@ impl CommandExecutor {
         }
     }
 
-    /// Send the next queued hook feedback as a prompt.
-    pub fn flush_next_hook_feedback(
-        session: &SessionContext,
-        conn: &Rc<acp::ClientSideConnection>,
-        chat: &mut chat::ChatState,
-        toolbar: &mut toolbar::ToolbarState,
-        channels: &CommandChannels,
-        pending_hook_feedback: &mut Vec<String>,
-    ) {
-        if pending_hook_feedback.is_empty() {
-            return;
-        }
-
-        let session_id = match &session.id {
-            Some(id) => id.clone(),
-            None => {
-                tracing::warn!(
-                    count = pending_hook_feedback.len(),
-                    "Discarding hook feedback — no active session"
-                );
-                pending_hook_feedback.clear();
-                return;
-            }
-        };
-
-        let text = pending_hook_feedback.remove(0);
-        toolbar.is_busy = true;
-        chat.begin_streaming();
-
-        let conn = conn.clone();
-        let done_tx = channels.prompt_done_tx.clone();
-        let response_tx = channels.cmd_response_tx.clone();
-        tokio::task::spawn_local(async move {
-            let result = conn
-                .prompt(acp::PromptRequest::new(
-                    session_id,
-                    vec![acp::ContentBlock::Text(acp::TextContent::new(text))],
-                ))
-                .await;
-
-            if let Err(e) = result {
-                tracing::error!("Hook feedback prompt error: {e}");
-                Self::send_or_log(&response_tx, format!("[Error] Hook feedback failed: {e}"), "cmd-response");
-            }
-            Self::send_or_log(&done_tx, (), "prompt-done");
-        });
-    }
 }
 
 /// Built-in slash commands.

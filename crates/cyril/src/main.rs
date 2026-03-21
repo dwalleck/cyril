@@ -15,7 +15,6 @@ use tokio::sync::mpsc;
 
 use cyril_core::client::KiroClient;
 use cyril_core::event::{AppEvent, InteractionRequest, ProtocolEvent};
-use cyril_core::hooks::{self, HookRegistry};
 use cyril_core::path;
 use cyril_core::transport::AgentProcess;
 
@@ -178,27 +177,7 @@ async fn connect(
     agent.check_startup().await?;
 
     let (event_tx, event_rx) = mpsc::unbounded_channel::<AppEvent>();
-    let mut hook_registry = HookRegistry::new();
-
-    // Load user-configured hooks from hooks.json in cwd
-    let hooks_path = std::env::current_dir()
-        .unwrap_or_default()
-        .join("hooks.json");
-    if hooks_path.exists() {
-        match hooks::load_hooks_config(&hooks_path) {
-            Ok(loaded) => {
-                tracing::info!("Loaded {} hooks from {}", loaded.len(), hooks_path.display());
-                for hook in loaded {
-                    hook_registry.register(hook);
-                }
-            }
-            Err(e) => {
-                tracing::warn!("Failed to load hooks config: {e}");
-            }
-        }
-    }
-
-    let client = KiroClient::new(event_tx, hook_registry);
+    let client = KiroClient::new(event_tx);
 
     let stdin = agent.take_stdin()?;
     let stdout = agent.take_stdout()?;
@@ -220,15 +199,7 @@ async fn connect(
     let init_response = conn
         .initialize(
             acp::InitializeRequest::new(acp::ProtocolVersion::V1)
-                .client_capabilities(
-                    acp::ClientCapabilities::new()
-                        .fs(
-                            acp::FileSystemCapability::new()
-                                .read_text_file(true)
-                                .write_text_file(true),
-                        )
-                        .terminal(true),
-                )
+                .client_capabilities(acp::ClientCapabilities::new())
                 .client_info(
                     acp::Implementation::new("cyril", env!("CARGO_PKG_VERSION"))
                         .title("Cyril"),

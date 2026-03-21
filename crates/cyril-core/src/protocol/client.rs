@@ -1,19 +1,14 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::str::FromStr;
 
 use agent_client_protocol as acp;
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
-use crate::capabilities;
-use crate::event::{AppEvent, ExtensionEvent, InteractionRequest, InternalEvent, ProtocolEvent};
-use crate::hooks::{HookContext, HookRegistry, HookResult, HookTarget, HookTiming};
+use crate::event::{AppEvent, ExtensionEvent, InteractionRequest, ProtocolEvent};
 use crate::kiro_ext::KiroCommandsPayload;
-use crate::platform::path;
-use crate::platform::terminal::{TerminalId, TerminalManager};
 
 /// Construct an ACP internal error with a message.
 fn internal_err(msg: impl Into<String>) -> acp::Error {
@@ -21,14 +16,12 @@ fn internal_err(msg: impl Into<String>) -> acp::Error {
 }
 
 /// The central ACP Client implementation.
-/// Handles all agent callbacks: fs, terminal, permissions, notifications.
+/// Handles agent callbacks: permissions, notifications, and extensions.
 ///
 /// Uses `Rc<RefCell<_>>` for interior mutability since everything is `!Send`
 /// (required by `#[async_trait(?Send)]` on the ACP `Client` trait).
 pub struct KiroClient {
     event_tx: mpsc::UnboundedSender<AppEvent>,
-    terminal_manager: RefCell<TerminalManager>,
-    hooks: RefCell<HookRegistry>,
     /// Cache of `raw_input` from ToolCall/ToolCallUpdate notifications, keyed by tool call ID.
     /// Permission requests arrive without `raw_input`, so we look it up here to enrich them.
     tool_call_inputs: RefCell<HashMap<acp::ToolCallId, serde_json::Value>>,
@@ -37,12 +30,9 @@ pub struct KiroClient {
 impl KiroClient {
     pub fn new(
         event_tx: mpsc::UnboundedSender<AppEvent>,
-        hooks: HookRegistry,
     ) -> Rc<Self> {
         Rc::new(Self {
             event_tx,
-            terminal_manager: RefCell::new(TerminalManager::new()),
-            hooks: RefCell::new(hooks),
             tool_call_inputs: RefCell::new(HashMap::new()),
         })
     }
@@ -197,168 +187,5 @@ impl acp::Client for KiroClient {
         }
 
         Ok(())
-    }
-
-    async fn read_text_file(
-        &self,
-        args: acp::ReadTextFileRequest,
-    ) -> acp::Result<acp::ReadTextFileResponse> {
-        let native_path = path::to_native(&args.path);
-        tracing::info!("fs.readTextFile: {} -> {}", args.path.display(), native_path.display());
-
-        let hook_ctx = HookContext {
-            target: HookTarget::FsRead,
-            timing: HookTiming::Before,
-            path: Some(native_path.clone()),
-            content: None,
-            command: None,
-        };
-        if let HookResult::Blocked { reason } = self.hooks.borrow().run_before(&hook_ctx).await {
-            return Err(internal_err(reason));
-        }
-
-        let content = capabilities::fs::read_text_file(&native_path)
-            .await
-            .map_err(|e| internal_err(e.to_string()))?;
-
-        Ok(acp::ReadTextFileResponse::new(content))
-    }
-
-    async fn write_text_file(
-        &self,
-        args: acp::WriteTextFileRequest,
-    ) -> acp::Result<acp::WriteTextFileResponse> {
-        let native_path = path::to_native(&args.path);
-        tracing::info!("fs.writeTextFile: {} -> {}", args.path.display(), native_path.display());
-
-        let mut content = args.content.clone();
-
-        let hook_ctx = HookContext {
-            target: HookTarget::FsWrite,
-            timing: HookTiming::Before,
-            path: Some(native_path.clone()),
-            content: Some(content.clone()),
-            command: None,
-        };
-        match self.hooks.borrow().run_before(&hook_ctx).await {
-            HookResult::Blocked { reason } => return Err(internal_err(reason)),
-            HookResult::ModifiedArgs { content: Some(c), .. } => content = c,
-            _ => {}
-        }
-
-        capabilities::fs::write_text_file(&native_path, &content)
-            .await
-            .map_err(|e| internal_err(e.to_string()))?;
-
-        // Run after hooks
-        let after_ctx = HookContext {
-            target: HookTarget::FsWrite,
-            timing: HookTiming::After,
-            path: Some(native_path),
-            content: Some(content),
-            command: None,
-        };
-        let after_results = self.hooks.borrow().run_after(&after_ctx).await;
-        for result in after_results {
-            if let HookResult::FeedbackPrompt { text } = result {
-                self.emit(AppEvent::Internal(InternalEvent::HookFeedback { text }));
-            }
-        }
-
-        Ok(acp::WriteTextFileResponse::new())
-    }
-
-    async fn create_terminal(
-        &self,
-        args: acp::CreateTerminalRequest,
-    ) -> acp::Result<acp::CreateTerminalResponse> {
-        let command = args.command.clone();
-        tracing::info!("terminal.create: {command}");
-
-        let hook_ctx = HookContext {
-            target: HookTarget::Terminal,
-            timing: HookTiming::Before,
-            path: None,
-            content: None,
-            command: Some(command.clone()),
-        };
-        if let HookResult::Blocked { reason } = self.hooks.borrow().run_before(&hook_ctx).await {
-            return Err(internal_err(reason));
-        }
-
-        let id = self
-            .terminal_manager
-            .borrow_mut()
-            .create_terminal(&command)
-            .map_err(|e| internal_err(e.to_string()))?;
-
-        Ok(acp::CreateTerminalResponse::new(id.to_string()))
-    }
-
-    async fn terminal_output(
-        &self,
-        args: acp::TerminalOutputRequest,
-    ) -> acp::Result<acp::TerminalOutputResponse> {
-        let id = TerminalId::from_str(&args.terminal_id.to_string())
-            .map_err(|e| internal_err(format!("Invalid terminal ID: {e}")))?;
-
-        let output = self
-            .terminal_manager
-            .borrow_mut()
-            .get_output(&id)
-            .map_err(|e| internal_err(e.to_string()))?;
-
-        Ok(acp::TerminalOutputResponse::new(output, false))
-    }
-
-    async fn wait_for_terminal_exit(
-        &self,
-        args: acp::WaitForTerminalExitRequest,
-    ) -> acp::Result<acp::WaitForTerminalExitResponse> {
-        let id = TerminalId::from_str(&args.terminal_id.to_string())
-            .map_err(|e| internal_err(format!("Invalid terminal ID: {e}")))?;
-
-        let exit_code = self
-            .terminal_manager
-            .borrow_mut()
-            .wait_for_exit(&id)
-            .await
-            .map_err(|e| internal_err(e.to_string()))?;
-
-        let exit_status = acp::TerminalExitStatus::new()
-            .exit_code(exit_code.max(0) as u32);
-
-        Ok(acp::WaitForTerminalExitResponse::new(exit_status))
-    }
-
-    async fn release_terminal(
-        &self,
-        args: acp::ReleaseTerminalRequest,
-    ) -> acp::Result<acp::ReleaseTerminalResponse> {
-        let id = TerminalId::from_str(&args.terminal_id.to_string())
-            .map_err(|e| internal_err(format!("Invalid terminal ID: {e}")))?;
-
-        self.terminal_manager
-            .borrow_mut()
-            .release(&id)
-            .map_err(|e| internal_err(e.to_string()))?;
-
-        Ok(acp::ReleaseTerminalResponse::new())
-    }
-
-    async fn kill_terminal_command(
-        &self,
-        args: acp::KillTerminalCommandRequest,
-    ) -> acp::Result<acp::KillTerminalCommandResponse> {
-        let id = TerminalId::from_str(&args.terminal_id.to_string())
-            .map_err(|e| internal_err(format!("Invalid terminal ID: {e}")))?;
-
-        self.terminal_manager
-            .borrow_mut()
-            .kill(&id)
-            .await
-            .map_err(|e| internal_err(e.to_string()))?;
-
-        Ok(acp::KillTerminalCommandResponse::new())
     }
 }
