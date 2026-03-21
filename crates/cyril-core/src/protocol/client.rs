@@ -132,15 +132,18 @@ impl acp::Client for KiroClient {
                 }));
             }
             _ => {
-                tracing::debug!("Unhandled session notification variant");
+                tracing::warn!(
+                    session_id = %args.session_id,
+                    "Unhandled session update variant: {:?}",
+                    serde_json::to_string(&args.update).unwrap_or_else(|_| "(serialize error)".into())
+                );
             }
         }
         Ok(())
     }
 
     async fn ext_notification(&self, args: acp::ExtNotification) -> acp::Result<()> {
-        tracing::info!("Received ext_notification: method={}", args.method);
-        tracing::info!("ext_notification params: {}", args.params);
+        tracing::debug!("ext_notification: method={}", args.method);
 
         if args.method.as_ref() == "kiro.dev/commands/available" {
             match serde_json::from_str::<KiroCommandsPayload>(args.params.get()) {
@@ -227,9 +230,10 @@ impl acp::Client for KiroClient {
                     }));
                 }
                 Ok(payload) => {
-                    tracing::debug!(
-                        "Unhandled kiro.dev/session/update variant: {}",
-                        payload.update.session_update
+                    tracing::warn!(
+                        "Unhandled kiro.dev/session/update variant: {} (raw: {})",
+                        payload.update.session_update,
+                        args.params.get()
                     );
                 }
                 Err(e) => {
@@ -269,7 +273,11 @@ impl acp::Client for KiroClient {
                 }
             }
         } else {
-            tracing::warn!("Unrecognized ext_notification: method={}", args.method);
+            tracing::warn!(
+                "Unrecognized ext_notification: method={} params={}",
+                args.method,
+                args.params.get()
+            );
             self.emit(AppEvent::Extension(ExtensionEvent::Unknown {
                 method: args.method.to_string(),
                 params: args.params.get().to_string(),
