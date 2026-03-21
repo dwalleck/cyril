@@ -443,6 +443,13 @@ impl App {
             }
             ExtensionEvent::KiroMetadata { context_usage_pct, .. } => {
                 self.session.set_context_usage_pct(context_usage_pct);
+                // Metadata arrives after every turn completes. If we're still
+                // showing busy (prompt() hasn't returned yet), treat this as
+                // a turn-end signal to stop the spinner.
+                if self.toolbar.is_busy {
+                    tracing::info!("Metadata received while busy — ending turn");
+                    self.on_turn_end();
+                }
             }
             ExtensionEvent::AgentSwitched { agent_name, welcome_message, .. } => {
                 self.session.set_current_mode_id(agent_name.clone());
