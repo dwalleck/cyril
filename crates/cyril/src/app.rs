@@ -104,6 +104,13 @@ impl App {
                     }
                 }
                 _ = self.prompt_done_rx.recv() => {
+                    // Drain any pending command responses before finishing the turn.
+                    // Both channels are fed from the same spawned task, so the response
+                    // may already be queued when the done signal arrives.
+                    while let Ok(text) = self.cmd_response_rx.try_recv() {
+                        self.chat.append_streaming(&text);
+                        self.chat.scroll_to_bottom();
+                    }
                     self.on_turn_end();
                     None
                 }
