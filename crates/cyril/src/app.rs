@@ -427,14 +427,13 @@ impl App {
             ExtensionEvent::KiroMetadata { context_usage_pct, .. } => {
                 self.session.set_context_usage_pct(context_usage_pct);
             }
-            ExtensionEvent::AgentSwitched { agent_name, previous_agent_name, welcome_message } => {
+            ExtensionEvent::AgentSwitched { agent_name, welcome_message, .. } => {
                 self.session.set_current_mode_id(agent_name.clone());
-                let msg = if let Some(ref welcome) = welcome_message {
-                    format!("Switched from {previous_agent_name} to {agent_name}: {welcome}")
-                } else {
-                    format!("Switched from {previous_agent_name} to {agent_name}")
-                };
-                self.chat.add_system_message(msg);
+                // Don't show a chat message — the commands/execute response already
+                // displays "Agent changed to ..." via spawn_command_execute.
+                if let Some(welcome) = welcome_message {
+                    self.chat.add_system_message(welcome);
+                }
             }
             ExtensionEvent::ToolCallChunk { tool_call_id, title, kind } => {
                 self.chat.update_tool_call_title(&tool_call_id, &title, &kind);
