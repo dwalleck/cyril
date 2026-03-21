@@ -431,6 +431,13 @@ impl App {
             }
             ExtensionEvent::ToolCallChunk { tool_call_id, title, kind } => {
                 self.chat.update_tool_call_title(&tool_call_id, &title, &kind);
+                let detail = match kind.as_str() {
+                    "read" => format!("reading {title}"),
+                    "execute" => format!("executing {title}"),
+                    "search" => format!("searching {title}"),
+                    _ => format!("{kind} {title}"),
+                };
+                self.toolbar.busy_detail = Some(detail);
             }
             ExtensionEvent::CompactionStatus { message } => {
                 self.chat.add_system_message(format!("[Compaction] {message}"));
@@ -457,5 +464,6 @@ impl App {
     fn on_turn_end(&mut self) {
         self.chat.finish_streaming();
         self.toolbar.is_busy = false;
+        self.toolbar.busy_detail = None;
     }
 }

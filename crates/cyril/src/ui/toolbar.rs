@@ -14,6 +14,9 @@ pub struct ToolbarState {
     pub agent_name: String,
     pub agent_version: String,
     pub is_busy: bool,
+    /// Current tool activity detail (e.g. "reading file.rs", "executing shell").
+    /// Shown in the toolbar instead of generic "working..." when present.
+    pub busy_detail: Option<String>,
     /// The --agent value passed at startup (e.g. "sonnet").
     pub selected_agent: Option<String>,
     /// Whether mouse capture is active (false = copy mode).
@@ -21,7 +24,11 @@ pub struct ToolbarState {
 }
 
 pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &SessionContext) {
-    let status = if state.is_busy { "working..." } else { "ready" };
+    let status = if state.is_busy {
+        state.busy_detail.as_deref().unwrap_or("working...")
+    } else {
+        "ready"
+    };
     let status_color = if state.is_busy {
         Color::Yellow
     } else {

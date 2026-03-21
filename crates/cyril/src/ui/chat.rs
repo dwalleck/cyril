@@ -89,7 +89,9 @@ impl ChatState {
     }
 
     /// Update a tool call's title from a lightweight tool_call_chunk notification.
-    pub fn update_tool_call_title(&mut self, tool_call_id: &str, title: &str, _kind: &str) {
+    /// If the tool call doesn't exist yet, creates a placeholder so the user sees
+    /// activity immediately (before the full ToolCall notification arrives).
+    pub fn update_tool_call_title(&mut self, tool_call_id: &str, title: &str, kind: &str) {
         for block in self.stream_blocks.iter_mut().rev() {
             if let ContentBlock::ToolCall(ref mut tc) = block {
                 if tc.id().to_string() == tool_call_id {
@@ -98,6 +100,19 @@ impl ChatState {
                 }
             }
         }
+
+        // Tool call not found — create a placeholder
+        let tool_kind = match kind {
+            "read" => acp::ToolKind::Read,
+            "execute" => acp::ToolKind::Execute,
+            "search" => acp::ToolKind::Search,
+            _ => acp::ToolKind::Other,
+        };
+        let placeholder = acp::ToolCall::new(tool_call_id.to_string(), title.to_string())
+            .kind(tool_kind)
+            .status(acp::ToolCallStatus::InProgress);
+        self.stream_blocks
+            .push(ContentBlock::ToolCall(TrackedToolCall::new(placeholder)));
     }
 
     pub fn update_plan(&mut self, plan: acp::Plan) {
