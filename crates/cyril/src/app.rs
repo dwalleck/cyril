@@ -489,6 +489,9 @@ impl App {
                     _ => format!("{kind} {title}"),
                 };
                 self.toolbar.busy_detail = Some(detail);
+                // Reset spinner timer for each new tool call so the spinner
+                // animates and elapsed time counts from tool start
+                self.toolbar.busy_since = Some(std::time::Instant::now());
             }
             ExtensionEvent::CompactionStatus { message } => {
                 self.chat.add_system_message(format!("[Compaction] {message}"));
