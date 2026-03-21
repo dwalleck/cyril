@@ -59,6 +59,26 @@ pub enum ExtensionEvent {
         session_id: String,
         context_usage_pct: f64,
     },
+    /// The agent was switched (e.g. via /agent picker).
+    AgentSwitched {
+        agent_name: String,
+        previous_agent_name: String,
+        welcome_message: Option<String>,
+    },
+    /// Lightweight tool call progress from kiro.dev/session/update.
+    ToolCallChunk {
+        tool_call_id: String,
+        title: String,
+        kind: String,
+    },
+    /// Compaction progress from kiro.dev/compaction/status.
+    CompactionStatus {
+        message: String,
+    },
+    /// Clear progress from kiro.dev/clear/status.
+    ClearStatus {
+        message: String,
+    },
     /// An extension notification we don't have a specific handler for.
     Unknown {
         method: String,

@@ -157,9 +157,6 @@ impl acp::Client for KiroClient {
                 }
             }
         } else if args.method.as_ref() == "kiro.dev/metadata" {
-            // Log the full raw payload so we can discover all available fields
-            tracing::info!("kiro.dev/metadata raw: {}", args.params.get());
-
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase")]
             struct MetadataPayload {
@@ -176,6 +173,99 @@ impl acp::Client for KiroClient {
                 }
                 Err(e) => {
                     tracing::warn!("Failed to parse kiro.dev/metadata: {e}");
+                }
+            }
+        } else if args.method.as_ref() == "kiro.dev/agent/switched" {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct AgentSwitchedPayload {
+                agent_name: String,
+                #[serde(default)]
+                previous_agent_name: String,
+                welcome_message: Option<String>,
+            }
+            match serde_json::from_str::<AgentSwitchedPayload>(args.params.get()) {
+                Ok(payload) => {
+                    tracing::info!(
+                        "Agent switched: {} -> {}",
+                        payload.previous_agent_name,
+                        payload.agent_name
+                    );
+                    self.emit(AppEvent::Extension(ExtensionEvent::AgentSwitched {
+                        agent_name: payload.agent_name,
+                        previous_agent_name: payload.previous_agent_name,
+                        welcome_message: payload.welcome_message,
+                    }));
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to parse kiro.dev/agent/switched: {e}");
+                }
+            }
+        } else if args.method.as_ref() == "kiro.dev/session/update" {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct KiroSessionUpdate {
+                update: KiroUpdateInner,
+            }
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct KiroUpdateInner {
+                session_update: String,
+                #[serde(default)]
+                tool_call_id: String,
+                #[serde(default)]
+                title: String,
+                #[serde(default)]
+                kind: String,
+            }
+            match serde_json::from_str::<KiroSessionUpdate>(args.params.get()) {
+                Ok(payload) if payload.update.session_update == "tool_call_chunk" => {
+                    self.emit(AppEvent::Extension(ExtensionEvent::ToolCallChunk {
+                        tool_call_id: payload.update.tool_call_id,
+                        title: payload.update.title,
+                        kind: payload.update.kind,
+                    }));
+                }
+                Ok(payload) => {
+                    tracing::debug!(
+                        "Unhandled kiro.dev/session/update variant: {}",
+                        payload.update.session_update
+                    );
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to parse kiro.dev/session/update: {e}");
+                }
+            }
+        } else if args.method.as_ref() == "kiro.dev/compaction/status" {
+            #[derive(serde::Deserialize)]
+            struct StatusPayload {
+                #[serde(default)]
+                message: String,
+            }
+            match serde_json::from_str::<StatusPayload>(args.params.get()) {
+                Ok(payload) => {
+                    self.emit(AppEvent::Extension(ExtensionEvent::CompactionStatus {
+                        message: payload.message,
+                    }));
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to parse kiro.dev/compaction/status: {e}");
+                }
+            }
+        } else if args.method.as_ref() == "kiro.dev/clear/status" {
+            #[derive(serde::Deserialize)]
+            struct StatusPayload {
+                #[serde(default)]
+                message: String,
+            }
+            match serde_json::from_str::<StatusPayload>(args.params.get()) {
+                Ok(payload) => {
+                    self.emit(AppEvent::Extension(ExtensionEvent::ClearStatus {
+                        message: payload.message,
+                    }));
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to parse kiro.dev/clear/status: {e}");
                 }
             }
         } else {

@@ -2,11 +2,11 @@ use std::collections::VecDeque;
 
 use agent_client_protocol as acp;
 use ratatui::{
-    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap},
+    Frame,
 };
 
 use super::tool_calls::{self, TrackedToolCall};
@@ -88,6 +88,18 @@ impl ChatState {
         }
     }
 
+    /// Update a tool call's title from a lightweight tool_call_chunk notification.
+    pub fn update_tool_call_title(&mut self, tool_call_id: &str, title: &str, _kind: &str) {
+        for block in self.stream_blocks.iter_mut().rev() {
+            if let ContentBlock::ToolCall(ref mut tc) = block {
+                if tc.id().to_string() == tool_call_id {
+                    tc.tool_call.title = title.to_string();
+                    return;
+                }
+            }
+        }
+    }
+
     pub fn update_plan(&mut self, plan: acp::Plan) {
         // Replace existing plan block or add new one
         for block in self.stream_blocks.iter_mut().rev() {
@@ -140,9 +152,7 @@ impl ChatState {
 }
 
 pub fn render(frame: &mut Frame, area: Rect, state: &ChatState) {
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" Chat ");
+    let block = Block::default().borders(Borders::ALL).title(" Chat ");
 
     let inner = block.inner(area);
 
@@ -151,10 +161,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ChatState) {
     for msg in &state.messages {
         let (label, label_style) = role_style(&msg.role);
 
-        lines.push(Line::from(Span::styled(
-            format!("{label}:"),
-            label_style,
-        )));
+        lines.push(Line::from(Span::styled(format!("{label}:"), label_style)));
 
         render_blocks(&msg.blocks, &msg.role, &mut lines);
         lines.push(Line::from(""));
@@ -267,18 +274,9 @@ fn render_blocks(blocks: &[ContentBlock], role: &Role, lines: &mut Vec<Line<'sta
                         _ => "",
                     };
                     lines.push(Line::from(vec![
-                        Span::styled(
-                            format!("    {icon} "),
-                            Style::default().fg(color),
-                        ),
-                        Span::styled(
-                            entry.content.clone(),
-                            Style::default().fg(Color::White),
-                        ),
-                        Span::styled(
-                            priority_marker.to_string(),
-                            Style::default().fg(Color::Red),
-                        ),
+                        Span::styled(format!("    {icon} "), Style::default().fg(color)),
+                        Span::styled(entry.content.clone(), Style::default().fg(Color::White)),
+                        Span::styled(priority_marker.to_string(), Style::default().fg(Color::Red)),
                     ]));
                 }
             }
