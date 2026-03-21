@@ -204,11 +204,11 @@ Use `kiro.dev/commands/execute` with the `model` command instead (see Kiro Exten
 
 ## Session Update Notifications (`session/update`, server → client)
 
-Sent as `SessionNotification` containing a `SessionUpdate` enum, discriminated by the `sessionUpdate` field.
+Sent as `SessionNotification` containing a `SessionUpdate` enum, discriminated by the `sessionUpdate` field. Kiro v1.28.0 sends `agent_message_chunk`, `tool_call`, and `tool_call_update` as the primary variants. `plan` is sent for complex multi-step tasks.
 
 ### AgentMessageChunk
 
-Streaming text content from the agent.
+Streaming text content from the agent. This is the main output mechanism — the agent's response arrives as a stream of these chunks.
 
 ```json
 {
@@ -228,7 +228,7 @@ Streaming text content from the agent.
 
 ### AgentThoughtChunk
 
-Internal reasoning from the agent (extended thinking).
+Internal reasoning from the agent (extended thinking). Same structure as `AgentMessageChunk`. Sent when the model uses extended thinking — not observed in standard sessions but defined in the ACP spec and handled identically to message chunks.
 
 ```json
 {
@@ -244,7 +244,7 @@ Internal reasoning from the agent (extended thinking).
 
 ### ToolCall
 
-A tool invocation has been initiated. Follows a three-phase lifecycle:
+A tool invocation initiated by the agent. Kiro executes tools server-side (via built-in tools like `read`, `write`, `shell`) and reports progress via these notifications. Tool calls follow a two-phase lifecycle through this notification type:
 
 **Phase 1 — InProgress** (tool initiated):
 ```json
@@ -259,7 +259,7 @@ A tool invocation has been initiated. Follows a three-phase lifecycle:
 }
 ```
 
-**Phase 2 — Pending** (title updated, awaiting permission if needed):
+**Phase 2 — Pending** (title updated, may await permission):
 ```json
 {
   "update": {
@@ -272,9 +272,12 @@ A tool invocation has been initiated. Follows a three-phase lifecycle:
 }
 ```
 
+Note: Kiro also sends lightweight `tool_call_chunk` updates via `kiro.dev/session/update` (see Kiro Extensions). These often arrive before the standard `ToolCall` notification and provide early visibility into tool activity.
+
 ### ToolCallUpdate
 
-**Phase 3 — Completed:**
+Completion notification for a tool call (phase 3 of the lifecycle):
+
 ```json
 {
   "update": {
@@ -288,7 +291,7 @@ A tool invocation has been initiated. Follows a three-phase lifecycle:
 
 ### Plan
 
-The agent's execution plan for complex tasks. Each update replaces the previous plan entirely.
+The agent's execution plan for complex tasks. Sent when the agent creates or updates a plan. Each update replaces the previous plan entirely.
 
 ```json
 {
@@ -306,9 +309,11 @@ The agent's execution plan for complex tasks. Each update replaces the previous 
 
 ### AvailableCommandsUpdate
 
-Standard ACP command updates. These may arrive during the session alongside the Kiro-specific `kiro.dev/commands/available`.
+Standard ACP command list updates. Kiro sends command lists primarily via the `kiro.dev/commands/available` extension notification (which includes richer metadata like `inputType` and `optionsMethod`), but may also send this standard variant.
 
 ### CurrentModeUpdate
+
+Standard ACP mode change notification. Kiro sends mode changes primarily via the `kiro.dev/agent/switched` extension notification (which includes `previousAgentName` and `welcomeMessage`), but may also send this standard variant.
 
 ```json
 {
@@ -321,6 +326,8 @@ Standard ACP command updates. These may arrive during the session alongside the 
 
 ### ConfigOptionUpdate
 
+Standard ACP config option updates. Not sent by Kiro v1.28.0 — config options are always `null`. Model switching is done via `kiro.dev/commands/execute` instead.
+
 ```json
 {
   "update": {
@@ -329,8 +336,6 @@ Standard ACP command updates. These may arrive during the session alongside the 
   }
 }
 ```
-
-**Note:** Kiro v1.28.0 does not send `ConfigOptionUpdate` notifications. Config options are always `null`.
 
 ---
 
