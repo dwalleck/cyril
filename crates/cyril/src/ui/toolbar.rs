@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use ratatui::{
     layout::Rect,
     style::{Color, Modifier, Style},
@@ -8,6 +10,8 @@ use ratatui::{
 
 use cyril_core::session::SessionContext;
 
+const SPINNER_FRAMES: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
 /// State for the toolbar/status bar.
 #[derive(Debug, Default)]
 pub struct ToolbarState {
@@ -17,6 +21,8 @@ pub struct ToolbarState {
     /// Current tool activity detail (e.g. "reading file.rs", "executing shell").
     /// Shown in the toolbar instead of generic "working..." when present.
     pub busy_detail: Option<String>,
+    /// When the current busy period started (for elapsed time display).
+    pub busy_since: Option<Instant>,
     /// The --agent value passed at startup (e.g. "sonnet").
     pub selected_agent: Option<String>,
     /// Whether mouse capture is active (false = copy mode).
@@ -24,15 +30,23 @@ pub struct ToolbarState {
 }
 
 pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &SessionContext) {
-    let status = if state.is_busy {
-        state.busy_detail.as_deref().unwrap_or("working...")
+    let status: String;
+    let status_color;
+
+    if state.is_busy {
+        let detail = state.busy_detail.as_deref().unwrap_or("working");
+        let elapsed = state.busy_since.map(|t| t.elapsed().as_secs()).unwrap_or(0);
+        let spinner_idx = if let Some(t) = state.busy_since {
+            (t.elapsed().as_millis() / 80) as usize % SPINNER_FRAMES.len()
+        } else {
+            0
+        };
+        let spinner = SPINNER_FRAMES[spinner_idx];
+        status = format!("{spinner} {detail} ({elapsed}s)");
+        status_color = Color::Yellow;
     } else {
-        "ready"
-    };
-    let status_color = if state.is_busy {
-        Color::Yellow
-    } else {
-        Color::Green
+        status = "ready".to_string();
+        status_color = Color::Green;
     };
 
     let session_display: &str = match session.id.as_ref() {
@@ -96,7 +110,10 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &Ses
     }
 
     spans.push(Span::raw(" | "));
-    spans.push(Span::styled(status, Style::default().fg(status_color)));
+    spans.push(Span::styled(
+        status.clone(),
+        Style::default().fg(status_color),
+    ));
 
     let line = Line::from(spans);
 

@@ -470,6 +470,7 @@ impl App {
     fn on_turn_end(&mut self) {
         self.chat.finish_streaming();
         self.toolbar.is_busy = false;
+        self.toolbar.busy_since = None;
         self.toolbar.busy_detail = None;
     }
 }

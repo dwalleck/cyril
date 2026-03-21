@@ -325,3 +325,170 @@ fn render_blocks(blocks: &[ContentBlock], role: &Role, lines: &mut Vec<Line<'sta
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use agent_client_protocol as acp;
+
+    #[test]
+    fn add_user_message() {
+        let mut state = ChatState::default();
+        state.add_user_message("hello".into());
+        assert_eq!(state.messages.len(), 1);
+        assert_eq!(state.messages[0].role, Role::User);
+    }
+
+    #[test]
+    fn streaming_lifecycle() {
+        let mut state = ChatState::default();
+        state.begin_streaming();
+        assert!(state.is_streaming);
+        assert!(state.stream_blocks.is_empty());
+
+        state.append_streaming("hello ");
+        state.append_streaming("world");
+        assert_eq!(state.stream_blocks.len(), 1);
+        match &state.stream_blocks[0] {
+            ContentBlock::Text(t) => assert_eq!(t, "hello world"),
+            _ => panic!("Expected Text block"),
+        }
+
+        state.finish_streaming();
+        assert!(!state.is_streaming);
+        assert_eq!(state.messages.len(), 1);
+        assert_eq!(state.messages[0].role, Role::Agent);
+    }
+
+    #[test]
+    fn append_thought_creates_thought_block() {
+        let mut state = ChatState::default();
+        state.begin_streaming();
+        state.append_thought("thinking...");
+        state.append_thought(" more");
+        assert_eq!(state.stream_blocks.len(), 1);
+        match &state.stream_blocks[0] {
+            ContentBlock::Thought(t) => assert_eq!(t, "thinking... more"),
+            _ => panic!("Expected Thought block"),
+        }
+    }
+
+    #[test]
+    fn text_then_thought_creates_separate_blocks() {
+        let mut state = ChatState::default();
+        state.begin_streaming();
+        state.append_streaming("text");
+        state.append_thought("thought");
+        assert_eq!(state.stream_blocks.len(), 2);
+    }
+
+    #[test]
+    fn add_tool_call() {
+        let mut state = ChatState::default();
+        state.begin_streaming();
+        let tc = acp::ToolCall::new("tc-1", "Read file").kind(acp::ToolKind::Read);
+        state.add_tool_call(tc);
+        assert_eq!(state.stream_blocks.len(), 1);
+        assert!(matches!(state.stream_blocks[0], ContentBlock::ToolCall(_)));
+    }
+
+    #[test]
+    fn update_tool_call_modifies_existing() {
+        let mut state = ChatState::default();
+        state.begin_streaming();
+        state.add_tool_call(
+            acp::ToolCall::new("tc-1", "Read")
+                .kind(acp::ToolKind::Read)
+                .status(acp::ToolCallStatus::InProgress),
+        );
+        state.update_tool_call(acp::ToolCallUpdate::new(
+            "tc-1",
+            acp::ToolCallUpdateFields::new().status(acp::ToolCallStatus::Completed),
+        ));
+        match &state.stream_blocks[0] {
+            ContentBlock::ToolCall(tc) => {
+                assert_eq!(tc.status(), acp::ToolCallStatus::Completed);
+            }
+            _ => panic!("Expected ToolCall"),
+        }
+    }
+
+    #[test]
+    fn update_tool_call_title_creates_placeholder() {
+        let mut state = ChatState::default();
+        state.begin_streaming();
+        state.update_tool_call_title("tc-new", "Reading file", "read");
+        assert_eq!(state.stream_blocks.len(), 1);
+        match &state.stream_blocks[0] {
+            ContentBlock::ToolCall(tc) => {
+                assert_eq!(tc.tool_call.title, "Reading file");
+                assert_eq!(tc.kind(), acp::ToolKind::Read);
+            }
+            _ => panic!("Expected ToolCall"),
+        }
+    }
+
+    #[test]
+    fn update_plan_replaces_existing() {
+        let mut state = ChatState::default();
+        state.begin_streaming();
+        let plan1 = acp::Plan::new(vec![]);
+        state.update_plan(plan1);
+        assert_eq!(state.stream_blocks.len(), 1);
+
+        let plan2 = acp::Plan::new(vec![acp::PlanEntry::new(
+            "step 1",
+            acp::PlanEntryPriority::Medium,
+            acp::PlanEntryStatus::Pending,
+        )]);
+        state.update_plan(plan2);
+        // Should replace, not add
+        assert_eq!(state.stream_blocks.len(), 1);
+        match &state.stream_blocks[0] {
+            ContentBlock::Plan(p) => assert_eq!(p.entries.len(), 1),
+            _ => panic!("Expected Plan"),
+        }
+    }
+
+    #[test]
+    fn enforce_message_limit() {
+        let mut state = ChatState::default();
+        for i in 0..510 {
+            state.add_user_message(format!("msg {i}"));
+        }
+        assert!(state.messages.len() <= 500);
+    }
+
+    #[test]
+    fn scroll_operations() {
+        let mut state = ChatState::default();
+        assert_eq!(state.scroll_offset, 0);
+
+        state.scroll_up();
+        assert_eq!(state.scroll_offset, 3);
+
+        state.scroll_up();
+        assert_eq!(state.scroll_offset, 6);
+
+        state.scroll_down();
+        assert_eq!(state.scroll_offset, 3);
+
+        state.scroll_to_bottom();
+        assert_eq!(state.scroll_offset, 0);
+    }
+
+    #[test]
+    fn scroll_down_does_not_underflow() {
+        let mut state = ChatState::default();
+        state.scroll_down();
+        assert_eq!(state.scroll_offset, 0);
+    }
+
+    #[test]
+    fn finish_streaming_with_no_blocks_does_not_add_message() {
+        let mut state = ChatState::default();
+        state.begin_streaming();
+        state.finish_streaming();
+        assert!(state.messages.is_empty());
+    }
+}

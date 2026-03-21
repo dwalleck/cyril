@@ -159,6 +159,7 @@ impl CommandExecutor {
         chat.begin_streaming();
         chat.scroll_to_bottom();
         toolbar.is_busy = true;
+        toolbar.busy_since = Some(std::time::Instant::now());
 
         // Build content blocks: user text + any @-referenced file contents
         let mut content_blocks = vec![acp::ContentBlock::Text(acp::TextContent::new(text.clone()))];
@@ -353,6 +354,7 @@ impl CommandExecutor {
         chat.begin_streaming();
         chat.scroll_to_bottom();
         toolbar.is_busy = true;
+        toolbar.busy_since = Some(std::time::Instant::now());
 
         Self::spawn_command_execute(conn, channels, raw_params, command.to_string());
 
@@ -924,6 +926,7 @@ pub fn matching_suggestions(prefix: &str, agent_commands: &[AgentCommand]) -> Ve
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     fn no_agent_commands() -> Vec<AgentCommand> {
         Vec::new()
@@ -938,97 +941,77 @@ mod tests {
         }]
     }
 
-    #[test]
-    fn parse_slash_quit() {
-        let cmd = parse_command("/quit", &no_agent_commands());
-        assert!(matches!(cmd, Some(ParsedCommand::Quit)));
+    // ── built-in command parsing ──
+
+    #[rstest]
+    #[case("/quit", "Quit")]
+    #[case("/clear", "Clear")]
+    #[case("/help", "Help")]
+    #[case("/new", "New")]
+    fn parse_builtin_commands(#[case] input: &str, #[case] expected: &str) {
+        let cmd = parse_command(input, &no_agent_commands());
+        let debug = format!("{:?}", cmd.unwrap());
+        assert!(debug.starts_with(expected), "got {debug}");
     }
 
-    #[test]
-    fn parse_slash_clear() {
-        let cmd = parse_command("/clear", &no_agent_commands());
-        assert!(matches!(cmd, Some(ParsedCommand::Clear)));
-    }
-
-    #[test]
-    fn parse_slash_help() {
-        let cmd = parse_command("/help", &no_agent_commands());
-        assert!(matches!(cmd, Some(ParsedCommand::Help)));
-    }
-
-    #[test]
-    fn parse_slash_new() {
-        let cmd = parse_command("/new", &no_agent_commands());
-        assert!(matches!(cmd, Some(ParsedCommand::New)));
-    }
-
-    #[test]
-    fn parse_slash_load_with_arg() {
-        let cmd = parse_command("/load abc-123", &no_agent_commands());
-        match cmd {
-            Some(ParsedCommand::Load(arg)) => assert_eq!(arg, "abc-123"),
-            other => panic!("Expected Load(\"abc-123\"), got {other:?}"),
+    #[rstest]
+    #[case("/load abc-123", "abc-123")]
+    #[case("/load", "")]
+    fn parse_load_command(#[case] input: &str, #[case] expected_arg: &str) {
+        match parse_command(input, &no_agent_commands()) {
+            Some(ParsedCommand::Load(arg)) => assert_eq!(arg, expected_arg),
+            other => panic!("Expected Load, got {other:?}"),
         }
     }
 
     #[test]
-    fn parse_slash_load_no_arg() {
-        let cmd = parse_command("/load", &no_agent_commands());
-        match cmd {
-            Some(ParsedCommand::Load(arg)) => assert_eq!(arg, ""),
-            other => panic!("Expected Load(\"\"), got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn parse_slash_mode_with_arg() {
-        let cmd = parse_command("/mode code", &no_agent_commands());
-        match cmd {
+    fn parse_mode_with_arg() {
+        match parse_command("/mode code", &no_agent_commands()) {
             Some(ParsedCommand::Mode(arg)) => assert_eq!(arg, "code"),
-            other => panic!("Expected Mode(\"code\"), got {other:?}"),
+            other => panic!("Expected Mode, got {other:?}"),
         }
     }
 
     #[test]
-    fn parse_slash_model_with_arg() {
-        let cmd = parse_command("/model claude-sonnet", &no_agent_commands());
-        match cmd {
+    fn parse_model_with_arg() {
+        match parse_command("/model claude-sonnet", &no_agent_commands()) {
             Some(ParsedCommand::ModelSelect(arg)) => assert_eq!(arg, "claude-sonnet"),
-            other => panic!("Expected ModelSelect(\"claude-sonnet\"), got {other:?}"),
+            other => panic!("Expected ModelSelect, got {other:?}"),
         }
     }
 
-    #[test]
-    fn parse_non_slash_returns_none() {
-        let cmd = parse_command("hello world", &no_agent_commands());
-        assert!(cmd.is_none());
+    #[rstest]
+    #[case("hello world")]
+    #[case("")]
+    #[case("not a command")]
+    fn parse_non_slash_returns_none(#[case] input: &str) {
+        assert!(parse_command(input, &no_agent_commands()).is_none());
     }
 
     #[test]
     fn parse_unknown_command() {
-        let cmd = parse_command("/foobar", &no_agent_commands());
-        match cmd {
+        match parse_command("/foobar", &no_agent_commands()) {
             Some(ParsedCommand::Unknown(name)) => assert_eq!(name, "/foobar"),
-            other => panic!("Expected Unknown(\"/foobar\"), got {other:?}"),
+            other => panic!("Expected Unknown, got {other:?}"),
         }
     }
 
+    // ── agent command parsing ──
+
     #[test]
     fn parse_agent_command() {
-        let cmd = parse_command("/compact", &agent_commands_with_compact());
-        match cmd {
+        match parse_command("/compact", &agent_commands_with_compact()) {
             Some(ParsedCommand::Agent { name, input }) => {
                 assert_eq!(name, "compact");
                 assert!(input.is_none());
             }
-            other => panic!("Expected Agent {{ name: \"compact\" }}, got {other:?}"),
+            other => panic!("Expected Agent, got {other:?}"),
         }
     }
 
     #[test]
     fn parse_agent_command_with_input() {
-        let cmd = parse_command("/compact reduce context", &agent_commands_with_compact());
-        match cmd {
+        match parse_command("/compact reduce context", &agent_commands_with_compact()) {
             Some(ParsedCommand::Agent { name, input }) => {
                 assert_eq!(name, "compact");
                 assert_eq!(input.as_deref(), Some("reduce context"));
@@ -1037,6 +1020,8 @@ mod tests {
         }
     }
 
+    // ── autocomplete suggestions ──
+
     #[test]
     fn matching_suggestions_filters_by_prefix() {
         let suggestions = matching_suggestions("/cl", &no_agent_commands());
@@ -1044,10 +1029,11 @@ mod tests {
         assert_eq!(suggestions[0].display_name, "/clear");
     }
 
-    #[test]
-    fn matching_suggestions_empty_for_non_slash() {
-        let suggestions = matching_suggestions("hello", &no_agent_commands());
-        assert!(suggestions.is_empty());
+    #[rstest]
+    #[case("hello")]
+    #[case("")]
+    fn matching_suggestions_empty_for_non_slash(#[case] input: &str) {
+        assert!(matching_suggestions(input, &no_agent_commands()).is_empty());
     }
 
     #[test]
@@ -1055,5 +1041,11 @@ mod tests {
         let suggestions = matching_suggestions("/com", &agent_commands_with_compact());
         let names: Vec<&str> = suggestions.iter().map(|s| s.display_name.as_str()).collect();
         assert!(names.contains(&"/compact"));
+    }
+
+    #[test]
+    fn matching_suggestions_slash_only_returns_all() {
+        let suggestions = matching_suggestions("/", &no_agent_commands());
+        assert!(suggestions.len() >= COMMANDS.len());
     }
 }

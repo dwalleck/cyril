@@ -208,3 +208,105 @@ fn centered_rect_fixed(percent_x: u16, height: u16, area: Rect) -> Rect {
     ])
     .split(popup_layout[1])[1]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use agent_client_protocol as acp;
+
+    fn make_approval(
+        options: Vec<(&str, &str)>,
+        detail_raw: Option<serde_json::Value>,
+    ) -> ApprovalState {
+        let mut fields = acp::ToolCallUpdateFields::new().title("Test action");
+        if let Some(raw) = detail_raw {
+            fields = fields.raw_input(raw);
+        }
+        let update = acp::ToolCallUpdate::new("tc-1", fields);
+        let perm_options: Vec<acp::PermissionOption> = options
+            .into_iter()
+            .map(|(id, name)| {
+                acp::PermissionOption::new(
+                    id.to_string(),
+                    name.to_string(),
+                    acp::PermissionOptionKind::AllowOnce,
+                )
+            })
+            .collect();
+        let request = acp::RequestPermissionRequest::new("test-session", update, perm_options);
+        ApprovalState::from_request(&request)
+    }
+
+    #[test]
+    fn from_request_basic() {
+        let state = make_approval(vec![("allow", "Allow"), ("deny", "Deny")], None);
+        assert_eq!(state.options.len(), 2);
+        assert_eq!(state.selected, 0);
+        assert_eq!(state.title.as_deref(), Some("Test action"));
+    }
+
+    #[test]
+    fn select_next_wraps() {
+        let mut state = make_approval(vec![("a", "A"), ("b", "B")], None);
+        assert_eq!(state.selected, 0);
+        state.select_next();
+        assert_eq!(state.selected, 1);
+        state.select_next();
+        assert_eq!(state.selected, 0); // wraps
+    }
+
+    #[test]
+    fn select_prev_wraps() {
+        let mut state = make_approval(vec![("a", "A"), ("b", "B")], None);
+        state.select_prev();
+        assert_eq!(state.selected, 1); // wraps to end
+    }
+
+    #[test]
+    fn selected_option_id() {
+        let state = make_approval(vec![("allow", "Allow"), ("deny", "Deny")], None);
+        assert_eq!(state.selected_option_id(), Some("allow"));
+    }
+
+    #[test]
+    fn extract_detail_command() {
+        let state = make_approval(
+            vec![("a", "A")],
+            Some(serde_json::json!({"command": "cargo test"})),
+        );
+        assert_eq!(state.detail.as_deref(), Some("Command: cargo test"));
+    }
+
+    #[test]
+    fn extract_detail_path() {
+        let state = make_approval(
+            vec![("a", "A")],
+            Some(serde_json::json!({"file_path": "/src/main.rs"})),
+        );
+        assert_eq!(state.detail.as_deref(), Some("Path: /src/main.rs"));
+    }
+
+    #[test]
+    fn extract_detail_url() {
+        let state = make_approval(
+            vec![("a", "A")],
+            Some(serde_json::json!({"url": "https://example.com"})),
+        );
+        assert_eq!(state.detail.as_deref(), Some("URL: https://example.com"));
+    }
+
+    #[test]
+    fn extract_detail_query() {
+        let state = make_approval(
+            vec![("a", "A")],
+            Some(serde_json::json!({"query": "search term"})),
+        );
+        assert_eq!(state.detail.as_deref(), Some("Query: search term"));
+    }
+
+    #[test]
+    fn no_detail_when_no_raw_input() {
+        let state = make_approval(vec![("a", "A")], None);
+        assert!(state.detail.is_none());
+    }
+}
