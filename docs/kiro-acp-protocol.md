@@ -663,27 +663,91 @@ Sent after each turn with session metadata. **Not documented in official Kiro do
 }
 ```
 
+### `kiro.dev/agent/switched` (server → client, notification)
+
+Sent when the agent is switched (e.g. via `/agent` picker). Discovered from production `kiro-chat.log` — not in official Kiro docs.
+
+```json
+{
+  "method": "_kiro.dev/agent/switched",
+  "params": {
+    "sessionId": "4dfac9d3-...",
+    "agentName": "code-reviewer",
+    "previousAgentName": "kiro_default",
+    "welcomeMessage": null
+  }
+}
+```
+
+**Fields:**
+- `agentName` — the new agent name (matches mode IDs from `session/new`)
+- `previousAgentName` — the agent that was active before
+- `welcomeMessage` — optional greeting from the new agent (typically null)
+
+### `kiro.dev/session/update` (server → client, notification)
+
+Kiro-specific session updates sent via the extension mechanism. Currently only one variant observed:
+
+#### `tool_call_chunk`
+
+Lightweight tool call progress. Sent alongside (or before) the standard ACP `session/update` → `ToolCall` notifications. Provides just the tool name and kind without full rawInput.
+
+```json
+{
+  "method": "_kiro.dev/session/update",
+  "params": {
+    "sessionId": "4dfac9d3-...",
+    "update": {
+      "sessionUpdate": "tool_call_chunk",
+      "toolCallId": "tooluse_abc123",
+      "title": "read",
+      "kind": "read"
+    }
+  }
+}
+```
+
+**`kind` values observed:** `read`, `execute`, `search`
+
+**`title` values observed:** `read`, `ls`, `glob`, `shell`
+
+### `kiro.dev/compaction/status` (server → client, notification)
+
+Reports progress when compacting conversation context via `/compact`.
+
+```json
+{
+  "method": "_kiro.dev/compaction/status",
+  "params": {
+    "message": "Compacting conversation context..."
+  }
+}
+```
+
+### `kiro.dev/clear/status` (server → client, notification)
+
+Reports status when clearing session history via `/clear`.
+
+```json
+{
+  "method": "_kiro.dev/clear/status",
+  "params": {
+    "message": "Clearing session history..."
+  }
+}
+```
+
 ---
 
 ## Unimplemented Kiro Extensions
 
-These are documented in the Kiro ACP docs but not yet handled by Cyril.
-
 ### `kiro.dev/mcp/oauth_request` (server → client, notification)
 
-Provides an OAuth URL when an MCP server requires authentication.
+Provides an OAuth URL when an MCP server requires authentication. Not observed in production logs.
 
 ### `kiro.dev/mcp/server_initialized` (server → client, notification)
 
-Indicates an MCP server has finished initializing and its tools are available.
-
-### `kiro.dev/compaction/status` (server → client, notification)
-
-Reports progress when compacting conversation context.
-
-### `kiro.dev/clear/status` (server → client, notification)
-
-Reports status when clearing session history.
+Indicates an MCP server has finished initializing and its tools are available. Not observed in production logs.
 
 ### `session/terminate` (server → client, notification)
 
