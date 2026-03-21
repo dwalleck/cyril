@@ -25,11 +25,9 @@ There is no linter or formatter configured beyond `cargo check`. The project use
 
 Two crates in a Cargo workspace:
 
-- **`cyril-core`** — Protocol logic, no UI. Implements the ACP `Client` trait, path translation, hooks, terminal management.
+- **`cyril-core`** — Protocol logic, no UI. Implements the ACP `Client` trait, path translation.
   - `protocol/` — ACP client implementation (`client.rs`) and transport (`transport.rs`)
-  - `platform/` — OS-specific abstractions: path translation (`path.rs`), terminal management (`terminal.rs`)
-  - `capabilities/` — Filesystem operations (`fs.rs`)
-  - `hooks/` — Hook system (config, execution)
+  - `platform/` — OS-specific abstractions: path translation (`path.rs`)
   - `kiro_ext.rs` — Kiro-specific extension types (`KiroExtCommand`, `KiroCommandsPayload`)
   - `session.rs` — `SessionContext` (session state: modes, model, config options)
   - `event.rs` — `AppEvent` and sub-enums bridging protocol → TUI
@@ -45,26 +43,26 @@ User input → CommandExecutor::send_prompt() → acp::ClientSideConnection::pro
                                                     ↓ (JSON-RPC over stdio; via WSL on Windows)
                                                kiro-cli acp
                                                     ↓ (callbacks)
-KiroClient (implements acp::Client) ← agent requests fs/terminal/permissions
+KiroClient (implements acp::Client) ← session notifications, permission requests, extensions
          ↓ (mpsc channel)
     AppEvent (wraps sub-enums)
          ↓
     App::handle_acp_event() dispatches to:
       ├─ Protocol(e)    → handle_protocol_event()   → ChatState, session
       ├─ Interaction(r) → handle_interaction()       → approval popup
-      ├─ Extension(e)   → handle_extension_event()   → commands, context %
-      └─ Internal(e)    → handle_internal_event()    → hook feedback
+      └─ Extension(e)   → handle_extension_event()   → commands, context %
          ↓
     ratatui render loop (~30fps)
 ```
 
 ### Key Boundary: KiroClient (`cyril-core/src/protocol/client.rs`)
 
-This is the ACP `Client` trait implementation — the single point where all agent callbacks arrive. It:
-- On Windows, translates WSL paths to Windows paths on every fs read/write (no-op on Linux)
-- Runs before/after hooks at the protocol boundary
-- Manages terminal processes (native execution on the host OS)
-- Sends `AppEvent`s over an mpsc channel to the TUI
+This is the ACP `Client` trait implementation — the single point where all agent callbacks arrive. It handles:
+- Session notifications (agent messages, tool calls, mode changes)
+- Permission requests (approval popup via oneshot channel)
+- Extension notifications (Kiro commands, metadata)
+
+Note: Kiro handles file I/O and terminal commands internally via built-in agent tools. The ACP client capability callbacks (`read_text_file`, `write_text_file`, `create_terminal`, etc.) are defined in the `acp::Client` trait but Kiro never invokes them.
 
 Everything is `!Send` — uses `Rc<RefCell<_>>` and `#[async_trait(?Send)]`. The tokio runtime is `current_thread` with a `LocalSet`.
 
@@ -74,12 +72,11 @@ On Windows, all paths crossing the WSL boundary go through `win_to_wsl()` / `wsl
 
 ### Event Architecture
 
-`AppEvent` (in `cyril-core/src/event.rs`) is the bridge between the protocol layer and TUI. Events flow one-way from `KiroClient` → `App`. It wraps four sub-enums:
+`AppEvent` (in `cyril-core/src/event.rs`) is the bridge between the protocol layer and TUI. Events flow one-way from `KiroClient` → `App`. It wraps three sub-enums:
 
 - **`ProtocolEvent`** — Standard ACP session updates (agent messages, tool calls, mode/config changes, plan updates)
 - **`InteractionRequest`** — Requests needing a user response (permission requests via oneshot channel)
 - **`ExtensionEvent`** — Kiro-specific extension notifications (commands, metadata)
-- **`InternalEvent`** — App-internal events (hook feedback)
 
 `App::handle_acp_event()` pattern-matches the top-level variant and dispatches to a dedicated handler per sub-enum.
 
@@ -102,10 +99,6 @@ Pattern for spawned async work: use `tokio::task::spawn_local` with cloned chann
 ### Tool Call Display (`cyril/src/ui/tool_calls.rs`)
 
 `TrackedToolCall` wraps a full `acp::ToolCall` and caches a `DiffSummary` (computed via the `similar` crate). Tool calls render inline in chat with kind-specific labels (`Read(path)`, `Edit(path)`, `Execute(cmd)`) and actual code diffs for edits.
-
-### Hook System (`cyril-core/src/hooks/`)
-
-Hooks intercept agent operations at the protocol boundary. Before-hooks can block or modify; after-hooks can produce feedback that gets injected as follow-up prompts. Configured via `hooks.json` in the working directory.
 
 ## ACP Protocol Notes
 

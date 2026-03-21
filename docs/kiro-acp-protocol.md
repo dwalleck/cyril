@@ -31,13 +31,7 @@ Exchange capabilities and identify both sides.
   "method": "initialize",
   "params": {
     "protocolVersion": "2025-01-01",
-    "clientCapabilities": {
-      "filesystem": {
-        "readTextFile": true,
-        "writeTextFile": true
-      },
-      "terminal": true
-    },
+    "clientCapabilities": {},
     "clientInfo": {
       "name": "cyril",
       "version": "0.1.0",
@@ -387,55 +381,16 @@ Or to cancel:
 
 ---
 
-## Client Capabilities (server → client requests)
+## Client Capabilities (NOT used by Kiro v1.28.0)
 
-These are requests the **server** sends to the **client** to perform operations on the host.
+The ACP spec defines client-side callbacks for filesystem and terminal operations (`fs/read_text_file`, `fs/write_text_file`, `terminal/create`, etc.). These would allow the server to delegate host operations to the client.
 
-### `fs/read_text_file`
+**Kiro does not use these.** Instead, Kiro has its own built-in agent tools (`read`, `write`, `shell`, `ls`, `glob`, `grep`, etc.) that it executes server-side. The client only needs to handle:
+- `session/update` notifications (streaming content, tool calls)
+- `session/request_permission` requests (permission approval UI)
+- Extension notifications/methods (`kiro.dev/*`)
 
-```json
-{ "method": "fs/read_text_file", "params": { "path": "/home/user/file.rs" } }
-```
-Response: `{ "content": "file contents..." }`
-
-### `fs/write_text_file`
-
-```json
-{ "method": "fs/write_text_file", "params": { "path": "/home/user/file.rs", "content": "new contents" } }
-```
-
-### `terminal/create`
-
-```json
-{ "method": "terminal/create", "params": { "command": "npm test" } }
-```
-Response: `{ "terminalId": "1" }`
-
-### `terminal/output`
-
-```json
-{ "method": "terminal/output", "params": { "terminalId": "1" } }
-```
-Response: `{ "output": "test output...", "isComplete": false }`
-
-### `terminal/wait_for_exit`
-
-```json
-{ "method": "terminal/wait_for_exit", "params": { "terminalId": "1" } }
-```
-Response: `{ "exitStatus": { "exitCode": 0 } }`
-
-### `terminal/kill`
-
-```json
-{ "method": "terminal/kill", "params": { "terminalId": "1" } }
-```
-
-### `terminal/release`
-
-```json
-{ "method": "terminal/release", "params": { "terminalId": "1" } }
-```
+Cyril advertises empty `clientCapabilities` during `initialize`. The `tool_call_inputs` cache enriches permission requests with `rawInput` for the approval UI, but actual file I/O and command execution happen inside kiro-cli.
 
 ---
 
