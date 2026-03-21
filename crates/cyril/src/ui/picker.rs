@@ -1,9 +1,9 @@
 use ratatui::{
-    Frame,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
+    Frame,
 };
 
 /// A generic picker popup for selecting from a list of options.
@@ -28,16 +28,15 @@ pub struct PickerOption {
 /// What the picker should do when an option is confirmed.
 #[derive(Debug, Clone)]
 pub enum PickerAction {
-    SetModel,
+    /// Execute a selection command via kiro.dev/commands/execute.
+    /// `command` is the command name without slash (e.g. "model", "agent").
+    ExecuteCommand { command: String },
 }
 
 impl PickerState {
     pub fn new(title: impl Into<String>, options: Vec<PickerOption>, action: PickerAction) -> Self {
         // Pre-select the active option if there is one
-        let selected = options
-            .iter()
-            .position(|o| o.active)
-            .unwrap_or(0);
+        let selected = options.iter().position(|o| o.active).unwrap_or(0);
 
         Self {
             title: title.into(),
@@ -121,10 +120,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
         )];
 
         if opt.active {
-            spans.push(Span::styled(
-                " (active)",
-                Style::default().fg(Color::Green),
-            ));
+            spans.push(Span::styled(" (active)", Style::default().fg(Color::Green)));
         }
 
         option_lines.push(Line::from(spans));

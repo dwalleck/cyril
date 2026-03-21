@@ -7,7 +7,7 @@ use serde_json::value::RawValue;
 use tokio::sync::mpsc;
 
 use cyril_core::path;
-use cyril_core::session::{CONFIG_KEY_MODEL, SessionContext};
+use cyril_core::session::SessionContext;
 
 use crate::file_completer;
 use crate::ui::{chat, input, picker, toolbar};
@@ -425,27 +425,7 @@ impl CommandExecutor {
         };
 
         if model_id.is_empty() {
-            let params = serde_json::json!({
-                "command": CONFIG_KEY_MODEL,
-                "sessionId": session_id.to_string()
-            });
-            let raw_params = RawValue::from_string(params.to_string())
-                .map_err(|e| anyhow::anyhow!("Failed to serialize params: {e}"))?;
-
-            match conn
-                .ext_method(acp::ExtRequest::new(
-                    "kiro.dev/commands/options",
-                    Arc::from(raw_params),
-                ))
-                .await
-            {
-                Ok(resp) => {
-                    Self::open_model_picker(chat, picker, resp.0.get());
-                }
-                Err(e) => {
-                    chat.add_system_message(format!("Failed to query models: {e}"));
-                }
-            }
+            Self::open_selection_picker(session, conn, chat, picker, "model", "Select Model").await?;
             return Ok(());
         }
 
@@ -459,17 +439,60 @@ impl CommandExecutor {
         Ok(())
     }
 
-    /// Parse model options from a `kiro.dev/commands/options` response and open a picker.
-    pub fn open_model_picker(
+    /// Query `kiro.dev/commands/options` for a command and open a picker with the results.
+    pub async fn open_selection_picker(
+        session: &SessionContext,
+        conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
+        picker: &mut Option<picker::PickerState>,
+        command_name: &str,
+        title: &str,
+    ) -> Result<()> {
+        let session_id = match &session.id {
+            Some(id) => id.clone(),
+            None => {
+                chat.add_system_message("No active session.".to_string());
+                return Ok(());
+            }
+        };
+
+        let params = serde_json::json!({
+            "command": command_name,
+            "sessionId": session_id.to_string()
+        });
+        let raw_params = RawValue::from_string(params.to_string())
+            .map_err(|e| anyhow::anyhow!("Failed to serialize params: {e}"))?;
+
+        match conn
+            .ext_method(acp::ExtRequest::new(
+                "kiro.dev/commands/options",
+                Arc::from(raw_params),
+            ))
+            .await
+        {
+            Ok(resp) => {
+                Self::open_picker_from_response(chat, picker, resp.0.get(), command_name, title);
+            }
+            Err(e) => {
+                chat.add_system_message(format!("Failed to query {command_name} options: {e}"));
+            }
+        }
+        Ok(())
+    }
+
+    /// Parse options from a `kiro.dev/commands/options` response and open a picker.
+    pub fn open_picker_from_response(
         chat: &mut chat::ChatState,
         picker: &mut Option<picker::PickerState>,
         raw_json: &str,
+        command_name: &str,
+        title: &str,
     ) {
         let val: serde_json::Value = match serde_json::from_str(raw_json) {
             Ok(v) => v,
             Err(e) => {
-                tracing::warn!("Failed to parse model options: {e}");
-                chat.add_system_message("Failed to parse model options.".to_string());
+                tracing::warn!("Failed to parse {command_name} options: {e}");
+                chat.add_system_message(format!("Failed to parse {command_name} options."));
                 return;
             }
         };
@@ -507,15 +530,17 @@ impl CommandExecutor {
                     })
                     .collect();
                 *picker = Some(picker::PickerState::new(
-                    "Select Model",
+                    title,
                     picker_options,
-                    picker::PickerAction::SetModel,
+                    picker::PickerAction::ExecuteCommand {
+                        command: command_name.to_string(),
+                    },
                 ));
             }
             _ => {
-                tracing::info!("Model options raw response: {raw_json}");
+                tracing::info!("{command_name} options raw response: {raw_json}");
                 chat.add_system_message(
-                    "No model options returned. Try /model <model-id> directly.".to_string(),
+                    format!("No {command_name} options returned. Try /{command_name} <value> directly."),
                 );
             }
         }
@@ -537,7 +562,7 @@ impl CommandExecutor {
         };
 
         match state.action {
-            picker::PickerAction::SetModel => {
+            picker::PickerAction::ExecuteCommand { ref command } => {
                 let session_id = match &session.id {
                     Some(id) => id.clone(),
                     None => {
@@ -546,18 +571,25 @@ impl CommandExecutor {
                     }
                 };
 
-                session.set_optimistic_model(value.clone());
+                if command == "model" {
+                    session.set_optimistic_model(value.clone());
+                }
 
                 let args = serde_json::json!({ "value": value });
-                let raw_params = match Self::build_execute_params(&session_id, "model", args) {
+                let raw_params = match Self::build_execute_params(&session_id, command, args) {
                     Ok(p) => p,
                     Err(e) => {
-                        tracing::error!("Failed to build model command params: {e}");
+                        tracing::error!("Failed to build {command} command params: {e}");
                         return;
                     }
                 };
 
-                Self::spawn_command_execute(conn, channels, raw_params, format!("/model {value}"));
+                Self::spawn_command_execute(
+                    conn,
+                    channels,
+                    raw_params,
+                    format!("/{command} {value}"),
+                );
             }
         }
     }
