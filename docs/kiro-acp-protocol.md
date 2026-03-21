@@ -1,17 +1,18 @@
 # Kiro CLI ACP Protocol Reference
 
-This document describes the Agent Client Protocol (ACP) as implemented by **Kiro CLI v1.28.0**, based on the ACP v2025-01-01 specification. All findings were verified empirically by probing `kiro-cli acp` and examining its debug logs at `/run/user/$UID/kiro-log/kiro-chat.log` (Linux) or `$TMPDIR/kiro-log/kiro-chat.log` (macOS).
+This document describes the Agent Client Protocol (ACP) as implemented by **Kiro CLI v1.28.0**, based on the ACP v2025-01-01 specification. It serves as a reference for any ACP client connecting to Kiro, not just Cyril. All findings were verified empirically by probing `kiro-cli acp` and examining its debug logs.
 
 ## Transport
 
 - **Protocol**: JSON-RPC 2.0 over stdio
-- **Spawn command**: `kiro-cli acp` (Linux) or `wsl kiro-cli acp` (Windows)
+- **Spawn command**: `kiro-cli acp` (Linux/macOS) or `wsl kiro-cli acp` (Windows)
 - **Flags**: `--agent <name>`, `--model <id>`, `--trust-all-tools`, `--verbose`
 - **Logging**: Set `KIRO_LOG_LEVEL=debug` for verbose logs. Override log path with `KIRO_CHAT_LOG_FILE`.
+- **Log locations**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux), `$TMPDIR/kiro-log/kiro-chat.log` (macOS)
 
 ## Extension Method Convention
 
-ACP uses an underscore prefix (`_`) on the wire for extension methods. The `agent-client-protocol` crate strips this prefix before delivering to handlers. So:
+ACP uses an underscore prefix (`_`) on the wire for extension methods. The `agent-client-protocol` crate (v0.9+) strips this prefix before delivering to handlers. So:
 - On the wire: `_kiro.dev/commands/execute`
 - In `ext_notification`/`ext_method` handlers: `kiro.dev/commands/execute`
 
@@ -33,9 +34,9 @@ Exchange capabilities and identify both sides.
     "protocolVersion": "2025-01-01",
     "clientCapabilities": {},
     "clientInfo": {
-      "name": "cyril",
-      "version": "0.1.0",
-      "title": "Cyril"
+      "name": "my-client",
+      "version": "1.0.0",
+      "title": "My ACP Client"
     }
   }
 }
@@ -64,10 +65,11 @@ Exchange capabilities and identify both sides.
 }
 ```
 
-**Key observations:**
+**Notes:**
 - `promptCapabilities.image: true` — Kiro supports image content blocks in prompts
-- `sessionCapabilities: {}` — No `fork`, `list`, or `resume` support (these are behind unstable feature flags in the ACP crate)
+- `sessionCapabilities: {}` — No `fork`, `list`, or `resume` support yet
 - `mcpCapabilities` — MCP servers only via stdio, not HTTP/SSE
+- **Client capabilities are not used** — Kiro handles all file I/O and terminal commands internally via built-in agent tools (`read`, `write`, `shell`, `ls`, `glob`, `grep`, etc.). The ACP spec defines client-side callbacks (`fs/read_text_file`, `fs/write_text_file`, `terminal/create`, etc.) but Kiro never invokes them. Clients only need to handle notifications, permission requests, and extension methods.
 
 ### 2. `session/new` (client → server)
 
@@ -182,7 +184,7 @@ Switch the agent mode.
 
 ### 7. `session/set_config_option` (client → server)
 
-**NOT IMPLEMENTED** by Kiro v1.28.0. Returns:
+**Not supported** by Kiro v1.28.0. Returns:
 ```json
 {
   "error": {
@@ -196,7 +198,7 @@ Use `kiro.dev/commands/execute` with the `model` command instead (see Kiro Exten
 
 ### 8. `session/set_model` (client → server)
 
-Behind `unstable_session_model` feature flag in the ACP crate. Not advertised in Kiro's `sessionCapabilities`. Status unknown — use `kiro.dev/commands/execute` for model switching.
+**Not supported.** Behind `unstable_session_model` feature flag in the ACP crate. Not advertised in Kiro's `sessionCapabilities`. Use `kiro.dev/commands/execute` for model switching.
 
 ---
 
@@ -381,20 +383,9 @@ Or to cancel:
 
 ---
 
-## Client Capabilities (NOT used by Kiro v1.28.0)
-
-The ACP spec defines client-side callbacks for filesystem and terminal operations (`fs/read_text_file`, `fs/write_text_file`, `terminal/create`, etc.). These would allow the server to delegate host operations to the client.
-
-**Kiro does not use these.** Instead, Kiro has its own built-in agent tools (`read`, `write`, `shell`, `ls`, `glob`, `grep`, etc.) that it executes server-side. The client only needs to handle:
-- `session/update` notifications (streaming content, tool calls)
-- `session/request_permission` requests (permission approval UI)
-- Extension notifications/methods (`kiro.dev/*`)
-
-Cyril advertises empty `clientCapabilities` during `initialize`. The `tool_call_inputs` cache enriches permission requests with `rawInput` for the approval UI, but actual file I/O and command execution happen inside kiro-cli.
-
----
-
 ## Kiro Extension Methods
+
+These are Kiro-specific methods not part of the standard ACP specification. They use the `_kiro.dev/` prefix on the wire.
 
 ### `kiro.dev/commands/available` (server → client, notification)
 
@@ -543,7 +534,7 @@ Query available options for a selection command.
 
 Execute a slash command. The `command` field is a `TuiCommand` adjacently tagged enum.
 
-**CRITICAL:** The `command` field must be an object `{"command": "<name>", "args": {<args>}}`, not a string. Sending a string crashes `kiro-cli`.
+**CRITICAL:** The `command` field must be an object `{"command": "<name>", "args": {<args>}}`, not a string. Sending a string crashes `kiro-cli` with a deserialization error.
 
 #### Panel command (no args):
 
@@ -651,7 +642,7 @@ Execute a slash command. The `command` field is a `TuiCommand` adjacently tagged
 
 ### `kiro.dev/metadata` (server → client, notification)
 
-Sent after each turn with session metadata. **Not documented in official Kiro docs** but consistently sent.
+Sent after each turn with session metadata.
 
 ```json
 {
@@ -665,7 +656,7 @@ Sent after each turn with session metadata. **Not documented in official Kiro do
 
 ### `kiro.dev/agent/switched` (server → client, notification)
 
-Sent when the agent is switched (e.g. via `/agent` picker). Discovered from production `kiro-chat.log` — not in official Kiro docs.
+Sent when the agent is switched (e.g. via `/agent` picker).
 
 ```json
 {
@@ -686,7 +677,7 @@ Sent when the agent is switched (e.g. via `/agent` picker). Discovered from prod
 
 ### `kiro.dev/session/update` (server → client, notification)
 
-Kiro-specific session updates sent via the extension mechanism. Currently only one variant observed:
+Kiro-specific session updates sent via the extension mechanism, separate from the standard ACP `session/update`. Currently one variant observed:
 
 #### `tool_call_chunk`
 
@@ -737,21 +728,17 @@ Reports status when clearing session history via `/clear`.
 }
 ```
 
----
-
-## Unimplemented Kiro Extensions
-
 ### `kiro.dev/mcp/oauth_request` (server → client, notification)
 
-Provides an OAuth URL when an MCP server requires authentication. Not observed in production logs.
+Provides an OAuth URL when an MCP server requires authentication. Documented in the [Kiro ACP docs](https://kiro.dev/docs/cli/acp/#kiro-extensions) but not observed in production logs. Exact payload format unknown.
 
 ### `kiro.dev/mcp/server_initialized` (server → client, notification)
 
-Indicates an MCP server has finished initializing and its tools are available. Not observed in production logs.
+Indicates an MCP server has finished initializing and its tools are available. Documented in the [Kiro ACP docs](https://kiro.dev/docs/cli/acp/#kiro-extensions) but not observed in production logs. Exact payload format unknown.
 
 ### `session/terminate` (server → client, notification)
 
-Terminates a subagent session. Related to the unstable `session/fork` capability in the ACP crate (behind `unstable_session_fork` feature flag). Not active since `sessionCapabilities` is empty.
+Terminates a subagent session. Documented in the [Kiro ACP docs](https://kiro.dev/docs/cli/acp/#kiro-extensions). Related to the unstable `session/fork` capability in the ACP crate (behind `unstable_session_fork` feature flag). Not active since Kiro v1.28.0 reports `sessionCapabilities: {}`.
 
 ---
 
@@ -772,16 +759,6 @@ These exist in the `agent-client-protocol-schema` crate behind feature flags but
 
 ## Debugging
 
-### Log locations
-
-- **Linux**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (typically `/run/user/1000/kiro-log/kiro-chat.log`)
-- **macOS**: `$TMPDIR/kiro-log/kiro-chat.log`
-
-### Environment variables
-
-- `KIRO_LOG_LEVEL=debug` — verbose logging
-- `KIRO_CHAT_LOG_FILE=/path/to/custom.log` — custom log path
-
 ### Common errors in kiro-cli logs
 
 **Wrong command format:**
@@ -792,7 +769,7 @@ Connection error: Parse error: {
   "phase": "deserialization"
 }
 ```
-This means the `command` field was sent as a string instead of the required `{"command": "<name>", "args": {}}` object format.
+This means the `command` field was sent as a string instead of the required `{"command": "<name>", "args": {}}` object format. This error crashes the kiro-cli agent connection.
 
 **Unsupported method:**
 ```
@@ -806,4 +783,4 @@ The ACP method is not implemented by this version of Kiro.
 
 | Date | Kiro Version | ACP Schema | Notes |
 |------|-------------|------------|-------|
-| 2026-03-20 | v1.28.0 | v0.10.8 | Initial investigation. Discovered TuiCommand format, broken set_config_option. |
+| 2026-03-20 | v1.28.0 | v0.10.8 | Initial investigation. Discovered TuiCommand format, broken set_config_option, agent/switched and tool_call_chunk notifications. |
