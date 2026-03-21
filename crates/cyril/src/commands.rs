@@ -611,9 +611,9 @@ fn format_command_response(val: &serde_json::Value) -> String {
     let message = val.get("message").and_then(|m| m.as_str()).unwrap_or("");
     let data = val.get("data");
 
-    // If there's tool data, format a tool list
+    // If there's tool data, format as a markdown list
     if let Some(tools) = data.and_then(|d| d.get("tools")).and_then(|t| t.as_array()) {
-        let mut out = format!("{message}\n");
+        let mut out = format!("**{message}**\n\n");
         for tool in tools {
             let name = tool.get("name").and_then(|n| n.as_str()).unwrap_or("?");
             let source = tool.get("source").and_then(|s| s.as_str()).unwrap_or("");
@@ -625,16 +625,17 @@ fn format_command_response(val: &serde_json::Value) -> String {
                 .find(|l| !l.trim().is_empty())
                 .unwrap_or("")
                 .trim();
-            out.push_str(&format!("  {name:<20} {desc}"));
-            if !source.is_empty() && source != "built-in" {
-                out.push_str(&format!(" ({source})"));
-            }
-            out.push('\n');
+            let source_tag = if !source.is_empty() && source != "built-in" {
+                format!(" *({source})*")
+            } else {
+                String::new()
+            };
+            out.push_str(&format!("- **{name}** — {desc}{source_tag}\n"));
         }
         return out;
     }
 
-    // If there's usage breakdown data, format it
+    // If there's usage breakdown data, format as markdown
     if let Some(breakdowns) = data
         .and_then(|d| d.get("usageBreakdowns"))
         .and_then(|u| u.as_array())
@@ -643,13 +644,13 @@ fn format_command_response(val: &serde_json::Value) -> String {
             .and_then(|d| d.get("planName"))
             .and_then(|p| p.as_str())
             .unwrap_or("Unknown");
-        let mut out = format!("Plan: {plan}\n");
+        let mut out = format!("**Plan: {plan}**\n\n");
         for bd in breakdowns {
             let name = bd.get("displayName").and_then(|n| n.as_str()).unwrap_or("?");
             let used = bd.get("used").and_then(|u| u.as_f64()).unwrap_or(0.0);
             let limit = bd.get("limit").and_then(|l| l.as_f64()).unwrap_or(0.0);
             let pct = bd.get("percentage").and_then(|p| p.as_u64()).unwrap_or(0);
-            out.push_str(&format!("  {name}: {used:.0}/{limit:.0} ({pct}%)\n"));
+            out.push_str(&format!("- **{name}**: {used:.0} / {limit:.0} ({pct}%)\n"));
         }
         return out;
     }
