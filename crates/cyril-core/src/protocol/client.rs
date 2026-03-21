@@ -188,6 +188,12 @@ impl acp::Client for KiroClient {
                     tracing::warn!("Failed to parse kiro.dev/metadata: {e}");
                 }
             }
+        } else {
+            tracing::warn!("Unrecognized ext_notification: method={}", args.method);
+            self.emit(AppEvent::Extension(ExtensionEvent::Unknown {
+                method: args.method.to_string(),
+                params: args.params.get().to_string(),
+            }));
         }
 
         Ok(())

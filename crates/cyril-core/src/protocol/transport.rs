@@ -22,6 +22,11 @@ impl AgentProcess {
     /// On Windows, runs via `wsl kiro-cli acp`; on Linux, runs `kiro-cli acp` directly.
     /// If `agent` is provided, passes `--agent <name>` to kiro-cli.
     pub fn spawn(agent: Option<&str>) -> Result<Self> {
+        Self::spawn_with_extra_args(agent, &[])
+    }
+
+    /// Like `spawn`, but allows passing additional CLI arguments to kiro-cli acp.
+    pub fn spawn_with_extra_args(agent: Option<&str>, extra_args: &[&str]) -> Result<Self> {
         let mut cmd = if cfg!(target_os = "windows") {
             let mut c = Command::new("wsl");
             c.arg("kiro-cli");
@@ -31,6 +36,10 @@ impl AgentProcess {
         };
 
         cmd.arg("acp");
+
+        for arg in extra_args {
+            cmd.arg(arg);
+        }
 
         if let Some(name) = agent {
             cmd.args(["--agent", name]);

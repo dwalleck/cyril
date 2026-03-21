@@ -72,8 +72,8 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
     println!("=== ACP Method Tester ===\n");
 
     // --- Connect ---
-    println!("[1] Spawning kiro-cli...");
-    let mut agent = AgentProcess::spawn(agent_name)?;
+    println!("[1] Spawning kiro-cli (verbose)...");
+    let mut agent = AgentProcess::spawn_with_extra_args(agent_name, &["--verbose"])?;
     agent.check_startup().await?;
 
     let (event_tx, mut event_rx) = mpsc::unbounded_channel::<AppEvent>();
@@ -82,12 +82,9 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
     let stdin = agent.take_stdin()?;
     let stdout = agent.take_stdout()?;
 
-    let (conn, handle_io) = acp::ClientSideConnection::new(
-        client,
-        stdin,
-        stdout,
-        |fut| { tokio::task::spawn_local(fut); },
-    );
+    let (conn, handle_io) = acp::ClientSideConnection::new(client, stdin, stdout, |fut| {
+        tokio::task::spawn_local(fut);
+    });
     tokio::task::spawn_local(async move {
         if let Err(e) = handle_io.await {
             tracing::error!("ACP I/O error: {e}");
@@ -101,11 +98,44 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
                 AppEvent::Protocol(ProtocolEvent::ModeChanged { mode, .. }) => {
                     println!("  [event] ModeChanged: {:?}", mode);
                 }
+                AppEvent::Protocol(ProtocolEvent::ConfigOptionsUpdated { config_options, .. }) => {
+                    println!("  [event] ConfigOptionsUpdated: {} options", config_options.len());
+                    for opt in config_options {
+                        print_config_option(opt);
+                    }
+                }
                 AppEvent::Extension(ExtensionEvent::KiroCommandsAvailable { commands }) => {
                     println!("  [event] KiroCommandsAvailable: {} commands", commands.len());
+                    for cmd in commands {
+                        let meta_str = match &cmd.meta {
+                            Some(meta) => {
+                                let mut parts = Vec::new();
+                                if let Some(ref it) = meta.input_type {
+                                    parts.push(format!("inputType={it}"));
+                                }
+                                if let Some(ref om) = meta.options_method {
+                                    parts.push(format!("optionsMethod={om}"));
+                                }
+                                if meta.local {
+                                    parts.push("local".to_string());
+                                }
+                                format!(" [{}]", parts.join(", "))
+                            }
+                            None => String::new(),
+                        };
+                        let hint = cmd.input_hint.as_deref().unwrap_or("");
+                        println!(
+                            "    {:<20} {:30} {hint}{meta_str}",
+                            cmd.name, cmd.description
+                        );
+                    }
                 }
                 AppEvent::Extension(ExtensionEvent::KiroMetadata { context_usage_pct, .. }) => {
                     println!("  [event] KiroMetadata: context={context_usage_pct}%");
+                }
+                AppEvent::Extension(ExtensionEvent::Unknown { method, params }) => {
+                    println!("  [event] UNKNOWN EXT: method={method}");
+                    println!("          params={params}");
                 }
                 _ => {
                     tracing::debug!("  [event] {:?}", event);
@@ -180,114 +210,97 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
     }
     println!();
 
-    // Give the agent a moment to send any initial notifications
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    // Give the agent a moment to send initial notifications (commands, metadata)
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    // --- Test session/set_mode ---
-    println!("[4] Testing session/set_mode...");
-    if let Some(ref modes) = session_response.modes {
-        for mode in &modes.available_modes {
-            let mode_id = mode.id.to_string();
-            println!("    Trying set_mode(\"{mode_id}\")");
+    // --- Test kiro.dev/commands/options for model ---
+    println!("[4] Testing kiro.dev/commands/options (model)...");
+    {
+        let params = serde_json::json!({
+            "command": "model",
+            "sessionId": session_id.to_string()
+        });
+        let raw_params = serde_json::value::RawValue::from_string(params.to_string())
+            .expect("valid json");
 
-            match conn
-                .set_session_mode(acp::SetSessionModeRequest::new(
-                    session_id.clone(),
-                    mode_id.clone(),
-                ))
-                .await
-            {
-                Ok(resp) => {
-                    println!("    SUCCESS: set_mode(\"{mode_id}\") -> meta={:?}", resp.meta);
-                }
-                Err(e) => {
-                    println!("    FAILED: set_mode(\"{mode_id}\") -> {e}");
-                }
+        match conn
+            .ext_method(acp::ExtRequest::new(
+                "kiro.dev/commands/options",
+                std::sync::Arc::from(raw_params),
+            ))
+            .await
+        {
+            Ok(resp) => {
+                println!("    Raw response: {}", resp.0);
             }
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        }
-    } else {
-        for mode_id in &["code", "architect", "ask"] {
-            println!("    Trying set_mode(\"{mode_id}\") (guessing, none advertised)");
-            match conn
-                .set_session_mode(acp::SetSessionModeRequest::new(
-                    session_id.clone(),
-                    mode_id.to_string(),
-                ))
-                .await
-            {
-                Ok(resp) => {
-                    println!("    SUCCESS: set_mode(\"{mode_id}\") -> meta={:?}", resp.meta);
-                }
-                Err(e) => {
-                    println!("    FAILED: set_mode(\"{mode_id}\") -> {e}");
-                }
+            Err(e) => {
+                println!("    FAILED: {e}");
             }
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
     }
     println!();
 
-    // --- Test session/set_config_option ---
-    println!("[5] Testing session/set_config_option...");
-    if let Some(ref config_options) = session_response.config_options {
-        for opt in config_options {
-            if let acp::SessionConfigKind::Select(ref select) = opt.kind {
-                println!("    Config '{}': current={}", opt.id, select.current_value);
-                if let acp::SessionConfigSelectOptions::Ungrouped(ref opts) = select.options {
-                    // Try setting to each value
-                    for val in opts {
-                        println!("      Trying set_config_option(id={}, value={})", opt.id, val.value);
-                        match conn
-                            .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
-                                session_id.clone(),
-                                opt.id.to_string(),
-                                val.value.to_string(),
-                            ))
-                            .await
-                        {
-                            Ok(resp) => {
-                                println!("      SUCCESS -> returned {} config options", resp.config_options.len());
-                                for updated in &resp.config_options {
-                                    if let acp::SessionConfigKind::Select(ref s) = updated.kind {
-                                        println!("        {} = {}", updated.id, s.current_value);
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                println!("      FAILED -> {e}");
-                            }
-                        }
-                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                    }
-                }
+    // --- Test commands/execute with various command types ---
+    println!("[5] Testing kiro.dev/commands/execute with different commands...");
+
+    // Format discovered from kiro-cli debug logs:
+    //   command: { "command": "<name>", "args": {<args>} }
+    let test_commands: Vec<(&str, serde_json::Value)> = vec![
+        (
+            "/context (panel, no args)",
+            serde_json::json!({
+                "command": { "command": "context", "args": {} },
+                "sessionId": session_id.to_string()
+            }),
+        ),
+        (
+            "/model (selection, value=claude-haiku-4.5)",
+            serde_json::json!({
+                "command": { "command": "model", "args": { "value": "claude-haiku-4.5" } },
+                "sessionId": session_id.to_string()
+            }),
+        ),
+        (
+            "/compact (simple, no args)",
+            serde_json::json!({
+                "command": { "command": "compact", "args": {} },
+                "sessionId": session_id.to_string()
+            }),
+        ),
+    ];
+
+    for (label, params) in &test_commands {
+        println!("    [{label}]");
+        println!("      payload: {params}");
+
+        let raw_params = serde_json::value::RawValue::from_string(params.to_string())
+            .expect("valid json");
+
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            conn.ext_method(acp::ExtRequest::new(
+                "kiro.dev/commands/execute",
+                std::sync::Arc::from(raw_params),
+            )),
+        )
+        .await;
+
+        match result {
+            Ok(Ok(resp)) => {
+                println!("      SUCCESS: {}", resp.0);
+                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             }
+            Ok(Err(e)) => println!("      ERROR: {e}"),
+            Err(_) => println!("      TIMEOUT (5s)"),
         }
-    } else {
-        println!("    No config_options advertised. Trying common IDs...");
-        for (config_id, value) in &[("model", "claude-sonnet-4-0"), ("mode", "code")] {
-            println!("    Trying set_config_option(id={config_id}, value={value})");
-            match conn
-                .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
-                    session_id.clone(),
-                    config_id.to_string(),
-                    value.to_string(),
-                ))
-                .await
-            {
-                Ok(resp) => {
-                    println!("    SUCCESS -> returned {} config options", resp.config_options.len());
-                    for updated in &resp.config_options {
-                        if let acp::SessionConfigKind::Select(ref s) = updated.kind {
-                            println!("      {} = {}", updated.id, s.current_value);
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!("    FAILED -> {e}");
-                }
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+
+    // Drain stderr from kiro-cli
+    let stderr = agent.drain_stderr();
+    if !stderr.is_empty() {
+        println!("    kiro-cli stderr:");
+        for line in stderr.lines() {
+            println!("      {line}");
         }
     }
     println!();

@@ -243,6 +243,76 @@ impl CommandExecutor {
         Ok(())
     }
 
+    /// Build the JSON-RPC params for `kiro.dev/commands/execute`.
+    ///
+    /// Kiro expects `command` as a TuiCommand enum: `{"command": "<name>", "args": {<args>}}`.
+    fn build_execute_params(
+        session_id: &acp::SessionId,
+        command_name: &str,
+        args: serde_json::Value,
+    ) -> Result<Arc<RawValue>> {
+        let params = serde_json::json!({
+            "sessionId": session_id.to_string(),
+            "command": {
+                "command": command_name,
+                "args": args,
+            }
+        });
+        let raw = RawValue::from_string(params.to_string())
+            .map_err(|e| anyhow::anyhow!("Failed to serialize command params: {e}"))?;
+        Ok(Arc::from(raw))
+    }
+
+    /// Send a `kiro.dev/commands/execute` request and display the response.
+    fn spawn_command_execute(
+        conn: &Rc<acp::ClientSideConnection>,
+        channels: &CommandChannels,
+        raw_params: Arc<RawValue>,
+        label: String,
+    ) {
+        let conn = conn.clone();
+        let done_tx = channels.prompt_done_tx.clone();
+        let response_tx = channels.cmd_response_tx.clone();
+        tokio::task::spawn_local(async move {
+            let result = conn
+                .ext_method(acp::ExtRequest::new(
+                    "kiro.dev/commands/execute",
+                    raw_params,
+                ))
+                .await;
+
+            match result {
+                Ok(resp) => {
+                    tracing::info!("Command {label} response: {}", resp.0);
+                    let displayed = if let Ok(val) =
+                        serde_json::from_str::<serde_json::Value>(resp.0.get())
+                    {
+                        if let Some(msg) = val.get("message").and_then(|m| m.as_str()) {
+                            Self::send_or_log(&response_tx, msg.to_string(), "cmd-response");
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    };
+                    if !displayed {
+                        Self::send_or_log(&response_tx, resp.0.to_string(), "cmd-response");
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Command {label} error: {e}");
+                    Self::send_or_log(
+                        &response_tx,
+                        format!("[Error] Command {label} failed: {e}"),
+                        "cmd-response",
+                    );
+                }
+            }
+            Self::send_or_log(&done_tx, (), "prompt-done");
+        });
+    }
+
     /// Execute a Kiro agent command via the extension method.
     /// `command` should be the full slash-prefixed string (e.g. `"/context add src/"`).
     pub async fn execute_agent_command(
@@ -261,54 +331,25 @@ impl CommandExecutor {
             }
         };
 
-        let params = serde_json::json!({
-            "sessionId": session_id.to_string(),
-            "command": command
-        });
+        // Parse "/name arg1 arg2" into command name and optional text argument.
+        let trimmed = command.trim().strip_prefix('/').unwrap_or(command.trim());
+        let (cmd_name, cmd_input) = match trimmed.split_once(' ') {
+            Some((name, rest)) => (name, Some(rest.trim())),
+            None => (trimmed, None),
+        };
 
-        let raw_params = RawValue::from_string(params.to_string())
-            .map_err(|e| anyhow::anyhow!("Failed to serialize command params: {e}"))?;
+        let args = match cmd_input {
+            Some(input) => serde_json::json!({ "value": input }),
+            None => serde_json::json!({}),
+        };
+
+        let raw_params = Self::build_execute_params(&session_id, cmd_name, args)?;
 
         chat.begin_streaming();
         chat.scroll_to_bottom();
         toolbar.is_busy = true;
 
-        let conn = conn.clone();
-        let done_tx = channels.prompt_done_tx.clone();
-        let response_tx = channels.cmd_response_tx.clone();
-        let cmd_str = command.to_string();
-        tokio::task::spawn_local(async move {
-            let result = conn
-                .ext_method(acp::ExtRequest::new(
-                    "kiro.dev/commands/execute",
-                    Arc::from(raw_params),
-                ))
-                .await;
-
-            match result {
-                Ok(resp) => {
-                    tracing::info!("Command {cmd_str} response: {}", resp.0);
-                    let displayed = if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
-                        if let Some(msg) = val.get("message").and_then(|m| m.as_str()) {
-                            Self::send_or_log(&response_tx, msg.to_string(), "cmd-response");
-                            true
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    };
-                    if !displayed {
-                        Self::send_or_log(&response_tx, resp.0.to_string(), "cmd-response");
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Command {cmd_str} error: {e}");
-                    Self::send_or_log(&response_tx, format!("[Error] Command {cmd_str} failed: {e}"), "cmd-response");
-                }
-            }
-            Self::send_or_log(&done_tx, (), "prompt-done");
-        });
+        Self::spawn_command_execute(conn, channels, raw_params, command.to_string());
 
         Ok(())
     }
@@ -410,28 +451,11 @@ impl CommandExecutor {
 
         session.set_optimistic_model(model_id.to_string());
 
-        let conn = conn.clone();
-        let response_tx = channels.cmd_response_tx.clone();
-        let model_str = model_id.to_string();
-        tokio::task::spawn_local(async move {
-            match conn
-                .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
-                    session_id,
-                    CONFIG_KEY_MODEL.to_string(),
-                    model_str.clone(),
-                ))
-                .await
-            {
-                Ok(_) => {
-                    tracing::info!("Set model to: {model_str}");
-                    Self::send_or_log(&response_tx, format!("Switched to model: {model_str}"), "cmd-response");
-                }
-                Err(e) => {
-                    tracing::error!("Failed to set model: {e}");
-                    Self::send_or_log(&response_tx, format!("Failed to set model: {e}"), "cmd-response");
-                }
-            }
-        });
+        let args = serde_json::json!({ "value": model_id });
+        let raw_params = Self::build_execute_params(&session_id, "model", args)?;
+
+        Self::spawn_command_execute(conn, channels, raw_params, format!("/model {model_id}"));
+
         Ok(())
     }
 
@@ -466,7 +490,8 @@ impl CommandExecutor {
                             .unwrap_or("?")
                             .to_string();
                         let name = opt
-                            .get("name")
+                            .get("label")
+                            .or_else(|| opt.get("name"))
                             .and_then(|v| v.as_str())
                             .unwrap_or(&value)
                             .to_string();
@@ -523,27 +548,16 @@ impl CommandExecutor {
 
                 session.set_optimistic_model(value.clone());
 
-                let conn = conn.clone();
-                let response_tx = channels.cmd_response_tx.clone();
-                tokio::task::spawn_local(async move {
-                    match conn
-                        .set_session_config_option(acp::SetSessionConfigOptionRequest::new(
-                            session_id,
-                            CONFIG_KEY_MODEL.to_string(),
-                            value.clone(),
-                        ))
-                        .await
-                    {
-                        Ok(_) => {
-                            tracing::info!("Set model to: {value}");
-                            Self::send_or_log(&response_tx, format!("Switched to model: {value}"), "cmd-response");
-                        }
-                        Err(e) => {
-                            tracing::error!("Failed to set model: {e}");
-                            Self::send_or_log(&response_tx, format!("Failed to set model: {e}"), "cmd-response");
-                        }
+                let args = serde_json::json!({ "value": value });
+                let raw_params = match Self::build_execute_params(&session_id, "model", args) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        tracing::error!("Failed to build model command params: {e}");
+                        return;
                     }
-                });
+                };
+
+                Self::spawn_command_execute(conn, channels, raw_params, format!("/model {value}"));
             }
         }
     }

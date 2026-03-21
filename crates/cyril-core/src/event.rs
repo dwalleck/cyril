@@ -59,6 +59,11 @@ pub enum ExtensionEvent {
         session_id: String,
         context_usage_pct: f64,
     },
+    /// An extension notification we don't have a specific handler for.
+    Unknown {
+        method: String,
+        params: String,
+    },
 }
 
 /// Internal application events (not from the agent).

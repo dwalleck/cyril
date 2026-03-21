@@ -421,6 +421,9 @@ impl App {
             ExtensionEvent::KiroMetadata { context_usage_pct, .. } => {
                 self.session.set_context_usage_pct(context_usage_pct);
             }
+            ExtensionEvent::Unknown { method, .. } => {
+                tracing::info!("Unhandled extension event: {method}");
+            }
         }
     }
 
