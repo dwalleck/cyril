@@ -372,6 +372,10 @@ impl App {
                 if let acp::ContentBlock::Text(text) = &chunk.content {
                     self.chat.append_streaming(&text.text);
                     self.chat.scroll_to_bottom();
+                    // Text is streaming — the content itself is the activity indicator,
+                    // so clear the spinner/timer
+                    self.toolbar.busy_detail = None;
+                    self.toolbar.busy_since = None;
                 }
             }
             ProtocolEvent::AgentThought { chunk, .. } => {
@@ -454,6 +458,12 @@ impl App {
             }
             ExtensionEvent::KiroMetadata { context_usage_pct, .. } => {
                 self.session.set_context_usage_pct(context_usage_pct);
+
+                // Fetch initial credits on first metadata (session startup)
+                if self.session.credit_usage().is_none() {
+                    self.query_credit_usage();
+                }
+
                 // Metadata arrives after every turn completes. If we're still
                 // showing busy (prompt() hasn't returned yet), treat this as
                 // a turn-end signal to stop the spinner.
@@ -508,43 +518,47 @@ impl App {
         self.toolbar.is_busy = false;
         self.toolbar.busy_since = None;
         self.toolbar.busy_detail = None;
+        self.query_credit_usage();
+    }
 
-        // Query credit usage silently in the background
-        if let Some(ref session_id) = self.session.id {
-            let conn = self.conn.clone();
-            let credit_tx = self.credit_tx.clone();
-            let sid = session_id.to_string();
-            tokio::task::spawn_local(async move {
-                let params = serde_json::json!({
-                    "command": { "command": "usage", "args": {} },
-                    "sessionId": sid
-                });
-                let raw_params = match serde_json::value::RawValue::from_string(params.to_string()) {
-                    Ok(r) => std::sync::Arc::from(r),
-                    Err(_) => return,
-                };
-                if let Ok(resp) = conn
-                    .ext_method(acp::ExtRequest::new(
-                        "kiro.dev/commands/execute",
-                        raw_params,
-                    ))
-                    .await
-                {
-                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
-                        if let Some(breakdowns) = val
-                            .get("data")
-                            .and_then(|d| d.get("usageBreakdowns"))
-                            .and_then(|u| u.as_array())
-                        {
-                            if let Some(bd) = breakdowns.first() {
-                                let used = bd.get("used").and_then(|u| u.as_f64()).unwrap_or(0.0);
-                                let limit = bd.get("limit").and_then(|l| l.as_f64()).unwrap_or(0.0);
-                                let _ = credit_tx.send((used, limit));
-                            }
+    /// Silently query `/usage` in the background and update the credit gauge.
+    fn query_credit_usage(&self) {
+        let session_id = match &self.session.id {
+            Some(id) => id.to_string(),
+            None => return,
+        };
+        let conn = self.conn.clone();
+        let credit_tx = self.credit_tx.clone();
+        tokio::task::spawn_local(async move {
+            let params = serde_json::json!({
+                "command": { "command": "usage", "args": {} },
+                "sessionId": session_id
+            });
+            let raw_params = match serde_json::value::RawValue::from_string(params.to_string()) {
+                Ok(r) => std::sync::Arc::from(r),
+                Err(_) => return,
+            };
+            if let Ok(resp) = conn
+                .ext_method(acp::ExtRequest::new(
+                    "kiro.dev/commands/execute",
+                    raw_params,
+                ))
+                .await
+            {
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
+                    if let Some(breakdowns) = val
+                        .get("data")
+                        .and_then(|d| d.get("usageBreakdowns"))
+                        .and_then(|u| u.as_array())
+                    {
+                        if let Some(bd) = breakdowns.first() {
+                            let used = bd.get("used").and_then(|u| u.as_f64()).unwrap_or(0.0);
+                            let limit = bd.get("limit").and_then(|l| l.as_f64()).unwrap_or(0.0);
+                            let _ = credit_tx.send((used, limit));
                         }
                     }
                 }
-            });
-        }
+            }
+        });
     }
 }
