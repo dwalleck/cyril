@@ -513,27 +513,41 @@ impl CommandExecutor {
             Some(opts) if !opts.is_empty() => {
                 let picker_options: Vec<picker::PickerOption> = opts
                     .iter()
-                    .map(|opt| {
+                    .filter_map(|opt| {
                         let value = opt
                             .get("value")
                             .and_then(|v| v.as_str())
                             .unwrap_or("?")
                             .to_string();
-                        let name = opt
+                        let mut name = opt
                             .get("label")
                             .or_else(|| opt.get("name"))
                             .and_then(|v| v.as_str())
                             .unwrap_or(&value)
                             .to_string();
+                        let description = opt
+                            .get("description")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+
+                        // Clean up untitled entries and append description
+                        if name.contains("<title not available>") {
+                            let short_id = &value[..8.min(value.len())];
+                            name = format!("(untitled) {short_id}");
+                        }
+                        if !description.is_empty() {
+                            name = format!("{name}  {description}");
+                        }
+
                         let active = opt
                             .get("current")
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false);
-                        picker::PickerOption {
+                        Some(picker::PickerOption {
                             label: name,
                             value,
                             active,
-                        }
+                        })
                     })
                     .collect();
                 *picker = Some(picker::PickerState::new(
