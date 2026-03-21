@@ -16,3 +16,13 @@ path = "src/main.rs"
 
 [dependencies]
 cyril-core = { path = "../cyril-core" }
+cyril-ui = { path = "../cyril-ui" }
+tokio = { workspace = true, features = ["full"] }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+crossterm = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+rstest = { workspace = true }
