@@ -1,5 +1,6 @@
 pub mod command;
 pub mod config;
+pub mod event;
 pub mod message;
 pub mod plan;
 pub mod session;
