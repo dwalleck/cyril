@@ -296,21 +296,14 @@ impl CommandExecutor {
             match result {
                 Ok(resp) => {
                     tracing::info!("Command {label} response: {}", resp.0);
-                    let displayed = if let Ok(val) =
+                    let text = if let Ok(val) =
                         serde_json::from_str::<serde_json::Value>(resp.0.get())
                     {
-                        if let Some(msg) = val.get("message").and_then(|m| m.as_str()) {
-                            Self::send_or_log(&response_tx, msg.to_string(), "cmd-response");
-                            true
-                        } else {
-                            false
-                        }
+                        format_command_response(&val)
                     } else {
-                        false
+                        resp.0.to_string()
                     };
-                    if !displayed {
-                        Self::send_or_log(&response_tx, resp.0.to_string(), "cmd-response");
-                    }
+                    Self::send_or_log(&response_tx, text, "cmd-response");
                 }
                 Err(e) => {
                     tracing::error!("Command {label} error: {e}");
@@ -606,6 +599,68 @@ impl CommandExecutor {
         }
     }
 
+}
+
+/// Format a `kiro.dev/commands/execute` response for display.
+///
+/// Panel commands return `{"success": bool, "message": "...", "data": {...}}`.
+/// The `message` field is a summary; `data` contains the details. For commands
+/// like `/tools` and `/usage`, the message alone is insufficient — we format
+/// the `data` into human-readable output.
+fn format_command_response(val: &serde_json::Value) -> String {
+    let message = val.get("message").and_then(|m| m.as_str()).unwrap_or("");
+    let data = val.get("data");
+
+    // If there's tool data, format a tool list
+    if let Some(tools) = data.and_then(|d| d.get("tools")).and_then(|t| t.as_array()) {
+        let mut out = format!("{message}\n");
+        for tool in tools {
+            let name = tool.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+            let source = tool.get("source").and_then(|s| s.as_str()).unwrap_or("");
+            let desc = tool
+                .get("description")
+                .and_then(|d| d.as_str())
+                .unwrap_or("")
+                .lines()
+                .find(|l| !l.trim().is_empty())
+                .unwrap_or("")
+                .trim();
+            out.push_str(&format!("  {name:<20} {desc}"));
+            if !source.is_empty() && source != "built-in" {
+                out.push_str(&format!(" ({source})"));
+            }
+            out.push('\n');
+        }
+        return out;
+    }
+
+    // If there's usage breakdown data, format it
+    if let Some(breakdowns) = data
+        .and_then(|d| d.get("usageBreakdowns"))
+        .and_then(|u| u.as_array())
+    {
+        let plan = data
+            .and_then(|d| d.get("planName"))
+            .and_then(|p| p.as_str())
+            .unwrap_or("Unknown");
+        let mut out = format!("Plan: {plan}\n");
+        for bd in breakdowns {
+            let name = bd.get("displayName").and_then(|n| n.as_str()).unwrap_or("?");
+            let used = bd.get("used").and_then(|u| u.as_f64()).unwrap_or(0.0);
+            let limit = bd.get("limit").and_then(|l| l.as_f64()).unwrap_or(0.0);
+            let pct = bd.get("percentage").and_then(|p| p.as_u64()).unwrap_or(0);
+            out.push_str(&format!("  {name}: {used:.0}/{limit:.0} ({pct}%)\n"));
+        }
+        return out;
+    }
+
+    // For /help and other commands where `message` is already well-formatted, just use it
+    if !message.is_empty() {
+        return message.to_string();
+    }
+
+    // Fallback: dump the raw JSON
+    val.to_string()
 }
 
 /// Built-in slash commands.

@@ -286,8 +286,35 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
         }
     }
 
+    // --- Test panel command data payloads ---
+    println!("[6] Testing panel command responses...");
+    for cmd_name in &["tools", "usage", "help", "mcp", "knowledge"] {
+        let params = serde_json::json!({
+            "command": { "command": cmd_name, "args": {} },
+            "sessionId": session_id.to_string()
+        });
+        let raw_params = serde_json::value::RawValue::from_string(params.to_string())
+            .expect("valid json");
+
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            conn.ext_method(acp::ExtRequest::new(
+                "kiro.dev/commands/execute",
+                std::sync::Arc::from(raw_params),
+            )),
+        )
+        .await;
+
+        match result {
+            Ok(Ok(resp)) => println!("    /{cmd_name}: {}", resp.0),
+            Ok(Err(e)) => println!("    /{cmd_name}: ERROR {e}"),
+            Err(_) => println!("    /{cmd_name}: TIMEOUT"),
+        }
+    }
+    println!();
+
     // --- Test kiro.dev/commands/options for agent ---
-    println!("[6] Testing kiro.dev/commands/options (agent)...");
+    println!("[7] Testing kiro.dev/commands/options (agent)...");
     {
         let params = serde_json::json!({
             "command": "agent",
