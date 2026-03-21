@@ -28,6 +28,8 @@ pub struct App {
     pub input: input::InputState,
     pub toolbar: toolbar::ToolbarState,
     pub approval: Option<(approval::ApprovalState, oneshot::Sender<acp::RequestPermissionResponse>)>,
+    /// Queued permission requests waiting to be shown after the current approval is handled.
+    pending_approvals: Vec<(approval::ApprovalState, oneshot::Sender<acp::RequestPermissionResponse>)>,
     pub picker: Option<picker::PickerState>,
     pub should_quit: bool,
     pub session: SessionContext,
@@ -61,6 +63,7 @@ impl App {
             input,
             toolbar: toolbar::ToolbarState { mouse_captured: true, ..Default::default() },
             approval: None,
+            pending_approvals: Vec::new(),
             picker: None,
             should_quit: false,
             session: SessionContext::new(cwd),
@@ -169,7 +172,7 @@ impl App {
 
         // Overlay popups
         if let Some((ref approval_state, _)) = self.approval {
-            approval::render(frame, area, approval_state);
+            approval::render(frame, area, approval_state, self.pending_approvals.len());
         } else if let Some(ref picker_state) = self.picker {
             picker::render(frame, area, picker_state);
         }
@@ -236,6 +239,7 @@ impl App {
                         if responder.send(response).is_err() {
                             tracing::warn!("Permission response could not be delivered — agent may have cancelled");
                         }
+                        self.show_next_approval();
                     }
                 }
                 KeyCode::Esc => {
@@ -246,6 +250,7 @@ impl App {
                         if responder.send(response).is_err() {
                             tracing::warn!("Permission response could not be delivered — agent may have cancelled");
                         }
+                        self.show_next_approval();
                     }
                 }
                 _ => {}
@@ -414,7 +419,12 @@ impl App {
         match request {
             InteractionRequest::Permission { request, responder } => {
                 let state = approval::ApprovalState::from_request(&request);
-                self.approval = Some((state, responder));
+                if self.approval.is_some() {
+                    // Queue it — don't overwrite the current approval
+                    self.pending_approvals.push((state, responder));
+                } else {
+                    self.approval = Some((state, responder));
+                }
             }
         }
     }
@@ -497,6 +507,14 @@ impl App {
             ExtensionEvent::Unknown { method, .. } => {
                 tracing::info!("Unhandled extension event: {method}");
             }
+        }
+    }
+
+    /// Show the next queued approval popup, if any.
+    fn show_next_approval(&mut self) {
+        if !self.pending_approvals.is_empty() {
+            let (state, responder) = self.pending_approvals.remove(0);
+            self.approval = Some((state, responder));
         }
     }
 

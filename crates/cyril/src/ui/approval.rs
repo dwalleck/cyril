@@ -112,7 +112,7 @@ impl ApprovalState {
     }
 }
 
-pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState, queued: usize) {
     let detail_height: u16 = if state.detail.is_some() { 1 } else { 0 };
     let options_height = state.options.len() as u16;
     // 1 (title) + detail + 1 (blank separator) + options + 1 (hint) + 2 (borders)
@@ -122,9 +122,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
 
     frame.render_widget(Clear, popup_area);
 
+    let title = if queued > 0 {
+        format!(" Permission Required (+{queued} more) ")
+    } else {
+        " Permission Required ".to_string()
+    };
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" Permission Required ")
+        .title(title)
         .border_style(Style::default().fg(Color::Yellow));
 
     let inner = block.inner(popup_area);
