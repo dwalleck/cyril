@@ -109,9 +109,12 @@ Hooks intercept agent operations at the protocol boundary. Before-hooks can bloc
 
 ## ACP Protocol Notes
 
+For the comprehensive protocol reference with example requests/responses, see **[docs/kiro-acp-protocol.md](docs/kiro-acp-protocol.md)**.
+
 - **Protocol**: JSON-RPC 2.0 over stdio (ACP v2025-01-01)
 - The `agent-client-protocol` crate (v0.9) from crates.io is the source of truth for ACP types. Actual type definitions live in `agent-client-protocol-schema` (transitive dependency).
 - Tool calls with `kind == ToolKind::Other` are "planning" steps from the agent and are filtered from display.
+- **Kiro logs**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux). Set `KIRO_LOG_LEVEL=debug` for verbose output.
 
 ### Session Updates (`session/update`)
 
@@ -140,18 +143,27 @@ A server-to-client request (has an `id`, expects a JSON-RPC response). The agent
 
 A notification (fire-and-forget, no response expected). Cyril sends this on Esc when `is_busy`.
 
-### Kiro Extension Notifications
+### Kiro Extension Commands (`kiro.dev/commands/*`)
 
-Parsed in `KiroClient::ext_notification()`:
-- `kiro.dev/commands/available` — slash commands after session creation (multiple payload shapes supported)
-- `kiro.dev/metadata` — session metadata with `contextUsagePercentage` after each turn
-- Panel commands (`/context`) return structured JSON responses with a `message` field for display
+**`commands/execute`** — The `command` field must be an object `{"command": "<name>", "args": {<args>}}` (a `TuiCommand` adjacently tagged enum), NOT a plain string. Sending a string crashes kiro-cli. Selection commands pass their value as `{"value": "<selected>"}` in args.
+
+**`commands/options`** — Query available options for selection commands. Options use `label` (not `name`) for display, plus `value`, `description`, `group`, and optional `current` boolean.
+
+**`commands/available`** — Notification sent after session creation with the full command list, tools, and MCP servers.
+
+**`metadata`** — Notification with `contextUsagePercentage` after each turn. Not in official docs.
 
 ### `session/new` Response
 
 Includes more than just `session_id`:
 - `modes` — `SessionModeState` with `current_mode_id` and `available_modes` list (displayed in toolbar)
-- `config_options` — optional session configuration (currently logged only)
+- `config_options` — always `null` in Kiro v1.28.0 (`session/set_config_option` is not implemented)
+
+### Methods NOT implemented by Kiro v1.28.0
+
+- `session/set_config_option` — returns "Method not found". Use `kiro.dev/commands/execute` with `model` command instead.
+- `session/set_model` — behind unstable feature flag, not advertised in capabilities.
+- `session/fork`, `session/resume`, `session/list` — unstable, `sessionCapabilities: {}`.
 
 ## Adding New Features
 
