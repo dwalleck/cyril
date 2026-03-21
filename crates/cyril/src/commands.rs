@@ -557,6 +557,7 @@ impl CommandExecutor {
     pub fn handle_picker_confirm(
         session: &mut SessionContext,
         conn: &Rc<acp::ClientSideConnection>,
+        chat: &mut chat::ChatState,
         channels: &CommandChannels,
         state: picker::PickerState,
     ) {
@@ -567,6 +568,13 @@ impl CommandExecutor {
                 return;
             }
         };
+
+        // Get the selected label for display (before state is consumed)
+        let label = state
+            .options
+            .get(state.selected)
+            .map(|o| o.label.clone())
+            .unwrap_or_default();
 
         match state.action {
             picker::PickerAction::ExecuteCommand { ref command } => {
@@ -582,9 +590,12 @@ impl CommandExecutor {
                     session.set_optimistic_model(value.clone());
                 }
 
-                // /chat loads a different session — update our session ID
+                // /chat loads a different session — clear chat and update session ID
                 if command == "chat" {
                     session.set_session_id(acp::SessionId::from(value.clone()));
+                    *chat = chat::ChatState::default();
+                    chat.add_system_message(format!("Resumed session: {label}"));
+                    chat.scroll_to_bottom();
                 }
 
                 let args = serde_json::json!({ "value": value });

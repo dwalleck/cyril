@@ -252,6 +252,7 @@ impl App {
                         CommandExecutor::handle_picker_confirm(
                             &mut self.session,
                             &self.conn,
+                            &mut self.chat,
                             &self.channels,
                             picker_state,
                         );
