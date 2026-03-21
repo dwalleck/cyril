@@ -1,25 +1,23 @@
 [package]
 name = "cyril-core"
-version = "0.1.0-alpha.1"
-edition = "2021"
-description = "Core protocol logic, path translation, and session management for the Cyril ACP client"
-license = "MIT"
-repository = "https://github.com/dwalleck/cyril"
-readme = "../../README.md"
-homepage = "https://github.com/dwalleck/cyril"
-documentation = "https://docs.rs/cyril-core"
-keywords = ["acp", "kiro", "wsl", "windows"]
-categories = ["development-tools"]
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core protocol logic, types, and session management for the Cyril ACP client"
+
+[lints]
+workspace = true
 
 [dependencies]
-agent-client-protocol = "0.9"
-tokio = { version = "1", features = ["process", "sync", "rt", "macros", "time", "io-util"] }
-tokio-util = { version = "0.7", features = ["compat"] }
-async-trait = "0.1"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-anyhow = "1"
-tracing = "0.1"
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = ["sync", "rt", "macros", "time"] }
+tracing = { workspace = true }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["full"] }
+anyhow = { workspace = true }
+rstest = { workspace = true }
+tokio = { workspace = true, features = ["full", "test-util"] }
