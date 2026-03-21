@@ -31,8 +31,15 @@ impl ApprovalState {
     pub fn from_request(request: &acp::RequestPermissionRequest) -> Self {
         let title = request.tool_call.fields.title.clone();
 
-        // Extract detail from the tool call: file path or command being run
-        let detail = Self::extract_detail(&request.tool_call);
+        // Extract detail from the tool call: file path or command being run.
+        // Skip the detail if the title already contains the same info.
+        let detail = Self::extract_detail(&request.tool_call).filter(|d| match &title {
+            Some(t) => {
+                let detail_value = d.split_once(": ").map(|(_, v)| v).unwrap_or(d);
+                !t.contains(detail_value)
+            }
+            None => true,
+        });
 
         let options: Vec<ApprovalOption> = request
             .options
