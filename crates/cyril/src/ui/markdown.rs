@@ -48,6 +48,10 @@ fn do_render(markdown: &str) -> Vec<Line<'static>> {
     let mut code_block_lang: Option<String> = None;
     let mut list_depth: usize = 0;
     let mut in_blockquote = false;
+    let mut in_table = false;
+    let mut table_row: Vec<String> = Vec::new();
+    let mut current_cell = String::new();
+    let mut is_table_header = false;
 
     for event in parser {
         match event {
@@ -57,7 +61,9 @@ fn do_render(markdown: &str) -> Vec<Line<'static>> {
                     Tag::Heading { level, .. } => {
                         flush_line(&mut lines, &mut current_spans);
                         let heading_style = match level as u8 {
-                            1 => base.fg(Color::Cyan).add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+                            1 => base
+                                .fg(Color::Cyan)
+                                .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
                             2 => base.fg(Color::Cyan).add_modifier(Modifier::BOLD),
                             3 => base.fg(Color::White).add_modifier(Modifier::BOLD),
                             _ => base.fg(Color::White).add_modifier(Modifier::BOLD),
@@ -91,11 +97,8 @@ fn do_render(markdown: &str) -> Vec<Line<'static>> {
                             header,
                             Style::default().fg(Color::DarkGray),
                         )));
-                        style_stack.push(
-                            Style::default()
-                                .fg(Color::White)
-                                .bg(Color::Rgb(35, 35, 35)),
-                        );
+                        style_stack
+                            .push(Style::default().fg(Color::White).bg(Color::Rgb(35, 35, 35)));
                     }
                     Tag::List(_) => {
                         list_depth += 1;
@@ -107,6 +110,20 @@ fn do_render(markdown: &str) -> Vec<Line<'static>> {
                             format!("{indent}• "),
                             Style::default().fg(Color::Cyan),
                         ));
+                    }
+                    Tag::Table(_) => {
+                        flush_line(&mut lines, &mut current_spans);
+                        in_table = true;
+                    }
+                    Tag::TableHead => {
+                        is_table_header = true;
+                        table_row.clear();
+                    }
+                    Tag::TableRow => {
+                        table_row.clear();
+                    }
+                    Tag::TableCell => {
+                        current_cell.clear();
                     }
                     Tag::BlockQuote(_) => {
                         in_blockquote = true;
@@ -131,10 +148,7 @@ fn do_render(markdown: &str) -> Vec<Line<'static>> {
                     style_stack.pop();
 
                     let code = code_block_content.trim_end_matches('\n');
-                    let highlighted = highlight::highlight_block(
-                        code,
-                        code_block_lang.as_deref(),
-                    );
+                    let highlighted = highlight::highlight_block(code, code_block_lang.as_deref());
                     for spans in highlighted {
                         let mut line_spans = vec![Span::styled(
                             "│ ".to_string(),
@@ -166,6 +180,53 @@ fn do_render(markdown: &str) -> Vec<Line<'static>> {
                 TagEnd::Item => {
                     flush_line(&mut lines, &mut current_spans);
                 }
+                TagEnd::Table => {
+                    in_table = false;
+                    lines.push(Line::from(""));
+                }
+                TagEnd::TableHead => {
+                    // Render header row with bold styling
+                    let mut spans: Vec<Span<'static>> = Vec::new();
+                    for (i, cell) in table_row.iter().enumerate() {
+                        if i > 0 {
+                            spans.push(Span::styled(" │ ", Style::default().fg(Color::DarkGray)));
+                        }
+                        spans.push(Span::styled(
+                            cell.clone(),
+                            Style::default()
+                                .fg(Color::Cyan)
+                                .add_modifier(Modifier::BOLD),
+                        ));
+                    }
+                    lines.push(Line::from(spans));
+                    // Separator line
+                    lines.push(Line::from(Span::styled(
+                        "─".repeat(60),
+                        Style::default().fg(Color::DarkGray),
+                    )));
+                    is_table_header = false;
+                }
+                TagEnd::TableRow => {
+                    if !is_table_header {
+                        let mut spans: Vec<Span<'static>> = Vec::new();
+                        for (i, cell) in table_row.iter().enumerate() {
+                            if i > 0 {
+                                spans.push(Span::styled(
+                                    " │ ",
+                                    Style::default().fg(Color::DarkGray),
+                                ));
+                            }
+                            spans.push(Span::styled(
+                                cell.clone(),
+                                Style::default().fg(Color::White),
+                            ));
+                        }
+                        lines.push(Line::from(spans));
+                    }
+                }
+                TagEnd::TableCell => {
+                    table_row.push(current_cell.clone());
+                }
                 TagEnd::BlockQuote(_) => {
                     in_blockquote = false;
                     style_stack.pop();
@@ -177,7 +238,9 @@ fn do_render(markdown: &str) -> Vec<Line<'static>> {
             },
             Event::Text(text) => {
                 let style = current_style(&style_stack);
-                if in_code_block {
+                if in_table {
+                    current_cell.push_str(&text);
+                } else if in_code_block {
                     code_block_content.push_str(&text);
                 } else if in_blockquote {
                     // Prefix blockquote lines with a bar
@@ -186,10 +249,8 @@ fn do_render(markdown: &str) -> Vec<Line<'static>> {
                             flush_line(&mut lines, &mut current_spans);
                         }
                         if current_spans.is_empty() {
-                            current_spans.push(Span::styled(
-                                "│ ",
-                                Style::default().fg(Color::DarkGray),
-                            ));
+                            current_spans
+                                .push(Span::styled("│ ", Style::default().fg(Color::DarkGray)));
                         }
                         current_spans.push(Span::styled(bq_line.to_string(), style));
                     }
