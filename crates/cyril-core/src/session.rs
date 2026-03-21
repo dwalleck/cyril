@@ -16,6 +16,13 @@ pub struct AvailableMode {
 ///
 /// This is the single source of truth for session data. The toolbar borrows
 /// from this struct at render time.
+/// Credit usage snapshot from `/usage` command.
+#[derive(Debug, Clone)]
+pub struct CreditUsage {
+    pub used: f64,
+    pub limit: f64,
+}
+
 #[derive(Debug)]
 pub struct SessionContext {
     pub id: Option<acp::SessionId>,
@@ -25,6 +32,7 @@ pub struct SessionContext {
     context_usage_pct: Option<f64>,
     current_mode_id: Option<String>,
     cached_model: Option<String>,
+    credit_usage: Option<CreditUsage>,
 }
 
 impl SessionContext {
@@ -37,6 +45,7 @@ impl SessionContext {
             context_usage_pct: None,
             current_mode_id: None,
             cached_model: None,
+            credit_usage: None,
         }
     }
 
@@ -68,6 +77,16 @@ impl SessionContext {
     /// Set the context usage percentage (from Kiro metadata notifications).
     pub fn set_context_usage_pct(&mut self, pct: f64) {
         self.context_usage_pct = Some(pct);
+    }
+
+    /// The current credit usage snapshot, if available.
+    pub fn credit_usage(&self) -> Option<&CreditUsage> {
+        self.credit_usage.as_ref()
+    }
+
+    /// Update credit usage from a `/usage` response.
+    pub fn set_credit_usage(&mut self, used: f64, limit: f64) {
+        self.credit_usage = Some(CreditUsage { used, limit });
     }
 
     /// Store mode info from a NewSessionResponse.
@@ -199,11 +218,8 @@ mod tests {
             ],
         );
         ctx.set_config_options(vec![option]);
-
-        // current_model() returns the cached value without recomputing
         assert_eq!(ctx.current_model(), Some("claude-opus-4"));
 
-        // Adding a non-model config option does not affect the model cache
         let other = acp::SessionConfigOption::select(
             "thought_level",
             "Thought Level",
@@ -212,5 +228,46 @@ mod tests {
         );
         ctx.set_config_options(vec![other]);
         assert!(ctx.current_model().is_none());
+    }
+
+    #[test]
+    fn optimistic_model_overridden_by_config_update() {
+        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
+        ctx.set_optimistic_model("optimistic-model".to_string());
+        assert_eq!(ctx.current_model(), Some("optimistic-model"));
+
+        let option = acp::SessionConfigOption::select(
+            "model",
+            "Model",
+            "server-model",
+            vec![acp::SessionConfigSelectOption::new(
+                "server-model",
+                "Server Model",
+            )],
+        );
+        ctx.set_config_options(vec![option]);
+        assert_eq!(ctx.current_model(), Some("server-model"));
+    }
+
+    #[test]
+    fn context_usage_pct() {
+        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
+        assert!(ctx.context_usage_pct().is_none());
+        ctx.set_context_usage_pct(42.5);
+        assert_eq!(ctx.context_usage_pct(), Some(42.5));
+    }
+
+    #[test]
+    fn set_current_mode_id() {
+        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
+        assert!(ctx.current_mode_id().is_none());
+        ctx.set_current_mode_id("agent".to_string());
+        assert_eq!(ctx.current_mode_id(), Some("agent"));
+    }
+
+    #[test]
+    fn cwd_stored() {
+        let ctx = SessionContext::new(PathBuf::from("/home/user/project"));
+        assert_eq!(ctx.cwd, PathBuf::from("/home/user/project"));
     }
 }

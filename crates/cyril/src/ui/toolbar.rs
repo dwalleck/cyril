@@ -122,8 +122,35 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &Ses
     frame.render_widget(paragraph, area);
 }
 
-/// Render a compact context usage gauge (1 row, 40 chars, left-aligned).
-pub fn render_context_bar(frame: &mut Frame, area: Rect, pct: f64) {
+/// Render the status bar with context usage gauge and optional credit gauge.
+pub fn render_status_bar(frame: &mut Frame, area: Rect, session: &SessionContext) {
+    let context_pct = session.context_usage_pct().unwrap_or(0.0);
+
+    // Context gauge
+    render_gauge(frame, area, 0, "context ", context_pct);
+
+    // Credit gauge (right side)
+    if let Some(credit) = session.credit_usage() {
+        let credit_pct = if credit.limit > 0.0 {
+            (credit.used / credit.limit * 100.0).clamp(0.0, 100.0)
+        } else {
+            0.0
+        };
+        let label = format!("credits {:.0}/{:.0} ", credit.used, credit.limit);
+        let label_width = label.len() as u16;
+        let gauge_width: u16 = 20;
+        let total = label_width + gauge_width;
+        let start_x = area.width.saturating_sub(total);
+
+        let label_area = Rect::new(area.x + start_x, area.y, label_width.min(area.width), 1);
+        let label_widget = Paragraph::new(Span::styled(label, Style::default().fg(Color::Gray)));
+        frame.render_widget(label_widget, label_area);
+
+        render_gauge(frame, area, (start_x + label_width) as u16, "", credit_pct);
+    }
+}
+
+fn render_gauge(frame: &mut Frame, area: Rect, x_offset: u16, label_text: &str, pct: f64) {
     let bar_color = if pct > 80.0 {
         Color::Red
     } else if pct > 50.0 {
@@ -132,20 +159,20 @@ pub fn render_context_bar(frame: &mut Frame, area: Rect, pct: f64) {
         Color::Green
     };
 
-    let label_width: u16 = 8; // "context "
+    let label_width = label_text.len() as u16;
     let gauge_width: u16 = 32;
 
-    // Render "context " label
-    let label_area = Rect::new(area.x, area.y, label_width.min(area.width), 1);
-    let label = Paragraph::new(Span::styled("context ", Style::default().fg(Color::Gray)));
-    frame.render_widget(label, label_area);
+    if !label_text.is_empty() {
+        let label_area = Rect::new(area.x + x_offset, area.y, label_width.min(area.width), 1);
+        let label = Paragraph::new(Span::styled(label_text, Style::default().fg(Color::Gray)));
+        frame.render_widget(label, label_area);
+    }
 
-    // Render gauge bar
-    let gauge_x = area.x + label_width;
+    let gauge_x = area.x + x_offset + label_width;
     let gauge_area = Rect::new(
         gauge_x,
         area.y,
-        gauge_width.min(area.width.saturating_sub(label_width)),
+        gauge_width.min(area.width.saturating_sub(gauge_x)),
         1,
     );
     let ratio = (pct / 100.0).clamp(0.0, 1.0);

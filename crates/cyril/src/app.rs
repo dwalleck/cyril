@@ -36,6 +36,9 @@ pub struct App {
     prompt_done_rx: mpsc::UnboundedReceiver<()>,
     /// Channel for command responses to display in chat.
     cmd_response_rx: mpsc::UnboundedReceiver<String>,
+    /// Channel for silent credit usage updates.
+    credit_rx: mpsc::UnboundedReceiver<(f64, f64)>,
+    credit_tx: mpsc::UnboundedSender<(f64, f64)>,
     channels: CommandChannels,
 }
 
@@ -47,6 +50,7 @@ impl App {
     ) -> Self {
         let (prompt_done_tx, prompt_done_rx) = mpsc::unbounded_channel();
         let (cmd_response_tx, cmd_response_rx) = mpsc::unbounded_channel();
+        let (credit_tx, credit_rx) = mpsc::unbounded_channel();
 
         let mut input = input::InputState::default();
         let file_completer = file_completer::FileCompleter::new(cwd.clone());
@@ -64,6 +68,8 @@ impl App {
             event_rx,
             prompt_done_rx,
             cmd_response_rx,
+            credit_rx,
+            credit_tx,
             channels: CommandChannels { prompt_done_tx, cmd_response_tx },
         }
     }
@@ -121,6 +127,12 @@ impl App {
                     }
                     None
                 }
+                credit = self.credit_rx.recv() => {
+                    if let Some((used, limit)) = credit {
+                        self.session.set_credit_usage(used, limit);
+                    }
+                    None
+                }
                 _ = tick_interval.tick() => {
                     None
                 }
@@ -153,8 +165,7 @@ impl App {
         chat::render(frame, chunks[1], &self.chat);
         input::render(frame, chunks[2], &mut self.input);
 
-        let pct = self.session.context_usage_pct().unwrap_or(0.0);
-        toolbar::render_context_bar(frame, chunks[3], pct);
+        toolbar::render_status_bar(frame, chunks[3], &self.session);
 
         // Overlay popups
         if let Some((ref approval_state, _)) = self.approval {
@@ -497,5 +508,43 @@ impl App {
         self.toolbar.is_busy = false;
         self.toolbar.busy_since = None;
         self.toolbar.busy_detail = None;
+
+        // Query credit usage silently in the background
+        if let Some(ref session_id) = self.session.id {
+            let conn = self.conn.clone();
+            let credit_tx = self.credit_tx.clone();
+            let sid = session_id.to_string();
+            tokio::task::spawn_local(async move {
+                let params = serde_json::json!({
+                    "command": { "command": "usage", "args": {} },
+                    "sessionId": sid
+                });
+                let raw_params = match serde_json::value::RawValue::from_string(params.to_string()) {
+                    Ok(r) => std::sync::Arc::from(r),
+                    Err(_) => return,
+                };
+                if let Ok(resp) = conn
+                    .ext_method(acp::ExtRequest::new(
+                        "kiro.dev/commands/execute",
+                        raw_params,
+                    ))
+                    .await
+                {
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
+                        if let Some(breakdowns) = val
+                            .get("data")
+                            .and_then(|d| d.get("usageBreakdowns"))
+                            .and_then(|u| u.as_array())
+                        {
+                            if let Some(bd) = breakdowns.first() {
+                                let used = bd.get("used").and_then(|u| u.as_f64()).unwrap_or(0.0);
+                                let limit = bd.get("limit").and_then(|l| l.as_f64()).unwrap_or(0.0);
+                                let _ = credit_tx.send((used, limit));
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 }
