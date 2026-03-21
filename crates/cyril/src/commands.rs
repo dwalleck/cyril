@@ -703,8 +703,48 @@ fn format_command_response(val: &serde_json::Value) -> String {
         return message.to_string();
     }
 
-    // Fallback: dump the raw JSON
-    val.to_string()
+    // If there's data with an entries/servers/commands array, format as a list or show empty state
+    if let Some(data) = data {
+        for key in &["entries", "servers", "commands"] {
+            if let Some(arr) = data.get(*key).and_then(|a| a.as_array()) {
+                if arr.is_empty() {
+                    return format!("No {key} found.");
+                }
+                let mut out = String::new();
+                for item in arr {
+                    let name = item
+                        .get("name")
+                        .and_then(|n| n.as_str())
+                        .unwrap_or("(unnamed)");
+                    let desc = item
+                        .get("description")
+                        .and_then(|d| d.as_str())
+                        .unwrap_or("");
+                    if desc.is_empty() {
+                        out.push_str(&format!("- **{name}**\n"));
+                    } else {
+                        out.push_str(&format!("- **{name}** — {desc}\n"));
+                    }
+                }
+                return out;
+            }
+        }
+
+        // Data exists but we don't recognize the shape — show the message from data if present
+        if let Some(data_msg) = data.get("message").and_then(|m| m.as_str()) {
+            if !data_msg.is_empty() {
+                return data_msg.to_string();
+            }
+        }
+    }
+
+    // Last resort: show success/failure status
+    let success = val.get("success").and_then(|s| s.as_bool()).unwrap_or(true);
+    if success {
+        "Done.".to_string()
+    } else {
+        "Command failed.".to_string()
+    }
 }
 
 /// Built-in slash commands.
