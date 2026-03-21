@@ -412,8 +412,16 @@ impl App {
                 self.input.agent_commands = kiro_cmds
                     .into_iter()
                     .filter(|cmd| {
+                        // Always exclude commands we handle locally in Cyril
+                        if LOCAL_COMMANDS.contains(&cmd.name.as_str()) {
+                            return false;
+                        }
+                        // Allow selection commands even if marked local (e.g. /chat)
+                        // since they work through the ACP picker flow
+                        let is_selection = cmd.meta.as_ref()
+                            .is_some_and(|m| m.input_type.as_deref() == Some("selection"));
                         let is_local = cmd.meta.as_ref().is_some_and(|m| m.local);
-                        !is_local && !LOCAL_COMMANDS.contains(&cmd.name.as_str())
+                        !is_local || is_selection
                     })
                     .map(|cmd| {
                         let is_selection = cmd.meta.as_ref()

@@ -582,6 +582,11 @@ impl CommandExecutor {
                     session.set_optimistic_model(value.clone());
                 }
 
+                // /chat loads a different session — update our session ID
+                if command == "chat" {
+                    session.set_session_id(acp::SessionId::from(value.clone()));
+                }
+
                 let args = serde_json::json!({ "value": value });
                 let raw_params = match Self::build_execute_params(&session_id, command, args) {
                     Ok(p) => p,

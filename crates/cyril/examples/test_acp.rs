@@ -313,8 +313,63 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
     }
     println!();
 
+    // --- Test kiro.dev/commands/options for chat (session resume) ---
+    println!("[7] Testing kiro.dev/commands/options (chat)...");
+    {
+        let params = serde_json::json!({
+            "command": "chat",
+            "sessionId": session_id.to_string()
+        });
+        let raw_params = serde_json::value::RawValue::from_string(params.to_string())
+            .expect("valid json");
+
+        match conn
+            .ext_method(acp::ExtRequest::new(
+                "kiro.dev/commands/options",
+                std::sync::Arc::from(raw_params),
+            ))
+            .await
+        {
+            Ok(resp) => {
+                println!("    Raw response: {}", resp.0);
+            }
+            Err(e) => {
+                println!("    FAILED: {e}");
+            }
+        }
+    }
+    println!();
+
+    // --- Test /chat execute (session resume) ---
+    println!("[8] Testing /chat execute (resume session)...");
+    {
+        // Use the session we just created (should be the most recent)
+        let params = serde_json::json!({
+            "command": { "command": "chat", "args": { "value": session_id.to_string() } },
+            "sessionId": session_id.to_string()
+        });
+        let raw_params = serde_json::value::RawValue::from_string(params.to_string())
+            .expect("valid json");
+
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            conn.ext_method(acp::ExtRequest::new(
+                "kiro.dev/commands/execute",
+                std::sync::Arc::from(raw_params),
+            )),
+        )
+        .await;
+
+        match result {
+            Ok(Ok(resp)) => println!("    SUCCESS: {}", resp.0),
+            Ok(Err(e)) => println!("    ERROR: {e}"),
+            Err(_) => println!("    TIMEOUT (5s)"),
+        }
+    }
+    println!();
+
     // --- Test kiro.dev/commands/options for agent ---
-    println!("[7] Testing kiro.dev/commands/options (agent)...");
+    println!("[9] Testing kiro.dev/commands/options (agent)...");
     {
         let params = serde_json::json!({
             "command": "agent",
