@@ -36,13 +36,15 @@ struct Cli {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    // Log to file to avoid TUI conflicts
+    // Log to file as JSON to avoid TUI conflicts and enable structured analysis
     match std::fs::OpenOptions::new().create(true).append(true).open("cyril.log") {
         Ok(file) => {
             tracing_subscriber::fmt()
+                .json()
                 .with_max_level(tracing::Level::INFO)
                 .with_writer(std::sync::Mutex::new(file))
-                .with_ansi(false)
+                .with_target(true)
+                .with_current_span(false)
                 .init();
         }
         Err(e) => {
