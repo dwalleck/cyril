@@ -20,13 +20,16 @@ Windows: Cyril TUI  <── stdin/stdout JSON-RPC ──>  WSL (kiro-cli acp)
 
 ## Features
 
-- **Streaming TUI** — ratatui-based interface with real-time markdown rendering
+- **Streaming TUI** — ratatui-based interface with real-time markdown rendering (headings, bold, italic, code blocks with syntax highlighting, tables, lists, blockquotes)
 - **Cross-platform** — runs natively on Linux; bridges to WSL on Windows with automatic path translation
-- **Hook system** — JSON-configurable before/after hooks on file writes and terminal commands
 - **Slash commands** — autocomplete-enabled commands from both the client and the Kiro agent
-- **Tool call display** — see what the agent is doing in real time
-- **Approval prompts** — review and approve file writes and command execution
-- **Session management** — create, load, and switch between sessions
+- **Tool call display** — see what the agent is doing in real time with inline diffs
+- **Approval prompts** — review and approve command execution with Yes/Always/No options
+- **Session management** — create, load, and resume previous sessions via `/chat`
+- **Agent/model switching** — switch agents (`/agent`) and models (`/model`) via picker UI
+- **Live activity indicator** — animated spinner with elapsed time and current tool activity in the toolbar
+- **Context bar** — visual gauge showing context window usage
+- **@-file references** — reference files in prompts with `@path/to/file` autocomplete
 
 ## Prerequisites
 
@@ -79,45 +82,46 @@ cyril -d C:\Users\you\project    # Windows
 | `Shift+Enter` | Newline in input |
 | `Tab` | Accept autocomplete suggestion |
 | `Esc` | Cancel current request |
+| `Ctrl+M` | Toggle mouse capture (off = copy mode) |
 | `Ctrl+C` / `Ctrl+Q` | Quit |
 
 ### Slash commands
+
+**Local commands** (handled by Cyril):
 
 | Command | Description |
 |---------|-------------|
 | `/help` | Show available commands |
 | `/new` | Start a new session |
-| `/load <id>` | Load a previous session |
+| `/load <id>` | Load a session by ID |
 | `/clear` | Clear the chat |
+| `/mode <id>` | Switch agent mode |
+| `/model [id]` | Switch model (opens picker if no ID given) |
 | `/quit` | Quit |
 
-Agent-provided slash commands are also available with autocomplete.
+**Agent commands** (forwarded to Kiro via ACP):
 
-## Hook system
-
-Create a `hooks.json` in your working directory to configure hooks that run on agent actions:
-
-```json
-{
-  "hooks": [
-    {
-      "name": "Format on save",
-      "event": "afterWrite",
-      "pattern": "*.cs",
-      "command": "dotnet format --include {{file}}"
-    }
-  ]
-}
-```
-
-Hooks run at the protocol boundary — the agent never sees them, just the results.
+| Command | Description |
+|---------|-------------|
+| `/agent` | Switch agent (picker) |
+| `/chat` | Resume a previous session (picker) |
+| `/compact` | Compact conversation history |
+| `/context` | Show context/token usage breakdown |
+| `/knowledge` | Manage knowledge bases |
+| `/mcp` | Show configured MCP servers |
+| `/plan` | Switch to planning agent |
+| `/prompts` | Select from available prompts (picker) |
+| `/tools` | Show available agent tools |
+| `/usage` | Show billing and usage info |
 
 ## Project structure
 
 ```
 crates/
   cyril/          # TUI application (binary)
-  cyril-core/     # Protocol logic, path translation, hooks, capabilities
+  cyril-core/     # Protocol logic, path translation, session state
+docs/
+  kiro-acp-protocol.md  # Comprehensive Kiro ACP protocol reference
 ```
 
 ## License
