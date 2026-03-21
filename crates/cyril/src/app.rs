@@ -485,6 +485,7 @@ impl App {
     }
 
     fn on_turn_end(&mut self) {
+        tracing::info!("Turn ended, finishing streaming");
         self.chat.finish_streaming();
         self.toolbar.is_busy = false;
         self.toolbar.busy_since = None;

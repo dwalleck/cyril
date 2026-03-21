@@ -189,9 +189,14 @@ impl CommandExecutor {
                 .prompt(acp::PromptRequest::new(session_id, content_blocks))
                 .await;
 
-            if let Err(e) = result {
-                tracing::error!("Prompt error: {e}");
-                Self::send_or_log(&response_tx, format!("[Error] Prompt failed: {e}"), "cmd-response");
+            match &result {
+                Ok(resp) => {
+                    tracing::info!("Prompt completed: stop_reason={:?}", resp.stop_reason);
+                }
+                Err(e) => {
+                    tracing::error!("Prompt error: {e}");
+                    Self::send_or_log(&response_tx, format!("[Error] Prompt failed: {e}"), "cmd-response");
+                }
             }
             Self::send_or_log(&done_tx, (), "prompt-done");
         });
