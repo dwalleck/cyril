@@ -51,6 +51,12 @@ impl acp::Client for KiroClient {
         &self,
         mut args: acp::RequestPermissionRequest,
     ) -> acp::Result<acp::RequestPermissionResponse> {
+        tracing::info!(
+            "RequestPermission: tool={} id={} options={:?}",
+            args.tool_call.fields.title.as_deref().unwrap_or("?"),
+            args.tool_call.tool_call_id,
+            args.options.iter().map(|o| o.option_id.to_string()).collect::<Vec<_>>()
+        );
         // Permission requests arrive without raw_input — enrich from our cache
         // so the approval UI can display details like URLs and commands.
         if args.tool_call.fields.raw_input.is_none() {
@@ -74,18 +80,46 @@ impl acp::Client for KiroClient {
     ) -> acp::Result<()> {
         match args.update {
             acp::SessionUpdate::AgentMessageChunk(chunk) => {
+                if let acp::ContentBlock::Text(ref text) = chunk.content {
+                    tracing::info!(
+                        "AgentMessageChunk: {} chars",
+                        text.text.len()
+                    );
+                } else {
+                    tracing::info!(
+                        "AgentMessageChunk: non-text content block"
+                    );
+                }
                 self.emit(AppEvent::Protocol(ProtocolEvent::AgentMessage {
                     session_id: args.session_id,
                     chunk,
                 }));
             }
             acp::SessionUpdate::AgentThoughtChunk(chunk) => {
+                if let acp::ContentBlock::Text(ref text) = chunk.content {
+                    tracing::info!(
+                        "AgentThoughtChunk: {} chars",
+                        text.text.len()
+                    );
+                } else {
+                    tracing::info!(
+                        "AgentThoughtChunk: non-text content block"
+                    );
+                }
                 self.emit(AppEvent::Protocol(ProtocolEvent::AgentThought {
                     session_id: args.session_id,
                     chunk,
                 }));
             }
             acp::SessionUpdate::ToolCall(tool_call) => {
+                tracing::info!(
+                    "ToolCall: id={} title={} kind={:?} status={:?} raw_input={:?}",
+                    tool_call.tool_call_id,
+                    tool_call.title,
+                    tool_call.kind,
+                    tool_call.status,
+                    tool_call.raw_input
+                );
                 if let Some(ref raw_input) = tool_call.raw_input {
                     self.tool_call_inputs
                         .borrow_mut()
@@ -97,6 +131,13 @@ impl acp::Client for KiroClient {
                 }));
             }
             acp::SessionUpdate::ToolCallUpdate(update) => {
+                tracing::info!(
+                    "ToolCallUpdate: id={} title={:?} kind={:?} status={:?}",
+                    update.tool_call_id,
+                    update.fields.title,
+                    update.fields.kind,
+                    update.fields.status,
+                );
                 if let Some(ref raw_input) = update.fields.raw_input {
                     self.tool_call_inputs
                         .borrow_mut()
@@ -108,24 +149,43 @@ impl acp::Client for KiroClient {
                 }));
             }
             acp::SessionUpdate::Plan(plan) => {
+                tracing::info!(
+                    "Plan: {} entries (completed={}, in_progress={}, pending={})",
+                    plan.entries.len(),
+                    plan.entries.iter().filter(|e| e.status == acp::PlanEntryStatus::Completed).count(),
+                    plan.entries.iter().filter(|e| e.status == acp::PlanEntryStatus::InProgress).count(),
+                    plan.entries.iter().filter(|e| e.status == acp::PlanEntryStatus::Pending).count(),
+                );
                 self.emit(AppEvent::Protocol(ProtocolEvent::PlanUpdated {
                     session_id: args.session_id,
                     plan,
                 }));
             }
             acp::SessionUpdate::AvailableCommandsUpdate(commands) => {
+                tracing::info!(
+                    "AvailableCommandsUpdate: {} commands",
+                    commands.available_commands.len()
+                );
                 self.emit(AppEvent::Protocol(ProtocolEvent::CommandsUpdated {
                     session_id: args.session_id,
                     commands,
                 }));
             }
             acp::SessionUpdate::CurrentModeUpdate(mode) => {
+                tracing::info!(
+                    "CurrentModeUpdate: mode={}",
+                    mode.current_mode_id
+                );
                 self.emit(AppEvent::Protocol(ProtocolEvent::ModeChanged {
                     session_id: args.session_id,
                     mode,
                 }));
             }
             acp::SessionUpdate::ConfigOptionUpdate(update) => {
+                tracing::info!(
+                    "ConfigOptionUpdate: {} options",
+                    update.config_options.len()
+                );
                 self.emit(AppEvent::Protocol(ProtocolEvent::ConfigOptionsUpdated {
                     session_id: args.session_id,
                     config_options: update.config_options,
@@ -134,7 +194,7 @@ impl acp::Client for KiroClient {
             _ => {
                 tracing::warn!(
                     session_id = %args.session_id,
-                    "Unhandled session update variant: {:?}",
+                    "Unhandled session update: {}",
                     serde_json::to_string(&args.update).unwrap_or_else(|_| "(serialize error)".into())
                 );
             }
@@ -143,7 +203,7 @@ impl acp::Client for KiroClient {
     }
 
     async fn ext_notification(&self, args: acp::ExtNotification) -> acp::Result<()> {
-        tracing::debug!("ext_notification: method={}", args.method);
+        tracing::info!("ext_notification: method={} params={}", args.method, args.params);
 
         if args.method.as_ref() == "kiro.dev/commands/available" {
             match serde_json::from_str::<KiroCommandsPayload>(args.params.get()) {
