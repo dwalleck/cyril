@@ -397,19 +397,22 @@ impl App {
     fn handle_extension_event(&mut self, event: ExtensionEvent) {
         match event {
             ExtensionEvent::KiroCommandsAvailable { commands: kiro_cmds } => {
-                const LOCAL_COMMANDS: &[&str] = &["/agent", "/clear", "/help", "/quit", "/load", "/new", "/model"];
+                const LOCAL_COMMANDS: &[&str] = &["/clear", "/help", "/quit", "/load", "/new", "/model"];
                 self.input.agent_commands = kiro_cmds
                     .into_iter()
                     .filter(|cmd| {
-                        !LOCAL_COMMANDS.contains(&cmd.name.as_str())
-                            && cmd.is_executable()
+                        let is_local = cmd.meta.as_ref().is_some_and(|m| m.local);
+                        !is_local && !LOCAL_COMMANDS.contains(&cmd.name.as_str())
                     })
                     .map(|cmd| {
+                        let is_selection = cmd.meta.as_ref()
+                            .is_some_and(|m| m.input_type.as_deref() == Some("selection"));
                         let name = cmd.name.strip_prefix('/').unwrap_or(&cmd.name).to_string();
                         commands::AgentCommand {
                             name,
                             description: cmd.description,
                             input_hint: cmd.input_hint,
+                            is_selection,
                         }
                     })
                     .collect();

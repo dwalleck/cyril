@@ -104,12 +104,24 @@ impl CommandExecutor {
                 Ok(CommandResult::Continue)
             }
             ParsedCommand::Agent { name, input: arg } => {
-                let command = if let Some(input_text) = arg {
-                    format!("/{name} {input_text}")
+                let is_selection = agent_commands.iter()
+                    .any(|ac| ac.name == name && ac.is_selection);
+
+                if is_selection && arg.is_none() {
+                    let title = format!("Select {name}");
+                    Self::open_selection_picker(
+                        session, conn, chat, picker, &name, &title,
+                    ).await?;
                 } else {
-                    format!("/{name}")
-                };
-                Self::execute_agent_command(session, conn, chat, toolbar, channels, &command).await?;
+                    let command = if let Some(input_text) = arg {
+                        format!("/{name} {input_text}")
+                    } else {
+                        format!("/{name}")
+                    };
+                    Self::execute_agent_command(
+                        session, conn, chat, toolbar, channels, &command,
+                    ).await?;
+                }
                 Ok(CommandResult::Continue)
             }
             ParsedCommand::Unknown(cmd) => {
@@ -657,6 +669,8 @@ pub struct AgentCommand {
     pub name: String,
     pub description: String,
     pub input_hint: Option<String>,
+    /// If true, this command uses a selection picker (e.g. "model", "agent").
+    pub is_selection: bool,
 }
 
 impl AgentCommand {
@@ -669,6 +683,7 @@ impl AgentCommand {
             name: cmd.name.clone(),
             description: cmd.description.clone(),
             input_hint,
+            is_selection: false,
         }
     }
 
@@ -827,6 +842,7 @@ mod tests {
             name: "compact".to_string(),
             description: "Compact the context".to_string(),
             input_hint: Some("instructions".to_string()),
+            is_selection: false,
         }]
     }
 
