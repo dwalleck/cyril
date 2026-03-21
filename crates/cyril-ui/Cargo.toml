@@ -11,3 +11,13 @@ description = "TUI rendering and input handling for the Cyril ACP client"
 workspace = true
 
 [dependencies]
+cyril-core = { path = "../cyril-core" }
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+rstest = { workspace = true }
+insta = { workspace = true }
