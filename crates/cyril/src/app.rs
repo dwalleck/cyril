@@ -186,6 +186,23 @@ impl App {
             return Ok(());
         }
 
+        // Global shortcuts — always available regardless of popup state
+        match key.code {
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.should_quit = true;
+                return Ok(());
+            }
+            KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.should_quit = true;
+                return Ok(());
+            }
+            KeyCode::Char('m') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.toggle_mouse_capture();
+                return Ok(());
+            }
+            _ => {}
+        }
+
         // Handle approval mode first
         if let Some((ref mut approval_state, _)) = self.approval {
             match key.code {
@@ -252,15 +269,6 @@ impl App {
         let has_suggestions = self.input.has_suggestions();
 
         match key.code {
-            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.should_quit = true;
-            }
-            KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.should_quit = true;
-            }
-            KeyCode::Char('m') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.toggle_mouse_capture();
-            }
             KeyCode::Tab if has_suggestions => {
                 self.input.apply_suggestion();
             }
