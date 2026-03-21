@@ -295,6 +295,33 @@ async fn run_tests(agent_name: Option<&str>) -> Result<()> {
         }
     }
 
+    // --- Test kiro.dev/commands/options for agent ---
+    println!("[6] Testing kiro.dev/commands/options (agent)...");
+    {
+        let params = serde_json::json!({
+            "command": "agent",
+            "sessionId": session_id.to_string()
+        });
+        let raw_params = serde_json::value::RawValue::from_string(params.to_string())
+            .expect("valid json");
+
+        match conn
+            .ext_method(acp::ExtRequest::new(
+                "kiro.dev/commands/options",
+                std::sync::Arc::from(raw_params),
+            ))
+            .await
+        {
+            Ok(resp) => {
+                println!("    Raw response: {}", resp.0);
+            }
+            Err(e) => {
+                println!("    FAILED: {e}");
+            }
+        }
+    }
+    println!();
+
     // Drain stderr from kiro-cli
     let stderr = agent.drain_stderr();
     if !stderr.is_empty() {
