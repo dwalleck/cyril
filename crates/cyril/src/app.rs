@@ -356,7 +356,7 @@ impl App {
             }
             ProtocolEvent::AgentThought { chunk, .. } => {
                 if let acp::ContentBlock::Text(text) = &chunk.content {
-                    self.chat.append_streaming(&text.text);
+                    self.chat.append_thought(&text.text);
                 }
             }
             ProtocolEvent::ToolCallStarted { tool_call, .. } => {

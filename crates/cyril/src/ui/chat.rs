@@ -15,6 +15,7 @@ use super::tool_calls::{self, TrackedToolCall};
 #[derive(Debug, Clone)]
 pub enum ContentBlock {
     Text(String),
+    Thought(String),
     ToolCall(TrackedToolCall),
     Plan(acp::Plan),
 }
@@ -68,6 +69,15 @@ impl ChatState {
         } else {
             self.stream_blocks
                 .push(ContentBlock::Text(text.to_string()));
+        }
+    }
+
+    pub fn append_thought(&mut self, text: &str) {
+        if let Some(ContentBlock::Thought(ref mut s)) = self.stream_blocks.last_mut() {
+            s.push_str(text);
+        } else {
+            self.stream_blocks
+                .push(ContentBlock::Thought(text.to_string()));
         }
     }
 
@@ -261,6 +271,23 @@ fn render_blocks(blocks: &[ContentBlock], role: &Role, lines: &mut Vec<Line<'sta
                     for text_line in text.lines() {
                         lines.push(Line::from(text_line.to_string()));
                     }
+                }
+            }
+            ContentBlock::Thought(text) => {
+                let thought_style = Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::ITALIC);
+                lines.push(Line::from(Span::styled(
+                    "  thinking:",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD | Modifier::ITALIC),
+                )));
+                for thought_line in text.lines() {
+                    lines.push(Line::from(Span::styled(
+                        format!("  {thought_line}"),
+                        thought_style,
+                    )));
                 }
             }
             ContentBlock::ToolCall(tc) => {
