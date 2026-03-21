@@ -12,41 +12,84 @@ use cyril_core::session::SessionContext;
 
 const SPINNER_FRAMES: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
+/// What the toolbar is currently showing for the activity indicator.
+#[derive(Debug, Clone)]
+pub enum ToolbarActivity {
+    /// Agent is idle, ready for input.
+    Ready,
+    /// Prompt sent, waiting for first response.
+    Waiting { since: Instant },
+    /// A tool is running (reading, executing, searching).
+    ToolCall { detail: String, since: Instant },
+    /// Agent is streaming text -- the content itself is the indicator.
+    Streaming,
+}
+
+impl Default for ToolbarActivity {
+    fn default() -> Self {
+        Self::Ready
+    }
+}
+
 /// State for the toolbar/status bar.
 #[derive(Debug, Default)]
 pub struct ToolbarState {
     pub agent_name: String,
     pub agent_version: String,
-    pub is_busy: bool,
-    /// Current tool activity detail (e.g. "reading file.rs", "executing shell").
-    /// Shown in the toolbar instead of generic "working..." when present.
-    pub busy_detail: Option<String>,
-    /// When the current busy period started (for elapsed time display).
-    pub busy_since: Option<Instant>,
+    pub activity: ToolbarActivity,
     /// The --agent value passed at startup (e.g. "sonnet").
     pub selected_agent: Option<String>,
     /// Whether mouse capture is active (false = copy mode).
     pub mouse_captured: bool,
 }
 
-pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &SessionContext) {
-    let status: String;
-    let status_color;
-
-    if state.is_busy {
-        let detail = state.busy_detail.as_deref().unwrap_or("working");
-        let elapsed = state.busy_since.map(|t| t.elapsed().as_secs()).unwrap_or(0);
-        let spinner_idx = if let Some(t) = state.busy_since {
-            (t.elapsed().as_millis() / 80) as usize % SPINNER_FRAMES.len()
-        } else {
-            0
+impl ToolbarState {
+    pub fn on_prompt_sent(&mut self) {
+        self.activity = ToolbarActivity::Waiting {
+            since: Instant::now(),
         };
-        let spinner = SPINNER_FRAMES[spinner_idx];
-        status = format!("{spinner} {detail} ({elapsed}s)");
-        status_color = Color::Yellow;
-    } else {
-        status = "ready".to_string();
-        status_color = Color::Green;
+    }
+
+    pub fn on_tool_call_chunk(&mut self, detail: impl Into<String>) {
+        self.activity = ToolbarActivity::ToolCall {
+            detail: detail.into(),
+            since: Instant::now(),
+        };
+    }
+
+    pub fn on_agent_message(&mut self) {
+        self.activity = ToolbarActivity::Streaming;
+    }
+
+    pub fn on_turn_end(&mut self) {
+        self.activity = ToolbarActivity::Ready;
+    }
+
+    pub fn is_busy(&self) -> bool {
+        !matches!(self.activity, ToolbarActivity::Ready)
+    }
+}
+
+pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &SessionContext) {
+    let (status, status_color) = match &state.activity {
+        ToolbarActivity::Ready => ("ready".to_string(), Color::Green),
+        ToolbarActivity::Waiting { since } => {
+            let elapsed = since.elapsed().as_secs();
+            let idx = (since.elapsed().as_millis() / 80) as usize % SPINNER_FRAMES.len();
+            (
+                format!("{} working ({elapsed}s)", SPINNER_FRAMES[idx]),
+                Color::Yellow,
+            )
+        }
+        ToolbarActivity::ToolCall { detail, since } => {
+            let elapsed = since.elapsed().as_secs();
+            let idx = (since.elapsed().as_millis() / 80) as usize % SPINNER_FRAMES.len();
+            (
+                format!("{} {detail} ({elapsed}s)", SPINNER_FRAMES[idx]),
+                Color::Yellow,
+            )
+        }
+        ToolbarActivity::Streaming => ("streaming".to_string(), Color::Cyan),
     };
 
     let session_display: &str = match session.id.as_ref() {
@@ -110,10 +153,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ToolbarState, session: &Ses
     }
 
     spans.push(Span::raw(" | "));
-    spans.push(Span::styled(
-        status.clone(),
-        Style::default().fg(status_color),
-    ));
+    spans.push(Span::styled(status, Style::default().fg(status_color)));
 
     let line = Line::from(spans);
 
@@ -187,4 +227,102 @@ fn render_gauge(frame: &mut Frame, area: Rect, x_offset: u16, label_text: &str, 
         .use_unicode(true);
 
     frame.render_widget(gauge, gauge_area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_state_is_ready() {
+        let state = ToolbarState::default();
+        assert!(matches!(state.activity, ToolbarActivity::Ready));
+    }
+
+    #[test]
+    fn prompt_sent_transitions_to_waiting() {
+        let mut state = ToolbarState::default();
+        state.on_prompt_sent();
+        assert!(matches!(state.activity, ToolbarActivity::Waiting { .. }));
+    }
+
+    #[test]
+    fn tool_call_from_waiting() {
+        let mut state = ToolbarState::default();
+        state.on_prompt_sent();
+        state.on_tool_call_chunk("reading file.rs");
+        match &state.activity {
+            ToolbarActivity::ToolCall { detail, .. } => {
+                assert_eq!(detail, "reading file.rs");
+            }
+            other => panic!("Expected ToolCall, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn agent_message_transitions_to_streaming() {
+        let mut state = ToolbarState::default();
+        state.on_prompt_sent();
+        state.on_agent_message();
+        assert!(matches!(state.activity, ToolbarActivity::Streaming));
+    }
+
+    #[test]
+    fn tool_call_from_streaming() {
+        let mut state = ToolbarState::default();
+        state.on_prompt_sent();
+        state.on_agent_message();
+        state.on_tool_call_chunk("executing shell");
+        match &state.activity {
+            ToolbarActivity::ToolCall { detail, .. } => {
+                assert_eq!(detail, "executing shell");
+            }
+            other => panic!("Expected ToolCall, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn turn_end_from_any_state() {
+        for start in ["waiting", "tool_call", "streaming"] {
+            let mut state = ToolbarState::default();
+            state.on_prompt_sent();
+            match start {
+                "tool_call" => state.on_tool_call_chunk("test"),
+                "streaming" => state.on_agent_message(),
+                _ => {}
+            }
+            state.on_turn_end();
+            assert!(matches!(state.activity, ToolbarActivity::Ready));
+        }
+    }
+
+    #[test]
+    fn tool_call_resets_timer() {
+        let mut state = ToolbarState::default();
+        state.on_prompt_sent();
+        state.on_tool_call_chunk("first");
+        let first_since = match &state.activity {
+            ToolbarActivity::ToolCall { since, .. } => *since,
+            _ => panic!("Expected ToolCall"),
+        };
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        state.on_tool_call_chunk("second");
+        let second_since = match &state.activity {
+            ToolbarActivity::ToolCall { since, .. } => *since,
+            _ => panic!("Expected ToolCall"),
+        };
+        assert!(second_since > first_since);
+    }
+
+    #[test]
+    fn is_busy_reflects_activity() {
+        let mut state = ToolbarState::default();
+        assert!(!state.is_busy());
+        state.on_prompt_sent();
+        assert!(state.is_busy());
+        state.on_agent_message();
+        assert!(state.is_busy());
+        state.on_turn_end();
+        assert!(!state.is_busy());
+    }
 }

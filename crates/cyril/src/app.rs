@@ -301,7 +301,7 @@ impl App {
                 self.handle_enter().await?;
             }
             KeyCode::Esc => {
-                if self.toolbar.is_busy {
+                if self.toolbar.is_busy() {
                     if let Some(ref session_id) = self.session.id {
                         if let Err(e) = self.conn.cancel(acp::CancelNotification::new(session_id.clone())).await {
                             tracing::warn!("Failed to send cancel notification: {e}");
@@ -372,10 +372,8 @@ impl App {
                 if let acp::ContentBlock::Text(text) = &chunk.content {
                     self.chat.append_streaming(&text.text);
                     self.chat.scroll_to_bottom();
-                    // Text is streaming — the content itself is the activity indicator,
-                    // so clear the spinner/timer
-                    self.toolbar.busy_detail = None;
-                    self.toolbar.busy_since = None;
+                    // Text is streaming — the content itself is the activity indicator
+                    self.toolbar.on_agent_message();
                 }
             }
             ProtocolEvent::AgentThought { chunk, .. } => {
@@ -467,7 +465,7 @@ impl App {
                 // Metadata arrives after every turn completes. If we're still
                 // showing busy (prompt() hasn't returned yet), treat this as
                 // a turn-end signal to stop the spinner.
-                if self.toolbar.is_busy {
+                if self.toolbar.is_busy() {
                     tracing::info!("Metadata received while busy — ending turn");
                     self.on_turn_end();
                 }
@@ -488,10 +486,7 @@ impl App {
                     "search" => format!("searching {title}"),
                     _ => format!("{kind} {title}"),
                 };
-                self.toolbar.busy_detail = Some(detail);
-                // Reset spinner timer for each new tool call so the spinner
-                // animates and elapsed time counts from tool start
-                self.toolbar.busy_since = Some(std::time::Instant::now());
+                self.toolbar.on_tool_call_chunk(detail);
             }
             ExtensionEvent::CompactionStatus { message } => {
                 self.chat.add_system_message(format!("[Compaction] {message}"));
@@ -518,9 +513,7 @@ impl App {
     fn on_turn_end(&mut self) {
         tracing::info!("Turn ended, finishing streaming");
         self.chat.finish_streaming();
-        self.toolbar.is_busy = false;
-        self.toolbar.busy_since = None;
-        self.toolbar.busy_detail = None;
+        self.toolbar.on_turn_end();
         self.query_credit_usage();
     }
 

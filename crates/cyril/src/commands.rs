@@ -142,7 +142,7 @@ impl CommandExecutor {
         toolbar: &mut toolbar::ToolbarState,
         channels: &CommandChannels,
     ) -> Result<()> {
-        if input.is_empty() || toolbar.is_busy {
+        if input.is_empty() || toolbar.is_busy() {
             return Ok(());
         }
 
@@ -158,8 +158,7 @@ impl CommandExecutor {
         chat.add_user_message(text.clone());
         chat.begin_streaming();
         chat.scroll_to_bottom();
-        toolbar.is_busy = true;
-        toolbar.busy_since = Some(std::time::Instant::now());
+        toolbar.on_prompt_sent();
 
         // Build content blocks: user text + any @-referenced file contents
         let mut content_blocks = vec![acp::ContentBlock::Text(acp::TextContent::new(text.clone()))];
@@ -358,8 +357,7 @@ impl CommandExecutor {
 
         chat.begin_streaming();
         chat.scroll_to_bottom();
-        toolbar.is_busy = true;
-        toolbar.busy_since = Some(std::time::Instant::now());
+        toolbar.on_prompt_sent();
 
         Self::spawn_command_execute(conn, channels, raw_params, command.to_string());
 
