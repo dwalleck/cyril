@@ -635,6 +635,49 @@ fn format_command_response(val: &serde_json::Value) -> String {
         return out;
     }
 
+    // If there's context breakdown data, format it
+    if let Some(breakdown) = data.and_then(|d| d.get("breakdown")) {
+        let pct = data
+            .and_then(|d| d.get("contextUsagePercentage"))
+            .and_then(|p| p.as_f64())
+            .unwrap_or(0.0);
+        let model = data
+            .and_then(|d| d.get("model"))
+            .and_then(|m| m.as_str())
+            .unwrap_or("unknown");
+        let mut out = format!("**Context: {pct:.1}% used** (model: {model})\n\n");
+
+        let categories = [
+            ("contextFiles", "Context files"),
+            ("tools", "Tools"),
+            ("yourPrompts", "Your prompts"),
+            ("kiroResponses", "Kiro responses"),
+            ("sessionFiles", "Session files"),
+        ];
+        for (key, label) in &categories {
+            if let Some(cat) = breakdown.get(*key) {
+                let tokens = cat.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
+                let cat_pct = cat.get("percent").and_then(|p| p.as_f64()).unwrap_or(0.0);
+                if tokens > 0 {
+                    out.push_str(&format!("- **{label}**: {tokens} tokens ({cat_pct:.1}%)\n"));
+
+                    // Show individual file items if present
+                    if let Some(items) = cat.get("items").and_then(|i| i.as_array()) {
+                        for item in items {
+                            let name = item.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                            let item_tokens = item.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
+                            let item_pct = item.get("percent").and_then(|p| p.as_f64()).unwrap_or(0.0);
+                            if item_tokens > 0 {
+                                out.push_str(&format!("  - {name}: {item_tokens} tokens ({item_pct:.1}%)\n"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
     // If there's usage breakdown data, format as markdown
     if let Some(breakdowns) = data
         .and_then(|d| d.get("usageBreakdowns"))
