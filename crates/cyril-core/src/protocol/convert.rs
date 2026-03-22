@@ -138,12 +138,46 @@ pub(crate) fn to_ext_notification(
             Ok(Notification::CommandsUpdated(commands))
         }
         "kiro.dev/session/update" => {
-            // Kiro-specific session update notifications (e.g., tool_call_chunk)
-            // For now, log and skip — these are supplementary to standard ACP notifications
-            tracing::debug!(method, "kiro.dev/session/update received (not yet handled)");
-            Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
-                message: format!("unhandled extension: {method}"),
-            }))
+            let update = params.get("update");
+            let session_update = update
+                .and_then(|u| u.get("sessionUpdate"))
+                .and_then(|s| s.as_str());
+            match session_update {
+                Some("tool_call_chunk") => {
+                    let tool_call_id = update
+                        .and_then(|u| u.get("toolCallId"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let title = update
+                        .and_then(|u| u.get("title"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let kind = update
+                        .and_then(|u| u.get("kind"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    Ok(Notification::ToolCallChunk {
+                        tool_call_id,
+                        title,
+                        kind,
+                    })
+                }
+                Some(other) => {
+                    tracing::debug!(variant = other, "unhandled kiro.dev/session/update variant");
+                    Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
+                        message: format!("unhandled session/update variant: {other}"),
+                    }))
+                }
+                None => {
+                    tracing::debug!("kiro.dev/session/update missing sessionUpdate field");
+                    Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
+                        message: "missing sessionUpdate field".into(),
+                    }))
+                }
+            }
         }
         other => {
             tracing::debug!(method = other, "unknown extension notification");
@@ -641,8 +675,45 @@ mod tests {
     }
 
     #[test]
-    fn to_ext_notification_session_update_returns_error() {
-        let params = serde_json::json!({"update": {"sessionUpdate": "tool_call_chunk"}});
+    fn to_ext_notification_session_update_tool_call_chunk() {
+        let params = serde_json::json!({
+            "update": {
+                "sessionUpdate": "tool_call_chunk",
+                "toolCallId": "tc_123",
+                "title": "reading main.rs",
+                "kind": "read"
+            }
+        });
+        let result = to_ext_notification("kiro.dev/session/update", &params);
+        assert!(result.is_ok());
+        if let Ok(Notification::ToolCallChunk {
+            tool_call_id,
+            title,
+            kind,
+        }) = result
+        {
+            assert_eq!(tool_call_id, "tc_123");
+            assert_eq!(title, "reading main.rs");
+            assert_eq!(kind, "read");
+        } else {
+            panic!("expected ToolCallChunk");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_session_update_unknown_variant_returns_error() {
+        let params = serde_json::json!({
+            "update": {
+                "sessionUpdate": "some_future_variant"
+            }
+        });
+        let result = to_ext_notification("kiro.dev/session/update", &params);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn to_ext_notification_session_update_missing_session_update_field() {
+        let params = serde_json::json!({"update": {}});
         let result = to_ext_notification("kiro.dev/session/update", &params);
         assert!(result.is_err());
     }
