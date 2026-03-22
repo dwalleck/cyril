@@ -205,3 +205,26 @@ async fn command_sends_to_bridge() {
         Some(BridgeCommand::NewSession { .. })
     ));
 }
+
+#[test]
+fn session_created_activates_both_controllers() {
+    let mut ui = UiState::new(500);
+    let mut session = SessionController::new();
+
+    let notification = Notification::SessionCreated {
+        session_id: SessionId::new("sess_123"),
+    };
+
+    let ui_changed = ui.apply_notification(&notification);
+    let session_changed = session.apply_notification(&notification);
+
+    assert!(ui_changed);
+    assert!(session_changed);
+
+    // Session should be active with an ID
+    assert_eq!(session.status(), &SessionStatus::Active);
+    assert_eq!(session.id().map(SessionId::as_str), Some("sess_123"));
+
+    // UI should show the session label
+    assert_eq!(ui.session_label(), Some("sess_123"));
+}

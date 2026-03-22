@@ -584,4 +584,63 @@ mod tests {
             Some(&serde_json::json!({"cmd": "ls"}))
         );
     }
+
+    #[test]
+    fn to_ext_notification_commands_available_with_commands_key() {
+        let params = serde_json::json!({
+            "commands": [
+                {"name": "model", "label": "Switch model", "description": "Change model", "hasOptions": true},
+                {"name": "compact", "label": "Compact", "hasOptions": false}
+            ]
+        });
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        assert!(result.is_ok());
+        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+            assert_eq!(cmds.len(), 2);
+            assert_eq!(cmds[0].name(), "model");
+            assert_eq!(cmds[0].label(), "Switch model");
+            assert_eq!(cmds[0].description(), Some("Change model"));
+            assert!(cmds[0].has_options());
+            assert_eq!(cmds[1].name(), "compact");
+            assert!(!cmds[1].has_options());
+        } else {
+            panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_commands_available_with_available_commands_key() {
+        let params = serde_json::json!({
+            "availableCommands": [
+                {"name": "tools", "label": "Show tools"}
+            ]
+        });
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        assert!(result.is_ok());
+        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+            assert_eq!(cmds.len(), 1);
+            assert_eq!(cmds[0].name(), "tools");
+        } else {
+            panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_commands_available_empty_payload() {
+        let params = serde_json::json!({});
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        assert!(result.is_ok());
+        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+            assert!(cmds.is_empty());
+        } else {
+            panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_session_update_returns_error() {
+        let params = serde_json::json!({"update": {"sessionUpdate": "tool_call_chunk"}});
+        let result = to_ext_notification("kiro.dev/session/update", &params);
+        assert!(result.is_err());
+    }
 }

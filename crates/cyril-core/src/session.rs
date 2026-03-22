@@ -241,4 +241,31 @@ mod tests {
         assert!(changed);
         assert_eq!(ctrl.status(), &SessionStatus::Active);
     }
+
+    #[test]
+    fn session_created_sets_id_and_activates() {
+        let mut ctrl = SessionController::new();
+        assert_eq!(ctrl.status(), &SessionStatus::Disconnected);
+        assert!(ctrl.id().is_none());
+
+        let changed = ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("sess_abc"),
+        });
+
+        assert!(changed);
+        assert_eq!(ctrl.status(), &SessionStatus::Active);
+        assert_eq!(ctrl.id().map(SessionId::as_str), Some("sess_abc"));
+    }
+
+    #[test]
+    fn session_created_overwrites_previous_session() {
+        let mut ctrl = SessionController::new();
+        ctrl.set_session(SessionId::new("old_sess"), SessionStatus::Active);
+
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("new_sess"),
+        });
+
+        assert_eq!(ctrl.id().map(SessionId::as_str), Some("new_sess"));
+    }
 }
