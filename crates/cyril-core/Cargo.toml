@@ -14,9 +14,13 @@ workspace = true
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { workspace = true, features = ["sync", "rt", "macros", "time"] }
+tokio = { workspace = true, features = ["sync", "rt", "macros", "time", "process"] }
 tracing = { workspace = true }
 toml = { workspace = true }
+agent-client-protocol = { workspace = true }
+async-trait = { workspace = true }
+tokio-util = { workspace = true }
+futures-util = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
