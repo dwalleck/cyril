@@ -1,3 +1,5 @@
+pub mod builtin;
+
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -108,6 +110,18 @@ impl CommandRegistry {
             None => (&trimmed[1..], ""),
         };
         self.commands.get(name).map(|cmd| (cmd.as_ref(), args))
+    }
+
+    /// Create a registry pre-populated with all builtin commands.
+    pub fn with_builtins() -> Self {
+        let mut registry = Self::new();
+        let names: Vec<&str> = vec!["help", "clear", "quit", "new", "load"];
+        registry.register(Arc::new(builtin::HelpCommand::new(&names)));
+        registry.register(Arc::new(builtin::ClearCommand));
+        registry.register(Arc::new(builtin::QuitCommand));
+        registry.register(Arc::new(builtin::NewCommand));
+        registry.register(Arc::new(builtin::LoadCommand));
+        registry
     }
 
     /// All registered commands (deduplicated — aliases don't count as separate).
@@ -252,5 +266,91 @@ mod tests {
         assert!(
             matches!(result.kind, CommandResultKind::SystemMessage(ref s) if s == "Echo: test")
         );
+    }
+
+    #[tokio::test]
+    async fn help_command_returns_system_message() {
+        let session = crate::session::SessionController::new();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+        };
+
+        let result = builtin::HelpCommand::new(&[]).execute(&ctx, "").await;
+        assert!(result.is_ok());
+        assert!(matches!(
+            result.unwrap().kind,
+            CommandResultKind::SystemMessage(_)
+        ));
+    }
+
+    #[tokio::test]
+    async fn clear_command_returns_system_message() {
+        let session = crate::session::SessionController::new();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+        };
+
+        let result = builtin::ClearCommand.execute(&ctx, "").await;
+        assert!(result.is_ok());
+        assert!(matches!(
+            result.unwrap().kind,
+            CommandResultKind::SystemMessage(_)
+        ));
+    }
+
+    #[tokio::test]
+    async fn quit_command_returns_quit() {
+        let session = crate::session::SessionController::new();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+        };
+
+        let result = builtin::QuitCommand.execute(&ctx, "").await;
+        assert!(result.is_ok());
+        assert!(matches!(result.unwrap().kind, CommandResultKind::Quit));
+    }
+
+    #[tokio::test]
+    async fn new_command_sends_bridge_command() {
+        let session = crate::session::SessionController::new();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+        };
+
+        let result = builtin::NewCommand.execute(&ctx, "").await;
+        assert!(result.is_ok());
+        assert!(matches!(
+            result.unwrap().kind,
+            CommandResultKind::Dispatched
+        ));
+
+        // Verify bridge received the command
+        let cmd = rx.recv().await;
+        assert!(matches!(
+            cmd,
+            Some(crate::types::BridgeCommand::NewSession { .. })
+        ));
+    }
+
+    #[test]
+    fn default_registry_has_builtins() {
+        let registry = CommandRegistry::with_builtins();
+        assert!(registry.parse("/help").is_some());
+        assert!(registry.parse("/clear").is_some());
+        assert!(registry.parse("/quit").is_some());
+        assert!(registry.parse("/q").is_some());
+        assert!(registry.parse("/new").is_some());
     }
 }
