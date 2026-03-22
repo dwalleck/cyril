@@ -905,6 +905,151 @@ mod tests {
         );
     }
 
+    // --- Turn lifecycle tests ---
+    // These test realistic sequences of notifications, not just individual events.
+
+    #[test]
+    fn turn_with_text_and_tool_calls_commits_both() {
+        let mut state = UiState::new(500);
+
+        // Simulate: agent streams text, starts a tool call, completes it, streams more text
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "Let me read that file.".into(),
+            is_streaming: true,
+        }));
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            Some("Reading main.rs".into()),
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            None,
+        );
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+
+        assert_eq!(state.active_tool_calls().len(), 1);
+        assert_eq!(state.streaming_text(), "Let me read that file.");
+
+        // Turn completes
+        state.apply_notification(&Notification::TurnCompleted);
+
+        // Both text and tool call should be in committed messages
+        assert!(state.active_tool_calls().is_empty(), "active tool calls should be cleared");
+        assert_eq!(state.streaming_text(), "", "streaming text should be cleared");
+
+        let messages = state.messages();
+        assert!(messages.len() >= 2, "should have text + tool call messages, got {}", messages.len());
+
+        let has_agent_text = messages.iter().any(|m| matches!(m.kind(), ChatMessageKind::AgentText(_)));
+        let has_tool_call = messages.iter().any(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
+        assert!(has_agent_text, "committed messages should include agent text");
+        assert!(has_tool_call, "committed messages should include tool call");
+    }
+
+    #[test]
+    fn turn_with_diff_content_preserves_diff_in_history() {
+        use cyril_core::types::{ToolCallContent, ToolCallLocation};
+
+        let mut state = UiState::new(500);
+
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            Some("Editing main.rs".into()),
+            ToolKind::Write,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_content(vec![ToolCallContent::Diff {
+            path: "src/main.rs".into(),
+            old_text: Some("fn main() {}".into()),
+            new_text: "fn main() {\n    println!(\"hello\");\n}".into(),
+        }])
+        .with_locations(vec![ToolCallLocation {
+            path: "src/main.rs".into(),
+            line: Some(1),
+        }]);
+
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+        state.apply_notification(&Notification::TurnCompleted);
+
+        // The tool call should be committed with its diff content intact
+        let messages = state.messages();
+        let tc_msg = messages.iter().find(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
+        assert!(tc_msg.is_some(), "tool call should be in committed messages");
+
+        if let ChatMessageKind::ToolCall(tracked) = tc_msg.unwrap().kind() {
+            assert!(!tracked.content().is_empty(), "diff content should be preserved");
+            assert!(!tracked.locations().is_empty(), "locations should be preserved");
+            assert_eq!(tracked.primary_path(), Some("src/main.rs"));
+        } else {
+            panic!("expected ToolCall message kind");
+        }
+    }
+
+    #[test]
+    fn multiple_turns_preserve_all_content() {
+        let mut state = UiState::new(500);
+
+        // Turn 1: text only
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "First response.".into(),
+            is_streaming: true,
+        }));
+        state.apply_notification(&Notification::TurnCompleted);
+
+        // Turn 2: text + tool call
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "Second response.".into(),
+            is_streaming: true,
+        }));
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            None,
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        );
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+        state.apply_notification(&Notification::TurnCompleted);
+
+        // Both turns should be in history
+        let messages = state.messages();
+        let agent_texts: Vec<_> = messages
+            .iter()
+            .filter(|m| matches!(m.kind(), ChatMessageKind::AgentText(_)))
+            .collect();
+        let tool_calls: Vec<_> = messages
+            .iter()
+            .filter(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)))
+            .collect();
+
+        assert_eq!(agent_texts.len(), 2, "both turns should have agent text");
+        assert_eq!(tool_calls.len(), 1, "second turn should have tool call");
+    }
+
+    #[test]
+    fn turn_with_only_tool_calls_no_text() {
+        let mut state = UiState::new(500);
+
+        // Agent does tool calls without streaming any text
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            Some("Reading config".into()),
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        );
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+        state.apply_notification(&Notification::TurnCompleted);
+
+        let messages = state.messages();
+        assert_eq!(messages.len(), 1, "tool call should be committed even with no text");
+        assert!(matches!(messages[0].kind(), ChatMessageKind::ToolCall(_)));
+    }
+
     #[test]
     fn message_limit_enforced() {
         let mut state = UiState::new(3);
