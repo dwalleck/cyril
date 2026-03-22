@@ -19,6 +19,7 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
 tracing = { workspace = true }
+pulldown-cmark = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
