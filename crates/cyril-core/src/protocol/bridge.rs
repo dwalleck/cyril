@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+use std::sync::Arc;
+
 use tokio::sync::mpsc;
 
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest};
@@ -81,6 +84,200 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     };
 
     (handle, channels)
+}
+
+/// Spawn the ACP bridge on a dedicated thread.
+/// Returns a BridgeHandle for the Send world to communicate through.
+pub fn spawn_bridge(agent: &str, cwd: PathBuf) -> crate::Result<BridgeHandle> {
+    let (handle, channels) = create_channel_pair();
+    let agent = agent.to_string();
+
+    std::thread::Builder::new()
+        .name("acp-bridge".into())
+        .spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build();
+
+            match rt {
+                Ok(rt) => {
+                    let local = tokio::task::LocalSet::new();
+                    local.block_on(&rt, async move {
+                        if let Err(e) = run_bridge(&agent, &cwd, channels).await {
+                            tracing::error!(error = %e, "bridge terminated with error");
+                        }
+                    });
+                }
+                Err(e) => {
+                    tracing::error!(error = %e, "failed to create bridge runtime");
+                }
+            }
+        })
+        .map_err(|e| {
+            crate::Error::with_source(
+                crate::ErrorKind::Transport {
+                    detail: "failed to spawn bridge thread".into(),
+                },
+                e,
+            )
+        })?;
+
+    Ok(handle)
+}
+
+async fn run_bridge(
+    agent: &str,
+    cwd: &std::path::Path,
+    mut channels: BridgeChannels,
+) -> crate::Result<()> {
+    use agent_client_protocol as acp;
+    use acp::Agent;
+    use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
+
+    use crate::protocol::client::KiroClient;
+    use crate::protocol::transport::AgentProcess;
+
+    // 1. Spawn agent process
+    let process = AgentProcess::spawn(agent, cwd).await?;
+
+    // 2. Create KiroClient
+    let client = KiroClient::new(
+        channels.notification_tx.clone(),
+        channels.permission_tx.clone(),
+    );
+
+    // 3. Create the ACP connection.
+    //    ClientSideConnection::new returns (conn, io_future).
+    //    The io_future must be spawned on the LocalSet so the RPC layer runs.
+    let (conn, io_task) = acp::ClientSideConnection::new(
+        client,
+        process.stdin.compat_write(),
+        process.stdout.compat(),
+        |fut| {
+            tokio::task::spawn_local(fut);
+        },
+    );
+
+    // Spawn the IO pump on the local task set
+    tokio::task::spawn_local(async move {
+        if let Err(e) = io_task.await {
+            tracing::error!(error = %e, "ACP IO task failed");
+        }
+    });
+
+    // 4. ACP handshake
+    let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::V1)
+        .client_info(acp::Implementation::new(
+            "cyril",
+            env!("CARGO_PKG_VERSION"),
+        ))
+        .client_capabilities(acp::ClientCapabilities::new());
+
+    let _init_response: acp::InitializeResponse =
+        conn.initialize(init_request).await.map_err(|e| {
+            crate::Error::from_kind(crate::ErrorKind::Protocol {
+                message: format!("ACP initialization failed: {e}"),
+            })
+        })?;
+
+    tracing::info!("ACP bridge initialized");
+
+    // 5. Command loop
+    while let Some(cmd) = channels.command_rx.recv().await {
+        match cmd {
+            BridgeCommand::NewSession { cwd: session_cwd } => {
+                let translated_cwd = crate::platform::path::to_agent(&session_cwd);
+                match conn.new_session(acp::NewSessionRequest::new(translated_cwd)).await {
+                    Ok(response) => {
+                        let session_id = response.session_id.to_string();
+                        let notification = Notification::SessionCreated {
+                            session_id: crate::types::SessionId::new(session_id),
+                        };
+                        if channels.notification_tx.send(notification).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, "new_session failed");
+                    }
+                }
+            }
+            BridgeCommand::SendPrompt { session_id, text } => {
+                let acp_session_id = acp::SessionId::new(session_id.as_str());
+                let prompt = vec![acp::ContentBlock::from(text)];
+                let request = acp::PromptRequest::new(acp_session_id, prompt);
+                match conn.prompt(request).await {
+                    Ok(_) => {
+                        if channels
+                            .notification_tx
+                            .send(Notification::TurnCompleted)
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, "prompt failed");
+                    }
+                }
+            }
+            BridgeCommand::CancelRequest => {
+                // Cancel requires a session_id which we don't have in this variant.
+                // TODO: track active session and issue CancelNotification
+                tracing::info!("cancel requested (not yet implemented)");
+            }
+            BridgeCommand::SetMode { mode_id } => {
+                // TODO: implement when active session tracking is added
+                tracing::info!(mode_id, "set_mode requested (not yet implemented)");
+            }
+            BridgeCommand::LoadSession { session_id } => {
+                let acp_session_id = acp::SessionId::new(session_id.as_str());
+                match conn
+                    .load_session(acp::LoadSessionRequest::new(acp_session_id, cwd))
+                    .await
+                {
+                    Ok(_) => {
+                        tracing::info!(session_id = session_id.as_str(), "session loaded");
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            error = %e,
+                            session_id = session_id.as_str(),
+                            "load_session failed"
+                        );
+                    }
+                }
+            }
+            BridgeCommand::ExtMethod { method, params } => {
+                let raw = match serde_json::value::RawValue::from_string(
+                    serde_json::to_string(&params).unwrap_or_else(|_| "null".to_string()),
+                ) {
+                    Ok(raw) => raw,
+                    Err(e) => {
+                        tracing::error!(error = %e, method, "failed to serialize ext params");
+                        continue;
+                    }
+                };
+                let raw_arc: Arc<serde_json::value::RawValue> = raw.into();
+                match conn
+                    .ext_method(acp::ExtRequest::new(&*method, raw_arc))
+                    .await
+                {
+                    Ok(_response) => {}
+                    Err(e) => {
+                        tracing::error!(error = %e, method, "ext_method failed");
+                    }
+                }
+            }
+            BridgeCommand::Shutdown => {
+                tracing::info!("bridge shutting down");
+                break;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

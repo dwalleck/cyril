@@ -29,6 +29,7 @@ pub enum Notification {
     ClearStatus { message: String },
 
     // Lifecycle
+    SessionCreated { session_id: SessionId },
     TurnCompleted,
     BridgeDisconnected { reason: String },
 }
