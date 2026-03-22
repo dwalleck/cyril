@@ -206,7 +206,8 @@ impl App {
         // Handle command execution response
         if let Notification::CommandExecuted { ref command, ref response } = notification {
             let text = format_command_response(command, response);
-            self.ui_state.add_system_message(text);
+            self.ui_state
+                .add_command_output(command.clone(), text);
             self.redraw_needed = true;
         }
 

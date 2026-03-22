@@ -112,6 +112,17 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
                 lines.push(Line::styled(line.to_string(), style));
             }
         }
+        ChatMessageKind::CommandOutput { command, text } => {
+            lines.push(Line::styled(
+                format!("/{command}:"),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ));
+            for line in text.lines() {
+                lines.push(Line::raw(format!("  {line}")));
+            }
+        }
     }
 }
 

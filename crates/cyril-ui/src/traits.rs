@@ -70,6 +70,11 @@ pub enum ChatMessageKind {
     ToolCall(TrackedToolCall),
     Plan(Plan),
     System(String),
+    /// Output from an agent command (e.g., /tools, /context, /usage).
+    CommandOutput {
+        command: String,
+        text: String,
+    },
 }
 
 impl ChatMessage {
@@ -104,6 +109,13 @@ impl ChatMessage {
     pub fn system(text: String) -> Self {
         Self {
             kind: ChatMessageKind::System(text),
+            timestamp: std::time::Instant::now(),
+        }
+    }
+
+    pub fn command_output(command: String, text: String) -> Self {
+        Self {
+            kind: ChatMessageKind::CommandOutput { command, text },
             timestamp: std::time::Instant::now(),
         }
     }
@@ -247,29 +259,75 @@ pub mod test_support {
     }
 
     impl TuiState for MockTuiState {
-        fn messages(&self) -> &[ChatMessage] { &self.messages }
-        fn streaming_text(&self) -> &str { &self.streaming_text }
-        fn streaming_thought(&self) -> Option<&str> { self.streaming_thought.as_deref() }
-        fn messages_version(&self) -> u64 { 0 }
-        fn active_tool_calls(&self) -> &[TrackedToolCall] { &self.active_tool_calls }
-        fn current_plan(&self) -> Option<&cyril_core::types::Plan> { self.current_plan.as_ref() }
-        fn input_text(&self) -> &str { &self.input_text }
-        fn input_cursor(&self) -> usize { self.input_cursor }
-        fn autocomplete_suggestions(&self) -> &[Suggestion] { &self.autocomplete_suggestions }
-        fn autocomplete_selected(&self) -> Option<usize> { self.autocomplete_selected }
-        fn activity(&self) -> Activity { self.activity }
-        fn session_label(&self) -> Option<&str> { self.session_label.as_deref() }
-        fn current_mode(&self) -> Option<&str> { self.current_mode.as_deref() }
-        fn current_model(&self) -> Option<&str> { self.current_model.as_deref() }
-        fn context_usage(&self) -> Option<f64> { self.context_usage }
-        fn credit_usage(&self) -> Option<(f64, f64)> { self.credit_usage }
-        fn approval(&self) -> Option<&ApprovalState> { self.approval.as_ref() }
-        fn picker(&self) -> Option<&PickerState> { self.picker.as_ref() }
-        fn terminal_size(&self) -> (u16, u16) { self.terminal_size }
-        fn mouse_captured(&self) -> bool { self.mouse_captured }
-        fn should_quit(&self) -> bool { self.quit_requested }
-        fn activity_elapsed(&self) -> Option<Duration> { self.activity_elapsed }
-        fn is_deep_idle(&self) -> bool { self.deep_idle }
+        fn messages(&self) -> &[ChatMessage] {
+            &self.messages
+        }
+        fn streaming_text(&self) -> &str {
+            &self.streaming_text
+        }
+        fn streaming_thought(&self) -> Option<&str> {
+            self.streaming_thought.as_deref()
+        }
+        fn messages_version(&self) -> u64 {
+            0
+        }
+        fn active_tool_calls(&self) -> &[TrackedToolCall] {
+            &self.active_tool_calls
+        }
+        fn current_plan(&self) -> Option<&cyril_core::types::Plan> {
+            self.current_plan.as_ref()
+        }
+        fn input_text(&self) -> &str {
+            &self.input_text
+        }
+        fn input_cursor(&self) -> usize {
+            self.input_cursor
+        }
+        fn autocomplete_suggestions(&self) -> &[Suggestion] {
+            &self.autocomplete_suggestions
+        }
+        fn autocomplete_selected(&self) -> Option<usize> {
+            self.autocomplete_selected
+        }
+        fn activity(&self) -> Activity {
+            self.activity
+        }
+        fn session_label(&self) -> Option<&str> {
+            self.session_label.as_deref()
+        }
+        fn current_mode(&self) -> Option<&str> {
+            self.current_mode.as_deref()
+        }
+        fn current_model(&self) -> Option<&str> {
+            self.current_model.as_deref()
+        }
+        fn context_usage(&self) -> Option<f64> {
+            self.context_usage
+        }
+        fn credit_usage(&self) -> Option<(f64, f64)> {
+            self.credit_usage
+        }
+        fn approval(&self) -> Option<&ApprovalState> {
+            self.approval.as_ref()
+        }
+        fn picker(&self) -> Option<&PickerState> {
+            self.picker.as_ref()
+        }
+        fn terminal_size(&self) -> (u16, u16) {
+            self.terminal_size
+        }
+        fn mouse_captured(&self) -> bool {
+            self.mouse_captured
+        }
+        fn should_quit(&self) -> bool {
+            self.quit_requested
+        }
+        fn activity_elapsed(&self) -> Option<Duration> {
+            self.activity_elapsed
+        }
+        fn is_deep_idle(&self) -> bool {
+            self.deep_idle
+        }
     }
 }
 

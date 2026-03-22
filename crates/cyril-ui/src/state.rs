@@ -320,6 +320,14 @@ impl UiState {
         self.enforce_message_limit();
     }
 
+    /// Add a command output message to the chat.
+    pub fn add_command_output(&mut self, command: String, text: String) {
+        self.messages
+            .push(ChatMessage::command_output(command, text));
+        self.messages_version += 1;
+        self.enforce_message_limit();
+    }
+
     /// Update the activity state and record when it changed.
     pub fn set_activity(&mut self, activity: Activity) {
         if self.activity != activity {
