@@ -339,6 +339,53 @@ async fn run_bridge(
                     }
                 }
             }
+            BridgeCommand::ExecuteCommand {
+                command,
+                session_id,
+                args,
+            } => {
+                let params = serde_json::json!({
+                    "sessionId": session_id.as_str(),
+                    "command": {
+                        "command": command,
+                        "args": args,
+                    }
+                });
+                let raw = match serde_json::value::RawValue::from_string(
+                    serde_json::to_string(&params).unwrap_or_else(|_| "null".to_string()),
+                ) {
+                    Ok(raw) => raw,
+                    Err(e) => {
+                        tracing::error!(error = %e, command, "failed to serialize execute params");
+                        continue;
+                    }
+                };
+                let raw_arc: Arc<serde_json::value::RawValue> = raw.into();
+                match conn
+                    .ext_method(acp::ExtRequest::new("kiro.dev/commands/execute", raw_arc))
+                    .await
+                {
+                    Ok(response) => {
+                        let value: serde_json::Value =
+                            serde_json::from_str(response.0.get())
+                                .unwrap_or(serde_json::Value::Null);
+                        if channels
+                            .notification_tx
+                            .send(Notification::CommandExecuted {
+                                command,
+                                response: value,
+                            })
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, command, "commands/execute failed");
+                    }
+                }
+            }
             BridgeCommand::Shutdown => {
                 tracing::info!("bridge shutting down");
                 break;
@@ -446,6 +493,35 @@ mod tests {
             assert_eq!(session_id.as_str(), "sess_test");
         } else {
             panic!("expected QueryCommandOptions, got {cmd:?}");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn execute_command_roundtrip() -> anyhow::Result<()> {
+        let (handle, mut bridge_side) = create_channel_pair();
+        let sender = handle.sender();
+
+        sender
+            .send(BridgeCommand::ExecuteCommand {
+                command: "tools".into(),
+                session_id: crate::types::SessionId::new("sess_test"),
+                args: serde_json::json!({}),
+            })
+            .await?;
+
+        let cmd = bridge_side.command_rx.recv().await;
+        if let Some(BridgeCommand::ExecuteCommand {
+            command,
+            session_id,
+            args,
+        }) = cmd
+        {
+            assert_eq!(command, "tools");
+            assert_eq!(session_id.as_str(), "sess_test");
+            assert_eq!(args, serde_json::json!({}));
+        } else {
+            panic!("expected ExecuteCommand, got {cmd:?}");
         }
         Ok(())
     }

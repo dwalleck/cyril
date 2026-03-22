@@ -288,6 +288,10 @@ impl UiState {
                 // Handled by the App layer (opens picker or shows message).
                 false
             }
+            Notification::CommandExecuted { .. } => {
+                // Handled by the App layer (formats and displays the response).
+                false
+            }
         }
     }
 

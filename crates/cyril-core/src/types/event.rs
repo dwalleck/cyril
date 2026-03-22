@@ -30,6 +30,12 @@ pub enum Notification {
         options: Vec<crate::types::command::CommandOption>,
     },
 
+    /// Response from executing an agent command via kiro.dev/commands/execute.
+    CommandExecuted {
+        command: String,
+        response: serde_json::Value,
+    },
+
     // Kiro extensions
     ContextUsageUpdated(ContextUsage),
     AgentSwitched {
@@ -109,6 +115,12 @@ pub enum BridgeCommand {
     QueryCommandOptions {
         command: String,
         session_id: SessionId,
+    },
+    /// Execute an agent command and emit the response as a notification.
+    ExecuteCommand {
+        command: String,
+        session_id: SessionId,
+        args: serde_json::Value,
     },
     Shutdown,
 }
@@ -279,5 +291,40 @@ mod tests {
         };
         let n2 = n.clone();
         assert!(matches!(n2, Notification::CommandOptionsReceived { .. }));
+    }
+
+    #[test]
+    fn notification_command_executed() {
+        let n = Notification::CommandExecuted {
+            command: "tools".into(),
+            response: serde_json::json!({"success": true, "message": "OK"}),
+        };
+        if let Notification::CommandExecuted { command, response } = n {
+            assert_eq!(command, "tools");
+            assert_eq!(response["success"], true);
+            assert_eq!(response["message"], "OK");
+        } else {
+            panic!("wrong variant");
+        }
+    }
+
+    #[test]
+    fn notification_command_executed_is_clone() {
+        let n = Notification::CommandExecuted {
+            command: "context".into(),
+            response: serde_json::json!({"success": true}),
+        };
+        let n2 = n.clone();
+        assert!(matches!(n2, Notification::CommandExecuted { .. }));
+    }
+
+    #[test]
+    fn bridge_command_execute_command() {
+        let cmd = BridgeCommand::ExecuteCommand {
+            command: "compact".into(),
+            session_id: SessionId::new("sess_1"),
+            args: serde_json::json!({}),
+        };
+        assert!(matches!(cmd, BridgeCommand::ExecuteCommand { .. }));
     }
 }

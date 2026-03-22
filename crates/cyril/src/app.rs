@@ -203,6 +203,13 @@ impl App {
             self.redraw_needed = true;
         }
 
+        // Handle command execution response
+        if let Notification::CommandExecuted { ref command, ref response } = notification {
+            let text = format_command_response(command, response);
+            self.ui_state.add_system_message(text);
+            self.redraw_needed = true;
+        }
+
         self.redraw_needed = self.redraw_needed || session_changed || ui_changed;
     }
 
@@ -306,15 +313,10 @@ impl App {
                         .to_string();
                     if let Some(session_id) = self.session.id() {
                         self.bridge_sender
-                            .send(BridgeCommand::ExtMethod {
-                                method: "kiro.dev/commands/execute".into(),
-                                params: serde_json::json!({
-                                    "sessionId": session_id.as_str(),
-                                    "command": {
-                                        "command": command_name,
-                                        "args": {"value": value}
-                                    }
-                                }),
+                            .send(BridgeCommand::ExecuteCommand {
+                                command: command_name,
+                                session_id: session_id.clone(),
+                                args: serde_json::json!({"value": value}),
                             })
                             .await?;
                     }
@@ -422,5 +424,236 @@ impl App {
             }
         }
         self.redraw_needed = true;
+    }
+}
+
+/// Format a `kiro.dev/commands/execute` response for display as a system message.
+///
+/// The response shape is `{"success": bool, "message": "...", "data": {...}}`.
+/// This handles tools lists, context breakdowns, usage breakdowns, and generic messages
+/// as a priority cascade.
+fn format_command_response(command: &str, response: &serde_json::Value) -> String {
+    let message = response
+        .get("message")
+        .and_then(|m| m.as_str())
+        .unwrap_or("");
+    let data = response.get("data");
+
+    // If there's tool data, format as a list
+    if let Some(tools) = data
+        .and_then(|d| d.get("tools"))
+        .and_then(|t| t.as_array())
+    {
+        let mut out = format!("{message}\n\n");
+        for tool in tools {
+            let name = tool.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+            let source = tool
+                .get("source")
+                .and_then(|s| s.as_str())
+                .unwrap_or("");
+            let desc = tool
+                .get("description")
+                .and_then(|d| d.as_str())
+                .unwrap_or("")
+                .lines()
+                .find(|l| !l.trim().is_empty())
+                .unwrap_or("")
+                .trim();
+            let source_tag = if !source.is_empty() && source != "built-in" {
+                format!(" ({source})")
+            } else {
+                String::new()
+            };
+            out.push_str(&format!("  {name} — {desc}{source_tag}\n"));
+        }
+        return out;
+    }
+
+    // If there's a context breakdown, format it
+    if let Some(breakdown) = data.and_then(|d| d.get("breakdown")) {
+        let pct = data
+            .and_then(|d| d.get("contextUsagePercentage"))
+            .and_then(|p| p.as_f64())
+            .unwrap_or(0.0);
+        let model = data
+            .and_then(|d| d.get("model"))
+            .and_then(|m| m.as_str())
+            .unwrap_or("unknown");
+        let mut out = format!("Context: {pct:.1}% used (model: {model})\n\n");
+        let categories = [
+            ("contextFiles", "Context files"),
+            ("tools", "Tools"),
+            ("yourPrompts", "Your prompts"),
+            ("kiroResponses", "Kiro responses"),
+            ("sessionFiles", "Session files"),
+        ];
+        for (key, label) in &categories {
+            if let Some(cat) = breakdown.get(*key) {
+                let tokens = cat.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
+                let cat_pct = cat
+                    .get("percent")
+                    .and_then(|p| p.as_f64())
+                    .unwrap_or(0.0);
+                if tokens > 0 {
+                    out.push_str(&format!("  {label}: {tokens} tokens ({cat_pct:.1}%)\n"));
+                }
+            }
+        }
+        return out;
+    }
+
+    // If there's usage breakdown data
+    if let Some(breakdowns) = data
+        .and_then(|d| d.get("usageBreakdowns"))
+        .and_then(|u| u.as_array())
+    {
+        let plan = data
+            .and_then(|d| d.get("planName"))
+            .and_then(|p| p.as_str())
+            .unwrap_or("Unknown");
+        let mut out = format!("Plan: {plan}\n\n");
+        for bd in breakdowns {
+            let name = bd
+                .get("displayName")
+                .and_then(|n| n.as_str())
+                .unwrap_or("?");
+            let used = bd.get("used").and_then(|u| u.as_f64()).unwrap_or(0.0);
+            let limit = bd.get("limit").and_then(|l| l.as_f64()).unwrap_or(0.0);
+            let pct = bd
+                .get("percentage")
+                .and_then(|p| p.as_u64())
+                .unwrap_or(0);
+            out.push_str(&format!("  {name}: {used:.0} / {limit:.0} ({pct}%)\n"));
+        }
+        return out;
+    }
+
+    // For well-formatted messages, just use them
+    if !message.is_empty() {
+        return message.to_string();
+    }
+
+    // Fallback
+    let success = response
+        .get("success")
+        .and_then(|s| s.as_bool())
+        .unwrap_or(true);
+    if success {
+        format!("/{command}: done.")
+    } else {
+        format!("/{command}: command failed.")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_response_tools_list() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "Available tools:",
+            "data": {
+                "tools": [
+                    {"name": "read", "description": "Read a file\nMore details", "source": "built-in"},
+                    {"name": "fetch", "description": "Fetch a URL", "source": "mcp-server"}
+                ]
+            }
+        });
+        let result = format_command_response("tools", &response);
+        assert!(result.contains("Available tools:"));
+        assert!(result.contains("  read — Read a file\n"));
+        assert!(result.contains("  fetch — Fetch a URL (mcp-server)\n"));
+    }
+
+    #[test]
+    fn format_response_context_breakdown() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "",
+            "data": {
+                "contextUsagePercentage": 42.5,
+                "model": "claude-sonnet",
+                "breakdown": {
+                    "contextFiles": {"tokens": 1000, "percent": 10.0},
+                    "tools": {"tokens": 500, "percent": 5.0},
+                    "yourPrompts": {"tokens": 2000, "percent": 20.0},
+                    "kiroResponses": {"tokens": 0, "percent": 0.0}
+                }
+            }
+        });
+        let result = format_command_response("context", &response);
+        assert!(result.contains("Context: 42.5% used (model: claude-sonnet)"));
+        assert!(result.contains("Context files: 1000 tokens (10.0%)"));
+        assert!(result.contains("Tools: 500 tokens (5.0%)"));
+        assert!(result.contains("Your prompts: 2000 tokens (20.0%)"));
+        // Zero-token categories should be omitted
+        assert!(!result.contains("Kiro responses"));
+    }
+
+    #[test]
+    fn format_response_usage_breakdowns() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "",
+            "data": {
+                "planName": "Pro",
+                "usageBreakdowns": [
+                    {"displayName": "Fast requests", "used": 150.0, "limit": 500.0, "percentage": 30}
+                ]
+            }
+        });
+        let result = format_command_response("usage", &response);
+        assert!(result.contains("Plan: Pro"));
+        assert!(result.contains("Fast requests: 150 / 500 (30%)"));
+    }
+
+    #[test]
+    fn format_response_plain_message() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "Context compacted successfully."
+        });
+        let result = format_command_response("compact", &response);
+        assert_eq!(result, "Context compacted successfully.");
+    }
+
+    #[test]
+    fn format_response_success_fallback() {
+        let response = serde_json::json!({"success": true});
+        let result = format_command_response("compact", &response);
+        assert_eq!(result, "/compact: done.");
+    }
+
+    #[test]
+    fn format_response_failure_fallback() {
+        let response = serde_json::json!({"success": false});
+        let result = format_command_response("compact", &response);
+        assert_eq!(result, "/compact: command failed.");
+    }
+
+    #[test]
+    fn format_response_null_data() {
+        let response = serde_json::Value::Null;
+        let result = format_command_response("test", &response);
+        assert_eq!(result, "/test: done.");
+    }
+
+    #[test]
+    fn format_response_tools_builtin_source_omitted() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "Tools:",
+            "data": {
+                "tools": [
+                    {"name": "read", "description": "Read a file", "source": "built-in"}
+                ]
+            }
+        });
+        let result = format_command_response("tools", &response);
+        // built-in source tag should NOT appear
+        assert!(!result.contains("(built-in)"));
+        assert!(result.contains("  read — Read a file\n"));
     }
 }

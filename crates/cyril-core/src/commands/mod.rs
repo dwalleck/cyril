@@ -212,25 +212,18 @@ impl Command for AgentCommand {
             return Ok(CommandResult::dispatched());
         }
 
-        // Execute command via kiro.dev/commands/execute with TuiCommand format
+        // Execute command via bridge — response comes back as CommandExecuted notification
         let cmd_args = if args.is_empty() {
             serde_json::json!({})
         } else {
             serde_json::json!({"value": args})
         };
 
-        let params = serde_json::json!({
-            "sessionId": session_id.as_str(),
-            "command": {
-                "command": self.name,
-                "args": cmd_args,
-            }
-        });
-
         ctx.bridge
-            .send(crate::types::BridgeCommand::ExtMethod {
-                method: "kiro.dev/commands/execute".into(),
-                params,
+            .send(crate::types::BridgeCommand::ExecuteCommand {
+                command: self.name.clone(),
+                session_id: session_id.clone(),
+                args: cmd_args,
             })
             .await?;
 
@@ -605,7 +598,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn agent_command_execute_sends_correct_method_and_format() {
+    async fn agent_command_execute_sends_correct_command_and_format() {
         let mut session = crate::session::SessionController::new();
         session.set_session(
             crate::types::SessionId::new("sess_test"),
@@ -631,13 +624,17 @@ mod tests {
         ));
 
         let bridge_cmd = rx.recv().await.unwrap();
-        if let crate::types::BridgeCommand::ExtMethod { method, params } = bridge_cmd {
-            assert_eq!(method, "kiro.dev/commands/execute");
-            assert_eq!(params["sessionId"], "sess_test");
-            assert_eq!(params["command"]["command"], "compact");
-            assert_eq!(params["command"]["args"], serde_json::json!({}));
+        if let crate::types::BridgeCommand::ExecuteCommand {
+            command,
+            session_id,
+            args,
+        } = bridge_cmd
+        {
+            assert_eq!(command, "compact");
+            assert_eq!(session_id.as_str(), "sess_test");
+            assert_eq!(args, serde_json::json!({}));
         } else {
-            panic!("expected ExtMethod, got {bridge_cmd:?}");
+            panic!("expected ExecuteCommand, got {bridge_cmd:?}");
         }
     }
 
@@ -664,12 +661,16 @@ mod tests {
         assert!(result.is_ok());
 
         let bridge_cmd = rx.recv().await.unwrap();
-        if let crate::types::BridgeCommand::ExtMethod { method, params } = bridge_cmd {
-            assert_eq!(method, "kiro.dev/commands/execute");
-            assert_eq!(params["command"]["command"], "model");
-            assert_eq!(params["command"]["args"]["value"], "claude-sonnet");
+        if let crate::types::BridgeCommand::ExecuteCommand {
+            command,
+            session_id: _,
+            args,
+        } = bridge_cmd
+        {
+            assert_eq!(command, "model");
+            assert_eq!(args["value"], "claude-sonnet");
         } else {
-            panic!("expected ExtMethod, got {bridge_cmd:?}");
+            panic!("expected ExecuteCommand, got {bridge_cmd:?}");
         }
     }
 
