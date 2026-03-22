@@ -51,7 +51,6 @@ impl BridgeSender {
 }
 
 /// The bridge side of the channels (held by the bridge thread).
-#[expect(dead_code, reason = "will be consumed by bridge loop in a later task")]
 pub(crate) struct BridgeChannels {
     pub command_rx: mpsc::Receiver<BridgeCommand>,
     pub notification_tx: mpsc::Sender<Notification>,
@@ -59,7 +58,6 @@ pub(crate) struct BridgeChannels {
 }
 
 /// Create a matched pair of BridgeHandle + BridgeChannels.
-#[expect(dead_code, reason = "will be consumed by bridge loop in a later task")]
 pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     let (command_tx, command_rx) = mpsc::channel(COMMAND_CAPACITY);
     let (notification_tx, notification_rx) = mpsc::channel(NOTIFICATION_CAPACITY);
