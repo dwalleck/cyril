@@ -293,20 +293,25 @@ impl App {
             KeyCode::Down => self.ui_state.picker_select_next(),
             KeyCode::Enter => {
                 if let Some(value) = self.ui_state.picker_confirm() {
-                    let title = self
+                    let command_name = self
                         .ui_state
                         .picker_title()
                         .unwrap_or_default()
                         .to_string();
-                    self.bridge_sender
-                        .send(BridgeCommand::ExtMethod {
-                            method: "kiro.dev/commands/execute".into(),
-                            params: serde_json::json!({
-                                "command": title,
-                                "args": {"value": value}
-                            }),
-                        })
-                        .await?;
+                    if let Some(session_id) = self.session.id() {
+                        self.bridge_sender
+                            .send(BridgeCommand::ExtMethod {
+                                method: "kiro.dev/commands/execute".into(),
+                                params: serde_json::json!({
+                                    "sessionId": session_id.as_str(),
+                                    "command": {
+                                        "command": command_name,
+                                        "args": {"value": value}
+                                    }
+                                }),
+                            })
+                            .await?;
+                    }
                 }
             }
             KeyCode::Esc => self.ui_state.picker_cancel(),
