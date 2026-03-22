@@ -1,5 +1,6 @@
 pub mod cache;
 pub mod error;
+pub mod file_completer;
 pub mod highlight;
 pub mod render;
 pub mod state;
