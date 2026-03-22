@@ -259,22 +259,7 @@ impl App {
                 self.ui_state.dismiss_autocomplete();
             }
             (KeyModifiers::NONE, KeyCode::Enter) => {
-                // If autocomplete is showing, accept the suggestion first
-                if !self.ui_state.autocomplete_suggestions().is_empty() {
-                    let was_slash = self
-                        .ui_state
-                        .autocomplete_suggestions()
-                        .first()
-                        .is_some_and(|s| s.text.starts_with('/'));
-                    self.ui_state.accept_autocomplete();
-                    // For slash commands: accept AND submit immediately (FR-INPUT-042)
-                    if was_slash {
-                        self.submit_input().await?;
-                    }
-                    // For @file: just accept, don't submit (user is still composing)
-                } else {
-                    self.submit_input().await?;
-                }
+                self.submit_input().await?;
             }
             (KeyModifiers::NONE, KeyCode::Esc) => {
                 if matches!(self.session.status(), SessionStatus::Busy) {
