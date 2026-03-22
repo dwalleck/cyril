@@ -103,6 +103,11 @@ impl SessionController {
                 self.status = SessionStatus::Active;
                 true
             }
+            Notification::SessionCreated { session_id } => {
+                self.id = Some(session_id.clone());
+                self.status = SessionStatus::Active;
+                true
+            }
             Notification::BridgeDisconnected { .. } => {
                 self.status = SessionStatus::Disconnected;
                 true

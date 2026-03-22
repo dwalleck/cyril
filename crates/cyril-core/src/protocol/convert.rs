@@ -85,9 +85,48 @@ pub(crate) fn to_ext_notification(
                 .map(String::from);
             Ok(Notification::AgentSwitched { name, welcome })
         }
-        other => Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
-            message: format!("unknown extension: {other}"),
-        })),
+        "kiro.dev/commands/available" => {
+            // Parse the commands list from the payload.
+            // Kiro sends: {"commands": [...]} or {"availableCommands": [...]} or just [...]
+            let commands_value = params
+                .get("commands")
+                .or_else(|| params.get("availableCommands"))
+                .unwrap_or(params);
+
+            let commands = if let Some(arr) = commands_value.as_array() {
+                arr.iter()
+                    .filter_map(|v| {
+                        let name = v.get("name").or_else(|| v.get("command"))
+                            .and_then(|n| n.as_str())?;
+                        let label = v.get("label").and_then(|l| l.as_str())
+                            .unwrap_or(name);
+                        let description = v.get("description").and_then(|d| d.as_str())
+                            .map(String::from);
+                        let has_options = v.get("hasOptions").and_then(|h| h.as_bool())
+                            .unwrap_or(false);
+                        Some(CommandInfo::new(name, label, description, has_options))
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
+
+            Ok(Notification::CommandsUpdated(commands))
+        }
+        "kiro.dev/session/update" => {
+            // Kiro-specific session update notifications (e.g., tool_call_chunk)
+            // For now, log and skip — these are supplementary to standard ACP notifications
+            tracing::debug!(method, "kiro.dev/session/update received (not yet handled)");
+            Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
+                message: format!("unhandled extension: {method}"),
+            }))
+        }
+        other => {
+            tracing::debug!(method = other, "unknown extension notification");
+            Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
+                message: format!("unknown extension: {other}"),
+            }))
+        },
     }
 }
 
