@@ -306,12 +306,7 @@ impl App {
             KeyCode::Up => self.ui_state.picker_select_prev(),
             KeyCode::Down => self.ui_state.picker_select_next(),
             KeyCode::Enter => {
-                if let Some(value) = self.ui_state.picker_confirm() {
-                    let command_name = self
-                        .ui_state
-                        .picker_title()
-                        .unwrap_or_default()
-                        .to_string();
+                if let Some((command_name, value)) = self.ui_state.picker_confirm() {
                     if let Some(session_id) = self.session.id() {
                         self.bridge_sender
                             .send(BridgeCommand::ExecuteCommand {

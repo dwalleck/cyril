@@ -714,10 +714,14 @@ impl UiState {
     }
 
     /// Confirm the picker selection. Returns the selected value if any.
-    pub fn picker_confirm(&mut self) -> Option<String> {
+    /// Confirm the picker selection and close the dialog.
+    /// Returns (command_name, selected_value) — both are needed by the caller
+    /// to construct the bridge command. Returns None if nothing was selected.
+    pub fn picker_confirm(&mut self) -> Option<(String, String)> {
         let picker = self.picker.take()?;
         let idx = picker.filtered_indices.get(picker.selected).copied()?;
-        picker.options.get(idx).map(|opt| opt.value.clone())
+        let value = picker.options.get(idx)?.value.clone();
+        Some((picker.title.clone(), value))
     }
 
     /// Cancel and close the picker dialog.
