@@ -236,8 +236,6 @@ impl UiState {
             }
             Notification::TurnCompleted => {
                 self.commit_streaming();
-                self.active_tool_calls.clear();
-                self.tool_call_index.clear();
                 self.set_activity(Activity::Ready);
                 true
             }
@@ -308,15 +306,27 @@ impl UiState {
         }
     }
 
-    /// Flush any streaming text into the message list.
+    /// Flush streaming text and active tool calls into the message list.
     pub fn commit_streaming(&mut self) {
+        let had_content = !self.streaming_text.is_empty() || !self.active_tool_calls.is_empty();
+
         if !self.streaming_text.is_empty() {
             let text = std::mem::take(&mut self.streaming_text);
             self.messages.push(ChatMessage::agent_text(text));
+        }
+
+        // Commit tool calls as individual messages so they appear in history
+        for tc in self.active_tool_calls.drain(..) {
+            self.messages.push(ChatMessage::tool_call(tc));
+        }
+        self.tool_call_index.clear();
+
+        self.streaming_thought = None;
+
+        if had_content {
             self.messages_version += 1;
             self.enforce_message_limit();
         }
-        self.streaming_thought = None;
     }
 
     /// Add a user message to the chat history.
@@ -574,8 +584,7 @@ impl UiState {
             && let Some(at_pos) = self.input_text[..self.input_cursor].rfind('@')
         {
             let after_cursor = self.input_text[self.input_cursor..].to_string();
-            self.input_text =
-                format!("{}{suggestion} {after_cursor}", &self.input_text[..at_pos]);
+            self.input_text = format!("{}{suggestion} {after_cursor}", &self.input_text[..at_pos]);
             self.input_cursor = at_pos + suggestion.len() + 1; // +1 for space
         }
 
@@ -904,9 +913,7 @@ mod tests {
         }
         assert_eq!(state.messages().len(), 3);
         // Oldest messages removed
-        assert!(
-            matches!(state.messages()[0].kind(), ChatMessageKind::UserText(t) if t == "msg 2")
-        );
+        assert!(matches!(state.messages()[0].kind(), ChatMessageKind::UserText(t) if t == "msg 2"));
     }
 
     #[test]
@@ -914,9 +921,7 @@ mod tests {
         let mut state = UiState::new(500);
         state.add_system_message("Welcome".into());
         assert_eq!(state.messages().len(), 1);
-        assert!(
-            matches!(state.messages()[0].kind(), ChatMessageKind::System(t) if t == "Welcome")
-        );
+        assert!(matches!(state.messages()[0].kind(), ChatMessageKind::System(t) if t == "Welcome"));
     }
 
     #[test]
