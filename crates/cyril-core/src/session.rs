@@ -87,8 +87,10 @@ impl SessionController {
                 self.context_usage = Some(usage.clone());
                 true
             }
-            Notification::ConfigOptionsUpdated(_options) => {
-                // TODO: extract model from config options when Kiro supports it
+            Notification::ConfigOptionsUpdated(options) => {
+                if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
+                    self.cached_model = model_opt.value.clone();
+                }
                 true
             }
             Notification::CommandsUpdated(cmds) => {

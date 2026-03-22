@@ -285,8 +285,16 @@ impl UiState {
                 self.set_activity(Activity::ToolRunning);
                 true
             }
-            Notification::ConfigOptionsUpdated(_) | Notification::CommandsUpdated(_) => {
-                // These are consumed by the App layer, not UiState directly.
+            Notification::ConfigOptionsUpdated(options) => {
+                if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
+                    self.current_model = model_opt.value.clone();
+                    true
+                } else {
+                    false
+                }
+            }
+            Notification::CommandsUpdated(_) => {
+                // Consumed by the App layer (registers in CommandRegistry).
                 false
             }
             Notification::CommandOptionsReceived { .. } => {
@@ -323,6 +331,11 @@ impl UiState {
         self.messages.push(ChatMessage::system(text));
         self.messages_version += 1;
         self.enforce_message_limit();
+    }
+
+    /// Set the current model name (displayed in toolbar).
+    pub fn set_current_model(&mut self, model: Option<String>) {
+        self.current_model = model;
     }
 
     /// Add a command output message to the chat.

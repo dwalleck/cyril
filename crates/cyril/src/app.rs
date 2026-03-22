@@ -208,6 +208,19 @@ impl App {
             let text = format_command_response(command, response);
             self.ui_state
                 .add_command_output(command.clone(), text);
+
+            // Extract model change from /model command response
+            if command == "model" {
+                if let Some(model_id) = response
+                    .get("data")
+                    .and_then(|d| d.get("model"))
+                    .and_then(|m| m.get("id"))
+                    .and_then(|id| id.as_str())
+                {
+                    self.ui_state.set_current_model(Some(model_id.to_string()));
+                }
+            }
+
             self.redraw_needed = true;
         }
 
