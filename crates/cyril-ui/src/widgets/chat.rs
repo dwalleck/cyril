@@ -220,27 +220,27 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     }
 }
 
-/// Compute (added, removed) line counts from diff content.
+/// Compute (added, removed) line counts from diff content using `similar`.
 fn compute_diff_summary(tc: &TrackedToolCall) -> Option<(usize, usize)> {
+    use similar::{ChangeTag, TextDiff};
+
     for content in tc.content() {
         if let cyril_core::types::ToolCallContent::Diff {
             old_text, new_text, ..
         } = content
         {
             let old = old_text.as_deref().unwrap_or("");
-            let old_count = old.lines().count();
-            let new_count = new_text.lines().count();
-            let added = new_count.saturating_sub(old_count);
-            let removed = old_count.saturating_sub(new_count);
-            if added > 0 || removed > 0 || old != new_text.as_str() {
-                if added == 0 && removed == 0 {
-                    let changed = old
-                        .lines()
-                        .zip(new_text.lines())
-                        .filter(|(a, b)| a != b)
-                        .count();
-                    return Some((changed, changed));
+            let diff = TextDiff::from_lines(old, new_text);
+            let mut added = 0usize;
+            let mut removed = 0usize;
+            for change in diff.iter_all_changes() {
+                match change.tag() {
+                    ChangeTag::Insert => added += 1,
+                    ChangeTag::Delete => removed += 1,
+                    ChangeTag::Equal => {}
                 }
+            }
+            if added > 0 || removed > 0 {
                 return Some((added, removed));
             }
         }
@@ -248,8 +248,11 @@ fn compute_diff_summary(tc: &TrackedToolCall) -> Option<(usize, usize)> {
     None
 }
 
-/// Render actual diff lines for edit operations (max 20 lines).
+/// Render actual diff lines with line numbers for edit operations.
+/// Uses the `similar` crate for proper diff computation with context lines.
 fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+    use similar::{ChangeTag, TextDiff};
+
     const MAX_DIFF_LINES: usize = 20;
 
     for content in tc.content() {
@@ -258,46 +261,55 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
         } = content
         {
             let old = old_text.as_deref().unwrap_or("");
-            let old_lines_vec: Vec<&str> = old.lines().collect();
-            let new_lines_vec: Vec<&str> = new_text.lines().collect();
-
+            let diff = TextDiff::from_lines(old, new_text);
             let mut count = 0;
 
-            for line in &old_lines_vec {
-                if count >= MAX_DIFF_LINES {
-                    lines.push(Line::styled(
-                        "      ...".to_string(),
-                        Style::default().fg(Color::DarkGray),
-                    ));
-                    return;
-                }
-                if !new_lines_vec.contains(line) {
-                    lines.push(Line::styled(
-                        format!("    - {line}"),
-                        Style::default().fg(Color::Red),
-                    ));
-                    count += 1;
+            for group in diff.grouped_ops(1) {
+                for op in &group {
+                    for change in diff.iter_changes(op) {
+                        if count >= MAX_DIFF_LINES {
+                            lines.push(Line::styled(
+                                "      ...".to_string(),
+                                Style::default().fg(Color::DarkGray),
+                            ));
+                            return;
+                        }
+
+                        let line_text = change.value().trim_end_matches('\n');
+
+                        let (prefix, color) = match change.tag() {
+                            ChangeTag::Delete => {
+                                let line_no = change.old_index().map(|i| i + 1).unwrap_or(0);
+                                (format!("    {line_no:>4} │- "), Color::Red)
+                            }
+                            ChangeTag::Insert => {
+                                let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
+                                (format!("    {line_no:>4} │+ "), Color::Green)
+                            }
+                            ChangeTag::Equal => {
+                                let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
+                                (format!("    {line_no:>4} │  "), Color::DarkGray)
+                            }
+                        };
+
+                        lines.push(Line::from(vec![
+                            Span::styled(prefix, Style::default().fg(color)),
+                            Span::styled(
+                                line_text.to_string(),
+                                if change.tag() == ChangeTag::Equal {
+                                    Style::default().fg(Color::DarkGray)
+                                } else {
+                                    Style::default().fg(color)
+                                },
+                            ),
+                        ]));
+
+                        count += 1;
+                    }
                 }
             }
 
-            for line in &new_lines_vec {
-                if count >= MAX_DIFF_LINES {
-                    lines.push(Line::styled(
-                        "      ...".to_string(),
-                        Style::default().fg(Color::DarkGray),
-                    ));
-                    return;
-                }
-                if !old_lines_vec.contains(line) {
-                    lines.push(Line::styled(
-                        format!("    + {line}"),
-                        Style::default().fg(Color::Green),
-                    ));
-                    count += 1;
-                }
-            }
-
-            // Only render first diff
+            // Only render first diff block
             return;
         }
     }

@@ -21,6 +21,7 @@ tokio = { workspace = true, features = ["sync", "process"] }
 tracing = { workspace = true }
 nucleo-matcher = { workspace = true }
 pulldown-cmark = { workspace = true }
+similar = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
