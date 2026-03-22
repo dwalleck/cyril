@@ -170,6 +170,38 @@ impl TrackedToolCall {
     pub fn raw_input(&self) -> Option<&serde_json::Value> {
         self.inner.raw_input()
     }
+
+    pub fn content(&self) -> &[cyril_core::types::ToolCallContent] {
+        self.inner.content()
+    }
+
+    pub fn locations(&self) -> &[cyril_core::types::ToolCallLocation] {
+        self.inner.locations()
+    }
+
+    /// Get the primary file path from locations, then from diff content, then from raw_input.
+    pub fn primary_path(&self) -> Option<&str> {
+        if let Some(loc) = self.inner.locations().first() {
+            return Some(&loc.path);
+        }
+        for c in self.inner.content() {
+            if let cyril_core::types::ToolCallContent::Diff { path, .. } = c {
+                return Some(path);
+            }
+        }
+        self.inner
+            .raw_input()
+            .and_then(|v| v.get("file_path").or_else(|| v.get("path")))
+            .and_then(|v| v.as_str())
+    }
+
+    /// Extract command string from raw_input for Execute kind.
+    pub fn command_text(&self) -> Option<&str> {
+        self.inner
+            .raw_input()
+            .and_then(|v| v.get("command"))
+            .and_then(|v| v.as_str())
+    }
 }
 
 /// Autocomplete suggestion for input.

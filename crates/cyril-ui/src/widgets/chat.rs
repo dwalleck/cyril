@@ -131,44 +131,173 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
 }
 
 fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+    use cyril_core::types::{ToolCallStatus, ToolKind};
+
     let status_icon = match tc.status() {
-        cyril_core::types::ToolCallStatus::InProgress => "⟳",
-        cyril_core::types::ToolCallStatus::Pending => "⏳",
-        cyril_core::types::ToolCallStatus::Completed => "✓",
-        cyril_core::types::ToolCallStatus::Failed => "✗",
+        ToolCallStatus::InProgress => "⟳",
+        ToolCallStatus::Pending => "⏳",
+        ToolCallStatus::Completed => "✓",
+        ToolCallStatus::Failed => "✗",
     };
 
-    let kind_label = match tc.kind() {
-        cyril_core::types::ToolKind::Read => "Read",
-        cyril_core::types::ToolKind::Write => "Edit",
-        cyril_core::types::ToolKind::Execute => "Run",
-        cyril_core::types::ToolKind::Other => "Tool",
+    let label = match tc.kind() {
+        ToolKind::Read => {
+            if let Some(path) = tc.primary_path() {
+                format!("Read({path})")
+            } else {
+                tc.title().unwrap_or(tc.name()).to_string()
+            }
+        }
+        ToolKind::Write => {
+            if let Some(path) = tc.primary_path() {
+                format!("Edit({path})")
+            } else {
+                tc.title().unwrap_or(tc.name()).to_string()
+            }
+        }
+        ToolKind::Execute => {
+            if let Some(cmd) = tc.command_text() {
+                let display: String = cmd.chars().take(50).collect();
+                if cmd.len() > 50 {
+                    format!("Run({display}...)")
+                } else {
+                    format!("Run({display})")
+                }
+            } else {
+                tc.title().unwrap_or(tc.name()).to_string()
+            }
+        }
+        ToolKind::Search => tc.title().unwrap_or("Search").to_string(),
+        ToolKind::Think => "Thinking...".to_string(),
+        ToolKind::Fetch => tc.title().unwrap_or("Fetch").to_string(),
+        ToolKind::Other => tc.title().unwrap_or(tc.name()).to_string(),
     };
 
-    let title = tc.title().unwrap_or(tc.name());
     let color = match tc.status() {
-        cyril_core::types::ToolCallStatus::Completed => Color::Green,
-        cyril_core::types::ToolCallStatus::Failed => Color::Red,
+        ToolCallStatus::Completed => Color::Green,
+        ToolCallStatus::Failed => Color::Red,
         _ => Color::Yellow,
     };
 
-    lines.push(Line::from(vec![
+    let kind_color = match tc.kind() {
+        ToolKind::Read => Color::Blue,
+        ToolKind::Write => Color::Magenta,
+        ToolKind::Execute => Color::Yellow,
+        ToolKind::Search => Color::Cyan,
+        ToolKind::Think => Color::DarkGray,
+        ToolKind::Fetch => Color::Cyan,
+        ToolKind::Other => Color::White,
+    };
+
+    let mut header_spans = vec![
         Span::styled(format!("{status_icon} "), Style::default().fg(color)),
-        Span::styled(
-            kind_label.to_string(),
-            Style::default().fg(color).add_modifier(Modifier::BOLD),
-        ),
-        Span::styled(format!("({title})"), Style::default().fg(Color::DarkGray)),
-    ]));
+        Span::styled(label, Style::default().fg(kind_color)),
+    ];
+
+    if let Some((added, removed)) = compute_diff_summary(tc) {
+        header_spans.push(Span::styled(
+            format!("  +{added} -{removed}"),
+            Style::default().fg(Color::DarkGray),
+        ));
+    }
+
+    lines.push(Line::from(header_spans));
+
+    if tc.status() == ToolCallStatus::Completed && tc.kind() == ToolKind::Write {
+        render_diff_lines(lines, tc);
+    }
+}
+
+/// Compute (added, removed) line counts from diff content.
+fn compute_diff_summary(tc: &TrackedToolCall) -> Option<(usize, usize)> {
+    for content in tc.content() {
+        if let cyril_core::types::ToolCallContent::Diff {
+            old_text, new_text, ..
+        } = content
+        {
+            let old = old_text.as_deref().unwrap_or("");
+            let old_count = old.lines().count();
+            let new_count = new_text.lines().count();
+            let added = new_count.saturating_sub(old_count);
+            let removed = old_count.saturating_sub(new_count);
+            if added > 0 || removed > 0 || old != new_text.as_str() {
+                if added == 0 && removed == 0 {
+                    let changed = old
+                        .lines()
+                        .zip(new_text.lines())
+                        .filter(|(a, b)| a != b)
+                        .count();
+                    return Some((changed, changed));
+                }
+                return Some((added, removed));
+            }
+        }
+    }
+    None
+}
+
+/// Render actual diff lines for edit operations (max 20 lines).
+fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+    const MAX_DIFF_LINES: usize = 20;
+
+    for content in tc.content() {
+        if let cyril_core::types::ToolCallContent::Diff {
+            old_text, new_text, ..
+        } = content
+        {
+            let old = old_text.as_deref().unwrap_or("");
+            let old_lines_vec: Vec<&str> = old.lines().collect();
+            let new_lines_vec: Vec<&str> = new_text.lines().collect();
+
+            let mut count = 0;
+
+            for line in &old_lines_vec {
+                if count >= MAX_DIFF_LINES {
+                    lines.push(Line::styled(
+                        "      ...".to_string(),
+                        Style::default().fg(Color::DarkGray),
+                    ));
+                    return;
+                }
+                if !new_lines_vec.contains(line) {
+                    lines.push(Line::styled(
+                        format!("    - {line}"),
+                        Style::default().fg(Color::Red),
+                    ));
+                    count += 1;
+                }
+            }
+
+            for line in &new_lines_vec {
+                if count >= MAX_DIFF_LINES {
+                    lines.push(Line::styled(
+                        "      ...".to_string(),
+                        Style::default().fg(Color::DarkGray),
+                    ));
+                    return;
+                }
+                if !old_lines_vec.contains(line) {
+                    lines.push(Line::styled(
+                        format!("    + {line}"),
+                        Style::default().fg(Color::Green),
+                    ));
+                    count += 1;
+                }
+            }
+
+            // Only render first diff
+            return;
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::test_support::MockTuiState;
     use crate::traits::ChatMessage;
-    use ratatui::backend::TestBackend;
+    use crate::traits::test_support::MockTuiState;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn chat_renders_empty() {
