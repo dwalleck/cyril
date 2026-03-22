@@ -356,6 +356,198 @@ mod tests {
     }
 
     #[test]
+    fn render_tool_call_with_diff_shows_line_numbers() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "write".into(),
+                Some("Editing main.rs".into()),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "src/main.rs".into(),
+                old_text: Some("fn main() {\n    println!(\"old\");\n}\n".into()),
+                new_text: "fn main() {\n    println!(\"new\");\n    println!(\"extra\");\n}\n"
+                    .into(),
+            }])
+            .with_locations(vec![ToolCallLocation {
+                path: "src/main.rs".into(),
+                line: Some(1),
+            }]),
+        );
+
+        let mut lines: Vec<Line> = Vec::new();
+        render_tool_call(&mut lines, &tc);
+
+        // Header should have label and diff summary
+        let header = lines[0].to_string();
+        assert!(
+            header.contains("Edit"),
+            "header should contain Edit label: {header}"
+        );
+        assert!(
+            header.contains("+"),
+            "header should contain diff summary: {header}"
+        );
+
+        // Should have diff lines with line numbers and │ separator
+        let diff_lines: Vec<String> = lines[1..].iter().map(|l| l.to_string()).collect();
+        let has_gutter = diff_lines.iter().any(|l| l.contains('│'));
+        assert!(
+            has_gutter,
+            "diff lines should have │ gutter separator: {diff_lines:?}"
+        );
+
+        let has_add = diff_lines.iter().any(|l| l.contains("│+"));
+        let has_del = diff_lines.iter().any(|l| l.contains("│-"));
+        assert!(has_add, "should have added lines: {diff_lines:?}");
+        assert!(has_del, "should have removed lines: {diff_lines:?}");
+    }
+
+    #[test]
+    fn render_tool_call_diff_summary_counts() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "write".into(),
+                None,
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "file.rs".into(),
+                old_text: Some("line1\nline2\nline3\n".into()),
+                new_text: "line1\nchanged\nline3\nnew_line\n".into(),
+            }]),
+        );
+
+        let mut lines: Vec<Line> = Vec::new();
+        render_tool_call(&mut lines, &tc);
+
+        // Header should show +2 -1 (one changed + one added = 2 inserts, 1 delete)
+        let header = lines[0].to_string();
+        assert!(header.contains('+'), "should show additions: {header}");
+        assert!(header.contains('-'), "should show removals: {header}");
+    }
+
+    #[test]
+    fn render_tool_call_no_diff_for_read() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            Some("Reading file.rs".into()),
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        ));
+
+        let mut lines: Vec<Line> = Vec::new();
+        render_tool_call(&mut lines, &tc);
+
+        // Read tool calls should only have a header, no diff lines
+        assert_eq!(
+            lines.len(),
+            1,
+            "read tool call should only have header line"
+        );
+    }
+
+    #[test]
+    fn render_tool_call_diff_respects_max_lines() {
+        use cyril_core::types::*;
+
+        // Create a large diff that exceeds MAX_DIFF_LINES
+        let old_text: String = (0..30).map(|i| format!("old line {i}\n")).collect();
+        let new_text: String = (0..30).map(|i| format!("new line {i}\n")).collect();
+
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "write".into(),
+                None,
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "big.rs".into(),
+                old_text: Some(old_text),
+                new_text,
+            }]),
+        );
+
+        let mut lines: Vec<Line> = Vec::new();
+        render_tool_call(&mut lines, &tc);
+
+        // Should have header + at most 20 diff lines + "..." overflow
+        let last_line = lines.last().map(|l| l.to_string()).unwrap_or_default();
+        assert!(
+            last_line.contains("..."),
+            "large diff should show overflow indicator: {last_line}"
+        );
+        // Total lines should be capped (header + <=21 diff lines including overflow)
+        assert!(
+            lines.len() <= 23,
+            "should be capped, got {} lines",
+            lines.len()
+        );
+    }
+
+    #[test]
+    fn render_tool_call_smart_labels() {
+        use cyril_core::types::*;
+
+        // Read with location
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "read".into(),
+                None,
+                ToolKind::Read,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_locations(vec![ToolCallLocation {
+                path: "src/main.rs".into(),
+                line: None,
+            }]),
+        );
+        let mut lines = Vec::new();
+        render_tool_call(&mut lines, &tc);
+        let header = lines[0].to_string();
+        assert!(
+            header.contains("Read(src/main.rs)"),
+            "should show Read(path): {header}"
+        );
+
+        // Execute with command
+        let tc = TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("tc_2"),
+            "shell".into(),
+            None,
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            Some(serde_json::json!({"command": "cargo test"})),
+        ));
+        let mut lines = Vec::new();
+        render_tool_call(&mut lines, &tc);
+        let header = lines[0].to_string();
+        assert!(
+            header.contains("Run(cargo test)"),
+            "should show Run(cmd): {header}"
+        );
+    }
+
+    #[test]
     fn chat_renders_streaming() {
         let state = MockTuiState {
             streaming_text: "Streaming **markdown** content".into(),
