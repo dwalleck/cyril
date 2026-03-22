@@ -10,7 +10,7 @@ use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, Comma
 use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
 use cyril_core::types::*;
-use cyril_ui::state::UiState;
+use cyril_ui::state::{AutocompleteAction, UiState};
 use cyril_ui::traits::{Activity, TuiState};
 
 pub struct App {
@@ -236,28 +236,22 @@ impl App {
             return Ok(());
         }
 
-        // Layer 3: Normal input
+        // Layer 3: Autocomplete (if active — consumes relevant keys)
+        match self.ui_state.handle_autocomplete_key(key) {
+            AutocompleteAction::Consumed | AutocompleteAction::Accepted => {
+                self.redraw_needed = true;
+                return Ok(());
+            }
+            AutocompleteAction::AcceptedAndSubmit => {
+                self.submit_input().await?;
+                self.redraw_needed = true;
+                return Ok(());
+            }
+            AutocompleteAction::NotActive => {} // Fall through to Layer 4
+        }
+
+        // Layer 4: Normal input
         match (key.modifiers, key.code) {
-            (KeyModifiers::NONE, KeyCode::Tab) => {
-                if self.ui_state.accept_autocomplete() {
-                    // Autocomplete accepted — don't process further
-                }
-            }
-            (KeyModifiers::NONE, KeyCode::Up)
-                if !self.ui_state.autocomplete_suggestions().is_empty() =>
-            {
-                self.ui_state.autocomplete_prev();
-            }
-            (KeyModifiers::NONE, KeyCode::Down)
-                if !self.ui_state.autocomplete_suggestions().is_empty() =>
-            {
-                self.ui_state.autocomplete_next();
-            }
-            (KeyModifiers::NONE, KeyCode::Esc)
-                if !self.ui_state.autocomplete_suggestions().is_empty() =>
-            {
-                self.ui_state.dismiss_autocomplete();
-            }
             (KeyModifiers::NONE, KeyCode::Enter) => {
                 self.submit_input().await?;
             }

@@ -1,10 +1,24 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use crossterm::event::{KeyCode, KeyEvent};
 use cyril_core::types::*;
 
 use crate::file_completer::FileCompleter;
 use crate::traits::*;
+
+/// Result of handling a key event when autocomplete is active.
+#[derive(Debug, PartialEq, Eq)]
+pub enum AutocompleteAction {
+    /// No autocomplete was active — caller should handle the key normally.
+    NotActive,
+    /// Key was consumed by autocomplete (navigation, dismiss). No further action needed.
+    Consumed,
+    /// A suggestion was accepted into the input. Caller should NOT submit.
+    Accepted,
+    /// A slash command suggestion was accepted AND should be submitted immediately.
+    AcceptedAndSubmit,
+}
 
 pub struct UiState {
     // Chat
@@ -331,6 +345,8 @@ impl UiState {
     /// Take the current input text, clearing the input buffer and cursor.
     pub fn take_input(&mut self) -> String {
         self.input_cursor = 0;
+        self.autocomplete_suggestions.clear();
+        self.autocomplete_selected = None;
         std::mem::take(&mut self.input_text)
     }
 
@@ -552,6 +568,53 @@ impl UiState {
     pub fn dismiss_autocomplete(&mut self) {
         self.autocomplete_suggestions.clear();
         self.autocomplete_selected = None;
+    }
+
+    /// Handle a key event when autocomplete is active (Layer 2.5).
+    /// Returns an action telling the caller what to do next.
+    ///
+    /// This is the single authority for autocomplete key handling — the caller
+    /// should NOT inspect autocomplete state or make decisions about it.
+    pub fn handle_autocomplete_key(&mut self, key: KeyEvent) -> AutocompleteAction {
+        if self.autocomplete_suggestions.is_empty() {
+            return AutocompleteAction::NotActive;
+        }
+
+        match key.code {
+            KeyCode::Tab => {
+                self.accept_autocomplete();
+                AutocompleteAction::Accepted
+            }
+            KeyCode::Up => {
+                self.autocomplete_prev();
+                AutocompleteAction::Consumed
+            }
+            KeyCode::Down => {
+                self.autocomplete_next();
+                AutocompleteAction::Consumed
+            }
+            KeyCode::Esc => {
+                self.dismiss_autocomplete();
+                AutocompleteAction::Consumed
+            }
+            KeyCode::Enter => {
+                let is_slash = self
+                    .autocomplete_suggestions
+                    .first()
+                    .is_some_and(|s| s.text.starts_with('/'));
+                self.accept_autocomplete();
+                if is_slash {
+                    AutocompleteAction::AcceptedAndSubmit
+                } else {
+                    AutocompleteAction::Accepted
+                }
+            }
+            _ => {
+                // Any other key dismisses autocomplete and passes through to normal input
+                self.dismiss_autocomplete();
+                AutocompleteAction::NotActive
+            }
+        }
     }
 
     // --- Approval dialog methods ---
