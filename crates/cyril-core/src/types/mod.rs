@@ -8,8 +8,12 @@ pub mod tool_call;
 
 // Convenience re-exports
 pub use command::{CommandInfo, CommandOption, ConfigOption};
-pub use event::{BridgeCommand, Notification, PermissionOption, PermissionRequest, PermissionResponse};
+pub use event::{
+    BridgeCommand, Notification, PermissionOption, PermissionRequest, PermissionResponse,
+};
 pub use message::{AgentMessage, AgentThought};
 pub use plan::{Plan, PlanEntry, PlanEntryStatus};
 pub use session::{ContextUsage, CreditUsage, SessionId, SessionMode, SessionStatus};
-pub use tool_call::{ToolCall, ToolCallId, ToolCallStatus, ToolKind};
+pub use tool_call::{
+    ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
+};

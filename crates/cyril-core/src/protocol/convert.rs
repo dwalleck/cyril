@@ -12,6 +12,9 @@ pub(crate) fn to_tool_kind(kind: agent_client_protocol::ToolKind) -> ToolKind {
         | agent_client_protocol::ToolKind::Delete
         | agent_client_protocol::ToolKind::Move => ToolKind::Write,
         agent_client_protocol::ToolKind::Execute => ToolKind::Execute,
+        agent_client_protocol::ToolKind::Search => ToolKind::Search,
+        agent_client_protocol::ToolKind::Think => ToolKind::Think,
+        agent_client_protocol::ToolKind::Fetch => ToolKind::Fetch,
         _ => ToolKind::Other,
     }
 }
@@ -30,6 +33,10 @@ pub(crate) fn to_tool_call(
     cached_inputs: &std::collections::HashMap<String, serde_json::Value>,
 ) -> ToolCall {
     let id_str = acp_call.tool_call_id.to_string();
+
+    let content = convert_tool_call_content(&acp_call.content);
+    let locations = convert_tool_call_locations(&acp_call.locations);
+
     ToolCall::new(
         ToolCallId::new(id_str.clone()),
         acp_call.title.clone(),
@@ -41,6 +48,41 @@ pub(crate) fn to_tool_call(
             .cloned()
             .or_else(|| acp_call.raw_input.clone()),
     )
+    .with_content(content)
+    .with_locations(locations)
+}
+
+/// Convert ACP tool call content to our internal representation.
+fn convert_tool_call_content(acp_content: &[acp::ToolCallContent]) -> Vec<ToolCallContent> {
+    acp_content
+        .iter()
+        .filter_map(|c| match c {
+            acp::ToolCallContent::Diff(diff) => Some(ToolCallContent::Diff {
+                path: diff.path.to_string_lossy().to_string(),
+                old_text: diff.old_text.clone(),
+                new_text: diff.new_text.clone(),
+            }),
+            acp::ToolCallContent::Content(content) => {
+                if let acp::ContentBlock::Text(ref text) = content.content {
+                    Some(ToolCallContent::Text(text.text.clone()))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// Convert ACP tool call locations to our internal representation.
+fn convert_tool_call_locations(acp_locations: &[acp::ToolCallLocation]) -> Vec<ToolCallLocation> {
+    acp_locations
+        .iter()
+        .map(|loc| ToolCallLocation {
+            path: loc.path.to_string_lossy().to_string(),
+            line: loc.line,
+        })
+        .collect()
 }
 
 pub(crate) fn to_ext_notification(
@@ -212,6 +254,19 @@ pub(crate) fn to_tool_call_from_permission(
         .cloned()
         .or_else(|| update.fields.raw_input.clone());
 
+    let content = update
+        .fields
+        .content
+        .as_deref()
+        .map(convert_tool_call_content)
+        .unwrap_or_default();
+    let locations = update
+        .fields
+        .locations
+        .as_deref()
+        .map(convert_tool_call_locations)
+        .unwrap_or_default();
+
     ToolCall::new(
         ToolCallId::new(id_str),
         title,
@@ -220,6 +275,8 @@ pub(crate) fn to_tool_call_from_permission(
         status,
         raw_input,
     )
+    .with_content(content)
+    .with_locations(locations)
 }
 
 /// Convert ACP permission options to our internal representation.
@@ -362,14 +419,31 @@ pub(crate) fn session_update_to_notification(
                 .cloned()
                 .or_else(|| update.fields.raw_input.clone());
 
-            Some(Notification::ToolCallUpdated(ToolCall::new(
-                ToolCallId::new(id_str),
-                title,
-                None,
-                kind,
-                status,
-                raw_input,
-            )))
+            let content = update
+                .fields
+                .content
+                .as_deref()
+                .map(convert_tool_call_content)
+                .unwrap_or_default();
+            let locations = update
+                .fields
+                .locations
+                .as_deref()
+                .map(convert_tool_call_locations)
+                .unwrap_or_default();
+
+            Some(Notification::ToolCallUpdated(
+                ToolCall::new(
+                    ToolCallId::new(id_str),
+                    title,
+                    None,
+                    kind,
+                    status,
+                    raw_input,
+                )
+                .with_content(content)
+                .with_locations(locations),
+            ))
         }
         acp::SessionUpdate::Plan(plan) => {
             let entries = plan
@@ -495,18 +569,26 @@ mod tests {
     }
 
     #[test]
-    fn to_tool_kind_search_maps_to_other() {
+    fn to_tool_kind_search() {
         assert_eq!(
             to_tool_kind(agent_client_protocol::ToolKind::Search),
-            ToolKind::Other
+            ToolKind::Search
         );
     }
 
     #[test]
-    fn to_tool_kind_think_maps_to_other() {
+    fn to_tool_kind_think() {
         assert_eq!(
             to_tool_kind(agent_client_protocol::ToolKind::Think),
-            ToolKind::Other
+            ToolKind::Think
+        );
+    }
+
+    #[test]
+    fn to_tool_kind_fetch() {
+        assert_eq!(
+            to_tool_kind(agent_client_protocol::ToolKind::Fetch),
+            ToolKind::Fetch
         );
     }
 
