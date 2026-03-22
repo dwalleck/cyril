@@ -201,25 +201,15 @@ impl Command for AgentCommand {
             .id()
             .ok_or_else(|| crate::Error::from_kind(crate::ErrorKind::NoSession))?;
 
-        // Selection command without args: query options and show picker
+        // Selection command without args: dispatch options query (non-blocking)
         if self.is_selection && args.is_empty() {
-            let params = serde_json::json!({
-                "command": self.name,
-                "sessionId": session_id.as_str(),
-            });
-            let response = ctx
-                .bridge
-                .send_ext_method_with_response("kiro.dev/commands/options", params)
+            ctx.bridge
+                .send(crate::types::BridgeCommand::QueryCommandOptions {
+                    command: self.name.clone(),
+                    session_id: session_id.clone(),
+                })
                 .await?;
-
-            let options = parse_options_response(&response);
-            if options.is_empty() {
-                return Ok(CommandResult::system_message(format!(
-                    "No {} options available.",
-                    self.name
-                )));
-            }
-            return Ok(CommandResult::show_picker(self.name.clone(), options));
+            return Ok(CommandResult::dispatched());
         }
 
         // Execute command via kiro.dev/commands/execute with TuiCommand format
@@ -253,7 +243,7 @@ impl Command for AgentCommand {
 /// Handles two response shapes:
 /// - Object with `"options"` array: `{"options": [...]}`
 /// - Bare array: `[...]`
-fn parse_options_response(response: &serde_json::Value) -> Vec<CommandOption> {
+pub(crate) fn parse_options_response(response: &serde_json::Value) -> Vec<CommandOption> {
     let options_arr = response
         .get("options")
         .and_then(|v| v.as_array())
@@ -684,7 +674,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn agent_command_selection_no_args_queries_options() {
+    async fn agent_command_selection_no_args_sends_query_command_options() {
         let mut session = crate::session::SessionController::new();
         session.set_session(
             crate::types::SessionId::new("sess_test"),
@@ -703,76 +693,23 @@ mod tests {
             is_selection: true,
         };
 
-        // Spawn a task that receives the ExtMethodWithResponse and replies with options
-        let responder = tokio::spawn(async move {
-            if let Some(crate::types::BridgeCommand::ExtMethodWithResponse {
-                method,
-                params,
-                response_tx,
-            }) = rx.recv().await
-            {
-                assert_eq!(method, "kiro.dev/commands/options");
-                assert_eq!(params["command"], "model");
-                assert_eq!(params["sessionId"], "sess_test");
-                let _ = response_tx.send(Ok(serde_json::json!({
-                    "options": [
-                        {"value": "claude-sonnet", "label": "Claude Sonnet", "current": true},
-                        {"value": "claude-haiku", "label": "Claude Haiku"}
-                    ]
-                })));
-            } else {
-                panic!("expected ExtMethodWithResponse");
-            }
-        });
-
         let result = cmd.execute(&ctx, "").await.unwrap();
-        responder.await.unwrap();
+        assert!(
+            matches!(result.kind, CommandResultKind::Dispatched),
+            "selection command without args should return Dispatched"
+        );
 
-        if let CommandResultKind::ShowPicker { title, options } = result.kind {
-            assert_eq!(title, "model");
-            assert_eq!(options.len(), 2);
-            assert_eq!(options[0].value, "claude-sonnet");
-            assert!(options[0].is_current);
+        // Verify the bridge received a QueryCommandOptions command
+        let bridge_cmd = rx.recv().await.unwrap();
+        if let crate::types::BridgeCommand::QueryCommandOptions {
+            command,
+            session_id,
+        } = bridge_cmd
+        {
+            assert_eq!(command, "model");
+            assert_eq!(session_id.as_str(), "sess_test");
         } else {
-            panic!("expected ShowPicker, got {:?}", result.kind);
+            panic!("expected QueryCommandOptions, got {bridge_cmd:?}");
         }
-    }
-
-    #[tokio::test]
-    async fn agent_command_selection_empty_options_returns_message() {
-        let mut session = crate::session::SessionController::new();
-        session.set_session(
-            crate::types::SessionId::new("sess_test"),
-            crate::types::SessionStatus::Active,
-        );
-        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
-        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
-        let ctx = CommandContext {
-            session: &session,
-            bridge: &sender,
-        };
-
-        let cmd = AgentCommand {
-            name: "model".into(),
-            description: "Switch model".into(),
-            is_selection: true,
-        };
-
-        let responder = tokio::spawn(async move {
-            if let Some(crate::types::BridgeCommand::ExtMethodWithResponse {
-                response_tx, ..
-            }) = rx.recv().await
-            {
-                let _ = response_tx.send(Ok(serde_json::json!({"options": []})));
-            }
-        });
-
-        let result = cmd.execute(&ctx, "").await.unwrap();
-        responder.await.unwrap();
-
-        assert!(matches!(
-            result.kind,
-            CommandResultKind::SystemMessage(ref s) if s.contains("No model options")
-        ));
     }
 }

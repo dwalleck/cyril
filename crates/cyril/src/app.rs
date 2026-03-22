@@ -191,7 +191,19 @@ impl App {
             self.ui_state.clear_messages();
         }
 
-        self.redraw_needed = session_changed || ui_changed;
+        // Handle command options received — open picker or show message
+        if let Notification::CommandOptionsReceived { ref command, ref options } = notification {
+            if options.is_empty() {
+                self.ui_state.add_system_message(
+                    format!("No {command} options available."),
+                );
+            } else {
+                self.ui_state.show_picker(command.clone(), options.clone());
+            }
+            self.redraw_needed = true;
+        }
+
+        self.redraw_needed = self.redraw_needed || session_changed || ui_changed;
     }
 
     async fn handle_terminal_event(&mut self, event: Event) -> cyril_core::Result<()> {

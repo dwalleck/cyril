@@ -284,6 +284,10 @@ impl UiState {
                 // These are consumed by the App layer, not UiState directly.
                 false
             }
+            Notification::CommandOptionsReceived { .. } => {
+                // Handled by the App layer (opens picker or shows message).
+                false
+            }
         }
     }
 

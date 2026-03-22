@@ -24,6 +24,12 @@ pub enum Notification {
     ConfigOptionsUpdated(Vec<ConfigOption>),
     CommandsUpdated(Vec<CommandInfo>),
 
+    // Command system
+    CommandOptionsReceived {
+        command: String,
+        options: Vec<crate::types::command::CommandOption>,
+    },
+
     // Kiro extensions
     ContextUsageUpdated(ContextUsage),
     AgentSwitched {
@@ -100,10 +106,9 @@ pub enum BridgeCommand {
         method: String,
         params: serde_json::Value,
     },
-    ExtMethodWithResponse {
-        method: String,
-        params: serde_json::Value,
-        response_tx: tokio::sync::oneshot::Sender<crate::Result<serde_json::Value>>,
+    QueryCommandOptions {
+        command: String,
+        session_id: SessionId,
     },
     Shutdown,
 }
@@ -234,5 +239,45 @@ mod tests {
     fn bridge_command_shutdown() {
         let cmd = BridgeCommand::Shutdown;
         assert!(matches!(cmd, BridgeCommand::Shutdown));
+    }
+
+    #[test]
+    fn bridge_command_query_command_options() {
+        let cmd = BridgeCommand::QueryCommandOptions {
+            command: "model".into(),
+            session_id: SessionId::new("sess_1"),
+        };
+        assert!(matches!(cmd, BridgeCommand::QueryCommandOptions { .. }));
+    }
+
+    #[test]
+    fn notification_command_options_received() {
+        let n = Notification::CommandOptionsReceived {
+            command: "model".into(),
+            options: vec![crate::types::command::CommandOption {
+                label: "Claude Sonnet".into(),
+                value: "claude-sonnet".into(),
+                description: None,
+                group: None,
+                is_current: true,
+            }],
+        };
+        if let Notification::CommandOptionsReceived { command, options } = n {
+            assert_eq!(command, "model");
+            assert_eq!(options.len(), 1);
+            assert!(options[0].is_current);
+        } else {
+            panic!("wrong variant");
+        }
+    }
+
+    #[test]
+    fn notification_command_options_received_is_clone() {
+        let n = Notification::CommandOptionsReceived {
+            command: "model".into(),
+            options: vec![],
+        };
+        let n2 = n.clone();
+        assert!(matches!(n2, Notification::CommandOptionsReceived { .. }));
     }
 }
