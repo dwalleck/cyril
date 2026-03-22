@@ -325,6 +325,223 @@ impl UiState {
         self.terminal_size = (w, h);
     }
 
+    /// Toggle mouse capture mode.
+    pub fn toggle_mouse_capture(&mut self) {
+        self.mouse_captured = !self.mouse_captured;
+    }
+
+    /// Clear all messages from the chat history.
+    pub fn clear_messages(&mut self) {
+        self.messages.clear();
+        self.messages_version += 1;
+    }
+
+    /// Check if there is an active approval dialog.
+    pub fn has_approval(&self) -> bool {
+        self.approval.is_some()
+    }
+
+    /// Check if there is an active picker dialog.
+    pub fn has_picker(&self) -> bool {
+        self.picker.is_some()
+    }
+
+    /// Handle a key event for the input field.
+    pub fn handle_input_key(&mut self, key: crossterm::event::KeyEvent) {
+        use crossterm::event::KeyCode;
+
+        match key.code {
+            KeyCode::Char(c) => {
+                self.input_text.insert(self.input_cursor, c);
+                self.input_cursor += c.len_utf8();
+            }
+            KeyCode::Backspace => {
+                if self.input_cursor > 0 {
+                    // Find the previous character boundary
+                    let prev = self.input_text[..self.input_cursor]
+                        .char_indices()
+                        .next_back()
+                        .map(|(idx, _)| idx)
+                        .unwrap_or(0);
+                    self.input_text.drain(prev..self.input_cursor);
+                    self.input_cursor = prev;
+                }
+            }
+            KeyCode::Delete => {
+                if self.input_cursor < self.input_text.len() {
+                    let next = self.input_text[self.input_cursor..]
+                        .char_indices()
+                        .nth(1)
+                        .map(|(idx, _)| self.input_cursor + idx)
+                        .unwrap_or(self.input_text.len());
+                    self.input_text.drain(self.input_cursor..next);
+                }
+            }
+            KeyCode::Left => {
+                if self.input_cursor > 0 {
+                    self.input_cursor = self.input_text[..self.input_cursor]
+                        .char_indices()
+                        .next_back()
+                        .map(|(idx, _)| idx)
+                        .unwrap_or(0);
+                }
+            }
+            KeyCode::Right => {
+                if self.input_cursor < self.input_text.len() {
+                    self.input_cursor = self.input_text[self.input_cursor..]
+                        .char_indices()
+                        .nth(1)
+                        .map(|(idx, _)| self.input_cursor + idx)
+                        .unwrap_or(self.input_text.len());
+                }
+            }
+            KeyCode::Home => {
+                self.input_cursor = 0;
+            }
+            KeyCode::End => {
+                self.input_cursor = self.input_text.len();
+            }
+            _ => {}
+        }
+    }
+
+    // --- Approval dialog methods ---
+
+    /// Move approval selection to the previous option.
+    pub fn approval_select_prev(&mut self) {
+        if let Some(ref mut approval) = self.approval
+            && approval.selected > 0
+        {
+            approval.selected -= 1;
+        }
+    }
+
+    /// Move approval selection to the next option.
+    pub fn approval_select_next(&mut self) {
+        if let Some(ref mut approval) = self.approval
+            && approval.selected + 1 < approval.options.len()
+        {
+            approval.selected += 1;
+        }
+    }
+
+    /// Confirm the current approval selection, sending the response.
+    pub fn approval_confirm(&mut self) {
+        if let Some(approval) = self.approval.take() {
+            let response = match approval.selected {
+                0 => PermissionResponse::AllowOnce,
+                1 => PermissionResponse::AllowAlways,
+                _ => PermissionResponse::Reject,
+            };
+            // Ignore send error — the bridge may have dropped the receiver
+            let _ = approval.responder.send(response);
+        }
+    }
+
+    /// Cancel the approval dialog, sending a Cancel response.
+    pub fn approval_cancel(&mut self) {
+        if let Some(approval) = self.approval.take() {
+            let _ = approval.responder.send(PermissionResponse::Cancel);
+        }
+    }
+
+    // --- Picker dialog methods ---
+
+    /// Show a picker dialog with the given title and options.
+    pub fn show_picker(&mut self, title: String, options: Vec<CommandOption>) {
+        let filtered_indices: Vec<usize> = (0..options.len()).collect();
+        self.picker = Some(PickerState {
+            title,
+            options,
+            filter: String::new(),
+            filtered_indices,
+            selected: 0,
+        });
+    }
+
+    /// Get the picker title, if a picker is active.
+    pub fn picker_title(&self) -> Option<&str> {
+        self.picker.as_ref().map(|p| p.title.as_str())
+    }
+
+    /// Move picker selection to the previous option.
+    pub fn picker_select_prev(&mut self) {
+        if let Some(ref mut picker) = self.picker
+            && picker.selected > 0
+        {
+            picker.selected -= 1;
+        }
+    }
+
+    /// Move picker selection to the next option.
+    pub fn picker_select_next(&mut self) {
+        if let Some(ref mut picker) = self.picker
+            && !picker.filtered_indices.is_empty()
+            && picker.selected + 1 < picker.filtered_indices.len()
+        {
+            picker.selected += 1;
+        }
+    }
+
+    /// Confirm the picker selection. Returns the selected value if any.
+    pub fn picker_confirm(&mut self) -> Option<String> {
+        let picker = self.picker.take()?;
+        let idx = picker.filtered_indices.get(picker.selected).copied()?;
+        picker.options.get(idx).map(|opt| opt.value.clone())
+    }
+
+    /// Cancel and close the picker dialog.
+    pub fn picker_cancel(&mut self) {
+        self.picker = None;
+    }
+
+    /// Type a character into the picker filter.
+    pub fn picker_type_char(&mut self, c: char) {
+        if let Some(ref mut picker) = self.picker {
+            picker.filter.push(c);
+            Self::refilter_picker(picker);
+        }
+    }
+
+    /// Delete the last character from the picker filter.
+    pub fn picker_backspace(&mut self) {
+        if let Some(ref mut picker) = self.picker {
+            picker.filter.pop();
+            Self::refilter_picker(picker);
+        }
+    }
+
+    /// Re-compute filtered indices after filter text changes.
+    fn refilter_picker(picker: &mut PickerState) {
+        let filter_lower = picker.filter.to_lowercase();
+        picker.filtered_indices = picker
+            .options
+            .iter()
+            .enumerate()
+            .filter(|(_, opt)| {
+                filter_lower.is_empty()
+                    || opt.label.to_lowercase().contains(&filter_lower)
+                    || opt.value.to_lowercase().contains(&filter_lower)
+            })
+            .map(|(i, _)| i)
+            .collect();
+        // Clamp selected index
+        if picker.filtered_indices.is_empty() {
+            picker.selected = 0;
+        } else if picker.selected >= picker.filtered_indices.len() {
+            picker.selected = picker.filtered_indices.len() - 1;
+        }
+    }
+
+    /// Flush the stream buffer if it has timed-out content.
+    /// Returns `true` if content was flushed (UI changed).
+    pub fn flush_stream_buffer(&mut self) -> bool {
+        // The stream buffer is managed externally via apply_notification.
+        // This method handles the timeout-based flush of streaming_text.
+        // Currently streaming_text is set directly, so no buffered flush needed.
+        false
+    }
+
     /// Trim oldest messages to stay within the configured limit.
     fn enforce_message_limit(&mut self) {
         if self.messages.len() > self.max_messages {

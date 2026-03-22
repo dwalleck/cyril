@@ -34,6 +34,24 @@ impl BridgeHandle {
             command_tx: self.command_tx.clone(),
         }
     }
+
+    /// Split into individual receivers and a sender, for use in `tokio::select!`
+    /// where borrowing `&mut self` twice is not allowed.
+    pub fn split(
+        self,
+    ) -> (
+        BridgeSender,
+        mpsc::Receiver<Notification>,
+        mpsc::Receiver<PermissionRequest>,
+    ) {
+        (
+            BridgeSender {
+                command_tx: self.command_tx,
+            },
+            self.notification_rx,
+            self.permission_rx,
+        )
+    }
 }
 
 /// Cloneable handle for sending commands to the bridge.

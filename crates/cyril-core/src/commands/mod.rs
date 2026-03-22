@@ -124,6 +124,28 @@ impl CommandRegistry {
         registry
     }
 
+    /// Register commands advertised by the agent.
+    /// These are forwarded to the bridge as ext methods when executed.
+    pub fn register_agent_commands(&mut self, cmds: &[crate::types::CommandInfo]) {
+        for cmd in cmds {
+            let name = cmd.name().to_string();
+            // Skip if a builtin already covers this name
+            if self.commands.contains_key(&name) {
+                continue;
+            }
+            self.commands.insert(
+                name.clone(),
+                Arc::new(AgentCommand {
+                    name,
+                    description: cmd
+                        .description()
+                        .unwrap_or_else(|| cmd.label())
+                        .to_string(),
+                }),
+            );
+        }
+    }
+
     /// All registered commands (deduplicated — aliases don't count as separate).
     pub fn all_commands(&self) -> Vec<&dyn Command> {
         let mut seen = HashSet::new();
@@ -138,6 +160,41 @@ impl CommandRegistry {
 impl Default for CommandRegistry {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// A command forwarded to the agent via ext method.
+struct AgentCommand {
+    name: String,
+    description: String,
+}
+
+#[async_trait::async_trait]
+impl Command for AgentCommand {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn description(&self) -> &str {
+        &self.description
+    }
+
+    fn is_local(&self) -> bool {
+        false
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        let params = serde_json::json!({
+            "command": self.name,
+            "args": args,
+        });
+        ctx.bridge
+            .send(crate::types::BridgeCommand::ExtMethod {
+                method: format!("kiro.dev/commands/{}", self.name),
+                params,
+            })
+            .await?;
+        Ok(CommandResult::dispatched())
     }
 }
 
