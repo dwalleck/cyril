@@ -188,6 +188,109 @@ pub struct PickerState {
 }
 
 #[cfg(test)]
+pub mod test_support {
+    use super::*;
+
+    /// Minimal mock for rendering tests. Returns empty/default values.
+    #[derive(Default)]
+    pub struct MockTuiState;
+
+    impl TuiState for MockTuiState {
+        fn messages(&self) -> &[ChatMessage] {
+            &[]
+        }
+
+        fn streaming_text(&self) -> &str {
+            ""
+        }
+
+        fn streaming_thought(&self) -> Option<&str> {
+            None
+        }
+
+        fn messages_version(&self) -> u64 {
+            0
+        }
+
+        fn active_tool_calls(&self) -> &[TrackedToolCall] {
+            &[]
+        }
+
+        fn current_plan(&self) -> Option<&Plan> {
+            None
+        }
+
+        fn input_text(&self) -> &str {
+            ""
+        }
+
+        fn input_cursor(&self) -> usize {
+            0
+        }
+
+        fn autocomplete_suggestions(&self) -> &[Suggestion] {
+            &[]
+        }
+
+        fn autocomplete_selected(&self) -> Option<usize> {
+            None
+        }
+
+        fn activity(&self) -> Activity {
+            Activity::Idle
+        }
+
+        fn session_label(&self) -> Option<&str> {
+            None
+        }
+
+        fn current_mode(&self) -> Option<&str> {
+            None
+        }
+
+        fn current_model(&self) -> Option<&str> {
+            None
+        }
+
+        fn context_usage(&self) -> Option<f64> {
+            None
+        }
+
+        fn credit_usage(&self) -> Option<(f64, f64)> {
+            None
+        }
+
+        fn approval(&self) -> Option<&ApprovalState> {
+            None
+        }
+
+        fn picker(&self) -> Option<&PickerState> {
+            None
+        }
+
+        fn terminal_size(&self) -> (u16, u16) {
+            (80, 24)
+        }
+
+        fn mouse_captured(&self) -> bool {
+            false
+        }
+
+        fn should_quit(&self) -> bool {
+            false
+        }
+
+        fn activity_elapsed(&self) -> Option<Duration> {
+            None
+        }
+
+        fn is_deep_idle(&self) -> bool {
+            false
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

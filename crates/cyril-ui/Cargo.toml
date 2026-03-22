@@ -14,6 +14,7 @@ workspace = true
 cyril-core = { path = "../cyril-core" }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
+syntect = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
