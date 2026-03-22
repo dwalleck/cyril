@@ -209,7 +209,11 @@ impl App {
             self.ui_state
                 .add_command_output(command.clone(), text);
 
-            // Extract model change from /model command response
+            // WORKAROUND(Kiro v1.28.0): Kiro doesn't send ConfigOptionUpdate for
+            // model changes (QRK-004), so we extract the model from the /model
+            // command response. When Kiro sends proper ConfigOptionUpdate
+            // notifications, this block becomes dead code — remove it and rely
+            // on the ConfigOptionsUpdated handler in UiState.apply_notification().
             if command == "model" {
                 if let Some(model_id) = response
                     .get("data")
