@@ -211,6 +211,15 @@ impl UiState {
                 true
             }
             Notification::ToolCallStarted(tc) => {
+                // Flush any accumulated text before the tool call starts.
+                // This prevents text before and after a tool call from
+                // concatenating into one message (e.g., "I'll edit...I've updated...")
+                if !self.streaming_text.is_empty() {
+                    let text = std::mem::take(&mut self.streaming_text);
+                    self.messages.push(ChatMessage::agent_text(text));
+                    self.messages_version += 1;
+                }
+
                 let tracked = TrackedToolCall::new(tc.clone());
                 let idx = self.active_tool_calls.len();
                 self.active_tool_calls.push(tracked);
@@ -928,7 +937,9 @@ mod tests {
         state.apply_notification(&Notification::ToolCallStarted(tc));
 
         assert_eq!(state.active_tool_calls().len(), 1);
-        assert_eq!(state.streaming_text(), "Let me read that file.");
+        // Text is flushed to messages when tool call starts (prevents concatenation)
+        assert_eq!(state.streaming_text(), "");
+        assert_eq!(state.messages().len(), 1, "pre-tool-call text should already be committed");
 
         // Turn completes
         state.apply_notification(&Notification::TurnCompleted);
@@ -1086,6 +1097,65 @@ mod tests {
         assert!(!state.should_quit());
         state.request_quit();
         assert!(state.should_quit());
+    }
+
+    #[test]
+    fn text_before_tool_call_commits_separately() {
+        // Simulates: agent says "I'll edit that" → starts tool call → says "Done editing"
+        // Text should NOT concatenate into "I'll edit thatDone editing"
+        let mut state = UiState::new(500);
+
+        // Agent streams text before tool call
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "I'll edit that file.".into(),
+            is_streaming: true,
+        }));
+        assert_eq!(state.streaming_text(), "I'll edit that file.");
+
+        // Tool call starts — should flush text to messages
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            None,
+            ToolKind::Write,
+            ToolCallStatus::InProgress,
+            None,
+        );
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+
+        // Text before tool call should be committed
+        assert_eq!(state.streaming_text(), "", "streaming text should be flushed");
+        assert_eq!(state.messages().len(), 1, "pre-tool-call text should be committed");
+        assert!(
+            matches!(state.messages()[0].kind(), ChatMessageKind::AgentText(t) if t == "I'll edit that file."),
+            "committed message should be the pre-tool-call text"
+        );
+
+        // Agent streams text after tool call
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "Done editing.".into(),
+            is_streaming: true,
+        }));
+
+        // Post-tool-call text should be separate from pre-tool-call text
+        assert_eq!(state.streaming_text(), "Done editing.");
+
+        // Turn completes
+        state.apply_notification(&Notification::TurnCompleted);
+
+        // Should have: pre-tool-call text, agent text (post), and tool call
+        let messages = state.messages();
+        let agent_texts: Vec<&str> = messages
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::AgentText(t) => Some(t.as_str()),
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(agent_texts.len(), 2, "should have two separate text messages");
+        assert_eq!(agent_texts[0], "I'll edit that file.");
+        assert_eq!(agent_texts[1], "Done editing.");
     }
 
     // --- Tool call update merge tests ---
