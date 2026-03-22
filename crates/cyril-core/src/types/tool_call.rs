@@ -133,6 +133,29 @@ impl ToolCall {
     pub fn locations(&self) -> &[ToolCallLocation] {
         &self.locations
     }
+
+    /// Merge fields from an update into this tool call.
+    /// Only overwrites fields that the update carries (non-empty/non-default).
+    /// Preserves content and locations from the original if the update doesn't provide them.
+    pub fn merge_update(&mut self, update: &ToolCall) {
+        self.name = update.name.clone();
+        if update.title.is_some() {
+            self.title = update.title.clone();
+        }
+        if update.kind != ToolKind::Other {
+            self.kind = update.kind;
+        }
+        self.status = update.status;
+        if update.raw_input.is_some() {
+            self.raw_input = update.raw_input.clone();
+        }
+        if !update.content.is_empty() {
+            self.content = update.content.clone();
+        }
+        if !update.locations.is_empty() {
+            self.locations = update.locations.clone();
+        }
+    }
 }
 
 #[cfg(test)]

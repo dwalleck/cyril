@@ -64,10 +64,34 @@ impl acp::Client for KiroClient {
         Ok(convert::from_permission_response(response, &args))
     }
 
-    async fn session_notification(
-        &self,
-        args: acp::SessionNotification,
-    ) -> acp::Result<()> {
+    async fn session_notification(&self, args: acp::SessionNotification) -> acp::Result<()> {
+        // Log tool call details for debugging content/locations/diff availability
+        match &args.update {
+            acp::SessionUpdate::ToolCall(tc) => {
+                tracing::info!(
+                    id = %tc.tool_call_id,
+                    title = %tc.title,
+                    kind = ?tc.kind,
+                    status = ?tc.status,
+                    content_count = tc.content.len(),
+                    locations_count = tc.locations.len(),
+                    has_raw_input = tc.raw_input.is_some(),
+                    "ToolCall notification"
+                );
+            }
+            acp::SessionUpdate::ToolCallUpdate(update) => {
+                tracing::info!(
+                    id = %update.tool_call_id,
+                    title = ?update.fields.title,
+                    kind = ?update.fields.kind,
+                    status = ?update.fields.status,
+                    has_raw_input = update.fields.raw_input.is_some(),
+                    "ToolCallUpdate notification"
+                );
+            }
+            _ => {}
+        }
+
         convert::cache_tool_call_input(&args, &self.tool_call_inputs);
 
         let notification = {
@@ -84,12 +108,9 @@ impl acp::Client for KiroClient {
         Ok(())
     }
 
-    async fn ext_notification(
-        &self,
-        args: acp::ExtNotification,
-    ) -> acp::Result<()> {
-        let params: serde_json::Value = serde_json::from_str(args.params.get())
-            .unwrap_or(serde_json::Value::Null);
+    async fn ext_notification(&self, args: acp::ExtNotification) -> acp::Result<()> {
+        let params: serde_json::Value =
+            serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
 
         match convert::to_ext_notification(args.method.as_ref(), &params) {
             Ok(notification) => {

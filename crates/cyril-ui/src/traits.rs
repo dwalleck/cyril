@@ -143,8 +143,12 @@ impl TrackedToolCall {
         Self { inner: tc }
     }
 
+    /// Merge update fields into the existing tool call.
+    /// Only overwrites fields that the update provides — preserves
+    /// content and locations from the initial ToolCall if the update
+    /// doesn't carry them.
     pub fn update(&mut self, tc: &cyril_core::types::ToolCall) {
-        self.inner = tc.clone();
+        self.inner.merge_update(tc);
     }
 
     pub fn id(&self) -> &cyril_core::types::ToolCallId {
