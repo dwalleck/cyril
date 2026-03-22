@@ -104,8 +104,12 @@ impl SessionController {
                 self.status = SessionStatus::Active;
                 true
             }
-            Notification::SessionCreated { session_id } => {
+            Notification::SessionCreated {
+                session_id,
+                current_mode,
+            } => {
                 self.id = Some(session_id.clone());
+                self.current_mode_id = current_mode.clone();
                 self.status = SessionStatus::Active;
                 true
             }
@@ -253,11 +257,13 @@ mod tests {
 
         let changed = ctrl.apply_notification(&Notification::SessionCreated {
             session_id: SessionId::new("sess_abc"),
+            current_mode: Some("kiro_default".into()),
         });
 
         assert!(changed);
         assert_eq!(ctrl.status(), &SessionStatus::Active);
         assert_eq!(ctrl.id().map(SessionId::as_str), Some("sess_abc"));
+        assert_eq!(ctrl.current_mode_id(), Some("kiro_default"));
     }
 
     #[test]
@@ -267,6 +273,7 @@ mod tests {
 
         ctrl.apply_notification(&Notification::SessionCreated {
             session_id: SessionId::new("new_sess"),
+            current_mode: None,
         });
 
         assert_eq!(ctrl.id().map(SessionId::as_str), Some("new_sess"));

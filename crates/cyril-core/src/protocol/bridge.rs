@@ -209,8 +209,13 @@ async fn run_bridge(
                 match conn.new_session(acp::NewSessionRequest::new(translated_cwd)).await {
                     Ok(response) => {
                         let session_id = response.session_id.to_string();
+                        let current_mode = response
+                            .modes
+                            .as_ref()
+                            .map(|m| m.current_mode_id.to_string());
                         let notification = Notification::SessionCreated {
                             session_id: crate::types::SessionId::new(session_id),
+                            current_mode,
                         };
                         if channels.notification_tx.send(notification).await.is_err() {
                             break;

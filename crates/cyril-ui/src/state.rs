@@ -267,8 +267,12 @@ impl UiState {
                 self.add_system_message(format!("Clear: {message}"));
                 true
             }
-            Notification::SessionCreated { session_id } => {
+            Notification::SessionCreated {
+                session_id,
+                current_mode,
+            } => {
                 self.session_label = Some(session_id.as_str().to_string());
+                self.current_mode = current_mode.clone();
                 self.add_system_message(format!("Session created: {}", session_id.as_str()));
                 self.set_activity(Activity::Ready);
                 true
@@ -330,10 +334,14 @@ impl UiState {
     }
 
     /// Update the activity state and record when it changed.
+    /// Elapsed time is only tracked for busy states — cleared on Ready/Idle.
     pub fn set_activity(&mut self, activity: Activity) {
         if self.activity != activity {
             self.activity = activity;
-            self.activity_since = Some(Instant::now());
+            self.activity_since = match activity {
+                Activity::Idle | Activity::Ready => None,
+                _ => Some(Instant::now()),
+            };
             self.deep_idle = false;
         }
     }

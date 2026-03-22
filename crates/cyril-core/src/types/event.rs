@@ -57,6 +57,7 @@ pub enum Notification {
     // Lifecycle
     SessionCreated {
         session_id: SessionId,
+        current_mode: Option<String>,
     },
     TurnCompleted,
     BridgeDisconnected {
