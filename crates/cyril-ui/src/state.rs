@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use cyril_core::types::*;
 
+use crate::file_completer::FileCompleter;
 use crate::traits::*;
 
 pub struct UiState {
@@ -24,6 +25,8 @@ pub struct UiState {
     // Autocomplete
     autocomplete_suggestions: Vec<Suggestion>,
     autocomplete_selected: Option<usize>,
+    file_completer: Option<FileCompleter>,
+    command_names: Vec<String>,
 
     // Session info (projected by App from SessionController)
     activity: Activity,
@@ -156,6 +159,8 @@ impl UiState {
             input_cursor: 0,
             autocomplete_suggestions: Vec::new(),
             autocomplete_selected: None,
+            file_completer: None,
+            command_names: Vec::new(),
             activity: Activity::Idle,
             activity_since: None,
             session_label: None,
@@ -349,10 +354,13 @@ impl UiState {
     pub fn handle_input_key(&mut self, key: crossterm::event::KeyEvent) {
         use crossterm::event::KeyCode;
 
+        let mut text_changed = false;
+
         match key.code {
             KeyCode::Char(c) => {
                 self.input_text.insert(self.input_cursor, c);
                 self.input_cursor += c.len_utf8();
+                text_changed = true;
             }
             KeyCode::Backspace => {
                 if self.input_cursor > 0 {
@@ -364,6 +372,7 @@ impl UiState {
                         .unwrap_or(0);
                     self.input_text.drain(prev..self.input_cursor);
                     self.input_cursor = prev;
+                    text_changed = true;
                 }
             }
             KeyCode::Delete => {
@@ -374,6 +383,7 @@ impl UiState {
                         .map(|(idx, _)| self.input_cursor + idx)
                         .unwrap_or(self.input_text.len());
                     self.input_text.drain(self.input_cursor..next);
+                    text_changed = true;
                 }
             }
             KeyCode::Left => {
@@ -402,6 +412,130 @@ impl UiState {
             }
             _ => {}
         }
+
+        if text_changed {
+            self.update_autocomplete();
+        }
+    }
+
+    // --- File completer and autocomplete ---
+
+    /// Set the file completer for @-file autocomplete.
+    pub fn set_file_completer(&mut self, completer: FileCompleter) {
+        self.file_completer = Some(completer);
+    }
+
+    /// Command names available for slash autocomplete.
+    pub fn set_command_names(&mut self, names: Vec<String>) {
+        self.command_names = names;
+    }
+
+    /// Recompute autocomplete suggestions based on current input text.
+    fn update_autocomplete(&mut self) {
+        let text = &self.input_text;
+        let trimmed = text.trim();
+
+        // Slash command autocomplete
+        if trimmed.starts_with('/') && !trimmed.contains(' ') {
+            let query = trimmed[1..].to_lowercase();
+            self.autocomplete_suggestions = self
+                .command_names
+                .iter()
+                .filter(|name| name.to_lowercase().starts_with(&query))
+                .map(|name| Suggestion {
+                    text: format!("/{name}"),
+                    description: None,
+                })
+                .collect();
+            self.autocomplete_selected = if self.autocomplete_suggestions.is_empty() {
+                None
+            } else {
+                Some(0)
+            };
+            return;
+        }
+
+        // File autocomplete — look for @ trigger
+        if let Some(at_pos) = text[..self.input_cursor].rfind('@') {
+            let query = &text[at_pos + 1..self.input_cursor];
+            if !query.is_empty() && !query.contains(' ') {
+                if let Some(ref completer) = self.file_completer {
+                    let suggestions: Vec<Suggestion> = completer
+                        .suggest(query, 10)
+                        .into_iter()
+                        .map(|path| Suggestion {
+                            text: format!("@{path}"),
+                            description: None,
+                        })
+                        .collect();
+                    if !suggestions.is_empty() {
+                        self.autocomplete_suggestions = suggestions;
+                        self.autocomplete_selected = Some(0);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // No autocomplete
+        self.autocomplete_suggestions.clear();
+        self.autocomplete_selected = None;
+    }
+
+    /// Accept the currently selected autocomplete suggestion.
+    /// Returns true if a suggestion was accepted.
+    pub fn accept_autocomplete(&mut self) -> bool {
+        let selected = match self.autocomplete_selected {
+            Some(idx) => idx,
+            None => return false,
+        };
+        let suggestion = match self.autocomplete_suggestions.get(selected) {
+            Some(s) => s.text.clone(),
+            None => return false,
+        };
+
+        // For slash commands, replace the entire input
+        if suggestion.starts_with('/') {
+            self.input_text = format!("{suggestion} ");
+            self.input_cursor = self.input_text.len();
+        }
+        // For @file references, replace from the @ to the cursor
+        else if suggestion.starts_with('@') {
+            if let Some(at_pos) = self.input_text[..self.input_cursor].rfind('@') {
+                let after_cursor = self.input_text[self.input_cursor..].to_string();
+                self.input_text =
+                    format!("{}{suggestion} {after_cursor}", &self.input_text[..at_pos]);
+                self.input_cursor = at_pos + suggestion.len() + 1; // +1 for space
+            }
+        }
+
+        self.autocomplete_suggestions.clear();
+        self.autocomplete_selected = None;
+        true
+    }
+
+    /// Move autocomplete selection to the previous item.
+    pub fn autocomplete_prev(&mut self) {
+        if let Some(ref mut idx) = self.autocomplete_selected {
+            if *idx > 0 {
+                *idx -= 1;
+            }
+        }
+    }
+
+    /// Move autocomplete selection to the next item.
+    pub fn autocomplete_next(&mut self) {
+        if let Some(ref mut idx) = self.autocomplete_selected {
+            if *idx + 1 < self.autocomplete_suggestions.len() {
+                *idx += 1;
+            }
+        }
+    }
+
+    /// Dismiss the autocomplete menu.
+    pub fn dismiss_autocomplete(&mut self) {
+        self.autocomplete_suggestions.clear();
+        self.autocomplete_selected = None;
     }
 
     // --- Approval dialog methods ---

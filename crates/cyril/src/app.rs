@@ -27,13 +27,21 @@ pub struct App {
 impl App {
     pub fn new(bridge: BridgeHandle, max_messages: usize) -> Self {
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
+        let commands = CommandRegistry::with_builtins();
+        let names: Vec<String> = commands
+            .all_commands()
+            .iter()
+            .map(|c| c.name().to_string())
+            .collect();
+        let mut ui_state = UiState::new(max_messages);
+        ui_state.set_command_names(names);
         Self {
             bridge_sender,
             notification_rx,
             permission_rx,
-            ui_state: UiState::new(max_messages),
+            ui_state,
             session: SessionController::new(),
-            commands: CommandRegistry::with_builtins(),
+            commands,
             redraw_needed: true,
             last_activity: Instant::now(),
         }
@@ -160,6 +168,14 @@ impl App {
         // Register agent commands when they arrive
         if let Notification::CommandsUpdated(ref cmds) = notification {
             self.commands.register_agent_commands(cmds);
+            // Update autocomplete with all command names
+            let names: Vec<String> = self
+                .commands
+                .all_commands()
+                .iter()
+                .map(|cmd| cmd.name().to_string())
+                .collect();
+            self.ui_state.set_command_names(names);
         }
 
         // Handle clear command result
@@ -217,6 +233,26 @@ impl App {
 
         // Layer 3: Normal input
         match (key.modifiers, key.code) {
+            (KeyModifiers::NONE, KeyCode::Tab) => {
+                if self.ui_state.accept_autocomplete() {
+                    // Autocomplete accepted — don't process further
+                }
+            }
+            (KeyModifiers::NONE, KeyCode::Up)
+                if !self.ui_state.autocomplete_suggestions().is_empty() =>
+            {
+                self.ui_state.autocomplete_prev();
+            }
+            (KeyModifiers::NONE, KeyCode::Down)
+                if !self.ui_state.autocomplete_suggestions().is_empty() =>
+            {
+                self.ui_state.autocomplete_next();
+            }
+            (KeyModifiers::NONE, KeyCode::Esc)
+                if !self.ui_state.autocomplete_suggestions().is_empty() =>
+            {
+                self.ui_state.dismiss_autocomplete();
+            }
             (KeyModifiers::NONE, KeyCode::Enter) => {
                 self.submit_input().await?;
             }
