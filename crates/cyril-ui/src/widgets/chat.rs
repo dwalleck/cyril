@@ -169,12 +169,14 @@ mod tests {
 
     #[test]
     fn chat_renders_messages() {
-        let mut state = MockTuiState::default();
-        state.messages = vec![
-            ChatMessage::user_text("Hello".into()),
-            ChatMessage::agent_text("Hi there!".into()),
-            ChatMessage::system("Session started".into()),
-        ];
+        let state = MockTuiState {
+            messages: vec![
+                ChatMessage::user_text("Hello".into()),
+                ChatMessage::agent_text("Hi there!".into()),
+                ChatMessage::system("Session started".into()),
+            ],
+            ..Default::default()
+        };
 
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
@@ -187,8 +189,10 @@ mod tests {
 
     #[test]
     fn chat_renders_streaming() {
-        let mut state = MockTuiState::default();
-        state.streaming_text = "Streaming **markdown** content".into();
+        let state = MockTuiState {
+            streaming_text: "Streaming **markdown** content".into(),
+            ..Default::default()
+        };
 
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");

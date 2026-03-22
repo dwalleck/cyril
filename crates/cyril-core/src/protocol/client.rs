@@ -70,9 +70,11 @@ impl acp::Client for KiroClient {
     ) -> acp::Result<()> {
         convert::cache_tool_call_input(&args, &self.tool_call_inputs);
 
-        if let Some(notification) =
-            convert::session_update_to_notification(&args, &self.tool_call_inputs.borrow())
-        {
+        let notification = {
+            let inputs = self.tool_call_inputs.borrow();
+            convert::session_update_to_notification(&args, &inputs)
+        };
+        if let Some(notification) = notification {
             self.notification_tx
                 .send(notification)
                 .await
@@ -87,7 +89,7 @@ impl acp::Client for KiroClient {
         args: acp::ExtNotification,
     ) -> acp::Result<()> {
         let params: serde_json::Value = serde_json::from_str(args.params.get())
-            .unwrap_or_else(|_| serde_json::Value::Null);
+            .unwrap_or(serde_json::Value::Null);
 
         match convert::to_ext_notification(args.method.as_ref(), &params) {
             Ok(notification) => {

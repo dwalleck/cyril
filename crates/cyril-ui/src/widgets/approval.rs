@@ -49,7 +49,6 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
 }
 
 #[cfg(test)]
-#[allow(clippy::expect_used)]
 mod tests {
     use super::*;
     use ratatui::backend::TestBackend;

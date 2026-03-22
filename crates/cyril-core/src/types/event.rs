@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn permission_response_variants() {
-        let responses = vec![
+        let responses = [
             PermissionResponse::AllowOnce,
             PermissionResponse::AllowAlways,
             PermissionResponse::Reject,

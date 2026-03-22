@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn error_with_source_chains() {
-        let source = std::io::Error::new(std::io::ErrorKind::Other, "io failed");
+        let source = std::io::Error::other("io failed");
         let err = Error::with_source(
             ErrorKind::Terminal {
                 detail: "setup".into(),

@@ -153,10 +153,12 @@ mod tests {
 
     #[test]
     fn toolbar_renders_with_session() {
-        let mut state = MockTuiState::default();
-        state.session_label = Some("my-session".into());
-        state.current_mode = Some("code".into());
-        state.current_model = Some("claude-sonnet-4".into());
+        let state = MockTuiState {
+            session_label: Some("my-session".into()),
+            current_mode: Some("code".into()),
+            current_model: Some("claude-sonnet-4".into()),
+            ..Default::default()
+        };
 
         let backend = TestBackend::new(80, 1);
         let mut terminal = Terminal::new(backend).expect("test terminal");
@@ -169,9 +171,11 @@ mod tests {
 
     #[test]
     fn status_bar_renders_context_usage() {
-        let mut state = MockTuiState::default();
-        state.context_usage = Some(75.0);
-        state.credit_usage = Some((5.25, 10.0));
+        let state = MockTuiState {
+            context_usage: Some(75.0),
+            credit_usage: Some((5.25, 10.0)),
+            ..Default::default()
+        };
 
         let backend = TestBackend::new(80, 1);
         let mut terminal = Terminal::new(backend).expect("test terminal");

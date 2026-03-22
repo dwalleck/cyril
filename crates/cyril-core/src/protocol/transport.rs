@@ -5,7 +5,8 @@ use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 pub(crate) struct AgentProcess {
     pub stdin: ChildStdin,
     pub stdout: ChildStdout,
-    pub child: Child,
+    /// Held to keep the child process alive; dropped when the bridge shuts down.
+    pub _child: Child,
 }
 
 impl AgentProcess {
@@ -42,6 +43,6 @@ impl AgentProcess {
             })
         })?;
 
-        Ok(Self { stdin, stdout, child })
+        Ok(Self { stdin, stdout, _child: child })
     }
 }

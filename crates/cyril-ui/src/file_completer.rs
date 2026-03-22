@@ -80,14 +80,11 @@ impl FileCompleter {
             .await?;
 
         if !output.status.success() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!(
-                    "git ls-files exited with {}: {}",
-                    output.status,
-                    String::from_utf8_lossy(&output.stderr)
-                ),
-            ));
+            return Err(std::io::Error::other(format!(
+                "git ls-files exited with {}: {}",
+                output.status,
+                String::from_utf8_lossy(&output.stderr)
+            )));
         }
 
         let files = String::from_utf8_lossy(&output.stdout)

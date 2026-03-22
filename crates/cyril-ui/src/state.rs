@@ -441,6 +441,7 @@ impl UiState {
     /// Cancel the approval dialog, sending a Cancel response.
     pub fn approval_cancel(&mut self) {
         if let Some(approval) = self.approval.take() {
+            // Ignore send error — the bridge may have dropped the receiver
             let _ = approval.responder.send(PermissionResponse::Cancel);
         }
     }

@@ -107,9 +107,11 @@ mod tests {
 
     #[test]
     fn input_renders_with_text() {
-        let mut state = MockTuiState::default();
-        state.input_text = "hello world".into();
-        state.input_cursor = 5;
+        let state = MockTuiState {
+            input_text: "hello world".into(),
+            input_cursor: 5,
+            ..Default::default()
+        };
 
         let backend = TestBackend::new(80, 5);
         let mut terminal = Terminal::new(backend).expect("test terminal");
@@ -122,20 +124,22 @@ mod tests {
 
     #[test]
     fn input_renders_with_suggestions() {
-        let mut state = MockTuiState::default();
-        state.input_text = "/mo".into();
-        state.input_cursor = 3;
-        state.autocomplete_suggestions = vec![
-            crate::traits::Suggestion {
-                text: "/model".into(),
-                description: Some("Switch model".into()),
-            },
-            crate::traits::Suggestion {
-                text: "/mode".into(),
-                description: Some("Switch mode".into()),
-            },
-        ];
-        state.autocomplete_selected = Some(0);
+        let state = MockTuiState {
+            input_text: "/mo".into(),
+            input_cursor: 3,
+            autocomplete_suggestions: vec![
+                crate::traits::Suggestion {
+                    text: "/model".into(),
+                    description: Some("Switch model".into()),
+                },
+                crate::traits::Suggestion {
+                    text: "/mode".into(),
+                    description: Some("Switch mode".into()),
+                },
+            ],
+            autocomplete_selected: Some(0),
+            ..Default::default()
+        };
 
         let backend = TestBackend::new(80, 20);
         let mut terminal = Terminal::new(backend).expect("test terminal");
