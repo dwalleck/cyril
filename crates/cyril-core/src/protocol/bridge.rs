@@ -41,6 +41,11 @@ pub struct BridgeSender {
 }
 
 impl BridgeSender {
+    /// Create from a raw sender (used in tests and by the bridge).
+    pub fn from_sender(tx: mpsc::Sender<BridgeCommand>) -> Self {
+        Self { command_tx: tx }
+    }
+
     /// Send a command to the ACP bridge. Returns Err if bridge is dead.
     pub async fn send(&self, cmd: BridgeCommand) -> crate::Result<()> {
         self.command_tx
