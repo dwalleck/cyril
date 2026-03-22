@@ -202,12 +202,15 @@ async fn run_bridge(
     tracing::info!("ACP bridge initialized");
 
     // 5. Command loop
+    let mut active_session_id: Option<acp::SessionId> = None;
+
     while let Some(cmd) = channels.command_rx.recv().await {
         match cmd {
             BridgeCommand::NewSession { cwd: session_cwd } => {
                 let translated_cwd = crate::platform::path::to_agent(&session_cwd);
                 match conn.new_session(acp::NewSessionRequest::new(translated_cwd)).await {
                     Ok(response) => {
+                        active_session_id = Some(response.session_id.clone());
                         let session_id = response.session_id.to_string();
                         let current_mode = response
                             .modes
@@ -253,21 +256,45 @@ async fn run_bridge(
                 }
             }
             BridgeCommand::CancelRequest => {
-                // Cancel requires a session_id which we don't have in this variant.
-                // TODO: track active session and issue CancelNotification
-                tracing::info!("cancel requested (not yet implemented)");
+                if let Some(ref session_id) = active_session_id {
+                    if let Err(e) = conn
+                        .cancel(acp::CancelNotification::new(session_id.clone()))
+                        .await
+                    {
+                        tracing::warn!(error = %e, "failed to send cancel notification");
+                    }
+                } else {
+                    tracing::warn!("cancel requested but no active session");
+                }
             }
             BridgeCommand::SetMode { mode_id } => {
-                // TODO: implement when active session tracking is added
-                tracing::info!(mode_id, "set_mode requested (not yet implemented)");
+                if let Some(ref session_id) = active_session_id {
+                    match conn
+                        .set_session_mode(acp::SetSessionModeRequest::new(
+                            session_id.clone(),
+                            mode_id.clone(),
+                        ))
+                        .await
+                    {
+                        Ok(_) => {
+                            tracing::info!(mode_id, "mode changed");
+                        }
+                        Err(e) => {
+                            tracing::error!(error = %e, mode_id, "set_session_mode failed");
+                        }
+                    }
+                } else {
+                    tracing::warn!(mode_id, "set_mode requested but no active session");
+                }
             }
             BridgeCommand::LoadSession { session_id } => {
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 match conn
-                    .load_session(acp::LoadSessionRequest::new(acp_session_id, cwd))
+                    .load_session(acp::LoadSessionRequest::new(acp_session_id.clone(), cwd))
                     .await
                 {
                     Ok(_) => {
+                        active_session_id = Some(acp_session_id);
                         tracing::info!(session_id = session_id.as_str(), "session loaded");
                     }
                     Err(e) => {
