@@ -178,13 +178,12 @@ impl UiState {
         match notification {
             Notification::AgentMessage(msg) => {
                 if msg.is_streaming {
-                    self.streaming_text.clone_from(&msg.text);
+                    self.streaming_text.push_str(&msg.text);
                     self.set_activity(Activity::Streaming);
                 } else {
-                    self.streaming_text.clear();
-                    self.messages.push(ChatMessage::agent_text(msg.text.clone()));
-                    self.messages_version += 1;
-                    self.enforce_message_limit();
+                    self.streaming_text.push_str(&msg.text);
+                    self.commit_streaming();
+                    self.set_activity(Activity::Ready);
                 }
                 true
             }

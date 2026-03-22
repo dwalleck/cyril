@@ -21,6 +21,22 @@ fn agent_message_streams_to_ui_state() {
 }
 
 #[test]
+fn streaming_chunks_append_not_replace() {
+    let mut ui = UiState::new(500);
+
+    ui.apply_notification(&Notification::AgentMessage(AgentMessage {
+        text: "Hello ".into(),
+        is_streaming: true,
+    }));
+    ui.apply_notification(&Notification::AgentMessage(AgentMessage {
+        text: "world".into(),
+        is_streaming: true,
+    }));
+
+    assert_eq!(ui.streaming_text(), "Hello world");
+}
+
+#[test]
 fn turn_completed_commits_streaming_and_updates_session() {
     let mut ui = UiState::new(500);
     let mut session = SessionController::new();
