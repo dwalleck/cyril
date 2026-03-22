@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
+use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
 
 use crate::traits::{ChatMessage, ChatMessageKind, TrackedToolCall, TuiState};
 use crate::widgets::markdown;
@@ -36,8 +36,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         ));
     }
 
-    let total_lines = lines.len();
     let visible_height = area.height as usize;
+
+    let chat = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .block(Block::default());
+
+    // Use line_count to get the wrapped height (accounts for long lines wrapping)
+    let total_lines = chat.line_count(area.width);
 
     // Auto-scroll to bottom
     let scroll_offset = if total_lines > visible_height {
@@ -46,9 +52,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         0
     };
 
-    let chat = Paragraph::new(lines)
-        .scroll((scroll_offset as u16, 0))
-        .block(Block::default());
+    let chat = chat.scroll((scroll_offset as u16, 0));
 
     frame.render_widget(chat, area);
 
