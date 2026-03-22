@@ -50,6 +50,11 @@ impl App {
     pub async fn create_initial_session(&mut self, cwd: PathBuf) {
         self.ui_state
             .add_system_message("Connecting to agent...".into());
+
+        // Load file completer for @-file autocomplete
+        let completer = cyril_ui::file_completer::FileCompleter::load(&cwd).await;
+        self.ui_state.set_file_completer(completer);
+
         if let Err(e) = self
             .bridge_sender
             .send(BridgeCommand::NewSession { cwd })

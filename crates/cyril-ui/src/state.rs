@@ -254,6 +254,8 @@ impl UiState {
             }
             Notification::SessionCreated { session_id } => {
                 self.session_label = Some(session_id.as_str().to_string());
+                self.add_system_message(format!("Session created: {}", session_id.as_str()));
+                self.set_activity(Activity::Ready);
                 true
             }
             Notification::ConfigOptionsUpdated(_) | Notification::CommandsUpdated(_) => {
