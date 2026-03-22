@@ -1,5 +1,5 @@
-// TODO(5.3): Remove once the bridge module consumes these.
-#[expect(dead_code, reason = "will be consumed by bridge in Task 5.3")]
+pub mod bridge;
+#[expect(dead_code, reason = "will be consumed by bridge loop in a later task")]
 pub(crate) mod convert;
-#[expect(dead_code, reason = "will be consumed by bridge in Task 5.3")]
+#[expect(dead_code, reason = "will be consumed by bridge loop in a later task")]
 pub(crate) mod transport;
