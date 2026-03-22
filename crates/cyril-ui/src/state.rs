@@ -248,6 +248,10 @@ impl UiState {
                 self.add_system_message(format!("Clear: {message}"));
                 true
             }
+            Notification::SessionCreated { session_id } => {
+                self.session_label = Some(session_id.as_str().to_string());
+                true
+            }
             Notification::ConfigOptionsUpdated(_) | Notification::CommandsUpdated(_) => {
                 // These are consumed by the App layer, not UiState directly.
                 false
