@@ -74,6 +74,25 @@ impl BridgeSender {
             .await
             .map_err(|_| crate::Error::from_kind(crate::ErrorKind::BridgeClosed))
     }
+
+    /// Send an ext method request and await the response.
+    /// Used for request/response patterns like `kiro.dev/commands/options`.
+    pub async fn send_ext_method_with_response(
+        &self,
+        method: impl Into<String>,
+        params: serde_json::Value,
+    ) -> crate::Result<serde_json::Value> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        self.send(BridgeCommand::ExtMethodWithResponse {
+            method: method.into(),
+            params,
+            response_tx: tx,
+        })
+        .await?;
+        rx.await.map_err(|_| {
+            crate::Error::from_kind(crate::ErrorKind::BridgeClosed)
+        })?
+    }
 }
 
 /// The bridge side of the channels (held by the bridge thread).
@@ -288,6 +307,45 @@ async fn run_bridge(
                     }
                 }
             }
+            BridgeCommand::ExtMethodWithResponse {
+                method,
+                params,
+                response_tx,
+            } => {
+                let raw = match serde_json::value::RawValue::from_string(
+                    serde_json::to_string(&params).unwrap_or_else(|_| "null".to_string()),
+                ) {
+                    Ok(raw) => raw,
+                    Err(e) => {
+                        let _ = response_tx.send(Err(crate::Error::from_kind(
+                            crate::ErrorKind::Protocol {
+                                message: format!("failed to serialize ext params: {e}"),
+                            },
+                        )));
+                        continue;
+                    }
+                };
+                let raw_arc: Arc<serde_json::value::RawValue> = raw.into();
+                match conn
+                    .ext_method(acp::ExtRequest::new(&*method, raw_arc))
+                    .await
+                {
+                    Ok(response) => {
+                        let value: serde_json::Value =
+                            serde_json::from_str(response.0.get())
+                                .unwrap_or(serde_json::Value::Null);
+                        let _ = response_tx.send(Ok(value));
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, method, "ext_method failed");
+                        let _ = response_tx.send(Err(crate::Error::from_kind(
+                            crate::ErrorKind::Protocol {
+                                message: format!("ext_method {method} failed: {e}"),
+                            },
+                        )));
+                    }
+                }
+            }
             BridgeCommand::Shutdown => {
                 tracing::info!("bridge shutting down");
                 break;
@@ -371,5 +429,67 @@ mod tests {
         assert!(matches!(r1, Some(BridgeCommand::CancelRequest)));
         assert!(matches!(r2, Some(BridgeCommand::Shutdown)));
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn ext_method_with_response_roundtrip() -> anyhow::Result<()> {
+        let (handle, mut bridge_side) = create_channel_pair();
+        let sender = handle.sender();
+
+        let (resp_tx, _resp_rx) = tokio::sync::oneshot::channel();
+        sender
+            .send(BridgeCommand::ExtMethodWithResponse {
+                method: "kiro.dev/commands/options".into(),
+                params: serde_json::json!({"command": "model"}),
+                response_tx: resp_tx,
+            })
+            .await?;
+
+        let cmd = bridge_side.command_rx.recv().await;
+        assert!(matches!(
+            cmd,
+            Some(BridgeCommand::ExtMethodWithResponse { .. })
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn send_ext_method_with_response_returns_err_when_bridge_dead() {
+        let (handle, _bridge_side) = create_channel_pair();
+        let sender = handle.sender();
+        drop(_bridge_side);
+
+        let result = sender
+            .send_ext_method_with_response(
+                "kiro.dev/commands/options",
+                serde_json::json!({"command": "model"}),
+            )
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn send_ext_method_with_response_returns_err_when_responder_dropped() {
+        let (handle, mut bridge_side) = create_channel_pair();
+        let sender = handle.sender();
+
+        // Spawn a task that receives the command but drops the response_tx
+        let join = tokio::spawn(async move {
+            if let Some(BridgeCommand::ExtMethodWithResponse { response_tx, .. }) =
+                bridge_side.command_rx.recv().await
+            {
+                drop(response_tx);
+            }
+        });
+
+        let result = sender
+            .send_ext_method_with_response(
+                "kiro.dev/commands/options",
+                serde_json::json!({"command": "model"}),
+            )
+            .await;
+
+        join.await.unwrap();
+        assert!(result.is_err());
     }
 }

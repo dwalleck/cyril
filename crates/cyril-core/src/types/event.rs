@@ -18,20 +18,33 @@ pub enum Notification {
 
     // Session state
     PlanUpdated(Plan),
-    ModeChanged { mode_id: String },
+    ModeChanged {
+        mode_id: String,
+    },
     ConfigOptionsUpdated(Vec<ConfigOption>),
     CommandsUpdated(Vec<CommandInfo>),
 
     // Kiro extensions
     ContextUsageUpdated(ContextUsage),
-    AgentSwitched { name: String, welcome: Option<String> },
-    CompactionStatus { message: String },
-    ClearStatus { message: String },
+    AgentSwitched {
+        name: String,
+        welcome: Option<String>,
+    },
+    CompactionStatus {
+        message: String,
+    },
+    ClearStatus {
+        message: String,
+    },
 
     // Lifecycle
-    SessionCreated { session_id: SessionId },
+    SessionCreated {
+        session_id: SessionId,
+    },
     TurnCompleted,
-    BridgeDisconnected { reason: String },
+    BridgeDisconnected {
+        reason: String,
+    },
 }
 
 /// A request from the agent that needs user approval.
@@ -64,12 +77,29 @@ pub enum PermissionResponse {
 /// Commands sent from the App to the ACP bridge.
 #[derive(Debug)]
 pub enum BridgeCommand {
-    SendPrompt { session_id: SessionId, text: String },
-    NewSession { cwd: std::path::PathBuf },
-    LoadSession { session_id: String },
+    SendPrompt {
+        session_id: SessionId,
+        text: String,
+    },
+    NewSession {
+        cwd: std::path::PathBuf,
+    },
+    LoadSession {
+        session_id: String,
+    },
     CancelRequest,
-    SetMode { mode_id: String },
-    ExtMethod { method: String, params: serde_json::Value },
+    SetMode {
+        mode_id: String,
+    },
+    ExtMethod {
+        method: String,
+        params: serde_json::Value,
+    },
+    ExtMethodWithResponse {
+        method: String,
+        params: serde_json::Value,
+        response_tx: tokio::sync::oneshot::Sender<crate::Result<serde_json::Value>>,
+    },
     Shutdown,
 }
 
