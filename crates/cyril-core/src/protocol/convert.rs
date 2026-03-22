@@ -1,3 +1,8 @@
+use std::cell::RefCell;
+use std::collections::HashMap;
+
+use agent_client_protocol as acp;
+
 use crate::types::*;
 
 pub(crate) fn to_tool_kind(kind: agent_client_protocol::ToolKind) -> ToolKind {
@@ -83,6 +88,275 @@ pub(crate) fn to_ext_notification(
         other => Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
             message: format!("unknown extension: {other}"),
         })),
+    }
+}
+
+/// Build a `ToolCall` from the `ToolCallUpdate` inside a permission request,
+/// enriching it with cached `raw_input` when the update doesn't carry one.
+pub(crate) fn to_tool_call_from_permission(
+    args: &acp::RequestPermissionRequest,
+    cached: &HashMap<String, serde_json::Value>,
+) -> ToolCall {
+    let update = &args.tool_call;
+    let id_str = update.tool_call_id.to_string();
+    let title = update
+        .fields
+        .title
+        .clone()
+        .unwrap_or_default();
+    let kind = update
+        .fields
+        .kind
+        .map(to_tool_kind)
+        .unwrap_or(ToolKind::Other);
+    let status = update
+        .fields
+        .status
+        .map(to_tool_call_status)
+        .unwrap_or(ToolCallStatus::Pending);
+    let raw_input = cached
+        .get(&id_str)
+        .cloned()
+        .or_else(|| update.fields.raw_input.clone());
+
+    ToolCall::new(
+        ToolCallId::new(id_str),
+        title,
+        None,
+        kind,
+        status,
+        raw_input,
+    )
+}
+
+/// Convert ACP permission options to our internal representation.
+pub(crate) fn to_permission_options(args: &acp::RequestPermissionRequest) -> Vec<PermissionOption> {
+    args.options
+        .iter()
+        .map(|opt| {
+            let is_destructive = matches!(
+                opt.kind,
+                acp::PermissionOptionKind::RejectOnce | acp::PermissionOptionKind::RejectAlways
+            );
+            PermissionOption {
+                id: opt.option_id.to_string(),
+                label: opt.name.clone(),
+                is_destructive,
+            }
+        })
+        .collect()
+}
+
+/// Extract a human-readable message from a permission request.
+/// Falls back to the tool call title if no dedicated message field exists.
+pub(crate) fn extract_permission_message(args: &acp::RequestPermissionRequest) -> String {
+    args.tool_call
+        .fields
+        .title
+        .clone()
+        .unwrap_or_else(|| "Permission requested".to_string())
+}
+
+/// Convert our `PermissionResponse` back into an ACP `RequestPermissionResponse`.
+/// Uses the option IDs from the original request to map our response variants.
+pub(crate) fn from_permission_response(
+    response: PermissionResponse,
+    args: &acp::RequestPermissionRequest,
+) -> acp::RequestPermissionResponse {
+    let outcome = match response {
+        PermissionResponse::Cancel => acp::RequestPermissionOutcome::Cancelled,
+        PermissionResponse::AllowOnce => {
+            let option_id = find_option_id(args, acp::PermissionOptionKind::AllowOnce);
+            acp::RequestPermissionOutcome::Selected(
+                acp::SelectedPermissionOutcome::new(option_id),
+            )
+        }
+        PermissionResponse::AllowAlways => {
+            let option_id = find_option_id(args, acp::PermissionOptionKind::AllowAlways);
+            acp::RequestPermissionOutcome::Selected(
+                acp::SelectedPermissionOutcome::new(option_id),
+            )
+        }
+        PermissionResponse::Reject => {
+            let option_id = find_option_id(args, acp::PermissionOptionKind::RejectOnce);
+            acp::RequestPermissionOutcome::Selected(
+                acp::SelectedPermissionOutcome::new(option_id),
+            )
+        }
+    };
+    acp::RequestPermissionResponse::new(outcome)
+}
+
+/// Find the option ID for a given permission kind in the request.
+/// Falls back to the first option ID if the exact kind isn't found.
+fn find_option_id(
+    args: &acp::RequestPermissionRequest,
+    target_kind: acp::PermissionOptionKind,
+) -> acp::PermissionOptionId {
+    args.options
+        .iter()
+        .find(|o| o.kind == target_kind)
+        .or_else(|| args.options.first())
+        .map(|o| o.option_id.clone())
+        .unwrap_or_else(|| acp::PermissionOptionId::new("allow_once"))
+}
+
+/// Cache `raw_input` from tool call and tool call update notifications,
+/// keyed by tool call ID. Permission requests arrive without `raw_input`,
+/// so the client looks it up from this cache.
+pub(crate) fn cache_tool_call_input(
+    args: &acp::SessionNotification,
+    cache: &RefCell<HashMap<String, serde_json::Value>>,
+) {
+    match &args.update {
+        acp::SessionUpdate::ToolCall(tc) => {
+            if let Some(ref raw_input) = tc.raw_input {
+                cache
+                    .borrow_mut()
+                    .insert(tc.tool_call_id.to_string(), raw_input.clone());
+            }
+        }
+        acp::SessionUpdate::ToolCallUpdate(update) => {
+            if let Some(ref raw_input) = update.fields.raw_input {
+                cache
+                    .borrow_mut()
+                    .insert(update.tool_call_id.to_string(), raw_input.clone());
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Convert an ACP `SessionNotification` to our internal `Notification`.
+/// Returns `None` for update types we don't surface to the UI.
+pub(crate) fn session_update_to_notification(
+    args: &acp::SessionNotification,
+    cached_inputs: &HashMap<String, serde_json::Value>,
+) -> Option<Notification> {
+    match &args.update {
+        acp::SessionUpdate::AgentMessageChunk(chunk) => {
+            if let acp::ContentBlock::Text(ref text) = chunk.content {
+                Some(Notification::AgentMessage(AgentMessage {
+                    text: text.text.clone(),
+                    is_streaming: true,
+                }))
+            } else {
+                None
+            }
+        }
+        acp::SessionUpdate::AgentThoughtChunk(chunk) => {
+            if let acp::ContentBlock::Text(ref text) = chunk.content {
+                Some(Notification::AgentThought(AgentThought {
+                    text: text.text.clone(),
+                }))
+            } else {
+                None
+            }
+        }
+        acp::SessionUpdate::ToolCall(tc) => {
+            Some(Notification::ToolCallStarted(to_tool_call(tc, cached_inputs)))
+        }
+        acp::SessionUpdate::ToolCallUpdate(update) => {
+            let id_str = update.tool_call_id.to_string();
+            let title = update.fields.title.clone().unwrap_or_default();
+            let kind = update
+                .fields
+                .kind
+                .map(to_tool_kind)
+                .unwrap_or(ToolKind::Other);
+            let status = update
+                .fields
+                .status
+                .map(to_tool_call_status)
+                .unwrap_or(ToolCallStatus::Pending);
+            let raw_input = cached_inputs
+                .get(&id_str)
+                .cloned()
+                .or_else(|| update.fields.raw_input.clone());
+
+            Some(Notification::ToolCallUpdated(ToolCall::new(
+                ToolCallId::new(id_str),
+                title,
+                None,
+                kind,
+                status,
+                raw_input,
+            )))
+        }
+        acp::SessionUpdate::Plan(plan) => {
+            let entries = plan
+                .entries
+                .iter()
+                .map(|e| {
+                    let status = match e.status {
+                        acp::PlanEntryStatus::Pending => PlanEntryStatus::Pending,
+                        acp::PlanEntryStatus::InProgress => PlanEntryStatus::InProgress,
+                        acp::PlanEntryStatus::Completed => PlanEntryStatus::Completed,
+                        _ => PlanEntryStatus::Pending,
+                    };
+                    PlanEntry::new(e.content.clone(), status)
+                })
+                .collect();
+            Some(Notification::PlanUpdated(Plan::new(entries)))
+        }
+        acp::SessionUpdate::CurrentModeUpdate(mode) => {
+            Some(Notification::ModeChanged {
+                mode_id: mode.current_mode_id.to_string(),
+            })
+        }
+        acp::SessionUpdate::ConfigOptionUpdate(update) => {
+            let options = update
+                .config_options
+                .iter()
+                .filter_map(|opt| {
+                    match &opt.kind {
+                        acp::SessionConfigKind::Select(select) => {
+                            let values = match &select.options {
+                                acp::SessionConfigSelectOptions::Ungrouped(flat) => {
+                                    flat.iter().map(|v| v.value.to_string()).collect()
+                                }
+                                acp::SessionConfigSelectOptions::Grouped(groups) => {
+                                    groups
+                                        .iter()
+                                        .flat_map(|g| {
+                                            g.options.iter().map(|v| v.value.to_string())
+                                        })
+                                        .collect()
+                                }
+                                _ => Vec::new(),
+                            };
+                            Some(ConfigOption {
+                                key: opt.id.to_string(),
+                                label: opt.name.clone(),
+                                value: Some(select.current_value.to_string()),
+                                options: values,
+                            })
+                        }
+                        _ => None,
+                    }
+                })
+                .collect();
+            Some(Notification::ConfigOptionsUpdated(options))
+        }
+        acp::SessionUpdate::AvailableCommandsUpdate(update) => {
+            let commands = update
+                .available_commands
+                .iter()
+                .map(|cmd| {
+                    CommandInfo::new(
+                        cmd.name.clone(),
+                        cmd.description.clone(),
+                        None::<String>,
+                        cmd.input.is_some(),
+                    )
+                })
+                .collect();
+            Some(Notification::CommandsUpdated(commands))
+        }
+        _ => {
+            tracing::debug!("unhandled session update variant");
+            None
+        }
     }
 }
 
