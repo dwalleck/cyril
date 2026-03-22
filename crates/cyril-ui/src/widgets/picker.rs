@@ -5,9 +5,10 @@ use crate::traits::PickerState;
 
 /// Render the picker overlay (centered popup).
 pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
-    let width = 60.min(area.width.saturating_sub(4));
+    let width = 80.min(area.width.saturating_sub(4));
     let visible = state.filtered_indices.len().min(15);
-    let height = (visible as u16 + 5).min(area.height.saturating_sub(4));
+    // +1 for the description line of the selected item
+    let height = (visible as u16 + 6).min(area.height.saturating_sub(4));
     let x = area.x + (area.width.saturating_sub(width)) / 2;
     let y = area.y + (area.height.saturating_sub(height)) / 2;
     let popup_area = Rect::new(x, y, width, height);
@@ -27,23 +28,46 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
     // Options
     for (display_idx, &option_idx) in state.filtered_indices.iter().enumerate().take(visible) {
         if let Some(opt) = state.options.get(option_idx) {
-            let style = if display_idx == state.selected {
+            let is_selected = display_idx == state.selected;
+            let prefix = if is_selected { "▸ " } else { "  " };
+            let current_marker = if opt.is_current { " ✓" } else { "" };
+
+            let label_style = if is_selected {
                 Style::default().bg(Color::Rgb(50, 50, 70)).fg(Color::White)
             } else {
                 Style::default().fg(Color::Gray)
             };
-
-            let prefix = if display_idx == state.selected {
-                "▸ "
+            let detail_style = if is_selected {
+                Style::default()
+                    .bg(Color::Rgb(50, 50, 70))
+                    .fg(Color::DarkGray)
             } else {
-                "  "
+                Style::default().fg(Color::DarkGray)
             };
-            let current_marker = if opt.is_current { " ✓" } else { "" };
 
-            lines.push(Line::styled(
+            let mut spans = vec![Span::styled(
                 format!("{prefix}{}{current_marker}", opt.label),
-                style,
-            ));
+                label_style,
+            )];
+
+            // Show group (e.g., credit tier) if available
+            if let Some(ref group) = opt.group {
+                spans.push(Span::styled(format!("  {group}"), detail_style));
+            }
+
+            lines.push(Line::from(spans));
+
+            // Show description on a second line for the selected item
+            if is_selected {
+                if let Some(ref desc) = opt.description {
+                    lines.push(Line::styled(
+                        format!("    {desc}"),
+                        Style::default()
+                            .fg(Color::DarkGray)
+                            .add_modifier(Modifier::ITALIC),
+                    ));
+                }
+            }
         }
     }
 

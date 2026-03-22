@@ -301,8 +301,10 @@ fn print_notification(n: &Notification) {
             );
             for opt in options {
                 println!(
-                    "    {:<30} value={:<25} current={}",
-                    opt.label, opt.value, opt.is_current
+                    "    {:<30} value={:<25} current={} desc={:?} group={:?}",
+                    opt.label, opt.value, opt.is_current,
+                    opt.description.as_deref().unwrap_or(""),
+                    opt.group.as_deref().unwrap_or("")
                 );
             }
         }
