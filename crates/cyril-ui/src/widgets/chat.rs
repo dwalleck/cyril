@@ -22,6 +22,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     // Render streaming text
     let streaming = state.streaming_text();
     if !streaming.is_empty() {
+        lines.push(Line::styled(
+            "Kiro:",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ));
         let md_lines = markdown::render(streaming);
         lines.extend(md_lines);
     }
@@ -78,6 +84,12 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
             }
         }
         ChatMessageKind::AgentText(text) => {
+            lines.push(Line::styled(
+                "Kiro:",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ));
             let md_lines = markdown::render(text);
             lines.extend(md_lines);
         }
@@ -294,10 +306,10 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::ChatMessage;
     use crate::traits::test_support::MockTuiState;
-    use ratatui::Terminal;
+    use crate::traits::ChatMessage;
     use ratatui::backend::TestBackend;
+    use ratatui::Terminal;
 
     #[test]
     fn chat_renders_empty() {
