@@ -328,4 +328,172 @@ mod tests {
         assert_send::<ToolCallLocation>();
         assert_sync::<ToolCallLocation>();
     }
+
+    // --- merge_update tests ---
+
+    #[test]
+    fn merge_update_preserves_content_when_update_has_none() {
+        // Simulates: initial ToolCall has diff content, ToolCallUpdate only changes status
+        let mut tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            Some("Editing main.rs".into()),
+            ToolKind::Write,
+            ToolCallStatus::InProgress,
+            None,
+        )
+        .with_content(vec![ToolCallContent::Diff {
+            path: "src/main.rs".into(),
+            old_text: Some("old code".into()),
+            new_text: "new code".into(),
+        }])
+        .with_locations(vec![ToolCallLocation {
+            path: "src/main.rs".into(),
+            line: Some(1),
+        }]);
+
+        // Update only changes status — no content or locations
+        let update = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            Some("Editing main.rs".into()),
+            ToolKind::Write,
+            ToolCallStatus::Completed,
+            None,
+        );
+
+        tc.merge_update(&update);
+
+        assert_eq!(
+            tc.status(),
+            ToolCallStatus::Completed,
+            "status should update"
+        );
+        assert_eq!(tc.content().len(), 1, "content should be preserved");
+        assert_eq!(tc.locations().len(), 1, "locations should be preserved");
+        assert!(
+            matches!(&tc.content()[0], ToolCallContent::Diff { new_text, .. } if new_text == "new code"),
+            "diff content should be intact"
+        );
+    }
+
+    #[test]
+    fn merge_update_overwrites_content_when_update_provides_it() {
+        let mut tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            None,
+            ToolKind::Write,
+            ToolCallStatus::InProgress,
+            None,
+        )
+        .with_content(vec![ToolCallContent::Text("old content".into())]);
+
+        let update = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            None,
+            ToolKind::Write,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_content(vec![ToolCallContent::Diff {
+            path: "file.rs".into(),
+            old_text: None,
+            new_text: "new file".into(),
+        }]);
+
+        tc.merge_update(&update);
+
+        assert_eq!(tc.content().len(), 1);
+        assert!(
+            matches!(&tc.content()[0], ToolCallContent::Diff { .. }),
+            "content should be replaced when update provides it"
+        );
+    }
+
+    #[test]
+    fn merge_update_preserves_title_when_update_has_none() {
+        let mut tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            Some("Reading config.rs".into()),
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            None,
+        );
+
+        let update = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            None, // no title in update
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        );
+
+        tc.merge_update(&update);
+
+        assert_eq!(
+            tc.title(),
+            Some("Reading config.rs"),
+            "title should be preserved"
+        );
+        assert_eq!(tc.status(), ToolCallStatus::Completed);
+    }
+
+    #[test]
+    fn merge_update_overwrites_title_when_update_provides_it() {
+        let mut tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            Some("Reading...".into()),
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            None,
+        );
+
+        let update = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            Some("Reading config.rs:1-50".into()),
+            ToolKind::Read,
+            ToolCallStatus::Pending,
+            None,
+        );
+
+        tc.merge_update(&update);
+
+        assert_eq!(tc.title(), Some("Reading config.rs:1-50"));
+    }
+
+    #[test]
+    fn merge_update_preserves_raw_input_when_update_has_none() {
+        let input = serde_json::json!({"path": "src/main.rs"});
+        let mut tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            None,
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            Some(input.clone()),
+        );
+
+        let update = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            None,
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None, // no raw_input in update
+        );
+
+        tc.merge_update(&update);
+
+        assert_eq!(
+            tc.raw_input(),
+            Some(&input),
+            "raw_input should be preserved"
+        );
+    }
 }

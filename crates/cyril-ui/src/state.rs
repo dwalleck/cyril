@@ -1087,4 +1087,140 @@ mod tests {
         state.request_quit();
         assert!(state.should_quit());
     }
+
+    // --- Tool call update merge tests ---
+    // These test the exact Kiro scenario: initial ToolCall has content,
+    // ToolCallUpdate only changes status, content must survive into committed messages.
+
+    #[test]
+    fn tool_call_update_preserves_diff_content() {
+        use cyril_core::types::{ToolCallContent, ToolCallLocation};
+
+        let mut state = UiState::new(500);
+
+        // Phase 1: Initial ToolCall with diff content and location (Kiro sends this first)
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            Some("Editing main.rs".into()),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"file_path": "src/main.rs"})),
+        )
+        .with_content(vec![ToolCallContent::Diff {
+            path: "src/main.rs".into(),
+            old_text: Some("fn main() {}".into()),
+            new_text: "fn main() {\n    println!(\"hello\");\n}".into(),
+        }])
+        .with_locations(vec![ToolCallLocation {
+            path: "src/main.rs".into(),
+            line: Some(1),
+        }]);
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+
+        assert_eq!(state.active_tool_calls().len(), 1);
+        assert_eq!(state.active_tool_calls()[0].content().len(), 1);
+        assert_eq!(state.active_tool_calls()[0].locations().len(), 1);
+
+        // Phase 2: ToolCallUpdate with status=Completed but NO content/locations
+        // (This is exactly what Kiro sends — only the changed fields)
+        let update = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            Some("Editing main.rs".into()),
+            ToolKind::Write,
+            ToolCallStatus::Completed,
+            None,
+        );
+        // Note: no .with_content() or .with_locations() — empty vecs
+        state.apply_notification(&Notification::ToolCallUpdated(update));
+
+        // Content and locations must survive the update
+        assert_eq!(
+            state.active_tool_calls()[0].content().len(),
+            1,
+            "diff content must survive ToolCallUpdate"
+        );
+        assert_eq!(
+            state.active_tool_calls()[0].locations().len(),
+            1,
+            "locations must survive ToolCallUpdate"
+        );
+        assert_eq!(
+            state.active_tool_calls()[0].status(),
+            ToolCallStatus::Completed,
+            "status should be updated"
+        );
+
+        // Phase 3: TurnCompleted — tool calls commit to message history
+        state.apply_notification(&Notification::TurnCompleted);
+
+        let tc_msg = state
+            .messages()
+            .iter()
+            .find(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
+        assert!(tc_msg.is_some(), "tool call should be in committed messages");
+
+        if let ChatMessageKind::ToolCall(tracked) = tc_msg.unwrap().kind() {
+            assert_eq!(
+                tracked.content().len(),
+                1,
+                "diff content must survive through commit"
+            );
+            assert!(
+                matches!(&tracked.content()[0], ToolCallContent::Diff { new_text, .. }
+                    if new_text.contains("println")),
+                "diff should contain the actual code change"
+            );
+            assert_eq!(tracked.primary_path(), Some("src/main.rs"));
+        }
+    }
+
+    #[test]
+    fn multiple_tool_call_updates_preserve_content() {
+        use cyril_core::types::ToolCallContent;
+
+        let mut state = UiState::new(500);
+
+        // Initial ToolCall with content
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            Some("Editing lib.rs".into()),
+            ToolKind::Write,
+            ToolCallStatus::InProgress,
+            None,
+        )
+        .with_content(vec![ToolCallContent::Diff {
+            path: "src/lib.rs".into(),
+            old_text: Some("// old".into()),
+            new_text: "// new".into(),
+        }]);
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+
+        // First update: status changes to Pending
+        let update1 = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            Some("Editing lib.rs".into()),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            None,
+        );
+        state.apply_notification(&Notification::ToolCallUpdated(update1));
+        assert_eq!(state.active_tool_calls()[0].content().len(), 1, "content survives first update");
+
+        // Second update: status changes to Completed
+        let update2 = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            Some("Editing lib.rs".into()),
+            ToolKind::Write,
+            ToolCallStatus::Completed,
+            None,
+        );
+        state.apply_notification(&Notification::ToolCallUpdated(update2));
+        assert_eq!(state.active_tool_calls()[0].content().len(), 1, "content survives second update");
+        assert_eq!(state.active_tool_calls()[0].status(), ToolCallStatus::Completed);
+    }
 }
