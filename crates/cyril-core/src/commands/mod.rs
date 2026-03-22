@@ -14,10 +14,12 @@ pub struct CommandContext<'a> {
 }
 
 /// Result of executing a command.
+#[derive(Debug)]
 pub struct CommandResult {
     pub kind: CommandResultKind,
 }
 
+#[derive(Debug)]
 pub enum CommandResultKind {
     /// Display a system message in chat.
     SystemMessage(String),
@@ -194,18 +196,103 @@ impl Command for AgentCommand {
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        let session_id = ctx
+            .session
+            .id()
+            .ok_or_else(|| crate::Error::from_kind(crate::ErrorKind::NoSession))?;
+
+        // Selection command without args: query options and show picker
+        if self.is_selection && args.is_empty() {
+            let params = serde_json::json!({
+                "command": self.name,
+                "sessionId": session_id.as_str(),
+            });
+            let response = ctx
+                .bridge
+                .send_ext_method_with_response("kiro.dev/commands/options", params)
+                .await?;
+
+            let options = parse_options_response(&response);
+            if options.is_empty() {
+                return Ok(CommandResult::system_message(format!(
+                    "No {} options available.",
+                    self.name
+                )));
+            }
+            return Ok(CommandResult::show_picker(self.name.clone(), options));
+        }
+
+        // Execute command via kiro.dev/commands/execute with TuiCommand format
+        let cmd_args = if args.is_empty() {
+            serde_json::json!({})
+        } else {
+            serde_json::json!({"value": args})
+        };
+
         let params = serde_json::json!({
-            "command": self.name,
-            "args": args,
+            "sessionId": session_id.as_str(),
+            "command": {
+                "command": self.name,
+                "args": cmd_args,
+            }
         });
+
         ctx.bridge
             .send(crate::types::BridgeCommand::ExtMethod {
-                method: format!("kiro.dev/commands/{}", self.name),
+                method: "kiro.dev/commands/execute".into(),
                 params,
             })
             .await?;
+
         Ok(CommandResult::dispatched())
     }
+}
+
+/// Parse a `kiro.dev/commands/options` response into `CommandOption`s.
+///
+/// Handles two response shapes:
+/// - Object with `"options"` array: `{"options": [...]}`
+/// - Bare array: `[...]`
+fn parse_options_response(response: &serde_json::Value) -> Vec<CommandOption> {
+    let options_arr = response
+        .get("options")
+        .and_then(|v| v.as_array())
+        .or_else(|| response.as_array());
+
+    let Some(opts) = options_arr else {
+        return Vec::new();
+    };
+
+    opts.iter()
+        .filter_map(|opt| {
+            let value = opt.get("value").and_then(|v| v.as_str())?.to_string();
+            let label = opt
+                .get("label")
+                .or_else(|| opt.get("name"))
+                .and_then(|v| v.as_str())
+                .unwrap_or(&value)
+                .to_string();
+            let description = opt
+                .get("description")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let group = opt
+                .get("group")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let is_current = opt
+                .get("current")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            Some(CommandOption {
+                label,
+                value,
+                description,
+                group,
+                is_current,
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -420,5 +507,272 @@ mod tests {
         assert!(registry.parse("/quit").is_some());
         assert!(registry.parse("/q").is_some());
         assert!(registry.parse("/new").is_some());
+    }
+
+    // --- parse_options_response tests ---
+
+    #[test]
+    fn parse_options_response_with_options_key() {
+        let response = serde_json::json!({
+            "options": [
+                {"value": "claude-sonnet", "label": "Claude Sonnet", "description": "Fast", "current": true},
+                {"value": "claude-haiku", "label": "Claude Haiku"}
+            ]
+        });
+        let opts = parse_options_response(&response);
+        assert_eq!(opts.len(), 2);
+        assert_eq!(opts[0].value, "claude-sonnet");
+        assert_eq!(opts[0].label, "Claude Sonnet");
+        assert_eq!(opts[0].description.as_deref(), Some("Fast"));
+        assert!(opts[0].is_current);
+        assert!(!opts[1].is_current);
+    }
+
+    #[test]
+    fn parse_options_response_bare_array() {
+        let response = serde_json::json!([
+            {"value": "auto", "label": "auto"}
+        ]);
+        let opts = parse_options_response(&response);
+        assert_eq!(opts.len(), 1);
+        assert_eq!(opts[0].value, "auto");
+    }
+
+    #[test]
+    fn parse_options_response_empty() {
+        let response = serde_json::json!({});
+        let opts = parse_options_response(&response);
+        assert!(opts.is_empty());
+    }
+
+    #[test]
+    fn parse_options_response_label_fallback_to_value() {
+        let response = serde_json::json!({
+            "options": [{"value": "claude-sonnet"}]
+        });
+        let opts = parse_options_response(&response);
+        assert_eq!(opts[0].label, "claude-sonnet");
+    }
+
+    #[test]
+    fn parse_options_response_label_fallback_to_name() {
+        let response = serde_json::json!({
+            "options": [{"value": "sonnet", "name": "Claude Sonnet"}]
+        });
+        let opts = parse_options_response(&response);
+        assert_eq!(opts[0].label, "Claude Sonnet");
+    }
+
+    #[test]
+    fn parse_options_response_skips_entries_without_value() {
+        let response = serde_json::json!({
+            "options": [
+                {"label": "No value field"},
+                {"value": "valid", "label": "Valid"}
+            ]
+        });
+        let opts = parse_options_response(&response);
+        assert_eq!(opts.len(), 1);
+        assert_eq!(opts[0].value, "valid");
+    }
+
+    #[test]
+    fn parse_options_response_with_groups() {
+        let response = serde_json::json!({
+            "options": [
+                {"value": "sonnet", "label": "Sonnet", "group": "Anthropic"},
+                {"value": "haiku", "label": "Haiku", "group": "Anthropic"}
+            ]
+        });
+        let opts = parse_options_response(&response);
+        assert_eq!(opts[0].group.as_deref(), Some("Anthropic"));
+        assert_eq!(opts[1].group.as_deref(), Some("Anthropic"));
+    }
+
+    // --- AgentCommand execution tests ---
+
+    #[tokio::test]
+    async fn agent_command_fails_without_session() {
+        let session = crate::session::SessionController::new();
+        let (tx, _rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+        };
+
+        let cmd = AgentCommand {
+            name: "compact".into(),
+            description: "Compact".into(),
+            is_selection: false,
+        };
+        let result = cmd.execute(&ctx, "").await;
+        assert!(result.is_err(), "should fail with no active session");
+        assert!(matches!(
+            result.unwrap_err().kind(),
+            crate::ErrorKind::NoSession
+        ));
+    }
+
+    #[tokio::test]
+    async fn agent_command_execute_sends_correct_method_and_format() {
+        let mut session = crate::session::SessionController::new();
+        session.set_session(
+            crate::types::SessionId::new("sess_test"),
+            crate::types::SessionStatus::Active,
+        );
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+        };
+
+        let cmd = AgentCommand {
+            name: "compact".into(),
+            description: "Compact context".into(),
+            is_selection: false,
+        };
+        let result = cmd.execute(&ctx, "").await;
+        assert!(result.is_ok());
+        assert!(matches!(
+            result.unwrap().kind,
+            CommandResultKind::Dispatched
+        ));
+
+        let bridge_cmd = rx.recv().await.unwrap();
+        if let crate::types::BridgeCommand::ExtMethod { method, params } = bridge_cmd {
+            assert_eq!(method, "kiro.dev/commands/execute");
+            assert_eq!(params["sessionId"], "sess_test");
+            assert_eq!(params["command"]["command"], "compact");
+            assert_eq!(params["command"]["args"], serde_json::json!({}));
+        } else {
+            panic!("expected ExtMethod, got {bridge_cmd:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn agent_command_execute_with_args_sends_value_field() {
+        let mut session = crate::session::SessionController::new();
+        session.set_session(
+            crate::types::SessionId::new("sess_test"),
+            crate::types::SessionStatus::Active,
+        );
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+        };
+
+        let cmd = AgentCommand {
+            name: "model".into(),
+            description: "Switch model".into(),
+            is_selection: true,
+        };
+        let result = cmd.execute(&ctx, "claude-sonnet").await;
+        assert!(result.is_ok());
+
+        let bridge_cmd = rx.recv().await.unwrap();
+        if let crate::types::BridgeCommand::ExtMethod { method, params } = bridge_cmd {
+            assert_eq!(method, "kiro.dev/commands/execute");
+            assert_eq!(params["command"]["command"], "model");
+            assert_eq!(params["command"]["args"]["value"], "claude-sonnet");
+        } else {
+            panic!("expected ExtMethod, got {bridge_cmd:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn agent_command_selection_no_args_queries_options() {
+        let mut session = crate::session::SessionController::new();
+        session.set_session(
+            crate::types::SessionId::new("sess_test"),
+            crate::types::SessionStatus::Active,
+        );
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+        };
+
+        let cmd = AgentCommand {
+            name: "model".into(),
+            description: "Switch model".into(),
+            is_selection: true,
+        };
+
+        // Spawn a task that receives the ExtMethodWithResponse and replies with options
+        let responder = tokio::spawn(async move {
+            if let Some(crate::types::BridgeCommand::ExtMethodWithResponse {
+                method,
+                params,
+                response_tx,
+            }) = rx.recv().await
+            {
+                assert_eq!(method, "kiro.dev/commands/options");
+                assert_eq!(params["command"], "model");
+                assert_eq!(params["sessionId"], "sess_test");
+                let _ = response_tx.send(Ok(serde_json::json!({
+                    "options": [
+                        {"value": "claude-sonnet", "label": "Claude Sonnet", "current": true},
+                        {"value": "claude-haiku", "label": "Claude Haiku"}
+                    ]
+                })));
+            } else {
+                panic!("expected ExtMethodWithResponse");
+            }
+        });
+
+        let result = cmd.execute(&ctx, "").await.unwrap();
+        responder.await.unwrap();
+
+        if let CommandResultKind::ShowPicker { title, options } = result.kind {
+            assert_eq!(title, "model");
+            assert_eq!(options.len(), 2);
+            assert_eq!(options[0].value, "claude-sonnet");
+            assert!(options[0].is_current);
+        } else {
+            panic!("expected ShowPicker, got {:?}", result.kind);
+        }
+    }
+
+    #[tokio::test]
+    async fn agent_command_selection_empty_options_returns_message() {
+        let mut session = crate::session::SessionController::new();
+        session.set_session(
+            crate::types::SessionId::new("sess_test"),
+            crate::types::SessionStatus::Active,
+        );
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+        };
+
+        let cmd = AgentCommand {
+            name: "model".into(),
+            description: "Switch model".into(),
+            is_selection: true,
+        };
+
+        let responder = tokio::spawn(async move {
+            if let Some(crate::types::BridgeCommand::ExtMethodWithResponse {
+                response_tx, ..
+            }) = rx.recv().await
+            {
+                let _ = response_tx.send(Ok(serde_json::json!({"options": []})));
+            }
+        });
+
+        let result = cmd.execute(&ctx, "").await.unwrap();
+        responder.await.unwrap();
+
+        assert!(matches!(
+            result.kind,
+            CommandResultKind::SystemMessage(ref s) if s.contains("No model options")
+        ));
     }
 }
