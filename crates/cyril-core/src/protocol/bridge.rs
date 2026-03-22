@@ -239,9 +239,15 @@ async fn run_bridge(
                     }
                 }
             }
-            BridgeCommand::SendPrompt { session_id, text } => {
+            BridgeCommand::SendPrompt {
+                session_id,
+                content_blocks,
+            } => {
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
-                let prompt = vec![acp::ContentBlock::from(text)];
+                let prompt: Vec<acp::ContentBlock> = content_blocks
+                    .into_iter()
+                    .map(acp::ContentBlock::from)
+                    .collect();
                 let request = acp::PromptRequest::new(acp_session_id, prompt);
                 match conn.prompt(request).await {
                     Ok(_) => {

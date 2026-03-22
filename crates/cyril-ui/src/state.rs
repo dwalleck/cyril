@@ -258,6 +258,14 @@ impl UiState {
                 self.set_activity(Activity::Ready);
                 true
             }
+            Notification::ToolCallChunk {
+                tool_call_id: _,
+                title: _,
+                kind: _,
+            } => {
+                self.set_activity(Activity::ToolRunning);
+                true
+            }
             Notification::ConfigOptionsUpdated(_) | Notification::CommandsUpdated(_) => {
                 // These are consumed by the App layer, not UiState directly.
                 false
@@ -427,6 +435,11 @@ impl UiState {
         self.file_completer = Some(completer);
     }
 
+    /// Get a reference to the file completer, if loaded.
+    pub fn file_completer(&self) -> Option<&FileCompleter> {
+        self.file_completer.as_ref()
+    }
+
     /// Command names available for slash autocomplete.
     pub fn set_command_names(&mut self, names: Vec<String>) {
         self.command_names = names;
@@ -460,21 +473,22 @@ impl UiState {
         // File autocomplete — look for @ trigger
         if let Some(at_pos) = text[..self.input_cursor].rfind('@') {
             let query = &text[at_pos + 1..self.input_cursor];
-            if !query.is_empty() && !query.contains(' ') {
-                if let Some(ref completer) = self.file_completer {
-                    let suggestions: Vec<Suggestion> = completer
-                        .suggest(query, 10)
-                        .into_iter()
-                        .map(|path| Suggestion {
-                            text: format!("@{path}"),
-                            description: None,
-                        })
-                        .collect();
-                    if !suggestions.is_empty() {
-                        self.autocomplete_suggestions = suggestions;
-                        self.autocomplete_selected = Some(0);
-                        return;
-                    }
+            if !query.is_empty()
+                && !query.contains(' ')
+                && let Some(ref completer) = self.file_completer
+            {
+                let suggestions: Vec<Suggestion> = completer
+                    .suggest(query, 10)
+                    .into_iter()
+                    .map(|path| Suggestion {
+                        text: format!("@{path}"),
+                        description: None,
+                    })
+                    .collect();
+                if !suggestions.is_empty() {
+                    self.autocomplete_suggestions = suggestions;
+                    self.autocomplete_selected = Some(0);
+                    return;
                 }
             }
         }
@@ -502,13 +516,13 @@ impl UiState {
             self.input_cursor = self.input_text.len();
         }
         // For @file references, replace from the @ to the cursor
-        else if suggestion.starts_with('@') {
-            if let Some(at_pos) = self.input_text[..self.input_cursor].rfind('@') {
-                let after_cursor = self.input_text[self.input_cursor..].to_string();
-                self.input_text =
-                    format!("{}{suggestion} {after_cursor}", &self.input_text[..at_pos]);
-                self.input_cursor = at_pos + suggestion.len() + 1; // +1 for space
-            }
+        else if suggestion.starts_with('@')
+            && let Some(at_pos) = self.input_text[..self.input_cursor].rfind('@')
+        {
+            let after_cursor = self.input_text[self.input_cursor..].to_string();
+            self.input_text =
+                format!("{}{suggestion} {after_cursor}", &self.input_text[..at_pos]);
+            self.input_cursor = at_pos + suggestion.len() + 1; // +1 for space
         }
 
         self.autocomplete_suggestions.clear();
@@ -518,19 +532,19 @@ impl UiState {
 
     /// Move autocomplete selection to the previous item.
     pub fn autocomplete_prev(&mut self) {
-        if let Some(ref mut idx) = self.autocomplete_selected {
-            if *idx > 0 {
-                *idx -= 1;
-            }
+        if let Some(ref mut idx) = self.autocomplete_selected
+            && *idx > 0
+        {
+            *idx -= 1;
         }
     }
 
     /// Move autocomplete selection to the next item.
     pub fn autocomplete_next(&mut self) {
-        if let Some(ref mut idx) = self.autocomplete_selected {
-            if *idx + 1 < self.autocomplete_suggestions.len() {
-                *idx += 1;
-            }
+        if let Some(ref mut idx) = self.autocomplete_selected
+            && *idx + 1 < self.autocomplete_suggestions.len()
+        {
+            *idx += 1;
         }
     }
 

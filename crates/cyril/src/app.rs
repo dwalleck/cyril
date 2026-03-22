@@ -362,10 +362,31 @@ impl App {
         self.session.set_status(SessionStatus::Busy);
         self.ui_state.set_activity(Activity::Sending);
 
+        let mut content_blocks = vec![text.clone()];
+
+        if let Some(completer) = self.ui_state.file_completer() {
+            let root = completer.root().to_path_buf();
+            let known = completer.known_files();
+            for path in cyril_ui::file_completer::parse_file_references(&text, known) {
+                match cyril_ui::file_completer::read_file(&root, &path) {
+                    Ok(contents) => {
+                        content_blocks
+                            .push(format!("<file path=\"{path}\">\n{contents}\n</file>"));
+                        tracing::info!("Attached @-referenced file: {path}");
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to read @-referenced file {path}: {e}");
+                        self.ui_state
+                            .add_system_message(format!("Could not attach @{path}: {e}"));
+                    }
+                }
+            }
+        }
+
         self.bridge_sender
             .send(BridgeCommand::SendPrompt {
                 session_id,
-                text,
+                content_blocks,
             })
             .await?;
 

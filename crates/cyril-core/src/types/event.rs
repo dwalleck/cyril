@@ -36,6 +36,11 @@ pub enum Notification {
     ClearStatus {
         message: String,
     },
+    ToolCallChunk {
+        tool_call_id: String,
+        title: String,
+        kind: String,
+    },
 
     // Lifecycle
     SessionCreated {
@@ -79,7 +84,7 @@ pub enum PermissionResponse {
 pub enum BridgeCommand {
     SendPrompt {
         session_id: SessionId,
-        text: String,
+        content_blocks: Vec<String>,
     },
     NewSession {
         cwd: std::path::PathBuf,
@@ -212,7 +217,7 @@ mod tests {
     fn bridge_command_send_prompt() {
         let cmd = BridgeCommand::SendPrompt {
             session_id: SessionId::new("sess_1"),
-            text: "hello".into(),
+            content_blocks: vec!["hello".into()],
         };
         assert!(matches!(cmd, BridgeCommand::SendPrompt { .. }));
     }
