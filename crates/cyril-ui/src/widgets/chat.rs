@@ -105,12 +105,12 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
             }
         }
         ChatMessageKind::System(text) => {
-            lines.push(Line::styled(
-                text.clone(),
-                Style::default()
-                    .fg(Color::DarkGray)
-                    .add_modifier(Modifier::ITALIC),
-            ));
+            let style = Style::default()
+                .fg(Color::DarkGray)
+                .add_modifier(Modifier::ITALIC);
+            for line in text.lines() {
+                lines.push(Line::styled(line.to_string(), style));
+            }
         }
     }
 }
