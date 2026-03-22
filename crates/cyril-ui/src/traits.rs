@@ -191,102 +191,85 @@ pub struct PickerState {
 pub mod test_support {
     use super::*;
 
-    /// Minimal mock for rendering tests. Returns empty/default values.
-    #[derive(Default)]
-    pub struct MockTuiState;
+    /// Mock for rendering tests. Has public fields matching every TuiState method.
+    pub struct MockTuiState {
+        pub messages: Vec<ChatMessage>,
+        pub streaming_text: String,
+        pub streaming_thought: Option<String>,
+        pub active_tool_calls: Vec<TrackedToolCall>,
+        pub current_plan: Option<cyril_core::types::Plan>,
+        pub input_text: String,
+        pub input_cursor: usize,
+        pub autocomplete_suggestions: Vec<Suggestion>,
+        pub autocomplete_selected: Option<usize>,
+        pub activity: Activity,
+        pub session_label: Option<String>,
+        pub current_mode: Option<String>,
+        pub current_model: Option<String>,
+        pub context_usage: Option<f64>,
+        pub credit_usage: Option<(f64, f64)>,
+        pub approval: Option<ApprovalState>,
+        pub picker: Option<PickerState>,
+        pub terminal_size: (u16, u16),
+        pub mouse_captured: bool,
+        pub quit_requested: bool,
+        pub activity_elapsed: Option<Duration>,
+        pub deep_idle: bool,
+    }
+
+    impl Default for MockTuiState {
+        fn default() -> Self {
+            Self {
+                messages: Vec::new(),
+                streaming_text: String::new(),
+                streaming_thought: None,
+                active_tool_calls: Vec::new(),
+                current_plan: None,
+                input_text: String::new(),
+                input_cursor: 0,
+                autocomplete_suggestions: Vec::new(),
+                autocomplete_selected: None,
+                activity: Activity::Idle,
+                session_label: None,
+                current_mode: None,
+                current_model: None,
+                context_usage: None,
+                credit_usage: None,
+                approval: None,
+                picker: None,
+                terminal_size: (80, 24),
+                mouse_captured: false,
+                quit_requested: false,
+                activity_elapsed: None,
+                deep_idle: false,
+            }
+        }
+    }
 
     impl TuiState for MockTuiState {
-        fn messages(&self) -> &[ChatMessage] {
-            &[]
-        }
-
-        fn streaming_text(&self) -> &str {
-            ""
-        }
-
-        fn streaming_thought(&self) -> Option<&str> {
-            None
-        }
-
-        fn messages_version(&self) -> u64 {
-            0
-        }
-
-        fn active_tool_calls(&self) -> &[TrackedToolCall] {
-            &[]
-        }
-
-        fn current_plan(&self) -> Option<&Plan> {
-            None
-        }
-
-        fn input_text(&self) -> &str {
-            ""
-        }
-
-        fn input_cursor(&self) -> usize {
-            0
-        }
-
-        fn autocomplete_suggestions(&self) -> &[Suggestion] {
-            &[]
-        }
-
-        fn autocomplete_selected(&self) -> Option<usize> {
-            None
-        }
-
-        fn activity(&self) -> Activity {
-            Activity::Idle
-        }
-
-        fn session_label(&self) -> Option<&str> {
-            None
-        }
-
-        fn current_mode(&self) -> Option<&str> {
-            None
-        }
-
-        fn current_model(&self) -> Option<&str> {
-            None
-        }
-
-        fn context_usage(&self) -> Option<f64> {
-            None
-        }
-
-        fn credit_usage(&self) -> Option<(f64, f64)> {
-            None
-        }
-
-        fn approval(&self) -> Option<&ApprovalState> {
-            None
-        }
-
-        fn picker(&self) -> Option<&PickerState> {
-            None
-        }
-
-        fn terminal_size(&self) -> (u16, u16) {
-            (80, 24)
-        }
-
-        fn mouse_captured(&self) -> bool {
-            false
-        }
-
-        fn should_quit(&self) -> bool {
-            false
-        }
-
-        fn activity_elapsed(&self) -> Option<Duration> {
-            None
-        }
-
-        fn is_deep_idle(&self) -> bool {
-            false
-        }
+        fn messages(&self) -> &[ChatMessage] { &self.messages }
+        fn streaming_text(&self) -> &str { &self.streaming_text }
+        fn streaming_thought(&self) -> Option<&str> { self.streaming_thought.as_deref() }
+        fn messages_version(&self) -> u64 { 0 }
+        fn active_tool_calls(&self) -> &[TrackedToolCall] { &self.active_tool_calls }
+        fn current_plan(&self) -> Option<&cyril_core::types::Plan> { self.current_plan.as_ref() }
+        fn input_text(&self) -> &str { &self.input_text }
+        fn input_cursor(&self) -> usize { self.input_cursor }
+        fn autocomplete_suggestions(&self) -> &[Suggestion] { &self.autocomplete_suggestions }
+        fn autocomplete_selected(&self) -> Option<usize> { self.autocomplete_selected }
+        fn activity(&self) -> Activity { self.activity }
+        fn session_label(&self) -> Option<&str> { self.session_label.as_deref() }
+        fn current_mode(&self) -> Option<&str> { self.current_mode.as_deref() }
+        fn current_model(&self) -> Option<&str> { self.current_model.as_deref() }
+        fn context_usage(&self) -> Option<f64> { self.context_usage }
+        fn credit_usage(&self) -> Option<(f64, f64)> { self.credit_usage }
+        fn approval(&self) -> Option<&ApprovalState> { self.approval.as_ref() }
+        fn picker(&self) -> Option<&PickerState> { self.picker.as_ref() }
+        fn terminal_size(&self) -> (u16, u16) { self.terminal_size }
+        fn mouse_captured(&self) -> bool { self.mouse_captured }
+        fn should_quit(&self) -> bool { self.quit_requested }
+        fn activity_elapsed(&self) -> Option<Duration> { self.activity_elapsed }
+        fn is_deep_idle(&self) -> bool { self.deep_idle }
     }
 }
 

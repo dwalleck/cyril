@@ -140,7 +140,7 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     lines.push(Line::from(vec![
         Span::styled(format!("{status_icon} "), Style::default().fg(color)),
         Span::styled(
-            format!("{kind_label}"),
+            kind_label.to_string(),
             Style::default().fg(color).add_modifier(Modifier::BOLD),
         ),
         Span::styled(format!("({title})"), Style::default().fg(Color::DarkGray)),
