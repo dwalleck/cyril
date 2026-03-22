@@ -178,17 +178,11 @@ mod tests {
     #[test]
     fn context_usage_updated() {
         let mut ctrl = SessionController::new();
-        let changed = ctrl.apply_notification(&Notification::ContextUsageUpdated(
-            ContextUsage::new(75.0),
-        ));
+        let changed =
+            ctrl.apply_notification(&Notification::ContextUsageUpdated(ContextUsage::new(75.0)));
         assert!(changed);
         assert!(
-            (ctrl
-                .context_usage()
-                .map(|u| u.percentage())
-                .unwrap_or(0.0)
-                - 75.0)
-                .abs()
+            (ctrl.context_usage().map(|u| u.percentage()).unwrap_or(0.0) - 75.0).abs()
                 < f64::EPSILON
         );
     }
@@ -196,7 +190,14 @@ mod tests {
     #[test]
     fn commands_updated() {
         let mut ctrl = SessionController::new();
-        let cmds = vec![CommandInfo::new("model", "Model", None::<&str>, true)];
+        let cmds = vec![CommandInfo::new(
+            "model",
+            "Model",
+            None::<&str>,
+            true,
+            false,
+            false,
+        )];
         let changed = ctrl.apply_notification(&Notification::CommandsUpdated(cmds));
         assert!(changed);
         assert_eq!(ctrl.agent_commands().len(), 1);

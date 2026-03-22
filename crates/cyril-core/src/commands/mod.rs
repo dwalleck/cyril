@@ -126,8 +126,16 @@ impl CommandRegistry {
 
     /// Register commands advertised by the agent.
     /// These are forwarded to the bridge as ext methods when executed.
+    ///
+    /// Skips commands that are local-only and not selection commands.
+    /// Local selection commands (e.g., `/chat`) are kept because they
+    /// still need picker UI on the client side.
     pub fn register_agent_commands(&mut self, cmds: &[crate::types::CommandInfo]) {
         for cmd in cmds {
+            // QRK-010: skip local-only commands that aren't selection pickers
+            if cmd.is_local() && !cmd.is_selection() {
+                continue;
+            }
             let name = cmd.name().to_string();
             // Skip if a builtin already covers this name
             if self.commands.contains_key(&name) {
@@ -141,6 +149,7 @@ impl CommandRegistry {
                         .description()
                         .unwrap_or_else(|| cmd.label())
                         .to_string(),
+                    is_selection: cmd.is_selection(),
                 }),
             );
         }
@@ -167,6 +176,7 @@ impl Default for CommandRegistry {
 struct AgentCommand {
     name: String,
     description: String,
+    is_selection: bool,
 }
 
 #[async_trait::async_trait]

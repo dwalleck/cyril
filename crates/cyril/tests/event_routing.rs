@@ -155,8 +155,8 @@ fn mode_change_updates_session() {
 fn commands_updated_stores_in_session() {
     let mut session = SessionController::new();
     let cmds = vec![
-        CommandInfo::new("model", "Switch model", Some("Change model"), true),
-        CommandInfo::new("compact", "Compact", None::<&str>, false),
+        CommandInfo::new("model", "Switch model", Some("Change model"), true, false, false),
+        CommandInfo::new("compact", "Compact", None::<&str>, false, false, false),
     ];
     session.apply_notification(&Notification::CommandsUpdated(cmds));
     assert_eq!(session.agent_commands().len(), 2);

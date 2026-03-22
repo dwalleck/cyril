@@ -5,6 +5,8 @@ pub struct CommandInfo {
     label: String,
     description: Option<String>,
     has_options: bool,
+    is_selection: bool,
+    is_local: bool,
 }
 
 impl CommandInfo {
@@ -13,12 +15,16 @@ impl CommandInfo {
         label: impl Into<String>,
         description: Option<impl Into<String>>,
         has_options: bool,
+        is_selection: bool,
+        is_local: bool,
     ) -> Self {
         Self {
             name: name.into(),
             label: label.into(),
             description: description.map(Into::into),
             has_options,
+            is_selection,
+            is_local,
         }
     }
 
@@ -36,6 +42,14 @@ impl CommandInfo {
 
     pub fn has_options(&self) -> bool {
         self.has_options
+    }
+
+    pub fn is_selection(&self) -> bool {
+        self.is_selection
+    }
+
+    pub fn is_local(&self) -> bool {
+        self.is_local
     }
 }
 
@@ -64,18 +78,29 @@ mod tests {
 
     #[test]
     fn command_info_accessors() {
-        let cmd = CommandInfo::new("model", "Switch model", Some("Change the active model"), true);
+        let cmd = CommandInfo::new(
+            "model",
+            "Switch model",
+            Some("Change the active model"),
+            true,
+            true,
+            false,
+        );
         assert_eq!(cmd.name(), "model");
         assert_eq!(cmd.label(), "Switch model");
         assert_eq!(cmd.description(), Some("Change the active model"));
         assert!(cmd.has_options());
+        assert!(cmd.is_selection());
+        assert!(!cmd.is_local());
     }
 
     #[test]
     fn command_info_no_description() {
-        let cmd = CommandInfo::new("quit", "Quit", None::<&str>, false);
+        let cmd = CommandInfo::new("quit", "Quit", None::<&str>, false, false, true);
         assert_eq!(cmd.description(), None);
         assert!(!cmd.has_options());
+        assert!(!cmd.is_selection());
+        assert!(cmd.is_local());
     }
 
     #[test]

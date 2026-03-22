@@ -16,9 +16,7 @@ pub(crate) fn to_tool_kind(kind: agent_client_protocol::ToolKind) -> ToolKind {
     }
 }
 
-pub(crate) fn to_tool_call_status(
-    status: agent_client_protocol::ToolCallStatus,
-) -> ToolCallStatus {
+pub(crate) fn to_tool_call_status(status: agent_client_protocol::ToolCallStatus) -> ToolCallStatus {
     match status {
         agent_client_protocol::ToolCallStatus::InProgress => ToolCallStatus::InProgress,
         agent_client_protocol::ToolCallStatus::Pending => ToolCallStatus::Pending,
@@ -96,15 +94,41 @@ pub(crate) fn to_ext_notification(
             let commands = if let Some(arr) = commands_value.as_array() {
                 arr.iter()
                     .filter_map(|v| {
-                        let name = v.get("name").or_else(|| v.get("command"))
+                        let raw_name = v
+                            .get("name")
+                            .or_else(|| v.get("command"))
                             .and_then(|n| n.as_str())?;
-                        let label = v.get("label").and_then(|l| l.as_str())
-                            .unwrap_or(name);
-                        let description = v.get("description").and_then(|d| d.as_str())
+                        let name = raw_name.strip_prefix('/').unwrap_or(raw_name);
+                        let label = v.get("label").and_then(|l| l.as_str()).unwrap_or(name);
+                        let description = v
+                            .get("description")
+                            .and_then(|d| d.as_str())
                             .map(String::from);
-                        let has_options = v.get("hasOptions").and_then(|h| h.as_bool())
+
+                        let meta = v.get("meta");
+                        let is_selection = meta
+                            .and_then(|m| m.get("inputType"))
+                            .and_then(|t| t.as_str())
+                            == Some("selection");
+                        let is_local = meta
+                            .and_then(|m| m.get("local"))
+                            .and_then(|l| l.as_bool())
                             .unwrap_or(false);
-                        Some(CommandInfo::new(name, label, description, has_options))
+
+                        // Backward compat: hasOptions field OR selection inputType
+                        let has_options = is_selection
+                            || v.get("hasOptions")
+                                .and_then(|h| h.as_bool())
+                                .unwrap_or(false);
+
+                        Some(CommandInfo::new(
+                            name,
+                            label,
+                            description,
+                            has_options,
+                            is_selection,
+                            is_local,
+                        ))
                     })
                     .collect()
             } else {
@@ -126,7 +150,7 @@ pub(crate) fn to_ext_notification(
             Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
                 message: format!("unknown extension: {other}"),
             }))
-        },
+        }
     }
 }
 
@@ -138,11 +162,7 @@ pub(crate) fn to_tool_call_from_permission(
 ) -> ToolCall {
     let update = &args.tool_call;
     let id_str = update.tool_call_id.to_string();
-    let title = update
-        .fields
-        .title
-        .clone()
-        .unwrap_or_default();
+    let title = update.fields.title.clone().unwrap_or_default();
     let kind = update
         .fields
         .kind
@@ -206,21 +226,15 @@ pub(crate) fn from_permission_response(
         PermissionResponse::Cancel => acp::RequestPermissionOutcome::Cancelled,
         PermissionResponse::AllowOnce => {
             let option_id = find_option_id(args, acp::PermissionOptionKind::AllowOnce);
-            acp::RequestPermissionOutcome::Selected(
-                acp::SelectedPermissionOutcome::new(option_id),
-            )
+            acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
         }
         PermissionResponse::AllowAlways => {
             let option_id = find_option_id(args, acp::PermissionOptionKind::AllowAlways);
-            acp::RequestPermissionOutcome::Selected(
-                acp::SelectedPermissionOutcome::new(option_id),
-            )
+            acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
         }
         PermissionResponse::Reject => {
             let option_id = find_option_id(args, acp::PermissionOptionKind::RejectOnce);
-            acp::RequestPermissionOutcome::Selected(
-                acp::SelectedPermissionOutcome::new(option_id),
-            )
+            acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
         }
     };
     acp::RequestPermissionResponse::new(outcome)
@@ -292,9 +306,10 @@ pub(crate) fn session_update_to_notification(
                 None
             }
         }
-        acp::SessionUpdate::ToolCall(tc) => {
-            Some(Notification::ToolCallStarted(to_tool_call(tc, cached_inputs)))
-        }
+        acp::SessionUpdate::ToolCall(tc) => Some(Notification::ToolCallStarted(to_tool_call(
+            tc,
+            cached_inputs,
+        ))),
         acp::SessionUpdate::ToolCallUpdate(update) => {
             let id_str = update.tool_call_id.to_string();
             let title = update.fields.title.clone().unwrap_or_default();
@@ -338,41 +353,33 @@ pub(crate) fn session_update_to_notification(
                 .collect();
             Some(Notification::PlanUpdated(Plan::new(entries)))
         }
-        acp::SessionUpdate::CurrentModeUpdate(mode) => {
-            Some(Notification::ModeChanged {
-                mode_id: mode.current_mode_id.to_string(),
-            })
-        }
+        acp::SessionUpdate::CurrentModeUpdate(mode) => Some(Notification::ModeChanged {
+            mode_id: mode.current_mode_id.to_string(),
+        }),
         acp::SessionUpdate::ConfigOptionUpdate(update) => {
             let options = update
                 .config_options
                 .iter()
-                .filter_map(|opt| {
-                    match &opt.kind {
-                        acp::SessionConfigKind::Select(select) => {
-                            let values = match &select.options {
-                                acp::SessionConfigSelectOptions::Ungrouped(flat) => {
-                                    flat.iter().map(|v| v.value.to_string()).collect()
-                                }
-                                acp::SessionConfigSelectOptions::Grouped(groups) => {
-                                    groups
-                                        .iter()
-                                        .flat_map(|g| {
-                                            g.options.iter().map(|v| v.value.to_string())
-                                        })
-                                        .collect()
-                                }
-                                _ => Vec::new(),
-                            };
-                            Some(ConfigOption {
-                                key: opt.id.to_string(),
-                                label: opt.name.clone(),
-                                value: Some(select.current_value.to_string()),
-                                options: values,
-                            })
-                        }
-                        _ => None,
+                .filter_map(|opt| match &opt.kind {
+                    acp::SessionConfigKind::Select(select) => {
+                        let values = match &select.options {
+                            acp::SessionConfigSelectOptions::Ungrouped(flat) => {
+                                flat.iter().map(|v| v.value.to_string()).collect()
+                            }
+                            acp::SessionConfigSelectOptions::Grouped(groups) => groups
+                                .iter()
+                                .flat_map(|g| g.options.iter().map(|v| v.value.to_string()))
+                                .collect(),
+                            _ => Vec::new(),
+                        };
+                        Some(ConfigOption {
+                            key: opt.id.to_string(),
+                            label: opt.name.clone(),
+                            value: Some(select.current_value.to_string()),
+                            options: values,
+                        })
                     }
+                    _ => None,
                 })
                 .collect();
             Some(Notification::ConfigOptionsUpdated(options))
@@ -387,6 +394,8 @@ pub(crate) fn session_update_to_notification(
                         cmd.description.clone(),
                         None::<String>,
                         cmd.input.is_some(),
+                        false,
+                        false,
                     )
                 })
                 .collect();
@@ -557,10 +566,7 @@ mod tests {
             .raw_input(serde_json::json!({"path": "original.rs"}));
 
         let mut cached = std::collections::HashMap::new();
-        cached.insert(
-            "tc_1".to_string(),
-            serde_json::json!({"path": "cached.rs"}),
-        );
+        cached.insert("tc_1".to_string(), serde_json::json!({"path": "cached.rs"}));
 
         let result = to_tool_call(&acp_call, &cached);
         assert_eq!(result.id().as_str(), "tc_1");
@@ -579,10 +585,7 @@ mod tests {
 
         let cached = std::collections::HashMap::new();
         let result = to_tool_call(&acp_call, &cached);
-        assert_eq!(
-            result.raw_input(),
-            Some(&serde_json::json!({"cmd": "ls"}))
-        );
+        assert_eq!(result.raw_input(), Some(&serde_json::json!({"cmd": "ls"})));
     }
 
     #[test]
@@ -642,5 +645,54 @@ mod tests {
         let params = serde_json::json!({"update": {"sessionUpdate": "tool_call_chunk"}});
         let result = to_ext_notification("kiro.dev/session/update", &params);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn to_ext_notification_commands_strips_slash_prefix() {
+        let params = serde_json::json!({
+            "commands": [
+                {"name": "/model", "description": "Switch model", "meta": {"inputType": "selection"}}
+            ]
+        });
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+            assert_eq!(cmds[0].name(), "model", "leading / should be stripped");
+        } else {
+            panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_commands_parses_selection_type() {
+        let params = serde_json::json!({
+            "commands": [
+                {"name": "/model", "description": "Switch model", "meta": {"inputType": "selection"}},
+                {"name": "/compact", "description": "Compact context"}
+            ]
+        });
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+            assert!(cmds[0].is_selection(), "/model should be selection");
+            assert!(!cmds[1].is_selection(), "/compact should not be selection");
+        } else {
+            panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_commands_parses_local_flag() {
+        let params = serde_json::json!({
+            "commands": [
+                {"name": "/quit", "description": "Quit", "meta": {"local": true}},
+                {"name": "/compact", "description": "Compact"}
+            ]
+        });
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+            assert!(cmds[0].is_local(), "/quit should be local");
+            assert!(!cmds[1].is_local(), "/compact should not be local");
+        } else {
+            panic!("expected CommandsUpdated");
+        }
     }
 }
