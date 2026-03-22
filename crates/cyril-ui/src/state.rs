@@ -331,6 +331,8 @@ impl UiState {
     /// Take the current input text, clearing the input buffer and cursor.
     pub fn take_input(&mut self) -> String {
         self.input_cursor = 0;
+        self.autocomplete_suggestions.clear();
+        self.autocomplete_selected = None;
         std::mem::take(&mut self.input_text)
     }
 
