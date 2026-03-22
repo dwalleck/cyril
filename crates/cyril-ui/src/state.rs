@@ -251,6 +251,7 @@ impl UiState {
                 true
             }
             Notification::AgentSwitched { name, welcome } => {
+                self.current_mode = Some(name.clone());
                 if let Some(msg) = welcome {
                     self.add_system_message(format!("Switched to {name}: {msg}"));
                 } else {

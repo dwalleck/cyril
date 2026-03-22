@@ -95,7 +95,8 @@ impl SessionController {
                 self.agent_commands = cmds.clone();
                 true
             }
-            Notification::AgentSwitched { .. } => {
+            Notification::AgentSwitched { name, .. } => {
+                self.current_mode_id = Some(name.clone());
                 self.status = SessionStatus::Active;
                 true
             }
@@ -232,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn agent_switched_updates_status() {
+    fn agent_switched_updates_status_and_mode() {
         let mut ctrl = SessionController::new();
         ctrl.set_status(SessionStatus::Busy);
         let changed = ctrl.apply_notification(&Notification::AgentSwitched {
@@ -241,6 +242,7 @@ mod tests {
         });
         assert!(changed);
         assert_eq!(ctrl.status(), &SessionStatus::Active);
+        assert_eq!(ctrl.current_mode_id(), Some("code-agent"));
     }
 
     #[test]
