@@ -147,10 +147,7 @@ impl CommandRegistry {
                 name.clone(),
                 Arc::new(AgentCommand {
                     name,
-                    description: cmd
-                        .description()
-                        .unwrap_or_else(|| cmd.label())
-                        .to_string(),
+                    description: cmd.description().unwrap_or_else(|| cmd.label()).to_string(),
                     is_selection: cmd.is_selection(),
                 }),
             );
@@ -259,10 +256,7 @@ pub(crate) fn parse_options_response(response: &serde_json::Value) -> Vec<Comman
                 .get("description")
                 .and_then(|v| v.as_str())
                 .map(String::from);
-            let group = opt
-                .get("group")
-                .and_then(|v| v.as_str())
-                .map(String::from);
+            let group = opt.get("group").and_then(|v| v.as_str()).map(String::from);
             let is_current = opt
                 .get("current")
                 .and_then(|v| v.as_bool())
@@ -480,6 +474,78 @@ mod tests {
             cmd,
             Some(crate::types::BridgeCommand::NewSession { .. })
         ));
+    }
+
+    #[test]
+    fn register_agent_commands_skips_local_non_selection() {
+        let mut registry = CommandRegistry::new();
+        let cmds = vec![
+            crate::types::CommandInfo::new(
+                "quit",
+                "Quit",
+                None::<&str>,
+                false,
+                false,
+                true,
+            ), // local, not selection → skip
+            crate::types::CommandInfo::new(
+                "compact",
+                "Compact",
+                None::<&str>,
+                false,
+                false,
+                false,
+            ), // not local → register
+        ];
+        registry.register_agent_commands(&cmds);
+        assert!(
+            registry.parse("/compact").is_some(),
+            "non-local command should register"
+        );
+        assert!(
+            registry.parse("/quit").is_none(),
+            "local non-selection should be skipped"
+        );
+    }
+
+    #[test]
+    fn register_agent_commands_keeps_local_selection() {
+        let mut registry = CommandRegistry::new();
+        let cmds = vec![
+            crate::types::CommandInfo::new(
+                "chat",
+                "Chat",
+                None::<&str>,
+                true,
+                true,
+                true,
+            ), // local AND selection → keep
+        ];
+        registry.register_agent_commands(&cmds);
+        assert!(
+            registry.parse("/chat").is_some(),
+            "local selection command should be kept (QRK-010)"
+        );
+    }
+
+    #[test]
+    fn register_agent_commands_skips_builtin_names() {
+        let mut registry = CommandRegistry::with_builtins();
+        let cmds = vec![crate::types::CommandInfo::new(
+            "help",
+            "Agent Help",
+            None::<&str>,
+            false,
+            false,
+            false,
+        )];
+        registry.register_agent_commands(&cmds);
+        // Should still be the builtin help, not agent help
+        let (cmd, _) = registry.parse("/help").unwrap();
+        assert!(
+            cmd.is_local(),
+            "builtin should not be overwritten by agent command"
+        );
     }
 
     #[test]

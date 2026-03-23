@@ -133,7 +133,7 @@ impl Command for LoadCommand {
         }
         ctx.bridge
             .send(BridgeCommand::LoadSession {
-                session_id: args.to_string(),
+                session_id: crate::types::SessionId::new(args),
             })
             .await?;
         Ok(CommandResult::dispatched())

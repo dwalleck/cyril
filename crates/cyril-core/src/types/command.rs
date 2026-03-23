@@ -22,7 +22,7 @@ impl CommandInfo {
             name: name.into(),
             label: label.into(),
             description: description.map(Into::into),
-            has_options,
+            has_options: has_options || is_selection,
             is_selection,
             is_local,
         }
@@ -115,6 +115,12 @@ mod tests {
         assert_eq!(opt.label, "Claude Sonnet");
         assert_eq!(opt.value, "claude-sonnet-4");
         assert!(opt.is_current);
+    }
+
+    #[test]
+    fn command_info_selection_implies_has_options() {
+        let cmd = CommandInfo::new("model", "Model", None::<&str>, false, true, false);
+        assert!(cmd.has_options(), "is_selection should imply has_options");
     }
 
     #[test]

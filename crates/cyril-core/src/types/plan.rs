@@ -4,6 +4,7 @@ pub enum PlanEntryStatus {
     Pending,
     InProgress,
     Completed,
+    Failed,
 }
 
 /// A single step in the agent's plan.
@@ -15,11 +16,18 @@ pub struct PlanEntry {
 
 impl PlanEntry {
     pub fn new(title: impl Into<String>, status: PlanEntryStatus) -> Self {
-        Self { title: title.into(), status }
+        Self {
+            title: title.into(),
+            status,
+        }
     }
 
-    pub fn title(&self) -> &str { &self.title }
-    pub fn status(&self) -> PlanEntryStatus { self.status }
+    pub fn title(&self) -> &str {
+        &self.title
+    }
+    pub fn status(&self) -> PlanEntryStatus {
+        self.status
+    }
 }
 
 /// The agent's execution plan.
@@ -33,7 +41,9 @@ impl Plan {
         Self { entries }
     }
 
-    pub fn entries(&self) -> &[PlanEntry] { &self.entries }
+    pub fn entries(&self) -> &[PlanEntry] {
+        &self.entries
+    }
 }
 
 #[cfg(test)]
