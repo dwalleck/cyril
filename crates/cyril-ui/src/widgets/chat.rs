@@ -8,15 +8,10 @@ use crate::widgets::markdown;
 pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     let mut lines: Vec<Line> = Vec::new();
 
-    // Render committed messages
+    // Render committed messages (includes tool calls in chronological position)
     for msg in state.messages() {
         render_message(&mut lines, msg);
         lines.push(Line::default()); // spacing between messages
-    }
-
-    // Render active tool calls
-    for tc in state.active_tool_calls() {
-        render_tool_call(&mut lines, tc);
     }
 
     // Render streaming text
