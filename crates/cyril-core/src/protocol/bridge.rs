@@ -74,7 +74,6 @@ impl BridgeSender {
             .await
             .map_err(|_| crate::Error::from_kind(crate::ErrorKind::BridgeClosed))
     }
-
 }
 
 /// The bridge side of the channels (held by the bridge thread).
@@ -149,8 +148,8 @@ async fn run_bridge(
     cwd: &std::path::Path,
     mut channels: BridgeChannels,
 ) -> crate::Result<()> {
-    use agent_client_protocol as acp;
     use acp::Agent;
+    use agent_client_protocol as acp;
     use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
     use crate::protocol::client::KiroClient;
@@ -186,10 +185,7 @@ async fn run_bridge(
 
     // 4. ACP handshake
     let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::V1)
-        .client_info(acp::Implementation::new(
-            "cyril",
-            env!("CARGO_PKG_VERSION"),
-        ))
+        .client_info(acp::Implementation::new("cyril", env!("CARGO_PKG_VERSION")))
         .client_capabilities(acp::ClientCapabilities::new());
 
     let _init_response: acp::InitializeResponse =
@@ -208,7 +204,10 @@ async fn run_bridge(
         match cmd {
             BridgeCommand::NewSession { cwd: session_cwd } => {
                 let translated_cwd = crate::platform::path::to_agent(&session_cwd);
-                match conn.new_session(acp::NewSessionRequest::new(translated_cwd)).await {
+                match conn
+                    .new_session(acp::NewSessionRequest::new(translated_cwd))
+                    .await
+                {
                     Ok(response) => {
                         active_session_id = Some(response.session_id.clone());
                         let session_id = response.session_id.to_string();
@@ -226,6 +225,12 @@ async fn run_bridge(
                     }
                     Err(e) => {
                         tracing::error!(error = %e, "new_session failed");
+                        let _ = channels
+                            .notification_tx
+                            .send(Notification::BridgeDisconnected {
+                                reason: format!("Failed to create session: {e}"),
+                            })
+                            .await;
                     }
                 }
             }
@@ -252,6 +257,10 @@ async fn run_bridge(
                     }
                     Err(e) => {
                         tracing::error!(error = %e, "prompt failed");
+                        let _ = channels
+                            .notification_tx
+                            .send(Notification::TurnCompleted)
+                            .await;
                     }
                 }
             }
@@ -303,6 +312,12 @@ async fn run_bridge(
                             session_id = session_id.as_str(),
                             "load_session failed"
                         );
+                        let _ = channels
+                            .notification_tx
+                            .send(Notification::BridgeDisconnected {
+                                reason: format!("Failed to load session: {e}"),
+                            })
+                            .await;
                     }
                 }
             }
@@ -351,15 +366,21 @@ async fn run_bridge(
                 {
                     Ok(response) => {
                         let value: serde_json::Value =
-                            serde_json::from_str(response.0.get())
-                                .unwrap_or(serde_json::Value::Null);
+                            match serde_json::from_str(response.0.get()) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    tracing::error!(
+                                        error = %e,
+                                        command,
+                                        "failed to parse commands/options response as JSON"
+                                    );
+                                    serde_json::Value::Null
+                                }
+                            };
                         let options = crate::commands::parse_options_response(&value);
                         if channels
                             .notification_tx
-                            .send(Notification::CommandOptionsReceived {
-                                command,
-                                options,
-                            })
+                            .send(Notification::CommandOptionsReceived { command, options })
                             .await
                             .is_err()
                         {
@@ -368,6 +389,13 @@ async fn run_bridge(
                     }
                     Err(e) => {
                         tracing::error!(error = %e, command, "commands/options query failed");
+                        let _ = channels
+                            .notification_tx
+                            .send(Notification::CommandOptionsReceived {
+                                command,
+                                options: vec![],
+                            })
+                            .await;
                     }
                 }
             }
@@ -399,8 +427,17 @@ async fn run_bridge(
                 {
                     Ok(response) => {
                         let value: serde_json::Value =
-                            serde_json::from_str(response.0.get())
-                                .unwrap_or(serde_json::Value::Null);
+                            match serde_json::from_str(response.0.get()) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    tracing::error!(
+                                        error = %e,
+                                        command,
+                                        "failed to parse commands/execute response as JSON"
+                                    );
+                                    serde_json::Value::Null
+                                }
+                            };
                         if channels
                             .notification_tx
                             .send(Notification::CommandExecuted {
@@ -415,6 +452,16 @@ async fn run_bridge(
                     }
                     Err(e) => {
                         tracing::error!(error = %e, command, "commands/execute failed");
+                        let _ = channels
+                            .notification_tx
+                            .send(Notification::CommandExecuted {
+                                command,
+                                response: serde_json::json!({
+                                    "success": false,
+                                    "error": format!("{e}"),
+                                }),
+                            })
+                            .await;
                     }
                 }
             }
