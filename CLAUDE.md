@@ -51,6 +51,45 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 - **Responsibility:** Wire `cyril-core` and `cyril-ui` together. Run the `tokio::select!` event loop. Dispatch key events through the layered handler. Route notifications to both `SessionController` and `UiState`. Handle cross-cutting concerns (opening pickers from `CommandOptionsReceived`, extracting model from `CommandExecuted`).
 - **Must NOT:** Contain business logic or protocol knowledge. Parse JSON responses (that's `cyril-core`'s job). Make rendering decisions (that's `cyril-ui`'s job).
 
+### Component Separation Within Crates
+
+The crate boundaries enforce dependency rules, but equally important is the separation **within** each crate. Each component has a single responsibility:
+
+**`SessionController`** (`cyril-core/session.rs`) — Pure state machine for session data.
+- `apply_notification(&Notification) -> bool` — updates session fields, returns whether state changed
+- No async. No side effects. No bridge access. No UI knowledge.
+- Owns: session ID, current mode, cached model, context usage, credit usage, agent commands
+- Testable by constructing a controller, applying notifications, and asserting field values.
+
+**`UiState`** (`cyril-ui/state.rs`) — Pure state machine for UI data.
+- `apply_notification(&Notification) -> bool` — updates UI fields, returns whether state changed
+- No async. No bridge access. Does not send commands or open pickers.
+- Owns: messages, streaming buffers, tool call index, input text/cursor, autocomplete, approval/picker overlays, activity state
+- Testable by constructing state, applying notifications, and asserting field values.
+
+**`CommandRegistry`** (`cyril-core/commands/mod.rs`) — Command dispatch.
+- `parse(&str) -> Option<(&dyn Command, &str)>` — finds the command, returns it with args
+- Commands get `CommandContext { session: &SessionController, bridge: &BridgeSender }` — read-only session, write-only bridge. No UI state access.
+- Commands return `CommandResult` (SystemMessage/ShowPicker/Dispatched/Quit) — the App decides what to do with the result.
+
+**`App`** (`cyril/app.rs`) — Thin orchestrator. Owns all components but contains no business logic.
+- Routes notifications to both `SessionController` and `UiState`
+- Handles cross-cutting concerns: wiring `CommandOptionsReceived` to `show_picker()`, extracting model from `CommandExecuted`
+- The ONLY place where all components interact — if logic can live in a component, it should not be in App.
+
+**`convert.rs`** (`cyril-core/protocol/convert.rs`) — The only file that imports both `acp::` and internal types.
+- All Kiro protocol quirks live here: name stripping, metadata parsing, content extraction, raw_input caching
+- If a new Kiro deviation is discovered, it's handled in convert.rs — nowhere else.
+
+**`TuiState` trait** (`cyril-ui/traits.rs`) — Read-only rendering contract.
+- ~25 methods, all returning references or Copy types
+- The renderer receives `&dyn TuiState`, never `&App` or `&mut UiState`
+- Compile-time guarantee that rendering cannot mutate state
+
+**`TrackedToolCall`** (`cyril-ui/traits.rs`) — Display-oriented wrapper around `cyril_core::types::ToolCall`.
+- Adds display logic: `primary_path()`, `command_text()` — these are presentation concerns, not data concerns
+- The core `ToolCall` carries data; `TrackedToolCall` interprets it for display
+
 ### Data Flow
 
 ```
