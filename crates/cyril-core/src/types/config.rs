@@ -1,6 +1,6 @@
 use std::path::Path;
 
-/// Application configuration, loaded from TOML.
+/// Application configuration, loaded from a TOML file.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct Config {

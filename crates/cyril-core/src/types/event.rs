@@ -5,7 +5,7 @@ use crate::types::session::{ContextUsage, SessionId};
 use crate::types::tool_call::{ToolCall, ToolCallId};
 
 /// Notifications emitted by the ACP bridge. All variants are Send + Sync + Clone.
-/// This is the only way protocol state crosses into the Send world.
+/// This is the primary channel for agent state updates crossing from the bridge thread into the App.
 #[derive(Debug, Clone)]
 pub enum Notification {
     // Agent output

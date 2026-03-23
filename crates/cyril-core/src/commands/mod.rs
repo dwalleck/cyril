@@ -134,7 +134,7 @@ impl CommandRegistry {
     /// still need picker UI on the client side.
     pub fn register_agent_commands(&mut self, cmds: &[crate::types::CommandInfo]) {
         for cmd in cmds {
-            // QRK-010: skip local-only commands that aren't selection pickers
+            // Kiro quirk: /chat is marked local but needs picker UI, so keep local+selection commands.
             if cmd.is_local() && !cmd.is_selection() {
                 continue;
             }
@@ -524,7 +524,7 @@ mod tests {
         registry.register_agent_commands(&cmds);
         assert!(
             registry.parse("/chat").is_some(),
-            "local selection command should be kept (QRK-010)"
+            "local selection command should be kept for picker UI"
         );
     }
 

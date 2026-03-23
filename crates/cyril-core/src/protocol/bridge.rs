@@ -165,8 +165,8 @@ async fn run_bridge(
     );
 
     // 3. Create the ACP connection.
-    //    ClientSideConnection::new returns (conn, io_future).
-    //    The io_future must be spawned on the LocalSet so the RPC layer runs.
+    //    ClientSideConnection::new returns (conn, io_task).
+    //    The io_task must be spawned on the LocalSet so the RPC layer runs.
     let (conn, io_task) = acp::ClientSideConnection::new(
         client,
         process.stdin.compat_write(),
