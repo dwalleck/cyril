@@ -76,8 +76,7 @@ fn tool_call_lifecycle() {
     // Tool starts
     let tc = ToolCall::new(
         ToolCallId::new("tc_1"),
-        "read_file".into(),
-        Some("Reading main.rs".into()),
+        "Reading main.rs".into(),
         ToolKind::Read,
         ToolCallStatus::InProgress,
         None,
@@ -89,8 +88,7 @@ fn tool_call_lifecycle() {
     // Tool updates
     let tc_updated = ToolCall::new(
         ToolCallId::new("tc_1"),
-        "read_file".into(),
-        Some("Read main.rs (245 lines)".into()),
+        "Read main.rs (245 lines)".into(),
         ToolKind::Read,
         ToolCallStatus::Completed,
         None,
@@ -98,7 +96,7 @@ fn tool_call_lifecycle() {
     ui.apply_notification(&Notification::ToolCallUpdated(tc_updated));
     assert_eq!(
         ui.active_tool_calls()[0].title(),
-        Some("Read main.rs (245 lines)")
+        "Read main.rs (245 lines)"
     );
 }
 
@@ -155,7 +153,14 @@ fn mode_change_updates_session() {
 fn commands_updated_stores_in_session() {
     let mut session = SessionController::new();
     let cmds = vec![
-        CommandInfo::new("model", "Switch model", Some("Change model"), true, false, false),
+        CommandInfo::new(
+            "model",
+            "Switch model",
+            Some("Change model"),
+            true,
+            false,
+            false,
+        ),
         CommandInfo::new("compact", "Compact", None::<&str>, false, false, false),
     ];
     session.apply_notification(&Notification::CommandsUpdated(cmds));
@@ -216,10 +221,7 @@ async fn command_sends_to_bridge() {
     assert!(result.is_ok());
 
     let bridge_cmd = rx.recv().await;
-    assert!(matches!(
-        bridge_cmd,
-        Some(BridgeCommand::NewSession { .. })
-    ));
+    assert!(matches!(bridge_cmd, Some(BridgeCommand::NewSession { .. })));
 }
 
 #[test]

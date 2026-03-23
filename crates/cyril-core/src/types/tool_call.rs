@@ -62,11 +62,13 @@ pub enum ToolCallStatus {
 }
 
 /// A tool call from the agent, with accessor methods.
+///
+/// The `title` field is the human-readable display text from ACP (e.g., "Reading main.rs").
+/// ACP has a single `title` field; there is no separate "name" concept.
 #[derive(Debug, Clone)]
 pub struct ToolCall {
     id: ToolCallId,
-    name: String,
-    title: Option<String>,
+    title: String,
     kind: ToolKind,
     status: ToolCallStatus,
     raw_input: Option<serde_json::Value>,
@@ -77,15 +79,13 @@ pub struct ToolCall {
 impl ToolCall {
     pub fn new(
         id: ToolCallId,
-        name: String,
-        title: Option<String>,
+        title: String,
         kind: ToolKind,
         status: ToolCallStatus,
         raw_input: Option<serde_json::Value>,
     ) -> Self {
         Self {
             id,
-            name,
             title,
             kind,
             status,
@@ -112,11 +112,9 @@ impl ToolCall {
     pub fn id(&self) -> &ToolCallId {
         &self.id
     }
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-    pub fn title(&self) -> Option<&str> {
-        self.title.as_deref()
+    /// The human-readable display text from ACP (e.g., "Reading main.rs").
+    pub fn title(&self) -> &str {
+        &self.title
     }
     pub fn kind(&self) -> ToolKind {
         self.kind
@@ -138,8 +136,7 @@ impl ToolCall {
     /// Only overwrites fields that the update carries (non-empty/non-default).
     /// Preserves content and locations from the original if the update doesn't provide them.
     pub fn merge_update(&mut self, update: &ToolCall) {
-        self.name = update.name.clone();
-        if update.title.is_some() {
+        if !update.title.is_empty() {
             self.title = update.title.clone();
         }
         if update.kind != ToolKind::Other {
@@ -199,15 +196,13 @@ mod tests {
     fn tool_call_accessors() {
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read_file".to_string(),
-            Some("Reading main.rs".to_string()),
+            "Reading main.rs".to_string(),
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,
         );
         assert_eq!(tc.id().as_str(), "tc_1");
-        assert_eq!(tc.name(), "read_file");
-        assert_eq!(tc.title(), Some("Reading main.rs"));
+        assert_eq!(tc.title(), "Reading main.rs");
         assert_eq!(tc.kind(), ToolKind::Read);
         assert_eq!(tc.status(), ToolCallStatus::InProgress);
         assert!(tc.raw_input().is_none());
@@ -219,13 +214,12 @@ mod tests {
         let tc = ToolCall::new(
             ToolCallId::new("tc_2"),
             "write_file".to_string(),
-            None,
             ToolKind::Write,
             ToolCallStatus::Completed,
             Some(input.clone()),
         );
         assert_eq!(tc.raw_input(), Some(&input));
-        assert!(tc.title().is_none());
+        assert_eq!(tc.title(), "write_file");
     }
 
     #[test]
@@ -233,7 +227,6 @@ mod tests {
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "read".to_string(),
-            None,
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,
@@ -247,7 +240,6 @@ mod tests {
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "edit".to_string(),
-            None,
             ToolKind::Write,
             ToolCallStatus::Completed,
             None,
@@ -269,7 +261,6 @@ mod tests {
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "read".to_string(),
-            None,
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,
@@ -336,8 +327,7 @@ mod tests {
         // Simulates: initial ToolCall has diff content, ToolCallUpdate only changes status
         let mut tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "write".into(),
-            Some("Editing main.rs".into()),
+            "Editing main.rs".into(),
             ToolKind::Write,
             ToolCallStatus::InProgress,
             None,
@@ -355,8 +345,7 @@ mod tests {
         // Update only changes status — no content or locations
         let update = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "write".into(),
-            Some("Editing main.rs".into()),
+            "Editing main.rs".into(),
             ToolKind::Write,
             ToolCallStatus::Completed,
             None,
@@ -382,7 +371,6 @@ mod tests {
         let mut tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "write".into(),
-            None,
             ToolKind::Write,
             ToolCallStatus::InProgress,
             None,
@@ -392,7 +380,6 @@ mod tests {
         let update = ToolCall::new(
             ToolCallId::new("tc_1"),
             "write".into(),
-            None,
             ToolKind::Write,
             ToolCallStatus::Completed,
             None,
@@ -413,11 +400,10 @@ mod tests {
     }
 
     #[test]
-    fn merge_update_preserves_title_when_update_has_none() {
+    fn merge_update_preserves_title_when_update_is_empty() {
         let mut tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read".into(),
-            Some("Reading config.rs".into()),
+            "Reading config.rs".into(),
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,
@@ -425,8 +411,7 @@ mod tests {
 
         let update = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read".into(),
-            None, // no title in update
+            String::new(), // empty title in update
             ToolKind::Read,
             ToolCallStatus::Completed,
             None,
@@ -436,8 +421,8 @@ mod tests {
 
         assert_eq!(
             tc.title(),
-            Some("Reading config.rs"),
-            "title should be preserved"
+            "Reading config.rs",
+            "title should be preserved when update has empty title"
         );
         assert_eq!(tc.status(), ToolCallStatus::Completed);
     }
@@ -446,8 +431,7 @@ mod tests {
     fn merge_update_overwrites_title_when_update_provides_it() {
         let mut tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read".into(),
-            Some("Reading...".into()),
+            "Reading...".into(),
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,
@@ -455,8 +439,7 @@ mod tests {
 
         let update = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read".into(),
-            Some("Reading config.rs:1-50".into()),
+            "Reading config.rs:1-50".into(),
             ToolKind::Read,
             ToolCallStatus::Pending,
             None,
@@ -464,7 +447,7 @@ mod tests {
 
         tc.merge_update(&update);
 
-        assert_eq!(tc.title(), Some("Reading config.rs:1-50"));
+        assert_eq!(tc.title(), "Reading config.rs:1-50");
     }
 
     #[test]
@@ -473,7 +456,6 @@ mod tests {
         let mut tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "read".into(),
-            None,
             ToolKind::Read,
             ToolCallStatus::InProgress,
             Some(input.clone()),
@@ -482,7 +464,6 @@ mod tests {
         let update = ToolCall::new(
             ToolCallId::new("tc_1"),
             "read".into(),
-            None,
             ToolKind::Read,
             ToolCallStatus::Completed,
             None, // no raw_input in update

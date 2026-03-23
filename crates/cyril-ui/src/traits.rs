@@ -155,10 +155,6 @@ impl TrackedToolCall {
         self.inner.id()
     }
 
-    pub fn name(&self) -> &str {
-        self.inner.name()
-    }
-
     pub fn kind(&self) -> cyril_core::types::ToolKind {
         self.inner.kind()
     }
@@ -167,7 +163,8 @@ impl TrackedToolCall {
         self.inner.status()
     }
 
-    pub fn title(&self) -> Option<&str> {
+    /// The human-readable display text from ACP (e.g., "Reading main.rs").
+    pub fn title(&self) -> &str {
         self.inner.title()
     }
 
@@ -394,15 +391,13 @@ mod tests {
         use cyril_core::types::*;
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read".into(),
-            Some("Reading file".into()),
+            "Reading file".into(),
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,
         );
         let tracked = TrackedToolCall::new(tc);
-        assert_eq!(tracked.name(), "read");
-        assert_eq!(tracked.title(), Some("Reading file"));
+        assert_eq!(tracked.title(), "Reading file");
     }
 
     #[test]

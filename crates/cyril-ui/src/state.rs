@@ -886,7 +886,6 @@ mod tests {
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "read".into(),
-            None,
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,
@@ -903,7 +902,6 @@ mod tests {
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "read".into(),
-            None,
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,
@@ -912,18 +910,14 @@ mod tests {
 
         let updated = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read".into(),
-            Some("Reading src/main.rs".into()),
+            "Reading src/main.rs".into(),
             ToolKind::Read,
             ToolCallStatus::Completed,
             None,
         );
         state.apply_notification(&Notification::ToolCallUpdated(updated));
 
-        assert_eq!(
-            state.active_tool_calls()[0].title(),
-            Some("Reading src/main.rs")
-        );
+        assert_eq!(state.active_tool_calls()[0].title(), "Reading src/main.rs");
     }
 
     // --- Turn lifecycle tests ---
@@ -940,8 +934,7 @@ mod tests {
         }));
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read".into(),
-            Some("Reading main.rs".into()),
+            "Reading main.rs".into(),
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,
@@ -978,8 +971,7 @@ mod tests {
 
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "write".into(),
-            Some("Editing main.rs".into()),
+            "Editing main.rs".into(),
             ToolKind::Write,
             ToolCallStatus::Completed,
             None,
@@ -1030,7 +1022,6 @@ mod tests {
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "read".into(),
-            None,
             ToolKind::Read,
             ToolCallStatus::Completed,
             None,
@@ -1060,8 +1051,7 @@ mod tests {
         // Agent does tool calls without streaming any text
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read".into(),
-            Some("Reading config".into()),
+            "Reading config".into(),
             ToolKind::Read,
             ToolCallStatus::Completed,
             None,
@@ -1129,7 +1119,6 @@ mod tests {
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "write".into(),
-            None,
             ToolKind::Write,
             ToolCallStatus::InProgress,
             None,
@@ -1190,8 +1179,7 @@ mod tests {
         // Phase 1: Initial ToolCall with diff content and location (Kiro sends this first)
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "write".into(),
-            Some("Editing main.rs".into()),
+            "Editing main.rs".into(),
             ToolKind::Write,
             ToolCallStatus::Pending,
             Some(serde_json::json!({"file_path": "src/main.rs"})),
@@ -1215,8 +1203,7 @@ mod tests {
         // (This is exactly what Kiro sends — only the changed fields)
         let update = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "write".into(),
-            Some("Editing main.rs".into()),
+            "Editing main.rs".into(),
             ToolKind::Write,
             ToolCallStatus::Completed,
             None,
@@ -1274,8 +1261,7 @@ mod tests {
         // Initial ToolCall with content
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "write".into(),
-            Some("Editing lib.rs".into()),
+            "Editing lib.rs".into(),
             ToolKind::Write,
             ToolCallStatus::InProgress,
             None,
@@ -1290,8 +1276,7 @@ mod tests {
         // First update: status changes to Pending
         let update1 = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "write".into(),
-            Some("Editing lib.rs".into()),
+            "Editing lib.rs".into(),
             ToolKind::Write,
             ToolCallStatus::Pending,
             None,
@@ -1302,8 +1287,7 @@ mod tests {
         // Second update: status changes to Completed
         let update2 = ToolCall::new(
             ToolCallId::new("tc_1"),
-            "write".into(),
-            Some("Editing lib.rs".into()),
+            "Editing lib.rs".into(),
             ToolKind::Write,
             ToolCallStatus::Completed,
             None,

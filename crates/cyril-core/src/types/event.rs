@@ -2,7 +2,7 @@ use crate::types::command::{CommandInfo, ConfigOption};
 use crate::types::message::{AgentMessage, AgentThought};
 use crate::types::plan::Plan;
 use crate::types::session::{ContextUsage, SessionId};
-use crate::types::tool_call::ToolCall;
+use crate::types::tool_call::{ToolCall, ToolCallId};
 
 /// Notifications emitted by the ACP bridge. All variants are Send + Sync + Clone.
 /// This is the only way protocol state crosses into the Send world.
@@ -49,7 +49,7 @@ pub enum Notification {
         message: String,
     },
     ToolCallChunk {
-        tool_call_id: String,
+        tool_call_id: ToolCallId,
         title: String,
         kind: String,
     },
@@ -103,7 +103,7 @@ pub enum BridgeCommand {
         cwd: std::path::PathBuf,
     },
     LoadSession {
-        session_id: String,
+        session_id: SessionId,
     },
     CancelRequest,
     SetMode {
@@ -166,7 +166,6 @@ mod tests {
         let tc = ToolCall::new(
             ToolCallId::new("tc_1"),
             "read".into(),
-            None,
             ToolKind::Read,
             ToolCallStatus::InProgress,
             None,

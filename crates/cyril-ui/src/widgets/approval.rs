@@ -59,8 +59,7 @@ mod tests {
         let state = ApprovalState {
             tool_call: cyril_core::types::ToolCall::new(
                 cyril_core::types::ToolCallId::new("tc_1"),
-                "bash".into(),
-                Some("echo hello".into()),
+                "echo hello".into(),
                 cyril_core::types::ToolKind::Execute,
                 cyril_core::types::ToolCallStatus::Pending,
                 None,

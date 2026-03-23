@@ -111,6 +111,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
                     cyril_core::types::PlanEntryStatus::Pending => "○",
                     cyril_core::types::PlanEntryStatus::InProgress => "◐",
                     cyril_core::types::PlanEntryStatus::Completed => "●",
+                    cyril_core::types::PlanEntryStatus::Failed => "✗",
                 };
                 lines.push(Line::raw(format!("  {icon} {}", entry.title())));
             }
@@ -152,14 +153,14 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
             if let Some(path) = tc.primary_path() {
                 format!("Read({path})")
             } else {
-                tc.title().unwrap_or(tc.name()).to_string()
+                tc.title().to_string()
             }
         }
         ToolKind::Write => {
             if let Some(path) = tc.primary_path() {
                 format!("Edit({path})")
             } else {
-                tc.title().unwrap_or(tc.name()).to_string()
+                tc.title().to_string()
             }
         }
         ToolKind::Execute => {
@@ -171,13 +172,13 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
                     format!("Run({display})")
                 }
             } else {
-                tc.title().unwrap_or(tc.name()).to_string()
+                tc.title().to_string()
             }
         }
-        ToolKind::Search => tc.title().unwrap_or("Search").to_string(),
+        ToolKind::Search => tc.title().to_string(),
         ToolKind::Think => "Thinking...".to_string(),
-        ToolKind::Fetch => tc.title().unwrap_or("Fetch").to_string(),
-        ToolKind::Other => tc.title().unwrap_or(tc.name()).to_string(),
+        ToolKind::Fetch => tc.title().to_string(),
+        ToolKind::Other => tc.title().to_string(),
     };
 
     let color = match tc.status() {
@@ -357,8 +358,7 @@ mod tests {
         let tc = TrackedToolCall::new(
             ToolCall::new(
                 ToolCallId::new("tc_1"),
-                "write".into(),
-                Some("Editing main.rs".into()),
+                "Editing main.rs".into(),
                 ToolKind::Write,
                 ToolCallStatus::Completed,
                 None,
@@ -411,7 +411,6 @@ mod tests {
             ToolCall::new(
                 ToolCallId::new("tc_1"),
                 "write".into(),
-                None,
                 ToolKind::Write,
                 ToolCallStatus::Completed,
                 None,
@@ -438,8 +437,7 @@ mod tests {
 
         let tc = TrackedToolCall::new(ToolCall::new(
             ToolCallId::new("tc_1"),
-            "read".into(),
-            Some("Reading file.rs".into()),
+            "Reading file.rs".into(),
             ToolKind::Read,
             ToolCallStatus::Completed,
             None,
@@ -468,7 +466,6 @@ mod tests {
             ToolCall::new(
                 ToolCallId::new("tc_1"),
                 "write".into(),
-                None,
                 ToolKind::Write,
                 ToolCallStatus::Completed,
                 None,
@@ -506,7 +503,6 @@ mod tests {
             ToolCall::new(
                 ToolCallId::new("tc_1"),
                 "read".into(),
-                None,
                 ToolKind::Read,
                 ToolCallStatus::Completed,
                 None,
@@ -528,7 +524,6 @@ mod tests {
         let tc = TrackedToolCall::new(ToolCall::new(
             ToolCallId::new("tc_2"),
             "shell".into(),
-            None,
             ToolKind::Execute,
             ToolCallStatus::Completed,
             Some(serde_json::json!({"command": "cargo test"})),
@@ -553,8 +548,7 @@ mod tests {
                 ChatMessage::tool_call(TrackedToolCall::new(
                     ToolCall::new(
                         ToolCallId::new("tc_1"),
-                        "write".into(),
-                        Some("Editing main.rs".into()),
+                        "Editing main.rs".into(),
                         ToolKind::Write,
                         ToolCallStatus::Completed,
                         None,

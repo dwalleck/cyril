@@ -40,7 +40,6 @@ pub(crate) fn to_tool_call(
     ToolCall::new(
         ToolCallId::new(id_str.clone()),
         acp_call.title.clone(),
-        None,
         to_tool_kind(acp_call.kind),
         to_tool_call_status(acp_call.status),
         cached_inputs
@@ -202,7 +201,7 @@ pub(crate) fn to_ext_notification(
                         .unwrap_or("")
                         .to_string();
                     Ok(Notification::ToolCallChunk {
-                        tool_call_id,
+                        tool_call_id: ToolCallId::new(tool_call_id),
                         title,
                         kind,
                     })
@@ -267,16 +266,9 @@ pub(crate) fn to_tool_call_from_permission(
         .map(convert_tool_call_locations)
         .unwrap_or_default();
 
-    ToolCall::new(
-        ToolCallId::new(id_str),
-        title,
-        None,
-        kind,
-        status,
-        raw_input,
-    )
-    .with_content(content)
-    .with_locations(locations)
+    ToolCall::new(ToolCallId::new(id_str), title, kind, status, raw_input)
+        .with_content(content)
+        .with_locations(locations)
 }
 
 /// Convert ACP permission options to our internal representation.
@@ -443,16 +435,9 @@ pub(crate) fn session_update_to_notification(
                 .unwrap_or_default();
 
             Some(Notification::ToolCallUpdated(
-                ToolCall::new(
-                    ToolCallId::new(id_str),
-                    title,
-                    None,
-                    kind,
-                    status,
-                    raw_input,
-                )
-                .with_content(content)
-                .with_locations(locations),
+                ToolCall::new(ToolCallId::new(id_str), title, kind, status, raw_input)
+                    .with_content(content)
+                    .with_locations(locations),
             ))
         }
         acp::SessionUpdate::Plan(plan) => {
@@ -464,7 +449,7 @@ pub(crate) fn session_update_to_notification(
                         acp::PlanEntryStatus::Pending => PlanEntryStatus::Pending,
                         acp::PlanEntryStatus::InProgress => PlanEntryStatus::InProgress,
                         acp::PlanEntryStatus::Completed => PlanEntryStatus::Completed,
-                        _ => PlanEntryStatus::Pending,
+                        _ => PlanEntryStatus::Failed,
                     };
                     PlanEntry::new(e.content.clone(), status)
                 })
@@ -784,7 +769,7 @@ mod tests {
             kind,
         }) = result
         {
-            assert_eq!(tool_call_id, "tc_123");
+            assert_eq!(tool_call_id.as_str(), "tc_123");
             assert_eq!(title, "reading main.rs");
             assert_eq!(kind, "read");
         } else {
@@ -808,6 +793,95 @@ mod tests {
         let params = serde_json::json!({"update": {}});
         let result = to_ext_notification("kiro.dev/session/update", &params);
         assert!(result.is_err());
+    }
+
+    /// Helper to build a `RequestPermissionRequest` with given option kinds.
+    fn make_permission_request(
+        options: Vec<(
+            &'static str,
+            &'static str,
+            agent_client_protocol::PermissionOptionKind,
+        )>,
+    ) -> acp::RequestPermissionRequest {
+        let tool_call_update = acp::ToolCallUpdate::new(
+            "tc_perm",
+            acp::ToolCallUpdateFields::new()
+                .title("Run command")
+                .kind(acp::ToolKind::Execute)
+                .status(acp::ToolCallStatus::Pending),
+        );
+        let perm_options: Vec<acp::PermissionOption> = options
+            .into_iter()
+            .map(|(id, name, kind)| acp::PermissionOption::new(id, name, kind))
+            .collect();
+        acp::RequestPermissionRequest::new("sess_1", tool_call_update, perm_options)
+    }
+
+    #[test]
+    fn find_option_id_exact_match() {
+        let req = make_permission_request(vec![
+            ("opt_allow", "Yes", acp::PermissionOptionKind::AllowOnce),
+            (
+                "opt_always",
+                "Always",
+                acp::PermissionOptionKind::AllowAlways,
+            ),
+            ("opt_reject", "No", acp::PermissionOptionKind::RejectOnce),
+        ]);
+
+        let allow_id = find_option_id(&req, acp::PermissionOptionKind::AllowOnce);
+        assert_eq!(allow_id.to_string(), "opt_allow");
+
+        let reject_id = find_option_id(&req, acp::PermissionOptionKind::RejectOnce);
+        assert_eq!(reject_id.to_string(), "opt_reject");
+    }
+
+    #[test]
+    fn find_option_id_fallback_to_first() {
+        let req = make_permission_request(vec![(
+            "opt_allow",
+            "Yes",
+            acp::PermissionOptionKind::AllowOnce,
+        )]);
+
+        // RejectOnce doesn't exist, should fall back to first option (AllowOnce)
+        let id = find_option_id(&req, acp::PermissionOptionKind::RejectOnce);
+        assert_eq!(id.to_string(), "opt_allow");
+    }
+
+    #[test]
+    fn from_permission_response_allow_once() {
+        let req = make_permission_request(vec![
+            ("opt_allow", "Yes", acp::PermissionOptionKind::AllowOnce),
+            (
+                "opt_always",
+                "Always",
+                acp::PermissionOptionKind::AllowAlways,
+            ),
+            ("opt_reject", "No", acp::PermissionOptionKind::RejectOnce),
+        ]);
+
+        let resp = from_permission_response(PermissionResponse::AllowOnce, &req);
+        if let acp::RequestPermissionOutcome::Selected(selected) = resp.outcome {
+            assert_eq!(selected.option_id.to_string(), "opt_allow");
+        } else {
+            panic!("expected Selected outcome");
+        }
+    }
+
+    #[test]
+    fn from_permission_response_cancel() {
+        let req = make_permission_request(vec![(
+            "opt_allow",
+            "Yes",
+            acp::PermissionOptionKind::AllowOnce,
+        )]);
+
+        let resp = from_permission_response(PermissionResponse::Cancel, &req);
+        assert!(matches!(
+            resp.outcome,
+            acp::RequestPermissionOutcome::Cancelled
+        ));
     }
 
     #[test]
