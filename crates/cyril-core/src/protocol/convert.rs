@@ -337,12 +337,22 @@ fn find_option_id(
     args: &acp::RequestPermissionRequest,
     target_kind: acp::PermissionOptionKind,
 ) -> acp::PermissionOptionId {
+    if let Some(opt) = args.options.iter().find(|o| o.kind == target_kind) {
+        return opt.option_id.clone();
+    }
+
+    tracing::warn!(
+        ?target_kind,
+        "permission option kind not found, falling back to first available option"
+    );
+
     args.options
-        .iter()
-        .find(|o| o.kind == target_kind)
-        .or_else(|| args.options.first())
+        .first()
         .map(|o| o.option_id.clone())
-        .unwrap_or_else(|| acp::PermissionOptionId::new("allow_once"))
+        .unwrap_or_else(|| {
+            tracing::error!("no permission options available, fabricating allow_once ID");
+            acp::PermissionOptionId::new("allow_once")
+        })
 }
 
 /// Cache `raw_input` from tool call and tool call update notifications,
