@@ -916,6 +916,113 @@ mod tests {
         }
     }
 
+    // --- convert_tool_call_content tests ---
+
+    #[test]
+    fn convert_tool_call_content_diff() {
+        let diff = acp::Diff::new("src/main.rs", "new code").old_text("old code");
+        let acp_content = vec![acp::ToolCallContent::Diff(diff)];
+        let result = convert_tool_call_content(&acp_content);
+        assert_eq!(result.len(), 1);
+        assert!(matches!(
+            &result[0],
+            ToolCallContent::Diff {
+                path,
+                old_text,
+                new_text,
+            } if path == "src/main.rs"
+                && old_text.as_deref() == Some("old code")
+                && new_text == "new code"
+        ));
+    }
+
+    #[test]
+    fn convert_tool_call_content_empty() {
+        let result = convert_tool_call_content(&[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn convert_tool_call_content_text_via_content_block() {
+        let text_block = acp::ContentBlock::from("hello world");
+        let acp_content = vec![acp::ToolCallContent::Content(acp::Content::new(text_block))];
+        let result = convert_tool_call_content(&acp_content);
+        assert_eq!(result.len(), 1);
+        assert!(matches!(&result[0], ToolCallContent::Text(t) if t == "hello world"));
+    }
+
+    // --- convert_tool_call_locations tests ---
+
+    #[test]
+    fn convert_tool_call_locations_basic() {
+        let loc = acp::ToolCallLocation::new("src/lib.rs").line(42u32);
+        let result = convert_tool_call_locations(&[loc]);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].path, "src/lib.rs");
+        assert_eq!(result[0].line, Some(42));
+    }
+
+    #[test]
+    fn convert_tool_call_locations_without_line() {
+        let loc = acp::ToolCallLocation::new("Cargo.toml");
+        let result = convert_tool_call_locations(&[loc]);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].path, "Cargo.toml");
+        assert!(result[0].line.is_none());
+    }
+
+    #[test]
+    fn convert_tool_call_locations_empty() {
+        let result = convert_tool_call_locations(&[]);
+        assert!(result.is_empty());
+    }
+
+    // --- cache_tool_call_input tests ---
+
+    #[test]
+    fn cache_tool_call_input_from_tool_call() {
+        let cache = RefCell::new(HashMap::new());
+        let tc = acp::ToolCall::new("tc_1", "Read file")
+            .raw_input(serde_json::json!({"path": "test.rs"}));
+        let notification = acp::SessionNotification::new(
+            acp::SessionId::new("sess"),
+            acp::SessionUpdate::ToolCall(tc),
+        );
+        cache_tool_call_input(&notification, &cache);
+        let borrowed = cache.borrow();
+        assert!(borrowed.contains_key("tc_1"));
+        assert_eq!(borrowed["tc_1"], serde_json::json!({"path": "test.rs"}));
+    }
+
+    #[test]
+    fn cache_tool_call_input_ignores_non_tool_updates() {
+        let cache = RefCell::new(HashMap::new());
+        let chunk = acp::ContentChunk::new(acp::ContentBlock::from("hello"));
+        let notification = acp::SessionNotification::new(
+            acp::SessionId::new("sess"),
+            acp::SessionUpdate::AgentMessageChunk(chunk),
+        );
+        cache_tool_call_input(&notification, &cache);
+        assert!(cache.borrow().is_empty());
+    }
+
+    #[test]
+    fn cache_tool_call_input_from_tool_call_update() {
+        let cache = RefCell::new(HashMap::new());
+        let update = acp::ToolCallUpdate::new(
+            "tc_2",
+            acp::ToolCallUpdateFields::new().raw_input(serde_json::json!({"cmd": "ls"})),
+        );
+        let notification = acp::SessionNotification::new(
+            acp::SessionId::new("sess"),
+            acp::SessionUpdate::ToolCallUpdate(update),
+        );
+        cache_tool_call_input(&notification, &cache);
+        let borrowed = cache.borrow();
+        assert!(borrowed.contains_key("tc_2"));
+        assert_eq!(borrowed["tc_2"], serde_json::json!({"cmd": "ls"}));
+    }
+
     #[test]
     fn to_ext_notification_commands_parses_local_flag() {
         let params = serde_json::json!({
