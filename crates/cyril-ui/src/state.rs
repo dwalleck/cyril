@@ -213,25 +213,43 @@ impl UiState {
             Notification::ToolCallStarted(tc) => {
                 // Flush any accumulated text before the tool call starts.
                 // This prevents text before and after a tool call from
-                // concatenating into one message (e.g., "I'll edit...I've updated...")
+                // concatenating into one message.
                 if !self.streaming_text.is_empty() {
                     let text = std::mem::take(&mut self.streaming_text);
                     self.messages.push(ChatMessage::agent_text(text));
                     self.messages_version += 1;
                 }
 
+                // Commit tool call directly to messages in chronological position.
+                // This ensures tool calls stay between the text segments that
+                // surround them, rather than moving to the end on TurnCompleted.
                 let tracked = TrackedToolCall::new(tc.clone());
-                let idx = self.active_tool_calls.len();
-                self.active_tool_calls.push(tracked);
+                let idx = self.messages.len();
+                self.messages.push(ChatMessage::tool_call(tracked));
                 self.tool_call_index.insert(tc.id().clone(), idx);
+                self.messages_version += 1;
+
+                // Also keep in active_tool_calls for the live display section
+                self.active_tool_calls
+                    .push(TrackedToolCall::new(tc.clone()));
                 self.set_activity(Activity::ToolRunning);
                 true
             }
             Notification::ToolCallUpdated(tc) => {
-                if let Some(&idx) = self.tool_call_index.get(tc.id())
-                    && let Some(tracked) = self.active_tool_calls.get_mut(idx)
-                {
-                    tracked.update(tc);
+                // Update in active_tool_calls (for live display)
+                for tracked in &mut self.active_tool_calls {
+                    if tracked.id() == tc.id() {
+                        tracked.update(tc);
+                        break;
+                    }
+                }
+                // Update in committed messages (for history)
+                if let Some(&idx) = self.tool_call_index.get(tc.id()) {
+                    if let Some(msg) = self.messages.get_mut(idx) {
+                        if let ChatMessageKind::ToolCall(ref mut tracked) = msg.kind {
+                            tracked.update(tc);
+                        }
+                    }
                 }
                 true
             }
@@ -315,27 +333,21 @@ impl UiState {
         }
     }
 
-    /// Flush streaming text and active tool calls into the message list.
+    /// Flush remaining streaming text and clear active tool call display.
+    /// Tool calls are already committed to messages in chronological position
+    /// (done in ToolCallStarted handler), so we only flush trailing text here.
     pub fn commit_streaming(&mut self) {
-        let had_content = !self.streaming_text.is_empty() || !self.active_tool_calls.is_empty();
-
         if !self.streaming_text.is_empty() {
             let text = std::mem::take(&mut self.streaming_text);
             self.messages.push(ChatMessage::agent_text(text));
-        }
-
-        // Commit tool calls as individual messages so they appear in history
-        for tc in self.active_tool_calls.drain(..) {
-            self.messages.push(ChatMessage::tool_call(tc));
-        }
-        self.tool_call_index.clear();
-
-        self.streaming_thought = None;
-
-        if had_content {
             self.messages_version += 1;
-            self.enforce_message_limit();
         }
+
+        // Clear active display — tool calls are already in messages
+        self.active_tool_calls.clear();
+        self.tool_call_index.clear();
+        self.streaming_thought = None;
+        self.enforce_message_limit();
     }
 
     /// Add a user message to the chat history.
@@ -937,9 +949,10 @@ mod tests {
         state.apply_notification(&Notification::ToolCallStarted(tc));
 
         assert_eq!(state.active_tool_calls().len(), 1);
-        // Text is flushed to messages when tool call starts (prevents concatenation)
+        // Text is flushed to messages when tool call starts, and tool call is
+        // committed immediately in chronological position
         assert_eq!(state.streaming_text(), "");
-        assert_eq!(state.messages().len(), 1, "pre-tool-call text should already be committed");
+        assert_eq!(state.messages().len(), 2, "text + tool call should be committed immediately");
 
         // Turn completes
         state.apply_notification(&Notification::TurnCompleted);
@@ -1123,12 +1136,16 @@ mod tests {
         );
         state.apply_notification(&Notification::ToolCallStarted(tc));
 
-        // Text before tool call should be committed
+        // Text and tool call should both be committed in order
         assert_eq!(state.streaming_text(), "", "streaming text should be flushed");
-        assert_eq!(state.messages().len(), 1, "pre-tool-call text should be committed");
+        assert_eq!(state.messages().len(), 2, "text + tool call committed");
         assert!(
             matches!(state.messages()[0].kind(), ChatMessageKind::AgentText(t) if t == "I'll edit that file."),
-            "committed message should be the pre-tool-call text"
+            "first message should be the pre-tool-call text"
+        );
+        assert!(
+            matches!(state.messages()[1].kind(), ChatMessageKind::ToolCall(_)),
+            "second message should be the tool call"
         );
 
         // Agent streams text after tool call
@@ -1143,19 +1160,21 @@ mod tests {
         // Turn completes
         state.apply_notification(&Notification::TurnCompleted);
 
-        // Should have: pre-tool-call text, agent text (post), and tool call
+        // Should have: text, tool call, text — in chronological order
         let messages = state.messages();
-        let agent_texts: Vec<&str> = messages
-            .iter()
-            .filter_map(|m| match m.kind() {
-                ChatMessageKind::AgentText(t) => Some(t.as_str()),
-                _ => None,
-            })
-            .collect();
-
-        assert_eq!(agent_texts.len(), 2, "should have two separate text messages");
-        assert_eq!(agent_texts[0], "I'll edit that file.");
-        assert_eq!(agent_texts[1], "Done editing.");
+        assert_eq!(messages.len(), 3, "should have text + tool call + text");
+        assert!(
+            matches!(messages[0].kind(), ChatMessageKind::AgentText(t) if t == "I'll edit that file."),
+            "first: pre-tool-call text"
+        );
+        assert!(
+            matches!(messages[1].kind(), ChatMessageKind::ToolCall(_)),
+            "second: tool call in chronological position"
+        );
+        assert!(
+            matches!(messages[2].kind(), ChatMessageKind::AgentText(t) if t == "Done editing."),
+            "third: post-tool-call text"
+        );
     }
 
     // --- Tool call update merge tests ---
