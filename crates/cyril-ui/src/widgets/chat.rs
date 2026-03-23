@@ -543,6 +543,75 @@ mod tests {
     }
 
     #[test]
+    fn chat_renders_interleaved_text_and_tool_calls_in_order() {
+        use cyril_core::types::*;
+
+        // Simulate a committed turn: text → tool call → text
+        let state = MockTuiState {
+            messages: vec![
+                ChatMessage::agent_text("I'll edit that file.".into()),
+                ChatMessage::tool_call(TrackedToolCall::new(
+                    ToolCall::new(
+                        ToolCallId::new("tc_1"),
+                        "write".into(),
+                        Some("Editing main.rs".into()),
+                        ToolKind::Write,
+                        ToolCallStatus::Completed,
+                        None,
+                    )
+                    .with_content(vec![ToolCallContent::Diff {
+                        path: "src/main.rs".into(),
+                        old_text: Some("old".into()),
+                        new_text: "new".into(),
+                    }]),
+                )),
+                ChatMessage::agent_text("Done editing.".into()),
+            ],
+            ..Default::default()
+        };
+
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| {
+                render(frame, frame.area(), &state);
+            })
+            .expect("draw");
+
+        // Extract rendered text from the buffer
+        let buffer = terminal.backend().buffer().clone();
+        let rendered: String = (0..buffer.area.height)
+            .map(|y| {
+                (0..buffer.area.width)
+                    .map(|x| buffer.cell((x, y)).map(|c| c.symbol()).unwrap_or(" "))
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        // Verify order: first text appears before tool call, tool call before second text
+        let first_text_pos = rendered
+            .find("edit that file")
+            .expect("first text should render");
+        let tool_call_pos = rendered
+            .find("Edit(")
+            .or_else(|| rendered.find("main.rs"))
+            .expect("tool call should render");
+        let second_text_pos = rendered
+            .find("Done editing")
+            .expect("second text should render");
+
+        assert!(
+            first_text_pos < tool_call_pos,
+            "first text ({first_text_pos}) should appear before tool call ({tool_call_pos})"
+        );
+        assert!(
+            tool_call_pos < second_text_pos,
+            "tool call ({tool_call_pos}) should appear before second text ({second_text_pos})"
+        );
+    }
+
+    #[test]
     fn chat_renders_streaming() {
         let state = MockTuiState {
             streaming_text: "Streaming **markdown** content".into(),
