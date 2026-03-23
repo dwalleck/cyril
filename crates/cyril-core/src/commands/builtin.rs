@@ -98,12 +98,15 @@ impl Command for NewCommand {
         "Start a new session"
     }
 
-    async fn execute(
-        &self,
-        ctx: &CommandContext<'_>,
-        _args: &str,
-    ) -> crate::Result<CommandResult> {
-        let cwd = std::env::current_dir().unwrap_or_default();
+    async fn execute(&self, ctx: &CommandContext<'_>, _args: &str) -> crate::Result<CommandResult> {
+        let cwd = std::env::current_dir().map_err(|e| {
+            crate::Error::with_source(
+                crate::ErrorKind::CommandFailed {
+                    detail: "could not determine current working directory".into(),
+                },
+                e,
+            )
+        })?;
         ctx.bridge.send(BridgeCommand::NewSession { cwd }).await?;
         Ok(CommandResult::dispatched())
     }
@@ -122,11 +125,7 @@ impl Command for LoadCommand {
         "Load a session by ID"
     }
 
-    async fn execute(
-        &self,
-        ctx: &CommandContext<'_>,
-        args: &str,
-    ) -> crate::Result<CommandResult> {
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
         if args.is_empty() {
             return Ok(CommandResult::system_message(
                 "Usage: /load <session-id>".to_string(),

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-/// Application configuration, loaded from TOML with env var overrides.
+/// Application configuration, loaded from TOML.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -51,12 +51,24 @@ impl Default for AgentConfig {
 }
 
 impl Config {
-    /// Load config from a specific path. Returns defaults on any error.
+    /// Load config from a specific path. Returns defaults if the file is
+    /// missing, unreadable, or contains invalid TOML.
     pub fn load_from_path(path: &Path) -> Self {
-        std::fs::read_to_string(path)
-            .ok()
-            .and_then(|s| toml::from_str(&s).ok())
-            .unwrap_or_default()
+        let content = match std::fs::read_to_string(path) {
+            Ok(s) => s,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Self::default(),
+            Err(e) => {
+                tracing::warn!(path = %path.display(), error = %e, "could not read config file, using defaults");
+                return Self::default();
+            }
+        };
+        match toml::from_str(&content) {
+            Ok(config) => config,
+            Err(e) => {
+                tracing::warn!(path = %path.display(), error = %e, "invalid config file, using defaults");
+                Self::default()
+            }
+        }
     }
 }
 

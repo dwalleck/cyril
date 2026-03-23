@@ -109,8 +109,17 @@ impl acp::Client for KiroClient {
     }
 
     async fn ext_notification(&self, args: acp::ExtNotification) -> acp::Result<()> {
-        let params: serde_json::Value =
-            serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
+        let params: serde_json::Value = match serde_json::from_str(args.params.get()) {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!(
+                    error = %e,
+                    method = %args.method,
+                    "failed to parse ext_notification params"
+                );
+                serde_json::Value::Null
+            }
+        };
 
         match convert::to_ext_notification(args.method.as_ref(), &params) {
             Ok(notification) => {
