@@ -21,84 +21,104 @@ There is no linter or formatter configured beyond `cargo check`. The project use
 
 ## Architecture
 
-### Workspace Layout
+### Three-Crate Workspace
 
-Two crates in a Cargo workspace:
+```
+crates/
+  cyril-core/     # Library — protocol, types, commands, session, platform
+  cyril-ui/       # Library — rendering, widgets, UI state (depends on cyril-core)
+  cyril/          # Binary — wires everything together, owns the event loop
+```
 
-- **`cyril-core`** — Protocol logic, no UI. Implements the ACP `Client` trait, path translation.
-  - `protocol/` — ACP client implementation (`client.rs`) and transport (`transport.rs`)
-  - `platform/` — OS-specific abstractions: path translation (`path.rs`)
-  - `kiro_ext.rs` — Kiro-specific extension types (`KiroExtCommand`, `KiroCommandsPayload`)
-  - `session.rs` — `SessionContext` (session state: modes, model, config options)
-  - `event.rs` — `AppEvent` and sub-enums bridging protocol → TUI
-- **`cyril`** — The ratatui TUI binary. Owns all rendering, input handling, and the main event loop.
-  - `app.rs` — Thin coordinator: event loop, dispatches to handlers
-  - `commands.rs` — `CommandExecutor` (stateless slash command + prompt execution)
-  - `ui/` — All rendering: `chat.rs`, `toolbar.rs`, `input.rs`, `approval.rs`, `picker.rs`, `markdown.rs`, `tool_calls.rs`
+### Layer Responsibilities
+
+Each crate has a clear responsibility and strict rules about what it must NOT do:
+
+**`cyril-core`** — Domain logic and protocol boundary.
+- **Owns:** Types (`types/`), ACP protocol bridge (`protocol/`), command registry (`commands/`), session state (`session.rs`), path translation (`platform/`), error types (`error.rs`)
+- **Responsibility:** Convert between ACP wire types and internal domain types. All Kiro protocol quirks are handled in `convert.rs`. The bridge runs on a dedicated `!Send` thread and communicates via typed channels.
+- **Must NOT:** Import any UI crate. Reference ratatui, crossterm, or any rendering concept. Know how content is displayed.
+- **Dependency rule:** Only crate that imports `agent-client-protocol`. No other crate may reference `acp::` types.
+
+**`cyril-ui`** — Rendering and UI state.
+- **Owns:** `UiState` (all mutable UI state), `TuiState` trait (read-only rendering interface), widgets (`widgets/`), markdown rendering, syntax highlighting, file completer, stream buffer
+- **Responsibility:** Given notifications, update UI state. Given `&dyn TuiState`, render frames. All rendering decisions live here.
+- **Must NOT:** Import `agent-client-protocol`. Know about ACP, JSON-RPC, or the bridge. Send commands to the bridge. Make async calls.
+- **Dependency rule:** Depends on `cyril-core` for types only — never `protocol::`.
+
+**`cyril`** — Thin orchestrator binary.
+- **Owns:** `App` (event loop), CLI args, terminal setup, wiring between components
+- **Responsibility:** Wire `cyril-core` and `cyril-ui` together. Run the `tokio::select!` event loop. Dispatch key events through the layered handler. Route notifications to both `SessionController` and `UiState`. Handle cross-cutting concerns (opening pickers from `CommandOptionsReceived`, extracting model from `CommandExecuted`).
+- **Must NOT:** Contain business logic or protocol knowledge. Parse JSON responses (that's `cyril-core`'s job). Make rendering decisions (that's `cyril-ui`'s job).
 
 ### Data Flow
 
 ```
-User input → CommandExecutor::send_prompt() → acp::ClientSideConnection::prompt()
-                                                    ↓ (JSON-RPC over stdio; via WSL on Windows)
-                                               kiro-cli acp
-                                                    ↓ (callbacks)
-KiroClient (implements acp::Client) ← session notifications, permission requests, extensions
-         ↓ (mpsc channel)
-    AppEvent (wraps sub-enums)
-         ↓
-    App::handle_acp_event() dispatches to:
-      ├─ Protocol(e)    → handle_protocol_event()   → ChatState, session
-      ├─ Interaction(r) → handle_interaction()       → approval popup
-      └─ Extension(e)   → handle_extension_event()   → commands, context %
-         ↓
-    ratatui render loop (~30fps)
+User input → CommandRegistry::parse() → Command::execute() → BridgeSender::send(BridgeCommand)
+                                                                    ↓ (mpsc channel)
+                                                              Bridge thread (dedicated OS thread)
+                                                                    ↓ (JSON-RPC over stdio)
+                                                              kiro-cli acp
+                                                                    ↓ (ACP callbacks)
+                                                              KiroClient (protocol/client.rs)
+                                                                    ↓ (mpsc channels)
+                                                    Notification / PermissionRequest
+                                                                    ↓
+App event loop (tokio::select!):
+  ├─ Notification → SessionController::apply_notification()
+  │               → UiState::apply_notification()
+  │               → cross-cutting handlers (CommandOptionsReceived, CommandExecuted, etc.)
+  ├─ PermissionRequest → UiState::show_approval()
+  └─ Terminal Event → layered key dispatch
+                                                                    ↓
+                                              ratatui render (adaptive frame rate)
 ```
 
-### Key Boundary: KiroClient (`cyril-core/src/protocol/client.rs`)
+### Key Boundaries
 
-This is the ACP `Client` trait implementation — the single point where all agent callbacks arrive. It handles:
-- Session notifications (agent messages, tool calls, mode changes)
-- Permission requests (approval popup via oneshot channel)
-- Extension notifications (Kiro commands, metadata)
+**Bridge thread (`protocol/bridge.rs`):** Runs `!Send` ACP types in a quarantined `current_thread` + `LocalSet` runtime. All communication is via three bounded mpsc channels: commands in, notifications out, permission requests out. The bridge MUST send a notification for every command it processes — including error cases — so the App never gets stuck.
 
-Note: Kiro handles file I/O and terminal commands internally via built-in agent tools. The ACP client capability callbacks (`read_text_file`, `write_text_file`, `create_terminal`, etc.) are defined in the `acp::Client` trait but Kiro never invokes them.
+**Conversion boundary (`protocol/convert.rs`):** Single file that imports both `acp::` and internal types. Every Kiro protocol quirk is handled here: name prefix stripping, metadata parsing, content/location extraction, raw_input caching. No other file should import `acp::` types.
 
-Everything is `!Send` — uses `Rc<RefCell<_>>` and `#[async_trait(?Send)]`. The tokio runtime is `current_thread` with a `LocalSet`.
+**TuiState trait (`cyril-ui/traits.rs`):** Read-only interface the renderer uses. Every method returns a reference or Copy type — compile-time guarantee that rendering cannot mutate state. The renderer receives `&dyn TuiState`, never `&App` or `&mut UiState`.
+
+### Notification-Driven Architecture
+
+All agent interactions are notification-driven. Commands return immediately; results arrive as notifications:
+
+| User action | BridgeCommand | Notification back | App reacts |
+|---|---|---|---|
+| Send prompt | `SendPrompt` | `AgentMessage`, `ToolCallStarted`, `TurnCompleted` | Streams to chat |
+| `/new` | `NewSession` | `SessionCreated` | Updates session state |
+| `/model` (no args) | `QueryCommandOptions` | `CommandOptionsReceived` | Opens picker |
+| `/tools` | `ExecuteCommand` | `CommandExecuted` | Shows formatted response |
+| Picker confirms | `ExecuteCommand` | `CommandExecuted` | Shows confirmation |
+
+**The event loop must NEVER block on command execution.** Commands send a `BridgeCommand` and return `Dispatched`. Results come back asynchronously as notifications.
+
+### Key Handling Layers
+
+Input dispatch follows strict priority (each layer consumes or passes through):
+
+1. **Global shortcuts** (Ctrl+C, Ctrl+Q, Ctrl+M) — always active
+2. **Approval overlay** — consumes all keys if active, early return
+3. **Picker overlay** — consumes all keys if active, early return
+4. **Autocomplete** — `handle_autocomplete_key()` returns `AutocompleteAction` enum (Consumed/Accepted/AcceptedAndSubmit/NotActive), early return unless NotActive
+5. **Normal input** — Enter submits, Esc cancels, other keys go to textarea
+
+### Streaming Content Model
+
+Agent text and tool calls commit to the message list in chronological order as they arrive:
+
+- `AgentMessage` chunks accumulate in `streaming_text`
+- When `ToolCallStarted` arrives, flush `streaming_text` to a committed `AgentText` message, then commit the tool call to messages at that position
+- `ToolCallUpdated` updates the committed tool call in-place via `merge_update` (preserves content/locations from initial notification)
+- When `TurnCompleted` arrives, flush any remaining `streaming_text`
+- Result: messages list has `[AgentText, ToolCall, AgentText, ...]` in arrival order
 
 ### Path Translation (`cyril-core/src/platform/path.rs`)
 
-On Windows, all paths crossing the WSL boundary go through `win_to_wsl()` / `wsl_to_win()`. The agent sees `/mnt/c/...` paths; the client operates on `C:\...` paths. `translate_paths_in_json()` handles recursive translation in JSON payloads. On Linux, path translation is a no-op — paths pass through unchanged.
-
-### Event Architecture
-
-`AppEvent` (in `cyril-core/src/event.rs`) is the bridge between the protocol layer and TUI. Events flow one-way from `KiroClient` → `App`. It wraps three sub-enums:
-
-- **`ProtocolEvent`** — Standard ACP session updates (agent messages, tool calls, mode/config changes, plan updates)
-- **`InteractionRequest`** — Requests needing a user response (permission requests via oneshot channel)
-- **`ExtensionEvent`** — Kiro-specific extension notifications (commands, metadata)
-
-`App::handle_acp_event()` pattern-matches the top-level variant and dispatches to a dedicated handler per sub-enum.
-
-### SessionContext (`cyril-core/src/session.rs`)
-
-Single source of truth for session state: session ID, modes, config options, context usage, and cached model. Lives in `cyril-core` so both crates can reference it.
-
-Key invariant: `config_options` has a setter (`set_config_options()`) that maintains the `cached_model` cache. Fields with setters are private — use the getter/setter API. `set_optimistic_model()` allows immediate UI feedback before the server confirms.
-
-### CommandExecutor (`cyril/src/commands.rs`)
-
-Stateless executor for slash commands and prompts. Each method is an associated function that takes only the dependencies it needs as parameters. `App` is a thin coordinator — it owns the state and calls into `CommandExecutor`.
-
-Pattern for spawned async work: use `tokio::task::spawn_local` with cloned channels, and use `send_or_log()` instead of `let _ = send()` to prevent silent failures.
-
-### Chat Model: Interleaved Content Blocks
-
-`ChatState` uses `Vec<ContentBlock>` where `ContentBlock` is `Text(String)`, `ToolCall(TrackedToolCall)`, or `Plan(acp::Plan)`. During streaming, blocks accumulate in `stream_blocks`; on turn end they move to `messages`. This keeps text, tool calls, and plans in chronological order. Plan updates replace the existing plan block (the agent sends the full plan each time).
-
-### Tool Call Display (`cyril/src/ui/tool_calls.rs`)
-
-`TrackedToolCall` wraps a full `acp::ToolCall` and caches a `DiffSummary` (computed via the `similar` crate). Tool calls render inline in chat with kind-specific labels (`Read(path)`, `Edit(path)`, `Execute(cmd)`) and actual code diffs for edits.
+On Windows, all paths crossing the WSL boundary go through `win_to_wsl()` / `wsl_to_win()`. On Linux, path translation is a no-op.
 
 ## ACP Protocol Notes
 
