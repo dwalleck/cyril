@@ -133,15 +133,13 @@ impl ToolCall {
     }
 
     /// Merge fields from an update into this tool call.
-    /// Only overwrites fields that the update carries (non-empty/non-default).
-    /// Preserves content and locations from the original if the update doesn't provide them.
+    /// Always overwrites `kind` and `status`. Conditionally overwrites `title`,
+    /// `raw_input`, `content`, and `locations` only when the update carries non-empty values.
     pub fn merge_update(&mut self, update: &ToolCall) {
         if !update.title.is_empty() {
             self.title = update.title.clone();
         }
-        if update.kind != ToolKind::Other {
-            self.kind = update.kind;
-        }
+        self.kind = update.kind;
         self.status = update.status;
         if update.raw_input.is_some() {
             self.raw_input = update.raw_input.clone();
@@ -476,5 +474,25 @@ mod tests {
             Some(&input),
             "raw_input should be preserved"
         );
+    }
+
+    #[test]
+    fn merge_update_applies_kind_other() {
+        let mut tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            None,
+        );
+        let update = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "planning".into(),
+            ToolKind::Other,
+            ToolCallStatus::InProgress,
+            None,
+        );
+        tc.merge_update(&update);
+        assert_eq!(tc.kind(), ToolKind::Other, "kind should update to Other");
     }
 }
