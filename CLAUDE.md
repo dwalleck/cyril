@@ -184,6 +184,35 @@ Includes more than just `session_id`:
 ### Channel sends in spawned tasks
 Always use `CommandExecutor::send_or_log()` instead of `let _ = sender.send()`. Silent send failures can freeze the UI (e.g., `toolbar.is_busy` stuck true).
 
+## Design Principles
+
+### Make illegal states unrepresentable
+
+Use the type system to prevent bugs at compile time rather than catching them at runtime.
+
+**Use newtypes for domain identifiers.** `SessionId`, `ToolCallId` — never pass raw `String` where a typed ID is expected. Every field that carries a session or tool call identifier must use the newtype, not `String`.
+
+**Use `Option` for absent values, not sentinels.** Never use a concrete enum variant (like `ToolKind::Other`) or a magic value (like `0.0` or `""`) to mean "not specified." If a value may be absent, the type should be `Option<T>`. Sentinel values break `merge_update` patterns — you can't distinguish "explicitly set to X" from "not provided."
+
+**Guard partial updates.** When merging update fields into existing state, only overwrite fields the update actually provides. An update with an empty string for `name` means "name was not provided," not "set name to empty." Use guards like `if update.field.is_some()` or `if !update.field.is_empty()`.
+
+**Errors are not default values.** Never use `unwrap_or(0.0)`, `unwrap_or("")`, or `unwrap_or_default()` to handle parse failures or missing data. These hide real errors as plausible-looking defaults. Instead:
+- Return `None` / skip the notification if the data is genuinely optional
+- Return `Err` if the data is required
+- At minimum, log a warning before falling back
+
+**Bridge errors must notify the App.** Every failed bridge operation (`prompt`, `new_session`, `load_session`, `set_session_mode`) must send a notification back through the channel so the UI can recover. Logging alone is invisible to the user — the UI will get stuck in a transitional state.
+
+**`commit_streaming` flushes text on boundaries.** When a tool call starts, flush accumulated streaming text to a committed message first. This prevents text segments from concatenating across tool call boundaries. Content commits in chronological order — tool calls go into messages at the position where they arrived, not at the end.
+
+### Testing layers
+
+State tests verify data transitions. Render tests verify presentation. Both are needed:
+
+- **State lifecycle tests**: Apply a realistic sequence of notifications (text → tool call → update → turn complete) and verify committed messages contain all content in order.
+- **Render order tests**: Render to `TestBackend`, extract the buffer, assert character positions maintain chronological order.
+- **Merge tests**: Verify that partial updates preserve existing fields (content, locations, title, raw_input) when the update doesn't provide them.
+
 ## Platform Constraints
 
 - **Linux:** spawns `kiro-cli acp` directly; requires kiro-cli installed and on PATH
