@@ -564,7 +564,7 @@ Sent after session creation with the full list of available commands, prompts, t
 
 #### Prompts
 
-The `prompts` array in `commands/available` lists available prompt templates from both file-based sources (`.kiro/prompts/`) and MCP servers. **In v1.29.0, file-based prompts gained argument support** — previously only MCP prompts could declare parameters.
+The `prompts` array in `commands/available` lists available prompt templates from both file-based sources (`.kiro/prompts/`) and MCP servers. All prompts carry an `arguments` field in the protocol, but **file-based prompts currently always send `arguments: []`** — only MCP prompts populate arguments. The TUI code handles arguments uniformly regardless of source, suggesting file-based prompt arguments may be added in a future release.
 
 ```json
 {
@@ -616,10 +616,12 @@ The `prompts` array in `commands/available` lists available prompt templates fro
 
 The **server** parses the slash command, extracts arguments by position, and resolves the prompt template. The client does not need to perform structured argument passing — it forwards the raw text. This is identical for both file-based and MCP prompts.
 
-**What changed in v1.29.0:**
-- File-based prompts from `.kiro/prompts/` can now declare `arguments` — previously only MCP prompts had this capability
-- Both prompt sources are now treated uniformly in the `prompts` array
+**Current state (v1.29.0):**
+- File-based prompts (local and global) **do not support arguments** — the `arguments` field is always `[]`. [Kiro docs confirm this](https://kiro.dev/docs/cli/chat/manage-prompts/).
+- MCP prompts can declare arguments with `name` and `required` fields
+- The `arguments` field is present on all prompts in the protocol regardless of source — the TUI handles them uniformly, suggesting file-based prompt arguments may be added in a future release
 - The prompt command appears in slash-command autocomplete alongside regular commands, distinguished by `meta.type: "prompt"`
+- **Verified empirically:** Created a test file prompt with YAML frontmatter declaring arguments — kiro-cli ignored the frontmatter and sent `arguments: []`
 
 ### `kiro.dev/commands/options` (client → server, request)
 
@@ -1166,5 +1168,5 @@ The ACP method is not implemented by this version of Kiro.
 
 | Date | Kiro Version | ACP Schema | Notes |
 |------|-------------|------------|-------|
-| 2026-04-02 | v1.29.0 | v0.10.8+ | Subagent support (`subagent`/`agent_crew` tools, `subagent/list_update`, `session/inbox_notification`). Multi-session methods (`session/spawn`, `session/terminate`, `session/attach`, `message/send`, `session/list`). `session/new` response now includes `models` field. `mcpCapabilities.http` now `true`. New: `kiro.dev/error/rate_limit`, `kiro.dev/session/activity`, `kiro.dev/session/list_update`. Compaction status gained structured `status.type` field. Turn metering data available in metadata events. **File-based prompts now support arguments** — previously only MCP prompts could declare parameters. |
+| 2026-04-02 | v1.29.0 | v0.10.8+ | Subagent support (`subagent`/`agent_crew` tools, `subagent/list_update`, `session/inbox_notification`). Multi-session methods (`session/spawn`, `session/terminate`, `session/attach`, `message/send`, `session/list`). `session/new` response now includes `models` field. `mcpCapabilities.http` now `true`. New: `kiro.dev/error/rate_limit`, `kiro.dev/session/activity`, `kiro.dev/session/list_update`. Compaction status gained structured `status.type` field. Turn metering data available in metadata events. Prompts array in `commands/available` now includes `arguments` field on all prompts (currently only populated for MCP prompts). |
 | 2026-03-20 | v1.28.0 | v0.10.8 | Initial investigation. Discovered TuiCommand format, broken set_config_option, agent/switched and tool_call_chunk notifications. |
