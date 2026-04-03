@@ -145,8 +145,19 @@ async fn main() -> anyhow::Result<()> {
     drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3)).await;
     println!();
 
-    // --- Test 9: Query chat sessions ---
-    println!("--- [9] Querying chat session options ---");
+    // --- Test 9: Send a prompt to trigger UsageUpdate ---
+    println!("--- [9] Sending prompt (checking for UsageUpdate) ---");
+    sender
+        .send(BridgeCommand::SendPrompt {
+            session_id: session_id.clone(),
+            content_blocks: vec!["Say hello in one word.".into()],
+        })
+        .await?;
+    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(15)).await;
+    println!();
+
+    // --- Test 10: Query chat sessions ---
+    println!("--- [10] Querying chat session options ---");
     sender
         .send(BridgeCommand::QueryCommandOptions {
             command: "chat".into(),

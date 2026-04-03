@@ -713,85 +713,93 @@ git commit -m "feat: parse prompts from commands/available with argument support
 
 ---
 
-## Task 5: Token Usage & Cost Display via UsageUpdate
+## Task 5: Turn Cost Display via kiro.dev/metadata Metering
 
-The ACP schema crate (v0.10.8) defines a `UsageUpdate` session update variant behind the `unstable_session_usage` feature flag. It carries actual token counts and cumulative cost:
+**Verified empirically:** The `kiro.dev/metadata` notification carries `meteringUsage` and `turnDurationMs` after each prompt turn. The ACP crate's `UsageUpdate` session update (`unstable_session_usage`) compiles but Kiro v1.29.0 does NOT send it. Token-level counts (`inputTokens`, `outputTokens`) are not accessible through the ACP client interface. Credit cost per turn is the available data.
 
-```rust
-pub struct UsageUpdate {
-    pub used: u64,      // Tokens currently in context
-    pub size: u64,      // Total context window size
-    pub cost: Option<Cost>,  // Cumulative session cost
+Post-turn metadata payload (captured from test harness):
+```json
+{
+  "contextUsagePercentage": 7.11,
+  "meteringUsage": [
+    {"unit": "credit", "unitPlural": "credits", "value": 0.018139567827529027}
+  ],
+  "turnDurationMs": 1948,
+  "sessionId": "00d1ab84-..."
 }
 ```
 
-Cyril currently uses `agent-client-protocol = "0.10"` without this feature flag, so `UsageUpdate` notifications are silently dropped by the `_ =>` catch-all in `session_update_to_notification`. The Kiro TUI tracks `inputTokens`, `outputTokens`, and `cachedTokens` from what appears to be this data path.
-
-Additionally, `kiro.dev/metadata` may carry `meteringUsage` (credit cost per turn) and `turnDurationMs` alongside the existing `contextUsagePercentage`.
-
 **Files:**
-- Modify: `Cargo.toml` (enable feature flag)
-- Modify: `crates/cyril-core/src/types/event.rs` (add UsageUpdated variant)
-- Modify: `crates/cyril-core/src/protocol/convert.rs:378-511` (handle UsageUpdate in session_update_to_notification)
-- Modify: `crates/cyril-core/src/protocol/convert.rs:92-98` (extend metadata handler for metering)
-- Modify: `crates/cyril-core/src/session.rs` (store token/cost state)
+- Modify: `crates/cyril-core/src/types/event.rs` (extend ContextUsageUpdated or add new variant)
+- Modify: `crates/cyril-core/src/types/session.rs` (add TurnMetering type)
+- Modify: `crates/cyril-core/src/protocol/convert.rs:92-98` (parse metering from metadata)
+- Modify: `crates/cyril-core/src/session.rs` (store last turn cost)
 - Modify: `crates/cyril-ui/src/state.rs` (display in toolbar)
 
-### Step 1: Enable the feature flag
+### Step 1: Write failing conversion test
 
-In workspace `Cargo.toml`, change:
-
-```toml
-agent-client-protocol = { version = "0.10", features = ["unstable_session_usage"] }
-```
-
-### Step 2: Verify the variant compiles
-
-Run: `cargo check -p cyril-core`
-
-If successful, the `SessionUpdate::UsageUpdate` variant is now available in the match. If the ACP crate doesn't compile with this flag on v0.10, check for a newer version.
-
-### Step 3: Write failing test
+Add to convert.rs tests:
 
 ```rust
 #[test]
-fn parse_usage_update_notification() {
-    // This would test that a UsageUpdate session notification
-    // is converted to a Notification::UsageUpdated variant
+fn parse_metadata_with_metering() {
+    let params = serde_json::json!({
+        "sessionId": "s1",
+        "contextUsagePercentage": 7.11,
+        "meteringUsage": [
+            {"unit": "credit", "unitPlural": "credits", "value": 0.018}
+        ],
+        "turnDurationMs": 1948
+    });
+    let result = to_ext_notification("kiro.dev/metadata", &params);
+    assert!(result.is_ok());
+    // Verify metering data is captured (exact assertion depends on approach)
+}
+
+#[test]
+fn parse_metadata_without_metering() {
+    let params = serde_json::json!({
+        "sessionId": "s1",
+        "contextUsagePercentage": 2.28
+    });
+    let result = to_ext_notification("kiro.dev/metadata", &params);
+    assert!(result.is_ok());
+    // Should still work — metering is optional
 }
 ```
 
-### Step 4: Add Notification variant
+### Step 2: Add TurnMetering type
+
+In `crates/cyril-core/src/types/session.rs`:
 
 ```rust
-    UsageUpdated {
-        tokens_used: u64,
-        tokens_total: u64,
-        cost: Option<f64>,
-    },
+#[derive(Debug, Clone)]
+pub struct TurnMetering {
+    pub credits: f64,
+    pub duration_ms: Option<u64>,
+}
 ```
 
-### Step 5: Handle UsageUpdate in session_update_to_notification
+### Step 3: Decide notification approach
 
-In the match on `args.update` in `session_update_to_notification`, add before the `_ =>`:
+Two options:
 
+**(A) Extend ContextUsageUpdated** to carry optional metering:
 ```rust
-        #[cfg(feature = "unstable_session_usage")]
-        acp::SessionUpdate::UsageUpdate(usage) => {
-            let cost = usage.cost.as_ref().map(|c| c.total);
-            Some(Notification::UsageUpdated {
-                tokens_used: usage.used,
-                tokens_total: usage.size,
-                cost,
-            })
-        }
+ContextUsageUpdated {
+    usage: ContextUsage,
+    metering: Option<TurnMetering>,
+}
 ```
+This changes the variant shape but keeps one notification.
 
-Note: Check the actual `Cost` struct fields — they may differ from `total`.
+**(B) Emit a separate TurnMeteringUpdated notification** alongside ContextUsageUpdated. Cleaner but requires the conversion to return two notifications (same issue as prompts — `to_ext_notification` returns one).
 
-### Step 6: Extend metadata parsing for metering
+**Recommended: (A)** — extend the existing variant. The metering always arrives with the context percentage on the same notification.
 
-In the `kiro.dev/metadata` arm of `to_ext_notification`, parse metering if present:
+### Step 4: Update conversion
+
+In `convert.rs`, update the `kiro.dev/metadata` arm:
 
 ```rust
         "kiro.dev/metadata" => {
@@ -800,37 +808,41 @@ In the `kiro.dev/metadata` arm of `to_ext_notification`, parse metering if prese
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
 
-            // v1.29.0: metering usage (credits per turn)
-            if let Some(metering) = params.get("meteringUsage").and_then(|m| m.as_array()) {
-                let total_credits: f64 = metering
-                    .iter()
-                    .filter_map(|u| u.get("value").and_then(|v| v.as_f64()))
-                    .sum();
-                tracing::info!(credits = total_credits, "turn metering");
-            }
+            let metering = params
+                .get("meteringUsage")
+                .and_then(|m| m.as_array())
+                .map(|arr| {
+                    let credits: f64 = arr
+                        .iter()
+                        .filter_map(|u| u.get("value").and_then(|v| v.as_f64()))
+                        .sum();
+                    let duration_ms = params
+                        .get("turnDurationMs")
+                        .and_then(|d| d.as_u64());
+                    TurnMetering { credits, duration_ms }
+                });
 
             Ok(Notification::ContextUsageUpdated(ContextUsage::new(pct)))
+            // TODO: include metering in the notification
         }
 ```
 
-### Step 7: Handle in SessionController and UiState
+### Step 5: Update all ContextUsageUpdated match sites
 
-Add fields to track token usage and credit cost. Display in the toolbar alongside context usage percentage.
+Fix destructuring in SessionController, UiState, and test harness.
 
-### Step 8: Run tests
+### Step 6: Display in toolbar
+
+Show credit cost after each turn, e.g., `7.1% ctx | 0.018 credits | 1.9s`.
+
+### Step 7: Run tests
 
 Run: `cargo test`
 Expected: PASS
 
-### Step 9: Commit
+### Step 8: Commit
 
 ```bash
-git add Cargo.toml crates/cyril-core/src/types/event.rs crates/cyril-core/src/protocol/convert.rs crates/cyril-core/src/session.rs crates/cyril-ui/src/state.rs
-git commit -m "feat: enable UsageUpdate for token counts and cost display"
+git add crates/cyril-core/src/types/event.rs crates/cyril-core/src/types/session.rs crates/cyril-core/src/protocol/convert.rs crates/cyril-core/src/session.rs crates/cyril-ui/src/state.rs
+git commit -m "feat: display per-turn credit cost from metadata metering"
 ```
-
-**Investigation notes:**
-- The `unstable_session_usage` flag may not compile cleanly on `agent-client-protocol` 0.10 — check for compatibility
-- Verify that Kiro v1.29.0 actually sends `UsageUpdate` by enabling the flag and running the test harness
-- The `Cost` struct internals need to be checked — field names may not be `total`
-- If `UsageUpdate` isn't sent by Kiro, metering from `kiro.dev/metadata` is the fallback path

@@ -791,30 +791,39 @@ Execute a slash command. The `command` field is a `TuiCommand` adjacently tagged
 
 ### `kiro.dev/metadata` (server → client, notification)
 
-Sent after each turn with session metadata. **In v1.29.0**, the metadata event also carries `meteringUsage` for per-turn cost tracking.
+Sent after each turn with session metadata. **In v1.29.0**, the post-turn metadata notification also carries `meteringUsage` and `turnDurationMs`.
 
+**Initial metadata** (on session creation):
 ```json
 {
   "method": "_kiro.dev/metadata",
   "params": {
     "sessionId": "4dfac9d3-...",
-    "contextUsagePercentage": 3.09
+    "contextUsagePercentage": 2.28
   }
 }
 ```
 
-The TUI extracts metering data from the underlying stream metadata and emits a `turn_summary` event with:
-
+**Post-turn metadata** (after a prompt completes, verified empirically):
 ```json
 {
-  "meteringUsage": [
-    { "value": 0.021, "unit": "credit", "unit_plural": "credits" }
-  ],
-  "turnDurationMs": 115000
+  "method": "_kiro.dev/metadata",
+  "params": {
+    "sessionId": "4dfac9d3-...",
+    "contextUsagePercentage": 7.11,
+    "meteringUsage": [
+      { "unit": "credit", "unitPlural": "credits", "value": 0.018139567827529027 }
+    ],
+    "turnDurationMs": 1948
+  }
 }
 ```
 
-This is derived from the `MetadataEvent.metering_usage` field in the stream, not sent as a separate notification. Clients processing the raw ACP stream can extract it from metadata events.
+**New fields (v1.29.0):**
+- `meteringUsage` — array of cost entries per turn. Each has `value` (numeric cost), `unit` (singular label), `unitPlural` (plural label). Typically one entry for credits.
+- `turnDurationMs` — wall-clock duration of the turn in milliseconds
+
+**Note:** Token-level usage (`inputTokens`, `outputTokens`, `cachedTokens`) is NOT available through the `ext_notification` path. The TUI extracts these from raw stream `MetadataEvent` internals processed by the ACP crate. The ACP schema's `UsageUpdate` session update (`unstable_session_usage` feature flag) compiles but Kiro v1.29.0 does not send it.
 
 ### `kiro.dev/agent/switched` (server → client, notification)
 
@@ -1110,7 +1119,7 @@ These exist in the `agent-client-protocol-schema` crate behind feature flags but
 | `unstable_session_resume` | `session/resume` | Not advertised. |
 | `unstable_session_list` | `session/list` | Available via Kiro extension (not standard ACP). |
 | `unstable_session_model` | `session/set_model` | Not advertised. Use `kiro.dev/commands/execute`. |
-| `unstable_session_usage` | `UsageUpdate` notification | **Likely active in v1.29.0.** Carries `used` (tokens in context), `size` (window size), and optional `Cost`. Cyril does not enable this feature flag — these updates are silently dropped. The TUI tracks `inputTokens`, `outputTokens`, and `cachedTokens` from a `Metadata` event that likely originates from this. Enable with `features = ["unstable_session_usage"]` on `agent-client-protocol`. |
+| `unstable_session_usage` | `UsageUpdate` notification | **Not sent by Kiro v1.29.0.** Tested by enabling `features = ["unstable_session_usage"]` — the variant compiles but Kiro never sends it. Token counts (`inputTokens`, `outputTokens`, `cachedTokens`) are extracted by the TUI from raw stream `MetadataEvent` internals, not from this variant. Per-turn credit cost is available via `kiro.dev/metadata` (see below). |
 | `unstable_session_info_update` | `SessionInfoUpdate` notification | Not advertised. |
 
 Note: While `sessionCapabilities` remains `{}`, Kiro v1.29.0 effectively implements multi-session support through its extension methods (`session/spawn`, `session/terminate`, `session/attach`, `session/list`, `message/send`, `kiro.dev/subagent/list_update`). These bypass the standard ACP capability negotiation.
