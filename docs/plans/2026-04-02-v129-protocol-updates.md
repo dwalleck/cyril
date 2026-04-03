@@ -768,15 +768,65 @@ fn parse_metadata_without_metering() {
 }
 ```
 
-### Step 2: Add TurnMetering type
+### Step 2: Add TurnMetering and SessionCost types
 
 In `crates/cyril-core/src/types/session.rs`:
 
 ```rust
+/// Per-turn metering data from kiro.dev/metadata.
 #[derive(Debug, Clone)]
 pub struct TurnMetering {
+    /// Credits consumed by this turn.
     pub credits: f64,
+    /// Wall-clock duration of the turn in milliseconds.
     pub duration_ms: Option<u64>,
+}
+
+/// Running session cost accumulator.
+#[derive(Debug, Clone, Default)]
+pub struct SessionCost {
+    /// Total credits consumed across all turns in this session.
+    total_credits: f64,
+    /// Number of turns completed.
+    turn_count: u32,
+    /// Credits consumed by the most recent turn.
+    last_turn_credits: Option<f64>,
+    /// Duration of the most recent turn.
+    last_turn_duration_ms: Option<u64>,
+}
+
+impl SessionCost {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Record a completed turn's metering data.
+    pub fn record_turn(&mut self, metering: &TurnMetering) {
+        self.total_credits += metering.credits;
+        self.turn_count += 1;
+        self.last_turn_credits = Some(metering.credits);
+        self.last_turn_duration_ms = metering.duration_ms;
+    }
+
+    pub fn total_credits(&self) -> f64 { self.total_credits }
+    pub fn turn_count(&self) -> u32 { self.turn_count }
+    pub fn last_turn_credits(&self) -> Option<f64> { self.last_turn_credits }
+    pub fn last_turn_duration_ms(&self) -> Option<u64> { self.last_turn_duration_ms }
+
+    /// Format duration as human-readable string (e.g., "1.9s", "2m 15s").
+    pub fn last_turn_duration_display(&self) -> Option<String> {
+        self.last_turn_duration_ms.map(|ms| {
+            if ms < 1000 {
+                format!("{ms}ms")
+            } else if ms < 60_000 {
+                format!("{:.1}s", ms as f64 / 1000.0)
+            } else {
+                let mins = ms / 60_000;
+                let secs = (ms % 60_000) / 1000;
+                format!("{mins}m {secs}s")
+            }
+        })
+    }
 }
 ```
 
@@ -829,20 +879,125 @@ In `convert.rs`, update the `kiro.dev/metadata` arm:
 
 ### Step 5: Update all ContextUsageUpdated match sites
 
-Fix destructuring in SessionController, UiState, and test harness.
+Fix destructuring in SessionController, UiState, and test harness to handle the new variant shape.
 
-### Step 6: Display in toolbar
+### Step 6: Store running total in SessionController
 
-Show credit cost after each turn, e.g., `7.1% ctx | 0.018 credits | 1.9s`.
+Add a `session_cost: SessionCost` field to `SessionController`. In `apply_notification`:
 
-### Step 7: Run tests
+```rust
+        Notification::ContextUsageUpdated { usage, metering } => {
+            self.context_usage = Some(usage.clone());
+            if let Some(ref m) = metering {
+                self.session_cost.record_turn(m);
+            }
+            true
+        }
+```
+
+Expose via accessor:
+
+```rust
+    pub fn session_cost(&self) -> &SessionCost { &self.session_cost }
+```
+
+### Step 7: Surface cost data in UiState
+
+Add fields to `UiState`:
+
+```rust
+    /// Running total of credits consumed this session.
+    total_credits: f64,
+    /// Credits consumed by the most recent turn.
+    last_turn_credits: Option<f64>,
+    /// Duration of the most recent turn.
+    last_turn_duration_ms: Option<u64>,
+```
+
+In `apply_notification`:
+
+```rust
+        Notification::ContextUsageUpdated { usage, metering } => {
+            self.context_usage = Some(usage.percentage());
+            if let Some(ref m) = metering {
+                self.total_credits += m.credits;
+                self.last_turn_credits = Some(m.credits);
+                self.last_turn_duration_ms = m.duration_ms;
+            }
+            true
+        }
+```
+
+Add to `TuiState` trait:
+
+```rust
+    fn total_credits(&self) -> f64;
+    fn last_turn_credits(&self) -> Option<f64>;
+    fn last_turn_duration_display(&self) -> Option<String>;
+```
+
+### Step 8: Display in toolbar
+
+Update the toolbar rendering to show cost info alongside context usage. Layout:
+
+```
+                                    ctx 7.1% | 0.018 cr (0.54 total) | 1.9s
+```
+
+- **`0.018 cr`** — last turn cost (only shown after first turn completes)
+- **`(0.54 total)`** — running session total
+- **`1.9s`** — last turn duration
+
+When no metering has arrived yet (session just created), only show context percentage as before. The display is additive — no visual change until the first turn completes.
+
+Format credits to 3 decimal places. Format duration using `SessionCost::last_turn_duration_display()`.
+
+### Step 9: Write display tests
+
+```rust
+#[test]
+fn session_cost_accumulates() {
+    let mut cost = SessionCost::new();
+    cost.record_turn(&TurnMetering { credits: 0.018, duration_ms: Some(1948) });
+    cost.record_turn(&TurnMetering { credits: 0.042, duration_ms: Some(5200) });
+
+    assert_eq!(cost.turn_count(), 2);
+    assert!((cost.total_credits() - 0.060).abs() < 0.001);
+    assert!((cost.last_turn_credits().unwrap() - 0.042).abs() < 0.001);
+    assert_eq!(cost.last_turn_duration_ms(), Some(5200));
+}
+
+#[test]
+fn duration_display_formatting() {
+    let mut cost = SessionCost::new();
+    cost.record_turn(&TurnMetering { credits: 0.01, duration_ms: Some(500) });
+    assert_eq!(cost.last_turn_duration_display(), Some("500ms".into()));
+
+    cost.record_turn(&TurnMetering { credits: 0.01, duration_ms: Some(1948) });
+    assert_eq!(cost.last_turn_duration_display(), Some("1.9s".into()));
+
+    cost.record_turn(&TurnMetering { credits: 0.01, duration_ms: Some(135000) });
+    assert_eq!(cost.last_turn_duration_display(), Some("2m 15s".into()));
+}
+
+#[test]
+fn session_cost_no_metering() {
+    let cost = SessionCost::new();
+    assert_eq!(cost.total_credits(), 0.0);
+    assert_eq!(cost.turn_count(), 0);
+    assert!(cost.last_turn_credits().is_none());
+    assert!(cost.last_turn_duration_display().is_none());
+}
+```
+
+### Step 10: Run tests
 
 Run: `cargo test`
 Expected: PASS
 
-### Step 8: Commit
+### Step 11: Commit
 
 ```bash
-git add crates/cyril-core/src/types/event.rs crates/cyril-core/src/types/session.rs crates/cyril-core/src/protocol/convert.rs crates/cyril-core/src/session.rs crates/cyril-ui/src/state.rs
-git commit -m "feat: display per-turn credit cost from metadata metering"
+git add crates/cyril-core/src/types/event.rs crates/cyril-core/src/types/session.rs crates/cyril-core/src/protocol/convert.rs crates/cyril-core/src/session.rs crates/cyril-ui/src/state.rs crates/cyril-ui/src/traits.rs
+git commit -m "feat: display per-turn and cumulative credit cost with turn duration"
 ```
