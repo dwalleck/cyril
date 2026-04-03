@@ -1110,7 +1110,7 @@ These exist in the `agent-client-protocol-schema` crate behind feature flags but
 | `unstable_session_resume` | `session/resume` | Not advertised. |
 | `unstable_session_list` | `session/list` | Available via Kiro extension (not standard ACP). |
 | `unstable_session_model` | `session/set_model` | Not advertised. Use `kiro.dev/commands/execute`. |
-| `unstable_session_usage` | `UsageUpdate` notification | Not advertised. Metering via `kiro.dev/metadata` instead. |
+| `unstable_session_usage` | `UsageUpdate` notification | **Likely active in v1.29.0.** Carries `used` (tokens in context), `size` (window size), and optional `Cost`. Cyril does not enable this feature flag — these updates are silently dropped. The TUI tracks `inputTokens`, `outputTokens`, and `cachedTokens` from a `Metadata` event that likely originates from this. Enable with `features = ["unstable_session_usage"]` on `agent-client-protocol`. |
 | `unstable_session_info_update` | `SessionInfoUpdate` notification | Not advertised. |
 
 Note: While `sessionCapabilities` remains `{}`, Kiro v1.29.0 effectively implements multi-session support through its extension methods (`session/spawn`, `session/terminate`, `session/attach`, `session/list`, `message/send`, `kiro.dev/subagent/list_update`). These bypass the standard ACP capability negotiation.
