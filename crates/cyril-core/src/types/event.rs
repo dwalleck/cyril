@@ -67,6 +67,18 @@ pub enum Notification {
     McpServerInitialized {
         server_name: String,
     },
+    AgentNotFound {
+        requested: String,
+        fallback: Option<String>,
+    },
+    AgentConfigError {
+        path: String,
+        error: String,
+    },
+    ModelNotFound {
+        requested: String,
+        fallback: Option<String>,
+    },
 
     // Lifecycle
     SessionCreated {

@@ -274,6 +274,51 @@ pub(crate) fn to_ext_notification(
                 .to_string();
             Ok(Some(Notification::McpServerInitialized { server_name }))
         }
+        "kiro.dev/agent/not_found" => {
+            let requested = params
+                .get("requestedAgent")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string();
+            let fallback = params
+                .get("fallbackAgent")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            Ok(Some(Notification::AgentNotFound {
+                requested,
+                fallback,
+            }))
+        }
+        "kiro.dev/agent/config_error" => {
+            let path = params
+                .get("path")
+                .and_then(|v| v.as_str())
+                .unwrap_or("(unknown path)")
+                .to_string();
+            let error = params
+                .get("error")
+                .and_then(|v| v.as_str())
+                .unwrap_or("(no detail)")
+                .to_string();
+            Ok(Some(Notification::AgentConfigError { path, error }))
+        }
+        "kiro.dev/model/not_found" => {
+            let requested = params
+                .get("requestedModel")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string();
+            let fallback = params
+                .get("fallbackModel")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            Ok(Some(Notification::ModelNotFound {
+                requested,
+                fallback,
+            }))
+        }
         other => {
             tracing::debug!(method = other, "unknown extension notification");
             Ok(None)
@@ -1176,6 +1221,59 @@ mod tests {
             assert!(!cmds[1].is_local(), "/compact should not be local");
         } else {
             panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_agent_not_found() {
+        let params = serde_json::json!({
+            "requestedAgent": "code-reviewer",
+            "fallbackAgent": "default"
+        });
+        let result = to_ext_notification("kiro.dev/agent/not_found", &params);
+        if let Ok(Some(Notification::AgentNotFound {
+            requested,
+            fallback,
+        })) = result
+        {
+            assert_eq!(requested, "code-reviewer");
+            assert_eq!(fallback.as_deref(), Some("default"));
+        } else {
+            panic!("expected AgentNotFound, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn parse_agent_config_error() {
+        let params = serde_json::json!({
+            "path": ".kiro/agents/broken.md",
+            "error": "invalid YAML frontmatter"
+        });
+        let result = to_ext_notification("kiro.dev/agent/config_error", &params);
+        if let Ok(Some(Notification::AgentConfigError { path, error })) = result {
+            assert_eq!(path, ".kiro/agents/broken.md");
+            assert_eq!(error, "invalid YAML frontmatter");
+        } else {
+            panic!("expected AgentConfigError, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn parse_model_not_found() {
+        let params = serde_json::json!({
+            "requestedModel": "claude-opus-5",
+            "fallbackModel": "claude-sonnet-4"
+        });
+        let result = to_ext_notification("kiro.dev/model/not_found", &params);
+        if let Ok(Some(Notification::ModelNotFound {
+            requested,
+            fallback,
+        })) = result
+        {
+            assert_eq!(requested, "claude-opus-5");
+            assert_eq!(fallback.as_deref(), Some("claude-sonnet-4"));
+        } else {
+            panic!("expected ModelNotFound, got {:?}", result);
         }
     }
 }

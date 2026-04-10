@@ -369,5 +369,14 @@ fn print_notification(n: &Notification) {
         Notification::McpServerInitialized { server_name } => {
             println!("  [McpReady] {server_name}");
         }
+        Notification::AgentNotFound { requested, fallback } => {
+            println!("  [AgentNotFound] {requested} -> {}", fallback.as_deref().unwrap_or("(none)"));
+        }
+        Notification::AgentConfigError { path, error } => {
+            println!("  [AgentConfigError] {path}: {error}");
+        }
+        Notification::ModelNotFound { requested, fallback } => {
+            println!("  [ModelNotFound] {requested} -> {}", fallback.as_deref().unwrap_or("(none)"));
+        }
     }
 }

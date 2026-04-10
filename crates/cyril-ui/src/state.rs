@@ -354,6 +354,30 @@ impl UiState {
                 // Handled by App (cross-cutting concern: opens browser)
                 false
             }
+            Notification::AgentNotFound { requested, fallback } => {
+                if let Some(fb) = fallback {
+                    self.add_system_message(
+                        format!("Agent '{requested}' not found, using '{fb}'")
+                    );
+                } else {
+                    self.add_system_message(format!("Agent '{requested}' not found"));
+                }
+                true
+            }
+            Notification::AgentConfigError { path, error } => {
+                self.add_system_message(format!("Agent config error in {path}: {error}"));
+                true
+            }
+            Notification::ModelNotFound { requested, fallback } => {
+                if let Some(fb) = fallback {
+                    self.add_system_message(
+                        format!("Model '{requested}' not available, using '{fb}'")
+                    );
+                } else {
+                    self.add_system_message(format!("Model '{requested}' not available"));
+                }
+                true
+            }
         }
     }
 
