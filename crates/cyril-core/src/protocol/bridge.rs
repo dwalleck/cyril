@@ -215,9 +215,14 @@ async fn run_bridge(
                             .modes
                             .as_ref()
                             .map(|m| m.current_mode_id.to_string());
+                        // TODO: extract current_model from response.models once the
+                        // `unstable_session_model` feature is enabled in agent-client-protocol-schema.
+                        // The field exists in the schema but is gated behind a feature flag.
+                        let current_model: Option<String> = None;
                         let notification = Notification::SessionCreated {
                             session_id: crate::types::SessionId::new(session_id),
                             current_mode,
+                            current_model,
                         };
                         if channels.notification_tx.send(notification).await.is_err() {
                             break;

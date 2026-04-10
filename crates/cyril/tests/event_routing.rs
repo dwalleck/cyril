@@ -236,6 +236,7 @@ fn session_created_activates_both_controllers() {
     let notification = Notification::SessionCreated {
         session_id: SessionId::new("sess_123"),
         current_mode: Some("kiro_default".into()),
+        current_model: None,
     };
 
     let ui_changed = ui.apply_notification(&notification);

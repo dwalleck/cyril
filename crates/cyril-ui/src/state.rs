@@ -301,9 +301,13 @@ impl UiState {
             Notification::SessionCreated {
                 session_id,
                 current_mode,
+                current_model,
             } => {
                 self.session_label = Some(session_id.as_str().to_string());
                 self.current_mode = current_mode.clone();
+                if let Some(model) = current_model {
+                    self.current_model = Some(model.clone());
+                }
                 self.add_system_message(format!("Session created: {}", session_id.as_str()));
                 self.set_activity(Activity::Ready);
                 true

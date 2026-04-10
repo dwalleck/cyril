@@ -224,12 +224,17 @@ fn print_notification(n: &Notification) {
         Notification::SessionCreated {
             session_id,
             current_mode,
+            current_model,
         } => {
             println!("  [SessionCreated]");
             println!("    session_id: {}", session_id.as_str());
             println!(
                 "    current_mode: {}",
                 current_mode.as_deref().unwrap_or("(none)")
+            );
+            println!(
+                "    current_model: {}",
+                current_model.as_deref().unwrap_or("(none)")
             );
         }
         Notification::TurnCompleted => {

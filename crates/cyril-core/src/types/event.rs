@@ -88,6 +88,7 @@ pub enum Notification {
     SessionCreated {
         session_id: SessionId,
         current_mode: Option<String>,
+        current_model: Option<String>,
     },
     TurnCompleted,
     BridgeDisconnected {
