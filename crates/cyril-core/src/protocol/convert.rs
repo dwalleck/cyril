@@ -319,6 +319,16 @@ pub(crate) fn to_ext_notification(
                 fallback,
             }))
         }
+        "kiro.dev/subagent/list_update"
+        | "kiro.dev/session/activity"
+        | "kiro.dev/session/list_update"
+        | "kiro.dev/session/inbox_notification" => {
+            tracing::debug!(
+                method,
+                "multi-session notification acknowledged, not forwarded"
+            );
+            Ok(None)
+        }
         other => {
             tracing::debug!(method = other, "unknown extension notification");
             Ok(None)
@@ -1274,6 +1284,22 @@ mod tests {
             assert_eq!(fallback.as_deref(), Some("claude-sonnet-4"));
         } else {
             panic!("expected ModelNotFound, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn subagent_notifications_acknowledged_not_forwarded() {
+        for method in [
+            "kiro.dev/subagent/list_update",
+            "kiro.dev/session/activity",
+            "kiro.dev/session/list_update",
+            "kiro.dev/session/inbox_notification",
+        ] {
+            let result = to_ext_notification(method, &serde_json::json!({}));
+            assert!(
+                matches!(result, Ok(None)),
+                "{method} should return Ok(None), got {result:?}"
+            );
         }
     }
 }
