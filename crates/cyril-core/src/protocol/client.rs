@@ -122,17 +122,18 @@ impl acp::Client for KiroClient {
         };
 
         match convert::to_ext_notification(args.method.as_ref(), &params) {
-            Ok(notification) => {
+            Ok(Some(notification)) => {
                 self.notification_tx
                     .send(notification)
                     .await
                     .map_err(|_| acp::Error::new(-32603, "bridge closed"))?;
             }
+            Ok(None) => {}
             Err(e) => {
                 tracing::warn!(
                     error = %e,
                     method = %args.method,
-                    "unrecognized extension notification"
+                    "malformed extension notification"
                 );
             }
         }

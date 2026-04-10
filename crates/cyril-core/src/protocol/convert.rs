@@ -87,14 +87,16 @@ fn convert_tool_call_locations(acp_locations: &[acp::ToolCallLocation]) -> Vec<T
 pub(crate) fn to_ext_notification(
     method: &str,
     params: &serde_json::Value,
-) -> crate::Result<Notification> {
+) -> crate::Result<Option<Notification>> {
     match method {
         "kiro.dev/metadata" => {
             let pct = params
                 .get("contextUsagePercentage")
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
-            Ok(Notification::ContextUsageUpdated(ContextUsage::new(pct)))
+            Ok(Some(Notification::ContextUsageUpdated(ContextUsage::new(
+                pct,
+            ))))
         }
         "kiro.dev/compaction/status" => {
             let message = params
@@ -102,7 +104,7 @@ pub(crate) fn to_ext_notification(
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            Ok(Notification::CompactionStatus { message })
+            Ok(Some(Notification::CompactionStatus { message }))
         }
         "kiro.dev/clear/status" => {
             let message = params
@@ -110,7 +112,7 @@ pub(crate) fn to_ext_notification(
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            Ok(Notification::ClearStatus { message })
+            Ok(Some(Notification::ClearStatus { message }))
         }
         "kiro.dev/agent/switched" => {
             let name = params
@@ -122,7 +124,7 @@ pub(crate) fn to_ext_notification(
                 .get("welcomeMessage")
                 .and_then(|v| v.as_str())
                 .map(String::from);
-            Ok(Notification::AgentSwitched { name, welcome })
+            Ok(Some(Notification::AgentSwitched { name, welcome }))
         }
         "kiro.dev/commands/available" => {
             // Parse the commands list from the payload.
@@ -176,7 +178,7 @@ pub(crate) fn to_ext_notification(
                 Vec::new()
             };
 
-            Ok(Notification::CommandsUpdated(commands))
+            Ok(Some(Notification::CommandsUpdated(commands)))
         }
         "kiro.dev/session/update" => {
             let update = params.get("update");
@@ -200,11 +202,11 @@ pub(crate) fn to_ext_notification(
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
                         .to_string();
-                    Ok(Notification::ToolCallChunk {
+                    Ok(Some(Notification::ToolCallChunk {
                         tool_call_id: ToolCallId::new(tool_call_id),
                         title,
                         kind,
-                    })
+                    }))
                 }
                 Some(other) => {
                     tracing::debug!(variant = other, "unhandled kiro.dev/session/update variant");
@@ -222,9 +224,7 @@ pub(crate) fn to_ext_notification(
         }
         other => {
             tracing::debug!(method = other, "unknown extension notification");
-            Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
-                message: format!("unknown extension: {other}"),
-            }))
+            Ok(None)
         }
     }
 }
@@ -620,12 +620,9 @@ mod tests {
     }
 
     #[test]
-    fn to_ext_notification_unknown_method_returns_error() {
+    fn to_ext_notification_unknown_method_returns_none() {
         let result = to_ext_notification("unknown.method", &serde_json::json!({}));
-        match result {
-            Err(ref e) => assert!(matches!(e.kind(), crate::ErrorKind::Protocol { .. })),
-            Ok(_) => panic!("expected error for unknown method"),
-        }
+        assert!(matches!(result, Ok(None)));
     }
 
     #[test]
@@ -633,7 +630,7 @@ mod tests {
         let params = serde_json::json!({"contextUsagePercentage": 75.0});
         let result = to_ext_notification("kiro.dev/metadata", &params);
         assert!(result.is_ok());
-        if let Ok(Notification::ContextUsageUpdated(usage)) = result {
+        if let Ok(Some(Notification::ContextUsageUpdated(usage))) = result {
             assert!((usage.percentage() - 75.0).abs() < f64::EPSILON);
         } else {
             panic!("expected ContextUsageUpdated");
@@ -645,7 +642,10 @@ mod tests {
         let params = serde_json::json!({"message": "50% done"});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
         assert!(result.is_ok());
-        assert!(matches!(result, Ok(Notification::CompactionStatus { .. })));
+        assert!(matches!(
+            result,
+            Ok(Some(Notification::CompactionStatus { .. }))
+        ));
     }
 
     #[test]
@@ -653,7 +653,7 @@ mod tests {
         let params = serde_json::json!({"message": "cleared"});
         let result = to_ext_notification("kiro.dev/clear/status", &params);
         assert!(result.is_ok());
-        assert!(matches!(result, Ok(Notification::ClearStatus { .. })));
+        assert!(matches!(result, Ok(Some(Notification::ClearStatus { .. }))));
     }
 
     #[test]
@@ -661,7 +661,7 @@ mod tests {
         let params = serde_json::json!({"agentName": "code-agent", "welcomeMessage": "Hello!"});
         let result = to_ext_notification("kiro.dev/agent/switched", &params);
         assert!(result.is_ok());
-        if let Ok(Notification::AgentSwitched { name, welcome }) = result {
+        if let Ok(Some(Notification::AgentSwitched { name, welcome })) = result {
             assert_eq!(name, "code-agent");
             assert_eq!(welcome.as_deref(), Some("Hello!"));
         } else {
@@ -709,7 +709,7 @@ mod tests {
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
         assert!(result.is_ok());
-        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
             assert_eq!(cmds.len(), 2);
             assert_eq!(cmds[0].name(), "model");
             assert_eq!(cmds[0].label(), "Switch model");
@@ -731,7 +731,7 @@ mod tests {
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
         assert!(result.is_ok());
-        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
             assert_eq!(cmds.len(), 1);
             assert_eq!(cmds[0].name(), "tools");
         } else {
@@ -744,7 +744,7 @@ mod tests {
         let params = serde_json::json!({});
         let result = to_ext_notification("kiro.dev/commands/available", &params);
         assert!(result.is_ok());
-        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
             assert!(cmds.is_empty());
         } else {
             panic!("expected CommandsUpdated");
@@ -763,11 +763,11 @@ mod tests {
         });
         let result = to_ext_notification("kiro.dev/session/update", &params);
         assert!(result.is_ok());
-        if let Ok(Notification::ToolCallChunk {
+        if let Ok(Some(Notification::ToolCallChunk {
             tool_call_id,
             title,
             kind,
-        }) = result
+        })) = result
         {
             assert_eq!(tool_call_id.as_str(), "tc_123");
             assert_eq!(title, "reading main.rs");
@@ -892,7 +892,7 @@ mod tests {
             ]
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
-        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
             assert_eq!(cmds[0].name(), "model", "leading / should be stripped");
         } else {
             panic!("expected CommandsUpdated");
@@ -908,7 +908,7 @@ mod tests {
             ]
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
-        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
             assert!(cmds[0].is_selection(), "/model should be selection");
             assert!(!cmds[1].is_selection(), "/compact should not be selection");
         } else {
@@ -1032,7 +1032,7 @@ mod tests {
             ]
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
-        if let Ok(Notification::CommandsUpdated(cmds)) = result {
+        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
             assert!(cmds[0].is_local(), "/quit should be local");
             assert!(!cmds[1].is_local(), "/compact should not be local");
         } else {
