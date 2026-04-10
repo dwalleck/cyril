@@ -132,11 +132,36 @@ pub(crate) fn to_ext_notification(
             }))
         }
         "kiro.dev/compaction/status" => {
-            let message = params
-                .get("message")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
+            let message = if let Some(status) = params.get("status") {
+                let status_type = status
+                    .get("type")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("unknown");
+                match status_type {
+                    "started" => "Compacting conversation context...".to_string(),
+                    "completed" => {
+                        let summary = params
+                            .get("summary")
+                            .and_then(|s| s.as_str())
+                            .unwrap_or("done");
+                        format!("Compaction completed: {summary}")
+                    }
+                    "failed" => {
+                        let error = status
+                            .get("error")
+                            .and_then(|e| e.as_str())
+                            .unwrap_or("unknown error");
+                        format!("Compaction failed: {error}")
+                    }
+                    other => format!("Compaction: {other}"),
+                }
+            } else {
+                params
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string()
+            };
             Ok(Some(Notification::CompactionStatus { message }))
         }
         "kiro.dev/clear/status" => {
@@ -829,14 +854,48 @@ mod tests {
     }
 
     #[test]
-    fn to_ext_notification_compaction_status() {
+    fn to_ext_notification_compaction_status_legacy() {
         let params = serde_json::json!({"message": "50% done"});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
-        assert!(result.is_ok());
-        assert!(matches!(
-            result,
-            Ok(Some(Notification::CompactionStatus { .. }))
-        ));
+        if let Ok(Some(Notification::CompactionStatus { message })) = result {
+            assert_eq!(message, "50% done");
+        } else {
+            panic!("expected CompactionStatus");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_compaction_status_started() {
+        let params = serde_json::json!({"status": {"type": "started"}});
+        let result = to_ext_notification("kiro.dev/compaction/status", &params);
+        if let Ok(Some(Notification::CompactionStatus { message })) = result {
+            assert!(message.contains("Compacting"), "got: {message}");
+        } else {
+            panic!("expected CompactionStatus");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_compaction_status_failed() {
+        let params = serde_json::json!({"status": {"type": "failed", "error": "out of memory"}});
+        let result = to_ext_notification("kiro.dev/compaction/status", &params);
+        if let Ok(Some(Notification::CompactionStatus { message })) = result {
+            assert!(message.contains("out of memory"), "got: {message}");
+        } else {
+            panic!("expected CompactionStatus");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_compaction_status_completed() {
+        let params =
+            serde_json::json!({"status": {"type": "completed"}, "summary": "3 turns removed"});
+        let result = to_ext_notification("kiro.dev/compaction/status", &params);
+        if let Ok(Some(Notification::CompactionStatus { message })) = result {
+            assert!(message.contains("3 turns removed"), "got: {message}");
+        } else {
+            panic!("expected CompactionStatus");
+        }
     }
 
     #[test]
