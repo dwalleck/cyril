@@ -357,7 +357,7 @@ impl UiState {
                 true
             }
             Notification::McpOAuthRequest { .. } => {
-                // Handled by App (cross-cutting concern: opens browser)
+                // Handled by App (cross-cutting concern: displays URL for manual browser opening)
                 false
             }
             Notification::AgentNotFound { requested, fallback } => {
@@ -1349,5 +1349,133 @@ mod tests {
         state.apply_notification(&Notification::ToolCallUpdated(update2));
         assert_eq!(state.active_tool_calls()[0].content().len(), 1, "content survives second update");
         assert_eq!(state.active_tool_calls()[0].status(), ToolCallStatus::Completed);
+    }
+
+    // --- Notification handler tests for new variants ---
+
+    #[test]
+    fn rate_limited_adds_system_message() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::RateLimited {
+            message: "Too many requests".into(),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("Too many requests"))
+        );
+    }
+
+    #[test]
+    fn mcp_server_init_failure_with_error() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::McpServerInitFailure {
+            server_name: "my-mcp".into(),
+            error: Some("connection refused".into()),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("my-mcp") && t.contains("connection refused"))
+        );
+    }
+
+    #[test]
+    fn mcp_server_init_failure_without_error() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::McpServerInitFailure {
+            server_name: "my-mcp".into(),
+            error: None,
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("my-mcp") && t.contains("failed"))
+        );
+    }
+
+    #[test]
+    fn mcp_server_initialized_adds_system_message() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::McpServerInitialized {
+            server_name: "github-mcp".into(),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("github-mcp") && t.contains("ready"))
+        );
+    }
+
+    #[test]
+    fn mcp_oauth_request_not_handled_by_ui() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::McpOAuthRequest {
+            server_name: "server".into(),
+            url: "https://example.com".into(),
+        });
+        assert!(!changed, "McpOAuthRequest should be handled by App, not UiState");
+        assert!(state.messages().is_empty());
+    }
+
+    #[test]
+    fn agent_not_found_with_fallback() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::AgentNotFound {
+            requested: "code-reviewer".into(),
+            fallback: Some("default".into()),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("code-reviewer") && t.contains("default"))
+        );
+    }
+
+    #[test]
+    fn agent_not_found_without_fallback() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::AgentNotFound {
+            requested: "code-reviewer".into(),
+            fallback: None,
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("code-reviewer") && t.contains("not found"))
+        );
+    }
+
+    #[test]
+    fn agent_config_error_adds_system_message() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::AgentConfigError {
+            path: ".kiro/agents/broken.md".into(),
+            error: "invalid YAML".into(),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("broken.md") && t.contains("invalid YAML"))
+        );
+    }
+
+    #[test]
+    fn model_not_found_with_fallback() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::ModelNotFound {
+            requested: "claude-opus-5".into(),
+            fallback: Some("claude-sonnet-4".into()),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("claude-opus-5") && t.contains("claude-sonnet-4"))
+        );
+    }
+
+    #[test]
+    fn model_not_found_without_fallback() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::ModelNotFound {
+            requested: "claude-opus-5".into(),
+            fallback: None,
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("claude-opus-5") && t.contains("not available"))
+        );
     }
 }

@@ -90,10 +90,18 @@ pub(crate) fn to_ext_notification(
 ) -> crate::Result<Option<Notification>> {
     match method {
         "kiro.dev/metadata" => {
-            let pct = params
+            let pct = match params
                 .get("contextUsagePercentage")
                 .and_then(|v| v.as_f64())
-                .unwrap_or(0.0);
+            {
+                Some(v) => v,
+                None => {
+                    tracing::warn!(
+                        "kiro.dev/metadata missing or non-numeric contextUsagePercentage"
+                    );
+                    0.0
+                }
+            };
 
             let metering = params
                 .get("meteringUsage")
@@ -116,11 +124,7 @@ pub(crate) fn to_ext_notification(
                 let output = params.get("outputTokens").and_then(|v| v.as_u64());
                 let cached = params.get("cachedTokens").and_then(|v| v.as_u64());
                 match (input, output) {
-                    (Some(i), Some(o)) => Some(TokenCounts {
-                        input: i,
-                        output: o,
-                        cached: cached.unwrap_or(0),
-                    }),
+                    (Some(i), Some(o)) => Some(TokenCounts::new(i, o, cached)),
                     _ => None,
                 }
             };
@@ -156,27 +160,45 @@ pub(crate) fn to_ext_notification(
                     other => format!("Compaction: {other}"),
                 }
             } else {
-                params
+                match params
                     .get("message")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string()
+                    .filter(|s| !s.is_empty())
+                {
+                    Some(msg) => msg.to_string(),
+                    None => {
+                        tracing::warn!(
+                            "kiro.dev/compaction/status: no status object or message field"
+                        );
+                        return Ok(None);
+                    }
+                }
             };
             Ok(Some(Notification::CompactionStatus { message }))
         }
         "kiro.dev/clear/status" => {
-            let message = params
+            let message = match params
                 .get("message")
                 .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
+                .filter(|s| !s.is_empty())
+            {
+                Some(msg) => msg.to_string(),
+                None => {
+                    tracing::debug!("kiro.dev/clear/status: empty or missing message");
+                    return Ok(None);
+                }
+            };
             Ok(Some(Notification::ClearStatus { message }))
         }
         "kiro.dev/agent/switched" => {
             let name = params
                 .get("agentName")
                 .and_then(|v| v.as_str())
-                .unwrap_or("unknown")
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| {
+                    tracing::warn!("kiro.dev/agent/switched: missing or empty agentName");
+                    "unknown"
+                })
                 .to_string();
             let welcome = params
                 .get("welcomeMessage")
@@ -286,11 +308,17 @@ pub(crate) fn to_ext_notification(
                 .and_then(|s| s.as_str());
             match session_update {
                 Some("tool_call_chunk") => {
-                    let tool_call_id = update
+                    let tool_call_id = match update
                         .and_then(|u| u.get("toolCallId"))
                         .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
+                        .filter(|s| !s.is_empty())
+                    {
+                        Some(id) => id.to_string(),
+                        None => {
+                            tracing::warn!("tool_call_chunk missing or empty toolCallId, dropping");
+                            return Ok(None);
+                        }
+                    };
                     let title = update
                         .and_then(|u| u.get("title"))
                         .and_then(|v| v.as_str())
@@ -334,7 +362,10 @@ pub(crate) fn to_ext_notification(
                 .get("serverName")
                 .and_then(|v| v.as_str())
                 .filter(|s| !s.is_empty())
-                .unwrap_or("unknown")
+                .unwrap_or_else(|| {
+                    tracing::warn!("kiro.dev/mcp/server_init_failure: missing or empty serverName");
+                    "unknown"
+                })
                 .to_string();
             let error = params
                 .get("error")
@@ -350,7 +381,11 @@ pub(crate) fn to_ext_notification(
             let server_name = params
                 .get("serverName")
                 .and_then(|v| v.as_str())
-                .unwrap_or("unknown")
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| {
+                    tracing::warn!("kiro.dev/mcp/oauth_request: missing or empty serverName");
+                    "unknown"
+                })
                 .to_string();
             let url = params
                 .get("oauthUrl")
@@ -369,7 +404,11 @@ pub(crate) fn to_ext_notification(
             let server_name = params
                 .get("serverName")
                 .and_then(|v| v.as_str())
-                .unwrap_or("unknown")
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| {
+                    tracing::warn!("kiro.dev/mcp/server_initialized: missing or empty serverName");
+                    "unknown"
+                })
                 .to_string();
             Ok(Some(Notification::McpServerInitialized { server_name }))
         }
@@ -377,7 +416,11 @@ pub(crate) fn to_ext_notification(
             let requested = params
                 .get("requestedAgent")
                 .and_then(|v| v.as_str())
-                .unwrap_or("unknown")
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| {
+                    tracing::warn!("kiro.dev/agent/not_found: missing or empty requestedAgent");
+                    "unknown"
+                })
                 .to_string();
             let fallback = params
                 .get("fallbackAgent")
@@ -393,12 +436,20 @@ pub(crate) fn to_ext_notification(
             let path = params
                 .get("path")
                 .and_then(|v| v.as_str())
-                .unwrap_or("(unknown path)")
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| {
+                    tracing::warn!("kiro.dev/agent/config_error: missing or empty path");
+                    "(unknown path)"
+                })
                 .to_string();
             let error = params
                 .get("error")
                 .and_then(|v| v.as_str())
-                .unwrap_or("(no detail)")
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| {
+                    tracing::warn!("kiro.dev/agent/config_error: missing or empty error");
+                    "(no detail)"
+                })
                 .to_string();
             Ok(Some(Notification::AgentConfigError { path, error }))
         }
@@ -406,7 +457,11 @@ pub(crate) fn to_ext_notification(
             let requested = params
                 .get("requestedModel")
                 .and_then(|v| v.as_str())
-                .unwrap_or("unknown")
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| {
+                    tracing::warn!("kiro.dev/model/not_found: missing or empty requestedModel");
+                    "unknown"
+                })
                 .to_string();
             let fallback = params
                 .get("fallbackModel")
@@ -892,6 +947,39 @@ mod tests {
         {
             assert!(metering.is_none());
             assert!(tokens.is_none());
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_metadata_with_tokens() {
+        let params = serde_json::json!({
+            "contextUsagePercentage": 15.0,
+            "inputTokens": 1500,
+            "outputTokens": 300,
+            "cachedTokens": 200
+        });
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { tokens, .. })) = result {
+            let t = tokens.expect("tokens should be present");
+            assert_eq!(t.input(), 1500);
+            assert_eq!(t.output(), 300);
+            assert_eq!(t.cached(), Some(200));
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_metadata_with_partial_tokens() {
+        let params = serde_json::json!({
+            "contextUsagePercentage": 15.0,
+            "inputTokens": 1500
+        });
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { tokens, .. })) = result {
+            assert!(tokens.is_none(), "partial tokens should produce None");
         } else {
             panic!("expected MetadataUpdated");
         }

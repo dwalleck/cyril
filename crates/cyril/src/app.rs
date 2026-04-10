@@ -217,7 +217,7 @@ impl App {
         } = notification
         {
             self.ui_state.add_system_message(
-                format!("Authenticate MCP server '{server_name}': {url}"),
+                format!("MCP server '{server_name}' requires authentication. Open in browser: {url}"),
             );
             self.redraw_needed = true;
         }

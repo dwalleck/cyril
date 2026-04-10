@@ -160,10 +160,18 @@ impl SessionCost {
     }
 
     pub fn record_turn(&mut self, metering: &TurnMetering) {
-        self.total_credits += metering.credits;
-        self.turn_count += 1;
-        self.last_turn_credits = Some(metering.credits);
-        self.last_turn_duration_ms = metering.duration_ms;
+        let credits = metering.credits();
+        if credits.is_finite() {
+            self.total_credits += credits;
+        } else {
+            tracing::warn!(
+                credits,
+                "TurnMetering credits is non-finite, skipping accumulation"
+            );
+        }
+        self.turn_count = self.turn_count.saturating_add(1);
+        self.last_turn_credits = Some(credits);
+        self.last_turn_duration_ms = metering.duration_ms();
     }
 
     pub fn total_credits(&self) -> f64 {
@@ -186,9 +194,31 @@ impl SessionCost {
 /// Token counts from a single turn.
 #[derive(Debug, Clone)]
 pub struct TokenCounts {
-    pub input: u64,
-    pub output: u64,
-    pub cached: u64,
+    input: u64,
+    output: u64,
+    cached: Option<u64>,
+}
+
+impl TokenCounts {
+    pub fn new(input: u64, output: u64, cached: Option<u64>) -> Self {
+        Self {
+            input,
+            output,
+            cached,
+        }
+    }
+
+    pub fn input(&self) -> u64 {
+        self.input
+    }
+
+    pub fn output(&self) -> u64 {
+        self.output
+    }
+
+    pub fn cached(&self) -> Option<u64> {
+        self.cached
+    }
 }
 
 #[cfg(test)]

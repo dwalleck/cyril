@@ -308,7 +308,7 @@ fn print_notification(n: &Notification) {
                 "  [MetadataUpdated] ctx={:.1}% metering={:?} tokens={:?}",
                 context_usage.percentage(),
                 metering.as_ref().map(|m| m.credits()),
-                tokens.as_ref().map(|t| (t.input, t.output, t.cached))
+                tokens.as_ref().map(|t| (t.input(), t.output(), t.cached()))
             );
         }
         Notification::AgentSwitched { name, welcome } => {

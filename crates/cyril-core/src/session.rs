@@ -129,6 +129,7 @@ impl SessionController {
                 if let Some(model) = current_model {
                     self.cached_model = Some(model.clone());
                 }
+                self.session_cost = SessionCost::new();
                 self.status = SessionStatus::Active;
                 true
             }
@@ -322,5 +323,36 @@ mod tests {
         });
 
         assert_eq!(ctrl.id().map(SessionId::as_str), Some("new_sess"));
+    }
+
+    #[test]
+    fn session_created_sets_model() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s1"),
+            current_mode: None,
+            current_model: Some("claude-sonnet-4".to_string()),
+        });
+        assert_eq!(ctrl.current_model(), Some("claude-sonnet-4"));
+    }
+
+    #[test]
+    fn session_created_resets_cost() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(10.0),
+            metering: Some(TurnMetering::new(0.05, Some(2000))),
+            tokens: None,
+        });
+        assert!(ctrl.session_cost().total_credits() > 0.0);
+
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+        });
+
+        assert_eq!(ctrl.session_cost().total_credits(), 0.0);
+        assert_eq!(ctrl.session_cost().turn_count(), 0);
     }
 }

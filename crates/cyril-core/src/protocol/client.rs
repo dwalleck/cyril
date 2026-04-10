@@ -128,6 +128,9 @@ impl acp::Client for KiroClient {
                     .await
                     .map_err(|_| acp::Error::new(-32603, "bridge closed"))?;
             }
+            // Known-but-not-forwarded (multi-session), unknown, or
+            // malformed-but-suppressed (e.g. oauth_request missing URL).
+            // Individual handlers log warnings for the malformed cases.
             Ok(None) => {}
             Err(e) => {
                 tracing::warn!(
