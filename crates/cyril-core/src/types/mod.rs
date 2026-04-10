@@ -13,7 +13,10 @@ pub use event::{
 };
 pub use message::{AgentMessage, AgentThought};
 pub use plan::{Plan, PlanEntry, PlanEntryStatus};
-pub use session::{ContextUsage, CreditUsage, SessionId, SessionMode, SessionStatus};
+pub use session::{
+    ContextUsage, CreditUsage, SessionCost, SessionId, SessionMode, SessionStatus, TokenCounts,
+    TurnMetering,
+};
 pub use tool_call::{
     ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
 };

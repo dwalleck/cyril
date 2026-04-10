@@ -29,7 +29,9 @@ pub enum SessionStatus {
     Active,
     Busy,
     Compacting,
-    Error { message: String },
+    Error {
+        message: String,
+    },
 }
 
 /// An available agent mode (e.g., "code", "chat").
@@ -105,6 +107,90 @@ impl CreditUsage {
     }
 }
 
+/// Per-turn metering data from kiro.dev/metadata.
+#[derive(Debug, Clone)]
+pub struct TurnMetering {
+    credits: f64,
+    duration_ms: Option<u64>,
+}
+
+impl TurnMetering {
+    pub fn new(credits: f64, duration_ms: Option<u64>) -> Self {
+        Self {
+            credits,
+            duration_ms,
+        }
+    }
+
+    pub fn credits(&self) -> f64 {
+        self.credits
+    }
+
+    pub fn duration_ms(&self) -> Option<u64> {
+        self.duration_ms
+    }
+
+    pub fn duration_display(&self) -> Option<String> {
+        self.duration_ms.map(|ms| {
+            if ms < 1000 {
+                format!("{ms}ms")
+            } else if ms < 60_000 {
+                format!("{:.1}s", ms as f64 / 1000.0)
+            } else {
+                let mins = ms / 60_000;
+                let secs = (ms % 60_000) / 1000;
+                format!("{mins}m {secs}s")
+            }
+        })
+    }
+}
+
+/// Running session cost accumulator.
+#[derive(Debug, Clone, Default)]
+pub struct SessionCost {
+    total_credits: f64,
+    turn_count: u32,
+    last_turn_credits: Option<f64>,
+    last_turn_duration_ms: Option<u64>,
+}
+
+impl SessionCost {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn record_turn(&mut self, metering: &TurnMetering) {
+        self.total_credits += metering.credits;
+        self.turn_count += 1;
+        self.last_turn_credits = Some(metering.credits);
+        self.last_turn_duration_ms = metering.duration_ms;
+    }
+
+    pub fn total_credits(&self) -> f64 {
+        self.total_credits
+    }
+
+    pub fn turn_count(&self) -> u32 {
+        self.turn_count
+    }
+
+    pub fn last_turn_credits(&self) -> Option<f64> {
+        self.last_turn_credits
+    }
+
+    pub fn last_turn_duration_ms(&self) -> Option<u64> {
+        self.last_turn_duration_ms
+    }
+}
+
+/// Token counts from a single turn.
+#[derive(Debug, Clone)]
+pub struct TokenCounts {
+    pub input: u64,
+    pub output: u64,
+    pub cached: u64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,7 +224,9 @@ mod tests {
 
     #[test]
     fn session_status_error_carries_message() {
-        let status = SessionStatus::Error { message: "oops".into() };
+        let status = SessionStatus::Error {
+            message: "oops".into(),
+        };
         assert!(matches!(status, SessionStatus::Error { message } if message == "oops"));
     }
 
@@ -181,6 +269,42 @@ mod tests {
         assert!((credits.limit() - 10.0).abs() < f64::EPSILON);
     }
 
+    #[test]
+    fn session_cost_accumulates() {
+        let mut cost = SessionCost::new();
+        cost.record_turn(&TurnMetering::new(0.018, Some(1948)));
+        cost.record_turn(&TurnMetering::new(0.042, Some(5200)));
+        assert_eq!(cost.turn_count(), 2);
+        assert!((cost.total_credits() - 0.060).abs() < 0.001);
+        assert!((cost.last_turn_credits().unwrap() - 0.042).abs() < 0.001);
+        assert_eq!(cost.last_turn_duration_ms(), Some(5200));
+    }
+
+    #[test]
+    fn duration_display_formatting() {
+        assert_eq!(
+            TurnMetering::new(0.01, Some(500)).duration_display(),
+            Some("500ms".into())
+        );
+        assert_eq!(
+            TurnMetering::new(0.01, Some(1948)).duration_display(),
+            Some("1.9s".into())
+        );
+        assert_eq!(
+            TurnMetering::new(0.01, Some(135000)).duration_display(),
+            Some("2m 15s".into())
+        );
+        assert!(TurnMetering::new(0.01, None).duration_display().is_none());
+    }
+
+    #[test]
+    fn session_cost_default() {
+        let cost = SessionCost::new();
+        assert_eq!(cost.total_credits(), 0.0);
+        assert_eq!(cost.turn_count(), 0);
+        assert!(cost.last_turn_credits().is_none());
+    }
+
     fn assert_send<T: Send>() {}
     fn assert_sync<T: Sync>() {}
 
@@ -196,5 +320,11 @@ mod tests {
         assert_sync::<ContextUsage>();
         assert_send::<CreditUsage>();
         assert_sync::<CreditUsage>();
+        assert_send::<TurnMetering>();
+        assert_sync::<TurnMetering>();
+        assert_send::<SessionCost>();
+        assert_sync::<SessionCost>();
+        assert_send::<TokenCounts>();
+        assert_sync::<TokenCounts>();
     }
 }

@@ -1,7 +1,7 @@
 use crate::types::command::{CommandInfo, ConfigOption};
 use crate::types::message::{AgentMessage, AgentThought};
 use crate::types::plan::Plan;
-use crate::types::session::{ContextUsage, SessionId};
+use crate::types::session::{ContextUsage, SessionId, TokenCounts, TurnMetering};
 use crate::types::tool_call::{ToolCall, ToolCallId};
 
 /// Notifications emitted by the ACP bridge. All variants are Send + Sync + Clone.
@@ -37,7 +37,11 @@ pub enum Notification {
     },
 
     // Kiro extensions
-    ContextUsageUpdated(ContextUsage),
+    MetadataUpdated {
+        context_usage: ContextUsage,
+        metering: Option<TurnMetering>,
+        tokens: Option<TokenCounts>,
+    },
     AgentSwitched {
         name: String,
         welcome: Option<String>,
@@ -201,10 +205,21 @@ mod tests {
     }
 
     #[test]
-    fn notification_context_usage() {
-        let n = Notification::ContextUsageUpdated(ContextUsage::new(75.0));
-        if let Notification::ContextUsageUpdated(usage) = n {
-            assert!((usage.percentage() - 75.0).abs() < f64::EPSILON);
+    fn notification_metadata_updated() {
+        let n = Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(75.0),
+            metering: None,
+            tokens: None,
+        };
+        if let Notification::MetadataUpdated {
+            context_usage,
+            metering,
+            tokens,
+        } = n
+        {
+            assert!((context_usage.percentage() - 75.0).abs() < f64::EPSILON);
+            assert!(metering.is_none());
+            assert!(tokens.is_none());
         } else {
             panic!("wrong variant");
         }

@@ -9,6 +9,7 @@ pub struct SessionController {
     context_usage: Option<ContextUsage>,
     agent_commands: Vec<CommandInfo>,
     credit_usage: Option<CreditUsage>,
+    session_cost: SessionCost,
 }
 
 impl SessionController {
@@ -22,6 +23,7 @@ impl SessionController {
             context_usage: None,
             agent_commands: Vec::new(),
             credit_usage: None,
+            session_cost: SessionCost::new(),
         }
     }
 
@@ -58,6 +60,10 @@ impl SessionController {
         self.credit_usage.as_ref()
     }
 
+    pub fn session_cost(&self) -> &SessionCost {
+        &self.session_cost
+    }
+
     // Mutators
     pub fn set_session(&mut self, id: SessionId, status: SessionStatus) {
         self.id = Some(id);
@@ -83,8 +89,15 @@ impl SessionController {
                 self.current_mode_id = Some(mode_id.clone());
                 true
             }
-            Notification::ContextUsageUpdated(usage) => {
-                self.context_usage = Some(usage.clone());
+            Notification::MetadataUpdated {
+                context_usage,
+                metering,
+                ..
+            } => {
+                self.context_usage = Some(context_usage.clone());
+                if let Some(m) = metering {
+                    self.session_cost.record_turn(m);
+                }
                 true
             }
             Notification::ConfigOptionsUpdated(options) => {
@@ -183,15 +196,36 @@ mod tests {
     }
 
     #[test]
-    fn context_usage_updated() {
+    fn metadata_updated_stores_context_usage() {
         let mut ctrl = SessionController::new();
-        let changed =
-            ctrl.apply_notification(&Notification::ContextUsageUpdated(ContextUsage::new(75.0)));
+        let changed = ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(75.0),
+            metering: None,
+            tokens: None,
+        });
         assert!(changed);
         assert!(
             (ctrl.context_usage().map(|u| u.percentage()).unwrap_or(0.0) - 75.0).abs()
                 < f64::EPSILON
         );
+    }
+
+    #[test]
+    fn metadata_updated_records_turn_metering() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(5.0),
+            metering: Some(TurnMetering::new(0.018, Some(1948))),
+            tokens: None,
+        });
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(6.0),
+            metering: Some(TurnMetering::new(0.042, Some(5200))),
+            tokens: None,
+        });
+        assert_eq!(ctrl.session_cost().turn_count(), 2);
+        assert!((ctrl.session_cost().total_credits() - 0.060).abs() < 0.001);
+        assert!((ctrl.session_cost().last_turn_credits().unwrap() - 0.042).abs() < 0.001);
     }
 
     #[test]

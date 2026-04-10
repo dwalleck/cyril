@@ -94,9 +94,42 @@ pub(crate) fn to_ext_notification(
                 .get("contextUsagePercentage")
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
-            Ok(Some(Notification::ContextUsageUpdated(ContextUsage::new(
-                pct,
-            ))))
+
+            let metering = params
+                .get("meteringUsage")
+                .and_then(|m| m.as_array())
+                .and_then(|arr| {
+                    let credits: f64 = arr
+                        .iter()
+                        .filter_map(|u| u.get("value").and_then(|v| v.as_f64()))
+                        .sum();
+                    if credits > 0.0 {
+                        let duration_ms = params.get("turnDurationMs").and_then(|d| d.as_u64());
+                        Some(TurnMetering::new(credits, duration_ms))
+                    } else {
+                        None
+                    }
+                });
+
+            let tokens = {
+                let input = params.get("inputTokens").and_then(|v| v.as_u64());
+                let output = params.get("outputTokens").and_then(|v| v.as_u64());
+                let cached = params.get("cachedTokens").and_then(|v| v.as_u64());
+                match (input, output) {
+                    (Some(i), Some(o)) => Some(TokenCounts {
+                        input: i,
+                        output: o,
+                        cached: cached.unwrap_or(0),
+                    }),
+                    _ => None,
+                }
+            };
+
+            Ok(Some(Notification::MetadataUpdated {
+                context_usage: ContextUsage::new(pct),
+                metering,
+                tokens,
+            }))
         }
         "kiro.dev/compaction/status" => {
             let message = params
@@ -737,10 +770,61 @@ mod tests {
         let params = serde_json::json!({"contextUsagePercentage": 75.0});
         let result = to_ext_notification("kiro.dev/metadata", &params);
         assert!(result.is_ok());
-        if let Ok(Some(Notification::ContextUsageUpdated(usage))) = result {
-            assert!((usage.percentage() - 75.0).abs() < f64::EPSILON);
+        if let Ok(Some(Notification::MetadataUpdated {
+            context_usage,
+            metering,
+            tokens,
+        })) = result
+        {
+            assert!((context_usage.percentage() - 75.0).abs() < f64::EPSILON);
+            assert!(metering.is_none());
+            assert!(tokens.is_none());
         } else {
-            panic!("expected ContextUsageUpdated");
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_metadata_with_metering() {
+        let params = serde_json::json!({
+            "sessionId": "s1",
+            "contextUsagePercentage": 7.11,
+            "meteringUsage": [
+                {"unit": "credit", "unitPlural": "credits", "value": 0.018}
+            ],
+            "turnDurationMs": 1948
+        });
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated {
+            context_usage,
+            metering,
+            ..
+        })) = result
+        {
+            assert!((context_usage.percentage() - 7.11).abs() < 0.01);
+            let m = metering.unwrap();
+            assert!((m.credits() - 0.018).abs() < 0.001);
+            assert_eq!(m.duration_ms(), Some(1948));
+        } else {
+            panic!("expected MetadataUpdated, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn parse_metadata_without_metering() {
+        let params = serde_json::json!({
+            "sessionId": "s1",
+            "contextUsagePercentage": 2.28
+        });
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated {
+            metering, tokens, ..
+        })) = result
+        {
+            assert!(metering.is_none());
+            assert!(tokens.is_none());
+        } else {
+            panic!("expected MetadataUpdated");
         }
     }
 

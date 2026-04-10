@@ -48,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     // Drain notifications for a few seconds — session creation triggers
-    // several notifications (SessionCreated, CommandsUpdated, ContextUsageUpdated)
+    // several notifications (SessionCreated, CommandsUpdated, MetadataUpdated)
     let session_id =
         drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3))
             .await;
@@ -294,8 +294,17 @@ fn print_notification(n: &Notification) {
                 );
             }
         }
-        Notification::ContextUsageUpdated(usage) => {
-            println!("  [ContextUsageUpdated] {:.1}%", usage.percentage());
+        Notification::MetadataUpdated {
+            context_usage,
+            metering,
+            tokens,
+        } => {
+            println!(
+                "  [MetadataUpdated] ctx={:.1}% metering={:?} tokens={:?}",
+                context_usage.percentage(),
+                metering.as_ref().map(|m| m.credits()),
+                tokens.as_ref().map(|t| (t.input, t.output, t.cached))
+            );
         }
         Notification::AgentSwitched { name, welcome } => {
             println!(

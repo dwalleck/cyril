@@ -105,7 +105,11 @@ fn context_usage_flows_to_both() {
     let mut ui = UiState::new(500);
     let mut session = SessionController::new();
 
-    let notification = Notification::ContextUsageUpdated(ContextUsage::new(85.0));
+    let notification = Notification::MetadataUpdated {
+        context_usage: ContextUsage::new(85.0),
+        metering: None,
+        tokens: None,
+    };
     ui.apply_notification(&notification);
     session.apply_notification(&notification);
 

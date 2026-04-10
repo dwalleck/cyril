@@ -257,8 +257,10 @@ impl UiState {
                 self.current_plan = Some(plan.clone());
                 true
             }
-            Notification::ContextUsageUpdated(usage) => {
-                self.context_usage = Some(usage.percentage());
+            Notification::MetadataUpdated {
+                context_usage, ..
+            } => {
+                self.context_usage = Some(context_usage.percentage());
                 true
             }
             Notification::TurnCompleted => {
