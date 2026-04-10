@@ -334,6 +334,26 @@ impl UiState {
                 // Handled by the App layer (formats and displays the response).
                 false
             }
+            Notification::McpServerInitFailure { server_name, error } => {
+                if let Some(err) = error {
+                    self.add_system_message(
+                        format!("MCP server '{server_name}' failed to initialize: {err}"),
+                    );
+                } else {
+                    self.add_system_message(
+                        format!("MCP server '{server_name}' failed to initialize"),
+                    );
+                }
+                true
+            }
+            Notification::McpServerInitialized { server_name } => {
+                self.add_system_message(format!("MCP server '{server_name}' ready"));
+                true
+            }
+            Notification::McpOAuthRequest { .. } => {
+                // Handled by App (cross-cutting concern: opens browser)
+                false
+            }
         }
     }
 

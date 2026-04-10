@@ -56,6 +56,17 @@ pub enum Notification {
         title: String,
         kind: String,
     },
+    McpServerInitFailure {
+        server_name: String,
+        error: Option<String>,
+    },
+    McpOAuthRequest {
+        server_name: String,
+        url: String,
+    },
+    McpServerInitialized {
+        server_name: String,
+    },
 
     // Lifecycle
     SessionCreated {

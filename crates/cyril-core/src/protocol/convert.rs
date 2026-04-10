@@ -230,6 +230,50 @@ pub(crate) fn to_ext_notification(
                 .to_string();
             Ok(Some(Notification::RateLimited { message }))
         }
+        "kiro.dev/mcp/server_init_failure" => {
+            let server_name = params
+                .get("serverName")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .unwrap_or("unknown")
+                .to_string();
+            let error = params
+                .get("error")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            Ok(Some(Notification::McpServerInitFailure {
+                server_name,
+                error,
+            }))
+        }
+        "kiro.dev/mcp/oauth_request" => {
+            let server_name = params
+                .get("serverName")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string();
+            let url = params
+                .get("oauthUrl")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .unwrap_or("")
+                .to_string();
+            if url.is_empty() {
+                tracing::warn!("mcp/oauth_request missing oauthUrl");
+                Ok(None)
+            } else {
+                Ok(Some(Notification::McpOAuthRequest { server_name, url }))
+            }
+        }
+        "kiro.dev/mcp/server_initialized" => {
+            let server_name = params
+                .get("serverName")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string();
+            Ok(Some(Notification::McpServerInitialized { server_name }))
+        }
         other => {
             tracing::debug!(method = other, "unknown extension notification");
             Ok(None)
@@ -945,6 +989,69 @@ mod tests {
             assert!(!message.is_empty());
         } else {
             panic!("expected RateLimited");
+        }
+    }
+
+    #[test]
+    fn parse_mcp_server_init_failure() {
+        let params = serde_json::json!({
+            "serverName": "my-mcp",
+            "error": "connection refused"
+        });
+        let result = to_ext_notification("kiro.dev/mcp/server_init_failure", &params);
+        if let Ok(Some(Notification::McpServerInitFailure { server_name, error })) = result {
+            assert_eq!(server_name, "my-mcp");
+            assert_eq!(error.as_deref(), Some("connection refused"));
+        } else {
+            panic!("expected McpServerInitFailure, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn parse_mcp_server_init_failure_no_error() {
+        let params = serde_json::json!({ "serverName": "my-mcp" });
+        let result = to_ext_notification("kiro.dev/mcp/server_init_failure", &params);
+        if let Ok(Some(Notification::McpServerInitFailure { server_name, error })) = result {
+            assert_eq!(server_name, "my-mcp");
+            assert!(error.is_none());
+        } else {
+            panic!("expected McpServerInitFailure");
+        }
+    }
+
+    #[test]
+    fn parse_mcp_oauth_request() {
+        let params = serde_json::json!({
+            "serverName": "github-mcp",
+            "oauthUrl": "https://github.com/login/oauth/authorize?client_id=abc"
+        });
+        let result = to_ext_notification("kiro.dev/mcp/oauth_request", &params);
+        if let Ok(Some(Notification::McpOAuthRequest { server_name, url })) = result {
+            assert_eq!(server_name, "github-mcp");
+            assert!(url.starts_with("https://"));
+        } else {
+            panic!("expected McpOAuthRequest, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn parse_mcp_oauth_request_missing_url() {
+        let params = serde_json::json!({ "serverName": "github-mcp" });
+        let result = to_ext_notification("kiro.dev/mcp/oauth_request", &params);
+        assert!(
+            matches!(result, Ok(None)),
+            "missing oauthUrl should return None"
+        );
+    }
+
+    #[test]
+    fn parse_mcp_server_initialized() {
+        let params = serde_json::json!({ "serverName": "github-mcp" });
+        let result = to_ext_notification("kiro.dev/mcp/server_initialized", &params);
+        if let Ok(Some(Notification::McpServerInitialized { server_name })) = result {
+            assert_eq!(server_name, "github-mcp");
+        } else {
+            panic!("expected McpServerInitialized, got {:?}", result);
         }
     }
 

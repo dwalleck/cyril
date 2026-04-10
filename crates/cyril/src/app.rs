@@ -203,6 +203,18 @@ impl App {
             self.redraw_needed = true;
         }
 
+        // Handle MCP OAuth request — display URL for the user to copy
+        if let Notification::McpOAuthRequest {
+            ref server_name,
+            ref url,
+        } = notification
+        {
+            self.ui_state.add_system_message(
+                format!("Authenticate MCP server '{server_name}': {url}"),
+            );
+            self.redraw_needed = true;
+        }
+
         // Handle command execution response
         if let Notification::CommandExecuted { ref command, ref response } = notification {
             let text = format_command_response(command, response);

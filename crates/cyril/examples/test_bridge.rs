@@ -357,5 +357,17 @@ fn print_notification(n: &Notification) {
                 }
             }
         }
+        Notification::McpServerInitFailure { server_name, error } => {
+            println!(
+                "  [McpInitFail] {server_name}: {}",
+                error.as_deref().unwrap_or("(no detail)")
+            );
+        }
+        Notification::McpOAuthRequest { server_name, url } => {
+            println!("  [McpOAuth] {server_name}: {url}");
+        }
+        Notification::McpServerInitialized { server_name } => {
+            println!("  [McpReady] {server_name}");
+        }
     }
 }
