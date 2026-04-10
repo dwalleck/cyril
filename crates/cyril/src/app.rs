@@ -171,15 +171,22 @@ impl App {
         let ui_changed = self.ui_state.apply_notification(&notification);
 
         // Register agent commands when they arrive
-        if let Notification::CommandsUpdated(ref cmds) = notification {
+        if let Notification::CommandsUpdated {
+            commands: ref cmds,
+            prompts: ref prompt_list,
+        } = notification
+        {
             self.commands.register_agent_commands(cmds);
-            // Update autocomplete with all command names
-            let names: Vec<String> = self
+            // Update autocomplete with all command names and prompt names
+            let mut names: Vec<String> = self
                 .commands
                 .all_commands()
                 .iter()
                 .map(|cmd| cmd.name().to_string())
                 .collect();
+            for prompt in prompt_list {
+                names.push(prompt.name().to_string());
+            }
             self.ui_state.set_command_names(names);
         }
 

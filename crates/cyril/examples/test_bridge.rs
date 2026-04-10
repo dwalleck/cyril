@@ -287,8 +287,8 @@ fn print_notification(n: &Notification) {
                 );
             }
         }
-        Notification::CommandsUpdated(cmds) => {
-            println!("  [CommandsUpdated] {} commands", cmds.len());
+        Notification::CommandsUpdated { commands: cmds, prompts } => {
+            println!("  [CommandsUpdated] {} commands, {} prompts", cmds.len(), prompts.len());
             for cmd in cmds {
                 println!(
                     "    {:<20} sel={:<5} local={:<5} {}",

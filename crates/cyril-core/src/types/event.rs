@@ -22,7 +22,10 @@ pub enum Notification {
         mode_id: String,
     },
     ConfigOptionsUpdated(Vec<ConfigOption>),
-    CommandsUpdated(Vec<CommandInfo>),
+    CommandsUpdated {
+        commands: Vec<CommandInfo>,
+        prompts: Vec<crate::types::PromptInfo>,
+    },
 
     // Command system
     CommandOptionsReceived {

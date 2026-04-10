@@ -236,7 +236,48 @@ pub(crate) fn to_ext_notification(
                 Vec::new()
             };
 
-            Ok(Some(Notification::CommandsUpdated(commands)))
+            let prompts = params
+                .get("prompts")
+                .and_then(|p| p.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| {
+                            let name = v.get("name")?.as_str()?;
+                            let description = v
+                                .get("description")
+                                .and_then(|d| d.as_str())
+                                .map(String::from);
+                            let server_name = v
+                                .get("serverName")
+                                .and_then(|s| s.as_str())
+                                .map(String::from);
+                            let arguments = v
+                                .get("arguments")
+                                .and_then(|a| a.as_array())
+                                .map(|args| {
+                                    args.iter()
+                                        .filter_map(|arg| {
+                                            let arg_name = arg.get("name")?.as_str()?;
+                                            let required = arg
+                                                .get("required")
+                                                .and_then(|r| r.as_bool())
+                                                .unwrap_or(false);
+                                            let desc = arg
+                                                .get("description")
+                                                .and_then(|d| d.as_str())
+                                                .map(String::from);
+                                            Some(PromptArgument::new(arg_name, desc, required))
+                                        })
+                                        .collect()
+                                })
+                                .unwrap_or_default();
+                            Some(PromptInfo::new(name, description, server_name, arguments))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            Ok(Some(Notification::CommandsUpdated { commands, prompts }))
         }
         "kiro.dev/session/update" => {
             let update = params.get("update");
@@ -667,7 +708,10 @@ pub(crate) fn session_update_to_notification(
                     )
                 })
                 .collect();
-            Some(Notification::CommandsUpdated(commands))
+            Some(Notification::CommandsUpdated {
+                commands,
+                prompts: Vec::new(),
+            })
         }
         _ => {
             tracing::debug!("unhandled session update variant");
@@ -959,7 +1003,7 @@ mod tests {
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
         assert!(result.is_ok());
-        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
+        if let Ok(Some(Notification::CommandsUpdated { commands: cmds, .. })) = result {
             assert_eq!(cmds.len(), 2);
             assert_eq!(cmds[0].name(), "model");
             assert_eq!(cmds[0].label(), "Switch model");
@@ -981,7 +1025,7 @@ mod tests {
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
         assert!(result.is_ok());
-        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
+        if let Ok(Some(Notification::CommandsUpdated { commands: cmds, .. })) = result {
             assert_eq!(cmds.len(), 1);
             assert_eq!(cmds[0].name(), "tools");
         } else {
@@ -994,7 +1038,7 @@ mod tests {
         let params = serde_json::json!({});
         let result = to_ext_notification("kiro.dev/commands/available", &params);
         assert!(result.is_ok());
-        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
+        if let Ok(Some(Notification::CommandsUpdated { commands: cmds, .. })) = result {
             assert!(cmds.is_empty());
         } else {
             panic!("expected CommandsUpdated");
@@ -1142,7 +1186,7 @@ mod tests {
             ]
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
-        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
+        if let Ok(Some(Notification::CommandsUpdated { commands: cmds, .. })) = result {
             assert_eq!(cmds[0].name(), "model", "leading / should be stripped");
         } else {
             panic!("expected CommandsUpdated");
@@ -1158,7 +1202,7 @@ mod tests {
             ]
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
-        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
+        if let Ok(Some(Notification::CommandsUpdated { commands: cmds, .. })) = result {
             assert!(cmds[0].is_selection(), "/model should be selection");
             assert!(!cmds[1].is_selection(), "/compact should not be selection");
         } else {
@@ -1369,7 +1413,7 @@ mod tests {
             ]
         });
         let result = to_ext_notification("kiro.dev/commands/available", &params);
-        if let Ok(Some(Notification::CommandsUpdated(cmds))) = result {
+        if let Ok(Some(Notification::CommandsUpdated { commands: cmds, .. })) = result {
             assert!(cmds[0].is_local(), "/quit should be local");
             assert!(!cmds[1].is_local(), "/compact should not be local");
         } else {
@@ -1443,6 +1487,53 @@ mod tests {
                 matches!(result, Ok(None)),
                 "{method} should return Ok(None), got {result:?}"
             );
+        }
+    }
+
+    #[test]
+    fn parse_commands_available_with_prompts() {
+        let params = serde_json::json!({
+            "commands": [
+                { "name": "/help", "description": "Show help" }
+            ],
+            "prompts": [
+                {
+                    "name": "review-pr",
+                    "description": "Review a PR",
+                    "serverName": "file-prompts",
+                    "arguments": [
+                        { "name": "branch", "required": true },
+                        { "name": "scope", "required": false }
+                    ]
+                }
+            ],
+            "tools": [],
+            "mcpServers": []
+        });
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        if let Ok(Some(Notification::CommandsUpdated { commands, prompts })) = result {
+            assert_eq!(commands.len(), 1);
+            assert_eq!(prompts.len(), 1);
+            assert_eq!(prompts[0].name(), "review-pr");
+            assert_eq!(prompts[0].arguments().len(), 2);
+            assert!(prompts[0].arguments()[0].required());
+            assert!(!prompts[0].arguments()[1].required());
+            assert_eq!(prompts[0].argument_hints(), "<branch> [scope]");
+        } else {
+            panic!("expected CommandsUpdated, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn parse_commands_available_no_prompts() {
+        let params = serde_json::json!({
+            "commands": [{ "name": "/help", "description": "Show help" }]
+        });
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        if let Ok(Some(Notification::CommandsUpdated { prompts, .. })) = result {
+            assert!(prompts.is_empty());
+        } else {
+            panic!("expected CommandsUpdated");
         }
     }
 }

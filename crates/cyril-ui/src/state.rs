@@ -328,7 +328,7 @@ impl UiState {
                     false
                 }
             }
-            Notification::CommandsUpdated(_) => {
+            Notification::CommandsUpdated { .. } => {
                 // Consumed by the App layer (registers in CommandRegistry).
                 false
             }

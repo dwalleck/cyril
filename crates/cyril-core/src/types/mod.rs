@@ -3,6 +3,7 @@ pub mod config;
 pub mod event;
 pub mod message;
 pub mod plan;
+pub mod prompt;
 pub mod session;
 pub mod tool_call;
 
@@ -13,6 +14,7 @@ pub use event::{
 };
 pub use message::{AgentMessage, AgentThought};
 pub use plan::{Plan, PlanEntry, PlanEntryStatus};
+pub use prompt::{PromptArgument, PromptInfo};
 pub use session::{
     ContextUsage, CreditUsage, SessionCost, SessionId, SessionMode, SessionStatus, TokenCounts,
     TurnMetering,

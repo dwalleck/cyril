@@ -167,7 +167,10 @@ fn commands_updated_stores_in_session() {
         ),
         CommandInfo::new("compact", "Compact", None::<&str>, false, false, false),
     ];
-    session.apply_notification(&Notification::CommandsUpdated(cmds));
+    session.apply_notification(&Notification::CommandsUpdated {
+        commands: cmds,
+        prompts: Vec::new(),
+    });
     assert_eq!(session.agent_commands().len(), 2);
 }
 

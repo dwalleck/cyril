@@ -106,8 +106,8 @@ impl SessionController {
                 }
                 true
             }
-            Notification::CommandsUpdated(cmds) => {
-                self.agent_commands = cmds.clone();
+            Notification::CommandsUpdated { commands, .. } => {
+                self.agent_commands = commands.clone();
                 true
             }
             Notification::AgentSwitched { name, .. } => {
@@ -243,7 +243,10 @@ mod tests {
             false,
             false,
         )];
-        let changed = ctrl.apply_notification(&Notification::CommandsUpdated(cmds));
+        let changed = ctrl.apply_notification(&Notification::CommandsUpdated {
+            commands: cmds,
+            prompts: Vec::new(),
+        });
         assert!(changed);
         assert_eq!(ctrl.agent_commands().len(), 1);
     }
