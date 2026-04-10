@@ -292,6 +292,10 @@ impl UiState {
                 self.add_system_message(format!("Clear: {message}"));
                 true
             }
+            Notification::RateLimited { message } => {
+                self.add_system_message(format!("Rate limited: {message}"));
+                true
+            }
             Notification::SessionCreated {
                 session_id,
                 current_mode,

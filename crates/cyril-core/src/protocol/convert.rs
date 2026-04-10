@@ -222,6 +222,14 @@ pub(crate) fn to_ext_notification(
                 }
             }
         }
+        "kiro.dev/error/rate_limit" => {
+            let message = params
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Rate limit exceeded")
+                .to_string();
+            Ok(Some(Notification::RateLimited { message }))
+        }
         other => {
             tracing::debug!(method = other, "unknown extension notification");
             Ok(None)
@@ -913,6 +921,30 @@ mod tests {
             assert!(!cmds[1].is_selection(), "/compact should not be selection");
         } else {
             panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_rate_limit_error() {
+        let params = serde_json::json!({
+            "message": "Rate limit exceeded. Please wait before retrying."
+        });
+        let result = to_ext_notification("kiro.dev/error/rate_limit", &params);
+        if let Ok(Some(Notification::RateLimited { message })) = result {
+            assert!(message.contains("Rate limit"));
+        } else {
+            panic!("expected RateLimited, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn parse_rate_limit_error_missing_message() {
+        let params = serde_json::json!({});
+        let result = to_ext_notification("kiro.dev/error/rate_limit", &params);
+        if let Ok(Some(Notification::RateLimited { message })) = result {
+            assert!(!message.is_empty());
+        } else {
+            panic!("expected RateLimited");
         }
     }
 

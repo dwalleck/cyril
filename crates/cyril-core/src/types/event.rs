@@ -48,6 +48,9 @@ pub enum Notification {
     ClearStatus {
         message: String,
     },
+    RateLimited {
+        message: String,
+    },
     ToolCallChunk {
         tool_call_id: ToolCallId,
         title: String,

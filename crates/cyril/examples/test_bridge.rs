@@ -309,6 +309,9 @@ fn print_notification(n: &Notification) {
         Notification::ClearStatus { message } => {
             println!("  [ClearStatus] {message}");
         }
+        Notification::RateLimited { message } => {
+            println!("  [RateLimited] {message}");
+        }
         Notification::ToolCallChunk {
             tool_call_id,
             title,
