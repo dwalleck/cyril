@@ -244,6 +244,12 @@ pub struct PickerState {
 /// this struct carries no interactive state beyond scroll position.
 #[derive(Debug, Clone)]
 pub struct HooksPanelState {
+    /// Hook list in `(trigger, command)` lexicographic order. Pre-sorted by
+    /// [`crate::state::UiState::show_hooks_panel`]; the renderer iterates
+    /// this directly without re-sorting. A caller that constructs
+    /// `HooksPanelState` outside that method is responsible for sorting —
+    /// an unsorted `Vec` will render in insertion order and break the
+    /// widget's alphabetical-grouping convention.
     pub hooks: Vec<HookInfo>,
     pub scroll_offset: usize,
 }

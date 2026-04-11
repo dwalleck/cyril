@@ -17,8 +17,10 @@ const PADDING: usize = 6;
 /// The panel displays them as a three-column table sorted by trigger.
 pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
     let width = 96.min(area.width.saturating_sub(4));
-    // Reserve 4 rows of chrome (borders, title, header, blank line) plus
-    // one row per visible hook. Cap at 15 data rows.
+    // +4 = top border + bottom border + header row + 1 row of margin for
+    // the title span (the title sits on the top border row in ratatui, so
+    // the "margin" is what keeps the header from sitting directly under it).
+    // Cap at 15 data rows before the content starts scrolling.
     let data_rows = state.hooks.len().max(1).min(15) as u16;
     let height = (data_rows + 4).min(area.height.saturating_sub(4));
     let x = area.x + (area.width.saturating_sub(width)) / 2;
@@ -116,9 +118,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
 /// and narrow characters count as 1. This matters for column alignment:
 /// a 3-char CJK trigger like "日本語" occupies 6 cells, not 3.
 ///
-/// Runs in `O(chars_in_truncation_window)` — walks the input only until
-/// the display-width budget is exhausted, so huge command strings don't
-/// stall the render loop.
+/// Complexity: `O(n)` worst case — the fast path (`s.width() <= max_width`)
+/// walks the whole string via `UnicodeWidthStr::width`, and the slow path
+/// (truncation needed) walks input chars until the cell budget is exhausted.
+/// Both paths are bounded at column-width scale (`max_width` is ~18–52 in
+/// practice), so the absolute cost is negligible, but the function is not
+/// sub-linear for very long inputs that happen to fit in the budget.
 fn truncate(s: &str, max_width: usize) -> String {
     if max_width == 0 {
         return String::new();
@@ -195,6 +200,40 @@ mod tests {
             .iter()
             .map(|c| c.symbol())
             .collect()
+    }
+
+    /// Find the cell x coordinate where `needle` starts in the rendered
+    /// buffer. Only supports ASCII needles — each char must occupy exactly
+    /// one cell. Used by the CJK-alignment test to compare the cell
+    /// positions of two commands in different rows.
+    fn find_ascii_cell_x(terminal: &Terminal<TestBackend>, needle: &str) -> Option<u16> {
+        assert!(
+            needle.is_ascii(),
+            "find_ascii_cell_x only supports ASCII needles"
+        );
+        let buf = terminal.backend().buffer();
+        let area = buf.area();
+        let needle_bytes = needle.as_bytes();
+        if needle_bytes.is_empty() || area.width < needle_bytes.len() as u16 {
+            return None;
+        }
+        let max_start = area.width - needle_bytes.len() as u16;
+        for y in 0..area.height {
+            for start_x in 0..=max_start {
+                let mut matched = true;
+                for (i, &expected) in needle_bytes.iter().enumerate() {
+                    let sym = buf[(start_x + i as u16, y)].symbol();
+                    if sym.len() != 1 || sym.as_bytes()[0] != expected {
+                        matched = false;
+                        break;
+                    }
+                }
+                if matched {
+                    return Some(start_x);
+                }
+            }
+        }
+        None
     }
 
     #[test]
@@ -305,6 +344,39 @@ mod tests {
         assert!(text.contains("MARKER"), "command marker should render");
         // Truncation happened — ellipsis indicates the trigger was cut off.
         assert!(text.contains("…"), "long CJK trigger should be truncated");
+    }
+
+    #[test]
+    fn cjk_trigger_aligns_command_column_with_ascii() {
+        // Two hooks, one ASCII trigger and one CJK trigger. Because
+        // `pad_right` measures cells (not chars), both should place their
+        // Command column at the same cell x coordinate regardless of
+        // trigger script. A regression in `truncate_and_pad` or `pad_right`
+        // that fell back to char counts would shift the CJK row's command
+        // right by several cells — this test catches that.
+        let state = HooksPanelState {
+            hooks: vec![
+                HookInfo {
+                    trigger: "Short".into(),
+                    command: "FIRST".into(),
+                    matcher: None,
+                },
+                HookInfo {
+                    trigger: "日本語テスト".into(),
+                    command: "SECOND".into(),
+                    matcher: None,
+                },
+            ],
+            scroll_offset: 0,
+        };
+        let terminal = draw(&state, 100, 20);
+        let first_col = find_ascii_cell_x(&terminal, "FIRST").expect("FIRST should render");
+        let second_col = find_ascii_cell_x(&terminal, "SECOND").expect("SECOND should render");
+        assert_eq!(
+            first_col, second_col,
+            "ASCII and CJK triggers must place their commands at the same cell \
+             column (CJK alignment regression — check pad_right / truncate_and_pad)"
+        );
     }
 
     #[test]

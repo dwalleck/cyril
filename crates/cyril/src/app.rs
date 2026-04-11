@@ -655,25 +655,50 @@ fn format_command_response(command: &str, response: &serde_json::Value) -> Strin
 /// Deserializes the whole `data.hooks` array as a typed `Vec<HookInfo>` in one
 /// shot: if any entry is structurally malformed (missing `trigger`, missing
 /// `command`, wrong types), the whole response is rejected rather than
-/// silently dropping individual entries. Returns `None` and logs at warn level
-/// on any parse failure — the caller falls back to `format_command_response`
-/// so the user still sees the raw response instead of a silently empty panel.
+/// silently dropping individual entries.
+///
+/// Returns `None` on any of these conditions, so the caller falls back to
+/// `format_command_response` and the user still sees the raw response
+/// instead of a silently empty panel:
+///
+/// - `data` field absent → `debug` log
+/// - `data.hooks` field absent → `debug` log
+/// - structural deserialization failure → `warn` log
+/// - any entry has an empty `trigger` or `command` → `warn` log (display
+///   defect — would render as a blank row)
 ///
 /// Uses `Deserialize::deserialize` directly on `&Value` (which implements
 /// `Deserializer`) to avoid the deep clone of the hooks array that
 /// `serde_json::from_value` would require.
 fn parse_hooks_response(response: &serde_json::Value) -> Option<Vec<cyril_core::types::HookInfo>> {
-    let hooks_value = response.get("data").and_then(|d| d.get("hooks"))?;
-    match Vec::<cyril_core::types::HookInfo>::deserialize(hooks_value) {
-        Ok(hooks) => Some(hooks),
+    let Some(data) = response.get("data") else {
+        tracing::debug!("/hooks response has no `data` field — falling back");
+        return None;
+    };
+    let Some(hooks_value) = data.get("hooks") else {
+        tracing::debug!("/hooks response has no `data.hooks` field — falling back");
+        return None;
+    };
+    let hooks = match Vec::<cyril_core::types::HookInfo>::deserialize(hooks_value) {
+        Ok(hooks) => hooks,
         Err(e) => {
             tracing::warn!(
                 error = %e,
                 "malformed /hooks response, falling back to generic command output"
             );
-            None
+            return None;
         }
+    };
+    if hooks
+        .iter()
+        .any(|h| h.trigger.is_empty() || h.command.is_empty())
+    {
+        tracing::warn!(
+            "/hooks response contained a hook with an empty trigger or command — falling back"
+        );
+        return None;
     }
+    Some(hooks)
 }
 
 /// Dispatch a `CommandExecuted` response to the UI.
@@ -924,8 +949,51 @@ mod tests {
     }
 
     #[test]
+    fn parse_hooks_response_rejects_entry_with_empty_trigger() {
+        // Structural Serde validation accepts empty strings for required
+        // fields, so we guard against them explicitly to prevent the widget
+        // from rendering a blank trigger column.
+        let response = serde_json::json!({
+            "data": {
+                "hooks": [
+                    {"trigger": "", "command": "echo hi"}
+                ]
+            }
+        });
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_rejects_entry_with_empty_command() {
+        let response = serde_json::json!({
+            "data": {
+                "hooks": [
+                    {"trigger": "PreToolUse", "command": ""}
+                ]
+            }
+        });
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_rejects_mixed_valid_and_empty_entries() {
+        // Fail-fast: one bad entry rejects the whole response, same as
+        // the malformed-entry case.
+        let response = serde_json::json!({
+            "data": {
+                "hooks": [
+                    {"trigger": "PreToolUse", "command": "valid"},
+                    {"trigger": "Stop", "command": ""}
+                ]
+            }
+        });
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
     fn parse_hooks_response_preserves_ordering() {
-        // parse_hooks_response itself shouldn't sort — sorting is the widget's job.
+        // parse_hooks_response preserves wire order; sorting happens in
+        // `UiState::show_hooks_panel`, not in the parser or the widget.
         let response = serde_json::json!({
             "data": {
                 "hooks": [
