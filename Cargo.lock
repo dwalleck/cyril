@@ -427,6 +427,7 @@ dependencies = [
  "futures-util",
  "ratatui",
  "rstest",
+ "serde",
  "serde_json",
  "tokio",
  "tracing",

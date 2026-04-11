@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers};
 use futures_util::{FutureExt, StreamExt};
 use ratatui::DefaultTerminal;
+use serde::Deserialize;
 use tokio::sync::mpsc;
 
 use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, CommandResultKind};
@@ -657,9 +658,13 @@ fn format_command_response(command: &str, response: &serde_json::Value) -> Strin
 /// silently dropping individual entries. Returns `None` and logs at warn level
 /// on any parse failure — the caller falls back to `format_command_response`
 /// so the user still sees the raw response instead of a silently empty panel.
+///
+/// Uses `Deserialize::deserialize` directly on `&Value` (which implements
+/// `Deserializer`) to avoid the deep clone of the hooks array that
+/// `serde_json::from_value` would require.
 fn parse_hooks_response(response: &serde_json::Value) -> Option<Vec<cyril_core::types::HookInfo>> {
     let hooks_value = response.get("data").and_then(|d| d.get("hooks"))?;
-    match serde_json::from_value::<Vec<cyril_core::types::HookInfo>>(hooks_value.clone()) {
+    match Vec::<cyril_core::types::HookInfo>::deserialize(hooks_value) {
         Ok(hooks) => Some(hooks),
         Err(e) => {
             tracing::warn!(

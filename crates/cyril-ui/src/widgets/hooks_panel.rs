@@ -68,17 +68,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
         Span::styled(format!("{:<MATCHER_COL$}", "Matcher"), header_style),
     ]));
 
-    // Sort by trigger then command — matches Kiro's HooksPanel behavior.
-    let mut sorted: Vec<&cyril_core::types::HookInfo> = state.hooks.iter().collect();
-    sorted.sort_by(|a, b| {
-        a.trigger
-            .cmp(&b.trigger)
-            .then_with(|| a.command.cmp(&b.command))
-    });
-
+    // `state.hooks` is stored pre-sorted by UiState::show_hooks_panel, so the
+    // widget never re-sorts on render.
     let visible_rows = (height as usize).saturating_sub(4);
-    let end = (state.scroll_offset + visible_rows).min(sorted.len());
-    for hook in sorted.iter().take(end).skip(state.scroll_offset) {
+    let end = (state.scroll_offset + visible_rows).min(state.hooks.len());
+    for hook in state.hooks.iter().take(end).skip(state.scroll_offset) {
         let trigger_text = truncate(&hook.trigger, TRIGGER_COL);
         let command_text = truncate(&hook.command, command_col);
         let matcher_text = match hook.matcher.as_deref() {
@@ -109,17 +103,21 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
 
 /// Truncate `s` to at most `max_chars` characters, appending `…` when
 /// truncation happens. Uses character boundaries to avoid splitting UTF-8.
+///
+/// Runs in `O(max_chars)` — consumes at most `max_chars + 1` characters from
+/// the input iterator regardless of `s.len()`. This matters when a hook's
+/// shell command is unexpectedly huge: the render loop must not walk the
+/// whole string just to decide it needs trimming.
 fn truncate(s: &str, max_chars: usize) -> String {
-    let count = s.chars().count();
-    if count <= max_chars {
-        return s.to_string();
-    }
     if max_chars == 0 {
         return String::new();
     }
-    let take = max_chars.saturating_sub(1);
-    let mut out: String = s.chars().take(take).collect();
-    out.push('…');
+    let mut chars = s.chars();
+    let mut out: String = chars.by_ref().take(max_chars).collect();
+    if chars.next().is_some() {
+        out.pop();
+        out.push('…');
+    }
     out
 }
 
@@ -182,7 +180,12 @@ mod tests {
     }
 
     #[test]
-    fn multiple_hooks_render_pluralized_and_sorted() {
+    fn multiple_hooks_render_pluralized_in_state_order() {
+        // The widget renders `state.hooks` in whatever order it's given —
+        // sorting is a `UiState::show_hooks_panel` invariant tested
+        // separately in `state.rs`. The input here is already in the order
+        // `UiState` would produce (Post < Pre alphabetically), so this test
+        // verifies the widget faithfully preserves that order on screen.
         let state = HooksPanelState {
             hooks: vec![
                 HookInfo {
@@ -207,14 +210,12 @@ mod tests {
         assert!(text.contains("—"));
         // `rendered_text` walks the TestBackend cells in row-major order, so
         // a substring that appears earlier in the returned string was rendered
-        // on an earlier row. "Post" < "Pre" alphabetically (P-o vs P-r), so
-        // PostToolUse should appear before PreToolUse on screen even though
-        // it was inserted second in the input vector.
+        // on an earlier row.
         let post_pos = text.find("PostToolUse").expect("PostToolUse should render");
         let pre_pos = text.find("PreToolUse").expect("PreToolUse should render");
         assert!(
             post_pos < pre_pos,
-            "PostToolUse should sort before PreToolUse"
+            "widget should preserve state.hooks order"
         );
     }
 

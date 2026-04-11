@@ -977,7 +977,17 @@ impl UiState {
     // --- Hooks panel methods ---
 
     /// Open the hooks panel overlay with a list of hooks from the `hooks` command.
-    pub fn show_hooks_panel(&mut self, hooks: Vec<HookInfo>) {
+    ///
+    /// Hooks are sorted on insert by `(trigger, command)` so the widget can
+    /// iterate `state.hooks` directly without re-sorting on every render
+    /// frame. The stored order is the panel's display order — callers that
+    /// need the original wire order should keep their own copy.
+    pub fn show_hooks_panel(&mut self, mut hooks: Vec<HookInfo>) {
+        hooks.sort_by(|a, b| {
+            a.trigger
+                .cmp(&b.trigger)
+                .then_with(|| a.command.cmp(&b.command))
+        });
         self.hooks_panel = Some(HooksPanelState {
             hooks,
             scroll_offset: 0,
@@ -1840,16 +1850,20 @@ mod tests {
     #[test]
     fn show_hooks_panel_sets_state() {
         let mut state = UiState::new(500);
+        // Input order is (Pre, Post) but show_hooks_panel sorts by
+        // (trigger, command), so the stored order is (Post, Pre).
         let hooks = vec![
             sample_hook("PreToolUse", "echo pre", Some("read")),
             sample_hook("PostToolUse", "echo post", None),
         ];
-        state.show_hooks_panel(hooks.clone());
+        state.show_hooks_panel(hooks);
         assert!(state.has_hooks_panel());
         let panel = state.hooks_panel().expect("panel should exist");
         assert_eq!(panel.hooks.len(), 2);
-        assert_eq!(panel.hooks[0].trigger, "PreToolUse");
-        assert_eq!(panel.hooks[1].matcher, None);
+        assert_eq!(panel.hooks[0].trigger, "PostToolUse");
+        assert_eq!(panel.hooks[0].matcher, None);
+        assert_eq!(panel.hooks[1].trigger, "PreToolUse");
+        assert_eq!(panel.hooks[1].matcher.as_deref(), Some("read"));
         assert_eq!(panel.scroll_offset, 0);
     }
 
@@ -1868,6 +1882,46 @@ mod tests {
         state.show_hooks_panel(Vec::new());
         assert!(state.has_hooks_panel());
         assert_eq!(state.hooks_panel().expect("panel").hooks.len(), 0);
+    }
+
+    #[test]
+    fn show_hooks_panel_sorts_on_insert_by_trigger() {
+        // Unsorted input; expect sorted by trigger in the stored state so the
+        // widget can iterate without re-sorting on every render frame.
+        let mut state = UiState::new(500);
+        state.show_hooks_panel(vec![
+            sample_hook("Stop", "stop-cmd", None),
+            sample_hook("AgentSpawn", "spawn-cmd", None),
+            sample_hook("PreToolUse", "pre-cmd", Some("read")),
+        ]);
+        let triggers: Vec<&str> = state
+            .hooks_panel()
+            .expect("panel")
+            .hooks
+            .iter()
+            .map(|h| h.trigger.as_str())
+            .collect();
+        assert_eq!(triggers, vec!["AgentSpawn", "PreToolUse", "Stop"]);
+    }
+
+    #[test]
+    fn show_hooks_panel_sorts_by_command_within_trigger() {
+        // Same trigger, different commands — expect alphabetical order by
+        // command as the tiebreaker.
+        let mut state = UiState::new(500);
+        state.show_hooks_panel(vec![
+            sample_hook("PreToolUse", "zebra", None),
+            sample_hook("PreToolUse", "alpha", None),
+            sample_hook("PreToolUse", "middle", None),
+        ]);
+        let commands: Vec<&str> = state
+            .hooks_panel()
+            .expect("panel")
+            .hooks
+            .iter()
+            .map(|h| h.command.as_str())
+            .collect();
+        assert_eq!(commands, vec!["alpha", "middle", "zebra"]);
     }
 
     #[test]
