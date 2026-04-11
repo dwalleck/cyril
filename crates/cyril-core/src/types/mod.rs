@@ -1,6 +1,7 @@
 pub mod command;
 pub mod config;
 pub mod event;
+pub mod hook;
 pub mod message;
 pub mod plan;
 pub mod prompt;
@@ -14,6 +15,7 @@ pub use event::{
     BridgeCommand, Notification, PermissionOption, PermissionRequest, PermissionResponse,
     RoutedNotification,
 };
+pub use hook::HookInfo;
 pub use message::{AgentMessage, AgentThought};
 pub use plan::{Plan, PlanEntry, PlanEntryStatus};
 pub use prompt::{PromptArgument, PromptInfo};
