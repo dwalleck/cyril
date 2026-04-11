@@ -1,102 +1,59 @@
 # Codebase Information
 
-## Project Overview
+> Generated: 2026-04-11 | Codebase: Cyril
 
-**Name:** Cyril  
-**Version:** 0.1.0-alpha.1  
-**Status:** Alpha - functional but under active development  
-**License:** MIT  
-**Repository:** https://github.com/dwalleck/cyril
+## Project Identity
 
-## Description
+- **Name:** Cyril
+- **Repository:** https://github.com/dwalleck/cyril
+- **Language:** Rust (Edition 2024, rust-version 1.94.0)
+- **License:** MIT
+- **Status:** Alpha — functional, under active development
 
-Cyril is a cross-platform TUI (Terminal User Interface) client for Kiro CLI that communicates via the Agent Client Protocol (ACP). It provides a terminal-based frontend with streaming markdown rendering, tool call visibility, and an approval workflow.
+## What Cyril Does
 
-## Technology Stack
+Cyril is a cross-platform TUI client for [Kiro CLI](https://kiro.dev) that communicates via the [Agent Client Protocol (ACP)](https://agentclientprotocol.com). It provides streaming markdown rendering, tool call visibility, approval workflows, and multi-session subagent management — all from the terminal.
 
-### Primary Language
-- **Rust** (Edition 2021)
-
-### Core Dependencies
-- `agent-client-protocol` 0.9 - ACP protocol implementation
-- `tokio` 1.x - Async runtime
-- `ratatui` 0.29 - Terminal UI framework
-- `crossterm` 0.28 - Cross-platform terminal manipulation
-- `pulldown-cmark` 0.12 - Markdown parsing
-- `syntect` 5.x - Syntax highlighting
-- `serde_json` 1.x - JSON serialization
-- `clap` 4.x - CLI argument parsing
-- `anyhow` 1.x - Error handling
-- `tracing` 0.1 - Logging and diagnostics
-
-### Development Tools
-- Cargo workspace with 2 crates
-- Comprehensive test suite (50+ test functions)
-- Git hooks for code formatting (rustfmt)
-- LSP integration for development
-
-## Codebase Statistics
-
-- **Total Files:** 429
-- **Lines of Code:** ~6,783
-- **Size Category:** Large
-- **Functions:** 290
-- **Structs/Enums/Classes:** 57
-- **Test Coverage:** Extensive (50+ test functions across modules)
+- **Linux:** runs `kiro-cli acp` directly as a subprocess
+- **Windows:** bridges to `kiro-cli` inside WSL with automatic `C:\` ↔ `/mnt/c/` path translation
 
 ## Workspace Structure
 
-```
-cyril/
-├── crates/
-│   ├── cyril/          # Binary crate - TUI application
-│   └── cyril-core/     # Library crate - Protocol logic and platform abstraction
-├── docs/               # Documentation and implementation plans
-├── .kiro/              # Kiro CLI configuration, skills, and agents
-├── .claude/            # Claude AI configuration
-└── .agents/            # AI-generated documentation (this directory)
-```
+Three-crate Cargo workspace:
 
-## Platform Support
+| Crate | Role | Description |
+|-------|------|-------------|
+| `cyril` | Binary | TUI application — event loop, terminal I/O, rendering orchestration |
+| `cyril-core` | Library | Protocol bridge, ACP client, types, commands, session management |
+| `cyril-ui` | Library | UI state machine, widgets, rendering, file completion, syntax highlighting |
 
-- **Linux:** Native execution with direct subprocess communication
-- **Windows:** WSL bridge with automatic path translation (C:\ ↔ /mnt/c/)
+## Key Metrics
 
-## Key Features
+| Metric | Value |
+|--------|-------|
+| Source files (`.rs`) | 48 |
+| Test functions (`#[test]`) | 431 |
+| `cyril` crate | binary, event loop + main |
+| `cyril-core` crate | protocol, types, commands |
+| `cyril-ui` crate | state, widgets, rendering |
 
-1. **Streaming TUI** - Real-time markdown rendering with syntax highlighting
-2. **Cross-platform** - Native Linux support, WSL bridge for Windows
-3. **Hook System** - JSON-configurable before/after hooks on file operations
-4. **Slash Commands** - Autocomplete-enabled command system
-5. **Tool Call Display** - Real-time visibility into agent actions
-6. **Approval Prompts** - Review and approve file writes and command execution
-7. **Session Management** - Create, load, and switch between sessions
+## Build Configuration
 
-## Build Information
+- **Workspace resolver:** 2
+- **Lints:** `unsafe_code = "forbid"`, `unwrap_used = "deny"`, `expect_used = "warn"`
+- **Release profile:** LTO fat, codegen-units 1, symbols stripped
+- **Dev profile:** incremental, opt-level 0
+- **Test profile:** opt-level 1
 
-**Build Command:**
-```bash
-cargo build --release
-```
+## Configuration
 
-**Binary Location:**
-- Linux: `target/release/cyril`
-- Windows: `target/release/cyril.exe`
+User config loaded from `~/.config/cyril/config.toml` (TOML). Falls back to defaults if missing or invalid.
 
-**Installation:**
-```bash
-cargo install cyril
-```
-
-## Prerequisites
-
-- Rust toolchain (rustup)
-- Kiro CLI installed and authenticated
-- Windows only: WSL with kiro-cli installed inside
-
-## Development Environment
-
-- **LSP Support:** Configured via `.kiro/settings/lsp.json`
-- **Code Formatting:** Automated via git hooks (rustfmt)
-- **Skills System:** 15+ development skills in `.kiro/skills/`
-- **Custom Agents:** 10+ specialized agents in `.kiro/agents/`
+| Section | Key | Default | Purpose |
+|---------|-----|---------|---------|
+| `ui` | `max_messages` | 500 | Chat history limit |
+| `ui` | `highlight_cache_size` | 20 | Syntax highlight LRU entries |
+| `ui` | `stream_buffer_timeout_ms` | 150 | Streaming flush timeout |
+| `ui` | `mouse_capture` | true | Enable mouse on startup |
+| `agent` | `agent_name` | `"kiro-cli"` | Agent binary name |
+| `agent` | `extra_args` | `[]` | Extra subprocess args |

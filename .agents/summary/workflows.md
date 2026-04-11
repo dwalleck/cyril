@@ -1,911 +1,252 @@
 # Workflows
 
-## Overview
+> Generated: 2026-04-11 | Codebase: Cyril
 
-This document describes the key workflows and processes in Cyril, from user interactions to protocol communications and system operations.
-
-## User Workflows
-
-### Application Startup
+## Application Startup
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Main
-    participant Transport
-    participant Client
+    participant Main as main.rs
+    participant Bridge as spawn_bridge()
     participant App
-    
-    User->>Main: Run cyril
-    Main->>Main: Parse CLI args
-    Main->>Transport: spawn("kiro-cli acp")
-    Transport->>Transport: Start process
-    Transport-->>Main: stdin/stdout handles
-    Main->>Client: new(stdin, stdout)
-    Main->>App: new(client, working_dir)
-    App->>App: load_project_files()
-    Main->>App: run()
-    App-->>User: Display TUI
+    participant Agent as kiro-cli acp
+
+    User->>Main: cyril [--cwd] [--prompt] [--agent]
+    Main->>Main: Parse CLI args (clap)
+    Main->>Main: Setup JSON file logging
+    Main->>Main: Load config from ~/.config/cyril/config.toml
+    Main->>Bridge: spawn_bridge(agent_name, cwd)
+    Bridge->>Agent: Spawn subprocess (stdio piped)
+    Bridge->>Bridge: Create channel pairs
+    Bridge->>Bridge: Start bridge loop (tokio::spawn)
+    Bridge-->>Main: BridgeHandle
+    Main->>App: App::new(bridge, max_messages)
+    App->>App: Split BridgeHandle → sender + receivers
+    App->>App: Register builtin commands
+    App->>App: create_initial_session(cwd)
+    App->>Agent: BridgeCommand::NewSession
+    Agent-->>App: SessionCreated notification
+    App->>App: Initialize terminal (ratatui + mouse capture)
+    App->>App: Enter event loop
 ```
 
-**Steps:**
-1. Parse command-line arguments (working directory, prompt, etc.)
-2. Spawn agent process (`kiro-cli acp`)
-3. Create ACP client with stdio handles
-4. Initialize application state
-5. Load project files for completion
-6. Enter main event loop
-7. Display TUI
-
----
-
-### Sending a Message
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Input
-    participant Commands
-    participant Client
-    participant Chat
-    
-    User->>Input: Type message
-    User->>Input: Press Enter
-    Input->>Commands: execute(text)
-    Commands->>Commands: parse_command()
-    
-    alt Slash Command
-        Commands->>Commands: Execute locally
-        Commands->>Chat: add_system_message()
-    else Regular Message
-        Commands->>Client: emit("prompt", text)
-        Commands->>Chat: add_user_message()
-        Client-->>Chat: Streaming updates
-    end
-    
-    Chat-->>User: Display updated chat
-```
-
-**Steps:**
-1. User types message in input field
-2. User presses Enter
-3. Command executor parses input
-4. If slash command: execute locally
-5. If regular message: send to agent via ACP
-6. Add user message to chat history
-7. Display streaming response as it arrives
-
----
-
-### File Completion Workflow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Input
-    participant Completer
-    participant FileSystem
-    
-    User->>Input: Type "@"
-    Input->>Completer: find_at_trigger()
-    Completer-->>Input: AtContext
-    
-    alt Files Not Loaded
-        Input->>Completer: load_files()
-        Completer->>FileSystem: Read project files
-        FileSystem-->>Completer: File list
-    end
-    
-    User->>Input: Type "src/m"
-    Input->>Completer: suggestions("src/m")
-    Completer->>Completer: Fuzzy match
-    Completer-->>Input: Matching files
-    Input-->>User: Display popup
-    
-    User->>Input: Press Tab
-    Input->>Input: apply_file_suggestion()
-    Input-->>User: Insert file path
-```
-
-**Steps:**
-1. User types `@` character
-2. Detect @ trigger and position
-3. Load project files if not already loaded
-4. User continues typing query
-5. Fuzzy match files against query
-6. Display matching files in popup
-7. User selects file with Tab or arrow keys
-8. Insert selected file path into input
-
----
-
-### Command Autocomplete Workflow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Input
-    participant Commands
-    
-    User->>Input: Type "/"
-    Input->>Commands: matching_suggestions("/")
-    Commands->>Commands: Filter slash commands
-    Commands->>Commands: Filter agent commands
-    Commands-->>Input: Suggestions
-    Input-->>User: Display popup
-    
-    User->>Input: Type "/mo"
-    Input->>Commands: matching_suggestions("/mo")
-    Commands-->>Input: Filtered suggestions
-    Input-->>User: Update popup
-    
-    User->>Input: Press Tab
-    Input->>Input: apply_command_suggestion()
-    Input-->>User: Complete command
-```
-
-**Steps:**
-1. User types `/` character
-2. Get all available commands (slash + agent)
-3. Display command popup
-4. User continues typing
-5. Filter commands by prefix
-6. Update popup with matches
-7. User selects command with Tab
-8. Complete command in input field
-
----
-
-## Protocol Workflows
-
-### Agent Request-Response
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Transport
-    participant Agent
-    
-    Client->>Client: Generate request ID
-    Client->>Transport: Write JSON-RPC request
-    Transport->>Agent: stdin
-    
-    loop Wait for response
-        Agent->>Transport: stdout
-        Transport->>Client: Read line
-        Client->>Client: Parse JSON
-        
-        alt Response with matching ID
-            Client->>Client: Return result
-        else Notification
-            Client->>Client: Emit event
-        else Other response
-            Client->>Client: Continue waiting
-        end
-    end
-    
-    Client-->>Client: Return result
-```
-
-**Steps:**
-1. Generate unique request ID
-2. Serialize request to JSON-RPC
-3. Write to agent stdin
-4. Read from agent stdout line by line
-5. Parse each line as JSON
-6. If response matches ID: return result
-7. If notification: emit event and continue
-8. If other response: continue waiting
-
----
-
-### Streaming Response
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Agent
-    participant Chat
-    
-    Client->>Agent: Send prompt request
-    
-    loop Streaming
-        Agent-->>Client: Content notification
-        Client->>Chat: append_streaming()
-        Chat-->>Chat: Update display
-    end
-    
-    Agent-->>Client: Complete notification
-    Client->>Chat: finish_streaming()
-    Chat-->>Chat: Finalize message
-```
-
-**Steps:**
-1. Send prompt request to agent
-2. Agent sends content notifications
-3. Append each chunk to streaming buffer
-4. Update UI with accumulated content
-5. Agent sends completion notification
-6. Finalize assistant message
-7. Clear streaming buffer
-
----
-
-### Tool Call Execution
-
-```mermaid
-sequenceDiagram
-    participant Agent
-    participant Client
-    participant Hooks
-    participant Approval
-    participant FS
-    participant Tracking
-    
-    Agent->>Client: Tool call request
-    Client->>Tracking: Track tool call (Running)
-    
-    alt Needs Approval
-        Client->>Approval: Show approval UI
-        Approval-->>Client: User decision
-        
-        alt Denied
-            Client->>Tracking: Update (Cancelled)
-            Client-->>Agent: Error response
-        end
-    end
-    
-    Client->>Hooks: run_before()
-    
-    alt Hook blocks
-        Hooks-->>Client: Block(reason)
-        Client->>Tracking: Update (Failed)
-        Client-->>Agent: Error response
-    else Hook allows
-        Hooks-->>Client: Continue
-        Client->>FS: Execute operation
-        FS-->>Client: Result
-        Client->>Hooks: run_after()
-        Hooks-->>Client: Feedback
-        Client->>Tracking: Update (Success)
-        Client-->>Agent: Success response
-    end
-```
-
-**Steps:**
-1. Agent sends tool call request
-2. Create tracked tool call (Running status)
-3. Check if approval needed
-4. If needed: show approval UI and wait
-5. If denied: update status and return error
-6. Run before hooks
-7. If hook blocks: update status and return error
-8. Execute file/terminal operation
-9. Run after hooks (feedback only)
-10. Update tool call status (Success/Failed)
-11. Return result to agent
-
----
-
-## File Operation Workflows
-
-### File Write with Hooks
-
-```mermaid
-sequenceDiagram
-    participant Agent
-    participant Client
-    participant Hooks
-    participant FS
-    
-    Agent->>Client: writeTextFile(path, content)
-    
-    Client->>Hooks: run_before(Write, context)
-    
-    loop For each before hook
-        Hooks->>Hooks: Match glob pattern
-        
-        alt Pattern matches
-            Hooks->>Hooks: Execute hook command
-            
-            alt Hook fails
-                Hooks-->>Client: Block(error)
-                Client-->>Agent: Error response
-            end
-        end
-    end
-    
-    Hooks-->>Client: Continue
-    Client->>FS: write_text_file(path, content)
-    FS->>FS: Create parent directories
-    FS->>FS: Write file
-    FS-->>Client: Success
-    
-    Client->>Hooks: run_after(Write, context)
-    
-    loop For each after hook
-        Hooks->>Hooks: Match glob pattern
-        
-        alt Pattern matches
-            Hooks->>Hooks: Execute hook command
-            Hooks-->>Client: Feedback(output)
-        end
-    end
-    
-    Client-->>Agent: Success + feedback
-```
-
-**Steps:**
-1. Agent requests file write
-2. Run before hooks with file context
-3. For each hook: check glob pattern match
-4. If matches: execute hook command
-5. If hook fails: block operation and return error
-6. If all hooks pass: proceed with write
-7. Create parent directories if needed
-8. Write file content
-9. Run after hooks
-10. Collect feedback from hooks
-11. Return success with feedback to agent
-
----
-
-### File Read
-
-```mermaid
-sequenceDiagram
-    participant Agent
-    participant Client
-    participant Platform
-    participant FS
-    
-    Agent->>Client: readTextFile(path)
-    
-    alt Windows Platform
-        Client->>Platform: translate_path(ToAgent)
-        Platform-->>Client: WSL path
-    end
-    
-    Client->>FS: read_text_file(path)
-    FS->>FS: Read file
-    FS-->>Client: Content
-    
-    Client-->>Agent: Success(content)
-```
-
-**Steps:**
-1. Agent requests file read
-2. If Windows: translate path to WSL format
-3. Read file from filesystem
-4. Return content to agent
-
----
-
-## Terminal Workflows
-
-### Terminal Creation and Execution
-
-```mermaid
-sequenceDiagram
-    participant Agent
-    participant Client
-    participant TermMgr
-    participant Process
-    
-    Agent->>Client: createTerminal(command, workdir)
-    Client->>TermMgr: create_terminal()
-    TermMgr->>TermMgr: Generate terminal ID
-    TermMgr->>TermMgr: Detect shell
-    TermMgr->>Process: Spawn shell with command
-    Process-->>TermMgr: Child process
-    TermMgr->>TermMgr: Start output reader
-    TermMgr-->>Client: Terminal ID
-    Client-->>Agent: Success(terminalId)
-    
-    loop Command running
-        Process->>TermMgr: Output data
-        TermMgr->>TermMgr: Buffer output
-    end
-    
-    Agent->>Client: terminalOutput(terminalId)
-    Client->>TermMgr: get_output(id)
-    TermMgr->>TermMgr: Cap output size
-    TermMgr-->>Client: Output + exit code
-    Client-->>Agent: Success(output, exitCode)
-    
-    alt Process still running
-        Agent->>Client: waitForTerminalExit(terminalId)
-        Client->>TermMgr: wait_for_exit(id)
-        TermMgr->>Process: Wait for exit
-        Process-->>TermMgr: Exit code
-        TermMgr-->>Client: Exit code
-        Client-->>Agent: Success(exitCode)
-    end
-    
-    Agent->>Client: releaseTerminal(terminalId)
-    Client->>TermMgr: release(id)
-    TermMgr->>TermMgr: Remove from tracking
-    TermMgr-->>Client: Success
-    Client-->>Agent: Success
-```
-
-**Steps:**
-1. Agent requests terminal creation
-2. Generate unique terminal ID
-3. Detect available shell (bash, zsh, fish, pwsh)
-4. Spawn shell process with command
-5. Start async output reader
-6. Return terminal ID to agent
-7. Agent requests output
-8. Read buffered output
-9. Cap output to prevent memory issues
-10. Return output and exit code (if available)
-11. If still running: agent can wait for exit
-12. Agent releases terminal
-13. Clean up process and tracking
-
----
-
-### Terminal Output Capping
+## Event Loop (App::run)
 
 ```mermaid
 graph TB
-    Output[Terminal Output] --> Check{Size > Limit?}
-    Check -->|No| Return[Return Full Output]
-    Check -->|Yes| Truncate[Truncate to Limit]
-    Truncate --> Prefix[Add Truncation Prefix]
-    Prefix --> Boundary[Respect UTF-8 Boundaries]
-    Boundary --> Return
-```
-
-**Steps:**
-1. Read terminal output buffer
-2. Check if size exceeds limit (default: 100KB)
-3. If under limit: return full output
-4. If over limit: truncate to most recent content
-5. Add prefix indicating truncation
-6. Ensure truncation respects UTF-8 character boundaries
-7. Return capped output
-
----
-
-## Session Workflows
-
-### Session Creation
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Commands
-    participant Client
-    participant Session
-    
-    User->>Commands: /new
-    Commands->>Client: emit("session/new")
-    Client-->>Commands: Session ID
-    Commands->>Session: set_session_id(id)
-    Commands-->>User: "New session created: {id}"
-```
-
-**Steps:**
-1. User enters `/new` command
-2. Send session creation request to agent
-3. Agent returns new session ID
-4. Update session context
-5. Display confirmation message
-
----
-
-### Session Loading
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Commands
-    participant Client
-    participant Session
-    participant Chat
-    
-    User->>Commands: /load <id>
-    Commands->>Client: emit("session/load", id)
-    Client-->>Commands: Session data
-    Commands->>Session: set_session_id(id)
-    Commands->>Chat: Load history
-    Commands-->>User: "Loaded session: {id}"
-```
-
-**Steps:**
-1. User enters `/load <id>` command
-2. Send session load request to agent
-3. Agent returns session data
-4. Update session context
-5. Load chat history
-6. Display confirmation message
-
----
-
-### Model Selection
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Commands
-    participant Picker
-    participant Client
-    participant Session
-    
-    User->>Commands: /model
-    Commands->>Picker: open_model_picker()
-    Picker-->>User: Display model list
-    User->>Picker: Select model
-    Picker-->>Commands: Selected model
-    Commands->>Session: set_optimistic_model()
-    Commands->>Client: emit("model/set", model)
-    Client-->>Commands: Confirmation
-    Commands->>Session: set_config_options()
-    Commands-->>User: "Model changed to {model}"
-```
-
-**Steps:**
-1. User enters `/model` command
-2. Open model picker UI
-3. Display available models
-4. User selects model
-5. Optimistically update session context
-6. Send model change request to agent
-7. Agent confirms change
-8. Update session with confirmed model
-9. Display confirmation message
-
----
-
-## Path Translation Workflows (Windows)
-
-### Windows to WSL Translation
-
-```mermaid
-graph TB
-    Input["C:\Users\name\project\file.txt"]
-    Detect{Windows Path?}
-    Extended{Extended Prefix?}
-    Strip[Strip \\?\]
-    Drive{Drive Letter?}
-    Convert[Convert to /mnt/c/...]
-    Slashes[Replace \ with /]
-    Output["/mnt/c/Users/name/project/file.txt"]
-    
-    Input --> Detect
-    Detect -->|Yes| Extended
-    Extended -->|Yes| Strip
-    Extended -->|No| Drive
-    Strip --> Drive
-    Drive -->|Yes| Convert
-    Convert --> Slashes
-    Slashes --> Output
-    Detect -->|No| Output
-```
-
-**Steps:**
-1. Detect if path is Windows format
-2. Check for extended prefix (`\\?\`)
-3. If extended: strip prefix
-4. Check for drive letter
-5. Convert drive to `/mnt/{drive}`
-6. Replace backslashes with forward slashes
-7. Return WSL path
-
----
-
-### WSL to Windows Translation
-
-```mermaid
-graph TB
-    Input["/mnt/c/Users/name/project/file.txt"]
-    Detect{WSL Mount Path?}
-    Extract[Extract drive letter]
-    Convert["Convert to C:\..."]
-    Slashes[Replace / with \]
-    Output["C:\Users\name\project\file.txt"]
-    
-    Input --> Detect
-    Detect -->|Yes| Extract
-    Extract --> Convert
-    Convert --> Slashes
-    Slashes --> Output
-    Detect -->|No| Output
-```
-
-**Steps:**
-1. Detect if path is WSL mount format
-2. Extract drive letter from `/mnt/{drive}`
-3. Convert to Windows drive format
-4. Replace forward slashes with backslashes
-5. Return Windows path
-
----
-
-### JSON Payload Translation
-
-```mermaid
-graph TB
-    JSON[JSON Payload]
-    Traverse[Traverse JSON Tree]
-    String{String Value?}
-    Path{Looks Like Path?}
-    Translate[Translate Path]
-    Replace[Replace in JSON]
-    Continue[Continue Traversal]
-    Done[Return Modified JSON]
-    
-    JSON --> Traverse
-    Traverse --> String
-    String -->|Yes| Path
-    String -->|No| Continue
-    Path -->|Yes| Translate
-    Path -->|No| Continue
-    Translate --> Replace
-    Replace --> Continue
-    Continue --> Traverse
-    Traverse --> Done
-```
-
-**Steps:**
-1. Receive JSON payload
-2. Recursively traverse JSON tree
-3. For each string value: check if it looks like a path
-4. If path: translate based on direction
-5. Replace value in JSON
-6. Continue traversal
-7. Return modified JSON
-
----
-
-## Hook Execution Workflows
-
-### Hook Registration
-
-```mermaid
-sequenceDiagram
-    participant App
-    participant Config
-    participant Registry
-    
-    App->>Config: load_hooks_config("hooks.json")
-    Config->>Config: Parse JSON
-    
-    loop For each hook definition
-        Config->>Config: parse_event()
-        Config->>Config: from_def()
-        Config->>Registry: register(hook)
+    subgraph "tokio::select! (biased)"
+        P1[Priority 1:<br/>Terminal Events]
+        P2[Priority 2:<br/>Permission Requests]
+        P3[Priority 3:<br/>Notifications]
+        P4[Priority 4:<br/>Redraw Timer]
     end
-    
-    Config-->>App: Registry with hooks
+
+    P1 -->|KeyEvent| HANDLE_KEY[handle_key]
+    P1 -->|MouseEvent| HANDLE_MOUSE[handle mouse]
+    P1 -->|Resize| SET_SIZE[set_terminal_size]
+    P2 --> SHOW_APPROVAL[show_approval]
+    P3 --> ROUTE[Route notification]
+    P4 --> REDRAW[terminal.draw]
+
+    HANDLE_KEY -->|has approval| APPROVAL_KEY[handle_approval_key]
+    HANDLE_KEY -->|has picker| PICKER_KEY[handle_picker_key]
+    HANDLE_KEY -->|has hooks panel| HOOKS_KEY[handle_hooks_panel_key]
+    HANDLE_KEY -->|normal| INPUT_KEY[handle_input_key / submit_input]
+
+    ROUTE -->|session matches main| APPLY_MAIN[apply to UiState + Session]
+    ROUTE -->|session is subagent| APPLY_SUB[apply to SubagentUiState]
+    ROUTE -->|global| APPLY_GLOBAL[apply to main pipeline]
 ```
 
-**Steps:**
-1. Load `hooks.json` from working directory
-2. Parse JSON configuration
-3. For each hook definition:
-   - Parse event type (beforeWrite, afterWrite, etc.)
-   - Create hook instance with glob filter
-   - Register hook in registry
-4. Return configured registry
-
----
-
-### Hook Execution
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Registry
-    participant Hook
-    participant Shell
-    
-    Client->>Registry: run_before(target, context)
-    
-    loop For each registered hook
-        Registry->>Hook: Check timing and target
-        
-        alt Matches
-            Hook->>Hook: matches_path(context.path)
-            
-            alt Pattern matches
-                Hook->>Hook: expand_command(context)
-                Hook->>Shell: Execute command
-                Shell-->>Hook: Exit code + output
-                
-                alt Command failed
-                    Hook-->>Registry: Block(error)
-                    Registry-->>Client: Err(error)
-                else Command succeeded
-                    Hook-->>Registry: Continue
-                end
-            end
-        end
-    end
-    
-    Registry-->>Client: Ok(())
-```
-
-**Steps:**
-1. Client calls `run_before()` or `run_after()`
-2. Registry iterates registered hooks
-3. For each hook: check timing and target match
-4. If matches: check glob pattern against path
-5. If pattern matches: expand command placeholders
-6. Execute shell command
-7. If before hook fails: block operation
-8. If after hook fails: log but continue
-9. Return result to client
-
----
-
-## Error Handling Workflows
-
-### Protocol Error Handling
-
-```mermaid
-graph TB
-    Request[Send Request]
-    Response{Response Type?}
-    Success[Success Result]
-    Error[Error Response]
-    Timeout[Timeout]
-    Parse[Parse Error]
-    
-    Request --> Response
-    Response -->|Result| Success
-    Response -->|Error| Error
-    Response -->|Timeout| Timeout
-    Response -->|Invalid JSON| Parse
-    
-    Error --> Log[Log Error]
-    Timeout --> Log
-    Parse --> Log
-    Log --> Display[Display to User]
-```
-
-**Steps:**
-1. Send request to agent
-2. Wait for response
-3. If success: return result
-4. If error: parse error message
-5. If timeout: generate timeout error
-6. If invalid JSON: generate parse error
-7. Log error details
-8. Display error to user
-
----
-
-### Tool Call Error Handling
-
-```mermaid
-graph TB
-    ToolCall[Tool Call Request]
-    Approval{Needs Approval?}
-    Denied[User Denies]
-    Hook{Hook Blocks?}
-    Execute[Execute Operation]
-    Fail{Operation Fails?}
-    
-    ToolCall --> Approval
-    Approval -->|Yes| Denied
-    Approval -->|No| Hook
-    Denied --> Error[Return Error]
-    Hook -->|Yes| Error
-    Hook -->|No| Execute
-    Execute --> Fail
-    Fail -->|Yes| Error
-    Fail -->|No| Success[Return Success]
-    
-    Error --> Track[Update Tracking: Failed]
-    Success --> Track2[Update Tracking: Success]
-```
-
-**Steps:**
-1. Receive tool call request
-2. Check if approval needed
-3. If denied: return error and update tracking
-4. Run before hooks
-5. If hook blocks: return error and update tracking
-6. Execute operation
-7. If operation fails: return error and update tracking
-8. If operation succeeds: return success and update tracking
-
----
-
-## Performance Optimization Workflows
-
-### Lazy File Loading
-
-```mermaid
-graph TB
-    User[User Types @]
-    Check{Files Loaded?}
-    Load[Load Project Files]
-    Cache[Cache File List]
-    Match[Fuzzy Match]
-    Display[Display Suggestions]
-    
-    User --> Check
-    Check -->|No| Load
-    Load --> Cache
-    Cache --> Match
-    Check -->|Yes| Match
-    Match --> Display
-```
-
-**Steps:**
-1. User triggers file completion with `@`
-2. Check if files already loaded
-3. If not loaded: scan project directory
-4. Cache file list for future use
-5. Perform fuzzy matching on query
-6. Display matching suggestions
-
----
-
-### Streaming Rendering
-
-```mermaid
-graph TB
-    Chunk[Receive Content Chunk]
-    Append[Append to Buffer]
-    Parse[Parse Markdown]
-    Render[Render to Terminal]
-    Display[Update Display]
-    
-    Chunk --> Append
-    Append --> Parse
-    Parse --> Render
-    Render --> Display
-    Display -.Next Chunk.-> Chunk
-```
-
-**Steps:**
-1. Receive content chunk from agent
-2. Append to streaming buffer
-3. Parse accumulated markdown
-4. Render to terminal lines
-5. Update display
-6. Repeat for next chunk
-
----
-
-## Shutdown Workflow
+## User Input → Agent Response
 
 ```mermaid
 sequenceDiagram
     participant User
     participant App
-    participant TermMgr
-    participant Client
-    participant Transport
-    
-    User->>App: Ctrl+C or /quit
-    App->>App: Set should_quit flag
-    App->>TermMgr: Release all terminals
-    
-    loop For each terminal
-        TermMgr->>TermMgr: Kill process
-        TermMgr->>TermMgr: Remove from tracking
+    participant Commands as CommandRegistry
+    participant Bridge as BridgeSender
+    participant Agent as kiro-cli acp
+    participant UiState
+
+    User->>App: Enter key pressed
+    App->>App: take_input() from UiState
+    App->>Commands: parse(input)
+    alt Input is a command
+        Commands->>Commands: execute(ctx, args)
+        Commands-->>App: CommandResult
+        App->>UiState: Apply result (system msg / picker / quit)
+    else Input is a prompt
+        App->>UiState: add_user_message(text)
+        App->>UiState: set_activity(Sending)
+        App->>Bridge: BridgeCommand::SendPrompt
+        Bridge->>Agent: JSON-RPC prompt
+        loop Streaming
+            Agent-->>App: AgentMessage (is_streaming=true)
+            App->>UiState: apply_notification → streaming_text
+        end
+        Agent-->>App: TurnCompleted
+        App->>UiState: commit_streaming()
+        App->>UiState: set_activity(Idle)
     end
-    
-    App->>Client: Close connection
-    Client->>Transport: Close stdin
-    Transport->>Transport: Wait for process exit
-    App->>App: Restore terminal
-    App-->>User: Exit
 ```
 
-**Steps:**
-1. User triggers quit (Ctrl+C or `/quit`)
-2. Set quit flag in app state
-3. Release all tracked terminals
-4. Kill terminal processes
-5. Close ACP client connection
-6. Close agent stdin
-7. Wait for agent process to exit
-8. Restore terminal to normal mode
-9. Exit application
+## Tool Call Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant Agent as kiro-cli acp
+    participant Bridge
+    participant App
+    participant UiState
+
+    Agent->>Bridge: SessionNotification (ToolCall)
+    Bridge->>App: RoutedNotification (ToolCallStarted)
+    App->>UiState: apply_notification → add to active_tool_calls
+    Note over UiState: Activity = ToolRunning
+
+    loop Updates
+        Agent->>Bridge: SessionNotification (ToolCallUpdate)
+        Bridge->>App: RoutedNotification (ToolCallUpdated)
+        App->>UiState: merge_update on existing tool call
+    end
+
+    alt Needs Permission
+        Agent->>Bridge: request_permission
+        Bridge->>App: PermissionRequest
+        App->>UiState: show_approval(tool_call, message, options)
+        Note over UiState: Render approval overlay
+        App-->>Bridge: PermissionResponse (via oneshot)
+    end
+
+    Agent->>Bridge: SessionNotification (ToolCall, status=Completed)
+    Bridge->>App: RoutedNotification (ToolCallUpdated, Completed)
+    App->>UiState: update status, move to message history
+```
+
+## Subagent Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant Bridge
+    participant Agent as kiro-cli acp
+    participant Tracker as SubagentTracker
+    participant SubUI as SubagentUiState
+
+    User->>App: /spawn worker "do task"
+    App->>Bridge: BridgeCommand::SpawnSession(name, task)
+    Bridge->>Agent: session/spawn
+    Agent-->>App: SubagentSpawned(session_id, name)
+    App->>Tracker: register subagent
+
+    loop Subagent working
+        Agent-->>App: RoutedNotification(session_id=sub, AgentMessage)
+        App->>App: session_id ≠ main → route to subagent
+        App->>SubUI: apply_notification(session_id, notification)
+    end
+
+    Agent-->>App: SubagentListUpdated (status=Terminated)
+    App->>Tracker: apply_notification
+    App->>SubUI: mark_terminated
+
+    User->>App: Focus subagent (crew panel)
+    App->>SubUI: focus(session_id)
+    Note over SubUI: Chat widget shows subagent stream
+```
+
+## Command Execution (Agent Commands)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant Registry as CommandRegistry
+    participant Bridge
+    participant Agent as kiro-cli acp
+
+    User->>App: /tools (or /context, /usage, etc.)
+    App->>Registry: parse("/tools")
+    Registry-->>App: AgentCommand (selection_type=false)
+    App->>Bridge: BridgeCommand::ExecuteCommand("tools", session_id, {})
+    Bridge->>Agent: kiro.dev/commands/execute
+    Agent-->>App: CommandExecuted(command, response)
+    App->>App: format_command_response(response)
+    App->>App: add_command_output or show_picker
+
+    Note over App: Selection-type commands (e.g., /model)
+    User->>App: /model
+    App->>Registry: parse("/model")
+    Registry-->>App: AgentCommand (selection_type=true)
+    App->>Bridge: BridgeCommand::QueryCommandOptions("model", session_id)
+    Bridge->>Agent: kiro.dev/commands/options
+    Agent-->>App: CommandOptionsReceived(options)
+    App->>App: show_picker(title, options)
+    User->>App: Select option
+    App->>Bridge: BridgeCommand::ExecuteCommand("model", session_id, {value: selected})
+```
+
+## Rendering Pipeline
+
+```mermaid
+graph TB
+    TIMER[Redraw timer tick] --> DRAW[render::draw]
+    DRAW --> LAYOUT[Layout::vertical]
+    LAYOUT --> TOOLBAR[toolbar::render]
+    LAYOUT --> CHAT[chat::render]
+    LAYOUT --> CREW[crew_panel::render]
+    LAYOUT --> INPUT[input::render]
+    LAYOUT --> STATUS[toolbar::render_status_bar]
+
+    CHAT --> MD[markdown::render]
+    CHAT --> DIFF[render_diff_lines]
+    CHAT --> TC[render_tool_call]
+    CHAT --> DRILL[render_subagent_drill_in]
+
+    MD --> PULLDOWN[pulldown-cmark parser]
+    MD --> SYNTECT[syntect highlighter]
+    MD --> CACHE[LRU cache]
+
+    subgraph "Overlays (on top)"
+        APPROVAL[approval::render]
+        PICKER[picker::render]
+        HOOKS[hooks_panel::render]
+    end
+```
+
+## Adaptive Frame Rate
+
+```mermaid
+stateDiagram-v2
+    state "Idle (500ms)" as IDLE
+    state "Ready (200ms)" as READY
+    state "Sending (100ms)" as SENDING
+    state "Waiting (100ms)" as WAITING
+    state "Streaming (33ms / 30fps)" as STREAMING
+    state "ToolRunning (100ms)" as TOOL
+
+    [*] --> IDLE
+    IDLE --> SENDING: user submits
+    SENDING --> WAITING: prompt sent
+    WAITING --> STREAMING: first agent text
+    STREAMING --> TOOL: tool call started
+    TOOL --> STREAMING: tool completed
+    STREAMING --> IDLE: turn completed
+    IDLE --> READY: any interaction
+    READY --> IDLE: 2s no activity (deep idle)
+```
+
+The `redraw_duration()` method maps `Activity` to frame intervals. Deep idle (2s+ no activity) further reduces to 1s intervals.
+
+## Path Translation (Windows/WSL)
+
+```mermaid
+graph LR
+    WIN[C:\Users\name\file.txt] -->|win_to_wsl| WSL[/mnt/c/Users/name/file.txt]
+    WSL -->|wsl_to_win| WIN
+    JSON[JSON payload] -->|translate_paths_in_json| JSON2[Translated JSON]
+```
+
+Automatic recursive translation in JSON payloads. Detects paths by drive letter prefix (`C:\`) or WSL mount prefix (`/mnt/`).

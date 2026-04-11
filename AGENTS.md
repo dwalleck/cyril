@@ -1,658 +1,152 @@
-# AGENTS.md - AI Assistant Guide for Cyril
+# AGENTS.md — Cyril
 
-> **Purpose:** This file provides AI coding assistants with essential context about the Cyril project that is not covered in README.md or other user-facing documentation. It focuses on development patterns, code organization, testing practices, and assistant-specific guidance.
+> Cross-platform TUI client for [Kiro CLI](https://kiro.dev) via the [Agent Client Protocol (ACP)](https://agentclientprotocol.com). Alpha status.
 
-**Last Updated:** 2026-03-20  
-**Baseline Commit:** 7b8366b1  
-**Documentation Version:** 1.0
+<!-- metadata: auto-generated 2026-04-11, see .agents/summary/ for detailed docs -->
 
----
+## Workspace Layout
 
-## Table of Contents
-
-1. [Quick Start for AI Assistants](#quick-start-for-ai-assistants)
-2. [Project Structure](#project-structure)
-3. [Architecture Overview](#architecture-overview)
-4. [Development Patterns](#development-patterns)
-5. [Testing Guidelines](#testing-guidelines)
-6. [Code Style and Conventions](#code-style-and-conventions)
-7. [Common Tasks](#common-tasks)
-8. [Troubleshooting](#troubleshooting)
-9. [Additional Resources](#additional-resources)
-
----
-
-## Quick Start for AI Assistants
-
-### What is Cyril?
-
-Cyril is a **cross-platform TUI client** for Kiro CLI that communicates via the Agent Client Protocol (ACP). It's written in Rust and organized as a two-crate workspace.
-
-**Key Facts:**
-- **Language:** Rust (Edition 2021)
-- **Size:** Large (429 files, ~6,783 LOC)
-- **Architecture:** Two-crate workspace (binary + library)
-- **Status:** Alpha - functional but under active development
-- **License:** MIT
-
-### Core Responsibilities
-
-**Binary Crate (`cyril`):** TUI application
-- User interface rendering (ratatui)
-- Event handling and input processing
-- Command parsing and execution
-- Markdown rendering with syntax highlighting
-
-**Library Crate (`cyril-core`):** Protocol and platform logic
-- ACP protocol client implementation
-- Platform abstraction (Windows/WSL path translation)
-- File system capabilities
-
-### Key Architectural Decisions
-
-1. **Two-Crate Design:** Separates UI from protocol logic for reusability and testability
-2. **Event-Driven:** All interactions flow through an event system
-3. **Cross-Platform:** Windows support via WSL bridge with automatic path translation
-4. **Streaming:** Real-time markdown rendering as content arrives
-
----
-
-## Project Structure
-
-### Directory Layout
+Three-crate Rust workspace (Edition 2024, Rust ≥1.94.0):
 
 ```
-cyril/
-├── crates/
-│   ├── cyril/              # Binary crate (TUI application)
-│   │   ├── src/
-│   │   │   ├── main.rs     # Entry point (245 LOC)
-│   │   │   ├── app.rs      # Event loop (459 LOC)
-│   │   │   ├── commands.rs # Command system (905 LOC) ⭐ Most complex
-│   │   │   ├── file_completer.rs # File completion (183 LOC)
-│   │   │   ├── tui.rs      # Terminal setup (26 LOC)
-│   │   │   ├── event.rs    # Event types (29 LOC)
-│   │   │   └── ui/         # UI components
-│   │   │       ├── input.rs      # Input field (299 LOC)
-│   │   │       ├── chat.rs       # Message display (287 LOC)
-│   │   │       ├── markdown.rs   # Markdown rendering (243 LOC)
-│   │   │       ├── highlight.rs  # Syntax highlighting (116 LOC)
-│   │   │       ├── tool_calls.rs # Tool display (291 LOC)
-│   │   │       ├── approval.rs   # Approval UI (203 LOC)
-│   │   │       ├── picker.rs     # Selection UI (171 LOC)
-│   │   │       ├── toolbar.rs    # Status bar (139 LOC)
-│   │   │       └── cache.rs      # LRU cache (89 LOC)
-│   │   └── Cargo.toml
-│   └── cyril-core/         # Library crate (protocol & platform)
-│       ├── src/
-│       │   ├── lib.rs      # Public API (12 LOC)
-│       │   ├── session.rs  # Session state (216 LOC)
-│       │   ├── event.rs    # Event types (77 LOC)
-│       │   ├── kiro_ext.rs # Kiro extensions (196 LOC)
-│       │   ├── protocol/   # ACP protocol
-│       │   │   ├── client.rs    # ACP client (358 LOC)
-│       │   │   └── transport.rs # Process mgmt (161 LOC)
-│       │   ├── platform/   # Platform abstraction
-│       │   │   ├── path.rs      # Path translation (306 LOC)
-│       │   │   └── terminal.rs  # Terminal mgmt (361 LOC) ⭐ Highly complex
-│       │   └── capabilities/ # File operations
-│       │       └── fs.rs        # File I/O (73 LOC)
-│       └── Cargo.toml
-├── docs/               # Documentation and plans
-├── .kiro/              # Kiro CLI configuration
-│   ├── skills/         # Development skills (15+ skills)
-│   ├── agents/         # Custom agents (10+ agents)
-│   ├── hooks/          # Git hooks (rustfmt)
-│   └── settings/       # LSP configuration
-├── .claude/            # Claude AI configuration
-├── .agents/            # AI-generated documentation
-│   └── summary/        # Comprehensive documentation
-└── Cargo.toml          # Workspace manifest
+crates/
+  cyril/          # Binary — event loop, terminal I/O, rendering orchestration
+    src/
+      main.rs       # CLI parsing (clap), bridge spawn, tokio runtime
+      app.rs        # Event loop (tokio::select!), notification routing, command dispatch
+    tests/
+      event_routing.rs  # Integration tests for notification routing
+    examples/
+      test_bridge.rs    # Bridge testing utility
+
+  cyril-core/     # Library — protocol, types, commands, session management
+    src/
+      protocol/
+        bridge.rs     # BridgeHandle/BridgeSender channel pair, spawn_bridge(), bridge loop
+        client.rs     # KiroClient — implements acp::Client trait (!Send, bridge thread)
+        convert.rs    # Notification conversion layer (largest file — ACP → typed Notification)
+        transport.rs  # AgentProcess::spawn() — launches kiro-cli acp subprocess
+      commands/
+        mod.rs        # CommandRegistry, Command trait, CommandContext, CommandResult
+        builtin.rs    # help, clear, quit, new, load
+        subagent.rs   # spawn, kill, msg, sessions
+      types/          # Domain types: event, tool_call, session, subagent, command, config, etc.
+      session.rs      # SessionController — session metadata state machine
+      subagent.rs     # SubagentTracker — tracks subagent roster from list_update notifications
+      error.rs        # Error + ErrorKind enum
+      platform/
+        path.rs       # Windows ↔ WSL path translation (C:\ ↔ /mnt/c/)
+
+  cyril-ui/       # Library — UI state, rendering, widgets
+    src/
+      state.rs        # UiState — central state machine, implements TuiState trait
+      traits.rs       # TuiState (read-only renderer trait), Activity, ChatMessage, overlay types
+      render.rs       # Frame layout (panic-safe), widget orchestration
+      subagent_ui.rs  # SubagentUiState — per-subagent message streams, drill-in focus
+      stream_buffer.rs # Semantic-boundary streaming buffer
+      file_completer.rs # @-file autocomplete (async, .gitignore-aware)
+      highlight.rs    # Syntect-based syntax highlighting with LRU cache
+      cache.rs        # Generic LRU cache
+      widgets/
+        chat.rs       # Message display, tool call diffs, subagent drill-in
+        markdown.rs   # pulldown-cmark → ratatui spans with syntax highlighting
+        input.rs      # Multi-line input with cursor + autocomplete overlay
+        toolbar.rs    # Top bar (session/mode/model) + bottom status bar (context/activity)
+        crew_panel.rs # Subagent status panel (max 6 rows + overflow)
+        hooks_panel.rs # Hooks overlay popup (three-column table)
+        picker.rs     # Fuzzy-filtered selection list (nucleo-matcher)
+        approval.rs   # Permission approval dialog
 ```
 
-⭐ = Most complex components (>400 LOC or high complexity)
+## Architecture
 
-### File Organization Patterns
+### Bridge Pattern
 
-**Binary Crate (`cyril`):**
-- `main.rs` - Entry point, CLI parsing, connection setup
-- `app.rs` - Main event loop, state management, rendering coordination
-- `commands.rs` - Command parsing, execution, autocomplete (largest file)
-- `ui/` - UI components, each in its own file
-- `event.rs` - Event type definitions
+The bridge connects the App to `kiro-cli acp` via three async channels:
 
-**Library Crate (`cyril-core`):**
-- `lib.rs` - Public API exports
-- `protocol/` - ACP client and transport
-- `platform/` - OS-specific abstractions
-- `hooks/` - Hook system implementation
-- `capabilities/` - Agent capabilities (file I/O, etc.)
-- `session.rs` - Session state management
-- `event.rs` - Event type definitions
+- **App → Bridge:** `BridgeCommand` (mpsc, cap 32) — prompts, session control, agent commands
+- **Bridge → App:** `RoutedNotification` (mpsc, cap 256) — agent output, tool calls, metadata
+- **Bridge → App:** `PermissionRequest` (mpsc, cap 16) — approval dialogs (oneshot response)
 
-**Configuration:**
-- `.kiro/` - Kiro CLI configuration (skills, agents, hooks, LSP)
-- `.claude/` - Claude AI configuration
-- `hooks.json` - User-defined hooks (in working directory)
+`BridgeHandle.split()` yields a cloneable `BridgeSender` + two receivers for `tokio::select!`.
 
----
+### Notification Routing
 
-## Architecture Overview
+Every `RoutedNotification` carries `Option<SessionId>`:
+- `None` → global (bridge lifecycle, subagent list updates) → main pipeline
+- `Some(id)` matching main session → main state machines
+- `Some(id)` not matching → `SubagentUiState` (subagent stream)
 
-### High-Level Architecture
+### State / Renderer Separation
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Cyril TUI (Binary)                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │   UI     │  │   App    │  │ Commands │  │   File   │   │
-│  │ Layer    │◄─┤  Event   │◄─┤  System  │◄─┤Completer │   │
-│  │(ratatui) │  │   Loop   │  │          │  │          │   │
-│  └──────────┘  └────┬─────┘  └──────────┘  └──────────┘   │
-└─────────────────────┼─────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Cyril Core (Library)                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                  │
-│  │   ACP    │  │ Platform │  │   File   │                  │
-│  │  Client  │  │  Layer   │  │   I/O    │                  │
-│  │          │  │(Path/Term)│  │          │                  │
-│  └────┬─────┘  └──────────┘  └──────────┘                  │
-└───────┼─────────────────────────────────────────────────────┘
-        │
-        ▼ JSON-RPC 2.0 over stdio
-┌─────────────────────────────────────────────────────────────┐
-│              kiro-cli acp (Agent Process)                   │
-│         (Linux: native | Windows: via WSL)                  │
-└─────────────────────────────────────────────────────────────┘
-```
+`UiState` implements `TuiState` (read-only trait). The renderer receives `&dyn TuiState` and cannot mutate state. Mutations happen only in the App event loop.
 
-### Key Architectural Patterns
+### Command Registry
 
-**Event-Driven Architecture:**
-- All interactions flow through `AppEvent` enum
-- Async event handling with tokio
-- Channel-based communication between components
+Commands implement `Command` trait (`name`, `description`, `execute`). `CommandRegistry` stores `Arc<dyn Command>`, supports:
+- Builtin commands registered at startup
+- Agent commands dynamically registered from server-advertised `CommandsUpdated`
+- Subagent commands (`spawn`, `kill`, `msg`, `sessions`)
+- Alias resolution and deduplication
 
-**Separation of Concerns:**
-- UI logic in `cyril` crate
-- Protocol logic in `cyril-core` crate
-- Platform-specific code isolated in `platform/` module
+`CommandResult` variants: `SystemMessage`, `ShowPicker`, `Dispatched`, `Quit`, `NotACommand`.
 
-**Cross-Platform Abstraction:**
-- Path translation layer for Windows/WSL
-- Platform detection at runtime
-- Transparent path conversion in JSON payloads
+### Event Loop Priority (biased `tokio::select!`)
 
----
+1. Terminal input (keyboard/mouse)
+2. Permission requests
+3. Notifications
+4. Redraw timer (adaptive: 33ms streaming → 500ms idle)
 
-## Development Patterns
+## Repo-Specific Patterns
 
-### Error Handling
+### Error Handling Boundary
+- `cyril-core` and `cyril-ui` define their own `Error`/`ErrorKind` enums via `thiserror`
+- The binary crate uses `Box<dyn Error>` at the top level
+- Lints: `unsafe_code = "forbid"`, `unwrap_used = "deny"`, `expect_used = "warn"`
 
-**Use `anyhow::Result` for application errors:**
-```rust
-use anyhow::{Result, Context};
+### ACP Client (`!Send`)
+`KiroClient` implements `acp::Client` with `async_trait(?Send)` because it uses `RefCell<HashMap>` for tool call input caching. Lives exclusively in the bridge thread.
 
-pub fn read_config(path: &Path) -> Result<Config> {
-    let content = fs::read_to_string(path)
-        .context("Failed to read config file")?;
-    let config = serde_json::from_str(&content)
-        .context("Failed to parse config")?;
-    Ok(config)
-}
-```
+### Notification Conversion (`convert.rs`)
+The largest file. Translates raw ACP protocol messages → typed `Notification` variants. Maintains a `tool_call_inputs` cache because permission requests arrive without `raw_input`. Most likely file to need changes when the ACP protocol evolves.
 
-**Use `thiserror` for library errors:**
-```rust
-use thiserror::Error;
+### Streaming Buffer
+`StreamBuffer` flushes at semantic boundaries (newlines, code fences) or after a configurable timeout (default 150ms). Prevents partial-line rendering during streaming.
 
-#[derive(Error, Debug)]
-pub enum ProtocolError {
-    #[error("Connection failed: {0}")]
-    ConnectionFailed(String),
-    #[error("Invalid response: {0}")]
-    InvalidResponse(String),
-}
-```
+### Panic-Safe Rendering
+`render::draw()` wraps the inner draw in `catch_unwind`. On panic, renders a fallback "Render error" message instead of crashing.
 
-### Async Patterns
+## Config & Tooling
 
-**Use tokio for async operations:**
-```rust
-use tokio::fs;
-use tokio::process::Command;
+### User Config
+`~/.config/cyril/config.toml` (TOML). Falls back to defaults if missing/invalid.
 
-pub async fn execute_command(cmd: &str) -> Result<String> {
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg(cmd)
-        .output()
-        .await?;
-    Ok(String::from_utf8_lossy(&output.stdout).to_string())
-}
-```
-
-**Use channels for communication:**
-```rust
-use tokio::sync::mpsc;
-
-let (tx, mut rx) = mpsc::unbounded_channel();
-
-// Send events
-tx.send(AppEvent::Internal(InternalEvent::SessionCreated(id)))?;
-
-// Receive events
-while let Some(event) = rx.recv().await {
-    handle_event(event).await?;
-}
-```
-
-### State Management
-
-**Centralized state in `App` struct:**
-```rust
-pub struct App {
-    // Core state
-    client: KiroClient,
-    session: SessionContext,
-    
-    // UI component states
-    chat: ChatState,
-    input: InputState,
-    toolbar: ToolbarState,
-    
-    // Tracking
-    tool_calls: HashMap<String, TrackedToolCall>,
-}
-```
-
-**Immutable updates where possible:**
-```rust
-// Good: Return new state
-pub fn with_session_id(mut self, id: String) -> Self {
-    self.session_id = Some(id);
-    self
-}
-
-// Also good: Mutable update when needed
-pub fn set_session_id(&mut self, id: String) {
-    self.session_id = Some(id);
-}
-```
-
-### Testing Patterns
-
-**Unit tests in same file:**
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_path_translation() {
-        let wsl_path = win_to_wsl(r"C:\Users\name\file.txt");
-        assert_eq!(wsl_path, "/mnt/c/Users/name/file.txt");
-    }
-}
-```
-
-**Async tests with tokio:**
-```rust
-#[tokio::test]
-async fn test_file_write() {
-    let temp = tempfile::tempdir().unwrap();
-    let path = temp.path().join("test.txt");
-    
-    write_text_file(&path, "content").await.unwrap();
-    
-    let content = fs::read_to_string(&path).await.unwrap();
-    assert_eq!(content, "content");
-}
-```
-
----
-
-## Testing Guidelines
-
-### Test Organization
-
-**Test Coverage:**
-- ~50 test functions across modules
-- Focus on critical paths (path translation, command parsing)
-- No integration tests currently
-
-**Test Locations:**
-- Unit tests: Same file as implementation (`#[cfg(test)]` module)
-- Integration tests: `tests/` directory (if needed)
-
-### Running Tests
-
-```bash
-# Run all tests
-cargo test
-
-# Run tests for specific crate
-cargo test -p cyril-core
-
-# Run specific test
-cargo test test_path_translation
-
-# Run with output
-cargo test -- --nocapture
-
-# Run with logging
-RUST_LOG=debug cargo test
-```
-
-### Test Patterns
-
-**Roundtrip Testing (Path Translation):**
-```rust
-#[test]
-fn test_roundtrip_win_wsl_win() {
-    let original = r"C:\Users\name\project\file.txt";
-    let wsl = win_to_wsl(original);
-    let back = wsl_to_win(&wsl);
-    assert_eq!(original, back);
-}
-```
-
-**Edge Case Testing:**
-```rust
-#[test]
-fn test_empty_input() {
-    let result = parse_command("");
-    assert!(matches!(result, ParsedCommand::None));
-}
-
-#[test]
-fn test_invalid_json() {
-    let result = parse_json("{invalid}");
-    assert!(result.is_err());
-}
-```
-
-**Mock-Friendly Design:**
-```rust
-// Use traits for testability
-pub trait FileSystem {
-    async fn read(&self, path: &Path) -> Result<String>;
-    async fn write(&self, path: &Path, content: &str) -> Result<()>;
-}
-
-// Real implementation
-pub struct RealFileSystem;
-
-// Test implementation
-pub struct MockFileSystem {
-    files: HashMap<PathBuf, String>,
-}
-```
-
----
-
-## Code Style and Conventions
-
-### Rust Style
-
-**Follow standard Rust conventions:**
-- Use `rustfmt` for formatting (automated via git hooks)
-- Use `clippy` for linting
-- Follow Rust API guidelines
-
-**Naming Conventions:**
-- Types: `PascalCase` (e.g., `ChatState`, `ToolCallKind`)
-- Functions: `snake_case` (e.g., `parse_command`, `run_hooks`)
-- Constants: `SCREAMING_SNAKE_CASE` (e.g., `MAX_OUTPUT_SIZE`)
-- Modules: `snake_case` (e.g., `file_completer`, `tool_calls`)
-
-### Documentation
-
-**Document public APIs:**
-```rust
-/// Parse a command from user input.
-///
-/// Recognizes slash commands (e.g., `/help`, `/quit`) and agent commands.
-/// Returns `ParsedCommand::None` for empty input or non-command text.
-///
-/// # Examples
-///
-/// ```
-/// let cmd = parse_command("/help");
-/// assert!(matches!(cmd, ParsedCommand::Slash(SlashCommand::Help)));
-/// ```
-pub fn parse_command(input: &str) -> ParsedCommand {
-    // Implementation
-}
-```
-
-**Use inline comments for complex logic:**
-```rust
-// Translate paths in JSON payload recursively
-// This handles nested objects and arrays
-pub fn translate_paths_in_json(value: &mut Value, direction: Direction) {
-    match value {
-        Value::String(s) => {
-            // Only translate if it looks like a path
-            if looks_like_path(s) {
-                *s = translate_path(s, direction);
-            }
-        }
-        Value::Object(map) => {
-            for v in map.values_mut() {
-                translate_paths_in_json(v, direction);
-            }
-        }
-        // ... handle other cases
-    }
-}
-```
+Key options: `ui.max_messages` (500), `ui.stream_buffer_timeout_ms` (150), `ui.mouse_capture` (true), `agent.agent_name` ("kiro-cli").
 
 ### Git Hooks
+`.claude/hooks/rustfmt.sh` — runs `rustfmt --edition 2024` on staged `.rs` files before commit.
 
-**Automated formatting on commit:**
-- `.kiro/hooks/rustfmt.sh` - Runs rustfmt on staged Rust files
-- `.claude/hooks/rustfmt.sh` - Same for Claude integration
+### Logging
+JSON-structured logs to `~/.config/cyril/cyril.log` via `tracing-subscriber`. Enable debug: `RUST_LOG=debug cargo run`.
 
-**Hook script:**
-```bash
-#!/bin/bash
-# Format staged Rust files
-git diff --cached --name-only --diff-filter=ACM | \
-  grep '\.rs$' | \
-  xargs -r rustfmt --edition 2021
-```
+### Testing
+431 test functions. Unit tests in-file (`#[cfg(test)]`), integration tests in `tests/`. Uses `rstest` for fixtures, `insta` for snapshots, `tempfile` for temp dirs. `MockTuiState` in `traits.rs` for widget testing.
 
----
+### Key Dependencies
+- `agent-client-protocol` 0.10 — ACP trait + transport (critical, version-sensitive)
+- `ratatui` 0.30 — TUI framework (uses `unstable-rendered-line-info`)
+- `crossterm` 0.29 — terminal I/O (event-stream feature)
+- `syntect` 5 — syntax highlighting
+- `pulldown-cmark` 0.13 — markdown parsing
+- `similar` 2 — diff computation for tool call content
+- `nucleo-matcher` 0.3 — fuzzy matching for picker
 
-## Common Tasks
+## Detailed Documentation
 
-### Adding a New UI Component
+See `.agents/summary/index.md` for the full documentation index with query routing guidance.
 
-1. Create new file in `crates/cyril/src/ui/`
-2. Define state struct
-3. Implement rendering method
-4. Add to `App` state
-5. Call from `App::render()`
-
-**Example:**
-```rust
-// crates/cyril/src/ui/my_component.rs
-use ratatui::{Frame, layout::Rect, widgets::Paragraph};
-
-pub struct MyComponentState {
-    content: String,
-}
-
-impl MyComponentState {
-    pub fn new() -> Self {
-        Self {
-            content: String::new(),
-        }
-    }
-    
-    pub fn render(&self, frame: &mut Frame, area: Rect) {
-        let widget = Paragraph::new(self.content.as_str());
-        frame.render_widget(widget, area);
-    }
-}
-```
-
-### Adding a New ACP Method
-
-1. Add method to `KiroClient` in `crates/cyril-core/src/protocol/client.rs`
-2. Define request/response types
-3. Implement method using `emit()`
-4. Add tests
-
-**Example:**
-```rust
-impl KiroClient {
-    pub async fn my_new_method(&mut self, param: &str) -> Result<String> {
-        let params = json!({ "param": param });
-        let result = self.emit("acp/myNewMethod", params).await?;
-        Ok(result["value"].as_str().unwrap().to_string())
-    }
-}
-```
-
-> **Note:** The hook system was removed in a recent refactor. This section is kept for reference but may be outdated.
-
-### Adding Path Translation Support
-
-Path translation is automatic for JSON payloads. To add support for new fields:
-
-1. Ensure field is a string in JSON
-2. Path detection is automatic (looks for drive letters or `/mnt/` prefix)
-3. Translation happens recursively in `translate_paths_in_json()`
-
-No code changes needed unless adding special path formats.
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**Issue: Tests fail with "connection refused"**
-- Cause: Agent process not starting correctly
-- Solution: Check that `kiro-cli` is installed and in PATH
-- Debug: Run with `RUST_LOG=debug cargo test`
-
-**Issue: Path translation not working**
-- Cause: Path doesn't match expected format
-- Solution: Check `looks_like_windows_path()` and `looks_like_wsl_mount_path()`
-- Debug: Add logging to `translate_paths_in_json()`
-
-**Issue: UI not updating**
-- Cause: Event not being sent or handled
-- Solution: Check event flow from source to handler
-- Debug: Add logging in `App::handle_event()`
-
-> **Note:** The hook system was removed. This troubleshooting entry is outdated.
-
-### Debugging Tips
-
-**Enable debug logging:**
-```bash
-RUST_LOG=debug cargo run
-```
-
-**Check log file:**
-```bash
-tail -f cyril.log
-```
-
-**Use `dbg!()` macro:**
-```rust
-dbg!(&path);  // Prints path with file:line info
-```
-
-**Use `tracing` for structured logging:**
-```rust
-use tracing::{debug, info, warn, error};
-
-debug!("Processing command: {}", cmd);
-info!("Session created: {}", session_id);
-warn!("Hook failed: {}", error);
-error!("Fatal error: {}", error);
-```
-
----
-
-## Additional Resources
-
-### Comprehensive Documentation
-
-For detailed information, see the `.agents/summary/` directory:
-
-- **index.md** - Documentation index and navigation guide
-- **architecture.md** - System architecture and design patterns
-- **components.md** - Detailed component documentation
-- **interfaces.md** - APIs and integration points
-- **data_models.md** - Data structures and models
-- **workflows.md** - Process flows and sequences
-- **dependencies.md** - External dependencies
-- **review_notes.md** - Documentation gaps and recommendations
-
-### External Resources
-
-- [Kiro CLI Documentation](https://kiro.dev/docs/cli/)
-- [Agent Client Protocol Specification](https://agentclientprotocol.com)
-- [Ratatui Documentation](https://ratatui.rs/)
-- [Tokio Documentation](https://tokio.rs/)
-
-### Development Tools
-
-- **LSP:** Configured in `.kiro/settings/lsp.json`
-- **Skills:** 15+ development skills in `.kiro/skills/`
-- **Agents:** 10+ specialized agents in `.kiro/agents/`
-- **Hooks:** Git hooks for formatting in `.kiro/hooks/`
-
----
-
-## Quick Reference
-
-### Most Important Files
-
-1. **main.rs** - Entry point, CLI parsing
-2. **app.rs** - Main event loop
-3. **commands.rs** - Command system (most complex)
-4. **protocol/client.rs** - ACP client
-5. **platform/path.rs** - Path translation
-6. **platform/terminal.rs** - Terminal management
-
-### Key Concepts
-
-- **Two-crate architecture:** UI (cyril) + Protocol (cyril-core)
-- **Event-driven:** All interactions via `AppEvent`
-- **Cross-platform:** Windows via WSL bridge with path translation
-- **Streaming:** Real-time markdown rendering
-
-### Common Commands
-
-```bash
-# Build
-cargo build --release
-
-# Run
-cargo run
-
-# Test
-cargo test
-
-# Format
-cargo fmt
-
-# Lint
-cargo clippy
-
-# Check
-cargo check
-```
-
----
-
-**Remember:** This is an alpha project under active development. Expect changes and improvements. When in doubt, check the comprehensive documentation in `.agents/summary/` or ask the maintainers.
+## Custom Instructions
+<!-- This section is for human and agent-maintained operational knowledge.
+     Add repo-specific conventions, gotchas, and workflow rules here.
+     This section is preserved exactly as-is when re-running codebase-summary. -->
