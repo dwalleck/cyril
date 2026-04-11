@@ -223,6 +223,7 @@ async fn command_sends_to_bridge() {
     let ctx = cyril_core::commands::CommandContext {
         session: &session,
         bridge: &sender,
+        subagent_tracker: None,
     };
     let result = cmd.execute(&ctx, args).await;
     assert!(result.is_ok());

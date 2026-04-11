@@ -51,6 +51,10 @@ pub struct UiState {
     context_usage: Option<f64>,
     credit_usage: Option<(f64, f64)>,
 
+    // Subagent streams and tracker (private — mutated via delegating methods)
+    subagents: crate::subagent_ui::SubagentUiState,
+    subagent_tracker: cyril_core::subagent::SubagentTracker,
+
     // Overlays
     approval: Option<ApprovalState>,
     picker: Option<PickerState>,
@@ -157,6 +161,14 @@ impl TuiState for UiState {
     fn is_deep_idle(&self) -> bool {
         self.deep_idle
     }
+
+    fn subagent_tracker(&self) -> &cyril_core::subagent::SubagentTracker {
+        &self.subagent_tracker
+    }
+
+    fn subagent_ui(&self) -> &crate::subagent_ui::SubagentUiState {
+        &self.subagents
+    }
 }
 
 impl UiState {
@@ -182,6 +194,8 @@ impl UiState {
             current_model: None,
             context_usage: None,
             credit_usage: None,
+            subagents: crate::subagent_ui::SubagentUiState::new(),
+            subagent_tracker: cyril_core::subagent::SubagentTracker::new(),
             approval: None,
             picker: None,
             terminal_size: (80, 24),
@@ -312,11 +326,7 @@ impl UiState {
                 self.set_activity(Activity::Ready);
                 true
             }
-            Notification::ToolCallChunk {
-                tool_call_id: _,
-                title: _,
-                kind: _,
-            } => {
+            Notification::ToolCallChunk { .. } => {
                 self.set_activity(Activity::ToolRunning);
                 true
             }
@@ -382,6 +392,39 @@ impl UiState {
                 } else {
                     self.add_system_message(format!("Model '{requested}' not available"));
                 }
+                true
+            }
+
+            // Subagent list and inbox notifications are handled by SubagentTracker,
+            // which is owned by UiState but updated separately via
+            // apply_subagent_tracker_notification(). These variants are no-ops here.
+            Notification::SubagentListUpdated { .. } | Notification::InboxNotification { .. } => {
+                false
+            }
+
+            // Spawn/terminate/error notifications surface as system messages.
+            Notification::SubagentSpawned { session_id, name } => {
+                self.add_system_message(format!(
+                    "Spawned subagent '{name}' ({})",
+                    session_id.as_str()
+                ));
+                true
+            }
+            Notification::SubagentTerminated { session_id } => {
+                // Try to resolve name via the tracker for a friendlier message.
+                let name = self
+                    .subagent_tracker
+                    .get(session_id)
+                    .map(|info| info.session_name().to_string());
+                let msg = match name {
+                    Some(n) => format!("Terminated subagent '{n}' ({})", session_id.as_str()),
+                    None => format!("Terminated subagent ({})", session_id.as_str()),
+                };
+                self.add_system_message(msg);
+                true
+            }
+            Notification::BridgeError { operation, message } => {
+                self.add_system_message(format!("{operation} failed: {message}"));
                 true
             }
         }
@@ -582,6 +625,59 @@ impl UiState {
     /// Command names available for slash autocomplete.
     pub fn set_command_names(&mut self, names: Vec<String>) {
         self.command_names = names;
+    }
+
+    /// Read-only access to the subagent tracker.
+    pub fn subagent_tracker(&self) -> &cyril_core::subagent::SubagentTracker {
+        &self.subagent_tracker
+    }
+
+    /// Apply a notification to the subagent tracker. Returns true if tracker state changed.
+    pub fn apply_subagent_tracker_notification(
+        &mut self,
+        notification: &Notification,
+    ) -> bool {
+        self.subagent_tracker.apply_notification(notification)
+    }
+
+    /// Read-only access to subagent UI state.
+    pub fn subagent_ui(&self) -> &crate::subagent_ui::SubagentUiState {
+        &self.subagents
+    }
+
+    /// Route a notification to the per-subagent stream identified by `session_id`.
+    /// Creates the stream on first contact.
+    pub fn apply_subagent_notification(
+        &mut self,
+        session_id: &SessionId,
+        notification: &Notification,
+    ) -> bool {
+        self.subagents.apply_notification(session_id, notification)
+    }
+
+    /// Apply a list update to subagent streams — marks terminated streams
+    /// that are no longer in the active list.
+    pub fn apply_subagent_list_update(
+        &mut self,
+        subagents: &[cyril_core::types::SubagentInfo],
+    ) -> bool {
+        self.subagents.apply_list_update(subagents)
+    }
+
+    /// Focus a subagent for drill-in rendering. Returns true if the
+    /// session has a stream and focus was set.
+    pub fn focus_subagent(&mut self, session_id: SessionId) -> bool {
+        self.subagents.focus(session_id)
+    }
+
+    /// Exit drill-in mode.
+    pub fn unfocus_subagent(&mut self) {
+        self.subagents.unfocus();
+    }
+
+    /// True if any subagent stream is actively streaming or running tools.
+    pub fn any_subagent_active(&self) -> bool {
+        self.subagents.any_active()
     }
 
     /// Recompute autocomplete suggestions based on current input text.
@@ -1477,5 +1573,203 @@ mod tests {
         assert!(
             matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("claude-opus-5") && t.contains("not available"))
         );
+    }
+
+    #[test]
+    fn tool_call_chunk_sets_tool_running() {
+        // Subagent routing is now at the App layer via RoutedNotification —
+        // UiState only sees chunks for the main session, and always sets activity.
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::ToolCallChunk {
+            tool_call_id: ToolCallId::new("tc-1"),
+            title: "read".into(),
+            kind: "read".into(),
+            session_id: None,
+        });
+        assert!(changed);
+        assert_eq!(state.activity(), Activity::ToolRunning);
+    }
+
+    #[test]
+    fn subagent_spawned_adds_system_message() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::SubagentSpawned {
+            session_id: SessionId::new("sub-1"),
+            name: "reviewer".into(),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("reviewer") && t.contains("sub-1"))
+        );
+    }
+
+    #[test]
+    fn subagent_terminated_adds_system_message_with_name_if_tracked() {
+        let mut state = UiState::new(500);
+        // Register the subagent first so state can look up the name
+        register_subagent(&mut state, "sub-1", "reviewer");
+
+        let changed = state.apply_notification(&Notification::SubagentTerminated {
+            session_id: SessionId::new("sub-1"),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("reviewer") && t.contains("sub-1"))
+        );
+    }
+
+    #[test]
+    fn subagent_terminated_adds_system_message_without_name_if_not_tracked() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::SubagentTerminated {
+            session_id: SessionId::new("ghost"),
+        });
+        assert!(changed);
+        // Message should still include the session id even if name can't be resolved
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("ghost") && t.contains("Terminated"))
+        );
+    }
+
+    #[test]
+    fn bridge_error_adds_system_message() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::BridgeError {
+            operation: "set_mode".into(),
+            message: "connection refused".into(),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("set_mode") && t.contains("connection refused"))
+        );
+    }
+
+    // ── Subagent routing tests ───────────────────────────────────────────
+    // These verify the routing contract that App::handle_notification depends
+    // on: session-scoped notifications must flow to SubagentUiState, not the
+    // main UiState; list updates must reach both tracker and stream cleanup.
+
+    fn register_subagent(state: &mut UiState, id: &str, name: &str) {
+        let info = cyril_core::types::SubagentInfo::new(
+            SessionId::new(id),
+            name,
+            name,
+            "query",
+            cyril_core::types::SubagentStatus::Working {
+                message: Some("Running".into()),
+            },
+            Some("crew-test".into()),
+            None,
+            vec![],
+        );
+        let notif = Notification::SubagentListUpdated {
+            subagents: vec![info],
+            pending_stages: vec![],
+        };
+        state.apply_subagent_tracker_notification(&notif);
+        if let Notification::SubagentListUpdated { subagents, .. } = &notif {
+            state.apply_subagent_list_update(subagents);
+        }
+    }
+
+    #[test]
+    fn subagent_notification_routes_to_subagent_stream_not_main() {
+        let mut state = UiState::new(500);
+        register_subagent(&mut state, "sub-1", "reviewer");
+
+        let sid = SessionId::new("sub-1");
+        assert!(state.subagent_tracker().is_subagent(&sid));
+
+        // Send an AgentMessage scoped to the subagent
+        state.apply_subagent_notification(
+            &sid,
+            &Notification::AgentMessage(AgentMessage {
+                text: "subagent text".into(),
+                is_streaming: false,
+            }),
+        );
+
+        // Main messages should be empty
+        assert!(state.messages().is_empty());
+
+        // Subagent stream should have the message
+        let stream = state
+            .subagent_ui()
+            .streams()
+            .get(&sid)
+            .expect("stream should exist");
+        assert_eq!(stream.messages().len(), 1);
+    }
+
+    #[test]
+    fn subagent_list_update_marks_removed_streams_terminated() {
+        let mut state = UiState::new(500);
+        register_subagent(&mut state, "sub-1", "reviewer");
+
+        // Stream for sub-1 exists and is working
+        let sid = SessionId::new("sub-1");
+        state.apply_subagent_notification(
+            &sid,
+            &Notification::AgentMessage(AgentMessage {
+                text: "working".into(),
+                is_streaming: true,
+            }),
+        );
+        assert!(state.any_subagent_active());
+
+        // List update removes sub-1
+        let changed = state.apply_subagent_list_update(&[]);
+        assert!(changed);
+        // Stream still exists (preserved for history)
+        assert!(state.subagent_ui().streams().contains_key(&sid));
+        // But is no longer active
+        assert!(!state.any_subagent_active());
+    }
+
+    #[test]
+    fn subagent_list_update_no_op_returns_false() {
+        let mut state = UiState::new(500);
+        // No streams registered, list update is a no-op
+        let changed = state.apply_subagent_list_update(&[]);
+        assert!(!changed);
+    }
+
+    #[test]
+    fn focus_subagent_requires_existing_stream() {
+        let mut state = UiState::new(500);
+        let sid = SessionId::new("ghost");
+        // Focus without a stream should fail
+        assert!(!state.focus_subagent(sid.clone()));
+        assert!(state.subagent_ui().focused_session_id().is_none());
+
+        // After registering + notifying, focus should succeed
+        register_subagent(&mut state, "sub-1", "reviewer");
+        let sid = SessionId::new("sub-1");
+        state.apply_subagent_notification(
+            &sid,
+            &Notification::AgentMessage(AgentMessage {
+                text: "hi".into(),
+                is_streaming: false,
+            }),
+        );
+        assert!(state.focus_subagent(sid.clone()));
+        assert_eq!(state.subagent_ui().focused_session_id(), Some(&sid));
+    }
+
+    #[test]
+    fn unfocus_subagent_clears_focus() {
+        let mut state = UiState::new(500);
+        register_subagent(&mut state, "sub-1", "reviewer");
+        let sid = SessionId::new("sub-1");
+        state.apply_subagent_notification(
+            &sid,
+            &Notification::AgentMessage(AgentMessage {
+                text: "hi".into(),
+                is_streaming: false,
+            }),
+        );
+        assert!(state.focus_subagent(sid));
+        state.unfocus_subagent();
+        assert!(state.subagent_ui().focused_session_id().is_none());
     }
 }

@@ -465,6 +465,7 @@ dependencies = [
  "ratatui",
  "rstest",
  "serde_json",
+ "similar",
  "syntect",
  "tempfile",
  "thiserror 2.0.18",

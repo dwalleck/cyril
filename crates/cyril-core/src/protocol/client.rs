@@ -14,14 +14,14 @@ use crate::types::*;
 /// caching tool call `raw_input`. Permission requests arrive without
 /// `raw_input`, so the client looks it up from this cache.
 pub(crate) struct KiroClient {
-    notification_tx: mpsc::Sender<Notification>,
+    notification_tx: mpsc::Sender<RoutedNotification>,
     permission_tx: mpsc::Sender<PermissionRequest>,
     tool_call_inputs: RefCell<HashMap<String, serde_json::Value>>,
 }
 
 impl KiroClient {
     pub fn new(
-        notification_tx: mpsc::Sender<Notification>,
+        notification_tx: mpsc::Sender<RoutedNotification>,
         permission_tx: mpsc::Sender<PermissionRequest>,
     ) -> Self {
         Self {
@@ -99,8 +99,13 @@ impl acp::Client for KiroClient {
             convert::session_update_to_notification(&args, &inputs)
         };
         if let Some(notification) = notification {
+            // Every session notification carries the session_id from the
+            // envelope. The App routes based on whether this matches the main
+            // session or a known subagent.
+            let session_id = SessionId::new(args.session_id.to_string());
+            let routed = RoutedNotification::scoped(session_id, notification);
             self.notification_tx
-                .send(notification)
+                .send(routed)
                 .await
                 .map_err(|_| acp::Error::new(-32603, "bridge closed"))?;
         }
@@ -123,8 +128,18 @@ impl acp::Client for KiroClient {
 
         match convert::to_ext_notification(args.method.as_ref(), &params) {
             Ok(Some(notification)) => {
+                // ToolCallChunk carries an inline session_id from the outer
+                // kiro.dev/session/update envelope. Promote it to the
+                // channel-level RoutedNotification routing.
+                let routed = match &notification {
+                    Notification::ToolCallChunk {
+                        session_id: Some(sid),
+                        ..
+                    } => RoutedNotification::scoped(sid.clone(), notification),
+                    _ => RoutedNotification::global(notification),
+                };
                 self.notification_tx
-                    .send(notification)
+                    .send(routed)
                     .await
                     .map_err(|_| acp::Error::new(-32603, "bridge closed"))?;
             }

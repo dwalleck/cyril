@@ -1,4 +1,5 @@
 pub mod builtin;
+pub mod subagent;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -11,6 +12,34 @@ use crate::types::CommandOption;
 pub struct CommandContext<'a> {
     pub session: &'a SessionController,
     pub bridge: &'a BridgeSender,
+    /// Optional subagent tracker for commands that need to look up subagents
+    /// by name (e.g., `/kill`, `/msg`). `None` in tests that don't exercise
+    /// subagent commands.
+    pub subagent_tracker: Option<&'a crate::subagent::SubagentTracker>,
+}
+
+impl<'a> CommandContext<'a> {
+    /// Require the subagent tracker to be present. Returns a graceful
+    /// `CommandResult` system message when absent, which subagent commands
+    /// can propagate via `?` using the `Result<T, CommandResult>` convention
+    /// defined below.
+    ///
+    /// Absence at runtime is a programming error — the App always wires the
+    /// tracker. We log at error level so it shows up in `cyril.log` if it
+    /// ever fires.
+    pub fn require_tracker(&self) -> Result<&'a crate::subagent::SubagentTracker, CommandResult> {
+        match self.subagent_tracker {
+            Some(tracker) => Ok(tracker),
+            None => {
+                tracing::error!(
+                    "CommandContext.subagent_tracker is None — wiring error in App"
+                );
+                Err(CommandResult::system_message(
+                    "Subagent tracker unavailable.".into(),
+                ))
+            }
+        }
+    }
 }
 
 /// Result of executing a command.
@@ -117,12 +146,18 @@ impl CommandRegistry {
     /// Create a registry pre-populated with all builtin commands.
     pub fn with_builtins() -> Self {
         let mut registry = Self::new();
-        let names: Vec<&str> = vec!["help", "clear", "quit", "new", "load"];
+        let names: Vec<&str> = vec![
+            "help", "clear", "quit", "new", "load", "sessions", "spawn", "kill", "msg",
+        ];
         registry.register(Arc::new(builtin::HelpCommand::new(&names)));
         registry.register(Arc::new(builtin::ClearCommand));
         registry.register(Arc::new(builtin::QuitCommand));
         registry.register(Arc::new(builtin::NewCommand));
         registry.register(Arc::new(builtin::LoadCommand));
+        registry.register(Arc::new(subagent::SessionsCommand));
+        registry.register(Arc::new(subagent::SpawnCommand));
+        registry.register(Arc::new(subagent::KillCommand));
+        registry.register(Arc::new(subagent::MsgCommand));
         registry
     }
 
@@ -391,6 +426,7 @@ mod tests {
         let ctx = CommandContext {
             session: &session,
             bridge: &sender,
+            subagent_tracker: None,
         };
         let result = cmd.execute(&ctx, "test").await;
         assert!(result.is_ok());
@@ -408,6 +444,7 @@ mod tests {
         let ctx = CommandContext {
             session: &session,
             bridge: &sender,
+            subagent_tracker: None,
         };
 
         let result = builtin::HelpCommand::new(&[]).execute(&ctx, "").await;
@@ -426,6 +463,7 @@ mod tests {
         let ctx = CommandContext {
             session: &session,
             bridge: &sender,
+            subagent_tracker: None,
         };
 
         let result = builtin::ClearCommand.execute(&ctx, "").await;
@@ -444,6 +482,7 @@ mod tests {
         let ctx = CommandContext {
             session: &session,
             bridge: &sender,
+            subagent_tracker: None,
         };
 
         let result = builtin::QuitCommand.execute(&ctx, "").await;
@@ -459,6 +498,7 @@ mod tests {
         let ctx = CommandContext {
             session: &session,
             bridge: &sender,
+            subagent_tracker: None,
         };
 
         let result = builtin::NewCommand.execute(&ctx, "").await;
@@ -648,6 +688,7 @@ mod tests {
         let ctx = CommandContext {
             session: &session,
             bridge: &sender,
+            subagent_tracker: None,
         };
 
         let cmd = AgentCommand {
@@ -675,6 +716,7 @@ mod tests {
         let ctx = CommandContext {
             session: &session,
             bridge: &sender,
+            subagent_tracker: None,
         };
 
         let cmd = AgentCommand {
@@ -716,6 +758,7 @@ mod tests {
         let ctx = CommandContext {
             session: &session,
             bridge: &sender,
+            subagent_tracker: None,
         };
 
         let cmd = AgentCommand {
@@ -752,6 +795,7 @@ mod tests {
         let ctx = CommandContext {
             session: &session,
             bridge: &sender,
+            subagent_tracker: None,
         };
 
         let cmd = AgentCommand {

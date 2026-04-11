@@ -178,7 +178,7 @@ async fn main() -> anyhow::Result<()> {
 /// Drain all notifications for `duration`, printing each one.
 /// Returns the session ID if a SessionCreated notification was received.
 async fn drain_notifications(
-    notification_rx: &mut tokio::sync::mpsc::Receiver<Notification>,
+    notification_rx: &mut tokio::sync::mpsc::Receiver<RoutedNotification>,
     permission_rx: &mut tokio::sync::mpsc::Receiver<PermissionRequest>,
     duration: Duration,
 ) -> Option<SessionId> {
@@ -189,9 +189,12 @@ async fn drain_notifications(
         tokio::select! {
             biased;
 
-            Some(notification) = notification_rx.recv() => {
-                print_notification(&notification);
-                if let Notification::SessionCreated { session_id: ref id, .. } = notification {
+            Some(routed) = notification_rx.recv() => {
+                if let Some(ref sid) = routed.session_id {
+                    println!("  [session={}]", sid.as_str());
+                }
+                print_notification(&routed.notification);
+                if let Notification::SessionCreated { session_id: ref id, .. } = routed.notification {
                     session_id = Some(id.clone());
                 }
             }
@@ -330,8 +333,10 @@ fn print_notification(n: &Notification) {
             tool_call_id,
             title,
             kind,
+            session_id,
         } => {
-            println!("  [ToolCallChunk] id={tool_call_id} title={title} kind={kind}");
+            let sid = session_id.as_ref().map_or("main", |s| s.as_str());
+            println!("  [ToolCallChunk] id={tool_call_id} title={title} kind={kind} session={sid}");
         }
         Notification::CommandOptionsReceived { command, options } => {
             println!(
@@ -391,6 +396,43 @@ fn print_notification(n: &Notification) {
         }
         Notification::ModelNotFound { requested, fallback } => {
             println!("  [ModelNotFound] {requested} -> {}", fallback.as_deref().unwrap_or("(none)"));
+        }
+        Notification::SubagentListUpdated { subagents, pending_stages } => {
+            println!(
+                "  [SubagentList] {} active, {} pending",
+                subagents.len(),
+                pending_stages.len()
+            );
+            for s in subagents {
+                let status = if s.is_working() { "working" } else { "terminated" };
+                println!("    {} ({}) — {status}", s.session_name(), s.agent_name());
+            }
+            for p in pending_stages {
+                println!("    {} (pending, depends: {:?})", p.name(), p.depends_on());
+            }
+        }
+        Notification::InboxNotification {
+            session_id,
+            message_count,
+            escalation_count,
+            senders,
+        } => {
+            println!(
+                "  [Inbox] session={} msgs={message_count} escalations={escalation_count} from={senders:?}",
+                session_id.as_str()
+            );
+        }
+        Notification::SubagentSpawned { session_id, name } => {
+            println!(
+                "  [SubagentSpawned] {name} ({})",
+                session_id.as_str()
+            );
+        }
+        Notification::SubagentTerminated { session_id } => {
+            println!("  [SubagentTerminated] ({})", session_id.as_str());
+        }
+        Notification::BridgeError { operation, message } => {
+            println!("  [BridgeError] {operation}: {message}");
         }
     }
 }

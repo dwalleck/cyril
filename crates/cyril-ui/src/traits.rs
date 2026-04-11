@@ -53,6 +53,10 @@ pub trait TuiState {
     // Timing
     fn activity_elapsed(&self) -> Option<Duration>;
     fn is_deep_idle(&self) -> bool;
+
+    // Subagents
+    fn subagent_tracker(&self) -> &cyril_core::subagent::SubagentTracker;
+    fn subagent_ui(&self) -> &crate::subagent_ui::SubagentUiState;
 }
 
 /// A chat message for display purposes.
@@ -260,6 +264,8 @@ pub mod test_support {
         pub quit_requested: bool,
         pub activity_elapsed: Option<Duration>,
         pub deep_idle: bool,
+        pub subagent_tracker: cyril_core::subagent::SubagentTracker,
+        pub subagent_ui: crate::subagent_ui::SubagentUiState,
     }
 
     impl Default for MockTuiState {
@@ -287,6 +293,8 @@ pub mod test_support {
                 quit_requested: false,
                 activity_elapsed: None,
                 deep_idle: false,
+                subagent_tracker: cyril_core::subagent::SubagentTracker::new(),
+                subagent_ui: crate::subagent_ui::SubagentUiState::new(),
             }
         }
     }
@@ -360,6 +368,12 @@ pub mod test_support {
         }
         fn is_deep_idle(&self) -> bool {
             self.deep_idle
+        }
+        fn subagent_tracker(&self) -> &cyril_core::subagent::SubagentTracker {
+            &self.subagent_tracker
+        }
+        fn subagent_ui(&self) -> &crate::subagent_ui::SubagentUiState {
+            &self.subagent_ui
         }
     }
 }

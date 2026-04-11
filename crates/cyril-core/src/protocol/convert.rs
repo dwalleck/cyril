@@ -84,6 +84,120 @@ fn convert_tool_call_locations(acp_locations: &[acp::ToolCallLocation]) -> Vec<T
         .collect()
 }
 
+/// Parse a single subagent entry from a `subagent/list_update` JSON array element.
+fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
+    let session_id = match v
+        .get("sessionId")
+        .and_then(|s| s.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        Some(id) => SessionId::new(id),
+        None => {
+            tracing::warn!("subagent entry missing or empty sessionId, skipping");
+            return None;
+        }
+    };
+    let session_name = v
+        .get("sessionName")
+        .and_then(|n| n.as_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| {
+            tracing::warn!("subagent entry missing sessionName");
+            "(unknown)"
+        });
+    let agent_name = v
+        .get("agentName")
+        .and_then(|n| n.as_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| {
+            tracing::warn!("subagent entry missing agentName");
+            "(unknown)"
+        });
+    let initial_query = v
+        .get("initialQuery")
+        .and_then(|q| q.as_str())
+        .unwrap_or_default();
+
+    let status_obj = v.get("status");
+    if status_obj.is_none() {
+        tracing::warn!("subagent entry missing status field, defaulting to Working");
+    }
+    let status_type = status_obj
+        .and_then(|s| s.get("type"))
+        .and_then(|t| t.as_str())
+        .unwrap_or("working");
+    let working_message = status_obj
+        .and_then(|s| s.get("message"))
+        .and_then(|m| m.as_str())
+        .map(String::from);
+    let status = match status_type {
+        "working" => SubagentStatus::Working {
+            message: working_message,
+        },
+        "terminated" => SubagentStatus::Terminated,
+        other => {
+            tracing::warn!(
+                status = other,
+                "unknown subagent status type, treating as Working"
+            );
+            SubagentStatus::Working {
+                message: working_message,
+            }
+        }
+    };
+
+    let group = v.get("group").and_then(|g| g.as_str()).map(String::from);
+    let role = v.get("role").and_then(|r| r.as_str()).map(String::from);
+    let depends_on = parse_string_array(v, "dependsOn");
+
+    Some(SubagentInfo::new(
+        session_id,
+        session_name,
+        agent_name,
+        initial_query,
+        status,
+        group,
+        role,
+        depends_on,
+    ))
+}
+
+/// Parse a single pending stage entry from a `subagent/list_update` JSON array element.
+fn parse_pending_stage(v: &serde_json::Value) -> Option<PendingStage> {
+    let name = match v
+        .get("name")
+        .and_then(|n| n.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        Some(n) => n,
+        None => {
+            tracing::warn!("pending stage entry missing or empty name, skipping");
+            return None;
+        }
+    };
+    let agent_name = v
+        .get("agentName")
+        .and_then(|n| n.as_str())
+        .map(String::from);
+    let group = v.get("group").and_then(|g| g.as_str()).map(String::from);
+    let role = v.get("role").and_then(|r| r.as_str()).map(String::from);
+    let depends_on = parse_string_array(v, "dependsOn");
+
+    Some(PendingStage::new(name, agent_name, group, role, depends_on))
+}
+
+/// Extract a string array from a JSON value by key. Returns empty vec on missing/malformed.
+fn parse_string_array(v: &serde_json::Value, key: &str) -> Vec<String> {
+    v.get(key)
+        .and_then(|d| d.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 pub(crate) fn to_ext_notification(
     method: &str,
     params: &serde_json::Value,
@@ -329,10 +443,16 @@ pub(crate) fn to_ext_notification(
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
                         .to_string();
+                    let ext_session_id = params
+                        .get("sessionId")
+                        .and_then(|s| s.as_str())
+                        .filter(|s| !s.is_empty())
+                        .map(SessionId::new);
                     Ok(Some(Notification::ToolCallChunk {
                         tool_call_id: ToolCallId::new(tool_call_id),
                         title,
                         kind,
+                        session_id: ext_session_id,
                     }))
                 }
                 Some(other) => {
@@ -473,10 +593,72 @@ pub(crate) fn to_ext_notification(
                 fallback,
             }))
         }
-        "kiro.dev/subagent/list_update"
-        | "kiro.dev/session/activity"
-        | "kiro.dev/session/list_update"
-        | "kiro.dev/session/inbox_notification" => {
+        "kiro.dev/subagent/list_update" => {
+            let subagents_raw = params.get("subagents").and_then(|s| s.as_array());
+            if subagents_raw.is_none() {
+                tracing::warn!("subagent/list_update missing subagents array");
+            }
+            let subagents = subagents_raw
+                .map(|arr| arr.iter().filter_map(parse_subagent_entry).collect())
+                .unwrap_or_default();
+
+            let pending_stages_raw = params.get("pendingStages").and_then(|s| s.as_array());
+            if pending_stages_raw.is_none() && subagents_raw.is_some() {
+                tracing::warn!("subagent/list_update missing pendingStages array");
+            }
+            let pending_stages = pending_stages_raw
+                .map(|arr| arr.iter().filter_map(parse_pending_stage).collect())
+                .unwrap_or_default();
+
+            Ok(Some(Notification::SubagentListUpdated {
+                subagents,
+                pending_stages,
+            }))
+        }
+        "kiro.dev/session/inbox_notification" => {
+            let session_id = match params
+                .get("sessionId")
+                .and_then(|s| s.as_str())
+                .filter(|s| !s.is_empty())
+            {
+                Some(id) => SessionId::new(id),
+                None => {
+                    tracing::warn!("inbox_notification missing or empty sessionId, dropping");
+                    return Ok(None);
+                }
+            };
+            let message_count = match params.get("messageCount").and_then(|m| m.as_u64()) {
+                Some(n) => n as u32,
+                None => {
+                    tracing::warn!("inbox_notification missing messageCount, defaulting to 0");
+                    0
+                }
+            };
+            let escalation_count = match params.get("escalationCount").and_then(|e| e.as_u64()) {
+                Some(n) => n as u32,
+                None => {
+                    tracing::warn!("inbox_notification missing escalationCount, defaulting to 0");
+                    0
+                }
+            };
+            let senders = params
+                .get("senders")
+                .and_then(|s| s.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            Ok(Some(Notification::InboxNotification {
+                session_id,
+                message_count,
+                escalation_count,
+                senders,
+            }))
+        }
+        "kiro.dev/session/activity" | "kiro.dev/session/list_update" => {
             tracing::debug!(
                 method,
                 "multi-session notification acknowledged, not forwarded"
@@ -1149,11 +1331,13 @@ mod tests {
             tool_call_id,
             title,
             kind,
+            session_id,
         })) = result
         {
             assert_eq!(tool_call_id.as_str(), "tc_123");
             assert_eq!(title, "reading main.rs");
             assert_eq!(kind, "read");
+            assert!(session_id.is_none());
         } else {
             panic!("expected ToolCallChunk");
         }
@@ -1563,19 +1747,305 @@ mod tests {
     }
 
     #[test]
-    fn subagent_notifications_acknowledged_not_forwarded() {
-        for method in [
-            "kiro.dev/subagent/list_update",
-            "kiro.dev/session/activity",
-            "kiro.dev/session/list_update",
-            "kiro.dev/session/inbox_notification",
-        ] {
+    fn multi_session_notifications_acknowledged_not_forwarded() {
+        for method in ["kiro.dev/session/activity", "kiro.dev/session/list_update"] {
             let result = to_ext_notification(method, &serde_json::json!({}));
             assert!(
                 matches!(result, Ok(None)),
                 "{method} should return Ok(None), got {result:?}"
             );
         }
+    }
+
+    #[test]
+    fn parse_subagent_list_update_with_active_subagents() {
+        let params = serde_json::json!({
+            "subagents": [{
+                "sessionId": "b49d53d1-a42a-4ef6-a173-a6224e8e6fcd",
+                "sessionName": "code-reviewer",
+                "agentName": "code-reviewer",
+                "initialQuery": "Review the code changes",
+                "status": { "type": "working", "message": "Running" },
+                "group": "crew-Review code changes",
+                "role": "code-reviewer",
+                "dependsOn": []
+            }],
+            "pendingStages": [{
+                "name": "summary-writer",
+                "agentName": "summary-writer",
+                "group": "crew-Review code changes",
+                "role": "summary-writer",
+                "dependsOn": ["code-reviewer"]
+            }]
+        });
+        let result = to_ext_notification("kiro.dev/subagent/list_update", &params);
+        assert!(result.is_ok());
+        if let Ok(Some(Notification::SubagentListUpdated {
+            subagents,
+            pending_stages,
+        })) = result
+        {
+            assert_eq!(subagents.len(), 1);
+            assert_eq!(subagents[0].session_name(), "code-reviewer");
+            assert!(subagents[0].is_working());
+            assert_eq!(subagents[0].group(), Some("crew-Review code changes"));
+            assert_eq!(pending_stages.len(), 1);
+            assert_eq!(pending_stages[0].name(), "summary-writer");
+            assert_eq!(pending_stages[0].depends_on(), &["code-reviewer"]);
+        } else {
+            panic!("expected SubagentListUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_subagent_list_update_empty() {
+        let params = serde_json::json!({
+            "subagents": [],
+            "pendingStages": []
+        });
+        let result = to_ext_notification("kiro.dev/subagent/list_update", &params);
+        assert!(result.is_ok());
+        if let Ok(Some(Notification::SubagentListUpdated {
+            subagents,
+            pending_stages,
+        })) = result
+        {
+            assert!(subagents.is_empty());
+            assert!(pending_stages.is_empty());
+        } else {
+            panic!("expected SubagentListUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_subagent_list_update_terminated_status() {
+        let params = serde_json::json!({
+            "subagents": [{
+                "sessionId": "s1",
+                "sessionName": "reviewer",
+                "agentName": "reviewer",
+                "initialQuery": "review",
+                "status": { "type": "terminated" },
+                "group": null,
+                "role": null,
+                "dependsOn": []
+            }],
+            "pendingStages": []
+        });
+        let result = to_ext_notification("kiro.dev/subagent/list_update", &params);
+        assert!(result.is_ok());
+        if let Ok(Some(Notification::SubagentListUpdated { subagents, .. })) = result {
+            assert!(!subagents[0].is_working());
+        } else {
+            panic!("expected SubagentListUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_inbox_notification() {
+        let params = serde_json::json!({
+            "sessionId": "874046d5-c7ab-47a7-86c5-b15cece1379a",
+            "sessionName": "main",
+            "messageCount": 2,
+            "escalationCount": 0,
+            "senders": ["subagent"]
+        });
+        let result = to_ext_notification("kiro.dev/session/inbox_notification", &params);
+        assert!(result.is_ok());
+        if let Ok(Some(Notification::InboxNotification {
+            session_id,
+            message_count,
+            escalation_count,
+            senders,
+        })) = result
+        {
+            assert_eq!(session_id.as_str(), "874046d5-c7ab-47a7-86c5-b15cece1379a");
+            assert_eq!(message_count, 2);
+            assert_eq!(escalation_count, 0);
+            assert_eq!(senders, vec!["subagent"]);
+        } else {
+            panic!("expected InboxNotification");
+        }
+    }
+
+    #[test]
+    fn parse_tool_call_chunk_with_session_id() {
+        let params = serde_json::json!({
+            "sessionId": "b49d53d1-subagent",
+            "update": {
+                "sessionUpdate": "tool_call_chunk",
+                "toolCallId": "tc-1",
+                "title": "read",
+                "kind": "read"
+            }
+        });
+        let result = to_ext_notification("kiro.dev/session/update", &params);
+        assert!(result.is_ok());
+        if let Ok(Some(Notification::ToolCallChunk { session_id, .. })) = result {
+            assert_eq!(
+                session_id.as_ref().map(|s| s.as_str()),
+                Some("b49d53d1-subagent")
+            );
+        } else {
+            panic!("expected ToolCallChunk with session_id");
+        }
+    }
+
+    #[test]
+    fn parse_tool_call_chunk_empty_session_id_treated_as_none() {
+        let params = serde_json::json!({
+            "sessionId": "",
+            "update": {
+                "sessionUpdate": "tool_call_chunk",
+                "toolCallId": "tc-2",
+                "title": "read",
+                "kind": "read"
+            }
+        });
+        let result = to_ext_notification("kiro.dev/session/update", &params);
+        assert!(result.is_ok());
+        if let Ok(Some(Notification::ToolCallChunk { session_id, .. })) = result {
+            assert!(session_id.is_none(), "empty sessionId should be None");
+        } else {
+            panic!("expected ToolCallChunk");
+        }
+    }
+
+    #[test]
+    fn parse_subagent_list_update_missing_session_id_skips_entry() {
+        let params = serde_json::json!({
+            "subagents": [
+                {
+                    "sessionName": "no-id",
+                    "agentName": "no-id",
+                    "initialQuery": "query",
+                    "status": { "type": "working", "message": "Running" },
+                    "dependsOn": []
+                },
+                {
+                    "sessionId": "s2",
+                    "sessionName": "has-id",
+                    "agentName": "has-id",
+                    "initialQuery": "query",
+                    "status": { "type": "working", "message": "Running" },
+                    "dependsOn": []
+                }
+            ],
+            "pendingStages": []
+        });
+        let result = to_ext_notification("kiro.dev/subagent/list_update", &params);
+        if let Ok(Some(Notification::SubagentListUpdated { subagents, .. })) = result {
+            assert_eq!(subagents.len(), 1);
+            assert_eq!(subagents[0].session_name(), "has-id");
+        } else {
+            panic!("expected SubagentListUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_subagent_list_update_multiple_subagents() {
+        let params = serde_json::json!({
+            "subagents": [
+                {
+                    "sessionId": "s1",
+                    "sessionName": "reviewer",
+                    "agentName": "code-reviewer",
+                    "initialQuery": "review code",
+                    "status": { "type": "working", "message": "Reading files" },
+                    "group": "crew-Review",
+                    "role": "code-reviewer",
+                    "dependsOn": []
+                },
+                {
+                    "sessionId": "s2",
+                    "sessionName": "analyzer",
+                    "agentName": "pr-test-analyzer",
+                    "initialQuery": "analyze tests",
+                    "status": { "type": "terminated" },
+                    "group": "crew-Review",
+                    "role": "pr-test-analyzer",
+                    "dependsOn": []
+                }
+            ],
+            "pendingStages": []
+        });
+        let result = to_ext_notification("kiro.dev/subagent/list_update", &params);
+        if let Ok(Some(Notification::SubagentListUpdated { subagents, .. })) = result {
+            assert_eq!(subagents.len(), 2);
+            assert!(subagents[0].is_working());
+            assert!(!subagents[1].is_working());
+            assert_eq!(subagents[0].session_name(), "reviewer");
+            assert_eq!(subagents[1].session_name(), "analyzer");
+        } else {
+            panic!("expected SubagentListUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_subagent_working_status_without_message() {
+        let params = serde_json::json!({
+            "subagents": [{
+                "sessionId": "s1",
+                "sessionName": "reviewer",
+                "agentName": "reviewer",
+                "initialQuery": "review",
+                "status": { "type": "working" },
+                "group": null,
+                "role": null,
+                "dependsOn": []
+            }],
+            "pendingStages": []
+        });
+        let result = to_ext_notification("kiro.dev/subagent/list_update", &params);
+        if let Ok(Some(Notification::SubagentListUpdated { subagents, .. })) = result {
+            assert!(subagents[0].is_working());
+            if let SubagentStatus::Working { message } = subagents[0].status() {
+                assert!(message.is_none());
+            } else {
+                panic!("expected Working status");
+            }
+        } else {
+            panic!("expected SubagentListUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_subagent_unknown_status_type_defaults_to_working() {
+        let params = serde_json::json!({
+            "subagents": [{
+                "sessionId": "s1",
+                "sessionName": "reviewer",
+                "agentName": "reviewer",
+                "initialQuery": "review",
+                "status": { "type": "suspended", "message": "Paused" },
+                "group": null,
+                "role": null,
+                "dependsOn": []
+            }],
+            "pendingStages": []
+        });
+        let result = to_ext_notification("kiro.dev/subagent/list_update", &params);
+        if let Ok(Some(Notification::SubagentListUpdated { subagents, .. })) = result {
+            assert!(subagents[0].is_working());
+            if let SubagentStatus::Working { message } = subagents[0].status() {
+                assert_eq!(message.as_deref(), Some("Paused"));
+            } else {
+                panic!("expected Working status");
+            }
+        } else {
+            panic!("expected SubagentListUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_inbox_notification_missing_session_id_returns_none() {
+        let params = serde_json::json!({
+            "messageCount": 1,
+            "escalationCount": 0,
+            "senders": ["subagent"]
+        });
+        let result = to_ext_notification("kiro.dev/session/inbox_notification", &params);
+        assert!(matches!(result, Ok(None)));
     }
 
     #[test]

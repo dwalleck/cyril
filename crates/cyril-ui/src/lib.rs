@@ -5,6 +5,7 @@ pub mod highlight;
 pub mod render;
 pub mod state;
 pub mod stream_buffer;
+pub mod subagent_ui;
 pub mod traits;
 pub mod widgets;
 

@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use tokio::sync::mpsc;
 
-use crate::types::event::{BridgeCommand, Notification, PermissionRequest};
+use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -13,13 +13,13 @@ const PERMISSION_CAPACITY: usize = 16;
 /// Handle held by the App (Send side) to communicate with the ACP bridge.
 pub struct BridgeHandle {
     command_tx: mpsc::Sender<BridgeCommand>,
-    pub(crate) notification_rx: mpsc::Receiver<Notification>,
+    pub(crate) notification_rx: mpsc::Receiver<RoutedNotification>,
     pub(crate) permission_rx: mpsc::Receiver<PermissionRequest>,
 }
 
 impl BridgeHandle {
     /// Receive the next notification. Returns None if bridge is dead.
-    pub async fn recv_notification(&mut self) -> Option<Notification> {
+    pub async fn recv_notification(&mut self) -> Option<RoutedNotification> {
         self.notification_rx.recv().await
     }
 
@@ -41,7 +41,7 @@ impl BridgeHandle {
         self,
     ) -> (
         BridgeSender,
-        mpsc::Receiver<Notification>,
+        mpsc::Receiver<RoutedNotification>,
         mpsc::Receiver<PermissionRequest>,
     ) {
         (
@@ -79,7 +79,7 @@ impl BridgeSender {
 /// The bridge side of the channels (held by the bridge thread).
 pub(crate) struct BridgeChannels {
     pub command_rx: mpsc::Receiver<BridgeCommand>,
-    pub notification_tx: mpsc::Sender<Notification>,
+    pub notification_tx: mpsc::Sender<RoutedNotification>,
     pub permission_tx: mpsc::Sender<PermissionRequest>,
 }
 
@@ -141,6 +141,15 @@ pub fn spawn_bridge(agent: &str, cwd: PathBuf) -> crate::Result<BridgeHandle> {
         })?;
 
     Ok(handle)
+}
+
+/// Serialize a JSON value to an `Arc<RawValue>` for use with `ext_method`.
+fn to_raw_arc(
+    params: &serde_json::Value,
+) -> std::result::Result<Arc<serde_json::value::RawValue>, serde_json::Error> {
+    let json_str = serde_json::to_string(params)?;
+    let raw = serde_json::value::RawValue::from_string(json_str)?;
+    Ok(raw.into())
 }
 
 async fn run_bridge(
@@ -224,7 +233,7 @@ async fn run_bridge(
                             current_mode,
                             current_model,
                         };
-                        if channels.notification_tx.send(notification).await.is_err() {
+                        if channels.notification_tx.send(notification.into()).await.is_err() {
                             break;
                         }
                     }
@@ -234,7 +243,7 @@ async fn run_bridge(
                             .notification_tx
                             .send(Notification::BridgeDisconnected {
                                 reason: format!("Failed to create session: {e}"),
-                            })
+                            }.into())
                             .await;
                     }
                 }
@@ -253,7 +262,7 @@ async fn run_bridge(
                     Ok(_) => {
                         if channels
                             .notification_tx
-                            .send(Notification::TurnCompleted)
+                            .send(Notification::TurnCompleted.into())
                             .await
                             .is_err()
                         {
@@ -264,7 +273,7 @@ async fn run_bridge(
                         tracing::error!(error = %e, "prompt failed");
                         let _ = channels
                             .notification_tx
-                            .send(Notification::TurnCompleted)
+                            .send(Notification::TurnCompleted.into())
                             .await;
                     }
                 }
@@ -295,6 +304,16 @@ async fn run_bridge(
                         }
                         Err(e) => {
                             tracing::error!(error = %e, mode_id, "set_session_mode failed");
+                            let _ = channels
+                                .notification_tx
+                                .send(
+                                    Notification::BridgeError {
+                                        operation: format!("set_mode '{mode_id}'"),
+                                        message: e.to_string(),
+                                    }
+                                    .into(),
+                                )
+                                .await;
                         }
                     }
                 } else {
@@ -321,7 +340,7 @@ async fn run_bridge(
                             .notification_tx
                             .send(Notification::BridgeDisconnected {
                                 reason: format!("Failed to load session: {e}"),
-                            })
+                            }.into())
                             .await;
                     }
                 }
@@ -385,7 +404,7 @@ async fn run_bridge(
                         let options = crate::commands::parse_options_response(&value);
                         if channels
                             .notification_tx
-                            .send(Notification::CommandOptionsReceived { command, options })
+                            .send(Notification::CommandOptionsReceived { command, options }.into())
                             .await
                             .is_err()
                         {
@@ -399,7 +418,7 @@ async fn run_bridge(
                             .send(Notification::CommandOptionsReceived {
                                 command,
                                 options: vec![],
-                            })
+                            }.into())
                             .await;
                     }
                 }
@@ -448,7 +467,7 @@ async fn run_bridge(
                             .send(Notification::CommandExecuted {
                                 command,
                                 response: value,
-                            })
+                            }.into())
                             .await
                             .is_err()
                         {
@@ -465,9 +484,221 @@ async fn run_bridge(
                                     "success": false,
                                     "error": format!("{e}"),
                                 }),
-                            })
+                            }.into())
                             .await;
                     }
+                }
+            }
+            BridgeCommand::SpawnSession { task, name } => {
+                let Some(ref session_id) = active_session_id else {
+                    tracing::warn!(name, "spawn requested but no active session");
+                    let _ = channels
+                        .notification_tx
+                        .send(
+                            Notification::BridgeError {
+                                operation: format!("spawn_session '{name}'"),
+                                message: "no active session — run /new or /load first"
+                                    .into(),
+                            }
+                            .into(),
+                        )
+                        .await;
+                    continue;
+                };
+                let params = serde_json::json!({
+                    "sessionId": session_id.to_string(),
+                    "task": task,
+                    "name": name,
+                });
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
+                    Err(e) => {
+                        tracing::error!(error = %e, "failed to serialize spawn params");
+                        let _ = channels
+                            .notification_tx
+                            .send(
+                                Notification::BridgeError {
+                                    operation: format!("spawn_session '{name}'"),
+                                    message: format!("serialize params: {e}"),
+                                }
+                                .into(),
+                            )
+                            .await;
+                        continue;
+                    }
+                };
+                match conn
+                    .ext_method(acp::ExtRequest::new("session/spawn", raw_arc))
+                    .await
+                {
+                    Ok(response) => {
+                        let val: serde_json::Value =
+                            match serde_json::from_str(response.0.get()) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    tracing::warn!(
+                                        error = %e,
+                                        name,
+                                        "failed to parse session/spawn response"
+                                    );
+                                    serde_json::Value::Null
+                                }
+                            };
+                        match val.get("sessionId").and_then(|s| s.as_str()) {
+                            Some(spawned_id) => {
+                                tracing::info!(name, spawned_id, "spawned session");
+                                let _ = channels
+                                    .notification_tx
+                                    .send(
+                                        Notification::SubagentSpawned {
+                                            session_id: crate::types::SessionId::new(
+                                                spawned_id,
+                                            ),
+                                            name: name.clone(),
+                                        }
+                                        .into(),
+                                    )
+                                    .await;
+                            }
+                            None => {
+                                tracing::warn!(
+                                    name,
+                                    "session/spawn succeeded but response missing sessionId"
+                                );
+                                let _ = channels
+                                    .notification_tx
+                                    .send(
+                                        Notification::BridgeError {
+                                            operation: format!("spawn_session '{name}'"),
+                                            message: "response missing sessionId".into(),
+                                        }
+                                        .into(),
+                                    )
+                                    .await;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, name, "session/spawn failed");
+                        let _ = channels
+                            .notification_tx
+                            .send(
+                                Notification::BridgeError {
+                                    operation: format!("spawn_session '{name}'"),
+                                    message: e.to_string(),
+                                }
+                                .into(),
+                            )
+                            .await;
+                    }
+                }
+            }
+            BridgeCommand::TerminateSession { session_id: target } => {
+                let params = serde_json::json!({
+                    "sessionId": target.as_str(),
+                });
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
+                    Err(e) => {
+                        tracing::error!(error = %e, "failed to serialize terminate params");
+                        let _ = channels
+                            .notification_tx
+                            .send(
+                                Notification::BridgeError {
+                                    operation: format!("terminate_session '{}'", target.as_str()),
+                                    message: format!("serialize params: {e}"),
+                                }
+                                .into(),
+                            )
+                            .await;
+                        continue;
+                    }
+                };
+                match conn
+                    .ext_method(acp::ExtRequest::new("session/terminate", raw_arc))
+                    .await
+                {
+                    Ok(_) => {
+                        tracing::info!(
+                            session_id = target.as_str(),
+                            "terminated session"
+                        );
+                        let _ = channels
+                            .notification_tx
+                            .send(
+                                Notification::SubagentTerminated {
+                                    session_id: target.clone(),
+                                }
+                                .into(),
+                            )
+                            .await;
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            error = %e,
+                            session_id = target.as_str(),
+                            "session/terminate failed"
+                        );
+                        let _ = channels
+                            .notification_tx
+                            .send(
+                                Notification::BridgeError {
+                                    operation: format!(
+                                        "terminate_session '{}'",
+                                        target.as_str()
+                                    ),
+                                    message: e.to_string(),
+                                }
+                                .into(),
+                            )
+                            .await;
+                    }
+                }
+            }
+            BridgeCommand::SendMessage {
+                session_id: target,
+                content,
+            } => {
+                let params = serde_json::json!({
+                    "sessionId": target.as_str(),
+                    "content": content,
+                });
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
+                    Err(e) => {
+                        tracing::error!(error = %e, "failed to serialize message params");
+                        let _ = channels
+                            .notification_tx
+                            .send(
+                                Notification::BridgeError {
+                                    operation: format!("send_message to '{}'", target.as_str()),
+                                    message: format!("serialize params: {e}"),
+                                }
+                                .into(),
+                            )
+                            .await;
+                        continue;
+                    }
+                };
+                if let Err(e) = conn
+                    .ext_method(acp::ExtRequest::new("message/send", raw_arc))
+                    .await
+                {
+                    tracing::error!(
+                        error = %e,
+                        session_id = target.as_str(),
+                        "message/send failed"
+                    );
+                    let _ = channels
+                        .notification_tx
+                        .send(
+                            Notification::BridgeError {
+                                operation: format!("send_message to '{}'", target.as_str()),
+                                message: e.to_string(),
+                            }
+                            .into(),
+                        )
+                        .await;
                 }
             }
             BridgeCommand::Shutdown => {
@@ -525,9 +756,10 @@ mod tests {
     async fn notification_roundtrip() -> anyhow::Result<()> {
         let (mut handle, bridge_side) = create_channel_pair();
         let notification = Notification::TurnCompleted;
-        bridge_side.notification_tx.send(notification).await?;
-        let received = handle.recv_notification().await;
-        assert!(matches!(received, Some(Notification::TurnCompleted)));
+        bridge_side.notification_tx.send(notification.into()).await?;
+        let received = handle.recv_notification().await.expect("notification");
+        assert!(received.session_id.is_none());
+        assert!(matches!(received.notification, Notification::TurnCompleted));
         Ok(())
     }
 

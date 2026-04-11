@@ -4,8 +4,15 @@ use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, Scroll
 use crate::traits::{ChatMessage, ChatMessageKind, TrackedToolCall, TuiState};
 use crate::widgets::markdown;
 
-/// Render the chat area.
+/// Render the chat area. If a subagent is focused, renders the focused
+/// subagent's stream instead of the main chat.
 pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
+    // Drill-in: if a subagent is focused, render its stream instead.
+    if let Some(focused) = state.subagent_ui().focused_stream() {
+        render_subagent_drill_in(frame, area, state, focused);
+        return;
+    }
+
     let mut lines: Vec<Line> = Vec::new();
 
     // Render committed messages (includes tool calls in chronological position)
@@ -58,6 +65,77 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     frame.render_widget(chat, area);
 
     // Scrollbar
+    if total_lines > visible_height {
+        let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+        frame.render_stateful_widget(scrollbar, area, &mut scrollbar_state);
+    }
+}
+
+/// Render a focused subagent's message stream in place of the main chat.
+/// Shows a header with the subagent name and "[Esc] Back" hint.
+fn render_subagent_drill_in(
+    frame: &mut Frame,
+    area: Rect,
+    state: &dyn TuiState,
+    stream: &crate::subagent_ui::SubagentStream,
+) {
+    let mut lines: Vec<Line> = Vec::new();
+
+    // Header bar with subagent name
+    let focused_id = state.subagent_ui().focused_session_id();
+    let name = focused_id
+        .and_then(|id| state.subagent_tracker().get(id))
+        .map(|info| info.session_name().to_string())
+        .or_else(|| focused_id.map(|id| id.as_str().to_string()))
+        .unwrap_or_else(|| "subagent".to_string());
+
+    lines.push(Line::from(vec![
+        Span::styled(
+            format!("─── {name} "),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("[Esc] Back", Style::default().fg(Color::DarkGray)),
+    ]));
+    lines.push(Line::default());
+
+    // Render committed messages
+    for msg in stream.messages() {
+        render_message(&mut lines, msg);
+        lines.push(Line::default());
+    }
+
+    // Render streaming text
+    let streaming = stream.streaming_text();
+    if !streaming.is_empty() {
+        lines.push(Line::styled(
+            format!("{name}:"),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ));
+        let md_lines = markdown::render(streaming);
+        lines.extend(md_lines);
+    }
+
+    let visible_height = area.height as usize;
+
+    let chat = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .block(Block::default());
+
+    let total_lines = chat.line_count(area.width);
+    let scroll_offset = if total_lines > visible_height {
+        total_lines.saturating_sub(visible_height)
+    } else {
+        0
+    };
+
+    let chat = chat.scroll((scroll_offset as u16, 0));
+    frame.render_widget(chat, area);
+
     if total_lines > visible_height {
         let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
@@ -619,5 +697,85 @@ mod tests {
                 render(frame, frame.area(), &state);
             })
             .expect("draw");
+    }
+
+    #[test]
+    fn chat_renders_drill_in_when_subagent_focused() {
+        use cyril_core::types::{AgentMessage, Notification, SessionId};
+
+        let mut state = MockTuiState::default();
+        // Add a main session message that should NOT appear during drill-in
+        state
+            .messages
+            .push(ChatMessage::agent_text("main session text".into()));
+
+        // Register a subagent in the tracker
+        let sub_info = cyril_core::types::SubagentInfo::new(
+            SessionId::new("sub-1"),
+            "reviewer",
+            "code-reviewer",
+            "query",
+            cyril_core::types::SubagentStatus::Working {
+                message: Some("Running".into()),
+            },
+            None,
+            None,
+            vec![],
+        );
+        state
+            .subagent_tracker
+            .apply_notification(&Notification::SubagentListUpdated {
+                subagents: vec![sub_info],
+                pending_stages: vec![],
+            });
+
+        // Push a message into the subagent stream
+        let sid = SessionId::new("sub-1");
+        state.subagent_ui.apply_notification(
+            &sid,
+            &Notification::AgentMessage(AgentMessage {
+                text: "subagent only text".into(),
+                is_streaming: false,
+            }),
+        );
+        state.subagent_ui.focus(sid);
+
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| {
+                render(frame, frame.area(), &state);
+            })
+            .expect("draw");
+
+        let buffer = terminal.backend().buffer();
+        let text: String = (0..24)
+            .flat_map(|y| {
+                (0..80).map(move |x| {
+                    buffer[(x as u16, y as u16)]
+                        .symbol()
+                        .chars()
+                        .next()
+                        .unwrap_or(' ')
+                })
+            })
+            .collect();
+
+        assert!(
+            text.contains("reviewer"),
+            "drill-in header should show subagent name"
+        );
+        assert!(
+            text.contains("[Esc] Back"),
+            "drill-in should show back hint"
+        );
+        assert!(
+            text.contains("subagent only text"),
+            "drill-in should show subagent's messages"
+        );
+        assert!(
+            !text.contains("main session text"),
+            "drill-in should NOT show main session messages"
+        );
     }
 }

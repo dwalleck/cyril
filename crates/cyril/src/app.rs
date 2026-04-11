@@ -15,7 +15,7 @@ use cyril_ui::traits::{Activity, TuiState};
 
 pub struct App {
     bridge_sender: BridgeSender,
-    notification_rx: mpsc::Receiver<Notification>,
+    notification_rx: mpsc::Receiver<RoutedNotification>,
     permission_rx: mpsc::Receiver<PermissionRequest>,
     ui_state: UiState,
     session: SessionController,
@@ -126,8 +126,13 @@ impl App {
                 }
             }
 
-            // Adaptive frame rate
-            let new_duration = Self::redraw_duration(self.ui_state.activity());
+            // Adaptive frame rate — account for subagent activity as well as main session.
+            let effective_activity = if self.ui_state.any_subagent_active() {
+                Activity::Streaming
+            } else {
+                self.ui_state.activity()
+            };
+            let new_duration = Self::redraw_duration(effective_activity);
             redraw_interval = tokio::time::interval(new_duration);
             redraw_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -166,7 +171,49 @@ impl App {
         }
     }
 
-    fn handle_notification(&mut self, notification: Notification) {
+    fn handle_notification(&mut self, routed: RoutedNotification) {
+        let RoutedNotification {
+            session_id,
+            notification,
+        } = routed;
+
+        // Tracker-level notifications (list_update, inbox) are global:
+        // apply them regardless of session_id. Returns false for unrelated variants.
+        let tracker_changed = self
+            .ui_state
+            .apply_subagent_tracker_notification(&notification);
+
+        // SubagentListUpdated also informs SubagentUiState so it can mark terminated streams.
+        if let Notification::SubagentListUpdated { ref subagents, .. } = notification {
+            self.ui_state.apply_subagent_list_update(subagents);
+            self.redraw_needed = true;
+        }
+
+        // Route session-scoped notifications: if the source session_id is
+        // a known subagent, route to SubagentUiState and return early.
+        // If session_id is None or matches the main session, fall through.
+        if let Some(ref sid) = session_id {
+            let is_main = self.session.id().map(|m| m == sid).unwrap_or(false);
+            if !is_main && self.ui_state.subagent_tracker().is_subagent(sid) {
+                self.ui_state.apply_subagent_notification(sid, &notification);
+                self.redraw_needed = true;
+                return;
+            }
+            if !is_main && self.session.id().is_some() {
+                // Session ID doesn't match main and isn't a known subagent.
+                // This can happen if a subagent notification arrives before
+                // the corresponding SubagentListUpdated. Route it optimistically —
+                // the stream will be created on first contact.
+                tracing::debug!(
+                    session_id = sid.as_str(),
+                    "notification for unknown session, routing to subagent stream"
+                );
+                self.ui_state.apply_subagent_notification(sid, &notification);
+                self.redraw_needed = true;
+                return;
+            }
+        }
+
         let session_changed = self.session.apply_notification(&notification);
         let ui_changed = self.ui_state.apply_notification(&notification);
 
@@ -247,7 +294,8 @@ impl App {
             self.redraw_needed = true;
         }
 
-        self.redraw_needed = self.redraw_needed || session_changed || ui_changed;
+        self.redraw_needed =
+            self.redraw_needed || session_changed || ui_changed || tracker_changed;
     }
 
     async fn handle_terminal_event(&mut self, event: Event) -> cyril_core::Result<()> {
@@ -312,7 +360,10 @@ impl App {
                 self.submit_input().await?;
             }
             (KeyModifiers::NONE, KeyCode::Esc) => {
-                if matches!(self.session.status(), SessionStatus::Busy) {
+                // If drilled into a subagent stream, Esc exits the drill-in first.
+                if self.ui_state.subagent_ui().focused_session_id().is_some() {
+                    self.ui_state.unfocus_subagent();
+                } else if matches!(self.session.status(), SessionStatus::Busy) {
                     self.bridge_sender
                         .send(BridgeCommand::CancelRequest)
                         .await?;
@@ -375,11 +426,18 @@ impl App {
             let ctx = CommandContext {
                 session: &self.session,
                 bridge: &self.bridge_sender,
+                subagent_tracker: Some(self.ui_state.subagent_tracker()),
             };
+            let command_name = cmd.name().to_string();
             let args = args.to_string();
             match cmd.execute(&ctx, &args).await {
                 Ok(result) => self.handle_command_result(result),
                 Err(e) => {
+                    tracing::error!(
+                        error = %e,
+                        command = %command_name,
+                        "slash command execution failed"
+                    );
                     self.ui_state
                         .add_system_message(format!("Command error: {e}"));
                 }

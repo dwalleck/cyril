@@ -62,6 +62,12 @@ pub enum Notification {
         tool_call_id: ToolCallId,
         title: String,
         kind: String,
+        /// Session ID from the outer `kiro.dev/session/update` envelope.
+        /// Used by the bridge → client pathway to convert into a
+        /// `RoutedNotification` at the channel boundary. By the time this
+        /// notification reaches state machines, routing has already happened
+        /// and this field is effectively just a tag.
+        session_id: Option<SessionId>,
     },
     McpServerInitFailure {
         server_name: String,
@@ -87,6 +93,32 @@ pub enum Notification {
         fallback: Option<String>,
     },
 
+    // Subagent lifecycle (kiro.dev/subagent/*)
+    SubagentListUpdated {
+        subagents: Vec<crate::types::SubagentInfo>,
+        pending_stages: Vec<crate::types::PendingStage>,
+    },
+    InboxNotification {
+        session_id: SessionId,
+        message_count: u32,
+        escalation_count: u32,
+        senders: Vec<String>,
+    },
+    /// A subagent was spawned successfully via `session/spawn`.
+    SubagentSpawned {
+        session_id: SessionId,
+        name: String,
+    },
+    /// A subagent was terminated successfully via `session/terminate`.
+    SubagentTerminated {
+        session_id: SessionId,
+    },
+    /// A bridge command failed. Surfaces to the UI as a system message.
+    BridgeError {
+        operation: String,
+        message: String,
+    },
+
     // Lifecycle
     SessionCreated {
         session_id: SessionId,
@@ -97,6 +129,51 @@ pub enum Notification {
     BridgeDisconnected {
         reason: String,
     },
+}
+
+/// A notification paired with its source session ID for routing.
+///
+/// `session_id == None` means the notification is **global** — bridge
+/// lifecycle events (`BridgeDisconnected`, `SubagentSpawned`, etc.),
+/// `SubagentListUpdated`, or anything else that doesn't belong to a specific
+/// ACP session. The App routes `None` through its main pipeline because
+/// there's nothing to compare against.
+///
+/// `session_id == Some(id)` means the notification originated from a
+/// specific session (every standard ACP `SessionNotification` is wrapped
+/// this way with the envelope's `session_id`). The App compares `id` against
+/// its known main session: if it matches, dispatches to the main state
+/// machines; otherwise routes to `SubagentUiState`.
+///
+/// This is the primary channel type from the bridge to the App.
+#[derive(Debug, Clone)]
+pub struct RoutedNotification {
+    pub session_id: Option<SessionId>,
+    pub notification: Notification,
+}
+
+impl RoutedNotification {
+    /// Create a routed notification with no session scope (global or main).
+    pub fn global(notification: Notification) -> Self {
+        Self {
+            session_id: None,
+            notification,
+        }
+    }
+
+    /// Create a routed notification scoped to a specific session.
+    pub fn scoped(session_id: SessionId, notification: Notification) -> Self {
+        Self {
+            session_id: Some(session_id),
+            notification,
+        }
+    }
+}
+
+impl From<Notification> for RoutedNotification {
+    fn from(notification: Notification) -> Self {
+        Self::global(notification)
+    }
 }
 
 /// A request from the agent that needs user approval.
@@ -156,6 +233,18 @@ pub enum BridgeCommand {
         command: String,
         session_id: SessionId,
         args: serde_json::Value,
+    },
+    // Subagent session control
+    SpawnSession {
+        task: String,
+        name: String,
+    },
+    TerminateSession {
+        session_id: SessionId,
+    },
+    SendMessage {
+        session_id: SessionId,
+        content: String,
     },
     Shutdown,
 }
@@ -361,6 +450,93 @@ mod tests {
         };
         let n2 = n.clone();
         assert!(matches!(n2, Notification::CommandExecuted { .. }));
+    }
+
+    #[test]
+    fn subagent_notification_is_send_sync_clone() {
+        assert_send::<crate::types::SubagentInfo>();
+        assert_sync::<crate::types::SubagentInfo>();
+        assert_clone::<crate::types::SubagentInfo>();
+        assert_send::<crate::types::PendingStage>();
+        assert_sync::<crate::types::PendingStage>();
+        assert_clone::<crate::types::PendingStage>();
+    }
+
+    #[test]
+    fn routed_notification_global_has_no_session_id() {
+        let routed = RoutedNotification::global(Notification::TurnCompleted);
+        assert!(routed.session_id.is_none());
+        assert!(matches!(routed.notification, Notification::TurnCompleted));
+    }
+
+    #[test]
+    fn routed_notification_scoped_preserves_session_id() {
+        let routed = RoutedNotification::scoped(
+            SessionId::new("sub-1"),
+            Notification::AgentMessage(AgentMessage {
+                text: "hello".into(),
+                is_streaming: true,
+            }),
+        );
+        assert_eq!(
+            routed.session_id.as_ref().map(|s| s.as_str()),
+            Some("sub-1")
+        );
+    }
+
+    #[test]
+    fn notification_into_routed_is_global() {
+        let routed: RoutedNotification = Notification::TurnCompleted.into();
+        assert!(routed.session_id.is_none());
+    }
+
+    #[test]
+    fn subagent_list_updated_variant() {
+        let n = Notification::SubagentListUpdated {
+            subagents: vec![],
+            pending_stages: vec![],
+        };
+        assert!(matches!(n, Notification::SubagentListUpdated { .. }));
+    }
+
+    #[test]
+    fn inbox_notification_variant() {
+        let n = Notification::InboxNotification {
+            session_id: SessionId::new("main"),
+            message_count: 2,
+            escalation_count: 0,
+            senders: vec!["subagent".into()],
+        };
+        if let Notification::InboxNotification {
+            message_count,
+            escalation_count,
+            ..
+        } = n
+        {
+            assert_eq!(message_count, 2);
+            assert_eq!(escalation_count, 0);
+        }
+    }
+
+    #[test]
+    fn routed_notification_clone_preserves_session_id() {
+        let original = RoutedNotification::scoped(
+            SessionId::new("sub-1"),
+            Notification::AgentMessage(AgentMessage {
+                text: "hello from subagent".into(),
+                is_streaming: true,
+            }),
+        );
+        let cloned = original.clone();
+        assert_eq!(
+            cloned.session_id.as_ref().map(|s| s.as_str()),
+            Some("sub-1")
+        );
+        if let Notification::AgentMessage(msg) = cloned.notification {
+            assert_eq!(msg.text, "hello from subagent");
+        } else {
+            panic!("inner should be AgentMessage");
+        }
     }
 
     #[test]
