@@ -1,5 +1,6 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::traits::HooksPanelState;
 
@@ -63,9 +64,15 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
         .add_modifier(Modifier::BOLD);
     let mut lines: Vec<Line> = Vec::new();
     lines.push(Line::from(vec![
-        Span::styled(format!("  {:<TRIGGER_COL$}  ", "Trigger"), header_style),
-        Span::styled(format!("{:<command_col$}  ", "Command"), header_style),
-        Span::styled(format!("{:<MATCHER_COL$}", "Matcher"), header_style),
+        Span::styled(
+            format!("  {}  ", pad_right("Trigger", TRIGGER_COL)),
+            header_style,
+        ),
+        Span::styled(
+            format!("{}  ", pad_right("Command", command_col)),
+            header_style,
+        ),
+        Span::styled(pad_right("Matcher", MATCHER_COL), header_style),
     ]));
 
     // `state.hooks` is stored pre-sorted by UiState::show_hooks_panel, so the
@@ -73,11 +80,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
     let visible_rows = (height as usize).saturating_sub(4);
     let end = (state.scroll_offset + visible_rows).min(state.hooks.len());
     for hook in state.hooks.iter().take(end).skip(state.scroll_offset) {
-        let trigger_text = truncate(&hook.trigger, TRIGGER_COL);
-        let command_text = truncate(&hook.command, command_col);
-        let matcher_text = match hook.matcher.as_deref() {
-            Some(m) => truncate(m, MATCHER_COL),
-            None => "—".into(),
+        let trigger_cell = truncate_and_pad(&hook.trigger, TRIGGER_COL);
+        let command_cell = truncate_and_pad(&hook.command, command_col);
+        let matcher_cell = match hook.matcher.as_deref() {
+            Some(m) => truncate_and_pad(m, MATCHER_COL),
+            None => pad_right("—", MATCHER_COL),
         };
         let matcher_style = if hook.matcher.is_some() {
             Style::default().fg(Color::Cyan)
@@ -86,14 +93,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
         };
         lines.push(Line::from(vec![
             Span::styled(
-                format!("  {:<TRIGGER_COL$}  ", trigger_text),
+                format!("  {trigger_cell}  "),
                 Style::default().fg(Color::Rgb(176, 141, 255)),
             ),
             Span::styled(
-                format!("{:<command_col$}  ", command_text),
+                format!("{command_cell}  "),
                 Style::default().fg(Color::Gray),
             ),
-            Span::styled(format!("{:<MATCHER_COL$}", matcher_text), matcher_style),
+            Span::styled(matcher_cell, matcher_style),
         ]));
     }
 
@@ -101,24 +108,66 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
     frame.render_widget(popup, popup_area);
 }
 
-/// Truncate `s` to at most `max_chars` characters, appending `…` when
-/// truncation happens. Uses character boundaries to avoid splitting UTF-8.
+/// Truncate `s` so its **terminal display width** is at most `max_width`
+/// cells, appending `…` when truncation happens.
 ///
-/// Runs in `O(max_chars)` — consumes at most `max_chars + 1` characters from
-/// the input iterator regardless of `s.len()`. This matters when a hook's
-/// shell command is unexpectedly huge: the render loop must not walk the
-/// whole string just to decide it needs trimming.
-fn truncate(s: &str, max_chars: usize) -> String {
-    if max_chars == 0 {
+/// Uses `unicode-width` to count display cells rather than Unicode scalar
+/// values or bytes — so wide characters (CJK, most emoji) count as 2 cells
+/// and narrow characters count as 1. This matters for column alignment:
+/// a 3-char CJK trigger like "日本語" occupies 6 cells, not 3.
+///
+/// Runs in `O(chars_in_truncation_window)` — walks the input only until
+/// the display-width budget is exhausted, so huge command strings don't
+/// stall the render loop.
+fn truncate(s: &str, max_width: usize) -> String {
+    if max_width == 0 {
         return String::new();
     }
-    let mut chars = s.chars();
-    let mut out: String = chars.by_ref().take(max_chars).collect();
-    if chars.next().is_some() {
-        out.pop();
-        out.push('…');
+    if s.width() <= max_width {
+        return s.to_string();
+    }
+    // Reserve 1 cell for the ellipsis (`…` is 1 cell wide).
+    let budget = max_width.saturating_sub(1);
+    let mut out = String::new();
+    let mut used: usize = 0;
+    for ch in s.chars() {
+        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
+        if used + ch_width > budget {
+            break;
+        }
+        out.push(ch);
+        used += ch_width;
+    }
+    out.push('…');
+    out
+}
+
+/// Pad `s` with trailing spaces so its display width equals `width` cells.
+/// Returns `s` unchanged if it already meets or exceeds `width`.
+///
+/// Rust's `format!("{:<N}", ...)` spec pads by character count, not cell
+/// count, so it miscounts CJK content. This helper uses `UnicodeWidthStr`
+/// so columns stay aligned regardless of character script.
+fn pad_right(s: &str, width: usize) -> String {
+    let current = s.width();
+    if current >= width {
+        return s.to_string();
+    }
+    let padding = width - current;
+    let mut out = String::with_capacity(s.len() + padding);
+    out.push_str(s);
+    for _ in 0..padding {
+        out.push(' ');
     }
     out
+}
+
+/// Truncate to at most `width` cells and then pad to exactly `width` cells.
+/// Used by the table renderer to keep every column aligned regardless of
+/// content length or character width.
+fn truncate_and_pad(s: &str, width: usize) -> String {
+    let trunc = truncate(s, width);
+    pad_right(&trunc, width)
 }
 
 #[cfg(test)]
@@ -238,19 +287,24 @@ mod tests {
     }
 
     #[test]
-    fn unicode_trigger_is_not_split_on_truncation() {
+    fn unicode_trigger_renders_with_truncation_and_command_marker() {
+        // CJK trigger overflows the 18-cell Trigger column (10 chars × 2 cells
+        // = 20 cells). The widget should truncate the trigger and still render
+        // a distinguishable marker in the Command column, so users can see
+        // there's a value there even if the trigger is mangled.
         let state = HooksPanelState {
             hooks: vec![HookInfo {
                 trigger: "日本語トリガーテスト".into(),
-                command: "echo ok".into(),
+                command: "MARKER".into(),
                 matcher: None,
             }],
             scroll_offset: 0,
         };
-        // Small terminal — trigger will be truncated mid-string
-        let terminal = draw(&state, 80, 20);
-        // The test is that this doesn't panic and produces some output
-        let _ = rendered_text(&terminal);
+        let terminal = draw(&state, 100, 20);
+        let text = rendered_text(&terminal);
+        assert!(text.contains("MARKER"), "command marker should render");
+        // Truncation happened — ellipsis indicates the trigger was cut off.
+        assert!(text.contains("…"), "long CJK trigger should be truncated");
     }
 
     #[test]
@@ -260,20 +314,77 @@ mod tests {
     }
 
     #[test]
-    fn truncate_helper_shortens_with_ellipsis() {
+    fn truncate_helper_shortens_ascii_with_ellipsis() {
         assert_eq!(truncate("abcdefghij", 5), "abcd…");
     }
 
     #[test]
-    fn truncate_helper_handles_unicode_boundary() {
-        // 4 chars, each multi-byte. Truncating to 3 should not split bytes.
+    fn truncate_helper_uses_display_width_for_cjk() {
+        // Width budget 3 with 1 cell reserved for ellipsis leaves room for
+        // exactly one 2-cell CJK char. The old char-count implementation
+        // would have returned "日本…" (3 chars, 5 cells wide); the new
+        // display-width implementation returns "日…" (2 chars, 3 cells wide).
         let result = truncate("日本語テスト", 3);
-        assert_eq!(result.chars().count(), 3);
-        assert!(result.ends_with('…'));
+        assert_eq!(result, "日…");
+        assert_eq!(result.width(), 3, "result should fit the cell budget");
+    }
+
+    #[test]
+    fn truncate_helper_handles_exact_display_width() {
+        // 3 ASCII chars == 3 cells, fits exactly, no truncation.
+        assert_eq!(truncate("abc", 3), "abc");
+        // 1 CJK char == 2 cells, fits in a 2-cell budget, no truncation.
+        assert_eq!(truncate("日", 2), "日");
     }
 
     #[test]
     fn truncate_helper_max_zero_returns_empty() {
         assert_eq!(truncate("abc", 0), "");
+    }
+
+    #[test]
+    fn pad_right_adds_spaces_to_ascii() {
+        assert_eq!(pad_right("abc", 6), "abc   ");
+    }
+
+    #[test]
+    fn pad_right_pads_cjk_by_cell_width() {
+        // "日本" is 2 chars but 4 cells. Padding to 6 cells adds 2 spaces.
+        let padded = pad_right("日本", 6);
+        assert_eq!(padded.width(), 6);
+        assert_eq!(padded, "日本  ");
+    }
+
+    #[test]
+    fn pad_right_noop_when_already_at_width() {
+        assert_eq!(pad_right("abc", 3), "abc");
+        assert_eq!(pad_right("日", 2), "日");
+    }
+
+    #[test]
+    fn pad_right_noop_when_wider_than_width() {
+        // Overflow is unchanged — truncation is truncate()'s job.
+        assert_eq!(pad_right("abcdef", 3), "abcdef");
+    }
+
+    #[test]
+    fn truncate_and_pad_fits_exactly_in_cells() {
+        // ASCII
+        assert_eq!(truncate_and_pad("abc", 10).width(), 10);
+        // CJK that overflows: truncate, then pad
+        let result = truncate_and_pad("日本語テスト", 8);
+        assert_eq!(
+            result.width(),
+            8,
+            "truncate_and_pad output must always equal the requested width"
+        );
+        assert!(result.contains('…'), "should have been truncated");
+    }
+
+    #[test]
+    fn truncate_and_pad_short_input_is_padded() {
+        let result = truncate_and_pad("hi", 10);
+        assert_eq!(result, "hi        ");
+        assert_eq!(result.width(), 10);
     }
 }
