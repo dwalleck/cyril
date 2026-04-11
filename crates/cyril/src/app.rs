@@ -1,151 +1,160 @@
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::time::{Duration, Instant};
 
-use agent_client_protocol::{self as acp, Agent};
-use anyhow::Result;
-use crossterm::event::{
-    DisableMouseCapture, EnableMouseCapture, EventStream, KeyCode, KeyEvent, KeyEventKind,
-    KeyModifiers,
-};
-use futures_util::StreamExt;
+use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers};
+use futures_util::{FutureExt, StreamExt};
+use ratatui::DefaultTerminal;
 use tokio::sync::mpsc;
-use tokio::sync::oneshot;
 
-use cyril_core::event::{AppEvent, ExtensionEvent, InteractionRequest, ProtocolEvent};
-use cyril_core::session::SessionContext;
+use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, CommandResultKind};
+use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
+use cyril_core::session::SessionController;
+use cyril_core::types::*;
+use cyril_ui::state::{AutocompleteAction, UiState};
+use cyril_ui::traits::{Activity, TuiState};
 
-use crate::commands::{self, CommandChannels, CommandExecutor, CommandResult};
-use crate::event::Event;
-use crate::file_completer;
-use crate::tui::Tui;
-use crate::ui::{approval, chat, input, picker, toolbar};
-
-use ratatui::layout::{Constraint, Layout};
-
-/// Main application state.
 pub struct App {
-    pub chat: chat::ChatState,
-    pub input: input::InputState,
-    pub toolbar: toolbar::ToolbarState,
-    pub approval: Option<(approval::ApprovalState, oneshot::Sender<acp::RequestPermissionResponse>)>,
-    /// Queued permission requests waiting to be shown after the current approval is handled.
-    pending_approvals: Vec<(approval::ApprovalState, oneshot::Sender<acp::RequestPermissionResponse>)>,
-    pub picker: Option<picker::PickerState>,
-    pub should_quit: bool,
-    pub session: SessionContext,
-    conn: Rc<acp::ClientSideConnection>,
-    event_rx: mpsc::UnboundedReceiver<AppEvent>,
-    prompt_done_rx: mpsc::UnboundedReceiver<()>,
-    /// Channel for command responses to display in chat.
-    cmd_response_rx: mpsc::UnboundedReceiver<String>,
-    /// Channel for silent credit usage updates.
-    credit_rx: mpsc::UnboundedReceiver<(f64, f64)>,
-    credit_tx: mpsc::UnboundedSender<(f64, f64)>,
-    channels: CommandChannels,
+    bridge_sender: BridgeSender,
+    notification_rx: mpsc::Receiver<RoutedNotification>,
+    permission_rx: mpsc::Receiver<PermissionRequest>,
+    ui_state: UiState,
+    session: SessionController,
+    commands: CommandRegistry,
+    redraw_needed: bool,
+    last_activity: Instant,
 }
 
 impl App {
-    pub fn new(
-        conn: Rc<acp::ClientSideConnection>,
-        cwd: PathBuf,
-        event_rx: mpsc::UnboundedReceiver<AppEvent>,
-    ) -> Self {
-        let (prompt_done_tx, prompt_done_rx) = mpsc::unbounded_channel();
-        let (cmd_response_tx, cmd_response_rx) = mpsc::unbounded_channel();
-        let (credit_tx, credit_rx) = mpsc::unbounded_channel();
-
-        let mut input = input::InputState::default();
-        let file_completer = file_completer::FileCompleter::new(cwd.clone());
-        input.file_completer = Some(file_completer);
-
+    pub fn new(bridge: BridgeHandle, max_messages: usize) -> Self {
+        let (bridge_sender, notification_rx, permission_rx) = bridge.split();
+        let commands = CommandRegistry::with_builtins();
+        let names: Vec<String> = commands
+            .all_commands()
+            .iter()
+            .map(|c| c.name().to_string())
+            .collect();
+        let mut ui_state = UiState::new(max_messages);
+        ui_state.set_command_names(names);
         Self {
-            chat: chat::ChatState::default(),
-            input,
-            toolbar: toolbar::ToolbarState { mouse_captured: true, ..Default::default() },
-            approval: None,
-            pending_approvals: Vec::new(),
-            picker: None,
-            should_quit: false,
-            session: SessionContext::new(cwd),
-            conn,
-            event_rx,
-            prompt_done_rx,
-            cmd_response_rx,
-            credit_rx,
-            credit_tx,
-            channels: CommandChannels { prompt_done_tx, cmd_response_tx },
+            bridge_sender,
+            notification_rx,
+            permission_rx,
+            ui_state,
+            session: SessionController::new(),
+            commands,
+            redraw_needed: true,
+            last_activity: Instant::now(),
         }
     }
 
-    /// Load project files for @-completion asynchronously.
-    pub async fn load_project_files(&mut self) {
-        if let Some(ref mut completer) = self.input.file_completer {
-            if let Err(e) = completer.load_files().await {
-                tracing::warn!("Failed to load project files: {e}");
-                self.chat.add_system_message(format!(
-                    "@-file completion unavailable: {e}"
-                ));
-            }
+    pub async fn create_initial_session(&mut self, cwd: PathBuf) {
+        self.ui_state
+            .add_system_message("Connecting to agent...".into());
+
+        // Load file completer for @-file autocomplete
+        let completer = cyril_ui::file_completer::FileCompleter::load(&cwd).await;
+        self.ui_state.set_file_completer(completer);
+
+        if let Err(e) = self
+            .bridge_sender
+            .send(BridgeCommand::NewSession { cwd })
+            .await
+        {
+            self.ui_state
+                .add_system_message(format!("Failed to create session: {e}"));
         }
     }
 
-    /// Run the main event loop.
-    pub async fn run(&mut self, terminal: &mut Tui) -> Result<()> {
-        let mut crossterm_events = EventStream::new();
-        let tick_rate = tokio::time::Duration::from_millis(33); // ~30fps
-        let mut tick_interval = tokio::time::interval(tick_rate);
+    pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> cyril_core::Result<()> {
+        let mut event_stream = EventStream::new();
+        let mut redraw_interval =
+            tokio::time::interval(Self::redraw_duration(Activity::Idle));
+        redraw_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+        // Initial draw
+        terminal
+            .draw(|frame| cyril_ui::render::draw(frame, &self.ui_state))
+            .map_err(|e| {
+                cyril_core::Error::with_source(
+                    cyril_core::ErrorKind::Transport {
+                        detail: "initial draw failed".into(),
+                    },
+                    e,
+                )
+            })?;
 
         loop {
-            terminal.draw(|frame| self.render(frame))?;
+            tokio::select! {
+                biased;
 
-            let event = tokio::select! {
-                ct_event = crossterm_events.next() => {
-                    match ct_event {
-                        Some(Ok(e)) => Some(Event::from(e)),
-                        Some(Err(_)) => continue,
-                        None => break,
+                // Priority 1: Terminal input
+                Some(event) = event_stream.next() => {
+                    match event {
+                        Ok(event) => self.handle_terminal_event(event).await?,
+                        Err(e) => {
+                            tracing::error!(error = %e, "terminal event error");
+                        }
+                    }
+                    // Drain remaining buffered input
+                    while let Some(Ok(event)) = event_stream.next().now_or_never().flatten() {
+                        self.handle_terminal_event(event).await?;
                     }
                 }
-                acp_event = self.event_rx.recv() => {
-                    match acp_event {
-                        Some(e) => Some(Event::Acp(e)),
-                        None => break,
-                    }
-                }
-                _ = self.prompt_done_rx.recv() => {
-                    // Drain any pending command responses before finishing the turn.
-                    // Both channels are fed from the same spawned task, so the response
-                    // may already be queued when the done signal arrives.
-                    while let Ok(text) = self.cmd_response_rx.try_recv() {
-                        self.chat.append_streaming(&text);
-                        self.chat.scroll_to_bottom();
-                    }
-                    self.on_turn_end();
-                    None
-                }
-                msg = self.cmd_response_rx.recv() => {
-                    if let Some(text) = msg {
-                        self.chat.append_streaming(&text);
-                        self.chat.scroll_to_bottom();
-                    }
-                    None
-                }
-                credit = self.credit_rx.recv() => {
-                    if let Some((used, limit)) = credit {
-                        self.session.set_credit_usage(used, limit);
-                    }
-                    None
-                }
-                _ = tick_interval.tick() => {
-                    None
-                }
-            };
 
-            if let Some(event) = event {
-                self.handle_event(event).await?;
+                // Priority 2: Notifications from bridge
+                Some(notification) = self.notification_rx.recv() => {
+                    self.handle_notification(notification);
+                }
+
+                // Priority 3: Permission requests from bridge
+                Some(request) = self.permission_rx.recv() => {
+                    self.ui_state.show_approval(request);
+                    self.redraw_needed = true;
+                }
+
+                // Priority 4: Redraw tick
+                _ = redraw_interval.tick() => {
+                    // Flush stream buffer on tick
+                    if self.ui_state.flush_stream_buffer() {
+                        self.redraw_needed = true;
+                    }
+
+                    // Deep idle detection
+                    if self.last_activity.elapsed() > Duration::from_secs(30) {
+                        self.ui_state.set_deep_idle(true);
+                    }
+                }
             }
 
-            if self.should_quit {
+            // Adaptive frame rate — account for subagent activity as well as main session.
+            let effective_activity = if self.ui_state.any_subagent_active() {
+                Activity::Streaming
+            } else {
+                self.ui_state.activity()
+            };
+            let new_duration = Self::redraw_duration(effective_activity);
+            redraw_interval = tokio::time::interval(new_duration);
+            redraw_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+            // Conditional redraw
+            if self.redraw_needed {
+                terminal
+                    .draw(|frame| cyril_ui::render::draw(frame, &self.ui_state))
+                    .map_err(|e| {
+                        cyril_core::Error::with_source(
+                            cyril_core::ErrorKind::Transport {
+                                detail: "draw failed".into(),
+                            },
+                            e,
+                        )
+                    })?;
+                self.redraw_needed = false;
+            }
+
+            if self.ui_state.should_quit() {
+                if let Err(e) = self.bridge_sender.send(BridgeCommand::Shutdown).await {
+                    tracing::warn!(error = %e, "failed to send shutdown to bridge");
+                }
                 break;
             }
         }
@@ -153,426 +162,588 @@ impl App {
         Ok(())
     }
 
-    fn render(&mut self, frame: &mut ratatui::Frame) {
-        let area = frame.area();
-
-        let chunks = Layout::vertical([
-            Constraint::Length(1),  // toolbar
-            Constraint::Min(5),    // chat (includes inline tool calls)
-            Constraint::Length(5), // input
-            Constraint::Length(1), // context bar
-        ])
-        .split(area);
-
-        toolbar::render(frame, chunks[0], &self.toolbar, &self.session);
-        chat::render(frame, chunks[1], &self.chat);
-        input::render(frame, chunks[2], &mut self.input);
-
-        toolbar::render_status_bar(frame, chunks[3], &self.session);
-
-        // Overlay popups
-        if let Some((ref approval_state, _)) = self.approval {
-            approval::render(frame, area, approval_state, self.pending_approvals.len());
-        } else if let Some(ref picker_state) = self.picker {
-            picker::render(frame, area, picker_state);
+    fn redraw_duration(activity: Activity) -> Duration {
+        match activity {
+            Activity::Streaming | Activity::ToolRunning => Duration::from_millis(50),
+            Activity::Waiting | Activity::Sending => Duration::from_millis(100),
+            Activity::Ready => Duration::from_millis(250),
+            Activity::Idle => Duration::from_secs(1),
         }
     }
 
-    async fn handle_event(&mut self, event: Event) -> Result<()> {
-        match event {
-            Event::Key(key) => self.handle_key(key).await?,
-            Event::Acp(acp_event) => self.handle_acp_event(acp_event),
-            Event::Mouse(mouse) => {
-                use crossterm::event::MouseEventKind;
-                match mouse.kind {
-                    MouseEventKind::ScrollUp => self.chat.scroll_up(),
-                    MouseEventKind::ScrollDown => self.chat.scroll_down(),
-                    _ => {}
+    fn handle_notification(&mut self, routed: RoutedNotification) {
+        let RoutedNotification {
+            session_id,
+            notification,
+        } = routed;
+
+        // Tracker-level notifications (list_update, inbox) are global:
+        // apply them regardless of session_id. Returns false for unrelated variants.
+        let tracker_changed = self
+            .ui_state
+            .apply_subagent_tracker_notification(&notification);
+
+        // SubagentListUpdated also informs SubagentUiState so it can mark terminated streams.
+        if let Notification::SubagentListUpdated { ref subagents, .. } = notification {
+            self.ui_state.apply_subagent_list_update(subagents);
+            self.redraw_needed = true;
+        }
+
+        // Route session-scoped notifications: if the source session_id is
+        // a known subagent, route to SubagentUiState and return early.
+        // If session_id is None or matches the main session, fall through.
+        if let Some(ref sid) = session_id {
+            let is_main = self.session.id().map(|m| m == sid).unwrap_or(false);
+            if !is_main && self.ui_state.subagent_tracker().is_subagent(sid) {
+                self.ui_state.apply_subagent_notification(sid, &notification);
+                self.redraw_needed = true;
+                return;
+            }
+            if !is_main && self.session.id().is_some() {
+                // Session ID doesn't match main and isn't a known subagent.
+                // This can happen if a subagent notification arrives before
+                // the corresponding SubagentListUpdated. Route it optimistically —
+                // the stream will be created on first contact.
+                tracing::debug!(
+                    session_id = sid.as_str(),
+                    "notification for unknown session, routing to subagent stream"
+                );
+                self.ui_state.apply_subagent_notification(sid, &notification);
+                self.redraw_needed = true;
+                return;
+            }
+        }
+
+        let session_changed = self.session.apply_notification(&notification);
+        let ui_changed = self.ui_state.apply_notification(&notification);
+
+        // Register agent commands when they arrive
+        if let Notification::CommandsUpdated {
+            commands: ref cmds,
+            prompts: ref prompt_list,
+        } = notification
+        {
+            self.commands.register_agent_commands(cmds);
+            // Update autocomplete with all command names and prompt names
+            let mut names: Vec<String> = self
+                .commands
+                .all_commands()
+                .iter()
+                .map(|cmd| cmd.name().to_string())
+                .collect();
+            for prompt in prompt_list {
+                names.push(prompt.name().to_string());
+            }
+            self.ui_state.set_command_names(names);
+        }
+
+        // Handle clear command result
+        if let Notification::AgentMessage(ref msg) = notification
+            && !msg.is_streaming
+            && msg.text == "__clear__"
+        {
+            self.ui_state.clear_messages();
+        }
+
+        // Handle command options received — open picker or show message
+        if let Notification::CommandOptionsReceived { ref command, ref options } = notification {
+            if options.is_empty() {
+                self.ui_state.add_system_message(
+                    format!("No {command} options available."),
+                );
+            } else {
+                self.ui_state.show_picker(command.clone(), options.clone());
+            }
+            self.redraw_needed = true;
+        }
+
+        // Handle MCP OAuth request — display URL for the user to copy
+        if let Notification::McpOAuthRequest {
+            ref server_name,
+            ref url,
+        } = notification
+        {
+            self.ui_state.add_system_message(
+                format!("MCP server '{server_name}' requires authentication. Open in browser: {url}"),
+            );
+            self.redraw_needed = true;
+        }
+
+        // Handle command execution response
+        if let Notification::CommandExecuted { ref command, ref response } = notification {
+            let text = format_command_response(command, response);
+            self.ui_state
+                .add_command_output(command.clone(), text);
+
+            // WORKAROUND(Kiro v1.28.0): Kiro doesn't send ConfigOptionUpdate for
+            // model changes (QRK-004), so we extract the model from the /model
+            // command response. When Kiro sends proper ConfigOptionUpdate
+            // notifications, this block becomes dead code — remove it and rely
+            // on the ConfigOptionsUpdated handler in UiState.apply_notification().
+            if command == "model" {
+                if let Some(model_id) = response
+                    .get("data")
+                    .and_then(|d| d.get("model"))
+                    .and_then(|m| m.get("id"))
+                    .and_then(|id| id.as_str())
+                {
+                    self.ui_state.set_current_model(Some(model_id.to_string()));
                 }
             }
-            Event::Tick | Event::Resize(_, _) => {}
+
+            self.redraw_needed = true;
         }
+
+        self.redraw_needed =
+            self.redraw_needed || session_changed || ui_changed || tracker_changed;
+    }
+
+    async fn handle_terminal_event(&mut self, event: Event) -> cyril_core::Result<()> {
+        match event {
+            Event::Key(key) => self.handle_key(key).await?,
+            Event::Resize(w, h) => {
+                self.ui_state.set_terminal_size(w, h);
+                self.redraw_needed = true;
+            }
+            _ => {}
+        }
+        self.last_activity = Instant::now();
+        self.ui_state.set_deep_idle(false);
         Ok(())
     }
 
-    async fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
-        if key.kind != KeyEventKind::Press {
-            return Ok(());
-        }
-
-        // Global shortcuts — always available regardless of popup state
-        match key.code {
-            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.should_quit = true;
+    async fn handle_key(&mut self, key: KeyEvent) -> cyril_core::Result<()> {
+        // Layer 1: Global shortcuts
+        match (key.modifiers, key.code) {
+            (KeyModifiers::CONTROL, KeyCode::Char('c'))
+            | (KeyModifiers::CONTROL, KeyCode::Char('q')) => {
+                self.ui_state.request_quit();
                 return Ok(());
             }
-            KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.should_quit = true;
-                return Ok(());
-            }
-            KeyCode::Char('m') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.toggle_mouse_capture();
+            (KeyModifiers::CONTROL, KeyCode::Char('m')) => {
+                self.ui_state.toggle_mouse_capture();
+                self.redraw_needed = true;
                 return Ok(());
             }
             _ => {}
         }
 
-        // Handle approval mode first
-        if let Some((ref mut approval_state, _)) = self.approval {
-            match key.code {
-                KeyCode::Up => approval_state.select_prev(),
-                KeyCode::Down => approval_state.select_next(),
-                KeyCode::Enter => {
-                    if let Some((approval_state, responder)) = self.approval.take() {
-                        let response = if let Some(option_id) = approval_state.selected_option_id() {
-                            acp::RequestPermissionResponse::new(
-                                acp::RequestPermissionOutcome::Selected(
-                                    acp::SelectedPermissionOutcome::new(option_id.to_string()),
-                                ),
-                            )
-                        } else {
-                            tracing::warn!("Approval confirmed but no option was selected — sending cancellation");
-                            acp::RequestPermissionResponse::new(
-                                acp::RequestPermissionOutcome::Cancelled,
-                            )
-                        };
-                        if responder.send(response).is_err() {
-                            tracing::warn!("Permission response could not be delivered — agent may have cancelled");
-                        }
-                        self.show_next_approval();
-                    }
-                }
-                KeyCode::Esc => {
-                    if let Some((_, responder)) = self.approval.take() {
-                        let response = acp::RequestPermissionResponse::new(
-                            acp::RequestPermissionOutcome::Cancelled,
-                        );
-                        if responder.send(response).is_err() {
-                            tracing::warn!("Permission response could not be delivered — agent may have cancelled");
-                        }
-                        self.show_next_approval();
-                    }
-                }
-                _ => {}
-            }
+        // Layer 2: Modal overlays
+        if self.ui_state.has_approval() {
+            self.handle_approval_key(key);
+            self.redraw_needed = true;
+            return Ok(());
+        }
+        if self.ui_state.has_picker() {
+            self.handle_picker_key(key).await?;
+            self.redraw_needed = true;
             return Ok(());
         }
 
-        // Handle picker mode
-        if let Some(ref mut picker_state) = self.picker {
-            match key.code {
-                KeyCode::Up => picker_state.select_prev(),
-                KeyCode::Down => picker_state.select_next(),
-                KeyCode::Enter => {
-                    if let Some(picker_state) = self.picker.take() {
-                        CommandExecutor::handle_picker_confirm(
-                            &mut self.session,
-                            &self.conn,
-                            &mut self.chat,
-                            &self.channels,
-                            picker_state,
-                        );
-                    }
-                }
-                KeyCode::Esc => {
-                    self.picker = None;
-                }
-                _ => {}
+        // Layer 3: Autocomplete (if active — consumes relevant keys)
+        match self.ui_state.handle_autocomplete_key(key) {
+            AutocompleteAction::Consumed | AutocompleteAction::Accepted => {
+                self.redraw_needed = true;
+                return Ok(());
             }
-            return Ok(());
+            AutocompleteAction::AcceptedAndSubmit => {
+                self.submit_input().await?;
+                self.redraw_needed = true;
+                return Ok(());
+            }
+            AutocompleteAction::NotActive => {} // Fall through to Layer 4
         }
 
-        // Check if autocomplete is showing
-        let has_suggestions = self.input.has_suggestions();
-
-        match key.code {
-            KeyCode::Tab if has_suggestions => {
-                self.input.apply_suggestion();
+        // Layer 4: Normal input
+        match (key.modifiers, key.code) {
+            (KeyModifiers::NONE, KeyCode::Enter) => {
+                self.submit_input().await?;
             }
-            KeyCode::Up if has_suggestions => {
-                self.input.autocomplete_up();
-            }
-            KeyCode::Down if has_suggestions => {
-                self.input.autocomplete_down();
-            }
-            KeyCode::Enter if !key.modifiers.contains(KeyModifiers::SHIFT) && has_suggestions => {
-                let is_slash = matches!(self.input.active_popup(), input::ActivePopup::SlashCommand);
-                self.input.apply_suggestion();
-                if is_slash {
-                    self.handle_enter().await?;
-                }
-            }
-            KeyCode::Enter if !key.modifiers.contains(KeyModifiers::SHIFT) => {
-                self.handle_enter().await?;
-            }
-            KeyCode::Esc => {
-                if self.toolbar.is_busy() {
-                    if let Some(ref session_id) = self.session.id {
-                        if let Err(e) = self.conn.cancel(acp::CancelNotification::new(session_id.clone())).await {
-                            tracing::warn!("Failed to send cancel notification: {e}");
-                        }
-                    }
+            (KeyModifiers::NONE, KeyCode::Esc) => {
+                // If drilled into a subagent stream, Esc exits the drill-in first.
+                if self.ui_state.subagent_ui().focused_session_id().is_some() {
+                    self.ui_state.unfocus_subagent();
+                } else if matches!(self.session.status(), SessionStatus::Busy) {
+                    self.bridge_sender
+                        .send(BridgeCommand::CancelRequest)
+                        .await?;
                 }
             }
             _ => {
-                self.input.textarea.input(key);
-                self.input.autocomplete_selected = 0;
+                self.ui_state.handle_input_key(key);
             }
         }
 
+        self.redraw_needed = true;
         Ok(())
     }
 
-    /// Handle Enter key -- either execute a slash command or send a prompt.
-    async fn handle_enter(&mut self) -> Result<()> {
-        if self.input.is_empty() {
-            return Ok(());
-        }
-
-        let text = self.input.current_text();
-
-        if let Some(cmd) = commands::parse_command(&text, &self.input.agent_commands) {
-            self.input.take_input();
-            let result = CommandExecutor::execute(
-                cmd,
-                &mut self.session,
-                &self.conn,
-                &mut self.chat,
-                &self.input.agent_commands,
-                &mut self.toolbar,
-                &mut self.picker,
-                &self.channels,
-            )
-            .await?;
-
-            if matches!(result, CommandResult::Quit) {
-                self.should_quit = true;
-            }
-        } else {
-            CommandExecutor::send_prompt(
-                &self.session,
-                &self.conn,
-                &mut self.chat,
-                &mut self.input,
-                &mut self.toolbar,
-                &self.channels,
-            )
-            .await?;
-        }
-
-        Ok(())
-    }
-
-    fn handle_acp_event(&mut self, event: AppEvent) {
-        match event {
-            AppEvent::Protocol(e) => self.handle_protocol_event(e),
-            AppEvent::Interaction(r) => self.handle_interaction(r),
-            AppEvent::Extension(e) => self.handle_extension_event(e),
+    fn handle_approval_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Up => self.ui_state.approval_select_prev(),
+            KeyCode::Down => self.ui_state.approval_select_next(),
+            KeyCode::Enter => self.ui_state.approval_confirm(),
+            KeyCode::Esc => self.ui_state.approval_cancel(),
+            _ => {}
         }
     }
 
-    fn handle_protocol_event(&mut self, event: ProtocolEvent) {
-        match event {
-            ProtocolEvent::AgentMessage { chunk, .. } => {
-                if let acp::ContentBlock::Text(text) = &chunk.content {
-                    self.chat.append_streaming(&text.text);
-                    self.chat.scroll_to_bottom();
-                    // Text is streaming — the content itself is the activity indicator
-                    self.toolbar.on_agent_message();
-                }
-            }
-            ProtocolEvent::AgentThought { chunk, .. } => {
-                if let acp::ContentBlock::Text(text) = &chunk.content {
-                    self.chat.append_thought(&text.text);
-                }
-            }
-            ProtocolEvent::ToolCallStarted { tool_call, .. } => {
-                self.chat.add_tool_call(tool_call);
-            }
-            ProtocolEvent::ToolCallUpdated { update, .. } => {
-                self.chat.update_tool_call(update);
-            }
-            ProtocolEvent::CommandsUpdated { commands, .. } => {
-                self.input.agent_commands = commands
-                    .available_commands
-                    .iter()
-                    .map(commands::AgentCommand::from_available)
-                    .collect();
-                tracing::info!(
-                    "Received {} agent commands",
-                    self.input.agent_commands.len()
-                );
-            }
-            ProtocolEvent::ModeChanged { mode, .. } => {
-                self.session.set_current_mode_id(mode.current_mode_id.to_string());
-            }
-            ProtocolEvent::PlanUpdated { plan, .. } => {
-                self.chat.update_plan(plan);
-            }
-            ProtocolEvent::ConfigOptionsUpdated { config_options, .. } => {
-                self.session.set_config_options(config_options);
-            }
-        }
-    }
-
-    fn handle_interaction(&mut self, request: InteractionRequest) {
-        match request {
-            InteractionRequest::Permission { request, responder } => {
-                let state = approval::ApprovalState::from_request(&request);
-                if self.approval.is_some() {
-                    // Queue it — don't overwrite the current approval
-                    self.pending_approvals.push((state, responder));
-                } else {
-                    self.approval = Some((state, responder));
-                }
-            }
-        }
-    }
-
-    fn handle_extension_event(&mut self, event: ExtensionEvent) {
-        match event {
-            ExtensionEvent::KiroCommandsAvailable { commands: kiro_cmds } => {
-                const LOCAL_COMMANDS: &[&str] = &["/clear", "/help", "/quit", "/load", "/new", "/model"];
-                self.input.agent_commands = kiro_cmds
-                    .into_iter()
-                    .filter(|cmd| {
-                        // Always exclude commands we handle locally in Cyril
-                        if LOCAL_COMMANDS.contains(&cmd.name.as_str()) {
-                            return false;
-                        }
-                        // Allow selection commands even if marked local (e.g. /chat)
-                        // since they work through the ACP picker flow
-                        let is_selection = cmd.meta.as_ref()
-                            .is_some_and(|m| m.input_type.as_deref() == Some("selection"));
-                        let is_local = cmd.meta.as_ref().is_some_and(|m| m.local);
-                        !is_local || is_selection
-                    })
-                    .map(|cmd| {
-                        let is_selection = cmd.meta.as_ref()
-                            .is_some_and(|m| m.input_type.as_deref() == Some("selection"));
-                        let name = cmd.name.strip_prefix('/').unwrap_or(&cmd.name).to_string();
-                        commands::AgentCommand {
-                            name,
-                            description: cmd.description,
-                            input_hint: cmd.input_hint,
-                            is_selection,
-                        }
-                    })
-                    .collect();
-                tracing::info!(
-                    "Loaded {} commands from kiro.dev/commands/available",
-                    self.input.agent_commands.len()
-                );
-            }
-            ExtensionEvent::KiroMetadata { context_usage_pct, .. } => {
-                self.session.set_context_usage_pct(context_usage_pct);
-
-                // Fetch initial credits on first metadata (session startup)
-                if self.session.credit_usage().is_none() {
-                    self.query_credit_usage();
-                }
-
-                // Metadata arrives after every turn completes. If we're still
-                // showing busy (prompt() hasn't returned yet), treat this as
-                // a turn-end signal to stop the spinner.
-                if self.toolbar.is_busy() {
-                    tracing::info!("Metadata received while busy — ending turn");
-                    self.on_turn_end();
-                }
-            }
-            ExtensionEvent::AgentSwitched { agent_name, welcome_message, .. } => {
-                self.session.set_current_mode_id(agent_name.clone());
-                // Don't show a chat message — the commands/execute response already
-                // displays "Agent changed to ..." via spawn_command_execute.
-                if let Some(welcome) = welcome_message {
-                    self.chat.add_system_message(welcome);
-                }
-            }
-            ExtensionEvent::ToolCallChunk { tool_call_id, title, kind } => {
-                self.chat.update_tool_call_title(&tool_call_id, &title, &kind);
-                let detail = match kind.as_str() {
-                    "read" => format!("reading {title}"),
-                    "execute" => format!("executing {title}"),
-                    "search" => format!("searching {title}"),
-                    _ => format!("{kind} {title}"),
-                };
-                self.toolbar.on_tool_call_chunk(detail);
-            }
-            ExtensionEvent::CompactionStatus { message } => {
-                self.chat.add_system_message(format!("[Compaction] {message}"));
-            }
-            ExtensionEvent::ClearStatus { message } => {
-                self.chat.add_system_message(format!("[Clear] {message}"));
-            }
-            ExtensionEvent::Unknown { method, .. } => {
-                tracing::info!("Unhandled extension event: {method}");
-            }
-        }
-    }
-
-    /// Show the next queued approval popup, if any.
-    fn show_next_approval(&mut self) {
-        if !self.pending_approvals.is_empty() {
-            let (state, responder) = self.pending_approvals.remove(0);
-            self.approval = Some((state, responder));
-        }
-    }
-
-    fn toggle_mouse_capture(&mut self) {
-        self.toolbar.mouse_captured = !self.toolbar.mouse_captured;
-        let mut stdout = std::io::stdout();
-        if self.toolbar.mouse_captured {
-            let _ = crossterm::execute!(stdout, EnableMouseCapture);
-        } else {
-            let _ = crossterm::execute!(stdout, DisableMouseCapture);
-        }
-    }
-
-    fn on_turn_end(&mut self) {
-        tracing::info!("Turn ended, finishing streaming");
-        self.chat.finish_streaming();
-        self.toolbar.on_turn_end();
-        self.query_credit_usage();
-    }
-
-    /// Silently query `/usage` in the background and update the credit gauge.
-    fn query_credit_usage(&self) {
-        let session_id = match &self.session.id {
-            Some(id) => id.to_string(),
-            None => return,
-        };
-        let conn = self.conn.clone();
-        let credit_tx = self.credit_tx.clone();
-        tokio::task::spawn_local(async move {
-            let params = serde_json::json!({
-                "command": { "command": "usage", "args": {} },
-                "sessionId": session_id
-            });
-            let raw_params = match serde_json::value::RawValue::from_string(params.to_string()) {
-                Ok(r) => std::sync::Arc::from(r),
-                Err(_) => return,
-            };
-            if let Ok(resp) = conn
-                .ext_method(acp::ExtRequest::new(
-                    "kiro.dev/commands/execute",
-                    raw_params,
-                ))
-                .await
-            {
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(resp.0.get()) {
-                    if let Some(breakdowns) = val
-                        .get("data")
-                        .and_then(|d| d.get("usageBreakdowns"))
-                        .and_then(|u| u.as_array())
-                    {
-                        if let Some(bd) = breakdowns.first() {
-                            let used = bd.get("used").and_then(|u| u.as_f64()).unwrap_or(0.0);
-                            let limit = bd.get("limit").and_then(|l| l.as_f64()).unwrap_or(0.0);
-                            let _ = credit_tx.send((used, limit));
-                        }
+    async fn handle_picker_key(&mut self, key: KeyEvent) -> cyril_core::Result<()> {
+        match key.code {
+            KeyCode::Up => self.ui_state.picker_select_prev(),
+            KeyCode::Down => self.ui_state.picker_select_next(),
+            KeyCode::Enter => {
+                if let Some((command_name, value)) = self.ui_state.picker_confirm() {
+                    if let Some(session_id) = self.session.id() {
+                        self.bridge_sender
+                            .send(BridgeCommand::ExecuteCommand {
+                                command: command_name,
+                                session_id: session_id.clone(),
+                                args: serde_json::json!({"value": value}),
+                            })
+                            .await?;
                     }
                 }
             }
+            KeyCode::Esc => self.ui_state.picker_cancel(),
+            KeyCode::Char(c) => self.ui_state.picker_type_char(c),
+            KeyCode::Backspace => self.ui_state.picker_backspace(),
+            _ => {}
+        }
+        Ok(())
+    }
+
+    async fn submit_input(&mut self) -> cyril_core::Result<()> {
+        let text = self.ui_state.take_input();
+        if text.is_empty() {
+            return Ok(());
+        }
+
+        self.last_activity = Instant::now();
+
+        // Try as slash command
+        if let Some((cmd, args)) = self.commands.parse(&text) {
+            let ctx = CommandContext {
+                session: &self.session,
+                bridge: &self.bridge_sender,
+                subagent_tracker: Some(self.ui_state.subagent_tracker()),
+            };
+            let command_name = cmd.name().to_string();
+            let args = args.to_string();
+            match cmd.execute(&ctx, &args).await {
+                Ok(result) => self.handle_command_result(result),
+                Err(e) => {
+                    tracing::error!(
+                        error = %e,
+                        command = %command_name,
+                        "slash command execution failed"
+                    );
+                    self.ui_state
+                        .add_system_message(format!("Command error: {e}"));
+                }
+            }
+            return Ok(());
+        }
+
+        // Send as prompt
+        let session_id = match self.session.id() {
+            Some(id) => id.clone(),
+            None => {
+                self.ui_state.add_system_message(
+                    "No active session. Use /new to create one.".into(),
+                );
+                return Ok(());
+            }
+        };
+
+        self.ui_state.add_user_message(&text);
+        self.session.set_status(SessionStatus::Busy);
+        self.ui_state.set_activity(Activity::Sending);
+
+        let mut content_blocks = vec![text.clone()];
+
+        if let Some(completer) = self.ui_state.file_completer() {
+            let root = completer.root().to_path_buf();
+            let known = completer.known_files();
+            for path in cyril_ui::file_completer::parse_file_references(&text, known) {
+                match cyril_ui::file_completer::read_file(&root, &path) {
+                    Ok(contents) => {
+                        content_blocks
+                            .push(format!("<file path=\"{path}\">\n{contents}\n</file>"));
+                        tracing::info!("Attached @-referenced file: {path}");
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to read @-referenced file {path}: {e}");
+                        self.ui_state
+                            .add_system_message(format!("Could not attach @{path}: {e}"));
+                    }
+                }
+            }
+        }
+
+        self.bridge_sender
+            .send(BridgeCommand::SendPrompt {
+                session_id,
+                content_blocks,
+            })
+            .await?;
+
+        Ok(())
+    }
+
+    fn handle_command_result(&mut self, result: CommandResult) {
+        match result.kind {
+            CommandResultKind::SystemMessage(text) => {
+                if text == "__clear__" {
+                    self.ui_state.clear_messages();
+                } else {
+                    self.ui_state.add_system_message(text);
+                }
+            }
+            CommandResultKind::NotACommand(_text) => {
+                // Should not happen since we already checked parse()
+            }
+            CommandResultKind::ShowPicker { title, options } => {
+                self.ui_state.show_picker(title, options);
+            }
+            CommandResultKind::Dispatched => {
+                // Already sent via bridge
+            }
+            CommandResultKind::Quit => {
+                self.ui_state.request_quit();
+            }
+        }
+        self.redraw_needed = true;
+    }
+}
+
+/// Format a `kiro.dev/commands/execute` response for display as a system message.
+///
+/// The response shape is `{"success": bool, "message": "...", "data": {...}}`.
+/// This handles tools lists, context breakdowns, usage breakdowns, and generic messages
+/// as a priority cascade.
+fn format_command_response(command: &str, response: &serde_json::Value) -> String {
+    let message = response
+        .get("message")
+        .and_then(|m| m.as_str())
+        .unwrap_or("");
+    let data = response.get("data");
+
+    // If there's tool data, format as a list
+    if let Some(tools) = data
+        .and_then(|d| d.get("tools"))
+        .and_then(|t| t.as_array())
+    {
+        let mut out = format!("{message}\n\n");
+        for tool in tools {
+            let name = tool.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+            let source = tool
+                .get("source")
+                .and_then(|s| s.as_str())
+                .unwrap_or("");
+            let desc = tool
+                .get("description")
+                .and_then(|d| d.as_str())
+                .unwrap_or("")
+                .lines()
+                .find(|l| !l.trim().is_empty())
+                .unwrap_or("")
+                .trim();
+            let source_tag = if !source.is_empty() && source != "built-in" {
+                format!(" ({source})")
+            } else {
+                String::new()
+            };
+            out.push_str(&format!("  {name} — {desc}{source_tag}\n"));
+        }
+        return out;
+    }
+
+    // If there's a context breakdown, format it
+    if let Some(breakdown) = data.and_then(|d| d.get("breakdown")) {
+        let pct = data
+            .and_then(|d| d.get("contextUsagePercentage"))
+            .and_then(|p| p.as_f64())
+            .unwrap_or(0.0);
+        let model = data
+            .and_then(|d| d.get("model"))
+            .and_then(|m| m.as_str())
+            .unwrap_or("unknown");
+        let mut out = format!("Context: {pct:.1}% used (model: {model})\n\n");
+        let categories = [
+            ("contextFiles", "Context files"),
+            ("tools", "Tools"),
+            ("yourPrompts", "Your prompts"),
+            ("kiroResponses", "Kiro responses"),
+            ("sessionFiles", "Session files"),
+        ];
+        for (key, label) in &categories {
+            if let Some(cat) = breakdown.get(*key) {
+                let tokens = cat.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
+                let cat_pct = cat
+                    .get("percent")
+                    .and_then(|p| p.as_f64())
+                    .unwrap_or(0.0);
+                if tokens > 0 {
+                    out.push_str(&format!("  {label}: {tokens} tokens ({cat_pct:.1}%)\n"));
+                }
+            }
+        }
+        return out;
+    }
+
+    // If there's usage breakdown data
+    if let Some(breakdowns) = data
+        .and_then(|d| d.get("usageBreakdowns"))
+        .and_then(|u| u.as_array())
+    {
+        let plan = data
+            .and_then(|d| d.get("planName"))
+            .and_then(|p| p.as_str())
+            .unwrap_or("Unknown");
+        let mut out = format!("Plan: {plan}\n\n");
+        for bd in breakdowns {
+            let name = bd
+                .get("displayName")
+                .and_then(|n| n.as_str())
+                .unwrap_or("?");
+            let used = bd.get("used").and_then(|u| u.as_f64()).unwrap_or(0.0);
+            let limit = bd.get("limit").and_then(|l| l.as_f64()).unwrap_or(0.0);
+            let pct = bd
+                .get("percentage")
+                .and_then(|p| p.as_u64())
+                .unwrap_or(0);
+            out.push_str(&format!("  {name}: {used:.0} / {limit:.0} ({pct}%)\n"));
+        }
+        return out;
+    }
+
+    // For well-formatted messages, just use them
+    if !message.is_empty() {
+        return message.to_string();
+    }
+
+    // Fallback
+    let success = response
+        .get("success")
+        .and_then(|s| s.as_bool())
+        .unwrap_or(true);
+    if success {
+        format!("/{command}: done.")
+    } else {
+        format!("/{command}: command failed.")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_response_tools_list() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "Available tools:",
+            "data": {
+                "tools": [
+                    {"name": "read", "description": "Read a file\nMore details", "source": "built-in"},
+                    {"name": "fetch", "description": "Fetch a URL", "source": "mcp-server"}
+                ]
+            }
         });
+        let result = format_command_response("tools", &response);
+        assert!(result.contains("Available tools:"));
+        assert!(result.contains("  read — Read a file\n"));
+        assert!(result.contains("  fetch — Fetch a URL (mcp-server)\n"));
+    }
+
+    #[test]
+    fn format_response_context_breakdown() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "",
+            "data": {
+                "contextUsagePercentage": 42.5,
+                "model": "claude-sonnet",
+                "breakdown": {
+                    "contextFiles": {"tokens": 1000, "percent": 10.0},
+                    "tools": {"tokens": 500, "percent": 5.0},
+                    "yourPrompts": {"tokens": 2000, "percent": 20.0},
+                    "kiroResponses": {"tokens": 0, "percent": 0.0}
+                }
+            }
+        });
+        let result = format_command_response("context", &response);
+        assert!(result.contains("Context: 42.5% used (model: claude-sonnet)"));
+        assert!(result.contains("Context files: 1000 tokens (10.0%)"));
+        assert!(result.contains("Tools: 500 tokens (5.0%)"));
+        assert!(result.contains("Your prompts: 2000 tokens (20.0%)"));
+        // Zero-token categories should be omitted
+        assert!(!result.contains("Kiro responses"));
+    }
+
+    #[test]
+    fn format_response_usage_breakdowns() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "",
+            "data": {
+                "planName": "Pro",
+                "usageBreakdowns": [
+                    {"displayName": "Fast requests", "used": 150.0, "limit": 500.0, "percentage": 30}
+                ]
+            }
+        });
+        let result = format_command_response("usage", &response);
+        assert!(result.contains("Plan: Pro"));
+        assert!(result.contains("Fast requests: 150 / 500 (30%)"));
+    }
+
+    #[test]
+    fn format_response_plain_message() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "Context compacted successfully."
+        });
+        let result = format_command_response("compact", &response);
+        assert_eq!(result, "Context compacted successfully.");
+    }
+
+    #[test]
+    fn format_response_success_fallback() {
+        let response = serde_json::json!({"success": true});
+        let result = format_command_response("compact", &response);
+        assert_eq!(result, "/compact: done.");
+    }
+
+    #[test]
+    fn format_response_failure_fallback() {
+        let response = serde_json::json!({"success": false});
+        let result = format_command_response("compact", &response);
+        assert_eq!(result, "/compact: command failed.");
+    }
+
+    #[test]
+    fn format_response_null_data() {
+        let response = serde_json::Value::Null;
+        let result = format_command_response("test", &response);
+        assert_eq!(result, "/test: done.");
+    }
+
+    #[test]
+    fn format_response_tools_builtin_source_omitted() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "Tools:",
+            "data": {
+                "tools": [
+                    {"name": "read", "description": "Read a file", "source": "built-in"}
+                ]
+            }
+        });
+        let result = format_command_response("tools", &response);
+        // built-in source tag should NOT appear
+        assert!(!result.contains("(built-in)"));
+        assert!(result.contains("  read — Read a file\n"));
     }
 }

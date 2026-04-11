@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 
 /// Translate an agent-provided path to the native filesystem path.
-/// On Windows (WSL bridge), converts `/mnt/c/...` → `C:\...`.
+/// On Windows (WSL bridge), converts `/mnt/c/...` to `C:\...`.
 /// On Linux (direct), returns the path unchanged.
 pub fn to_native(path: &Path) -> PathBuf {
     if cfg!(target_os = "windows") {
@@ -14,7 +14,7 @@ pub fn to_native(path: &Path) -> PathBuf {
 }
 
 /// Translate a native filesystem path to an agent-compatible path.
-/// On Windows (WSL bridge), converts `C:\...` → `/mnt/c/...`.
+/// On Windows (WSL bridge), converts `C:\...` to `/mnt/c/...`.
 /// On Linux (direct), returns the path unchanged.
 pub fn to_agent(path: &Path) -> PathBuf {
     if cfg!(target_os = "windows") {
@@ -33,9 +33,9 @@ pub enum Direction {
 
 /// Convert a Windows path to a WSL path.
 ///
-/// `C:\Users\foo\bar` → `/mnt/c/Users/foo/bar`
-/// `D:\project` → `/mnt/d/project`
-/// `\\?\C:\Users\foo` → `/mnt/c/Users/foo` (extended-length prefix stripped)
+/// `C:\Users\foo\bar` becomes `/mnt/c/Users/foo/bar`
+/// `D:\project` becomes `/mnt/d/project`
+/// `\\?\C:\Users\foo` becomes `/mnt/c/Users/foo` (extended-length prefix stripped)
 pub fn win_to_wsl(path: &Path) -> PathBuf {
     let s = path.to_string_lossy();
     // Strip the \\?\ extended-length path prefix that canonicalize() produces on Windows.
@@ -59,22 +59,22 @@ pub fn win_to_wsl(path: &Path) -> PathBuf {
 
 /// Convert a WSL path to a Windows path.
 ///
-/// `/mnt/c/Users/foo/bar` → `C:\Users\foo\bar`
-/// `/mnt/d/project` → `D:\project`
+/// `/mnt/c/Users/foo/bar` becomes `C:\Users\foo\bar`
+/// `/mnt/d/project` becomes `D:\project`
 pub fn wsl_to_win(path: &str) -> PathBuf {
-    if let Some(rest) = path.strip_prefix("/mnt/") {
-        if rest.len() >= 1 {
-            let drive = rest.as_bytes()[0].to_ascii_uppercase() as char;
-            let after_drive = &rest[1..];
-            if after_drive.is_empty() || after_drive.starts_with('/') {
-                let suffix = after_drive.strip_prefix('/').unwrap_or("");
-                let win_path = if suffix.is_empty() {
-                    format!("{drive}:\\")
-                } else {
-                    format!("{drive}:\\{}", suffix.replace('/', "\\"))
-                };
-                return PathBuf::from(win_path);
-            }
+    if let Some(rest) = path.strip_prefix("/mnt/")
+        && !rest.is_empty()
+    {
+        let drive = rest.as_bytes()[0].to_ascii_uppercase() as char;
+        let after_drive = &rest[1..];
+        if after_drive.is_empty() || after_drive.starts_with('/') {
+            let suffix = after_drive.strip_prefix('/').unwrap_or("");
+            let win_path = if suffix.is_empty() {
+                format!("{drive}:\\")
+            } else {
+                format!("{drive}:\\{}", suffix.replace('/', "\\"))
+            };
+            return PathBuf::from(win_path);
         }
     }
     // Not a /mnt/ path — return as-is
@@ -131,7 +131,7 @@ fn looks_like_windows_path(s: &str) -> bool {
 
 fn looks_like_wsl_mount_path(s: &str) -> bool {
     if let Some(rest) = s.strip_prefix("/mnt/") {
-        rest.len() >= 1 && rest.as_bytes()[0].is_ascii_alphabetic()
+        !rest.is_empty() && rest.as_bytes()[0].is_ascii_alphabetic()
     } else {
         false
     }
@@ -269,10 +269,16 @@ mod tests {
     fn test_roundtrip_extended_prefix() {
         let original = r"\\?\C:\Users\dwall\repos\project\src\main.rs";
         let wsl = win_to_wsl(Path::new(original));
-        assert_eq!(wsl, PathBuf::from("/mnt/c/Users/dwall/repos/project/src/main.rs"));
+        assert_eq!(
+            wsl,
+            PathBuf::from("/mnt/c/Users/dwall/repos/project/src/main.rs")
+        );
         let back = wsl_to_win(&wsl.to_string_lossy());
         // Roundtrip produces the canonical form without \\?\ prefix
-        assert_eq!(back, PathBuf::from(r"C:\Users\dwall\repos\project\src\main.rs"));
+        assert_eq!(
+            back,
+            PathBuf::from(r"C:\Users\dwall\repos\project\src\main.rs")
+        );
     }
 
     #[test]

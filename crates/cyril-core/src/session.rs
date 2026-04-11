@@ -1,134 +1,150 @@
-use std::path::PathBuf;
+use crate::types::*;
 
-use agent_client_protocol as acp;
-
-/// Config option ID used by the ACP server for the current model selection.
-pub const CONFIG_KEY_MODEL: &str = "model";
-
-/// An available agent mode from the session.
-#[derive(Debug, Clone)]
-pub struct AvailableMode {
-    pub id: String,
-    pub name: String,
-}
-
-/// Owns all session-level state: IDs, modes, config options, and working directory.
-///
-/// This is the single source of truth for session data. The toolbar borrows
-/// from this struct at render time.
-/// Credit usage snapshot from `/usage` command.
-#[derive(Debug, Clone)]
-pub struct CreditUsage {
-    pub used: f64,
-    pub limit: f64,
-}
-
-#[derive(Debug)]
-pub struct SessionContext {
-    pub id: Option<acp::SessionId>,
-    pub cwd: PathBuf,
-    available_modes: Vec<AvailableMode>,
-    config_options: Vec<acp::SessionConfigOption>,
-    context_usage_pct: Option<f64>,
+pub struct SessionController {
+    status: SessionStatus,
+    id: Option<SessionId>,
+    modes: Vec<SessionMode>,
     current_mode_id: Option<String>,
     cached_model: Option<String>,
+    context_usage: Option<ContextUsage>,
+    agent_commands: Vec<CommandInfo>,
     credit_usage: Option<CreditUsage>,
+    session_cost: SessionCost,
 }
 
-impl SessionContext {
-    pub fn new(cwd: PathBuf) -> Self {
+impl SessionController {
+    pub fn new() -> Self {
         Self {
+            status: SessionStatus::Disconnected,
             id: None,
-            available_modes: Vec::new(),
-            config_options: Vec::new(),
-            cwd,
-            context_usage_pct: None,
+            modes: Vec::new(),
             current_mode_id: None,
             cached_model: None,
+            context_usage: None,
+            agent_commands: Vec::new(),
             credit_usage: None,
+            session_cost: SessionCost::new(),
         }
     }
 
-    /// Set the session ID (typically after creating or loading a session).
-    pub fn set_session_id(&mut self, session_id: acp::SessionId) {
-        self.id = Some(session_id);
+    // Accessors
+    pub fn status(&self) -> &SessionStatus {
+        &self.status
     }
 
-    /// The available agent modes advertised by the session.
-    pub fn available_modes(&self) -> &[AvailableMode] {
-        &self.available_modes
+    pub fn id(&self) -> Option<&SessionId> {
+        self.id.as_ref()
     }
 
-    /// The current mode ID, if any.
+    pub fn modes(&self) -> &[SessionMode] {
+        &self.modes
+    }
+
     pub fn current_mode_id(&self) -> Option<&str> {
         self.current_mode_id.as_deref()
     }
 
-    /// Set the current mode ID (from a `ModeChanged` notification).
-    pub fn set_current_mode_id(&mut self, mode_id: String) {
-        self.current_mode_id = Some(mode_id);
-    }
-
-    /// The current context usage percentage, if reported.
-    pub fn context_usage_pct(&self) -> Option<f64> {
-        self.context_usage_pct
-    }
-
-    /// Set the context usage percentage (from Kiro metadata notifications).
-    pub fn set_context_usage_pct(&mut self, pct: f64) {
-        self.context_usage_pct = Some(pct);
-    }
-
-    /// The current credit usage snapshot, if available.
-    pub fn credit_usage(&self) -> Option<&CreditUsage> {
-        self.credit_usage.as_ref()
-    }
-
-    /// Update credit usage from a `/usage` response.
-    pub fn set_credit_usage(&mut self, used: f64, limit: f64) {
-        self.credit_usage = Some(CreditUsage { used, limit });
-    }
-
-    /// Store mode info from a NewSessionResponse.
-    pub fn set_modes(&mut self, modes: &acp::SessionModeState) {
-        self.current_mode_id = Some(modes.current_mode_id.to_string());
-        self.available_modes = modes
-            .available_modes
-            .iter()
-            .map(|m| AvailableMode {
-                id: m.id.to_string(),
-                name: m.name.clone(),
-            })
-            .collect();
-    }
-
-    /// Store config options (model, etc.) from a session response or update notification.
-    pub fn set_config_options(&mut self, options: Vec<acp::SessionConfigOption>) {
-        self.config_options = options;
-        self.cached_model = self.compute_current_model();
-    }
-
-    /// Optimistically update the cached model for immediate UI feedback.
-    /// The server's `ConfigOptionsUpdated` event will confirm or overwrite this.
-    pub fn set_optimistic_model(&mut self, model: String) {
-        self.cached_model = Some(model);
-    }
-
-    /// Return the cached model value (O(1) per frame).
     pub fn current_model(&self) -> Option<&str> {
         self.cached_model.as_deref()
     }
 
-    /// Extract the current model value from stored config options.
-    fn compute_current_model(&self) -> Option<String> {
-        self.config_options.iter().find_map(|opt| {
-            if opt.id.to_string() == CONFIG_KEY_MODEL {
-                if let acp::SessionConfigKind::Select(ref select) = opt.kind {
-                    return Some(select.current_value.to_string());
-                }
+    pub fn context_usage(&self) -> Option<&ContextUsage> {
+        self.context_usage.as_ref()
+    }
+
+    pub fn agent_commands(&self) -> &[CommandInfo] {
+        &self.agent_commands
+    }
+
+    pub fn credit_usage(&self) -> Option<&CreditUsage> {
+        self.credit_usage.as_ref()
+    }
+
+    pub fn session_cost(&self) -> &SessionCost {
+        &self.session_cost
+    }
+
+    // Mutators
+    pub fn set_session(&mut self, id: SessionId, status: SessionStatus) {
+        self.id = Some(id);
+        self.status = status;
+    }
+
+    pub fn set_status(&mut self, status: SessionStatus) {
+        self.status = status;
+    }
+
+    pub fn set_modes(&mut self, modes: Vec<SessionMode>) {
+        self.modes = modes;
+    }
+
+    pub fn set_credit_usage(&mut self, usage: CreditUsage) {
+        self.credit_usage = Some(usage);
+    }
+
+    /// Apply a notification to session state. Returns whether state changed.
+    pub fn apply_notification(&mut self, notification: &Notification) -> bool {
+        match notification {
+            Notification::ModeChanged { mode_id } => {
+                self.current_mode_id = Some(mode_id.clone());
+                true
             }
-            None
-        })
+            Notification::MetadataUpdated {
+                context_usage,
+                metering,
+                ..
+            } => {
+                self.context_usage = Some(context_usage.clone());
+                if let Some(m) = metering {
+                    self.session_cost.record_turn(m);
+                }
+                true
+            }
+            Notification::ConfigOptionsUpdated(options) => {
+                if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
+                    self.cached_model = model_opt.value.clone();
+                }
+                true
+            }
+            Notification::CommandsUpdated { commands, .. } => {
+                self.agent_commands = commands.clone();
+                true
+            }
+            Notification::AgentSwitched { name, .. } => {
+                self.current_mode_id = Some(name.clone());
+                self.status = SessionStatus::Active;
+                true
+            }
+            Notification::TurnCompleted => {
+                self.status = SessionStatus::Active;
+                true
+            }
+            Notification::SessionCreated {
+                session_id,
+                current_mode,
+                current_model,
+            } => {
+                self.id = Some(session_id.clone());
+                self.current_mode_id = current_mode.clone();
+                if let Some(model) = current_model {
+                    self.cached_model = Some(model.clone());
+                }
+                self.session_cost = SessionCost::new();
+                self.status = SessionStatus::Active;
+                true
+            }
+            Notification::BridgeDisconnected { .. } => {
+                self.status = SessionStatus::Disconnected;
+                true
+            }
+            _ => false,
+        }
+    }
+}
+
+impl Default for SessionController {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -137,137 +153,206 @@ mod tests {
     use super::*;
 
     #[test]
-    fn new_session_has_no_id() {
-        let ctx = SessionContext::new(PathBuf::from("/tmp"));
-        assert!(ctx.id.is_none());
-        assert!(ctx.available_modes.is_empty());
-        assert!(ctx.config_options.is_empty());
-        assert!(ctx.context_usage_pct.is_none());
-        assert!(ctx.current_mode_id.is_none());
-        assert!(ctx.current_model().is_none());
+    fn new_controller_is_disconnected() {
+        let ctrl = SessionController::new();
+        assert_eq!(ctrl.status(), &SessionStatus::Disconnected);
+        assert!(ctrl.id().is_none());
+        assert!(ctrl.current_model().is_none());
+        assert!(ctrl.current_mode_id().is_none());
+        assert!(ctrl.context_usage().is_none());
     }
 
     #[test]
-    fn set_session_id_stores_id() {
-        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
-        let id = acp::SessionId::from("test-session-123".to_string());
-        ctx.set_session_id(id);
-        assert!(ctx.id.is_some());
-        assert_eq!(ctx.id.unwrap().to_string(), "test-session-123");
+    fn set_session_updates_id_and_status() {
+        let mut ctrl = SessionController::new();
+        ctrl.set_session(SessionId::new("sess_1"), SessionStatus::Active);
+        assert_eq!(ctrl.id().map(SessionId::as_str), Some("sess_1"));
+        assert_eq!(ctrl.status(), &SessionStatus::Active);
     }
 
     #[test]
-    fn current_model_returns_none_when_no_config() {
-        let ctx = SessionContext::new(PathBuf::from("/tmp"));
-        assert!(ctx.current_model().is_none());
+    fn turn_completed_transitions_busy_to_active() {
+        let mut ctrl = SessionController::new();
+        ctrl.set_session(SessionId::new("sess_1"), SessionStatus::Busy);
+        let changed = ctrl.apply_notification(&Notification::TurnCompleted);
+        assert!(changed);
+        assert_eq!(ctrl.status(), &SessionStatus::Active);
     }
 
     #[test]
-    fn current_model_returns_value_from_config_options() {
-        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
-        let option = acp::SessionConfigOption::select(
+    fn bridge_disconnect_transitions_to_disconnected() {
+        let mut ctrl = SessionController::new();
+        ctrl.set_session(SessionId::new("sess_1"), SessionStatus::Active);
+        let changed = ctrl.apply_notification(&Notification::BridgeDisconnected {
+            reason: "process exited".into(),
+        });
+        assert!(changed);
+        assert_eq!(ctrl.status(), &SessionStatus::Disconnected);
+    }
+
+    #[test]
+    fn mode_changed_updates_mode() {
+        let mut ctrl = SessionController::new();
+        let changed = ctrl.apply_notification(&Notification::ModeChanged {
+            mode_id: "code".into(),
+        });
+        assert!(changed);
+        assert_eq!(ctrl.current_mode_id(), Some("code"));
+    }
+
+    #[test]
+    fn metadata_updated_stores_context_usage() {
+        let mut ctrl = SessionController::new();
+        let changed = ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(75.0),
+            metering: None,
+            tokens: None,
+        });
+        assert!(changed);
+        assert!(
+            (ctrl.context_usage().map(|u| u.percentage()).unwrap_or(0.0) - 75.0).abs()
+                < f64::EPSILON
+        );
+    }
+
+    #[test]
+    fn metadata_updated_records_turn_metering() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(5.0),
+            metering: Some(TurnMetering::new(0.018, Some(1948))),
+            tokens: None,
+        });
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(6.0),
+            metering: Some(TurnMetering::new(0.042, Some(5200))),
+            tokens: None,
+        });
+        assert_eq!(ctrl.session_cost().turn_count(), 2);
+        assert!((ctrl.session_cost().total_credits() - 0.060).abs() < 0.001);
+        assert!((ctrl.session_cost().last_turn_credits().unwrap() - 0.042).abs() < 0.001);
+    }
+
+    #[test]
+    fn commands_updated() {
+        let mut ctrl = SessionController::new();
+        let cmds = vec![CommandInfo::new(
             "model",
             "Model",
-            "claude-sonnet-4-6",
-            vec![acp::SessionConfigSelectOption::new(
-                "claude-sonnet-4-6",
-                "Claude Sonnet 4.6",
-            )],
-        );
-        ctx.set_config_options(vec![option]);
-        assert_eq!(ctx.current_model(), Some("claude-sonnet-4-6"));
+            None::<&str>,
+            true,
+            false,
+            false,
+        )];
+        let changed = ctrl.apply_notification(&Notification::CommandsUpdated {
+            commands: cmds,
+            prompts: Vec::new(),
+        });
+        assert!(changed);
+        assert_eq!(ctrl.agent_commands().len(), 1);
     }
 
     #[test]
-    fn set_modes_populates_available_modes() {
-        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
-        let modes = acp::SessionModeState::new(
-            "code",
-            vec![
-                acp::SessionMode::new("code", "Code"),
-                acp::SessionMode::new("chat", "Chat"),
-            ],
-        );
-        ctx.set_modes(&modes);
-        assert_eq!(ctx.current_mode_id.as_deref(), Some("code"));
-        assert_eq!(ctx.available_modes.len(), 2);
-        assert_eq!(ctx.available_modes[0].id, "code");
-        assert_eq!(ctx.available_modes[0].name, "Code");
-        assert_eq!(ctx.available_modes[1].id, "chat");
-        assert_eq!(ctx.available_modes[1].name, "Chat");
+    fn agent_message_does_not_change_session() {
+        let mut ctrl = SessionController::new();
+        let changed = ctrl.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "hello".into(),
+            is_streaming: true,
+        }));
+        assert!(!changed);
     }
 
     #[test]
-    fn set_optimistic_model_updates_cached_value() {
-        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
-        assert!(ctx.current_model().is_none());
-        ctx.set_optimistic_model("claude-sonnet-4-6".to_string());
-        assert_eq!(ctx.current_model(), Some("claude-sonnet-4-6"));
+    fn set_modes() {
+        let mut ctrl = SessionController::new();
+        let modes = vec![
+            SessionMode::new("code", "Code", None::<&str>),
+            SessionMode::new("chat", "Chat", Some("General chat")),
+        ];
+        ctrl.set_modes(modes);
+        assert_eq!(ctrl.modes().len(), 2);
     }
 
     #[test]
-    fn set_config_options_caches_model() {
-        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
-        let option = acp::SessionConfigOption::select(
-            "model",
-            "Model",
-            "claude-opus-4",
-            vec![
-                acp::SessionConfigSelectOption::new("claude-opus-4", "Claude Opus 4"),
-                acp::SessionConfigSelectOption::new("claude-sonnet-4-6", "Claude Sonnet 4.6"),
-            ],
-        );
-        ctx.set_config_options(vec![option]);
-        assert_eq!(ctx.current_model(), Some("claude-opus-4"));
-
-        let other = acp::SessionConfigOption::select(
-            "thought_level",
-            "Thought Level",
-            "high",
-            vec![acp::SessionConfigSelectOption::new("high", "High")],
-        );
-        ctx.set_config_options(vec![other]);
-        assert!(ctx.current_model().is_none());
+    fn set_status_directly() {
+        let mut ctrl = SessionController::new();
+        ctrl.set_status(SessionStatus::Busy);
+        assert_eq!(ctrl.status(), &SessionStatus::Busy);
     }
 
     #[test]
-    fn optimistic_model_overridden_by_config_update() {
-        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
-        ctx.set_optimistic_model("optimistic-model".to_string());
-        assert_eq!(ctx.current_model(), Some("optimistic-model"));
-
-        let option = acp::SessionConfigOption::select(
-            "model",
-            "Model",
-            "server-model",
-            vec![acp::SessionConfigSelectOption::new(
-                "server-model",
-                "Server Model",
-            )],
-        );
-        ctx.set_config_options(vec![option]);
-        assert_eq!(ctx.current_model(), Some("server-model"));
+    fn agent_switched_updates_status_and_mode() {
+        let mut ctrl = SessionController::new();
+        ctrl.set_status(SessionStatus::Busy);
+        let changed = ctrl.apply_notification(&Notification::AgentSwitched {
+            name: "code-agent".into(),
+            welcome: None,
+        });
+        assert!(changed);
+        assert_eq!(ctrl.status(), &SessionStatus::Active);
+        assert_eq!(ctrl.current_mode_id(), Some("code-agent"));
     }
 
     #[test]
-    fn context_usage_pct() {
-        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
-        assert!(ctx.context_usage_pct().is_none());
-        ctx.set_context_usage_pct(42.5);
-        assert_eq!(ctx.context_usage_pct(), Some(42.5));
+    fn session_created_sets_id_and_activates() {
+        let mut ctrl = SessionController::new();
+        assert_eq!(ctrl.status(), &SessionStatus::Disconnected);
+        assert!(ctrl.id().is_none());
+
+        let changed = ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("sess_abc"),
+            current_mode: Some("kiro_default".into()),
+            current_model: None,
+        });
+
+        assert!(changed);
+        assert_eq!(ctrl.status(), &SessionStatus::Active);
+        assert_eq!(ctrl.id().map(SessionId::as_str), Some("sess_abc"));
+        assert_eq!(ctrl.current_mode_id(), Some("kiro_default"));
     }
 
     #[test]
-    fn set_current_mode_id() {
-        let mut ctx = SessionContext::new(PathBuf::from("/tmp"));
-        assert!(ctx.current_mode_id().is_none());
-        ctx.set_current_mode_id("agent".to_string());
-        assert_eq!(ctx.current_mode_id(), Some("agent"));
+    fn session_created_overwrites_previous_session() {
+        let mut ctrl = SessionController::new();
+        ctrl.set_session(SessionId::new("old_sess"), SessionStatus::Active);
+
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("new_sess"),
+            current_mode: None,
+            current_model: None,
+        });
+
+        assert_eq!(ctrl.id().map(SessionId::as_str), Some("new_sess"));
     }
 
     #[test]
-    fn cwd_stored() {
-        let ctx = SessionContext::new(PathBuf::from("/home/user/project"));
-        assert_eq!(ctx.cwd, PathBuf::from("/home/user/project"));
+    fn session_created_sets_model() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s1"),
+            current_mode: None,
+            current_model: Some("claude-sonnet-4".to_string()),
+        });
+        assert_eq!(ctrl.current_model(), Some("claude-sonnet-4"));
+    }
+
+    #[test]
+    fn session_created_resets_cost() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(10.0),
+            metering: Some(TurnMetering::new(0.05, Some(2000))),
+            tokens: None,
+        });
+        assert!(ctrl.session_cost().total_credits() > 0.0);
+
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+        });
+
+        assert_eq!(ctrl.session_cost().total_credits(), 0.0);
+        assert_eq!(ctrl.session_cost().turn_count(), 0);
     }
 }

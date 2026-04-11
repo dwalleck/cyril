@@ -1,170 +1,48 @@
-use anyhow::{Context, Result, bail};
-use tokio::io::AsyncReadExt;
-use tokio::process::{Child, Command};
-use tokio::sync::mpsc;
-use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
+use std::path::Path;
+use std::process::Stdio;
+use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 
-pub type CompatStdin = tokio_util::compat::Compat<tokio::process::ChildStdin>;
-pub type CompatStdout = tokio_util::compat::Compat<tokio::process::ChildStdout>;
-
-/// Wraps the agent subprocess and its compat-wrapped pipes.
-/// On Windows, spawns via `wsl kiro-cli acp`; on Linux, runs `kiro-cli acp` directly.
-pub struct AgentProcess {
-    _child: Child,
-    stdin: Option<CompatStdin>,
-    stdout: Option<CompatStdout>,
-    stderr_rx: mpsc::UnboundedReceiver<String>,
+pub(crate) struct AgentProcess {
+    pub stdin: ChildStdin,
+    pub stdout: ChildStdout,
+    /// Held to keep the child process alive; dropped when the bridge shuts down.
+    pub _child: Child,
 }
 
 impl AgentProcess {
-    /// Spawn the kiro-cli ACP subprocess and return compat-wrapped stdin/stdout
-    /// suitable for passing to `ClientSideConnection::new`.
-    /// On Windows, runs via `wsl kiro-cli acp`; on Linux, runs `kiro-cli acp` directly.
-    /// If `agent` is provided, passes `--agent <name>` to kiro-cli.
-    pub fn spawn(agent: Option<&str>) -> Result<Self> {
-        Self::spawn_with_extra_args(agent, &[])
-    }
-
-    /// Like `spawn`, but allows passing additional CLI arguments to kiro-cli acp.
-    pub fn spawn_with_extra_args(agent: Option<&str>, extra_args: &[&str]) -> Result<Self> {
-        let mut cmd = if cfg!(target_os = "windows") {
-            let mut c = Command::new("wsl");
-            c.arg("kiro-cli");
-            c
+    pub async fn spawn(agent_name: &str, cwd: &Path) -> crate::Result<Self> {
+        let (program, args) = if cfg!(target_os = "windows") {
+            ("wsl".to_string(), vec![agent_name.to_string(), "acp".to_string()])
         } else {
-            Command::new("kiro-cli")
+            (agent_name.to_string(), vec!["acp".to_string()])
         };
 
-        cmd.arg("acp");
-
-        for arg in extra_args {
-            cmd.arg(arg);
-        }
-
-        if let Some(name) = agent {
-            cmd.args(["--agent", name]);
-        }
-
-        let mut child = cmd
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .kill_on_drop(true)
+        let mut child = Command::new(&program)
+            .args(&args)
+            .current_dir(cwd)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()
-            .context(if cfg!(target_os = "windows") {
-                "Failed to spawn `wsl kiro-cli acp`. Is WSL installed and kiro-cli available?"
-            } else {
-                "Failed to spawn `kiro-cli acp`. Is kiro-cli installed and on PATH?"
-            })?;
+            .map_err(|e| crate::Error::with_source(
+                crate::ErrorKind::Transport {
+                    detail: format!("failed to spawn {program}"),
+                },
+                e,
+            ))?;
 
-        let stdin = child
-            .stdin
-            .take()
-            .context("Failed to capture agent stdin")?
-            .compat_write();
+        let stdin = child.stdin.take().ok_or_else(|| {
+            crate::Error::from_kind(crate::ErrorKind::Transport {
+                detail: "failed to capture stdin".into(),
+            })
+        })?;
 
-        let stdout = child
-            .stdout
-            .take()
-            .context("Failed to capture agent stdout")?
-            .compat();
+        let stdout = child.stdout.take().ok_or_else(|| {
+            crate::Error::from_kind(crate::ErrorKind::Transport {
+                detail: "failed to capture stdout".into(),
+            })
+        })?;
 
-        // Capture stderr in background so we can surface auth/startup errors
-        let stderr = child
-            .stderr
-            .take()
-            .context("Failed to capture agent stderr")?;
-
-        let (stderr_tx, stderr_rx) = mpsc::unbounded_channel();
-        tokio::spawn(async move {
-            let mut stderr = stderr;
-            let mut buf = [0u8; 4096];
-            loop {
-                match stderr.read(&mut buf).await {
-                    Ok(0) => break,
-                    Ok(n) => {
-                        let s = String::from_utf8_lossy(&buf[..n]).into_owned();
-                        if stderr_tx.send(s).is_err() {
-                            break;
-                        }
-                    }
-                    Err(e) => {
-                        tracing::warn!("Stderr read error: {e}");
-                        break;
-                    }
-                }
-            }
-        });
-
-        Ok(Self {
-            _child: child,
-            stdin: Some(stdin),
-            stdout: Some(stdout),
-            stderr_rx,
-        })
-    }
-
-    /// Take the stdin pipe (can only be called once).
-    pub fn take_stdin(&mut self) -> Result<CompatStdin> {
-        self.stdin.take().context("stdin already taken")
-    }
-
-    /// Take the stdout pipe (can only be called once).
-    pub fn take_stdout(&mut self) -> Result<CompatStdout> {
-        self.stdout.take().context("stdout already taken")
-    }
-
-    /// Drain any stderr output collected so far.
-    pub fn drain_stderr(&mut self) -> String {
-        let mut output = String::new();
-        while let Ok(chunk) = self.stderr_rx.try_recv() {
-            output.push_str(&chunk);
-        }
-        output
-    }
-
-    /// Check if the process has already exited (non-blocking).
-    pub fn try_wait(&mut self) -> Result<Option<std::process::ExitStatus>> {
-        self._child.try_wait().context("Failed to check agent process status")
-    }
-
-    /// Wait briefly for the process to start, returning an error if it exits
-    /// immediately (e.g. due to auth failure).
-    pub async fn check_startup(&mut self) -> Result<()> {
-        // Give the process a moment to fail — 1s accommodates slower WSL startup
-        tokio::time::sleep(std::time::Duration::from_millis(1_000)).await;
-
-        // Surface any early stderr even if the process is still running
-        let early_stderr = self.drain_stderr();
-        if !early_stderr.is_empty() {
-            tracing::warn!("Agent early stderr: {early_stderr}");
-        }
-
-        if let Some(status) = self.try_wait()? {
-            let extra_stderr = self.drain_stderr();
-            let stderr = if extra_stderr.is_empty() {
-                early_stderr
-            } else {
-                format!("{early_stderr}{extra_stderr}")
-            };
-
-            if stderr.contains("not logged in") || stderr.contains("please log in") {
-                let login_cmd = if cfg!(target_os = "windows") {
-                    "wsl kiro-cli login"
-                } else {
-                    "kiro-cli login"
-                };
-                bail!(
-                    "kiro-cli requires authentication.\n\
-                     Run `{login_cmd}` first, then try again.\n\n\
-                     Agent stderr: {stderr}"
-                );
-            }
-            bail!(
-                "Agent process exited immediately with {status}.\n\
-                 Agent stderr: {stderr}"
-            );
-        }
-        Ok(())
+        Ok(Self { stdin, stdout, _child: child })
     }
 }

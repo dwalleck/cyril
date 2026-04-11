@@ -7,8 +7,8 @@ use ratatui::{
     text::{Line, Span},
 };
 
-use super::cache::HashCache;
-use super::highlight;
+use crate::cache::HashCache;
+use crate::highlight;
 
 static MARKDOWN_CACHE: LazyLock<Mutex<HashCache<Vec<Line<'static>>>>> =
     LazyLock::new(|| Mutex::new(HashCache::new(256)));
@@ -21,10 +21,10 @@ pub fn render(markdown: &str) -> Vec<Line<'static>> {
         h.finish()
     };
 
-    if let Ok(cache) = MARKDOWN_CACHE.lock() {
-        if let Some(cached) = cache.get(hash) {
-            return cached.clone();
-        }
+    if let Ok(cache) = MARKDOWN_CACHE.lock()
+        && let Some(cached) = cache.get(hash)
+    {
+        return cached.clone();
     }
 
     let result = do_render(markdown);
@@ -309,15 +309,8 @@ fn flush_line(lines: &mut Vec<Line<'static>>, spans: &mut Vec<Span<'static>>) {
     }
 }
 
-fn flush_code_line(lines: &mut Vec<Line<'static>>, spans: &mut Vec<Span<'static>>) {
-    if !spans.is_empty() {
-        let mut line = Line::from(std::mem::take(spans));
-        line.style = Style::default().bg(Color::Rgb(35, 35, 35));
-        lines.push(line);
-    }
-}
-
 #[cfg(test)]
+#[expect(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use rstest::rstest;
