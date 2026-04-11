@@ -427,6 +427,7 @@ dependencies = [
  "futures-util",
  "ratatui",
  "rstest",
+ "serde",
  "serde_json",
  "tokio",
  "tracing",
@@ -471,6 +472,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tracing",
+ "unicode-width",
 ]
 
 [[package]]

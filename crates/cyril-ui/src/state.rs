@@ -58,6 +58,7 @@ pub struct UiState {
     // Overlays
     approval: Option<ApprovalState>,
     picker: Option<PickerState>,
+    hooks_panel: Option<HooksPanelState>,
 
     // Terminal
     terminal_size: (u16, u16),
@@ -142,6 +143,10 @@ impl TuiState for UiState {
         self.picker.as_ref()
     }
 
+    fn hooks_panel(&self) -> Option<&HooksPanelState> {
+        self.hooks_panel.as_ref()
+    }
+
     fn terminal_size(&self) -> (u16, u16) {
         self.terminal_size
     }
@@ -198,6 +203,7 @@ impl UiState {
             subagent_tracker: cyril_core::subagent::SubagentTracker::new(),
             approval: None,
             picker: None,
+            hooks_panel: None,
             terminal_size: (80, 24),
             mouse_captured: false,
             quit_requested: false,
@@ -965,6 +971,57 @@ impl UiState {
             picker.selected = 0;
         } else if picker.selected >= picker.filtered_indices.len() {
             picker.selected = picker.filtered_indices.len() - 1;
+        }
+    }
+
+    // --- Hooks panel methods ---
+
+    /// Open the hooks panel overlay with a list of hooks from the `hooks` command.
+    ///
+    /// Hooks are sorted on insert by `(trigger, command)` so the widget can
+    /// iterate `state.hooks` directly without re-sorting on every render
+    /// frame. The stored order is the panel's display order — callers that
+    /// need the original wire order should keep their own copy.
+    pub fn show_hooks_panel(&mut self, mut hooks: Vec<HookInfo>) {
+        hooks.sort_by(|a, b| {
+            a.trigger
+                .cmp(&b.trigger)
+                .then_with(|| a.command.cmp(&b.command))
+        });
+        self.hooks_panel = Some(HooksPanelState {
+            hooks,
+            scroll_offset: 0,
+        });
+    }
+
+    /// Close the hooks panel overlay.
+    pub fn hide_hooks_panel(&mut self) {
+        self.hooks_panel = None;
+    }
+
+    /// Check if the hooks panel is currently visible.
+    pub fn has_hooks_panel(&self) -> bool {
+        self.hooks_panel.is_some()
+    }
+
+    /// Scroll the hooks panel up by `lines`. Saturates at 0.
+    pub fn hooks_panel_scroll_up(&mut self, lines: usize) {
+        if let Some(panel) = self.hooks_panel.as_mut() {
+            panel.scroll_offset = panel.scroll_offset.saturating_sub(lines);
+        }
+    }
+
+    /// Scroll the hooks panel down by `lines`. Saturates at `hooks.len() - 1`
+    /// so `scroll_offset` never exceeds the last hook's index. This is a
+    /// strict clamp on the index, not a viewport-aware bound — with a tall
+    /// panel and a short list, the last item can end up alone at the top of
+    /// the visible area with blank rows below it. Matches `PickerState`'s
+    /// scroll convention in this codebase; viewport-aware clamping would
+    /// require threading `visible_rows` through from the renderer.
+    pub fn hooks_panel_scroll_down(&mut self, lines: usize) {
+        if let Some(panel) = self.hooks_panel.as_mut() {
+            let max = panel.hooks.len().saturating_sub(1);
+            panel.scroll_offset = (panel.scroll_offset + lines).min(max);
         }
     }
 
@@ -1771,5 +1828,134 @@ mod tests {
         assert!(state.focus_subagent(sid));
         state.unfocus_subagent();
         assert!(state.subagent_ui().focused_session_id().is_none());
+    }
+
+    // --- Hooks panel tests ---
+
+    fn sample_hook(trigger: &str, command: &str, matcher: Option<&str>) -> HookInfo {
+        HookInfo {
+            trigger: trigger.into(),
+            command: command.into(),
+            matcher: matcher.map(String::from),
+        }
+    }
+
+    #[test]
+    fn hooks_panel_starts_hidden() {
+        let state = UiState::new(500);
+        assert!(!state.has_hooks_panel());
+        assert!(state.hooks_panel().is_none());
+    }
+
+    #[test]
+    fn show_hooks_panel_sets_state() {
+        let mut state = UiState::new(500);
+        // Input order is (Pre, Post) but show_hooks_panel sorts by
+        // (trigger, command), so the stored order is (Post, Pre).
+        let hooks = vec![
+            sample_hook("PreToolUse", "echo pre", Some("read")),
+            sample_hook("PostToolUse", "echo post", None),
+        ];
+        state.show_hooks_panel(hooks);
+        assert!(state.has_hooks_panel());
+        let panel = state.hooks_panel().expect("panel should exist");
+        assert_eq!(panel.hooks.len(), 2);
+        assert_eq!(panel.hooks[0].trigger, "PostToolUse");
+        assert_eq!(panel.hooks[0].matcher, None);
+        assert_eq!(panel.hooks[1].trigger, "PreToolUse");
+        assert_eq!(panel.hooks[1].matcher.as_deref(), Some("read"));
+        assert_eq!(panel.scroll_offset, 0);
+    }
+
+    #[test]
+    fn hide_hooks_panel_clears_state() {
+        let mut state = UiState::new(500);
+        state.show_hooks_panel(vec![sample_hook("Stop", "noop", None)]);
+        assert!(state.has_hooks_panel());
+        state.hide_hooks_panel();
+        assert!(!state.has_hooks_panel());
+    }
+
+    #[test]
+    fn show_hooks_panel_with_empty_list() {
+        let mut state = UiState::new(500);
+        state.show_hooks_panel(Vec::new());
+        assert!(state.has_hooks_panel());
+        assert_eq!(state.hooks_panel().expect("panel").hooks.len(), 0);
+    }
+
+    #[test]
+    fn show_hooks_panel_sorts_on_insert_by_trigger() {
+        // Unsorted input; expect sorted by trigger in the stored state so the
+        // widget can iterate without re-sorting on every render frame.
+        let mut state = UiState::new(500);
+        state.show_hooks_panel(vec![
+            sample_hook("Stop", "stop-cmd", None),
+            sample_hook("AgentSpawn", "spawn-cmd", None),
+            sample_hook("PreToolUse", "pre-cmd", Some("read")),
+        ]);
+        let triggers: Vec<&str> = state
+            .hooks_panel()
+            .expect("panel")
+            .hooks
+            .iter()
+            .map(|h| h.trigger.as_str())
+            .collect();
+        assert_eq!(triggers, vec!["AgentSpawn", "PreToolUse", "Stop"]);
+    }
+
+    #[test]
+    fn show_hooks_panel_sorts_by_command_within_trigger() {
+        // Same trigger, different commands — expect alphabetical order by
+        // command as the tiebreaker.
+        let mut state = UiState::new(500);
+        state.show_hooks_panel(vec![
+            sample_hook("PreToolUse", "zebra", None),
+            sample_hook("PreToolUse", "alpha", None),
+            sample_hook("PreToolUse", "middle", None),
+        ]);
+        let commands: Vec<&str> = state
+            .hooks_panel()
+            .expect("panel")
+            .hooks
+            .iter()
+            .map(|h| h.command.as_str())
+            .collect();
+        assert_eq!(commands, vec!["alpha", "middle", "zebra"]);
+    }
+
+    #[test]
+    fn hooks_panel_scroll_down_respects_bound() {
+        let mut state = UiState::new(500);
+        let hooks = vec![
+            sample_hook("A", "a", None),
+            sample_hook("B", "b", None),
+            sample_hook("C", "c", None),
+        ];
+        state.show_hooks_panel(hooks);
+        state.hooks_panel_scroll_down(10); // way past the end
+        // Max index is len-1 = 2
+        assert_eq!(state.hooks_panel().expect("panel").scroll_offset, 2);
+    }
+
+    #[test]
+    fn hooks_panel_scroll_up_saturates_at_zero() {
+        let mut state = UiState::new(500);
+        state.show_hooks_panel(vec![
+            sample_hook("A", "a", None),
+            sample_hook("B", "b", None),
+        ]);
+        state.hooks_panel_scroll_down(1);
+        state.hooks_panel_scroll_up(5); // way past the start
+        assert_eq!(state.hooks_panel().expect("panel").scroll_offset, 0);
+    }
+
+    #[test]
+    fn hooks_panel_scroll_noop_when_hidden() {
+        let mut state = UiState::new(500);
+        // These should silently do nothing when there's no panel.
+        state.hooks_panel_scroll_up(3);
+        state.hooks_panel_scroll_down(3);
+        assert!(!state.has_hooks_panel());
     }
 }

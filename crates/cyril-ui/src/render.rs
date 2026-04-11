@@ -44,6 +44,9 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     if let Some(picker) = state.picker() {
         crate::widgets::picker::render(frame, area, picker);
     }
+    if let Some(hooks) = state.hooks_panel() {
+        crate::widgets::hooks_panel::render(frame, area, hooks);
+    }
 }
 
 fn draw_fallback(frame: &mut Frame) {

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use cyril_core::types::{CommandOption, Plan};
+use cyril_core::types::{CommandOption, HookInfo, Plan};
 
 /// Activity state derived from UiState — used for adaptive frame rate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -44,6 +44,7 @@ pub trait TuiState {
     // Overlays
     fn approval(&self) -> Option<&ApprovalState>;
     fn picker(&self) -> Option<&PickerState>;
+    fn hooks_panel(&self) -> Option<&HooksPanelState>;
 
     // Terminal
     fn terminal_size(&self) -> (u16, u16);
@@ -236,6 +237,23 @@ pub struct PickerState {
     pub selected: usize,
 }
 
+/// Hooks panel overlay state (read-only table display for `/hooks` command).
+///
+/// Populated from the `hooks` command response (`data.hooks[]`). The panel is
+/// purely informational — hooks execute in `kiro-cli-chat`, not in Cyril, so
+/// this struct carries no interactive state beyond scroll position.
+#[derive(Debug, Clone)]
+pub struct HooksPanelState {
+    /// Hook list in `(trigger, command)` lexicographic order. Pre-sorted by
+    /// [`crate::state::UiState::show_hooks_panel`]; the renderer iterates
+    /// this directly without re-sorting. A caller that constructs
+    /// `HooksPanelState` outside that method is responsible for sorting —
+    /// an unsorted `Vec` will render in insertion order and break the
+    /// widget's alphabetical-grouping convention.
+    pub hooks: Vec<HookInfo>,
+    pub scroll_offset: usize,
+}
+
 #[cfg(test)]
 pub mod test_support {
     use super::*;
@@ -259,6 +277,7 @@ pub mod test_support {
         pub credit_usage: Option<(f64, f64)>,
         pub approval: Option<ApprovalState>,
         pub picker: Option<PickerState>,
+        pub hooks_panel: Option<HooksPanelState>,
         pub terminal_size: (u16, u16),
         pub mouse_captured: bool,
         pub quit_requested: bool,
@@ -288,6 +307,7 @@ pub mod test_support {
                 credit_usage: None,
                 approval: None,
                 picker: None,
+                hooks_panel: None,
                 terminal_size: (80, 24),
                 mouse_captured: false,
                 quit_requested: false,
@@ -353,6 +373,9 @@ pub mod test_support {
         }
         fn picker(&self) -> Option<&PickerState> {
             self.picker.as_ref()
+        }
+        fn hooks_panel(&self) -> Option<&HooksPanelState> {
+            self.hooks_panel.as_ref()
         }
         fn terminal_size(&self) -> (u16, u16) {
             self.terminal_size

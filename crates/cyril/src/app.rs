@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers};
 use futures_util::{FutureExt, StreamExt};
 use ratatui::DefaultTerminal;
+use serde::Deserialize;
 use tokio::sync::mpsc;
 
 use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, CommandResultKind};
@@ -269,11 +270,13 @@ impl App {
             self.redraw_needed = true;
         }
 
-        // Handle command execution response
+        // Handle command execution response. The `hooks` command is special-
+        // cased to open a panel overlay instead of printing text; all other
+        // commands fall through to the generic command-output path. See
+        // `dispatch_command_executed` for the rules and `docs/kiro-changelog-nov2025.json`
+        // for when `/hooks` was introduced (Kiro 1.29.6, 2026-04-08).
         if let Notification::CommandExecuted { ref command, ref response } = notification {
-            let text = format_command_response(command, response);
-            self.ui_state
-                .add_command_output(command.clone(), text);
+            dispatch_command_executed(command, response, &mut self.ui_state);
 
             // WORKAROUND(Kiro v1.28.0): Kiro doesn't send ConfigOptionUpdate for
             // model changes (QRK-004), so we extract the model from the /model
@@ -339,6 +342,11 @@ impl App {
             self.redraw_needed = true;
             return Ok(());
         }
+        if self.ui_state.has_hooks_panel() {
+            self.handle_hooks_panel_key(key);
+            self.redraw_needed = true;
+            return Ok(());
+        }
 
         // Layer 3: Autocomplete (if active — consumes relevant keys)
         match self.ui_state.handle_autocomplete_key(key) {
@@ -386,6 +394,12 @@ impl App {
             KeyCode::Esc => self.ui_state.approval_cancel(),
             _ => {}
         }
+    }
+
+    /// Handle key input while the `/hooks` panel overlay is visible.
+    /// Esc closes; Up/Down and PgUp/PgDn scroll.
+    fn handle_hooks_panel_key(&mut self, key: KeyEvent) {
+        dispatch_hooks_panel_key(key, &mut self.ui_state);
     }
 
     async fn handle_picker_key(&mut self, key: KeyEvent) -> cyril_core::Result<()> {
@@ -635,6 +649,117 @@ fn format_command_response(command: &str, response: &serde_json::Value) -> Strin
     }
 }
 
+/// Parse a `/hooks` response body into a list of `HookInfo`.
+///
+/// Expects the Kiro wire shape `{data: {hooks: [{trigger, command, matcher?}, ...]}}`.
+/// Deserializes the whole `data.hooks` array as a typed `Vec<HookInfo>` in one
+/// shot: if any entry is structurally malformed (missing `trigger`, missing
+/// `command`, wrong types), the whole response is rejected rather than
+/// silently dropping individual entries.
+///
+/// Returns `None` on any of these conditions, so the caller falls back to
+/// `format_command_response` and the user still sees the raw response
+/// instead of a silently empty panel:
+///
+/// - `data` field absent → `debug` log
+/// - `data.hooks` field absent → `debug` log
+/// - structural deserialization failure → `warn` log
+/// - any entry has an empty `trigger` or `command` → `warn` log (display
+///   defect — would render as a blank row)
+///
+/// Uses `Deserialize::deserialize` directly on `&Value` (which implements
+/// `Deserializer`) to avoid the deep clone of the hooks array that
+/// `serde_json::from_value` would require.
+fn parse_hooks_response(response: &serde_json::Value) -> Option<Vec<cyril_core::types::HookInfo>> {
+    let Some(data) = response.get("data") else {
+        tracing::debug!("/hooks response has no `data` field — falling back");
+        return None;
+    };
+    let Some(hooks_value) = data.get("hooks") else {
+        tracing::debug!("/hooks response has no `data.hooks` field — falling back");
+        return None;
+    };
+    let hooks = match Vec::<cyril_core::types::HookInfo>::deserialize(hooks_value) {
+        Ok(hooks) => hooks,
+        Err(e) => {
+            tracing::warn!(
+                error = %e,
+                "malformed /hooks response, falling back to generic command output"
+            );
+            return None;
+        }
+    };
+    if hooks
+        .iter()
+        .any(|h| h.trigger.is_empty() || h.command.is_empty())
+    {
+        tracing::warn!(
+            "/hooks response contained a hook with an empty trigger or command — falling back"
+        );
+        return None;
+    }
+    Some(hooks)
+}
+
+/// Dispatch a `CommandExecuted` response to the UI.
+///
+/// For `command == "hooks"` with a successful response (`success: true` or
+/// absent), parses the hooks and opens the overlay panel. For any other
+/// command, or for hooks responses that are structurally invalid or report
+/// `success: false`, falls through to `format_command_response` so the
+/// backend's `message` field surfaces as a normal command-output line.
+///
+/// Extracted as a free function so it can be tested directly without
+/// constructing a full `App`. Model-specific workarounds (see
+/// `App::handle_notification`) stay at the caller site because they mutate
+/// session state, not UI state.
+fn dispatch_command_executed(
+    command: &str,
+    response: &serde_json::Value,
+    ui_state: &mut cyril_ui::state::UiState,
+) {
+    let handled_as_panel = command == "hooks" && is_success_response(response) && {
+        match parse_hooks_response(response) {
+            Some(hooks) => {
+                ui_state.show_hooks_panel(hooks);
+                true
+            }
+            None => false,
+        }
+    };
+
+    if !handled_as_panel {
+        let text = format_command_response(command, response);
+        ui_state.add_command_output(command.to_string(), text);
+    }
+}
+
+/// Dispatch a key press while the `/hooks` panel is visible.
+///
+/// Extracted as a free function so the full key-map can be unit-tested
+/// without constructing an `App`. Esc hides the panel; arrow keys scroll
+/// one line; page keys scroll ten lines; other keys are no-ops.
+fn dispatch_hooks_panel_key(key: KeyEvent, ui_state: &mut cyril_ui::state::UiState) {
+    match key.code {
+        KeyCode::Esc => ui_state.hide_hooks_panel(),
+        KeyCode::Up => ui_state.hooks_panel_scroll_up(1),
+        KeyCode::Down => ui_state.hooks_panel_scroll_down(1),
+        KeyCode::PageUp => ui_state.hooks_panel_scroll_up(10),
+        KeyCode::PageDown => ui_state.hooks_panel_scroll_down(10),
+        _ => {}
+    }
+}
+
+/// Returns `true` if the response either has no `success` field (legacy or
+/// optional) or has `success: true`. `success: false` reports a backend
+/// error and should never be swallowed by panel-style handlers.
+fn is_success_response(response: &serde_json::Value) -> bool {
+    response
+        .get("success")
+        .and_then(|s| s.as_bool())
+        .unwrap_or(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -745,5 +870,373 @@ mod tests {
         // built-in source tag should NOT appear
         assert!(!result.contains("(built-in)"));
         assert!(result.contains("  read — Read a file\n"));
+    }
+
+    // --- parse_hooks_response tests ---
+
+    #[test]
+    fn parse_hooks_response_well_formed() {
+        let response = serde_json::json!({
+            "success": true,
+            "data": {
+                "hooks": [
+                    {"trigger": "PreToolUse", "command": "echo pre", "matcher": "read"},
+                    {"trigger": "Stop", "command": "notify done"}
+                ]
+            }
+        });
+        let hooks = parse_hooks_response(&response).expect("should parse");
+        assert_eq!(hooks.len(), 2);
+        assert_eq!(hooks[0].trigger, "PreToolUse");
+        assert_eq!(hooks[0].command, "echo pre");
+        assert_eq!(hooks[0].matcher.as_deref(), Some("read"));
+        assert_eq!(hooks[1].trigger, "Stop");
+        assert!(hooks[1].matcher.is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_empty_array() {
+        let response = serde_json::json!({"data": {"hooks": []}});
+        let hooks = parse_hooks_response(&response).expect("should parse");
+        assert!(hooks.is_empty());
+    }
+
+    #[test]
+    fn parse_hooks_response_missing_data_returns_none() {
+        let response = serde_json::json!({"success": true, "message": "no data"});
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_data_without_hooks_field() {
+        let response = serde_json::json!({"data": {"other": "stuff"}});
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_hooks_wrong_type_returns_none() {
+        let response = serde_json::json!({"data": {"hooks": "not an array"}});
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_rejects_any_malformed_entry() {
+        // Fail-fast semantics: a single bad entry rejects the whole response,
+        // so the caller falls through to the generic command-output path and
+        // the user sees the raw JSON instead of a silently truncated panel.
+        let response = serde_json::json!({
+            "data": {
+                "hooks": [
+                    {"trigger": "PreToolUse", "command": "valid"},
+                    {"not_a_hook": true},
+                    {"trigger": "Stop", "command": "also valid", "matcher": "write"}
+                ]
+            }
+        });
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_rejects_entry_missing_required_field() {
+        let response = serde_json::json!({
+            "data": {
+                "hooks": [
+                    {"trigger": "PreToolUse"} // missing required `command`
+                ]
+            }
+        });
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_rejects_entry_with_empty_trigger() {
+        // Structural Serde validation accepts empty strings for required
+        // fields, so we guard against them explicitly to prevent the widget
+        // from rendering a blank trigger column.
+        let response = serde_json::json!({
+            "data": {
+                "hooks": [
+                    {"trigger": "", "command": "echo hi"}
+                ]
+            }
+        });
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_rejects_entry_with_empty_command() {
+        let response = serde_json::json!({
+            "data": {
+                "hooks": [
+                    {"trigger": "PreToolUse", "command": ""}
+                ]
+            }
+        });
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_rejects_mixed_valid_and_empty_entries() {
+        // Fail-fast: one bad entry rejects the whole response, same as
+        // the malformed-entry case.
+        let response = serde_json::json!({
+            "data": {
+                "hooks": [
+                    {"trigger": "PreToolUse", "command": "valid"},
+                    {"trigger": "Stop", "command": ""}
+                ]
+            }
+        });
+        assert!(parse_hooks_response(&response).is_none());
+    }
+
+    #[test]
+    fn parse_hooks_response_preserves_ordering() {
+        // parse_hooks_response preserves wire order; sorting happens in
+        // `UiState::show_hooks_panel`, not in the parser or the widget.
+        let response = serde_json::json!({
+            "data": {
+                "hooks": [
+                    {"trigger": "Stop", "command": "z"},
+                    {"trigger": "AgentSpawn", "command": "a"},
+                ]
+            }
+        });
+        let hooks = parse_hooks_response(&response).expect("should parse");
+        assert_eq!(hooks[0].trigger, "Stop");
+        assert_eq!(hooks[1].trigger, "AgentSpawn");
+    }
+
+    // --- is_success_response tests ---
+
+    #[test]
+    fn is_success_missing_field_defaults_true() {
+        let response = serde_json::json!({"data": {"hooks": []}});
+        assert!(is_success_response(&response));
+    }
+
+    #[test]
+    fn is_success_explicit_true() {
+        let response = serde_json::json!({"success": true, "data": {}});
+        assert!(is_success_response(&response));
+    }
+
+    #[test]
+    fn is_success_explicit_false() {
+        let response = serde_json::json!({"success": false, "message": "oops"});
+        assert!(!is_success_response(&response));
+    }
+
+    #[test]
+    fn is_success_wrong_type_defaults_true() {
+        // Non-bool success field is treated as missing and defaults to true.
+        let response = serde_json::json!({"success": "yes", "data": {}});
+        assert!(is_success_response(&response));
+    }
+
+    // --- dispatch_command_executed tests ---
+
+    fn valid_hooks_response() -> serde_json::Value {
+        serde_json::json!({
+            "success": true,
+            "data": {
+                "hooks": [
+                    {"trigger": "PreToolUse", "command": "echo pre", "matcher": "read"},
+                    {"trigger": "Stop", "command": "notify done"}
+                ]
+            }
+        })
+    }
+
+    #[test]
+    fn dispatch_hooks_valid_response_opens_panel_and_adds_no_message() {
+        let mut ui_state = UiState::new(500);
+        let response = valid_hooks_response();
+
+        dispatch_command_executed("hooks", &response, &mut ui_state);
+
+        assert!(ui_state.has_hooks_panel(), "panel should be open");
+        assert_eq!(
+            ui_state.hooks_panel().expect("panel").hooks.len(),
+            2,
+            "both hooks should be parsed"
+        );
+        assert_eq!(
+            ui_state.messages().len(),
+            0,
+            "no command-output message when panel handles the response"
+        );
+    }
+
+    #[test]
+    fn dispatch_hooks_malformed_entry_falls_through_to_message() {
+        let mut ui_state = UiState::new(500);
+        // Missing `command` field — whole response rejected.
+        let response = serde_json::json!({
+            "success": true,
+            "message": "",
+            "data": {
+                "hooks": [
+                    {"trigger": "PreToolUse"}
+                ]
+            }
+        });
+
+        dispatch_command_executed("hooks", &response, &mut ui_state);
+
+        assert!(
+            !ui_state.has_hooks_panel(),
+            "panel should NOT open for malformed response"
+        );
+        assert_eq!(
+            ui_state.messages().len(),
+            1,
+            "should fall through and add a command-output message"
+        );
+    }
+
+    #[test]
+    fn dispatch_hooks_success_false_surfaces_error_message() {
+        let mut ui_state = UiState::new(500);
+        // Backend reports an error — critical case: the previous implementation
+        // opened an empty panel and discarded the `message` field, hiding the
+        // error from the user.
+        let response = serde_json::json!({
+            "success": false,
+            "message": "session expired",
+            "data": {"hooks": []}
+        });
+
+        dispatch_command_executed("hooks", &response, &mut ui_state);
+
+        assert!(
+            !ui_state.has_hooks_panel(),
+            "panel should NOT open when backend reports success: false"
+        );
+        assert_eq!(
+            ui_state.messages().len(),
+            1,
+            "error message should be added as a command-output message"
+        );
+        // The error message should be visible to the user. format_command_response
+        // returns the `message` field directly when no structured data shape matches.
+        let msg_text = match ui_state.messages()[0].kind() {
+            cyril_ui::traits::ChatMessageKind::CommandOutput { text, .. } => text.clone(),
+            other => panic!("expected CommandOutput, got {other:?}"),
+        };
+        assert!(
+            msg_text.contains("session expired"),
+            "user should see the backend error message; got: {msg_text}"
+        );
+    }
+
+    #[test]
+    fn dispatch_hooks_missing_data_falls_through_to_message() {
+        let mut ui_state = UiState::new(500);
+        let response = serde_json::json!({"success": true, "message": "no hooks data"});
+
+        dispatch_command_executed("hooks", &response, &mut ui_state);
+
+        assert!(!ui_state.has_hooks_panel());
+        assert_eq!(ui_state.messages().len(), 1);
+    }
+
+    #[test]
+    fn dispatch_non_hooks_command_adds_message() {
+        let mut ui_state = UiState::new(500);
+        let response = serde_json::json!({
+            "success": true,
+            "message": "Context compacted successfully."
+        });
+
+        dispatch_command_executed("compact", &response, &mut ui_state);
+
+        assert!(
+            !ui_state.has_hooks_panel(),
+            "non-hooks commands should never open the hooks panel"
+        );
+        assert_eq!(ui_state.messages().len(), 1);
+    }
+
+    // --- dispatch_hooks_panel_key tests ---
+
+    fn key(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    fn state_with_open_panel(num_hooks: usize) -> UiState {
+        let mut ui_state = UiState::new(500);
+        let hooks: Vec<cyril_core::types::HookInfo> = (0..num_hooks)
+            .map(|i| cyril_core::types::HookInfo {
+                trigger: format!("T{i}"),
+                command: format!("cmd{i}"),
+                matcher: None,
+            })
+            .collect();
+        ui_state.show_hooks_panel(hooks);
+        ui_state
+    }
+
+    #[test]
+    fn hooks_panel_key_esc_closes_panel() {
+        let mut ui_state = state_with_open_panel(3);
+        dispatch_hooks_panel_key(key(KeyCode::Esc), &mut ui_state);
+        assert!(!ui_state.has_hooks_panel());
+    }
+
+    #[test]
+    fn hooks_panel_key_down_scrolls_down_one() {
+        let mut ui_state = state_with_open_panel(5);
+        dispatch_hooks_panel_key(key(KeyCode::Down), &mut ui_state);
+        assert_eq!(ui_state.hooks_panel().expect("panel").scroll_offset, 1);
+    }
+
+    #[test]
+    fn hooks_panel_key_up_scrolls_up_one() {
+        let mut ui_state = state_with_open_panel(5);
+        // Scroll down twice first to have something to scroll up from.
+        dispatch_hooks_panel_key(key(KeyCode::Down), &mut ui_state);
+        dispatch_hooks_panel_key(key(KeyCode::Down), &mut ui_state);
+        dispatch_hooks_panel_key(key(KeyCode::Up), &mut ui_state);
+        assert_eq!(ui_state.hooks_panel().expect("panel").scroll_offset, 1);
+    }
+
+    #[test]
+    fn hooks_panel_key_pgdown_scrolls_down_ten() {
+        let mut ui_state = state_with_open_panel(20);
+        dispatch_hooks_panel_key(key(KeyCode::PageDown), &mut ui_state);
+        assert_eq!(ui_state.hooks_panel().expect("panel").scroll_offset, 10);
+    }
+
+    #[test]
+    fn hooks_panel_key_pgup_scrolls_up_ten() {
+        let mut ui_state = state_with_open_panel(20);
+        // Scroll down past 10 first.
+        dispatch_hooks_panel_key(key(KeyCode::PageDown), &mut ui_state);
+        dispatch_hooks_panel_key(key(KeyCode::PageDown), &mut ui_state);
+        // Now at offset ~19 (clamped from 20 to len-1 = 19).
+        dispatch_hooks_panel_key(key(KeyCode::PageUp), &mut ui_state);
+        assert_eq!(ui_state.hooks_panel().expect("panel").scroll_offset, 9);
+    }
+
+    #[test]
+    fn hooks_panel_key_unknown_is_noop() {
+        let mut ui_state = state_with_open_panel(5);
+        dispatch_hooks_panel_key(key(KeyCode::Char('x')), &mut ui_state);
+        assert!(ui_state.has_hooks_panel(), "panel should still be open");
+        assert_eq!(
+            ui_state.hooks_panel().expect("panel").scroll_offset,
+            0,
+            "unknown key should not affect scroll"
+        );
+    }
+
+    #[test]
+    fn hooks_panel_key_scroll_down_on_empty_panel_is_noop() {
+        // Edge case: empty panel. saturating_sub(1) on len=0 yields 0; scroll
+        // must stay at 0 without panicking.
+        let mut ui_state = state_with_open_panel(0);
+        dispatch_hooks_panel_key(key(KeyCode::PageDown), &mut ui_state);
+        assert_eq!(ui_state.hooks_panel().expect("panel").scroll_offset, 0);
     }
 }
