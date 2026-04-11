@@ -64,12 +64,13 @@ The crate boundaries enforce dependency rules, but equally important is the sepa
 **`UiState`** (`cyril-ui/state.rs`) — Pure state machine for UI data.
 - `apply_notification(&Notification) -> bool` — updates UI fields, returns whether state changed
 - No async. No bridge access. Does not send commands or open pickers.
-- Owns: messages, streaming buffers, tool call index, input text/cursor, autocomplete, approval/picker overlays, activity state
+- Owns: messages, streaming buffers, tool call index, input text/cursor, autocomplete, approval/picker overlays, activity state, subagent tracker, subagent UI streams
+- Subagent state is mutated via delegating methods (`apply_subagent_notification`, `apply_subagent_list_update`, `focus_subagent`, etc.) — callers never reach into the private `subagents` field.
 - Testable by constructing state, applying notifications, and asserting field values.
 
 **`CommandRegistry`** (`cyril-core/commands/mod.rs`) — Command dispatch.
 - `parse(&str) -> Option<(&dyn Command, &str)>` — finds the command, returns it with args
-- Commands get `CommandContext { session: &SessionController, bridge: &BridgeSender }` — read-only session, write-only bridge. No UI state access.
+- Commands get `CommandContext { session: &SessionController, bridge: &BridgeSender, subagent_tracker: Option<&SubagentTracker> }` — read-only session and tracker, write-only bridge. No UI state access.
 - Commands return `CommandResult` (SystemMessage/ShowPicker/Dispatched/Quit) — the App decides what to do with the result.
 
 **`App`** (`cyril/app.rs`) — Thin orchestrator. Owns all components but contains no business logic.
@@ -134,6 +135,39 @@ All agent interactions are notification-driven. Commands return immediately; res
 | Picker confirms | `ExecuteCommand` | `CommandExecuted` | Shows confirmation |
 
 **The event loop must NEVER block on command execution.** Commands send a `BridgeCommand` and return `Dispatched`. Results come back asynchronously as notifications.
+
+### Subagent Support
+
+Kiro v1.29+ supports subagents — child sessions spawned from the main agent that run in parallel with their own tool access and message streams. Cyril observes, displays, and controls these via:
+
+**Components:**
+
+- **`SubagentTracker`** (`cyril-core/src/subagent.rs`) — Pure state machine defined in `cyril-core`, held as a field inside `UiState` (cyril-ui). Tracks metadata from `kiro.dev/subagent/list_update` notifications: which subagents are active, their status, group, dependencies, and inbox counters. `apply_notification(&Notification) -> bool`, same pattern as `SessionController`.
+- **`SubagentUiState`** (`cyril-ui/src/subagent_ui.rs`) — Per-subagent message streams (`HashMap<SessionId, SubagentStream>`), drill-in focus state, and `any_active()` for frame rate. Each `SubagentStream` mirrors `UiState`'s streaming-text → committed-message pattern.
+- **`crew_panel`** widget (`cyril-ui/src/widgets/crew_panel.rs`) — Renders a bordered status bar with one row per subagent + pending stage. Clamps to `MAX_CREW_ROWS` with a `+N more` overflow indicator. Single source of truth for sizing via `height_for(state)`.
+
+**Notification routing via `RoutedNotification`:**
+
+Every session notification carries a `session_id` from the ACP envelope. The bridge → App channel carries `RoutedNotification { session_id: Option<SessionId>, notification: Notification }`. The App compares `session_id` against its main session and routes:
+
+- `None` or matches main → dispatched to `SessionController` + `UiState` (main pipeline)
+- Matches a known subagent in the tracker → dispatched to `UiState::apply_subagent_notification` (creates stream on first contact)
+- Unknown session → also routes to subagent stream (optimistic, in case `list_update` hasn't arrived yet)
+
+`SubagentListUpdated` is global — it updates both the tracker and `SubagentUiState::apply_list_update` (which marks removed streams terminated, preserving their history).
+
+**Slash commands** (`cyril-core/src/commands/subagent.rs`):
+
+- `/sessions` — lists active subagents and pending stages from the tracker
+- `/spawn <name> <task>` — sends `BridgeCommand::SpawnSession`
+- `/kill <name>` — looks up by `session_name` via `SubagentTracker::find_by_name()`, sends `BridgeCommand::TerminateSession`
+- `/msg <name> <text>` — same lookup, sends `BridgeCommand::SendMessage`
+
+Subagent commands need read access to `SubagentTracker`, so `CommandContext` carries `subagent_tracker: Option<&SubagentTracker>`. Tests that don't exercise subagent commands pass `None`.
+
+**Drill-in:** When a subagent is focused (`focus_subagent()`), `chat::render` swaps the main viewport for the focused subagent's stream with a `─── <name> [Esc] Back` header. `SubagentUiState::focus()` validates that the session has an active stream — returns `false` and logs a warning if not. Esc key exits drill-in before cancelling a busy session.
+
+**Frame rate:** When any subagent stream is actively streaming or running tools, `any_subagent_active()` returns `true` and the adaptive frame rate uses fast tick (50ms).
 
 ### Key Handling Layers
 
