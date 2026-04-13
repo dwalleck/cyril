@@ -215,6 +215,88 @@ impl TrackedToolCall {
             .and_then(|v| v.get("command"))
             .and_then(|v| v.as_str())
     }
+
+    /// Access the structured output from tool execution.
+    pub fn raw_output(&self) -> Option<&serde_json::Value> {
+        self.inner.raw_output()
+    }
+
+    /// Extract displayable output text from raw_output.
+    ///
+    /// Tries multiple unwrapping strategies matching tui.js `unwrapResultOutput`:
+    /// 1. Plain string value
+    /// 2. Shell commands: `raw_output.stdout` or `raw_output.stderr`
+    /// 3. Kiro item envelope: `raw_output.items[0].Text`
+    /// 4. Kiro JSON envelope: `raw_output.items[0].Json` (pretty-printed)
+    /// 5. Direct text fields: `raw_output.text`, `.content`, `.result`
+    pub fn output_text(&self) -> Option<String> {
+        let output = self.inner.raw_output()?;
+
+        if let Some(s) = output.as_str() {
+            return Some(s.to_string());
+        }
+
+        let obj = output.as_object()?;
+
+        if let Some(stdout) = obj.get("stdout").and_then(|v| v.as_str()) {
+            if !stdout.trim().is_empty() {
+                return Some(stdout.to_string());
+            }
+        }
+        if let Some(stderr) = obj.get("stderr").and_then(|v| v.as_str()) {
+            if !stderr.trim().is_empty() {
+                return Some(stderr.to_string());
+            }
+        }
+
+        if let Some(items) = obj.get("items").and_then(|v| v.as_array()) {
+            if let Some(first) = items.first() {
+                if let Some(text) = first.get("Text").and_then(|v| v.as_str()) {
+                    return Some(text.to_string());
+                }
+                if let Some(json_val) = first.get("Json") {
+                    return serde_json::to_string_pretty(json_val).ok();
+                }
+            }
+        }
+
+        for key in ["text", "content", "result"] {
+            if let Some(s) = obj.get(key).and_then(|v| v.as_str()) {
+                return Some(s.to_string());
+            }
+        }
+
+        None
+    }
+
+    /// Extract exit code from raw_output for Execute-kind tool calls.
+    pub fn exit_code(&self) -> Option<i64> {
+        if self.inner.kind() != cyril_core::types::ToolKind::Execute {
+            return None;
+        }
+        let output = self.inner.raw_output()?;
+        let obj = output.as_object()?;
+        obj.get("exit_status").and_then(|v| v.as_i64())
+    }
+
+    /// Extract error message when tool call failed.
+    pub fn error_message(&self) -> Option<String> {
+        if self.inner.status() != cyril_core::types::ToolCallStatus::Failed {
+            return None;
+        }
+        let output = self.inner.raw_output()?;
+        if let Some(s) = output.as_str() {
+            return Some(s.to_string());
+        }
+        if let Some(obj) = output.as_object() {
+            for key in ["error", "message"] {
+                if let Some(s) = obj.get(key).and_then(|v| v.as_str()) {
+                    return Some(s.to_string());
+                }
+            }
+        }
+        None
+    }
 }
 
 /// Autocomplete suggestion for input.
@@ -472,5 +554,186 @@ mod tests {
     #[test]
     fn activity_default_is_idle() {
         assert_eq!(Activity::default(), Activity::Idle);
+    }
+
+    #[test]
+    fn tracked_tool_call_raw_output_accessor() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"stdout": "hello\nworld", "exit_status": 0});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "Running cargo test".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output.clone()));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(tracked.raw_output(), Some(&output));
+    }
+
+    #[test]
+    fn tracked_tool_call_output_text_shell() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"stdout": "hello world", "exit_status": 0});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(tracked.output_text(), Some("hello world".to_string()));
+    }
+
+    #[test]
+    fn tracked_tool_call_output_text_stderr_fallback() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"stdout": "", "stderr": "error output", "exit_status": 1});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(tracked.output_text(), Some("error output".to_string()));
+    }
+
+    #[test]
+    fn tracked_tool_call_output_text_items_text() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"items": [{"Text": "file contents here"}]});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(
+            tracked.output_text(),
+            Some("file contents here".to_string())
+        );
+    }
+
+    #[test]
+    fn tracked_tool_call_output_text_plain_string() {
+        use cyril_core::types::*;
+        let output = serde_json::json!("plain text output");
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "tool".into(),
+            ToolKind::Other,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(tracked.output_text(), Some("plain text output".to_string()));
+    }
+
+    #[test]
+    fn tracked_tool_call_output_text_none_without_raw_output() {
+        use cyril_core::types::*;
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        );
+        let tracked = TrackedToolCall::new(tc);
+        assert!(tracked.output_text().is_none());
+    }
+
+    #[test]
+    fn tracked_tool_call_exit_code() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"stdout": "", "exit_status": 1});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(tracked.exit_code(), Some(1));
+    }
+
+    #[test]
+    fn tracked_tool_call_exit_code_none_for_non_execute() {
+        use cyril_core::types::*;
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        );
+        let tracked = TrackedToolCall::new(tc);
+        assert!(tracked.exit_code().is_none());
+    }
+
+    #[test]
+    fn tracked_tool_call_error_message_on_failed() {
+        use cyril_core::types::*;
+        let output = serde_json::json!("Command timed out");
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Failed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(
+            tracked.error_message(),
+            Some("Command timed out".to_string())
+        );
+    }
+
+    #[test]
+    fn tracked_tool_call_error_message_none_when_not_failed() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"stdout": "ok"});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert!(tracked.error_message().is_none());
+    }
+
+    #[test]
+    fn tracked_tool_call_error_message_from_object() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"error": "permission denied"});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "write".into(),
+            ToolKind::Write,
+            ToolCallStatus::Failed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(
+            tracked.error_message(),
+            Some("permission denied".to_string())
+        );
     }
 }
