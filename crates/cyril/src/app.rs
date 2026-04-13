@@ -885,9 +885,7 @@ fn dispatch_code_command(
 
     match CodeCommandResponse::from_json(response) {
         CodeCommandResponse::Panel(data) => {
-            if data.status == LspStatus::Initialized {
-                ui_state.set_code_intelligence_active(true);
-            }
+            ui_state.set_code_intelligence_active(data.status == LspStatus::Initialized);
             ui_state.show_code_panel(data);
             None
         }
@@ -1533,6 +1531,29 @@ mod tests {
         );
         assert!(ui.has_code_panel());
         assert!(!ui.code_intelligence_active());
+    }
+
+    #[test]
+    fn dispatch_code_panel_failed_resets_active_flag() {
+        let session = code_session();
+        let mut ui = UiState::new(500);
+        ui.set_code_intelligence_active(true);
+        assert!(ui.code_intelligence_active());
+
+        dispatch_code_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "status": "failed",
+                    "detectedLanguages": [],
+                    "projectMarkers": [],
+                    "lsps": []
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(!ui.code_intelligence_active(), "failed status should reset the flag");
     }
 
     #[test]
