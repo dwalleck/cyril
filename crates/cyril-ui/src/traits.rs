@@ -221,14 +221,18 @@ impl TrackedToolCall {
         self.inner.raw_output()
     }
 
-    /// Extract displayable output text from raw_output.
+    /// Extract displayable text from raw_output.
     ///
-    /// Tries multiple unwrapping strategies matching tui.js `unwrapResultOutput`:
+    /// Tries the following strategies in order:
     /// 1. Plain string value
-    /// 2. Shell commands: `raw_output.stdout` or `raw_output.stderr`
-    /// 3. Kiro item envelope: `raw_output.items[0].Text`
-    /// 4. Kiro JSON envelope: `raw_output.items[0].Json` (pretty-printed)
-    /// 5. Direct text fields: `raw_output.text`, `.content`, `.result`
+    /// 2. Shell commands: `stdout` (non-empty), then `stderr` (non-empty)
+    /// 3. Kiro item envelope: `items[0].Text`
+    /// 4. Kiro item envelope: `items[0].Json` (pretty-printed as JSON)
+    /// 5. Direct text fields: `text`, `content`, `result`
+    /// 6. Non-object values (arrays, numbers, bools): JSON serialization
+    ///
+    /// Inspired by the `unwrapResultOutput` / `extractResultText` pattern in
+    /// tui.js, with adaptations for the Rust context.
     pub fn output_text(&self) -> Option<String> {
         let output = self.inner.raw_output()?;
 
@@ -236,7 +240,12 @@ impl TrackedToolCall {
             return Some(s.to_string());
         }
 
-        let obj = output.as_object()?;
+        let obj = match output.as_object() {
+            Some(o) => o,
+            None => {
+                return serde_json::to_string_pretty(output).ok();
+            }
+        };
 
         if let Some(stdout) = obj.get("stdout").and_then(|v| v.as_str()) {
             if !stdout.trim().is_empty() {
@@ -295,7 +304,8 @@ impl TrackedToolCall {
                 }
             }
         }
-        None
+        // Fall back to output_text() for any displayable content
+        self.output_text()
     }
 }
 
@@ -735,5 +745,109 @@ mod tests {
             tracked.error_message(),
             Some("permission denied".to_string())
         );
+    }
+
+    #[test]
+    fn tracked_tool_call_output_text_items_json() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"items": [{"Json": {"key": "value"}}]});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "tool".into(),
+            ToolKind::Other,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        let text = tracked.output_text().expect("should extract Json item");
+        assert!(text.contains("\"key\""));
+        assert!(text.contains("\"value\""));
+    }
+
+    #[test]
+    fn tracked_tool_call_output_text_text_field() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"text": "plain output"});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "tool".into(),
+            ToolKind::Other,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(tracked.output_text(), Some("plain output".to_string()));
+    }
+
+    #[test]
+    fn tracked_tool_call_output_text_unknown_object_returns_none() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"unknownKey": "data"});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "tool".into(),
+            ToolKind::Other,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert!(tracked.output_text().is_none());
+    }
+
+    #[test]
+    fn tracked_tool_call_output_text_json_array_falls_through() {
+        use cyril_core::types::*;
+        let output = serde_json::json!([1, 2, 3]);
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "tool".into(),
+            ToolKind::Other,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        let text = tracked
+            .output_text()
+            .expect("should serialize array as JSON");
+        assert!(text.contains("1"));
+    }
+
+    #[test]
+    fn tracked_tool_call_error_message_falls_back_to_output_text() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"stderr": "permission denied", "exit_status": 1});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Failed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(
+            tracked.error_message(),
+            Some("permission denied".to_string())
+        );
+    }
+
+    #[test]
+    fn tracked_tool_call_error_message_from_message_key() {
+        use cyril_core::types::*;
+        let output = serde_json::json!({"message": "not found"});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "tool".into(),
+            ToolKind::Other,
+            ToolCallStatus::Failed,
+            None,
+        )
+        .with_raw_output(Some(output));
+        let tracked = TrackedToolCall::new(tc);
+        assert_eq!(tracked.error_message(), Some("not found".to_string()));
     }
 }
