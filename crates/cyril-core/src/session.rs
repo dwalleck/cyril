@@ -10,6 +10,9 @@ pub struct SessionController {
     agent_commands: Vec<CommandInfo>,
     credit_usage: Option<CreditUsage>,
     session_cost: SessionCost,
+    pending_tokens: Option<TokenCounts>,
+    pending_metering: Option<TurnMetering>,
+    last_turn: Option<TurnSummary>,
 }
 
 impl SessionController {
@@ -24,6 +27,9 @@ impl SessionController {
             agent_commands: Vec::new(),
             credit_usage: None,
             session_cost: SessionCost::new(),
+            pending_tokens: None,
+            pending_metering: None,
+            last_turn: None,
         }
     }
 
@@ -64,6 +70,10 @@ impl SessionController {
         &self.session_cost
     }
 
+    pub fn last_turn(&self) -> Option<&TurnSummary> {
+        self.last_turn.as_ref()
+    }
+
     // Mutators
     pub fn set_session(&mut self, id: SessionId, status: SessionStatus) {
         self.id = Some(id);
@@ -92,12 +102,14 @@ impl SessionController {
             Notification::MetadataUpdated {
                 context_usage,
                 metering,
-                ..
+                tokens,
             } => {
                 self.context_usage = Some(context_usage.clone());
                 if let Some(m) = metering {
                     self.session_cost.record_turn(m);
+                    self.pending_metering = Some(m.clone());
                 }
+                self.pending_tokens = tokens.clone();
                 true
             }
             Notification::ConfigOptionsUpdated(options) => {
@@ -115,7 +127,12 @@ impl SessionController {
                 self.status = SessionStatus::Active;
                 true
             }
-            Notification::TurnCompleted { .. } => {
+            Notification::TurnCompleted { stop_reason } => {
+                self.last_turn = Some(TurnSummary::new(
+                    *stop_reason,
+                    self.pending_tokens.take(),
+                    self.pending_metering.take(),
+                ));
                 self.status = SessionStatus::Active;
                 true
             }
@@ -130,10 +147,16 @@ impl SessionController {
                     self.cached_model = Some(model.clone());
                 }
                 self.session_cost = SessionCost::new();
+                self.last_turn = None;
+                self.pending_tokens = None;
+                self.pending_metering = None;
                 self.status = SessionStatus::Active;
                 true
             }
             Notification::BridgeDisconnected { .. } => {
+                self.last_turn = None;
+                self.pending_tokens = None;
+                self.pending_metering = None;
                 self.status = SessionStatus::Disconnected;
                 true
             }
@@ -262,6 +285,120 @@ mod tests {
             is_streaming: true,
         }));
         assert!(!changed);
+    }
+
+    #[test]
+    fn turn_summary_assembled_from_metadata_and_turn_completed() {
+        let mut ctrl = SessionController::new();
+        ctrl.set_status(SessionStatus::Busy);
+
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(50.0),
+            metering: Some(TurnMetering::new(0.03, Some(2000))),
+            tokens: Some(TokenCounts::new(800, 400, Some(100))),
+        });
+        assert!(
+            ctrl.last_turn().is_none(),
+            "no TurnSummary until turn completes"
+        );
+
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        let summary = ctrl
+            .last_turn()
+            .expect("TurnSummary should exist after TurnCompleted");
+        assert_eq!(summary.stop_reason(), StopReason::EndTurn);
+        assert!(summary.token_counts().is_some());
+        assert_eq!(summary.token_counts().unwrap().input(), 800);
+        assert!(summary.metering().is_some());
+    }
+
+    #[test]
+    fn turn_summary_cleared_on_new_session() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(10.0),
+            metering: Some(TurnMetering::new(0.01, None)),
+            tokens: None,
+        });
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert!(ctrl.last_turn().is_some());
+
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+        });
+        assert!(
+            ctrl.last_turn().is_none(),
+            "TurnSummary cleared on new session"
+        );
+    }
+
+    #[test]
+    fn turn_summary_cleared_on_bridge_disconnect() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert!(ctrl.last_turn().is_some());
+
+        ctrl.apply_notification(&Notification::BridgeDisconnected {
+            reason: "process exited".into(),
+        });
+        assert!(
+            ctrl.last_turn().is_none(),
+            "TurnSummary cleared on disconnect"
+        );
+    }
+
+    #[test]
+    fn turn_summary_without_metadata() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::Cancelled,
+        });
+        let summary = ctrl
+            .last_turn()
+            .expect("TurnSummary even without prior metadata");
+        assert_eq!(summary.stop_reason(), StopReason::Cancelled);
+        assert!(summary.token_counts().is_none());
+        assert!(summary.metering().is_none());
+    }
+
+    #[test]
+    fn second_turn_overwrites_last_turn() {
+        let mut ctrl = SessionController::new();
+
+        // Turn 1
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(10.0),
+            metering: Some(TurnMetering::new(0.01, None)),
+            tokens: Some(TokenCounts::new(100, 50, None)),
+        });
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            ctrl.last_turn().unwrap().token_counts().unwrap().input(),
+            100
+        );
+
+        // Turn 2
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(20.0),
+            metering: Some(TurnMetering::new(0.05, Some(5000))),
+            tokens: Some(TokenCounts::new(800, 400, Some(200))),
+        });
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::MaxTokens,
+        });
+        let summary = ctrl.last_turn().unwrap();
+        assert_eq!(summary.stop_reason(), StopReason::MaxTokens);
+        assert_eq!(summary.token_counts().unwrap().input(), 800);
     }
 
     #[test]
