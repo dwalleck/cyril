@@ -658,7 +658,8 @@ impl UiState {
 
     /// Command info tuples `(name, description)` available for slash autocomplete.
     /// Names are stored without the leading `/`.
-    pub fn set_command_info(&mut self, info: Vec<(String, Option<String>)>) {
+    pub fn set_command_info(&mut self, mut info: Vec<(String, Option<String>)>) {
+        info.sort_by(|(a, _), (b, _)| a.to_lowercase().cmp(&b.to_lowercase()));
         self.command_info = info;
     }
 
