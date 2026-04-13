@@ -106,7 +106,6 @@ impl SessionController {
             } => {
                 self.context_usage = Some(context_usage.clone());
                 if let Some(m) = metering {
-                    self.session_cost.record_turn(m);
                     self.pending_metering = Some(m.clone());
                 }
                 self.pending_tokens = tokens.clone();
@@ -133,6 +132,9 @@ impl SessionController {
                     self.pending_tokens.take(),
                     self.pending_metering.take(),
                 ));
+                if let Some(m) = self.last_turn.as_ref().and_then(|t| t.metering()) {
+                    self.session_cost.record_turn(m);
+                }
                 self.status = SessionStatus::Active;
                 true
             }
@@ -243,16 +245,27 @@ mod tests {
     #[test]
     fn metadata_updated_records_turn_metering() {
         let mut ctrl = SessionController::new();
+
+        // Turn 1: MetadataUpdated + TurnCompleted
         ctrl.apply_notification(&Notification::MetadataUpdated {
             context_usage: ContextUsage::new(5.0),
             metering: Some(TurnMetering::new(0.018, Some(1948))),
             tokens: None,
         });
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+
+        // Turn 2: MetadataUpdated + TurnCompleted
         ctrl.apply_notification(&Notification::MetadataUpdated {
             context_usage: ContextUsage::new(6.0),
             metering: Some(TurnMetering::new(0.042, Some(5200))),
             tokens: None,
         });
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+
         assert_eq!(ctrl.session_cost().turn_count(), 2);
         assert!((ctrl.session_cost().total_credits() - 0.060).abs() < 0.001);
         assert!((ctrl.session_cost().last_turn_credits().unwrap() - 0.042).abs() < 0.001);
@@ -484,6 +497,9 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.05, Some(2000))),
             tokens: None,
+        });
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
         });
         assert!(ctrl.session_cost().total_credits() > 0.0);
 

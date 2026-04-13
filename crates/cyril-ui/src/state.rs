@@ -324,7 +324,6 @@ impl UiState {
                 self.pending_tokens = tokens.clone();
                 if let Some(m) = metering {
                     self.pending_metering = Some(m.clone());
-                    self.session_cost.record_turn(m);
                 }
                 true
             }
@@ -335,6 +334,9 @@ impl UiState {
                     self.pending_tokens.take(),
                     self.pending_metering.take(),
                 ));
+                if let Some(m) = self.last_turn.as_ref().and_then(|t| t.metering()) {
+                    self.session_cost.record_turn(m);
+                }
                 self.set_activity(Activity::Ready);
                 true
             }
@@ -1200,7 +1202,9 @@ mod tests {
             text: "response".into(),
             is_streaming: true,
         }));
-        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
 
         assert_eq!(state.streaming_text(), "");
         assert_eq!(state.messages().len(), 1);
@@ -1279,7 +1283,9 @@ mod tests {
         assert_eq!(state.messages().len(), 2, "text + tool call should be committed immediately");
 
         // Turn completes
-        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
 
         // Both text and tool call should be in committed messages
         assert!(state.active_tool_calls().is_empty(), "active tool calls should be cleared");
@@ -1318,7 +1324,9 @@ mod tests {
         }]);
 
         state.apply_notification(&Notification::ToolCallStarted(tc));
-        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
 
         // The tool call should be committed with its diff content intact
         let messages = state.messages();
@@ -1343,7 +1351,9 @@ mod tests {
             text: "First response.".into(),
             is_streaming: true,
         }));
-        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
 
         // Turn 2: text + tool call
         state.apply_notification(&Notification::AgentMessage(AgentMessage {
@@ -1358,7 +1368,9 @@ mod tests {
             None,
         );
         state.apply_notification(&Notification::ToolCallStarted(tc));
-        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
 
         // Both turns should be in history
         let messages = state.messages();
@@ -1388,7 +1400,9 @@ mod tests {
             None,
         );
         state.apply_notification(&Notification::ToolCallStarted(tc));
-        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
 
         let messages = state.messages();
         assert_eq!(messages.len(), 1, "tool call should be committed even with no text");
@@ -1478,7 +1492,9 @@ mod tests {
         assert_eq!(state.streaming_text(), "Done editing.");
 
         // Turn completes
-        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
 
         // Should have: text, tool call, text — in chronological order
         let messages = state.messages();
@@ -1560,7 +1576,9 @@ mod tests {
         );
 
         // Phase 3: TurnCompleted — tool calls commit to message history
-        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
 
         let tc_msg = state
             .messages()
@@ -2249,5 +2267,111 @@ mod tests {
         state.set_activity(Activity::Sending);
         // Should not panic or change behavior
         assert!(state.activity_elapsed().is_some());
+    }
+
+    // --- TurnSummary buffer assembly tests ---
+
+    #[test]
+    fn ui_state_turn_summary_assembled_from_metadata_and_turn_completed() {
+        let mut state = UiState::new(500);
+
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(50.0),
+            metering: Some(TurnMetering::new(0.03, Some(2000))),
+            tokens: Some(TokenCounts::new(800, 400, Some(100))),
+        });
+        assert!(
+            state.last_turn().is_none(),
+            "no TurnSummary until TurnCompleted"
+        );
+
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        let summary = state
+            .last_turn()
+            .expect("TurnSummary should exist after TurnCompleted");
+        assert_eq!(summary.stop_reason(), cyril_core::types::StopReason::EndTurn);
+        assert!(summary.token_counts().is_some());
+        assert_eq!(summary.token_counts().unwrap().input(), 800);
+        assert!(summary.metering().is_some());
+        assert!((summary.metering().unwrap().credits() - 0.03).abs() < 0.001);
+    }
+
+    #[test]
+    fn ui_state_turn_summary_cleared_on_session_created() {
+        let mut state = UiState::new(500);
+
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(10.0),
+            metering: Some(TurnMetering::new(0.01, None)),
+            tokens: None,
+        });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert!(state.last_turn().is_some());
+
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+        });
+        assert!(
+            state.last_turn().is_none(),
+            "TurnSummary should be cleared on new session"
+        );
+    }
+
+    #[test]
+    fn ui_state_session_cost_accumulates() {
+        let mut state = UiState::new(500);
+
+        // Turn 1
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(10.0),
+            metering: Some(TurnMetering::new(0.02, Some(1000))),
+            tokens: None,
+        });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+
+        // Turn 2
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(20.0),
+            metering: Some(TurnMetering::new(0.03, Some(2000))),
+            tokens: None,
+        });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+
+        assert_eq!(state.session_cost().turn_count(), 2);
+        assert!((state.session_cost().total_credits() - 0.05).abs() < 0.001);
+    }
+
+    #[test]
+    fn ui_state_session_cost_reset_on_session_created() {
+        let mut state = UiState::new(500);
+
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(10.0),
+            metering: Some(TurnMetering::new(0.05, Some(2000))),
+            tokens: None,
+        });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert!(state.session_cost().total_credits() > 0.0);
+
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+        });
+
+        assert_eq!(state.session_cost().total_credits(), 0.0);
+        assert_eq!(state.session_cost().turn_count(), 0);
     }
 }
