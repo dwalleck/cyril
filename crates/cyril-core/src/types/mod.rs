@@ -19,7 +19,7 @@ pub use event::{
 };
 pub use hook::HookInfo;
 pub use message::{AgentMessage, AgentThought};
-pub use plan::{Plan, PlanEntry, PlanEntryStatus};
+pub use plan::{Plan, PlanEntry, PlanEntryPriority, PlanEntryStatus};
 pub use prompt::{PromptArgument, PromptInfo};
 pub use session::{
     ContextUsage, CreditUsage, SessionCost, SessionId, SessionMode, SessionStatus, StopReason,

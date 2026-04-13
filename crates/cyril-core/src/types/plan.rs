@@ -7,26 +7,46 @@ pub enum PlanEntryStatus {
     Failed,
 }
 
+/// Priority level of a plan entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PlanEntryPriority {
+    High,
+    #[default]
+    Medium,
+    Low,
+}
+
 /// A single step in the agent's plan.
 #[derive(Debug, Clone)]
 pub struct PlanEntry {
     title: String,
     status: PlanEntryStatus,
+    priority: PlanEntryPriority,
 }
 
 impl PlanEntry {
-    pub fn new(title: impl Into<String>, status: PlanEntryStatus) -> Self {
+    pub fn new(
+        title: impl Into<String>,
+        status: PlanEntryStatus,
+        priority: PlanEntryPriority,
+    ) -> Self {
         Self {
             title: title.into(),
             status,
+            priority,
         }
     }
 
     pub fn title(&self) -> &str {
         &self.title
     }
+
     pub fn status(&self) -> PlanEntryStatus {
         self.status
+    }
+
+    pub fn priority(&self) -> PlanEntryPriority {
+        self.priority
     }
 }
 
@@ -52,7 +72,11 @@ mod tests {
 
     #[test]
     fn plan_entry_accessors() {
-        let entry = PlanEntry::new("Implement feature", PlanEntryStatus::InProgress);
+        let entry = PlanEntry::new(
+            "Implement feature",
+            PlanEntryStatus::InProgress,
+            PlanEntryPriority::Medium,
+        );
         assert_eq!(entry.title(), "Implement feature");
         assert_eq!(entry.status(), PlanEntryStatus::InProgress);
     }
@@ -60,8 +84,16 @@ mod tests {
     #[test]
     fn plan_entries_slice() {
         let plan = Plan::new(vec![
-            PlanEntry::new("Step 1", PlanEntryStatus::Completed),
-            PlanEntry::new("Step 2", PlanEntryStatus::Pending),
+            PlanEntry::new(
+                "Step 1",
+                PlanEntryStatus::Completed,
+                PlanEntryPriority::Medium,
+            ),
+            PlanEntry::new(
+                "Step 2",
+                PlanEntryStatus::Pending,
+                PlanEntryPriority::Medium,
+            ),
         ]);
         assert_eq!(plan.entries().len(), 2);
         assert_eq!(plan.entries()[0].title(), "Step 1");
@@ -87,5 +119,26 @@ mod tests {
     fn plan_is_send_sync() {
         assert_send::<Plan>();
         assert_sync::<Plan>();
+    }
+
+    #[test]
+    fn plan_entry_priority_default_is_medium() {
+        assert_eq!(PlanEntryPriority::default(), PlanEntryPriority::Medium);
+    }
+
+    #[test]
+    fn plan_entry_with_priority() {
+        let entry = PlanEntry::new(
+            "Critical fix",
+            PlanEntryStatus::InProgress,
+            PlanEntryPriority::High,
+        );
+        assert_eq!(entry.priority(), PlanEntryPriority::High);
+    }
+
+    #[test]
+    fn plan_entry_priority_is_send_sync() {
+        assert_send::<PlanEntryPriority>();
+        assert_sync::<PlanEntryPriority>();
     }
 }
