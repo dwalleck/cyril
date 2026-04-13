@@ -334,6 +334,8 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     if tc.status() == ToolCallStatus::Completed && tc.kind() == ToolKind::Write {
         render_diff_lines(lines, tc);
     }
+
+    render_tool_output(lines, tc);
 }
 
 /// Compute (added, removed) line counts from diff content using `similar`.
@@ -427,6 +429,88 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
 
             // Only render first diff block
             return;
+        }
+    }
+}
+
+/// Render tool output (shell stdout, errors, file read summary).
+///
+/// Called after the header and diff rendering in `render_tool_call`. Skips
+/// Write-kind tools since they already display diff content.
+fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+    use cyril_core::types::{ToolCallStatus, ToolKind};
+
+    const MAX_OUTPUT_LINES: usize = 5;
+    const INDENT: &str = "    ";
+
+    // Failed tools: show error message
+    if tc.status() == ToolCallStatus::Failed {
+        if let Some(err) = tc.error_message() {
+            lines.push(Line::styled(
+                format!("{INDENT}Error: {err}"),
+                Style::default().fg(Color::Red),
+            ));
+        }
+        return;
+    }
+
+    // Only show output for completed tools
+    if tc.status() != ToolCallStatus::Completed {
+        return;
+    }
+
+    // Write tools already show diff content — skip output rendering
+    if tc.kind() == ToolKind::Write {
+        return;
+    }
+
+    // Execute: show exit code if non-zero
+    if let Some(code) = tc.exit_code() {
+        if code != 0 {
+            lines.push(Line::styled(
+                format!("{INDENT}Exit: {code}"),
+                Style::default().fg(Color::Yellow),
+            ));
+        }
+    }
+
+    // Read: show char count summary instead of full output
+    if tc.kind() == ToolKind::Read {
+        if let Some(text) = tc.output_text() {
+            let chars = text.len();
+            let summary = if chars < 1000 {
+                format!("{chars} chars")
+            } else {
+                format!("{:.1}k chars", chars as f64 / 1000.0)
+            };
+            lines.push(Line::styled(
+                format!("{INDENT}{summary}"),
+                Style::default().fg(Color::DarkGray),
+            ));
+        }
+        return;
+    }
+
+    // Other tools: show output preview
+    if let Some(text) = tc.output_text() {
+        let output_lines: Vec<&str> = text.lines().collect();
+        let total = output_lines.len();
+        if total == 0 {
+            return;
+        }
+
+        let show = total.min(MAX_OUTPUT_LINES);
+        for line_text in &output_lines[..show] {
+            lines.push(Line::styled(
+                format!("{INDENT}| {line_text}"),
+                Style::default().fg(Color::DarkGray),
+            ));
+        }
+        if total > show {
+            lines.push(Line::styled(
+                format!("{INDENT}...{} more lines", total - show),
+                Style::default().fg(Color::DarkGray),
+            ));
         }
     }
 }
@@ -957,6 +1041,223 @@ mod tests {
         assert!(
             !text.contains("Thinking"),
             "Idle state should not show activity indicator"
+        );
+    }
+
+    #[test]
+    fn render_tool_output_shell_with_exit_code() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "cargo test".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                Some(serde_json::json!({"command": "cargo test"})),
+            )
+            .with_raw_output(Some(serde_json::json!({
+                "stdout": "test result: FAILED\n2 tests failed",
+                "exit_status": 1
+            }))),
+        );
+        let mut lines = Vec::new();
+        render_tool_output(&mut lines, &tc);
+        let text: String = lines
+            .iter()
+            .map(|l| l.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(text.contains("Exit: 1"), "should show non-zero exit code");
+        assert!(text.contains("test result: FAILED"), "should show stdout");
+    }
+
+    #[test]
+    fn render_tool_output_shell_zero_exit_code_hidden() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "cargo test".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                Some(serde_json::json!({"command": "cargo test"})),
+            )
+            .with_raw_output(Some(serde_json::json!({
+                "stdout": "test result: ok",
+                "exit_status": 0
+            }))),
+        );
+        let mut lines = Vec::new();
+        render_tool_output(&mut lines, &tc);
+        let text: String = lines
+            .iter()
+            .map(|l| l.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(!text.contains("Exit:"), "zero exit code should be hidden");
+        assert!(text.contains("test result: ok"), "should show stdout");
+    }
+
+    #[test]
+    fn render_tool_output_failed_shows_error() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "shell".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Failed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!("Command timed out"))),
+        );
+        let mut lines = Vec::new();
+        render_tool_output(&mut lines, &tc);
+        let text: String = lines
+            .iter()
+            .map(|l| l.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            text.contains("Error: Command timed out"),
+            "should show error"
+        );
+    }
+
+    #[test]
+    fn render_tool_output_read_shows_char_count() {
+        use cyril_core::types::*;
+
+        let content = "a".repeat(2500);
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "Read(main.rs)".into(),
+                ToolKind::Read,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!({"items": [{"Text": content}]}))),
+        );
+        let mut lines = Vec::new();
+        render_tool_output(&mut lines, &tc);
+        let text: String = lines
+            .iter()
+            .map(|l| l.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            text.contains("2.5k chars"),
+            "should show char count: got {text}"
+        );
+    }
+
+    #[test]
+    fn render_tool_output_read_small_file_shows_raw_count() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "Read(small.rs)".into(),
+                ToolKind::Read,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_raw_output(Some(
+                serde_json::json!({"items": [{"Text": "hello world"}]}),
+            )),
+        );
+        let mut lines = Vec::new();
+        render_tool_output(&mut lines, &tc);
+        let text: String = lines
+            .iter()
+            .map(|l| l.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            text.contains("11 chars"),
+            "should show raw char count: got {text}"
+        );
+    }
+
+    #[test]
+    fn render_tool_output_write_skipped() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!("written ok"))),
+        );
+        let mut lines = Vec::new();
+        render_tool_output(&mut lines, &tc);
+        assert!(
+            lines.is_empty(),
+            "Write tools should not render output (diff is shown instead)"
+        );
+    }
+
+    #[test]
+    fn render_tool_output_truncates_long_output() {
+        use cyril_core::types::*;
+
+        let long_output: String = (0..20)
+            .map(|i| format!("line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_1"),
+                "shell".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                Some(serde_json::json!({"command": "long-cmd"})),
+            )
+            .with_raw_output(Some(serde_json::json!({
+                "stdout": long_output,
+                "exit_status": 0
+            }))),
+        );
+        let mut lines = Vec::new();
+        render_tool_output(&mut lines, &tc);
+        let text: String = lines
+            .iter()
+            .map(|l| l.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            text.contains("...15 more lines"),
+            "should show overflow indicator: got {text}"
+        );
+        // 5 visible lines + 1 overflow indicator = 6 total
+        assert_eq!(lines.len(), 6, "should show 5 lines + overflow");
+    }
+
+    #[test]
+    fn render_tool_output_in_progress_shows_nothing() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::InProgress,
+            None,
+        ));
+        let mut lines = Vec::new();
+        render_tool_output(&mut lines, &tc);
+        assert!(
+            lines.is_empty(),
+            "in-progress tools should not render output"
         );
     }
 }
