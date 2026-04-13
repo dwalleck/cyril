@@ -254,7 +254,10 @@ impl App {
                 })
                 .collect();
             for prompt in prompt_list {
-                info.push((prompt.name().to_string(), prompt.description().map(str::to_string)));
+                info.push((
+                    prompt.name().to_string(),
+                    prompt.description().map(str::to_string).filter(|s| !s.is_empty()),
+                ));
             }
             self.ui_state.set_command_info(info);
         }

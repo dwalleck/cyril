@@ -28,11 +28,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     let total = suggestions.len();
     let visible = total.min(MAX_VISIBLE);
 
-    // Sliding window with bottom-edge snap: once the selection moves past the
-    // last visible row, the window advances so the selected item is at the bottom.
-    // When nothing is selected, the window stays at the top of the list.
+    // Center-scroll: keep the selected item near the middle of the viewport.
+    // Clamped so the window never starts before 0 or extends past the end.
+    // When nothing is selected or the list fits in one page, start at 0.
     let start = match selected {
-        Some(sel) if sel >= visible => sel - visible + 1,
+        Some(sel) if total > visible => {
+            let half = visible / 2;
+            sel.saturating_sub(half).min(total - visible)
+        }
         _ => 0,
     };
 
@@ -219,13 +222,13 @@ mod tests {
             text.contains("▸ /cmd15"),
             "should show selected item /cmd15 when scrolled"
         );
-        // Window [6..16]: verify first visible item and that items before it are absent
+        // Center-scroll: sel=15, half=5, start=10, window [10..20]
         assert!(
-            text.contains("/cmd6"),
-            "window should start at /cmd6 for selection 15"
+            text.contains("/cmd10"),
+            "window should start at /cmd10 for centered selection 15"
         );
         assert!(
-            !text.contains("/cmd5 "),
+            !text.contains("/cmd9 "),
             "items before the window should not be visible"
         );
     }
@@ -329,8 +332,8 @@ mod tests {
 
     #[test]
     fn render_scrolls_at_exact_boundary() {
-        // selected = MAX_VISIBLE (10) is the first index where the window slides.
-        // Window should be [1..11], with /cmd10 at the bottom edge.
+        // selected = MAX_VISIBLE (10): center-scroll puts it mid-viewport.
+        // half=5, start=10-5=5, window [5..15], /cmd10 centered at row 5.
         let state = MockTuiState {
             autocomplete_suggestions: (0..20)
                 .map(|i| Suggestion {
@@ -352,9 +355,9 @@ mod tests {
         let text = buffer_text(&terminal, MAX_VISIBLE as u16);
         assert!(
             text.contains("▸ /cmd10"),
-            "selected /cmd10 should be visible at boundary"
+            "selected /cmd10 should be visible and centered"
         );
-        assert!(text.contains("/cmd1 "), "window should start at /cmd1");
-        assert!(!text.contains("/cmd0 "), "/cmd0 should have scrolled out");
+        assert!(text.contains("/cmd5 "), "window should start at /cmd5");
+        assert!(!text.contains("/cmd4 "), "/cmd4 should have scrolled out");
     }
 }
