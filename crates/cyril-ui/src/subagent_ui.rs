@@ -100,7 +100,7 @@ impl SubagentStream {
                 self.activity = Activity::ToolRunning;
                 true
             }
-            Notification::TurnCompleted => {
+            Notification::TurnCompleted { .. } => {
                 self.flush_streaming_text();
                 self.activity = Activity::Ready;
                 true
@@ -282,7 +282,12 @@ mod tests {
         let mut state = SubagentUiState::new();
         let sid = SessionId::new("sub-1");
         state.apply_notification(&sid, &make_agent_msg("final text", true));
-        state.apply_notification(&sid, &Notification::TurnCompleted);
+        state.apply_notification(
+            &sid,
+            &Notification::TurnCompleted {
+                stop_reason: cyril_core::types::StopReason::EndTurn,
+            },
+        );
 
         let stream = &state.streams[&sid];
         assert_eq!(stream.streaming_text(), "");
@@ -335,7 +340,12 @@ mod tests {
         state.apply_notification(&sid, &make_agent_msg("streaming", true));
         assert!(state.any_active());
 
-        state.apply_notification(&sid, &Notification::TurnCompleted);
+        state.apply_notification(
+            &sid,
+            &Notification::TurnCompleted {
+                stop_reason: cyril_core::types::StopReason::EndTurn,
+            },
+        );
         assert!(!state.any_active());
     }
 
@@ -390,7 +400,12 @@ mod tests {
         state.apply_notification(&sid, &make_agent_msg("before tool", true));
         state.apply_notification(&sid, &make_tool_call("tc-1", "read"));
         state.apply_notification(&sid, &make_agent_msg("after tool", true));
-        state.apply_notification(&sid, &Notification::TurnCompleted);
+        state.apply_notification(
+            &sid,
+            &Notification::TurnCompleted {
+                stop_reason: cyril_core::types::StopReason::EndTurn,
+            },
+        );
 
         let stream = &state.streams[&sid];
         // Should be: AgentText("before tool"), ToolCall, AgentText("after tool")

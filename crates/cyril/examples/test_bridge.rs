@@ -240,7 +240,7 @@ fn print_notification(n: &Notification) {
                 current_model.as_deref().unwrap_or("(none)")
             );
         }
-        Notification::TurnCompleted => {
+        Notification::TurnCompleted { .. } => {
             println!("  [TurnCompleted]");
         }
         Notification::BridgeDisconnected { reason } => {
@@ -314,7 +314,7 @@ fn print_notification(n: &Notification) {
                 tokens.as_ref().map(|t| (t.input(), t.output(), t.cached()))
             );
         }
-        Notification::AgentSwitched { name, welcome } => {
+        Notification::AgentSwitched { name, welcome, .. } => {
             println!(
                 "  [AgentSwitched] name={name} welcome={:?}",
                 welcome

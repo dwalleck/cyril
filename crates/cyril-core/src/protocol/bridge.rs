@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
+use crate::types::StopReason;
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -262,7 +263,7 @@ async fn run_bridge(
                     Ok(_) => {
                         if channels
                             .notification_tx
-                            .send(Notification::TurnCompleted.into())
+                            .send(Notification::TurnCompleted { stop_reason: StopReason::EndTurn }.into())
                             .await
                             .is_err()
                         {
@@ -273,7 +274,7 @@ async fn run_bridge(
                         tracing::error!(error = %e, "prompt failed");
                         let _ = channels
                             .notification_tx
-                            .send(Notification::TurnCompleted.into())
+                            .send(Notification::TurnCompleted { stop_reason: StopReason::EndTurn }.into())
                             .await;
                     }
                 }
@@ -755,11 +756,13 @@ mod tests {
     #[tokio::test]
     async fn notification_roundtrip() -> anyhow::Result<()> {
         let (mut handle, bridge_side) = create_channel_pair();
-        let notification = Notification::TurnCompleted;
+        let notification = Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        };
         bridge_side.notification_tx.send(notification.into()).await?;
         let received = handle.recv_notification().await.expect("notification");
         assert!(received.session_id.is_none());
-        assert!(matches!(received.notification, Notification::TurnCompleted));
+        assert!(matches!(received.notification, Notification::TurnCompleted { .. }));
         Ok(())
     }
 

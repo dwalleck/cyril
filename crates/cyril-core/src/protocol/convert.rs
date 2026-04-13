@@ -318,7 +318,12 @@ pub(crate) fn to_ext_notification(
                 .get("welcomeMessage")
                 .and_then(|v| v.as_str())
                 .map(String::from);
-            Ok(Some(Notification::AgentSwitched { name, welcome }))
+            Ok(Some(Notification::AgentSwitched {
+                name,
+                welcome,
+                previous_agent: None,
+                model: None,
+            }))
         }
         "kiro.dev/commands/available" => {
             // Parse the commands list from the payload.
@@ -1225,7 +1230,7 @@ mod tests {
         let params = serde_json::json!({"agentName": "code-agent", "welcomeMessage": "Hello!"});
         let result = to_ext_notification("kiro.dev/agent/switched", &params);
         assert!(result.is_ok());
-        if let Ok(Some(Notification::AgentSwitched { name, welcome })) = result {
+        if let Ok(Some(Notification::AgentSwitched { name, welcome, .. })) = result {
             assert_eq!(name, "code-agent");
             assert_eq!(welcome.as_deref(), Some("Hello!"));
         } else {

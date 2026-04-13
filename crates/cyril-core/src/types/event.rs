@@ -1,7 +1,7 @@
 use crate::types::command::{CommandInfo, ConfigOption};
 use crate::types::message::{AgentMessage, AgentThought};
 use crate::types::plan::Plan;
-use crate::types::session::{ContextUsage, SessionId, TokenCounts, TurnMetering};
+use crate::types::session::{ContextUsage, SessionId, StopReason, TokenCounts, TurnMetering};
 use crate::types::tool_call::{ToolCall, ToolCallId};
 
 /// Notifications emitted by the ACP bridge. All variants are Send + Sync + Clone.
@@ -48,6 +48,8 @@ pub enum Notification {
     AgentSwitched {
         name: String,
         welcome: Option<String>,
+        previous_agent: Option<String>,
+        model: Option<String>,
     },
     CompactionStatus {
         message: String,
@@ -125,7 +127,9 @@ pub enum Notification {
         current_mode: Option<String>,
         current_model: Option<String>,
     },
-    TurnCompleted,
+    TurnCompleted {
+        stop_reason: StopReason,
+    },
     BridgeDisconnected {
         reason: String,
     },
@@ -320,8 +324,10 @@ mod tests {
 
     #[test]
     fn notification_turn_completed() {
-        let n = Notification::TurnCompleted;
-        assert!(matches!(n, Notification::TurnCompleted));
+        let n = Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        };
+        assert!(matches!(n, Notification::TurnCompleted { .. }));
     }
 
     #[test]
@@ -464,9 +470,14 @@ mod tests {
 
     #[test]
     fn routed_notification_global_has_no_session_id() {
-        let routed = RoutedNotification::global(Notification::TurnCompleted);
+        let routed = RoutedNotification::global(Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
         assert!(routed.session_id.is_none());
-        assert!(matches!(routed.notification, Notification::TurnCompleted));
+        assert!(matches!(
+            routed.notification,
+            Notification::TurnCompleted { .. }
+        ));
     }
 
     #[test]
@@ -486,7 +497,10 @@ mod tests {
 
     #[test]
     fn notification_into_routed_is_global() {
-        let routed: RoutedNotification = Notification::TurnCompleted.into();
+        let routed: RoutedNotification = Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        }
+        .into();
         assert!(routed.session_id.is_none());
     }
 

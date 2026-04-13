@@ -305,7 +305,7 @@ impl UiState {
                 self.context_usage = Some(context_usage.percentage());
                 true
             }
-            Notification::TurnCompleted => {
+            Notification::TurnCompleted { .. } => {
                 self.commit_streaming();
                 self.set_activity(Activity::Ready);
                 true
@@ -319,7 +319,7 @@ impl UiState {
                 self.current_mode = Some(mode_id.clone());
                 true
             }
-            Notification::AgentSwitched { name, welcome } => {
+            Notification::AgentSwitched { name, welcome, .. } => {
                 self.current_mode = Some(name.clone());
                 if let Some(msg) = welcome {
                     self.add_system_message(format!("Switched to {name}: {msg}"));
@@ -1165,7 +1165,7 @@ mod tests {
             text: "response".into(),
             is_streaming: true,
         }));
-        state.apply_notification(&Notification::TurnCompleted);
+        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
 
         assert_eq!(state.streaming_text(), "");
         assert_eq!(state.messages().len(), 1);
@@ -1244,7 +1244,7 @@ mod tests {
         assert_eq!(state.messages().len(), 2, "text + tool call should be committed immediately");
 
         // Turn completes
-        state.apply_notification(&Notification::TurnCompleted);
+        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
 
         // Both text and tool call should be in committed messages
         assert!(state.active_tool_calls().is_empty(), "active tool calls should be cleared");
@@ -1283,7 +1283,7 @@ mod tests {
         }]);
 
         state.apply_notification(&Notification::ToolCallStarted(tc));
-        state.apply_notification(&Notification::TurnCompleted);
+        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
 
         // The tool call should be committed with its diff content intact
         let messages = state.messages();
@@ -1308,7 +1308,7 @@ mod tests {
             text: "First response.".into(),
             is_streaming: true,
         }));
-        state.apply_notification(&Notification::TurnCompleted);
+        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
 
         // Turn 2: text + tool call
         state.apply_notification(&Notification::AgentMessage(AgentMessage {
@@ -1323,7 +1323,7 @@ mod tests {
             None,
         );
         state.apply_notification(&Notification::ToolCallStarted(tc));
-        state.apply_notification(&Notification::TurnCompleted);
+        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
 
         // Both turns should be in history
         let messages = state.messages();
@@ -1353,7 +1353,7 @@ mod tests {
             None,
         );
         state.apply_notification(&Notification::ToolCallStarted(tc));
-        state.apply_notification(&Notification::TurnCompleted);
+        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
 
         let messages = state.messages();
         assert_eq!(messages.len(), 1, "tool call should be committed even with no text");
@@ -1443,7 +1443,7 @@ mod tests {
         assert_eq!(state.streaming_text(), "Done editing.");
 
         // Turn completes
-        state.apply_notification(&Notification::TurnCompleted);
+        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
 
         // Should have: text, tool call, text — in chronological order
         let messages = state.messages();
@@ -1525,7 +1525,7 @@ mod tests {
         );
 
         // Phase 3: TurnCompleted — tool calls commit to message history
-        state.apply_notification(&Notification::TurnCompleted);
+        state.apply_notification(&Notification::TurnCompleted { stop_reason: cyril_core::types::StopReason::EndTurn });
 
         let tc_msg = state
             .messages()

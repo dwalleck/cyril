@@ -115,7 +115,7 @@ impl SessionController {
                 self.status = SessionStatus::Active;
                 true
             }
-            Notification::TurnCompleted => {
+            Notification::TurnCompleted { .. } => {
                 self.status = SessionStatus::Active;
                 true
             }
@@ -174,7 +174,9 @@ mod tests {
     fn turn_completed_transitions_busy_to_active() {
         let mut ctrl = SessionController::new();
         ctrl.set_session(SessionId::new("sess_1"), SessionStatus::Busy);
-        let changed = ctrl.apply_notification(&Notification::TurnCompleted);
+        let changed = ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
         assert!(changed);
         assert_eq!(ctrl.status(), &SessionStatus::Active);
     }
@@ -287,6 +289,8 @@ mod tests {
         let changed = ctrl.apply_notification(&Notification::AgentSwitched {
             name: "code-agent".into(),
             welcome: None,
+            previous_agent: None,
+            model: None,
         });
         assert!(changed);
         assert_eq!(ctrl.status(), &SessionStatus::Active);

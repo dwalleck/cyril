@@ -244,7 +244,9 @@ mod tests {
     #[test]
     fn ignores_unrelated_notifications() {
         let mut tracker = SubagentTracker::new();
-        assert!(!tracker.apply_notification(&Notification::TurnCompleted));
+        assert!(!tracker.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        }));
     }
 
     #[test]

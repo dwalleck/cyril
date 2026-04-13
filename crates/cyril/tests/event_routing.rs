@@ -49,7 +49,9 @@ fn turn_completed_commits_streaming_and_updates_session() {
     }));
 
     // Turn completes
-    let turn = Notification::TurnCompleted;
+    let turn = Notification::TurnCompleted {
+        stop_reason: cyril_core::types::StopReason::EndTurn,
+    };
     let ui_changed = ui.apply_notification(&turn);
     let session_changed = session.apply_notification(&turn);
 
@@ -183,6 +185,8 @@ fn agent_switched_shows_message_and_activates() {
     let notification = Notification::AgentSwitched {
         name: "code-agent".into(),
         welcome: Some("Ready to code!".into()),
+        previous_agent: None,
+        model: None,
     };
     ui.apply_notification(&notification);
     session.apply_notification(&notification);
