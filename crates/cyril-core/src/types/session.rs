@@ -221,6 +221,61 @@ impl TokenCounts {
     }
 }
 
+/// Reason the agent stopped processing a prompt turn.
+///
+/// We define our own enum rather than reusing `acp::StopReason` so that
+/// `cyril-ui` (which must not import ACP types) can read it through the
+/// `TuiState` trait.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum StopReason {
+    #[default]
+    EndTurn,
+    MaxTokens,
+    MaxTurnRequests,
+    Refusal,
+    Cancelled,
+}
+
+/// Atomic summary of a completed turn.
+///
+/// Assembled by `SessionController` when `TurnCompleted` arrives: the
+/// `stop_reason` comes from the `session/prompt` response; `token_counts`
+/// and `metering` were buffered from the preceding `MetadataUpdated`
+/// notification. Grouping them prevents the renderer from ever seeing
+/// token counts from turn N paired with a stop reason from turn N-1.
+#[derive(Debug, Clone)]
+pub struct TurnSummary {
+    stop_reason: StopReason,
+    token_counts: Option<TokenCounts>,
+    metering: Option<TurnMetering>,
+}
+
+impl TurnSummary {
+    pub fn new(
+        stop_reason: StopReason,
+        token_counts: Option<TokenCounts>,
+        metering: Option<TurnMetering>,
+    ) -> Self {
+        Self {
+            stop_reason,
+            token_counts,
+            metering,
+        }
+    }
+
+    pub fn stop_reason(&self) -> StopReason {
+        self.stop_reason
+    }
+
+    pub fn token_counts(&self) -> Option<&TokenCounts> {
+        self.token_counts.as_ref()
+    }
+
+    pub fn metering(&self) -> Option<&TurnMetering> {
+        self.metering.as_ref()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -356,5 +411,42 @@ mod tests {
         assert_sync::<SessionCost>();
         assert_send::<TokenCounts>();
         assert_sync::<TokenCounts>();
+    }
+
+    #[test]
+    fn stop_reason_default_is_end_turn() {
+        assert_eq!(StopReason::default(), StopReason::EndTurn);
+    }
+
+    #[test]
+    fn turn_summary_accessors() {
+        let summary = TurnSummary::new(
+            StopReason::MaxTokens,
+            Some(TokenCounts::new(1000, 500, Some(200))),
+            Some(TurnMetering::new(0.05, Some(3000))),
+        );
+        assert_eq!(summary.stop_reason(), StopReason::MaxTokens);
+        assert!(summary.token_counts().is_some());
+        assert!(summary.metering().is_some());
+    }
+
+    #[test]
+    fn turn_summary_minimal() {
+        let summary = TurnSummary::new(StopReason::Cancelled, None, None);
+        assert_eq!(summary.stop_reason(), StopReason::Cancelled);
+        assert!(summary.token_counts().is_none());
+        assert!(summary.metering().is_none());
+    }
+
+    #[test]
+    fn stop_reason_is_send_sync() {
+        assert_send::<StopReason>();
+        assert_sync::<StopReason>();
+    }
+
+    #[test]
+    fn turn_summary_is_send_sync() {
+        assert_send::<TurnSummary>();
+        assert_sync::<TurnSummary>();
     }
 }

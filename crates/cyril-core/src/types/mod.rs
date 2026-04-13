@@ -22,8 +22,8 @@ pub use message::{AgentMessage, AgentThought};
 pub use plan::{Plan, PlanEntry, PlanEntryStatus};
 pub use prompt::{PromptArgument, PromptInfo};
 pub use session::{
-    ContextUsage, CreditUsage, SessionCost, SessionId, SessionMode, SessionStatus, TokenCounts,
-    TurnMetering,
+    ContextUsage, CreditUsage, SessionCost, SessionId, SessionMode, SessionStatus, StopReason,
+    TokenCounts, TurnMetering, TurnSummary,
 };
 pub use subagent::{PendingStage, SubagentInfo, SubagentStatus};
 pub use tool_call::{
