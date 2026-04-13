@@ -899,6 +899,7 @@ pub(crate) fn session_update_to_notification(
                         acp::PlanEntryStatus::Completed => PlanEntryStatus::Completed,
                         _ => PlanEntryStatus::Failed,
                     };
+                    // TODO(task-5): map from acp::PlanEntry priority field instead of hardcoding Medium
                     PlanEntry::new(e.content.clone(), status, PlanEntryPriority::Medium)
                 })
                 .collect();

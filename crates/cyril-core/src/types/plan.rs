@@ -8,12 +8,12 @@ pub enum PlanEntryStatus {
 }
 
 /// Priority level of a plan entry.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum PlanEntryPriority {
-    High,
+    Low,
     #[default]
     Medium,
-    Low,
+    High,
 }
 
 /// A single step in the agent's plan.
@@ -134,6 +134,12 @@ mod tests {
             PlanEntryPriority::High,
         );
         assert_eq!(entry.priority(), PlanEntryPriority::High);
+    }
+
+    #[test]
+    fn plan_entry_priority_ordering() {
+        assert!(PlanEntryPriority::High > PlanEntryPriority::Medium);
+        assert!(PlanEntryPriority::Medium > PlanEntryPriority::Low);
     }
 
     #[test]

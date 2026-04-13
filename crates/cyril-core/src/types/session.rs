@@ -243,6 +243,10 @@ pub enum StopReason {
 /// and `metering` were buffered from the preceding `MetadataUpdated`
 /// notification. Grouping them prevents the renderer from ever seeing
 /// token counts from turn N paired with a stop reason from turn N-1.
+///
+/// NOTE: `stop_reason` is not yet extracted from the `session/prompt` response.
+/// The bridge currently hardcodes `StopReason::EndTurn` for all outcomes.
+/// Task #2 in the protocol parity backlog will wire the real value.
 #[derive(Debug, Clone)]
 pub struct TurnSummary {
     stop_reason: StopReason,
