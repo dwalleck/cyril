@@ -32,13 +32,16 @@ impl App {
     pub fn new(bridge: BridgeHandle, max_messages: usize) -> Self {
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
         let commands = CommandRegistry::with_builtins();
-        let names: Vec<String> = commands
+        let info: Vec<(String, Option<String>)> = commands
             .all_commands()
             .iter()
-            .map(|c| c.name().to_string())
+            .map(|c| {
+                let desc = c.description();
+                (c.name().to_string(), Some(desc.to_string()).filter(|s| !s.is_empty()))
+            })
             .collect();
         let mut ui_state = UiState::new(max_messages);
-        ui_state.set_command_names(names);
+        ui_state.set_command_info(info);
         // main.rs enables mouse capture before the event loop, so sync the
         // initial state to avoid an inverted Ctrl+M toggle.
         ui_state.set_mouse_captured(true);
@@ -240,17 +243,20 @@ impl App {
         } = notification
         {
             self.commands.register_agent_commands(cmds);
-            // Update autocomplete with all command names and prompt names
-            let mut names: Vec<String> = self
+            // Update autocomplete with all command info (name + description)
+            let mut info: Vec<(String, Option<String>)> = self
                 .commands
                 .all_commands()
                 .iter()
-                .map(|cmd| cmd.name().to_string())
+                .map(|cmd| {
+                    let desc = cmd.description();
+                    (cmd.name().to_string(), Some(desc.to_string()).filter(|s| !s.is_empty()))
+                })
                 .collect();
             for prompt in prompt_list {
-                names.push(prompt.name().to_string());
+                info.push((prompt.name().to_string(), prompt.description().map(str::to_string)));
             }
-            self.ui_state.set_command_names(names);
+            self.ui_state.set_command_info(info);
         }
 
         // Handle clear command result
