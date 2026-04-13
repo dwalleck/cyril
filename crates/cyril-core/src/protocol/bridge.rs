@@ -260,10 +260,11 @@ async fn run_bridge(
                     .collect();
                 let request = acp::PromptRequest::new(acp_session_id, prompt);
                 match conn.prompt(request).await {
-                    Ok(_) => {
+                    Ok(response) => {
+                        let stop_reason = crate::protocol::convert::to_stop_reason(response.stop_reason);
                         if channels
                             .notification_tx
-                            .send(Notification::TurnCompleted { stop_reason: StopReason::EndTurn }.into())
+                            .send(Notification::TurnCompleted { stop_reason }.into())
                             .await
                             .is_err()
                         {
@@ -272,6 +273,9 @@ async fn run_bridge(
                     }
                     Err(e) => {
                         tracing::error!(error = %e, "prompt failed");
+                        // Transport error — no PromptResponse available. EndTurn is a
+                        // placeholder; the BridgeError notification (if sent) carries
+                        // the real failure detail.
                         let _ = channels
                             .notification_tx
                             .send(Notification::TurnCompleted { stop_reason: StopReason::EndTurn }.into())

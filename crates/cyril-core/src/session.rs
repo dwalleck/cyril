@@ -121,8 +121,11 @@ impl SessionController {
                 self.agent_commands = commands.clone();
                 true
             }
-            Notification::AgentSwitched { name, .. } => {
+            Notification::AgentSwitched { name, model, .. } => {
                 self.current_mode_id = Some(name.clone());
+                if let Some(m) = model {
+                    self.cached_model = Some(m.clone());
+                }
                 self.status = SessionStatus::Active;
                 true
             }

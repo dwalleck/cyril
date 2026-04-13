@@ -19,6 +19,20 @@ pub(crate) fn to_tool_kind(kind: agent_client_protocol::ToolKind) -> ToolKind {
     }
 }
 
+pub(crate) fn to_stop_reason(reason: agent_client_protocol::StopReason) -> StopReason {
+    match reason {
+        agent_client_protocol::StopReason::EndTurn => StopReason::EndTurn,
+        agent_client_protocol::StopReason::MaxTokens => StopReason::MaxTokens,
+        agent_client_protocol::StopReason::MaxTurnRequests => StopReason::MaxTurnRequests,
+        agent_client_protocol::StopReason::Refusal => StopReason::Refusal,
+        agent_client_protocol::StopReason::Cancelled => StopReason::Cancelled,
+        _ => {
+            tracing::warn!(?reason, "unknown StopReason variant, defaulting to EndTurn");
+            StopReason::EndTurn
+        }
+    }
+}
+
 pub(crate) fn to_tool_call_status(status: agent_client_protocol::ToolCallStatus) -> ToolCallStatus {
     match status {
         agent_client_protocol::ToolCallStatus::InProgress => ToolCallStatus::InProgress,
@@ -49,6 +63,7 @@ pub(crate) fn to_tool_call(
     )
     .with_content(content)
     .with_locations(locations)
+    .with_raw_output(acp_call.raw_output.clone())
 }
 
 /// Convert ACP tool call content to our internal representation.
@@ -318,11 +333,19 @@ pub(crate) fn to_ext_notification(
                 .get("welcomeMessage")
                 .and_then(|v| v.as_str())
                 .map(String::from);
+            let previous_agent = params
+                .get("previousAgentName")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let model = params
+                .get("model")
+                .and_then(|v| v.as_str())
+                .map(String::from);
             Ok(Some(Notification::AgentSwitched {
                 name,
                 welcome,
-                previous_agent: None,
-                model: None,
+                previous_agent,
+                model,
             }))
         }
         "kiro.dev/commands/available" => {
@@ -717,6 +740,7 @@ pub(crate) fn to_tool_call_from_permission(
     ToolCall::new(ToolCallId::new(id_str), title, kind, status, raw_input)
         .with_content(content)
         .with_locations(locations)
+        .with_raw_output(update.fields.raw_output.clone())
 }
 
 /// Convert ACP permission options to our internal representation.
@@ -885,7 +909,8 @@ pub(crate) fn session_update_to_notification(
             Some(Notification::ToolCallUpdated(
                 ToolCall::new(ToolCallId::new(id_str), title, kind, status, raw_input)
                     .with_content(content)
-                    .with_locations(locations),
+                    .with_locations(locations)
+                    .with_raw_output(update.fields.raw_output.clone()),
             ))
         }
         acp::SessionUpdate::Plan(plan) => {
@@ -899,8 +924,13 @@ pub(crate) fn session_update_to_notification(
                         acp::PlanEntryStatus::Completed => PlanEntryStatus::Completed,
                         _ => PlanEntryStatus::Failed,
                     };
-                    // TODO(task-5): map from acp::PlanEntry priority field instead of hardcoding Medium
-                    PlanEntry::new(e.content.clone(), status, PlanEntryPriority::Medium)
+                    let priority = match e.priority {
+                        acp::PlanEntryPriority::High => PlanEntryPriority::High,
+                        acp::PlanEntryPriority::Medium => PlanEntryPriority::Medium,
+                        acp::PlanEntryPriority::Low => PlanEntryPriority::Low,
+                        _ => PlanEntryPriority::Medium,
+                    };
+                    PlanEntry::new(e.content.clone(), status, priority)
                 })
                 .collect();
             Some(Notification::PlanUpdated(Plan::new(entries)))
