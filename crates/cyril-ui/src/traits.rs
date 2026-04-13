@@ -40,6 +40,8 @@ pub trait TuiState {
     fn current_model(&self) -> Option<&str>;
     fn context_usage(&self) -> Option<f64>;
     fn credit_usage(&self) -> Option<(f64, f64)>;
+    fn last_turn(&self) -> Option<&cyril_core::types::TurnSummary>;
+    fn session_cost(&self) -> &cyril_core::types::SessionCost;
 
     // Overlays
     fn approval(&self) -> Option<&ApprovalState>;
@@ -280,6 +282,8 @@ pub mod test_support {
         pub current_model: Option<String>,
         pub context_usage: Option<f64>,
         pub credit_usage: Option<(f64, f64)>,
+        pub last_turn: Option<cyril_core::types::TurnSummary>,
+        pub session_cost: cyril_core::types::SessionCost,
         pub approval: Option<ApprovalState>,
         pub picker: Option<PickerState>,
         pub hooks_panel: Option<HooksPanelState>,
@@ -313,6 +317,8 @@ pub mod test_support {
                 current_model: None,
                 context_usage: None,
                 credit_usage: None,
+                last_turn: None,
+                session_cost: cyril_core::types::SessionCost::new(),
                 approval: None,
                 picker: None,
                 hooks_panel: None,
@@ -378,6 +384,12 @@ pub mod test_support {
         }
         fn credit_usage(&self) -> Option<(f64, f64)> {
             self.credit_usage
+        }
+        fn last_turn(&self) -> Option<&cyril_core::types::TurnSummary> {
+            self.last_turn.as_ref()
+        }
+        fn session_cost(&self) -> &cyril_core::types::SessionCost {
+            &self.session_cost
         }
         fn approval(&self) -> Option<&ApprovalState> {
             self.approval.as_ref()

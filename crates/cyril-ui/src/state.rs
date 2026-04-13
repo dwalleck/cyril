@@ -50,6 +50,10 @@ pub struct UiState {
     current_model: Option<String>,
     context_usage: Option<f64>,
     credit_usage: Option<(f64, f64)>,
+    last_turn: Option<cyril_core::types::TurnSummary>,
+    session_cost: cyril_core::types::SessionCost,
+    pending_tokens: Option<cyril_core::types::TokenCounts>,
+    pending_metering: Option<cyril_core::types::TurnMetering>,
 
     // Subagent streams and tracker (private — mutated via delegating methods)
     subagents: crate::subagent_ui::SubagentUiState,
@@ -142,6 +146,14 @@ impl TuiState for UiState {
         self.credit_usage
     }
 
+    fn last_turn(&self) -> Option<&cyril_core::types::TurnSummary> {
+        self.last_turn.as_ref()
+    }
+
+    fn session_cost(&self) -> &cyril_core::types::SessionCost {
+        &self.session_cost
+    }
+
     fn approval(&self) -> Option<&ApprovalState> {
         self.approval.as_ref()
     }
@@ -218,6 +230,10 @@ impl UiState {
             current_model: None,
             context_usage: None,
             credit_usage: None,
+            last_turn: None,
+            session_cost: cyril_core::types::SessionCost::new(),
+            pending_tokens: None,
+            pending_metering: None,
             subagents: crate::subagent_ui::SubagentUiState::new(),
             subagent_tracker: cyril_core::subagent::SubagentTracker::new(),
             approval: None,
@@ -300,18 +316,33 @@ impl UiState {
                 true
             }
             Notification::MetadataUpdated {
-                context_usage, ..
+                context_usage,
+                metering,
+                tokens,
             } => {
                 self.context_usage = Some(context_usage.percentage());
+                self.pending_tokens = tokens.clone();
+                if let Some(m) = metering {
+                    self.pending_metering = Some(m.clone());
+                    self.session_cost.record_turn(m);
+                }
                 true
             }
-            Notification::TurnCompleted { .. } => {
+            Notification::TurnCompleted { stop_reason } => {
                 self.commit_streaming();
+                self.last_turn = Some(cyril_core::types::TurnSummary::new(
+                    *stop_reason,
+                    self.pending_tokens.take(),
+                    self.pending_metering.take(),
+                ));
                 self.set_activity(Activity::Ready);
                 true
             }
             Notification::BridgeDisconnected { reason } => {
                 self.add_system_message(format!("Disconnected: {reason}"));
+                self.last_turn = None;
+                self.pending_tokens = None;
+                self.pending_metering = None;
                 self.set_activity(Activity::Idle);
                 true
             }
@@ -350,6 +381,10 @@ impl UiState {
                 if let Some(model) = current_model {
                     self.current_model = Some(model.clone());
                 }
+                self.last_turn = None;
+                self.pending_tokens = None;
+                self.pending_metering = None;
+                self.session_cost = cyril_core::types::SessionCost::new();
                 self.add_system_message(format!("Session created: {}", session_id.as_str()));
                 self.set_activity(Activity::Ready);
                 true
