@@ -106,14 +106,18 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                         let border_width = width.min(palette::MAX_BORDER_WIDTH);
                         match &code_block_lang {
                             Some(lang) => {
+                                // Truncate language tag if it would overflow the
+                                // border: "╭─── " (5) + lang + " ─" (2) = 7 min.
+                                let max_lang = border_width.saturating_sub(7);
+                                let display_lang = text::truncate(lang, max_lang);
                                 header_spans.push(Span::styled("╭─── ", border_style));
                                 header_spans.push(Span::styled(
-                                    lang.clone(),
+                                    display_lang.clone(),
                                     Style::default()
                                         .fg(Color::Cyan)
                                         .add_modifier(Modifier::BOLD),
                                 ));
-                                let lang_cols = lang.width();
+                                let lang_cols = display_lang.width();
                                 let fill_len =
                                     border_width.saturating_sub(lang_cols + 6).max(1);
                                 header_spans.push(Span::styled(
@@ -238,17 +242,20 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                     let total_content: usize = col_widths.iter().sum();
                     if col_count > 0 && total_content + separator_space > width {
                         let available = width.saturating_sub(separator_space);
-                        let scale = available as f64 / total_content.max(1) as f64;
-                        let min_col = (available / col_count.max(1)).max(1);
-                        for w in &mut col_widths {
-                            *w = (*w as f64 * scale).floor().max(min_col as f64) as usize;
-                        }
-                        // Re-check: if floor pushed us over budget, hard-clamp
-                        let post_total: usize = col_widths.iter().sum();
-                        if post_total > available {
-                            for w in &mut col_widths {
-                                *w = min_col;
-                            }
+                        // Even distribution: each column gets at least
+                        // available/col_count, then distribute remainder
+                        // to the widest columns to preserve proportionality.
+                        let base = available / col_count.max(1);
+                        let remainder = available.saturating_sub(base * col_count);
+
+                        // Sort indices by original width (descending) so the
+                        // widest columns get the extra space.
+                        let mut indices: Vec<usize> = (0..col_count).collect();
+                        indices.sort_by(|&a, &b| col_widths[b].cmp(&col_widths[a]));
+
+                        for (rank, &idx) in indices.iter().enumerate() {
+                            let extra = if rank < remainder { 1 } else { 0 };
+                            col_widths[idx] = base + extra;
                         }
                     }
 
