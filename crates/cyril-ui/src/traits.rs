@@ -46,6 +46,9 @@ pub trait TuiState {
     fn picker(&self) -> Option<&PickerState>;
     fn hooks_panel(&self) -> Option<&HooksPanelState>;
 
+    // Chat scroll
+    fn chat_scroll_back(&self) -> Option<usize>;
+
     // Terminal
     fn terminal_size(&self) -> (u16, u16);
     fn mouse_captured(&self) -> bool;
@@ -278,6 +281,7 @@ pub mod test_support {
         pub approval: Option<ApprovalState>,
         pub picker: Option<PickerState>,
         pub hooks_panel: Option<HooksPanelState>,
+        pub chat_scroll_back: Option<usize>,
         pub terminal_size: (u16, u16),
         pub mouse_captured: bool,
         pub quit_requested: bool,
@@ -308,6 +312,7 @@ pub mod test_support {
                 approval: None,
                 picker: None,
                 hooks_panel: None,
+                chat_scroll_back: None,
                 terminal_size: (80, 24),
                 mouse_captured: false,
                 quit_requested: false,
@@ -376,6 +381,9 @@ pub mod test_support {
         }
         fn hooks_panel(&self) -> Option<&HooksPanelState> {
             self.hooks_panel.as_ref()
+        }
+        fn chat_scroll_back(&self) -> Option<usize> {
+            self.chat_scroll_back
         }
         fn terminal_size(&self) -> (u16, u16) {
             self.terminal_size

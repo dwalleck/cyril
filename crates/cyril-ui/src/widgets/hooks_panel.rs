@@ -1,7 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+use crate::text::{pad_right, truncate_and_pad};
 use crate::traits::HooksPanelState;
 
 const TRIGGER_COL: usize = 18;
@@ -108,71 +108,6 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
 
     let popup = Paragraph::new(lines).block(block);
     frame.render_widget(popup, popup_area);
-}
-
-/// Truncate `s` so its **terminal display width** is at most `max_width`
-/// cells, appending `…` when truncation happens.
-///
-/// Uses `unicode-width` to count display cells rather than Unicode scalar
-/// values or bytes — so wide characters (CJK, most emoji) count as 2 cells
-/// and narrow characters count as 1. This matters for column alignment:
-/// a 3-char CJK trigger like "日本語" occupies 6 cells, not 3.
-///
-/// Complexity: `O(n)` worst case — the fast path (`s.width() <= max_width`)
-/// walks the whole string via `UnicodeWidthStr::width`, and the slow path
-/// (truncation needed) walks input chars until the cell budget is exhausted.
-/// Both paths are bounded at column-width scale (`max_width` is ~18–52 in
-/// practice), so the absolute cost is negligible, but the function is not
-/// sub-linear for very long inputs that happen to fit in the budget.
-fn truncate(s: &str, max_width: usize) -> String {
-    if max_width == 0 {
-        return String::new();
-    }
-    if s.width() <= max_width {
-        return s.to_string();
-    }
-    // Reserve 1 cell for the ellipsis (`…` is 1 cell wide).
-    let budget = max_width.saturating_sub(1);
-    let mut out = String::new();
-    let mut used: usize = 0;
-    for ch in s.chars() {
-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
-        if used + ch_width > budget {
-            break;
-        }
-        out.push(ch);
-        used += ch_width;
-    }
-    out.push('…');
-    out
-}
-
-/// Pad `s` with trailing spaces so its display width equals `width` cells.
-/// Returns `s` unchanged if it already meets or exceeds `width`.
-///
-/// Rust's `format!("{:<N}", ...)` spec pads by character count, not cell
-/// count, so it miscounts CJK content. This helper uses `UnicodeWidthStr`
-/// so columns stay aligned regardless of character script.
-fn pad_right(s: &str, width: usize) -> String {
-    let current = s.width();
-    if current >= width {
-        return s.to_string();
-    }
-    let padding = width - current;
-    let mut out = String::with_capacity(s.len() + padding);
-    out.push_str(s);
-    for _ in 0..padding {
-        out.push(' ');
-    }
-    out
-}
-
-/// Truncate to at most `width` cells and then pad to exactly `width` cells.
-/// Used by the table renderer to keep every column aligned regardless of
-/// content length or character width.
-fn truncate_and_pad(s: &str, width: usize) -> String {
-    let trunc = truncate(s, width);
-    pad_right(&trunc, width)
 }
 
 #[cfg(test)]
@@ -377,86 +312,5 @@ mod tests {
             "ASCII and CJK triggers must place their commands at the same cell \
              column (CJK alignment regression — check pad_right / truncate_and_pad)"
         );
-    }
-
-    #[test]
-    fn truncate_helper_preserves_short_strings() {
-        assert_eq!(truncate("abc", 10), "abc");
-        assert_eq!(truncate("", 10), "");
-    }
-
-    #[test]
-    fn truncate_helper_shortens_ascii_with_ellipsis() {
-        assert_eq!(truncate("abcdefghij", 5), "abcd…");
-    }
-
-    #[test]
-    fn truncate_helper_uses_display_width_for_cjk() {
-        // Width budget 3 with 1 cell reserved for ellipsis leaves room for
-        // exactly one 2-cell CJK char. The old char-count implementation
-        // would have returned "日本…" (3 chars, 5 cells wide); the new
-        // display-width implementation returns "日…" (2 chars, 3 cells wide).
-        let result = truncate("日本語テスト", 3);
-        assert_eq!(result, "日…");
-        assert_eq!(result.width(), 3, "result should fit the cell budget");
-    }
-
-    #[test]
-    fn truncate_helper_handles_exact_display_width() {
-        // 3 ASCII chars == 3 cells, fits exactly, no truncation.
-        assert_eq!(truncate("abc", 3), "abc");
-        // 1 CJK char == 2 cells, fits in a 2-cell budget, no truncation.
-        assert_eq!(truncate("日", 2), "日");
-    }
-
-    #[test]
-    fn truncate_helper_max_zero_returns_empty() {
-        assert_eq!(truncate("abc", 0), "");
-    }
-
-    #[test]
-    fn pad_right_adds_spaces_to_ascii() {
-        assert_eq!(pad_right("abc", 6), "abc   ");
-    }
-
-    #[test]
-    fn pad_right_pads_cjk_by_cell_width() {
-        // "日本" is 2 chars but 4 cells. Padding to 6 cells adds 2 spaces.
-        let padded = pad_right("日本", 6);
-        assert_eq!(padded.width(), 6);
-        assert_eq!(padded, "日本  ");
-    }
-
-    #[test]
-    fn pad_right_noop_when_already_at_width() {
-        assert_eq!(pad_right("abc", 3), "abc");
-        assert_eq!(pad_right("日", 2), "日");
-    }
-
-    #[test]
-    fn pad_right_noop_when_wider_than_width() {
-        // Overflow is unchanged — truncation is truncate()'s job.
-        assert_eq!(pad_right("abcdef", 3), "abcdef");
-    }
-
-    #[test]
-    fn truncate_and_pad_fits_exactly_in_cells() {
-        // ASCII
-        assert_eq!(truncate_and_pad("abc", 10).width(), 10);
-        // CJK that overflows: truncate, then pad
-        let result = truncate_and_pad("日本語テスト", 8);
-        assert_eq!(
-            result.width(),
-            8,
-            "truncate_and_pad output must always equal the requested width"
-        );
-        assert!(result.contains('…'), "should have been truncated");
-    }
-
-    #[test]
-    fn truncate_and_pad_short_input_is_padded() {
-        let result = truncate_and_pad("hi", 10);
-        assert_eq!(result, "hi        ");
-        assert_eq!(result.width(), 10);
     }
 }

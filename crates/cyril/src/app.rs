@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseEventKind};
 use futures_util::{FutureExt, StreamExt};
 use ratatui::DefaultTerminal;
 use serde::Deserialize;
@@ -13,6 +13,9 @@ use cyril_core::session::SessionController;
 use cyril_core::types::*;
 use cyril_ui::state::{AutocompleteAction, UiState};
 use cyril_ui::traits::{Activity, TuiState};
+
+/// Lines per mouse wheel tick (finer-grained than keyboard half-page scroll).
+const MOUSE_SCROLL_LINES: usize = 3;
 
 pub struct App {
     bridge_sender: BridgeSender,
@@ -36,6 +39,9 @@ impl App {
             .collect();
         let mut ui_state = UiState::new(max_messages);
         ui_state.set_command_names(names);
+        // main.rs enables mouse capture before the event loop, so sync the
+        // initial state to avoid an inverted Ctrl+M toggle.
+        ui_state.set_mouse_captured(true);
         Self {
             bridge_sender,
             notification_rx,
@@ -117,6 +123,15 @@ impl App {
                 _ = redraw_interval.tick() => {
                     // Flush stream buffer on tick
                     if self.ui_state.flush_stream_buffer() {
+                        self.redraw_needed = true;
+                    }
+
+                    // During busy states, redraw every tick so the activity
+                    // spinner animates and the elapsed timer increments.
+                    if !matches!(
+                        self.ui_state.activity(),
+                        Activity::Idle | Activity::Ready
+                    ) {
                         self.redraw_needed = true;
                     }
 
@@ -304,6 +319,29 @@ impl App {
     async fn handle_terminal_event(&mut self, event: Event) -> cyril_core::Result<()> {
         match event {
             Event::Key(key) => self.handle_key(key).await?,
+            Event::Mouse(mouse) => {
+                // Respect modal overlay priority — don't scroll chat when
+                // an overlay is consuming input.
+                if !self.ui_state.has_approval()
+                    && !self.ui_state.has_picker()
+                    && !self.ui_state.has_hooks_panel()
+                    && self.ui_state.subagent_ui().focused_session_id().is_none()
+                {
+                    // Mouse wheel uses a fixed 3-line step; keyboard
+                    // PgUp/PgDn uses half-page for coarser navigation.
+                    match mouse.kind {
+                        MouseEventKind::ScrollUp => {
+                            self.ui_state.chat_scroll_up(MOUSE_SCROLL_LINES);
+                            self.redraw_needed = true;
+                        }
+                        MouseEventKind::ScrollDown => {
+                            self.ui_state.chat_scroll_down(MOUSE_SCROLL_LINES);
+                            self.redraw_needed = true;
+                        }
+                        _ => {}
+                    }
+                }
+            }
             Event::Resize(w, h) => {
                 self.ui_state.set_terminal_size(w, h);
                 self.redraw_needed = true;
@@ -325,6 +363,21 @@ impl App {
             }
             (KeyModifiers::CONTROL, KeyCode::Char('m')) => {
                 self.ui_state.toggle_mouse_capture();
+                let result = if self.ui_state.mouse_captured() {
+                    crossterm::execute!(
+                        std::io::stdout(),
+                        crossterm::event::EnableMouseCapture,
+                    )
+                } else {
+                    crossterm::execute!(
+                        std::io::stdout(),
+                        crossterm::event::DisableMouseCapture,
+                    )
+                };
+                if let Err(e) = result {
+                    tracing::warn!(error = %e, "failed to toggle mouse capture");
+                    self.ui_state.toggle_mouse_capture(); // roll back
+                }
                 self.redraw_needed = true;
                 return Ok(());
             }
@@ -378,7 +431,13 @@ impl App {
                 }
             }
             _ => {
-                self.ui_state.handle_input_key(key);
+                // Only scroll the main chat when not drilled into a subagent.
+                let scroll_consumed =
+                    self.ui_state.subagent_ui().focused_session_id().is_none()
+                        && dispatch_chat_scroll_key(key, &mut self.ui_state);
+                if !scroll_consumed {
+                    self.ui_state.handle_input_key(key);
+                }
             }
         }
 
@@ -747,6 +806,24 @@ fn dispatch_hooks_panel_key(key: KeyEvent, ui_state: &mut cyril_ui::state::UiSta
         KeyCode::PageUp => ui_state.hooks_panel_scroll_up(10),
         KeyCode::PageDown => ui_state.hooks_panel_scroll_down(10),
         _ => {}
+    }
+}
+
+/// Handle PageUp/PageDown for main chat scrolling.
+/// Returns `true` if the key was consumed.
+fn dispatch_chat_scroll_key(key: KeyEvent, ui_state: &mut cyril_ui::state::UiState) -> bool {
+    let (_, h) = ui_state.terminal_size();
+    let half_page = ((h as usize) / 2).max(1);
+    match key.code {
+        KeyCode::PageUp => {
+            ui_state.chat_scroll_up(half_page);
+            true
+        }
+        KeyCode::PageDown => {
+            ui_state.chat_scroll_down(half_page);
+            true
+        }
+        _ => false,
     }
 }
 
@@ -1238,5 +1315,45 @@ mod tests {
         let mut ui_state = state_with_open_panel(0);
         dispatch_hooks_panel_key(key(KeyCode::PageDown), &mut ui_state);
         assert_eq!(ui_state.hooks_panel().expect("panel").scroll_offset, 0);
+    }
+
+    // --- Chat scroll key dispatch tests ---
+
+    #[test]
+    fn chat_scroll_pageup_consumed_and_enters_browse_mode() {
+        let mut ui_state = UiState::new(500);
+        let consumed = dispatch_chat_scroll_key(key(KeyCode::PageUp), &mut ui_state);
+        assert!(consumed, "PageUp should be consumed");
+        assert!(
+            ui_state.chat_scroll_back().is_some(),
+            "should enter browse mode"
+        );
+    }
+
+    #[test]
+    fn chat_scroll_pagedown_consumed() {
+        let mut ui_state = UiState::new(500);
+        ui_state.chat_scroll_up(20);
+        let consumed = dispatch_chat_scroll_key(key(KeyCode::PageDown), &mut ui_state);
+        assert!(consumed, "PageDown should be consumed");
+    }
+
+    #[test]
+    fn chat_scroll_non_scroll_key_not_consumed() {
+        let mut ui_state = UiState::new(500);
+        let consumed = dispatch_chat_scroll_key(key(KeyCode::Char('a')), &mut ui_state);
+        assert!(!consumed, "regular key should not be consumed");
+        assert!(
+            ui_state.chat_scroll_back().is_none(),
+            "scroll state should not change"
+        );
+    }
+
+    #[test]
+    fn chat_scroll_pageup_uses_half_terminal_height() {
+        let mut ui_state = UiState::new(500);
+        ui_state.set_terminal_size(80, 24);
+        dispatch_chat_scroll_key(key(KeyCode::PageUp), &mut ui_state);
+        assert_eq!(ui_state.chat_scroll_back(), Some(12));
     }
 }

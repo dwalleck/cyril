@@ -1,9 +1,8 @@
 use ratatui::prelude::*;
 use ratatui::widgets::Paragraph;
 
+use crate::palette;
 use crate::traits::{Activity, TuiState};
-
-const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
 /// Render the toolbar (top line).
 pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
@@ -15,21 +14,21 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         Activity::Sending | Activity::Waiting => {
             let idx = spinner_index(state);
             parts.push(Span::styled(
-                format!("{} ", SPINNER_CHARS[idx]),
+                format!("{} ", palette::SPINNER_CHARS[idx]),
                 Style::default().fg(Color::Yellow),
             ));
         }
         Activity::Streaming => {
             let idx = spinner_index(state);
             parts.push(Span::styled(
-                format!("{} ", SPINNER_CHARS[idx]),
+                format!("{} ", palette::SPINNER_CHARS[idx]),
                 Style::default().fg(Color::Green),
             ));
         }
         Activity::ToolRunning => {
             let idx = spinner_index(state);
             parts.push(Span::styled(
-                format!("{} ", SPINNER_CHARS[idx]),
+                format!("{} ", palette::SPINNER_CHARS[idx]),
                 Style::default().fg(Color::Cyan),
             ));
         }
@@ -114,6 +113,19 @@ pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         ));
     }
 
+    // In browse mode, prompt the user to return to follow mode with PgDn.
+    if state.chat_scroll_back().is_some() {
+        if !parts.is_empty() {
+            parts.push(Span::raw(" · "));
+        }
+        parts.push(Span::styled(
+            "SCROLL \u{2193} PgDn",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ));
+    }
+
     if parts.is_empty() {
         parts.push(Span::styled("cyril", Style::default().fg(Color::DarkGray)));
     }
@@ -127,7 +139,9 @@ pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 fn spinner_index(state: &dyn TuiState) -> usize {
     state
         .activity_elapsed()
-        .map(|d| (d.as_millis() / 80) as usize % SPINNER_CHARS.len())
+        .map(|d| {
+            (d.as_millis() / palette::SPINNER_FRAME_MS) as usize % palette::SPINNER_CHARS.len()
+        })
         .unwrap_or(0)
 }
 
@@ -196,5 +210,34 @@ mod tests {
                 render_status_bar(frame, frame.area(), &state);
             })
             .expect("draw");
+    }
+
+    #[test]
+    fn status_bar_shows_scroll_indicator_in_browse_mode() {
+        let state = MockTuiState {
+            chat_scroll_back: Some(10),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| {
+                render_status_bar(frame, frame.area(), &state);
+            })
+            .expect("draw");
+
+        let buffer = terminal.backend().buffer();
+        let text: String = (0..80)
+            .map(|x| {
+                buffer
+                    .cell((x, 0))
+                    .map(|c| c.symbol().to_string())
+                    .unwrap_or_default()
+            })
+            .collect();
+        assert!(
+            text.contains("SCROLL"),
+            "status bar should show SCROLL indicator in browse mode: {text}"
+        );
     }
 }
