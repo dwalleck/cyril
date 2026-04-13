@@ -1,3 +1,4 @@
+pub mod code_panel;
 pub mod command;
 pub mod config;
 pub mod event;
@@ -10,6 +11,7 @@ pub mod subagent;
 pub mod tool_call;
 
 // Convenience re-exports
+pub use code_panel::{CodeCommandResponse, CodePanelData, LspServerInfo, LspStatus};
 pub use command::{CommandInfo, CommandOption, ConfigOption};
 pub use event::{
     BridgeCommand, Notification, PermissionOption, PermissionRequest, PermissionResponse,

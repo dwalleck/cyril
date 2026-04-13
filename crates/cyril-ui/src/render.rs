@@ -53,6 +53,9 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     if let Some(hooks) = state.hooks_panel() {
         crate::widgets::hooks_panel::render(frame, area, hooks);
     }
+    if let Some(code_panel) = state.code_panel() {
+        crate::widgets::code_panel::render(frame, area, code_panel);
+    }
 }
 
 fn draw_fallback(frame: &mut Frame) {

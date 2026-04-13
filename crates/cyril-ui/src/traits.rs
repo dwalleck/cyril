@@ -45,6 +45,8 @@ pub trait TuiState {
     fn approval(&self) -> Option<&ApprovalState>;
     fn picker(&self) -> Option<&PickerState>;
     fn hooks_panel(&self) -> Option<&HooksPanelState>;
+    fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData>;
+    fn code_intelligence_active(&self) -> bool;
 
     // Chat scroll
     fn chat_scroll_back(&self) -> Option<usize>;
@@ -281,6 +283,8 @@ pub mod test_support {
         pub approval: Option<ApprovalState>,
         pub picker: Option<PickerState>,
         pub hooks_panel: Option<HooksPanelState>,
+        pub code_panel: Option<cyril_core::types::CodePanelData>,
+        pub code_intelligence_active: bool,
         pub chat_scroll_back: Option<usize>,
         pub terminal_size: (u16, u16),
         pub mouse_captured: bool,
@@ -312,6 +316,8 @@ pub mod test_support {
                 approval: None,
                 picker: None,
                 hooks_panel: None,
+                code_panel: None,
+                code_intelligence_active: false,
                 chat_scroll_back: None,
                 terminal_size: (80, 24),
                 mouse_captured: false,
@@ -381,6 +387,12 @@ pub mod test_support {
         }
         fn hooks_panel(&self) -> Option<&HooksPanelState> {
             self.hooks_panel.as_ref()
+        }
+        fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData> {
+            self.code_panel.as_ref()
+        }
+        fn code_intelligence_active(&self) -> bool {
+            self.code_intelligence_active
         }
         fn chat_scroll_back(&self) -> Option<usize> {
             self.chat_scroll_back

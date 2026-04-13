@@ -14,6 +14,8 @@ use cyril_core::types::*;
 use cyril_ui::state::{AutocompleteAction, UiState};
 use cyril_ui::traits::{Activity, TuiState};
 
+use cyril_core::types::code_panel::CodeCommandResponse;
+
 /// Lines per mouse wheel tick (finer-grained than keyboard half-page scroll).
 const MOUSE_SCROLL_LINES: usize = 3;
 
@@ -113,7 +115,21 @@ impl App {
 
                 // Priority 2: Notifications from bridge
                 Some(notification) = self.notification_rx.recv() => {
-                    self.handle_notification(notification);
+                    if let Some(deferred) = self.handle_notification(notification) {
+                        match self.bridge_sender.send(deferred).await {
+                            Ok(()) => {
+                                // Commit session state after successful send
+                                self.session.set_status(SessionStatus::Busy);
+                            }
+                            Err(e) => {
+                                tracing::warn!(error = %e, "failed to send deferred bridge command");
+                                self.ui_state.set_activity(Activity::Idle);
+                                self.ui_state.add_system_message(
+                                    "Failed to send /code prompt to agent.".into(),
+                                );
+                            }
+                        }
+                    }
                 }
 
                 // Priority 3: Permission requests from bridge
@@ -190,7 +206,7 @@ impl App {
         }
     }
 
-    fn handle_notification(&mut self, routed: RoutedNotification) {
+    fn handle_notification(&mut self, routed: RoutedNotification) -> Option<BridgeCommand> {
         let RoutedNotification {
             session_id,
             notification,
@@ -216,7 +232,7 @@ impl App {
             if !is_main && self.ui_state.subagent_tracker().is_subagent(sid) {
                 self.ui_state.apply_subagent_notification(sid, &notification);
                 self.redraw_needed = true;
-                return;
+                return None;
             }
             if !is_main && self.session.id().is_some() {
                 // Session ID doesn't match main and isn't a known subagent.
@@ -229,7 +245,7 @@ impl App {
                 );
                 self.ui_state.apply_subagent_notification(sid, &notification);
                 self.redraw_needed = true;
-                return;
+                return None;
             }
         }
 
@@ -260,6 +276,13 @@ impl App {
                 ));
             }
             self.ui_state.set_command_info(info);
+
+            // Optimistic code intelligence detection: if .kiro/settings/lsp.json
+            // exists in the working directory, assume code intelligence is active
+            // until the first /code response confirms or denies it.
+            if std::path::Path::new(".kiro/settings/lsp.json").exists() {
+                self.ui_state.set_code_intelligence_active(true);
+            }
         }
 
         // Handle clear command result
@@ -294,27 +317,31 @@ impl App {
             self.redraw_needed = true;
         }
 
-        // Handle command execution response. The `hooks` command is special-
-        // cased to open a panel overlay instead of printing text; all other
-        // commands fall through to the generic command-output path. See
-        // `dispatch_command_executed` for the rules and `docs/kiro-changelog-nov2025.json`
-        // for when `/hooks` was introduced (Kiro 1.29.6, 2026-04-08).
+        // Handle command execution response. The `hooks` and `code` commands
+        // are special-cased; all other commands fall through to the generic
+        // command-output path. See `dispatch_command_executed` for the rules.
+        let mut deferred_command = None;
         if let Notification::CommandExecuted { ref command, ref response } = notification {
-            dispatch_command_executed(command, response, &mut self.ui_state);
+            if command == "code" {
+                deferred_command =
+                    dispatch_code_command(response, &self.session, &mut self.ui_state);
+            } else {
+                dispatch_command_executed(command, response, &mut self.ui_state);
 
-            // WORKAROUND(Kiro v1.28.0): Kiro doesn't send ConfigOptionUpdate for
-            // model changes (QRK-004), so we extract the model from the /model
-            // command response. When Kiro sends proper ConfigOptionUpdate
-            // notifications, this block becomes dead code — remove it and rely
-            // on the ConfigOptionsUpdated handler in UiState.apply_notification().
-            if command == "model" {
-                if let Some(model_id) = response
-                    .get("data")
-                    .and_then(|d| d.get("model"))
-                    .and_then(|m| m.get("id"))
-                    .and_then(|id| id.as_str())
-                {
-                    self.ui_state.set_current_model(Some(model_id.to_string()));
+                // WORKAROUND(Kiro v1.28.0): Kiro doesn't send ConfigOptionUpdate for
+                // model changes (QRK-004), so we extract the model from the /model
+                // command response. When Kiro sends proper ConfigOptionUpdate
+                // notifications, this block becomes dead code — remove it and rely
+                // on the ConfigOptionsUpdated handler in UiState.apply_notification().
+                if command == "model" {
+                    if let Some(model_id) = response
+                        .get("data")
+                        .and_then(|d| d.get("model"))
+                        .and_then(|m| m.get("id"))
+                        .and_then(|id| id.as_str())
+                    {
+                        self.ui_state.set_current_model(Some(model_id.to_string()));
+                    }
                 }
             }
 
@@ -323,6 +350,7 @@ impl App {
 
         self.redraw_needed =
             self.redraw_needed || session_changed || ui_changed || tracker_changed;
+        deferred_command
     }
 
     async fn handle_terminal_event(&mut self, event: Event) -> cyril_core::Result<()> {
@@ -334,6 +362,7 @@ impl App {
                 if !self.ui_state.has_approval()
                     && !self.ui_state.has_picker()
                     && !self.ui_state.has_hooks_panel()
+                    && !self.ui_state.has_code_panel()
                     && self.ui_state.subagent_ui().focused_session_id().is_none()
                 {
                     // Mouse wheel uses a fixed 3-line step; keyboard
@@ -409,6 +438,11 @@ impl App {
             self.redraw_needed = true;
             return Ok(());
         }
+        if self.ui_state.has_code_panel() {
+            self.handle_code_panel_key(key).await?;
+            self.redraw_needed = true;
+            return Ok(());
+        }
 
         // Layer 3: Autocomplete (if active — consumes relevant keys)
         match self.ui_state.handle_autocomplete_key(key) {
@@ -468,6 +502,33 @@ impl App {
     /// Esc closes; Up/Down and PgUp/PgDn scroll.
     fn handle_hooks_panel_key(&mut self, key: KeyEvent) {
         dispatch_hooks_panel_key(key, &mut self.ui_state);
+    }
+
+    /// Handle key input while the `/code` panel overlay is visible.
+    /// Esc closes; `r` refreshes by re-executing the `/code` command.
+    async fn handle_code_panel_key(&mut self, key: KeyEvent) -> cyril_core::Result<()> {
+        match key.code {
+            KeyCode::Esc => self.ui_state.close_code_panel(),
+            KeyCode::Char('r') => {
+                if let Some(id) = self.session.id().cloned() {
+                    self.bridge_sender
+                        .send(BridgeCommand::ExecuteCommand {
+                            command: "code".into(),
+                            session_id: id,
+                            args: serde_json::json!({}),
+                        })
+                        .await?;
+                } else {
+                    tracing::debug!("code panel refresh requested but no active session");
+                    self.ui_state.add_system_message(
+                        "No active session — cannot refresh.".into(),
+                    );
+                    self.ui_state.close_code_panel();
+                }
+            }
+            _ => {} // Consume all other keys
+        }
+        Ok(())
     }
 
     async fn handle_picker_key(&mut self, key: KeyEvent) -> cyril_core::Result<()> {
@@ -799,6 +860,61 @@ fn dispatch_command_executed(
     if !handled_as_panel {
         let text = format_command_response(command, response);
         ui_state.add_command_output(command.to_string(), text);
+    }
+}
+
+/// Handle a `/code` command response.
+///
+/// If the response reports `success: false`, falls through to generic command
+/// output (matching the `hooks` pattern). Otherwise routes by response shape:
+/// - Panel: shows overlay and, if `Initialized`, marks code intelligence active.
+/// - Prompt: validates session, pre-populates chat, sets Busy, returns a
+///   deferred `SendPrompt` command (deferred because `handle_notification` is
+///   sync and cannot `.await` the bridge send).
+/// - Unknown: falls through to generic formatting.
+fn dispatch_code_command(
+    response: &serde_json::Value,
+    session: &cyril_core::session::SessionController,
+    ui_state: &mut cyril_ui::state::UiState,
+) -> Option<BridgeCommand> {
+    if !is_success_response(response) {
+        let text = format_command_response("code", response);
+        ui_state.add_command_output("code".to_string(), text);
+        return None;
+    }
+
+    match CodeCommandResponse::from_json(response) {
+        CodeCommandResponse::Panel(data) => {
+            ui_state.set_code_intelligence_active(data.status == LspStatus::Initialized);
+            ui_state.show_code_panel(data);
+            None
+        }
+        CodeCommandResponse::Prompt { text, label } => {
+            let session_id = match session.id().cloned() {
+                Some(id) => id,
+                None => {
+                    tracing::warn!("/code prompt response arrived with no active session");
+                    ui_state.add_system_message(
+                        "/code: received prompt but no active session — try again.".into(),
+                    );
+                    return None;
+                }
+            };
+            let display = label.as_deref().unwrap_or("Code Intelligence");
+            ui_state.add_system_message(format!("/code: {display}"));
+            ui_state.add_user_message(&text);
+            ui_state.set_activity(Activity::Sending);
+
+            Some(BridgeCommand::SendPrompt {
+                session_id,
+                content_blocks: vec![text],
+            })
+        }
+        CodeCommandResponse::Unknown(ref value) => {
+            let text = format_command_response("code", value);
+            ui_state.add_command_output("code".to_string(), text);
+            None
+        }
     }
 }
 
@@ -1364,5 +1480,178 @@ mod tests {
         ui_state.set_terminal_size(80, 24);
         dispatch_chat_scroll_key(key(KeyCode::PageUp), &mut ui_state);
         assert_eq!(ui_state.chat_scroll_back(), Some(12));
+    }
+
+    // --- dispatch_code_command tests ---
+
+    fn code_session() -> cyril_core::session::SessionController {
+        let mut session = cyril_core::session::SessionController::new();
+        session.set_session(SessionId::new("sess_1"), SessionStatus::Active);
+        session
+    }
+
+    #[test]
+    fn dispatch_code_panel_opens_overlay() {
+        let session = code_session();
+        let mut ui = UiState::new(500);
+        let result = dispatch_code_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "status": "initialized",
+                    "detectedLanguages": ["rust"],
+                    "projectMarkers": [],
+                    "lsps": []
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(result.is_none());
+        assert!(ui.has_code_panel());
+        assert!(ui.code_intelligence_active());
+    }
+
+    #[test]
+    fn dispatch_code_panel_failed_does_not_set_active() {
+        let session = code_session();
+        let mut ui = UiState::new(500);
+        dispatch_code_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "status": "failed",
+                    "detectedLanguages": [],
+                    "projectMarkers": [],
+                    "lsps": []
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(ui.has_code_panel());
+        assert!(!ui.code_intelligence_active());
+    }
+
+    #[test]
+    fn dispatch_code_panel_failed_resets_active_flag() {
+        let session = code_session();
+        let mut ui = UiState::new(500);
+        ui.set_code_intelligence_active(true);
+        assert!(ui.code_intelligence_active());
+
+        dispatch_code_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "status": "failed",
+                    "detectedLanguages": [],
+                    "projectMarkers": [],
+                    "lsps": []
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(!ui.code_intelligence_active(), "failed status should reset the flag");
+    }
+
+    #[test]
+    fn dispatch_code_success_false_falls_through_to_message() {
+        let session = code_session();
+        let mut ui = UiState::new(500);
+        let result = dispatch_code_command(
+            &serde_json::json!({
+                "success": false,
+                "message": "Not configured",
+                "data": {
+                    "status": "initialized",
+                    "lsps": []
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(result.is_none());
+        assert!(!ui.has_code_panel(), "panel should NOT open on success:false");
+        assert!(!ui.code_intelligence_active());
+    }
+
+    #[test]
+    fn dispatch_code_prompt_returns_deferred_command() {
+        let session = code_session();
+        let mut ui = UiState::new(500);
+        let result = dispatch_code_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "executePrompt": "Analyze the code...",
+                    "label": "Code Summary"
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(matches!(result, Some(BridgeCommand::SendPrompt { .. })));
+        assert_eq!(ui.activity(), Activity::Sending);
+    }
+
+    #[test]
+    fn dispatch_code_prompt_no_session_shows_error() {
+        let session = cyril_core::session::SessionController::new(); // no session ID
+        let mut ui = UiState::new(500);
+        let result = dispatch_code_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "executePrompt": "Analyze...",
+                    "label": "Summary"
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(result.is_none());
+        // Should show error, not the prompt system message
+        assert!(!ui.messages().is_empty());
+        assert_eq!(ui.activity(), Activity::Idle);
+    }
+
+    #[test]
+    fn dispatch_code_prompt_without_label_uses_default() {
+        let session = code_session();
+        let mut ui = UiState::new(500);
+        dispatch_code_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "executePrompt": "Analyze..."
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        // System message should use the default label
+        let has_default_label = ui.messages().iter().any(|m| {
+            matches!(m.kind(), cyril_ui::traits::ChatMessageKind::System(s) if s.contains("Code Intelligence"))
+        });
+        assert!(has_default_label, "should use 'Code Intelligence' as default label");
+    }
+
+    #[test]
+    fn dispatch_code_unknown_adds_command_output() {
+        let session = code_session();
+        let mut ui = UiState::new(500);
+        let result = dispatch_code_command(
+            &serde_json::json!({
+                "success": true,
+                "message": "Something unexpected"
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(result.is_none());
+        assert!(!ui.has_code_panel());
+        assert!(!ui.messages().is_empty());
     }
 }

@@ -176,8 +176,12 @@ Input dispatch follows strict priority (each layer consumes or passes through):
 1. **Global shortcuts** (Ctrl+C, Ctrl+Q, Ctrl+M) — always active
 2. **Approval overlay** — consumes all keys if active, early return
 3. **Picker overlay** — consumes all keys if active, early return
-4. **Autocomplete** — `handle_autocomplete_key()` returns `AutocompleteAction` enum (Consumed/Accepted/AcceptedAndSubmit/NotActive), early return unless NotActive
-5. **Normal input** — Enter submits, Esc cancels, other keys go to textarea
+4. **Hooks panel overlay** — Esc closes, arrow/page keys scroll, all others consumed
+5. **Code panel overlay** — Esc closes, `r` refreshes, all others consumed
+6. **Autocomplete** — `handle_autocomplete_key()` returns `AutocompleteAction` enum (Consumed/Accepted/AcceptedAndSubmit/NotActive), early return unless NotActive
+7. **Normal input** — Enter submits, Esc cancels, other keys go to textarea
+
+Any new modal overlay must be added to both this chain and the mouse-scroll guard in `handle_terminal_event`.
 
 ### Streaming Content Model
 
