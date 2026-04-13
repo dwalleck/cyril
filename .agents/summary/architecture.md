@@ -1,311 +1,176 @@
-# System Architecture
+# Architecture
 
-## Overview
+> Generated: 2026-04-11 | Codebase: Cyril
 
-Cyril follows a clean separation of concerns with a two-crate architecture that isolates platform-specific logic from the TUI presentation layer. The system communicates with Kiro CLI via the Agent Client Protocol (ACP) using JSON-RPC 2.0 over stdio.
+## System Overview
 
-## High-Level Architecture
+Cyril is a three-crate Rust workspace that implements a TUI frontend for Kiro CLI over the Agent Client Protocol (ACP). The architecture separates concerns into protocol logic (`cyril-core`), UI state and rendering (`cyril-ui`), and application orchestration (`cyril`).
 
 ```mermaid
 graph TB
-    subgraph "Cyril TUI (Binary)"
-        UI[UI Layer<br/>ratatui + crossterm]
-        App[App Event Loop<br/>app.rs]
-        Cmd[Command System<br/>commands.rs]
-        FC[File Completer<br/>file_completer.rs]
+    subgraph "cyril (binary)"
+        MAIN[main.rs<br/>CLI parsing, bridge spawn]
+        APP[App<br/>Event loop, orchestration]
     end
-    
-    subgraph "Cyril Core (Library)"
-        Client[ACP Client<br/>protocol/client.rs]
-        Transport[Agent Process<br/>protocol/transport.rs]
-        Platform[Platform Abstraction<br/>platform/]
-        Hooks[Hook System<br/>hooks/]
-        Caps[Capabilities<br/>capabilities/]
+
+    subgraph "cyril-ui (library)"
+        STATE[UiState<br/>State machine]
+        RENDER[render.rs<br/>Frame layout]
+        WIDGETS[Widgets<br/>chat, input, toolbar,<br/>crew_panel, hooks_panel,<br/>picker, approval, markdown]
+        TRAITS[TuiState trait<br/>Read-only view]
     end
-    
+
+    subgraph "cyril-core (library)"
+        BRIDGE[BridgeHandle / BridgeSender<br/>Channel pair]
+        CLIENT[KiroClient<br/>ACP Client impl]
+        CONVERT[convert.rs<br/>Notification conversion]
+        COMMANDS[CommandRegistry<br/>Trait-based commands]
+        SESSION[SessionController<br/>Session state]
+        SUBAGENT[SubagentTracker<br/>Multi-session tracking]
+        TYPES[types/<br/>Domain types]
+    end
+
     subgraph "External"
-        Agent[kiro-cli acp]
-        WSL[WSL Bridge<br/>Windows only]
+        KIRO[kiro-cli acp<br/>Agent process]
+        ACP_CRATE[agent-client-protocol<br/>ACP trait + transport]
     end
-    
-    UI --> App
-    App --> Cmd
-    App --> FC
-    Cmd --> Client
-    Client --> Transport
-    Transport --> Platform
-    Client --> Hooks
-    Client --> Caps
-    
-    Transport -.Linux.-> Agent
-    Transport -.Windows.-> WSL
-    WSL -.-> Agent
-    
-    Platform -.Path Translation.-> WSL
+
+    MAIN --> APP
+    APP --> STATE
+    APP --> SESSION
+    APP --> COMMANDS
+    APP --> BRIDGE
+    STATE -.->|implements| TRAITS
+    RENDER -->|reads| TRAITS
+    RENDER --> WIDGETS
+    BRIDGE --> CLIENT
+    CLIENT --> ACP_CRATE
+    CLIENT --> CONVERT
+    ACP_CRATE <-->|JSON-RPC 2.0 stdio| KIRO
+    CONVERT --> TYPES
+    COMMANDS --> BRIDGE
+    APP --> SUBAGENT
 ```
 
-## Architectural Layers
+## Core Architectural Patterns
 
-### 1. Presentation Layer (cyril crate)
+### Bridge Pattern (Channel-Based IPC)
 
-**Responsibility:** User interface and interaction handling
+The bridge is the central communication hub between the App and the ACP agent process. It uses three async channels:
 
-**Key Components:**
-- `main.rs` - Entry point, CLI parsing, mode selection
-- `app.rs` - Main event loop and state management
-- `commands.rs` - Slash command parsing and execution
-- `ui/` - UI component modules
-
-**Design Patterns:**
-- Event-driven architecture
-- Component-based UI rendering
-- State machine for interaction flows
-
-### 2. Protocol Layer (cyril-core)
-
-**Responsibility:** ACP communication and protocol handling
-
-**Key Components:**
-- `protocol/client.rs` - ACP client implementation
-- `protocol/transport.rs` - Process spawning and stdio management
-- `event.rs` - Event type definitions
-
-**Communication Flow:**
-```mermaid
-sequenceDiagram
-    participant User
-    participant App
-    participant Client
-    participant Transport
-    participant Agent
-    
-    User->>App: Input command
-    App->>Client: Send ACP request
-    Client->>Transport: Write to stdin
-    Transport->>Agent: JSON-RPC message
-    Agent-->>Transport: JSON-RPC response
-    Transport-->>Client: Parse response
-    Client-->>App: Protocol event
-    App-->>User: Update UI
-```
-
-### 3. Platform Abstraction Layer (cyril-core)
-
-**Responsibility:** OS-specific functionality and path translation
-
-**Key Components:**
-- `platform/path.rs` - Bidirectional path translation (Windows ↔ WSL)
-- `platform/terminal.rs` - Terminal process management
-
-**Path Translation Architecture:**
 ```mermaid
 graph LR
-    subgraph "Windows Side"
-        WinPath["C:\Users\name\project"]
+    subgraph "App Thread"
+        APP[App]
+        SENDER[BridgeSender<br/>Clone + Send]
     end
-    
-    subgraph "Translation Layer"
-        Detect[Detect Path Type]
-        WinToWSL[Windows → WSL]
-        WSLToWin[WSL → Windows]
-        JSON[JSON Payload Rewriter]
+
+    subgraph "Bridge Thread (!Send)"
+        CLIENT[KiroClient]
+        ACP[ACP transport]
     end
-    
-    subgraph "WSL Side"
-        WSLPath["/mnt/c/Users/name/project"]
-    end
-    
-    WinPath --> Detect
-    Detect --> WinToWSL
-    WinToWSL --> WSLPath
-    WSLPath --> Detect
-    Detect --> WSLToWin
-    WSLToWin --> WinPath
-    
-    JSON -.Recursive Translation.-> WinToWSL
-    JSON -.Recursive Translation.-> WSLToWin
+
+    APP -->|BridgeCommand| SENDER
+    SENDER -->|mpsc 32| CLIENT
+    CLIENT -->|RoutedNotification<br/>mpsc 256| APP
+    CLIENT -->|PermissionRequest<br/>mpsc 16| APP
+    ACP <-->|stdio JSON-RPC| KIRO[kiro-cli acp]
 ```
 
-### 4. Hook System (cyril-core)
+- `BridgeCommand` — App → Bridge: prompts, session control, agent commands
+- `RoutedNotification` — Bridge → App: agent output, tool calls, metadata
+- `PermissionRequest` — Bridge → App: approval dialogs (oneshot response)
 
-**Responsibility:** Extensible event-driven automation
+`BridgeHandle` is split into `BridgeSender` (cloneable, passed to commands) and two receivers consumed by `tokio::select!` in the event loop.
 
-**Architecture:**
+### Routed Notification System
+
+Every notification from the ACP bridge carries an optional `session_id` for routing:
+
+- `session_id == None` → global notification (bridge lifecycle, subagent list updates)
+- `session_id == Some(id)` matching main session → dispatched to main state machines
+- `session_id == Some(id)` not matching main → routed to `SubagentUiState`
+
+This enables multi-session support where the main session and subagent sessions share a single bridge connection.
+
+### State / Renderer Separation (TuiState Trait)
+
+The renderer receives `&dyn TuiState` — a read-only trait — and cannot mutate application state. `UiState` implements `TuiState` and owns all mutable UI state.
+
 ```mermaid
 graph TB
-    Event[File Write / Command Event]
-    Registry[Hook Registry]
-    Before[Before Hooks]
-    After[After Hooks]
-    Builtin[Built-in Hooks]
-    User[User-defined Hooks]
-    
-    Event --> Registry
-    Registry --> Before
-    Registry --> After
-    Before --> Builtin
-    Before --> User
-    After --> Builtin
-    After --> User
-    
-    Builtin -.Path Validation.-> Event
-    User -.Custom Commands.-> Event
+    APP[App] -->|mutates| UISTATE[UiState]
+    UISTATE -.->|implements| TRAIT[TuiState trait]
+    RENDER[render::draw] -->|reads| TRAIT
+    RENDER --> WIDGETS[Widget functions]
 ```
 
-**Hook Execution Flow:**
-1. Event triggered (file write, terminal command)
-2. Registry matches hooks by glob pattern
-3. Before hooks execute (can block operation)
-4. Main operation executes
-5. After hooks execute (provide feedback)
+This enforces a unidirectional data flow: mutations happen in the App event loop, rendering is a pure function of state.
 
-### 5. Capabilities Layer (cyril-core)
+### Command Registry Pattern
 
-**Responsibility:** File system operations and agent capabilities
-
-**Key Components:**
-- `capabilities/fs.rs` - File read/write operations
-
-## Data Flow Architecture
-
-### User Input → Agent Response
+Commands are registered as trait objects implementing `Command`:
 
 ```mermaid
-sequenceDiagram
-    participant User
-    participant InputState
-    participant CommandExecutor
-    participant KiroClient
-    participant AgentProcess
-    participant ChatState
-    
-    User->>InputState: Type message
-    InputState->>CommandExecutor: Parse command
-    
-    alt Slash Command
-        CommandExecutor->>CommandExecutor: Execute locally
-        CommandExecutor->>ChatState: Add system message
-    else Agent Prompt
-        CommandExecutor->>KiroClient: Send prompt
-        KiroClient->>AgentProcess: JSON-RPC request
-        AgentProcess-->>KiroClient: Streaming response
-        KiroClient-->>ChatState: Update streaming content
-        ChatState-->>User: Render markdown
-    end
+graph TB
+    REGISTRY[CommandRegistry] -->|lookup| CMD[dyn Command]
+    CMD -->|execute| RESULT[CommandResult]
+    RESULT -->|variant| SYS[SystemMessage]
+    RESULT -->|variant| PICK[ShowPicker]
+    RESULT -->|variant| DISP[Dispatched]
+    RESULT -->|variant| QUIT[Quit]
+    RESULT -->|variant| NAC[NotACommand]
 ```
 
-### Tool Call Execution
+Builtin commands (`help`, `clear`, `quit`, `new`, `load`) are registered at startup. Agent commands from the server are dynamically registered via `register_agent_commands()`. Subagent commands (`spawn`, `kill`, `msg`, `sessions`) are registered separately.
+
+### Notification Conversion Layer
+
+`convert.rs` is the largest file in the codebase. It translates raw ACP protocol messages into typed `Notification` variants:
 
 ```mermaid
-sequenceDiagram
-    participant Agent
-    participant KiroClient
-    participant HookRegistry
-    participant TerminalManager
-    participant FileSystem
-    
-    Agent->>KiroClient: Tool call request
-    
-    alt File Write
-        KiroClient->>HookRegistry: Run before hooks
-        HookRegistry-->>KiroClient: Continue/Block
-        KiroClient->>FileSystem: Write file
-        FileSystem-->>KiroClient: Success
-        KiroClient->>HookRegistry: Run after hooks
-        HookRegistry-->>KiroClient: Feedback
-        KiroClient-->>Agent: Result + feedback
-    else Terminal Command
-        KiroClient->>TerminalManager: Create terminal
-        TerminalManager->>TerminalManager: Spawn process
-        TerminalManager-->>KiroClient: Terminal ID
-        KiroClient-->>Agent: Terminal created
-        Agent->>KiroClient: Get output
-        KiroClient->>TerminalManager: Read output
-        TerminalManager-->>KiroClient: Output text
-        KiroClient-->>Agent: Output result
-    end
+graph LR
+    ACP_SESSION[acp::SessionNotification] --> CONVERT[convert.rs]
+    ACP_EXT[acp::ExtNotification] --> CONVERT
+    ACP_PERM[acp::RequestPermission] --> CONVERT
+    CONVERT --> NOTIF[Notification variants]
+    CONVERT --> TOOL[ToolCall construction]
+    CONVERT --> PERM[PermissionRequest]
 ```
 
-## Design Principles
+The conversion layer also maintains a `tool_call_inputs` cache (via `RefCell<HashMap>`) because permission requests arrive without `raw_input` — the client looks it up from previously cached tool call notifications.
 
-### 1. Separation of Concerns
-- **UI logic** isolated in `cyril` crate
-- **Protocol logic** isolated in `cyril-core` crate
-- **Platform-specific code** contained in `platform/` module
+## Crate Dependency Graph
 
-### 2. Event-Driven Architecture
-- All interactions flow through event system
-- Async/await for non-blocking I/O
-- Channel-based communication between components
+```mermaid
+graph TD
+    CYRIL[cyril<br/>binary] --> CORE[cyril-core]
+    CYRIL --> UI[cyril-ui]
+    UI --> CORE
+    CORE --> ACP[agent-client-protocol]
+```
 
-### 3. Cross-Platform Abstraction
-- Platform detection at runtime
-- Transparent path translation
-- Unified API regardless of OS
+`cyril-core` has no dependency on `cyril-ui`. The binary crate depends on both.
 
-### 4. Extensibility
-- Hook system for custom automation
-- Plugin-like architecture for capabilities
-- JSON-based configuration
+## Event Loop Architecture
 
-### 5. Testability
-- Comprehensive unit tests (50+ test functions)
-- Mock-friendly interfaces
-- Isolated component testing
+The App's `run()` method uses `tokio::select!` with biased priority:
 
-## Key Architectural Decisions
+1. **Terminal input** (highest) — keyboard/mouse events from crossterm
+2. **Permission requests** — approval dialogs from the bridge
+3. **Notifications** — agent output, tool calls, metadata updates
+4. **Redraw timer** — adaptive frame rate based on `Activity` state
 
-### Why Two Crates?
-- **Reusability:** Core logic can be used by other clients
-- **Testing:** Easier to test protocol logic independently
-- **Compilation:** Faster incremental builds
-- **Clarity:** Clear boundary between UI and business logic
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Sending: user submits prompt
+    Sending --> Waiting: prompt sent to bridge
+    Waiting --> Streaming: agent starts responding
+    Streaming --> ToolRunning: tool call started
+    ToolRunning --> Streaming: tool call completed
+    Streaming --> Idle: turn completed
+    Waiting --> Idle: turn completed (no output)
+```
 
-### Why Event-Driven?
-- **Responsiveness:** Non-blocking UI updates
-- **Flexibility:** Easy to add new event types
-- **Decoupling:** Components don't need direct references
-
-### Why Hook System?
-- **Extensibility:** Users can customize behavior without code changes
-- **Transparency:** Agent doesn't need to know about hooks
-- **Safety:** Hooks run at protocol boundary with validation
-
-### Why Path Translation?
-- **Windows Support:** Enables Windows users without native kiro-cli
-- **Seamless UX:** Users work with native paths
-- **Correctness:** Ensures paths work in both environments
-
-## Performance Considerations
-
-### Streaming Rendering
-- Incremental markdown parsing
-- Efficient diff computation for tool calls
-- Bounded message history (prevents memory growth)
-
-### Terminal Management
-- Output capping to prevent memory exhaustion
-- Async I/O for non-blocking reads
-- Process cleanup on terminal release
-
-### Path Translation
-- Lazy translation (only when needed)
-- Caching for repeated translations
-- Efficient JSON traversal
-
-## Security Considerations
-
-### Approval System
-- User must approve file writes
-- User must approve terminal commands
-- Clear display of what will be executed
-
-### Hook Validation
-- Path validation built-in hook
-- Glob pattern matching for safety
-- Error handling prevents hook failures from breaking operations
-
-### Process Isolation
-- Terminal processes run in separate context
-- No shell injection vulnerabilities
-- Proper process cleanup
+The `Activity` enum drives adaptive frame rate: `Idle` redraws at 500ms, `Streaming` at 33ms (30fps).

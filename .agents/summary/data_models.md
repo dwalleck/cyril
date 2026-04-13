@@ -1,811 +1,370 @@
 # Data Models
 
-## Overview
+> Generated: 2026-04-11 | Codebase: Cyril
 
-This document describes the key data structures, types, and models used throughout Cyril. It covers both the protocol-level data models and internal application state.
+## Core Domain Types (`cyril-core/src/types/`)
 
-## Protocol Data Models
+### Session Types (`session.rs`)
 
-### ACP Message Types
-
-#### JSON-RPC Request
-```rust
-{
-    "jsonrpc": "2.0",
-    "id": number | string,
-    "method": string,
-    "params": object
-}
-```
-
-#### JSON-RPC Response
-```rust
-{
-    "jsonrpc": "2.0",
-    "id": number | string,
-    "result": any
-}
-```
-
-#### JSON-RPC Notification
-```rust
-{
-    "jsonrpc": "2.0",
-    "method": string,
-    "params": object
-}
-```
-
-#### JSON-RPC Error
-```rust
-{
-    "jsonrpc": "2.0",
-    "id": number | string,
-    "error": {
-        "code": number,
-        "message": string,
-        "data": any?
+```mermaid
+classDiagram
+    class SessionId {
+        -inner: String
+        +new(impl Into~String~) SessionId
+        +as_str() str
     }
-}
+
+    class SessionStatus {
+        <<enum>>
+        Disconnected
+        Connecting
+        Connected
+        Error(String)
+    }
+
+    class SessionMode {
+        +id: String
+        +label: String
+        +description: Option~String~
+    }
+
+    class ContextUsage {
+        -percentage: f64
+        +new(f64) ContextUsage
+        +percentage() f64
+    }
+
+    class CreditUsage {
+        +used: f64
+        +limit: f64
+    }
+
+    class TokenCounts {
+        +input: u64
+        +output: u64
+        +cache_read: Option~u64~
+        +cache_write: Option~u64~
+    }
+
+    class TurnMetering {
+        +input_tokens: u64
+        +output_tokens: u64
+        +cost_usd: Option~f64~
+    }
+
+    class SessionCost {
+        +total_usd: f64
+        +add_turn(TurnMetering)
+    }
 ```
 
----
+`SessionId` wraps a `String`, implements `Hash + Eq + Clone + Display`. Used as HashMap key for subagent tracking.
 
-### Permission Request Models
+### Tool Call Types (`tool_call.rs`)
 
-#### File Write Request
-```rust
-{
-    "type": "fileWrite",
-    "path": string,
-    "content": string,
-    "options": ["approve", "deny", "edit"]
-}
-```
-
-#### Terminal Command Request
-```rust
-{
-    "type": "terminalCommand",
-    "command": string,
-    "workingDirectory": string?,
-    "options": ["approve", "deny"]
-}
-```
-
-#### Permission Response
-```rust
-{
-    "approved": boolean,
-    "selectedOption": string,
-    "modifiedContent": string?  // If edited
-}
-```
-
----
-
-### Terminal Models
-
-#### Terminal Creation
-```rust
-// Request
-{
-    "command": string,
-    "workingDirectory": string?
-}
-
-// Response
-{
-    "terminalId": string
-}
-```
-
-#### Terminal Output
-```rust
-// Request
-{
-    "terminalId": string
-}
-
-// Response
-{
-    "output": string,
-    "exitCode": number?
-}
-```
-
----
-
-### Session Models
-
-#### Session Update
-```rust
-{
-    "sessionId": string,
-    "model": string?,
-    "contextUsage": number?,  // 0.0 to 1.0
-    "modes": [
-        {
-            "id": string,
-            "name": string,
-            "description": string?
-        }
-    ]?
-}
-```
-
----
-
-### Extension Models
-
-#### Kiro Commands
-```rust
-{
-    "commands": [
-        {
-            "name": string,
-            "description": string,
-            "inputType": "panel" | "selection" | "local",
-            "meta": {
-                "options": string[]?,
-                "placeholder": string?,
-                "compact": boolean?
-            }?
-        }
-    ]
-}
-```
-
----
-
-## Application State Models
-
-### App State
-
-**Location:** `cyril/src/app.rs`
-
-```rust
-pub struct App {
-    // Core state
-    client: KiroClient,
-    session: SessionContext,
-    
-    // UI component states
-    chat: ChatState,
-    input: InputState,
-    toolbar: ToolbarState,
-    approval: Option<ApprovalState>,
-    picker: Option<PickerState<String>>,
-    
-    // Tracking
-    tool_calls: HashMap<String, TrackedToolCall>,
-    
-    // Configuration
-    working_dir: PathBuf,
-    project_files: Vec<PathBuf>,
-    
-    // Flags
-    should_quit: bool,
-    mouse_capture: bool,
-}
-```
-
-**State Transitions:**
 ```mermaid
-stateDiagram-v2
-    [*] --> Idle
-    Idle --> WaitingForResponse: Send prompt
-    WaitingForResponse --> Streaming: Begin streaming
-    Streaming --> Streaming: Append content
-    Streaming --> ToolCall: Tool call start
-    ToolCall --> WaitingForApproval: Needs approval
-    WaitingForApproval --> ToolCall: Approved
-    WaitingForApproval --> Idle: Denied
-    ToolCall --> Streaming: Tool complete
-    Streaming --> Idle: Stream complete
-    Idle --> [*]: Quit
+classDiagram
+    class ToolCallId {
+        -inner: String
+        +new(impl Into~String~) ToolCallId
+        +as_str() str
+    }
+
+    class ToolCall {
+        -id: ToolCallId
+        -title: String
+        -kind: ToolKind
+        -status: ToolCallStatus
+        -content: Option~ToolCallContent~
+        -locations: Vec~ToolCallLocation~
+        -raw_input: Option~Value~
+        +new(id, title, kind, status, raw_input) ToolCall
+        +with_content(content) ToolCall
+        +with_locations(locations) ToolCall
+        +merge_update(other)
+    }
+
+    class ToolKind {
+        <<enum>>
+        Read
+        Write
+        Execute
+        Search
+        Think
+        Fetch
+        Other(String)
+    }
+
+    class ToolCallStatus {
+        <<enum>>
+        Pending
+        InProgress
+        Completed
+        Failed
+    }
+
+    class ToolCallContent {
+        <<enum>>
+        Text(String)
+        Diff(old: String, new: String)
+    }
+
+    class ToolCallLocation {
+        +path: String
+        +line: Option~u32~
+    }
+
+    ToolCall --> ToolCallId
+    ToolCall --> ToolKind
+    ToolCall --> ToolCallStatus
+    ToolCall --> ToolCallContent
+    ToolCall --> ToolCallLocation
 ```
 
----
+All tool call types are `Send + Sync + Clone`. `ToolCall::merge_update()` applies partial updates (preserves existing fields when update has `None`).
 
-### Chat State
+### Event Types (`event.rs`)
 
-**Location:** `cyril/src/ui/chat.rs`
+See [Interfaces — Notification System](interfaces.md) for the full `Notification` and `BridgeCommand` enums.
 
-```rust
-pub struct ChatState {
-    messages: Vec<ChatMessage>,
-    streaming_content: String,
-    scroll_offset: usize,
-    max_messages: usize,
-}
+Key design decisions:
+- `Notification` is `Send + Sync + Clone` — can be freely shared across threads
+- `PermissionRequest` is NOT Clone — owns a `oneshot::Sender`
+- `RoutedNotification` wraps `Notification` with optional `SessionId` for routing
+- `BridgeCommand` is `Send` but not Clone — consumed by the bridge
 
-pub struct ChatMessage {
-    role: Role,
-    content: Vec<ContentBlock>,
-}
+### Subagent Types (`subagent.rs`)
 
-pub enum Role {
-    User,
-    Assistant,
-    System,
-}
-
-pub enum ContentBlock {
-    Text(String),
-    ToolCall {
-        id: String,
-        name: String,
-        status: String,
-    },
-    Plan {
-        title: String,
-        steps: Vec<String>,
-    },
-}
-```
-
-**Message Flow:**
 ```mermaid
-graph LR
-    User[User Input] --> UserMsg[User Message]
-    UserMsg --> History[Message History]
-    Agent[Agent Response] --> Stream[Streaming Buffer]
-    Stream --> AssistantMsg[Assistant Message]
-    AssistantMsg --> History
-    ToolCall[Tool Call] --> ToolBlock[Tool Block]
-    ToolBlock --> AssistantMsg
+classDiagram
+    class SubagentInfo {
+        -session_id: SessionId
+        -name: String
+        -task: String
+        -status: SubagentStatus
+        +session_id() SessionId
+        +name() str
+        +task() str
+        +status() SubagentStatus
+    }
+
+    class SubagentStatus {
+        <<enum>>
+        Working(Option~String~)
+        Idle
+        Terminated
+    }
+
+    class PendingStage {
+        +name: String
+        +status: String
+    }
+
+    SubagentInfo --> SubagentStatus
 ```
 
----
+### Command Types (`command.rs`)
 
-### Input State
-
-**Location:** `cyril/src/ui/input.rs`
-
-```rust
-pub struct InputState {
-    textarea: TextArea<'static>,
-    command_suggestions: Vec<Suggestion>,
-    file_suggestions: Vec<FileSuggestion>,
-    active_popup: Option<ActivePopup>,
-    selected_index: usize,
-}
-
-pub enum ActivePopup {
-    Commands,
-    Files,
-}
-
-pub struct Suggestion {
-    display: String,
-    value: String,
-    description: Option<String>,
-}
-
-pub struct FileSuggestion {
-    path: PathBuf,
-    display: String,
-}
-```
-
----
-
-### Tool Call Tracking
-
-**Location:** `cyril/src/ui/tool_calls.rs`
-
-```rust
-pub struct TrackedToolCall {
-    id: String,
-    kind: ToolCallKind,
-    status: ToolCallStatus,
-    display_label: String,
-    primary_path: Option<String>,
-    diff_content: Option<String>,
-}
-
-pub enum ToolCallKind {
-    FileRead,
-    FileWrite,
-    TerminalCommand,
-    Other,
-}
-
-pub enum ToolCallStatus {
-    Running,
-    Success,
-    Failed,
-    Cancelled,
-}
-
-pub struct DiffSummary {
-    additions: usize,
-    deletions: usize,
-    total_lines: usize,
-}
-```
-
-**Tool Call Lifecycle:**
 ```mermaid
-stateDiagram-v2
-    [*] --> Created
-    Created --> Running: Start
-    Running --> Success: Complete
-    Running --> Failed: Error
-    Running --> Cancelled: User cancel
-    Success --> [*]
-    Failed --> [*]
-    Cancelled --> [*]
+classDiagram
+    class CommandInfo {
+        +name: String
+        +description: String
+        +is_local: bool
+        +selection_type: bool
+    }
+
+    class CommandOption {
+        +label: String
+        +value: String
+        +description: Option~String~
+        +group: Option~String~
+        +is_current: bool
+    }
+
+    class ConfigOption {
+        +id: String
+        +label: String
+        +description: Option~String~
+    }
 ```
 
----
+### Message Types (`message.rs`)
 
-### Approval State
-
-**Location:** `cyril/src/ui/approval.rs`
-
-```rust
-pub struct ApprovalState {
-    request: serde_json::Value,
-    options: Vec<ApprovalOption>,
-    selected_index: usize,
-}
-
-pub struct ApprovalOption {
-    id: String,
-    label: String,
-    description: Option<String>,
-}
-```
-
----
-
-### Picker State
-
-**Location:** `cyril/src/ui/picker.rs`
-
-```rust
-pub struct PickerState<T> {
-    title: String,
-    options: Vec<PickerOption<T>>,
-    selected_index: usize,
-    scroll_offset: usize,
-}
-
-pub struct PickerOption<T> {
-    label: String,
-    value: T,
-    description: Option<String>,
-}
-
-pub enum PickerAction<T> {
-    Selected(T),
-    Cancelled,
-}
-```
-
----
-
-### Session Context
-
-**Location:** `cyril-core/src/session.rs`
-
-```rust
-pub struct SessionContext {
-    session_id: Option<String>,
-    current_model: Option<String>,
-    optimistic_model: Option<String>,
-    available_modes: Vec<AvailableMode>,
-    current_mode_id: Option<String>,
-    context_usage_pct: f64,
-}
-
-pub struct AvailableMode {
-    pub id: String,
-    pub name: String,
-    pub description: Option<String>,
-}
-```
-
----
-
-## Platform Models
-
-### Path Translation
-
-**Location:** `cyril-core/src/platform/path.rs`
-
-```rust
-pub enum Direction {
-    ToNative,  // WSL → Windows
-    ToAgent,   // Windows → WSL
-}
-```
-
-**Path Patterns:**
-- Windows: `C:\path\to\file`
-- WSL: `/mnt/c/path/to/file`
-- Extended: `\\?\C:\path\to\file`
-- UNC: `\\server\share\path`
-
----
-
-### Terminal Models
-
-**Location:** `cyril-core/src/platform/terminal.rs`
-
-```rust
-pub struct TerminalManager {
-    terminals: HashMap<TerminalId, TerminalProcess>,
-    next_id: usize,
-}
-
-pub struct TerminalProcess {
-    id: TerminalId,
-    child: Child,
-    output_buffer: String,
-    exit_code: Option<i32>,
-}
-
-pub struct TerminalId(String);
-
-pub enum Shell {
-    Bash,
-    Zsh,
-    Fish,
-    Pwsh,
-}
-```
-
----
-
-## Hook Models
-
-### Hook Configuration
-
-**Location:** `cyril-core/src/hooks/config.rs`
-
-```rust
-pub struct HooksConfig {
-    pub hooks: Vec<ShellHookDef>,
-}
-
-pub struct ShellHookDef {
-    pub name: String,
-    pub event: String,
-    pub pattern: Option<String>,
-    pub command: String,
-}
-
-pub struct ShellHook {
-    name: String,
-    timing: HookTiming,
-    target: HookTarget,
-    filter: Option<GlobFilter>,
-    command: String,
-}
-
-pub struct GlobFilter {
-    pattern: glob::Pattern,
-}
-```
-
----
-
-### Hook Execution
-
-**Location:** `cyril-core/src/hooks/types.rs`
-
-```rust
-pub struct HookRegistry {
-    hooks: Vec<Box<dyn Hook>>,
-}
-
-pub struct HookContext {
-    pub path: Option<String>,
-    pub content: Option<String>,
-    pub command: Option<String>,
-}
-
-pub enum HookResult {
-    Continue,
-    Block(String),
-    Feedback(String),
-}
-
-pub enum HookTiming {
-    Before,
-    After,
-}
-
-pub enum HookTarget {
-    Write,
-    Command,
-}
-```
-
----
-
-## Command Models
-
-### Command System
-
-**Location:** `cyril/src/commands.rs`
-
-```rust
-pub struct CommandExecutor {
-    client: KiroClient,
-    channels: CommandChannels,
-    agent_commands: Vec<AgentCommand>,
-    next_hook_feedback: Option<String>,
-}
-
-pub struct CommandChannels {
-    pub event_tx: mpsc::UnboundedSender<AppEvent>,
-    pub interaction_tx: mpsc::UnboundedSender<InteractionRequest>,
-}
-
-pub enum ParsedCommand {
-    Slash(SlashCommand),
-    Agent(AgentCommand, Option<String>),
-    Unknown(String),
-    None,
-}
-
-pub enum SlashCommand {
-    Help,
-    New,
-    Load(Option<String>),
-    Clear,
-    Quit,
-    Model(Option<String>),
-    Mode(Option<String>),
-}
-
-pub struct AgentCommand {
-    pub name: String,
-    pub description: String,
-    pub input_type: String,
-    pub meta: Option<serde_json::Value>,
-}
-
-pub enum CommandResult {
-    Success,
-    Error(String),
-    Quit,
-}
-```
-
----
-
-## File Completion Models
-
-**Location:** `cyril/src/file_completer.rs`
-
-```rust
-pub struct FileCompleter {
-    files: Vec<PathBuf>,
-    loaded: bool,
-}
-
-pub struct FileSuggestion {
-    pub path: PathBuf,
-    pub display: String,
-}
-
-pub struct AtContext {
-    pub trigger_pos: usize,
-    pub query: String,
-}
-```
-
----
-
-## Extension Models
-
-### Kiro Extensions
-
-**Location:** `cyril-core/src/kiro_ext.rs`
-
-```rust
-pub struct KiroExtCommand {
-    pub name: String,
-    pub description: String,
-    pub input_type: String,
-    pub meta: Option<KiroCommandMeta>,
-}
-
-pub struct KiroCommandMeta {
-    pub options: Option<Vec<String>>,
-    pub placeholder: Option<String>,
-    pub compact: Option<bool>,
-}
-
-pub enum KiroCommandsPayload {
-    Wrapped { commands: Vec<KiroExtCommand> },
-    AcpStyle { commands: Vec<KiroExtCommand> },
-    BareArray(Vec<KiroExtCommand>),
-}
-```
-
----
-
-## Event Models
-
-### Application Events
-
-**Location:** `cyril-core/src/event.rs`
-
-```rust
-pub enum AppEvent {
-    Protocol(ProtocolEvent),
-    Internal(InternalEvent),
-    Extension(ExtensionEvent),
-    Interaction(InteractionRequest),
-}
-
-pub enum ProtocolEvent {
-    StreamingContent(String),
-    StreamingComplete,
-    ToolCallStart { id: String, name: String },
-    ToolCallUpdate { id: String, status: String },
-    Error(String),
-}
-
-pub enum InternalEvent {
-    SessionCreated(String),
-    SessionLoaded(String),
-    ModelChanged(String),
-    ModeChanged(String),
-}
-
-pub enum ExtensionEvent {
-    CommandsAvailable(Vec<KiroExtCommand>),
-    ConfigUpdate(serde_json::Value),
-}
-
-pub enum InteractionRequest {
-    Approval {
-        request: serde_json::Value,
-        response_tx: oneshot::Sender<serde_json::Value>,
-    },
-}
-```
-
----
-
-## UI Models
-
-### Rendering Models
-
-**Location:** `cyril/src/ui/markdown.rs`
-
-```rust
-// Internal rendering state
-struct RenderState {
-    lines: Vec<Line<'static>>,
-    current_line: Vec<Span<'static>>,
-    style_stack: Vec<Style>,
-    in_code_block: bool,
-    code_language: Option<String>,
-    code_lines: Vec<String>,
-}
-```
-
----
-
-### Cache Models
-
-**Location:** `cyril/src/ui/cache.rs`
-
-```rust
-pub struct HashCache<K, V> {
-    map: HashMap<K, V>,
-    order: VecDeque<K>,
-    capacity: usize,
-}
-```
-
----
-
-## Data Flow Diagrams
-
-### Message Data Flow
 ```mermaid
-graph TB
-    Input[User Input] --> Parse[Parse Command]
-    Parse --> Slash{Slash Command?}
-    Slash -->|Yes| Execute[Execute Locally]
-    Slash -->|No| Send[Send to Agent]
-    Send --> Client[KiroClient]
-    Client --> JSON[JSON-RPC]
-    JSON --> Agent[Agent Process]
-    Agent --> Response[Response]
-    Response --> Event[Protocol Event]
-    Event --> State[Update State]
-    State --> Render[Render UI]
+classDiagram
+    class AgentMessage {
+        +text: String
+        +is_streaming: bool
+    }
+
+    class AgentThought {
+        +text: String
+    }
 ```
 
-### Tool Call Data Flow
+### Plan Types (`plan.rs`)
+
 ```mermaid
-graph TB
-    Agent[Agent Request] --> Client[KiroClient]
-    Client --> Approval{Needs Approval?}
-    Approval -->|Yes| UI[Show Approval UI]
-    UI --> User[User Decision]
-    User --> Execute[Execute Tool]
-    Approval -->|No| Execute
-    Execute --> Hooks[Run Hooks]
-    Hooks --> Result[Tool Result]
-    Result --> Track[Update Tracking]
-    Track --> Response[Send Response]
-    Response --> Agent
+classDiagram
+    class Plan {
+        +entries: Vec~PlanEntry~
+    }
+
+    class PlanEntry {
+        +description: String
+        +status: PlanEntryStatus
+    }
+
+    class PlanEntryStatus {
+        <<enum>>
+        Pending
+        InProgress
+        Completed
+    }
+
+    Plan --> PlanEntry
+    PlanEntry --> PlanEntryStatus
 ```
 
-### Session Data Flow
+### Hook Types (`hook.rs`)
+
 ```mermaid
-graph TB
-    Agent[Agent Notification] --> Parse[Parse Session Update]
-    Parse --> Context[SessionContext]
-    Context --> Model[Update Model]
-    Context --> Mode[Update Mode]
-    Context --> Usage[Update Usage]
-    Model --> Toolbar[Update Toolbar]
-    Mode --> Toolbar
-    Usage --> Toolbar
-    Toolbar --> Render[Render UI]
+classDiagram
+    class HookInfo {
+        +trigger: String
+        +command: String
+        +matcher: Option~String~
+    }
 ```
 
----
+Display-only projection of Kiro's backend `HookConfig`. Trigger values: `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, `AgentSpawn`. Matcher is optional tool name filter.
 
-## Data Validation
+### Configuration (`config.rs`)
 
-### Path Validation
-- Must be absolute or relative to working directory
-- No path traversal attacks (`..` limited)
-- Windows paths validated for format
-- WSL paths validated for mount structure
+```mermaid
+classDiagram
+    class Config {
+        +ui: UiConfig
+        +agent: AgentConfig
+        +load_from_path(Path) Config
+    }
 
-### Command Validation
-- Shell commands sanitized
-- No shell injection vulnerabilities
-- Working directory validated
+    class UiConfig {
+        +max_messages: usize = 500
+        +highlight_cache_size: usize = 20
+        +stream_buffer_timeout_ms: u64 = 150
+        +mouse_capture: bool = true
+    }
 
-### JSON Validation
-- All ACP messages validated against schema
-- Unknown fields ignored
-- Required fields enforced
+    class AgentConfig {
+        +agent_name: String = "kiro-cli"
+        +extra_args: Vec~String~ = []
+    }
 
----
+    Config --> UiConfig
+    Config --> AgentConfig
+```
 
-## Data Persistence
+## UI State Types (`cyril-ui/src/traits.rs`)
 
-### Session Persistence
-- Session ID stored in memory
-- No automatic session saving
-- User must explicitly load/save sessions
+### Chat Display Types
 
-### Configuration Persistence
-- Hooks loaded from `hooks.json`
-- No runtime configuration changes persisted
-- All configuration file-based
+```mermaid
+classDiagram
+    class ChatMessage {
+        +kind: ChatMessageKind
+        +timestamp: Instant
+    }
 
-### State Persistence
-- No automatic state persistence
-- Chat history in memory only
-- Tool call tracking in memory only
+    class ChatMessageKind {
+        <<enum>>
+        UserText(String)
+        AgentText(String)
+        Thought(String)
+        ToolCall(TrackedToolCall)
+        Plan(Plan)
+        System(String)
+        CommandOutput(command, lines)
+    }
 
----
+    class TrackedToolCall {
+        +tool_call: ToolCall
+        +is_latest: bool
+    }
 
-## Memory Management
+    ChatMessage --> ChatMessageKind
+    ChatMessageKind --> TrackedToolCall
+```
 
-### Bounded Collections
-- Chat messages limited to `max_messages` (default: 100)
-- Terminal output capped to prevent memory exhaustion
-- File completion cache with LRU eviction
+### Overlay State Types
 
-### Resource Cleanup
-- Terminal processes released after use
-- Completed tool calls can be pruned
-- Streaming buffers cleared after completion
+```mermaid
+classDiagram
+    class ApprovalState {
+        +tool_call: ToolCall
+        +message: String
+        +options: Vec~PermissionOption~
+        +selected: usize
+    }
+
+    class PickerState {
+        +title: String
+        +items: Vec~CommandOption~
+        +filtered: Vec~usize~
+        +selected: usize
+        +filter_text: String
+    }
+
+    class HooksPanelState {
+        +hooks: Vec~HookInfo~
+        +scroll_offset: usize
+    }
+```
+
+### Autocomplete
+
+```mermaid
+classDiagram
+    class Suggestion {
+        +text: String
+        +display: String
+        +kind: SuggestionKind
+    }
+
+    class SuggestionKind {
+        <<enum>>
+        Command
+        File
+    }
+
+    Suggestion --> SuggestionKind
+```
+
+## Subagent UI State (`cyril-ui/src/subagent_ui.rs`)
+
+```mermaid
+classDiagram
+    class SubagentUiState {
+        -streams: HashMap~SessionId, SubagentStream~
+        -focused: Option~SessionId~
+        +apply_notification(SessionId, Notification)
+        +focus(SessionId)
+        +unfocus()
+        +focused_stream() Option~SubagentStream~
+    }
+
+    class SubagentStream {
+        -messages: Vec~ChatMessage~
+        -streaming_text: String
+        -tool_call_index: HashMap~ToolCallId, usize~
+        -activity: Activity
+        +messages() [ChatMessage]
+        +streaming_text() str
+        +activity() Activity
+        +mark_terminated()
+        +is_terminated() bool
+    }
+
+    SubagentUiState --> SubagentStream
+```
