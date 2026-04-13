@@ -60,6 +60,9 @@ pub struct UiState {
     picker: Option<PickerState>,
     hooks_panel: Option<HooksPanelState>,
 
+    // Chat scroll (None = follow/auto-scroll, Some(n) = n lines above bottom)
+    chat_scroll_back: Option<usize>,
+
     // Terminal
     terminal_size: (u16, u16),
     mouse_captured: bool,
@@ -147,6 +150,10 @@ impl TuiState for UiState {
         self.hooks_panel.as_ref()
     }
 
+    fn chat_scroll_back(&self) -> Option<usize> {
+        self.chat_scroll_back
+    }
+
     fn terminal_size(&self) -> (u16, u16) {
         self.terminal_size
     }
@@ -204,6 +211,7 @@ impl UiState {
             approval: None,
             picker: None,
             hooks_panel: None,
+            chat_scroll_back: None,
             terminal_size: (80, 24),
             mouse_captured: false,
             quit_requested: false,
@@ -481,14 +489,26 @@ impl UiState {
     }
 
     /// Update the activity state and record when it changed.
-    /// Elapsed time is only tracked for busy states — cleared on Ready/Idle.
+    /// The timer starts when entering a busy state from idle/ready, and
+    /// persists across busy→busy transitions (Sending→Streaming→ToolRunning)
+    /// so it tracks total turn time. Cleared on Ready/Idle.
     pub fn set_activity(&mut self, activity: Activity) {
         if self.activity != activity {
+            let was_busy = !matches!(
+                self.activity,
+                Activity::Idle | Activity::Ready
+            );
+            let is_busy = !matches!(activity, Activity::Idle | Activity::Ready);
+
             self.activity = activity;
-            self.activity_since = match activity {
-                Activity::Idle | Activity::Ready => None,
-                _ => Some(Instant::now()),
-            };
+
+            if !is_busy {
+                self.activity_since = None;
+            } else if !was_busy {
+                self.activity_since = Some(Instant::now());
+            }
+            // busy→busy: keep existing timer
+
             self.deep_idle = false;
         }
     }
@@ -514,17 +534,25 @@ impl UiState {
         });
     }
 
-    /// Take the current input text, clearing the input buffer and cursor.
+    /// Take the current input text, clearing the input buffer, cursor, and
+    /// chat scroll offset (returns to follow mode so the agent's response
+    /// is visible).
     pub fn take_input(&mut self) -> String {
         self.input_cursor = 0;
         self.autocomplete_suggestions.clear();
         self.autocomplete_selected = None;
+        self.chat_scroll_back = None;
         std::mem::take(&mut self.input_text)
     }
 
     /// Update the terminal size.
     pub fn set_terminal_size(&mut self, w: u16, h: u16) {
         self.terminal_size = (w, h);
+    }
+
+    /// Set mouse capture state (used to sync with terminal on startup).
+    pub fn set_mouse_captured(&mut self, captured: bool) {
+        self.mouse_captured = captured;
     }
 
     /// Toggle mouse capture mode.
@@ -1025,12 +1053,39 @@ impl UiState {
         }
     }
 
-    /// Flush the stream buffer if it has timed-out content.
-    /// Returns `true` if content was flushed (UI changed).
+    // --- Chat scroll ---
+
+    /// Scroll chat up by `lines`. Enters browse mode from follow mode,
+    /// or scrolls further up if already browsing.
+    pub fn chat_scroll_up(&mut self, lines: usize) {
+        self.chat_scroll_back = Some(
+            self.chat_scroll_back.unwrap_or(0).saturating_add(lines),
+        );
+    }
+
+    /// Scroll chat down by `lines`. Returns to follow mode when offset
+    /// reaches zero.
+    pub fn chat_scroll_down(&mut self, lines: usize) {
+        match self.chat_scroll_back {
+            None => {}
+            Some(n) if n <= lines => {
+                self.chat_scroll_back = None;
+            }
+            Some(n) => {
+                self.chat_scroll_back = Some(n - lines);
+            }
+        }
+    }
+
+    /// Return to follow mode (snap to bottom).
+    pub fn chat_scroll_reset(&mut self) {
+        self.chat_scroll_back = None;
+    }
+
+    /// No-op stub — streaming text is committed directly in
+    /// `apply_notification`, so no timeout-based buffer flush is needed.
+    /// Returns `false` unconditionally.
     pub fn flush_stream_buffer(&mut self) -> bool {
-        // The stream buffer is managed externally via apply_notification.
-        // This method handles the timeout-based flush of streaming_text.
-        // Currently streaming_text is set directly, so no buffered flush needed.
         false
     }
 
@@ -1957,5 +2012,108 @@ mod tests {
         state.hooks_panel_scroll_up(3);
         state.hooks_panel_scroll_down(3);
         assert!(!state.has_hooks_panel());
+    }
+
+    // --- Chat scroll tests ---
+
+    #[test]
+    fn chat_scroll_up_enters_browse_mode() {
+        let mut state = UiState::new(500);
+        assert!(state.chat_scroll_back().is_none());
+        state.chat_scroll_up(5);
+        assert_eq!(state.chat_scroll_back(), Some(5));
+    }
+
+    #[test]
+    fn chat_scroll_up_accumulates() {
+        let mut state = UiState::new(500);
+        state.chat_scroll_up(5);
+        state.chat_scroll_up(3);
+        assert_eq!(state.chat_scroll_back(), Some(8));
+    }
+
+    #[test]
+    fn chat_scroll_down_reduces_offset() {
+        let mut state = UiState::new(500);
+        state.chat_scroll_up(10);
+        state.chat_scroll_down(3);
+        assert_eq!(state.chat_scroll_back(), Some(7));
+    }
+
+    #[test]
+    fn chat_scroll_down_returns_to_follow_mode() {
+        let mut state = UiState::new(500);
+        state.chat_scroll_up(3);
+        state.chat_scroll_down(5);
+        assert!(state.chat_scroll_back().is_none());
+    }
+
+    #[test]
+    fn chat_scroll_down_noop_in_follow_mode() {
+        let mut state = UiState::new(500);
+        state.chat_scroll_down(5);
+        assert!(state.chat_scroll_back().is_none());
+    }
+
+    #[test]
+    fn chat_scroll_reset_returns_to_follow_mode() {
+        let mut state = UiState::new(500);
+        state.chat_scroll_up(10);
+        state.chat_scroll_reset();
+        assert!(state.chat_scroll_back().is_none());
+    }
+
+    #[test]
+    fn take_input_resets_chat_scroll() {
+        let mut state = UiState::new(500);
+        state.chat_scroll_up(10);
+        state.handle_input_key(crossterm::event::KeyEvent::from(
+            crossterm::event::KeyCode::Char('h'),
+        ));
+        let _ = state.take_input();
+        assert!(state.chat_scroll_back().is_none());
+    }
+
+    // --- Activity timer tests ---
+
+    #[test]
+    fn set_activity_idle_to_busy_starts_timer() {
+        let mut state = UiState::new(500);
+        assert!(state.activity_elapsed().is_none());
+        state.set_activity(Activity::Sending);
+        assert!(state.activity_elapsed().is_some());
+    }
+
+    #[test]
+    fn set_activity_busy_to_busy_preserves_timer() {
+        let mut state = UiState::new(500);
+        state.set_activity(Activity::Sending);
+        let first_elapsed = state.activity_elapsed();
+        assert!(first_elapsed.is_some());
+
+        // Transition to another busy state — timer should NOT reset
+        state.set_activity(Activity::ToolRunning);
+        assert!(state.activity_elapsed().is_some());
+        // Timer should still be running from the original start
+        assert_eq!(state.activity(), Activity::ToolRunning);
+    }
+
+    #[test]
+    fn set_activity_busy_to_idle_clears_timer() {
+        let mut state = UiState::new(500);
+        state.set_activity(Activity::Sending);
+        assert!(state.activity_elapsed().is_some());
+
+        state.set_activity(Activity::Ready);
+        assert!(state.activity_elapsed().is_none());
+    }
+
+    #[test]
+    fn set_activity_same_state_is_noop() {
+        let mut state = UiState::new(500);
+        state.set_activity(Activity::Sending);
+        state.set_activity(Activity::Sending);
+        // Should not panic or change behavior
+        assert!(state.activity_elapsed().is_some());
     }
 }

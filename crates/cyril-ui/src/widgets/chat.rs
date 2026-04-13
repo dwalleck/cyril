@@ -1,6 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
 
+use crate::palette;
 use crate::traits::{ChatMessage, ChatMessageKind, TrackedToolCall, TuiState};
 use crate::widgets::markdown;
 
@@ -17,7 +18,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 
     // Render committed messages (includes tool calls in chronological position)
     for msg in state.messages() {
-        render_message(&mut lines, msg);
+        render_message(&mut lines, msg, area.width as usize);
         lines.push(Line::default()); // spacing between messages
     }
 
@@ -27,10 +28,10 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         lines.push(Line::styled(
             "Kiro:",
             Style::default()
-                .fg(Color::Green)
+                .fg(palette::AGENT_GREEN)
                 .add_modifier(Modifier::BOLD),
         ));
-        let md_lines = markdown::render(streaming);
+        let md_lines = markdown::render(streaming, area.width as usize);
         lines.extend(md_lines);
     }
 
@@ -39,10 +40,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         lines.push(Line::styled(
             format!("💭 {thought}"),
             Style::default()
-                .fg(Color::DarkGray)
+                .fg(palette::MUTED_GRAY)
                 .add_modifier(Modifier::ITALIC),
         ));
     }
+
+    // Activity indicator — visible in the chat area when the agent is busy
+    // but not actively streaming text.
+    render_activity_indicator(&mut lines, state);
 
     let visible_height = area.height as usize;
 
@@ -53,14 +58,17 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     // Use line_count to get the wrapped height (accounts for long lines wrapping)
     let total_lines = chat.line_count(area.width);
 
-    // Auto-scroll to bottom
-    let scroll_offset = if total_lines > visible_height {
-        total_lines.saturating_sub(visible_height)
-    } else {
-        0
+    let max_scroll = total_lines.saturating_sub(visible_height);
+    let scroll_offset = match state.chat_scroll_back() {
+        None => max_scroll,
+        Some(back) => max_scroll.saturating_sub(back),
     };
 
-    let chat = chat.scroll((scroll_offset as u16, 0));
+    if scroll_offset > u16::MAX as usize {
+        tracing::warn!(scroll_offset, "scroll offset exceeds u16::MAX, clamping");
+    }
+    let scroll_clamped = scroll_offset.min(u16::MAX as usize) as u16;
+    let chat = chat.scroll((scroll_clamped, 0));
 
     frame.render_widget(chat, area);
 
@@ -94,16 +102,16 @@ fn render_subagent_drill_in(
         Span::styled(
             format!("─── {name} "),
             Style::default()
-                .fg(Color::Cyan)
+                .fg(palette::USER_BLUE)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled("[Esc] Back", Style::default().fg(Color::DarkGray)),
+        Span::styled("[Esc] Back", Style::default().fg(palette::MUTED_GRAY)),
     ]));
     lines.push(Line::default());
 
     // Render committed messages
     for msg in stream.messages() {
-        render_message(&mut lines, msg);
+        render_message(&mut lines, msg, area.width as usize);
         lines.push(Line::default());
     }
 
@@ -113,10 +121,10 @@ fn render_subagent_drill_in(
         lines.push(Line::styled(
             format!("{name}:"),
             Style::default()
-                .fg(Color::Green)
+                .fg(palette::AGENT_GREEN)
                 .add_modifier(Modifier::BOLD),
         ));
-        let md_lines = markdown::render(streaming);
+        let md_lines = markdown::render(streaming, area.width as usize);
         lines.extend(md_lines);
     }
 
@@ -133,7 +141,8 @@ fn render_subagent_drill_in(
         0
     };
 
-    let chat = chat.scroll((scroll_offset as u16, 0));
+    let scroll_clamped = scroll_offset.min(u16::MAX as usize) as u16;
+    let chat = chat.scroll((scroll_clamped, 0));
     frame.render_widget(chat, area);
 
     if total_lines > visible_height {
@@ -143,13 +152,13 @@ fn render_subagent_drill_in(
     }
 }
 
-fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
+fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
     match msg.kind() {
         ChatMessageKind::UserText(text) => {
             lines.push(Line::styled(
                 "You:",
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(palette::USER_BLUE)
                     .add_modifier(Modifier::BOLD),
             ));
             for line in text.lines() {
@@ -160,17 +169,17 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
             lines.push(Line::styled(
                 "Kiro:",
                 Style::default()
-                    .fg(Color::Green)
+                    .fg(palette::AGENT_GREEN)
                     .add_modifier(Modifier::BOLD),
             ));
-            let md_lines = markdown::render(text);
+            let md_lines = markdown::render(text, width);
             lines.extend(md_lines);
         }
         ChatMessageKind::Thought(text) => {
             lines.push(Line::styled(
                 format!("💭 {text}"),
                 Style::default()
-                    .fg(Color::DarkGray)
+                    .fg(palette::MUTED_GRAY)
                     .add_modifier(Modifier::ITALIC),
             ));
         }
@@ -196,7 +205,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
         }
         ChatMessageKind::System(text) => {
             let style = Style::default()
-                .fg(Color::DarkGray)
+                .fg(palette::SYSTEM_MAUVE)
                 .add_modifier(Modifier::ITALIC);
             for line in text.lines() {
                 lines.push(Line::styled(line.to_string(), style));
@@ -206,7 +215,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
             lines.push(Line::styled(
                 format!("/{command}:"),
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(palette::USER_BLUE)
                     .add_modifier(Modifier::BOLD),
             ));
             for line in text.lines() {
@@ -214,6 +223,39 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage) {
             }
         }
     }
+}
+
+/// Render a live activity indicator at the bottom of chat content.
+/// Shows a spinner + label + elapsed time when the agent is busy but not
+/// actively streaming text (which is already visible).
+fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState) {
+    use crate::traits::Activity;
+
+    let (label, color) = match state.activity() {
+        Activity::Sending | Activity::Waiting => ("Thinking...", palette::MUTED_GRAY),
+        Activity::ToolRunning => ("Running...", Color::Cyan),
+        // Streaming text is already visible — no indicator needed.
+        Activity::Streaming | Activity::Idle | Activity::Ready => return,
+    };
+
+    let elapsed_dur = state.activity_elapsed();
+    let elapsed_secs = elapsed_dur.map(|d| d.as_secs()).unwrap_or(0);
+    let spinner_idx = elapsed_dur
+        .map(|d| {
+            (d.as_millis() / palette::SPINNER_FRAME_MS) as usize % palette::SPINNER_CHARS.len()
+        })
+        .unwrap_or(0);
+
+    lines.push(Line::from(vec![
+        Span::styled(
+            format!("{} ", palette::SPINNER_CHARS[spinner_idx]),
+            Style::default().fg(color),
+        ),
+        Span::styled(
+            format!("{label} {elapsed_secs}s"),
+            Style::default().fg(color),
+        ),
+    ]));
 }
 
 fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
@@ -393,7 +435,7 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
 mod tests {
     use super::*;
     use crate::traits::test_support::MockTuiState;
-    use crate::traits::ChatMessage;
+    use crate::traits::{Activity, ChatMessage};
     use ratatui::backend::TestBackend;
     use ratatui::Terminal;
 
@@ -776,6 +818,145 @@ mod tests {
         assert!(
             !text.contains("main session text"),
             "drill-in should NOT show main session messages"
+        );
+    }
+
+    #[test]
+    fn chat_scroll_back_offsets_viewport() {
+        let mut messages = Vec::new();
+        for i in 0..50 {
+            messages.push(ChatMessage::agent_text(format!("Message {i}")));
+        }
+
+        // Follow mode — auto-scroll to bottom
+        let state_follow = MockTuiState {
+            messages: messages.clone(),
+            chat_scroll_back: None,
+            ..Default::default()
+        };
+
+        // Browse mode — scrolled up
+        let state_browse = MockTuiState {
+            messages,
+            chat_scroll_back: Some(30),
+            ..Default::default()
+        };
+
+        let backend_follow = TestBackend::new(80, 10);
+        let mut term_follow = Terminal::new(backend_follow).expect("test terminal");
+        term_follow
+            .draw(|frame| render(frame, frame.area(), &state_follow))
+            .expect("draw");
+
+        let backend_browse = TestBackend::new(80, 10);
+        let mut term_browse = Terminal::new(backend_browse).expect("test terminal");
+        term_browse
+            .draw(|frame| render(frame, frame.area(), &state_browse))
+            .expect("draw");
+
+        // Extract first line of each render to verify different content
+        let follow_text: String = (0..80)
+            .map(|x| {
+                term_follow
+                    .backend()
+                    .buffer()
+                    .cell((x, 0))
+                    .map(|c| c.symbol().to_string())
+                    .unwrap_or_default()
+            })
+            .collect();
+        let browse_text: String = (0..80)
+            .map(|x| {
+                term_browse
+                    .backend()
+                    .buffer()
+                    .cell((x, 0))
+                    .map(|c| c.symbol().to_string())
+                    .unwrap_or_default()
+            })
+            .collect();
+
+        assert_ne!(
+            follow_text, browse_text,
+            "follow mode and browse mode should show different content"
+        );
+    }
+
+    #[test]
+    fn chat_scroll_back_short_content_clamps_to_zero() {
+        // When content fits in the viewport, browse mode should still render
+        // correctly (offset clamps to 0, no underflow).
+        let state = MockTuiState {
+            messages: vec![ChatMessage::agent_text("Short".into())],
+            chat_scroll_back: Some(100),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state))
+            .expect("draw should not panic with scroll_back exceeding content");
+    }
+
+    #[test]
+    fn activity_indicator_shown_for_sending() {
+        use std::time::Duration;
+
+        let state = MockTuiState {
+            activity: Activity::Sending,
+            activity_elapsed: Some(Duration::from_secs(5)),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state))
+            .expect("draw");
+
+        let buffer = terminal.backend().buffer();
+        let text: String = (0..24)
+            .flat_map(|y| {
+                (0..80).map(move |x| {
+                    buffer
+                        .cell((x, y))
+                        .map(|c| c.symbol().to_string())
+                        .unwrap_or_default()
+                })
+            })
+            .collect();
+        assert!(
+            text.contains("Thinking"),
+            "Sending state should show Thinking indicator"
+        );
+        assert!(text.contains("5s"), "should show elapsed seconds");
+    }
+
+    #[test]
+    fn activity_indicator_not_shown_for_idle() {
+        let state = MockTuiState {
+            activity: Activity::Idle,
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state))
+            .expect("draw");
+
+        let buffer = terminal.backend().buffer();
+        let text: String = (0..24)
+            .flat_map(|y| {
+                (0..80).map(move |x| {
+                    buffer
+                        .cell((x, y))
+                        .map(|c| c.symbol().to_string())
+                        .unwrap_or_default()
+                })
+            })
+            .collect();
+        assert!(
+            !text.contains("Thinking"),
+            "Idle state should not show activity indicator"
         );
     }
 }
