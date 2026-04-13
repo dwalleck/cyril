@@ -17,17 +17,20 @@ pub fn draw(frame: &mut Frame, state: &dyn TuiState) {
 fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     let area = frame.area();
 
-    // Crew panel sizing is owned by the crew_panel widget (single source of truth).
+    // Runtime-variable panel heights are owned by their widget's height_for().
     let crew_height = crate::widgets::crew_panel::height_for(state);
+    let suggestions_height = crate::widgets::suggestions::height_for(state);
 
-    let [toolbar_area, chat_area, crew_area, input_area, status_area] = Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Min(5),
-        Constraint::Length(crew_height),
-        Constraint::Length(5),
-        Constraint::Length(1),
-    ])
-    .areas(area);
+    let [toolbar_area, chat_area, crew_area, input_area, suggestions_area, status_area] =
+        Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(5),
+            Constraint::Length(crew_height),
+            Constraint::Length(5),
+            Constraint::Length(suggestions_height),
+            Constraint::Length(1),
+        ])
+        .areas(area);
 
     crate::widgets::toolbar::render(frame, toolbar_area, state);
     crate::widgets::chat::render(frame, chat_area, state);
@@ -35,6 +38,9 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         crate::widgets::crew_panel::render(frame, crew_area, state);
     }
     crate::widgets::input::render(frame, input_area, state);
+    if suggestions_height > 0 {
+        crate::widgets::suggestions::render(frame, suggestions_area, state);
+    }
     crate::widgets::toolbar::render_status_bar(frame, status_area, state);
 
     // Overlays (rendered on top)

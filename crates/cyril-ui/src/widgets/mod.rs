@@ -5,4 +5,5 @@ pub mod hooks_panel;
 pub mod input;
 pub mod markdown;
 pub mod picker;
+pub mod suggestions;
 pub mod toolbar;

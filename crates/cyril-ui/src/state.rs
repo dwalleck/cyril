@@ -40,7 +40,7 @@ pub struct UiState {
     autocomplete_suggestions: Vec<Suggestion>,
     autocomplete_selected: Option<usize>,
     file_completer: Option<FileCompleter>,
-    command_names: Vec<String>,
+    command_info: Vec<(String, Option<String>)>,
 
     // Session info (projected by App from SessionController)
     activity: Activity,
@@ -198,7 +198,7 @@ impl UiState {
             autocomplete_suggestions: Vec::new(),
             autocomplete_selected: None,
             file_completer: None,
-            command_names: Vec::new(),
+            command_info: Vec::new(),
             activity: Activity::Idle,
             activity_since: None,
             session_label: None,
@@ -656,9 +656,11 @@ impl UiState {
         self.file_completer.as_ref()
     }
 
-    /// Command names available for slash autocomplete.
-    pub fn set_command_names(&mut self, names: Vec<String>) {
-        self.command_names = names;
+    /// Command info tuples `(name, description)` available for slash autocomplete.
+    /// Names are stored without the leading `/`.
+    pub fn set_command_info(&mut self, mut info: Vec<(String, Option<String>)>) {
+        info.sort_by(|(a, _), (b, _)| a.to_lowercase().cmp(&b.to_lowercase()));
+        self.command_info = info;
     }
 
     /// Read-only access to the subagent tracker.
@@ -723,12 +725,12 @@ impl UiState {
         if trimmed.starts_with('/') && !trimmed.contains(' ') {
             let query = trimmed[1..].to_lowercase();
             self.autocomplete_suggestions = self
-                .command_names
+                .command_info
                 .iter()
-                .filter(|name| name.to_lowercase().starts_with(&query))
-                .map(|name| Suggestion {
+                .filter(|(name, _)| name.to_lowercase().starts_with(&query))
+                .map(|(name, desc)| Suggestion {
                     text: format!("/{name}"),
-                    description: None,
+                    description: desc.clone(),
                 })
                 .collect();
             self.autocomplete_selected = if self.autocomplete_suggestions.is_empty() {
@@ -2072,6 +2074,30 @@ mod tests {
         ));
         let _ = state.take_input();
         assert!(state.chat_scroll_back().is_none());
+    }
+
+    #[test]
+    fn set_command_info_propagates_descriptions() {
+        use crossterm::event::{KeyCode, KeyEvent};
+
+        let mut state = UiState::new(500);
+        state.set_command_info(vec![
+            ("model".into(), Some("Switch model".into())),
+            ("mode".into(), Some("Switch mode".into())),
+            ("new".into(), None),
+        ]);
+
+        // Type "/" to trigger autocomplete for all commands
+        state.handle_input_key(KeyEvent::from(KeyCode::Char('/')));
+        let suggestions = state.autocomplete_suggestions();
+        assert_eq!(suggestions.len(), 3);
+
+        // Verify descriptions propagated correctly
+        let model = suggestions.iter().find(|s| s.text == "/model").unwrap();
+        assert_eq!(model.description.as_deref(), Some("Switch model"));
+
+        let new = suggestions.iter().find(|s| s.text == "/new").unwrap();
+        assert!(new.description.is_none(), "None description should stay None");
     }
 
     // --- Activity timer tests ---
