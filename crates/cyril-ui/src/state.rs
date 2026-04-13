@@ -59,6 +59,10 @@ pub struct UiState {
     approval: Option<ApprovalState>,
     picker: Option<PickerState>,
     hooks_panel: Option<HooksPanelState>,
+    code_panel: Option<cyril_core::types::CodePanelData>,
+
+    // Session-projected flags
+    code_intelligence_active: bool,
 
     // Chat scroll (None = follow/auto-scroll, Some(n) = n lines above bottom)
     chat_scroll_back: Option<usize>,
@@ -150,6 +154,14 @@ impl TuiState for UiState {
         self.hooks_panel.as_ref()
     }
 
+    fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData> {
+        self.code_panel.as_ref()
+    }
+
+    fn code_intelligence_active(&self) -> bool {
+        self.code_intelligence_active
+    }
+
     fn chat_scroll_back(&self) -> Option<usize> {
         self.chat_scroll_back
     }
@@ -211,6 +223,8 @@ impl UiState {
             approval: None,
             picker: None,
             hooks_panel: None,
+            code_panel: None,
+            code_intelligence_active: false,
             chat_scroll_back: None,
             terminal_size: (80, 24),
             mouse_captured: false,
@@ -1055,6 +1069,24 @@ impl UiState {
         }
     }
 
+    // --- Code panel ---
+
+    pub fn show_code_panel(&mut self, data: cyril_core::types::CodePanelData) {
+        self.code_panel = Some(data);
+    }
+
+    pub fn close_code_panel(&mut self) {
+        self.code_panel = None;
+    }
+
+    pub fn has_code_panel(&self) -> bool {
+        self.code_panel.is_some()
+    }
+
+    pub fn set_code_intelligence_active(&mut self, active: bool) {
+        self.code_intelligence_active = active;
+    }
+
     // --- Chat scroll ---
 
     /// Scroll chat up by `lines`. Enters browse mode from follow mode,
@@ -1895,6 +1927,47 @@ mod tests {
             command: command.into(),
             matcher: matcher.map(String::from),
         }
+    }
+
+    #[test]
+    fn code_panel_lifecycle() {
+        use cyril_core::types::{CodePanelData, LspStatus};
+
+        let mut state = UiState::new(500);
+        assert!(state.code_panel().is_none());
+        assert!(!state.has_code_panel());
+
+        let data = CodePanelData {
+            status: LspStatus::Initialized,
+            message: Some("LSP servers ready".into()),
+            warning: None,
+            root_path: Some("/home/user/project".into()),
+            detected_languages: vec!["rust".into()],
+            project_markers: vec!["Cargo.toml".into()],
+            config_path: Some(".kiro/settings/lsp.json".into()),
+            doc_url: None,
+            lsps: vec![],
+        };
+
+        state.show_code_panel(data);
+        assert!(state.has_code_panel());
+        assert!(state.code_panel().is_some());
+
+        state.close_code_panel();
+        assert!(!state.has_code_panel());
+    }
+
+    #[test]
+    fn code_intelligence_active_defaults_false() {
+        let state = UiState::new(500);
+        assert!(!state.code_intelligence_active());
+    }
+
+    #[test]
+    fn set_code_intelligence_active() {
+        let mut state = UiState::new(500);
+        state.set_code_intelligence_active(true);
+        assert!(state.code_intelligence_active());
     }
 
     #[test]

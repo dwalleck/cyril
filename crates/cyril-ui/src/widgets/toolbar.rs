@@ -67,6 +67,15 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         ));
     }
 
+    // Code intelligence indicator
+    if state.code_intelligence_active() {
+        parts.push(Span::raw(" · "));
+        parts.push(Span::styled(
+            "✦ code intel",
+            Style::default().fg(Color::Cyan),
+        ));
+    }
+
     // Elapsed time for active operations
     if let Some(elapsed) = state.activity_elapsed() {
         let secs = elapsed.as_secs();

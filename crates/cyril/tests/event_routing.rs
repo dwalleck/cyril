@@ -256,3 +256,106 @@ fn session_created_activates_both_controllers() {
     // UI should show the session label
     assert_eq!(ui.session_label(), Some("sess_123"));
 }
+
+#[test]
+fn code_command_panel_response_opens_overlay() {
+    let mut ui = UiState::new(500);
+
+    let response = serde_json::json!({
+        "success": true,
+        "data": {
+            "status": "initialized",
+            "message": "Ready",
+            "detectedLanguages": ["rust"],
+            "projectMarkers": ["Cargo.toml"],
+            "lsps": [{
+                "name": "rust-analyzer",
+                "languages": ["rust"],
+                "status": "initialized"
+            }]
+        }
+    });
+
+    match CodeCommandResponse::from_json(&response) {
+        CodeCommandResponse::Panel(data) => {
+            assert_eq!(data.status, LspStatus::Initialized);
+            ui.show_code_panel(data);
+        }
+        other => panic!("Expected Panel, got {other:?}"),
+    }
+
+    assert!(ui.has_code_panel());
+    assert!(ui.code_panel().is_some());
+    let panel = ui.code_panel().unwrap();
+    assert_eq!(panel.lsps.len(), 1);
+    assert_eq!(panel.lsps[0].name, "rust-analyzer");
+
+    ui.close_code_panel();
+    assert!(!ui.has_code_panel());
+}
+
+#[test]
+fn code_command_prompt_response_detected() {
+    let response = serde_json::json!({
+        "success": true,
+        "data": {
+            "executePrompt": "Summarize the codebase architecture...",
+            "label": "Code Summary"
+        }
+    });
+
+    match CodeCommandResponse::from_json(&response) {
+        CodeCommandResponse::Prompt { text, label } => {
+            assert!(text.contains("Summarize"));
+            assert_eq!(label, Some("Code Summary".into()));
+        }
+        other => panic!("Expected Prompt, got {other:?}"),
+    }
+}
+
+#[test]
+fn code_intelligence_active_set_on_initialized_panel() {
+    let mut ui = UiState::new(500);
+    assert!(!ui.code_intelligence_active());
+
+    let response = serde_json::json!({
+        "success": true,
+        "data": {
+            "status": "initialized",
+            "detectedLanguages": ["rust"],
+            "projectMarkers": [],
+            "lsps": []
+        }
+    });
+
+    if let CodeCommandResponse::Panel(data) = CodeCommandResponse::from_json(&response) {
+        if data.status == LspStatus::Initialized {
+            ui.set_code_intelligence_active(true);
+        }
+    }
+
+    assert!(ui.code_intelligence_active());
+}
+
+#[test]
+fn code_intelligence_not_set_on_initializing_panel() {
+    let mut ui = UiState::new(500);
+
+    let response = serde_json::json!({
+        "success": true,
+        "data": {
+            "status": "initializing",
+            "detectedLanguages": [],
+            "projectMarkers": [],
+            "lsps": []
+        }
+    });
+
+    if let CodeCommandResponse::Panel(data) = CodeCommandResponse::from_json(&response) {
+        if data.status == LspStatus::Initialized {
+            ui.set_code_intelligence_active(true);
+        }
+    }
+
+    assert!(!ui.code_intelligence_active());
+}
