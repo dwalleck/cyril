@@ -72,6 +72,7 @@ pub struct ToolCall {
     kind: ToolKind,
     status: ToolCallStatus,
     raw_input: Option<serde_json::Value>,
+    raw_output: Option<serde_json::Value>,
     content: Vec<ToolCallContent>,
     locations: Vec<ToolCallLocation>,
 }
@@ -90,6 +91,7 @@ impl ToolCall {
             kind,
             status,
             raw_input,
+            raw_output: None,
             content: Vec::new(),
             locations: Vec::new(),
         }
@@ -109,6 +111,13 @@ impl ToolCall {
         self
     }
 
+    /// Set the structured output from tool execution.
+    #[must_use]
+    pub fn with_raw_output(mut self, raw_output: Option<serde_json::Value>) -> Self {
+        self.raw_output = raw_output;
+        self
+    }
+
     pub fn id(&self) -> &ToolCallId {
         &self.id
     }
@@ -124,6 +133,9 @@ impl ToolCall {
     }
     pub fn raw_input(&self) -> Option<&serde_json::Value> {
         self.raw_input.as_ref()
+    }
+    pub fn raw_output(&self) -> Option<&serde_json::Value> {
+        self.raw_output.as_ref()
     }
     pub fn content(&self) -> &[ToolCallContent] {
         &self.content
@@ -143,6 +155,9 @@ impl ToolCall {
         self.status = update.status;
         if update.raw_input.is_some() {
             self.raw_input = update.raw_input.clone();
+        }
+        if update.raw_output.is_some() {
+            self.raw_output = update.raw_output.clone();
         }
         if !update.content.is_empty() {
             self.content = update.content.clone();
@@ -473,6 +488,92 @@ mod tests {
             tc.raw_input(),
             Some(&input),
             "raw_input should be preserved"
+        );
+    }
+
+    // --- raw_output tests ---
+
+    #[test]
+    fn tool_call_raw_output_accessor() {
+        let output = serde_json::json!({"stdout": "hello", "exit_status": 0});
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "Running cargo test".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(output.clone()));
+        assert_eq!(tc.raw_output(), Some(&output));
+    }
+
+    #[test]
+    fn tool_call_raw_output_default_none() {
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "read".into(),
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            None,
+        );
+        assert!(tc.raw_output().is_none());
+    }
+
+    #[test]
+    fn merge_update_preserves_raw_output_when_update_has_none() {
+        let output = serde_json::json!({"stdout": "ok"});
+        let mut tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::InProgress,
+            None,
+        )
+        .with_raw_output(Some(output.clone()));
+
+        let update = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            None,
+        );
+        // update has no raw_output
+        tc.merge_update(&update);
+        assert_eq!(
+            tc.raw_output(),
+            Some(&output),
+            "raw_output preserved when update has None"
+        );
+    }
+
+    #[test]
+    fn merge_update_overwrites_raw_output_when_update_provides_it() {
+        let old_output = serde_json::json!({"stdout": "old"});
+        let new_output = serde_json::json!({"stdout": "new", "exit_status": 0});
+        let mut tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::InProgress,
+            None,
+        )
+        .with_raw_output(Some(old_output));
+
+        let update = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_raw_output(Some(new_output.clone()));
+
+        tc.merge_update(&update);
+        assert_eq!(
+            tc.raw_output(),
+            Some(&new_output),
+            "raw_output overwritten when update provides it"
         );
     }
 
