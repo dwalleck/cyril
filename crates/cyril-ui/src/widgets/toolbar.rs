@@ -111,6 +111,46 @@ pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         ));
     }
 
+    // Stop reason warning (when last turn didn't end normally)
+    if let Some(turn) = state.last_turn() {
+        use cyril_core::types::StopReason;
+        let (label, color) = match turn.stop_reason() {
+            StopReason::EndTurn => ("", Color::White),
+            StopReason::MaxTokens => ("Token limit", Color::Yellow),
+            StopReason::MaxTurnRequests => ("Turn limit", Color::Yellow),
+            StopReason::Refusal => ("Refused", Color::Red),
+            StopReason::Cancelled => ("Cancelled", Color::DarkGray),
+        };
+        if !label.is_empty() {
+            if !parts.is_empty() {
+                parts.push(Span::raw(" · "));
+            }
+            parts.push(Span::styled(
+                label,
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            ));
+        }
+
+        // Token counts from last turn
+        if let Some(tokens) = turn.token_counts() {
+            if !parts.is_empty() {
+                parts.push(Span::raw(" · "));
+            }
+            let input = format_token_count(tokens.input());
+            let output = format_token_count(tokens.output());
+            let mut token_text = format!("{input} in / {output} out");
+            if let Some(cached) = tokens.cached() {
+                if cached > 0 {
+                    token_text.push_str(&format!(" / {} cached", format_token_count(cached)));
+                }
+            }
+            parts.push(Span::styled(
+                token_text,
+                Style::default().fg(Color::DarkGray),
+            ));
+        }
+    }
+
     // Credit usage
     if let Some((used, limit)) = state.credit_usage() {
         if !parts.is_empty() {
@@ -143,6 +183,16 @@ pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     let bar = Paragraph::new(line).style(Style::default().bg(Color::Rgb(30, 30, 46)));
 
     frame.render_widget(bar, area);
+}
+
+fn format_token_count(count: u64) -> String {
+    if count < 1000 {
+        format!("{count}")
+    } else if count < 1_000_000 {
+        format!("{:.1}k", count as f64 / 1000.0)
+    } else {
+        format!("{:.1}M", count as f64 / 1_000_000.0)
+    }
 }
 
 fn spinner_index(state: &dyn TuiState) -> usize {
@@ -248,5 +298,77 @@ mod tests {
             text.contains("SCROLL"),
             "status bar should show SCROLL indicator in browse mode: {text}"
         );
+    }
+
+    #[test]
+    fn status_bar_shows_token_limit_warning() {
+        let state = MockTuiState {
+            last_turn: Some(cyril_core::types::TurnSummary::new(
+                cyril_core::types::StopReason::MaxTokens,
+                None,
+                None,
+            )),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| {
+                render_status_bar(frame, frame.area(), &state);
+            })
+            .expect("draw");
+        let buffer = terminal.backend().buffer();
+        let text: String = (0..80)
+            .map(|x| {
+                buffer
+                    .cell((x, 0))
+                    .map(|c| c.symbol().to_string())
+                    .unwrap_or_default()
+            })
+            .collect();
+        assert!(
+            text.contains("Token limit"),
+            "should show token limit warning: {text}"
+        );
+    }
+
+    #[test]
+    fn status_bar_shows_token_counts() {
+        let state = MockTuiState {
+            last_turn: Some(cyril_core::types::TurnSummary::new(
+                cyril_core::types::StopReason::EndTurn,
+                Some(cyril_core::types::TokenCounts::new(1500, 800, Some(300))),
+                None,
+            )),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| {
+                render_status_bar(frame, frame.area(), &state);
+            })
+            .expect("draw");
+        let buffer = terminal.backend().buffer();
+        let text: String = (0..80)
+            .map(|x| {
+                buffer
+                    .cell((x, 0))
+                    .map(|c| c.symbol().to_string())
+                    .unwrap_or_default()
+            })
+            .collect();
+        assert!(text.contains("1.5k in"), "should show input tokens: {text}");
+        assert!(
+            text.contains("800 out"),
+            "should show output tokens: {text}"
+        );
+    }
+
+    #[test]
+    fn format_token_count_formats_correctly() {
+        assert_eq!(format_token_count(500), "500");
+        assert_eq!(format_token_count(1500), "1.5k");
+        assert_eq!(format_token_count(1_200_000), "1.2M");
     }
 }
