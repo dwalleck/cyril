@@ -361,8 +361,29 @@ impl UiState {
                 }
                 true
             }
-            Notification::CompactionStatus { message } => {
-                self.add_system_message(format!("Compaction: {message}"));
+            Notification::CompactionStatus { phase, summary } => {
+                match phase {
+                    cyril_core::types::CompactionPhase::Started => {
+                        self.add_system_message("Compacting conversation context...".into());
+                        self.set_activity(Activity::Streaming);
+                    }
+                    cyril_core::types::CompactionPhase::Completed => {
+                        if let Some(s) = summary {
+                            self.add_system_message(format!("Compaction completed: {s}"));
+                        } else {
+                            self.add_system_message("Compaction completed".into());
+                        }
+                        self.set_activity(Activity::Ready);
+                    }
+                    cyril_core::types::CompactionPhase::Failed { error } => {
+                        if let Some(e) = error {
+                            self.add_system_message(format!("Compaction failed: {e}"));
+                        } else {
+                            self.add_system_message("Compaction failed".into());
+                        }
+                        self.set_activity(Activity::Ready);
+                    }
+                }
                 true
             }
             Notification::ClearStatus { message } => {
@@ -377,6 +398,8 @@ impl UiState {
                 session_id,
                 current_mode,
                 current_model,
+                welcome_message,
+                ..
             } => {
                 self.session_label = Some(session_id.as_str().to_string());
                 self.current_mode = current_mode.clone();
@@ -387,7 +410,11 @@ impl UiState {
                 self.pending_tokens = None;
                 self.pending_metering = None;
                 self.session_cost = cyril_core::types::SessionCost::new();
-                self.add_system_message(format!("Session created: {}", session_id.as_str()));
+                if let Some(msg) = welcome_message {
+                    self.add_system_message(msg.clone());
+                } else {
+                    self.add_system_message(format!("Session created: {}", session_id.as_str()));
+                }
                 self.set_activity(Activity::Ready);
                 true
             }
@@ -457,6 +484,17 @@ impl UiState {
                 } else {
                     self.add_system_message(format!("Model '{requested}' not available"));
                 }
+                true
+            }
+
+            Notification::SessionsListed { .. } => {
+                // Handled by the App layer (opens session picker).
+                false
+            }
+            Notification::UserMessage { text } => {
+                self.messages.push(ChatMessage::user_text(text.clone()));
+                self.messages_version += 1;
+                self.enforce_message_limit();
                 true
             }
 
@@ -2316,6 +2354,8 @@ mod tests {
             session_id: SessionId::new("s2"),
             current_mode: None,
             current_model: None,
+            welcome_message: None,
+            available_modes: Vec::new(),
         });
         assert!(
             state.last_turn().is_none(),
@@ -2369,9 +2409,159 @@ mod tests {
             session_id: SessionId::new("s2"),
             current_mode: None,
             current_model: None,
+            welcome_message: None,
+            available_modes: Vec::new(),
         });
 
         assert_eq!(state.session_cost().total_credits(), 0.0);
         assert_eq!(state.session_cost().turn_count(), 0);
+    }
+
+    #[test]
+    fn session_created_welcome_message_shown() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s1"),
+            current_mode: None,
+            current_model: None,
+            welcome_message: Some("Hello! I'm Kiro.".into()),
+            available_modes: Vec::new(),
+        });
+        assert_eq!(state.messages().len(), 1);
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::System(msg) if msg == "Hello! I'm Kiro."
+        ));
+    }
+
+    #[test]
+    fn session_created_no_welcome_falls_back_to_session_id() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("sess_abc"),
+            current_mode: None,
+            current_model: None,
+            welcome_message: None,
+            available_modes: Vec::new(),
+        });
+        assert_eq!(state.messages().len(), 1);
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::System(msg) if msg.contains("sess_abc")
+        ));
+    }
+
+    #[test]
+    fn user_message_added_to_messages() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::UserMessage {
+            text: "Fix the auth bug".into(),
+        });
+        assert_eq!(state.messages().len(), 1);
+        assert!(
+            matches!(state.messages()[0].kind(), ChatMessageKind::UserText(t) if t == "Fix the auth bug")
+        );
+    }
+
+    #[test]
+    fn user_message_in_session_replay_sequence() {
+        let mut state = UiState::new(500);
+
+        // Simulate a replay: user message, then agent response, then turn complete
+        state.apply_notification(&Notification::UserMessage {
+            text: "What is 2+2?".into(),
+        });
+        state.apply_notification(&Notification::AgentMessage(
+            cyril_core::types::message::AgentMessage {
+                text: "4".into(),
+                is_streaming: false,
+            },
+        ));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+
+        assert_eq!(state.messages().len(), 2);
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::UserText(_)
+        ));
+        assert!(matches!(
+            state.messages()[1].kind(),
+            ChatMessageKind::AgentText(_)
+        ));
+    }
+
+    #[test]
+    fn compaction_started_sets_streaming_activity() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::CompactionStatus {
+            phase: cyril_core::types::CompactionPhase::Started,
+            summary: None,
+        });
+        assert!(matches!(state.activity(), Activity::Streaming));
+        assert_eq!(state.messages().len(), 1);
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::System(msg) if msg.contains("Compacting")
+        ));
+    }
+
+    #[test]
+    fn compaction_completed_resets_activity_and_shows_summary() {
+        let mut state = UiState::new(500);
+        state.set_activity(Activity::Streaming);
+        state.apply_notification(&Notification::CompactionStatus {
+            phase: cyril_core::types::CompactionPhase::Completed,
+            summary: Some("3 turns removed".into()),
+        });
+        assert!(matches!(state.activity(), Activity::Ready));
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::System(msg) if msg.contains("3 turns removed")
+        ));
+    }
+
+    #[test]
+    fn compaction_completed_no_summary() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::CompactionStatus {
+            phase: cyril_core::types::CompactionPhase::Completed,
+            summary: None,
+        });
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::System(msg) if msg == "Compaction completed"
+        ));
+    }
+
+    #[test]
+    fn compaction_failed_shows_error_and_resets_activity() {
+        let mut state = UiState::new(500);
+        state.set_activity(Activity::Streaming);
+        state.apply_notification(&Notification::CompactionStatus {
+            phase: cyril_core::types::CompactionPhase::Failed {
+                error: Some("out of memory".into()),
+            },
+            summary: None,
+        });
+        assert!(matches!(state.activity(), Activity::Ready));
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::System(msg) if msg.contains("out of memory")
+        ));
+    }
+
+    #[test]
+    fn compaction_failed_no_error_detail() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::CompactionStatus {
+            phase: cyril_core::types::CompactionPhase::Failed { error: None },
+            summary: None,
+        });
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::System(msg) if msg == "Compaction failed"
+        ));
     }
 }

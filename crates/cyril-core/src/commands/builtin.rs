@@ -112,6 +112,30 @@ impl Command for NewCommand {
     }
 }
 
+/// /resume — queries the session list; the App opens a picker and loads the
+/// selected session on confirmation.
+pub struct ResumeCommand;
+
+#[async_trait::async_trait]
+impl Command for ResumeCommand {
+    fn name(&self) -> &str {
+        "resume"
+    }
+
+    fn description(&self) -> &str {
+        "Resume a previous session"
+    }
+
+    async fn execute(
+        &self,
+        ctx: &CommandContext<'_>,
+        _args: &str,
+    ) -> crate::Result<CommandResult> {
+        ctx.bridge.send(BridgeCommand::ListSessions).await?;
+        Ok(CommandResult::dispatched())
+    }
+}
+
 /// /load <id> — load a session
 pub struct LoadCommand;
 

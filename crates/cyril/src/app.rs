@@ -305,6 +305,33 @@ impl App {
             self.redraw_needed = true;
         }
 
+        // Handle session list response — open resume picker or show message
+        if let Notification::SessionsListed { ref sessions } = notification {
+            if sessions.is_empty() {
+                self.ui_state
+                    .add_system_message("No previous sessions found.".into());
+            } else {
+                let options: Vec<CommandOption> = sessions
+                    .iter()
+                    .map(|s| {
+                        let label = s.title().unwrap_or("Untitled");
+                        let id_str = s.session_id().as_str();
+                        let id_prefix = &id_str[..8.min(id_str.len())];
+                        CommandOption {
+                            label: format!("{label} ({id_prefix})"),
+                            value: id_str.to_string(),
+                            description: s.updated_at().map(String::from),
+                            group: None,
+                            is_current: false,
+                        }
+                    })
+                    .collect();
+                self.ui_state
+                    .show_picker("Resume session".into(), options);
+            }
+            self.redraw_needed = true;
+        }
+
         // Handle MCP OAuth request — display URL for the user to copy
         if let Notification::McpOAuthRequest {
             ref server_name,
@@ -537,7 +564,14 @@ impl App {
             KeyCode::Down => self.ui_state.picker_select_next(),
             KeyCode::Enter => {
                 if let Some((command_name, value)) = self.ui_state.picker_confirm() {
-                    if let Some(session_id) = self.session.id() {
+                    if command_name == "Resume session" {
+                        // Session resume picker — load the selected session
+                        self.bridge_sender
+                            .send(BridgeCommand::LoadSession {
+                                session_id: SessionId::new(&value),
+                            })
+                            .await?;
+                    } else if let Some(session_id) = self.session.id() {
                         self.bridge_sender
                             .send(BridgeCommand::ExecuteCommand {
                                 command: command_name,

@@ -147,13 +147,14 @@ impl CommandRegistry {
     pub fn with_builtins() -> Self {
         let mut registry = Self::new();
         let names: Vec<&str> = vec![
-            "help", "clear", "quit", "new", "load", "sessions", "spawn", "kill", "msg",
+            "help", "clear", "quit", "new", "load", "resume", "sessions", "spawn", "kill", "msg",
         ];
         registry.register(Arc::new(builtin::HelpCommand::new(&names)));
         registry.register(Arc::new(builtin::ClearCommand));
         registry.register(Arc::new(builtin::QuitCommand));
         registry.register(Arc::new(builtin::NewCommand));
         registry.register(Arc::new(builtin::LoadCommand));
+        registry.register(Arc::new(builtin::ResumeCommand));
         registry.register(Arc::new(subagent::SessionsCommand));
         registry.register(Arc::new(subagent::SpawnCommand));
         registry.register(Arc::new(subagent::KillCommand));
@@ -514,6 +515,31 @@ mod tests {
             cmd,
             Some(crate::types::BridgeCommand::NewSession { .. })
         ));
+    }
+
+    #[tokio::test]
+    async fn resume_command_dispatches_list_sessions() {
+        let session = crate::session::SessionController::new();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+        };
+
+        let result = builtin::ResumeCommand.execute(&ctx, "").await;
+        assert!(result.is_ok());
+        assert!(matches!(
+            result.unwrap().kind,
+            CommandResultKind::Dispatched
+        ));
+
+        let cmd = rx.recv().await;
+        assert!(
+            matches!(cmd, Some(crate::types::BridgeCommand::ListSessions)),
+            "expected ListSessions, got {cmd:?}"
+        );
     }
 
     #[test]

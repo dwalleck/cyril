@@ -24,6 +24,7 @@ pub struct SubagentInfo {
     /// Stage names this subagent depends on. These correspond to
     /// `PendingStage::name` or other `SubagentInfo::session_name` values.
     depends_on: Vec<String>,
+    parent_session_id: Option<SessionId>,
 }
 
 impl SubagentInfo {
@@ -46,7 +47,14 @@ impl SubagentInfo {
             group,
             role,
             depends_on,
+            parent_session_id: None,
         }
+    }
+
+    #[must_use]
+    pub fn with_parent_session_id(mut self, parent: Option<SessionId>) -> Self {
+        self.parent_session_id = parent;
+        self
     }
 
     pub fn session_id(&self) -> &SessionId {
@@ -79,6 +87,10 @@ impl SubagentInfo {
 
     pub fn depends_on(&self) -> &[String] {
         &self.depends_on
+    }
+
+    pub fn parent_session_id(&self) -> Option<&SessionId> {
+        self.parent_session_id.as_ref()
     }
 
     pub fn is_working(&self) -> bool {

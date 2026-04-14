@@ -7,6 +7,7 @@ pub struct CommandInfo {
     has_options: bool,
     is_selection: bool,
     is_local: bool,
+    effect: Option<String>,
 }
 
 impl CommandInfo {
@@ -25,7 +26,14 @@ impl CommandInfo {
             has_options: has_options || is_selection,
             is_selection,
             is_local,
+            effect: None,
         }
+    }
+
+    #[must_use]
+    pub fn with_effect(mut self, effect: Option<impl Into<String>>) -> Self {
+        self.effect = effect.map(Into::into);
+        self
     }
 
     pub fn name(&self) -> &str {
@@ -50,6 +58,10 @@ impl CommandInfo {
 
     pub fn is_local(&self) -> bool {
         self.is_local
+    }
+
+    pub fn effect(&self) -> Option<&str> {
+        self.effect.as_deref()
     }
 }
 
@@ -121,6 +133,19 @@ mod tests {
     fn command_info_selection_implies_has_options() {
         let cmd = CommandInfo::new("model", "Model", None::<&str>, false, true, false);
         assert!(cmd.has_options(), "is_selection should imply has_options");
+    }
+
+    #[test]
+    fn command_info_effect() {
+        let cmd = CommandInfo::new("model", "Model", None::<&str>, false, true, false)
+            .with_effect(Some("updateModel"));
+        assert_eq!(cmd.effect(), Some("updateModel"));
+    }
+
+    #[test]
+    fn command_info_no_effect_by_default() {
+        let cmd = CommandInfo::new("quit", "Quit", None::<&str>, false, false, true);
+        assert!(cmd.effect().is_none());
     }
 
     #[test]

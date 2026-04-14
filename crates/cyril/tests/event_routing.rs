@@ -245,6 +245,8 @@ fn session_created_activates_both_controllers() {
         session_id: SessionId::new("sess_123"),
         current_mode: Some("kiro_default".into()),
         current_model: None,
+        welcome_message: None,
+        available_modes: Vec::new(),
     };
 
     let ui_changed = ui.apply_notification(&notification);

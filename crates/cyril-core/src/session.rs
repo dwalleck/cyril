@@ -145,12 +145,15 @@ impl SessionController {
                 session_id,
                 current_mode,
                 current_model,
+                available_modes,
+                ..
             } => {
                 self.id = Some(session_id.clone());
                 self.current_mode_id = current_mode.clone();
                 if let Some(model) = current_model {
                     self.cached_model = Some(model.clone());
                 }
+                self.modes = available_modes.clone();
                 self.session_cost = SessionCost::new();
                 self.last_turn = None;
                 self.pending_tokens = None;
@@ -347,6 +350,8 @@ mod tests {
             session_id: SessionId::new("s2"),
             current_mode: None,
             current_model: None,
+            welcome_message: None,
+            available_modes: Vec::new(),
         });
         assert!(
             ctrl.last_turn().is_none(),
@@ -460,6 +465,8 @@ mod tests {
             session_id: SessionId::new("sess_abc"),
             current_mode: Some("kiro_default".into()),
             current_model: None,
+            welcome_message: None,
+            available_modes: Vec::new(),
         });
 
         assert!(changed);
@@ -477,6 +484,8 @@ mod tests {
             session_id: SessionId::new("new_sess"),
             current_mode: None,
             current_model: None,
+            welcome_message: None,
+            available_modes: Vec::new(),
         });
 
         assert_eq!(ctrl.id().map(SessionId::as_str), Some("new_sess"));
@@ -489,6 +498,8 @@ mod tests {
             session_id: SessionId::new("s1"),
             current_mode: None,
             current_model: Some("claude-sonnet-4".to_string()),
+            welcome_message: None,
+            available_modes: Vec::new(),
         });
         assert_eq!(ctrl.current_model(), Some("claude-sonnet-4"));
     }
@@ -510,9 +521,29 @@ mod tests {
             session_id: SessionId::new("s2"),
             current_mode: None,
             current_model: None,
+            welcome_message: None,
+            available_modes: Vec::new(),
         });
 
         assert_eq!(ctrl.session_cost().total_credits(), 0.0);
         assert_eq!(ctrl.session_cost().turn_count(), 0);
+    }
+
+    #[test]
+    fn session_created_stores_available_modes() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s1"),
+            current_mode: None,
+            current_model: None,
+            welcome_message: None,
+            available_modes: vec![
+                SessionMode::new("default", "Default", Some("Default mode")),
+                SessionMode::new("code", "Code", None::<&str>),
+            ],
+        });
+        assert_eq!(ctrl.modes().len(), 2);
+        assert_eq!(ctrl.modes()[0].id(), "default");
+        assert_eq!(ctrl.modes()[1].id(), "code");
     }
 }

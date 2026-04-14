@@ -1,7 +1,10 @@
 use crate::types::command::{CommandInfo, ConfigOption};
 use crate::types::message::{AgentMessage, AgentThought};
 use crate::types::plan::Plan;
-use crate::types::session::{ContextUsage, SessionId, StopReason, TokenCounts, TurnMetering};
+use crate::types::session::{
+    CompactionPhase, ContextUsage, SessionId, SessionMode, StopReason, TokenCounts, TurnMetering,
+};
+use crate::types::session_entry::SessionEntry;
 use crate::types::tool_call::{ToolCall, ToolCallId};
 
 /// Notifications emitted by the ACP bridge. All variants are Send + Sync + Clone.
@@ -52,7 +55,8 @@ pub enum Notification {
         model: Option<String>,
     },
     CompactionStatus {
-        message: String,
+        phase: CompactionPhase,
+        summary: Option<String>,
     },
     ClearStatus {
         message: String,
@@ -121,11 +125,24 @@ pub enum Notification {
         message: String,
     },
 
+    /// User-authored message content from the agent runtime, typically during
+    /// session history replay after a load or resume.
+    UserMessage {
+        text: String,
+    },
+
+    /// Response to a session list query.
+    SessionsListed {
+        sessions: Vec<SessionEntry>,
+    },
+
     // Lifecycle
     SessionCreated {
         session_id: SessionId,
         current_mode: Option<String>,
         current_model: Option<String>,
+        welcome_message: Option<String>,
+        available_modes: Vec<SessionMode>,
     },
     TurnCompleted {
         stop_reason: StopReason,
@@ -250,6 +267,7 @@ pub enum BridgeCommand {
         session_id: SessionId,
         content: String,
     },
+    ListSessions,
     Shutdown,
 }
 

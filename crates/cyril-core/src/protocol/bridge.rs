@@ -153,6 +153,35 @@ fn to_raw_arc(
     Ok(raw.into())
 }
 
+/// Parse the response from `kiro.dev/session/list` into `SessionEntry` values.
+/// Filters out sessions without titles (matching tui.js behavior).
+fn parse_session_list(response: &serde_json::Value) -> Vec<crate::types::SessionEntry> {
+    response
+        .get("sessions")
+        .and_then(|s| s.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| {
+                    let Some(session_id) = v.get("sessionId").and_then(|s| s.as_str()) else {
+                        tracing::warn!("session list entry missing sessionId, skipping");
+                        return None;
+                    };
+                    let title = v.get("title").and_then(|t| t.as_str()).map(String::from);
+                    let updated_at =
+                        v.get("updatedAt").and_then(|t| t.as_str()).map(String::from);
+                    // tui.js filters untitled sessions from the list
+                    title.as_ref()?;
+                    Some(crate::types::SessionEntry::new(
+                        crate::types::SessionId::new(session_id),
+                        title,
+                        updated_at,
+                    ))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 async fn run_bridge(
     agent: &str,
     cwd: &std::path::Path,
@@ -229,10 +258,35 @@ async fn run_bridge(
                         // `unstable_session_model` feature is enabled in agent-client-protocol-schema.
                         // The field exists in the schema but is gated behind a feature flag.
                         let current_model: Option<String> = None;
+                        let welcome_message = response
+                            .modes
+                            .as_ref()
+                            .and_then(|m| m.meta.as_ref())
+                            .and_then(|meta| meta.get("welcomeMessage"))
+                            .and_then(|v| v.as_str())
+                            .map(String::from);
+                        let available_modes = response
+                            .modes
+                            .as_ref()
+                            .map(|m| {
+                                m.available_modes
+                                    .iter()
+                                    .map(|mode| {
+                                        crate::types::SessionMode::new(
+                                            mode.id.to_string(),
+                                            mode.name.clone(),
+                                            mode.description.clone(),
+                                        )
+                                    })
+                                    .collect()
+                            })
+                            .unwrap_or_default();
                         let notification = Notification::SessionCreated {
                             session_id: crate::types::SessionId::new(session_id),
                             current_mode,
                             current_model,
+                            welcome_message,
+                            available_modes,
                         };
                         if channels.notification_tx.send(notification.into()).await.is_err() {
                             break;
@@ -706,6 +760,76 @@ async fn run_bridge(
                         .await;
                 }
             }
+            BridgeCommand::ListSessions => {
+                let translated_cwd =
+                    crate::platform::path::to_agent(cwd).to_string_lossy().to_string();
+                let params = serde_json::json!({"cwd": translated_cwd});
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
+                    Err(e) => {
+                        tracing::error!(error = %e, "failed to serialize session list params");
+                        if channels
+                            .notification_tx
+                            .send(
+                                Notification::SessionsListed {
+                                    sessions: Vec::new(),
+                                }
+                                .into(),
+                            )
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+                        continue;
+                    }
+                };
+                match conn
+                    .ext_method(acp::ExtRequest::new("kiro.dev/session/list", raw_arc))
+                    .await
+                {
+                    Ok(response) => {
+                        let value: serde_json::Value =
+                            match serde_json::from_str(response.0.get()) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    tracing::error!(
+                                        error = %e,
+                                        "failed to parse session/list response as JSON"
+                                    );
+                                    serde_json::Value::Null
+                                }
+                            };
+                        let sessions = parse_session_list(&value);
+                        if channels
+                            .notification_tx
+                            .send(
+                                Notification::SessionsListed { sessions }.into(),
+                            )
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, "session list failed");
+                        if channels
+                            .notification_tx
+                            .send(
+                                Notification::SessionsListed {
+                                    sessions: Vec::new(),
+                                }
+                                .into(),
+                            )
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
             BridgeCommand::Shutdown => {
                 tracing::info!("bridge shutting down");
                 break;
@@ -847,5 +971,45 @@ mod tests {
             panic!("expected ExecuteCommand, got {cmd:?}");
         }
         Ok(())
+    }
+
+    #[test]
+    fn parse_session_list_filters_no_title() {
+        let response = serde_json::json!({
+            "sessions": [
+                {"sessionId": "sess_1", "title": "Fix auth bug", "updatedAt": "2026-04-12T10:30:00Z"},
+                {"sessionId": "sess_2", "updatedAt": "2026-04-11T09:00:00Z"}
+            ]
+        });
+        let sessions = parse_session_list(&response);
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].session_id().as_str(), "sess_1");
+        assert_eq!(sessions[0].title(), Some("Fix auth bug"));
+        assert_eq!(sessions[0].updated_at(), Some("2026-04-12T10:30:00Z"));
+    }
+
+    #[test]
+    fn parse_session_list_empty_response() {
+        let response = serde_json::json!({});
+        let sessions = parse_session_list(&response);
+        assert!(sessions.is_empty());
+    }
+
+    #[test]
+    fn parse_session_list_empty_sessions_array() {
+        let response = serde_json::json!({"sessions": []});
+        let sessions = parse_session_list(&response);
+        assert!(sessions.is_empty());
+    }
+
+    #[test]
+    fn parse_session_list_missing_session_id() {
+        let response = serde_json::json!({
+            "sessions": [
+                {"title": "No ID"}
+            ]
+        });
+        let sessions = parse_session_list(&response);
+        assert!(sessions.is_empty());
     }
 }

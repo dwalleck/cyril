@@ -228,6 +228,7 @@ fn print_notification(n: &Notification) {
             session_id,
             current_mode,
             current_model,
+            ..
         } => {
             println!("  [SessionCreated]");
             println!("    session_id: {}", session_id.as_str());
@@ -320,8 +321,8 @@ fn print_notification(n: &Notification) {
                 welcome
             );
         }
-        Notification::CompactionStatus { message } => {
-            println!("  [CompactionStatus] {message}");
+        Notification::CompactionStatus { phase, summary } => {
+            println!("  [CompactionStatus] {phase:?} summary={summary:?}");
         }
         Notification::ClearStatus { message } => {
             println!("  [ClearStatus] {message}");
@@ -433,6 +434,19 @@ fn print_notification(n: &Notification) {
         }
         Notification::BridgeError { operation, message } => {
             println!("  [BridgeError] {operation}: {message}");
+        }
+        Notification::UserMessage { text } => {
+            println!("  [UserMessage] {text}");
+        }
+        Notification::SessionsListed { sessions } => {
+            println!("  [SessionsListed] {} sessions", sessions.len());
+            for s in sessions {
+                println!(
+                    "    {} — {}",
+                    s.session_id().as_str(),
+                    s.title().unwrap_or("(untitled)")
+                );
+            }
         }
     }
 }

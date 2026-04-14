@@ -76,14 +76,27 @@ fn convert_tool_call_content(acp_content: &[acp::ToolCallContent]) -> Vec<ToolCa
                 old_text: diff.old_text.clone(),
                 new_text: diff.new_text.clone(),
             }),
-            acp::ToolCallContent::Content(content) => {
-                if let acp::ContentBlock::Text(ref text) = content.content {
-                    Some(ToolCallContent::Text(text.text.clone()))
-                } else {
+            acp::ToolCallContent::Content(content) => match &content.content {
+                acp::ContentBlock::Text(text) => Some(ToolCallContent::Text(text.text.clone())),
+                acp::ContentBlock::Image(img) => Some(ToolCallContent::Image {
+                    mime_type: img.mime_type.clone(),
+                }),
+                acp::ContentBlock::ResourceLink(link) => Some(ToolCallContent::ResourceLink {
+                    uri: link.uri.clone(),
+                    name: link.name.clone(),
+                }),
+                _ => {
+                    tracing::debug!("unhandled content block type in tool call content");
                     None
                 }
+            },
+            acp::ToolCallContent::Terminal(term) => Some(ToolCallContent::Terminal {
+                terminal_id: term.terminal_id.to_string(),
+            }),
+            _ => {
+                tracing::debug!("unhandled tool call content variant");
+                None
             }
-            _ => None,
         })
         .collect()
 }
@@ -164,17 +177,24 @@ fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
     let group = v.get("group").and_then(|g| g.as_str()).map(String::from);
     let role = v.get("role").and_then(|r| r.as_str()).map(String::from);
     let depends_on = parse_string_array(v, "dependsOn");
+    let parent_session_id = v
+        .get("parentSessionId")
+        .and_then(|p| p.as_str())
+        .map(SessionId::new);
 
-    Some(SubagentInfo::new(
-        session_id,
-        session_name,
-        agent_name,
-        initial_query,
-        status,
-        group,
-        role,
-        depends_on,
-    ))
+    Some(
+        SubagentInfo::new(
+            session_id,
+            session_name,
+            agent_name,
+            initial_query,
+            status,
+            group,
+            role,
+            depends_on,
+        )
+        .with_parent_session_id(parent_session_id),
+    )
 }
 
 /// Parse a single pending stage entry from a `subagent/list_update` JSON array element.
@@ -265,45 +285,52 @@ pub(crate) fn to_ext_notification(
             }))
         }
         "kiro.dev/compaction/status" => {
-            let message = if let Some(status) = params.get("status") {
+            if let Some(status) = params.get("status") {
                 let status_type = status
                     .get("type")
                     .and_then(|t| t.as_str())
                     .unwrap_or("unknown");
-                match status_type {
-                    "started" => "Compacting conversation context...".to_string(),
+                let (phase, summary) = match status_type {
+                    "started" => (CompactionPhase::Started, None),
                     "completed" => {
                         let summary = params
                             .get("summary")
                             .and_then(|s| s.as_str())
-                            .unwrap_or("done");
-                        format!("Compaction completed: {summary}")
+                            .map(String::from);
+                        (CompactionPhase::Completed, summary)
                     }
                     "failed" => {
                         let error = status
                             .get("error")
                             .and_then(|e| e.as_str())
-                            .unwrap_or("unknown error");
-                        format!("Compaction failed: {error}")
+                            .map(String::from);
+                        (CompactionPhase::Failed { error }, None)
                     }
-                    other => format!("Compaction: {other}"),
-                }
+                    other => {
+                        tracing::warn!(phase = other, "unknown compaction phase type");
+                        return Ok(None);
+                    }
+                };
+                Ok(Some(Notification::CompactionStatus { phase, summary }))
             } else {
+                // Older Kiro versions send a "message" field instead of a "status" object
                 match params
                     .get("message")
                     .and_then(|v| v.as_str())
                     .filter(|s| !s.is_empty())
                 {
-                    Some(msg) => msg.to_string(),
+                    Some(msg) => Ok(Some(Notification::CompactionStatus {
+                        phase: CompactionPhase::Completed,
+                        summary: Some(msg.to_string()),
+                    })),
                     None => {
                         tracing::warn!(
                             "kiro.dev/compaction/status: no status object or message field"
                         );
-                        return Ok(None);
+                        Ok(None)
                     }
                 }
-            };
-            Ok(Some(Notification::CompactionStatus { message }))
+            }
         }
         "kiro.dev/clear/status" => {
             let message = match params
@@ -380,20 +407,28 @@ pub(crate) fn to_ext_notification(
                             .and_then(|l| l.as_bool())
                             .unwrap_or(false);
 
+                        let effect = meta
+                            .and_then(|m| m.get("effect"))
+                            .and_then(|e| e.as_str())
+                            .map(String::from);
+
                         // Backward compat: hasOptions field OR selection inputType
                         let has_options = is_selection
                             || v.get("hasOptions")
                                 .and_then(|h| h.as_bool())
                                 .unwrap_or(false);
 
-                        Some(CommandInfo::new(
-                            name,
-                            label,
-                            description,
-                            has_options,
-                            is_selection,
-                            is_local,
-                        ))
+                        Some(
+                            CommandInfo::new(
+                                name,
+                                label,
+                                description,
+                                has_options,
+                                is_selection,
+                                is_local,
+                            )
+                            .with_effect(effect),
+                        )
                     })
                     .collect()
             } else {
@@ -986,6 +1021,16 @@ pub(crate) fn session_update_to_notification(
                 prompts: Vec::new(),
             })
         }
+        acp::SessionUpdate::UserMessageChunk(chunk) => {
+            if let acp::ContentBlock::Text(ref text) = chunk.content {
+                Some(Notification::UserMessage {
+                    text: text.text.clone(),
+                })
+            } else {
+                tracing::debug!("UserMessageChunk has non-text content, skipping for display");
+                None
+            }
+        }
         _ => {
             tracing::debug!("unhandled session update variant");
             None
@@ -1207,8 +1252,9 @@ mod tests {
     fn to_ext_notification_compaction_status_legacy() {
         let params = serde_json::json!({"message": "50% done"});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
-        if let Ok(Some(Notification::CompactionStatus { message })) = result {
-            assert_eq!(message, "50% done");
+        if let Ok(Some(Notification::CompactionStatus { phase, summary })) = result {
+            assert_eq!(phase, CompactionPhase::Completed);
+            assert_eq!(summary.as_deref(), Some("50% done"));
         } else {
             panic!("expected CompactionStatus");
         }
@@ -1218,8 +1264,9 @@ mod tests {
     fn to_ext_notification_compaction_status_started() {
         let params = serde_json::json!({"status": {"type": "started"}});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
-        if let Ok(Some(Notification::CompactionStatus { message })) = result {
-            assert!(message.contains("Compacting"), "got: {message}");
+        if let Ok(Some(Notification::CompactionStatus { phase, summary })) = result {
+            assert_eq!(phase, CompactionPhase::Started);
+            assert!(summary.is_none());
         } else {
             panic!("expected CompactionStatus");
         }
@@ -1229,8 +1276,17 @@ mod tests {
     fn to_ext_notification_compaction_status_failed() {
         let params = serde_json::json!({"status": {"type": "failed", "error": "out of memory"}});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
-        if let Ok(Some(Notification::CompactionStatus { message })) = result {
-            assert!(message.contains("out of memory"), "got: {message}");
+        if let Ok(Some(Notification::CompactionStatus { phase, summary })) = result {
+            assert_eq!(
+                phase,
+                CompactionPhase::Failed {
+                    error: Some("out of memory".into())
+                }
+            );
+            assert!(
+                summary.is_none(),
+                "Failed compaction should have no summary"
+            );
         } else {
             panic!("expected CompactionStatus");
         }
@@ -1241,8 +1297,9 @@ mod tests {
         let params =
             serde_json::json!({"status": {"type": "completed"}, "summary": "3 turns removed"});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
-        if let Ok(Some(Notification::CompactionStatus { message })) = result {
-            assert!(message.contains("3 turns removed"), "got: {message}");
+        if let Ok(Some(Notification::CompactionStatus { phase, summary })) = result {
+            assert_eq!(phase, CompactionPhase::Completed);
+            assert_eq!(summary.as_deref(), Some("3 turns removed"));
         } else {
             panic!("expected CompactionStatus");
         }
@@ -1317,6 +1374,40 @@ mod tests {
             assert!(cmds[0].has_options());
             assert_eq!(cmds[1].name(), "compact");
             assert!(!cmds[1].has_options());
+        } else {
+            panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_commands_available_extracts_effect() {
+        let params = serde_json::json!({
+            "commands": [
+                {
+                    "name": "model",
+                    "label": "Model",
+                    "meta": {"inputType": "selection", "effect": "updateModel"}
+                }
+            ]
+        });
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        if let Ok(Some(Notification::CommandsUpdated { commands: cmds, .. })) = result {
+            assert_eq!(cmds[0].effect(), Some("updateModel"));
+        } else {
+            panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_commands_available_no_effect_is_none() {
+        let params = serde_json::json!({
+            "commands": [
+                {"name": "compact", "label": "Compact"}
+            ]
+        });
+        let result = to_ext_notification("kiro.dev/commands/available", &params);
+        if let Ok(Some(Notification::CommandsUpdated { commands: cmds, .. })) = result {
+            assert!(cmds[0].effect().is_none());
         } else {
             panic!("expected CommandsUpdated");
         }
@@ -1640,6 +1731,45 @@ mod tests {
         assert!(matches!(&result[0], ToolCallContent::Text(t) if t == "hello world"));
     }
 
+    #[test]
+    fn convert_tool_call_content_terminal() {
+        let term = acp::Terminal::new("term_abc");
+        let acp_content = vec![acp::ToolCallContent::Terminal(term)];
+        let result = convert_tool_call_content(&acp_content);
+        assert_eq!(result.len(), 1);
+        assert!(
+            matches!(&result[0], ToolCallContent::Terminal { terminal_id } if terminal_id == "term_abc")
+        );
+    }
+
+    #[test]
+    fn convert_tool_call_content_image() {
+        let img = acp::ImageContent::new("iVBOR...", "image/png");
+        let acp_content = vec![acp::ToolCallContent::Content(acp::Content::new(
+            acp::ContentBlock::Image(img),
+        ))];
+        let result = convert_tool_call_content(&acp_content);
+        assert_eq!(result.len(), 1);
+        assert!(
+            matches!(&result[0], ToolCallContent::Image { mime_type } if mime_type == "image/png")
+        );
+    }
+
+    #[test]
+    fn convert_tool_call_content_resource_link() {
+        let link = acp::ResourceLink::new("readme.md", "file:///path/readme.md");
+        let acp_content = vec![acp::ToolCallContent::Content(acp::Content::new(
+            acp::ContentBlock::ResourceLink(link),
+        ))];
+        let result = convert_tool_call_content(&acp_content);
+        assert_eq!(result.len(), 1);
+        assert!(matches!(
+            &result[0],
+            ToolCallContent::ResourceLink { uri, name }
+                if uri == "file:///path/readme.md" && name == "readme.md"
+        ));
+    }
+
     // --- convert_tool_call_locations tests ---
 
     #[test]
@@ -1828,6 +1958,52 @@ mod tests {
             assert_eq!(pending_stages.len(), 1);
             assert_eq!(pending_stages[0].name(), "summary-writer");
             assert_eq!(pending_stages[0].depends_on(), &["code-reviewer"]);
+        } else {
+            panic!("expected SubagentListUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_subagent_list_update_extracts_parent_session_id() {
+        let params = serde_json::json!({
+            "subagents": [{
+                "sessionId": "child-1",
+                "sessionName": "worker",
+                "agentName": "worker",
+                "initialQuery": "do work",
+                "parentSessionId": "parent-sess",
+                "status": { "type": "working" },
+                "dependsOn": []
+            }],
+            "pendingStages": []
+        });
+        let result = to_ext_notification("kiro.dev/subagent/list_update", &params);
+        if let Ok(Some(Notification::SubagentListUpdated { subagents, .. })) = result {
+            assert_eq!(
+                subagents[0].parent_session_id().map(|s| s.as_str()),
+                Some("parent-sess")
+            );
+        } else {
+            panic!("expected SubagentListUpdated");
+        }
+    }
+
+    #[test]
+    fn parse_subagent_list_update_no_parent_session_id() {
+        let params = serde_json::json!({
+            "subagents": [{
+                "sessionId": "child-1",
+                "sessionName": "worker",
+                "agentName": "worker",
+                "initialQuery": "do work",
+                "status": { "type": "working" },
+                "dependsOn": []
+            }],
+            "pendingStages": []
+        });
+        let result = to_ext_notification("kiro.dev/subagent/list_update", &params);
+        if let Ok(Some(Notification::SubagentListUpdated { subagents, .. })) = result {
+            assert!(subagents[0].parent_session_id().is_none());
         } else {
             panic!("expected SubagentListUpdated");
         }
@@ -2128,6 +2304,22 @@ mod tests {
             assert!(prompts.is_empty());
         } else {
             panic!("expected CommandsUpdated");
+        }
+    }
+
+    #[test]
+    fn session_update_user_message_chunk_text() {
+        let chunk = acp::ContentChunk::new(acp::ContentBlock::from("Fix the auth bug"));
+        let args = acp::SessionNotification::new(
+            acp::SessionId::new("sess_1"),
+            acp::SessionUpdate::UserMessageChunk(chunk),
+        );
+        let cached = std::collections::HashMap::new();
+        let result = session_update_to_notification(&args, &cached);
+        if let Some(Notification::UserMessage { text }) = result {
+            assert_eq!(text, "Fix the auth bug");
+        } else {
+            panic!("expected UserMessage, got {result:?}");
         }
     }
 }

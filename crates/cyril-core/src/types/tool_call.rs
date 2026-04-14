@@ -50,6 +50,12 @@ pub enum ToolCallContent {
     },
     /// Text output from the tool.
     Text(String),
+    /// A terminal session reference.
+    Terminal { terminal_id: String },
+    /// An image content block from the agent runtime.
+    Image { mime_type: String },
+    /// A resource link reference.
+    ResourceLink { uri: String, name: String },
 }
 
 /// Lifecycle status of a tool call.
