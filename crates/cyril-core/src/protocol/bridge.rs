@@ -836,6 +836,19 @@ async fn run_bridge(
                     Ok(arc) => arc,
                     Err(e) => {
                         tracing::error!(error = %e, "failed to serialize settings query params");
+                        if channels
+                            .notification_tx
+                            .send(
+                                Notification::SettingsReceived {
+                                    settings: std::collections::HashMap::new(),
+                                }
+                                .into(),
+                            )
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
                         continue;
                     }
                 };
@@ -852,17 +865,23 @@ async fn run_bridge(
                                         error = %e,
                                         "failed to parse settings/list response"
                                     );
-                                    continue;
+                                    serde_json::Value::Null
                                 }
                             };
-                        let settings = value
-                            .as_object()
-                            .map(|obj| {
-                                obj.iter()
-                                    .map(|(k, v)| (k.clone(), v.clone()))
-                                    .collect()
-                            })
-                            .unwrap_or_default();
+                        let settings = match value.as_object() {
+                            Some(obj) => obj
+                                .iter()
+                                .map(|(k, v)| (k.clone(), v.clone()))
+                                .collect(),
+                            None => {
+                                if !value.is_null() {
+                                    tracing::warn!(
+                                        "settings/list response is not a JSON object"
+                                    );
+                                }
+                                std::collections::HashMap::new()
+                            }
+                        };
                         if channels
                             .notification_tx
                             .send(
@@ -875,7 +894,21 @@ async fn run_bridge(
                         }
                     }
                     Err(e) => {
+                        // settings/list may not be available on older Kiro versions
                         tracing::debug!(error = %e, "settings/list not available");
+                        if channels
+                            .notification_tx
+                            .send(
+                                Notification::SettingsReceived {
+                                    settings: std::collections::HashMap::new(),
+                                }
+                                .into(),
+                            )
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
                     }
                 }
             }

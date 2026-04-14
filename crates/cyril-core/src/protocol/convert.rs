@@ -807,6 +807,7 @@ pub(crate) fn extract_permission_message(args: &acp::RequestPermissionRequest) -
 }
 
 /// Extract trust options from `_meta.trustOptions` on a permission request.
+/// Elements missing either `"label"` or `"display"` are logged and dropped.
 pub(crate) fn extract_trust_options(
     args: &acp::RequestPermissionRequest,
 ) -> Vec<crate::types::event::TrustOption> {
@@ -816,14 +817,23 @@ pub(crate) fn extract_trust_options(
     let Some(trust_options) = meta.get("trustOptions").and_then(|v| v.as_array()) else {
         return Vec::new();
     };
-    trust_options
+    let total = trust_options.len();
+    let parsed: Vec<_> = trust_options
         .iter()
         .filter_map(|v| {
             let label = v.get("label").and_then(|l| l.as_str())?.to_string();
             let display = v.get("display").and_then(|d| d.as_str())?.to_string();
             Some(crate::types::event::TrustOption { label, display })
         })
-        .collect()
+        .collect();
+    if parsed.len() < total {
+        tracing::warn!(
+            dropped = total - parsed.len(),
+            total,
+            "some trustOptions entries were missing 'label' or 'display' fields"
+        );
+    }
+    parsed
 }
 
 /// Convert our `PermissionResponse` back into an ACP `RequestPermissionResponse`.
@@ -2341,5 +2351,60 @@ mod tests {
         } else {
             panic!("expected UserMessage, got {result:?}");
         }
+    }
+
+    #[test]
+    fn extract_trust_options_parses_label_and_display() {
+        let mut request = make_permission_request(vec![(
+            "opt_allow",
+            "Yes",
+            acp::PermissionOptionKind::AllowOnce,
+        )]);
+        let mut meta = serde_json::Map::new();
+        meta.insert(
+            "trustOptions".to_string(),
+            serde_json::json!([
+                {"label": "allow_always", "display": "Always allow this tool"},
+                {"label": "trust_session", "display": "Trust all tools for this session"}
+            ]),
+        );
+        request.meta = Some(meta);
+        let options = extract_trust_options(&request);
+        assert_eq!(options.len(), 2);
+        assert_eq!(options[0].label, "allow_always");
+        assert_eq!(options[0].display, "Always allow this tool");
+        assert_eq!(options[1].label, "trust_session");
+    }
+
+    #[test]
+    fn extract_trust_options_no_meta_returns_empty() {
+        let request = make_permission_request(vec![(
+            "opt_allow",
+            "Yes",
+            acp::PermissionOptionKind::AllowOnce,
+        )]);
+        let options = extract_trust_options(&request);
+        assert!(options.is_empty());
+    }
+
+    #[test]
+    fn extract_trust_options_drops_entries_missing_display() {
+        let mut request = make_permission_request(vec![(
+            "opt_allow",
+            "Yes",
+            acp::PermissionOptionKind::AllowOnce,
+        )]);
+        let mut meta = serde_json::Map::new();
+        meta.insert(
+            "trustOptions".to_string(),
+            serde_json::json!([
+                {"label": "allow_always"},
+                {"label": "trust_session", "display": "Trust all"}
+            ]),
+        );
+        request.meta = Some(meta);
+        let options = extract_trust_options(&request);
+        assert_eq!(options.len(), 1);
+        assert_eq!(options[0].label, "trust_session");
     }
 }

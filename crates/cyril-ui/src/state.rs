@@ -492,7 +492,7 @@ impl UiState {
                 false
             }
             Notification::SettingsReceived { .. } => {
-                // Handled by the App layer.
+                // Not yet consumed — no handler in the App layer.
                 false
             }
             Notification::UserMessage { text } => {

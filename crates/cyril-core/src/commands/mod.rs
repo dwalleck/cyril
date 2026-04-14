@@ -709,6 +709,28 @@ mod tests {
         assert_eq!(opts[1].group.as_deref(), Some("Anthropic"));
     }
 
+    #[test]
+    fn parse_options_response_with_hint() {
+        let response = serde_json::json!({
+            "options": [
+                {"value": "my-agent", "label": "/agent my-agent", "hint": "Enter task description"}
+            ]
+        });
+        let opts = parse_options_response(&response);
+        assert_eq!(opts[0].hint.as_deref(), Some("Enter task description"));
+    }
+
+    #[test]
+    fn parse_options_response_hint_absent_is_none() {
+        let response = serde_json::json!({
+            "options": [
+                {"value": "claude-sonnet", "label": "Claude Sonnet"}
+            ]
+        });
+        let opts = parse_options_response(&response);
+        assert!(opts[0].hint.is_none());
+    }
+
     // --- AgentCommand execution tests ---
 
     #[tokio::test]
