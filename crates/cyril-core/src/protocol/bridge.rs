@@ -830,6 +830,55 @@ async fn run_bridge(
                     }
                 }
             }
+            BridgeCommand::QuerySettings => {
+                let params = serde_json::json!({});
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
+                    Err(e) => {
+                        tracing::error!(error = %e, "failed to serialize settings query params");
+                        continue;
+                    }
+                };
+                match conn
+                    .ext_method(acp::ExtRequest::new("kiro.dev/settings/list", raw_arc))
+                    .await
+                {
+                    Ok(response) => {
+                        let value: serde_json::Value =
+                            match serde_json::from_str(response.0.get()) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    tracing::error!(
+                                        error = %e,
+                                        "failed to parse settings/list response"
+                                    );
+                                    continue;
+                                }
+                            };
+                        let settings = value
+                            .as_object()
+                            .map(|obj| {
+                                obj.iter()
+                                    .map(|(k, v)| (k.clone(), v.clone()))
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                        if channels
+                            .notification_tx
+                            .send(
+                                Notification::SettingsReceived { settings }.into(),
+                            )
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::debug!(error = %e, "settings/list not available");
+                    }
+                }
+            }
             BridgeCommand::Shutdown => {
                 tracing::info!("bridge shutting down");
                 break;

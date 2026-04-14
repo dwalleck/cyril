@@ -323,6 +323,7 @@ impl App {
                             description: s.updated_at().map(String::from),
                             group: None,
                             is_current: false,
+                            hint: None,
                         }
                     })
                     .collect();

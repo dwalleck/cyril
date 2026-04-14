@@ -297,12 +297,17 @@ pub(crate) fn parse_options_response(response: &serde_json::Value) -> Vec<Comman
                 .get("current")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
+            let hint = opt
+                .get("hint")
+                .and_then(|v| v.as_str())
+                .map(String::from);
             Some(CommandOption {
                 label,
                 value,
                 description,
                 group,
                 is_current,
+                hint,
             })
         })
         .collect()

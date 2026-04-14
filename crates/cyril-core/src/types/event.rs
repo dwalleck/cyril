@@ -136,6 +136,11 @@ pub enum Notification {
         sessions: Vec<SessionEntry>,
     },
 
+    /// Settings received from `kiro.dev/settings/list`.
+    SettingsReceived {
+        settings: std::collections::HashMap<String, serde_json::Value>,
+    },
+
     // Lifecycle
     SessionCreated {
         session_id: SessionId,
@@ -204,6 +209,7 @@ pub struct PermissionRequest {
     pub tool_call: ToolCall,
     pub message: String,
     pub options: Vec<PermissionOption>,
+    pub trust_options: Vec<TrustOption>,
     pub responder: tokio::sync::oneshot::Sender<PermissionResponse>,
 }
 
@@ -213,6 +219,13 @@ pub struct PermissionOption {
     pub id: String,
     pub label: String,
     pub is_destructive: bool,
+}
+
+/// A trust policy option from `_meta.trustOptions` on a permission request.
+#[derive(Debug, Clone)]
+pub struct TrustOption {
+    pub label: String,
+    pub display: String,
 }
 
 /// The user's response to a permission request.
@@ -268,6 +281,7 @@ pub enum BridgeCommand {
         content: String,
     },
     ListSessions,
+    QuerySettings,
     Shutdown,
 }
 
@@ -430,6 +444,7 @@ mod tests {
                 description: None,
                 group: None,
                 is_current: true,
+                hint: None,
             }],
         };
         if let Notification::CommandOptionsReceived { command, options } = n {

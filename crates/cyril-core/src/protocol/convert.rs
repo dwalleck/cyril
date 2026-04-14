@@ -806,6 +806,26 @@ pub(crate) fn extract_permission_message(args: &acp::RequestPermissionRequest) -
         .unwrap_or_else(|| "Permission requested".to_string())
 }
 
+/// Extract trust options from `_meta.trustOptions` on a permission request.
+pub(crate) fn extract_trust_options(
+    args: &acp::RequestPermissionRequest,
+) -> Vec<crate::types::event::TrustOption> {
+    let Some(meta) = &args.meta else {
+        return Vec::new();
+    };
+    let Some(trust_options) = meta.get("trustOptions").and_then(|v| v.as_array()) else {
+        return Vec::new();
+    };
+    trust_options
+        .iter()
+        .filter_map(|v| {
+            let label = v.get("label").and_then(|l| l.as_str())?.to_string();
+            let display = v.get("display").and_then(|d| d.as_str())?.to_string();
+            Some(crate::types::event::TrustOption { label, display })
+        })
+        .collect()
+}
+
 /// Convert our `PermissionResponse` back into an ACP `RequestPermissionResponse`.
 /// Uses the option IDs from the original request to map our response variants.
 pub(crate) fn from_permission_response(

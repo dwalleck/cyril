@@ -72,6 +72,7 @@ pub struct CommandOption {
     pub value: String,
     pub description: Option<String>,
     pub group: Option<String>,
+    pub hint: Option<String>,
     pub is_current: bool,
 }
 
@@ -123,6 +124,7 @@ mod tests {
             description: Some("Fast model".into()),
             group: Some("Anthropic".into()),
             is_current: true,
+            hint: None,
         };
         assert_eq!(opt.label, "Claude Sonnet");
         assert_eq!(opt.value, "claude-sonnet-4");

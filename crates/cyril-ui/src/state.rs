@@ -491,6 +491,10 @@ impl UiState {
                 // Handled by the App layer (opens session picker).
                 false
             }
+            Notification::SettingsReceived { .. } => {
+                // Handled by the App layer.
+                false
+            }
             Notification::UserMessage { text } => {
                 self.messages.push(ChatMessage::user_text(text.clone()));
                 self.messages_version += 1;

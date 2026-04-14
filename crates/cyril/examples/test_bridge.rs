@@ -448,5 +448,11 @@ fn print_notification(n: &Notification) {
                 );
             }
         }
+        Notification::SettingsReceived { settings } => {
+            println!("  [SettingsReceived] {} keys", settings.len());
+            for (key, value) in settings {
+                println!("    {key} = {value}");
+            }
+        }
     }
 }

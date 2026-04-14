@@ -103,6 +103,7 @@ mod tests {
                     description: None,
                     group: None,
                     is_current: true,
+                    hint: None,
                 },
                 cyril_core::types::CommandOption {
                     label: "Claude Haiku".into(),
@@ -110,6 +111,7 @@ mod tests {
                     description: None,
                     group: None,
                     is_current: false,
+                    hint: None,
                 },
             ],
             filter: String::new(),
