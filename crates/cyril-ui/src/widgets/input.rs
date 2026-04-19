@@ -35,8 +35,8 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 mod tests {
     use super::*;
     use crate::traits::test_support::MockTuiState;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn input_renders_empty() {

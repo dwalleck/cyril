@@ -25,6 +25,7 @@ pub struct UiState {
     messages: Vec<ChatMessage>,
     messages_version: u64,
     streaming_text: String,
+    streaming_user_text: String,
     streaming_thought: Option<String>,
 
     // Tool calls
@@ -213,6 +214,7 @@ impl UiState {
             messages: Vec::new(),
             messages_version: 0,
             streaming_text: String::new(),
+            streaming_user_text: String::new(),
             streaming_thought: None,
             active_tool_calls: Vec::new(),
             tool_call_index: HashMap::new(),
@@ -254,6 +256,9 @@ impl UiState {
     pub fn apply_notification(&mut self, notification: &Notification) -> bool {
         match notification {
             Notification::AgentMessage(msg) => {
+                // Flush any pending user replay so the user turn commits
+                // before any subsequent agent text.
+                self.flush_streaming_user_text();
                 if msg.is_streaming {
                     self.streaming_text.push_str(&msg.text);
                     self.set_activity(Activity::Streaming);
@@ -268,15 +273,25 @@ impl UiState {
                 self.streaming_thought = Some(thought.text.clone());
                 true
             }
+            Notification::UserMessage(msg) => {
+                // Kiro replays user turns during session/load, potentially in
+                // multiple chunks per message (mirroring AgentMessageChunk).
+                // Accumulate into `streaming_user_text` and flush on boundaries
+                // (tool call, turn complete, agent message). Flush any pending
+                // agent text first so ordering is preserved.
+                self.flush_streaming_agent_text();
+                self.streaming_user_text.push_str(&msg.text);
+                if !msg.is_streaming {
+                    self.flush_streaming_user_text();
+                }
+                true
+            }
             Notification::ToolCallStarted(tc) => {
                 // Flush any accumulated text before the tool call starts.
                 // This prevents text before and after a tool call from
                 // concatenating into one message.
-                if !self.streaming_text.is_empty() {
-                    let text = std::mem::take(&mut self.streaming_text);
-                    self.messages.push(ChatMessage::agent_text(text));
-                    self.messages_version += 1;
-                }
+                self.flush_streaming_user_text();
+                self.flush_streaming_agent_text();
 
                 // Commit tool call directly to messages in chronological position.
                 // This ensures tool calls stay between the text segments that
@@ -302,12 +317,11 @@ impl UiState {
                     }
                 }
                 // Update in committed messages (for history)
-                if let Some(&idx) = self.tool_call_index.get(tc.id()) {
-                    if let Some(msg) = self.messages.get_mut(idx) {
-                        if let ChatMessageKind::ToolCall(ref mut tracked) = msg.kind {
-                            tracked.update(tc);
-                        }
-                    }
+                if let Some(&idx) = self.tool_call_index.get(tc.id())
+                    && let Some(msg) = self.messages.get_mut(idx)
+                    && let ChatMessageKind::ToolCall(ref mut tracked) = msg.kind
+                {
+                    tracked.update(tc);
                 }
                 true
             }
@@ -325,6 +339,21 @@ impl UiState {
                 if let Some(m) = metering {
                     self.pending_metering = Some(m.clone());
                 }
+                true
+            }
+            Notification::UsageUpdated { used, size } => {
+                if *size == 0 {
+                    // `size == 0` is protocol-meaningless; don't claim state changed.
+                    tracing::warn!(used, "UsageUpdated with size=0, ignoring");
+                    return false;
+                }
+                // Clamp to [0, 100] via ContextUsage::new() — same constructor
+                // SessionController uses, so the clamp rule is defined once in
+                // the domain type. Avoids the toolbar rendering >100% if Kiro
+                // ever reports used > size. (UiState stores the clamped f64,
+                // not the ContextUsage itself.)
+                let pct = (*used as f64 / *size as f64) * 100.0;
+                self.context_usage = Some(ContextUsage::new(pct).percentage());
                 true
             }
             Notification::TurnCompleted { stop_reason } => {
@@ -349,7 +378,7 @@ impl UiState {
                 true
             }
             Notification::ModeChanged { mode_id } => {
-                self.current_mode = Some(mode_id.clone());
+                self.current_mode = Some(mode_id.as_str().to_string());
                 true
             }
             Notification::AgentSwitched { name, welcome, .. } => {
@@ -361,8 +390,20 @@ impl UiState {
                 }
                 true
             }
-            Notification::CompactionStatus { message } => {
-                self.add_system_message(format!("Compaction: {message}"));
+            Notification::CompactionStatus { phase, summary } => {
+                use cyril_core::types::CompactionPhase;
+                let message = match phase {
+                    CompactionPhase::Started => "Compacting conversation context...".to_string(),
+                    CompactionPhase::Completed => match summary.as_deref() {
+                        Some(s) => format!("Compaction completed: {s}"),
+                        None => "Compaction completed.".to_string(),
+                    },
+                    CompactionPhase::Failed { error } => match error.as_deref() {
+                        Some(e) => format!("Compaction failed: {e}"),
+                        None => "Compaction failed.".to_string(),
+                    },
+                };
+                self.add_system_message(message);
                 true
             }
             Notification::ClearStatus { message } => {
@@ -377,9 +418,11 @@ impl UiState {
                 session_id,
                 current_mode,
                 current_model,
+                available_modes,
+                available_models: _,
             } => {
                 self.session_label = Some(session_id.as_str().to_string());
-                self.current_mode = current_mode.clone();
+                self.current_mode = current_mode.as_ref().map(|m| m.as_str().to_string());
                 if let Some(model) = current_model {
                     self.current_model = Some(model.clone());
                 }
@@ -388,6 +431,32 @@ impl UiState {
                 self.pending_metering = None;
                 self.session_cost = cyril_core::types::SessionCost::new();
                 self.add_system_message(format!("Session created: {}", session_id.as_str()));
+                // If the active mode carries a Kiro-specific welcome message
+                // (e.g. kiro_planner's "Transform any idea..."), surface it.
+                if let Some(mode_id) = current_mode.as_ref() {
+                    match available_modes.iter().find(|m| m.id() == mode_id) {
+                        Some(mode) => {
+                            if let Some(welcome) = mode.welcome_message() {
+                                self.add_system_message(welcome.to_string());
+                            }
+                        }
+                        None if !available_modes.is_empty() => {
+                            // current_mode names a mode not in the catalog —
+                            // likely version skew or a partial session/load
+                            // response. Trace so the silent suppression of a
+                            // welcome message doesn't look like a bug.
+                            tracing::debug!(
+                                mode_id = %mode_id,
+                                available = ?available_modes
+                                    .iter()
+                                    .map(|m| m.id().as_str().to_string())
+                                    .collect::<Vec<_>>(),
+                                "SessionCreated current_mode has no matching entry in available_modes"
+                            );
+                        }
+                        None => {}
+                    }
+                }
                 self.set_activity(Activity::Ready);
                 true
             }
@@ -417,13 +486,13 @@ impl UiState {
             }
             Notification::McpServerInitFailure { server_name, error } => {
                 if let Some(err) = error {
-                    self.add_system_message(
-                        format!("MCP server '{server_name}' failed to initialize: {err}"),
-                    );
+                    self.add_system_message(format!(
+                        "MCP server '{server_name}' failed to initialize: {err}"
+                    ));
                 } else {
-                    self.add_system_message(
-                        format!("MCP server '{server_name}' failed to initialize"),
-                    );
+                    self.add_system_message(format!(
+                        "MCP server '{server_name}' failed to initialize"
+                    ));
                 }
                 true
             }
@@ -435,11 +504,12 @@ impl UiState {
                 // Handled by App (cross-cutting concern: displays URL for manual browser opening)
                 false
             }
-            Notification::AgentNotFound { requested, fallback } => {
+            Notification::AgentNotFound {
+                requested,
+                fallback,
+            } => {
                 if let Some(fb) = fallback {
-                    self.add_system_message(
-                        format!("Agent '{requested}' not found, using '{fb}'")
-                    );
+                    self.add_system_message(format!("Agent '{requested}' not found, using '{fb}'"));
                 } else {
                     self.add_system_message(format!("Agent '{requested}' not found"));
                 }
@@ -449,11 +519,14 @@ impl UiState {
                 self.add_system_message(format!("Agent config error in {path}: {error}"));
                 true
             }
-            Notification::ModelNotFound { requested, fallback } => {
+            Notification::ModelNotFound {
+                requested,
+                fallback,
+            } => {
                 if let Some(fb) = fallback {
-                    self.add_system_message(
-                        format!("Model '{requested}' not available, using '{fb}'")
-                    );
+                    self.add_system_message(format!(
+                        "Model '{requested}' not available, using '{fb}'"
+                    ));
                 } else {
                     self.add_system_message(format!("Model '{requested}' not available"));
                 }
@@ -499,17 +572,37 @@ impl UiState {
     /// Tool calls are already committed to messages in chronological position
     /// (done in ToolCallStarted handler), so we only flush trailing text here.
     pub fn commit_streaming(&mut self) {
-        if !self.streaming_text.is_empty() {
-            let text = std::mem::take(&mut self.streaming_text);
-            self.messages.push(ChatMessage::agent_text(text));
-            self.messages_version += 1;
-        }
+        self.flush_streaming_user_text();
+        self.flush_streaming_agent_text();
 
         // Clear active display — tool calls are already in messages
         self.active_tool_calls.clear();
         self.tool_call_index.clear();
         self.streaming_thought = None;
         self.enforce_message_limit();
+    }
+
+    /// Commit pending user-message chunks to a single `UserText` message.
+    /// Called at every boundary where an ordered commit is required
+    /// (tool call start, turn completion, new agent text).
+    fn flush_streaming_user_text(&mut self) {
+        if !self.streaming_user_text.is_empty() {
+            let text = std::mem::take(&mut self.streaming_user_text);
+            self.messages.push(ChatMessage::user_text(text));
+            self.messages_version += 1;
+        }
+    }
+
+    /// Commit pending agent-message chunks to a single `AgentText` message.
+    /// Symmetric with `flush_streaming_user_text` — called at boundaries
+    /// where the agent stream must commit before the next message arrives
+    /// (tool call start, user replay, turn completion).
+    fn flush_streaming_agent_text(&mut self) {
+        if !self.streaming_text.is_empty() {
+            let text = std::mem::take(&mut self.streaming_text);
+            self.messages.push(ChatMessage::agent_text(text));
+            self.messages_version += 1;
+        }
     }
 
     /// Add a user message to the chat history.
@@ -545,10 +638,7 @@ impl UiState {
     /// so it tracks total turn time. Cleared on Ready/Idle.
     pub fn set_activity(&mut self, activity: Activity) {
         if self.activity != activity {
-            let was_busy = !matches!(
-                self.activity,
-                Activity::Idle | Activity::Ready
-            );
+            let was_busy = !matches!(self.activity, Activity::Idle | Activity::Ready);
             let is_busy = !matches!(activity, Activity::Idle | Activity::Ready);
 
             self.activity = activity;
@@ -720,10 +810,7 @@ impl UiState {
     }
 
     /// Apply a notification to the subagent tracker. Returns true if tracker state changed.
-    pub fn apply_subagent_tracker_notification(
-        &mut self,
-        notification: &Notification,
-    ) -> bool {
+    pub fn apply_subagent_tracker_notification(&mut self, notification: &Notification) -> bool {
         self.subagent_tracker.apply_notification(notification)
     }
 
@@ -943,23 +1030,44 @@ impl UiState {
     }
 
     /// Confirm the current approval selection, sending the response.
+    ///
+    /// Maps the selected option's `kind` to a `PermissionResponse` semantically
+    /// — not by button index — so a `RejectAlways` option from the agent is
+    /// correctly distinguished from a plain `Reject`.
     pub fn approval_confirm(&mut self) {
         if let Some(approval) = self.approval.take() {
-            let response = match approval.selected {
-                0 => PermissionResponse::AllowOnce,
-                1 => PermissionResponse::AllowAlways,
-                _ => PermissionResponse::Reject,
+            let response = match approval.options.get(approval.selected) {
+                Some(opt) => PermissionResponse::from(opt.kind),
+                None => {
+                    // Shouldn't happen — the selector is bounded by options.len()
+                    // elsewhere. If it ever does, defaulting to Cancel silently
+                    // turns a user's Enter press into a rejection, so log first.
+                    tracing::warn!(
+                        selected = approval.selected,
+                        options_len = approval.options.len(),
+                        "approval_confirm selection out of bounds; defaulting to Cancel"
+                    );
+                    PermissionResponse::Cancel
+                }
             };
-            // Ignore send error — the bridge may have dropped the receiver
-            let _ = approval.responder.send(response);
+            // A failed send means the bridge's oneshot receiver was dropped
+            // (agent cancelled, session torn down). Nothing to recover — the
+            // user's choice is moot — but log so the drop is visible if we're
+            // ever investigating why an agent didn't receive a decision.
+            if approval.responder.send(response).is_err() {
+                tracing::debug!("approval response dropped — agent receiver no longer listening");
+            }
         }
     }
 
     /// Cancel the approval dialog, sending a Cancel response.
     pub fn approval_cancel(&mut self) {
         if let Some(approval) = self.approval.take() {
-            // Ignore send error — the bridge may have dropped the receiver
-            let _ = approval.responder.send(PermissionResponse::Cancel);
+            // Same rationale as approval_confirm: a dropped receiver means the
+            // request was already cancelled upstream; log at debug level.
+            if approval.responder.send(PermissionResponse::Cancel).is_err() {
+                tracing::debug!("approval cancel dropped — agent receiver no longer listening");
+            }
         }
     }
 
@@ -1129,9 +1237,7 @@ impl UiState {
     /// Scroll chat up by `lines`. Enters browse mode from follow mode,
     /// or scrolls further up if already browsing.
     pub fn chat_scroll_up(&mut self, lines: usize) {
-        self.chat_scroll_back = Some(
-            self.chat_scroll_back.unwrap_or(0).saturating_add(lines),
-        );
+        self.chat_scroll_back = Some(self.chat_scroll_back.unwrap_or(0).saturating_add(lines));
     }
 
     /// Scroll chat down by `lines`. Returns to follow mode when offset
@@ -1171,6 +1277,8 @@ impl UiState {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[test]
@@ -1280,7 +1388,11 @@ mod tests {
         // Text is flushed to messages when tool call starts, and tool call is
         // committed immediately in chronological position
         assert_eq!(state.streaming_text(), "");
-        assert_eq!(state.messages().len(), 2, "text + tool call should be committed immediately");
+        assert_eq!(
+            state.messages().len(),
+            2,
+            "text + tool call should be committed immediately"
+        );
 
         // Turn completes
         state.apply_notification(&Notification::TurnCompleted {
@@ -1288,15 +1400,33 @@ mod tests {
         });
 
         // Both text and tool call should be in committed messages
-        assert!(state.active_tool_calls().is_empty(), "active tool calls should be cleared");
-        assert_eq!(state.streaming_text(), "", "streaming text should be cleared");
+        assert!(
+            state.active_tool_calls().is_empty(),
+            "active tool calls should be cleared"
+        );
+        assert_eq!(
+            state.streaming_text(),
+            "",
+            "streaming text should be cleared"
+        );
 
         let messages = state.messages();
-        assert!(messages.len() >= 2, "should have text + tool call messages, got {}", messages.len());
+        assert!(
+            messages.len() >= 2,
+            "should have text + tool call messages, got {}",
+            messages.len()
+        );
 
-        let has_agent_text = messages.iter().any(|m| matches!(m.kind(), ChatMessageKind::AgentText(_)));
-        let has_tool_call = messages.iter().any(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
-        assert!(has_agent_text, "committed messages should include agent text");
+        let has_agent_text = messages
+            .iter()
+            .any(|m| matches!(m.kind(), ChatMessageKind::AgentText(_)));
+        let has_tool_call = messages
+            .iter()
+            .any(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
+        assert!(
+            has_agent_text,
+            "committed messages should include agent text"
+        );
         assert!(has_tool_call, "committed messages should include tool call");
     }
 
@@ -1330,12 +1460,23 @@ mod tests {
 
         // The tool call should be committed with its diff content intact
         let messages = state.messages();
-        let tc_msg = messages.iter().find(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
-        assert!(tc_msg.is_some(), "tool call should be in committed messages");
+        let tc_msg = messages
+            .iter()
+            .find(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
+        assert!(
+            tc_msg.is_some(),
+            "tool call should be in committed messages"
+        );
 
         if let ChatMessageKind::ToolCall(tracked) = tc_msg.unwrap().kind() {
-            assert!(!tracked.content().is_empty(), "diff content should be preserved");
-            assert!(!tracked.locations().is_empty(), "locations should be preserved");
+            assert!(
+                !tracked.content().is_empty(),
+                "diff content should be preserved"
+            );
+            assert!(
+                !tracked.locations().is_empty(),
+                "locations should be preserved"
+            );
             assert_eq!(tracked.primary_path(), Some("src/main.rs"));
         } else {
             panic!("expected ToolCall message kind");
@@ -1405,7 +1546,11 @@ mod tests {
         });
 
         let messages = state.messages();
-        assert_eq!(messages.len(), 1, "tool call should be committed even with no text");
+        assert_eq!(
+            messages.len(),
+            1,
+            "tool call should be committed even with no text"
+        );
         assert!(matches!(messages[0].kind(), ChatMessageKind::ToolCall(_)));
     }
 
@@ -1471,7 +1616,11 @@ mod tests {
         state.apply_notification(&Notification::ToolCallStarted(tc));
 
         // Text and tool call should both be committed in order
-        assert_eq!(state.streaming_text(), "", "streaming text should be flushed");
+        assert_eq!(
+            state.streaming_text(),
+            "",
+            "streaming text should be flushed"
+        );
         assert_eq!(state.messages().len(), 2, "text + tool call committed");
         assert!(
             matches!(state.messages()[0].kind(), ChatMessageKind::AgentText(t) if t == "I'll edit that file."),
@@ -1584,7 +1733,10 @@ mod tests {
             .messages()
             .iter()
             .find(|m| matches!(m.kind(), ChatMessageKind::ToolCall(_)));
-        assert!(tc_msg.is_some(), "tool call should be in committed messages");
+        assert!(
+            tc_msg.is_some(),
+            "tool call should be in committed messages"
+        );
 
         if let ChatMessageKind::ToolCall(tracked) = tc_msg.unwrap().kind() {
             assert_eq!(
@@ -1631,7 +1783,11 @@ mod tests {
             None,
         );
         state.apply_notification(&Notification::ToolCallUpdated(update1));
-        assert_eq!(state.active_tool_calls()[0].content().len(), 1, "content survives first update");
+        assert_eq!(
+            state.active_tool_calls()[0].content().len(),
+            1,
+            "content survives first update"
+        );
 
         // Second update: status changes to Completed
         let update2 = ToolCall::new(
@@ -1642,8 +1798,15 @@ mod tests {
             None,
         );
         state.apply_notification(&Notification::ToolCallUpdated(update2));
-        assert_eq!(state.active_tool_calls()[0].content().len(), 1, "content survives second update");
-        assert_eq!(state.active_tool_calls()[0].status(), ToolCallStatus::Completed);
+        assert_eq!(
+            state.active_tool_calls()[0].content().len(),
+            1,
+            "content survives second update"
+        );
+        assert_eq!(
+            state.active_tool_calls()[0].status(),
+            ToolCallStatus::Completed
+        );
     }
 
     // --- Notification handler tests for new variants ---
@@ -1705,7 +1868,10 @@ mod tests {
             server_name: "server".into(),
             url: "https://example.com".into(),
         });
-        assert!(!changed, "McpOAuthRequest should be handled by App, not UiState");
+        assert!(
+            !changed,
+            "McpOAuthRequest should be handled by App, not UiState"
+        );
         assert!(state.messages().is_empty());
     }
 
@@ -1857,10 +2023,8 @@ mod tests {
             cyril_core::types::SubagentStatus::Working {
                 message: Some("Running".into()),
             },
-            Some("crew-test".into()),
-            None,
-            vec![],
-        );
+        )
+        .with_group(Some("crew-test".into()));
         let notif = Notification::SubagentListUpdated {
             subagents: vec![info],
             pending_stages: vec![],
@@ -2223,7 +2387,10 @@ mod tests {
         assert_eq!(model.description.as_deref(), Some("Switch model"));
 
         let new = suggestions.iter().find(|s| s.text == "/new").unwrap();
-        assert!(new.description.is_none(), "None description should stay None");
+        assert!(
+            new.description.is_none(),
+            "None description should stay None"
+        );
     }
 
     // --- Activity timer tests ---
@@ -2291,7 +2458,10 @@ mod tests {
         let summary = state
             .last_turn()
             .expect("TurnSummary should exist after TurnCompleted");
-        assert_eq!(summary.stop_reason(), cyril_core::types::StopReason::EndTurn);
+        assert_eq!(
+            summary.stop_reason(),
+            cyril_core::types::StopReason::EndTurn
+        );
         assert!(summary.token_counts().is_some());
         assert_eq!(summary.token_counts().unwrap().input(), 800);
         assert!(summary.metering().is_some());
@@ -2316,6 +2486,8 @@ mod tests {
             session_id: SessionId::new("s2"),
             current_mode: None,
             current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
         });
         assert!(
             state.last_turn().is_none(),
@@ -2369,9 +2541,367 @@ mod tests {
             session_id: SessionId::new("s2"),
             current_mode: None,
             current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
         });
 
         assert_eq!(state.session_cost().total_credits(), 0.0);
         assert_eq!(state.session_cost().turn_count(), 0);
+    }
+
+    #[test]
+    fn ui_state_usage_updated_sets_context_usage() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::UsageUpdated {
+            used: 80_000,
+            size: 200_000,
+        });
+        assert!(changed);
+        let pct = state.context_usage().unwrap_or(0.0);
+        assert!((pct - 40.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn ui_state_usage_updated_clamps_over_100() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::UsageUpdated {
+            used: 250_000,
+            size: 200_000,
+        });
+        let pct = state.context_usage().unwrap_or(-1.0);
+        assert!(
+            (pct - 100.0).abs() < f64::EPSILON,
+            "expected 100.0, got {pct}"
+        );
+    }
+
+    #[test]
+    fn ui_state_usage_updated_zero_size_returns_false() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::UsageUpdated { used: 100, size: 0 });
+        assert!(!changed, "size=0 should not claim state changed");
+        assert!(state.context_usage().is_none());
+    }
+
+    // ---------- UserMessage / session-load replay ----------
+
+    #[test]
+    fn user_message_notification_appends_user_chat_message() {
+        use crate::traits::ChatMessageKind;
+        use cyril_core::types::UserMessage;
+
+        let mut state = UiState::new(500);
+        assert!(state.messages().is_empty());
+
+        // is_streaming=false → commit immediately (single-chunk turn).
+        let changed = state.apply_notification(&Notification::UserMessage(UserMessage {
+            text: "explain main.rs".into(),
+            is_streaming: false,
+        }));
+        assert!(changed);
+
+        let msgs = state.messages();
+        assert_eq!(msgs.len(), 1);
+        match &msgs[0].kind {
+            ChatMessageKind::UserText(text) => assert_eq!(text, "explain main.rs"),
+            other => panic!("expected UserText, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn user_message_flushes_pending_agent_stream_first() {
+        use crate::traits::ChatMessageKind;
+        use cyril_core::types::UserMessage;
+
+        let mut state = UiState::new(500);
+        // Simulate a replay where an agent message chunk arrives, then a user turn
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "half-written agent reply".into(),
+            is_streaming: true,
+        }));
+
+        state.apply_notification(&Notification::UserMessage(UserMessage {
+            text: "next user prompt".into(),
+            is_streaming: false,
+        }));
+
+        let msgs = state.messages();
+        // Agent stream flushed first, then user message
+        assert_eq!(msgs.len(), 2);
+        match &msgs[0].kind {
+            ChatMessageKind::AgentText(text) => assert_eq!(text, "half-written agent reply"),
+            other => panic!("expected AgentText, got {other:?}"),
+        }
+        match &msgs[1].kind {
+            ChatMessageKind::UserText(text) => assert_eq!(text, "next user prompt"),
+            other => panic!("expected UserText, got {other:?}"),
+        }
+    }
+
+    // ---------- approval_confirm routes to kind-derived PermissionResponse ----------
+
+    fn make_approval_request(
+        options: Vec<cyril_core::types::PermissionOption>,
+    ) -> (
+        cyril_core::types::PermissionRequest,
+        tokio::sync::oneshot::Receiver<cyril_core::types::PermissionResponse>,
+    ) {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let tool_call = cyril_core::types::ToolCall::new(
+            cyril_core::types::ToolCallId::new("tc_1"),
+            "echo hi".into(),
+            cyril_core::types::ToolKind::Execute,
+            cyril_core::types::ToolCallStatus::Pending,
+            None,
+        );
+        let req = cyril_core::types::PermissionRequest {
+            tool_call,
+            message: "Allow?".into(),
+            options,
+            responder: tx,
+        };
+        (req, rx)
+    }
+
+    #[test]
+    fn approval_confirm_reject_always_sends_reject_always() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, PermissionResponse};
+
+        let (req, rx) = make_approval_request(vec![
+            PermissionOption {
+                id: "opt_allow".into(),
+                label: "Yes".into(),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            },
+            PermissionOption {
+                id: "opt_reject_always".into(),
+                label: "Never".into(),
+                kind: PermissionOptionKind::RejectAlways,
+                is_destructive: true,
+            },
+        ]);
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_select_next(); // move from index 0 (Allow) to 1 (RejectAlways)
+        state.approval_confirm();
+
+        let response = rx.blocking_recv().expect("responder fired");
+        assert!(matches!(response, PermissionResponse::RejectAlways));
+    }
+
+    #[test]
+    fn approval_confirm_allow_always_routes_by_kind_not_index() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, PermissionResponse};
+
+        // Agent sends AllowAlways at index 0 — the old index-based dispatch
+        // would have returned AllowOnce here. Kind-based dispatch returns AllowAlways.
+        let (req, rx) = make_approval_request(vec![PermissionOption {
+            id: "opt_always".into(),
+            label: "Always".into(),
+            kind: PermissionOptionKind::AllowAlways,
+            is_destructive: false,
+        }]);
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_confirm();
+
+        let response = rx.blocking_recv().expect("responder fired");
+        assert!(matches!(response, PermissionResponse::AllowAlways));
+    }
+
+    #[test]
+    fn approval_confirm_out_of_bounds_selection_defaults_to_cancel() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, PermissionResponse};
+
+        let (req, rx) = make_approval_request(vec![
+            PermissionOption {
+                id: "allow".into(),
+                label: "Allow".into(),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            },
+            PermissionOption {
+                id: "reject".into(),
+                label: "Reject".into(),
+                kind: PermissionOptionKind::RejectOnce,
+                is_destructive: true,
+            },
+        ]);
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        // Force the selector out of bounds — simulates a refactor regression
+        // where the selector drifts past options.len(). The handler should
+        // log a warn and emit Cancel rather than panic or send an AllowOnce.
+        state.approval.as_mut().expect("approval present").selected = 99;
+        state.approval_confirm();
+
+        let response = rx.blocking_recv().expect("responder fired");
+        assert!(matches!(response, PermissionResponse::Cancel));
+    }
+
+    // ---------- SessionCreated welcome-message injection ----------
+
+    fn mode(id: &str, welcome: Option<&str>) -> SessionMode {
+        SessionMode::new(ModeId::new(id), id, None::<&str>)
+            .with_welcome_message(welcome.map(String::from))
+    }
+
+    fn session_created(
+        id: &str,
+        current_mode: Option<&str>,
+        modes: Vec<SessionMode>,
+    ) -> Notification {
+        Notification::SessionCreated {
+            session_id: SessionId::new(id),
+            current_mode: current_mode.map(ModeId::new),
+            current_model: None,
+            available_modes: modes,
+            available_models: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn session_created_welcome_injected_when_current_mode_has_welcome() {
+        use crate::traits::ChatMessageKind;
+        let mut state = UiState::new(500);
+        let modes = vec![
+            mode("kiro_default", None),
+            mode("kiro_planner", Some("Transform any idea...")),
+        ];
+        state.apply_notification(&session_created("s1", Some("kiro_planner"), modes));
+
+        // Messages: [Session created: s1, "Transform any idea..."]
+        let systems: Vec<&str> = state
+            .messages()
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::System(t) => Some(t.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(systems.len(), 2);
+        assert!(systems[0].starts_with("Session created:"));
+        assert_eq!(systems[1], "Transform any idea...");
+    }
+
+    #[test]
+    fn session_created_no_welcome_when_current_mode_missing_welcome() {
+        use crate::traits::ChatMessageKind;
+        let mut state = UiState::new(500);
+        let modes = vec![mode("kiro_default", None)];
+        state.apply_notification(&session_created("s1", Some("kiro_default"), modes));
+
+        let systems: Vec<&str> = state
+            .messages()
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::System(t) => Some(t.as_str()),
+                _ => None,
+            })
+            .collect();
+        // Only the "Session created: ..." system message, no welcome.
+        assert_eq!(systems.len(), 1);
+        assert!(systems[0].starts_with("Session created:"));
+    }
+
+    #[test]
+    fn session_created_stale_current_mode_does_not_inject_welcome() {
+        use crate::traits::ChatMessageKind;
+        let mut state = UiState::new(500);
+        // current_mode points at an id that's not in the available list.
+        let modes = vec![mode("kiro_default", Some("Welcome!"))];
+        state.apply_notification(&session_created("s1", Some("missing_mode"), modes));
+
+        let systems: Vec<&str> = state
+            .messages()
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::System(t) => Some(t.as_str()),
+                _ => None,
+            })
+            .collect();
+        // Welcome from kiro_default must NOT be injected (not the active mode).
+        assert_eq!(systems.len(), 1);
+        assert!(!systems.contains(&"Welcome!"));
+    }
+
+    #[test]
+    fn session_created_no_current_mode_skips_welcome_lookup() {
+        use crate::traits::ChatMessageKind;
+        let mut state = UiState::new(500);
+        let modes = vec![mode("any", Some("Should not appear"))];
+        state.apply_notification(&session_created("s1", None, modes));
+
+        let systems: Vec<&str> = state
+            .messages()
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::System(t) => Some(t.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(systems.len(), 1);
+        assert!(!systems.contains(&"Should not appear"));
+    }
+
+    // ---------- UserMessage multi-chunk accumulation ----------
+
+    #[test]
+    fn user_message_streaming_chunks_merge_into_single_message() {
+        use crate::traits::ChatMessageKind;
+        let mut state = UiState::new(500);
+        // Simulate Kiro chunking one logical user turn into two chunks.
+        state.apply_notification(&Notification::UserMessage(UserMessage {
+            text: "fix the auth ".into(),
+            is_streaming: true,
+        }));
+        state.apply_notification(&Notification::UserMessage(UserMessage {
+            text: "bug".into(),
+            is_streaming: true,
+        }));
+        // No flush yet — nothing committed.
+        assert!(state.messages().is_empty());
+
+        // Turn completion flushes the accumulated user text.
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert_eq!(state.messages().len(), 1);
+        match state.messages()[0].kind() {
+            ChatMessageKind::UserText(t) => assert_eq!(t, "fix the auth bug"),
+            other => panic!("expected UserText, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn user_message_flushes_on_tool_call_started() {
+        use crate::traits::ChatMessageKind;
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::UserMessage(UserMessage {
+            text: "please read".into(),
+            is_streaming: true,
+        }));
+        // Tool call boundary should flush the user chunk first.
+        let tc = cyril_core::types::ToolCall::new(
+            cyril_core::types::ToolCallId::new("tc_1"),
+            "Reading".into(),
+            cyril_core::types::ToolKind::Read,
+            cyril_core::types::ToolCallStatus::InProgress,
+            None,
+        );
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+        assert_eq!(state.messages().len(), 2);
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::UserText(t) if t == "please read"
+        ));
+        assert!(matches!(
+            state.messages()[1].kind(),
+            ChatMessageKind::ToolCall(_)
+        ));
     }
 }

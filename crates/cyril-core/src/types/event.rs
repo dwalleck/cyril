@@ -1,7 +1,10 @@
 use crate::types::command::{CommandInfo, ConfigOption};
-use crate::types::message::{AgentMessage, AgentThought};
+use crate::types::message::{AgentMessage, AgentThought, UserMessage};
 use crate::types::plan::Plan;
-use crate::types::session::{ContextUsage, SessionId, StopReason, TokenCounts, TurnMetering};
+use crate::types::session::{
+    CompactionPhase, ContextUsage, ModeId, ModelInfo, SessionId, SessionMode, StopReason,
+    TokenCounts, TurnMetering,
+};
 use crate::types::tool_call::{ToolCall, ToolCallId};
 
 /// Notifications emitted by the ACP bridge. All variants are Send + Sync + Clone.
@@ -12,6 +15,9 @@ pub enum Notification {
     AgentMessage(AgentMessage),
     AgentThought(AgentThought),
 
+    // User messages (replayed by the agent during session/load history replay)
+    UserMessage(UserMessage),
+
     // Tool lifecycle
     ToolCallStarted(ToolCall),
     ToolCallUpdated(ToolCall),
@@ -19,7 +25,7 @@ pub enum Notification {
     // Session state
     PlanUpdated(Plan),
     ModeChanged {
-        mode_id: String,
+        mode_id: ModeId,
     },
     ConfigOptionsUpdated(Vec<ConfigOption>),
     CommandsUpdated {
@@ -45,14 +51,26 @@ pub enum Notification {
         metering: Option<TurnMetering>,
         tokens: Option<TokenCounts>,
     },
+    /// ACP `usage_update` session notification (unstable_session_usage).
+    /// Carries absolute token counts rather than the percentage from
+    /// `kiro.dev/metadata`. Both may arrive within a turn; whichever notification
+    /// lands last wins (both write `context_usage` in UiState / SessionController).
+    UsageUpdated {
+        used: u64,
+        size: u64,
+    },
     AgentSwitched {
         name: String,
         welcome: Option<String>,
         previous_agent: Option<String>,
         model: Option<String>,
     },
+    /// Kiro-specific `kiro.dev/compaction/status`. `phase` carries the
+    /// lifecycle state; `summary` is populated when Kiro provides a
+    /// post-compaction summary (typically only with `Completed`).
     CompactionStatus {
-        message: String,
+        phase: CompactionPhase,
+        summary: Option<String>,
     },
     ClearStatus {
         message: String,
@@ -124,8 +142,15 @@ pub enum Notification {
     // Lifecycle
     SessionCreated {
         session_id: SessionId,
-        current_mode: Option<String>,
+        current_mode: Option<ModeId>,
         current_model: Option<String>,
+        /// Full mode catalog from `NewSessionResponse.modes.availableModes`.
+        /// Empty when the agent didn't report any.
+        available_modes: Vec<SessionMode>,
+        /// Full model catalog from `NewSessionResponse.models.availableModels`.
+        /// Populated when the agent reports models (cyril enables the
+        /// `unstable_session_model` ACP feature). Empty otherwise.
+        available_models: Vec<ModelInfo>,
     },
     TurnCompleted {
         stop_reason: StopReason,
@@ -190,11 +215,23 @@ pub struct PermissionRequest {
     pub responder: tokio::sync::oneshot::Sender<PermissionResponse>,
 }
 
+/// The semantic kind of a permission option. Mirrors `acp::PermissionOptionKind`
+/// so the UI can route a selection to the correct `PermissionResponse` without
+/// depending on the option's display order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PermissionOptionKind {
+    AllowOnce,
+    AllowAlways,
+    RejectOnce,
+    RejectAlways,
+}
+
 /// An option in a permission request dialog.
 #[derive(Debug, Clone)]
 pub struct PermissionOption {
     pub id: String,
     pub label: String,
+    pub kind: PermissionOptionKind,
     pub is_destructive: bool,
 }
 
@@ -204,7 +241,19 @@ pub enum PermissionResponse {
     AllowOnce,
     AllowAlways,
     Reject,
+    RejectAlways,
     Cancel,
+}
+
+impl From<PermissionOptionKind> for PermissionResponse {
+    fn from(kind: PermissionOptionKind) -> Self {
+        match kind {
+            PermissionOptionKind::AllowOnce => PermissionResponse::AllowOnce,
+            PermissionOptionKind::AllowAlways => PermissionResponse::AllowAlways,
+            PermissionOptionKind::RejectOnce => PermissionResponse::Reject,
+            PermissionOptionKind::RejectAlways => PermissionResponse::RejectAlways,
+        }
+    }
 }
 
 /// Commands sent from the App to the ACP bridge.
@@ -223,6 +272,13 @@ pub enum BridgeCommand {
     CancelRequest,
     SetMode {
         mode_id: String,
+    },
+    /// Request the agent switch to the given model via the standard ACP
+    /// `session/set_model` method. Infrastructure-only today: `/model`
+    /// currently routes through `ExecuteCommand` because Kiro does not
+    /// advertise `session/set_model` in its capabilities.
+    SetModel {
+        model_id: String,
     },
     ExtMethod {
         method: String,
@@ -353,10 +409,32 @@ mod tests {
         let opt = PermissionOption {
             id: "allow_once".into(),
             label: "Allow Once".into(),
+            kind: PermissionOptionKind::AllowOnce,
             is_destructive: false,
         };
         assert_eq!(opt.id, "allow_once");
+        assert_eq!(opt.kind, PermissionOptionKind::AllowOnce);
         assert!(!opt.is_destructive);
+    }
+
+    #[test]
+    fn permission_option_kind_maps_to_response() {
+        assert!(matches!(
+            PermissionResponse::from(PermissionOptionKind::AllowOnce),
+            PermissionResponse::AllowOnce
+        ));
+        assert!(matches!(
+            PermissionResponse::from(PermissionOptionKind::AllowAlways),
+            PermissionResponse::AllowAlways
+        ));
+        assert!(matches!(
+            PermissionResponse::from(PermissionOptionKind::RejectOnce),
+            PermissionResponse::Reject
+        ));
+        assert!(matches!(
+            PermissionResponse::from(PermissionOptionKind::RejectAlways),
+            PermissionResponse::RejectAlways
+        ));
     }
 
     #[test]
@@ -365,9 +443,28 @@ mod tests {
             PermissionResponse::AllowOnce,
             PermissionResponse::AllowAlways,
             PermissionResponse::Reject,
+            PermissionResponse::RejectAlways,
             PermissionResponse::Cancel,
         ];
-        assert_eq!(responses.len(), 4);
+        assert_eq!(responses.len(), 5);
+    }
+
+    #[test]
+    fn notification_user_message() {
+        use crate::types::message::UserMessage;
+        let n = Notification::UserMessage(UserMessage {
+            text: "what does this do?".into(),
+            is_streaming: true,
+        });
+        assert!(matches!(n, Notification::UserMessage(_)));
+    }
+
+    #[test]
+    fn bridge_command_set_model() {
+        let cmd = BridgeCommand::SetModel {
+            model_id: "claude-opus-4.6".into(),
+        };
+        assert!(matches!(cmd, BridgeCommand::SetModel { .. }));
     }
 
     #[test]

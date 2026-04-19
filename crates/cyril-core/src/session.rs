@@ -4,7 +4,8 @@ pub struct SessionController {
     status: SessionStatus,
     id: Option<SessionId>,
     modes: Vec<SessionMode>,
-    current_mode_id: Option<String>,
+    models: Vec<ModelInfo>,
+    current_mode_id: Option<ModeId>,
     cached_model: Option<String>,
     context_usage: Option<ContextUsage>,
     agent_commands: Vec<CommandInfo>,
@@ -21,6 +22,7 @@ impl SessionController {
             status: SessionStatus::Disconnected,
             id: None,
             modes: Vec::new(),
+            models: Vec::new(),
             current_mode_id: None,
             cached_model: None,
             context_usage: None,
@@ -46,8 +48,12 @@ impl SessionController {
         &self.modes
     }
 
-    pub fn current_mode_id(&self) -> Option<&str> {
-        self.current_mode_id.as_deref()
+    pub fn models(&self) -> &[ModelInfo] {
+        &self.models
+    }
+
+    pub fn current_mode_id(&self) -> Option<&ModeId> {
+        self.current_mode_id.as_ref()
     }
 
     pub fn current_model(&self) -> Option<&str> {
@@ -122,7 +128,9 @@ impl SessionController {
                 true
             }
             Notification::AgentSwitched { name, model, .. } => {
-                self.current_mode_id = Some(name.clone());
+                // Kiro reports agent switches using the agent's name as the
+                // mode identity — wrap into ModeId at this boundary.
+                self.current_mode_id = Some(ModeId::new(name.clone()));
                 if let Some(m) = model {
                     self.cached_model = Some(m.clone());
                 }
@@ -145,17 +153,32 @@ impl SessionController {
                 session_id,
                 current_mode,
                 current_model,
+                available_modes,
+                available_models,
             } => {
                 self.id = Some(session_id.clone());
                 self.current_mode_id = current_mode.clone();
                 if let Some(model) = current_model {
                     self.cached_model = Some(model.clone());
                 }
+                self.modes = available_modes.clone();
+                self.models = available_models.clone();
                 self.session_cost = SessionCost::new();
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
                 self.status = SessionStatus::Active;
+                true
+            }
+            Notification::UsageUpdated { used, size } => {
+                if *size == 0 {
+                    // `size == 0` is protocol-meaningless (division would be undefined).
+                    // Treat as a malformed update — don't claim state changed.
+                    tracing::warn!(used, "UsageUpdated with size=0, ignoring");
+                    return false;
+                }
+                let pct = (*used as f64 / *size as f64) * 100.0;
+                self.context_usage = Some(ContextUsage::new(pct));
                 true
             }
             Notification::BridgeDisconnected { .. } => {
@@ -178,6 +201,8 @@ impl Default for SessionController {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[test]
@@ -224,10 +249,10 @@ mod tests {
     fn mode_changed_updates_mode() {
         let mut ctrl = SessionController::new();
         let changed = ctrl.apply_notification(&Notification::ModeChanged {
-            mode_id: "code".into(),
+            mode_id: ModeId::new("code"),
         });
         assert!(changed);
-        assert_eq!(ctrl.current_mode_id(), Some("code"));
+        assert_eq!(ctrl.current_mode_id().map(ModeId::as_str), Some("code"));
     }
 
     #[test]
@@ -347,6 +372,8 @@ mod tests {
             session_id: SessionId::new("s2"),
             current_mode: None,
             current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
         });
         assert!(
             ctrl.last_turn().is_none(),
@@ -421,8 +448,8 @@ mod tests {
     fn set_modes() {
         let mut ctrl = SessionController::new();
         let modes = vec![
-            SessionMode::new("code", "Code", None::<&str>),
-            SessionMode::new("chat", "Chat", Some("General chat")),
+            SessionMode::new(ModeId::new("code"), "Code", None::<&str>),
+            SessionMode::new(ModeId::new("chat"), "Chat", Some("General chat")),
         ];
         ctrl.set_modes(modes);
         assert_eq!(ctrl.modes().len(), 2);
@@ -447,7 +474,10 @@ mod tests {
         });
         assert!(changed);
         assert_eq!(ctrl.status(), &SessionStatus::Active);
-        assert_eq!(ctrl.current_mode_id(), Some("code-agent"));
+        assert_eq!(
+            ctrl.current_mode_id().map(ModeId::as_str),
+            Some("code-agent")
+        );
     }
 
     #[test]
@@ -458,14 +488,19 @@ mod tests {
 
         let changed = ctrl.apply_notification(&Notification::SessionCreated {
             session_id: SessionId::new("sess_abc"),
-            current_mode: Some("kiro_default".into()),
+            current_mode: Some(ModeId::new("kiro_default")),
             current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
         });
 
         assert!(changed);
         assert_eq!(ctrl.status(), &SessionStatus::Active);
         assert_eq!(ctrl.id().map(SessionId::as_str), Some("sess_abc"));
-        assert_eq!(ctrl.current_mode_id(), Some("kiro_default"));
+        assert_eq!(
+            ctrl.current_mode_id().map(ModeId::as_str),
+            Some("kiro_default")
+        );
     }
 
     #[test]
@@ -477,6 +512,8 @@ mod tests {
             session_id: SessionId::new("new_sess"),
             current_mode: None,
             current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
         });
 
         assert_eq!(ctrl.id().map(SessionId::as_str), Some("new_sess"));
@@ -489,6 +526,8 @@ mod tests {
             session_id: SessionId::new("s1"),
             current_mode: None,
             current_model: Some("claude-sonnet-4".to_string()),
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
         });
         assert_eq!(ctrl.current_model(), Some("claude-sonnet-4"));
     }
@@ -510,9 +549,124 @@ mod tests {
             session_id: SessionId::new("s2"),
             current_mode: None,
             current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
         });
 
         assert_eq!(ctrl.session_cost().total_credits(), 0.0);
         assert_eq!(ctrl.session_cost().turn_count(), 0);
+    }
+
+    #[test]
+    fn usage_updated_computes_context_percentage() {
+        let mut ctrl = SessionController::new();
+        let changed = ctrl.apply_notification(&Notification::UsageUpdated {
+            used: 50_000,
+            size: 200_000,
+        });
+        assert!(changed);
+        let pct = ctrl.context_usage().map(|u| u.percentage()).unwrap_or(0.0);
+        assert!((pct - 25.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn usage_updated_zero_size_is_safe() {
+        let mut ctrl = SessionController::new();
+        let changed = ctrl.apply_notification(&Notification::UsageUpdated { used: 100, size: 0 });
+        // size=0 is protocol-meaningless; return false to avoid spurious repaint
+        // and leave context_usage untouched.
+        assert!(!changed);
+        assert!(ctrl.context_usage().is_none());
+    }
+
+    #[test]
+    fn usage_updated_used_over_size_clamps_to_100() {
+        // If Kiro ever reports used > size, clamp to 100% rather than display
+        // a nonsensical 125%.
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::UsageUpdated {
+            used: 250_000,
+            size: 200_000,
+        });
+        let pct = ctrl.context_usage().map(|u| u.percentage()).unwrap_or(-1.0);
+        assert!(
+            (pct - 100.0).abs() < f64::EPSILON,
+            "expected 100.0, got {pct}"
+        );
+    }
+
+    #[test]
+    fn session_created_stores_available_modes_and_models() {
+        let mut ctrl = SessionController::new();
+        let modes = vec![
+            SessionMode::new(ModeId::new("kiro_default"), "Default", None::<&str>),
+            SessionMode::new(
+                ModeId::new("kiro_planner"),
+                "Planner",
+                Some("Planning mode"),
+            )
+            .with_welcome_message(Some("Transform any idea...".into())),
+        ];
+        let models = vec![
+            ModelInfo::new(
+                ModelId::new("claude-sonnet-4"),
+                "Claude Sonnet 4",
+                None::<&str>,
+            ),
+            ModelInfo::new(ModelId::new("claude-haiku"), "Claude Haiku", Some("Fast")),
+        ];
+
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s1"),
+            current_mode: Some(ModeId::new("kiro_planner")),
+            current_model: Some("claude-sonnet-4".into()),
+            available_modes: modes,
+            available_models: models,
+        });
+
+        assert_eq!(ctrl.modes().len(), 2);
+        assert_eq!(ctrl.modes()[1].id().as_str(), "kiro_planner");
+        assert_eq!(
+            ctrl.modes()[1].welcome_message(),
+            Some("Transform any idea...")
+        );
+        assert_eq!(ctrl.models().len(), 2);
+        assert_eq!(ctrl.models()[0].id().as_str(), "claude-sonnet-4");
+        assert_eq!(ctrl.models()[0].name(), "Claude Sonnet 4");
+        assert_eq!(ctrl.models()[1].description(), Some("Fast"));
+    }
+
+    #[test]
+    fn session_created_replaces_previous_modes_and_models() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s1"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![SessionMode::new(ModeId::new("old"), "old", None::<&str>)],
+            available_models: vec![ModelInfo::new(
+                ModelId::new("old-model"),
+                "old",
+                None::<&str>,
+            )],
+        });
+
+        // Second SessionCreated must overwrite, not append.
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![SessionMode::new(ModeId::new("new"), "new", None::<&str>)],
+            available_models: vec![ModelInfo::new(
+                ModelId::new("new-model"),
+                "new",
+                None::<&str>,
+            )],
+        });
+
+        assert_eq!(ctrl.modes().len(), 1);
+        assert_eq!(ctrl.modes()[0].id().as_str(), "new");
+        assert_eq!(ctrl.models().len(), 1);
+        assert_eq!(ctrl.models()[0].id().as_str(), "new-model");
     }
 }

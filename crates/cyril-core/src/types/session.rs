@@ -34,33 +34,152 @@ pub enum SessionStatus {
     },
 }
 
+/// Phase of a context-compaction operation reported by Kiro's
+/// `kiro.dev/compaction/status` notification.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CompactionPhase {
+    /// Compaction has started; no summary yet.
+    Started,
+    /// Compaction finished successfully; a summary may be provided alongside.
+    Completed,
+    /// Compaction failed. `error` carries the agent's reason if supplied.
+    Failed { error: Option<String> },
+}
+
+/// Mode identifier. Newtype over `String` so `SessionMode::new` catches
+/// id/label positional swaps at compile time. Construct via `ModeId::new(..)`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ModeId(String);
+
+impl ModeId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for ModeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+// NOTE: intentionally no `From<&str>` / `From<String>` — see the matching
+// comment on `ModelId` for the rationale.
+
 /// An available agent mode (e.g., "code", "chat").
+///
+/// Kiro populates `_meta.welcomeMessage` on some modes (observed on
+/// `kiro_planner`); we capture it here so the UI can greet the user when
+/// that mode becomes active without a second roundtrip.
 #[derive(Debug, Clone)]
 pub struct SessionMode {
-    id: String,
+    id: ModeId,
     label: String,
     description: Option<String>,
+    welcome_message: Option<String>,
 }
 
 impl SessionMode {
     pub fn new(
-        id: impl Into<String>,
+        id: ModeId,
         label: impl Into<String>,
         description: Option<impl Into<String>>,
     ) -> Self {
         Self {
-            id: id.into(),
+            id,
             label: label.into(),
             description: description.map(Into::into),
+            welcome_message: None,
         }
     }
 
-    pub fn id(&self) -> &str {
+    #[must_use]
+    pub fn with_welcome_message(mut self, welcome_message: Option<String>) -> Self {
+        // Normalize empty (including whitespace-only) to None — a blank welcome
+        // would render as a blank system message and is semantically identical
+        // to "no welcome".
+        self.welcome_message = welcome_message.filter(|s| !s.trim().is_empty());
+        self
+    }
+
+    pub fn id(&self) -> &ModeId {
         &self.id
     }
 
     pub fn label(&self) -> &str {
         &self.label
+    }
+
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+
+    pub fn welcome_message(&self) -> Option<&str> {
+        self.welcome_message.as_deref()
+    }
+}
+
+/// Model identifier. Newtype wrapper over `String` so `ModelInfo::new`
+/// catches swaps between `id` and `name` (both stringly-typed on the wire)
+/// at compile time.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ModelId(String);
+
+impl ModelId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for ModelId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+// NOTE: intentionally no `From<&str>` or `From<String>` for ModelId.
+// Those impls would combine with `impl Into<ModelId>` on call sites to
+// silently wrap bare strings, re-admitting exactly the id/name positional
+// swap bug this newtype exists to prevent. Construct via `ModelId::new(...)`.
+
+/// A selectable model reported in `SessionModelState.availableModels`.
+///
+/// Mirrors `acp::ModelInfo` but lives in `cyril-core` so `cyril-ui` can read
+/// it through the `TuiState` trait without depending on ACP types.
+#[derive(Debug, Clone)]
+pub struct ModelInfo {
+    id: ModelId,
+    name: String,
+    description: Option<String>,
+}
+
+impl ModelInfo {
+    pub fn new(
+        id: ModelId,
+        name: impl Into<String>,
+        description: Option<impl Into<String>>,
+    ) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            description: description.map(Into::into),
+        }
+    }
+
+    pub fn id(&self) -> &ModelId {
+        &self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn description(&self) -> Option<&str> {
@@ -282,6 +401,8 @@ impl TurnSummary {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use std::collections::HashMap;
 
@@ -339,15 +460,19 @@ mod tests {
 
     #[test]
     fn session_mode_accessors() {
-        let mode = SessionMode::new("code", "Code Mode", Some("Write and edit code"));
-        assert_eq!(mode.id(), "code");
+        let mode = SessionMode::new(
+            ModeId::new("code"),
+            "Code Mode",
+            Some("Write and edit code"),
+        );
+        assert_eq!(mode.id().as_str(), "code");
         assert_eq!(mode.label(), "Code Mode");
         assert_eq!(mode.description(), Some("Write and edit code"));
     }
 
     #[test]
     fn session_mode_no_description() {
-        let mode = SessionMode::new("chat", "Chat", None::<&str>);
+        let mode = SessionMode::new(ModeId::new("chat"), "Chat", None::<&str>);
         assert_eq!(mode.description(), None);
     }
 

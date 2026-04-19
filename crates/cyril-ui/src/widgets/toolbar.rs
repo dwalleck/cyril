@@ -139,10 +139,10 @@ pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
             let input = format_token_count(tokens.input());
             let output = format_token_count(tokens.output());
             let mut token_text = format!("{input} in / {output} out");
-            if let Some(cached) = tokens.cached() {
-                if cached > 0 {
-                    token_text.push_str(&format!(" / {} cached", format_token_count(cached)));
-                }
+            if let Some(cached) = tokens.cached()
+                && cached > 0
+            {
+                token_text.push_str(&format!(" / {} cached", format_token_count(cached)));
             }
             parts.push(Span::styled(
                 token_text,
@@ -208,8 +208,8 @@ fn spinner_index(state: &dyn TuiState) -> usize {
 mod tests {
     use super::*;
     use crate::traits::test_support::MockTuiState;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn toolbar_renders_no_session() {

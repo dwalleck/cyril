@@ -159,10 +159,7 @@ mod tests {
 
     #[test]
     fn test_win_to_wsl_root() {
-        assert_eq!(
-            win_to_wsl(Path::new(r"C:\")),
-            PathBuf::from("/mnt/c")
-        );
+        assert_eq!(win_to_wsl(Path::new(r"C:\")), PathBuf::from("/mnt/c"));
     }
 
     #[test]
@@ -183,18 +180,12 @@ mod tests {
 
     #[test]
     fn test_wsl_to_win_d_drive() {
-        assert_eq!(
-            wsl_to_win("/mnt/d/project"),
-            PathBuf::from(r"D:\project")
-        );
+        assert_eq!(wsl_to_win("/mnt/d/project"), PathBuf::from(r"D:\project"));
     }
 
     #[test]
     fn test_wsl_to_win_root() {
-        assert_eq!(
-            wsl_to_win("/mnt/c"),
-            PathBuf::from(r"C:\")
-        );
+        assert_eq!(wsl_to_win("/mnt/c"), PathBuf::from(r"C:\"));
     }
 
     #[test]
@@ -259,10 +250,7 @@ mod tests {
 
     #[test]
     fn test_win_to_wsl_extended_prefix_root() {
-        assert_eq!(
-            win_to_wsl(Path::new(r"\\?\C:\")),
-            PathBuf::from("/mnt/c")
-        );
+        assert_eq!(win_to_wsl(Path::new(r"\\?\C:\")), PathBuf::from("/mnt/c"));
     }
 
     #[test]

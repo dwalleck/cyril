@@ -79,11 +79,13 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
-    use crate::traits::test_support::MockTuiState;
     use crate::traits::Suggestion;
-    use ratatui::backend::TestBackend;
+    use crate::traits::test_support::MockTuiState;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     fn buffer_text(terminal: &Terminal<TestBackend>, rows: u16) -> String {
         let buffer = terminal.backend().buffer();

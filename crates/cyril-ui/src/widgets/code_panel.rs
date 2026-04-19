@@ -169,8 +169,8 @@ fn status_label(status: &LspStatus) -> &str {
 mod tests {
     use super::*;
     use cyril_core::types::LspServerInfo;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     fn sample_panel_data() -> CodePanelData {
         CodePanelData {

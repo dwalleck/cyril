@@ -298,6 +298,7 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
         ToolKind::Search => tc.title().to_string(),
         ToolKind::Think => "Thinking...".to_string(),
         ToolKind::Fetch => tc.title().to_string(),
+        ToolKind::SwitchMode => tc.title().to_string(),
         ToolKind::Other => tc.title().to_string(),
     };
 
@@ -314,6 +315,7 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
         ToolKind::Search => Color::Cyan,
         ToolKind::Think => Color::DarkGray,
         ToolKind::Fetch => Color::Cyan,
+        ToolKind::SwitchMode => Color::Magenta,
         ToolKind::Other => Color::White,
     };
 
@@ -465,13 +467,13 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     }
 
     // Execute: show exit code if non-zero
-    if let Some(code) = tc.exit_code() {
-        if code != 0 {
-            lines.push(Line::styled(
-                format!("{INDENT}Exit: {code}"),
-                Style::default().fg(Color::Yellow),
-            ));
-        }
+    if let Some(code) = tc.exit_code()
+        && code != 0
+    {
+        lines.push(Line::styled(
+            format!("{INDENT}Exit: {code}"),
+            Style::default().fg(Color::Yellow),
+        ));
     }
 
     // Read: show char count summary instead of full output
@@ -517,11 +519,13 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use crate::traits::test_support::MockTuiState;
     use crate::traits::{Activity, ChatMessage};
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn chat_renders_empty() {
@@ -844,9 +848,6 @@ mod tests {
             cyril_core::types::SubagentStatus::Working {
                 message: Some("Running".into()),
             },
-            None,
-            None,
-            vec![],
         );
         state
             .subagent_tracker
