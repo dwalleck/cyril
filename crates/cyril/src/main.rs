@@ -25,13 +25,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_logging();
 
-    let cwd = cli.cwd.unwrap_or_else(|| {
-        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-    });
+    let cwd = cli
+        .cwd
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
-    let config = cyril_core::types::config::Config::load_from_path(
-        &config_dir().join("config.toml"),
-    );
+    let config =
+        cyril_core::types::config::Config::load_from_path(&config_dir().join("config.toml"));
 
     // Spawn bridge
     let bridge = cyril_core::protocol::bridge::spawn_bridge(&cli.agent, cwd.clone())?;
@@ -49,26 +48,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Initialize terminal
         let mut terminal = ratatui::init();
-        crossterm::execute!(
-            std::io::stdout(),
-            crossterm::event::EnableMouseCapture,
-        )
-        .map_err(|e| {
-            cyril_core::Error::with_source(
-                cyril_core::ErrorKind::Transport {
-                    detail: "failed to enable mouse capture".into(),
-                },
-                e,
-            )
-        })?;
+        crossterm::execute!(std::io::stdout(), crossterm::event::EnableMouseCapture,).map_err(
+            |e| {
+                cyril_core::Error::with_source(
+                    cyril_core::ErrorKind::Transport {
+                        detail: "failed to enable mouse capture".into(),
+                    },
+                    e,
+                )
+            },
+        )?;
 
         let result = app.run(&mut terminal).await;
 
         // Restore terminal
-        if let Err(e) = crossterm::execute!(
-            std::io::stdout(),
-            crossterm::event::DisableMouseCapture,
-        ) {
+        if let Err(e) =
+            crossterm::execute!(std::io::stdout(), crossterm::event::DisableMouseCapture,)
+        {
             tracing::warn!(error = %e, "failed to disable mouse capture");
         }
         ratatui::restore();

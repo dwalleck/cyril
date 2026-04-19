@@ -14,16 +14,16 @@ pub mod tool_call;
 pub use code_panel::{CodeCommandResponse, CodePanelData, LspServerInfo, LspStatus};
 pub use command::{CommandInfo, CommandOption, ConfigOption};
 pub use event::{
-    BridgeCommand, Notification, PermissionOption, PermissionRequest, PermissionResponse,
-    RoutedNotification,
+    BridgeCommand, Notification, PermissionOption, PermissionOptionKind, PermissionRequest,
+    PermissionResponse, RoutedNotification,
 };
 pub use hook::HookInfo;
-pub use message::{AgentMessage, AgentThought};
+pub use message::{AgentMessage, AgentThought, UserMessage};
 pub use plan::{Plan, PlanEntry, PlanEntryPriority, PlanEntryStatus};
 pub use prompt::{PromptArgument, PromptInfo};
 pub use session::{
-    ContextUsage, CreditUsage, SessionCost, SessionId, SessionMode, SessionStatus, StopReason,
-    TokenCounts, TurnMetering, TurnSummary,
+    CompactionPhase, ContextUsage, CreditUsage, ModeId, ModelId, ModelInfo, SessionCost, SessionId,
+    SessionMode, SessionStatus, StopReason, TokenCounts, TurnMetering, TurnSummary,
 };
 pub use subagent::{PendingStage, SubagentInfo, SubagentStatus};
 pub use tool_call::{

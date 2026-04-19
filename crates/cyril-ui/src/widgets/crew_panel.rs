@@ -155,11 +155,13 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use crate::traits::test_support::MockTuiState;
     use cyril_core::types::{PendingStage, SessionId, SubagentInfo, SubagentStatus};
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     fn make_working(id: &str, name: &str, group: Option<&str>) -> SubagentInfo {
         SubagentInfo::new(
@@ -170,10 +172,8 @@ mod tests {
             SubagentStatus::Working {
                 message: Some("Running".into()),
             },
-            group.map(String::from),
-            None,
-            vec![],
         )
+        .with_group(group.map(String::from))
     }
 
     #[test]

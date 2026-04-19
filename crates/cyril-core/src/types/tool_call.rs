@@ -29,6 +29,7 @@ pub enum ToolKind {
     Search,
     Think,
     Fetch,
+    SwitchMode,
     Other,
 }
 

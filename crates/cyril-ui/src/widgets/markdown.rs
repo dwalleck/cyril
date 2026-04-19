@@ -118,8 +118,7 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                                         .add_modifier(Modifier::BOLD),
                                 ));
                                 let lang_cols = display_lang.width();
-                                let fill_len =
-                                    border_width.saturating_sub(lang_cols + 6).max(1);
+                                let fill_len = border_width.saturating_sub(lang_cols + 6).max(1);
                                 header_spans.push(Span::styled(
                                     format!(" {}", "─".repeat(fill_len)),
                                     border_style,
@@ -127,8 +126,7 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                             }
                             None => {
                                 header_spans.push(Span::styled(
-                                    "╭".to_string()
-                                        + &"─".repeat(border_width.saturating_sub(1)),
+                                    "╭".to_string() + &"─".repeat(border_width.saturating_sub(1)),
                                     border_style,
                                 ));
                             }
@@ -226,8 +224,7 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                 }
                 TagEnd::Table => {
                     in_table = false;
-                    let col_count =
-                        table_rows.iter().map(|(_, r)| r.len()).max().unwrap_or(0);
+                    let col_count = table_rows.iter().map(|(_, r)| r.len()).max().unwrap_or(0);
                     let mut col_widths = vec![0usize; col_count];
                     for (_, row) in &table_rows {
                         for (i, cell) in row.iter().enumerate() {
@@ -281,8 +278,8 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                         }
                         lines.push(Line::from(spans));
                         if *is_header {
-                            let sep_width: usize = col_widths.iter().sum::<usize>()
-                                + separator_space;
+                            let sep_width: usize =
+                                col_widths.iter().sum::<usize>() + separator_space;
                             lines.push(Line::from(Span::styled(
                                 "─".repeat(sep_width),
                                 Style::default().fg(Color::DarkGray),
@@ -381,7 +378,6 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
     lines
 }
 
-
 fn current_style(stack: &[Style]) -> Style {
     stack.last().copied().unwrap_or_default()
 }
@@ -471,7 +467,10 @@ mod tests {
     fn render_code_block_has_border() {
         let lines = render_md("```rust\nfn main() {}\n```");
         let t = text(&lines);
-        assert!(t.contains("╭─── rust"), "header should have rounded corner and language: {t}");
+        assert!(
+            t.contains("╭─── rust"),
+            "header should have rounded corner and language: {t}"
+        );
         assert!(t.contains("╰─"), "footer should have rounded corner: {t}");
     }
 
@@ -519,9 +518,15 @@ mod tests {
 
     #[test]
     fn table_many_columns_at_narrow_width_fits() {
-        let header: String = (0..8).map(|i| format!("H{i}")).collect::<Vec<_>>().join(" | ");
+        let header: String = (0..8)
+            .map(|i| format!("H{i}"))
+            .collect::<Vec<_>>()
+            .join(" | ");
         let sep = "---|".repeat(8);
-        let row: String = (0..8).map(|i| format!("d{i}")).collect::<Vec<_>>().join(" | ");
+        let row: String = (0..8)
+            .map(|i| format!("d{i}"))
+            .collect::<Vec<_>>()
+            .join(" | ");
         let md = format!("| {header} |\n|{sep}\n| {row} |");
         let lines = do_render(&md, 30);
         for (i, line) in lines.iter().enumerate() {
@@ -607,7 +612,8 @@ mod tests {
 
     #[test]
     fn table_truncated_shows_ellipsis() {
-        let md = "| Very long header name here | Another very long header |\n|---|---|\n| cell | data |";
+        let md =
+            "| Very long header name here | Another very long header |\n|---|---|\n| cell | data |";
         let lines = do_render(md, 30);
         let t = text(&lines);
         assert!(t.contains("…"), "truncated table should show …: {t}");
@@ -640,8 +646,7 @@ mod tests {
             if line.style.bg != Some(bg) {
                 continue;
             }
-            let content_width: usize =
-                line.spans.iter().map(|s| s.content.width()).sum();
+            let content_width: usize = line.spans.iter().map(|s| s.content.width()).sum();
             // Lines wider than width should not get additional trailing spaces
             if content_width > 80 {
                 let last_is_padding = line
@@ -649,10 +654,7 @@ mod tests {
                     .last()
                     .map(|s| s.content.trim().is_empty() && !s.content.is_empty())
                     .unwrap_or(false);
-                assert!(
-                    !last_is_padding,
-                    "wide code line should not be padded"
-                );
+                assert!(!last_is_padding, "wide code line should not be padded");
             }
         }
     }
@@ -666,11 +668,7 @@ mod tests {
             .iter()
             .map(|s| s.content.width())
             .sum();
-        let wide_width: usize = lines_wide[0]
-            .spans
-            .iter()
-            .map(|s| s.content.width())
-            .sum();
+        let wide_width: usize = lines_wide[0].spans.iter().map(|s| s.content.width()).sum();
         assert!(
             wide_width > narrow_width,
             "wider terminal should produce wider border: narrow={narrow_width}, wide={wide_width}"
@@ -699,16 +697,13 @@ mod tests {
     fn tables_and_borders_fit_within_width() {
         // Tables, borders, rules, and padding should all fit within width.
         // Code block *content* may exceed width (it wraps via Paragraph).
-        let md = "| Col A | Col B | Col C |\n|---|---|---|\n| data | more data | even more |\n\n---";
+        let md =
+            "| Col A | Col B | Col C |\n|---|---|---|\n| data | more data | even more |\n\n---";
         for w in [30, 60, 80, 120] {
             let lines = do_render(md, w);
             for (i, line) in lines.iter().enumerate() {
-                let lw: usize =
-                    line.spans.iter().map(|s| s.content.width()).sum();
-                assert!(
-                    lw <= w,
-                    "width={w}, line {i} exceeds limit: {lw} cols"
-                );
+                let lw: usize = line.spans.iter().map(|s| s.content.width()).sum();
+                assert!(lw <= w, "width={w}, line {i} exceeds limit: {lw} cols");
             }
         }
     }

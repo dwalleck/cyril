@@ -58,15 +58,13 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
             lines.push(Line::from(spans));
 
             // Show description on a second line for the selected item
-            if is_selected {
-                if let Some(ref desc) = opt.description {
-                    lines.push(Line::styled(
-                        format!("    {desc}"),
-                        Style::default()
-                            .fg(Color::DarkGray)
-                            .add_modifier(Modifier::ITALIC),
-                    ));
-                }
+            if is_selected && let Some(ref desc) = opt.description {
+                lines.push(Line::styled(
+                    format!("    {desc}"),
+                    Style::default()
+                        .fg(Color::DarkGray)
+                        .add_modifier(Modifier::ITALIC),
+                ));
             }
         }
     }
@@ -89,8 +87,8 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn picker_renders() {

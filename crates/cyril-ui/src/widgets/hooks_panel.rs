@@ -21,7 +21,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
     // the title span (the title sits on the top border row in ratatui, so
     // the "margin" is what keeps the header from sitting directly under it).
     // Cap at 15 data rows before the content starts scrolling.
-    let data_rows = state.hooks.len().max(1).min(15) as u16;
+    let data_rows = state.hooks.len().clamp(1, 15) as u16;
     let height = (data_rows + 4).min(area.height.saturating_sub(4));
     let x = area.x + (area.width.saturating_sub(width)) / 2;
     let y = area.y + (area.height.saturating_sub(height)) / 2;
@@ -111,12 +111,13 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use cyril_core::types::HookInfo;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     fn draw(state: &HooksPanelState, width: u16, height: u16) -> Terminal<TestBackend> {
         let backend = TestBackend::new(width, height);

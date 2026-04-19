@@ -12,7 +12,10 @@ pub(crate) struct AgentProcess {
 impl AgentProcess {
     pub async fn spawn(agent_name: &str, cwd: &Path) -> crate::Result<Self> {
         let (program, args) = if cfg!(target_os = "windows") {
-            ("wsl".to_string(), vec![agent_name.to_string(), "acp".to_string()])
+            (
+                "wsl".to_string(),
+                vec![agent_name.to_string(), "acp".to_string()],
+            )
         } else {
             (agent_name.to_string(), vec!["acp".to_string()])
         };
@@ -24,12 +27,14 @@ impl AgentProcess {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(|e| crate::Error::with_source(
-                crate::ErrorKind::Transport {
-                    detail: format!("failed to spawn {program}"),
-                },
-                e,
-            ))?;
+            .map_err(|e| {
+                crate::Error::with_source(
+                    crate::ErrorKind::Transport {
+                        detail: format!("failed to spawn {program}"),
+                    },
+                    e,
+                )
+            })?;
 
         let stdin = child.stdin.take().ok_or_else(|| {
             crate::Error::from_kind(crate::ErrorKind::Transport {
@@ -43,6 +48,10 @@ impl AgentProcess {
             })
         })?;
 
-        Ok(Self { stdin, stdout, _child: child })
+        Ok(Self {
+            stdin,
+            stdout,
+            _child: child,
+        })
     }
 }

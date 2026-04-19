@@ -97,9 +97,7 @@ mod tests {
             Ok(42)
         }
         fn err_fn() -> Result<i32> {
-            Err(Error::from_kind(ErrorKind::Render {
-                detail: "x".into(),
-            }))
+            Err(Error::from_kind(ErrorKind::Render { detail: "x".into() }))
         }
         assert_eq!(ok_fn().ok(), Some(42));
         assert!(err_fn().is_err());
