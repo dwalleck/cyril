@@ -486,6 +486,11 @@ async fn run_bridge(
                 let params = serde_json::json!({
                     "command": command,
                     "sessionId": session_id.as_str(),
+                    // Kiro's `kiro.dev/commands/options` requires `partial:
+                    // string` (docs/kiro-acp-protocol-2.0.1.md §7). We don't
+                    // surface in-progress filter text to the bridge yet, so
+                    // send an empty string to request the full option list.
+                    "partial": "",
                 });
                 let raw_arc = match to_raw_arc(&params) {
                     Ok(arc) => arc,
