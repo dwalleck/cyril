@@ -21,10 +21,7 @@ impl FileCompleter {
     pub async fn load(cwd: &Path) -> Self {
         match Self::run_git_ls_files(cwd).await {
             Ok(file_list) => {
-                tracing::info!(
-                    "Loaded {} project files for @-completion",
-                    file_list.len()
-                );
+                tracing::info!("Loaded {} project files for @-completion", file_list.len());
                 Self::from_files_with_root(cwd.to_path_buf(), file_list)
             }
             Err(err) => {
@@ -175,6 +172,8 @@ pub fn read_file(root: &Path, relative_path: &str) -> std::io::Result<String> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[test]
@@ -247,7 +246,10 @@ mod tests {
     fn parse_refs_ignores_mid_word_at() {
         let known: HashSet<String> = ["file.rs".into()].into_iter().collect();
         let refs = parse_file_references("user@file.rs", &known);
-        assert!(refs.is_empty(), "@ preceded by non-whitespace should be ignored");
+        assert!(
+            refs.is_empty(),
+            "@ preceded by non-whitespace should be ignored"
+        );
     }
 
     #[test]

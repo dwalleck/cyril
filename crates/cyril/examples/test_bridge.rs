@@ -7,6 +7,8 @@
 //!   cargo run --example test_bridge
 //!   cargo run --example test_bridge -- --agent sonnet
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::time::Duration;
 
 use clap::Parser;
@@ -49,9 +51,12 @@ async fn main() -> anyhow::Result<()> {
 
     // Drain notifications for a few seconds — session creation triggers
     // several notifications (SessionCreated, CommandsUpdated, MetadataUpdated)
-    let session_id =
-        drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3))
-            .await;
+    let session_id = drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
 
     let session_id = match session_id {
         Some(id) => {
@@ -72,7 +77,12 @@ async fn main() -> anyhow::Result<()> {
             session_id: session_id.clone(),
         })
         .await?;
-    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3)).await;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
     println!();
 
     // --- Test 3: Query agent options ---
@@ -83,7 +93,12 @@ async fn main() -> anyhow::Result<()> {
             session_id: session_id.clone(),
         })
         .await?;
-    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3)).await;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
     println!();
 
     // --- Test 4: Execute /tools ---
@@ -95,7 +110,12 @@ async fn main() -> anyhow::Result<()> {
             args: serde_json::json!({}),
         })
         .await?;
-    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3)).await;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
     println!();
 
     // --- Test 5: Execute /context ---
@@ -107,7 +127,12 @@ async fn main() -> anyhow::Result<()> {
             args: serde_json::json!({}),
         })
         .await?;
-    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3)).await;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
     println!();
 
     // --- Test 6: Execute /usage ---
@@ -119,7 +144,12 @@ async fn main() -> anyhow::Result<()> {
             args: serde_json::json!({}),
         })
         .await?;
-    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3)).await;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
     println!();
 
     // --- Test 7: Switch model ---
@@ -131,7 +161,12 @@ async fn main() -> anyhow::Result<()> {
             args: serde_json::json!({"value": "claude-haiku-4.5"}),
         })
         .await?;
-    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3)).await;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
     println!();
 
     // --- Test 8: Query prompt options ---
@@ -142,7 +177,12 @@ async fn main() -> anyhow::Result<()> {
             session_id: session_id.clone(),
         })
         .await?;
-    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3)).await;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
     println!();
 
     // --- Test 9: Send a prompt to trigger UsageUpdate ---
@@ -153,7 +193,12 @@ async fn main() -> anyhow::Result<()> {
             content_blocks: vec!["Say hello in one word.".into()],
         })
         .await?;
-    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(15)).await;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(15),
+    )
+    .await;
     println!();
 
     // --- Test 10: Query chat sessions ---
@@ -164,7 +209,12 @@ async fn main() -> anyhow::Result<()> {
             session_id: session_id.clone(),
         })
         .await?;
-    drain_notifications(&mut notification_rx, &mut permission_rx, Duration::from_secs(3)).await;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
     println!();
 
     // --- Shutdown ---
@@ -210,7 +260,9 @@ async fn drain_notifications(
                 } else {
                     PermissionResponse::Cancel
                 };
-                let _ = permission.responder.send(response);
+                if permission.responder.send(response).is_err() {
+                    eprintln!("  [WARN] permission response dropped (receiver closed)");
+                }
             }
 
             _ = tokio::time::sleep_until(deadline) => {
@@ -228,13 +280,20 @@ fn print_notification(n: &Notification) {
             session_id,
             current_mode,
             current_model,
+            available_modes,
+            available_models,
         } => {
             println!("  [SessionCreated]");
             println!("    session_id: {}", session_id.as_str());
             println!(
                 "    current_mode: {}",
-                current_mode.as_deref().unwrap_or("(none)")
+                current_mode
+                    .as_ref()
+                    .map(|m| m.as_str())
+                    .unwrap_or("(none)")
             );
+            println!("    available_modes: {}", available_modes.len());
+            println!("    available_models: {}", available_models.len());
             println!(
                 "    current_model: {}",
                 current_model.as_deref().unwrap_or("(none)")
@@ -250,6 +309,13 @@ fn print_notification(n: &Notification) {
             let preview: String = msg.text.chars().take(80).collect();
             println!(
                 "  [AgentMessage] streaming={} text={preview}...",
+                msg.is_streaming
+            );
+        }
+        Notification::UserMessage(msg) => {
+            let preview: String = msg.text.chars().take(80).collect();
+            println!(
+                "  [UserMessage] streaming={} text={preview}...",
                 msg.is_streaming
             );
         }
@@ -290,8 +356,15 @@ fn print_notification(n: &Notification) {
                 );
             }
         }
-        Notification::CommandsUpdated { commands: cmds, prompts } => {
-            println!("  [CommandsUpdated] {} commands, {} prompts", cmds.len(), prompts.len());
+        Notification::CommandsUpdated {
+            commands: cmds,
+            prompts,
+        } => {
+            println!(
+                "  [CommandsUpdated] {} commands, {} prompts",
+                cmds.len(),
+                prompts.len()
+            );
             for cmd in cmds {
                 println!(
                     "    {:<20} sel={:<5} local={:<5} {}",
@@ -315,13 +388,10 @@ fn print_notification(n: &Notification) {
             );
         }
         Notification::AgentSwitched { name, welcome, .. } => {
-            println!(
-                "  [AgentSwitched] name={name} welcome={:?}",
-                welcome
-            );
+            println!("  [AgentSwitched] name={name} welcome={:?}", welcome);
         }
-        Notification::CompactionStatus { message } => {
-            println!("  [CompactionStatus] {message}");
+        Notification::CompactionStatus { phase, summary } => {
+            println!("  [CompactionStatus] phase={phase:?} summary={summary:?}");
         }
         Notification::ClearStatus { message } => {
             println!("  [ClearStatus] {message}");
@@ -346,7 +416,9 @@ fn print_notification(n: &Notification) {
             for opt in options {
                 println!(
                     "    {:<30} value={:<25} current={} desc={:?} group={:?}",
-                    opt.label, opt.value, opt.is_current,
+                    opt.label,
+                    opt.value,
+                    opt.is_current,
                     opt.description.as_deref().unwrap_or(""),
                     opt.group.as_deref().unwrap_or("")
                 );
@@ -388,23 +460,42 @@ fn print_notification(n: &Notification) {
         Notification::McpServerInitialized { server_name } => {
             println!("  [McpReady] {server_name}");
         }
-        Notification::AgentNotFound { requested, fallback } => {
-            println!("  [AgentNotFound] {requested} -> {}", fallback.as_deref().unwrap_or("(none)"));
+        Notification::AgentNotFound {
+            requested,
+            fallback,
+        } => {
+            println!(
+                "  [AgentNotFound] {requested} -> {}",
+                fallback.as_deref().unwrap_or("(none)")
+            );
         }
         Notification::AgentConfigError { path, error } => {
             println!("  [AgentConfigError] {path}: {error}");
         }
-        Notification::ModelNotFound { requested, fallback } => {
-            println!("  [ModelNotFound] {requested} -> {}", fallback.as_deref().unwrap_or("(none)"));
+        Notification::ModelNotFound {
+            requested,
+            fallback,
+        } => {
+            println!(
+                "  [ModelNotFound] {requested} -> {}",
+                fallback.as_deref().unwrap_or("(none)")
+            );
         }
-        Notification::SubagentListUpdated { subagents, pending_stages } => {
+        Notification::SubagentListUpdated {
+            subagents,
+            pending_stages,
+        } => {
             println!(
                 "  [SubagentList] {} active, {} pending",
                 subagents.len(),
                 pending_stages.len()
             );
             for s in subagents {
-                let status = if s.is_working() { "working" } else { "terminated" };
+                let status = if s.is_working() {
+                    "working"
+                } else {
+                    "terminated"
+                };
                 println!("    {} ({}) — {status}", s.session_name(), s.agent_name());
             }
             for p in pending_stages {
@@ -423,16 +514,17 @@ fn print_notification(n: &Notification) {
             );
         }
         Notification::SubagentSpawned { session_id, name } => {
-            println!(
-                "  [SubagentSpawned] {name} ({})",
-                session_id.as_str()
-            );
+            println!("  [SubagentSpawned] {name} ({})", session_id.as_str());
         }
         Notification::SubagentTerminated { session_id } => {
             println!("  [SubagentTerminated] ({})", session_id.as_str());
         }
         Notification::BridgeError { operation, message } => {
             println!("  [BridgeError] {operation}: {message}");
+        }
+        Notification::UsageUpdated { used, size } => {
+            let pct = *used as f64 / (*size).max(1) as f64 * 100.0;
+            println!("  [UsageUpdated] {used}/{size} tokens ({pct:.1}%)");
         }
     }
 }

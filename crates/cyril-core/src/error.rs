@@ -131,7 +131,9 @@ mod tests {
                 "session abc not found",
             ),
             (
-                ErrorKind::UnknownCommand { name: "/foo".into() },
+                ErrorKind::UnknownCommand {
+                    name: "/foo".into(),
+                },
                 "unknown command: /foo",
             ),
             (

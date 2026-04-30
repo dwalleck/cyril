@@ -16,11 +16,7 @@ impl Command for SessionsCommand {
         "List active subagents and pending stages"
     }
 
-    async fn execute(
-        &self,
-        ctx: &CommandContext<'_>,
-        _args: &str,
-    ) -> crate::Result<CommandResult> {
+    async fn execute(&self, ctx: &CommandContext<'_>, _args: &str) -> crate::Result<CommandResult> {
         let tracker = match ctx.require_tracker() {
             Ok(t) => t,
             Err(msg) => return Ok(msg),
@@ -222,10 +218,8 @@ mod tests {
             SubagentStatus::Working {
                 message: Some("Running".into()),
             },
-            Some("crew-a".into()),
-            None,
-            vec![],
-        );
+        )
+        .with_group(Some("crew-a".into()));
         let stage = PendingStage::new(
             "summary",
             None,

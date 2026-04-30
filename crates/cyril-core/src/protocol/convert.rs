@@ -15,7 +15,66 @@ pub(crate) fn to_tool_kind(kind: agent_client_protocol::ToolKind) -> ToolKind {
         agent_client_protocol::ToolKind::Search => ToolKind::Search,
         agent_client_protocol::ToolKind::Think => ToolKind::Think,
         agent_client_protocol::ToolKind::Fetch => ToolKind::Fetch,
+        agent_client_protocol::ToolKind::SwitchMode => ToolKind::SwitchMode,
         _ => ToolKind::Other,
+    }
+}
+
+/// Convert an ACP `SessionMode` into cyril's domain type, lifting the
+/// Kiro-specific `_meta.welcomeMessage` field out of the `_meta` bag.
+pub(crate) fn to_session_mode(mode: &acp::SessionMode) -> SessionMode {
+    let welcome = mode.meta.as_ref().and_then(|m| {
+        m.get("welcomeMessage").and_then(|v| match v.as_str() {
+            Some(s) => Some(s.to_string()),
+            None => {
+                tracing::warn!(
+                    mode_id = %mode.id,
+                    value = ?v,
+                    "_meta.welcomeMessage present but not a string, ignoring"
+                );
+                None
+            }
+        })
+    });
+    SessionMode::new(
+        ModeId::new(mode.id.to_string()),
+        mode.name.clone(),
+        mode.description.clone(),
+    )
+    .with_welcome_message(welcome)
+}
+
+/// Convert an ACP `ModelInfo` into cyril's domain type.
+pub(crate) fn to_model_info(info: &acp::ModelInfo) -> ModelInfo {
+    ModelInfo::new(
+        ModelId::new(info.model_id.to_string()),
+        info.name.clone(),
+        info.description.clone(),
+    )
+}
+
+/// Build a `SessionCreated` notification from the mode/model state returned
+/// by `session/new` or `session/load`. Consolidates the ACP→cyril conversion
+/// in one place alongside the per-item converters it calls.
+pub(crate) fn session_created_from_response(
+    session_id: String,
+    modes: Option<&acp::SessionModeState>,
+    models: Option<&acp::SessionModelState>,
+) -> Notification {
+    let current_mode = modes.map(|m| ModeId::new(m.current_mode_id.to_string()));
+    let available_modes: Vec<SessionMode> = modes
+        .map(|m| m.available_modes.iter().map(to_session_mode).collect())
+        .unwrap_or_default();
+    let current_model = models.map(|m| m.current_model_id.to_string());
+    let available_models: Vec<ModelInfo> = models
+        .map(|m| m.available_models.iter().map(to_model_info).collect())
+        .unwrap_or_default();
+    Notification::SessionCreated {
+        session_id: SessionId::new(session_id),
+        current_mode,
+        current_model,
+        available_modes,
+        available_models,
     }
 }
 
@@ -165,16 +224,12 @@ fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
     let role = v.get("role").and_then(|r| r.as_str()).map(String::from);
     let depends_on = parse_string_array(v, "dependsOn");
 
-    Some(SubagentInfo::new(
-        session_id,
-        session_name,
-        agent_name,
-        initial_query,
-        status,
-        group,
-        role,
-        depends_on,
-    ))
+    Some(
+        SubagentInfo::new(session_id, session_name, agent_name, initial_query, status)
+            .with_group(group)
+            .with_role(role)
+            .with_depends_on(depends_on),
+    )
 }
 
 /// Parse a single pending stage entry from a `subagent/list_update` JSON array element.
@@ -265,45 +320,44 @@ pub(crate) fn to_ext_notification(
             }))
         }
         "kiro.dev/compaction/status" => {
-            let message = if let Some(status) = params.get("status") {
-                let status_type = status
-                    .get("type")
-                    .and_then(|t| t.as_str())
-                    .unwrap_or("unknown");
-                match status_type {
-                    "started" => "Compacting conversation context...".to_string(),
-                    "completed" => {
-                        let summary = params
-                            .get("summary")
-                            .and_then(|s| s.as_str())
-                            .unwrap_or("done");
-                        format!("Compaction completed: {summary}")
-                    }
-                    "failed" => {
-                        let error = status
-                            .get("error")
-                            .and_then(|e| e.as_str())
-                            .unwrap_or("unknown error");
-                        format!("Compaction failed: {error}")
-                    }
-                    other => format!("Compaction: {other}"),
+            let Some(status) = params.get("status") else {
+                tracing::warn!(
+                    "kiro.dev/compaction/status: missing status object, dropping notification"
+                );
+                return Ok(None);
+            };
+            let status_type = status.get("type").and_then(|t| t.as_str());
+            let (phase, summary) = match status_type {
+                Some("started") => (CompactionPhase::Started, None),
+                Some("completed") => {
+                    let summary = params
+                        .get("summary")
+                        .and_then(|s| s.as_str())
+                        .map(String::from);
+                    (CompactionPhase::Completed, summary)
                 }
-            } else {
-                match params
-                    .get("message")
-                    .and_then(|v| v.as_str())
-                    .filter(|s| !s.is_empty())
-                {
-                    Some(msg) => msg.to_string(),
-                    None => {
-                        tracing::warn!(
-                            "kiro.dev/compaction/status: no status object or message field"
-                        );
-                        return Ok(None);
-                    }
+                Some("failed") => {
+                    let error = status
+                        .get("error")
+                        .and_then(|e| e.as_str())
+                        .map(String::from);
+                    (CompactionPhase::Failed { error }, None)
+                }
+                Some(other) => {
+                    tracing::warn!(
+                        status_type = other,
+                        "kiro.dev/compaction/status: unknown status type, dropping"
+                    );
+                    return Ok(None);
+                }
+                None => {
+                    tracing::warn!(
+                        "kiro.dev/compaction/status: status object missing `type` field"
+                    );
+                    return Ok(None);
                 }
             };
-            Ok(Some(Notification::CompactionStatus { message }))
+            Ok(Some(Notification::CompactionStatus { phase, summary }))
         }
         "kiro.dev/clear/status" => {
             let message = match params
@@ -748,13 +802,27 @@ pub(crate) fn to_permission_options(args: &acp::RequestPermissionRequest) -> Vec
     args.options
         .iter()
         .map(|opt| {
+            let kind = match opt.kind {
+                acp::PermissionOptionKind::AllowOnce => PermissionOptionKind::AllowOnce,
+                acp::PermissionOptionKind::AllowAlways => PermissionOptionKind::AllowAlways,
+                acp::PermissionOptionKind::RejectOnce => PermissionOptionKind::RejectOnce,
+                acp::PermissionOptionKind::RejectAlways => PermissionOptionKind::RejectAlways,
+                _ => {
+                    tracing::warn!(
+                        ?opt.kind,
+                        "unknown PermissionOptionKind variant; defaulting to RejectOnce"
+                    );
+                    PermissionOptionKind::RejectOnce
+                }
+            };
             let is_destructive = matches!(
-                opt.kind,
-                acp::PermissionOptionKind::RejectOnce | acp::PermissionOptionKind::RejectAlways
+                kind,
+                PermissionOptionKind::RejectOnce | PermissionOptionKind::RejectAlways
             );
             PermissionOption {
                 id: opt.option_id.to_string(),
                 label: opt.name.clone(),
+                kind,
                 is_destructive,
             }
         })
@@ -789,6 +857,10 @@ pub(crate) fn from_permission_response(
         }
         PermissionResponse::Reject => {
             let option_id = find_option_id(args, acp::PermissionOptionKind::RejectOnce);
+            acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
+        }
+        PermissionResponse::RejectAlways => {
+            let option_id = find_option_id(args, acp::PermissionOptionKind::RejectAlways);
             acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
         }
     };
@@ -852,6 +924,16 @@ pub(crate) fn session_update_to_notification(
     cached_inputs: &HashMap<String, serde_json::Value>,
 ) -> Option<Notification> {
     match &args.update {
+        acp::SessionUpdate::UserMessageChunk(chunk) => {
+            if let acp::ContentBlock::Text(ref text) = chunk.content {
+                Some(Notification::UserMessage(UserMessage {
+                    text: text.text.clone(),
+                    is_streaming: true,
+                }))
+            } else {
+                None
+            }
+        }
         acp::SessionUpdate::AgentMessageChunk(chunk) => {
             if let acp::ContentBlock::Text(ref text) = chunk.content {
                 Some(Notification::AgentMessage(AgentMessage {
@@ -936,7 +1018,7 @@ pub(crate) fn session_update_to_notification(
             Some(Notification::PlanUpdated(Plan::new(entries)))
         }
         acp::SessionUpdate::CurrentModeUpdate(mode) => Some(Notification::ModeChanged {
-            mode_id: mode.current_mode_id.to_string(),
+            mode_id: ModeId::new(mode.current_mode_id.to_string()),
         }),
         acp::SessionUpdate::ConfigOptionUpdate(update) => {
             let options = update
@@ -986,6 +1068,18 @@ pub(crate) fn session_update_to_notification(
                 prompts: Vec::new(),
             })
         }
+        acp::SessionUpdate::UsageUpdate(usage) => {
+            tracing::info!(
+                used = usage.used,
+                size = usage.size,
+                has_cost = usage.cost.is_some(),
+                "received ACP UsageUpdate (unstable_session_usage)"
+            );
+            Some(Notification::UsageUpdated {
+                used: usage.used,
+                size: usage.size,
+            })
+        }
         _ => {
             tracing::debug!("unhandled session update variant");
             None
@@ -995,6 +1089,8 @@ pub(crate) fn session_update_to_notification(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[test]
@@ -1204,24 +1300,23 @@ mod tests {
     }
 
     #[test]
-    fn to_ext_notification_compaction_status_legacy() {
+    fn to_ext_notification_compaction_status_bare_message_drops() {
+        // Legacy wire shape with only a flat `message` is no longer synthesized
+        // into a CompactionStatus; without a `status.type` we can't classify it.
         let params = serde_json::json!({"message": "50% done"});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
-        if let Ok(Some(Notification::CompactionStatus { message })) = result {
-            assert_eq!(message, "50% done");
-        } else {
-            panic!("expected CompactionStatus");
-        }
+        assert!(matches!(result, Ok(None)));
     }
 
     #[test]
     fn to_ext_notification_compaction_status_started() {
         let params = serde_json::json!({"status": {"type": "started"}});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
-        if let Ok(Some(Notification::CompactionStatus { message })) = result {
-            assert!(message.contains("Compacting"), "got: {message}");
+        if let Ok(Some(Notification::CompactionStatus { phase, summary })) = result {
+            assert_eq!(phase, CompactionPhase::Started);
+            assert!(summary.is_none());
         } else {
-            panic!("expected CompactionStatus");
+            panic!("expected CompactionStatus, got {result:?}");
         }
     }
 
@@ -1229,10 +1324,16 @@ mod tests {
     fn to_ext_notification_compaction_status_failed() {
         let params = serde_json::json!({"status": {"type": "failed", "error": "out of memory"}});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
-        if let Ok(Some(Notification::CompactionStatus { message })) = result {
-            assert!(message.contains("out of memory"), "got: {message}");
+        if let Ok(Some(Notification::CompactionStatus { phase, summary })) = result {
+            assert_eq!(
+                phase,
+                CompactionPhase::Failed {
+                    error: Some("out of memory".into())
+                }
+            );
+            assert!(summary.is_none());
         } else {
-            panic!("expected CompactionStatus");
+            panic!("expected CompactionStatus, got {result:?}");
         }
     }
 
@@ -1241,10 +1342,11 @@ mod tests {
         let params =
             serde_json::json!({"status": {"type": "completed"}, "summary": "3 turns removed"});
         let result = to_ext_notification("kiro.dev/compaction/status", &params);
-        if let Ok(Some(Notification::CompactionStatus { message })) = result {
-            assert!(message.contains("3 turns removed"), "got: {message}");
+        if let Ok(Some(Notification::CompactionStatus { phase, summary })) = result {
+            assert_eq!(phase, CompactionPhase::Completed);
+            assert_eq!(summary.as_deref(), Some("3 turns removed"));
         } else {
-            panic!("expected CompactionStatus");
+            panic!("expected CompactionStatus, got {result:?}");
         }
     }
 
@@ -1469,6 +1571,33 @@ mod tests {
         } else {
             panic!("expected Selected outcome");
         }
+    }
+
+    #[test]
+    fn from_permission_response_reject_always() {
+        let req = make_permission_request(vec![
+            ("opt_allow", "Yes", acp::PermissionOptionKind::AllowOnce),
+            (
+                "opt_reject_always",
+                "Never",
+                acp::PermissionOptionKind::RejectAlways,
+            ),
+        ]);
+
+        let resp = from_permission_response(PermissionResponse::RejectAlways, &req);
+        if let acp::RequestPermissionOutcome::Selected(selected) = resp.outcome {
+            assert_eq!(selected.option_id.to_string(), "opt_reject_always");
+        } else {
+            panic!("expected Selected outcome");
+        }
+    }
+
+    #[test]
+    fn to_tool_kind_switch_mode() {
+        assert_eq!(
+            to_tool_kind(agent_client_protocol::ToolKind::SwitchMode),
+            ToolKind::SwitchMode
+        );
     }
 
     #[test]
@@ -2128,6 +2257,184 @@ mod tests {
             assert!(prompts.is_empty());
         } else {
             panic!("expected CommandsUpdated");
+        }
+    }
+
+    // --- to_session_mode / to_model_info conversion tests ---
+
+    fn acp_session_mode(id: &str, name: &str, meta: Option<acp::Meta>) -> acp::SessionMode {
+        let mut m = acp::SessionMode::new(acp::SessionModeId::new(id.to_string()), name);
+        m.meta = meta;
+        m
+    }
+
+    #[test]
+    fn to_session_mode_extracts_welcome_message_from_meta() {
+        let mut meta = serde_json::Map::new();
+        meta.insert(
+            "welcomeMessage".into(),
+            serde_json::json!("Transform any idea..."),
+        );
+        let acp_mode = acp_session_mode("kiro_planner", "kiro_planner", Some(meta));
+        let mode = to_session_mode(&acp_mode);
+        assert_eq!(mode.welcome_message(), Some("Transform any idea..."));
+        assert_eq!(mode.id().as_str(), "kiro_planner");
+        assert_eq!(mode.label(), "kiro_planner");
+    }
+
+    #[test]
+    fn to_session_mode_no_meta_yields_no_welcome() {
+        let acp_mode = acp_session_mode("kiro_default", "kiro_default", None);
+        let mode = to_session_mode(&acp_mode);
+        assert_eq!(mode.welcome_message(), None);
+    }
+
+    #[test]
+    fn to_session_mode_meta_without_welcome_key() {
+        let mut meta = serde_json::Map::new();
+        meta.insert("unrelated".into(), serde_json::json!("value"));
+        let acp_mode = acp_session_mode("kiro_default", "kiro_default", Some(meta));
+        let mode = to_session_mode(&acp_mode);
+        assert_eq!(mode.welcome_message(), None);
+    }
+
+    #[test]
+    fn to_session_mode_non_string_welcome_is_ignored() {
+        // If Kiro ever ships a non-string welcomeMessage, we drop it rather
+        // than panic. A warn log is emitted (not asserted here).
+        let mut meta = serde_json::Map::new();
+        meta.insert("welcomeMessage".into(), serde_json::json!(42));
+        let acp_mode = acp_session_mode("kiro_default", "kiro_default", Some(meta));
+        let mode = to_session_mode(&acp_mode);
+        assert_eq!(mode.welcome_message(), None);
+    }
+
+    #[test]
+    fn to_session_mode_copies_description() {
+        let mut acp_mode = acp_session_mode("chat", "chat", None);
+        acp_mode.description = Some("General chat".into());
+        let mode = to_session_mode(&acp_mode);
+        assert_eq!(mode.description(), Some("General chat"));
+    }
+
+    #[test]
+    fn to_model_info_round_trip() {
+        let acp_info = acp::ModelInfo::new(
+            acp::ModelId::new("claude-sonnet-4".to_string()),
+            "Claude Sonnet 4",
+        )
+        .description(Some("Fast model".to_string()));
+        let info = to_model_info(&acp_info);
+        assert_eq!(info.id().as_str(), "claude-sonnet-4");
+        assert_eq!(info.name(), "Claude Sonnet 4");
+        assert_eq!(info.description(), Some("Fast model"));
+    }
+
+    #[test]
+    fn to_model_info_no_description() {
+        let acp_info = acp::ModelInfo::new(acp::ModelId::new("claude-haiku".to_string()), "Haiku");
+        let info = to_model_info(&acp_info);
+        assert_eq!(info.description(), None);
+    }
+
+    // --- session_created_from_response helper tests ---
+
+    fn acp_mode_with_welcome(id: &str, name: &str, welcome: Option<&str>) -> acp::SessionMode {
+        let mut m = acp::SessionMode::new(acp::SessionModeId::new(id.to_string()), name);
+        if let Some(w) = welcome {
+            let mut meta = serde_json::Map::new();
+            meta.insert("welcomeMessage".into(), serde_json::json!(w));
+            m.meta = Some(meta);
+        }
+        m
+    }
+
+    #[test]
+    fn session_created_from_response_populates_modes_and_welcome() {
+        let mode_state = acp::SessionModeState::new(
+            acp::SessionModeId::new("kiro_planner".to_string()),
+            vec![
+                acp_mode_with_welcome("kiro_default", "kiro_default", None),
+                acp_mode_with_welcome(
+                    "kiro_planner",
+                    "kiro_planner",
+                    Some("Transform any idea..."),
+                ),
+            ],
+        );
+
+        let notif = session_created_from_response("s1".into(), Some(&mode_state), None);
+        match notif {
+            Notification::SessionCreated {
+                session_id,
+                current_mode,
+                current_model,
+                available_modes,
+                available_models,
+            } => {
+                assert_eq!(session_id.as_str(), "s1");
+                assert_eq!(
+                    current_mode.as_ref().map(ModeId::as_str),
+                    Some("kiro_planner")
+                );
+                assert_eq!(current_model, None);
+                assert_eq!(available_modes.len(), 2);
+                assert_eq!(
+                    available_modes[1].welcome_message(),
+                    Some("Transform any idea...")
+                );
+                assert!(available_models.is_empty());
+            }
+            other => panic!("expected SessionCreated, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn session_created_from_response_populates_models() {
+        let model_state = acp::SessionModelState::new(
+            acp::ModelId::new("claude-sonnet-4".to_string()),
+            vec![
+                acp::ModelInfo::new(acp::ModelId::new("claude-sonnet-4".to_string()), "Sonnet"),
+                acp::ModelInfo::new(acp::ModelId::new("claude-haiku".to_string()), "Haiku"),
+            ],
+        );
+
+        let notif = session_created_from_response("s1".into(), None, Some(&model_state));
+        match notif {
+            Notification::SessionCreated {
+                current_model,
+                available_modes,
+                available_models,
+                ..
+            } => {
+                assert_eq!(current_model.as_deref(), Some("claude-sonnet-4"));
+                assert!(available_modes.is_empty());
+                assert_eq!(available_models.len(), 2);
+                assert_eq!(available_models[0].id().as_str(), "claude-sonnet-4");
+                assert_eq!(available_models[1].name(), "Haiku");
+            }
+            other => panic!("expected SessionCreated, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn session_created_from_response_none_none_yields_empty_catalogs() {
+        let notif = session_created_from_response("s1".into(), None, None);
+        match notif {
+            Notification::SessionCreated {
+                session_id,
+                current_mode,
+                current_model,
+                available_modes,
+                available_models,
+            } => {
+                assert_eq!(session_id.as_str(), "s1");
+                assert!(current_mode.is_none());
+                assert!(current_model.is_none());
+                assert!(available_modes.is_empty());
+                assert!(available_models.is_empty());
+            }
+            other => panic!("expected SessionCreated, got {other:?}"),
         }
     }
 }

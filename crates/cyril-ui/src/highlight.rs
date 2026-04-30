@@ -64,7 +64,10 @@ fn do_highlight_block(code: &str, lang: Option<&str>) -> HighlightedBlock {
                 Ok(ranges) => ranges
                     .into_iter()
                     .map(|(style, text)| {
-                        (syntect_to_ratatui(style), text.trim_end_matches('\n').to_string())
+                        (
+                            syntect_to_ratatui(style),
+                            text.trim_end_matches('\n').to_string(),
+                        )
                     })
                     .collect(),
                 Err(_) => vec![(Style::default().fg(Color::White), line.to_string())],
@@ -94,7 +97,10 @@ pub fn highlight_line(code: &str, ext: Option<&str>) -> HighlightedLine {
         Ok(ranges) => ranges
             .into_iter()
             .map(|(style, text)| {
-                (syntect_to_ratatui(style), text.trim_end_matches('\n').to_string())
+                (
+                    syntect_to_ratatui(style),
+                    text.trim_end_matches('\n').to_string(),
+                )
             })
             .collect(),
         Err(_) => vec![(Style::default().fg(Color::White), code.to_string())],
@@ -207,7 +213,12 @@ mod tests {
     #[test]
     fn syntect_to_ratatui_converts() {
         let syn_style = SynStyle {
-            foreground: syntect::highlighting::Color { r: 100, g: 150, b: 200, a: 255 },
+            foreground: syntect::highlighting::Color {
+                r: 100,
+                g: 150,
+                b: 200,
+                a: 255,
+            },
             ..SynStyle::default()
         };
         let style = syntect_to_ratatui(syn_style);

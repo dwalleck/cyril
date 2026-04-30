@@ -31,9 +31,7 @@ impl<'a> CommandContext<'a> {
         match self.subagent_tracker {
             Some(tracker) => Ok(tracker),
             None => {
-                tracing::error!(
-                    "CommandContext.subagent_tracker is None — wiring error in App"
-                );
+                tracing::error!("CommandContext.subagent_tracker is None — wiring error in App");
                 Err(CommandResult::system_message(
                     "Subagent tracker unavailable.".into(),
                 ))
@@ -520,22 +518,8 @@ mod tests {
     fn register_agent_commands_skips_local_non_selection() {
         let mut registry = CommandRegistry::new();
         let cmds = vec![
-            crate::types::CommandInfo::new(
-                "quit",
-                "Quit",
-                None::<&str>,
-                false,
-                false,
-                true,
-            ), // local, not selection → skip
-            crate::types::CommandInfo::new(
-                "compact",
-                "Compact",
-                None::<&str>,
-                false,
-                false,
-                false,
-            ), // not local → register
+            crate::types::CommandInfo::new("quit", "Quit", None::<&str>, false, false, true), // local, not selection → skip
+            crate::types::CommandInfo::new("compact", "Compact", None::<&str>, false, false, false), // not local → register
         ];
         registry.register_agent_commands(&cmds);
         assert!(
@@ -552,14 +536,7 @@ mod tests {
     fn register_agent_commands_keeps_local_selection() {
         let mut registry = CommandRegistry::new();
         let cmds = vec![
-            crate::types::CommandInfo::new(
-                "chat",
-                "Chat",
-                None::<&str>,
-                true,
-                true,
-                true,
-            ), // local AND selection → keep
+            crate::types::CommandInfo::new("chat", "Chat", None::<&str>, true, true, true), // local AND selection → keep
         ];
         registry.register_agent_commands(&cmds);
         assert!(

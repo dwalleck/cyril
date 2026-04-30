@@ -149,10 +149,10 @@ fn bridge_disconnect_updates_both() {
 fn mode_change_updates_session() {
     let mut session = SessionController::new();
     let changed = session.apply_notification(&Notification::ModeChanged {
-        mode_id: "chat".into(),
+        mode_id: ModeId::new("chat"),
     });
     assert!(changed);
-    assert_eq!(session.current_mode_id(), Some("chat"));
+    assert_eq!(session.current_mode_id().map(ModeId::as_str), Some("chat"));
 }
 
 #[test]
@@ -243,8 +243,10 @@ fn session_created_activates_both_controllers() {
 
     let notification = Notification::SessionCreated {
         session_id: SessionId::new("sess_123"),
-        current_mode: Some("kiro_default".into()),
+        current_mode: Some(ModeId::new("kiro_default")),
         current_model: None,
+        available_modes: Vec::new(),
+        available_models: Vec::new(),
     };
 
     let ui_changed = ui.apply_notification(&notification);
@@ -332,10 +334,10 @@ fn code_intelligence_active_set_on_initialized_panel() {
         }
     });
 
-    if let CodeCommandResponse::Panel(data) = CodeCommandResponse::from_json(&response) {
-        if data.status == LspStatus::Initialized {
-            ui.set_code_intelligence_active(true);
-        }
+    if let CodeCommandResponse::Panel(data) = CodeCommandResponse::from_json(&response)
+        && data.status == LspStatus::Initialized
+    {
+        ui.set_code_intelligence_active(true);
     }
 
     assert!(ui.code_intelligence_active());
@@ -355,10 +357,10 @@ fn code_intelligence_not_set_on_initializing_panel() {
         }
     });
 
-    if let CodeCommandResponse::Panel(data) = CodeCommandResponse::from_json(&response) {
-        if data.status == LspStatus::Initialized {
-            ui.set_code_intelligence_active(true);
-        }
+    if let CodeCommandResponse::Panel(data) = CodeCommandResponse::from_json(&response)
+        && data.status == LspStatus::Initialized
+    {
+        ui.set_code_intelligence_active(true);
     }
 
     assert!(!ui.code_intelligence_active());

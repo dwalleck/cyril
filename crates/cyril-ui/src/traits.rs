@@ -247,25 +247,25 @@ impl TrackedToolCall {
             }
         };
 
-        if let Some(stdout) = obj.get("stdout").and_then(|v| v.as_str()) {
-            if !stdout.trim().is_empty() {
-                return Some(stdout.to_string());
-            }
+        if let Some(stdout) = obj.get("stdout").and_then(|v| v.as_str())
+            && !stdout.trim().is_empty()
+        {
+            return Some(stdout.to_string());
         }
-        if let Some(stderr) = obj.get("stderr").and_then(|v| v.as_str()) {
-            if !stderr.trim().is_empty() {
-                return Some(stderr.to_string());
-            }
+        if let Some(stderr) = obj.get("stderr").and_then(|v| v.as_str())
+            && !stderr.trim().is_empty()
+        {
+            return Some(stderr.to_string());
         }
 
-        if let Some(items) = obj.get("items").and_then(|v| v.as_array()) {
-            if let Some(first) = items.first() {
-                if let Some(text) = first.get("Text").and_then(|v| v.as_str()) {
-                    return Some(text.to_string());
-                }
-                if let Some(json_val) = first.get("Json") {
-                    return serde_json::to_string_pretty(json_val).ok();
-                }
+        if let Some(items) = obj.get("items").and_then(|v| v.as_array())
+            && let Some(first) = items.first()
+        {
+            if let Some(text) = first.get("Text").and_then(|v| v.as_str()) {
+                return Some(text.to_string());
+            }
+            if let Some(json_val) = first.get("Json") {
+                return serde_json::to_string_pretty(json_val).ok();
             }
         }
 
@@ -527,6 +527,8 @@ pub mod test_support {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     /// Compile-time proof that TuiState is object-safe.

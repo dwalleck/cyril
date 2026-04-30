@@ -17,7 +17,47 @@ cargo test -p cyril-core             # run tests in the core crate
 cargo test -p cyril-core -- path     # run only path-related tests
 ```
 
-There is no linter or formatter configured beyond `cargo check`. The project uses Rust 2021 edition.
+The project uses Rust 2024 edition, pinned to `1.94.0` via `rust-toolchain.toml`.
+
+```sh
+cargo fmt --check                    # verify formatting
+cargo clippy -- -D warnings          # lint — all warnings are errors
+```
+
+## Development Workflow
+
+### Verify After Every Logical Change
+
+When making multi-file Rust changes, always run `cargo test` and `cargo clippy -- -D warnings` after each logical change set before moving on. Never rely on IDE diagnostics alone — rust-analyzer state can be stale, especially after cross-crate changes or renames. If `cargo check` passes but your IDE shows errors, trust `cargo check`.
+
+### Refactoring and Rewrites
+
+After any rewrite or large refactor, verify functional wiring end-to-end before declaring the work complete:
+
+- Event handlers are connected — notifications reach both `SessionController` and `UiState`
+- Streaming behavior works correctly (append, not replace) — test with a real `kiro-cli acp` session
+- All features from the previous version still function — check the key handling chain, overlays, and command dispatch
+- Cross-cutting concerns in `App` are preserved — picker wiring, model extraction, subagent routing
+
+### Subagent and Task Guidelines
+
+When using subagents for code changes:
+
+- **Non-overlapping file scopes** — each subagent must work on a distinct set of files. If two agents need to touch the same file, serialize them.
+- **Each agent validates its own work** — run `cargo test` and `cargo clippy` before finishing, not just after all agents complete.
+- **Verify completeness before moving on** — after each subagent finishes, check for unstaged files, incomplete implementations, and TODO comments left behind.
+- **Never weaken lint rules** — if a subagent disables `unsafe_code = "forbid"` or downgrades `unwrap_used = "deny"` to make its code compile, that is a bug to fix, not a shortcut to accept.
+
+### Reverse Engineering
+
+When reverse-engineering Kiro CLI or similar tools, follow this priority order:
+
+1. **Application logs first** — check `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` and `~/.kiro/` for structured logs and SQLite databases
+2. **Bundled source extraction** — Kiro ships a bundled `tui.js` (React/Ink TUI) that contains TypeScript interfaces and protocol handling; extract and read it
+3. **Binary string extraction** — `strings` / symbol analysis on unstripped binaries as a last resort
+4. **Protocol tracing** — use the logging proxy at `experiments/kiro-proxy-rs/` to capture live ACP traffic
+
+Check logs and databases before attempting binary analysis — they're more reliable and faster to work with.
 
 ## Architecture
 
@@ -310,6 +350,61 @@ State tests verify data transitions. Render tests verify presentation. Both are 
 - **Render order tests**: Render to `TestBackend`, extract the buffer, assert character positions maintain chronological order.
 - **Merge tests**: Verify that partial updates preserve existing fields (content, locations, title, raw_input) when the update doesn't provide them.
 
+## Rust Code Standards
+
+### Workspace Safety Rails
+
+These are already configured — maintain them when adding crates or dependencies:
+
+- **Unsafe is forbidden** — `[workspace.lints.rust] unsafe_code = "forbid"` in root `Cargo.toml`
+- **Lint inheritance** — every member crate has `[lints] workspace = true`. Never override lints per-crate.
+- **Pinned toolchain** — `rust-toolchain.toml` locks the exact Rust version (`1.94.0`), not `"stable"`. `rust-version` in `[workspace.package]` mirrors it for downstream consumers.
+- **Minimal toolchain profile** — only `rustfmt` and `clippy` components. Don't add extras unless needed.
+- **Centralized versions** — all dependency versions live in `[workspace.dependencies]`. Member crates reference with `{ workspace = true }`, never specifying their own version.
+- **Explicit feature selection** — `default-features = false` then list only what you need (see `tokio`, `crossterm`, `pulldown-cmark` in the root `Cargo.toml` for examples).
+
+### Build Profiles
+
+Four profiles are configured — use the right one:
+
+- **`dev`**: `incremental = true`, `opt-level = 0` — fast compile cycles
+- **`test`**: `opt-level = 1` — tests run faster without full optimization penalty
+- **`release`**: `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"` — smallest, fastest binary
+- **`release-with-debug`**: inherits release but keeps `debug = 2`, `strip = "none"` — for production crash investigation
+
+### Code Discipline
+
+These are project invariants maintained from inception, not aspirations. Maintaining them is dramatically easier than retrofitting.
+
+- **Zero `.unwrap()` in non-test code** — enforced by `clippy::unwrap_used = "deny"` at the workspace level. Propagate with `?`, use `if let` / `match`, or return `Option`/`Result`. `.expect("reason")` is allowed (warning-level) for compile-time invariants like hardcoded regex.
+- **Zero `let _ =` discarded Results** — handle or propagate every `Result`. If truly best-effort, log the error: `if let Err(e) = operation { warn!(...) }`. Use `send_or_log()` for channel sends.
+- **Zero `#[allow(...)]` directives** — don't suppress warnings, fix them. When every warning is resolved, new compiler/clippy lints are immediately actionable signal, not buried in noise.
+- **Zero sentinel values** — covered in Design Principles under "Use `Option` for absent values." Restated here: never use magic values (`0.0`, `""`, a catch-all enum variant) to mean "absent."
+
+### Error Type Design
+
+- **Use `thiserror`** — `#[derive(Debug, thiserror::Error)]` for all error types. The workspace already depends on `thiserror`.
+- **Map external errors at the boundary** — convert library-specific errors into your domain's error variants in `convert.rs` or adapter code. Never leak third-party error types (like `acp::` errors) across crate boundaries.
+- **Structured error metadata** — error types should carry enough context to diagnose without a debugger (command attempted, response received, what went wrong).
+- **Accessor methods over `pub` fields** — expose error data through methods, not public struct fields. This lets you refactor internals without breaking callers.
+
+### Test Organization
+
+- **Unit tests colocated** — `#[cfg(test)] mod tests` in the same file as production code
+- **Integration tests in `tests/`** — each `.rs` file compiles as its own crate
+- **`tempfile::tempdir()` for isolation** — no hardcoded paths, automatic cleanup. The workspace already depends on `tempfile`.
+- **Fixture data as files** — `tests/fixtures/` with expected input/output pairs for complex scenarios
+- **Helper functions, not macros** — extract common test setup as plain functions
+- **Test error messages explicitly** — verify error wording with `assert_eq!(failure.to_string(), "expected message")` to catch regressions in user-facing errors
+- **Snapshot testing with `insta`** — use for complex output comparisons where exact string matching is brittle
+
+### Silent Failure Prevention
+
+- **Log before returning `None`** — if a function returns `Option` and the `None` path represents something going wrong (not just "not found"), log context at `debug!` or `warn!` level before returning.
+- **Return `Err` for invalid inputs, not empty collections** — `Ok(Vec::new())` when the input was malformed is misleading; it looks like success.
+- **Distinguish "missing" from "corrupt"** — a file that doesn't exist and a file that fails to parse are different failure modes. Don't collapse them with `.ok()?`.
+- **Audit `.ok()`, `filter_map(Result::ok)`, `let _ =`** — before using these, ask: "Does anyone need to know which failure mode this was?"
+
 ## Platform Constraints
 
 - **Linux:** spawns `kiro-cli acp` directly; requires kiro-cli installed and on PATH
@@ -317,3 +412,5 @@ State tests verify data transitions. Render tests verify presentation. Both are 
 - Path translation (`C:\` ↔ `/mnt/c/`) is active only on Windows; on Linux it's a no-op
 - Terminal commands from the agent run natively on the host OS
 - Logs go to `cyril.log` in the working directory (append mode) to avoid TUI conflicts
+
+

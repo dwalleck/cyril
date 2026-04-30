@@ -5,6 +5,17 @@ pub struct AgentMessage {
     pub is_streaming: bool,
 }
 
+/// A user-authored message replayed by the agent.
+///
+/// Kiro emits `UserMessageChunk` variants during `session/load` to replay
+/// conversation history. Without capturing these, loaded sessions would
+/// only show agent responses, never the user turns that preceded them.
+#[derive(Debug, Clone)]
+pub struct UserMessage {
+    pub text: String,
+    pub is_streaming: bool,
+}
+
 /// A thought/reasoning block from the agent (usually collapsed in UI).
 #[derive(Debug, Clone)]
 pub struct AgentThought {

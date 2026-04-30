@@ -51,8 +51,8 @@ pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::backend::TestBackend;
     use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     #[test]
     fn approval_renders() {
@@ -69,11 +69,13 @@ mod tests {
                 cyril_core::types::PermissionOption {
                     id: "allow".into(),
                     label: "Allow Once".into(),
+                    kind: cyril_core::types::PermissionOptionKind::AllowOnce,
                     is_destructive: false,
                 },
                 cyril_core::types::PermissionOption {
                     id: "reject".into(),
                     label: "Reject".into(),
+                    kind: cyril_core::types::PermissionOptionKind::RejectOnce,
                     is_destructive: true,
                 },
             ],

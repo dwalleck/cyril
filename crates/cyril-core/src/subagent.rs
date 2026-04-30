@@ -123,6 +123,8 @@ impl Default for SubagentTracker {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     fn working_info(id: &str, name: &str) -> SubagentInfo {
@@ -134,10 +136,9 @@ mod tests {
             SubagentStatus::Working {
                 message: Some("Running".into()),
             },
-            Some("crew-test".into()),
-            Some(name.to_string()),
-            vec![],
         )
+        .with_group(Some("crew-test".into()))
+        .with_role(Some(name.to_string()))
     }
 
     fn terminated_info(id: &str, name: &str) -> SubagentInfo {
@@ -147,10 +148,8 @@ mod tests {
             name,
             "query",
             SubagentStatus::Terminated,
-            Some("crew-test".into()),
-            None,
-            vec![],
         )
+        .with_group(Some("crew-test".into()))
     }
 
     #[test]

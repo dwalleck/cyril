@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 use tokio::sync::mpsc;
 
-use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
+use crate::protocol::convert::session_created_from_response;
 use crate::types::StopReason;
+use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -153,6 +154,29 @@ fn to_raw_arc(
     Ok(raw.into())
 }
 
+/// Parse an ACP `ExtResponse` payload into a `serde_json::Value`. Returns the
+/// raw `serde_json::Error` on failure so callers can emit a `BridgeError`
+/// notification distinguishing "Kiro returned malformed JSON" from "Kiro
+/// returned a legitimately empty result" — the two should not collapse into
+/// the same empty-picker/blank-response UI state.
+fn parse_response(
+    raw: &serde_json::value::RawValue,
+) -> std::result::Result<serde_json::Value, serde_json::Error> {
+    serde_json::from_str(raw.get())
+}
+
+/// Send a notification on the bridge channel; returns `true` if the channel
+/// is closed (App died). Callers should `break` the command loop when this
+/// returns true — otherwise the bridge keeps the Kiro subprocess alive after
+/// the App has gone away. Use for BOTH success and error paths to keep the
+/// "App disconnected" detection symmetric.
+async fn notify_or_closed(
+    tx: &mpsc::Sender<RoutedNotification>,
+    notification: Notification,
+) -> bool {
+    tx.send(notification.into()).await.is_err()
+}
+
 async fn run_bridge(
     agent: &str,
     cwd: &std::path::Path,
@@ -220,32 +244,27 @@ async fn run_bridge(
                 {
                     Ok(response) => {
                         active_session_id = Some(response.session_id.clone());
-                        let session_id = response.session_id.to_string();
-                        let current_mode = response
-                            .modes
-                            .as_ref()
-                            .map(|m| m.current_mode_id.to_string());
-                        // TODO: extract current_model from response.models once the
-                        // `unstable_session_model` feature is enabled in agent-client-protocol-schema.
-                        // The field exists in the schema but is gated behind a feature flag.
-                        let current_model: Option<String> = None;
-                        let notification = Notification::SessionCreated {
-                            session_id: crate::types::SessionId::new(session_id),
-                            current_mode,
-                            current_model,
-                        };
-                        if channels.notification_tx.send(notification.into()).await.is_err() {
+                        let notification = session_created_from_response(
+                            response.session_id.to_string(),
+                            response.modes.as_ref(),
+                            response.models.as_ref(),
+                        );
+                        if notify_or_closed(&channels.notification_tx, notification).await {
                             break;
                         }
                     }
                     Err(e) => {
                         tracing::error!(error = %e, "new_session failed");
-                        let _ = channels
-                            .notification_tx
-                            .send(Notification::BridgeDisconnected {
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeDisconnected {
                                 reason: format!("Failed to create session: {e}"),
-                            }.into())
-                            .await;
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                     }
                 }
             }
@@ -261,7 +280,8 @@ async fn run_bridge(
                 let request = acp::PromptRequest::new(acp_session_id, prompt);
                 match conn.prompt(request).await {
                     Ok(response) => {
-                        let stop_reason = crate::protocol::convert::to_stop_reason(response.stop_reason);
+                        let stop_reason =
+                            crate::protocol::convert::to_stop_reason(response.stop_reason);
                         if channels
                             .notification_tx
                             .send(Notification::TurnCompleted { stop_reason }.into())
@@ -276,10 +296,16 @@ async fn run_bridge(
                         // Transport error — no PromptResponse available. EndTurn is a
                         // placeholder; the BridgeError notification (if sent) carries
                         // the real failure detail.
-                        let _ = channels
-                            .notification_tx
-                            .send(Notification::TurnCompleted { stop_reason: StopReason::EndTurn }.into())
-                            .await;
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::TurnCompleted {
+                                stop_reason: StopReason::EndTurn,
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                     }
                 }
             }
@@ -296,33 +322,87 @@ async fn run_bridge(
                 }
             }
             BridgeCommand::SetMode { mode_id } => {
-                if let Some(ref session_id) = active_session_id {
-                    match conn
-                        .set_session_mode(acp::SetSessionModeRequest::new(
-                            session_id.clone(),
-                            mode_id.clone(),
-                        ))
-                        .await
+                let Some(ref session_id) = active_session_id else {
+                    tracing::warn!(mode_id, "set_mode requested but no active session");
+                    if notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeError {
+                            operation: format!("set_mode '{mode_id}'"),
+                            message: "no active session — run /new or /load first".into(),
+                        },
+                    )
+                    .await
                     {
-                        Ok(_) => {
-                            tracing::info!(mode_id, "mode changed");
-                        }
-                        Err(e) => {
-                            tracing::error!(error = %e, mode_id, "set_session_mode failed");
-                            let _ = channels
-                                .notification_tx
-                                .send(
-                                    Notification::BridgeError {
-                                        operation: format!("set_mode '{mode_id}'"),
-                                        message: e.to_string(),
-                                    }
-                                    .into(),
-                                )
-                                .await;
+                        break;
+                    }
+                    continue;
+                };
+                match conn
+                    .set_session_mode(acp::SetSessionModeRequest::new(
+                        session_id.clone(),
+                        mode_id.clone(),
+                    ))
+                    .await
+                {
+                    Ok(_) => {
+                        tracing::info!(mode_id, "mode changed");
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, mode_id, "set_session_mode failed");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("set_mode '{mode_id}'"),
+                                message: e.to_string(),
+                            },
+                        )
+                        .await
+                        {
+                            break;
                         }
                     }
-                } else {
-                    tracing::warn!(mode_id, "set_mode requested but no active session");
+                }
+            }
+            BridgeCommand::SetModel { model_id } => {
+                let Some(ref session_id) = active_session_id else {
+                    tracing::warn!(model_id, "set_model requested but no active session");
+                    if notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeError {
+                            operation: format!("set_model '{model_id}'"),
+                            message: "no active session — run /new or /load first".into(),
+                        },
+                    )
+                    .await
+                    {
+                        break;
+                    }
+                    continue;
+                };
+                match conn
+                    .set_session_model(acp::SetSessionModelRequest::new(
+                        session_id.clone(),
+                        acp::ModelId::new(model_id.clone()),
+                    ))
+                    .await
+                {
+                    Ok(_) => {
+                        tracing::info!(model_id, "model changed");
+                    }
+                    Err(e) => {
+                        tracing::error!(error = %e, model_id, "set_session_model failed");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("set_model '{model_id}'"),
+                                message: e.to_string(),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
+                    }
                 }
             }
             BridgeCommand::LoadSession { session_id } => {
@@ -331,9 +411,17 @@ async fn run_bridge(
                     .load_session(acp::LoadSessionRequest::new(acp_session_id.clone(), cwd))
                     .await
                 {
-                    Ok(_) => {
+                    Ok(response) => {
                         active_session_id = Some(acp_session_id);
                         tracing::info!(session_id = session_id.as_str(), "session loaded");
+                        let notification = session_created_from_response(
+                            session_id.as_str().to_string(),
+                            response.modes.as_ref(),
+                            response.models.as_ref(),
+                        );
+                        if notify_or_closed(&channels.notification_tx, notification).await {
+                            break;
+                        }
                     }
                     Err(e) => {
                         tracing::error!(
@@ -341,33 +429,53 @@ async fn run_bridge(
                             session_id = session_id.as_str(),
                             "load_session failed"
                         );
-                        let _ = channels
-                            .notification_tx
-                            .send(Notification::BridgeDisconnected {
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeDisconnected {
                                 reason: format!("Failed to load session: {e}"),
-                            }.into())
-                            .await;
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                     }
                 }
             }
             BridgeCommand::ExtMethod { method, params } => {
-                let raw = match serde_json::value::RawValue::from_string(
-                    serde_json::to_string(&params).unwrap_or_else(|_| "null".to_string()),
-                ) {
-                    Ok(raw) => raw,
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
                     Err(e) => {
                         tracing::error!(error = %e, method, "failed to serialize ext params");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("ext_method '{method}'"),
+                                message: format!("serialize params: {e}"),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         continue;
                     }
                 };
-                let raw_arc: Arc<serde_json::value::RawValue> = raw.into();
-                match conn
+                if let Err(e) = conn
                     .ext_method(acp::ExtRequest::new(&*method, raw_arc))
                     .await
                 {
-                    Ok(_response) => {}
-                    Err(e) => {
-                        tracing::error!(error = %e, method, "ext_method failed");
+                    tracing::error!(error = %e, method, "ext_method failed");
+                    if notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeError {
+                            operation: format!("ext_method '{method}'"),
+                            message: e.to_string(),
+                        },
+                    )
+                    .await
+                    {
+                        break;
                     }
                 }
             }
@@ -378,53 +486,74 @@ async fn run_bridge(
                 let params = serde_json::json!({
                     "command": command,
                     "sessionId": session_id.as_str(),
+                    // Kiro's `kiro.dev/commands/options` requires `partial:
+                    // string` (docs/kiro-acp-protocol-2.0.1.md §7). We don't
+                    // surface in-progress filter text to the bridge yet, so
+                    // send an empty string to request the full option list.
+                    "partial": "",
                 });
-                let raw = match serde_json::value::RawValue::from_string(
-                    serde_json::to_string(&params).unwrap_or_else(|_| "null".to_string()),
-                ) {
-                    Ok(raw) => raw,
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
                     Err(e) => {
                         tracing::error!(error = %e, command, "failed to serialize options query");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("commands/options '{command}'"),
+                                message: format!("serialize params: {e}"),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         continue;
                     }
                 };
-                let raw_arc: Arc<serde_json::value::RawValue> = raw.into();
                 match conn
                     .ext_method(acp::ExtRequest::new("kiro.dev/commands/options", raw_arc))
                     .await
                 {
-                    Ok(response) => {
-                        let value: serde_json::Value =
-                            match serde_json::from_str(response.0.get()) {
-                                Ok(v) => v,
-                                Err(e) => {
-                                    tracing::error!(
-                                        error = %e,
-                                        command,
-                                        "failed to parse commands/options response as JSON"
-                                    );
-                                    serde_json::Value::Null
-                                }
-                            };
-                        let options = crate::commands::parse_options_response(&value);
-                        if channels
-                            .notification_tx
-                            .send(Notification::CommandOptionsReceived { command, options }.into())
+                    Ok(response) => match parse_response(&response.0) {
+                        Ok(value) => {
+                            let options = crate::commands::parse_options_response(&value);
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::CommandOptionsReceived { command, options },
+                            )
                             .await
-                            .is_err()
+                            {
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!(error = %e, command, "failed to parse commands/options response");
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::BridgeError {
+                                    operation: format!("commands/options '{command}'"),
+                                    message: format!("malformed JSON from kiro: {e}"),
+                                },
+                            )
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        tracing::error!(error = %e, command, "commands/options query failed");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::CommandOptionsReceived {
+                                command,
+                                options: vec![],
+                            },
+                        )
+                        .await
                         {
                             break;
                         }
-                    }
-                    Err(e) => {
-                        tracing::error!(error = %e, command, "commands/options query failed");
-                        let _ = channels
-                            .notification_tx
-                            .send(Notification::CommandOptionsReceived {
-                                command,
-                                options: vec![],
-                            }.into())
-                            .await;
                     }
                 }
             }
@@ -440,74 +569,90 @@ async fn run_bridge(
                         "args": args,
                     }
                 });
-                let raw = match serde_json::value::RawValue::from_string(
-                    serde_json::to_string(&params).unwrap_or_else(|_| "null".to_string()),
-                ) {
-                    Ok(raw) => raw,
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
                     Err(e) => {
                         tracing::error!(error = %e, command, "failed to serialize execute params");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("commands/execute '{command}'"),
+                                message: format!("serialize params: {e}"),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         continue;
                     }
                 };
-                let raw_arc: Arc<serde_json::value::RawValue> = raw.into();
                 match conn
                     .ext_method(acp::ExtRequest::new("kiro.dev/commands/execute", raw_arc))
                     .await
                 {
-                    Ok(response) => {
-                        let value: serde_json::Value =
-                            match serde_json::from_str(response.0.get()) {
-                                Ok(v) => v,
-                                Err(e) => {
-                                    tracing::error!(
-                                        error = %e,
-                                        command,
-                                        "failed to parse commands/execute response as JSON"
-                                    );
-                                    serde_json::Value::Null
-                                }
-                            };
-                        if channels
-                            .notification_tx
-                            .send(Notification::CommandExecuted {
-                                command,
-                                response: value,
-                            }.into())
+                    Ok(response) => match parse_response(&response.0) {
+                        Ok(value) => {
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::CommandExecuted {
+                                    command,
+                                    response: value,
+                                },
+                            )
                             .await
-                            .is_err()
-                        {
-                            break;
+                            {
+                                break;
+                            }
                         }
-                    }
+                        Err(e) => {
+                            tracing::error!(error = %e, command, "failed to parse commands/execute response");
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::BridgeError {
+                                    operation: format!("commands/execute '{command}'"),
+                                    message: format!("malformed JSON from kiro: {e}"),
+                                },
+                            )
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                    },
                     Err(e) => {
                         tracing::error!(error = %e, command, "commands/execute failed");
-                        let _ = channels
-                            .notification_tx
-                            .send(Notification::CommandExecuted {
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::CommandExecuted {
                                 command,
                                 response: serde_json::json!({
                                     "success": false,
                                     "error": format!("{e}"),
                                 }),
-                            }.into())
-                            .await;
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                     }
                 }
             }
             BridgeCommand::SpawnSession { task, name } => {
                 let Some(ref session_id) = active_session_id else {
                     tracing::warn!(name, "spawn requested but no active session");
-                    let _ = channels
-                        .notification_tx
-                        .send(
-                            Notification::BridgeError {
-                                operation: format!("spawn_session '{name}'"),
-                                message: "no active session — run /new or /load first"
-                                    .into(),
-                            }
-                            .into(),
-                        )
-                        .await;
+                    if notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeError {
+                            operation: format!("spawn_session '{name}'"),
+                            message: "no active session — run /new or /load first".into(),
+                        },
+                    )
+                    .await
+                    {
+                        break;
+                    }
                     continue;
                 };
                 let params = serde_json::json!({
@@ -519,16 +664,17 @@ async fn run_bridge(
                     Ok(arc) => arc,
                     Err(e) => {
                         tracing::error!(error = %e, "failed to serialize spawn params");
-                        let _ = channels
-                            .notification_tx
-                            .send(
-                                Notification::BridgeError {
-                                    operation: format!("spawn_session '{name}'"),
-                                    message: format!("serialize params: {e}"),
-                                }
-                                .into(),
-                            )
-                            .await;
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("spawn_session '{name}'"),
+                                message: format!("serialize params: {e}"),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         continue;
                     }
                 };
@@ -536,65 +682,68 @@ async fn run_bridge(
                     .ext_method(acp::ExtRequest::new("session/spawn", raw_arc))
                     .await
                 {
-                    Ok(response) => {
-                        let val: serde_json::Value =
-                            match serde_json::from_str(response.0.get()) {
-                                Ok(v) => v,
-                                Err(e) => {
-                                    tracing::warn!(
-                                        error = %e,
-                                        name,
-                                        "failed to parse session/spawn response"
-                                    );
-                                    serde_json::Value::Null
-                                }
-                            };
-                        match val.get("sessionId").and_then(|s| s.as_str()) {
+                    Ok(response) => match parse_response(&response.0) {
+                        Ok(val) => match val.get("sessionId").and_then(|s| s.as_str()) {
                             Some(spawned_id) => {
                                 tracing::info!(name, spawned_id, "spawned session");
-                                let _ = channels
-                                    .notification_tx
-                                    .send(
-                                        Notification::SubagentSpawned {
-                                            session_id: crate::types::SessionId::new(
-                                                spawned_id,
-                                            ),
-                                            name: name.clone(),
-                                        }
-                                        .into(),
-                                    )
-                                    .await;
+                                if notify_or_closed(
+                                    &channels.notification_tx,
+                                    Notification::SubagentSpawned {
+                                        session_id: crate::types::SessionId::new(spawned_id),
+                                        name: name.clone(),
+                                    },
+                                )
+                                .await
+                                {
+                                    break;
+                                }
                             }
                             None => {
                                 tracing::warn!(
                                     name,
                                     "session/spawn succeeded but response missing sessionId"
                                 );
-                                let _ = channels
-                                    .notification_tx
-                                    .send(
-                                        Notification::BridgeError {
-                                            operation: format!("spawn_session '{name}'"),
-                                            message: "response missing sessionId".into(),
-                                        }
-                                        .into(),
-                                    )
-                                    .await;
+                                if notify_or_closed(
+                                    &channels.notification_tx,
+                                    Notification::BridgeError {
+                                        operation: format!("spawn_session '{name}'"),
+                                        message: "response missing sessionId".into(),
+                                    },
+                                )
+                                .await
+                                {
+                                    break;
+                                }
                             }
-                        }
-                    }
-                    Err(e) => {
-                        tracing::error!(error = %e, name, "session/spawn failed");
-                        let _ = channels
-                            .notification_tx
-                            .send(
+                        },
+                        Err(e) => {
+                            tracing::error!(error = %e, name, "failed to parse session/spawn response");
+                            if notify_or_closed(
+                                &channels.notification_tx,
                                 Notification::BridgeError {
                                     operation: format!("spawn_session '{name}'"),
-                                    message: e.to_string(),
-                                }
-                                .into(),
+                                    message: format!("malformed JSON from kiro: {e}"),
+                                },
                             )
-                            .await;
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        tracing::error!(error = %e, name, "session/spawn failed");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("spawn_session '{name}'"),
+                                message: e.to_string(),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                     }
                 }
             }
@@ -606,16 +755,17 @@ async fn run_bridge(
                     Ok(arc) => arc,
                     Err(e) => {
                         tracing::error!(error = %e, "failed to serialize terminate params");
-                        let _ = channels
-                            .notification_tx
-                            .send(
-                                Notification::BridgeError {
-                                    operation: format!("terminate_session '{}'", target.as_str()),
-                                    message: format!("serialize params: {e}"),
-                                }
-                                .into(),
-                            )
-                            .await;
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("terminate_session '{}'", target.as_str()),
+                                message: format!("serialize params: {e}"),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         continue;
                     }
                 };
@@ -624,19 +774,17 @@ async fn run_bridge(
                     .await
                 {
                     Ok(_) => {
-                        tracing::info!(
-                            session_id = target.as_str(),
-                            "terminated session"
-                        );
-                        let _ = channels
-                            .notification_tx
-                            .send(
-                                Notification::SubagentTerminated {
-                                    session_id: target.clone(),
-                                }
-                                .into(),
-                            )
-                            .await;
+                        tracing::info!(session_id = target.as_str(), "terminated session");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::SubagentTerminated {
+                                session_id: target.clone(),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                     }
                     Err(e) => {
                         tracing::error!(
@@ -644,19 +792,17 @@ async fn run_bridge(
                             session_id = target.as_str(),
                             "session/terminate failed"
                         );
-                        let _ = channels
-                            .notification_tx
-                            .send(
-                                Notification::BridgeError {
-                                    operation: format!(
-                                        "terminate_session '{}'",
-                                        target.as_str()
-                                    ),
-                                    message: e.to_string(),
-                                }
-                                .into(),
-                            )
-                            .await;
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("terminate_session '{}'", target.as_str()),
+                                message: e.to_string(),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                     }
                 }
             }
@@ -672,16 +818,17 @@ async fn run_bridge(
                     Ok(arc) => arc,
                     Err(e) => {
                         tracing::error!(error = %e, "failed to serialize message params");
-                        let _ = channels
-                            .notification_tx
-                            .send(
-                                Notification::BridgeError {
-                                    operation: format!("send_message to '{}'", target.as_str()),
-                                    message: format!("serialize params: {e}"),
-                                }
-                                .into(),
-                            )
-                            .await;
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("send_message to '{}'", target.as_str()),
+                                message: format!("serialize params: {e}"),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         continue;
                     }
                 };
@@ -694,16 +841,17 @@ async fn run_bridge(
                         session_id = target.as_str(),
                         "message/send failed"
                     );
-                    let _ = channels
-                        .notification_tx
-                        .send(
-                            Notification::BridgeError {
-                                operation: format!("send_message to '{}'", target.as_str()),
-                                message: e.to_string(),
-                            }
-                            .into(),
-                        )
-                        .await;
+                    if notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeError {
+                            operation: format!("send_message to '{}'", target.as_str()),
+                            message: e.to_string(),
+                        },
+                    )
+                    .await
+                    {
+                        break;
+                    }
                 }
             }
             BridgeCommand::Shutdown => {
@@ -718,6 +866,8 @@ async fn run_bridge(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[tokio::test]
@@ -763,10 +913,16 @@ mod tests {
         let notification = Notification::TurnCompleted {
             stop_reason: StopReason::EndTurn,
         };
-        bridge_side.notification_tx.send(notification.into()).await?;
+        bridge_side
+            .notification_tx
+            .send(notification.into())
+            .await?;
         let received = handle.recv_notification().await.expect("notification");
         assert!(received.session_id.is_none());
-        assert!(matches!(received.notification, Notification::TurnCompleted { .. }));
+        assert!(matches!(
+            received.notification,
+            Notification::TurnCompleted { .. }
+        ));
         Ok(())
     }
 
@@ -847,5 +1003,19 @@ mod tests {
             panic!("expected ExecuteCommand, got {cmd:?}");
         }
         Ok(())
+    }
+
+    // --- parse_response ---
+
+    // `RawValue` validates JSON at construction time in practice (Kiro's
+    // `ExtResponse(Arc<RawValue>)` always holds validated bytes), so the
+    // `Err` path is defensive and unreachable from legitimate inputs. Test
+    // the happy path to lock the return-type contract.
+    #[test]
+    fn parse_response_parses_valid_json_object() {
+        let raw = serde_json::value::RawValue::from_string(r#"{"ok":true}"#.into())
+            .expect("build raw value");
+        let value = parse_response(&raw).expect("valid JSON parses");
+        assert_eq!(value["ok"], serde_json::json!(true));
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cyril_core::types::{message::AgentMessage, Notification, SessionId, ToolCallId};
+use cyril_core::types::{Notification, SessionId, ToolCallId, message::AgentMessage};
 
 use crate::traits::{Activity, ChatMessage, ChatMessageKind, TrackedToolCall};
 
@@ -82,13 +82,12 @@ impl SubagentStream {
                 true
             }
             Notification::ToolCallUpdated(tc) => {
-                if let Some(&idx) = self.tool_call_index.get(tc.id()) {
-                    if let Some(msg) = self.messages.get_mut(idx) {
-                        if let ChatMessageKind::ToolCall(ref mut tracked) = msg.kind {
-                            tracked.update(tc);
-                            return true;
-                        }
-                    }
+                if let Some(&idx) = self.tool_call_index.get(tc.id())
+                    && let Some(msg) = self.messages.get_mut(idx)
+                    && let ChatMessageKind::ToolCall(ref mut tracked) = msg.kind
+                {
+                    tracked.update(tc);
+                    return true;
                 }
                 tracing::debug!(
                     tool_call_id = tc.id().as_str(),
@@ -213,6 +212,8 @@ impl Default for SubagentUiState {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use cyril_core::types::{ToolCall, ToolCallId, ToolCallStatus, ToolKind};
 
@@ -380,9 +381,6 @@ mod tests {
             cyril_core::types::SubagentStatus::Working {
                 message: Some("Running".into()),
             },
-            None,
-            None,
-            vec![],
         )];
         state.apply_list_update(&active);
 

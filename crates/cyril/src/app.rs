@@ -39,7 +39,10 @@ impl App {
             .iter()
             .map(|c| {
                 let desc = c.description();
-                (c.name().to_string(), Some(desc.to_string()).filter(|s| !s.is_empty()))
+                (
+                    c.name().to_string(),
+                    Some(desc.to_string()).filter(|s| !s.is_empty()),
+                )
             })
             .collect();
         let mut ui_state = UiState::new(max_messages);
@@ -79,8 +82,7 @@ impl App {
 
     pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> cyril_core::Result<()> {
         let mut event_stream = EventStream::new();
-        let mut redraw_interval =
-            tokio::time::interval(Self::redraw_duration(Activity::Idle));
+        let mut redraw_interval = tokio::time::interval(Self::redraw_duration(Activity::Idle));
         redraw_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
         // Initial draw
@@ -230,7 +232,8 @@ impl App {
         if let Some(ref sid) = session_id {
             let is_main = self.session.id().map(|m| m == sid).unwrap_or(false);
             if !is_main && self.ui_state.subagent_tracker().is_subagent(sid) {
-                self.ui_state.apply_subagent_notification(sid, &notification);
+                self.ui_state
+                    .apply_subagent_notification(sid, &notification);
                 self.redraw_needed = true;
                 return None;
             }
@@ -243,7 +246,8 @@ impl App {
                     session_id = sid.as_str(),
                     "notification for unknown session, routing to subagent stream"
                 );
-                self.ui_state.apply_subagent_notification(sid, &notification);
+                self.ui_state
+                    .apply_subagent_notification(sid, &notification);
                 self.redraw_needed = true;
                 return None;
             }
@@ -266,13 +270,19 @@ impl App {
                 .iter()
                 .map(|cmd| {
                     let desc = cmd.description();
-                    (cmd.name().to_string(), Some(desc.to_string()).filter(|s| !s.is_empty()))
+                    (
+                        cmd.name().to_string(),
+                        Some(desc.to_string()).filter(|s| !s.is_empty()),
+                    )
                 })
                 .collect();
             for prompt in prompt_list {
                 info.push((
                     prompt.name().to_string(),
-                    prompt.description().map(str::to_string).filter(|s| !s.is_empty()),
+                    prompt
+                        .description()
+                        .map(str::to_string)
+                        .filter(|s| !s.is_empty()),
                 ));
             }
             self.ui_state.set_command_info(info);
@@ -294,11 +304,14 @@ impl App {
         }
 
         // Handle command options received — open picker or show message
-        if let Notification::CommandOptionsReceived { ref command, ref options } = notification {
+        if let Notification::CommandOptionsReceived {
+            ref command,
+            ref options,
+        } = notification
+        {
             if options.is_empty() {
-                self.ui_state.add_system_message(
-                    format!("No {command} options available."),
-                );
+                self.ui_state
+                    .add_system_message(format!("No {command} options available."));
             } else {
                 self.ui_state.show_picker(command.clone(), options.clone());
             }
@@ -311,9 +324,9 @@ impl App {
             ref url,
         } = notification
         {
-            self.ui_state.add_system_message(
-                format!("MCP server '{server_name}' requires authentication. Open in browser: {url}"),
-            );
+            self.ui_state.add_system_message(format!(
+                "MCP server '{server_name}' requires authentication. Open in browser: {url}"
+            ));
             self.redraw_needed = true;
         }
 
@@ -321,7 +334,11 @@ impl App {
         // are special-cased; all other commands fall through to the generic
         // command-output path. See `dispatch_command_executed` for the rules.
         let mut deferred_command = None;
-        if let Notification::CommandExecuted { ref command, ref response } = notification {
+        if let Notification::CommandExecuted {
+            ref command,
+            ref response,
+        } = notification
+        {
             if command == "code" {
                 deferred_command =
                     dispatch_code_command(response, &self.session, &mut self.ui_state);
@@ -333,23 +350,21 @@ impl App {
                 // command response. When Kiro sends proper ConfigOptionUpdate
                 // notifications, this block becomes dead code — remove it and rely
                 // on the ConfigOptionsUpdated handler in UiState.apply_notification().
-                if command == "model" {
-                    if let Some(model_id) = response
+                if command == "model"
+                    && let Some(model_id) = response
                         .get("data")
                         .and_then(|d| d.get("model"))
                         .and_then(|m| m.get("id"))
                         .and_then(|id| id.as_str())
-                    {
-                        self.ui_state.set_current_model(Some(model_id.to_string()));
-                    }
+                {
+                    self.ui_state.set_current_model(Some(model_id.to_string()));
                 }
             }
 
             self.redraw_needed = true;
         }
 
-        self.redraw_needed =
-            self.redraw_needed || session_changed || ui_changed || tracker_changed;
+        self.redraw_needed = self.redraw_needed || session_changed || ui_changed || tracker_changed;
         deferred_command
     }
 
@@ -402,15 +417,9 @@ impl App {
             (KeyModifiers::CONTROL, KeyCode::Char('m')) => {
                 self.ui_state.toggle_mouse_capture();
                 let result = if self.ui_state.mouse_captured() {
-                    crossterm::execute!(
-                        std::io::stdout(),
-                        crossterm::event::EnableMouseCapture,
-                    )
+                    crossterm::execute!(std::io::stdout(), crossterm::event::EnableMouseCapture,)
                 } else {
-                    crossterm::execute!(
-                        std::io::stdout(),
-                        crossterm::event::DisableMouseCapture,
-                    )
+                    crossterm::execute!(std::io::stdout(), crossterm::event::DisableMouseCapture,)
                 };
                 if let Err(e) = result {
                     tracing::warn!(error = %e, "failed to toggle mouse capture");
@@ -475,9 +484,8 @@ impl App {
             }
             _ => {
                 // Only scroll the main chat when not drilled into a subagent.
-                let scroll_consumed =
-                    self.ui_state.subagent_ui().focused_session_id().is_none()
-                        && dispatch_chat_scroll_key(key, &mut self.ui_state);
+                let scroll_consumed = self.ui_state.subagent_ui().focused_session_id().is_none()
+                    && dispatch_chat_scroll_key(key, &mut self.ui_state);
                 if !scroll_consumed {
                     self.ui_state.handle_input_key(key);
                 }
@@ -520,9 +528,8 @@ impl App {
                         .await?;
                 } else {
                     tracing::debug!("code panel refresh requested but no active session");
-                    self.ui_state.add_system_message(
-                        "No active session — cannot refresh.".into(),
-                    );
+                    self.ui_state
+                        .add_system_message("No active session — cannot refresh.".into());
                     self.ui_state.close_code_panel();
                 }
             }
@@ -536,16 +543,16 @@ impl App {
             KeyCode::Up => self.ui_state.picker_select_prev(),
             KeyCode::Down => self.ui_state.picker_select_next(),
             KeyCode::Enter => {
-                if let Some((command_name, value)) = self.ui_state.picker_confirm() {
-                    if let Some(session_id) = self.session.id() {
-                        self.bridge_sender
-                            .send(BridgeCommand::ExecuteCommand {
-                                command: command_name,
-                                session_id: session_id.clone(),
-                                args: serde_json::json!({"value": value}),
-                            })
-                            .await?;
-                    }
+                if let Some((command_name, value)) = self.ui_state.picker_confirm()
+                    && let Some(session_id) = self.session.id()
+                {
+                    self.bridge_sender
+                        .send(BridgeCommand::ExecuteCommand {
+                            command: command_name,
+                            session_id: session_id.clone(),
+                            args: serde_json::json!({"value": value}),
+                        })
+                        .await?;
                 }
             }
             KeyCode::Esc => self.ui_state.picker_cancel(),
@@ -592,9 +599,8 @@ impl App {
         let session_id = match self.session.id() {
             Some(id) => id.clone(),
             None => {
-                self.ui_state.add_system_message(
-                    "No active session. Use /new to create one.".into(),
-                );
+                self.ui_state
+                    .add_system_message("No active session. Use /new to create one.".into());
                 return Ok(());
             }
         };
@@ -611,8 +617,7 @@ impl App {
             for path in cyril_ui::file_completer::parse_file_references(&text, known) {
                 match cyril_ui::file_completer::read_file(&root, &path) {
                     Ok(contents) => {
-                        content_blocks
-                            .push(format!("<file path=\"{path}\">\n{contents}\n</file>"));
+                        content_blocks.push(format!("<file path=\"{path}\">\n{contents}\n</file>"));
                         tracing::info!("Attached @-referenced file: {path}");
                     }
                     Err(e) => {
@@ -673,17 +678,11 @@ fn format_command_response(command: &str, response: &serde_json::Value) -> Strin
     let data = response.get("data");
 
     // If there's tool data, format as a list
-    if let Some(tools) = data
-        .and_then(|d| d.get("tools"))
-        .and_then(|t| t.as_array())
-    {
+    if let Some(tools) = data.and_then(|d| d.get("tools")).and_then(|t| t.as_array()) {
         let mut out = format!("{message}\n\n");
         for tool in tools {
             let name = tool.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-            let source = tool
-                .get("source")
-                .and_then(|s| s.as_str())
-                .unwrap_or("");
+            let source = tool.get("source").and_then(|s| s.as_str()).unwrap_or("");
             let desc = tool
                 .get("description")
                 .and_then(|d| d.as_str())
@@ -723,10 +722,7 @@ fn format_command_response(command: &str, response: &serde_json::Value) -> Strin
         for (key, label) in &categories {
             if let Some(cat) = breakdown.get(*key) {
                 let tokens = cat.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
-                let cat_pct = cat
-                    .get("percent")
-                    .and_then(|p| p.as_f64())
-                    .unwrap_or(0.0);
+                let cat_pct = cat.get("percent").and_then(|p| p.as_f64()).unwrap_or(0.0);
                 if tokens > 0 {
                     out.push_str(&format!("  {label}: {tokens} tokens ({cat_pct:.1}%)\n"));
                 }
@@ -752,10 +748,7 @@ fn format_command_response(command: &str, response: &serde_json::Value) -> Strin
                 .unwrap_or("?");
             let used = bd.get("used").and_then(|u| u.as_f64()).unwrap_or(0.0);
             let limit = bd.get("limit").and_then(|l| l.as_f64()).unwrap_or(0.0);
-            let pct = bd
-                .get("percentage")
-                .and_then(|p| p.as_u64())
-                .unwrap_or(0);
+            let pct = bd.get("percentage").and_then(|p| p.as_u64()).unwrap_or(0);
             out.push_str(&format!("  {name}: {used:.0} / {limit:.0} ({pct}%)\n"));
         }
         return out;
@@ -964,6 +957,8 @@ fn is_success_response(response: &serde_json::Value) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[test]
@@ -1553,7 +1548,10 @@ mod tests {
             &session,
             &mut ui,
         );
-        assert!(!ui.code_intelligence_active(), "failed status should reset the flag");
+        assert!(
+            !ui.code_intelligence_active(),
+            "failed status should reset the flag"
+        );
     }
 
     #[test]
@@ -1573,7 +1571,10 @@ mod tests {
             &mut ui,
         );
         assert!(result.is_none());
-        assert!(!ui.has_code_panel(), "panel should NOT open on success:false");
+        assert!(
+            !ui.has_code_panel(),
+            "panel should NOT open on success:false"
+        );
         assert!(!ui.code_intelligence_active());
     }
 
@@ -1635,7 +1636,10 @@ mod tests {
         let has_default_label = ui.messages().iter().any(|m| {
             matches!(m.kind(), cyril_ui::traits::ChatMessageKind::System(s) if s.contains("Code Intelligence"))
         });
-        assert!(has_default_label, "should use 'Code Intelligence' as default label");
+        assert!(
+            has_default_label,
+            "should use 'Code Intelligence' as default label"
+        );
     }
 
     #[test]

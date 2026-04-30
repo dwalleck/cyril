@@ -27,15 +27,15 @@ pub struct SubagentInfo {
 }
 
 impl SubagentInfo {
+    /// Construct with the required identity fields. Metadata (`group`,
+    /// `role`, `depends_on`) defaults to absent; set it with the `with_*`
+    /// builder methods.
     pub fn new(
         session_id: SessionId,
         session_name: impl Into<String>,
         agent_name: impl Into<String>,
         initial_query: impl Into<String>,
         status: SubagentStatus,
-        group: Option<String>,
-        role: Option<String>,
-        depends_on: Vec<String>,
     ) -> Self {
         Self {
             session_id,
@@ -43,10 +43,28 @@ impl SubagentInfo {
             agent_name: agent_name.into(),
             initial_query: initial_query.into(),
             status,
-            group,
-            role,
-            depends_on,
+            group: None,
+            role: None,
+            depends_on: Vec::new(),
         }
+    }
+
+    #[must_use]
+    pub fn with_group(mut self, group: Option<String>) -> Self {
+        self.group = group;
+        self
+    }
+
+    #[must_use]
+    pub fn with_role(mut self, role: Option<String>) -> Self {
+        self.role = role;
+        self
+    }
+
+    #[must_use]
+    pub fn with_depends_on(mut self, depends_on: Vec<String>) -> Self {
+        self.depends_on = depends_on;
+        self
     }
 
     pub fn session_id(&self) -> &SessionId {
@@ -152,10 +170,9 @@ mod tests {
             SubagentStatus::Working {
                 message: Some("Running".into()),
             },
-            Some("crew-Review".into()),
-            Some("code-reviewer".into()),
-            vec![],
-        );
+        )
+        .with_group(Some("crew-Review".into()))
+        .with_role(Some("code-reviewer".into()));
         assert_eq!(info.session_name(), "code-reviewer");
         assert!(info.is_working());
         assert_eq!(info.group(), Some("crew-Review"));
@@ -170,9 +187,6 @@ mod tests {
             "done",
             "query",
             SubagentStatus::Terminated,
-            None,
-            None,
-            vec![],
         );
         assert!(!info.is_working());
     }
@@ -188,5 +202,18 @@ mod tests {
         );
         assert_eq!(stage.name(), "summary-writer");
         assert_eq!(stage.depends_on().len(), 2);
+    }
+
+    #[test]
+    fn subagent_info_with_depends_on_builder() {
+        let info = SubagentInfo::new(
+            SessionId::new("s1"),
+            "writer",
+            "summary-writer",
+            "Summarize results",
+            SubagentStatus::Working { message: None },
+        )
+        .with_depends_on(vec!["reviewer".into(), "tester".into()]);
+        assert_eq!(info.depends_on(), &["reviewer", "tester"]);
     }
 }
