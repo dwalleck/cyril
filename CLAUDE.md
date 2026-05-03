@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Cyril is a cross-platform TUI client for Kiro CLI, communicating over the Agent Client Protocol (ACP) via JSON-RPC 2.0 over stdio. On Linux it spawns `kiro-cli acp` directly; on Windows it spawns `wsl kiro-cli acp` and translates paths at the protocol boundary. It acts as a thin ACP client — providing filesystem, terminal, and permission capabilities while Kiro handles AI reasoning.
+*Cyril is the polished TUI for the Agent Client Protocol ecosystem.*
+
+Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. Run any of 37+ registered agents — Claude, Cursor, Codex, Cline, Goose, Kiro, and more — through a single interface. Beneath the TUI, composable proxy stages add behaviors no agent ships natively: skill systems, transcript audit, organizational permission policies, persistent memory across sessions, multi-client observers. Vendor neutrality is a feature, not a roadmap; stages are how cyril compounds value over time.
+
+**Status:** Alpha. Today cyril works against Kiro CLI; vendor-neutral agent selection and the proxy-stage layer are in active development. The descriptive sections below document the current Kiro-focused implementation, not the long-term vision.
 
 ## Build & Test Commands
 
