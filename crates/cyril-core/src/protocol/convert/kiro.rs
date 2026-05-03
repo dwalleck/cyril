@@ -139,20 +139,21 @@ pub(crate) fn to_ext_notification(
                 }
             };
 
+            // Preserve zero-credit turns rather than filtering them out — a
+            // turn with `meteringUsage: [{value: 0.0, ...}]` (cached
+            // response, free tier, etc.) is semantically distinct from a
+            // turn with the field omitted entirely. The UI layer decides
+            // whether to display 0.0 or hide it.
             let metering = params
                 .get("meteringUsage")
                 .and_then(|m| m.as_array())
-                .and_then(|arr| {
+                .map(|arr| {
                     let credits: f64 = arr
                         .iter()
                         .filter_map(|u| u.get("value").and_then(|v| v.as_f64()))
                         .sum();
-                    if credits > 0.0 {
-                        let duration_ms = params.get("turnDurationMs").and_then(|d| d.as_u64());
-                        Some(TurnMetering::new(credits, duration_ms))
-                    } else {
-                        None
-                    }
+                    let duration_ms = params.get("turnDurationMs").and_then(|d| d.as_u64());
+                    TurnMetering::new(credits, duration_ms)
                 });
 
             let tokens = {

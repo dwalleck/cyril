@@ -674,6 +674,30 @@ mod tests {
     }
 
     #[test]
+    fn parse_metadata_with_zero_credit_metering_preserved() {
+        // Regression: the parser previously dropped meteringUsage entries
+        // that summed to 0.0 credits, conflating them with the
+        // metering-field-absent case. Zero-cost turns (cached responses,
+        // free tier) should now flow through as Some(TurnMetering(0.0)).
+        let params = serde_json::json!({
+            "sessionId": "s1",
+            "contextUsagePercentage": 1.5,
+            "meteringUsage": [
+                {"unit": "credit", "unitPlural": "credits", "value": 0.0}
+            ],
+            "turnDurationMs": 12
+        });
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { metering, .. })) = result {
+            let m = metering.expect("zero-credit metering should be preserved");
+            assert!((m.credits() - 0.0).abs() < f64::EPSILON);
+            assert_eq!(m.duration_ms(), Some(12));
+        } else {
+            panic!("expected MetadataUpdated, got {:?}", result);
+        }
+    }
+
+    #[test]
     fn parse_metadata_with_tokens() {
         let params = serde_json::json!({
             "contextUsagePercentage": 15.0,
