@@ -126,7 +126,7 @@ impl acp::Client for KiroClient {
             }
         };
 
-        match convert::to_ext_notification(args.method.as_ref(), &params) {
+        match convert::kiro::to_ext_notification(args.method.as_ref(), &params) {
             Ok(Some(notification)) => {
                 // ToolCallChunk carries an inline session_id from the outer
                 // kiro.dev/session/update envelope. Promote it to the
