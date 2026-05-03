@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(name = "cyril", about = "TUI client for Kiro CLI via ACP")]
+#[command(name = "cyril", about = "Polished TUI for the Agent Client Protocol ecosystem")]
 struct Cli {
     /// Working directory
     #[arg(short = 'd', long = "cwd")]
@@ -15,9 +15,14 @@ struct Cli {
     #[arg(long)]
     prompt: Option<String>,
 
-    /// Agent name
-    #[arg(long, default_value = "kiro-cli")]
-    agent: String,
+    /// Command line for the ACP agent. First value is the program; remaining
+    /// values are arguments. Defaults to `kiro-cli acp`.
+    #[arg(
+        long = "agent-command",
+        num_args = 1..,
+        default_values_t = vec!["kiro-cli".to_string(), "acp".to_string()],
+    )]
+    agent_command: Vec<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cyril_core::types::config::Config::load_from_path(&config_dir().join("config.toml"));
 
     // Spawn bridge
-    let bridge = cyril_core::protocol::bridge::spawn_bridge(&cli.agent, cwd.clone())?;
+    let bridge = cyril_core::protocol::bridge::spawn_bridge(cli.agent_command, cwd.clone())?;
 
     // Build and run TUI
     let rt = tokio::runtime::Builder::new_multi_thread()

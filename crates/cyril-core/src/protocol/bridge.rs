@@ -108,9 +108,11 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
 
 /// Spawn the ACP bridge on a dedicated thread.
 /// Returns a BridgeHandle for the Send world to communicate through.
-pub fn spawn_bridge(agent: &str, cwd: PathBuf) -> crate::Result<BridgeHandle> {
+///
+/// `agent_command[0]` is the agent binary; `agent_command[1..]` are arguments.
+/// Returns an error if the slice is empty.
+pub fn spawn_bridge(agent_command: Vec<String>, cwd: PathBuf) -> crate::Result<BridgeHandle> {
     let (handle, channels) = create_channel_pair();
-    let agent = agent.to_string();
 
     std::thread::Builder::new()
         .name("acp-bridge".into())
@@ -123,7 +125,7 @@ pub fn spawn_bridge(agent: &str, cwd: PathBuf) -> crate::Result<BridgeHandle> {
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
                     local.block_on(&rt, async move {
-                        if let Err(e) = run_bridge(&agent, &cwd, channels).await {
+                        if let Err(e) = run_bridge(&agent_command, &cwd, channels).await {
                             tracing::error!(error = %e, "bridge terminated with error");
                         }
                     });
@@ -178,7 +180,7 @@ async fn notify_or_closed(
 }
 
 async fn run_bridge(
-    agent: &str,
+    agent_command: &[String],
     cwd: &std::path::Path,
     mut channels: BridgeChannels,
 ) -> crate::Result<()> {
@@ -190,7 +192,7 @@ async fn run_bridge(
     use crate::protocol::transport::AgentProcess;
 
     // 1. Spawn agent process
-    let process = AgentProcess::spawn(agent, cwd).await?;
+    let process = AgentProcess::spawn(agent_command, cwd).await?;
 
     // 2. Create KiroClient
     let client = KiroClient::new(

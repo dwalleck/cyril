@@ -19,9 +19,15 @@ use cyril_core::types::*;
 #[derive(Parser)]
 #[command(name = "test_bridge", about = "Bridge-based ACP test harness")]
 struct Cli {
-    /// Agent to use (e.g. "sonnet", "dotnet-dev")
-    #[arg(short, long, default_value = "kiro-cli")]
-    agent: String,
+    /// Command line for the ACP agent. First value is the program; remaining
+    /// values are arguments. Defaults to `kiro-cli acp`.
+    #[arg(
+        short = 'a',
+        long = "agent-command",
+        num_args = 1..,
+        default_values_t = vec!["kiro-cli".to_string(), "acp".to_string()],
+    )]
+    agent_command: Vec<String>,
 }
 
 #[tokio::main]
@@ -36,10 +42,10 @@ async fn main() -> anyhow::Result<()> {
     let cwd = std::env::current_dir()?;
 
     println!("=== Cyril v2 Bridge Test Harness ===\n");
-    println!("Agent: {}", cli.agent);
+    println!("Agent: {}", cli.agent_command.join(" "));
     println!("CWD: {}\n", cwd.display());
 
-    let bridge = spawn_bridge(&cli.agent, cwd.clone())?;
+    let bridge = spawn_bridge(cli.agent_command, cwd.clone())?;
     let (sender, mut notification_rx, mut permission_rx) = bridge.split();
     println!("[OK] Bridge spawned\n");
 

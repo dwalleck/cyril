@@ -10,18 +10,17 @@ pub(crate) struct AgentProcess {
 }
 
 impl AgentProcess {
-    pub async fn spawn(agent_name: &str, cwd: &Path) -> crate::Result<Self> {
-        let (program, args) = if cfg!(target_os = "windows") {
-            (
-                "wsl".to_string(),
-                vec![agent_name.to_string(), "acp".to_string()],
-            )
-        } else {
-            (agent_name.to_string(), vec!["acp".to_string()])
-        };
+    /// Spawn an ACP agent subprocess. `agent_command[0]` is the program;
+    /// `agent_command[1..]` are arguments. Returns an error if the slice is empty.
+    pub async fn spawn(agent_command: &[String], cwd: &Path) -> crate::Result<Self> {
+        let (program, args) = agent_command.split_first().ok_or_else(|| {
+            crate::Error::from_kind(crate::ErrorKind::Transport {
+                detail: "agent command is empty (need at least the program name)".into(),
+            })
+        })?;
 
-        let mut child = Command::new(&program)
-            .args(&args)
+        let mut child = Command::new(program)
+            .args(args)
             .current_dir(cwd)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
