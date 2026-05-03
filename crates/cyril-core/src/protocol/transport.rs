@@ -2,6 +2,8 @@ use std::path::Path;
 use std::process::Stdio;
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 
+use crate::types::AgentCommand;
+
 pub(crate) struct AgentProcess {
     pub stdin: ChildStdin,
     pub stdout: ChildStdout,
@@ -10,14 +12,10 @@ pub(crate) struct AgentProcess {
 }
 
 impl AgentProcess {
-    /// Spawn an ACP agent subprocess. `agent_command[0]` is the program;
-    /// `agent_command[1..]` are arguments. Returns an error if the slice is empty.
-    pub async fn spawn(agent_command: &[String], cwd: &Path) -> crate::Result<Self> {
-        let (program, args) = agent_command.split_first().ok_or_else(|| {
-            crate::Error::from_kind(crate::ErrorKind::Transport {
-                detail: "agent command is empty (need at least the program name)".into(),
-            })
-        })?;
+    /// Spawn an ACP agent subprocess described by `cmd`.
+    pub async fn spawn(cmd: &AgentCommand, cwd: &Path) -> crate::Result<Self> {
+        let program = cmd.program();
+        let args = cmd.args();
 
         let mut child = Command::new(program)
             .args(args)

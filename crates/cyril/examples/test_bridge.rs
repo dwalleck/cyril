@@ -5,7 +5,8 @@
 //!
 //! Usage:
 //!   cargo run --example test_bridge
-//!   cargo run --example test_bridge -- --agent sonnet
+//!   cargo run --example test_bridge -- --agent-command kiro-cli acp
+//!   cargo run --example test_bridge -- --agent-command sacp-conductor agent "kiro-cli acp"
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -22,7 +23,6 @@ struct Cli {
     /// Command line for the ACP agent. First value is the program; remaining
     /// values are arguments. Defaults to `kiro-cli acp`.
     #[arg(
-        short = 'a',
         long = "agent-command",
         num_args = 1..,
         default_values_t = vec!["kiro-cli".to_string(), "acp".to_string()],
@@ -45,7 +45,8 @@ async fn main() -> anyhow::Result<()> {
     println!("Agent: {}", cli.agent_command.join(" "));
     println!("CWD: {}\n", cwd.display());
 
-    let bridge = spawn_bridge(cli.agent_command, cwd.clone())?;
+    let agent_command = cyril_core::types::AgentCommand::try_from_argv(cli.agent_command)?;
+    let bridge = spawn_bridge(agent_command, cwd.clone())?;
     let (sender, mut notification_rx, mut permission_rx) = bridge.split();
     println!("[OK] Bridge spawned\n");
 

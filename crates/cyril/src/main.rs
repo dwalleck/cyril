@@ -38,7 +38,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cyril_core::types::config::Config::load_from_path(&config_dir().join("config.toml"));
 
     // Spawn bridge
-    let bridge = cyril_core::protocol::bridge::spawn_bridge(cli.agent_command, cwd.clone())?;
+    let agent_command = cyril_core::types::AgentCommand::try_from_argv(cli.agent_command)?;
+    let bridge = cyril_core::protocol::bridge::spawn_bridge(agent_command, cwd.clone())?;
 
     // Build and run TUI
     let rt = tokio::runtime::Builder::new_multi_thread()
