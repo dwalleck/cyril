@@ -11,7 +11,7 @@ Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. 
 ## Features
 
 - **Streaming TUI** — ratatui-based interface with real-time markdown rendering (headings, bold, italic, code blocks with syntax highlighting, tables, lists, blockquotes)
-- **Cross-platform** — runs natively on Linux; bridges to WSL on Windows with automatic path translation
+- **Cross-platform** — runs natively on Linux, macOS, and Windows
 - **Slash commands** — autocomplete-enabled commands from both the client and the Kiro agent
 - **Tool call display** — see what the agent is doing in real time with inline diffs
 - **Approval prompts** — review and approve command execution with Yes/Always/No options
@@ -23,9 +23,8 @@ Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. 
 
 ## Prerequisites
 
-- [Kiro CLI](https://kiro.dev/docs/cli/) installed and authenticated (`kiro-cli login`)
+- [Kiro CLI](https://kiro.dev/docs/cli/) installed and authenticated (`kiro-cli login`) — Linux, macOS, and Windows native binaries are all supported
 - [Rust toolchain](https://rustup.rs/) (for building from source)
-- **Windows only:** [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) with kiro-cli installed inside it
 
 ## Installation
 
