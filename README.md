@@ -1,22 +1,12 @@
 # Cyril
 
-A cross-platform TUI client for [Kiro CLI](https://kiro.dev) via the [Agent Client Protocol (ACP)](https://agentclientprotocol.com).
-
-> **Status:** Alpha — functional but under active development.
+*The polished TUI for the [Agent Client Protocol](https://agentclientprotocol.com) ecosystem.*
 
 ## What is this?
 
-Cyril is a terminal-based frontend for Kiro CLI, communicating over ACP (JSON-RPC 2.0 over stdio). It provides streaming markdown rendering, tool call visibility, and an approval workflow — all from your terminal.
+Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. Run any of 37+ registered agents — Claude, Cursor, Codex, Cline, Goose, Kiro, and more — through a single interface. Beneath the TUI, composable proxy stages add behaviors no agent ships natively: skill systems, transcript audit, organizational permission policies, persistent memory across sessions, multi-client observers. Vendor neutrality is a feature, not a roadmap; stages are how cyril compounds value over time.
 
-- **On Linux** — runs `kiro-cli acp` directly as a subprocess
-- **On Windows** — bridges to `kiro-cli` running inside WSL, with automatic path translation between `C:\` and `/mnt/c/` paths
-
-```
-Linux:   Cyril TUI  <── stdin/stdout JSON-RPC ──>  kiro-cli acp
-
-Windows: Cyril TUI  <── stdin/stdout JSON-RPC ──>  WSL (kiro-cli acp)
-              + automatic C:\ <-> /mnt/c/ path translation
-```
+> **Status:** Alpha. Today cyril works against [Kiro CLI](https://kiro.dev); vendor-neutral agent selection and the proxy-stage layer are in active development. The features and usage documentation below describe the current Kiro-focused implementation.
 
 ## Features
 
