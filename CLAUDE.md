@@ -10,15 +10,18 @@ Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. 
 
 **Status:** Alpha. Today cyril works against Kiro CLI; vendor-neutral agent selection and the proxy-stage layer are in active development. The descriptive sections below document the current Kiro-focused implementation, not the long-term vision.
 
+**Direction:** see [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased path from current Kiro-focused implementation toward vendor-neutral platform status. New non-trivial work should land in a numbered phase from that document.
+
 ## Build & Test Commands
 
 ```sh
-cargo build                          # build all crates
-cargo check                          # type-check without linking (faster)
-cargo run                            # run the cyril TUI binary
-cargo run --example test_acp         # run the headless ACP test harness
-cargo test -p cyril-core             # run tests in the core crate
-cargo test -p cyril-core -- path     # run only path-related tests
+cargo build                                                    # build all crates
+cargo check                                                    # type-check without linking (faster)
+cargo check --all-targets                                      # also covers examples and tests
+cargo run                                                      # run the cyril TUI binary
+cargo run --example test_bridge -- --agent-command kiro-cli acp  # end-to-end ACP smoke harness
+cargo test -p cyril-core                                       # run tests in the core crate
+cargo test -p cyril-core -- path                               # run only path-related tests
 ```
 
 The project uses Rust 2024 edition, pinned to `1.94.0` via `rust-toolchain.toml`.
@@ -80,7 +83,7 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 
 **`cyril-core`** — Domain logic and protocol boundary.
 - **Owns:** Types (`types/`), ACP protocol bridge (`protocol/`), command registry (`commands/`), session state (`session.rs`), path translation (`platform/`), error types (`error.rs`)
-- **Responsibility:** Convert between ACP wire types and internal domain types. All Kiro protocol quirks are handled in `convert.rs`. The bridge runs on a dedicated `!Send` thread and communicates via typed channels.
+- **Responsibility:** Convert between ACP wire types and internal domain types. Generic ACP conversion lives in `convert/mod.rs`; Kiro-specific extensions live in `convert/kiro.rs`. The bridge runs on a dedicated `!Send` thread and communicates via typed channels.
 - **Must NOT:** Import any UI crate. Reference ratatui, crossterm, or any rendering concept. Know how content is displayed.
 - **Dependency rule:** Only crate that imports `agent-client-protocol`. No other crate may reference `acp::` types.
 
@@ -122,9 +125,10 @@ The crate boundaries enforce dependency rules, but equally important is the sepa
 - Handles cross-cutting concerns: wiring `CommandOptionsReceived` to `show_picker()`, extracting model from `CommandExecuted`
 - The ONLY place where all components interact — if logic can live in a component, it should not be in App.
 
-**`convert.rs`** (`cyril-core/protocol/convert.rs`) — The only file that imports both `acp::` and internal types.
-- All Kiro protocol quirks live here: name stripping, metadata parsing, content extraction, raw_input caching
-- If a new Kiro deviation is discovered, it's handled in convert.rs — nowhere else.
+**`convert/`** (`cyril-core/protocol/convert/`) — Directory module that imports both `acp::` and internal types. `mod.rs` handles generic ACP; `kiro.rs` handles Kiro-specific extensions.
+- All Kiro protocol quirks live in `kiro.rs`: subagent helpers, `kiro.dev/*` method dispatch, metadata parsing.
+- If a new Kiro deviation is discovered, handle it in `convert/kiro.rs` — never in `mod.rs`.
+- A second vendor (e.g. `convert/claude.rs`) would follow the same pattern.
 
 **`TuiState` trait** (`cyril-ui/traits.rs`) — Read-only rendering contract.
 - ~25 methods, all returning references or Copy types
@@ -162,7 +166,7 @@ App event loop (tokio::select!):
 
 **Bridge thread (`protocol/bridge.rs`):** Runs `!Send` ACP types in a quarantined `current_thread` + `LocalSet` runtime. All communication is via three bounded mpsc channels: commands in, notifications out, permission requests out. The bridge MUST send a notification for every command it processes — including error cases — so the App never gets stuck.
 
-**Conversion boundary (`protocol/convert.rs`):** Single file that imports both `acp::` and internal types. Every Kiro protocol quirk is handled here: name prefix stripping, metadata parsing, content/location extraction, raw_input caching. No other file should import `acp::` types.
+**Conversion boundary (`protocol/convert/`):** Directory module that imports both `acp::` and internal types. `mod.rs` handles generic ACP; `kiro.rs` handles Kiro-specific extensions. No other file should import `acp::` types.
 
 **TuiState trait (`cyril-ui/traits.rs`):** Read-only interface the renderer uses. Every method returns a reference or Copy type — compile-time guarantee that rendering cannot mutate state. The renderer receives `&dyn TuiState`, never `&App` or `&mut UiState`.
 
@@ -249,6 +253,8 @@ For the comprehensive protocol reference with example requests/responses, see **
 - The `agent-client-protocol` crate (v0.9) from crates.io is the source of truth for ACP types. Actual type definitions live in `agent-client-protocol-schema` (transitive dependency).
 - Tool calls with `kind == ToolKind::Other` are "planning" steps from the agent and are filtered from display.
 - **Kiro logs**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux). Set `KIRO_LOG_LEVEL=debug` for verbose output.
+- **Wire format = binary × backend.** What kiro-cli emits depends on both the binary version and the AWS backend's current behavior. Same-day captures with different binaries isolate binary changes; same-binary captures across time isolate backend rollouts. Mixing the axes conflates both — the metering fields appearing on `_kiro.dev/metadata` between April and May 2026 was a backend rollout, not a binary change.
+- **Wire-format audit artifacts:** [`experiments/conductor-spike/`](experiments/conductor-spike/README.md) has same-day 2.1.0/2.2.0 baselines, the `diff_fields.py` structural differ, and reproducible wrapper scripts. Use these for any wire-format investigation rather than rebuilding from scratch.
 
 ### Session Updates (`session/update`)
 
@@ -388,7 +394,7 @@ These are project invariants maintained from inception, not aspirations. Maintai
 ### Error Type Design
 
 - **Use `thiserror`** — `#[derive(Debug, thiserror::Error)]` for all error types. The workspace already depends on `thiserror`.
-- **Map external errors at the boundary** — convert library-specific errors into your domain's error variants in `convert.rs` or adapter code. Never leak third-party error types (like `acp::` errors) across crate boundaries.
+- **Map external errors at the boundary** — convert library-specific errors into your domain's error variants in `convert/` or adapter code. Never leak third-party error types (like `acp::` errors) across crate boundaries.
 - **Structured error metadata** — error types should carry enough context to diagnose without a debugger (command attempted, response received, what went wrong).
 - **Accessor methods over `pub` fields** — expose error data through methods, not public struct fields. This lets you refactor internals without breaking callers.
 
