@@ -1,7 +1,12 @@
 //! Kiro-specific extension parsing.
 //!
-//! `_kiro.dev/*` methods, subagent metadata, and other Kiro-only ACP
+//! `kiro.dev/*` methods, subagent metadata, and other Kiro-only ACP
 //! extensions live here. Generic ACP conversion stays in `super`.
+//!
+//! Note: on the wire these methods appear with a leading underscore
+//! (`_kiro.dev/...`) because the public `agent-client-protocol` crate
+//! auto-prefixes outbound extension method names with `_` and auto-strips
+//! them inbound. The names without underscore are the canonical form.
 
 use crate::types::*;
 
