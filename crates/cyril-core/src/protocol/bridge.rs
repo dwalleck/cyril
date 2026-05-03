@@ -5,6 +5,7 @@ use tokio::sync::mpsc;
 
 use crate::protocol::convert::session_created_from_response;
 use crate::types::StopReason;
+use crate::types::agent_command::AgentCommand;
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
 
 /// Channel capacities
@@ -108,9 +109,16 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
 
 /// Spawn the ACP bridge on a dedicated thread.
 /// Returns a BridgeHandle for the Send world to communicate through.
-pub fn spawn_bridge(agent: &str, cwd: PathBuf) -> crate::Result<BridgeHandle> {
+///
+/// On any fail-stop path (runtime construction failure, `run_bridge` returning
+/// `Err`), a `Notification::BridgeDisconnected` is emitted before the thread
+/// exits so the App receives a structured signal instead of a silent channel
+/// close.
+pub fn spawn_bridge(agent_command: AgentCommand, cwd: PathBuf) -> crate::Result<BridgeHandle> {
     let (handle, channels) = create_channel_pair();
-    let agent = agent.to_string();
+    // Cloned before `channels` is moved into the thread so that fail-stop
+    // paths can still emit a final disconnect notification.
+    let disconnect_tx = channels.notification_tx.clone();
 
     std::thread::Builder::new()
         .name("acp-bridge".into())
@@ -119,17 +127,35 @@ pub fn spawn_bridge(agent: &str, cwd: PathBuf) -> crate::Result<BridgeHandle> {
                 .enable_all()
                 .build();
 
-            match rt {
+            let exit_reason: Option<String> = match rt {
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
                     local.block_on(&rt, async move {
-                        if let Err(e) = run_bridge(&agent, &cwd, channels).await {
-                            tracing::error!(error = %e, "bridge terminated with error");
+                        match run_bridge(&agent_command, &cwd, channels).await {
+                            Ok(()) => None,
+                            Err(e) => {
+                                tracing::error!(error = %e, "bridge terminated with error");
+                                Some(e.to_string())
+                            }
                         }
-                    });
+                    })
                 }
                 Err(e) => {
                     tracing::error!(error = %e, "failed to create bridge runtime");
+                    Some(format!("failed to create bridge runtime: {e}"))
+                }
+            };
+
+            if let Some(reason) = exit_reason {
+                // Best-effort; the App may already have dropped its receiver.
+                if let Err(send_err) = disconnect_tx.try_send(RoutedNotification {
+                    session_id: None,
+                    notification: Notification::BridgeDisconnected { reason },
+                }) {
+                    tracing::warn!(
+                        error = %send_err,
+                        "failed to deliver BridgeDisconnected notification on bridge exit"
+                    );
                 }
             }
         })
@@ -178,7 +204,7 @@ async fn notify_or_closed(
 }
 
 async fn run_bridge(
-    agent: &str,
+    agent_command: &AgentCommand,
     cwd: &std::path::Path,
     mut channels: BridgeChannels,
 ) -> crate::Result<()> {
@@ -190,7 +216,7 @@ async fn run_bridge(
     use crate::protocol::transport::AgentProcess;
 
     // 1. Spawn agent process
-    let process = AgentProcess::spawn(agent, cwd).await?;
+    let process = AgentProcess::spawn(agent_command, cwd).await?;
 
     // 2. Create KiroClient
     let client = KiroClient::new(
