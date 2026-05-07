@@ -70,16 +70,25 @@ def categorize(msgs):
                 by_method[method + " (response)"].add(p)
     return by_method
 
+def load_capture(path):
+    """Auto-detect format: conductor log (line-based, has 'C →' / 'C ←' / '0 →' markers) vs concat JSON."""
+    with open(path) as f:
+        head = f.read(2048)
+    if re.search(r"^[C0] [→←]", head, re.MULTILINE):
+        return parse_conductor_log(path)
+    return parse_concat_json(path)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("reference", help="Reference capture (concat JSON, e.g. docs/kiro-acp-capture-2.1.0.json)")
-    ap.add_argument("capture", help="Fresh conductor log (e.g. /tmp/conductor-spike/logs/<latest>.log)")
+    ap.add_argument("reference", help="Reference capture (concat JSON or conductor log; auto-detected)")
+    ap.add_argument("capture", help="Fresh capture (concat JSON or conductor log; auto-detected)")
     ap.add_argument("--label-ref", default="REFERENCE", help="Label for reference in output")
     ap.add_argument("--label-cap", default="CAPTURE", help="Label for capture in output")
     args = ap.parse_args()
 
-    ref = categorize(parse_concat_json(args.reference))
-    cap = categorize(parse_conductor_log(args.capture))
+    ref = categorize(load_capture(args.reference))
+    cap = categorize(load_capture(args.capture))
 
     common = sorted(set(ref) & set(cap))
     only_cap = sorted(set(cap) - set(ref))
