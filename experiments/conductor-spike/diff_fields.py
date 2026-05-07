@@ -1,5 +1,12 @@
-"""Compare JSON-RPC message field sets between 2.1.0 capture and 2.2.0 spike log."""
-import json, re, sys
+"""Compare JSON-RPC message field sets between a reference capture and a fresh conductor log.
+
+Usage:
+    diff_fields.py <reference.json> <capture.log> [--label-ref NAME] [--label-cap NAME]
+
+The reference is a concatenated-JSON dump (one or more JSON-RPC objects, no framing).
+The capture is a sacp-conductor --debug log (one JSON-RPC object embedded per line).
+"""
+import argparse, json, re
 from collections import defaultdict
 
 def walk_paths(obj, prefix=""):
@@ -63,41 +70,59 @@ def categorize(msgs):
                 by_method[method + " (response)"].add(p)
     return by_method
 
-cap_210 = categorize(parse_concat_json("/home/dwalleck/repos/cyril/docs/kiro-acp-capture-2.1.0.json"))
-cap_220 = categorize(parse_conductor_log("/tmp/conductor-spike/logs/20260503-140353.log"))
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("reference", help="Reference capture (concat JSON, e.g. docs/kiro-acp-capture-2.1.0.json)")
+    ap.add_argument("capture", help="Fresh conductor log (e.g. /tmp/conductor-spike/logs/<latest>.log)")
+    ap.add_argument("--label-ref", default="REFERENCE", help="Label for reference in output")
+    ap.add_argument("--label-cap", default="CAPTURE", help="Label for capture in output")
+    args = ap.parse_args()
 
-# Methods seen in both
-common = sorted(set(cap_210) & set(cap_220))
-only_220 = sorted(set(cap_220) - set(cap_210))
-only_210 = sorted(set(cap_210) - set(cap_220))
+    ref = categorize(parse_concat_json(args.reference))
+    cap = categorize(parse_conductor_log(args.capture))
 
-print("=" * 70)
-print("METHODS IN BOTH — checking field-level deltas")
-print("=" * 70)
-for method in common:
-    new_fields = cap_220[method] - cap_210[method]
-    removed_fields = cap_210[method] - cap_220[method]
-    if new_fields or removed_fields:
+    common = sorted(set(ref) & set(cap))
+    only_cap = sorted(set(cap) - set(ref))
+    only_ref = sorted(set(ref) - set(cap))
+
+    print("=" * 70)
+    print(f"METHODS IN BOTH ({args.label_ref} vs {args.label_cap}) — field-level deltas")
+    print("=" * 70)
+    deltas_found = False
+    for method in common:
+        new_fields = cap[method] - ref[method]
+        removed_fields = ref[method] - cap[method]
+        if new_fields or removed_fields:
+            deltas_found = True
+            print(f"\n[{method}]")
+            for f in sorted(new_fields):
+                print(f"  + {f}")
+            for f in sorted(removed_fields):
+                print(f"  - {f}")
+        else:
+            print(f"\n[{method}] — no field deltas ({len(cap[method])} fields)")
+    if not deltas_found:
+        print("\n  (no field-level deltas in any common method)")
+
+    print()
+    print("=" * 70)
+    print(f"METHODS ONLY IN {args.label_cap}")
+    print("=" * 70)
+    if not only_cap:
+        print("  (none)")
+    for method in only_cap:
         print(f"\n[{method}]")
-        for f in sorted(new_fields):
+        for f in sorted(cap[method]):
             print(f"  + {f}")
-        for f in sorted(removed_fields):
-            print(f"  - {f}")
-    else:
-        print(f"\n[{method}] — no field deltas ({len(cap_220[method])} fields)")
 
-print()
-print("=" * 70)
-print("METHODS ONLY IN 2.2.0 SPIKE")
-print("=" * 70)
-for method in only_220:
-    print(f"\n[{method}]")
-    for f in sorted(cap_220[method]):
-        print(f"  + {f}")
+    print()
+    print("=" * 70)
+    print(f"METHODS ONLY IN {args.label_ref} (probably scenario coverage gaps, not removals)")
+    print("=" * 70)
+    if not only_ref:
+        print("  (none)")
+    for method in only_ref:
+        print(f"\n[{method}]")
 
-print()
-print("=" * 70)
-print("METHODS ONLY IN 2.1.0 CAPTURE (probably scenario coverage gaps, not removals)")
-print("=" * 70)
-for method in only_210:
-    print(f"\n[{method}]")
+if __name__ == "__main__":
+    main()

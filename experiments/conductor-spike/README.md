@@ -11,8 +11,8 @@ See memory entries for full context: `reference_sacp_conductor_spike.md`, `refer
 
 | File | What |
 |---|---|
-| `conductor-wrapper-2.2.0.sh` | Wrapper that points conductor at the system-installed kiro-cli (whatever version is on `$PATH`). Used for the 2.2.0 capture since system kiro-cli is currently 2.2.0. |
-| `conductor-wrapper-2.1.0.sh` | Wrapper that points conductor at `docs/kiro-binaries-2.1.0/kiro-cli-chat acp` directly, bypassing the kiro-cli router so the 2.1.0 backend is exercised regardless of `$PATH`. |
+| `conductor-wrapper-2.2.0.sh` | Wrapper that points conductor at the system-installed kiro-cli (whatever version is on `$PATH`). Filename refers to when the wrapper was authored, not the binary it captures. |
+| `conductor-wrapper-2.1.0.sh` | Wrapper that points conductor at `~/.local/share/kiro-research/binaries/2.1.0/kiro-cli-chat acp` directly, bypassing the kiro-cli router so the 2.1.0 binary is exercised regardless of `$PATH`. See CLAUDE.md "Research archive" for the archive layout. |
 | `diff_fields.py` | Structural field-path differ. Parses two conductor debug logs and prints field additions/removals per JSON-RPC method. |
 | `logs/conductor-2.2.0.log` | Conductor's debug log of the 2.2.0 binary capture — every JSON-RPC line in both directions, with `C →`/`C ←`/`0 →`/`0 ←` direction markers. |
 | `logs/conductor-2.1.0.log` | Conductor's debug log of the 2.1.0 binary capture. |
@@ -27,16 +27,18 @@ cargo install sacp-conductor --root ~/.local/cargo-spike
 
 # Run against current system kiro-cli
 cargo run --example test_bridge -- \
-    --agent experiments/conductor-spike/conductor-wrapper-2.2.0.sh
+    --agent-command bash experiments/conductor-spike/conductor-wrapper-2.2.0.sh
 
-# Run against archived 2.1.0 binary (requires docs/kiro-binaries-2.1.0/ snapshot)
+# Run against archived 2.1.0 binary
+# (requires ~/.local/share/kiro-research/binaries/2.1.0/kiro-cli-chat — see CLAUDE.md "Research archive")
 cargo run --example test_bridge -- \
-    --agent experiments/conductor-spike/conductor-wrapper-2.1.0.sh
+    --agent-command bash experiments/conductor-spike/conductor-wrapper-2.1.0.sh
 
-# Diff two captures
+# Diff a fresh capture against the in-repo 2.1.0 reference
 python3 experiments/conductor-spike/diff_fields.py \
-    /tmp/conductor-spike/logs-210/<latest>.log \
-    /tmp/conductor-spike/logs/<latest>.log
+    docs/kiro-acp-capture-2.1.0.json \
+    /tmp/conductor-spike/logs/<latest>.log \
+    --label-ref 2.1.0 --label-cap 2.2.2
 ```
 
 (Wrapper scripts write to `/tmp/conductor-spike/logs*/` since `/tmp` is fine for runtime artifacts. The captures saved here are the post-run copies.)

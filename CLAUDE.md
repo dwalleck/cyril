@@ -66,6 +66,23 @@ When reverse-engineering Kiro CLI or similar tools, follow this priority order:
 
 Check logs and databases before attempting binary analysis — they're more reliable and faster to work with.
 
+### Research archive
+
+Kiro binaries, tui.js bundles, and strings dumps live **outside the repo** at `~/.local/share/kiro-research/`:
+
+```
+~/.local/share/kiro-research/
+├── binaries/<ver>/      # kiro-cli, kiro-cli-chat, kiro-cli-term + BUILD-INFO
+├── tui-bundles/         # kiro-tui-<ver>.js + .sha256 sidecars
+└── strings/<ver>/       # *.strings dumps for old versions
+```
+
+Why outside: binaries are 3.3 GB across versions and reproducible from the versioned S3 origin (`https://desktop-release.q.us-east-1.amazonaws.com/<ver>/kirocli-<arch>-linux.tar.zst`). `.gitignore` blocks `docs/kiro-binaries-*/` and `docs/kiro-tui-*.js*` to prevent accidental git addition.
+
+Small derived items (manual ACP captures, extracted system prompts, changelogs, schemas) stay in `docs/kiro-*` since they're version-controlled-friendly and load-bearing for tooling like `experiments/conductor-spike/diff_fields.py`.
+
+Tooling references the archive via `$HOME/.local/share/kiro-research/binaries/<ver>/...` — see `experiments/conductor-spike/conductor-wrapper-2.1.0.sh` for the pattern.
+
 ## Architecture
 
 ### Three-Crate Workspace

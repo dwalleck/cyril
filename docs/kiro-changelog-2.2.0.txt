@@ -1,0 +1,4 @@
+Changelog for version 2.2.0:
+Version 2.2.0 (2026-04-27)
+  - Added: Support adaptive thinking: Preserve model reasoning across multi-turn conversations for improved response quality
+  - Fixed: Fix subagent tool dispatch silently failing when MCP server events invalidate cached tool specs during execution
