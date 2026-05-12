@@ -16,7 +16,35 @@ Inside this extension's `kiro-shared` package, `package.json` declares three pee
 }
 ```
 
-This triad is what the extension's `RELEASE_STAGING_INFO.md` refers to as the **"KAS packages"** — same name the CLI plans to use for `--agent-engine kas`. **Same code, different distribution model.** The IDE bundles KAS inline via webpack into a single 36 MB `extension.js`; the CLI will eventually extract these packages to disk and spawn node as a child process speaking ACP over stdio.
+The extension's `RELEASE_STAGING_INFO.md` calls these "KAS packages" in cherry-pick log entries (e.g. *"chore: bump KAS packages to 0.3.17-hotfix.1"*) — that's the internal AWS shorthand. But the three packages play different roles, and the distinction matters for understanding what "KAS" the CLI engine refers to.
+
+### What each package actually is
+
+Counting webpack provenance comments inside `extension.js`:
+
+| Package | Provenance count | What it is |
+|---|---|---|
+| `@kiro/acp-type-covenant` | **0** | Pure TypeScript types — `.d.ts`-only package, tree-shaken out of runtime |
+| `@kiro/client` | **3** files (`dist/client.js`, `dist/index.js`, `dist/utils/type-predicates.js`) | Thin ACP client library |
+| `@kiro/agent` | **102** files in `dist/*.js`, `dist/spec/*`, `dist/utils/*`, `dist/services/*` | The agent runtime — **library half only**. `dist/server/*` is NOT in the bundle |
+
+Critically: `grep -aoE '@kiro/agent/dist/server/[a-z-]+' extension.js` returns **zero** results. The IDE has the agent runtime but not the standalone server entry point.
+
+### KAS-the-CLI-engine ≠ `@kiro/agent` the library
+
+**KAS = the standalone-stdio deployment shape of `@kiro/agent`, not the library itself.**
+
+Two facts force this distinction:
+
+1. The CLI's JS bundle walks the filesystem for `node_modules/@kiro/agent/dist/server/acp-server.js` specifically — a file in a `server/` subdirectory of `@kiro/agent`.
+2. The IDE bundle has none of those `dist/server/*` paths, no `--transport=stdio` code, no spawn-the-agent shim. It wires `@kiro/client` directly to `@kiro/agent`-the-library via in-process JS function calls.
+
+So `@kiro/agent` ships in two halves:
+
+- **Library half** (`dist/*.js` minus `dist/server/`) — what the IDE bundles, ~100 files. Already production-tested.
+- **Server entry** (`dist/server/acp-server.js` + transport plumbing) — what KAS-CLI will spawn as a node child.
+
+When `kiro-cli acp --agent-engine kas` errors with *"KAS assets not embedded"*, it specifically means the **server entry + its node_modules tree** aren't bundled into the kiro-cli-chat binary yet. The library's wire-format behavior (everything else documented below) is the SAME between in-process IDE use and stdio-spawned KAS-CLI use.
 
 ### Inlining verified at byte level
 
