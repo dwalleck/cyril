@@ -65,21 +65,50 @@ Module-path symbol delta: 2455 → 2453 (-2 net; 36 added, 38 removed). The +1.4
 
 Hidden behind a new flag: `kiro-cli acp --agent-engine <ENGINE>` and `kiro-cli chat --agent-engine <ENGINE>`. Help text: *"Agent engine to use: 'rust' (default) or 'kas' (TypeScript KAS agent)"*. KAS adds its own `--mode <vibe|spec>`.
 
-**Currently inert** — invoking `kiro-cli acp --agent-engine kas` fails:
+### Three success paths, only one fails by default
+
+The error message reveals all three resolution paths plus the failure:
 
 ```
-error: KAS assets not embedded and KIRO_KAS_SERVER_PATH not set
+"Using KAS agent engine, server path override: "        ← KIRO_KAS_SERVER_PATH set (works today)
+"Using KAS agent engine, embedded node: , server: "     ← compiled-in assets (not in this build)
+"Using KAS agent engine, server resolved from @kiro/agent package"  ← npm pkg found (not public)
+"KAS assets not embedded and KIRO_KAS_SERVER_PATH not set"          ← all three missing → error
 ```
 
-So 2.3.0 ships:
+The failure check is a precondition gate at `crates/chat-cli/src/cli/mod.rs:441` — before any extraction would happen. The "not embedded **and** not set" wording is an OR-gate between two parallel preconditions, both unsatisfied. Most plausible: a compile-time `--features kas-embedded` was off for the 2.3.0 build; the +1.4 MB binary growth is too small to actually contain a TypeScript agent runtime.
+
+### Proven working with `KIRO_KAS_SERVER_PATH`
+
+Probed empirically — the Rust binary actually spawns a node process when the env var is set:
+
+```
+$ KIRO_KAS_SERVER_PATH=/tmp/nonexistent.js kiro-cli acp --agent-engine kas
+Error: Cannot find module '/tmp/nonexistent.js'    ← node WAS spawned
+  at Module._resolveFilename (node:internal/modules/cjs/loader:1475:15)
+
+$ KIRO_KAS_SERVER_PATH=/etc/hostname kiro-cli acp --agent-engine kas
+/etc/hostname:1
+zbook-ultra                                         ← node loaded the file as JS
+ReferenceError: zbook is not defined
+```
+
+The host loop is fully functional. The only thing missing in the 2.3.0 build is the actual `acp-server.js` content. Anyone with a Node script implementing ACP can run it through 2.3.0's KAS host today.
+
+### What 2.3.0 ships
 
 - CLI argument plumbing (`--agent-engine`, `--mode`)
+- **Working host loop** — Rust spawns `node --experimental-wasm-modules <server> --transport=stdio [--token-path=...]`
 - Rust dispatch (`chat_cli::cli::execute_kas_acp`, `chat_cli::cli::chat::ChatArgs::resolve_agent_engine`)
-- Asset extraction stub (`chat_cli::embedded_tui::extract_kas_assets_if_needed`)
+- Asset extraction function (`chat_cli::embedded_tui::extract_kas_assets_if_needed`) — present but unused without embedded assets
 - Token plumbing (`chat_cli::util::paths::kas_token_path`)
-- TUI-side factory (`Ile` function in `tui.js` v2 bundle, already present): `KIRO_AGENT_ENGINE=kas` switches to KAS class `vle`
+- TUI-side factory (`Ile` function in `tui.js` v2 bundle, already present since 2.2.1): `KIRO_AGENT_ENGINE=kas` switches to KAS class `vle`
 
-…but **no embedded KAS bundle**. Same staging pattern as `AcpClient` scaffolding in 2.2.1 (still zero callers in 2.3.0).
+What's missing: only the actual `acp-server.js` content. Same staging pattern as `AcpClient` scaffolding in 2.2.1 (still zero callers in 2.3.0).
+
+### `@kiro/agent` NPM scope status
+
+Checked 2026-05-12: `@kiro/agent` returns 404 on the public NPM registry, and `scope:kiro` returns 0 packages total. Either AWS-internal CodeArtifact only, or unreleased. The "Install @kiro/agent or set KIRO_KAS_SERVER_PATH" message in `tui.js` suggests public-NPM is the eventual distribution channel — just not flipped yet.
 
 ### KAS engine details (extracted from `tui.js` inside the binary)
 
