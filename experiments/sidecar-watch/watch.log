@@ -1,0 +1,123 @@
+# watching /home/dwalleck/.kiro/sessions/cli (filter=ALL)
+# events: modify,close_write,moved_to,moved_from,create,delete,attrib
+# start_wallclock=1777682423.119
+T+ 9963.293ms  EVENT       CREATE        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.412ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.443ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.461ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.478ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.491ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.504ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.517ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.529ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.551ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.566ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.581ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.595ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.610ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.623ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.636ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.649ms  EVENT       MODIFY        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.663ms  EVENT       CLOSE_WRITE,CLOSE lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+ 9963.678ms  EVENT       CREATE        tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+ 9963.693ms  EVENT       MODIFY        tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+ 9963.708ms  EVENT       CLOSE_WRITE,CLOSE tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+ 9963.724ms  EVENT       MOVED_FROM    tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+ 9963.738ms  EVENT       MOVED_TO      json   40b75415-9145-491d-9a47-6864137d1638.json
+T+ 9963.747ms  SNAPSHOT    json          json   40b75415-9145-491d-9a47-6864137d1638.json  size=907 mtime=1777682433.081 turns=0 last_end=- input_tok=- output_tok=- credits=0.0000 updated_at=2026-05-02T00:40:33.081968900Z last_request_null=True
+T+ 9963.985ms  EVENT       CREATE        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+ 9963.996ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=0 mtime=1777682433.081 records=0
+T+ 9964.060ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+ 9964.071ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=0 mtime=1777682433.081 records=0
+T+144057.039ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+144057.137ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=1101 mtime=1777682567.175 records=2 last_kind=AssistantMessage
+T+144057.502ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+144057.525ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=1101 mtime=1777682567.175 records=2 last_kind=AssistantMessage
+T+144057.626ms  EVENT       CREATE        tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+144057.649ms  EVENT       MODIFY        tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+144057.667ms  EVENT       CLOSE_WRITE,CLOSE tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+144057.685ms  EVENT       MOVED_FROM    tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+144057.704ms  EVENT       MOVED_TO      json   40b75415-9145-491d-9a47-6864137d1638.json
+T+144057.715ms  SNAPSHOT    json          json   40b75415-9145-491d-9a47-6864137d1638.json  size=1055 mtime=1777682567.174 turns=0 last_end=- input_tok=- output_tok=- credits=0.0000 updated_at=2026-05-02T00:42:47.175604972Z last_request_null=True
+T+144057.826ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+144057.844ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=1101 mtime=1777682567.175 records=2 last_kind=AssistantMessage
+T+144057.906ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+144057.918ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=1101 mtime=1777682567.175 records=2 last_kind=AssistantMessage
+T+163903.521ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+163903.647ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=11671 mtime=1777682587.022 records=4 last_kind=AssistantMessage
+T+163904.032ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+163904.060ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=11671 mtime=1777682587.022 records=4 last_kind=AssistantMessage
+T+163904.184ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+163904.200ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=11671 mtime=1777682587.022 records=4 last_kind=AssistantMessage
+T+163904.270ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+163904.280ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=11671 mtime=1777682587.022 records=4 last_kind=AssistantMessage
+T+177968.581ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+177968.705ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=15951 mtime=1777682601.086 records=6 last_kind=AssistantMessage
+T+177969.112ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+177969.137ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=15951 mtime=1777682601.086 records=6 last_kind=AssistantMessage
+T+177969.246ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+177969.264ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=15951 mtime=1777682601.086 records=6 last_kind=AssistantMessage
+T+177969.347ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+177969.360ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=15951 mtime=1777682601.086 records=6 last_kind=AssistantMessage
+T+182970.945ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+182971.023ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=22721 mtime=1777682606.089 records=8 last_kind=AssistantMessage
+T+182971.340ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+182971.353ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=22721 mtime=1777682606.089 records=8 last_kind=AssistantMessage
+T+182971.480ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+182971.491ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=22721 mtime=1777682606.089 records=8 last_kind=AssistantMessage
+T+182971.581ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+182971.592ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=22721 mtime=1777682606.089 records=8 last_kind=AssistantMessage
+T+186996.141ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+186996.270ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=43855 mtime=1777682610.114 records=10 last_kind=AssistantMessage
+T+186996.760ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+186996.774ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=43855 mtime=1777682610.114 records=10 last_kind=AssistantMessage
+T+186996.943ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+186996.987ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=43855 mtime=1777682610.114 records=10 last_kind=AssistantMessage
+T+186997.123ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+186997.135ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=43855 mtime=1777682610.114 records=10 last_kind=AssistantMessage
+T+191589.231ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+191589.363ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=90647 mtime=1777682614.706 records=12 last_kind=AssistantMessage
+T+191590.104ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+191590.130ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=90647 mtime=1777682614.706 records=12 last_kind=AssistantMessage
+T+191590.441ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+191590.455ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=90647 mtime=1777682614.706 records=12 last_kind=AssistantMessage
+T+191590.703ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+191590.716ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=90647 mtime=1777682614.706 records=12 last_kind=AssistantMessage
+T+216280.895ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+216281.028ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=193134 mtime=1777682639.398 records=14 last_kind=AssistantMessage
+T+216281.980ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+216282.004ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=193134 mtime=1777682639.398 records=14 last_kind=AssistantMessage
+T+216282.474ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+216282.486ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=193134 mtime=1777682639.398 records=14 last_kind=AssistantMessage
+T+216282.878ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+216282.888ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=193134 mtime=1777682639.398 records=14 last_kind=AssistantMessage
+T+216283.268ms  EVENT       CREATE        tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+216283.285ms  EVENT       MODIFY        tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+216283.303ms  EVENT       CLOSE_WRITE,CLOSE tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+216283.320ms  EVENT       MOVED_FROM    tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+216283.342ms  EVENT       MOVED_TO      json   40b75415-9145-491d-9a47-6864137d1638.json
+T+216283.355ms  SNAPSHOT    json          json   40b75415-9145-491d-9a47-6864137d1638.json  size=7715 mtime=1777682639.399 turns=1 last_end=UserTurnEnd input_tok=0 output_tok=0 credits=0.7738 updated_at=2026-05-02T00:43:59.400057082Z last_request_null=True
+T+251396.709ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+251396.831ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=194027 mtime=1777682674.515 records=16 last_kind=AssistantMessage
+T+251397.674ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+251397.693ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=194027 mtime=1777682674.515 records=16 last_kind=AssistantMessage
+T+251398.117ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+251398.129ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=194027 mtime=1777682674.515 records=16 last_kind=AssistantMessage
+T+251398.516ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+251398.551ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=194027 mtime=1777682674.515 records=16 last_kind=AssistantMessage
+T+256956.107ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+256956.232ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=197678 mtime=1777682680.074 records=18 last_kind=AssistantMessage
+T+256957.113ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+256957.134ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=197678 mtime=1777682680.074 records=18 last_kind=AssistantMessage
+T+256957.589ms  EVENT       MODIFY        jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+256957.600ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=197678 mtime=1777682680.074 records=18 last_kind=AssistantMessage
+T+256957.988ms  EVENT       CLOSE_WRITE,CLOSE jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl
+T+256957.998ms  SNAPSHOT    jsonl         jsonl  40b75415-9145-491d-9a47-6864137d1638.jsonl  size=197678 mtime=1777682680.074 records=18 last_kind=AssistantMessage
+T+256958.386ms  EVENT       CREATE        tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+256958.403ms  EVENT       MODIFY        tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+256958.422ms  EVENT       CLOSE_WRITE,CLOSE tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+256958.442ms  EVENT       MOVED_FROM    tmp    40b75415-9145-491d-9a47-6864137d1638.json.tmp
+T+256958.459ms  EVENT       MOVED_TO      json   40b75415-9145-491d-9a47-6864137d1638.json
+T+256958.472ms  SNAPSHOT    json          json   40b75415-9145-491d-9a47-6864137d1638.json  size=9846 mtime=1777682680.075 turns=2 last_end=UserTurnEnd input_tok=0 output_tok=0 credits=0.2079 updated_at=2026-05-02T00:44:40.075407333Z last_request_null=True
+T+263176.074ms  EVENT       DELETE        lock   40b75415-9145-491d-9a47-6864137d1638.lock
+T+1722538.413ms  SHUTDOWN

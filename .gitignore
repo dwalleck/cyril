@@ -2,3 +2,9 @@
 cyril.log
 win-kiro.log
 .claude/worktrees/
+
+# Kiro binary research lives outside the repo at ~/.local/share/kiro-research/.
+# These globs prevent accidental re-introduction into git.
+docs/kiro-binaries-*/
+docs/kiro-tui-*.js
+docs/kiro-tui-*.js.sha256

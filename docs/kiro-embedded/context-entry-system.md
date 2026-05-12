@@ -1,0 +1,797 @@
+/modelFailed to apply registry filtering during agent swap: WARNING: Agent specifies model 'Context manager has failed to instantiate: ' which is not available. Keeping current model.
+--- CONTEXT ENTRY BEGIN ---
+This summary contains ALL relevant information from our previous conversation including tool uses, results, code analysis, and file operations. YOU MUST reference this information when answering questions and explicitly acknowledge specific details from the summary when they're relevant to the current question.
+
+SUMMARY CONTENT:
+--- CONTEXT ENTRY END ---
+
+The following file entries contain: name, filepath, and description. You SHOULD decide when to read the full file using the filepath based on its description. :
+
+[]
+Failed to get context files: Follow this instruction: I will fully incorporate this information when generating my responses, and explicitly acknowledge relevant parts of the summary when answering questions.Failed to fetch MCP registry from Failed to reload built-in tools: Terminating MCP server '' and removing its tools tools and  schemas from server '' not found in active clients[SYSTEM NOTE: This is an automated checkpoint creation request, not from the user]
+
+{{CUSTOM_INSTRUCTION}}
+
+Create a context window checkpoint for this chat session. This will be picked up by another agent to continue the work. Output a structured document using the sections below. DO NOT respond conversationally.
+
+## OBJECTIVE
+The user's primary goal or end state they're working toward.
+
+## USER GUIDANCE
+Explicit requirements, preferences, or directions from the user.
+
+## COMPLETED
+What has been done so far, including key decisions and their rationale.
+
+## TECHNICAL CONTEXT
+Implementation details required to continue correctly: files, symbols, code snippets, patterns, assumptions, constraints, invariants.
+
+## TOOLS EXECUTED
+Significant tool calls with their results and side effects.
+
+## NEXT STEPS
+Concrete, forward-looking actions that remain.
+
+## TODO LIST
+ID if loaded: <id or none>
+{{CUSTOM_INSTRUCTION}}
+This summary contains ALL relevant information from our previous conversation including tool uses, results, code analysis, and file operations. YOU MUST be sure to include this information when creating your summarization document.
+
+IMPORTANT CUSTOM INSTRUCTION: unable to construct conversation state/context show to learn more.
+
+Some context files are dropped due to size limit, please run [SYSTEM NOTE: This is an automated agent generation request, not from the user]
+
+FORMAT REQUIREMENTS: Generate a JSON configuration for a custom coding agent. IMPORTANT: Return ONLY raw JSON with NO markdown formatting, NO code blocks, NO ```json tags, NO conversational text.
+
+Your task is to generate an agent configuration file for an agent named '' with the following description: 
+
+The configuration must conform to this JSON schema:
+
+
+We have a prepopulated template:  
+
+Please change the includeMcpJson field to false. 
+Please generate the prompt field using user provided description, and fill in the MCP tools that user has selected . 
+Return only the JSON configuration, no additional text.code/readcode/writenext_message should not existinput must not be empty when adding new messagesFailed to get model info for , using default- @writeshellawsreportintrospectknowledgetodo_listuse_subagentweb_searchswitch_to_executionNo tool with "" is foundThe tool, "Mcp tool client not ready: {
+  "dummy": {
+    "name": "dummy",
+    "description": "This is a dummy tool. If you are seeing this that means the tool associated with this tool call is not in the list of available tools. This could be because a wrong tool name was supplied or the list of tools has changed since the conversation has started. Do not show this when user asks you to list tools.",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  "introspect": {
+    "name": "introspect",
+    "description": "Use ONLY when the user is asking about this chat application's own features, slash commands, settings, or capabilities. Do NOT use for general coding questions, AWS help, or tasks the user wants you to perform. When mentioning commands in your response, always prefix them with '/' (e.g., '/chat save', '/chat load', '/context'). CRITICAL: Only provide information explicitly documented. If details about any tool, feature, or command are not documented, clearly state the information is not available rather than generating assumptions.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The user's question about this assistant's usage, features, or capabilities"
+        },
+        "doc_path": {
+          "type": "string",
+          "description": "Path to a specific doc to retrieve (e.g., \"features/tangent-mode.md\"). Use this to get full content of a doc from the index."
+        }
+      },
+      "required": []
+    }
+  },
+  "glob": {
+    "name": "glob",
+    "description": "Find files and directories whose paths match a glob pattern. Respects .gitignore. Prefer this over the bash 'find' command for listing or discovering paths. Returns JSON with totalFiles (count found), truncated (true if limited), and filePaths array. When truncated is true, just mention results are truncated, don't state the limit number.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "Glob pattern, e.g. '**/*.rs', 'src/**/*.{ts,tsx}' or '**/test*'."
+        },
+        "path": {
+          "type": "string",
+          "description": "Root directory to search from. Only set this when the user explicitly mentions a directory path. In all other cases, omit this so the tool searches from the current working directory (the project root)."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum files to return. If totalFiles exceeds this, truncated will be true."
+        },
+        "max_depth": {
+          "type": "integer",
+          "description": "Maximum directory depth to traverse. Increase for deep nested structures."
+        }
+      },
+      "required": [
+        "pattern"
+      ]
+    }
+  },
+  "grep": {
+    "name": "grep",
+    "description": "Fast text pattern search in files using regex. ALWAYS use this tool instead of 'grep', 'rg', or 'ag' commands in bash. Respects .gitignore.\n\n## Text Discovery Only\nUse grep for literal text/pattern matching: error messages, TODOs, config values, regex patterns.\n\n## For Semantic Code Understanding â Use 'code' tool if available\n- Finding symbol definitions or usages â code tool (search_symbols, goto_definition, find_references)\n- Understanding code structure/relationships â code tool\n- Distinguishing definition vs call vs import â code tool\n\n## Fallback\nIf the 'code' tool is available but returns insufficient symbol info, use grep to discover candidate files/lines, then return to 'code' for precise navigation.\n\nWhen you use this tool, prefer to show the user a small list of representative matches (including file paths and line numbers) instead of only giving a high-level summary.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "Regex pattern to search for. Examples: 'fn main', 'class.*Component', 'TODO|FIXME'. Start with simple patterns first (e.g. just the word you're looking for), then refine if needed."
+        },
+        "path": {
+          "type": "string",
+          "description": "Directory to search from. Defaults to current working directory."
+        },
+        "include": {
+          "type": "string",
+          "description": "File filter glob. Examples: '*.rs', '*.{ts,tsx}', '*.py'"
+        },
+        "case_sensitive": {
+          "type": "boolean",
+          "description": "Case-sensitive search. Defaults to false (case-insensitive)."
+        },
+        "output_mode": {
+          "type": "string",
+          "enum": [
+            "content",
+            "files_with_matches",
+            "count"
+          ],
+          "description": "Output format: 'content' returns matches as 'file:line:content' (default, best for seeing actual matches), 'files_with_matches' returns only file paths, 'count' returns match counts per file."
+        },
+        "max_matches_per_file": {
+          "type": "integer",
+          "description": "Max matches returned per file (output limit). Increase to see all occurrences in a file."
+        },
+        "max_files": {
+          "type": "integer",
+          "description": "Max number of files returned (output limit). Increase for comprehensive codebase searches."
+        },
+        "max_total_lines": {
+          "type": "integer",
+          "description": "Max total matched lines returned across all files (output limit). Increase when searching for many occurrences."
+        },
+        "max_depth": {
+          "type": "integer",
+          "description": "Max directory depth to traverse when searching (search limit). Increase for deeply nested structures."
+        }
+      },
+      "required": [
+        "pattern"
+      ]
+    }
+  },
+  "execute_bash": {
+    "name": "execute_bash",
+    "description": "Execute the specified bash command. NEVER prefix commands with cd to change the working directory, use the `working_dir` argument instead.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Bash command to execute"
+        },
+        "summary": {
+          "type": "string",
+          "description": "A brief explanation of what the command does"
+        },
+        "working_dir": {
+          "type": "string",
+          "description": "Working directory for command execution. Supports tilde expansion (e.g., ~/projects). If not specified, uses the current working directory."
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  "fs_read": {
+    "name": "fs_read",
+    "description": "Tool for reading files, directories and images. Always provide an 'operations' array.\n\nFor single operation: provide array with one element.\nFor batch operations: provide array with multiple elements.\n\nAvailable modes:\n- Line: Read lines from a file\n- Directory: List directory contents\n- Search: Search for patterns in files\n- Image: Read and process images\n\nExamples:\n1. Single: {\"operations\": [{\"mode\": \"Line\", \"path\": \"/file.txt\"}]}\n2. Batch: {\"operations\": [{\"mode\": \"Line\", \"path\": \"/file1.txt\"}, {\"mode\": \"Search\", \"path\": \"/file2.txt\", \"pattern\": \"test\"}]}",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "operations": {
+          "type": "array",
+          "description": "Array of operations to execute. Provide one element for single operation, multiple for batch.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "Line",
+                  "Directory",
+                  "Search",
+                  "Image"
+                ],
+                "description": "The operation mode to run in: `Line`, `Directory`, `Search`. `Line` and `Search` are only for text files, and `Directory` is only for directories. `Image` is for image files, in this mode `image_paths` is required."
+              },
+              "path": {
+                "type": "string",
+                "description": "Path to the file or directory. The path should be absolute, or otherwise start with ~ for the user's home (required for Line, Directory, Search modes)."
+              },
+              "image_paths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "List of paths to the images. This is currently supported by the Image mode."
+              },
+              "start_line": {
+                "type": "integer",
+                "description": "Starting line number (optional, for Line mode). A negative index represents a line number starting from the end of the file.",
+                "default": 1
+              },
+              "end_line": {
+                "type": "integer",
+                "description": "Ending line number (optional, for Line mode). A negative index represents a line number starting from the end of the file.",
+                "default": -1
+              },
+              "pattern": {
+                "type": "string",
+                "description": "Pattern to search for (required, for Search mode). Case insensitive. The pattern matching is performed per line."
+              },
+              "context_lines": {
+                "type": "integer",
+                "description": "Number of context lines around search results (optional, for Search mode)",
+                "default": 2
+              },
+              "depth": {
+                "type": "integer",
+                "description": "Depth of a recursive directory listing (optional, for Directory mode)",
+                "default": 0
+              },
+              "exclude_patterns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Glob patterns to exclude from directory listing (optional, for Directory mode). If omitted, uses defaults. If empty array [] is provided, no exclusions are applied (shows everything). If patterns are provided, they completely override the defaults. Examples: '**/target/**', '*.log'",
+                "default": ["node_modules", ".git", "dist", "build", "out", ".cache", "target"]
+              },
+              "max_entries": {
+                "type": "integer",
+                "description": "Maximum number of entries to return (optional, for Directory mode). When limit is reached, results are truncated and metadata shows 'showing X of Y entries'. Use to prevent context window overflow. Default: 1000",
+                "default": 1000
+              },
+              "offset": {
+                "type": "integer",
+                "description": "Number of entries to skip for pagination (optional, for Directory mode). Use with max_entries to iterate through large directories. Entries are sorted by last modified time (most recent first). Default: 0",
+                "default": 0
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "minItems": 1
+        },
+        "summary": {
+          "type": "string",
+          "description": "Optional description of the purpose of this batch operation (mainly useful for multiple operations)"
+        }
+      },
+      "required": [
+        "operations"
+      ]
+    }
+  },
+  "fs_write": {
+    "name": "fs_write",
+    "description": "A tool for creating and editing files\n * The `create` command will override the file at `path` if it already exists as a file, and otherwise create a new file\n * The `append` command will add content to the end of an existing file, automatically adding a newline if the file doesn't end with one. The file must exist.\n Notes for using the `str_replace` command:\n * The `old_str` parameter should match EXACTLY one or more consecutive lines from the original file. Be mindful of whitespaces!\n * If the `old_str` parameter is not unique in the file, the replacement will not be performed. Make sure to include enough context in `old_str` to make it unique\n * The `new_str` parameter should contain the edited lines that should replace the `old_str`.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "enum": [
+            "create",
+            "str_replace",
+            "insert",
+            "append"
+          ],
+          "description": "The commands to run. Allowed options are: `create`, `str_replace`, `insert`, `append`."
+        },
+        "file_text": {
+          "description": "Required parameter of `create` command, with the content of the file to be created.",
+          "type": "string"
+        },
+        "insert_line": {
+          "description": "Required parameter of `insert` command. The `new_str` will be inserted AFTER the line `insert_line` of `path`.",
+          "type": "integer"
+        },
+        "new_str": {
+          "description": "Required parameter of `str_replace` command containing the new string. Required parameter of `insert` command containing the string to insert. Required parameter of `append` command containing the content to append to the file.",
+          "type": "string"
+        },
+        "old_str": {
+          "description": "Required parameter of `str_replace` command containing the string in `path` to replace.",
+          "type": "string"
+        },
+        "path": {
+          "description": "Absolute path to file or directory, e.g. `/repo/file.py` or `/repo`.",
+          "type": "string"
+        },
+        "summary": {
+          "description": "A brief explanation of what the file change does or why it's being made.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "command",
+        "path"
+      ]
+    }
+  },
+  "use_aws": {
+    "name": "use_aws",
+    "description": "Make an AWS CLI api call with the specified service, operation, and parameters. All arguments MUST conform to the AWS CLI specification. Should the output of the invocation indicate a malformed command, invoke help to obtain the the correct command.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "service_name": {
+          "type": "string",
+          "pattern": "^[^-].*",
+          "description": "The name of the AWS service. If you want to query s3, you should use s3api if possible. Must not start with a dash (-)."
+        },
+        "operation_name": {
+          "type": "string",
+          "description": "The name of the operation to perform."
+        },
+        "positional_args": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Positional arguments for high-level commands (e.g., s3 cp, s3 mv, s3 sync, s3 rm). These are passed directly without -- prefix. Use this for source/destination paths in S3 commands."
+        },
+        "parameters": {
+          "type": "object",
+          "description": "The parameters for the operation. The parameter keys MUST conform to the AWS CLI specification. You should prefer to use JSON Syntax over shorthand syntax wherever possible. For parameters that are booleans, prioritize using flags with no value. Denote these flags with flag names as key and an empty string as their value. You should also prefer kebab case."
+        },
+        "region": {
+          "type": "string",
+          "description": "Region name for calling the operation on AWS."
+        },
+        "profile_name": {
+          "type": "string",
+          "description": "Optional: AWS profile name to use from ~/.aws/credentials. Defaults to default profile if not specified."
+        },
+        "label": {
+          "type": "string",
+          "description": "Human readable description of the api that is being called."
+        }
+      },
+      "required": [
+        "region",
+        "service_name",
+        "operation_name",
+        "label"
+      ]
+    }
+  },
+  "gh_issue": {
+    "name": "report_issue",
+    "description": "Opens the browser to a pre-filled gh (GitHub) issue template to report chat issues, bugs, or feature requests. Pre-filled information includes the conversation transcript, chat context, and chat request IDs from the service.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the GitHub issue."
+        },
+        "expected_behavior": {
+          "type": "string",
+          "description": "Optional: The expected chat behavior or action that did not happen."
+        },
+        "actual_behavior": {
+          "type": "string",
+          "description": "Optional: The actual chat behavior that happened and demonstrates the issue or lack of a feature."
+        },
+        "steps_to_reproduce": {
+          "type": "string",
+          "description": "Optional: Previous user chat requests or steps that were taken that may have resulted in the issue or error response."
+        }
+      },
+      "required": [
+        "title"
+      ]
+    }
+  },
+  "thinking": {
+    "name": "thinking",
+    "description": "Thinking is an internal reasoning mechanism improving the quality of complex tasks by breaking their atomic actions down; use it specifically for multi-step problems requiring step-by-step dependencies, reasoning through multiple constraints, synthesizing results from previous tool calls, planning intricate sequences of actions, troubleshooting complex errors, or making decisions involving multiple trade-offs. Avoid using it for straightforward tasks, basic information retrieval, summaries, always clearly define the reasoning challenge, structure thoughts explicitly, consider multiple perspectives, and summarize key insights before important decisions or complex tool interactions.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "thought": {
+          "type": "string",
+          "description": "A reflective note or intermediate reasoning step such as \"The user needs to prepare their application for production. I need to complete three major asks including 1: building their code from source, 2: bundling their release artifacts together, and 3: signing the application bundle."
+        }
+      },
+      "required": [
+        "thought"
+      ]
+    }
+  },
+  "knowledge": {
+    "name": "knowledge",
+    "description": "A tool for indexing and searching content across chat sessions using semantic search.\n\n## Overview\nThis tool enables persistent storage and retrieval of information using semantic search (MiniLLM) or keyword search (BM25). Content remains available across sessions for later use.\n\n## When to use\n- When users ask to query your knowledge bases or kbs\n- When you need to search previously indexed content\n- When users request to index new content (code, markdown, CSV, PDF, and other text file formats)\n- When exploring unfamiliar content to find relevant information\n- When users ask about topics that might be in indexed knowledge bases\n\n## When not to use\n- When content has not been indexed yet and user hasn't requested indexing\n- When you need real-time or external information not in the knowledge base\n\n## Notes\n- Use 'show' command to list available knowledge bases before searching\n- Search can target specific knowledge bases (context_id) or all knowledge bases\n- Use default limit values unless specifically needed; fewer results for focused search\n- Pagination available via offset parameter for large result sets\n- 'add' command indexes new content; 'update' command refreshes existing knowledge bases\n- Unless there is a clear reason to modify the search query, use the user's original wording for better semantic matching",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "enum": [
+            "show",
+            "add",
+            "remove",
+            "clear",
+            "search",
+            "update",
+            "status",
+            "cancel"
+          ],
+          "description": "The knowledge operation to perform:\n- 'show': List all knowledge contexts (no additional parameters required)\n- 'add': Add content to knowledge base (requires 'name' and 'value')\n- 'remove': Remove content from knowledge base (requires one of: 'name', 'context_id', or 'path')\n- 'clear': Remove all knowledge contexts.\n- 'search': Search across knowledge contexts (requires 'query', optional: 'context_id', 'limit', 'offset', 'snippet_length', 'sort_by', 'file_type')\n- 'update': Update existing context with new content (requires 'path' and one of: 'name', 'context_id')\n- 'status': Show background operation status and progress\n- 'cancel': Cancel background operations (optional 'operation_id' to cancel specific operation, or cancel all if not provided)"
+        },
+        "name": {
+          "type": "string",
+          "description": "A descriptive name for the knowledge context. Required for 'add' operations. Can be used for 'remove' and 'update' operations to identify the context."
+        },
+        "value": {
+          "type": "string",
+          "description": "The content to store in knowledge base. Required for 'add' operations. Can be either text content or a file/directory path. If it's a valid file or directory path, the content will be indexed; otherwise it's treated as text."
+        },
+        "context_id": {
+          "type": "string",
+          "description": "The unique context identifier for targeted operations. Can be obtained from 'show' command. Used for 'remove', 'update', and 'search' operations to specify which context to operate on."
+        },
+        "path": {
+          "type": "string",
+          "description": "File or directory path. Used in 'remove' operations to remove contexts by their source path, and required for 'update' operations to specify the new content location."
+        },
+        "query": {
+          "type": "string",
+          "description": "The search query string. Required for 'search' operations. Performs semantic search across knowledge contexts to find relevant content."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of search results to return, use default value unless required more results or focused search. Optional for 'search' operations."
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Number of results to skip for pagination. Optional for 'search' operations."
+        },
+        "snippet_length": {
+          "type": "integer",
+          "description": "Maximum character length for text snippets in results. Text longer than this will be truncated. Optional for 'search' operations."
+        },
+        "sort_by": {
+          "type": "string",
+          "enum": ["relevance", "path", "name"],
+          "description": "Sort order for search results. Options: 'relevance' (default, by similarity score), 'path' or 'name' (alphabetically by file path). Optional for 'search' operations."
+        },
+        "file_type": {
+          "type": "string",
+          "description": "Filter results by file type (e.g., 'Code', 'Markdown', 'Text'). Optional for 'search' operations."
+        },
+        "operation_id": {
+          "type": "string",
+          "description": "Optional operation ID to cancel a specific operation. Used with 'cancel' command. If not provided, all active operations will be cancelled. Can be either the full operation ID or the short 8-character ID."
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  "todo_list": {
+    "name": "todo_list",
+    "description": "A tool for creating a TODO list and keeping track of tasks. This tool should be requested EVERY time the user gives you a task that will take multiple steps. A TODO list should be made BEFORE executing any steps. Steps should be marked off AS YOU COMPLETE THEM. DO NOT display your own tasks or todo list AT ANY POINT; this is done for you. Complete the tasks in the same order that you provide them. If the user tells you to skip a step, DO NOT mark it as completed.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "enum": [
+            "create", 
+            "complete", 
+            "load", 
+            "add", 
+            "remove",
+            "lookup"
+          ],
+          "description": "The command to run. Allowed options are `create`, `complete`, `load`, `add`, `remove`, and `lookup`. Call `lookup` without arguments to see a list of all existing TODO list IDs."
+        },
+        "tasks": {
+          "description": "Required parameter of `create` command containing the list of DISTINCT tasks to be added to the TODO list.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "task_description": {
+                "type": "string",
+                "description": "The main task description"
+              },
+              "details": {
+                "type": "string",
+                "description": "Optional detailed information about the task"
+              }
+            },
+            "required": ["task_description"]
+          }
+        },
+        "todo_list_description": {
+          "description": "Required parameter of `create` command containing a BRIEF summary of the todo list being created. The summary should be detailed enough to refer to without knowing the problem context beforehand.",
+          "type": "string"
+        },
+        "completed_indices": {
+          "description": "Required parameter of `complete` command containing the 0-INDEXED numbers of EVERY completed task. Each task should be marked as completed IMMEDIATELY after it is finished.",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "context_update": {
+          "description": "Required parameter of `complete` command containing important task context. Use this command to track important information about the task AND information about files you have read.",
+          "type": "string"
+        },
+        "modified_files": {
+          "description": "Optional parameter of `complete` command containing a list of paths of files that were modified during the task. This is useful for tracking file changes that are important to the task.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "load_id": {
+          "description": "Required parameter of `load` command containing ID of todo list to load",
+          "type": "string"
+        },
+        "current_id": {
+          "description": "Required parameter of `complete`, `add`, and `remove` commands containing the ID of the currently loaded todo list. The ID will ALWAYS be provided after every `todo_list` call after the serialized todo list state.",
+          "type": "string"
+        },
+        "new_tasks": {
+          "description": "Required parameter of `add` command containing a list of new tasks to be added to the to-do list.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "task_description": {
+                "type": "string",
+                "description": "The main task description"
+              },
+              "details": {
+                "type": "string",
+                "description": "Optional detailed information about the task"
+              }
+            },
+            "required": ["task_description"]
+          }
+        },
+        "insert_indices": {
+          "description": "Required parameter of `add` command containing a list of 0-INDEXED positions to insert the new tasks. There MUST be an index for every new task being added.",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "new_description": {
+          "description": "Optional parameter of `add` and `remove` containing a new todo list description. Use this when the updated set of tasks significantly change the goal or overall procedure of the todo list.",
+          "type": "string"
+        },
+        "remove_indices": {
+          "description": "Required parameter of `remove` command containing a list of 0-INDEXED positions of tasks to remove.",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": ["command"]
+    }
+  },
+  "delegate": {
+    "name": "delegate",
+    "description": "IMPORTANT: This tool is being replaced by 'use_subagent'. For most tasks requiring agent execution, use the 'use_subagent' tool instead. The delegate tool runs tasks asynchronously in the background (non-blocking), while use_subagent runs synchronously (blocking). Only use 'delegate' if the user explicitly requests background/async execution or mentions 'delegate' by name.\n\nLaunch and manage asynchronous agent processes. This tool allows you to delegate tasks to agents that run independently in the background.\n\nOperations:\n- launch: Start a new task with an agent (requires task parameter, agent is optional)\n- status: Check agent status and get full output if completed. Agent is optional - defaults to 'all' if not specified\n\nIf no agent is specified for launch, uses 'default_agent'. Only one task can run per agent at a time. Files are stored in .kiro/.subagents/\n\nIMPORTANT: If a specific agent is requested but not found, DO NOT automatically retry with 'default_agent' or any other agent. Simply report the error and available agents to the user.\n\nExample usage:\n1. Launch with agent: {\"operation\": \"launch\", \"agent\": \"rust-agent\", \"task\": \"Create a snake game\"}\n2. Launch without agent: {\"operation\": \"launch\", \"task\": \"Write a Python script\"}\n3. Check specific agent: {\"operation\": \"status\", \"agent\": \"rust-agent\"}\n4. Check all agents: {\"operation\": \"status\", \"agent\": \"all\"}\n5. Check all agents (shorthand): {\"operation\": \"status\"}",
+    "input_schema": {
+      "type": "object",
+        "properties": {
+          "operation": {
+            "description": "Operation to perform: launch, status, or list",
+            "$ref": "#/$defs/Operation"
+          },
+          "agent": {
+            "description": "Agent name to use (optional - uses \"q_cli_default\" if not specified)",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "task": {
+            "description": "Task description (required for launch operation). This process is supposed to be async. DO NOT query immediately after launching a task.",
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "operation"
+        ],
+        "$defs": {
+          "Operation": {
+            "oneOf": [
+              {
+                "description": "Launch a new agent with a specified task",
+                "type": "string",
+                "const": "launch"
+              },
+              {
+                "description": "Check the status of a specific agent or all agents if None is provided",
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "status"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "description": "List all available agents",
+                "type": "string",
+                "const": "list"
+              }
+            ]
+          }
+        },
+        "required": ["operation"]
+    }
+  },
+  "web_search": {
+    "name": "web_search",
+    "description": "WebSearch looks up information that is outside the model's training data or cannot be reliably inferred from the current codebase/context.\nTool performs basic compliance wrt content licensing and restriction.\nAs an agent you are responsible for adhering to compliance and attribution requirements.\nIMPORTANT: The snippets often contain enough information to answer questions - only use web_fetch if you need more detailed content from a specific webpage.\n\n## When to Use\n- When the user asks for current or up-to-date information (e.g., pricing, versions, technical specs) or explicitly requests a web search.\n- When verifying information that may have changed recently, or when the user provides a specific URL to inspect.\n\n## When NOT to Use\n- When the question involves basic concepts, historical facts, or well-established programming syntax/technical documentation.\n- When the topic does not require current or evolving information.\n\nFor any code-related tasks, follow this order:\n1. Search within the repository (if tools are available) and check if it can be inferred from existing code or documentation.\n2. Use this tool only if still unresolved and the library/data is likely new/unseen.\n\n## Content Compliance Requirements\nYou MUST adhere to strict licensing restrictions and attribution requirements when using search results:\n\n### Attribution Requirements\n- ALWAYS provide inline links to original sources using format: [description](url)\n- If not possible to provide inline link, add sources at the end of file\n- Ensure attribution is visible and accessible\n\n### Verbatim Reproduction Limits\n- NEVER reproduce more than 30 consecutive words from any single source\n- Track word count per source to ensure compliance\n- Always paraphrase and summarize rather than quote directly\n- Add compliance note when the content from the source is rephrased: \"Content was rephrased for compliance with licensing restrictions\"\n\n### Content Modification Guidelines\n- You MAY paraphrase, summarize, and reformat content\n- You MUST NOT materially change the underlying substance or meaning\n- Preserve factual accuracy while condensing information\n- Avoid altering core arguments, data, or conclusions\n\n## Usage Details\n- You may rephrase user queries to improve search effectiveness\n- You can make multiple queries to gather comprehensive information\n- Consider breaking complex questions into focused searches\n- Refine queries based on initial results if needed\n\n## Output Usage\n- Prioritize latest published sources based on publishedDate\n- Prefer official documentation to blogs and news posts\n- Use domain information to assess source authority and reliability\n\n## Error Handling\n- If unable to comply with content restrictions, explain limitations to user\n- Suggest alternative approaches when content cannot be reproduced\n- Prioritize compliance over completeness when conflicts arise\n\n## Output\nThe tool returns a JSON object with a \"results\" array containing search results:\n\n{\n  \"results\": [\n    {\n      \"title\": \"Example Page Title\",\n      \"url\": \"https://example.com/page\",\n      \"snippet\": \"Brief excerpt from the page...\",\n      \"publishedDate\": \"2025-11-20T10:30:00Z\",\n      \"domain\": \"example.com\",\n      \"id\": \"unique-id-123\",\n      \"maxVerbatimWordLimit\": 30,\n      \"publicDomain\": false\n    }\n  ]\n}\n\n## UI FROM LLM (You) back to the user\nCRITICAL: Always start your response with \"Here's what I found:\" and then start from a newline.\nALWAYS end your response with a blank line followed by 'References:' and list the sources you used in sequential order [1], [2], [3], etc. with NO gaps in numbering. Format: '[N] Title - URL' one per line. Truncate long titles to 80 characters and long URLs to 100 characters, adding '...' if truncated.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Search query (max 200 chars) - use concise keywords, not full sentences"
+        }
+      },
+      "required": ["query"]
+    }
+  },
+  "web_fetch": {
+    "name": "web_fetch",
+    "description": "Fetch and extract content from a specific URL. Supports three modes: 'selective' (default, extracts relevant sections around search terms), 'truncated' (first 8000 chars), 'full' (complete content). Use 'selective' mode to read specific parts of a page multiple times without filling context. Provide 'search_terms' in selective mode to find relevant sections (e.g., 'pricing', 'installation').",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "URL to fetch content from"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["selective", "truncated", "full"],
+          "description": "Extraction mode: 'selective' for smart extraction (default), 'truncated' for first 8000 chars, 'full' for complete content"
+        },
+        "search_terms": {
+          "type": "string",
+          "description": "Optional: Keywords to find in selective mode (e.g., 'pricing cost', 'installation setup'). Returns ~10 lines before and after matches. If not provided, returns beginning of page."
+        }
+      },
+      "required": ["url"]
+    }
+  },
+  "use_subagent": {
+    "name": "use_subagent",
+    "description": "â ï¸ CRITICAL DELEGATION TOOL â ï¸\n\nð BEFORE attempting ANY task, CHECK if you have the required tools in YOUR current tool list.\n\nâ If you DON'T have the necessary tools â YOU MUST use this tool to delegate to a subagent that does.\nâ If you DO have the tools â Handle the task yourself.\n\n## When to Use (MANDATORY scenarios):\n\n1. **MISSING TOOLS**: The user asks you to do something but you don't see the required tool in your available tools list\n   - Example: User asks to read a file, but you don't have 'fs_read' â USE THIS TOOL\n   - Example: User asks to search code, but you don't have 'code' tool â USE THIS TOOL\n   - Example: User asks to run bash command, but you don't have 'execute_bash' â USE THIS TOOL\n\n2. **PARALLEL PROCESSING**: A complex task can be split into independent subtasks that different specialized agents can handle simultaneously\n\n3. **CAPABILITY CHECK**: Use ListAgents command first to see what specialized agents and their toolsets are available\n\n## @prompt References in Queries\n\nYou CAN pass `@prompt-name` references (including arguments) directly in the subagent query field. The system automatically resolves @prompt references before the subagent starts â the prompt content is expanded inline and the subagent receives the fully resolved text. Do NOT refuse to delegate because a query contains `@prompt-name` syntax.\n\nExample: `{\"query\": \"@my-task 'arg1:value1, arg2:value2'\"}` â this is valid and will be resolved.\n\n## How Subagents Are Different:\n- Subagents have DIFFERENT, SPECIALIZED toolsets than you\n- Each subagent may have tools you don't have access to\n- They operate independently with their own context\n- Up to 4 subagents can work in parallel\n\n## Decision Flow:\n```\nUser makes request â Check YOUR tools list â Missing required tool? â USE use_subagent\n                                          â Have required tool? â Handle it yourself\n```\n\nâ¡ Remember: Don't apologize about lacking tools - just delegate to a subagent that has them! Also note that subagents that are spawned together could not communicate with each other. If they are to perform tasks that are dependent on each other. Spawn them with a different tool call!",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "enum": [
+            "ListAgents",
+            "InvokeSubagents"
+          ],
+          "description": "The commands to run. Allowed options are `ListAgents` to query available agents, or `InvokeSubagents` to invoke one or more subagents"
+        },
+        "content": {
+          "description": "Required for `InvokeSubagents` command. Contains subagents array and optional conversation ID.",
+          "type": "object",
+          "properties": {
+            "subagents": {
+              "type": "array",
+              "description": "Array of subagent invocations to execute in parallel. Each invocation specifies a query, optional agent name, and optional context.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "The query or task to be handled by the subagent"
+                  },
+                  "agent_name": {
+                    "type": "string",
+                    "description": "Optional name of the specific agent to use. If not provided, uses the default agent"
+                  },
+                  "relevant_context": {
+                    "type": "string",
+                    "description": "Optional additional context that should be provided to the subagent to help it understand the task better"
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              }
+            }
+          },
+          "required": [
+            "subagents"
+          ]
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  "switch_to_execution": {
+    "name": "switch_to_execution",
+    "exclude_from_builtin": true,
+    "description": "Use this tool when you have finished planning and are ready to switch back to the execution agent.\n\n## How This Tool Works\n- This tool signals that planning is complete and presents the user with two options:\n  - **y**: Switch to execution agent and begin implementation immediately\n  - **n**: Continue planning (stay with planner agent for refinements)\n- The user will see your plan and choose how to proceed\n\n## When to Use This Tool\nIMPORTANT: Only use this tool when you have completed planning for a task that requires code implementation. For research tasks where you're gathering information, searching files, reading files or in general trying to understand the codebase - do NOT use this tool.\n\n## Handling Ambiguity in Plans\nBefore using this tool, ensure your plan is clear and unambiguous. If there are multiple valid approaches or unclear requirements:\n1. Ask the user questions to clarify\n2. Ask about specific implementation choices (e.g., architectural patterns, which library to use)\n3. Clarify any assumptions that could affect the implementation\n4. Edit your plan to incorporate user feedback\n5. Only proceed with SwitchToExecution after resolving ambiguities",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "plan": {
+          "type": "string",
+          "description": "The generated implementation plan"
+        }
+      },
+      "required": ["plan"]
+    }
+  },
+  "session": {
+    "name": "session",
+    "description": "Adjust session settings temporarily (in-memory only, cleared on exit). CRITICAL: You MUST use introspect tool FIRST to verify setting names and understand their purpose before using set operation.\n\n## Session vs Persistent Settings\n- **session tool**: Temporary in-memory changes (cleared when chat exits) - Use for quick experiments or one-time adjustments\n- **fs_write tool**: Permanent changes saved to disk - Use when user says \"save\", \"persist\", \"permanently\", or \"always\"\n  - Global settings: ~/.kiro/settings.json\n  - Workspace settings: .kiro/settings.json\n\n## When to Use Each Tool\n- User: \"disable markdown\" â session tool (temporary)\n- User: \"disable markdown permanently\" â fs_write to ~/.kiro/settings.json (global) or .kiro/settings.json (workspace)\n- User: \"save this setting\" â fs_write (persistent)\n- User: \"try disabling markdown\" â session tool (temporary)\n\n## REQUIRED Workflow for Setting Changes\n1. User asks to change a setting\n2. Use introspect tool to find the correct setting name and understand what it does\n3. Determine if temporary (session) or permanent (fs_write)\n4. Use appropriate tool\n\n## Operations\n- **list**: Show currently configured session settings (non-default values only)\n- **get**: Get the current value of a specific setting\n- **set**: Change a setting value temporarily (MUST verify setting name with introspect first)\n- **reset**: Clear session override for a specific setting, or all session overrides if no key provided\n\n## Example Workflows\nTemporary change:\n  User: \"disable markdown\"\n  1. introspect(query=\"markdown setting\") â learn about chat.disableMarkdownRendering\n  2. session(operation=\"set\", key=\"chat.disableMarkdownRendering\", value=true)\n\nReset single setting:\n  User: \"reset markdown setting\"\n  session(operation=\"reset\", key=\"chat.disableMarkdownRendering\")\n\nReset all session overrides:\n  User: \"clear all my temporary settings\"\n  session(operation=\"reset\")\n\nPermanent change:\n  User: \"disable markdown permanently\"\n  1. introspect(query=\"markdown setting\") â learn about chat.disableMarkdownRendering\n  2. fs_write to modify ~/.kiro/settings.json with {\"chat.disableMarkdownRendering\": true}\n\nDO NOT guess setting names - always verify with introspect first.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": ["list", "get", "set", "reset"],
+          "description": "The operation to perform: 'list' shows configured settings, 'get' retrieves a specific setting, 'set' changes a setting value temporarily, 'reset' clears session override(s)"
+        },
+        "key": {
+          "type": "string",
+          "description": "Setting key (e.g., 'chat.disableMarkdownRendering'). Required for 'get' and 'set' operations. Optional for 'reset' (if omitted, resets all session overrides). MUST be verified with introspect tool first."
+        },
+        "value": {
+          "description": "Value to set. Type depends on the setting (boolean, string, or number). Required for 'set' operation"
+        }
+      },
+      "required": ["operation"]
+    }
+  }
+}
+User interrupted mcp server loading in non-interactive mode. Ending.Not all mcp servers loaded. Configure non-interactive timeout with q settings mcp.noInteractiveTimeoutOne or more mcp server did not load correctly. See $TMPDIR/kiro-log/kiro-chat.log for more details.The following tools are rejected because they conflict with existing tools in names. Avoid this via setting aliases for them: 
+ from ToolManager processed  MCP servers for runtime use (registry mode: Failed to process MCP servers (invalid registry data): Disabling all MCP servers due to registry processing failureMissing conversation id^[a-zA-Z][a-zA-Z0-9_]*$Failed to create config directory: Failed to serialize agent config: Failed to write agent config file: ð·  Checkpoints are enabled! (took s)
+Checkpoints could not be initialized: â Checkpoints are already enabled for this session! Use /checkpoint list to see current checkpoints.
+Failed to clean: Deleting: â ï¸ ï¸Checkpoints not enabled.
+â Deleted shadow repository for this session.
+Select checkpoint to restore:Failed to restore: Failed to gather checkpoints: â Restored to checkpoint â ï¸ Checkpoints not enabled. Use '/checkpoint init' to enable.
+
+Checkpoint is disabled. Enable it with:  settings chat.enableCheckpoint true
+â ï¸ Checkpoint is disabled while in tangent mode. Please exit tangent mode if you want to use checkpoint.
+
+Press ââto navigateEnterâto toggle an experiment) Failed to choose experiment: [OFF][ON] 
