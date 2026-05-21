@@ -390,7 +390,7 @@
         "type": "fixed",
         "description": "Reset context usage percentage on agent swap to prevent displaying stale values"
       },
-      {https://prod.download.cli.kiro.dev/stable/latest/manifest.json
+      {
         "type": "added",
         "description": "Interactive agent selection for /agent edit and /agent set-default commands"
       },

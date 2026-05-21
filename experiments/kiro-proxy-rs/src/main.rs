@@ -63,9 +63,14 @@ use tokio::process::ChildStdin;
 const DEFAULT_LOG_PATH: &str = "/tmp/kiro-proxy-poc/messages-rs.jsonl";
 
 /// Default real-backend path if `KIRO_PROXY_REAL_BACKEND` isn't set.
-fn default_real_backend() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/".into());
-    PathBuf::from(home).join(".local/bin/kiro-cli-chat")
+///
+/// Returns an error if `HOME` is unset rather than silently falling back to
+/// a root-relative path that would mask the misconfiguration downstream.
+fn default_real_backend() -> Result<PathBuf> {
+    let home = std::env::var("HOME").context(
+        "HOME is not set; set KIRO_PROXY_REAL_BACKEND explicitly to the kiro-cli-chat path",
+    )?;
+    Ok(PathBuf::from(home).join(".local/bin/kiro-cli-chat"))
 }
 
 /// Read ppid by parsing /proc/self/status. Linux-only; returns None elsewhere.
@@ -586,9 +591,10 @@ async fn main() -> Result<()> {
         );
     }
 
-    let real_backend_path = std::env::var("KIRO_PROXY_REAL_BACKEND")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| default_real_backend());
+    let real_backend_path = match std::env::var("KIRO_PROXY_REAL_BACKEND") {
+        Ok(p) => PathBuf::from(p),
+        Err(_) => default_real_backend()?,
+    };
 
     let mut spawn_args: Vec<String> = vec![real_backend_path.display().to_string()];
     spawn_args.extend(argv[1..].iter().cloned());
