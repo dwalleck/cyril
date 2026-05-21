@@ -59,10 +59,26 @@ Notable non-result: **`commands/execute (response)` jumped from 44 to 57 fields 
 ### `/effort`
 
 - **Slot in `commands/available`**: present in 2.4.1, absent in 2.3.0.
-- **`commands/options { command: "effort" }` response in 2.4.1**: `{ options: [], hasMore: false }`. Empty today — backend hasn't lit up effort values for the auto/Claude model in use. Schema is wired and parseable; values are gated.
+- **`commands/options { command: "effort" }` response is model-conditional.** Initial capture under `claude-haiku-4.5` returned `{ options: [], hasMore: false }`. Re-running with `claude-opus-4.7` active produced the actual options list:
+
+  ```json
+  {
+    "hasMore": false,
+    "options": [
+      {"value":"low",    "label":"Low"},
+      {"value":"medium", "label":"Medium"},
+      {"value":"high",   "label":"High"},
+      {"value":"xhigh",  "label":"xHigh  [active]"},
+      {"value":"max",    "label":"Max"}
+    ]
+  }
+  ```
+
+  Five effort levels: `low | medium | high | xhigh | max`. xHigh is the default for Opus 4.7 (signaled by the `[active]` suffix on `label`, not a structured `current: true` field). The option schema is bare (`value` + `label` only — no `description` or `group` like other selection commands). Captures: `experiments/conductor-spike/test_bridge-2.4.1.out` (haiku, empty), `test_bridge-2.4.1-opus.out` (opus, populated).
 - **Same request to 2.3.0**: backend hangs without responding (no `result`, no `error`). Subsequent client requests are blocked behind the in-flight id, breaking the session for the remainder of the run.
 - **New wire-field strings in `kiro-cli-chat` 2.4.1**: `"effort"`, `"effort_update"`. Both absent in 2.3.0 (0 matches).
 - **New Rust type**: `agent::agent::tui_commands::command::EffortArgs`, confirmed via mangled-symbol presence in 2.4.1 (`_ZN…tui_commands..command..EffortArgs..deserialize..`). Absent in 2.3.0 (0 matches for `EffortArgs` or `tui_commands..command..Effort`). Thinking-effort is net-new in the 2.4.x series — there is no 2.3.0 scaffolding precedent.
+- **`_kiro.dev/metadata` carries `effort` field under thinking-capable models.** New in 2.4.1 and **also model-conditional**: under Opus 4.7 the metadata notification gained `"effort": "xhigh"`, emitted on model-switch and on every subsequent metadata notification (turn completion, post-`/effort`-query). Absent under haiku in the same binary (0 matches for `"effort":` in the haiku conductor log, 6+ in opus). Cyril's `_kiro.dev/metadata` parser will need to deserialize `effort: Option<String>` and surface it in the UI (likely the toolbar, alongside the model name).
 
 ### `/rewind`
 
@@ -93,6 +109,8 @@ Sent `/stats` after the "Say hello in one word" turn on both binaries, same back
 ```
 
 **Conclusion**: token-count population is a backend-rollout question, not a binary question. Same-day same-backend isolation: if the binary were the variable, 2.4.1 would diverge; it doesn't. The `input_tokens`/`output_tokens` schema is present in both binaries (2.3.0's was the first to advertise it, per the `reference_kiro_2_3_0_diff.md` memory). Whether the backend will eventually populate these is observable via repeated capture against the same binary over time.
+
+**Also confirmed not model-conditional**: re-ran `/stats` with `claude-opus-4.7` active. Tokens are still null. So the gate is purely backend, not "only the thinking-capable models report tokens." A turn under Opus 4.7 with xHigh effort costs ~$0.148 in metered credits (vs ~$0.019 for the same prompt under Haiku at default effort — 7.8× more, of which some is the model multiplier and some is the effort-level thinking budget), but the token totals that would let us split those costs into thinking-token vs response-token shares aren't on the wire yet.
 
 `_kiro.dev/metadata` continues to emit `meteringUsage` (credits) and `turnDurationMs` but no per-turn token totals.
 
