@@ -208,6 +208,39 @@ async fn main() -> anyhow::Result<()> {
     .await;
     println!();
 
+    // --- Test 9b: Execute /stats (post-prompt; token counts should be populated if backend sends them) ---
+    println!("--- [9b] Executing /stats (post-prompt token data) ---");
+    sender
+        .send(BridgeCommand::ExecuteCommand {
+            command: "stats".into(),
+            session_id: session_id.clone(),
+            args: serde_json::json!({}),
+        })
+        .await?;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
+    println!();
+
+    // --- Test 9c: Query /effort options (new in 2.4.x: thinking-effort exposure) ---
+    println!("--- [9c] Querying /effort options ---");
+    sender
+        .send(BridgeCommand::QueryCommandOptions {
+            command: "effort".into(),
+            session_id: session_id.clone(),
+        })
+        .await?;
+    drain_notifications(
+        &mut notification_rx,
+        &mut permission_rx,
+        Duration::from_secs(3),
+    )
+    .await;
+    println!();
+
     // --- Test 10: Query chat sessions ---
     println!("--- [10] Querying chat session options ---");
     sender
