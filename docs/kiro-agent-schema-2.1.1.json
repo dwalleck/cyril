@@ -1,0 +1,373 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent",
+  "description": "An Agent is a declarative way of configuring a given instance of kiro-cli.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "name": {
+      "description": "Name of the agent",
+      "type": "string"
+    },
+    "description": {
+      "description": "This field is not model facing and is mostly here for users to discern between agents",
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "prompt": {
+      "description": "The intention for this field is to provide high level context to the\nagent. This should be seen as the same category of context as a system prompt.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "mcpServers": {
+      "description": "Configuration for Model Context Protocol (MCP) servers",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/CustomToolConfig"
+      },
+      "default": {}
+    },
+    "tools": {
+      "description": "List of tools the agent can see. Use \\\"@{MCP_SERVER_NAME}/tool_name\\\" to specify tools from\nmcp servers. To include all tools from a server, use \\\"@{MCP_SERVER_NAME}\\\"",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "toolAliases": {
+      "description": "Tool aliases for remapping tool names",
+      "type": "object",
+      "additionalProperties": {
+        "description": "The name to change to. For tools in mcp servers, you would need to exclude their server prefix",
+        "type": "string"
+      },
+      "propertyNames": {
+        "description": "Subject of the tool name change. For tools in mcp servers, you would need to prefix them with their server names",
+        "type": "string"
+      },
+      "default": {}
+    },
+    "allowedTools": {
+      "description": "List of tools the agent is explicitly allowed to use",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "resources": {
+      "description": "Files to include in the agent's context",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ResourcePath"
+      },
+      "default": []
+    },
+    "hooks": {
+      "description": "Commands to run when a chat session is created",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/Hook"
+        }
+      },
+      "default": {}
+    },
+    "toolsSettings": {
+      "description": "Settings for specific tools. These are mostly for native tools. The actual schema differs by\ntools and is documented in detail in our documentation",
+      "type": "object",
+      "additionalProperties": {
+        "description": "Settings for tools. Refer to our documentations to see how to configure them",
+        "type": "object"
+      },
+      "propertyNames": {
+        "description": "The name of the tool to be configured",
+        "type": "string"
+      },
+      "default": {}
+    },
+    "includeMcpJson": {
+      "description": "Whether or not to include the legacy global MCP configuration in the agent\nYou can reference tools brought in by these servers as just as you would with the servers\nyou configure in the mcpServers field in this config",
+      "type": "boolean",
+      "default": false
+    },
+    "model": {
+      "description": "The model ID to use for this agent. If not specified, uses the default model.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "keyboardShortcut": {
+      "description": "Keyboard shortcut for swapping to this agent (e.g., \"ctrl+shift+a\", \"shift+tab\")",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "welcomeMessage": {
+      "description": "Welcome message displayed when switching to this agent",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "name"
+  ],
+  "$defs": {
+    "CustomToolConfig": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "Transport type: \"stdio\", \"http\", or \"registry\"",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "url": {
+          "description": "The URL for HTTP-based MCP server communication",
+          "type": "string"
+        },
+        "headers": {
+          "description": "HTTP headers to include when communicating with HTTP-based MCP servers",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "oauthScopes": {
+          "description": "Scopes with which oauth is done (deprecated: use oauth.oauthScopes instead)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "oauth": {
+          "description": "OAuth configuration for this server",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OAuthConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "command": {
+          "description": "The command string used to initialize the mcp server",
+          "type": "string"
+        },
+        "args": {
+          "description": "A list of arguments to be used to run the command with",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env": {
+          "description": "A list of environment variables to run the command with",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "timeout": {
+          "description": "Timeout for each mcp request in ms",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "disabled": {
+          "description": "A boolean flag to denote whether or not to load this mcp server",
+          "type": "boolean"
+        },
+        "disabledTools": {
+          "description": "List of tool names from this server to disable",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "OAuthConfig": {
+      "type": "object",
+      "properties": {
+        "redirectUri": {
+          "description": "Custom redirect URI for OAuth flow (e.g., \"127.0.0.1:7778\")\nIf not specified, a random available port will be assigned by the OS",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "oauthScopes": {
+          "description": "Scopes with which oauth is done (new location, preferred over root-level oauth_scopes)",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "OriginalToolName": {
+      "description": "Subject of the tool name change. For tools in mcp servers, you would need to prefix them with\ntheir server names",
+      "type": "string"
+    },
+    "ResourcePath": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/ComplexResource"
+        }
+      ]
+    },
+    "ComplexResource": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "pattern": "^(file://)"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "description": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "indexType": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/IndexType"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "include": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "exclude": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "autoUpdate": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "knowledgeBase"
+            }
+          },
+          "required": [
+            "type",
+            "source"
+          ]
+        }
+      ]
+    },
+    "IndexType": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "best"
+      ]
+    },
+    "Hook": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "description": "The command to run when the hook is triggered",
+          "type": "string"
+        },
+        "timeout_ms": {
+          "description": "Max time the hook can run before it throws a timeout error",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 30000
+        },
+        "max_output_size": {
+          "description": "Max output size of the hook before it is truncated",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 10240
+        },
+        "cache_ttl_seconds": {
+          "description": "How long the hook output is cached before it will be executed again",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "default": 0
+        },
+        "matcher": {
+          "description": "Optional glob matcher for hook\nCurrently used for matching tool name of PreToolUse and PostToolUse hook",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "command"
+      ]
+    },
+    "ToolSettingTarget": {
+      "description": "The name of the tool to be configured",
+      "type": "string"
+    }
+  }
+}

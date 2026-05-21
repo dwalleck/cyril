@@ -1,0 +1,19 @@
+Changelog for version 2.1.0:
+Version 2.1.0 (2026-04-21)
+  - Added: Support for Google and GitHub login in remote environments using device flow via auth portal
+  - Fixed: Fix markdown table rendering: word-wrap to terminal width with inline styling support
+  - Fixed: Fix dangerous shell commands prompting for approval instead of respecting denyByDefault
+  - Fixed: Fix resume picker over-truncating session titles to 30 characters
+  - Fixed: Fix multiline input history splitting into separate entries across sessions
+  - Fixed: TUI colors no longer render as black on terminals with remapped ANSI palettes. Themes now use named ANSI colors instead of hardcoded hex values, `/theme` now supports base theme switching, and the NO_COLOR environment variable is respected.
+  - Added: Shell command output now streams to the TUI in real-time, line by line, instead of waiting for process completion
+  - Fixed: Clear prompt hint when selecting a file from the @ menu
+  - Fixed: Fix slash-prefixed input being truncated when sent to the LLM
+  - Added: Add Tool Search feature for on-demand MCP tool discovery to reduce context window usage
+  - Added: Invoke .kiro/skills as /skill-name slash commands
+  - Fixed: Fix paste being split into multiple messages after using shell escape commands (!vim, !less) or /editor
+  - Fixed: Send working directory and OS as context in TUI/ACP by default
+  - Changed: Improved rendering performance for shell commands that stream large amounts of output
+  - Added: Add TUI support for Red Hat Enterprise Linux (RHEL)
+  - Fixed: Reject queued ! shell-escape commands during processing instead of sending them as literal text
+
