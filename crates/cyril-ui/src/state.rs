@@ -484,6 +484,12 @@ impl UiState {
                 // Handled by the App layer (formats and displays the response).
                 false
             }
+            Notification::SettingsList { .. } => {
+                // Handled by the App layer (forwards to settings UI when one
+                // exists). Today there's no settings surface in cyril, so the
+                // notification is observable via tracing but not displayed.
+                false
+            }
             Notification::McpServerInitFailure { server_name, error } => {
                 if let Some(err) = error {
                     self.add_system_message(format!(

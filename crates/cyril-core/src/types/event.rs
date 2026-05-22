@@ -45,6 +45,15 @@ pub enum Notification {
         response: serde_json::Value,
     },
 
+    /// Response from `kiro.dev/settings/list`. Carries Kiro's on-disk
+    /// settings snapshot as a flat dotted-key map (`chat.enableThinking`,
+    /// `introspect.progressiveMode`, etc.) with optional sub-object
+    /// nesting (`chat: {...}` alongside `chat.enableNotifications: true`).
+    /// Round-trips `~/.kiro/settings/cli.json` byte for byte.
+    SettingsList {
+        settings: serde_json::Value,
+    },
+
     // Kiro extensions
     MetadataUpdated {
         context_usage: ContextUsage,
@@ -284,6 +293,16 @@ pub enum BridgeCommand {
         method: String,
         params: serde_json::Value,
     },
+    /// Query Kiro's on-disk settings snapshot via `kiro.dev/settings/list`.
+    /// Wire request takes empty `{}` params (non-empty hangs the agent —
+    /// see `docs/cyril-acp-coverage-vs-2.4.1.md`). The response is a flat
+    /// dotted-key map mirroring `~/.kiro/settings/cli.json`.
+    ///
+    /// Read-only. There is intentionally no `SetSetting` BridgeCommand:
+    /// `kiro.dev/settings/set` is dead wire surface (tui.js has the name
+    /// in its constants table with zero call sites; the TUI mutates
+    /// settings by writing the cli.json file directly).
+    ListSettings,
     QueryCommandOptions {
         command: String,
         session_id: SessionId,

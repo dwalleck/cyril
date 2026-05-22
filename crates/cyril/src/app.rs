@@ -117,17 +117,23 @@ impl App {
 
                 // Priority 2: Notifications from bridge
                 Some(notification) = self.notification_rx.recv() => {
-                    if let Some(deferred) = self.handle_notification(notification) {
+                    for deferred in self.handle_notification(notification) {
+                        // SendPrompt triggers a real turn → mark session Busy.
+                        // Session-management commands (LoadSession,
+                        // TerminateSession) don't start a turn so leave status
+                        // alone. See `/code` (busy) vs `/rewind` (not busy).
+                        let starts_turn = matches!(deferred, BridgeCommand::SendPrompt { .. });
                         match self.bridge_sender.send(deferred).await {
                             Ok(()) => {
-                                // Commit session state after successful send
-                                self.session.set_status(SessionStatus::Busy);
+                                if starts_turn {
+                                    self.session.set_status(SessionStatus::Busy);
+                                }
                             }
                             Err(e) => {
                                 tracing::warn!(error = %e, "failed to send deferred bridge command");
                                 self.ui_state.set_activity(Activity::Idle);
                                 self.ui_state.add_system_message(
-                                    "Failed to send /code prompt to agent.".into(),
+                                    "Failed to dispatch follow-up command to agent.".into(),
                                 );
                             }
                         }
@@ -208,7 +214,7 @@ impl App {
         }
     }
 
-    fn handle_notification(&mut self, routed: RoutedNotification) -> Option<BridgeCommand> {
+    fn handle_notification(&mut self, routed: RoutedNotification) -> Vec<BridgeCommand> {
         let RoutedNotification {
             session_id,
             notification,
@@ -235,7 +241,7 @@ impl App {
                 self.ui_state
                     .apply_subagent_notification(sid, &notification);
                 self.redraw_needed = true;
-                return None;
+                return Vec::new();
             }
             if !is_main && self.session.id().is_some() {
                 // Session ID doesn't match main and isn't a known subagent.
@@ -249,7 +255,7 @@ impl App {
                 self.ui_state
                     .apply_subagent_notification(sid, &notification);
                 self.redraw_needed = true;
-                return None;
+                return Vec::new();
             }
         }
 
@@ -333,15 +339,30 @@ impl App {
         // Handle command execution response. The `hooks` and `code` commands
         // are special-cased; all other commands fall through to the generic
         // command-output path. See `dispatch_command_executed` for the rules.
-        let mut deferred_command = None;
+        let mut deferred_commands: Vec<BridgeCommand> = Vec::new();
         if let Notification::CommandExecuted {
             ref command,
             ref response,
         } = notification
         {
             if command == "code" {
-                deferred_command =
-                    dispatch_code_command(response, &self.session, &mut self.ui_state);
+                deferred_commands.extend(dispatch_code_command(
+                    response,
+                    &self.session,
+                    &mut self.ui_state,
+                ));
+            } else if command == "rewind" {
+                // `/rewind` orchestration: when the agent signals
+                // `switchSession: true` in the response, fire the
+                // load+terminate pair to transition to the new session.
+                // No new ACP method needed — the bridge already has
+                // LoadSession and TerminateSession primitives.
+                deferred_commands.extend(dispatch_rewind_command(
+                    response,
+                    &self.session,
+                    &mut self.ui_state,
+                ));
+                dispatch_command_executed(command, response, &mut self.ui_state);
             } else {
                 dispatch_command_executed(command, response, &mut self.ui_state);
 
@@ -365,7 +386,7 @@ impl App {
         }
 
         self.redraw_needed = self.redraw_needed || session_changed || ui_changed || tracker_changed;
-        deferred_command
+        deferred_commands
     }
 
     async fn handle_terminal_event(&mut self, event: Event) -> cyril_core::Result<()> {
@@ -869,18 +890,18 @@ fn dispatch_code_command(
     response: &serde_json::Value,
     session: &cyril_core::session::SessionController,
     ui_state: &mut cyril_ui::state::UiState,
-) -> Option<BridgeCommand> {
+) -> Vec<BridgeCommand> {
     if !is_success_response(response) {
         let text = format_command_response("code", response);
         ui_state.add_command_output("code".to_string(), text);
-        return None;
+        return Vec::new();
     }
 
     match CodeCommandResponse::from_json(response) {
         CodeCommandResponse::Panel(data) => {
             ui_state.set_code_intelligence_active(data.status == LspStatus::Initialized);
             ui_state.show_code_panel(data);
-            None
+            Vec::new()
         }
         CodeCommandResponse::Prompt { text, label } => {
             let session_id = match session.id().cloned() {
@@ -890,7 +911,7 @@ fn dispatch_code_command(
                     ui_state.add_system_message(
                         "/code: received prompt but no active session — try again.".into(),
                     );
-                    return None;
+                    return Vec::new();
                 }
             };
             let display = label.as_deref().unwrap_or("Code Intelligence");
@@ -898,17 +919,87 @@ fn dispatch_code_command(
             ui_state.add_user_message(&text);
             ui_state.set_activity(Activity::Sending);
 
-            Some(BridgeCommand::SendPrompt {
+            vec![BridgeCommand::SendPrompt {
                 session_id,
                 content_blocks: vec![text],
-            })
+            }]
         }
         CodeCommandResponse::Unknown(ref value) => {
             let text = format_command_response("code", value);
             ui_state.add_command_output("code".to_string(), text);
-            None
+            Vec::new()
         }
     }
+}
+
+/// Dispatch a `/rewind` command response.
+///
+/// When the agent selects a new session (response carries
+/// `data.switchSession: true` plus `data.sessionId`), emit the
+/// `session/load` + `session/terminate` pair that client-orchestrates the
+/// "fork" — Kiro doesn't have a `session/fork` method; the rewind primitive
+/// is `commands/execute rewind {value: "<idx>"}` returning a new session id
+/// that the client must explicitly load and switch from. See
+/// `docs/cyril-acp-coverage-vs-2.4.1.md` for the wire trace.
+///
+/// Returns an empty vec for the no-args panel-data response (the panel is
+/// rendered via `dispatch_command_executed`) and on any error case.
+fn dispatch_rewind_command(
+    response: &serde_json::Value,
+    session: &cyril_core::session::SessionController,
+    ui_state: &mut cyril_ui::state::UiState,
+) -> Vec<BridgeCommand> {
+    if !is_success_response(response) {
+        return Vec::new();
+    }
+    let data = match response.get("data") {
+        Some(d) => d,
+        None => return Vec::new(),
+    };
+    let switch = data
+        .get("switchSession")
+        .and_then(|s| s.as_bool())
+        .unwrap_or(false);
+    if !switch {
+        // Panel-data response (no selection yet). The `turns` payload is
+        // rendered by the generic command-output path.
+        return Vec::new();
+    }
+    let new_session_id = match data
+        .get("sessionId")
+        .and_then(|s| s.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        Some(id) => SessionId::new(id),
+        None => {
+            tracing::warn!(
+                "/rewind response had switchSession:true but no sessionId — skipping"
+            );
+            return Vec::new();
+        }
+    };
+    let old_session_id = match session.id().cloned() {
+        Some(id) => id,
+        None => {
+            tracing::warn!(
+                "/rewind switchSession response arrived with no active session — skipping"
+            );
+            return Vec::new();
+        }
+    };
+    ui_state.add_system_message(format!(
+        "/rewind: switched to new session {} (old session {} will be terminated)",
+        new_session_id.as_str(),
+        old_session_id.as_str()
+    ));
+    vec![
+        BridgeCommand::LoadSession {
+            session_id: new_session_id,
+        },
+        BridgeCommand::TerminateSession {
+            session_id: old_session_id,
+        },
+    ]
 }
 
 /// Dispatch a key press while the `/hooks` panel is visible.
@@ -1502,7 +1593,7 @@ mod tests {
             &session,
             &mut ui,
         );
-        assert!(result.is_none());
+        assert!(result.is_empty());
         assert!(ui.has_code_panel());
         assert!(ui.code_intelligence_active());
     }
@@ -1570,7 +1661,7 @@ mod tests {
             &session,
             &mut ui,
         );
-        assert!(result.is_none());
+        assert!(result.is_empty());
         assert!(
             !ui.has_code_panel(),
             "panel should NOT open on success:false"
@@ -1593,7 +1684,8 @@ mod tests {
             &session,
             &mut ui,
         );
-        assert!(matches!(result, Some(BridgeCommand::SendPrompt { .. })));
+        assert_eq!(result.len(), 1);
+        assert!(matches!(result[0], BridgeCommand::SendPrompt { .. }));
         assert_eq!(ui.activity(), Activity::Sending);
     }
 
@@ -1612,7 +1704,7 @@ mod tests {
             &session,
             &mut ui,
         );
-        assert!(result.is_none());
+        assert!(result.is_empty());
         // Should show error, not the prompt system message
         assert!(!ui.messages().is_empty());
         assert_eq!(ui.activity(), Activity::Idle);
@@ -1654,8 +1746,133 @@ mod tests {
             &session,
             &mut ui,
         );
-        assert!(result.is_none());
+        assert!(result.is_empty());
         assert!(!ui.has_code_panel());
         assert!(!ui.messages().is_empty());
+    }
+
+    // --- dispatch_rewind_command tests ---
+    //
+    // /rewind selection orchestration: the agent's commands/execute response
+    // carrying `switchSession: true` + a new sessionId must produce the
+    // LoadSession + TerminateSession pair that client-orchestrates the fork.
+    // See `docs/cyril-acp-coverage-vs-2.4.1.md` "TUI recorder findings" for
+    // the empirically-captured wire sequence.
+
+    fn rewind_session() -> cyril_core::session::SessionController {
+        let mut session = cyril_core::session::SessionController::new();
+        session.set_session(SessionId::new("old-session-uuid"), SessionStatus::Active);
+        session
+    }
+
+    #[test]
+    fn dispatch_rewind_panel_data_returns_empty() {
+        // No-args rewind call returns the turn list — no switchSession means
+        // no follow-up dispatch.
+        let session = rewind_session();
+        let mut ui = UiState::new(500);
+        let result = dispatch_rewind_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "turns": [
+                        {
+                            "group": "2%",
+                            "label": "Say hello",
+                            "logIndex": 0,
+                            "responseSnippet": "Hello."
+                        }
+                    ]
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(result.is_empty(), "panel data should produce no deferred commands");
+    }
+
+    #[test]
+    fn dispatch_rewind_switch_session_emits_load_and_terminate() {
+        let session = rewind_session();
+        let mut ui = UiState::new(500);
+        let result = dispatch_rewind_command(
+            &serde_json::json!({
+                "success": true,
+                "message": "Rewound to earlier turn (new session new-session-uuid)",
+                "data": {
+                    "sessionId": "new-session-uuid",
+                    "switchSession": true
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert_eq!(result.len(), 2, "should emit LoadSession + TerminateSession");
+        match &result[0] {
+            BridgeCommand::LoadSession { session_id } => {
+                assert_eq!(session_id.as_str(), "new-session-uuid");
+            }
+            other => panic!("expected LoadSession first, got {other:?}"),
+        }
+        match &result[1] {
+            BridgeCommand::TerminateSession { session_id } => {
+                assert_eq!(session_id.as_str(), "old-session-uuid");
+            }
+            other => panic!("expected TerminateSession second, got {other:?}"),
+        }
+        // System message announces the swap
+        assert!(!ui.messages().is_empty());
+    }
+
+    #[test]
+    fn dispatch_rewind_switch_session_without_sessionid_is_noop() {
+        // Defensive: if Kiro signals switchSession but omits the new
+        // sessionId, we can't orchestrate. Warn and return empty.
+        let session = rewind_session();
+        let mut ui = UiState::new(500);
+        let result = dispatch_rewind_command(
+            &serde_json::json!({
+                "success": true,
+                "data": { "switchSession": true }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn dispatch_rewind_switch_session_without_active_session_is_noop() {
+        // Defensive: switchSession with no current session ID — we can't
+        // terminate "the old one" because there isn't one yet.
+        let session = cyril_core::session::SessionController::new();
+        let mut ui = UiState::new(500);
+        let result = dispatch_rewind_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "sessionId": "new-session-uuid",
+                    "switchSession": true
+                }
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn dispatch_rewind_success_false_returns_empty() {
+        let session = rewind_session();
+        let mut ui = UiState::new(500);
+        let result = dispatch_rewind_command(
+            &serde_json::json!({
+                "success": false,
+                "message": "Cannot rewind beyond first turn"
+            }),
+            &session,
+            &mut ui,
+        );
+        assert!(result.is_empty());
     }
 }

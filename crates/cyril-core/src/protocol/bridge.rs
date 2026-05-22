@@ -705,7 +705,7 @@ async fn run_bridge(
                     }
                 };
                 match conn
-                    .ext_method(acp::ExtRequest::new("session/spawn", raw_arc))
+                    .ext_method(acp::ExtRequest::new("kiro.dev/session/spawn", raw_arc))
                     .await
                 {
                     Ok(response) => match parse_response(&response.0) {
@@ -796,7 +796,10 @@ async fn run_bridge(
                     }
                 };
                 match conn
-                    .ext_method(acp::ExtRequest::new("session/terminate", raw_arc))
+                    .ext_method(acp::ExtRequest::new(
+                        "kiro.dev/session/terminate",
+                        raw_arc,
+                    ))
                     .await
                 {
                     Ok(_) => {
@@ -877,6 +880,74 @@ async fn run_bridge(
                     .await
                     {
                         break;
+                    }
+                }
+            }
+            BridgeCommand::ListSettings => {
+                // Wire request takes empty `{}` params — non-empty hangs the
+                // agent (verified empirically; see coverage doc). Singleton
+                // request, no sessionId.
+                let raw_arc = match to_raw_arc(&serde_json::json!({})) {
+                    Ok(arc) => arc,
+                    Err(e) => {
+                        tracing::error!(error = %e, "failed to serialize settings/list params");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: "settings/list".into(),
+                                message: format!("serialize params: {e}"),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
+                        continue;
+                    }
+                };
+                match conn
+                    .ext_method(acp::ExtRequest::new("kiro.dev/settings/list", raw_arc))
+                    .await
+                {
+                    Ok(response) => match parse_response(&response.0) {
+                        Ok(value) => {
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::SettingsList { settings: value },
+                            )
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!(error = %e, "failed to parse settings/list response");
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::BridgeError {
+                                    operation: "settings/list".into(),
+                                    message: format!("malformed JSON from kiro: {e}"),
+                                },
+                            )
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        tracing::error!(error = %e, "settings/list failed");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: "settings/list".into(),
+                                message: e.to_string(),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                     }
                 }
             }
