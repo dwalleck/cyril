@@ -32,10 +32,10 @@ Source: `~/.local/share/kiro-research/tui-bundles/kiro-tui-2.4.1.js` (sha256 `0a
 | `account/usage`             | ✓ | **—** | likely usage-data push; cyril gets usage via `commands/execute` response today |
 | `docs/cli/terminal`         | ✓ | **—** | terminal docs lookup; purpose unclear without exercise |
 | `mcp/governance_disabled`   | ✓ | **—** | **added in 2.3.0** ([[reference-kiro-2-3-0-diff]]) |
-| `session/list`              | ✓ | **—** | list past sessions; was removed from binary in 2.3.0 but tui.js still has handler |
+| `session/list`              | ✓ | **—** | list past sessions — **wire shape now characterized** (see "TUI recorder findings" below) |
 | `session/terminate`         | ✓ | **—** | inbound termination notification (cyril has *outbound* `TerminateSession` command but no inbound handler) |
-| `settings/list`             | ✓ | **—** | **added in 2.3.0** |
-| `settings/set`              | ✓ | **—** | pairs with `settings/list` |
+| `settings/list`             | ✓ | **—** | **wire shape characterized** (see below); reads `~/.kiro/settings/cli.json` |
+| `settings/set`              | tui.js name only | n/a | **DEAD WIRE SURFACE.** tui.js has the method name in its constants table but **zero call sites** anywhere; settings are mutated by the TUI writing `~/.kiro/settings/cli.json` directly. Cyril should NOT implement this as a BridgeCommand. |
 
 **7 extension methods tui.js handles that cyril doesn't dispatch.** Two were added in 2.3.0 (`mcp/governance_disabled`, `settings/list`+`settings/set`); the others are pre-existing tui.js handlers we never wired.
 
@@ -81,7 +81,7 @@ Cyril's `BridgeCommand` variants vs tui.js's outgoing method inventory:
 | `session/set_config_option`   | ✓ | **—** | Kiro returns "Method not found" anyway; doc-known dead surface |
 | `session/list`                | ✓ | **—** | Kiro v1.29.0+ feature; not exercised |
 | `session/attach`              | ✓ | **—** | new in v1.29.0; not exercised |
-| `session/fork`                | ✓ | **—** | **the `/rewind` command uses this** — implementing /rewind needs this |
+| `session/fork`                | tui.js name only | **n/a** | **DEAD WIRE SURFACE.** Despite the description on /rewind ("forks into a new session"), the actual orchestration uses `commands/execute` + `switchSession` response signal + `session/load` + `_kiro.dev/session/terminate`. tui.js has `session/fork` in its constants table but zero call sites. See "TUI recorder findings" below for the actual rewind sequence. |
 | `session/resume`              | ✓ | **—** | resume a previous session |
 | `session/close`               | ✓ | **—** | close a session (different from terminate?) |
 | `message/send`                | ✓ | **—** | new in v1.29.0; alternate prompt path |
@@ -146,10 +146,11 @@ From the non-trivial-prompt capture ([[reference-kiro-2-4-1-diff]] — see "Deep
 
 **Tier 2 — methods that exist in the wire surface but never observed:**
 
-5. `session/fork` outbound — backs `/rewind`. The slash command will surface as a panel-input UI; the handler needs to emit a `session/fork` request.
+5. **`/rewind` orchestration** (no new ACP method needed) — detect `switchSession: true` in `_kiro.dev/commands/execute` responses for `command: "rewind"`, then trigger `session/load` (new sessionId from response) + `_kiro.dev/session/terminate` (old sessionId) at the App layer. Cyril already has all the BridgeCommand primitives. See "TUI recorder findings" for the full 4-step sequence.
 6. `_kiro.dev/mcp/governance_disabled` notification — added in 2.3.0. Cyril silently drops it today. Likely small UI surface ("MCP governance has been disabled").
-7. `_kiro.dev/settings/list` + `settings/set` — added in 2.3.0. Settings query/mutation extension. No client today exercises it; impact depends on whether it surfaces user-visible config.
-8. `retry_warning` and `auth_error` session_update variants. Both have tui.js handlers; missing in cyril.
+7. `_kiro.dev/settings/list` — read-only snapshot of `~/.kiro/settings/cli.json`. Wire shape: empty `{}` request, flat dotted-key map response (`chat.enableThinking`, `introspect.progressiveMode`, etc.). **`settings/set` is dead — see coverage matrix.** If cyril ever needs to mutate settings, it should edit `~/.kiro/settings/cli.json` directly, the same way the TUI does.
+8. `_kiro.dev/session/list` — list past sessions. Wire shape: `{cwd}` request, `{sessions: [{sessionId, cwd, updatedAt, messageCount, title?}]}` response. Natural complement to cyril's existing `chat` slash command.
+9. `retry_warning` and `auth_error` session_update variants. Both have tui.js handlers; missing in cyril.
 
 **Tier 3 — defensive / completeness:**
 
@@ -171,3 +172,110 @@ Once each Tier 1 item is implemented, re-run the code-review capture under Opus 
 - `rawOutput` items render as either code (Text) or structured data (Json)
 - Toolbar shows `effort=xhigh` / `effort=max`
 - `/usage` displays the summed credits across the 29-element `meteringUsage[]`
+
+---
+
+## TUI recorder findings (2026-05-21 interactive probe)
+
+Captured via Kiro 2.4.0's built-in recorder (`KIRO_ACP_RECORD_PATH` env var, new in 2.4.0). Artifact: [`experiments/conductor-spike/trace-2.4.1-tui-recorder.jsonl`](../experiments/conductor-spike/trace-2.4.1-tui-recorder.jsonl). Interactively exercised `/rewind` selection, `/effort medium`, model switches, the settings panel, and session-list browsing.
+
+### Built-in recorder format
+
+```json
+{"ts":1779411238507,"dir":"out","msg":{"jsonrpc":"2.0","id":0,"method":"initialize",...}}
+{"ts":1779411238604,"dir":"in","msg":{"jsonrpc":"2.0","result":{...},"id":0}}
+```
+
+Three top-level keys: `ts` (unix milliseconds), `dir` (`out` = client→agent, `in` = agent→client), `msg` (raw JSON-RPC). Recorder hooks the readable/writable streams between bun and `kiro-cli-chat`; only active when `KIRO_ACP_RECORD_PATH` is set. **Only works for v2 TUI mode (`kiro-cli chat --tui`)** — does not capture `kiro-cli acp` mode (cyril's path).
+
+For future TUI-side captures: use the built-in recorder instead of the rust proxy. For cyril-side captures (`kiro-cli acp`), the rust proxy remains necessary.
+
+### `/rewind` orchestration (the actual sequence)
+
+Recorded from the user picking a turn in the rewind panel:
+
+```
+1. → _kiro.dev/commands/execute { command: "rewind", args: {} }
+   ← { data: { turns: [{group, label, logIndex, responseSnippet}] } }
+   (TUI displays the panel; user picks a turn)
+
+2. → _kiro.dev/commands/execute { command: "rewind", args: { value: "0" } }
+                                                              ↑ STRING, not number
+   ← { data: { sessionId: "<new-uuid>", switchSession: true },
+       message: "Rewound to earlier turn (new session <new-uuid>)",
+       success: true }
+
+3. → session/load { cwd, mcpServers: [], sessionId: "<new-uuid>" }
+   ← { models: {…}, modes: {…} }   ← same shape as session/new response
+
+4. → _kiro.dev/session/terminate { sessionId: "<old-uuid>" }
+   ← {}
+```
+
+**Key gotcha**: `args.value` is a **String** (`"0"`), not a number. `RewindArgs` deserializes only strings. Sending `{value: 0}` (integer) hangs the agent silently — no error, no response. Cyril must serialize the selected `logIndex` as a string.
+
+The "fork" is client-orchestrated: the agent says "switch to this new session" via `switchSession: true`; the client does `session/load` + `_kiro.dev/session/terminate` to fully transition. No `session/fork` method involved.
+
+### `_kiro.dev/settings/list` wire shape
+
+```
+→ _kiro.dev/settings/list { params: {} }    ← EMPTY params; no sessionId
+← {
+    "chat": {
+      "enableContextUsageIndicator": true,
+      "enableNotifications": true
+    },
+    "chat.disableMarkdownRendering": false,
+    "chat.enableNotifications": true,
+    "chat.enableThinking": true,
+    "chat.enableTodoList": true,
+    "introspect.progressiveMode": true
+  }
+```
+
+Flat dotted-key map. Note the dual nesting: `chat: {…}` (sub-object form) **alongside** `chat.enableNotifications: true` (flat key form) for the same setting. Both representations appear in the response simultaneously.
+
+**Empty params requirement is strict**: sending non-empty params (e.g., `{sessionId: ...}`) causes a silent hang — same failure mode as `rewind {value: 0}`. The deserializer expects exactly `{}`.
+
+The response payload **byte-matches `~/.kiro/settings/cli.json`** exactly. The agent reads from disk and round-trips.
+
+### Settings architecture
+
+Empirically verified through two `settings/list` calls separated by 300+ seconds and a deliberate settings-panel interaction:
+
+| What | How |
+|---|---|
+| Read settings | `_kiro.dev/settings/list { }` returns disk snapshot |
+| Write settings | **TUI writes `~/.kiro/settings/cli.json` directly** — no ACP roundtrip |
+| `settings/set` ACP method | **Dead surface.** Name in tui.js constants table; zero call sites. Cyril should not implement. |
+| Other config files (theme, feed, survey) | TUI-only, never exposed via ACP |
+
+`~/.kiro/settings/` directory layout (sibling files, only `cli.json` round-trips through ACP):
+
+- `cli.json` — user-facing settings (matches `settings/list` response)
+- `kiro_cli_theme.json` — theme (not on ACP wire)
+- `feed_state.json` — UI feed state (not on ACP wire)
+- `survey_state.json` — onboarding survey state (not on ACP wire)
+
+### `_kiro.dev/session/list` wire shape
+
+```
+→ _kiro.dev/session/list { cwd: "/abs/path" }
+← { sessions: [
+    { sessionId, cwd, updatedAt, messageCount, title? },
+    ...
+  ] }
+```
+
+Per-session fields:
+- `sessionId` (uuid)
+- `cwd` (working dir at session creation)
+- `updatedAt` (ISO-8601 timestamp with nanosecond precision and `+00:00` suffix)
+- `messageCount` (turns recorded in the session)
+- `title` (optional; usually the first user prompt, can be missing for empty sessions)
+
+Natural complement to cyril's existing `/chat` slash command for picking a previous session.
+
+### `_kiro.dev/metadata` carries effort across all five values
+
+The earlier 2.4.1 audit confirmed `effort: "xhigh"` and `effort: "max"`. This recorder capture added `effort: "medium"` — confirming the enum accepts all five string values (`low`, `medium`, `high`, `xhigh`, `max`) on the metadata notification, model-conditional.
