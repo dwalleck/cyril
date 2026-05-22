@@ -177,3 +177,173 @@ Next observable change is most likely a backend rollout (token values flipping n
 ## Methodology note
 
 Word-boundary string grep against `kiro-cli-chat` produces a lot of false positives because the binary embeds the entire `tui.js` JavaScript bundle plus V8, SQLite, Bun, and other vendored runtimes. Naive `\bEffort\b` matches things like V8's `Profiler.getBestEffortCoverage`, the regex library's `bestEffortTarget: "ES2025"`, SQLite's `Rewind` opcode, and Squirrel scripting `ctrlAutoScrollRewind` — none of which have anything to do with Kiro's slash-command system. To confirm a Rust-side feature is actually present, filter to mangled-symbol paths (e.g., `tui_commands..command..EffortArgs`, `agent..acp..commands..rewind`) or to fully qualified module paths under `chat_cli`/`chat_cli_v2`/`agent`. The findings above were re-verified against mangled symbols after the initial word-boundary grep produced false matches in 2.3.0 that suggested an effort/rewind scaffolding pattern that does not exist.
+
+---
+
+## Non-trivial prompt: deep wire-surface exposure
+
+The original 2.4.1 capture exercised the standard 14-method scenario with a one-word prompt; the resulting surfaces are well-characterized by the v1.29.0 ACP doc. To probe wire behavior that only manifests with real agent activity — tool calls, permission requests, structured tool outputs, multi-request turns — a follow-up capture sent
+
+> "Code review crates/cyril-core/src/protocol/bridge.rs and suggest meaningful improvements"
+
+first under Opus 4.7 at the default xHigh effort and then again at max. Both runs are against the same binary, same backend, same day. Artifacts: `experiments/conductor-spike/test_bridge-2.4.1-codereview{,-max}.out`, `logs/conductor-2.4.1-codereview{,-max}.log`.
+
+### Wire schema drift vs `docs/kiro-acp-protocol.md` (v1.29.0 baseline)
+
+The first three notification types in the protocol reference have drifted under the surface; tool_call_chunk was added with the correct shape.
+
+| Notification | Doc says | Actual wire (2.4.1) | Status |
+|---|---|---|---|
+| `session/update` → `tool_call` | `toolCallId`, `name`, `status`, `rawInput`, `title` | `toolCallId`, `kind`, `title`, `locations`, `rawInput` | **drift**: `name` → `kind`, `status` only on update, `locations` undocumented |
+| `session/update` → `tool_call_update` | `toolCallId`, `status`, `output: "<string>"` | `toolCallId`, `kind`, `status`, `title`, `locations`, `rawInput`, `rawOutput: { items: [{Text\|Json: ...}] }` | **drift**: scalar `output` → tagged-union `rawOutput.items[]`; many adjacent fields undocumented |
+| `_kiro.dev/session/update` → `tool_call_chunk` | `toolCallId`, `title`, `kind` | same | **matches** |
+
+The drift is most likely accumulated across the 14 binary releases since 2026-04-11 (v1.29.0 → 2.4.1), not 2.4.1-specific. `docs/kiro-acp-protocol.md` needs a refresh based on these captures.
+
+### `rawOutput` is a tagged union, not a string
+
+The biggest schema departure from the doc. Each `tool_call_update` carries `rawOutput.items[]` where each item is a tagged variant. Two variants observed:
+
+- **`Text`** — file-read content
+  ```json
+  { "Text": "use std::path::PathBuf;\nuse std::sync::Arc;\n..." }
+  ```
+- **`Json`** — shell exec, web search, anything else with structured output. Examples:
+  ```json
+  { "Json": { "stdout": "...", "stderr": "...", "exit_status": 0 } }
+  { "Json": { "results": [
+      { "url": "...", "snippet": "...", "title": "...",
+        "domain": "...", "publishedDate": "...",
+        "publicDomain": true, "maxVerbatimWordLimit": ...,
+        "totalResults": ... }
+  ] } }
+  ```
+
+Other variants likely exist (image/binary results) but weren't exercised by code review. The discriminator is the top-level key inside each item — `Text` and `Json` are the tag names.
+
+### `rawInput` shape variants
+
+Beyond the `{path}` shape we saw on file reads, max-effort exercised:
+
+- `rawInput.command` — shell command string (`find ... | head`)
+- `rawInput.query` — search query string
+- `rawInput.max_matches_per_file` — grep limit
+- `rawInput.__tool_use_purpose` — double-underscore prefix; almost certainly an internal/debug field the agent attaches to its own tool invocations. Worth grepping the binary's mangled symbols to confirm what it carries.
+
+### `session/request_permission` first observed live
+
+The v1.29.0 doc describes this method, but no prior capture had ever triggered it (the trivial prompts all exited without using permission-requiring tools). The max-effort code-review fired **7 permission requests**. None fired at xHigh.
+
+Triggering tools:
+
+| Kind | Count | Reason |
+|---|---|---|
+| Searching | 4 | grep over project files |
+| Reading | 2 | files OUTSIDE the workspace (`~/.cargo/registry/src/agent-client-protocol-0.10.*`) — workspace-boundary crossing |
+| Running | 1 | shell `find ... \| head` |
+
+Basic request schema matches the doc:
+
+```json
+{
+  "method": "session/request_permission",
+  "params": {
+    "sessionId": "...",
+    "toolCall": { "toolCallId": "tooluse_...", "title": "Searching the web" },
+    "options": [
+      { "optionId": "allow_once",   "name": "Yes",    "kind": "allow_once"   },
+      { "optionId": "allow_always", "name": "Always", "kind": "allow_always" },
+      { "optionId": "reject_once",  "name": "No",     "kind": "reject_once"  }
+    ]
+  }
+}
+```
+
+Response:
+
+```json
+{ "result": { "outcome": { "outcome": "selected", "optionId": "allow_once" } } }
+```
+
+### `_meta.trustOptions[]` — entirely new wire surface
+
+**5 of 7** permission requests also carried a previously-undocumented `_meta.trustOptions[]` sub-structure. Example payload (from a shell-command request):
+
+```json
+"_meta": {
+  "trustOptions": [
+    {
+      "label":       "Full command",
+      "display":     "find ~/.cargo/registry/src -name \"agent-client-protocol-0.10*\" -type d , head -3",
+      "setting_key": "allowedCommands",
+      "patterns": [
+        "find \\~/\\.cargo/registry/src \\-name \"agent\\-client\\-protocol\\-0\\.10\\*\" \\-type d",
+        "head \\-3"
+      ]
+    },
+    {
+      "label":       "Partial command",
+      "display":     "find ~/.cargo/registry/src * , head *",
+      "setting_key": "allowedCommands",
+      "patterns": ["find \\~/\\.cargo/registry/src( .*)?", "head( .*)?"]
+    },
+    {
+      "label":       "Base command",
+      "display":     "find * , head *",
+      "setting_key": "allowedCommands",
+      "patterns": ["find( .*)?", "head( .*)?"]
+    }
+  ]
+}
+```
+
+Three nested permission tiers Kiro proposes when the user wants "Always":
+
+- **Full** — exact command text
+- **Partial** — fixed prefix + wildcard suffix
+- **Base** — binary name + wildcards
+
+Each carries a `setting_key` indicating where the client should persist the chosen pattern (here `allowedCommands`), a pre-escaped regex `patterns[]` array ready for storage, and `label`/`display` for UX. The web-search permission request omits `_meta` — atomic permission, no decomposition possible.
+
+The 2 requests **without** `_meta`: web-search (atomic) and one of the internal greps. Shell exec and out-of-workspace file reads always carry it.
+
+### Still unexercised after max-effort + non-trivial prompt
+
+- **`agent_thought_chunk`** — 0 emitted across BOTH runs (xHigh and max). Most likely conclusion: Kiro's ACP doesn't expose model-side thinking content on the wire. Reasoning happens backend-side and only the final response streams via `agent_message_chunk`. The `effort` knob affects backend behavior (more thinking, larger token budget) but doesn't widen the wire surface. The v1.29.0 doc admitted this was unobserved; same conclusion 14 releases later.
+- **`plan`** — agent didn't generate a plan in either run. Probably tied to prompts where the agent self-decomposes ("implement X with steps 1, 2, 3") rather than analyzes existing code. Untested.
+
+### Cost comparison: xHigh vs max
+
+Same prompt, same binary, same backend, same model (Opus 4.7), only effort varies:
+
+| Metric           | xHigh (default) | Max     | Ratio  |
+|------------------|----------------:|--------:|-------:|
+| Credits          | 4.04            | 13.88   | 3.43×  |
+| Wall-clock       | 117 s           | 276 s   | 2.36×  |
+| Backend requests | 8               | 29      | 3.62×  |
+| `tool_call` events | 22            | 54      | 2.45×  |
+| Credits / second | $0.035/s        | $0.050/s| 1.45×  |
+
+The 3.43× total cost decomposes roughly as `1.45× (denser thinking per second) × 2.36× (more wall-clock)`. Max doesn't just "think more per response" — it triggers more independent reasoning rounds. At max, the agent also ventured outside the workspace to inspect `~/.cargo/registry/src/agent-client-protocol-0.10.*` and used the web-search tool. Neither happened at xHigh — likely a side effect of both the higher token budget allowing more thorough exploration and the larger thinking budget exposing the model's "I'm uncertain, let me verify" loops.
+
+### `/stats` token counts at every effort level
+
+Three-way confirmation that the token-population gate is purely backend, independent of model AND effort level:
+
+| Setting                          | input_tokens | output_tokens |
+|----------------------------------|--------------|---------------|
+| Haiku 4.5 (default effort)       | null         | null          |
+| Opus 4.7 + xHigh                 | null         | null          |
+| Opus 4.7 + max                   | null         | null          |
+
+`/stats` shape is per-backend-request, not per-user-turn: 1 entry for trivial, 8 for xHigh code-review, 29 for max code-review. The wider implication: when AWS does flip the token-population gate, every `/stats` consumer will start seeing values regardless of model choice or effort setting.
+
+### Cyril impact additions
+
+Beyond the items in the earlier "Cyril impact" section:
+
+- **`_meta.trustOptions[]` is the most product-shaped finding.** Cyril's current approval overlay surfaces only the bare `options[]` (AllowOnce / AllowAlways / RejectOnce). The `trustOptions[]` payload is the right surface for a "save this command as always-allowed" UX with three persistence tiers, regex patterns pre-built. The `setting_key` hints at a per-key persistence file that Kiro expects clients to maintain — likely an `allowedCommands` entry in cyril's config. Implementing this would match the IDE's approve-and-remember UX off the wire alone, no separate hook layer needed.
+- **`rawOutput.items[]` is a tagged union — cyril's deserializer needs both `Text` and `Json` arms.** A `Text` variant carrying file content versus a `Json` variant carrying structured tool data is a real fork in handling: file-content goes into the syntax-highlighted code panel; JSON output (web results, shell stdout, etc.) wants different rendering. If cyril's `convert/kiro.rs` treats `rawOutput` as a string today, it's wrong for everything except file reads.
+- **`rawInput` shape is tool-kind-dependent.** Cyril's tool-call display logic (`primary_path()`, `command_text()` in `TrackedToolCall`) should switch on `kind` and surface the right field: `command` for shell, `query` for search, `path` (or `operations[].path`) for read. Worth a pass over the existing display code to make sure all branches are covered.
+- **Max-effort cost warning.** If cyril ever surfaces an effort picker, max needs UX friction — a typical code-review prompt cost 3.43× more at max than at xHigh, $13.88 vs $4.04 on this specific run. Not a budget-breaker but a real bill surprise without a hint.
+- **The `_kiro.dev/metadata` parser must tolerate every shape combination.** Observed shapes in the deep capture: `{sessionId}` alone (3× as bare keep-alives), `{sessionId, effort}`, `{sessionId, contextUsagePercentage}`, `{sessionId, contextUsagePercentage, effort}`, and the full turn-completion shape `{sessionId, contextUsagePercentage, meteringUsage[], turnDurationMs, effort}`. All fields after `sessionId` are optional.
