@@ -389,3 +389,143 @@ These corrections do not invalidate the phased plan above (Phases 1–6). Concre
 - **Phase 1 (Types only):** drop `agent` from `StageAction::SpawnSubagent`. Add `taskDescription: String` to the action so the runner can correlate `Summarizing` tool_calls back to their spawning stage (multiple subagents in flight need to match results to spawns).
 - **Phase 4 (Subagent stages):** the runner watches the main session's `session/update` stream for `tool_call { title: "Summarizing" }`. Detection is therefore cheaper than the original design (no separate subagent-stream wiring required for completion detection — only for per-message history capture if a workflow wants it).
 - **Open question on role specialization** (formerly resolved as "spawn with `agent` field"): now genuinely open. Workflows that need fresh-context AND role-specialized reviewers should either rely on prompt framing (simplest) or test the mode-switching dance as a Phase 4 sub-spike before locking the trait API.
+
+---
+
+## Empirical corrections, round 2 (2026-05-23 evening)
+
+A second verification pass (multi-subagent code-review capture + manual `/spawn` test) yielded findings that **invalidate round-1 Correction 2 in its current form** and require a substantive reframe of the entire subagent stage strategy. Round-1 Correction 1 is sharpened; Correction 3 (compact) is unchanged.
+
+The new artifact: `experiments/conductor-spike/trace-2.4.1-multi-subagent.jsonl` (5484 lines, 1.4 MB). Covers a 4-stage agent-initiated review crew plus a separate `/spawn` invocation by the user.
+
+### 4. There are TWO distinct subagent mechanisms with different semantics
+
+The protocol doc now documents this comprehensively in [§ 11.11 (Client-spawned vs agent-crew subagents asymmetry)](kiro-acp-protocol.md#11-empirical-wire-type-verification-241-captures), but the workflow design needs to internalize it:
+
+| Aspect | Agent-crew subagents | Client `/spawn` subagents |
+|---|---|---|
+| Spawn primitive | Agent invokes its `subagent` tool with `stages[]` | Client sends `_session/spawn {task, name?}` |
+| Role specialization | ✅ `stages[].role` references `.kiro/agents/<role>.json` | ❌ inherits parent mode |
+| Lifecycle | `working → terminated` (single-task; gone) | `working → terminated → awaitingInstruction` (long-lived; persists) |
+| Persistence | Single-shot worker | Stays alive for `_message/send` follow-ups |
+| Result delivery | `Summarizing` tool_call on parent stream + inbox notification | **Neither fires.** Result stays on subagent's own `session/update` stream |
+
+These are not configuration variants of one mechanism — they're architecturally distinct primitives for distinct use cases.
+
+### 5. Round-1 Correction 2 was incomplete: Summarizing fires ONLY for agent-crew
+
+Round 1 said `SubagentResult.final_message` comes from a `Summarizing` tool_call. **That's only true for agent-crew subagents.** The Lancelot `/spawn` test in this trace ran a task (`"Review the @file:AGENTS.md file"`), completed in 22 seconds, and emitted **zero** `Summarizing` tool_calls and **zero** inbox notifications. Lancelot's review output exists only on its own `session/update` stream.
+
+**Implication:** if the workflow runner uses `_session/spawn` to create reviewer subagents, it has NO wire-level result-delivery mechanism. It would have to:
+
+1. Track the spawned subagent's `sessionId`
+2. Subscribe to its `session/update` stream (separately from the main session)
+3. Detect "task complete" by watching for `status → awaitingInstruction` in `subagent/list_update`
+4. Reconstruct the final response from accumulated `agent_message_chunk`s
+
+That's substantially more bookkeeping than the agent-crew path, which delivers a structured `taskResult` via `Summarizing` on the *main* stream the runner already consumes for `on_turn_complete`.
+
+### 6. The right `StageAction` for clean-context review is NOT `SpawnSubagent`
+
+Given the asymmetries above, the workflow design's `StageAction::SpawnSubagent` should be reconsidered. Two viable primitives:
+
+**Option A: `StageAction::SpawnSubagent` uses `_session/spawn` directly (round-1 design)**
+- Pros: client-driven, no LLM compliance dependency, can spawn even from non-orchestrator modes.
+- Cons: no result delivery, no role specialization, requires the runner to track + parse the subagent's stream.
+- Best for: "background investigator" workflows where the subagent does long-running work and the workflow runner periodically polls its state, not for "spawn-and-collect-result" patterns.
+
+**Option B: `StageAction::DelegateToCrew` invokes an orchestrator agent (NEW recommendation)**
+
+```rust
+pub enum StageAction {
+    /// Switch the main session to an orchestrator mode that has the
+    /// `subagent` tool configured, then prompt it to spawn a crew with
+    /// the given stage specifications. Results arrive via `Summarizing`
+    /// tool_calls on the main session stream.
+    DelegateToCrew {
+        orchestrator_agent: String,    // .kiro/agents/<name>.json (e.g., "review-orchestrator")
+        crew_prompt: String,            // instruction to the orchestrator
+        on_complete: StageId,
+    },
+    // ... existing variants
+}
+```
+
+- Pros: gets the full role-specialization machinery (stages[].role from `.kiro/agents/`), structured result delivery via Summarizing, inbox notifications, dependency-ordered stages, parallel execution — all the things the agent-crew mechanism provides natively.
+- Cons: requires the user to have an orchestrator agent definition on disk (cyril could ship default templates), and the LLM has to actually invoke the `subagent` tool (a prompt-engineering concern, not protocol).
+
+**Recommended split:** keep `SpawnSubagent` for "background worker" use cases and add `DelegateToCrew` for "orchestrated review" use cases. The original `ContextWorkflow` example (write → test → review → fix → verify) should use `DelegateToCrew` for the review stage, not `SpawnSubagent`.
+
+### 7. Concrete primitives the workflow runner can use
+
+Now empirically verified:
+
+| Action | Wire mechanism | Notes |
+|---|---|---|
+| `SendPrompt` | `session/prompt` | Standard ACP; unchanged |
+| `Compact { then }` | `commands/execute compact` + watch for `compaction/status: completed` | Confirmed wire flow (round 1, Correction 3) |
+| `SpawnSubagent` (background worker) | `_session/spawn` | No result delivery; runner must consume subagent's session stream. Use only for fire-and-monitor workflows. |
+| `MessageSubagent { session_id, content }` | `_message/send` | Sends a follow-up to a `/spawn`'d subagent that's in `awaitingInstruction`. Enables multi-turn dialogues with a parallel worker. Wire confirmed in this trace's `_session/spawn` capture. |
+| `TerminateSubagent { session_id }` | `_kiro.dev/session/terminate` | Best-effort; response discarded. |
+| `DelegateToCrew` (NEW) | `commands/execute agent {value: "<orch>"}` then `session/prompt {<crew-instruction>}` then await `Summarizing` tool_calls | The orchestrator agent invokes its `subagent` tool with stages[]. Results arrive via Summarizing on the main session. |
+
+### 8. Updated phase plan
+
+- **Phase 1 (Types only):** define `StageAction::SpawnSubagent` (single-shot worker, no result delivery), `StageAction::DelegateToCrew` (orchestrated multi-stage with role specialization + structured results), `StageAction::MessageSubagent`, `StageAction::TerminateSubagent`. Drop the `agent` field from `SpawnSubagent`. Add `taskDescription` to `SpawnSubagent` for stream-routing correlation.
+- **Phase 4 (Crew stages):** runner watches main session for `Summarizing` tool_calls (via `_session/update.tool_call` with `title == "Summarizing"`). Reads `rawInput.taskResult` as the subagent's final response, `rawInput.taskDescription` as the correlator. For `SpawnSubagent`-style background workers, the runner separately subscribes to the subagent's own session/update stream — that's a different subscription model than crew stages, and the trait should reflect the distinction.
+- **Phase 4 dependency**: requires `.kiro/agents/<orchestrator-name>.json` exist on disk with the `subagent` tool in its allowed-tools and a prompt that knows how to invoke it. Cyril should ship one or more default orchestrator templates in a `.kiro/agents-templates/` directory + a `/workflow init` command that copies them into the user's `.kiro/agents/`.
+- **New cross-cutting concern**: the workflow engine needs to handle the `awaitingInstruction` lifecycle for `_session/spawn`'d subagents — they don't auto-terminate, so the runner needs `TerminateSubagent` calls on stage exit to avoid leaking long-lived sessions.
+
+### 9. ContextWorkflow port — revised
+
+The 5-stage write → test → review → fix → verify workflow re-expressed against the new primitives:
+
+```rust
+impl Workflow for ContextWorkflow {
+    fn enter_stage(&mut self, stage: StageId, _: &WorkflowCtx) -> StageAction {
+        match stage.into() {
+            Stage::Write => StageAction::SendPrompt(format!(
+                "Implement the spec:\n\n{}", self.spec
+            )),
+            Stage::Test => StageAction::SendPrompt(
+                "Run the test suite. Report exit code.".into()
+            ),
+            // CHANGED: Review uses DelegateToCrew, not SpawnSubagent
+            // Requires the user to have a code-review orchestrator agent
+            // defined at .kiro/agents/review-orchestrator.json
+            Stage::Review => StageAction::DelegateToCrew {
+                orchestrator_agent: "review-orchestrator".into(),
+                crew_prompt: format!(
+                    "Review this implementation against the spec.\n\n\
+                     Spec:\n{}\n\nFiles changed:\n{}",
+                    self.spec, self.changed_files.join("\n")
+                ),
+                on_complete: Stage::Fix.into(),
+            },
+            Stage::Fix => StageAction::SendPrompt(format!(
+                "Address these review issues:\n{}", self.review_issues.join("\n")
+            )),
+            Stage::Verify => StageAction::SendPrompt(
+                "Re-run the test suite to verify.".into()
+            ),
+        }
+    }
+    
+    fn on_subagent_complete(&mut self, stage: StageId, result: &SubagentResult) -> Transition {
+        // Multiple Summarizing tool_calls arrive — one per crew stage
+        // (e.g., code-reviewer, silent-failure-hunter, type-design-analyzer).
+        // The runner aggregates them and calls on_subagent_complete with
+        // each, OR (better) batches them into a single CrewComplete call.
+        // Open design question — see § 10 below.
+        ...
+    }
+}
+```
+
+This requires the user to have written `.kiro/agents/review-orchestrator.json` + a `code-reviewer.json` (etc.) ahead of time. Cyril could ship templates.
+
+### 10. New open questions surfaced by round-2 corrections
+
+- **Multi-stage crew result aggregation.** Agent-crew workflows produce *multiple* Summarizing tool_calls (one per stage), all arriving on the main session over time. Does the runner call `on_subagent_complete` once per Summarizing (and the workflow handles aggregation), or batch them into `on_crew_complete` (and the runner handles the join)? The former is simpler trait-wise; the latter is more honest about the workflow's intent.
+- **Orchestrator agent author guidance.** What does a good `.kiro/agents/review-orchestrator.json` prompt look like? It needs to reliably invoke the `subagent` tool with the right stages. This is prompt-engineering, not protocol, but cyril probably needs to provide working templates or the feature is unusable for new users.
+- **Persistent worker management UX.** `_session/spawn`'d subagents stay alive in `awaitingInstruction`. Should cyril surface them as long-running background tasks in the UI, with explicit "terminate" actions? Without this, users will accumulate orphan subagents over time.
