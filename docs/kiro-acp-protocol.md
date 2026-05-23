@@ -2790,13 +2790,47 @@ tui.js also has zero mention of these names — searching the 2.4.1 bundle for `
 
 These capabilities ARE in Kiro (the agent can use them via its session-management tool, in-process), but the EFFECTS surface to clients only via the standard wire events (inbox_notification, subagent/list_update, session/update). Clients (cyril) cannot directly invoke `interrupt`, `inject_context`, `manage_group`, or `revive_session`. To use them, an agent must be configured with the session-management tool and prompted to call them (same architectural pattern as DelegateToCrew via the `subagent` tool).
 
-#### `_message/send` schema laxity
+#### `_message/send` schema laxity AND `priority` is silently ignored
 
-The wire request schema does NOT strictly validate extra fields. A probe with `{sessionId, content, priority: "escalation"}` was accepted without error and the message was processed normally — the recipient agent responded to "test" as expected. Whether the `priority` field is honored (e.g., increments `escalationCount` instead of `messageCount` in the recipient's inbox_notification) is unverified — the probe sent to the main session where no inbox routing happens. A focused probe with subagent-targeted escalation messages would resolve this.
+The wire request schema does NOT strictly validate extra fields. A probe with `{sessionId, content, priority: "escalation"}` was accepted without error.
 
-For clients implementing `_message/send`: send the documented `{sessionId, content}` shape. The wire is lenient about extras but only the documented fields are guaranteed to be honored.
+**Follow-up probe (2026-05-23 evening)** targeted a freshly-spawned subagent with `priority: "escalation"`. Results:
 
-Probe artifact: `experiments/conductor-spike/logs/conductor-2.4.1-internal-methods-probe.log`.
+- The subagent received the message and processed it as a normal turn (streamed an agent_message_chunk response)
+- **NO `_kiro.dev/session/inbox_notification` fired** — neither `messageCount` nor `escalationCount` incremented
+- The 4 inbox notifications captured were all from the subagent's initial spawn-task completion, BEFORE the priority message
+
+**Conclusion**: `_message/send`'s `priority` field is wire-accepted but **functionally a no-op**. True escalation routing only happens when the session-management tool's `send_message` command is invoked agent-side (in-process); the wire `_message/send` is plain message delivery only. For clients, send the documented `{sessionId, content}` shape and don't expect `priority` to do anything.
+
+Probe artifacts:
+- `experiments/conductor-spike/logs/conductor-2.4.1-internal-methods-probe.log` (the original lax-schema probe)
+- `experiments/conductor-spike/logs/conductor-2.4.1-escalation-probe.log` (the subagent-targeted escalation no-op probe)
+
+#### Binary-level confirmation of agent-internal command inventory
+
+String extraction from the 2.4.1 `kiro-cli-chat` binary at byte 6029228 reveals the complete session-management command enum has **11 variants** (9 documented in introspect + 2 internal helpers we hadn't seen):
+
+```
+spawn_session, send_message, read_messages, list_sessions, get_session_status,
+interrupt, inject_context, manage_group, revive_session,
+register_pending_stages, wait_for_group
+```
+
+The two newly-discovered internal commands:
+
+- **`register_pending_stages`** — likely the mechanism that populates the `pendingStages[]` field observed on `subagent/list_update`. Agent-internal — fires when the `subagent` tool's stage DAG has stages waiting on `depends_on` resolution.
+- **`wait_for_group`** — synchronization primitive for the `manage_group` family. Agent-internal — used by orchestrators to await group-level completion.
+
+Neither of these surface on the wire (probe omitted; they're internal helpers with no client invocation pattern). Tool-description text is embedded verbatim at byte 6075941:
+
+```
+- interrupt: Cancel a session's current work and redirect it.
+- inject_context: Silently add context to a session (no turn triggered).
+- manage_group: Create/manage groups of sessions.
+- revive_session: Re-spawn a terminated worker with a new task.
+```
+
+This text matches what introspect returned — confirming Kiro's own documentation is compiled into the binary as the tool's LLM-facing description.
 
 #### Methods confirmed to NOT fire under expected triggers
 
