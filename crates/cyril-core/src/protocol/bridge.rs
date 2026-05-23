@@ -704,8 +704,15 @@ async fn run_bridge(
                         continue;
                     }
                 };
+                // Wire path is the bare ACP form (`_session/spawn` on the wire,
+                // sans `_kiro.dev/` prefix). Verified empirically against 2.4.1:
+                // `_kiro.dev/session/spawn` returns JSON-RPC -32601 method-not-found,
+                // while bare `_session/spawn` accepts the request and spawns the
+                // subagent. Note this is the OPPOSITE of `session/terminate`, which
+                // requires the `kiro.dev/` prefix. See `docs/cyril-acp-coverage-vs-2.4.1.md`
+                // "subagent wire probe" for the captured frames.
                 match conn
-                    .ext_method(acp::ExtRequest::new("kiro.dev/session/spawn", raw_arc))
+                    .ext_method(acp::ExtRequest::new("session/spawn", raw_arc))
                     .await
                 {
                     Ok(response) => match parse_response(&response.0) {
