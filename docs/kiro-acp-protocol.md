@@ -1722,6 +1722,12 @@ type MessageSendRequest = {
 }
 ```
 
+**Empirical addenda (see § 11.11 for full probes):**
+
+- **Generic session-targeted RPC.** Works between any two top-level sessions on the same client connection — not parent-child-bound. Kiro treats this as "deliver content to any session by ID," full stop.
+- **Wire-callable context injection.** Sending to an `awaitingInstruction` subagent with instructions like "read X and report Y" triggers `fs_read` and lands content in the subagent's working context. This is the wire equivalent of the agent-internal `inject_context` command (with a turn-cost and a `Summarizing` follow-up to the parent).
+- **`priority` field is silently dropped.** `{sessionId, content, priority: "escalation"}` is accepted with no error, but `escalationCount` never increments. True escalation routing only works from the agent-internal `session-management` tool, not from any wire surface.
+
 ## 8. Shared types
 
 Types referenced by multiple methods live here. Types specific to a single method are defined next to that method (Sections 2–7).
@@ -2435,6 +2441,19 @@ Major undocumented sub-structure on shell/grep/out-of-workspace-read permission 
 
 Three permission tiers (Full / Partial / Base) the agent proposes when the user wants "Always". Each carries a `setting_key` indicating where the client should persist the chosen pattern. Web-search permission requests omit `_meta` (atomic permission, no decomposition).
 
+**File-read variant (probed 2026-05-23, see `experiments/conductor-spike/logs/probe-2.4.1-meta-and-addl-dirs-WITH.log`):** When the agent reads a file *outside* `cwd`, the permission request also carries `_meta.trustOptions[]` but with a different shape — two tiers and a different `setting_key`:
+
+```json
+"_meta": {
+  "trustOptions": [
+    { "label": "Specific paths",     "display": "/path/to/file",     "setting_key": "runtime_read_paths", "patterns": ["/path/to/file"] },
+    { "label": "Complete directory", "display": "/path/to/dir",      "setting_key": "runtime_read_paths", "patterns": ["/path/to/dir"]  }
+  ]
+}
+```
+
+So `trustOptions[]` is the same shape but the actual tiers vary per permission type: shell uses Full/Partial/Base under `allowedCommands`; out-of-cwd reads use Specific-path/Complete-directory under `runtime_read_paths`. Same outer pattern, per-tool tier semantics. Clients should not assume any fixed tier count or `setting_key` value.
+
 ### 11.5 Subagent result delivery (the "Summarizing" tool_call)
 
 **Important correction (2026-05-23 multi-subagent capture):** The `Summarizing` tool_call mechanism described below fires **only for agent-crew subagents** (those spawned via the agent's `subagent` tool with role-specialized stages). It does NOT fire for client-`/spawn`'d subagents — see § 11.11's "Client-spawned vs agent-crew subagents" asymmetry table for the full distinction. Client-spawned subagents deliver their output via their own `session/update` stream only, with no parent-side notification.
@@ -2788,7 +2807,7 @@ A targeted probe (saved as `experiments/conductor-spike/logs/conductor-2.4.1-gap
 
 #### Agent-internal-only commands (no client-callable wire surface)
 
-Kiro's embedded `session-management` tool documentation (accessible via the `introspect` agent tool) advertises eight commands: `spawn_session`, `send_message`, `read_messages`, `list_sessions`, `get_session_status`, `interrupt`, `inject_context`, `manage_group`, `revive_session`. Of these:
+Kiro's embedded `session-management` tool documentation (accessible via the `introspect` agent tool) advertises nine commands: `spawn_session`, `send_message`, `read_messages`, `list_sessions`, `get_session_status`, `interrupt`, `inject_context`, `manage_group`, `revive_session`. Binary string extraction (see "Binary-level confirmation" later in § 11.11) revealed **two additional internal commands** that don't surface via introspect: `register_pending_stages` and `wait_for_group` — both agent-internal helpers (likely powering the `pendingStages[]` field and `manage_group` synchronization respectively). Of the nine introspect-documented commands:
 
 - **`spawn_session`** → wire `_session/spawn` (verified — § 11.10)
 - **`send_message`** → wire `_message/send` (verified)
