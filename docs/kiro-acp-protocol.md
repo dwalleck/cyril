@@ -2646,24 +2646,44 @@ Methodology: union all Kiro-extension JSON-RPC frames from our capture artifacts
 | `_kiro.dev/settings/list` | 5 | Canonical request: `{}` (empty). Probes that sent `{sessionId}` hung — confirmed silent rejection of non-empty params (§ 11.2). |
 | `_kiro.dev/subagent/list_update` | 51 | `{subagents: SubagentInfo[], pendingStages: array}`. **`SubagentInfo`**: `{sessionId: string, sessionName: string, agentName: string, initialQuery: string, role: null, group: string, dependsOn: array, status: {type: string, message?: string}}`. **`subagents[].status.type` enum**: `"working"`, `"awaitingInstruction"` (2 observed; others likely exist). `agentName` observed: `"kiro_default"`. `role` is consistently `null` in our probes; was a string in older Kiro per § 6 — possibly retired. `group` observed: `"default"`. |
 
-#### Methods without empirical capture data
+#### Additional methods verified by the gap-fill probe (2026-05-23)
 
-11 Kiro extension notifications haven't fired in our captures because they require specific conditions:
+A targeted probe (saved as `experiments/conductor-spike/logs/conductor-2.4.1-gap-probe.log`) triggered `/agent swap`, `/agent <invalid>`, `/clear`, `SpawnSession`, and `SendMessage` to expand coverage. New empirical-type confirmations:
 
-| Method | Trigger required | Status |
+| Method | Frames | Verified type-shape |
 |---|---|---|
-| `_kiro.dev/agent/switched` | Run `/agent <other-mode>` | Documented in § 6 (shape from handler in § 11.9) |
-| `_kiro.dev/agent/not_found` | Run `/agent <nonexistent>` | Documented in § 6 |
-| `_kiro.dev/agent/config_error` | (REMOVED in 2.3.0 per § 11.3) | n/a |
-| `_kiro.dev/clear/status` | Run `/clear` | Handler is parameterless per § 11.9 — wire shape uncertain |
-| `_kiro.dev/error/rate_limit` | Exceed quota | Documented from handler |
-| `_kiro.dev/mcp/server_initialized` | Configure MCP server | Documented from handler |
-| `_kiro.dev/mcp/server_init_failure` | Misconfigure MCP server | Documented from handler |
-| `_kiro.dev/mcp/oauth_request` | OAuth-requiring MCP server | Documented from handler |
-| `_kiro.dev/mcp/governance_disabled` | Disable MCP governance | Documented from handler |
-| `_kiro.dev/session/activity` | (Subagent-related condition unclear) | Documented from handler |
-| `_kiro.dev/session/list_update` | (Trigger unclear; possibly session-management UI activity) | Documented from handler |
-| `_message/send` | Send message to subagent | Documented from sender (§ 11.10); cyril has the BridgeCommand but hasn't exercised it in captures |
+| `_kiro.dev/agent/switched` | 2 | `{sessionId: string, agentName: string, previousAgentName: string, welcomeMessage: string, model: string}`. All five fields present in every frame; matches § 6 documentation exactly. |
+| `_kiro.dev/clear/status` | 2 | `{sessionId: string}` — **only sessionId**. No `message`, no `status`, no other fields. Matches the parameterless dispatch finding from § 11.9 (the handler ignores params anyway, but for completeness the wire does carry sessionId). |
+| `_message/send` | 2 | `{sessionId: string, content: string}` — request only; response is `{}` and discarded per § 11.10. |
+
+#### Methods confirmed to NOT fire under expected triggers
+
+The probe attempted to elicit four notifications that the doc lists as expected behaviors. **They did not fire**:
+
+| Method | Attempted trigger | What actually happened |
+|---|---|---|
+| `_kiro.dev/agent/not_found` | `/agent` with `value: "definitely-not-real-agent-xyz123"` | Kiro returned `{success: false, message: "Unknown agent: ... Run /agent to browse available agents."}` in the `commands/execute` response. **No separate `agent/not_found` notification was emitted.** Per § 6, this notification was documented as "user requested an agent that doesn't exist; Kiro fell back to another." On 2.4.1 the behavior is "Kiro rejects the swap and tells you via the command response." The notification's handler exists but may be dormant. |
+| `_kiro.dev/session/activity` | Subagent spawn + send-message round trip | Never observed. Across all our captures (~thousands of frames), zero `session/activity` notifications. Likely dormant. |
+| `_kiro.dev/session/list_update` | Subagent activity, agent switching, /chat options | Never observed. Same — zero across all captures. Likely dormant. |
+
+These three methods are **handler-only**: the TUI has dispatch code for them but no observed wire fire. Possible causes:
+- Defensive reservation for future use (handlers were added speculatively)
+- Methods that only fire under conditions we haven't reproduced (multi-client scenarios, specific error states)
+- Effectively removed but handler kept defensively (cf. `agent/config_error` after 2.3.0)
+
+For cyril's current `convert/kiro.rs` handlers — these are NOT dead code in the same sense as `model/not_found` (§ 11.3), because tui.js still has the handlers. But they're not exercised on the wire in normal usage either. If cyril wants to be defensive against future Kiro firing them, keep the handlers; if cyril wants to minimize unexercised code, the handlers can be removed and re-added if/when the methods are confirmed live.
+
+#### Methods still without empirical data (5 — infrastructure-dependent)
+
+| Method | Trigger required | Best documentation we have |
+|---|---|---|
+| `_kiro.dev/error/rate_limit` | Exceed Kiro account quota | § 6 + handler (§ 11.9) |
+| `_kiro.dev/mcp/server_initialized` | Configure MCP server | § 6 + handler |
+| `_kiro.dev/mcp/server_init_failure` | Misconfigure MCP server | § 6 + handler |
+| `_kiro.dev/mcp/oauth_request` | OAuth-requiring MCP server | § 6 + handler |
+| `_kiro.dev/mcp/governance_disabled` | Disable MCP governance | § 11.2 + handler |
+
+To extend coverage, configure MCP servers (`~/.kiro/mcp.json`) or work against a rate-limit-throttled session. These are not reproducible without external infrastructure.
 
 For these, the §§ 11.9 and 11.10 source-extraction is the best we have. Empirical type verification would require capturing wire frames under each triggering condition.
 
