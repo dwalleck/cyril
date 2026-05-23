@@ -2414,7 +2414,9 @@ Three permission tiers (Full / Partial / Base) the agent proposes when the user 
 
 ### 11.5 Subagent result delivery (the "Summarizing" tool_call)
 
-After a `_session/spawn`-ed subagent completes its turn, the **parent agent** emits a `session/update` of variant `tool_call` on the **main session**, with:
+**Important correction (2026-05-23 multi-subagent capture):** The `Summarizing` tool_call mechanism described below fires **only for agent-crew subagents** (those spawned via the agent's `subagent` tool with role-specialized stages). It does NOT fire for client-`/spawn`'d subagents — see § 11.11's "Client-spawned vs agent-crew subagents" asymmetry table for the full distinction. Client-spawned subagents deliver their output via their own `session/update` stream only, with no parent-side notification.
+
+For agent-crew subagents, after one completes its turn the **parent agent** emits a `session/update` of variant `tool_call` on the **main session**, with:
 
 ```json
 "update": {
@@ -2640,7 +2642,7 @@ Methodology: union all Kiro-extension JSON-RPC frames from our capture artifacts
 | `_kiro.dev/metadata` | 226 | All fields optional except `sessionId`. `{sessionId: string, contextUsagePercentage?: number, effort?: string, meteringUsage?: {unit: string, unitPlural: string, value: number}[], turnDurationMs?: integer}`. **`effort` enum (model-conditional)**: `"low"` \| `"medium"` \| `"high"` \| `"xhigh"` \| `"max"` (4 observed; `"low"` documented but not seen). `meteringUsage[].unit` observed: `"credit"`. **Bare `{sessionId}` frames are valid** (keep-alives). |
 | `_kiro.dev/session/inbox_notification` | 4 | `{sessionId: string, sessionName: string, messageCount: integer, escalationCount: integer, senders: string[]}`. All fields present in every frame. `sessionName` observed: `"main"`. `senders` observed: `["subagent"]`. |
 | `_kiro.dev/session/list` | 1 | Request: `{cwd: string}`. Response shape from § 7.X / § 11.x: `{sessions: SessionInfo[]}`. |
-| `_session/spawn` | 13 | Request: `{sessionId: string, task: string, name?: string}`. **`name` is genuinely optional** — when omitted, Kiro auto-generates one (observed: `"Lancelot"`). Response: `{sessionId: string, name: string}` — `name` is always present, either echoed from request or auto-generated. **`role: null` empirically confirmed** for client-spawned subagents (`subagent/list_update` entry shows `role=None`, `agentName=kiro_default`). No `mode`/`agent`/`mode_id` field is honored. |
+| `_session/spawn` | 13 | Request: `{sessionId: string, task: string, name?: string}`. **`name` is genuinely optional** — when omitted, Kiro auto-generates one (observed: `"Lancelot"`). Response: `{sessionId: string, name: string}` — `name` is always present, either echoed from request or auto-generated. **`role: null` empirically confirmed** for client-spawned subagents (`subagent/list_update` entry shows `role=None`, `agentName=kiro_default`). **Lifecycle: `working → terminated → awaitingInstruction` (2ms transition).** Subagent persists in `awaitingInstruction` after task completion, ready to receive further `_message/send` calls. NO Summarizing tool_call fires on the parent; NO inbox_notification fires. No `mode`/`agent`/`mode_id` field is honored. |
 | `_kiro.dev/session/terminate` | 4 | `{sessionId: string}`. Response `{}`. |
 | `_kiro.dev/session/update` (tool_call_chunk only) | 158 | `{sessionId: string, update: {sessionUpdate: "tool_call_chunk", toolCallId: string, title: string, kind: string}}`. **`update.kind` enum** observed: `"read"`, `"search"`, `"execute"`, `"other"`. **`update.title` observed**: `"read"`, `"grep"`, `"shell"`, `"code"`, `"web_search"`, `"summary"` — note `"summary"` is what shows up for the parent-agent-emits-on-subagent-completion `Summarizing` tool_call (§ 11.5). |
 | `_kiro.dev/settings/list` | 5 | Canonical request: `{}` (empty). Probes that sent `{sessionId}` hung — confirmed silent rejection of non-empty params (§ 11.2). |
@@ -2712,6 +2714,32 @@ Custom agents seen in this repo (provenance for the captured `role` values):
 ```
 
 Cyril's `convert/kiro.rs` already parses `agentName` and `role` on `subagent/list_update` entries; consumers (cyril's crew panel, the workflow engine when built) should treat `role` as a free-form string that maps to user-defined agent identities, not a Kiro-defined enum.
+
+#### Client-spawned vs agent-crew subagents: 8 wire-level asymmetries
+
+A single capture exercising both spawn paths (the agent-crew code review + a manual `/spawn Review the @file:AGENTS.md file`) revealed that the two mechanisms produce subagents with completely different lifecycle and result-delivery semantics. This is not just configuration drift — they're distinct use cases.
+
+| Aspect | Agent-crew (via `subagent` tool) | Client `/spawn` (via `_session/spawn`) |
+|---|---|---|
+| Spawn path | Parent agent invokes its `subagent` tool with `stages[]` | Client sends `_session/spawn {task, name?}` |
+| Role specialization | ✅ `stages[].role` references `.kiro/agents/<role>.json` | ❌ `role: null`; subagent inherits parent mode (`kiro_default`) |
+| `group` field | `"crew-<task-description-prefix>"` | `"default"` |
+| `dependsOn` | Possibly non-empty (stages with deps) | Always `[]` |
+| `pendingStages` | Possibly populated (deps-blocked stages) | Always `[]` |
+| Final status | `terminated` (final) | `terminated → awaitingInstruction` (2ms transition; persists in `awaitingInstruction`) |
+| Persistence | Single-task; gone after termination | **Long-lived; alive after task complete, ready for `_message/send` follow-ups** |
+| Result delivery | `Summarizing` tool_call on parent's stream + `inbox_notification` increment | **Neither fires.** Output stays on subagent's own `session/update` stream. To get the result, consume the subagent's stream directly. |
+
+**Use case distinction:**
+
+- **Agent-crew** = orchestrated single-task workers. Designed for "spawn 4 reviewers, get their results, fold into final response." Parent agent coordinates the handoff via Summarizing tool_calls.
+- **Client `/spawn`** = long-lived parallel agent. Designed for "spawn a worker to handle a stream of follow-up requests." User interacts with it via the crew monitor + `_message/send`.
+
+**Implications for cyril and the workflow engine:**
+
+- The workflow design's "spawn a clean-context code-reviewer, get the result" naturally maps to the agent-crew path (orchestrator mode + `subagent` tool invocation) since that path delivers results via Summarizing. The client `/spawn` path doesn't have a delivery mechanism — cyril would have to watch the subagent's stream to know when it's done and what it said.
+- For `/spawn`'d subagents to be useful via cyril, the UX surface needs to make the subagent's stream visible (drill-in like Kiro's Ctrl+G) AND support sending follow-up messages via `_message/send`. Without both, `/spawn` is dead end from cyril's main view.
+- `awaitingInstruction` is a status type that cyril's existing `convert/kiro.rs` parser handles, but the implication (subagent is alive AND idle waiting for input) is new architectural information. A cyril UX could show "idle awaiting input" with a "Send message" prompt for these.
 
 #### Confirmed: 3 methods are DORMANT in 2.4.1
 
