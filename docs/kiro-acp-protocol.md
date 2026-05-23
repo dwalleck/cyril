@@ -2502,7 +2502,78 @@ grep -oE '"_?kiro\.dev/[a-z/_]+"' ~/.local/share/kiro-research/tui-bundles/kiro-
 
 Then diff against the prior version's output to find additions/removals. The EXT_METHODS-like constants table region (find via `grep -bn 'SESSION_TERMINATE\|SESSION_SPAWN' <bundle>`) lists the bare-path extensions.
 
-### 11.9 Tarball additions (2.4.0+)
+### 11.9 Handler-extracted field verification (2.4.1)
+
+Each Kiro extension handler in `kiro-tui-2.4.1.js` has been read and its parameter-destructuring extracted. The fields below are **what the TUI actually reads**, which is the ground truth for "what fields exist on the wire" — anything else is either dead-on-arrival or not consumed.
+
+Methodology: the handler functions retain human-readable names through the bundler (e.g., `handleInboxNotification`, `handleMetadataUpdate`). Search the bundle for each handler name, read the function body, transcribe the `e.field` / `let {field} = e` accesses.
+
+| Method | Handler | Fields read by TUI handler |
+|---|---|---|
+| `_kiro.dev/commands/available` | `handleCommandsAdvertising` | `commands[]`, `prompts[]`, `tools[]`, `mcpServers[]` |
+| `_kiro.dev/metadata` | `handleMetadataUpdate` | `sessionId`, `contextUsagePercentage`, `meteringUsage[]`, `turnDurationMs`, `effort` |
+| `_kiro.dev/compaction/status` | `handleCompactionStatus` | `status.{type, error}`, `summary` (top-level) |
+| `_kiro.dev/clear/status` | `handleClearStatus` | **none — handler takes no params** (`[CLEAR_STATUS]:()=>this.handleClearStatus()` in the dispatch). Any `message` field on the wire is dropped. |
+| `_kiro.dev/agent/switched` | `handleAgentSwitched` | `agentName`, `previousAgentName`, `welcomeMessage`, `model` |
+| `_kiro.dev/agent/not_found` | `handleAgentNotFound` | `requestedAgent`, `fallbackAgent` |
+| `_kiro.dev/agent/config_error` | `handleAgentConfigError` | `path`, `error` |
+| `_kiro.dev/mcp/server_initialized` | `handleMcpServerInitialized` | `serverName` |
+| `_kiro.dev/mcp/server_init_failure` | `handleMcpServerInitFailure` | `serverName`, `error` |
+| `_kiro.dev/mcp/oauth_request` | `handleMcpOauthRequest` | `serverName`, `oauthUrl` |
+| `_kiro.dev/mcp/governance_disabled` | `handleMcpGovernanceDisabled` | `apiFailure` (boolean; defaults to `false`) |
+| `_kiro.dev/error/rate_limit` | `handleRateLimitError` | `message` |
+| `_kiro.dev/subagent/list_update` | `handleSubagentListUpdate` | `subagents[]`, `pendingStages[]` |
+| `_kiro.dev/session/inbox_notification` | `handleInboxNotification` | **opaque** — handler is `(e) => this.inboxHandlers.forEach(h => h(e))`; whole params object is forwarded to subscribers without destructuring. Empirically observed fields: `sessionId`, `sessionName`, `messageCount`, `escalationCount`, `senders[]`. |
+| `_kiro.dev/session/list_update` | `handleSessionListUpdate` | `sessions[]` |
+| `_kiro.dev/session/activity` | `handleSessionActivity` | `sessionId`, `event` |
+| `_kiro.dev/session/update` (tool_call_chunk variant) | `handleExtSessionUpdate` | `update.{sessionUpdate, toolCallId, title, kind}`, `sessionId` |
+| `_kiro.dev/session/update` (retry_warning variant) | `handleExtSessionUpdate` | `update.{sessionUpdate, attempt, maxAttempts, delaySecs, message}` |
+
+**Findings beyond the documentation above:**
+
+- **`clear/status` carries no readable params on the wire.** The handler ignores any payload. If a future feature needs to communicate clear status detail, the wire would need updating *and* the handler. Cyril's parser at `convert/kiro.rs:215` reads `params.message`, which the TUI drops — verify with a live capture before relying on it.
+- **`retry_warning` field shape is now documented**: `attempt`, `maxAttempts`, `delaySecs`, `message`. This was previously listed in § 5 as "not in the 0.5.1 SDK" without field detail. Cyril doesn't have a handler for retry_warning yet (coverage doc Tier 2).
+- **`metadata.effort` confirmed** at the handler-read level (not just empirical observation): `handleMetadataUpdate` reads `e.effort` explicitly and emits an `effort_update` stream event. This matches the empirical capture in § 11.4 and confirms the field is part of the TUI's expected schema, not just a sometimes-present field.
+- **`mcp/governance_disabled.apiFailure`** confirmed as the only field with a `false` default when absent. Matches § 11.2.
+
+**What this verification does and doesn't cover:**
+
+- ✅ **Field NAMES** for each notification handler are taken directly from the TUI's destructuring code.
+- ✅ **Default values** observable in the handler (e.g., `??""`, `??false`, `??null`) are recorded.
+- ⚠ **Types** are partial — the handler accepts whatever JavaScript value is at each field. TypeScript types come from the upstream `@agentclientprotocol/sdk` for standard methods; Kiro extensions don't have published schemas, so types are inferred from usage.
+- ⚠ **Field VALUE constraints** (enums, regex patterns, etc.) require reading downstream consumers of `broadcastStreamEvent`, which is more work than the handler alone.
+
+To re-verify after a future Kiro release:
+
+```sh
+TUI=~/.local/share/kiro-research/tui-bundles/kiro-tui-<ver>.js
+for h in handleCommandsAdvertising handleMetadataUpdate handleCompactionStatus \
+         handleClearStatus handleAgentSwitched handleAgentNotFound \
+         handleAgentConfigError handleMcpServerInitialized \
+         handleMcpServerInitFailure handleMcpOauthRequest \
+         handleMcpGovernanceDisabled handleRateLimitError \
+         handleSubagentListUpdate handleInboxNotification \
+         handleSessionListUpdate handleSessionActivity handleExtSessionUpdate; do
+  echo "--- $h ---"
+  # The handler retains its name through the bundler; extract function body with brace matching
+  python3 -c "
+import re, sys
+with open('$TUI') as f: data = f.read()
+m = re.search(rf'$h\s*\([^)]*\)\s*\{{', data)
+if not m: print('NOT FOUND'); sys.exit(0)
+start = m.start(); depth = 0
+for i, c in enumerate(data[start:start+3000]):
+  if c == '{': depth += 1
+  elif c == '}':
+    depth -= 1
+    if depth == 0: print(data[start:start+i+1]); break
+"
+done
+```
+
+Diff against the prior version's output to find handler signature changes.
+
+### 11.10 Tarball additions (2.4.0+)
 
 Two new shell shims:
 
