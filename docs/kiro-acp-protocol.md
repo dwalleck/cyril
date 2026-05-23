@@ -1,812 +1,1219 @@
 # Kiro CLI ACP Protocol Reference
 
-This document describes the Agent Client Protocol (ACP) as implemented by **Kiro CLI v1.29.0**, based on the ACP v2025-01-01 specification. It serves as a reference for any ACP client connecting to Kiro, not just Cyril. All findings were verified empirically by probing `kiro-cli acp` and examining its debug logs.
-
-## Transport
-
-- **Protocol**: JSON-RPC 2.0 over stdio
-- **Spawn command**: `kiro-cli acp` (Linux/macOS) or `wsl kiro-cli acp` (Windows)
-- **Flags**: `--agent <name>`, `--model <id>`, `--trust-all-tools`, `--verbose`
-- **Logging**: Set `KIRO_LOG_LEVEL=debug` for verbose logs. Override log path with `KIRO_CHAT_LOG_FILE`.
-- **Log locations**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux), `$TMPDIR/kiro-log/kiro-chat.log` (macOS)
-
-## Extension Method Convention
-
-ACP uses an underscore prefix (`_`) on the wire for extension methods. The `agent-client-protocol` crate (v0.9+) strips this prefix before delivering to handlers. So:
-- On the wire: `_kiro.dev/commands/execute`
-- In `ext_notification`/`ext_method` handlers: `kiro.dev/commands/execute`
+> **Wire-shape baseline: Kiro CLI 2.0.1** — extracted from `kiro-tui-2.0.1.js`, the bundled TUI source. Every field, method, and type definition in Sections 1–10 cites the line number of the Zod schema that defines it. Every claim can be verified by reading that line in the bundle.
+>
+> **Behavior updates since 2.0.1:** see [§ 11 — Changes since 2.0.1](#11-changes-since-201) for additions and corrections discovered through Kiro 2.4.1.
+>
+> **Last empirically verified:** Kiro CLI 2.4.1 (2026-05-21). Verification artifacts:
+> - `experiments/conductor-spike/conductor-2.4.1*.log` — JSON-RPC frames from cyril ↔ kiro-cli-chat sessions
+> - `experiments/conductor-spike/trace-2.4.1-tui-recorder.jsonl` — TUI-side frames via `KIRO_ACP_RECORD_PATH` (built-in recorder added in 2.4.0)
+>
+> **Reproducibility:** re-running the test_bridge harness against a newer kiro-cli binary regenerates the captures. To re-verify after a Kiro release, compare new captures against this document section-by-section; any divergence indicates the doc needs a § 11 entry.
 
 ---
 
-## Connection Lifecycle
+## Table of Contents
 
-### 1. `initialize` (client → server)
+1. [Meta](#1-meta)
+2. [Connection lifecycle](#2-connection-lifecycle)
+3. [Session lifecycle (C→S)](#3-session-lifecycle-cs)
+4. [Client-side callbacks (S→C)](#4-client-side-callbacks-sc)
+5. [`session/update` notification variants](#5-sessionupdate-notification-variants)
+6. [Kiro extension notifications (S→C)](#6-kiro-extension-notifications-sc)
+7. [Kiro extension requests (C→S)](#7-kiro-extension-requests-cs)
+8. [Shared types](#8-shared-types)
+9. [Kiro command effects — `commands/execute` subcommands](#9-kiro-command-effects)
+10. [Appendix — method catalogs and union roots](#10-appendix)
+11. [Changes since 2.0.1](#11-changes-since-201)
 
-Exchange capabilities and identify both sides.
+---
 
-**Request:**
+## 1. Meta
+
+### Transport
+
+- **Protocol:** JSON-RPC 2.0 over stdio, newline-delimited.
+- **Spawn command:** `kiro-cli acp` (Linux/macOS). On Windows: `wsl kiro-cli acp`.
+- **SDK:** `@agentclientprotocol/sdk@0.5.1`, bundled from `node_modules/.bun/@agentclientprotocol+sdk@0.5.1/node_modules/@agentclientprotocol/sdk/dist/schema.js` (tui.js:122972).
+- **Protocol version:** `1` (integer, not a date string). Defined as `var PROTOCOL_VERSION = 1` at tui.js:122994. Clients send `protocolVersion: 1` in `initialize`.
+- **Logging (server-side):** Set `KIRO_LOG_LEVEL=debug`. Default log path: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux) or `$TMPDIR/kiro-log/kiro-chat.log` (macOS). Override with `KIRO_CHAT_LOG_FILE`.
+
+### Extension-prefix convention
+
+Kiro extensions use a `_` prefix on the wire. Examples: `_kiro.dev/commands/execute`, `_session/spawn`, `_message/send`.
+
+The SDK strips the leading `_` when dispatching extensions. See `ClientSideConnection.extMethod()` at tui.js:124039:
+
+```js
+async extMethod(method, params) {
+  return await this.#connection.sendRequest(`_${method}`, params);
+}
+```
+
+Handlers receive the bare name (e.g. `kiro.dev/commands/execute`), while the wire carries the underscored name.
+
+### Authoritative method catalogs
+
+The SDK defines two constant tables that enumerate all standard ACP methods:
+
+**`AGENT_METHODS`** — methods the agent handles (C→S). tui.js:122973:
+```ts
+{
+  authenticate:       "authenticate",
+  initialize:         "initialize",
+  session_cancel:     "session/cancel",   // notification
+  session_load:       "session/load",
+  session_new:        "session/new",
+  session_prompt:     "session/prompt",
+  session_set_mode:   "session/set_mode",
+  session_set_model:  "session/set_model",
+}
+```
+
+**`CLIENT_METHODS`** — methods the client handles (S→C). tui.js:122983:
+```ts
+{
+  fs_read_text_file:           "fs/read_text_file",
+  fs_write_text_file:          "fs/write_text_file",
+  session_request_permission:  "session/request_permission",
+  session_update:              "session/update",           // notification
+  terminal_create:             "terminal/create",
+  terminal_kill:               "terminal/kill",
+  terminal_output:             "terminal/output",
+  terminal_release:            "terminal/release",
+  terminal_wait_for_exit:      "terminal/wait_for_exit",
+}
+```
+
+Any method **not** in these tables is either a Kiro extension (prefixed with `_`) or a plain-named extension routed through the same `extMethod()` dispatcher — see Sections 6–7.
+
+### The `_meta` field
+
+Every request, response, and notification schema in the SDK accepts an optional `_meta: Record<string, unknown>` field at the top level. It is used by both sides for out-of-band metadata (for example, Kiro populates `_meta.welcomeMessage` on entries of `SessionMode` — see Section 3, "Supporting types"). For brevity, `_meta` is omitted from the type signatures in this document unless Kiro populates it with a documented field.
+
+### Union discriminator roots
+
+The SDK composes every valid message as a union of concrete schemas. These roots are useful when searching the bundle:
+
+| Union | Line | Composes |
+|---|---|---|
+| `agentRequestSchema` | 123435 | All requests the agent can *send* to the client |
+| `agentNotificationSchema` | 123685 | All notifications the agent can *send* to the client |
+| `agentResponseSchema` | 123703 | All responses the agent can *send* to the client |
+| `clientRequestSchema` | 123689 | All requests the client can *send* to the agent |
+| `clientNotificationSchema` | 123369 | All notifications the client can *send* to the agent |
+| `clientResponseSchema` | 123674 | All responses the client can *send* to the agent |
+
+See Section 10 for the full expansion of each union.
+
+---
+
+## 2. Connection lifecycle
+
+### `initialize` — C→S request
+
+First method on any connection. Exchanges protocol versions, capabilities, and identifying info. The client sends this immediately after stdio is established; no other method is valid until `initialize` has succeeded.
+
+**Request** (`initializeRequestSchema`, tui.js:123668):
+
+```ts
+type InitializeRequest = {
+  protocolVersion: number;
+  clientCapabilities?: ClientCapabilities;
+  clientInfo?: Implementation | null;
+}
+```
+
+**Response** (`initializeResponseSchema`, tui.js:123468):
+
+```ts
+type InitializeResponse = {
+  protocolVersion: number;
+  agentInfo?: Implementation | null;
+  agentCapabilities?: AgentCapabilities;
+  authMethods?: AuthMethod[];
+}
+```
+
+**Supporting types** used only by this method:
+
+```ts
+type Implementation = {              // tui.js:123243
+  name: string;
+  version: string;
+  title?: string | null;
+}
+
+type ClientCapabilities = {          // tui.js:123458
+  fs?: FileSystemCapability;
+  terminal?: boolean;
+}
+
+type FileSystemCapability = {        // tui.js:123298
+  readTextFile?: boolean;
+  writeTextFile?: boolean;
+}
+
+type AgentCapabilities = {           // tui.js:123446
+  loadSession?: boolean;
+  mcpCapabilities?: McpCapabilities;
+  promptCapabilities?: PromptCapabilities;
+}
+
+type McpCapabilities = {             // tui.js:123254
+  http?: boolean;
+  sse?: boolean;
+}
+
+type PromptCapabilities = {          // tui.js:123259
+  audio?: boolean;
+  embeddedContext?: boolean;
+  image?: boolean;
+}
+
+type AuthMethod = {                  // tui.js:123248
+  id: string;
+  name: string;
+  description?: string | null;
+}
+```
+
+**Example (wire):**
+
 ```json
+// ─── Request
 {
   "jsonrpc": "2.0",
   "id": 0,
   "method": "initialize",
   "params": {
-    "protocolVersion": "2025-01-01",
-    "clientCapabilities": {},
+    "protocolVersion": 1,
+    "clientCapabilities": {
+      "fs": { "readTextFile": true, "writeTextFile": true },
+      "terminal": true
+    },
     "clientInfo": {
-      "name": "my-client",
-      "version": "1.0.0",
-      "title": "My ACP Client"
+      "name": "cyril",
+      "version": "0.1.0",
+      "title": "Cyril TUI"
+    }
+  }
+}
+
+// ─── Response
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentInfo": {
+      "name": "Kiro CLI Agent",
+      "version": "2.0.1"
+    },
+    "agentCapabilities": {
+      "loadSession": true,
+      "mcpCapabilities": { "http": true, "sse": false },
+      "promptCapabilities": {
+        "audio": false,
+        "embeddedContext": false,
+        "image": true
+      }
+    },
+    "authMethods": []
+  }
+}
+```
+
+**Notes:**
+
+- **No `sessionCapabilities` field.** The v2.0.1 `agentCapabilities` schema contains only `loadSession`, `mcpCapabilities`, and `promptCapabilities`. Multi-session support (`session/spawn`, `session/attach`, etc.) is advertised implicitly by the presence of Kiro extension methods, not through capability negotiation — see Section 7.
+- **Client capabilities are advisory.** `clientCapabilities.fs.*` and `clientCapabilities.terminal` declare that the client can service `fs/*` and `terminal/*` callbacks, but Kiro's built-in tools (`read`, `write`, `shell`, etc.) perform file and shell I/O inside the agent process. In normal operation the callbacks in Section 4 are never invoked. Clients may still advertise the capability for forward compatibility.
+- **`authMethods`** is typically `[]`. Kiro authenticates out-of-band via `kiro-cli login` (AWS Builder ID / IAM Identity Center), and `authenticate` is rarely driven by ACP.
+
+### `authenticate` — C→S request
+
+Completes an authentication challenge named by one of the `authMethods` returned from `initialize`. As noted above, this is rarely reached in a normal Kiro deployment.
+
+**Request** (`authenticateRequestSchema`, tui.js:123096):
+
+```ts
+type AuthenticateRequest = {
+  methodId: string;  // must match an AuthMethod.id from initialize
+}
+```
+
+**Response** (`authenticateResponseSchema`, tui.js:123068):
+
+```ts
+type AuthenticateResponse = {
+  // empty — _meta only
+}
+```
+
+**Example (wire):**
+
+```json
+// ─── Request
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "authenticate",
+  "params": { "methodId": "sso" }
+}
+
+// ─── Response
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {}
+}
+```
+
+**Notes:**
+
+- The response body is effectively empty (only `_meta` is declared). Success is signaled by absence of a JSON-RPC `error` object.
+- If `methodId` is not recognized, the agent returns a standard JSON-RPC error (code/message shape — see `errorSchema` at tui.js:123063).
+
+---
+
+## 3. Session lifecycle (C→S)
+
+All methods in this section target an existing session identified by `sessionId`, except `session/new` which creates one.
+
+### `session/new` — C→S request
+
+Creates a conversation session bound to a working directory and an optional list of MCP servers.
+
+**Request** (`newSessionRequestSchema`, tui.js:123413):
+
+```ts
+type NewSessionRequest = {
+  cwd: string;
+  mcpServers: McpServer[];
+}
+```
+
+**Response** (`newSessionResponseSchema`, tui.js:123398):
+
+```ts
+type NewSessionResponse = {
+  sessionId: string;
+  modes?: SessionModeState | null;
+  models?: SessionModelState | null;
+}
+```
+
+**Notes:**
+
+- The response carries `modes` and `models` state — the full set of agent modes and models available for this session, plus which one is currently active. **This is the only place the client receives this data**; it is not re-sent as a notification. The client must capture it here (and in `session/load`).
+- `NewSessionRequest` has **only** `cwd` and `mcpServers` in v2.0.1's 0.5.1 SDK. No `configOptions` field exists on the request, and no `sessionCapabilities` field on the response — earlier protocol docs that showed these reflect older SDK versions.
+
+**Example:**
+
+```json
+// ─── Request
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "mcpServers": []
+  }
+}
+
+// ─── Response
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "sessionId": "4dfac9d3-2a7b-4dda-8f7c-13900cc29028",
+    "modes": {
+      "currentModeId": "kiro_default",
+      "availableModes": [
+        { "id": "kiro_default", "name": "kiro_default", "description": "The default agent..." },
+        {
+          "id": "kiro_planner",
+          "name": "kiro_planner",
+          "description": "Specialized planning agent...",
+          "_meta": { "welcomeMessage": "Transform any idea into fully working code." }
+        }
+      ]
+    },
+    "models": {
+      "currentModelId": "auto",
+      "availableModels": [
+        { "modelId": "auto", "name": "auto", "description": "Models chosen by task..." },
+        { "modelId": "claude-opus-4.6", "name": "claude-opus-4.6", "description": "Latest Claude Opus..." }
+      ]
     }
   }
 }
 ```
 
-**Response:**
-```json
-{
-  "agentInfo": {
-    "name": "Kiro CLI Agent",
-    "version": "1.29.0"
-  },
-  "agentCapabilities": {
-    "loadSession": true,
-    "promptCapabilities": {
-      "image": true,
-      "audio": false,
-      "embeddedContext": false
-    },
-    "mcpCapabilities": {
-      "http": true,
-      "sse": false
-    },
-    "sessionCapabilities": {}
-  }
+### `session/load` — C→S request
+
+Resumes a previously created session by ID. Requires `agentCapabilities.loadSession: true` (see Section 2).
+
+**Request** (`loadSessionRequestSchema`, tui.js:123418):
+
+```ts
+type LoadSessionRequest = {
+  sessionId: string;
+  cwd: string;
+  mcpServers: McpServer[];
+}
+```
+
+**Response** (`loadSessionResponseSchema`, tui.js:123404):
+
+```ts
+type LoadSessionResponse = {
+  modes?: SessionModeState | null;
+  models?: SessionModelState | null;
 }
 ```
 
 **Notes:**
-- `promptCapabilities.image: true` — Kiro supports image content blocks in prompts
-- `sessionCapabilities: {}` — Still empty in v1.29.0. Subagent support is via Kiro extensions, not standard ACP session capabilities.
-- `mcpCapabilities.http: true` — **Changed in v1.29.0** (was `false` in v1.28.0). MCP servers now support HTTP transport in addition to stdio.
-- **Client capabilities are not used** — Kiro handles all file I/O and terminal commands internally via built-in agent tools (`read`, `write`, `shell`, `ls`, `glob`, `grep`, etc.). The ACP spec defines client-side callbacks (`fs/read_text_file`, `fs/write_text_file`, `terminal/create`, etc.) but Kiro never invokes them. Clients only need to handle notifications, permission requests, and extension methods.
 
-### 2. `session/new` (client → server)
+- `LoadSessionResponse` **does not echo `sessionId`** — the client already has it from the request. Otherwise the payload is the same shape as `NewSessionResponse`.
+- The agent replays buffered session state as `session/update` notifications after the response returns, so a client loading an existing session should be prepared to receive updates before the next user prompt.
 
-Create a new conversation session.
+**Example:**
 
-**Request:**
 ```json
+// ─── Request
 {
-  "method": "session/new",
-  "params": {
-    "cwd": "/home/user/project"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "sessionId": "4dfac9d3-2a7b-4dda-8f7c-13900cc29028",
-  "modes": {
-    "currentModeId": "kiro_default",
-    "availableModes": [
-      { "id": "code-reviewer", "name": "code-reviewer", "description": "Reviews code..." },
-      { "id": "kiro_default", "name": "kiro_default", "description": "The default agent..." },
-      {
-        "id": "kiro_planner",
-        "name": "kiro_planner",
-        "description": "Specialized planning agent...",
-        "_meta": { "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?" }
-      }
-    ]
-  },
-  "models": {
-    "currentModelId": "auto",
-    "availableModels": [
-      { "modelId": "auto", "name": "auto", "description": "Models chosen by task for optimal usage and consistent quality" },
-      { "modelId": "claude-opus-4.6", "name": "claude-opus-4.6", "description": "The latest Claude Opus model with 1M context window" },
-      { "modelId": "claude-sonnet-4.6", "name": "claude-sonnet-4.6", "description": "The latest Claude Sonnet model with 1M context window" },
-      { "modelId": "claude-haiku-4.5", "name": "claude-haiku-4.5", "description": "The latest Claude Haiku model" },
-      { "modelId": "deepseek-3.2", "name": "deepseek-3.2", "description": "Experimental preview of DeepSeek V3.2" },
-      { "modelId": "minimax-m2.5", "name": "minimax-m2.5", "description": "Experimental preview of MiniMax M2.5" },
-      { "modelId": "glm-5", "name": "glm-5", "description": "Experimental preview of GLM-5" },
-      { "modelId": "qwen3-coder-next", "name": "qwen3-coder-next", "description": "Experimental preview of Qwen3 Coder Next" }
-    ]
-  }
-}
-```
-
-**Notes:**
-- **`models` is new in v1.29.0** — provides model list and current selection directly in the session response. Replaces the workaround of extracting model info from `/model` command responses.
-- `configOptions` is omitted (was always `null` in v1.28.0)
-- Modes come from agent configurations (`.kiro/agents/` directory)
-- Modes may include `_meta.welcomeMessage` (e.g., `kiro_planner`)
-- After session creation, Kiro sends `kiro.dev/metadata`, `kiro.dev/commands/available`, and `kiro.dev/subagent/list_update` (empty) extension notifications
-
-### 3. `session/load` (client → server)
-
-Load an existing session by ID. **In v1.29.0**, the response now includes `models` and `modes` — same structure as `session/new`.
-
-**Request:**
-```json
-{
+  "jsonrpc": "2.0",
+  "id": 3,
   "method": "session/load",
   "params": {
     "sessionId": "4dfac9d3-2a7b-4dda-8f7c-13900cc29028",
-    "cwd": "/home/user/project"
+    "cwd": "/home/user/project",
+    "mcpServers": []
+  }
+}
+
+// ─── Response
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "modes":  { "currentModeId": "kiro_default", "availableModes": [ /* ... */ ] },
+    "models": { "currentModelId": "auto",         "availableModels": [ /* ... */ ] }
   }
 }
 ```
 
-**Response** (same shape as `session/new`):
-```json
-{
-  "sessionId": "4dfac9d3-...",
-  "modes": { "currentModeId": "kiro_default", "availableModes": [...] },
-  "models": { "currentModelId": "auto", "availableModels": [...] }
+### `session/prompt` — C→S request
+
+Sends a user message to the agent and starts a **turn**. The agent streams its work via `session/update` notifications (Section 5) and returns the `session/prompt` response only when the turn ends.
+
+**Request** (`promptRequestSchema`, tui.js:123424):
+
+```ts
+type PromptRequest = {
+  sessionId: string;
+  prompt: ContentBlock[];   // see Section 8 for ContentBlock shape
 }
 ```
 
-### 4. `session/prompt` (client → server)
+**Response** (`promptResponseSchema`, tui.js:123074):
 
-Send a user message to the agent. This starts a "turn" — the agent processes the prompt, streams responses via `session/update` notifications, and returns when done.
+```ts
+type PromptResponse = {
+  stopReason:
+    | "end_turn"            // agent finished normally
+    | "max_tokens"          // hit the model's token budget
+    | "max_turn_requests"   // exceeded configured per-turn request cap
+    | "refusal"             // model refused to continue
+    | "cancelled";          // client-side cancel via session/cancel
+}
+```
 
-**Request:**
+**Notes:**
+
+- `stopReason` has **5 values** in the 0.5.1 SDK schema. Older docs that enumerate only `end_turn`/`max_tokens`/`cancelled` are incomplete — `max_turn_requests` and `refusal` are first-class.
+- Turn boundary is strictly between the request and the response. While the request is outstanding, `session/update` notifications for this `sessionId` belong to this turn.
+- Multiple turns can be multiplexed across different `sessionId`s over the same connection (see Section 7 for subagent sessions).
+
+**Example:**
+
 ```json
+// ─── Request
 {
+  "jsonrpc": "2.0",
+  "id": 4,
   "method": "session/prompt",
   "params": {
     "sessionId": "4dfac9d3-...",
-    "content": [
-      { "type": "text", "text": "Explain this code" }
+    "prompt": [{ "type": "text", "text": "Explain main.rs" }]
+  }
+}
+
+// ─── (many session/update notifications stream here — Section 5)
+
+// ─── Response
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": { "stopReason": "end_turn" }
+}
+```
+
+### `session/cancel` — C→S notification
+
+Fire-and-forget cancellation for an in-progress turn. **No response is expected or sent** — JSON-RPC notifications have no `id`.
+
+**Schema** (`cancelNotificationSchema`, tui.js:123161):
+
+```ts
+type CancelNotification = {
+  sessionId: string;
+}
+```
+
+**Notes:**
+
+- When the agent honors the cancel, the outstanding `session/prompt` response returns with `stopReason: "cancelled"`.
+- Cancel is not guaranteed to be instant; the agent finishes the current step (tool call, model chunk) before acknowledging.
+
+**Example:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/cancel",
+  "params": { "sessionId": "4dfac9d3-..." }
+}
+```
+
+### `session/set_mode` — C→S request
+
+Switches the active agent mode for the session. Valid `modeId` values come from `NewSessionResponse.modes.availableModes[].id`.
+
+**Request** (`setSessionModeRequestSchema`, tui.js:123100):
+
+```ts
+type SetSessionModeRequest = {
+  sessionId: string;
+  modeId: string;
+}
+```
+
+**Response** (`setSessionModeResponseSchema`, tui.js:123071):
+
+```ts
+type SetSessionModeResponse = {
+  // empty — _meta only
+}
+```
+
+**Notes:**
+
+- After a successful mode change, Kiro sends a `_kiro.dev/agent/switched` notification (Section 6) carrying the old and new agent name plus an optional welcome message.
+- The standard ACP `current_mode_update` `session/update` variant (Section 5) may also fire.
+
+**Example:**
+
+```json
+// ─── Request
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "session/set_mode",
+  "params": { "sessionId": "4dfac9d3-...", "modeId": "kiro_planner" }
+}
+
+// ─── Response
+{ "jsonrpc": "2.0", "id": 5, "result": {} }
+```
+
+### `session/set_model` — C→S request
+
+Switches the active model for the session. Valid `modelId` values come from `NewSessionResponse.models.availableModels[].modelId`.
+
+**Request** (`setSessionModelRequestSchema`, tui.js:123105):
+
+```ts
+type SetSessionModelRequest = {
+  sessionId: string;
+  modelId: string;
+}
+```
+
+**Response** (`setSessionModelResponseSchema`, tui.js:123084):
+
+```ts
+type SetSessionModelResponse = {
+  // empty — _meta only
+}
+```
+
+**Notes:**
+
+- **First-class in v2.0.1.** This method appears in `AGENT_METHODS` (tui.js:122981) with a dedicated sender `setSessionModel()` in `ClientSideConnection` (tui.js:124027). No capability flag gates it. Documentation that describes it as "unstable, not advertised" is obsolete.
+- Model changes also propagate via `session/update` (possibly via a `config_option_update` variant — see Section 5) and via `_kiro.dev/metadata` (Section 6).
+
+**Example:**
+
+```json
+// ─── Request
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "session/set_model",
+  "params": { "sessionId": "4dfac9d3-...", "modelId": "claude-opus-4.6" }
+}
+
+// ─── Response
+{ "jsonrpc": "2.0", "id": 6, "result": {} }
+```
+
+### Supporting types (used in this section)
+
+```ts
+type McpServer =                        // tui.js:123309 (3-way union)
+  | { type: "http"; name: string; url: string; headers: HttpHeader[] }
+  | { type: "sse";  name: string; url: string; headers: HttpHeader[] }
+  | StdioMcpServer;
+
+type StdioMcpServer = {                 // tui.js:123303
+  name: string;
+  command: string;
+  args: string[];
+  env: EnvVariable[];
+  // NOTE: no `type` discriminator on the wire — this is the fall-through case.
+  // Recipients distinguish stdio from http/sse by absence of `type`.
+}
+
+type HttpHeader = {                     // tui.js:123111
+  name: string;
+  value: string;
+}
+
+type EnvVariable = {                    // tui.js:123238
+  name: string;
+  value: string;
+}
+
+type SessionMode = {                    // tui.js:123271
+  id: string;
+  name: string;
+  description?: string | null;
+  // Kiro populates _meta.welcomeMessage on some modes (observed on kiro_planner)
+}
+
+type SessionModeState = {               // tui.js:123282
+  currentModeId: string;
+  availableModes: SessionMode[];
+}
+
+type ModelInfo = {                      // tui.js:123265
+  modelId: string;
+  name: string;
+  description?: string | null;
+}
+
+type SessionModelState = {              // tui.js:123277
+  currentModelId: string;
+  availableModels: ModelInfo[];
+}
+```
+
+## 4. Client-side callbacks (S→C)
+
+These methods are sent **from the agent to the client**. They are defined in `CLIENT_METHODS` (tui.js:122983) and dispatched in `ClientSideConnection`'s request handler (tui.js:123950–123994).
+
+**Practical note on what Kiro actually uses.** Kiro's built-in tools (`read`, `write`, `shell`, `ls`, `glob`, `grep`, etc.) perform file and shell I/O inside the agent process. **In normal Kiro operation, `fs/*` and `terminal/*` callbacks are never invoked** — the agent does not delegate these to the client. The one client-side callback that is actively used is `session/request_permission`, which Kiro sends before executing tools marked as requiring permission (notably shell commands). All other methods in this section are defined in the 0.5.1 SDK schema and implementable for forward compatibility, but won't be exercised by current Kiro releases.
+
+### `session/request_permission` — S→C request
+
+The agent asks the client to confirm (or reject) a pending tool call. The agent pauses the turn until the client responds.
+
+**Request** (`requestPermissionRequestSchema`, tui.js:123373):
+
+```ts
+type RequestPermissionRequest = {
+  sessionId: string;
+  options: PermissionOption[];
+  toolCall: {
+    toolCallId: string;
+    title?: string | null;
+    kind?: ToolKind | null;                // see Section 8
+    status?: ToolCallStatus | null;        // see Section 8
+    content?: ToolCallContent[] | null;    // see Section 8
+    locations?: ToolCallLocation[] | null; // see Section 8
+    rawInput?: Record<string, unknown>;
+    rawOutput?: Record<string, unknown>;
+  };
+}
+```
+
+**Response** (`requestPermissionResponseSchema`, tui.js:123133):
+
+```ts
+type RequestPermissionResponse = {
+  outcome:
+    | { outcome: "cancelled" }
+    | { outcome: "selected"; optionId: string };
+}
+```
+
+**Supporting type:**
+
+```ts
+type PermissionOption = {                  // tui.js:123166
+  optionId: string;                        // value sent back in the "selected" outcome
+  name: string;                            // display label
+  kind:
+    | "allow_once"
+    | "allow_always"
+    | "reject_once"
+    | "reject_always";
+}
+```
+
+**Notes:**
+
+- **Nested discriminated union on `outcome`.** The `outcome` field is itself an object with an `outcome` discriminator — two nested `outcome` keys. Do not flatten when deserializing; `response.outcome.outcome` is the literal tag.
+- **`kind` has 4 values.** `reject_always` is present in the 0.5.1 SDK even though Kiro typically only sends `allow_once`/`allow_always`/`reject_once` in its permission prompts.
+- `optionId` is the authoritative value the client sends back. `name` is a display label only — clients must not use name-matching to determine intent; rely on `kind` or `optionId`.
+- `rawInput` is unrestricted; for shell tools Kiro populates it with `{ command: "..." }`.
+- **Kiro's current policy:** shell commands require permission, file reads do not. An `allow_always` selection is remembered for the session.
+
+**Example (shell command):**
+
+```json
+// ─── Request
+{
+  "jsonrpc": "2.0", "id": 10, "method": "session/request_permission",
+  "params": {
+    "sessionId": "4dfac9d3-...",
+    "toolCall": {
+      "toolCallId": "tc_002",
+      "title": "Run `npm test`",
+      "kind": "execute",
+      "status": "pending",
+      "rawInput": { "command": "npm test" }
+    },
+    "options": [
+      { "optionId": "allow_once",   "name": "Yes",    "kind": "allow_once"   },
+      { "optionId": "allow_always", "name": "Always", "kind": "allow_always" },
+      { "optionId": "reject_once",  "name": "No",     "kind": "reject_once"  }
     ]
   }
 }
-```
 
-**Response** (returned when the turn completes):
-```json
+// ─── Response (user approves once)
 {
-  "stopReason": "end_turn"
+  "jsonrpc": "2.0", "id": 10,
+  "result": { "outcome": { "outcome": "selected", "optionId": "allow_once" } }
+}
+
+// ─── Response (user cancelled the picker)
+{
+  "jsonrpc": "2.0", "id": 10,
+  "result": { "outcome": { "outcome": "cancelled" } }
 }
 ```
 
-**Stop reasons:** `end_turn`, `max_tokens`, `cancelled`
+### `fs/read_text_file` — S→C request
 
-### 5. `session/cancel` (client → server, notification)
+Not invoked by current Kiro releases. Defined in the SDK schema for forward compatibility.
 
-Cancel the current operation. Fire-and-forget — no response expected.
+**Request** (`readTextFileRequestSchema`, tui.js:123004):
 
-```json
-{
-  "method": "session/cancel",
-  "params": {
-    "sessionId": "4dfac9d3-..."
-  }
+```ts
+type ReadTextFileRequest = {
+  sessionId: string;
+  path: string;
+  line?: number | null;    // 1-based starting line (partial read)
+  limit?: number | null;   // max lines to read from `line` (SDK does not specify units beyond "number")
 }
 ```
 
-### 6. `session/set_mode` (client → server)
+**Response** (`readTextFileResponseSchema`, tui.js:123129):
 
-Switch the agent mode.
-
-**Request:**
-```json
-{
-  "method": "session/set_mode",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "modeId": "kiro_planner"
-  }
+```ts
+type ReadTextFileResponse = {
+  content: string;
 }
 ```
 
-**Response:**
-```json
-{
-  "meta": null
+**Notes:**
+
+- The `line`/`limit` pair supports **partial reads** — an agent can request lines 100–150 of a large file without streaming the whole thing. Clients that advertise `clientCapabilities.fs.readTextFile: true` must handle both `null` (read all) and numeric values.
+
+### `fs/write_text_file` — S→C request
+
+Not invoked by current Kiro releases.
+
+**Request** (`writeTextFileRequestSchema`, tui.js:122998):
+
+```ts
+type WriteTextFileRequest = {
+  sessionId: string;
+  path: string;
+  content: string;
 }
 ```
 
-### 7. `session/set_config_option` (client → server)
+**Response** (`writeTextFileResponseSchema`, tui.js:123126):
 
-**Not supported** by Kiro v1.29.0. Returns:
-```json
-{
-  "error": {
-    "code": -32601,
-    "message": "Method not found: \"session/set_config_option\""
-  }
+```ts
+type WriteTextFileResponse = {
+  // empty — _meta only
 }
 ```
 
-Use `kiro.dev/commands/execute` with the `model` command instead (see Kiro Extensions below).
+### `terminal/create` — S→C request
 
-### 8. `session/set_model` (client → server)
+Creates a pseudo-terminal on the client side, for the agent to execute commands in. Not invoked by current Kiro releases.
 
-**Not supported.** Behind `unstable_session_model` feature flag in the ACP crate. Not advertised in Kiro's `sessionCapabilities`. Use `kiro.dev/commands/execute` for model switching.
+**Request** (`createTerminalRequestSchema`, tui.js:123389):
 
-### 9. `session/spawn` (client → server, new in v1.29.0)
-
-Spawn a new child session (subagent). Not part of the standard ACP spec — this is a Kiro extension exposed as a top-level method.
-
-**Request:**
-```json
-{
-  "method": "session/spawn",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "task": "Review the code for bugs",
-    "name": "code-reviewer"
-  }
+```ts
+type CreateTerminalRequest = {
+  sessionId: string;
+  command: string;
+  args?: string[];
+  cwd?: string | null;
+  env?: EnvVariable[];
+  outputByteLimit?: number | null;
 }
 ```
 
-**Response:**
-```json
-{
-  "sessionId": "b49d53d1-...",
-  "name": "code-reviewer"
+**Response** (`createTerminalResponseSchema`, tui.js:123145):
+
+```ts
+type CreateTerminalResponse = {
+  terminalId: string;   // opaque handle used by subsequent terminal/* methods
 }
 ```
 
-The spawned session appears in subsequent `kiro.dev/subagent/list_update` notifications.
+The client returns a `terminalId`; the agent then drives the terminal's lifecycle via `terminal/output`, `terminal/wait_for_exit`, `terminal/kill`, `terminal/release`.
 
-### 10. `session/terminate` (client → server, new in v1.29.0)
+### `terminal/output` — S→C request
 
-Terminate a running session.
+**Request** (`terminalOutputRequestSchema`, tui.js:123011):
 
-### 11. `session/attach` (client → server, new in v1.29.0)
-
-Attach to a running session to receive its updates.
-
-### 12. `message/send` (client → server, new in v1.29.0)
-
-Send a message to a specific session.
-
-**Request:**
-```json
-{
-  "method": "message/send",
-  "params": {
-    "sessionId": "b49d53d1-...",
-    "content": "Focus on the error handling in storage/mod.rs"
-  }
+```ts
+type TerminalOutputRequest = {
+  sessionId: string;
+  terminalId: string;
 }
 ```
 
-### 13. `session/list` (client → server, new in v1.29.0)
+**Response** (`terminalOutputResponseSchema`, tui.js:123429):
 
-List all active sessions. Exact response format not yet observed in production logs.
+```ts
+type TerminalOutputResponse = {
+  output: string;
+  truncated: boolean;
+  exitStatus?: TerminalExitStatus | null;
+}
+```
 
----
+Returns the accumulated terminal output and, if the terminal has exited, its nested `TerminalExitStatus`. `truncated: true` indicates the `outputByteLimit` cap from `terminal/create` was hit.
 
-## Session Update Notifications (`session/update`, server → client)
+### `terminal/wait_for_exit` — S→C request
 
-Sent as `SessionNotification` containing a `SessionUpdate` enum, discriminated by the `sessionUpdate` field. Kiro sends `agent_message_chunk`, `tool_call`, and `tool_call_update` as the primary variants. `plan` is sent for complex multi-step tasks.
+**Request** (`waitForTerminalExitRequestSchema`, tui.js:123021) — same shape as `terminal/output`:
 
-**Session ID scoping (new in v1.29.0):** Every `session/update` notification carries a `sessionId` field. When subagents are active, notifications arrive for multiple sessions over the same connection. The `sessionId` is the demuxing key — clients must route notifications to the correct session's state. Notifications where `sessionId` matches the main session are handled as before; notifications with a different `sessionId` belong to a subagent session.
+```ts
+type WaitForTerminalExitRequest = {
+  sessionId: string;
+  terminalId: string;
+}
+```
 
-### AgentMessageChunk
+**Response** (`waitForTerminalExitResponseSchema`, tui.js:123152):
 
-Streaming text content from the agent. This is the main output mechanism — the agent's response arrives as a stream of these chunks.
+```ts
+type WaitForTerminalExitResponse = {
+  exitCode?: number | null;
+  signal?: string | null;
+}
+```
+
+**Note:** this response has `exitCode`/`signal` **inlined at the top level**, not nested inside a `TerminalExitStatus` object the way `terminal/output` does. The two shapes are structurally equivalent but wire-format different — a client handler must not share a deserializer between them.
+
+### `terminal/kill` — S→C request
+
+Request has same shape as `terminal/output` (`killTerminalCommandRequestSchema`, tui.js:123026): `{ sessionId, terminalId }`.
+
+Response (`killTerminalResponseSchema`, tui.js:123157) is empty (`_meta` only).
+
+### `terminal/release` — S→C request
+
+Releases the client-side handle so its resources can be reclaimed. Request has same shape as `terminal/output` (`releaseTerminalRequestSchema`, tui.js:123016). Response (`releaseTerminalResponseSchema`, tui.js:123149) is empty.
+
+### Supporting types (used in this section)
+
+```ts
+type PermissionOption = {              // tui.js:123166
+  optionId: string;
+  name: string;
+  kind: "allow_once" | "allow_always" | "reject_once" | "reject_always";
+}
+
+type TerminalExitStatus = {            // tui.js:123364
+  exitCode?: number | null;
+  signal?: string | null;
+}
+
+// EnvVariable is defined in Section 3 (tui.js:123238).
+// ToolKind, ToolCallStatus, ToolCallContent, ToolCallLocation are defined in Section 8.
+```
+
+## 5. `session/update` notification variants
+
+`session/update` is a **server-to-client notification** (no response). It is the primary channel for everything the agent produces during a turn: text, extended thinking, tool calls, plans, and mode/command-list changes. Every payload is discriminated by an inner `sessionUpdate` field.
+
+### Wrapper
+
+`sessionNotificationSchema`, tui.js:123475:
+
+```ts
+type SessionNotification = {
+  sessionId: string;
+  update: SessionUpdate;
+}
+
+type SessionUpdate =
+  | UserMessageChunk
+  | AgentMessageChunk
+  | AgentThoughtChunk
+  | ToolCall
+  | ToolCallUpdate
+  | Plan
+  | AvailableCommandsUpdate
+  | CurrentModeUpdate;
+```
+
+**8 variants** in the 0.5.1 SDK schema. The variants are defined inline in one large `exports_external.union([...])` rather than as separate named schemas — grepping for `sessionUpdate:` will locate each one.
+
+### `user_message_chunk` — tui.js:123521
+
+Agent-replayed user message. Most commonly emitted during `session/load` to replay conversation history. Was **not present** in earlier protocol documentation; it is a first-class variant in the 0.5.1 SDK.
+
+```ts
+type UserMessageChunk = {
+  sessionUpdate: "user_message_chunk";
+  content: ContentBlock;     // single block, not an array
+}
+```
+
+### `agent_message_chunk` — tui.js:123565
+
+Streaming output from the agent. The primary output channel during a turn.
+
+```ts
+type AgentMessageChunk = {
+  sessionUpdate: "agent_message_chunk";
+  content: ContentBlock;     // single block per chunk
+}
+```
+
+**Example:**
 
 ```json
 {
+  "jsonrpc": "2.0",
   "method": "session/update",
   "params": {
     "sessionId": "4dfac9d3-...",
     "update": {
       "sessionUpdate": "agent_message_chunk",
-      "content": {
-        "type": "text",
-        "text": "Here is the explanation..."
-      }
+      "content": { "type": "text", "text": "Looking at the code..." }
     }
   }
 }
 ```
 
-### AgentThoughtChunk
+**Note on arrays vs singles:** chunk variants carry a *single* `content` block per notification, not an array. This differs from `session/prompt` (Section 3), which sends `prompt: ContentBlock[]` as a single bundled message.
 
-Internal reasoning from the agent (extended thinking). Same structure as `AgentMessageChunk`. Sent when the model uses extended thinking — not observed in standard sessions but defined in the ACP spec and handled identically to message chunks.
+### `agent_thought_chunk` — tui.js:123609
+
+Extended-thinking content. Structurally identical to `agent_message_chunk`. Clients typically render this in a collapsed or distinct style.
+
+```ts
+type AgentThoughtChunk = {
+  sessionUpdate: "agent_thought_chunk";
+  content: ContentBlock;
+}
+```
+
+### `tool_call` — tui.js:123629
+
+**Initial** announcement of a tool call. Tool calls are identified by `toolCallId` and can be updated later via `tool_call_update`.
+
+```ts
+type ToolCall = {
+  sessionUpdate: "tool_call";
+  toolCallId: string;
+  title: string;                           // REQUIRED on initial tool_call
+  kind?:                                   // inline union (not a toolKindSchema reference)
+    | "read" | "edit" | "delete" | "move" | "search"
+    | "execute" | "think" | "fetch" | "switch_mode" | "other";
+  status?: "pending" | "in_progress" | "completed" | "failed";
+  content?: ToolCallContent[];             // see Section 8
+  locations?: ToolCallLocation[];          // see Section 8
+  rawInput?: Record<string, unknown>;      // opaque tool args
+  rawOutput?: Record<string, unknown>;     // opaque tool result
+}
+```
+
+**Notes:**
+
+- **`kind` is inline, not a schema reference.** The 0.5.1 SDK declares the `kind` union directly inside the `tool_call` variant (tui.js:123614–123625) instead of referencing the shared `toolKindSchema` that `tool_call_update` uses. The string values are identical. Consumers can treat them as the same `ToolKind` enum.
+- **Optional fields are not nullable here.** Every optional field uses `.optional()` (may be absent) but *not* `.optional().nullable()` — if the field is present it cannot be `null`. This differs from `tool_call_update` below.
+- **`title` is required** on the initial `tool_call`. Updates may elide it; see below.
+
+### `tool_call_update` — tui.js:123646
+
+Progress/completion update for an existing tool call. Client matches on `toolCallId` and merges fields that are present.
+
+```ts
+type ToolCallUpdate = {
+  sessionUpdate: "tool_call_update";
+  toolCallId: string;                      // REQUIRED — identifies the tool call to update
+  title?: string | null;
+  kind?: ToolKind | null;
+  status?: ToolCallStatus | null;
+  content?: ToolCallContent[] | null;
+  locations?: ToolCallLocation[] | null;
+  rawInput?: Record<string, unknown>;
+  rawOutput?: Record<string, unknown>;
+}
+```
+
+**Notes:**
+
+- **All fields except `toolCallId` are `optional().nullable()`** (123641–123649). Contrast with `tool_call` (non-nullable optionals).
+- **Merge rule:** an update that does not mention a field should leave that field unchanged. Do not overwrite existing state with empty strings or empty arrays just because the update "has" those values — in practice Kiro omits unchanged fields. Treat missing *and* null as "no change."
+- **Observed lifecycle:** initial `tool_call` (`status: "in_progress"` or `"pending"`) → zero or more `tool_call_update` carrying intermediate state → final `tool_call_update` with `status: "completed"` or `"failed"` and usually a non-empty `content` (tool result) or `rawOutput`.
+
+### `plan` — tui.js:123651
+
+Multi-step plan from the agent. Sent when the agent establishes or revises a task list.
+
+```ts
+type Plan = {
+  sessionUpdate: "plan";
+  entries: PlanEntry[];
+}
+
+type PlanEntry = {                         // tui.js:123287
+  content: string;
+  priority: "high" | "medium" | "low";
+  status: "pending" | "in_progress" | "completed";
+}
+```
+
+**Note:** each `plan` update **replaces the previous plan entirely**. It is not a delta. Clients should atomically swap in the new `entries` array.
+
+### `available_commands_update` — tui.js:123656
+
+Updated slash-command list. Allows the command menu to refresh mid-session (for example when an MCP server finishes initializing and registers new commands).
+
+```ts
+type AvailableCommandsUpdate = {
+  sessionUpdate: "available_commands_update";
+  availableCommands: AvailableCommand[];
+}
+
+type AvailableCommand = {                  // tui.js:123452
+  name: string;
+  description: string;
+  input?: { hint: string } | null;         // unstructuredCommandInputSchema (tui.js:123090)
+}
+```
+
+**Note:** The SDK's `AvailableCommand` is minimal — `input` is just `{ hint: string }`. Kiro enriches each command with additional metadata (`optionsMethod`, `inputType`, `local`, etc.) via the `_meta` field and via its own `_kiro.dev/commands/available` notification (Section 6). Standard ACP clients that don't handle Kiro extensions will see the bare `name`/`description`/`input` only.
+
+### `current_mode_update` — tui.js:123661
+
+Agent mode changed.
+
+```ts
+type CurrentModeUpdate = {
+  sessionUpdate: "current_mode_update";
+  currentModeId: string;
+}
+```
+
+**Note:** Kiro also sends a richer `_kiro.dev/agent/switched` notification (Section 6) carrying the previous agent name and optional welcome message. A mode change may produce both notifications; clients should prefer the extension for display data and use `current_mode_update` for the ID.
+
+### Variants NOT in the 0.5.1 SDK
+
+- **`config_option_update`.** Earlier protocol docs referenced it for model/config changes. It is **absent** from `sessionNotificationSchema` in 2.0.1. Model switching now uses `session/set_model` (Section 3) plus `_kiro.dev/metadata` (Section 6); no standard ACP variant carries config-option deltas.
+
+### Realistic turn excerpt
 
 ```json
+// Tool call announced
 {
-  "update": {
-    "sessionUpdate": "agent_thought_chunk",
-    "content": {
-      "type": "text",
-      "text": "Let me analyze the code structure..."
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "4dfac9d3-...",
+    "update": {
+      "sessionUpdate": "tool_call",
+      "toolCallId": "tc_100",
+      "title": "Reading main.rs",
+      "kind": "read",
+      "status": "in_progress",
+      "rawInput": { "path": "/home/user/main.rs" },
+      "locations": [{ "path": "/home/user/main.rs", "line": 1 }]
+    }
+  }
+}
+
+// Tool completes
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "4dfac9d3-...",
+    "update": {
+      "sessionUpdate": "tool_call_update",
+      "toolCallId": "tc_100",
+      "status": "completed",
+      "content": [
+        { "type": "content", "content": { "type": "text", "text": "fn main() { ... }" } }
+      ]
+    }
+  }
+}
+
+// Agent explains
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "4dfac9d3-...",
+    "update": {
+      "sessionUpdate": "agent_message_chunk",
+      "content": { "type": "text", "text": "The file contains a simple main function." }
     }
   }
 }
 ```
 
-### ToolCall
+## 6. Kiro extension notifications (S→C)
 
-A tool invocation initiated by the agent. Kiro executes tools server-side (via built-in tools like `read`, `write`, `shell`) and reports progress via these notifications. Tool calls follow a two-phase lifecycle through this notification type:
+Kiro extensions are **not validated** by a Zod schema. The SDK defines `extNotificationSchema = record(unknown)` (tui.js:123089, 123165), so the protocol layer passes raw `params` through to the TUI handler. The shapes below are **reconstructed from property accesses in the handler functions** — they document what the TUI reads, not what Kiro's agent must or may send. Fields the TUI ignores are not documented here.
 
-**Phase 1 — InProgress** (tool initiated):
-```json
-{
-  "update": {
-    "sessionUpdate": "tool_call",
-    "toolCallId": "tc_001",
-    "name": "read",
-    "status": "in_progress",
-    "rawInput": { "path": "/home/user/src/main.rs" }
-  }
-}
-```
+**Wire format.** Every notification in this section arrives with an underscore prefix on the wire (e.g. `_kiro.dev/metadata`). The SDK's `extNotification` dispatcher strips the `_` before calling the client's handler (tui.js:123897, 124042), so handler lookups use the bare name (`kiro.dev/...`). This document uses the bare form in headings; the wire form always starts with `_`.
 
-**Phase 2 — Pending** (title updated, may await permission):
-```json
-{
-  "update": {
-    "sessionUpdate": "tool_call",
-    "toolCallId": "tc_001",
-    "name": "read",
-    "status": "pending",
-    "title": "Reading main.rs:1-50"
-  }
-}
-```
+**Method catalog.** All extension notifications are enumerated in the `EXT_METHODS` constant table at tui.js:124335. The dispatch map that routes each method to its handler is `AcpClient.extNotificationHandlers` at tui.js:124719:
 
-Note: Kiro also sends lightweight `tool_call_chunk` updates via `kiro.dev/session/update` (see Kiro Extensions). These often arrive before the standard `ToolCall` notification and provide early visibility into tool activity.
-
-### ToolCallUpdate
-
-Completion notification for a tool call (phase 3 of the lifecycle):
-
-```json
-{
-  "update": {
-    "sessionUpdate": "tool_call_update",
-    "toolCallId": "tc_001",
-    "status": "completed",
-    "output": "fn main() { ... }"
-  }
-}
-```
-
-### Plan
-
-The agent's execution plan for complex tasks. Sent when the agent creates or updates a plan. Each update replaces the previous plan entirely.
-
-```json
-{
-  "update": {
-    "sessionUpdate": "plan",
-    "title": "Implementation Plan",
-    "steps": [
-      { "description": "Read the config file", "status": "completed" },
-      { "description": "Add the new field", "status": "in_progress" },
-      { "description": "Update tests", "status": "pending" }
-    ]
-  }
-}
-```
-
-### AvailableCommandsUpdate
-
-Standard ACP command list updates. Kiro sends command lists primarily via the `kiro.dev/commands/available` extension notification (which includes richer metadata like `inputType` and `optionsMethod`), but may also send this standard variant.
-
-### CurrentModeUpdate
-
-Standard ACP mode change notification. Kiro sends mode changes primarily via the `kiro.dev/agent/switched` extension notification (which includes `previousAgentName` and `welcomeMessage`), but may also send this standard variant.
-
-```json
-{
-  "update": {
-    "sessionUpdate": "current_mode_update",
-    "currentModeId": "kiro_planner"
-  }
-}
-```
-
-### ConfigOptionUpdate
-
-Standard ACP config option updates. Not sent by Kiro v1.28.0 or v1.29.0. Model switching is done via `kiro.dev/commands/execute` instead. The `models` field in `session/new` response (v1.29.0) provides model info without needing config options.
-
-```json
-{
-  "update": {
-    "sessionUpdate": "config_option_update",
-    "configOptions": [...]
-  }
-}
+```ts
+// tui.js:124335
+var EXT_METHODS = {
+  COMMANDS_AVAILABLE:       "kiro.dev/commands/available",
+  METADATA:                 "kiro.dev/metadata",
+  COMPACTION_STATUS:        "kiro.dev/compaction/status",
+  CLEAR_STATUS:             "kiro.dev/clear/status",
+  MCP_SERVER_INIT_FAILURE:  "kiro.dev/mcp/server_init_failure",
+  MCP_OAUTH_REQUEST:        "kiro.dev/mcp/oauth_request",
+  MCP_SERVER_INITIALIZED:   "kiro.dev/mcp/server_initialized",
+  AGENT_NOT_FOUND:          "kiro.dev/agent/not_found",
+  AGENT_CONFIG_ERROR:       "kiro.dev/agent/config_error",
+  MODEL_NOT_FOUND:          "kiro.dev/model/not_found",
+  RATE_LIMIT_ERROR:         "kiro.dev/error/rate_limit",
+  SUBAGENT_LIST_UPDATE:     "kiro.dev/subagent/list_update",
+  SESSION_ACTIVITY:         "kiro.dev/session/activity",
+  SESSION_LIST_UPDATE:      "kiro.dev/session/list_update",
+  INBOX_NOTIFICATION:       "kiro.dev/session/inbox_notification",
+  AGENT_SWITCHED:           "kiro.dev/agent/switched",
+  SESSION_UPDATE:           "kiro.dev/session/update",
+  // ... extension requests follow (see Section 7)
+};
 ```
 
 ---
 
-## Permission Requests (`session/request_permission`, server → client)
+### `kiro.dev/commands/available`
 
-A JSON-RPC request (has an `id`, expects a response). The agent asks for permission before executing certain tools.
+Full list of slash commands, prompts, tools, and MCP servers available in the session. Typically sent once after session creation.
 
-**Request:**
-```json
-{
-  "method": "session/request_permission",
-  "params": {
-    "toolCall": {
-      "toolCallId": "tc_002",
-      "name": "shell",
-      "rawInput": { "command": "npm test" }
-    },
-    "options": [
-      { "id": "allow_once", "label": "Yes" },
-      { "id": "allow_always", "label": "Always" },
-      { "id": "reject_once", "label": "No" }
-    ]
-  }
+Handler: `handleCommandsAdvertising` (tui.js:124738).
+
+```ts
+type CommandsAvailableNotification = {
+  commands?: KiroCommand[];
+  prompts?: Prompt[];
+  tools?: Tool[];           // length is read; other fields are opaque to the TUI
+  mcpServers?: McpServerStatus[];
+}
+
+type KiroCommand = {                   // distinct from SDK's `AvailableCommand` (Section 5)
+  name: string;
+  description: string;
+  meta?: {                             // opaque; rendered but not enforced
+    optionsMethod?: string;            // e.g. "_kiro.dev/commands/model/options"
+    inputType?: "selection" | "panel"; // governs how the TUI prompts for input
+    hint?: string;
+    local?: boolean;                   // handled client-side, no backend round-trip
+    type?: "prompt";                   // distinguishes prompts from commands
+  };
+}
+
+type Prompt = {
+  name: string;
+  description: string;
+  serverName: string;                  // "file-prompts" or an MCP server name
+  arguments: Array<{ name: string; required: boolean }>;
+}
+
+type McpServerStatus = {
+  // handler reads .status === "running" to count running servers
+  status: "running" | "failed" | "pending" | string;
+  // other fields are forwarded opaque to subscribers
 }
 ```
 
-**Response:**
-```json
-{
-  "outcome": {
-    "type": "selected",
-    "optionId": "allow_once"
-  }
+**Notes:**
+
+- The TUI only derives the **count of running MCP servers** and a count of tools for decorative display; it does not enforce any fields on tools or mcpServers.
+- `commands[].meta` is read opaquely and attached to the in-UI command record as `meta`. The object values above are what Kiro populates in practice, but neither the TUI nor the SDK validates them.
+- **File-based prompts** use `serverName: "file-prompts"` and have `arguments: []`. **MCP prompts** may declare typed arguments.
+
+### `kiro.dev/metadata`
+
+Sent after each turn with session metadata (context usage, credit cost, turn duration). Also sent once at session creation with `contextUsagePercentage` only.
+
+Handler: `handleMetadataUpdate` (tui.js:124766).
+
+```ts
+type MetadataNotification = {
+  sessionId?: string;                  // ignored unless it matches the current session
+  contextUsagePercentage?: number | null;
+  meteringUsage?: MeteringEntry[];
+  turnDurationMs?: number;
+}
+
+type MeteringEntry = {
+  value: number;
+  unitPlural: string;                  // used as the aggregation key (e.g. "credits")
+  unit?: string;                       // singular form; present in Kiro output, not read by TUI
 }
 ```
 
-Or to cancel:
-```json
-{
-  "outcome": {
-    "type": "cancelled"
-  }
-}
-```
+**Notes:**
 
-**Observations:**
-- File reads do not require permission
-- Shell commands require permission
-- `allow_always` makes the agent remember the choice for the session
+- The TUI silently discards the notification if `sessionId` is present and does not match the current (main) session (tui.js:124768). To target a subagent session, Kiro uses the subagent's session id here.
+- `meteringUsage` entries are aggregated by `unitPlural`. The TUI does not read `unit` (singular) in 2.0.1, although Kiro still sends it.
+- **Token-level usage** (`inputTokens`, `outputTokens`, `cachedTokens`) is not exposed via this notification in 2.0.1. The SDK has no `UsageUpdate` session-update variant either (Section 5). If token counts are needed, they must be derived from lower-level agent events outside the ACP surface.
 
----
-
-## Kiro Extension Methods
-
-These are Kiro-specific methods not part of the standard ACP specification. They use the `_kiro.dev/` prefix on the wire.
-
-### `kiro.dev/commands/available` (server → client, notification)
-
-Sent after session creation with the full list of available commands, prompts, tools, and MCP servers.
+**Example:**
 
 ```json
 {
-  "method": "_kiro.dev/commands/available",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "commands": [
-      {
-        "name": "/agent",
-        "description": "Select or list available agents",
-        "meta": {
-          "optionsMethod": "_kiro.dev/commands/agent/options",
-          "inputType": "selection",
-          "hint": ""
-        }
-      },
-      {
-        "name": "/clear",
-        "description": "Clear conversation history"
-      },
-      {
-        "name": "/context",
-        "description": "Manage context files or show token usage",
-        "meta": {
-          "inputType": "panel",
-          "hint": "add <path>, remove <path>, clear"
-        }
-      },
-      {
-        "name": "/model",
-        "description": "Select or list available models",
-        "meta": {
-          "optionsMethod": "_kiro.dev/commands/model/options",
-          "inputType": "selection",
-          "hint": ""
-        }
-      },
-      {
-        "name": "/quit",
-        "description": "Quit the application",
-        "meta": { "local": true }
-      }
-    ],
-    "prompts": [],
-    "tools": [
-      {
-        "name": "read",
-        "description": "A tool for viewing file contents...",
-        "source": "built-in"
-      }
-    ],
-    "mcpServers": []
-  }
-}
-```
-
-**Command types** (determined by `meta.inputType`):
-- **`selection`** — requires a picker UI; has `optionsMethod` for querying choices
-- **`panel`** — returns structured data (execute and display the `message` field)
-- **`(none)`** — simple fire-and-execute command
-- **`local: true`** — handled entirely client-side (e.g. `/quit`)
-
-**Full command list (Kiro v1.28.0, may have expanded in v1.29.0):**
-
-| Command | inputType | local | optionsMethod |
-|---------|-----------|-------|---------------|
-| `/agent` | selection | no | `_kiro.dev/commands/agent/options` |
-| `/chat` | selection | yes | — |
-| `/clear` | — | no | — |
-| `/compact` | — | no | — |
-| `/context` | panel | no | — |
-| `/feedback` | selection | no | — |
-| `/help` | panel | no | — |
-| `/knowledge` | panel | no | — |
-| `/mcp` | panel | no | — |
-| `/model` | selection | no | `_kiro.dev/commands/model/options` |
-| `/paste` | — | no | — |
-| `/plan` | — | no | — |
-| `/prompts` | selection | no | `_kiro.dev/commands/prompts/options` |
-| `/quit` | — | yes | — |
-| `/reply` | — | no | — |
-| `/tools` | panel | no | — |
-| `/usage` | panel | no | — |
-
-#### Prompts
-
-The `prompts` array in `commands/available` lists available prompt templates from both file-based sources (`.kiro/prompts/`) and MCP servers. All prompts carry an `arguments` field in the protocol, but **file-based prompts currently always send `arguments: []`** — only MCP prompts populate arguments. The TUI code handles arguments uniformly regardless of source, suggesting file-based prompt arguments may be added in a future release.
-
-```json
-{
-  "prompts": [
-    {
-      "name": "review-pr",
-      "description": "Review a pull request for issues",
-      "serverName": "file-prompts",
-      "arguments": [
-        { "name": "branch", "required": true },
-        { "name": "scope", "required": false }
-      ]
-    },
-    {
-      "name": "explain-code",
-      "description": "Explain how a piece of code works",
-      "serverName": "mcp-docs-server",
-      "arguments": [
-        { "name": "file_path", "required": true }
-      ]
-    }
-  ]
-}
-```
-
-**Prompt fields:**
-- `name` — the prompt identifier (invoked as `/<name>`)
-- `description` — human-readable description
-- `serverName` — source of the prompt (e.g., `"file-prompts"` for `.kiro/prompts/`, or an MCP server name)
-- `arguments` — **new in v1.29.0 for file-based prompts**: array of parameter definitions
-  - `name` — parameter name
-  - `required` — whether the argument must be provided
-
-**Argument display:** Clients should show argument hints in autocomplete/picker: `<branch>` for required args, `[scope]` for optional ones.
-
-**Prompt execution:** Prompts are executed by sending the prompt name and arguments as a plain text message via `session/prompt`:
-
-```json
-{
-  "method": "session/prompt",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "content": [
-      { "type": "text", "text": "/review-pr main src/api" }
-    ]
-  }
-}
-```
-
-The **server** parses the slash command, extracts arguments by position, and resolves the prompt template. The client does not need to perform structured argument passing — it forwards the raw text. This is identical for both file-based and MCP prompts.
-
-**Current state (v1.29.0):**
-- File-based prompts (local and global) **do not support arguments** — the `arguments` field is always `[]`. [Kiro docs confirm this](https://kiro.dev/docs/cli/chat/manage-prompts/).
-- MCP prompts can declare arguments with `name` and `required` fields
-- The `arguments` field is present on all prompts in the protocol regardless of source — the TUI handles them uniformly, suggesting file-based prompt arguments may be added in a future release
-- The prompt command appears in slash-command autocomplete alongside regular commands, distinguished by `meta.type: "prompt"`
-- **Verified empirically:** Created a test file prompt with YAML frontmatter declaring arguments — kiro-cli ignored the frontmatter and sent `arguments: []`
-
-### `kiro.dev/commands/options` (client → server, request)
-
-Query available options for a selection command.
-
-**Request:**
-```json
-{
-  "method": "_kiro.dev/commands/options",
-  "params": {
-    "command": "model",
-    "sessionId": "4dfac9d3-...",
-    "partial": ""
-  }
-}
-```
-
-**Response (model):**
-```json
-{
-  "options": [
-    {
-      "value": "auto",
-      "label": "auto",
-      "description": "Models chosen by task for optimal usage and consistent quality",
-      "group": "1.00x credits"
-    },
-    {
-      "value": "claude-opus-4.6",
-      "label": "claude-opus-4.6",
-      "description": "Experimental preview of Claude Opus 4.6",
-      "group": "2.20x credits"
-    },
-    {
-      "value": "claude-sonnet-4.6",
-      "label": "claude-sonnet-4.6",
-      "description": "Experimental preview of the latest Claude Sonnet model",
-      "group": "1.30x credits"
-    },
-    {
-      "value": "claude-haiku-4.5",
-      "label": "claude-haiku-4.5",
-      "description": "The latest Claude Haiku model",
-      "group": "0.40x credits"
-    }
-  ],
-  "hasMore": false
-}
-```
-
-**Option fields:**
-- `value` — the ID to send back in `commands/execute`
-- `label` — display name (use this, not `name`)
-- `description` — longer description
-- `group` — grouping label (e.g. credit tier)
-- `current` — (optional) boolean, true if this is the active option
-
-### `kiro.dev/commands/execute` (client → server, request)
-
-Execute a slash command. The `command` field is a `TuiCommand` adjacently tagged enum.
-
-**CRITICAL:** The `command` field must be an object `{"command": "<name>", "args": {<args>}}`, not a string. Sending a string crashes `kiro-cli` with a deserialization error.
-
-#### Panel command (no args):
-
-**Request:**
-```json
-{
-  "method": "_kiro.dev/commands/execute",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "command": {
-      "command": "context",
-      "args": {}
-    }
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Context breakdown - 5% used",
-  "data": {
-    "model": "auto",
-    "contextUsagePercentage": 5.547,
-    "verbose": false,
-    "breakdown": {
-      "contextFiles": {
-        "tokens": 6124,
-        "percent": 3.062,
-        "items": [
-          { "name": "AGENTS.md", "tokens": 5284, "matched": true, "percent": 2.642 },
-          { "name": "README.md", "tokens": 840, "matched": true, "percent": 0.420 }
-        ]
-      },
-      "tools": { "tokens": 4913, "percent": 2.457 },
-      "kiroResponses": { "tokens": 0, "percent": 0.0 },
-      "yourPrompts": { "tokens": 57, "percent": 0.029 },
-      "sessionFiles": { "tokens": 0, "percent": 0.0 }
-    }
-  }
-}
-```
-
-#### Selection command (with value):
-
-**Request:**
-```json
-{
-  "method": "_kiro.dev/commands/execute",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "command": {
-      "command": "model",
-      "args": {
-        "value": "claude-haiku-4.5"
-      }
-    }
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Model changed to claude-haiku-4.5",
-  "data": {
-    "model": {
-      "id": "claude-haiku-4.5",
-      "name": "claude-haiku-4.5"
-    }
-  }
-}
-```
-
-#### Simple command (no args):
-
-**Request:**
-```json
-{
-  "method": "_kiro.dev/commands/execute",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "command": {
-      "command": "compact",
-      "args": {}
-    }
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": false,
-  "message": "Conversation too short to compact."
-}
-```
-
-**Response format:**
-- `success: bool` — whether the command succeeded
-- `message: string` — human-readable result (always present)
-- `data: object` — optional structured data (command-specific)
-
-### `kiro.dev/metadata` (server → client, notification)
-
-Sent after each turn with session metadata. **In v1.29.0**, the post-turn metadata notification also carries `meteringUsage` and `turnDurationMs`.
-
-**Initial metadata** (on session creation):
-```json
-{
-  "method": "_kiro.dev/metadata",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "contextUsagePercentage": 2.28
-  }
-}
-```
-
-**Post-turn metadata** (after a prompt completes, verified empirically):
-```json
-{
+  "jsonrpc": "2.0",
   "method": "_kiro.dev/metadata",
   "params": {
     "sessionId": "4dfac9d3-...",
@@ -819,363 +1226,1232 @@ Sent after each turn with session metadata. **In v1.29.0**, the post-turn metada
 }
 ```
 
-**New fields (v1.29.0):**
-- `meteringUsage` — array of cost entries per turn. Each has `value` (numeric cost), `unit` (singular label), `unitPlural` (plural label). Typically one entry for credits.
-- `turnDurationMs` — wall-clock duration of the turn in milliseconds
+### `kiro.dev/compaction/status`
 
-**Note:** Token-level usage (`inputTokens`, `outputTokens`, `cachedTokens`) is NOT available through the `ext_notification` path. The TUI extracts these from raw stream `MetadataEvent` internals processed by the ACP crate. The ACP schema's `UsageUpdate` session update (`unstable_session_usage` feature flag) compiles but Kiro v1.29.0 does not send it.
+Progress of `/compact` (conversation summarization).
 
-### `kiro.dev/agent/switched` (server → client, notification)
+Handler: `handleCompactionStatus` (tui.js:124790).
 
-Sent when the agent is switched (e.g. via `/agent` picker).
-
-```json
-{
-  "method": "_kiro.dev/agent/switched",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "agentName": "code-reviewer",
-    "previousAgentName": "kiro_default",
-    "welcomeMessage": null
-  }
+```ts
+type CompactionStatusNotification = {
+  status?: {
+    type: "started" | "completed" | "failed" | string;
+    error?: string;                    // populated on type === "failed"
+  };
+  summary?: unknown;                   // passed through opaquely
 }
 ```
 
-**Fields:**
-- `agentName` — the new agent name (matches mode IDs from `session/new`)
-- `previousAgentName` — the agent that was active before
-- `welcomeMessage` — optional greeting from the new agent (typically null)
+**Note:** the TUI treats the notification as a no-op if `status` is missing. Only `status.type` and `status.error` are interpreted; `summary` is forwarded as-is.
 
-### `kiro.dev/error/rate_limit` (server → client, notification, new in v1.29.0)
+### `kiro.dev/clear/status`
 
-Sent when the agent hits a rate limit. Clients should display the message as a transient error.
+Sent during `/clear` (session-history wipe). **No fields are read by the TUI** — the handler only logs at debug level (tui.js:124787). Payload shape is unenforced; Kiro may send any object.
 
-```json
-{
-  "method": "_kiro.dev/error/rate_limit",
-  "params": {
-    "message": "Rate limit exceeded. Please wait before retrying."
-  }
+### `kiro.dev/mcp/server_initialized`
+
+An MCP server finished initializing; its tools are now available.
+
+Handler: `handleMcpServerInitialized` (tui.js:124823).
+
+```ts
+type McpServerInitializedNotification = {
+  serverName: string;
 }
 ```
 
-### `kiro.dev/session/update` (server → client, notification)
+### `kiro.dev/mcp/server_init_failure`
 
-Kiro-specific session updates sent via the extension mechanism, separate from the standard ACP `session/update`. Currently one variant observed:
+An MCP server failed to initialize.
 
-#### `tool_call_chunk`
+Handler: `handleMcpServerInitFailure` (tui.js:124803).
 
-Lightweight tool call progress. Sent alongside (or before) the standard ACP `session/update` → `ToolCall` notifications. Provides just the tool name and kind without full rawInput.
-
-```json
-{
-  "method": "_kiro.dev/session/update",
-  "params": {
-    "sessionId": "4dfac9d3-...",
-    "update": {
-      "sessionUpdate": "tool_call_chunk",
-      "toolCallId": "tooluse_abc123",
-      "title": "read",
-      "kind": "read"
-    }
-  }
+```ts
+type McpServerInitFailureNotification = {
+  serverName: string;
+  error: unknown;                      // logged and forwarded, not parsed
 }
 ```
 
-**`kind` values observed:** `read`, `execute`, `search`
+### `kiro.dev/mcp/oauth_request`
 
-**`title` values observed:** `read`, `ls`, `glob`, `shell`
+An MCP server requires OAuth; Kiro supplies the URL for the user to open.
 
-**Session scoping (v1.29.0):** When `sessionId` differs from the main session, this is a tool call from a subagent. The TUI checks `sessionId !== this.sessionId` to route subagent tool events to multi-session handlers.
+Handler: `handleMcpOauthRequest` (tui.js:124813).
 
-### `kiro.dev/compaction/status` (server → client, notification)
-
-Reports progress when compacting conversation context via `/compact`. **In v1.29.0**, the payload gained structured status fields alongside the legacy `message` field.
-
-```json
-{
-  "method": "_kiro.dev/compaction/status",
-  "params": {
-    "status": {
-      "type": "started"
-    }
-  }
+```ts
+type McpOauthRequestNotification = {
+  serverName: string;
+  oauthUrl: string;
 }
 ```
 
-**`status.type` values:** `"started"`, `"completed"`, `"failed"`
+### `kiro.dev/error/rate_limit`
 
-When `type` is `"failed"`, an `error` field contains the failure reason. An optional `summary` field may be present on completion.
+Agent hit a rate limit; the message is typically rendered as a transient error banner.
 
-### `kiro.dev/clear/status` (server → client, notification)
+Handler: `handleRateLimitError` (tui.js:124831).
 
-Reports status when clearing session history via `/clear`.
-
-```json
-{
-  "method": "_kiro.dev/clear/status",
-  "params": {
-    "message": "Clearing session history..."
-  }
+```ts
+type RateLimitErrorNotification = {
+  message: string;
 }
 ```
+
+### `kiro.dev/agent/not_found`
+
+User requested an agent mode that doesn't exist; Kiro fell back to another.
+
+Handler: `handleAgentNotFound` (tui.js:124839).
+
+```ts
+type AgentNotFoundNotification = {
+  requestedAgent: string;
+  fallbackAgent: string;
+}
+```
+
+### `kiro.dev/agent/config_error`
+
+An agent configuration file failed to parse.
+
+Handler: `handleAgentConfigError` (tui.js:124852).
+
+```ts
+type AgentConfigErrorNotification = {
+  path: string;                        // the offending config file
+  error: unknown;                      // parse error detail; forwarded opaque
+}
+```
+
+### `kiro.dev/model/not_found`
+
+User requested a model that doesn't exist; Kiro fell back to another.
+
+Handler: `handleModelNotFound` (tui.js:124862).
+
+```ts
+type ModelNotFoundNotification = {
+  requestedModel: string;
+  fallbackModel: string;
+}
+```
+
+### `kiro.dev/agent/switched`
+
+Agent mode changed. Sent in addition to (and richer than) `session/update` with `current_mode_update` (Section 5).
+
+Handler: `handleAgentSwitched` (tui.js:124938).
+
+```ts
+type AgentSwitchedNotification = {
+  agentName: string;                   // new mode id
+  previousAgentName: string;           // prior mode id
+  welcomeMessage?: unknown;            // opaque; typically null
+  model?: unknown;                     // opaque; forwarded for display
+}
+```
+
+### `kiro.dev/session/update`
+
+**Extension variant** distinct from the standard ACP `session/update` (Section 5). Used primarily for lightweight `tool_call_chunk` updates — an early, rawInput-less preview of an imminent tool call.
+
+Handler: `handleExtSessionUpdate` (tui.js:124948). In 2.0.1 the handler only interprets `update.sessionUpdate === "tool_call_chunk"`; any other variant is silently ignored.
+
+```ts
+type ExtSessionUpdateNotification = {
+  sessionId?: string;                  // when different from main session → subagent
+  update: {
+    sessionUpdate: "tool_call_chunk";  // only variant the TUI reads in 2.0.1
+    toolCallId: string;
+    title: string;                     // e.g. "read", "shell", "ls"
+    kind: ToolKind;                    // e.g. "read", "execute", "search"
+  };
+}
+```
+
+**Notes:**
+
+- If `sessionId` differs from the main session, the TUI routes the event to subagent handlers (tui.js:124955).
+- `tool_call_chunk` arrives **before** (or alongside) the standard `session/update` → `tool_call` notification. It's the earliest visible signal that a tool is about to run. The standard notification will follow with full `rawInput`.
+- Although the SDK has no schema here, the handler is a switch that only branches on `sessionUpdate === "tool_call_chunk"` — other variants fall through to a debug log. Kiro may emit other `sessionUpdate` values in the future; 2.0.1 clients ignore them.
+
+### `kiro.dev/subagent/list_update`
+
+Snapshot of all running subagents and pending stages. Each notification carries the **complete** current state, not a delta.
+
+Handler: `handleSubagentListUpdate` (tui.js:124875). Both arrays are defaulted to `[]` if absent.
+
+```ts
+type SubagentListUpdateNotification = {
+  subagents?: SubagentEntry[];
+  pendingStages?: PendingStageEntry[];
+}
+
+type SubagentEntry = {                 // fields read by consumer at tui.js:125991
+  sessionId: string;
+  sessionName?: string;                // falls back to agentName if empty
+  agentName: string;
+  status?: { type: "working" | "terminated" | string };  // "working"→busy, "terminated"→terminated, else→idle
+  group?: string;
+  parentSessionId?: string;
+  role?: string;
+  dependsOn?: string[];                // other stage names this subagent depends on
+}
+
+type PendingStageEntry = {             // fields read by consumer at tui.js:126018
+  name: string;
+  agentName?: string;                  // display name; falls back to `name`
+  group?: string;
+  role?: string;
+  dependsOn?: string[];
+}
+```
+
+**Notes:**
+
+- **Snapshot semantics.** When a subagent disappears from `subagents[]` between notifications, it has terminated (or been cancelled). When a pending stage disappears from `pendingStages[]`, it has either started (and will now appear in `subagents[]`) or been abandoned.
+- **Group tags cluster stages.** The `group` string identifies stages spawned from a single parent `subagent`/`agent_crew` tool call.
+- **Older doc fields that don't appear in 2.0.1 handlers:** `initialQuery` and `status.message` were documented earlier but the 2.0.1 TUI doesn't read them. Kiro may still send them; they just aren't consumed.
+
+### `kiro.dev/session/list_update`
+
+Changes to the session list (used in the session picker).
+
+Handler: `handleSessionListUpdate` (tui.js:124887). The handler defaults `sessions` to `[]` and fans it out via the same subagent-list handler set — so list entries share the `SubagentEntry` shape in 2.0.1.
+
+```ts
+type SessionListUpdateNotification = {
+  sessions?: SubagentEntry[];          // same shape as subagent/list_update entries
+}
+```
+
+### `kiro.dev/session/activity`
+
+Per-session activity event (for example, an agent-thinking heartbeat or status update from a subagent).
+
+Handler: `handleSessionActivity` (tui.js:124880). Requires both `sessionId` and `event`; if either is missing the notification is silently dropped.
+
+```ts
+type SessionActivityNotification = {
+  sessionId: string;
+  event: unknown;                      // forwarded opaquely to multi-session handlers
+}
+```
+
+**Note:** the `event` payload is not introspected by the TUI in 2.0.1. Its shape is defined by whatever consumer subscribes via `onMultiSessionUpdate()`.
+
+### `kiro.dev/session/inbox_notification`
+
+Subagents have posted results back to a parent session.
+
+Handler: `handleInboxNotification` (tui.js:124891). The whole `params` object is forwarded to inbox subscribers; no field-level access is performed by the notification router.
+
+```ts
+type InboxNotification = {
+  // Fields observed in Kiro output (not enforced):
+  sessionId?: string;                  // the target (usually main) session
+  sessionName?: string;
+  messageCount?: number;
+  escalationCount?: number;
+  senders?: string[];                  // e.g. ["subagent"]
+}
+```
+
+**Note:** because the TUI forwards the raw `params` unchanged, the documented fields reflect observed Kiro behavior rather than TUI requirements. A client that only cares about "something changed in the inbox" can treat this as a signaling notification and ignore the payload.
+
+## 7. Kiro extension requests (C→S)
+
+Extension requests from client to agent are dispatched through `ClientSideConnection.extMethod()` (tui.js:124039), which prepends an underscore to the method name on the wire. The SDK validates neither request nor response (`extMethodRequestSchema` / `extMethodResponseSchema` are both `record(unknown)`, tui.js:123031, 123087). Shapes below are from the TUI's sender functions, not from a schema.
+
+**Important reconciliation: `EXT_METHODS` ≠ wire format.** The `EXT_METHODS` constant table at tui.js:124335 lists some methods with plain ACP names (`SESSION_TERMINATE: "session/terminate"`, `SESSION_LIST: "session/list"`), but the actual sender functions (`terminateSession`, `listSessions`) bypass those constants and call `extMethod()` with a hardcoded `"kiro.dev/session/terminate"` / `"kiro.dev/session/list"` — producing `_kiro.dev/session/terminate` / `_kiro.dev/session/list` on the wire, not `_session/terminate` / `_session/list`.
+
+The actual wire methods in 2.0.1 are enumerated in the table below. The EXT_METHODS constants that conflict with this behavior appear to be vestigial or reserved for future use; the SDK's `extMethod()` helper is the source of truth.
+
+| Wire method (with leading `_`) | Caller | Location |
+|---|---|---|
+| `_kiro.dev/commands/execute` | `AcpClient.executeCommand()` | tui.js:124581 |
+| `_kiro.dev/commands/options` | `AcpClient.getCommandOptions()` | tui.js:124603 |
+| `_kiro.dev/session/terminate` | `AcpClient.terminateSession()` | tui.js:124621 |
+| `_kiro.dev/session/list` | `AcpClient.listSessions()` | tui.js:124630 |
+| `_kiro.dev/settings/list` | `AcpClient.listSettings()` | tui.js:124635 |
+| `_session/spawn` | `AcpClient.spawnSession()` | tui.js:124910 |
+| `_message/send` | `AcpClient.sendMessage()` | tui.js:124932 |
+
+`_session/attach` is defined in `EXT_METHODS` (tui.js:124356) but has **no caller** in 2.0.1. It is likely reserved; treat it as undefined behavior.
 
 ---
 
-## Subagent & Multi-Session Protocol (new in v1.29.0)
+### `_kiro.dev/commands/execute` — request
 
-Kiro v1.29.0 introduces subagent support via extension methods. The main agent can spawn child sessions ("stages") that run in parallel, each with its own tool access and message stream. All communication is multiplexed over the existing stdio connection with `sessionId` as the demuxing key.
+Execute a slash command on the backend. The full catalog of commands and their response shapes is covered in Section 9.
 
-### Subagent Tool Calls
+**Request:**
 
-The main agent uses two tool names to spawn subagents: `"subagent"` and `"agent_crew"`. Both are treated identically by the TUI.
+```ts
+type CommandsExecuteRequest = {
+  sessionId: string;
+  command: TuiCommand;
+}
 
-**Tool input:**
+type TuiCommand = {
+  command: string;                     // e.g. "model", "context", "compact"
+  args: Record<string, unknown>;       // e.g. { value: "claude-opus-4.6" } for /model
+}
+```
+
+**Response:**
+
+```ts
+type CommandsExecuteResponse = {
+  success: boolean;
+  message?: string;                    // human-readable result
+  data?: unknown;                      // command-specific; see Section 9
+}
+```
+
+**Note on wire format (critical):** The `command` field is an **object**, not a string. Sending `{"command": "context", ...}` instead of `{"command": {"command": "context", "args": {}}, ...}` causes `kiro-cli` to respond with a deserialization error naming `TuiCommand` as the expected adjacently-tagged enum. Clients implementing slash commands must wrap the command name inside a `{command, args}` object.
+
+**Example (selection command):**
+
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "id": 20,
+  "method": "_kiro.dev/commands/execute",
+  "params": {
+    "sessionId": "4dfac9d3-...",
+    "command": { "command": "model", "args": { "value": "claude-opus-4.6" } }
+  }
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "id": 20,
+  "result": {
+    "success": true,
+    "message": "Model changed to claude-opus-4.6",
+    "data": { "model": { "id": "claude-opus-4.6", "name": "claude-opus-4.6" } }
+  }
+}
+```
+
+### `_kiro.dev/commands/options` — request
+
+Query selectable options for a command (e.g. the list of models for `/model`).
+
+**Request:**
+
+```ts
+type CommandsOptionsRequest = {
+  sessionId: string;
+  command: string;                     // bare name, no leading slash (TUI strips "/")
+  partial: string;                     // user input so far, for filtering (may be "")
+}
+```
+
+**Response:**
+
+```ts
+type CommandsOptionsResponse = {
+  options: CommandOption[];
+  hasMore?: boolean;
+}
+
+type CommandOption = {
+  value: string;                       // ID sent back in a subsequent commands/execute
+  label: string;                       // display name (prefer this over `name`)
+  description?: string;
+  group?: string;                      // grouping label (e.g. "1.00x credits" for /model)
+  current?: boolean;                   // true if this is the currently active option
+}
+```
+
+**Note:** the `getCommandOptions` caller (tui.js:124603) calls `commandName.replace(/^\//, "")` before sending, so clients should not include a leading slash in `command`. On network failure the sender falls back to `{options: []}` rather than surfacing the error.
+
+### `_kiro.dev/settings/list` — request
+
+Fetch user/workspace settings from the agent.
+
+**Request:** `{}`
+
+**Response:** an opaque `Record<string, unknown>`. The TUI returns the result directly from `listSettings()` (tui.js:124635) and does not introspect any fields at this layer. Downstream consumers may parse specific keys.
+
+### `_kiro.dev/session/terminate` — request
+
+Terminate a running session (typically a subagent).
+
+**Request:**
+
+```ts
+type SessionTerminateRequest = {
+  sessionId: string;
+}
+```
+
+**Response:** the TUI's caller is wrapped in try/catch and logs "best-effort" failure (tui.js:124626–124627). Response shape is not introspected; clients can treat a successful return as acknowledgement.
+
+### `_kiro.dev/session/list` — request
+
+List all sessions (main + subagents) in a working directory.
+
+**Request:**
+
+```ts
+type SessionListRequest = {
+  cwd: string;
+}
+```
+
+**Response:**
+
+```ts
+type SessionListResponse = {
+  sessions: SubagentEntry[];           // same shape as subagent/list_update entries (Section 6)
+}
+```
+
+The TUI destructures `{sessions}` from the response (tui.js:102547, 126115, 126168).
+
+### `_session/spawn` — request
+
+Spawn a child subagent session. Plain-name method routed through the extension dispatcher.
+
+**Request:**
+
+```ts
+type SessionSpawnRequest = {
+  sessionId: string;                   // the parent session
+  task: string;                        // human-readable description
+  name?: string;                       // UI label for the crew monitor — NOT a mode selector
+}
+```
+
+> **Correction (2026-05-23):** Earlier versions of this document annotated `name` as `"subagent mode/role (matches availableModes[].id)"` based on field-name inference. **This is wrong.** Per the user-facing Kiro CLI documentation for `/spawn`, `--name` is purely a display label for the crew monitor — it does not select the subagent's mode. Empirically verified on Kiro 2.4.1: spawning with `name: "kiro_planner"` produces a subagent whose mode is `kiro_default` (inherited from the parent), not `kiro_planner`. The spawned subagent always inherits the parent session's mode at spawn time. The Kiro docs explicitly distinguish `/spawn` (user-initiated, parallel long-running session, label only) from agent-initiated subagents created via the agent's `subagent` tool (which support role specialization through the tool's stages array). At the wire level both surface in `_kiro.dev/subagent/list_update`, but their semantics differ.
+
+**Response:**
+
+```ts
+type SessionSpawnResponse = {
+  sessionId: string;                   // new subagent's session id
+  name?: string;
+}
+```
+
+The spawned subagent subsequently appears in `_kiro.dev/subagent/list_update` notifications (Section 6) and streams its own `session/update` events under its new `sessionId`.
+
+**Example:**
+
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "id": 30,
+  "method": "_session/spawn",
+  "params": {
+    "sessionId": "4dfac9d3-...",
+    "task": "Review the code for bugs",
+    "name": "code-reviewer"
+  }
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "id": 30,
+  "result": {
+    "sessionId": "b49d53d1-a42a-4ef6-a173-a6224e8e6fcd",
+    "name": "code-reviewer"
+  }
+}
+```
+
+### `_message/send` — request
+
+Send a follow-up message to a specific session (most commonly a subagent).
+
+**Request:**
+
+```ts
+type MessageSendRequest = {
+  sessionId: string;
+  content: unknown;                    // typically a string or an ACP ContentBlock[]
+}
+```
+
+**Response:** the TUI's sender does not inspect the response (tui.js:124932–124937). Treat a successful return as acknowledgement.
+
+**Example:**
+
 ```json
 {
-  "mode": "blocking",
-  "task": "Review code changes between current branch and main",
-  "stages": [
-    {
-      "name": "code-reviewer",
-      "role": "code-reviewer",
-      "prompt_template": "Review the code changes in this PR against main..."
-    },
-    {
-      "name": "pr-test-analyzer",
-      "role": "pr-test-analyzer",
-      "prompt_template": "Analyze test coverage quality..."
+  "jsonrpc": "2.0",
+  "id": 31,
+  "method": "_message/send",
+  "params": {
+    "sessionId": "b49d53d1-...",
+    "content": "Focus on error handling in storage/mod.rs"
+  }
+}
+```
+
+## 8. Shared types
+
+Types referenced by multiple methods live here. Types specific to a single method are defined next to that method (Sections 2–7).
+
+### `ContentBlock` — tui.js:123324
+
+A discriminated union of content payloads. Used in `session/prompt`, `agent_message_chunk`, `agent_thought_chunk`, `user_message_chunk`, and (nested as `ToolCallContent.content`) in certain `ToolCallContent` variants.
+
+```ts
+type ContentBlock =
+  | {
+      type: "text";
+      text: string;
+      annotations?: Annotations | null;
     }
+  | {
+      type: "image";
+      data: string;                    // base64-encoded
+      mimeType: string;
+      uri?: string | null;             // optional resource URI
+      annotations?: Annotations | null;
+    }
+  | {
+      type: "audio";
+      data: string;                    // base64-encoded
+      mimeType: string;
+      annotations?: Annotations | null;
+    }
+  | {
+      type: "resource_link";
+      name: string;
+      uri: string;
+      mimeType?: string | null;
+      description?: string | null;
+      title?: string | null;
+      size?: number | null;
+      annotations?: Annotations | null;
+    }
+  | {
+      type: "resource";
+      resource: EmbeddedResourceContents;
+      annotations?: Annotations | null;
+    };
+```
+
+**Notes:**
+
+- The union tag is `type` (standard adjacently-tagged union, compatible with Rust serde `#[serde(tag = "type", rename_all = "snake_case")]`).
+- The schema is inlined in several places (e.g., each chunk variant in `sessionNotificationSchema` repeats the union). The structure is identical; the type above is the canonical shape.
+- `image` is advertised via `promptCapabilities.image` (Section 2). Kiro sets this to `true`, so clients can send image blocks in prompts.
+- `audio` and `embeddedContext` (the capability flag) are declared in `promptCapabilities` but Kiro sets both to `false` — Kiro does not accept audio prompts or embedded-resource prompts.
+
+### `Role` — tui.js:123032
+
+```ts
+type Role = "assistant" | "user";
+```
+
+Used inside `Annotations.audience`. Only two values.
+
+### `Annotations` — tui.js:123116
+
+Metadata attached to content blocks and tool-call content. Entirely optional; clients typically ignore it unless they implement audience-scoped rendering or cache invalidation.
+
+```ts
+type Annotations = {
+  audience?: Role[] | null;            // which roles should see this content
+  lastModified?: string | null;        // ISO timestamp
+  priority?: number | null;
+}
+```
+
+### `EmbeddedResourceContents` — tui.js:123122
+
+Union of text and blob resource contents. Used inside `ContentBlock` (variant `resource`) and `ToolCallContent` (variant `content` with inner type `resource`).
+
+```ts
+type EmbeddedResourceContents =
+  | TextResourceContents
+  | BlobResourceContents;
+
+type TextResourceContents = {          // tui.js:123033
+  uri: string;
+  text: string;
+  mimeType?: string | null;
+}
+
+type BlobResourceContents = {          // tui.js:123039
+  uri: string;
+  blob: string;                        // base64-encoded
+  mimeType?: string | null;
+}
+```
+
+**Note:** the two variants are not tagged — disambiguate by presence of `text` vs. `blob`.
+
+### `ToolKind` — tui.js:123045
+
+```ts
+type ToolKind =
+  | "read"
+  | "edit"
+  | "delete"
+  | "move"
+  | "search"
+  | "execute"
+  | "think"
+  | "fetch"
+  | "switch_mode"
+  | "other";
+```
+
+10 values. Used in `ToolCall`, `ToolCallUpdate`, and `session/request_permission.toolCall.kind`.
+
+**Notes:**
+
+- The `tool_call` session-update variant inlines this union rather than referencing `toolKindSchema` (see Section 5). Values are identical.
+- `"other"` is a catch-all and also marks "planning" steps that Kiro itself filters from display. Clients may want to suppress them from chat rendering.
+
+### `ToolCallStatus` — tui.js:123057
+
+```ts
+type ToolCallStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "failed";
+```
+
+4 values. Used in tool-call lifecycle notifications.
+
+### `ToolCallContent` — tui.js:123177
+
+A 3-variant union carrying tool output. Tagged by `type`.
+
+```ts
+type ToolCallContent =
+  | {
+      type: "content";
+      content: ContentBlock;           // one of the 5 ContentBlock variants (inlined in schema)
+    }
+  | {
+      type: "diff";
+      path: string;
+      newText: string;
+      oldText?: string | null;         // null for new files (no prior content)
+    }
+  | {
+      type: "terminal";
+      terminalId: string;              // live terminal feed (useful only if client holds the handle)
+    };
+```
+
+**Notes:**
+
+- The `content` variant embeds a full ContentBlock — tool output can be arbitrary content, including images.
+- The `diff` variant is how edit-kind tools report changes (before/after for a given path).
+- The `terminal` variant references a terminal id. In practice, Kiro does not use client-side terminals (Section 4), so this variant is rare. When it appears, the terminal is being managed by the agent — the id is informational only for a standard Kiro client.
+
+### `ToolCallLocation` — tui.js:123233
+
+```ts
+type ToolCallLocation = {
+  path: string;
+  line?: number | null;                // 1-based; omitted means "the whole file"
+}
+```
+
+Used by `ToolCall.locations` / `ToolCallUpdate.locations` to hint which files/lines a tool is operating on, for UI navigation.
+
+### `PlanEntry` — tui.js:123287
+
+```ts
+type PlanEntry = {
+  content: string;                     // free-text description of the step
+  priority: "high" | "medium" | "low";
+  status: "pending" | "in_progress" | "completed";
+}
+```
+
+See `Plan` variant in Section 5. Each `plan` update carries a full array of these and replaces the previous plan.
+
+### `Error` — tui.js:123063
+
+JSON-RPC error shape used when a request fails. This is the standard JSON-RPC 2.0 error object; the SDK declares it explicitly so that handler code can parse it.
+
+```ts
+type Error = {
+  code: number;
+  message: string;
+  data?: Record<string, unknown>;
+}
+```
+
+**Typical codes observed from Kiro:**
+
+| Code | Meaning |
+|---|---|
+| `-32601` | Method not found (e.g. older Kiro versions rejecting `session/set_config_option`) |
+| `-32602` | Invalid params (e.g. malformed `commands/execute` payload) |
+| `-32700` | Parse error (e.g. invalid JSON on the wire) |
+
+Kiro also populates `data` with structured detail in some error paths — the TUI does not enforce a shape, so clients should treat `data` as opaque.
+
+### Summary table — shared types and their homes
+
+| Type | Line | Defined in section | Used in |
+|---|---|---|---|
+| `ContentBlock` | 123324 | 8 | `session/prompt`, all `*_message_chunk` variants, `ToolCallContent` |
+| `Role` | 123032 | 8 | `Annotations` |
+| `Annotations` | 123116 | 8 | `ContentBlock`, `ToolCallContent` (inlined variants) |
+| `EmbeddedResourceContents` | 123122 | 8 | `ContentBlock` (resource variant) |
+| `ToolKind` | 123045 | 8 | `ToolCall`, `ToolCallUpdate`, `session/request_permission` |
+| `ToolCallStatus` | 123057 | 8 | `ToolCall`, `ToolCallUpdate`, `session/request_permission` |
+| `ToolCallContent` | 123177 | 8 | `ToolCall`, `ToolCallUpdate`, `session/request_permission` |
+| `ToolCallLocation` | 123233 | 8 | `ToolCall`, `ToolCallUpdate`, `session/request_permission` |
+| `PlanEntry` | 123287 | 8 | `plan` session-update variant |
+| `Error` | 123063 | 8 | JSON-RPC error responses |
+| `PermissionOption` | 123166 | 4 | `session/request_permission` |
+| `TerminalExitStatus` | 123364 | 4 | `terminal/output` |
+| `McpServer` | 123309 | 3 | `session/new`, `session/load` |
+| `HttpHeader` | 123111 | 3 | `McpServer` (http/sse variants) |
+| `EnvVariable` | 123238 | 3 | `terminal/create`, `McpServer` (stdio variant) |
+| `SessionMode` | 123271 | 3 | `SessionModeState` |
+| `SessionModeState` | 123282 | 3 | `session/new`, `session/load` responses |
+| `ModelInfo` | 123265 | 3 | `SessionModelState` |
+| `SessionModelState` | 123277 | 3 | `session/new`, `session/load` responses |
+| `AvailableCommand` | 123452 | 5 | `available_commands_update` variant (SDK-defined; has `input`) |
+| `KiroCommand` | — (handler-inferred) | 6 | `_kiro.dev/commands/available` notification (Kiro-specific; has `meta`, no SDK schema) |
+| `Implementation` | 123243 | 2 | `initialize` |
+| `ClientCapabilities` | 123458 | 2 | `initialize` request |
+| `AgentCapabilities` | 123446 | 2 | `initialize` response |
+| `McpCapabilities` | 123254 | 2 | `AgentCapabilities` |
+| `PromptCapabilities` | 123259 | 2 | `AgentCapabilities` |
+| `FileSystemCapability` | 123298 | 2 | `ClientCapabilities` |
+| `AuthMethod` | 123248 | 2 | `initialize` response |
+
+## 9. Kiro command effects
+
+Every slash command the user types is eventually routed through `_kiro.dev/commands/execute` (Section 7). The response is a generic `{ success, message?, data? }` envelope whose `data` shape varies per command. This section catalogs all 26 commands and their `data` payloads.
+
+### Dispatch architecture
+
+The TUI uses a two-layer dispatch:
+
+1. **`commandEffects`** (tui.js:101756) maps each slash-command name to an **effect** name (a logical operation, e.g. `updateModel`).
+2. **`effectHandlers`** (tui.js:101784) maps each effect name to the function that reads `result.data` and updates UI state.
+
+Multiple commands can map to the same effect (e.g. `plan` is an alias for `agent`; `exit` for `quit`). A handler that returns `true` short-circuits the default behavior of displaying `result.message` as an alert.
+
+### Response envelope
+
+Every `_kiro.dev/commands/execute` call returns:
+
+```ts
+type CommandsExecuteResponse = {
+  success: boolean;
+  message?: string;                    // human-readable result, shown unless the effect handler returns true
+  data?: unknown;                      // effect-specific; see tables below
+}
+```
+
+The TUI's generic dispatcher (inside `commands/execute`'s caller) displays `message` as a success/error alert when `success` controls the color and the effect handler does not suppress it.
+
+### `commandEffects` map
+
+From tui.js:101756:
+
+```ts
+{
+  feedback:   "showFeedbackUrl",
+  help:       "showHelpPanel",
+  model:      "updateModel",
+  agent:      "updateAgent",
+  plan:       "updateAgent",           // alias — same handler as `agent`
+  context:    "showContextPanel",
+  usage:      "showUsagePanel",
+  prompts:    "executePrompt",
+  clear:      "clearMessages",
+  quit:       "quit",
+  exit:       "quit",                  // alias
+  mcp:        "showMcpPanel",
+  tools:      "showToolsPanel",
+  hooks:      "showHooksPanel",
+  knowledge:  "showKnowledgePanel",
+  paste:      "pasteImage",
+  editor:     "promptEditor",
+  chat:       "loadSession",
+  reply:      "replyEditor",
+  code:       "showCodePanel",
+  spawn:      "spawnSession",
+  copy:       "copyToClipboard",
+  transcript: "openRawView",
+  theme:      "showThemeMenu",
+  tui:        "showTuiPanel",
+  guide:      "switchToGuideAgent",
+}
+```
+
+Plus two commands that are **not in `commandEffects`** — they are dispatched outside the generic pipeline:
+
+- **`new`** — invokes `newSession` handler (tui.js:101956) directly; calls `kiro.newSession()` and optionally sends an initial prompt from `args`.
+- **`switch`** — invokes `switchSession` handler (tui.js:102044) directly; opens a session picker or switches to a named session.
+
+### Per-command `data` shapes
+
+The following table documents, for each command, what the effect handler reads from `data`. Fields not listed may be present on the wire; the TUI does not consume them in 2.0.1.
+
+#### Panel-opening commands
+
+These commands return a `data` payload that populates an in-UI panel.
+
+| Command | Effect | `data` shape | Handler |
+|---|---|---|---|
+| `/help` | `showHelpPanel` | `{ commands: Array<{ name, description, usage }> }` | 101833 |
+| `/context` | `showContextPanel` | `{ breakdown: ContextBreakdown, contextUsagePercentage?: number, initialExpanded?: boolean }` | 101821 |
+| `/usage` | `showUsagePanel` | opaque — passed through to the panel | 101845 |
+| `/mcp` | `showMcpPanel` | `{ servers: McpServerInfo[], mode?: "list" \| string }` (mode defaults to `"list"`) | 101848 |
+| `/tools` | `showToolsPanel` | `{ tools: ToolInfo[] }` | 101852 |
+| `/hooks` | `showHooksPanel` | `{ hooks: HookInfo[] }` (defaults to `[]` if absent) | 101858 |
+| `/knowledge` | `showKnowledgePanel` | `{ entries: KnowledgeEntry[], status: KnowledgeStatus }` — if `data.entries` absent, closes panel and shows `message` as alert | 101862 |
+| `/code` | `showCodePanel` | **Dual-purpose** — see note below | 101922 |
+| `/tui` | `showTuiPanel` | none read | 102162 |
+
+**Context breakdown shape** (inferred from `/context` panel fields observed in earlier Kiro versions):
+
+```ts
+type ContextBreakdown = {
+  contextFiles:   { tokens: number; percent: number; items: ContextItem[] };
+  tools:          { tokens: number; percent: number };
+  kiroResponses:  { tokens: number; percent: number };
+  yourPrompts:    { tokens: number; percent: number };
+  sessionFiles:   { tokens: number; percent: number };
+}
+
+type ContextItem = { name: string; tokens: number; matched: boolean; percent: number };
+```
+
+**HookInfo shape** (from backend; three columns `trigger`, `command`, optional `matcher`):
+
+```ts
+type HookInfo = {
+  trigger: string;                     // e.g. "pre-tool", "post-response"
+  command: string;                     // shell command to run
+  matcher?: string;                    // optional trigger filter
+}
+```
+
+**Dual-purpose `showCodePanel`** (tui.js:101922): the effect handler branches on `data.executePrompt`. If present, the handler calls `ctx.sendMessage(data.executePrompt, undefined, data.label)` and returns `true` (short-circuit). Otherwise, if `data` is present, the code panel opens. If `data` is absent and a `message` is present, the message is shown as an alert. So `/code` can either open a panel **or** forward a prompt for submission, discriminated by the presence of `data.executePrompt` in the response.
+
+#### State-update commands
+
+| Command | Effect | `data` shape | Handler |
+|---|---|---|---|
+| `/model` | `updateModel` | `{ model: { id, name } }` | 101785 |
+| `/model <id>` (selection) | `updateModel` | same | 101785 |
+| `/agent` | `updateAgent` | `{ agent: AgentInfo }` OR `{ path: string }` | 101791 |
+| `/agent <name>` | `updateAgent` | `{ agent: AgentInfo }` | 101791 |
+| `/plan` | `updateAgent` (alias) | same as `/agent` | 101791 |
+| `/guide` | `switchToGuideAgent` | `{ agent: AgentInfo, prompt?: string }` | 102402 |
+
+**`updateAgent` is dual-purpose.** If `data.path` is present, the handler opens `$VISUAL` or `$EDITOR` on the file, validates that the saved JSON has a `name` field, and shows a success/error alert (returns `true` to short-circuit). Otherwise if `data.agent` is present, it sets the current agent. A command that wants to let the user edit a config file returns `{ path }`; one that simply switches agents returns `{ agent }`.
+
+**`switchToGuideAgent` may also send a prompt.** If `data.prompt` is present, the handler calls `ctx.sendMessage(data.prompt)` after setting the agent. This allows `/guide` to "set agent + start a turn" atomically.
+
+#### Prompt-forwarding commands
+
+These commands turn their response into a user prompt without showing a panel.
+
+| Command | Effect | `data` shape | Handler |
+|---|---|---|---|
+| `/prompts` | `executePrompt` | `{ executePrompt: string }` | 101875 |
+| `/code` (alt path) | `showCodePanel` | `{ executePrompt: string, label?: string }` | 101922 |
+| `/paste` | `pasteImage` | `{ data: string (base64), mimeType: string }` | 101946 |
+
+**`pasteImage` recipe.** When the backend returns image data, the handler calls `ctx.sendMessage(formatImageLabel(data), [{ base64: data.data, mimeType: data.mimeType }])`. This is the concrete pattern for attaching images to a prompt: `sendMessage`'s second parameter is an array of `{ base64, mimeType }` image attachments that the TUI converts to `ContentBlock` entries (type `image`) in the outgoing `session/prompt`.
+
+#### Feedback / notification commands
+
+| Command | Effect | `data` shape | Handler |
+|---|---|---|---|
+| `/feedback` | `showFeedbackUrl` | `{ url: string }` — handler shows `message` (or `url` as fallback) as a warning alert for 10s and returns `true` | 101939 |
+
+#### Editor-based commands (shell out to `$EDITOR`)
+
+| Command | Effect | `data` shape | Handler |
+|---|---|---|---|
+| `/editor` | `promptEditor` | *(ignored — args passed as initial content)* | 101888 |
+| `/reply` | `replyEditor` | `{ initialContent: string }` — editor pre-populated with this content | 101902 |
+
+Both handlers use `openEditorSync` to write a temp file, invoke `$EDITOR`, read the result, validate (non-empty for `editor`, must differ from `initialContent` for `reply`), and call `ctx.sendMessage(content)`. Both return `true` to short-circuit.
+
+#### Session management commands
+
+| Command | Effect | `data` shape | Handler |
+|---|---|---|---|
+| `/chat save <name>` | `loadSession` | backend fills in `message` + `success`; handler shows alert and returns `true` | 101985 |
+| `/chat load <name>` | `loadSession` | `{ sessionId: string }` on success; handler then calls `kiro.loadSession(sessionId, ...)` | 101985 |
+| `/chat new [prompt]` | *(special — `newSession` handler)* | backend response ignored; handler calls `kiro.newSession()` then optionally `sendMessage(prompt)` | 101956 |
+| `/spawn <task> [--name <id>]` | `spawnSession` | response ignored; handler parses args, calls `kiro.spawnSession(task, name)`, adds to local session store | 102086 |
+| `/switch [name]` | *(special — `switchSession` handler)* | handler reads the local session list, not backend `data` | 102044 |
+
+**Note on `/chat`:** the handler dispatches on whether `args` starts with `save` or `load`. The `load` branch parses `sessionId` from `data` and calls the async `loadSession`, replaying up to `MAX_DISPLAY_TURNS = 10` recent turns from the buffered event stream.
+
+#### UI/local commands (no or minimal data)
+
+| Command | Effect | `data` shape | Handler |
+|---|---|---|---|
+| `/clear` | `clearMessages` | none | 101881 |
+| `/quit`, `/exit` | `quit` | none (calls `kiro.close()` + `process.exit(0)`) | 101884 |
+| `/copy` | `copyToClipboard` | none — copies most recent assistant message | 102128 |
+| `/transcript` | `openRawView` | none — opens the conversation in `$PAGER` | 102153 |
+| `/theme` | `showThemeMenu` | none — handler opens a theme picker from local prefs + bundled themes | 102165 |
+
+`/quit`, `/exit`, `/editor`, `/spawn`, `/copy`, `/theme`, `/transcript` are declared as **local** commands in the TUI's own default command list (marked `source: "local"` in the slash-command registry). The backend is not consulted for these — the TUI calls the effect handler directly. They appear in this section because their dispatch path uses the same effect architecture.
+
+### Effect handlers that short-circuit
+
+A handler that returns `true` tells the outer dispatcher not to show `result.message` as an alert. Effects that do this:
+
+| Effect | When it short-circuits | Why |
+|---|---|---|
+| `updateAgent` | When `data.path` flow completes (success or error) | Handler already shows its own editor-result alert |
+| `promptEditor` | Always | Handler already shows editor failures or sends the message |
+| `replyEditor` | Always | Same |
+| `showCodePanel` | When `data.executePrompt` is present | Response was treated as a prompt, not a panel |
+| `showFeedbackUrl` | When `data.url` is present | Handler already showed the URL as a warning alert |
+| `openRawView` | On success | Handler opens the pager; alert would be redundant |
+| `newSession` | Always | Handler shows its own lifecycle alerts |
+
+### Pattern summary
+
+1. **All backend commands flow through `_kiro.dev/commands/execute`.** The TUI handles the response envelope centrally and delegates to an effect handler based on `commandEffects`.
+2. **Unknown commands degrade gracefully.** If a command name isn't in `commandEffects`, the dispatcher falls back to rendering `message` as an alert — so new backend commands "just work" for the simple message path.
+3. **Local commands use the same pipeline.** The TUI's own commands (`/quit`, `/copy`, etc.) register in the same effect table even though they don't round-trip to the backend.
+4. **Data-shape discrimination within an effect is common.** `updateAgent` (agent vs. path), `showCodePanel` (executePrompt vs. panel), and `showKnowledgePanel` (entries vs. message fallback) all branch on which `data.*` field is present.
+5. **`sendMessage` is the universal entry point for prompt submission.** Whether triggered by `/editor`, `/reply`, `/paste`, `/prompts`, or a `/code` prompt-forward — the terminal call is always `ctx.sendMessage(...)`, which goes out as a `session/prompt` (Section 3).
+
+## 10. Appendix
+
+### A. Complete method catalog
+
+| # | Wire name | Direction | Type | Section |
+|---|---|---|---|---|
+| 1 | `initialize` | C→S | request | 2 |
+| 2 | `authenticate` | C→S | request | 2 |
+| 3 | `session/new` | C→S | request | 3 |
+| 4 | `session/load` | C→S | request | 3 |
+| 5 | `session/prompt` | C→S | request | 3 |
+| 6 | `session/cancel` | C→S | notification | 3 |
+| 7 | `session/set_mode` | C→S | request | 3 |
+| 8 | `session/set_model` | C→S | request | 3 |
+| 9 | `fs/read_text_file` | S→C | request | 4 |
+| 10 | `fs/write_text_file` | S→C | request | 4 |
+| 11 | `session/request_permission` | S→C | request | 4 |
+| 12 | `session/update` | S→C | notification | 4, 5 |
+| 13 | `terminal/create` | S→C | request | 4 |
+| 14 | `terminal/output` | S→C | request | 4 |
+| 15 | `terminal/wait_for_exit` | S→C | request | 4 |
+| 16 | `terminal/kill` | S→C | request | 4 |
+| 17 | `terminal/release` | S→C | request | 4 |
+| 18 | `_kiro.dev/commands/available` | S→C | notification | 6 |
+| 19 | `_kiro.dev/metadata` | S→C | notification | 6 |
+| 20 | `_kiro.dev/compaction/status` | S→C | notification | 6 |
+| 21 | `_kiro.dev/clear/status` | S→C | notification | 6 |
+| 22 | `_kiro.dev/mcp/server_initialized` | S→C | notification | 6 |
+| 23 | `_kiro.dev/mcp/server_init_failure` | S→C | notification | 6 |
+| 24 | `_kiro.dev/mcp/oauth_request` | S→C | notification | 6 |
+| 25 | `_kiro.dev/error/rate_limit` | S→C | notification | 6 |
+| 26 | `_kiro.dev/agent/not_found` | S→C | notification | 6 |
+| 27 | `_kiro.dev/agent/config_error` | S→C | notification | 6 |
+| 28 | `_kiro.dev/agent/switched` | S→C | notification | 6 |
+| 29 | `_kiro.dev/model/not_found` | S→C | notification | 6 |
+| 30 | `_kiro.dev/session/update` | S→C | notification | 6 |
+| 31 | `_kiro.dev/subagent/list_update` | S→C | notification | 6 |
+| 32 | `_kiro.dev/session/activity` | S→C | notification | 6 |
+| 33 | `_kiro.dev/session/list_update` | S→C | notification | 6 |
+| 34 | `_kiro.dev/session/inbox_notification` | S→C | notification | 6 |
+| 35 | `_kiro.dev/commands/execute` | C→S | request | 7 |
+| 36 | `_kiro.dev/commands/options` | C→S | request | 7 |
+| 37 | `_kiro.dev/settings/list` | C→S | request | 7 |
+| 38 | `_kiro.dev/session/terminate` | C→S | request | 7 |
+| 39 | `_kiro.dev/session/list` | C→S | request | 7 |
+| 40 | `_session/spawn` | C→S | request | 7 |
+| 41 | `_message/send` | C→S | request | 7 |
+
+**Total: 41 wire methods** in Kiro CLI 2.0.1 — 17 standard ACP (tracked by SDK constants) + 24 Kiro extensions (17 notifications + 7 requests).
+
+### B. SDK union roots (tui.js:123674–123747)
+
+The SDK composes every valid JSON-RPC envelope as a union of concrete schemas. These are the union definitions from the bundle.
+
+**Client → Agent (what the client can send):**
+
+```ts
+// clientRequestSchema — tui.js:123689
+type ClientRequest =
+  | InitializeRequest
+  | AuthenticateRequest
+  | NewSessionRequest
+  | LoadSessionRequest
+  | SetSessionModeRequest
+  | PromptRequest
+  | SetSessionModelRequest
+  | ExtMethodRequest;   // record(unknown) — used for _kiro.dev/* extensions
+
+// clientNotificationSchema — tui.js:123369
+type ClientNotification =
+  | CancelNotification
+  | ExtNotification;    // record(unknown)
+
+// clientResponseSchema — tui.js:123674 (responses TO requests from the agent)
+type ClientResponse =
+  | WriteTextFileResponse
+  | ReadTextFileResponse
+  | RequestPermissionResponse
+  | CreateTerminalResponse
+  | TerminalOutputResponse
+  | ReleaseTerminalResponse
+  | WaitForTerminalExitResponse
+  | KillTerminalResponse
+  | ExtMethodResponse;  // record(unknown)
+```
+
+**Agent → Client (what the agent can send):**
+
+```ts
+// agentRequestSchema — tui.js:123435
+type AgentRequest =
+  | WriteTextFileRequest
+  | ReadTextFileRequest
+  | RequestPermissionRequest
+  | CreateTerminalRequest
+  | TerminalOutputRequest
+  | ReleaseTerminalRequest
+  | WaitForTerminalExitRequest
+  | KillTerminalCommandRequest
+  | ExtMethodRequest;
+
+// agentNotificationSchema — tui.js:123685
+type AgentNotification =
+  | SessionNotification  // the session/update wrapper — see Section 5
+  | ExtNotification;
+
+// agentResponseSchema — tui.js:123703 (responses TO requests from the client)
+type AgentResponse =
+  | InitializeResponse
+  | AuthenticateResponse
+  | NewSessionResponse
+  | LoadSessionResponse
+  | SetSessionModeResponse
+  | PromptResponse
+  | SetSessionModelResponse
+  | ExtMethodResponse;
+```
+
+### C. Top-level envelope schemas (tui.js:123713–123747)
+
+The SDK wraps the unions above into generic JSON-RPC message shapes:
+
+```ts
+// Generic JSON-RPC request (tui.js:123463 / 123713)
+type Request<Params> = {
+  id: null | number | string;
+  method: string;
+  params?: Params | null;
+}
+
+// Generic notification (tui.js:123409 / 123699)
+type Notification<Params> = {
+  method: string;
+  params?: Params | null;
+}
+
+// Generic response union — either result or error (tui.js:123718 / 123731)
+type Response<Result> =
+  | { result: Result }
+  | { error: Error };     // errorSchema (tui.js:123063)
+```
+
+Concrete combinations:
+
+```ts
+// What the client is allowed to put on the wire (tui.js:123726)
+type ClientOutgoingMessage =
+  | Request<ClientRequest>
+  | Response<ClientResponse>
+  | Notification<ClientNotification>;
+
+// What the agent is allowed to put on the wire (tui.js:123739)
+type AgentOutgoingMessage =
+  | Request<AgentRequest>
+  | Response<AgentResponse>
+  | Notification<AgentNotification>;
+
+// The full protocol surface (tui.js:123744) — what either side can send
+type AgentClientProtocol = AgentOutgoingMessage | ClientOutgoingMessage;
+```
+
+### D. JSON-RPC framing
+
+Every message on the wire is a JSON object on a single line (newline-delimited JSON). Pretty-printing does not occur — line boundaries separate messages.
+
+```
+Content → { ...JSON... }\n
+```
+
+- **Request:** has `id`, has `method`, has `params` (optional).
+- **Notification:** has `method`, has `params` (optional). **No `id` field.** (Absence of `id` is the only thing distinguishing a notification from a request.)
+- **Response:** has `id`, has either `result` or `error` (mutually exclusive), has no `method`.
+
+### E. Error codes observed from Kiro
+
+| Code | Standard meaning | Observed Kiro cause |
+|---|---|---|
+| `-32600` | Invalid request | Malformed JSON-RPC envelope |
+| `-32601` | Method not found | Unsupported method (e.g. `session/set_config_option`) |
+| `-32602` | Invalid params | Schema validation failure (e.g. wrong `TuiCommand` shape — see Section 7) |
+| `-32603` | Internal error | Backend panic |
+| `-32700` | Parse error | Invalid JSON on the wire |
+
+Kiro may populate the optional `error.data` field with structured detail. The SDK schema leaves it as `Record<string, unknown>` (tui.js:123063–123067); clients should treat `data` as opaque.
+
+### F. Version history
+
+| Kiro version | SDK version | Notable protocol changes |
+|---|---|---|
+| **2.0.1** | `@agentclientprotocol/sdk@0.5.1` | `PROTOCOL_VERSION = 1`. Documented in this file. Wire-format methods: 41. `session/set_model` is a first-class method (no longer behind an unstable flag). `stopReason` expanded to 5 values. `user_message_chunk` variant added to `session/update`. `sessionCapabilities` removed from `initializeResponse`. New extension notifications: `agent/not_found`, `agent/config_error`, `model/not_found`. Multi-session methods (`_session/spawn`, `_message/send`) are dispatched through the extension mechanism with plain ACP-style names (no `kiro.dev/` prefix). |
+
+### G. Reverse-engineering notes
+
+If you need to re-verify or extend this document against a future Kiro release, the reliable anchors are:
+
+1. **`AGENT_METHODS` / `CLIENT_METHODS` constant tables** — search the bundle for the exact strings. These are the ground truth for standard ACP methods and their direction.
+2. **`EXT_METHODS` table** — search for `_kiro.dev/` string literals. The table enumerates extensions, but **do not trust it for wire names alone** — some entries in 2.0.1 are vestigial (e.g. `SESSION_TERMINATE: "session/terminate"` is not actually used on the wire). Always cross-check against the sender function.
+3. **Zod schemas** — search for `exports_external.object({` near line 122995 onward. Each schema is named `<name>Schema` and maps directly to a TypeScript type.
+4. **Handler dispatch tables** — for Kiro extensions, the `extNotificationHandlers` map (`AcpClient.extNotificationHandlers` around line 124719) is the routing layer. Each entry's handler function reveals what fields the TUI actually reads.
+5. **`commandEffects` and `effectHandlers`** — the two-layer dispatch for slash commands, around line 101756 and 101784. Use these to trace any `_kiro.dev/commands/execute` subcommand to the UI effect it produces.
+
+Avoid relying on property-access grep results alone — they can be misleading when the bundle includes dead library code (e.g. the `AgentSideConnection` class at line ~123800 is bundled but never instantiated; only `ClientSideConnection` at line 123945 is wired up). Always verify the containing class and check `new X(` to confirm instantiation.
+
+---
+
+## 11. Changes since 2.0.1
+
+Wire-surface additions and behavior changes discovered through empirical capture and binary diff between Kiro CLI 2.0.1 (the baseline of Sections 1–10) and Kiro CLI 2.4.1 (current production as of 2026-05-23). Per-release detail in [`kiro-2.3.0-wire-audit.md`](kiro-2.3.0-wire-audit.md) and [`kiro-2.4.1-wire-audit.md`](kiro-2.4.1-wire-audit.md). Coverage gap against cyril in [`cyril-acp-coverage-vs-2.4.1.md`](cyril-acp-coverage-vs-2.4.1.md).
+
+### 11.1 New slash commands (`_kiro.dev/commands/execute`)
+
+| Command | Added | Notes |
+|---|---|---|
+| `/stats` | 2.3.0 | Per-backend-request statistics (1 entry per round-trip, N entries for non-trivial turns). Response shape: `data.stats[].{duration_ms, ttfc_ms, input_tokens, output_tokens, request_id, status_code, had_tool_use, error}` + `data.summary.{avg_ms, p90_ms, max_ms, errors}`. **`input_tokens`/`output_tokens` are null** in every capture through 2.4.1 — backend rollout state, independent of model and effort level. |
+| `/effort` | 2.4.0 | Thinking-effort level for the session. `inputType: "selection"`. Options-list is **model-conditional**: empty under non-thinking models (haiku/auto), 5 values under Opus 4.7: `low`/`medium`/`high`/`xhigh`/`max`. Active value is signaled via `label: "xHigh  [active]"` suffix (not a structured `current: true` field). |
+| `/rewind` | 2.4.0 | "Rewind conversation to a previous turn (forks into a new session)". `inputType: "panel"`. Two-step orchestration: (1) no-args call returns `data.turns[].{group, label, logIndex, responseSnippet}`; (2) selection call with `args: {value: "<logIndex-as-string>"}` returns `data.{sessionId, switchSession: true}`. Client then calls `session/load` (new sessionId) + `_kiro.dev/session/terminate` (old sessionId). Note: `args.value` is a **string**, not a number — sending `{value: 0}` (integer) hangs the agent silently. |
+
+### 11.2 New extension methods
+
+| Method | Direction | Added | Wire shape |
+|---|---|---|---|
+| `_kiro.dev/settings/list` | C→S | 2.3.0 | Request: `{}` (empty params required — non-empty hangs the agent silently). Response: flat dotted-key map mirroring `~/.kiro/settings/cli.json` (`chat.enableThinking: true`, `introspect.progressiveMode: true`, etc.) with optional sub-object nesting (`chat: {enableNotifications: true}` alongside `chat.enableNotifications: true`). |
+| `_kiro.dev/mcp/governance_disabled` | S→C | 2.3.0 | Notification with payload `{ apiFailure: boolean }`. Fires when MCP governance is administratively disabled. |
+
+`_kiro.dev/settings/set` is in tui.js's method-name constants table but has **zero call sites** — settings are persisted by the TUI writing `~/.kiro/settings/cli.json` directly, no ACP roundtrip. Do not implement.
+
+### 11.3 Removed (agent-side) extension methods
+
+| Method | Removed | Notes |
+|---|---|---|
+| `_kiro.dev/agent/config_error` | 2.3.0 | tui.js still has `handleAgentConfigError` defensively, but the 2.3.0+ agent doesn't emit it. |
+| `_kiro.dev/session/list` | 2.3.0 | Agent stopped emitting; tui.js retains the handler. (Note: the C→S request `_kiro.dev/session/list` for listing past sessions is still implemented — separate from the notification.) |
+
+### 11.4 New fields on existing methods
+
+#### `_kiro.dev/metadata` — `effort` field
+
+Under thinking-capable models (Opus 4.7+) the post-turn metadata notification gains an `effort` field carrying the active effort level as a string (`low`/`medium`/`high`/`xhigh`/`max`). Sent immediately on model-switch and on every subsequent metadata notification. Absent under haiku-class models (model-conditional).
+
+Also confirmed in 2.4.1: bare `{sessionId}` metadata notifications occur (keep-alives). All fields after `sessionId` are optional.
+
+#### `session/update` → `tool_call` and `tool_call_update` — field drift
+
+Section 5's schemas were derived from the 2.0.1 Zod definitions. In practice on 2.4.1:
+
+- The `kind` field on `tool_call` and `tool_call_update` is consistently populated; matches the 0.5.1 SDK `ToolKind` enum.
+- `locations[]` appears on file-touching tool calls with `[{path: "<abs-path>"}]` entries.
+- `rawOutput` is in practice a tagged-union container: `rawOutput.items[]` where each item is `{Text: "<string>"}` (file content) OR `{Json: {...}}` (shell exec stdout/stderr/exit_status, web-search results, etc.). The Zod schema declares `rawOutput` as `Record<string, unknown>` so this is shape rather than schema — clients should pattern-match on the inner discriminator.
+
+#### `_kiro.dev/session/inbox_notification` — `sessionName` field
+
+Captured on 2.4.1: `params.sessionName: "main"` accompanies the existing `sessionId`. Documented in Section 6 as observed (not enforced); confirmed still present.
+
+#### `session/request_permission` — `_meta.trustOptions[]`
+
+Major undocumented sub-structure on shell/grep/out-of-workspace-read permission requests:
+
+```json
+"_meta": {
+  "trustOptions": [
+    {
+      "label":       "Full command",
+      "display":     "find ~/.cargo/registry/src ...",
+      "setting_key": "allowedCommands",
+      "patterns":    ["find \\~/\\.cargo/...", "head \\-3"]
+    },
+    { "label": "Partial command", "display": "...", "setting_key": "allowedCommands", "patterns": [...] },
+    { "label": "Base command",    "display": "...", "setting_key": "allowedCommands", "patterns": [...] }
   ]
 }
 ```
 
-**Fields:**
-- `mode` — `"blocking"`: parent agent blocks until all stages complete
-- `task` — human-readable description of what the crew is doing
-- `stages[]` — array of subagent definitions:
-  - `name` — unique identifier for this stage
-  - `role` — agent mode to use (matches mode IDs from `session/new`)
-  - `prompt_template` — the prompt sent to the subagent
+Three permission tiers (Full / Partial / Base) the agent proposes when the user wants "Always". Each carries a `setting_key` indicating where the client should persist the chosen pattern. Web-search permission requests omit `_meta` (atomic permission, no decomposition).
 
-The initial `tool_call_chunk` for these tools has `kind: "other"` and `title: "subagent"` (or `"agent_crew"`). The TUI displays them as "Orchestrating"/"Orchestrated".
+### 11.5 Subagent result delivery (the "Summarizing" tool_call)
 
-### `kiro.dev/subagent/list_update` (server → client, notification)
-
-Snapshot notification sent whenever the subagent set changes. Each notification contains the **complete** current state (not a delta). Sent immediately after session creation (with empty arrays) and on every subagent state change.
+After a `_session/spawn`-ed subagent completes its turn, the **parent agent** emits a `session/update` of variant `tool_call` on the **main session**, with:
 
 ```json
-{
-  "method": "_kiro.dev/subagent/list_update",
-  "params": {
-    "subagents": [
-      {
-        "sessionId": "b49d53d1-a42a-4ef6-a173-a6224e8e6fcd",
-        "sessionName": "code-reviewer",
-        "agentName": "code-reviewer",
-        "initialQuery": "Review the code changes in this PR...",
-        "status": {
-          "type": "working",
-          "message": "Running"
-        },
-        "group": "crew-Review code changes ",
-        "role": "code-reviewer",
-        "dependsOn": []
-      }
-    ],
-    "pendingStages": [
-      {
-        "name": "summary-writer",
-        "agentName": "summary-writer",
-        "group": "crew-Review code changes ",
-        "role": "summary-writer",
-        "dependsOn": ["code-reviewer", "pr-test-analyzer"]
-      }
-    ]
+"update": {
+  "sessionUpdate": "tool_call",
+  "toolCallId": "tooluse_...",
+  "title": "Summarizing",
+  "kind": "other",
+  "rawInput": {
+    "__tool_use_purpose": "Task is complete, reporting back.",
+    "taskDescription":    "<the original task we sent>",
+    "taskResult":         "<the subagent's final message>"
   }
 }
 ```
 
-**`subagents[]`** — currently running sessions:
-- `sessionId` — unique session identifier (used as demuxing key for `session/update`)
-- `sessionName` — display name
-- `agentName` — agent mode name
-- `initialQuery` — the prompt that was sent to this subagent
-- `status.type` — `"working"` or `"terminated"`
-- `status.message` — human-readable status (e.g., `"Running"`)
-- `group` — groups stages from the same `subagent` tool call (e.g., `"crew-Review code changes "`)
-- `role` — agent role/mode
-- `dependsOn` — stage names this subagent depends on (empty = can run immediately)
+`rawInput.taskResult` is the canonical source for "what did the subagent say." The `_kiro.dev/session/inbox_notification` only carries counters (`messageCount`, `escalationCount`, `senders[]`), not the message body. Clients wanting full per-message history of the subagent should consume its `session/update` stream (routed by the subagent's `sessionId`).
 
-**`pendingStages[]`** — stages not yet spawned (waiting on dependencies):
-- `name` — stage identifier
-- `agentName` — agent mode to use when spawned
-- `group`, `role`, `dependsOn` — same semantics as `subagents[]`
+The `__tool_use_purpose` field (double-underscore prefix) is an internal convention seen on multiple tool calls — annotation the agent attaches to its own tool invocations.
 
-**Lifecycle:** When a subagent disappears from `subagents[]` (was present, now absent), it has terminated. The `pendingStages` array shrinks as stages get spawned into `subagents[]`.
+### 11.6 Built-in TUI recorder — `KIRO_ACP_RECORD_PATH` (2.4.0+)
 
-### `kiro.dev/session/inbox_notification` (server → client, notification)
+The bundled TUI gained a built-in ACP wire recorder. Set `KIRO_ACP_RECORD_PATH=/path/to/trace.jsonl` before `kiro-cli chat --tui` and the TUI writes every JSON-RPC frame to that file. Implemented in tui.js via a `TransformStream` tap; hooks `SIGINT`/`SIGTERM`/`beforeExit` for flush.
 
-Sent when subagents complete and post results back to the parent session.
+Format (3 keys):
 
 ```json
-{
-  "method": "_kiro.dev/session/inbox_notification",
-  "params": {
-    "sessionId": "874046d5-c7ab-47a7-86c5-b15cece1379a",
-    "sessionName": "main",
-    "messageCount": 1,
-    "escalationCount": 0,
-    "senders": ["subagent"]
-  }
-}
+{"ts": <unix-millis>, "dir": "out" | "in", "msg": <raw-JSON-RPC>}
 ```
 
-**Fields:**
-- `sessionId` — the target session receiving messages (typically the main session)
-- `sessionName` — display name of the target session
-- `messageCount` — total pending messages (increments as subagents finish)
-- `escalationCount` — number of escalated messages (requiring user attention)
-- `senders` — who sent the messages (e.g., `["subagent"]`)
+`dir`: `out` = client→agent, `in` = agent→client (from the TUI client's perspective). Only active when the env var is set; only captures `kiro-cli chat --tui` mode (NOT `kiro-cli acp` mode that cyril uses). For cyril-side captures the rust proxy at `experiments/kiro-proxy-rs/` is still required.
 
-### `kiro.dev/session/list_update` (server → client, notification)
+### 11.7 KAS scaffolding (not yet on the wire)
 
-Sent when the session list changes. Contains all active sessions.
+2.3.0 added a `--agent-engine rust|kas` flag plus env vars (`KIRO_AGENT_ENGINE`, `KIRO_KAS_SERVER_PATH`, `KIRO_MODE`) and asset-extraction code (`crates/chat-cli/src/embedded_tui.rs`). Running `kiro-cli acp --agent-engine kas` on 2.4.1 still errors with "KAS assets not embedded and KIRO_KAS_SERVER_PATH not set." Binary delta 2.3.0 → 2.4.1 is only +2.36 MB on `kiro-cli-chat` (the IDE-shipped KAS bundle is ~36 MB) — assets are not landed. KAS, when it lands, is expected to use a parallel `_kiro/*` namespace (no `.dev`) per IDE evidence.
 
-```json
-{
-  "method": "_kiro.dev/session/list_update",
-  "params": {
-    "sessions": [...]
-  }
-}
-```
+### 11.8 Tarball additions (2.4.0+)
 
-### `kiro.dev/session/activity` (server → client, notification)
+Two new shell shims:
 
-Per-session activity events.
+- `bin/q` (`sh -c '"$HOME/.local/bin/kiro-cli" --show-legacy-warning "$@"'`)
+- `bin/qchat` (same, with `chat` inserted before `"$@"`)
 
-```json
-{
-  "method": "_kiro.dev/session/activity",
-  "params": {
-    "sessionId": "b49d53d1-...",
-    "event": { ... }
-  }
-}
-```
-
-### Subagent Session Updates
-
-Each subagent streams via the standard `session/update` notification with its own `sessionId`. The same update types apply — `agent_message_chunk`, `tool_call`, `tool_call_update`:
-
-```json
-{
-  "method": "session/update",
-  "params": {
-    "sessionId": "b49d53d1-a42a-4ef6-a173-a6224e8e6fcd",
-    "update": {
-      "sessionUpdate": "agent_message_chunk",
-      "content": { "type": "text", "text": "I'll start by reading the steering files..." }
-    }
-  }
-}
-```
-
-Subagent tool calls also flow through `_kiro.dev/session/update` with `sessionUpdate: "tool_call_chunk"`, carrying the subagent's `sessionId`.
-
-### Subagent Session Spawning Flow
-
-1. Main agent streams a `subagent` (or `agent_crew`) tool use
-2. Kiro creates a session for each stage — log: `Orchestrated session spawning session_id=... name=... agent=...`
-3. `_kiro.dev/subagent/list_update` sent with new subagent in `subagents[]`
-4. Each subagent starts streaming its own `session/update` notifications
-5. As subagents complete, `list_update` arrives with them removed from `subagents[]`
-6. `_kiro.dev/session/inbox_notification` sent to the parent session
-
----
-
-### `kiro.dev/mcp/oauth_request` (server → client, notification)
-
-Provides an OAuth URL when an MCP server requires authentication. Documented in the [Kiro ACP docs](https://kiro.dev/docs/cli/acp/#kiro-extensions) but not observed in production logs. Exact payload format unknown.
-
-### `kiro.dev/mcp/server_initialized` (server → client, notification)
-
-Indicates an MCP server has finished initializing and its tools are available. Documented in the [Kiro ACP docs](https://kiro.dev/docs/cli/acp/#kiro-extensions) but not observed in production logs. Exact payload format unknown.
-
-### `session/terminate` (server → client, notification)
-
-Terminates a session. In v1.29.0, used for subagent session cleanup. Related to the multi-session methods (`session/spawn`, `session/terminate`, `session/attach`) documented under Connection Lifecycle above.
-
----
-
-## Unstable ACP Features
-
-These exist in the `agent-client-protocol-schema` crate behind feature flags but are **not advertised** by Kiro v1.29.0 in `sessionCapabilities`:
-
-| Feature Flag | Method | Status in v1.29.0 |
-|---|---|---|
-| `unstable_session_fork` | `session/fork` | Not advertised. Subagents use `session/spawn` instead. |
-| `unstable_session_resume` | `session/resume` | Not advertised. |
-| `unstable_session_list` | `session/list` | Available via Kiro extension (not standard ACP). |
-| `unstable_session_model` | `session/set_model` | Not advertised. Use `kiro.dev/commands/execute`. |
-| `unstable_session_usage` | `UsageUpdate` notification | **Not sent by Kiro v1.29.0.** Tested by enabling `features = ["unstable_session_usage"]` — the variant compiles but Kiro never sends it. Token counts (`inputTokens`, `outputTokens`, `cachedTokens`) are extracted by the TUI from raw stream `MetadataEvent` internals, not from this variant. Per-turn credit cost is available via `kiro.dev/metadata` (see below). |
-| `unstable_session_info_update` | `SessionInfoUpdate` notification | Not advertised. |
-
-Note: While `sessionCapabilities` remains `{}`, Kiro v1.29.0 effectively implements multi-session support through its extension methods (`session/spawn`, `session/terminate`, `session/attach`, `session/list`, `message/send`, `kiro.dev/subagent/list_update`). These bypass the standard ACP capability negotiation.
-
----
-
-## Debugging
-
-### Common errors in kiro-cli logs
-
-**Wrong command format:**
-```
-Connection error: Parse error: {
-  "error": "invalid type: string \"/context\", expected adjacently tagged enum TuiCommand",
-  "json": { "command": "/context", "sessionId": "..." },
-  "phase": "deserialization"
-}
-```
-This means the `command` field was sent as a string instead of the required `{"command": "<name>", "args": {}}` object format. This error crashes the kiro-cli agent connection.
-
-**Unsupported method:**
-```
-Method not found: "session/set_config_option"
-```
-The ACP method is not implemented by this version of Kiro.
-
----
-
-## Full Extension Method Reference (v1.29.0)
-
-| Method (wire format) | Direction | Type | Description |
-|---|---|---|---|
-| `_kiro.dev/commands/available` | server → client | notification | Full command, tool, and MCP server list |
-| `_kiro.dev/commands/options` | client → server | request | Query options for selection commands |
-| `_kiro.dev/commands/execute` | client → server | request | Execute a slash command |
-| `_kiro.dev/metadata` | server → client | notification | Context usage and metering data |
-| `_kiro.dev/session/update` | server → client | notification | Kiro-specific session updates (tool_call_chunk) |
-| `_kiro.dev/agent/switched` | server → client | notification | Agent mode changed |
-| `_kiro.dev/compaction/status` | server → client | notification | Compaction progress |
-| `_kiro.dev/clear/status` | server → client | notification | Clear session progress |
-| `_kiro.dev/error/rate_limit` | server → client | notification | Rate limit hit |
-| `_kiro.dev/mcp/oauth_request` | server → client | notification | MCP OAuth URL |
-| `_kiro.dev/mcp/server_init_failure` | server → client | notification | MCP server init failure |
-| `_kiro.dev/subagent/list_update` | server → client | notification | Subagent state snapshot |
-| `_kiro.dev/session/inbox_notification` | server → client | notification | Subagent completion messages |
-| `_kiro.dev/session/list_update` | server → client | notification | Session list changes |
-| `_kiro.dev/session/activity` | server → client | notification | Per-session activity events |
-| `session/spawn` | client → server | request | Spawn a child session |
-| `session/terminate` | client → server | request | Terminate a session |
-| `session/attach` | client → server | request | Attach to a session |
-| `session/list` | client → server | request | List all sessions |
-| `message/send` | client → server | request | Send message to a session |
-
-## Version History
-
-| Date | Kiro Version | ACP Schema | Notes |
-|------|-------------|------------|-------|
-| 2026-04-02 | v1.29.0 | v0.10.8+ | Subagent support (`subagent`/`agent_crew` tools, `subagent/list_update`, `session/inbox_notification`). Multi-session methods (`session/spawn`, `session/terminate`, `session/attach`, `message/send`, `session/list`). `session/new` response now includes `models` field. `mcpCapabilities.http` now `true`. New: `kiro.dev/error/rate_limit`, `kiro.dev/session/activity`, `kiro.dev/session/list_update`. Compaction status gained structured `status.type` field. Turn metering data available in metadata events. Prompts array in `commands/available` now includes `arguments` field on all prompts (currently only populated for MCP prompts). |
-| 2026-03-20 | v1.28.0 | v0.10.8 | Initial investigation. Discovered TuiCommand format, broken set_config_option, agent/switched and tool_call_chunk notifications. |
+Backward-compat entry points for Amazon Q legacy users. New `--show-legacy-warning` flag on `kiro-cli` prints a deprecation notice.

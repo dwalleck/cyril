@@ -1,5 +1,8 @@
 # Cyril ACP coverage gap vs Kiro 2.4.1 tui.js
 
+> **✅ Current** as of Kiro 2.4.1 (verified 2026-05-21). For current wire shape see [`kiro-acp-protocol.md`](kiro-acp-protocol.md). For the docs index, see [`README.md`](README.md).
+
+
 What cyril needs to add to match the wire surface that Kiro's bundled `tui.js` (2.4.1) is prepared to handle. Built by comparing tui.js's full known method/variant inventory against cyril's actual dispatch in `crates/cyril-core/src/protocol/`.
 
 Source: `~/.local/share/kiro-research/tui-bundles/kiro-tui-2.4.1.js` (sha256 `0a320921…`, 12.10 MB, snapshotted 2026-05-21 after a `kiro-cli chat --tui` launch on the upgraded local install). Method inventory extracted by grepping all `"_kiro.dev/..."` substrings and `sessionUpdate==="..."` case discriminators.

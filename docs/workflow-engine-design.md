@@ -1,5 +1,7 @@
 # Workflow Engine Design
 
+> **⚠ Empirical corrections 2026-05-23.** Three load-bearing assumptions in this doc were checked against Kiro 2.4.1 and need adjustment before any code lands. See [§ Empirical corrections (2026-05-23)](#empirical-corrections-2026-05-23) at the bottom for the verified facts and how they reshape the design. The high-level direction (state-machine workflows driving an ACP agent through stages) is sound; the specific `SpawnSubagent` action signature needs to drop the `agent` field, and `SubagentResult.final_message` needs to be sourced from a different wire surface.
+
 A programmatic workflow capability for cyril: define multi-stage state machines that drive an ACP agent through a sequence of prompts (e.g., write → test → review → fix → verify), observing tool calls and turn outcomes to decide transitions.
 
 This document captures findings from an investigation prompted by [Pi's context-workflow extension](https://raw.githubusercontent.com/owainlewis/pi-extensions/refs/heads/main/extensions/context-workflow/context-workflow.ts) and the broader [Pi extension system](https://pi.dev/docs/latest/extensions). The conclusion: cyril can implement Pi's *programmatic workflow* pattern natively, and in one important case (clean-context review stages) the ACP wire model gives a strictly better primitive than Pi's in-process model.
@@ -319,3 +321,71 @@ The residual gap versus Pi is much smaller than a naive client-vs-host compariso
 - [`docs/ROADMAP.md`](ROADMAP.md) — phased direction for cyril; this work should land as a numbered phase
 - Pi context-workflow source: https://raw.githubusercontent.com/owainlewis/pi-extensions/refs/heads/main/extensions/context-workflow/context-workflow.ts
 - Pi extension docs: https://pi.dev/docs/latest/extensions
+
+---
+
+## Empirical corrections (2026-05-23)
+
+Three findings from a wire-level probe against Kiro 2.4.1 (artifacts: `/tmp/conductor-spike/logs-241/20260523-*.log`, `experiments/conductor-spike/trace-2.4.1-tui-recorder.jsonl`). Each updates an assumption made in the original design above.
+
+### 1. `SpawnSubagent.agent` cannot be passed per-spawn
+
+**Original assumption** (in `StageAction::SpawnSubagent` and the `ContextWorkflow` example):
+
+```rust
+StageAction::SpawnSubagent {
+    agent: "code-reviewer".into(),    // ← assumed mode/role selector
+    task: "...",
+    on_complete: ...,
+}
+```
+
+**Verified reality:** `_session/spawn` accepts `{sessionId, task, name?}` per Kiro 2.4.1 user docs and empirical probe. `name` is a **UI label for the crew monitor**, NOT a mode selector — the Kiro `/spawn` documentation is explicit about this. Spawning with `name: "kiro_planner"` produces a subagent whose mode is `kiro_default` (inherited from the parent), not `kiro_planner`. See [`docs/kiro-acp-protocol.md` § 7](kiro-acp-protocol.md#_sessionspawn--request) for the corrected wire shape and provenance.
+
+**Implication:** the `StageAction::SpawnSubagent` action should drop the `agent` field. The clean-context advantage holds (subagent starts with empty conversation history) but role specialization is not available via `/spawn`. Three workarounds, ranked by ugliness:
+
+1. Rely on task framing alone — same agent, fresh context, role-shaped prompt.
+2. Switch main session's mode before spawning (via `commands/execute model` or `agent` slash command), spawn, switch back. Racy; pollutes the user's interactive mode.
+3. Trigger the agent's `subagent` tool via a prompt — non-deterministic.
+
+The Kiro docs draw a sharper distinction the design missed: `/spawn` (user-initiated, parallel long-running session, no role selection) versus agent-initiated subagents (created via the agent's `subagent` tool, support role specialization through the tool's stages array). At the wire level both surface in `_kiro.dev/subagent/list_update`, but they are semantically different mechanisms — only the agent-initiated path supports role selection, and clients cannot directly invoke it.
+
+### 2. `SubagentResult.final_message` source — `Summarizing` tool_call, not `inbox_notification`
+
+**Original assumption:** the runner reads the subagent's result message from `_kiro.dev/session/inbox_notification`.
+
+**Verified reality:** `inbox_notification` carries only metadata — `{sessionId, sessionName, messageCount, escalationCount, senders}`. The actual result content is delivered via a different mechanism. When the subagent completes its turn, the **parent agent** emits a `session/update` of variant `tool_call` on the **main session**, with `title: "Summarizing"`, `kind: "other"`, and `rawInput.taskResult` containing the subagent's final message:
+
+```json
+"rawInput": {
+  "__tool_use_purpose": "Task is complete, reporting back.",
+  "taskDescription": "<the original task>",
+  "taskResult": "<the subagent's final message>"
+}
+```
+
+**Implication:** the workflow runner detects subagent completion by watching the main session's `session/update` stream for `tool_call`s with `title="Summarizing"` and `kind="other"`. `SubagentResult.final_message` is `rawInput.taskResult`; the original `task` argument can be correlated via `rawInput.taskDescription`. See [§ 11.5](kiro-acp-protocol.md#115-subagent-result-delivery-the-summarizing-tool_call) of the protocol doc.
+
+This is structurally cleaner than the inbox-based design: the workflow runner only needs to listen on the main session's stream (which it's already listening on for `on_turn_complete`), not on a per-subagent stream. The subagent's own `session/update` stream (under its own sessionId) carries the full per-message history if needed; `taskResult` is the agent-summarized version.
+
+### 3. `Compact { then }` confirmed; no design change
+
+`/compact` works as the design assumed. Wire flow verified on 2.4.1:
+
+```
+→ _kiro.dev/commands/execute {command: "compact", args: {}}
+← {success: true, message: "Compacting conversation...", data: null}   (immediate ack)
+← _kiro.dev/compaction/status {status: {type: "started"}}
+← _kiro.dev/compaction/status {status: {type: "completed"}, summary: "<markdown>"}
+← _kiro.dev/metadata {contextUsagePercentage: <reduced> ...}
+```
+
+`StageAction::Compact { then }` is implementable as designed: send the execute, watch for `compaction/status` with `type: "completed"`, then enter `then`. The `summary` field is at the top of `params` (not nested under `status`) — matches cyril's existing parser.
+
+### Updated implementation phase notes
+
+These corrections do not invalidate the phased plan above (Phases 1–6). Concrete adjustments:
+
+- **Phase 1 (Types only):** drop `agent` from `StageAction::SpawnSubagent`. Add `taskDescription: String` to the action so the runner can correlate `Summarizing` tool_calls back to their spawning stage (multiple subagents in flight need to match results to spawns).
+- **Phase 4 (Subagent stages):** the runner watches the main session's `session/update` stream for `tool_call { title: "Summarizing" }`. Detection is therefore cheaper than the original design (no separate subagent-stream wiring required for completion detection — only for per-message history capture if a workflow wants it).
+- **Open question on role specialization** (formerly resolved as "spawn with `agent` field"): now genuinely open. Workflows that need fresh-context AND role-specialized reviewers should either rely on prompt framing (simplest) or test the mode-switching dance as a Phase 4 sub-spike before locking the trait API.

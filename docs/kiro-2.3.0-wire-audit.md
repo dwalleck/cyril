@@ -1,5 +1,8 @@
 # Kiro CLI 2.3.0 — ACP Wire Audit
 
+> **📜 Historical release-specific snapshot.** This is the findings record from the 2.3.0 audit; it is not a current-state reference. For current wire shape see [`kiro-acp-protocol.md`](kiro-acp-protocol.md) (§ 11 documents changes through the current Kiro release). For the docs index and currency tracker, see [`README.md`](README.md).
+
+
 > **Captured 2026-05-11** using `experiments/conductor-spike/` against today's backend. Binary-isolated test: same backend, two binaries (2.2.2 archived vs 2.3.0 freshly installed). Methodology details in [`docs/kiro-acp-protocol.md`](kiro-acp-protocol.md) and the `wire-audit-methodology` reference in user auto-memory.
 
 **Released**: 2026-05-11 (S3 tarball; embedded changelog absent). Build hash `a44742ad7a3acc79eac7459c2986103a8ad2b756` dated 2026-05-07.
