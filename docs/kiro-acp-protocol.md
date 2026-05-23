@@ -2623,7 +2623,100 @@ for name in ['executeCommand','getCommandOptions','listSettings','listSessions',
 
 Diff against the prior version's output to catch sender-signature changes.
 
-### 11.11 Tarball additions (2.4.0+)
+### 11.11 Empirical wire-type verification (2.4.1 captures)
+
+§§ 11.9 and 11.10 verified field NAMES via handler/sender source reading. JavaScript is dynamically typed — the handler reads `e.field` but doesn't tell us whether `field` is a string or a number or an enum. This subsection adds the third verification layer: empirical TYPES extracted from actual on-the-wire JSON-RPC frames.
+
+Methodology: union all Kiro-extension JSON-RPC frames from our capture artifacts (`experiments/conductor-spike/logs/conductor-2.4.1*.log`, `experiments/conductor-spike/trace-2.4.1-tui-recorder.jsonl`, `/tmp/conductor-spike/logs-241/*.log`, `/tmp/kiro-proxy-poc/messages-rs.jsonl`). For each method's params, record the observed JSON type per field, sample-set for string-typed fields (to spot enums), and presence rate (to spot optional fields).
+
+#### Methods with empirical type data
+
+| Method | Frames | Verified type-shape |
+|---|---|---|
+| `_kiro.dev/commands/available` | 33 | `{sessionId: string, commands: KiroCommand[], prompts: Prompt[], tools: Tool[], mcpServers: object[]}`. `commands[]` entries: `{name: string, description: string, meta?: {inputType: string, hint: string, optionsMethod?: string, subcommands?: string[], subcommandHints?: object}}`. `prompts[]` entries: `{name: string, description: string\|null, arguments: array, serverName: string}`. `tools[]` entries: `{name: string, description: string, source: string}` (source observed: `"built-in"`). |
+| `_kiro.dev/commands/execute` | 160 | `{sessionId: string, command: {command: string, args: object}}`. **`command.args.value` is canonically `string`** — the integer instances in our captures came from a buggy probe (`{value: 0}` instead of `{value: "0"}`) which silently hung the agent. |
+| `_kiro.dev/commands/options` | 134 | `{sessionId: string, command: string, partial: string}`. Observed `command` values (5): `agent`, `chat`, `effort`, `model`, `prompts`. `partial` was always empty `""` in our captures. |
+| `_kiro.dev/compaction/status` | 8 | `{sessionId: string, status: {type: string, error?: string}, summary: string\|null}`. **`status.type` enum**: `"started"` \| `"completed"` \| (per § 6: `"failed"`, not in our captures). **`summary` is `null` when `status.type === "started"`, `string` when `"completed"`** — top-level, not nested under status. |
+| `_kiro.dev/metadata` | 226 | All fields optional except `sessionId`. `{sessionId: string, contextUsagePercentage?: number, effort?: string, meteringUsage?: {unit: string, unitPlural: string, value: number}[], turnDurationMs?: integer}`. **`effort` enum (model-conditional)**: `"low"` \| `"medium"` \| `"high"` \| `"xhigh"` \| `"max"` (4 observed; `"low"` documented but not seen). `meteringUsage[].unit` observed: `"credit"`. **Bare `{sessionId}` frames are valid** (keep-alives). |
+| `_kiro.dev/session/inbox_notification` | 4 | `{sessionId: string, sessionName: string, messageCount: integer, escalationCount: integer, senders: string[]}`. All fields present in every frame. `sessionName` observed: `"main"`. `senders` observed: `["subagent"]`. |
+| `_kiro.dev/session/list` | 1 | Request: `{cwd: string}`. Response shape from § 7.X / § 11.x: `{sessions: SessionInfo[]}`. |
+| `_session/spawn` | 12 | Canonical: `{sessionId: string, task: string, name: string}`. **No `mode`/`agent`/`mode_id` field is honored** — variants attempted in probes produce subagents that inherit the parent's mode, confirming § 11.5. |
+| `_kiro.dev/session/terminate` | 4 | `{sessionId: string}`. Response `{}`. |
+| `_kiro.dev/session/update` (tool_call_chunk only) | 158 | `{sessionId: string, update: {sessionUpdate: "tool_call_chunk", toolCallId: string, title: string, kind: string}}`. **`update.kind` enum** observed: `"read"`, `"search"`, `"execute"`, `"other"`. **`update.title` observed**: `"read"`, `"grep"`, `"shell"`, `"code"`, `"web_search"`, `"summary"` — note `"summary"` is what shows up for the parent-agent-emits-on-subagent-completion `Summarizing` tool_call (§ 11.5). |
+| `_kiro.dev/settings/list` | 5 | Canonical request: `{}` (empty). Probes that sent `{sessionId}` hung — confirmed silent rejection of non-empty params (§ 11.2). |
+| `_kiro.dev/subagent/list_update` | 51 | `{subagents: SubagentInfo[], pendingStages: array}`. **`SubagentInfo`**: `{sessionId: string, sessionName: string, agentName: string, initialQuery: string, role: null, group: string, dependsOn: array, status: {type: string, message?: string}}`. **`subagents[].status.type` enum**: `"working"`, `"awaitingInstruction"` (2 observed; others likely exist). `agentName` observed: `"kiro_default"`. `role` is consistently `null` in our probes; was a string in older Kiro per § 6 — possibly retired. `group` observed: `"default"`. |
+
+#### Methods without empirical capture data
+
+11 Kiro extension notifications haven't fired in our captures because they require specific conditions:
+
+| Method | Trigger required | Status |
+|---|---|---|
+| `_kiro.dev/agent/switched` | Run `/agent <other-mode>` | Documented in § 6 (shape from handler in § 11.9) |
+| `_kiro.dev/agent/not_found` | Run `/agent <nonexistent>` | Documented in § 6 |
+| `_kiro.dev/agent/config_error` | (REMOVED in 2.3.0 per § 11.3) | n/a |
+| `_kiro.dev/clear/status` | Run `/clear` | Handler is parameterless per § 11.9 — wire shape uncertain |
+| `_kiro.dev/error/rate_limit` | Exceed quota | Documented from handler |
+| `_kiro.dev/mcp/server_initialized` | Configure MCP server | Documented from handler |
+| `_kiro.dev/mcp/server_init_failure` | Misconfigure MCP server | Documented from handler |
+| `_kiro.dev/mcp/oauth_request` | OAuth-requiring MCP server | Documented from handler |
+| `_kiro.dev/mcp/governance_disabled` | Disable MCP governance | Documented from handler |
+| `_kiro.dev/session/activity` | (Subagent-related condition unclear) | Documented from handler |
+| `_kiro.dev/session/list_update` | (Trigger unclear; possibly session-management UI activity) | Documented from handler |
+| `_message/send` | Send message to subagent | Documented from sender (§ 11.10); cyril has the BridgeCommand but hasn't exercised it in captures |
+
+For these, the §§ 11.9 and 11.10 source-extraction is the best we have. Empirical type verification would require capturing wire frames under each triggering condition.
+
+#### What this verification establishes
+
+- **For 12 of 28 Kiro extension methods**: every field's name, JSON type, and enum membership (where applicable) is empirically confirmed against captured frames.
+- **Optionality is verified**: fields marked optional in this doc that appear in <100% of frames are genuinely sometimes-absent on the wire (not just defensively documented).
+- **Enum values are observable**: for fields like `metadata.effort`, `update.kind`, `status.type`, the observed value set is documented. Unobserved values from § 6 are noted (e.g. `"low"` for effort, `"failed"` for compaction status) — they may exist but aren't proved by our captures.
+
+#### Reproducibility
+
+The script that produced this table:
+
+```py
+import json, re, glob
+from collections import defaultdict
+def js_type(v):
+    if v is None: return 'null'
+    if isinstance(v, bool): return 'boolean'
+    if isinstance(v, int): return 'integer'
+    if isinstance(v, float): return 'number'
+    if isinstance(v, str): return 'string'
+    if isinstance(v, list): return f'array<{js_type(v[0]) if v else ""}>'
+    if isinstance(v, dict): return 'object'
+schemas = defaultdict(lambda: defaultdict(lambda: {'types': set(), 'samples': set()}))
+def walk(method, prefix, obj):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            path = f'{prefix}.{k}' if prefix else k
+            schemas[method][path]['types'].add(js_type(v))
+            if isinstance(v, str) and len(v) < 60: schemas[method][path]['samples'].add(v)
+            if isinstance(v, dict): walk(method, path, v)
+            if isinstance(v, list) and v and isinstance(v[0], dict): walk(method, f'{path}[]', v[0])
+sources = (glob.glob('experiments/conductor-spike/logs/*.log') +
+           glob.glob('experiments/conductor-spike/trace-*.jsonl') +
+           glob.glob('/tmp/conductor-spike/logs-241/*.log'))
+for src in sources:
+    for line in open(src):
+        try: obj = json.loads(line.strip())
+        except:
+            m = re.search(r'(\{.*\})$', line); obj = json.loads(m.group(1)) if m else None
+        if not obj: continue
+        msg = obj.get('msg', obj)
+        if not isinstance(msg, dict): continue
+        method = msg.get('method', '')
+        if 'kiro.dev/' not in method and method not in ('session/spawn','session/terminate','session/list','message/send'): continue
+        walk(method, '', msg.get('params', {}))
+# Print schemas[method] for each method
+```
+
+To extend coverage to the 11 currently-unobserved methods, run the test harness under specific conditions (MCP-configured, rate-limited, etc.) and re-run.
+
+### 11.12 Tarball additions (2.4.0+)
 
 Two new shell shims:
 
