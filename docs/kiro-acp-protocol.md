@@ -2832,6 +2832,33 @@ Neither of these surface on the wire (probe omitted; they're internal helpers wi
 
 This text matches what introspect returned — confirming Kiro's own documentation is compiled into the binary as the tool's LLM-facing description.
 
+#### Client-driven context injection works (this IS the backdoor)
+
+Although there is no wire-callable `inject_context` (it's agent-internal only), a client CAN absolutely use `_message/send` as a backdoor for context injection. The probe (artifact: `experiments/conductor-spike/logs/conductor-2.4.1-context-injection-probe.log`) sent a freshly-spawned `awaitingInstruction` subagent the instruction "read README.md and report the first heading" — the subagent executed `fs_read`, the content entered its context window, and it reported back. **End-state achieved: file content lives in the subagent's working memory for all subsequent turns.**
+
+**Wire-level sequence** (sessionId `add6a806-...`):
+
+1. C→S `_message/send {sessionId, content: "...read README.md..."}` → returns `{ok: true}`
+2. Subagent emits `tool_call` for `fs_read` with `rawInput.operations: [{mode: "Line", path: "...README.md", limit: 5}]` and `__tool_use_purpose: "Read the README.md to find the first markdown heading."`
+3. `tool_call_update` with `status: completed` and `rawOutput.items[0].Text: "# Cyril\n\n..."` (actual file content)
+4. Subagent streams reply with the heading
+5. Subagent autonomously fires `Summarizing` tool to deliver result to parent
+6. Parent gets `_kiro.dev/session/inbox_notification` with `messageCount: 3, escalationCount: 0`
+
+**Differences vs the agent-internal `inject_context`:**
+
+| Property | Agent-internal `inject_context` | Wire `_message/send` backdoor |
+|---|---|---|
+| Triggers a turn | No (silent injection) | Yes (full model turn) |
+| Token cost | Just the injected content | Turn + tool execution + reply + Summarizing |
+| Parent notified | No | Yes — `Summarizing` fires, parent gets inbox_notification |
+| Tool reach | Content-only | Any tool the subagent has access to |
+| Required subagent state | Any | `awaitingInstruction` |
+
+**Implication for cyril:** This is a real, exploitable mechanism. When the parent session IS cyril itself (i.e., we're not trying to hide from another orchestrator), the "parent gets notified" caveat is a non-issue — we're the one initiating the inject, so we already know. The `Summarizing` tool firing is actually a *positive*: it gives cyril a structured report of what landed in the subagent's context. The only blocked use case is "hide the inject from a different orchestrator agent" — which isn't a cyril use case.
+
+For the workflow engine: this is the primitive for in-flight subagent steering — adding context (`read X`), redirecting work (`now also check Y`), or queueing new instructions to a settled subagent. It's not the silent version, but it's a real version.
+
 #### Methods confirmed to NOT fire under expected triggers
 
 The probe attempted to elicit four notifications that the doc lists as expected behaviors. **They did not fire**:
