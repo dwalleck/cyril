@@ -2573,7 +2573,57 @@ done
 
 Diff against the prior version's output to find handler signature changes.
 
-### 11.10 Tarball additions (2.4.0+)
+### 11.10 Sender-side (C→S) field verification (2.4.1)
+
+Companion to § 11.9 — for each Kiro extension that the client *sends* to the agent, read the sender function body and transcribe the exact params object it constructs. This is the ground truth for "what the wire request looks like" — anything not in the params here doesn't reach the agent.
+
+Same methodology as § 11.9: sender function names retain their human-readable identifiers in the bundler (`executeCommand`, `terminateSession`, etc.). Multiple functions share these names (mocks, stream wrappers), so the verification filters for "body contains `extMethod` call" to find the real sender.
+
+| Method | Sender function | Params sent |
+|---|---|---|
+| `_kiro.dev/commands/execute` | `executeCommand(e)` | `{sessionId, command: e}` — `e` is the full `TuiCommand` object `{command, args}`; the doc's note about the wrap-in-object requirement in § 7 is canonical |
+| `_kiro.dev/commands/options` | `getCommandOptions(e, t)` | `{sessionId, command: e.replace(/^\//, ""), partial: t}` — **strips leading `/`** from the command name before sending. Clients passing `/model` get `"model"` on the wire. |
+| `_kiro.dev/settings/list` | `listSettings()` | `{}` — confirmed empty (§ 11.2 stated non-empty hangs the agent; this is the canonical empty-params sender) |
+| `_kiro.dev/session/list` | `listSessions(e)` | `{cwd: e}` |
+| `_kiro.dev/session/terminate` | `terminateSession(e)` | `{sessionId: e}` — **best-effort**: wrapped in try/catch, response is discarded, failures are logged but not propagated |
+| `_session/spawn` | `spawnSession(e, t)` | `{sessionId: this.sessionId, task: e, name: t}` — **no mode/agent parameter**. Confirms § 7 and § 11.5: the spawned subagent inherits the parent's mode. Returns `{sessionId, name}` (with `name ?? t ?? ""` as fallback). |
+| `_message/send` | `sendMessage(e, t)` | `{sessionId: e, content: t}` — **positional signature**: `e` is sessionId, `t` is content. `content` is opaque per the SDK (typically string or `ContentBlock[]`). Response is discarded. |
+
+**Findings beyond the per-method documentation above:**
+
+- **`commands/options` slash-stripping is canonical** behavior, not optional. Any future client implementation must strip the leading `/` from the command name before sending. The doc's prior note ("TUI strips '/'") is confirmed at the sender code level.
+- **`terminateSession` is fire-and-forget by design.** The sender doesn't propagate errors — cyril's `BridgeCommand::TerminateSession` matches this semantics (logs and continues on failure). Any client expecting a strong delivery guarantee for termination needs to check separately (e.g., await the next `subagent/list_update` to confirm removal).
+- **`spawnSession` returns `{sessionId, name}` only.** No other response fields are exposed. Anything the agent returns beyond those two keys is dropped by the sender; the spawned subagent's subsequent state arrives via `subagent/list_update` notifications, not the spawn response.
+- **`sendMessage` response is discarded.** Same fire-and-forget pattern as terminate. Per the SDK, the response is `unknown` anyway.
+- **No `_kiro.dev/settings/set` sender exists in 2.4.1.** Confirms § 11.2's "dead surface" claim — the method name is in the constants table but no function calls `extMethod` with that method. If cyril ever surfaces a settings-edit UX, write the JSON file directly per § 11.2; do not attempt `settings/set`.
+
+To re-verify after a future Kiro release, the extraction filter is "function whose body contains `extMethod`":
+
+```sh
+TUI=~/.local/share/kiro-research/tui-bundles/kiro-tui-<ver>.js
+python3 -c "
+import re
+with open('$TUI') as f: data = f.read()
+for name in ['executeCommand','getCommandOptions','listSettings','listSessions',
+             'terminateSession','spawnSession','sendMessage']:
+    for m in re.finditer(rf'(async\s+)?\b{name}\s*\([^)]*\)\s*\{{', data):
+        start = m.start(); depth = 0
+        for i, c in enumerate(data[start:start+3000]):
+            if c == '{': depth += 1
+            elif c == '}':
+                depth -= 1
+                if depth == 0:
+                    body = data[start:start+i+1]
+                    if 'extMethod' in body:
+                        print(f'--- {name} ---\n{body[:800]}\n')
+                    break
+        if 'extMethod' in (body if 'body' in dir() else ''): break
+"
+```
+
+Diff against the prior version's output to catch sender-signature changes.
+
+### 11.11 Tarball additions (2.4.0+)
 
 Two new shell shims:
 
