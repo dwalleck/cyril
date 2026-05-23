@@ -2763,6 +2763,41 @@ A targeted probe (saved as `experiments/conductor-spike/logs/conductor-2.4.1-gap
 | `_kiro.dev/clear/status` | 2 | `{sessionId: string}` — **only sessionId**. No `message`, no `status`, no other fields. Matches the parameterless dispatch finding from § 11.9 (the handler ignores params anyway, but for completeness the wire does carry sessionId). |
 | `_message/send` | 2 | `{sessionId: string, content: string}` — request only; response is `{}` and discarded per § 11.10. |
 
+#### Agent-internal-only commands (no client-callable wire surface)
+
+Kiro's embedded `session-management` tool documentation (accessible via the `introspect` agent tool) advertises eight commands: `spawn_session`, `send_message`, `read_messages`, `list_sessions`, `get_session_status`, `interrupt`, `inject_context`, `manage_group`, `revive_session`. Of these:
+
+- **`spawn_session`** → wire `_session/spawn` (verified — § 11.10)
+- **`send_message`** → wire `_message/send` (verified)
+- **`list_sessions`** → wire `_kiro.dev/session/list` (verified)
+- **`read_messages`, `get_session_status`** → no direct wire equivalent; effects surface via `_kiro.dev/session/inbox_notification` and `_kiro.dev/subagent/list_update` respectively
+- **`interrupt`, `inject_context`, `manage_group`, `revive_session`** → **definitively agent-internal**, no client-callable wire methods exist
+
+Verified via probe (2026-05-23): 8 hypothetical wire-method names tried against the agent, all returning JSON-RPC `-32601 Method not found`:
+
+| Tried wire method | Result |
+|---|---|
+| `_session/interrupt` | Method not found |
+| `_kiro.dev/session/interrupt` | Method not found |
+| `_session/inject_context` | Method not found |
+| `_kiro.dev/session/inject_context` | Method not found |
+| `_session/group` | Method not found |
+| `_kiro.dev/group/list` | Method not found |
+| `_session/revive` | Method not found |
+| `_kiro.dev/session/revive` | Method not found |
+
+tui.js also has zero mention of these names — searching the 2.4.1 bundle for `interrupt|inject_context|manage_group|revive_session` returns no wire-method strings.
+
+These capabilities ARE in Kiro (the agent can use them via its session-management tool, in-process), but the EFFECTS surface to clients only via the standard wire events (inbox_notification, subagent/list_update, session/update). Clients (cyril) cannot directly invoke `interrupt`, `inject_context`, `manage_group`, or `revive_session`. To use them, an agent must be configured with the session-management tool and prompted to call them (same architectural pattern as DelegateToCrew via the `subagent` tool).
+
+#### `_message/send` schema laxity
+
+The wire request schema does NOT strictly validate extra fields. A probe with `{sessionId, content, priority: "escalation"}` was accepted without error and the message was processed normally — the recipient agent responded to "test" as expected. Whether the `priority` field is honored (e.g., increments `escalationCount` instead of `messageCount` in the recipient's inbox_notification) is unverified — the probe sent to the main session where no inbox routing happens. A focused probe with subagent-targeted escalation messages would resolve this.
+
+For clients implementing `_message/send`: send the documented `{sessionId, content}` shape. The wire is lenient about extras but only the documented fields are guaranteed to be honored.
+
+Probe artifact: `experiments/conductor-spike/logs/conductor-2.4.1-internal-methods-probe.log`.
+
 #### Methods confirmed to NOT fire under expected triggers
 
 The probe attempted to elicit four notifications that the doc lists as expected behaviors. **They did not fire**:
