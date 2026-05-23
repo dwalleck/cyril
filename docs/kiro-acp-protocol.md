@@ -284,7 +284,7 @@ All methods in this section target an existing session identified by `sessionId`
 
 Creates a conversation session bound to a working directory and an optional list of MCP servers.
 
-**Request** (`newSessionRequestSchema`, tui.js:123413):
+**Request (2.0.1, SDK 0.5.1)** — `newSessionRequestSchema`, tui.js:123413:
 
 ```ts
 type NewSessionRequest = {
@@ -293,20 +293,43 @@ type NewSessionRequest = {
 }
 ```
 
-**Response** (`newSessionResponseSchema`, tui.js:123398):
+**Request (2.4.1, schema `ZAe`)** — adds `_meta` and `additionalDirectories`:
+
+```ts
+type NewSessionRequest = {
+  cwd: string;                                       // required
+  mcpServers: McpServer[];                           // required (can be [])
+  additionalDirectories?: string[];                  // OPTIONAL — added since 2.0.1
+  _meta?: Record<string, unknown> | null;            // OPTIONAL — SDK-wide pattern, added since 2.0.1
+}
+```
+
+**Empirical behavior of the new fields (probed 2026-05-23 on 2.4.1):**
+
+| Field | Schema-accepted | Echoed in response | Observable effect |
+|---|---|---|---|
+| `_meta` | ✅ | ❌ never | None observed |
+| `additionalDirectories` | ✅ | ❌ never | **None across all tests** — see below |
+
+Both fields are accepted by Kiro without error but appear to be dormant. `additionalDirectories` was tested against four interpretations (fs_read permission gating, fs_read execution, `/context` breakdown, auto-discovery of AGENTS.md and `.kiro/steering/` in declared paths). Identical behavior with and without the field — see probe artifacts `experiments/conductor-spike/logs/probe-2.4.1-meta-and-addl-dirs-{WITH,CONTROL}.log` and the reproducible probe at `experiments/conductor-spike/probe-meta-and-addl-dirs.py`.
+
+**Response** (`newSessionResponseSchema` / 2.4.1 `g5e`, tui.js:123398):
 
 ```ts
 type NewSessionResponse = {
   sessionId: string;
   modes?: SessionModeState | null;
   models?: SessionModelState | null;
+  configOptions?: ConfigOption[] | null;             // historically nullish on Kiro
+  _meta?: Record<string, unknown> | null;
 }
 ```
 
 **Notes:**
 
 - The response carries `modes` and `models` state — the full set of agent modes and models available for this session, plus which one is currently active. **This is the only place the client receives this data**; it is not re-sent as a notification. The client must capture it here (and in `session/load`).
-- `NewSessionRequest` has **only** `cwd` and `mcpServers` in v2.0.1's 0.5.1 SDK. No `configOptions` field exists on the request, and no `sessionCapabilities` field on the response — earlier protocol docs that showed these reflect older SDK versions.
+- Kiro DOES populate `_meta` on individual `availableModes[]` items (e.g., `_meta.welcomeMessage` on `kiro_planner` and `kiro_guide`) — but never on the top-level response. tui.js reads `availableModes[i]._meta?.welcomeMessage` and renders it as a greeting when switching agents; clients that don't surface this miss the user-visible welcome string.
+- Response top-level `_meta` is wire-allowed but unused by Kiro. Client-supplied request `_meta` is silently dropped (not echoed, not preserved in any observed surface).
 
 **Example:**
 
