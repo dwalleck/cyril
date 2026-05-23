@@ -1324,11 +1324,13 @@ type AgentConfigErrorNotification = {
 }
 ```
 
-### `kiro.dev/model/not_found`
+### `kiro.dev/model/not_found` (REMOVED — see § 11.3)
+
+> **⚠ Removed in or before Kiro 2.4.1.** Documented here as 2.0.1 baseline; verified absent from 2.4.1 tui.js bundle (no method string, no handler). Cyril retains a stale handler in `convert/kiro.rs:511`. See § 11.3 for the cross-version status.
 
 User requested a model that doesn't exist; Kiro fell back to another.
 
-Handler: `handleModelNotFound` (tui.js:124862).
+Handler: `handleModelNotFound` (tui.js:124862, **2.0.1 only**).
 
 ```ts
 type ModelNotFoundNotification = {
@@ -2366,7 +2368,8 @@ Wire-surface additions and behavior changes discovered through empirical capture
 | Method | Removed | Notes |
 |---|---|---|
 | `_kiro.dev/agent/config_error` | 2.3.0 | tui.js still has `handleAgentConfigError` defensively, but the 2.3.0+ agent doesn't emit it. |
-| `_kiro.dev/session/list` | 2.3.0 | Agent stopped emitting; tui.js retains the handler. (Note: the C→S request `_kiro.dev/session/list` for listing past sessions is still implemented — separate from the notification.) |
+| `_kiro.dev/session/list` (notification) | 2.3.0 | Agent stopped emitting; tui.js retains the handler. (Note: the C→S request `_kiro.dev/session/list` for listing past sessions is still implemented — separate from the notification.) |
+| `_kiro.dev/model/not_found` | between 2.0.1 and 2.4.1 | Documented in Section 6 (carried over from 2.0.1) but **absent from the 2.4.1 tui.js bundle** — both the method string and any handler are gone. Cyril still has a handler in `convert/kiro.rs:511` — dead code. Exact removal release not narrowed down. |
 
 ### 11.4 New fields on existing methods
 
@@ -2447,7 +2450,59 @@ Format (3 keys):
 
 2.3.0 added a `--agent-engine rust|kas` flag plus env vars (`KIRO_AGENT_ENGINE`, `KIRO_KAS_SERVER_PATH`, `KIRO_MODE`) and asset-extraction code (`crates/chat-cli/src/embedded_tui.rs`). Running `kiro-cli acp --agent-engine kas` on 2.4.1 still errors with "KAS assets not embedded and KIRO_KAS_SERVER_PATH not set." Binary delta 2.3.0 → 2.4.1 is only +2.36 MB on `kiro-cli-chat` (the IDE-shipped KAS bundle is ~36 MB) — assets are not landed. KAS, when it lands, is expected to use a parallel `_kiro/*` namespace (no `.dev`) per IDE evidence.
 
-### 11.8 Tarball additions (2.4.0+)
+### 11.8 Authoritative Kiro extension inventory (2.4.1)
+
+The full list of Kiro-specific wire surfaces present in `kiro-tui-2.4.1.js`, extracted by string-grep on `"_?kiro\.dev/[a-z/_]+"` and the EXT_METHODS-equivalent constants table at bundle position ~12054000. This table is the source of truth for "what Kiro extensions exist in 2.4.1" — Sections 6 and 7 above describe each method's shape; this index just enumerates them.
+
+**`_kiro.dev/*` namespace (23 methods):**
+
+| Method | Direction | Section | Cyril handles? |
+|---|---|---|---|
+| `commands/available` | S→C notif | §6 | ✓ |
+| `commands/execute` | C→S request | §7 | ✓ (outbound via `BridgeCommand::ExecuteCommand`) |
+| `commands/options` | C→S request | §7 | ✓ (outbound via `BridgeCommand::QueryCommandOptions`) |
+| `metadata` | S→C notif | §6 | ✓ |
+| `compaction/status` | S→C notif | §6 | ✓ |
+| `clear/status` | S→C notif | §6 | ✓ |
+| `agent/switched` | S→C notif | §6 | ✓ |
+| `agent/not_found` | S→C notif | §6 | ✓ |
+| `agent/config_error` | S→C notif | §6 | ✓ (handler kept; agent stopped emitting in 2.3.0, see § 11.3) |
+| `mcp/server_initialized` | S→C notif | §6 | ✓ |
+| `mcp/server_init_failure` | S→C notif | §6 | ✓ |
+| `mcp/oauth_request` | S→C notif | §6 | ✓ |
+| `mcp/governance_disabled` | S→C notif | § 11.2 | **gap** (added in 2.3.0; coverage doc Tier 2) |
+| `error/rate_limit` | S→C notif | §6 | ✓ |
+| `subagent/list_update` | S→C notif | §6 | ✓ |
+| `session/inbox_notification` | S→C notif | §6 | ✓ |
+| `session/list_update` | S→C notif | §6 | ✓ |
+| `session/activity` | S→C notif | §6 | ✓ (dispatched together with `session/list_update`) |
+| `session/update` | S→C notif | §6 | ✓ (lightweight `tool_call_chunk`) |
+| `session/list` | C→S request | §7 | — (not yet exercised by cyril) |
+| `session/terminate` | C→S request | §7 | ✓ (outbound via `BridgeCommand::TerminateSession`) |
+| `settings/list` | C→S request | § 11.2 | — (gap; coverage doc Tier 2) |
+| `settings/set` | (dead surface) | § 11.2 | **don't implement** — no caller anywhere |
+
+**Bare-path Kiro extensions (5 methods):**
+
+| Method | Direction | Section | Cyril handles? |
+|---|---|---|---|
+| `session/spawn` | C→S request | §7 | ✓ (outbound via `BridgeCommand::SpawnSession`) |
+| `session/attach` | C→S request | §7 | — (no caller in tui.js per Section 7; reserved) |
+| `session/list` | (vestigial) | §7 | — (EXT_METHODS constant present but `kiro.dev/session/list` is the live wire path) |
+| `session/terminate` | (vestigial) | §7 | — (same; `kiro.dev/session/terminate` is the live path) |
+| `message/send` | C→S request | §7 | ✓ (outbound via `BridgeCommand::SendMessage`) |
+
+**Method removed since 2.0.1**: `kiro.dev/model/not_found` (see § 11.3).
+
+To regenerate this inventory after a future Kiro release, run:
+
+```sh
+grep -oE '"_?kiro\.dev/[a-z/_]+"' ~/.local/share/kiro-research/tui-bundles/kiro-tui-<ver>.js | sort -u
+```
+
+Then diff against the prior version's output to find additions/removals. The EXT_METHODS-like constants table region (find via `grep -bn 'SESSION_TERMINATE\|SESSION_SPAWN' <bundle>`) lists the bare-path extensions.
+
+### 11.9 Tarball additions (2.4.0+)
 
 Two new shell shims:
 
