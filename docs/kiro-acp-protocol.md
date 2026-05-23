@@ -2646,6 +2646,61 @@ Methodology: union all Kiro-extension JSON-RPC frames from our capture artifacts
 | `_kiro.dev/settings/list` | 5 | Canonical request: `{}` (empty). Probes that sent `{sessionId}` hung — confirmed silent rejection of non-empty params (§ 11.2). |
 | `_kiro.dev/subagent/list_update` | 51 | `{subagents: SubagentInfo[], pendingStages: array}`. **`SubagentInfo`**: `{sessionId: string, sessionName: string, agentName: string, initialQuery: string, role: null, group: string, dependsOn: array, status: {type: string, message?: string}}`. **`subagents[].status.type` enum**: `"working"`, `"awaitingInstruction"` (2 observed; others likely exist). `agentName` observed: `"kiro_default"`. `role` is consistently `null` in our probes; was a string in older Kiro per § 6 — possibly retired. `group` observed: `"default"`. |
 
+#### Multi-subagent crew capture (2026-05-23)
+
+A real `/agent review-orchestrator` session ran a 4-stage `subagent` tool crew with `KIRO_ACP_RECORD_PATH` enabled, hit rate-limit retries, and went through full subagent lifecycle. Saved as `experiments/conductor-spike/trace-2.4.1-multi-subagent.jsonl` (1099 frames, ~1.4 MB). Yielded empirical types for **6 additional methods/variants**:
+
+| Method | Frames | Verified type-shape |
+|---|---|---|
+| `_kiro.dev/error/rate_limit` | 1 | `{sessionId: string, message: string}`. `sessionId` was a **subagent's** id, not the main — rate limits surface per-session. `message`: "Rate limit exceeded. Please wait a moment before trying again." |
+| `session/update.retry_warning` | 26 | `{sessionUpdate: "retry_warning", attempt: integer, maxAttempts: integer, delaySecs: integer, message: string}`. `attempt` observed: `2`. `maxAttempts` observed: `3`. `delaySecs` observed: `8`, `10`. `message`: "Retrying in 8s (attempt 2/3)". Fires on the subagent's session/update stream when a rate-limit retry kicks in. |
+| `_kiro.dev/agent/switched` | 1 | **Schema now includes `welcomeMessage: string \| null`** — was always string before. When switching to `review-orchestrator` (a custom mode), `welcomeMessage` was `null`. Other fields unchanged: `{sessionId, agentName, previousAgentName, welcomeMessage: string\|null, model: string}`. |
+| `_kiro.dev/subagent/list_update` (extended) | 41 | **New enum value**: `status.type` includes `"terminated"` (23 occurrences in this trace). Full enum so far: `"working" \| "awaitingInstruction" \| "terminated"`. **`role` field is non-null for agent-initiated subagents** (`"code-reviewer"`, `"silent-failure-hunter"`, `"type-design-analyzer"`, `"pr-test-analyzer"` observed) — confirms client-vs-agent spawn asymmetry. `group` format: `"crew-<task-description-prefix>"`. `pendingStages` stayed `[]` even with 4 concurrent stages — likely only populates when stages have unresolved `dependsOn` dependencies. |
+| `session/update` variants on subagents | 1352+ | Each subagent's own sessionId carries a full session/update stream: `agent_message_chunk`, `tool_call`, `tool_call_update`. Confirms subagents are first-class ACP sessions with their own streams (not just "annotations" on the parent stream). |
+| `_kiro.dev/session/inbox_notification` (multi) | 3 | Confirmed `messageCount` is a **running counter** of reports-from-subagents, not "currently unread." Values went 1 → 2 → 3 as each subagent terminated in sequence. |
+
+**The agent's `subagent` tool — wire shape confirmed:**
+
+When the parent agent (when configured with the subagent tool, e.g., under `review-orchestrator` mode) invokes it, the wire emits a `session/update` of variant `tool_call` with:
+
+```json
+{
+  "sessionUpdate": "tool_call",
+  "toolCallId": "tooluse_...",
+  "title": "Spawning agent crew",
+  "rawInput": {
+    "__tool_use_purpose": "...",
+    "task": "<high-level task description>",
+    "mode": "blocking",                         // observed: "blocking"; "background" mentioned in older docs
+    "stages": [
+      {
+        "name": "code-reviewer",                // identifier (used for crew monitor + correlation)
+        "role": "code-reviewer",                // mode/role to spawn the subagent as
+        "prompt_template": "Review the code..." // instruction for that subagent
+        // optional: "depends_on": [string[]]   // snake_case in the stage spec, not present in our parallel-stages capture
+      },
+      ...
+    ]
+  }
+}
+```
+
+**Stage spec uses snake_case**: `prompt_template` and `depends_on` (when present), not camelCase. Contrasts with the `subagent/list_update.subagents[].dependsOn` (camelCase) — Kiro normalizes between the tool-spec format and the notification format.
+
+This is the **only canonical path to role-specialized subagents**. The client-side `_session/spawn` request (§ 7) does NOT support a `role` field; spawned-from-client subagents inherit the parent's mode. Spawned-from-agent (via this tool) subagents get the `role` from the stage spec.
+
+#### Confirmed: 3 methods are DORMANT in 2.4.1
+
+Despite intense activity (4 parallel subagents, rate limits, retries, agent switching) the following methods that have handlers in tui.js **never fired**:
+
+| Method | Capture frames | Status |
+|---|---|---|
+| `_kiro.dev/session/activity` | 0 | **Dormant.** Handler exists; trigger condition unknown or absent in 2.4.1. Across all our captures (~10k frames including this multi-subagent run), zero occurrences. |
+| `_kiro.dev/session/list_update` | 0 | **Dormant.** Same as above. Possibly intended for multi-client scenarios that we don't reproduce. |
+| `_kiro.dev/agent/not_found` | 0 | **Dormant.** Invalid `/agent` returns `{success: false, message: "Unknown agent: ..."}` in the `commands/execute` response — no separate notification. The doc-described "Kiro fell back to another" behavior is not what 2.4.1 does. |
+
+The cyril handlers for these are defensive — same level as tui.js's. Not strictly dead code but never exercised. If 2.5.x or later starts firing them, we'll find out.
+
 #### Additional methods verified by the gap-fill probe (2026-05-23)
 
 A targeted probe (saved as `experiments/conductor-spike/logs/conductor-2.4.1-gap-probe.log`) triggered `/agent swap`, `/agent <invalid>`, `/clear`, `SpawnSession`, and `SendMessage` to expand coverage. New empirical-type confirmations:
