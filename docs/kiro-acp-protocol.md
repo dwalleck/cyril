@@ -2859,6 +2859,27 @@ Although there is no wire-callable `inject_context` (it's agent-internal only), 
 
 For the workflow engine: this is the primitive for in-flight subagent steering — adding context (`read X`), redirecting work (`now also check Y`), or queueing new instructions to a settled subagent. It's not the silent version, but it's a real version.
 
+#### `_message/send` is a generic session-targeted RPC (works peer-to-peer)
+
+Stronger result than the subagent-targeted case above: `_message/send` works between **any two top-level sessions** created on the same client connection. There is no parent-child enforcement.
+
+Probe artifact: `experiments/conductor-spike/logs/conductor-2.4.1-cross-session-probe.log`.
+
+**Sequence observed:**
+
+1. Client calls `session/new` twice on the same connection → gets two independent sessionIds (`bb596b42-...` for A, `547eda8e-...` for B). Neither has a parent relationship to the other.
+2. Client sends `_message/send {sessionId: "547eda8e-...", content: "Reply with exactly the word ARTICHOKE..."}` → returns `{ok: true}`
+3. Session B emits `session/update` with `agent_message_chunk: {text: "ARTICHOKE"}`
+4. **Zero `_kiro.dev/subagent/list_update` events reference B** (all `subagents` lists remain empty)
+5. **Zero `_kiro.dev/session/inbox_notification` events fire** (no parent to notify)
+6. **Zero `Summarizing` tool calls** (nothing above to report to)
+
+Kiro's wire-level model is that **`_message/send` delivers content to any session by ID**, full stop. The parent-child semantics observed when targeting a subagent come from the subagent's own `Summarizing` reflex (the subagent agent has been configured to summarize and report back when it completes a delegated task), not from `_message/send` having any awareness of parent-child relationships.
+
+**Implication for cyril:** Session-level workflows can use `_message/send` as cheap inter-stage data passing. Cyril spawns N independent sessions, prompts each through normal `session/prompt`, and can route arbitrary text content between sessions without round-tripping through cyril's own model layer.
+
+**Scope limit:** Both sessions must be on the **same client connection** (same `kiro-cli-chat` process). If cyril spawns a separate agent process for session B (e.g., for a different vendor), `_message/send` from A's connection cannot reach B because B is on a different stdio pipe. Cross-process delivery requires cyril to relay.
+
 #### Methods confirmed to NOT fire under expected triggers
 
 The probe attempted to elicit four notifications that the doc lists as expected behaviors. **They did not fire**:
