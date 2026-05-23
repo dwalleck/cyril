@@ -2689,6 +2689,30 @@ When the parent agent (when configured with the subagent tool, e.g., under `revi
 
 This is the **only canonical path to role-specialized subagents**. The client-side `_session/spawn` request (§ 7) does NOT support a `role` field; spawned-from-client subagents inherit the parent's mode. Spawned-from-agent (via this tool) subagents get the `role` from the stage spec.
 
+**Crucial: `role` values reference custom agents defined in `.kiro/agents/<role>.json` on disk** — they're not built-in identifiers. In this capture the 4 reviewer roles (`code-reviewer`, `silent-failure-hunter`, `type-design-analyzer`, `pr-test-analyzer`) all map to JSON files in the user's repo at `.kiro/agents/`. Each file defines the subagent's prompt, tool allowlist, and resource bindings. The parent agent (`review-orchestrator`, also a custom agent) has the `subagent` tool in its allowed-tools list and a prompt instructing it to invoke the tool with the four reviewer stages.
+
+This means the role-specialization capability is **config-driven, not wire-driven**:
+
+- Wire layer: `subagent` tool with `stages[].role: "<name>"`
+- Disk layer: `.kiro/agents/<name>.json` defines what `<name>` means
+- Agent layer: an orchestrator-mode prompt has to invoke the tool with the right stages (the LLM has to comply)
+
+For a workflow runner: cyril can write/manage `.kiro/agents/*.json` files and switch to a configured orchestrator mode, but ultimately depends on the LLM invoking the subagent tool. The workflow engine doesn't have a wire-level "spawn this role" command — it has "configure agents on disk, then ask the orchestrator to spawn them."
+
+Custom agents seen in this repo (provenance for the captured `role` values):
+
+```
+.kiro/agents/code-reviewer.json
+.kiro/agents/code-simplifier.json
+.kiro/agents/comment-analyzer.json
+.kiro/agents/pr-test-analyzer.json
+.kiro/agents/review-orchestrator.json   ← has the `subagent` tool
+.kiro/agents/silent-failure-hunter.json
+.kiro/agents/type-design-analyzer.json
+```
+
+Cyril's `convert/kiro.rs` already parses `agentName` and `role` on `subagent/list_update` entries; consumers (cyril's crew panel, the workflow engine when built) should treat `role` as a free-form string that maps to user-defined agent identities, not a Kiro-defined enum.
+
 #### Confirmed: 3 methods are DORMANT in 2.4.1
 
 Despite intense activity (4 parallel subagents, rate limits, retries, agent switching) the following methods that have handlers in tui.js **never fired**:
