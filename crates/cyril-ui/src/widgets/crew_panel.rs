@@ -100,7 +100,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
             spans.push(Span::styled(
                 format!(
                     "  ↻ {}/{}",
-                    loop_state.iteration() + 1,
+                    loop_state.iteration().saturating_add(1),
                     loop_state.max_iterations()
                 ),
                 Style::default().fg(Color::Magenta),
