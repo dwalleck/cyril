@@ -491,6 +491,14 @@ impl UiState {
             }
             Notification::ConfigOptionsUpdated(options) => {
                 if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
+                    if self.current_model != model_opt.value {
+                        // effort is model-scoped: a non-thinking model never
+                        // reports it, so a real model change must clear any
+                        // stale level (re-reported by the new model's metadata
+                        // if it thinks). Absent that, switching e.g. Opus→Haiku
+                        // would leave the toolbar showing a phantom level.
+                        self.effort = None;
+                    }
                     self.current_model = model_opt.value.clone();
                     true
                 } else {
@@ -652,6 +660,12 @@ impl UiState {
 
     /// Set the current model name (displayed in toolbar).
     pub fn set_current_model(&mut self, model: Option<String>) {
+        if self.current_model != model {
+            // effort is model-scoped; clear it on a real model change so a
+            // non-thinking model doesn't keep showing a stale level (see the
+            // ConfigOptionsUpdated handler for the same invariant).
+            self.effort = None;
+        }
         self.current_model = model;
     }
 
@@ -2537,6 +2551,43 @@ mod tests {
             available_models: vec![],
         });
         assert_eq!(state.effort(), None, "new session clears stale effort");
+    }
+
+    #[test]
+    fn effort_clears_on_model_change_within_a_session() {
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("opus".into()));
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(7.5),
+            metering: None,
+            tokens: None,
+            effort: Some("high".into()),
+        });
+        assert_eq!(state.effort(), Some("high"));
+
+        // Switching to a non-thinking model (no new session) must clear effort,
+        // otherwise the toolbar shows a phantom level the new model never reports.
+        state.apply_notification(&Notification::ConfigOptionsUpdated(vec![ConfigOption {
+            key: "model".into(),
+            label: "Model".into(),
+            value: Some("haiku".into()),
+            options: vec![],
+        }]));
+        assert_eq!(state.effort(), None, "model change must clear stale effort");
+
+        // Re-reporting the *same* model must not disturb a freshly-set level.
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(8.0),
+            metering: None,
+            tokens: None,
+            effort: Some("medium".into()),
+        });
+        state.set_current_model(Some("haiku".into()));
+        assert_eq!(
+            state.effort(),
+            Some("medium"),
+            "unchanged model must not clear effort"
+        );
     }
 
     // --- TurnSummary buffer assembly tests ---
