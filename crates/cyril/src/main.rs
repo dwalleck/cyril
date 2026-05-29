@@ -5,7 +5,10 @@ use std::path::PathBuf;
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(name = "cyril", about = "Polished TUI for the Agent Client Protocol ecosystem")]
+#[command(
+    name = "cyril",
+    about = "Polished TUI for the Agent Client Protocol ecosystem"
+)]
 struct Cli {
     /// Working directory
     #[arg(short = 'd', long = "cwd")]

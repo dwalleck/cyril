@@ -972,9 +972,7 @@ fn dispatch_rewind_command(
     {
         Some(id) => SessionId::new(id),
         None => {
-            tracing::warn!(
-                "/rewind response had switchSession:true but no sessionId — skipping"
-            );
+            tracing::warn!("/rewind response had switchSession:true but no sessionId — skipping");
             return Vec::new();
         }
     };
@@ -1788,7 +1786,10 @@ mod tests {
             &session,
             &mut ui,
         );
-        assert!(result.is_empty(), "panel data should produce no deferred commands");
+        assert!(
+            result.is_empty(),
+            "panel data should produce no deferred commands"
+        );
     }
 
     #[test]
@@ -1807,7 +1808,11 @@ mod tests {
             &session,
             &mut ui,
         );
-        assert_eq!(result.len(), 2, "should emit LoadSession + TerminateSession");
+        assert_eq!(
+            result.len(),
+            2,
+            "should emit LoadSession + TerminateSession"
+        );
         match &result[0] {
             BridgeCommand::LoadSession { session_id } => {
                 assert_eq!(session_id.as_str(), "new-session-uuid");
