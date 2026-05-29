@@ -76,8 +76,10 @@ fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
     let role = v.get("role").and_then(|r| r.as_str()).map(String::from);
     let depends_on = parse_string_array(v, "dependsOn");
 
-    // Pipeline stage metadata (Kiro 2.5.0+). `name` is the stage name (distinct
-    // from sessionName, often null); `createdAtMs` is the stage creation time.
+    // Pipeline stage metadata (Kiro 2.5.0+). `name` is the stage name (often
+    // null, and distinct in meaning from sessionName — though for pipeline
+    // stages the two may carry the same value); `createdAtMs` is the stage
+    // creation time.
     let stage_name = v
         .get("name")
         .and_then(|n| n.as_str())

@@ -29,7 +29,9 @@ impl LoopState {
         }
     }
 
-    /// Current loop iteration (0-based on the wire — the first pass is 0).
+    /// Current loop iteration. Observed 0-based on the wire (the first pass is
+    /// 0); see docs/kiro-2.5.0-wire-audit.md. Re-verify if the displayed count
+    /// ever looks off-by-one against Kiro's own TUI.
     pub fn iteration(&self) -> u32 {
         self.iteration
     }
