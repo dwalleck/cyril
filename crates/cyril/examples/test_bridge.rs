@@ -466,8 +466,8 @@ fn print_notification(n: &Notification) {
             }
         }
         Notification::SettingsList { settings } => {
-            let pretty = serde_json::to_string_pretty(settings)
-                .unwrap_or_else(|_| settings.to_string());
+            let pretty =
+                serde_json::to_string_pretty(settings).unwrap_or_else(|_| settings.to_string());
             println!("  [SettingsList]");
             println!("    {}", pretty.replace('\n', "\n    "));
         }
