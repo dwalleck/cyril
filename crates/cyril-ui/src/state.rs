@@ -49,6 +49,10 @@ pub struct UiState {
     session_label: Option<String>,
     current_mode: Option<String>,
     current_model: Option<String>,
+    /// Thinking-effort level for the toolbar (Kiro 2.5.0+). Sticky: only
+    /// updated when a metadata frame reports it (frames mid-turn may omit it),
+    /// and reset on session change.
+    effort: Option<String>,
     context_usage: Option<f64>,
     credit_usage: Option<(f64, f64)>,
     last_turn: Option<cyril_core::types::TurnSummary>,
@@ -137,6 +141,10 @@ impl TuiState for UiState {
 
     fn current_model(&self) -> Option<&str> {
         self.current_model.as_deref()
+    }
+
+    fn effort(&self) -> Option<&str> {
+        self.effort.as_deref()
     }
 
     fn context_usage(&self) -> Option<f64> {
@@ -230,6 +238,7 @@ impl UiState {
             session_label: None,
             current_mode: None,
             current_model: None,
+            effort: None,
             context_usage: None,
             credit_usage: None,
             last_turn: None,
@@ -339,11 +348,18 @@ impl UiState {
                 context_usage,
                 metering,
                 tokens,
+                effort,
             } => {
                 self.context_usage = Some(context_usage.percentage());
                 self.pending_tokens = tokens.clone();
                 if let Some(m) = metering {
                     self.pending_metering = Some(m.clone());
+                }
+                // Sticky: a frame that omits effort means "no update", not
+                // "cleared" — context-only frames interleave with effort frames
+                // mid-turn, so overwriting with None would make it flicker.
+                if let Some(e) = effort {
+                    self.effort = Some(e.clone());
                 }
                 true
             }
@@ -432,6 +448,9 @@ impl UiState {
                 if let Some(model) = current_model {
                     self.current_model = Some(model.clone());
                 }
+                // Effort is per-session and re-reported by the new session's
+                // metadata; reset so a prior session's level doesn't linger.
+                self.effort = None;
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
@@ -2482,6 +2501,44 @@ mod tests {
         assert!(state.activity_elapsed().is_some());
     }
 
+    #[test]
+    fn effort_is_sticky_across_omitting_frames_and_resets_on_new_session() {
+        let mut state = UiState::new(500);
+        assert_eq!(state.effort(), None);
+
+        // A thinking turn reports effort.
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(7.5),
+            metering: None,
+            tokens: None,
+            effort: Some("high".into()),
+        });
+        assert_eq!(state.effort(), Some("high"));
+
+        // A context-only frame mid-turn omits effort — must NOT clear it.
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(8.0),
+            metering: None,
+            tokens: None,
+            effort: None,
+        });
+        assert_eq!(
+            state.effort(),
+            Some("high"),
+            "omitted effort must be sticky"
+        );
+
+        // A new session resets effort (re-reported by the new session if any).
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![],
+            available_models: vec![],
+        });
+        assert_eq!(state.effort(), None, "new session clears stale effort");
+    }
+
     // --- TurnSummary buffer assembly tests ---
 
     #[test]
@@ -2492,6 +2549,7 @@ mod tests {
             context_usage: ContextUsage::new(50.0),
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
+            effort: None,
         });
         assert!(
             state.last_turn().is_none(),
@@ -2522,6 +2580,7 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.01, None)),
             tokens: None,
+            effort: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
@@ -2550,6 +2609,7 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.02, Some(1000))),
             tokens: None,
+            effort: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
@@ -2560,6 +2620,7 @@ mod tests {
             context_usage: ContextUsage::new(20.0),
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: None,
+            effort: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
@@ -2577,6 +2638,7 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.05, Some(2000))),
             tokens: None,
+            effort: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,

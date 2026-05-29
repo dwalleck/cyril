@@ -67,6 +67,15 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         ));
     }
 
+    // Thinking-effort level (only present under thinking models, Kiro 2.5.0+)
+    if let Some(effort) = state.effort() {
+        parts.push(Span::raw(" "));
+        parts.push(Span::styled(
+            format!("◇ {effort}"),
+            Style::default().fg(Color::Yellow),
+        ));
+    }
+
     // Code intelligence indicator
     if state.code_intelligence_active() {
         parts.push(Span::raw(" · "));
@@ -240,6 +249,47 @@ mod tests {
                 render(frame, frame.area(), &state);
             })
             .expect("draw");
+    }
+
+    #[test]
+    fn toolbar_renders_effort_when_present() {
+        let state = MockTuiState {
+            current_model: Some("claude-opus-4.8".into()),
+            effort: Some("high".into()),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state))
+            .expect("draw");
+        let buf = terminal.backend().buffer();
+        let text: String = (0..80)
+            .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
+            .collect();
+        assert!(text.contains("high"), "effort should render, got: {text:?}");
+    }
+
+    #[test]
+    fn toolbar_omits_effort_when_absent() {
+        let state = MockTuiState {
+            current_model: Some("claude-haiku-4.5".into()),
+            effort: None,
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state))
+            .expect("draw");
+        let buf = terminal.backend().buffer();
+        let text: String = (0..80)
+            .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
+            .collect();
+        assert!(
+            !text.contains("◇"),
+            "no effort badge when absent, got: {text:?}"
+        );
     }
 
     #[test]

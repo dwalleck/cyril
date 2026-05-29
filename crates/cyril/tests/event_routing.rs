@@ -111,6 +111,7 @@ fn context_usage_flows_to_both() {
         context_usage: ContextUsage::new(85.0),
         metering: None,
         tokens: None,
+        effort: None,
     };
     ui.apply_notification(&notification);
     session.apply_notification(&notification);

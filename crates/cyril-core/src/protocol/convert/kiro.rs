@@ -193,10 +193,19 @@ pub(crate) fn to_ext_notification(
                 }
             };
 
+            // Thinking-effort level (Kiro 2.5.0+), present only under thinking
+            // models. Filter empties so "" never reaches the UI as a level.
+            let effort = params
+                .get("effort")
+                .and_then(|e| e.as_str())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+
             Ok(Some(Notification::MetadataUpdated {
                 context_usage: ContextUsage::new(pct),
                 metering,
                 tokens,
+                effort,
             }))
         }
         "kiro.dev/compaction/status" => {

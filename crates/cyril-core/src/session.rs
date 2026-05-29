@@ -109,6 +109,9 @@ impl SessionController {
                 context_usage,
                 metering,
                 tokens,
+                // `effort` is display-only; tracked in UiState for the toolbar,
+                // not in session command-context. Intentionally ignored here.
+                ..
             } => {
                 self.context_usage = Some(context_usage.clone());
                 if let Some(m) = metering {
@@ -262,6 +265,7 @@ mod tests {
             context_usage: ContextUsage::new(75.0),
             metering: None,
             tokens: None,
+            effort: None,
         });
         assert!(changed);
         assert!(
@@ -279,6 +283,7 @@ mod tests {
             context_usage: ContextUsage::new(5.0),
             metering: Some(TurnMetering::new(0.018, Some(1948))),
             tokens: None,
+            effort: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
             stop_reason: StopReason::EndTurn,
@@ -289,6 +294,7 @@ mod tests {
             context_usage: ContextUsage::new(6.0),
             metering: Some(TurnMetering::new(0.042, Some(5200))),
             tokens: None,
+            effort: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
             stop_reason: StopReason::EndTurn,
@@ -337,6 +343,7 @@ mod tests {
             context_usage: ContextUsage::new(50.0),
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
+            effort: None,
         });
         assert!(
             ctrl.last_turn().is_none(),
@@ -362,6 +369,7 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.01, None)),
             tokens: None,
+            effort: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
             stop_reason: StopReason::EndTurn,
@@ -421,6 +429,7 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.01, None)),
             tokens: Some(TokenCounts::new(100, 50, None)),
+            effort: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
             stop_reason: StopReason::EndTurn,
@@ -435,6 +444,7 @@ mod tests {
             context_usage: ContextUsage::new(20.0),
             metering: Some(TurnMetering::new(0.05, Some(5000))),
             tokens: Some(TokenCounts::new(800, 400, Some(200))),
+            effort: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
             stop_reason: StopReason::MaxTokens,
@@ -539,6 +549,7 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.05, Some(2000))),
             tokens: None,
+            effort: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
             stop_reason: StopReason::EndTurn,

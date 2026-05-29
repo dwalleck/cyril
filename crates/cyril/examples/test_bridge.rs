@@ -419,9 +419,10 @@ fn print_notification(n: &Notification) {
             context_usage,
             metering,
             tokens,
+            effort,
         } => {
             println!(
-                "  [MetadataUpdated] ctx={:.1}% metering={:?} tokens={:?}",
+                "  [MetadataUpdated] ctx={:.1}% metering={:?} tokens={:?} effort={effort:?}",
                 context_usage.percentage(),
                 metering.as_ref().map(|m| m.credits()),
                 tokens.as_ref().map(|t| (t.input(), t.output(), t.cached()))

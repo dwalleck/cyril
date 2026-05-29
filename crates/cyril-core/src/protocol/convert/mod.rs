@@ -619,11 +619,24 @@ mod tests {
             context_usage,
             metering,
             tokens,
+            effort,
         })) = result
         {
             assert!((context_usage.percentage() - 75.0).abs() < f64::EPSILON);
             assert!(metering.is_none());
             assert!(tokens.is_none());
+            assert!(effort.is_none(), "no effort field => None");
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_with_effort() {
+        let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": "high"});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
+            assert_eq!(effort.as_deref(), Some("high"));
         } else {
             panic!("expected MetadataUpdated");
         }

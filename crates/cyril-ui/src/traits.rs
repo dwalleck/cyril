@@ -38,6 +38,9 @@ pub trait TuiState {
     fn session_label(&self) -> Option<&str>;
     fn current_mode(&self) -> Option<&str>;
     fn current_model(&self) -> Option<&str>;
+    /// Current thinking-effort level (`low`..`max`), if a thinking model is
+    /// active and the agent has reported it. `None` otherwise.
+    fn effort(&self) -> Option<&str>;
     fn context_usage(&self) -> Option<f64>;
     fn credit_usage(&self) -> Option<(f64, f64)>;
     fn last_turn(&self) -> Option<&cyril_core::types::TurnSummary>;
@@ -372,6 +375,7 @@ pub mod test_support {
         pub session_label: Option<String>,
         pub current_mode: Option<String>,
         pub current_model: Option<String>,
+        pub effort: Option<String>,
         pub context_usage: Option<f64>,
         pub credit_usage: Option<(f64, f64)>,
         pub last_turn: Option<cyril_core::types::TurnSummary>,
@@ -407,6 +411,7 @@ pub mod test_support {
                 session_label: None,
                 current_mode: None,
                 current_model: None,
+                effort: None,
                 context_usage: None,
                 credit_usage: None,
                 last_turn: None,
@@ -470,6 +475,9 @@ pub mod test_support {
         }
         fn current_model(&self) -> Option<&str> {
             self.current_model.as_deref()
+        }
+        fn effort(&self) -> Option<&str> {
+            self.effort.as_deref()
         }
         fn context_usage(&self) -> Option<f64> {
             self.context_usage
