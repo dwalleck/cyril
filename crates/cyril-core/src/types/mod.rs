@@ -27,7 +27,7 @@ pub use session::{
     CompactionPhase, ContextUsage, CreditUsage, ModeId, ModelId, ModelInfo, SessionCost, SessionId,
     SessionMode, SessionStatus, StopReason, TokenCounts, TurnMetering, TurnSummary,
 };
-pub use subagent::{PendingStage, SubagentInfo, SubagentStatus};
+pub use subagent::{LoopState, PendingStage, SubagentInfo, SubagentStatus};
 pub use tool_call::{
     ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
 };

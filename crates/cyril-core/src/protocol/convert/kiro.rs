@@ -76,11 +76,38 @@ fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
     let role = v.get("role").and_then(|r| r.as_str()).map(String::from);
     let depends_on = parse_string_array(v, "dependsOn");
 
+    // Pipeline stage metadata (Kiro 2.5.0+). `name` is the stage name (distinct
+    // from sessionName, often null); `createdAtMs` is the stage creation time.
+    let stage_name = v
+        .get("name")
+        .and_then(|n| n.as_str())
+        .filter(|s| !s.is_empty())
+        .map(String::from);
+    let created_at_ms = v.get("createdAtMs").and_then(|c| c.as_u64());
+
+    // Review-loop progress (Kiro 2.5.0+). Only model loop_state when the stage
+    // actually has a loop — `hasLoop: false` leaves it None so "looping" and
+    // "not looping" can't be confused (the iteration/max counters are present
+    // but meaningless when hasLoop is false).
+    let loop_state = if v.get("hasLoop").and_then(|h| h.as_bool()).unwrap_or(false) {
+        let iteration = v.get("loopIteration").and_then(|i| i.as_u64()).unwrap_or(0) as u32;
+        let max_iterations = v
+            .get("loopMaxIterations")
+            .and_then(|m| m.as_u64())
+            .unwrap_or(0) as u32;
+        Some(LoopState::new(iteration, max_iterations))
+    } else {
+        None
+    };
+
     Some(
         SubagentInfo::new(session_id, session_name, agent_name, initial_query, status)
             .with_group(group)
             .with_role(role)
-            .with_depends_on(depends_on),
+            .with_depends_on(depends_on)
+            .with_stage_name(stage_name)
+            .with_created_at_ms(created_at_ms)
+            .with_loop_state(loop_state),
     )
 }
 
@@ -604,5 +631,69 @@ pub(crate) fn to_ext_notification(
             tracing::debug!(method = other, "unknown extension notification");
             Ok(None)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn parse_subagent_entry_extracts_review_loop_fields() {
+        // A looping reviewer stage mid-loop (Kiro 2.5.0 review-loop wire shape).
+        let v = json!({
+            "sessionId": "abc",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review the draft",
+            "status": {"type": "working", "message": "Running"},
+            "name": "checker",
+            "createdAtMs": 1_780_023_672_042u64,
+            "hasLoop": true,
+            "loopIteration": 1,
+            "loopMaxIterations": 2,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.session_name(), "checker");
+        assert_eq!(info.stage_name(), Some("checker"));
+        assert_eq!(info.created_at_ms(), Some(1_780_023_672_042));
+        assert_eq!(info.loop_state(), Some(LoopState::new(1, 2)));
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_when_has_loop_false() {
+        // A non-looping stage carries the loop counters but hasLoop=false;
+        // they must NOT produce a loop_state.
+        let v = json!({
+            "sessionId": "def",
+            "sessionName": "writer",
+            "agentName": "kiro_default",
+            "initialQuery": "write the draft",
+            "status": {"type": "working"},
+            "hasLoop": false,
+            "loopIteration": 0,
+            "loopMaxIterations": 0,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
+        assert_eq!(info.stage_name(), None);
+        assert_eq!(info.created_at_ms(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_fields_at_all() {
+        // Pre-2.5.0 shape: no loop keys present at all → no loop_state.
+        let v = json!({
+            "sessionId": "ghi",
+            "sessionName": "legacy",
+            "agentName": "kiro_default",
+            "initialQuery": "q",
+            "status": {"type": "working"},
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
     }
 }

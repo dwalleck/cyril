@@ -83,7 +83,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
             SubagentStatus::Terminated => ("◆", Color::DarkGray, "Terminated".to_string()),
         };
 
-        lines.push(Line::from(vec![
+        let mut spans = vec![
             Span::styled(format!("{icon} "), Style::default().fg(icon_color)),
             Span::styled(
                 format!("{:<20} ", info.session_name()),
@@ -92,7 +92,21 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(status_text, Style::default().fg(Color::DarkGray)),
-        ]));
+        ];
+        // Review-loop badge (Kiro 2.5.0+). `iteration` is 0-based on the wire,
+        // so display it 1-based: "↻ 1/2" on the first pass, "↻ 2/2" after a
+        // loop-back.
+        if let Some(loop_state) = info.loop_state() {
+            spans.push(Span::styled(
+                format!(
+                    "  ↻ {}/{}",
+                    loop_state.iteration() + 1,
+                    loop_state.max_iterations()
+                ),
+                Style::default().fg(Color::Magenta),
+            ));
+        }
+        lines.push(Line::from(spans));
         emitted += 1;
     }
 
@@ -174,6 +188,69 @@ mod tests {
             },
         )
         .with_group(group.map(String::from))
+    }
+
+    fn make_looping(id: &str, name: &str, iteration: u32, max: u32) -> SubagentInfo {
+        SubagentInfo::new(
+            SessionId::new(id),
+            name,
+            name,
+            "query",
+            SubagentStatus::Working {
+                message: Some("Running".into()),
+            },
+        )
+        .with_group(Some("crew-a".into()))
+        .with_loop_state(Some(cyril_core::types::LoopState::new(iteration, max)))
+    }
+
+    #[test]
+    fn render_shows_review_loop_badge() {
+        let mut state = MockTuiState::default();
+        let notif = cyril_core::types::Notification::SubagentListUpdated {
+            // iteration 1 (0-based) → second pass → "↻ 2/2"
+            subagents: vec![make_looping("s1", "checker", 1, 2)],
+            pending_stages: vec![],
+        };
+        state.subagent_tracker.apply_notification(&notif);
+
+        let backend = TestBackend::new(80, 10);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| {
+                render(frame, frame.area(), &state);
+            })
+            .expect("draw should succeed");
+
+        let text = buffer_text(&terminal, 80, 10);
+        assert!(
+            text.contains("↻ 2/2"),
+            "expected review-loop badge '↻ 2/2', got buffer:\n{text}"
+        );
+    }
+
+    #[test]
+    fn render_no_badge_for_non_looping_subagent() {
+        let mut state = MockTuiState::default();
+        let notif = cyril_core::types::Notification::SubagentListUpdated {
+            subagents: vec![make_working("s1", "writer", Some("crew-a"))],
+            pending_stages: vec![],
+        };
+        state.subagent_tracker.apply_notification(&notif);
+
+        let backend = TestBackend::new(80, 10);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| {
+                render(frame, frame.area(), &state);
+            })
+            .expect("draw should succeed");
+
+        let text = buffer_text(&terminal, 80, 10);
+        assert!(
+            !text.contains("↻"),
+            "non-looping subagent must not show a loop badge, got buffer:\n{text}"
+        );
     }
 
     #[test]
