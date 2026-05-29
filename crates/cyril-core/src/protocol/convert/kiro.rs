@@ -92,12 +92,23 @@ fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
     // "not looping" can't be confused (the iteration/max counters are present
     // but meaningless when hasLoop is false).
     let loop_state = if v.get("hasLoop").and_then(|h| h.as_bool()).unwrap_or(false) {
-        let iteration = v.get("loopIteration").and_then(|i| i.as_u64()).unwrap_or(0) as u32;
-        let max_iterations = v
-            .get("loopMaxIterations")
-            .and_then(|m| m.as_u64())
-            .unwrap_or(0) as u32;
-        Some(LoopState::new(iteration, max_iterations))
+        // hasLoop is true, so both counters are expected. If either is missing
+        // or non-numeric the frame is corrupt — log and emit no badge rather
+        // than defaulting to 0 and rendering a misleading "↻ 1/0".
+        match (
+            v.get("loopIteration").and_then(|i| i.as_u64()),
+            v.get("loopMaxIterations").and_then(|m| m.as_u64()),
+        ) {
+            (Some(iteration), Some(max_iterations)) => {
+                Some(LoopState::new(iteration as u32, max_iterations as u32))
+            }
+            _ => {
+                tracing::warn!(
+                    "subagent list_update has hasLoop:true but missing/invalid loop counters, omitting loop badge"
+                );
+                None
+            }
+        }
     } else {
         None
     };
@@ -703,6 +714,22 @@ mod tests {
             "agentName": "kiro_default",
             "initialQuery": "q",
             "status": {"type": "working"},
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_when_has_loop_true_but_counters_missing() {
+        // Corrupt frame: hasLoop:true but the counters are absent. Must NOT
+        // default to 0/0 and render a misleading "↻ 1/0" — emit no loop_state.
+        let v = json!({
+            "sessionId": "jkl",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review",
+            "status": {"type": "working"},
+            "hasLoop": true,
         });
         let info = parse_subagent_entry(&v).expect("entry should parse");
         assert_eq!(info.loop_state(), None);
