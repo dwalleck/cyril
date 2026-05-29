@@ -2,7 +2,7 @@
 
 **Analyzed:** 2026-05-28 · **Method:** same-day binary isolation vs archived 2.4.1 (backend held constant), plus live `kiro-tui` reference trace (`/tmp/trace.jsonl`).
 
-**Verdict for cyril:** 2.5.0 adds **two real ACP-wire changes** (thinking chunks, subagent review-loop fields) and one client-originated telemetry method. Cyril already has partial thinking plumbing but **cannot currently enable thinking** (no `/effort` command) and has a **thought-rendering bug**.
+**Verdict for cyril:** 2.5.0 adds **two real ACP-wire changes** (thinking chunks, subagent review-loop fields) and one client-originated telemetry method. Cyril already has partial thinking plumbing and can enable thinking (via the dynamic /effort command), but has a **thought-rendering bug**.
 
 ---
 
