@@ -270,7 +270,13 @@ impl UiState {
                 true
             }
             Notification::AgentThought(thought) => {
-                self.streaming_thought = Some(thought.text.clone());
+                // Thought chunks stream as token-deltas (mirroring AgentMessage),
+                // so accumulate them — overwriting would show only the last token.
+                // Kept transient: cleared at the turn boundary by commit_streaming,
+                // never committed to the message list.
+                self.streaming_thought
+                    .get_or_insert_with(String::new)
+                    .push_str(&thought.text);
                 true
             }
             Notification::UserMessage(msg) => {
@@ -1307,6 +1313,40 @@ mod tests {
         assert!(changed);
         assert_eq!(state.streaming_text(), "hello ");
         assert_eq!(state.activity(), Activity::Streaming);
+    }
+
+    #[test]
+    fn apply_agent_thought_accumulates_deltas() {
+        let mut state = UiState::new(500);
+        // Thought chunks arrive as token-deltas, mirroring agent_message_chunk.
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "I'm".into(),
+        }));
+        let changed = state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: " working".into(),
+        }));
+        assert!(changed);
+        // Must accumulate, not overwrite with only the latest delta.
+        assert_eq!(state.streaming_thought(), Some("I'm working"));
+    }
+
+    #[test]
+    fn agent_thought_is_transient_and_clears_on_turn_end() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "reasoning...".into(),
+        }));
+        assert_eq!(state.streaming_thought(), Some("reasoning..."));
+        // Thinking is a transient preview: it clears at the turn boundary and is
+        // never committed to scrollback (unlike agent message text).
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert_eq!(state.streaming_thought(), None);
+        assert!(
+            state.messages().is_empty(),
+            "thinking must not commit to the message list"
+        );
     }
 
     #[test]
