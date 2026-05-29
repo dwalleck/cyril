@@ -60,6 +60,14 @@ Live loop run: a `checker` stage with `loop_to=writer, trigger=NEEDS_CHANGES, ma
 
 Client→server notification; the v2 TUI reports its own process stats (`rssMb`, `heapUsedMb`, `cpuUserPct`, `lastRenderMs`, `rendersPerMin`, `yoga…`). New in 2.5.0 binary (absent from 2.4.1). **Cyril N/A** — it's client-originated TUI telemetry; cyril neither sends nor receives it.
 
+## 3b. Tool-trust batch auto-approval is CLIENT-side, not wire (verified)
+
+Changelog: *"Trusting a tool now automatically approves all other pending invocations of the same tool in the current batch."*
+
+Probed with `probe-trust-batch-2.5.0.py`: the agent fired **3 parallel `shell` permission requests** (echo alpha/bravo/charlie); the client answered only the first with `allow_always`. Result: the turn **did not complete** and the backend sent **no retraction** for the other two — it kept waiting on per-request responses. So the backend does **not** auto-resolve siblings at the ACP layer; the "trust auto-approves the batch" behavior is implemented **in the Kiro TUI client**, not on the wire.
+
+**Cyril impact:** no correctness gap — there is no orphaned/stale state, because the backend never resolves a `request_permission` behind the client's back. It's at most an optional **UX-parity** feature: when the user picks "Always" for a tool, cyril *could* auto-answer other pending `request_permission` overlays for the same tool instead of making the user click each. Not required for correctness.
+
 ## 4. Unchanged
 
 - Slash command set (identical 23 commands; `/reply`, `/rewind`, `/effort`, `/stats` all pre-existed in 2.4.1).
