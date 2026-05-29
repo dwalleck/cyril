@@ -734,4 +734,19 @@ mod tests {
         let info = parse_subagent_entry(&v).expect("entry should parse");
         assert_eq!(info.loop_state(), None);
     }
+
+    #[test]
+    fn parse_subagent_entry_empty_stage_name_is_none() {
+        // An empty `name` string must not reach the UI as a blank stage label.
+        let v = json!({
+            "sessionId": "mno",
+            "sessionName": "writer",
+            "agentName": "kiro_default",
+            "initialQuery": "q",
+            "status": {"type": "working"},
+            "name": "",
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.stage_name(), None);
+    }
 }

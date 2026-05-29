@@ -643,6 +643,18 @@ mod tests {
     }
 
     #[test]
+    fn to_ext_notification_metadata_empty_effort_is_none() {
+        // An empty effort string must not surface as a blank "◇ " toolbar badge.
+        let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": ""});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
+            assert_eq!(effort, None);
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
     fn parse_metadata_with_metering() {
         let params = serde_json::json!({
             "sessionId": "s1",
