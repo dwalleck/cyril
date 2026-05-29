@@ -1,0 +1,30 @@
+Changelog for version 2.5.0:
+Version 2.5.0 (2026-05-28)
+  - Added: Thinking display -- see the agent's reasoning process in real time. Enabled by default, toggle via `/settings` > Display > Show thinking.
+  - Added: Prompt history (Up/Down arrow) is now per-session by default. Configure via `/settings` → history to switch between session and global modes
+  - Added: Subagent pipelines now support review loops — a reviewer stage can send work back to an implementer for revisions automatically
+  - Added: `/settings display` to toggle animations, ASCII art, and icons. Changes take effect immediately.
+  - Changed: Suppress terminal notifications when terminal window is focused
+  - Changed: Faster message rendering during streaming — messages now update incrementally instead of reconstructing the full conversation on each chunk
+  - Changed: Faster shell command output rendering — long-running commands no longer cause increasing lag as output grows
+  - Changed: MCP tool call summaries now show all parameters instead of truncating to 4
+  - Changed: Require double Ctrl+Z to suspend, preventing accidental suspension during LLM streaming
+  - Changed: Screen reader support in menus — cursor now tracks the selected item, and `/model` marks the current model with `[active]`
+  - Changed: What's New popup shows only new features by default — press ctrl+o to reveal all changes
+  - Changed: Trusting a tool now automatically approves all other pending invocations of the same tool in the current batch
+  - Fixed: `/rewind` picker now adapts to small terminal panes instead of overflowing
+  - Fixed: `/spawn` background sessions now correctly surface permission dialogs and recover from startup failures instead of hanging silently
+  - Fixed: Settings file I/O now works on NFS4 mounts without crashing
+  - Fixed: Ctrl+C now correctly clears history-recalled text from the input line
+  - Fixed: Truecolor rendering now auto-detects capable terminals even when COLORTERM is unset, restoring proper diff contrast in tmux/SSH sessions
+  - Fixed: Spinner animation during long-running shell commands no longer causes high CPU
+  - Fixed: Invisible control characters no longer leak into terminal input in tmux, preventing garbled text when pasting or typing
+  - Fixed: OAuth authentication now completes successfully for registry-type MCP servers
+  - Fixed: Shell command output redirection now validates target paths, preventing writes outside allowed directories
+  - Fixed: Steering files and skills are now deduplicated when working directory equals home, preventing double-injection into context
+  - Fixed: Resumed sessions now replay only the last 10 turns, eliminating typing lag on long conversations
+  - Fixed: Clipboard history and undo stack are now capped, preventing memory growth during long sessions
+  - Fixed: Web_fetch tool now recovers gracefully from malformed HTML instead of hanging permanently
+  - Fixed: `/usage` overage label now shows the appropriate unit
+  - Fixed: Settings changes in one session no longer leak to other concurrent sessions
+
