@@ -201,7 +201,7 @@ mod tests {
             },
         )
         .with_group(Some("crew-a".into()))
-        .with_loop_state(Some(cyril_core::types::LoopState::new(iteration, max)))
+        .with_loop_state(cyril_core::types::LoopState::new(iteration, max))
     }
 
     #[test]
@@ -226,6 +226,32 @@ mod tests {
         assert!(
             text.contains("↻ 2/2"),
             "expected review-loop badge '↻ 2/2', got buffer:\n{text}"
+        );
+    }
+
+    #[test]
+    fn render_shows_first_pass_loop_badge() {
+        // iteration 0 (0-based) is the first pass → displayed 1-based as "↻ 1/2".
+        // This is the most common user-visible case and guards the +1 conversion.
+        let mut state = MockTuiState::default();
+        let notif = cyril_core::types::Notification::SubagentListUpdated {
+            subagents: vec![make_looping("s1", "checker", 0, 2)],
+            pending_stages: vec![],
+        };
+        state.subagent_tracker.apply_notification(&notif);
+
+        let backend = TestBackend::new(80, 10);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| {
+                render(frame, frame.area(), &state);
+            })
+            .expect("draw should succeed");
+
+        let text = buffer_text(&terminal, 80, 10);
+        assert!(
+            text.contains("↻ 1/2"),
+            "expected first-pass badge '↻ 1/2', got buffer:\n{text}"
         );
     }
 

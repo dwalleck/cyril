@@ -636,7 +636,19 @@ mod tests {
         let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": "high"});
         let result = to_ext_notification("kiro.dev/metadata", &params);
         if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
-            assert_eq!(effort.as_deref(), Some("high"));
+            assert_eq!(effort, Some(EffortLevel::High));
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_unrecognized_effort_is_none() {
+        // An unrecognized level must not surface as a badge (logged at debug!).
+        let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": "turbo"});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
+            assert_eq!(effort, None);
         } else {
             panic!("expected MetadataUpdated");
         }

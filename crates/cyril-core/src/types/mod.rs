@@ -24,8 +24,9 @@ pub use message::{AgentMessage, AgentThought, UserMessage};
 pub use plan::{Plan, PlanEntry, PlanEntryPriority, PlanEntryStatus};
 pub use prompt::{PromptArgument, PromptInfo};
 pub use session::{
-    CompactionPhase, ContextUsage, CreditUsage, ModeId, ModelId, ModelInfo, SessionCost, SessionId,
-    SessionMode, SessionStatus, StopReason, TokenCounts, TurnMetering, TurnSummary,
+    CompactionPhase, ContextUsage, CreditUsage, EffortLevel, ModeId, ModelId, ModelInfo,
+    SessionCost, SessionId, SessionMode, SessionStatus, StopReason, TokenCounts, TurnMetering,
+    TurnSummary,
 };
 pub use subagent::{LoopState, PendingStage, SubagentInfo, SubagentStatus};
 pub use tool_call::{

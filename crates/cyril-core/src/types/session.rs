@@ -20,6 +20,59 @@ impl fmt::Display for SessionId {
     }
 }
 
+/// Thinking-effort level reported under thinking models (Kiro 2.5.0+). A closed
+/// set on the wire: `low`/`medium`/`high`/`xhigh`/`max`. Modeled as an enum so an
+/// empty or unrecognized wire value can never surface as a toolbar badge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffortLevel {
+    Low,
+    Medium,
+    High,
+    XHigh,
+    Max,
+}
+
+impl EffortLevel {
+    /// Parse a wire `effort` string. Returns `None` for an empty/absent value
+    /// (the wire's way of saying "not set") and for an unrecognized level — the
+    /// latter logged at `debug!` so a backend-side addition to the set is
+    /// visible rather than silently dropped.
+    pub fn from_wire(s: &str) -> Option<Self> {
+        match s {
+            "" => None,
+            "low" => Some(Self::Low),
+            "medium" => Some(Self::Medium),
+            "high" => Some(Self::High),
+            "xhigh" => Some(Self::XHigh),
+            "max" => Some(Self::Max),
+            other => {
+                tracing::debug!(
+                    effort = other,
+                    "unrecognized thinking-effort level on the wire"
+                );
+                None
+            }
+        }
+    }
+
+    /// The canonical wire string for this level (also its display form).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+            Self::XHigh => "xhigh",
+            Self::Max => "max",
+        }
+    }
+}
+
+impl fmt::Display for EffortLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Session lifecycle state machine.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum SessionStatus {

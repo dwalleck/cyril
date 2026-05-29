@@ -255,7 +255,7 @@ mod tests {
     fn toolbar_renders_effort_when_present() {
         let state = MockTuiState {
             current_model: Some("claude-opus-4.8".into()),
-            effort: Some("high".into()),
+            effort: Some(cyril_core::types::EffortLevel::High),
             ..Default::default()
         };
         let backend = TestBackend::new(80, 1);

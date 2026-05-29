@@ -76,10 +76,10 @@ fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
     let role = v.get("role").and_then(|r| r.as_str()).map(String::from);
     let depends_on = parse_string_array(v, "dependsOn");
 
-    // Pipeline stage metadata (Kiro 2.5.0+). `name` is the stage name (often
-    // null, and distinct in meaning from sessionName — though for pipeline
-    // stages the two may carry the same value); `createdAtMs` is the stage
-    // creation time.
+    // Pipeline stage metadata (Kiro 2.5.0+). `name` is the stage name (may be
+    // null/absent, and distinct in meaning from sessionName — though for
+    // pipeline stages the two may carry the same value); `createdAtMs` is the
+    // stage creation time.
     let stage_name = v
         .get("name")
         .and_then(|n| n.as_str())
@@ -100,10 +100,20 @@ fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
             v.get("loopMaxIterations").and_then(|m| m.as_u64()),
         ) {
             (Some(iteration), Some(max_iterations)) => {
-                Some(LoopState::new(iteration as u32, max_iterations as u32))
+                let state = LoopState::new(iteration as u32, max_iterations as u32);
+                if state.is_none() {
+                    tracing::warn!(
+                        session_id = %session_id,
+                        session_name,
+                        "subagent list_update has hasLoop:true but loopMaxIterations is 0, omitting loop badge"
+                    );
+                }
+                state
             }
             _ => {
                 tracing::warn!(
+                    session_id = %session_id,
+                    session_name,
                     "subagent list_update has hasLoop:true but missing/invalid loop counters, omitting loop badge"
                 );
                 None
@@ -207,12 +217,13 @@ pub(crate) fn to_ext_notification(
             };
 
             // Thinking-effort level (Kiro 2.5.0+), present only under thinking
-            // models. Filter empties so "" never reaches the UI as a level.
+            // models. `EffortLevel::from_wire` maps the closed wire set and
+            // returns None for empty/unrecognized values, so "" never reaches
+            // the UI as a level.
             let effort = params
                 .get("effort")
                 .and_then(|e| e.as_str())
-                .filter(|s| !s.is_empty())
-                .map(String::from);
+                .and_then(EffortLevel::from_wire);
 
             Ok(Some(Notification::MetadataUpdated {
                 context_usage: ContextUsage::new(pct),
@@ -682,7 +693,7 @@ mod tests {
         assert_eq!(info.session_name(), "checker");
         assert_eq!(info.stage_name(), Some("checker"));
         assert_eq!(info.created_at_ms(), Some(1_780_023_672_042));
-        assert_eq!(info.loop_state(), Some(LoopState::new(1, 2)));
+        assert_eq!(info.loop_state(), LoopState::new(1, 2));
     }
 
     #[test]

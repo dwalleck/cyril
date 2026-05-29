@@ -52,7 +52,7 @@ pub struct UiState {
     /// Thinking-effort level for the toolbar (Kiro 2.5.0+). Sticky: only
     /// updated when a metadata frame reports it (frames mid-turn may omit it),
     /// and reset on session change.
-    effort: Option<String>,
+    effort: Option<EffortLevel>,
     context_usage: Option<f64>,
     credit_usage: Option<(f64, f64)>,
     last_turn: Option<cyril_core::types::TurnSummary>,
@@ -143,8 +143,8 @@ impl TuiState for UiState {
         self.current_model.as_deref()
     }
 
-    fn effort(&self) -> Option<&str> {
-        self.effort.as_deref()
+    fn effort(&self) -> Option<EffortLevel> {
+        self.effort
     }
 
     fn context_usage(&self) -> Option<f64> {
@@ -359,7 +359,7 @@ impl UiState {
                 // "cleared" — context-only frames interleave with effort frames
                 // mid-turn, so overwriting with None would make it flicker.
                 if let Some(e) = effort {
-                    self.effort = Some(e.clone());
+                    self.effort = Some(*e);
                 }
                 true
             }
@@ -1379,6 +1379,29 @@ mod tests {
         assert!(
             state.messages().is_empty(),
             "thinking must not commit to the message list"
+        );
+    }
+
+    #[test]
+    fn agent_thought_starts_fresh_on_next_turn() {
+        // After a turn boundary clears the buffer, the next turn's first thought
+        // must start clean — not concatenate onto the prior turn's reasoning.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "turn one".into(),
+        }));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert_eq!(state.streaming_thought(), None);
+
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "turn two".into(),
+        }));
+        assert_eq!(
+            state.streaming_thought(),
+            Some("turn two"),
+            "next turn must not carry over the prior turn's thought"
         );
     }
 
@@ -2525,9 +2548,9 @@ mod tests {
             context_usage: ContextUsage::new(7.5),
             metering: None,
             tokens: None,
-            effort: Some("high".into()),
+            effort: Some(EffortLevel::High),
         });
-        assert_eq!(state.effort(), Some("high"));
+        assert_eq!(state.effort(), Some(EffortLevel::High));
 
         // A context-only frame mid-turn omits effort — must NOT clear it.
         state.apply_notification(&Notification::MetadataUpdated {
@@ -2538,7 +2561,7 @@ mod tests {
         });
         assert_eq!(
             state.effort(),
-            Some("high"),
+            Some(EffortLevel::High),
             "omitted effort must be sticky"
         );
 
@@ -2561,9 +2584,9 @@ mod tests {
             context_usage: ContextUsage::new(7.5),
             metering: None,
             tokens: None,
-            effort: Some("high".into()),
+            effort: Some(EffortLevel::High),
         });
-        assert_eq!(state.effort(), Some("high"));
+        assert_eq!(state.effort(), Some(EffortLevel::High));
 
         // Switching to a non-thinking model (no new session) must clear effort,
         // otherwise the toolbar shows a phantom level the new model never reports.
@@ -2580,13 +2603,36 @@ mod tests {
             context_usage: ContextUsage::new(8.0),
             metering: None,
             tokens: None,
-            effort: Some("medium".into()),
+            effort: Some(EffortLevel::Medium),
         });
         state.set_current_model(Some("haiku".into()));
         assert_eq!(
             state.effort(),
-            Some("medium"),
+            Some(EffortLevel::Medium),
             "unchanged model must not clear effort"
+        );
+    }
+
+    #[test]
+    fn effort_clears_when_set_current_model_changes_model() {
+        // The set_current_model path (Kiro's model-command workaround) must
+        // clear effort on a real model change, mirroring the ConfigOptionsUpdated
+        // path — otherwise switching models leaves a phantom toolbar level.
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("opus".into()));
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(7.5),
+            metering: None,
+            tokens: None,
+            effort: Some(EffortLevel::High),
+        });
+        assert_eq!(state.effort(), Some(EffortLevel::High));
+
+        state.set_current_model(Some("haiku".into()));
+        assert_eq!(
+            state.effort(),
+            None,
+            "set_current_model with a different model must clear effort"
         );
     }
 

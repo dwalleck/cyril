@@ -22,11 +22,20 @@ pub struct LoopState {
 }
 
 impl LoopState {
-    pub fn new(iteration: u32, max_iterations: u32) -> Self {
-        Self {
-            iteration,
-            max_iterations,
+    /// Construct loop progress, enforcing the type's invariants. Returns `None`
+    /// when `max_iterations == 0` (a loop with a zero cap is meaningless and
+    /// would render a misleading "↻ 1/0"). `iteration` is clamped to
+    /// `max_iterations - 1` so a transposed or over-cap counter can never
+    /// render past the cap — the invariant lives in the type, not at the one
+    /// call site that parses the wire.
+    pub fn new(iteration: u32, max_iterations: u32) -> Option<Self> {
+        if max_iterations == 0 {
+            return None;
         }
+        Some(Self {
+            iteration: iteration.min(max_iterations - 1),
+            max_iterations,
+        })
     }
 
     /// Current loop iteration. Observed 0-based on the wire (the first pass is
@@ -305,11 +314,30 @@ mod tests {
         )
         .with_stage_name(Some("checker".into()))
         .with_created_at_ms(Some(1_780_023_672_042))
-        .with_loop_state(Some(LoopState::new(1, 2)));
+        .with_loop_state(LoopState::new(1, 2));
 
         assert_eq!(info.stage_name(), Some("checker"));
         assert_eq!(info.created_at_ms(), Some(1_780_023_672_042));
-        assert_eq!(info.loop_state(), Some(LoopState::new(1, 2)));
+        assert_eq!(info.loop_state(), LoopState::new(1, 2));
+    }
+
+    #[test]
+    fn loop_state_new_rejects_zero_max() {
+        // A loop with a zero cap is meaningless and would render "↻ 1/0".
+        assert_eq!(LoopState::new(0, 0), None);
+        assert_eq!(LoopState::new(3, 0), None);
+    }
+
+    #[test]
+    fn loop_state_new_clamps_iteration_to_cap() {
+        // A transposed/over-cap counter must never render past the cap.
+        let clamped = LoopState::new(99, 2);
+        assert_eq!(
+            clamped.map(|s| s.iteration()),
+            Some(1),
+            "clamped to max_iterations - 1"
+        );
+        assert_eq!(clamped.map(|s| s.max_iterations()), Some(2));
     }
 
     #[test]
