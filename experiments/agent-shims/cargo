@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# cargo shim — context-economical cargo for agent-driven sessions.
+#
+# Deploy by prepending this directory to the PATH of the shell that spawns
+# kiro-cli (cyril could do this when launching the bridge). The agent types
+# plain `cargo test ...`; shell resolution lands here first.
+#
+# Behavior:
+#   - Human at the terminal (no $AGENT_*_OUT vars) → exec real cargo, untouched.
+#   - Subcommand we don't summarize (fmt, metadata, run, ...) → exec real cargo.
+#   - Agent-driven test/clippy/build/check:
+#       * full output streams live to $AGENT_DISPLAY_OUT (user sees everything)
+#       * stdout (= model context) gets only errors/warnings/failures + result
+#       * $AGENT_CONTEXT_OUT gets a note with the full-log path (agent_notes)
+#
+# Caveat: writes to the FIFOs block if no reader is attached; the [ -n ] guard
+# means that can only happen if Kiro exported the vars but died mid-command.
+
+set -u
+
+SHIM_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+# Resolve the real cargo by stripping the shim dir from PATH.
+REAL_PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$SHIM_DIR" | paste -sd:)
+REAL_CARGO=$(PATH="$REAL_PATH" command -v cargo) || {
+    echo "[cargo-shim] real cargo not found on PATH" >&2
+    exit 127
+}
+
+sub="${1:-}"
+case "$sub" in
+    test | clippy | build | check) ;;
+    *) exec "$REAL_CARGO" "$@" ;;
+esac
+
+if [ -z "${AGENT_DISPLAY_OUT:-}" ] || [ -z "${AGENT_CONTEXT_OUT:-}" ]; then
+    exec "$REAL_CARGO" "$@"
+fi
+
+log=$(mktemp "/tmp/cargo-${sub}-XXXXXX.log")
+
+# Full output: live to the user's display channel, copy to the log file.
+# Single open of the FIFO (one redirection) so the backend reader sees one
+# continuous stream. The { } group runs in the current shell, so $status
+# survives it.
+{
+    echo "[cargo-shim] full output of: cargo $*"
+    "$REAL_CARGO" "$@" 2>&1 | tee "$log"
+    status=${PIPESTATUS[0]}
+} >"$AGENT_DISPLAY_OUT"
+
+# Distilled summary to stdout — this is all the model sees inline.
+total=$(wc -l <"$log")
+echo "[cargo-shim] cargo $sub exit=$status (full ${total}-line output streamed to user's display)"
+summary=$(grep -E '^error(\[[A-Z0-9]+\])?:|^warning:|FAILED|^failures:|test result:|^error: could not compile' "$log" | head -40)
+if [ -n "$summary" ]; then
+    echo "$summary"
+else
+    tail -n 3 "$log"
+fi
+
+echo "cargo $sub finished with exit=$status. The inline output above is a filtered summary of a ${total}-line run. Full log: $log — read it only if the summary is insufficient." >"$AGENT_CONTEXT_OUT"
+
+exit "$status"
