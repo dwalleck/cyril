@@ -42,6 +42,7 @@ impl acp::Client for KiroClient {
             convert::to_tool_call_from_permission(&args, &self.tool_call_inputs.borrow());
         let options = convert::to_permission_options(&args);
         let message = convert::extract_permission_message(&args);
+        let trust_options = convert::extract_trust_options(&args);
 
         let (responder_tx, responder_rx) = tokio::sync::oneshot::channel();
 
@@ -49,6 +50,7 @@ impl acp::Client for KiroClient {
             tool_call,
             message,
             options,
+            trust_options,
             responder: responder_tx,
         };
 

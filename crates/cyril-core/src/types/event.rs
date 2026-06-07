@@ -219,6 +219,17 @@ impl From<Notification> for RoutedNotification {
     }
 }
 
+/// A trust tier option from `_meta.trustOptions[]` on permission requests.
+/// Represents a level of persistent trust the user can grant (e.g. "Full command",
+/// "Base command") with pre-built regex patterns for storage.
+#[derive(Debug, Clone)]
+pub struct TrustOption {
+    pub label: String,
+    pub display: String,
+    pub setting_key: String,
+    pub patterns: Vec<String>,
+}
+
 /// A request from the agent that needs user approval.
 /// NOT Clone — owns a oneshot sender for the response.
 #[derive(Debug)]
@@ -226,6 +237,7 @@ pub struct PermissionRequest {
     pub tool_call: ToolCall,
     pub message: String,
     pub options: Vec<PermissionOption>,
+    pub trust_options: Vec<TrustOption>,
     pub responder: tokio::sync::oneshot::Sender<PermissionResponse>,
 }
 
@@ -253,7 +265,10 @@ pub struct PermissionOption {
 #[derive(Debug, Clone)]
 pub enum PermissionResponse {
     AllowOnce,
-    AllowAlways,
+    /// AllowAlways with an optional trust option label (from phase 2 selection).
+    AllowAlways {
+        trust_option: Option<String>,
+    },
     Reject,
     RejectAlways,
     Cancel,
@@ -263,7 +278,9 @@ impl From<PermissionOptionKind> for PermissionResponse {
     fn from(kind: PermissionOptionKind) -> Self {
         match kind {
             PermissionOptionKind::AllowOnce => PermissionResponse::AllowOnce,
-            PermissionOptionKind::AllowAlways => PermissionResponse::AllowAlways,
+            PermissionOptionKind::AllowAlways => {
+                PermissionResponse::AllowAlways { trust_option: None }
+            }
             PermissionOptionKind::RejectOnce => PermissionResponse::Reject,
             PermissionOptionKind::RejectAlways => PermissionResponse::RejectAlways,
         }
@@ -452,7 +469,7 @@ mod tests {
         ));
         assert!(matches!(
             PermissionResponse::from(PermissionOptionKind::AllowAlways),
-            PermissionResponse::AllowAlways
+            PermissionResponse::AllowAlways { .. }
         ));
         assert!(matches!(
             PermissionResponse::from(PermissionOptionKind::RejectOnce),
@@ -468,7 +485,7 @@ mod tests {
     fn permission_response_variants() {
         let responses = [
             PermissionResponse::AllowOnce,
-            PermissionResponse::AllowAlways,
+            PermissionResponse::AllowAlways { trust_option: None },
             PermissionResponse::Reject,
             PermissionResponse::RejectAlways,
             PermissionResponse::Cancel,

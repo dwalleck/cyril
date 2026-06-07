@@ -319,13 +319,24 @@ pub struct Suggestion {
     pub description: Option<String>,
 }
 
+/// The current phase of the approval dialog.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApprovalPhase {
+    /// Phase 1: Select allow/reject option.
+    SelectOption,
+    /// Phase 2: Select trust tier (shown after AllowAlways when trust options exist).
+    SelectTrust,
+}
+
 /// Permission approval dialog state.
 #[derive(Debug)]
 pub struct ApprovalState {
     pub tool_call: cyril_core::types::ToolCall,
     pub message: String,
     pub options: Vec<cyril_core::types::PermissionOption>,
+    pub trust_options: Vec<cyril_core::types::TrustOption>,
     pub selected: usize,
+    pub phase: ApprovalPhase,
     pub responder: tokio::sync::oneshot::Sender<cyril_core::types::PermissionResponse>,
 }
 
