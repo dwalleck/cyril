@@ -420,6 +420,10 @@ impl App {
                 self.ui_state.set_terminal_size(w, h);
                 self.redraw_needed = true;
             }
+            Event::Paste(text) => {
+                self.ui_state.insert_text(&text);
+                self.redraw_needed = true;
+            }
             _ => {}
         }
         self.last_activity = Instant::now();

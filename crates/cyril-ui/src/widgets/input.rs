@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 
 use crate::traits::TuiState;
 
@@ -21,7 +21,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         Span::raw(after),
     ]);
 
-    let input_widget = Paragraph::new(line).block(
+    let input_widget = Paragraph::new(line).wrap(Wrap { trim: false }).block(
         Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::DarkGray))

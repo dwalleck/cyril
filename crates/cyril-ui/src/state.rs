@@ -828,6 +828,13 @@ impl UiState {
         }
     }
 
+    /// Insert a block of text at the cursor (used for bracketed paste).
+    pub fn insert_text(&mut self, text: &str) {
+        self.input_text.insert_str(self.input_cursor, text);
+        self.input_cursor += text.len();
+        self.update_autocomplete();
+    }
+
     // --- File completer and autocomplete ---
 
     /// Set the file completer for @-file autocomplete.
