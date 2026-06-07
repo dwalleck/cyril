@@ -619,11 +619,61 @@ mod tests {
             context_usage,
             metering,
             tokens,
+            effort,
         })) = result
         {
             assert!((context_usage.percentage() - 75.0).abs() < f64::EPSILON);
             assert!(metering.is_none());
             assert!(tokens.is_none());
+            assert!(effort.is_none(), "no effort field => None");
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_with_effort() {
+        let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": "high"});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
+            assert_eq!(effort, Some(EffortLevel::High));
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_unrecognized_effort_is_none() {
+        // An unrecognized level must not surface as a badge (logged at debug!).
+        let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": "turbo"});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
+            assert_eq!(effort, None);
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_empty_effort_is_none() {
+        // An empty effort string must not surface as a blank "◇ " toolbar badge.
+        let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": ""});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
+            assert_eq!(effort, None);
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_non_string_effort_is_none() {
+        // A present-but-non-string effort field is corrupt (warned, not silent)
+        // and must not surface as a badge.
+        let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": 5});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
+            assert_eq!(effort, None);
         } else {
             panic!("expected MetadataUpdated");
         }

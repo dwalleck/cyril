@@ -76,11 +76,61 @@ fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
     let role = v.get("role").and_then(|r| r.as_str()).map(String::from);
     let depends_on = parse_string_array(v, "dependsOn");
 
+    // Pipeline stage metadata (Kiro 2.5.0+). `name` is the stage name (may be
+    // null/absent, and distinct in meaning from sessionName — though for
+    // pipeline stages the two may carry the same value); `createdAtMs` is the
+    // stage creation time.
+    let stage_name = v
+        .get("name")
+        .and_then(|n| n.as_str())
+        .filter(|s| !s.is_empty())
+        .map(String::from);
+    let created_at_ms = v.get("createdAtMs").and_then(|c| c.as_u64());
+
+    // Review-loop progress (Kiro 2.5.0+). Only model loop_state when the stage
+    // actually has a loop — `hasLoop: false` leaves it None so "looping" and
+    // "not looping" can't be confused (the iteration/max counters, if present,
+    // are meaningless when hasLoop is false).
+    let loop_state = if v.get("hasLoop").and_then(|h| h.as_bool()).unwrap_or(false) {
+        // hasLoop is true, so both counters are expected. If either is missing
+        // or non-numeric the frame is corrupt — log and emit no badge rather
+        // than defaulting to 0 and rendering a misleading "↻ 1/0".
+        match (
+            v.get("loopIteration").and_then(|i| i.as_u64()),
+            v.get("loopMaxIterations").and_then(|m| m.as_u64()),
+        ) {
+            (Some(iteration), Some(max_iterations)) => {
+                let state = LoopState::new(iteration as u32, max_iterations as u32);
+                if state.is_none() {
+                    tracing::warn!(
+                        session_id = %session_id,
+                        session_name,
+                        "subagent list_update has hasLoop:true but loopMaxIterations is 0, omitting loop badge"
+                    );
+                }
+                state
+            }
+            _ => {
+                tracing::warn!(
+                    session_id = %session_id,
+                    session_name,
+                    "subagent list_update has hasLoop:true but missing/invalid loop counters, omitting loop badge"
+                );
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     Some(
         SubagentInfo::new(session_id, session_name, agent_name, initial_query, status)
             .with_group(group)
             .with_role(role)
-            .with_depends_on(depends_on),
+            .with_depends_on(depends_on)
+            .with_stage_name(stage_name)
+            .with_created_at_ms(created_at_ms)
+            .with_loop_state(loop_state),
     )
 }
 
@@ -166,10 +216,31 @@ pub(crate) fn to_ext_notification(
                 }
             };
 
+            // Thinking-effort level (Kiro 2.5.0+), present only under thinking
+            // models. `EffortLevel::from_wire` maps the closed wire set and
+            // returns None for empty/unrecognized values, so "" never reaches
+            // the UI as a level. An absent field is normal (non-thinking model);
+            // a present-but-non-string field is corrupt, so warn rather than
+            // silently degrading to None (distinguish missing from corrupt).
+            let effort = match params.get("effort") {
+                None => None,
+                Some(e) => match e.as_str() {
+                    Some(s) => EffortLevel::from_wire(s),
+                    None => {
+                        tracing::warn!(
+                            effort = ?e,
+                            "metadata `effort` present but not a string, ignoring"
+                        );
+                        None
+                    }
+                },
+            };
+
             Ok(Some(Notification::MetadataUpdated {
                 context_usage: ContextUsage::new(pct),
                 metering,
                 tokens,
+                effort,
             }))
         }
         "kiro.dev/compaction/status" => {
@@ -604,5 +675,160 @@ pub(crate) fn to_ext_notification(
             tracing::debug!(method = other, "unknown extension notification");
             Ok(None)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn parse_subagent_entry_extracts_review_loop_fields() {
+        // A looping reviewer stage mid-loop (Kiro 2.5.0 review-loop wire shape).
+        let v = json!({
+            "sessionId": "abc",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review the draft",
+            "status": {"type": "working", "message": "Running"},
+            "name": "checker",
+            "createdAtMs": 1_780_023_672_042u64,
+            "hasLoop": true,
+            "loopIteration": 1,
+            "loopMaxIterations": 2,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.session_name(), "checker");
+        assert_eq!(info.stage_name(), Some("checker"));
+        assert_eq!(info.created_at_ms(), Some(1_780_023_672_042));
+        assert_eq!(info.loop_state(), LoopState::new(1, 2));
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_when_has_loop_false() {
+        // A non-looping stage carries the loop counters but hasLoop=false;
+        // they must NOT produce a loop_state.
+        let v = json!({
+            "sessionId": "def",
+            "sessionName": "writer",
+            "agentName": "kiro_default",
+            "initialQuery": "write the draft",
+            "status": {"type": "working"},
+            "hasLoop": false,
+            "loopIteration": 0,
+            "loopMaxIterations": 0,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
+        assert_eq!(info.stage_name(), None);
+        assert_eq!(info.created_at_ms(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_fields_at_all() {
+        // Pre-2.5.0 shape: no loop keys present at all → no loop_state.
+        let v = json!({
+            "sessionId": "ghi",
+            "sessionName": "legacy",
+            "agentName": "kiro_default",
+            "initialQuery": "q",
+            "status": {"type": "working"},
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_when_has_loop_true_but_counters_missing() {
+        // Corrupt frame: hasLoop:true but the counters are absent. Must NOT
+        // default to 0/0 and render a misleading "↻ 1/0" — emit no loop_state.
+        let v = json!({
+            "sessionId": "jkl",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review",
+            "status": {"type": "working"},
+            "hasLoop": true,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_when_counters_non_numeric() {
+        // Corrupt frame: hasLoop:true but a counter is the wrong JSON type
+        // (string instead of number). `as_u64()` yields None, so this must be
+        // treated as corrupt and emit no loop_state — not silently become 1/0.
+        let v = json!({
+            "sessionId": "pqr",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review",
+            "status": {"type": "working"},
+            "hasLoop": true,
+            "loopIteration": "two",
+            "loopMaxIterations": 2,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_when_max_is_zero() {
+        // Corrupt frame: hasLoop:true with a zero cap. LoopState::new rejects
+        // max == 0 (a zero-cap loop would render a misleading "↻ 1/0"), so the
+        // parser routes this to None via the zero-cap warn branch.
+        let v = json!({
+            "sessionId": "stu",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review",
+            "status": {"type": "working"},
+            "hasLoop": true,
+            "loopIteration": 0,
+            "loopMaxIterations": 0,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_clamps_over_cap_iteration() {
+        // A well-formed but over-cap frame (iteration >= max) is a Kiro-
+        // semantics question, not corruption: LoopState clamps iteration to
+        // max-1 so the badge never renders past the cap (here "↻ 2/2").
+        let v = json!({
+            "sessionId": "vwx",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review",
+            "status": {"type": "working"},
+            "hasLoop": true,
+            "loopIteration": 99,
+            "loopMaxIterations": 2,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        let loop_state = info.loop_state().expect("over-cap frame still loops");
+        assert_eq!(loop_state.iteration(), 1, "iteration clamped to max-1");
+        assert_eq!(loop_state.display_iteration(), 2, "displays clamped 2/2");
+        assert_eq!(loop_state.max_iterations(), 2);
+    }
+
+    #[test]
+    fn parse_subagent_entry_empty_stage_name_is_none() {
+        // An empty `name` string must not reach the UI as a blank stage label.
+        let v = json!({
+            "sessionId": "mno",
+            "sessionName": "writer",
+            "agentName": "kiro_default",
+            "initialQuery": "q",
+            "status": {"type": "working"},
+            "name": "",
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.stage_name(), None);
     }
 }

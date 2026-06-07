@@ -49,6 +49,10 @@ pub struct UiState {
     session_label: Option<String>,
     current_mode: Option<String>,
     current_model: Option<String>,
+    /// Thinking-effort level for the toolbar (Kiro 2.5.0+). Sticky: only
+    /// updated when a metadata frame reports it (frames mid-turn may omit it),
+    /// and reset on session change.
+    effort: Option<EffortLevel>,
     context_usage: Option<f64>,
     credit_usage: Option<(f64, f64)>,
     last_turn: Option<cyril_core::types::TurnSummary>,
@@ -137,6 +141,10 @@ impl TuiState for UiState {
 
     fn current_model(&self) -> Option<&str> {
         self.current_model.as_deref()
+    }
+
+    fn effort(&self) -> Option<EffortLevel> {
+        self.effort
     }
 
     fn context_usage(&self) -> Option<f64> {
@@ -230,6 +238,7 @@ impl UiState {
             session_label: None,
             current_mode: None,
             current_model: None,
+            effort: None,
             context_usage: None,
             credit_usage: None,
             last_turn: None,
@@ -270,7 +279,13 @@ impl UiState {
                 true
             }
             Notification::AgentThought(thought) => {
-                self.streaming_thought = Some(thought.text.clone());
+                // Thought chunks stream as token-deltas (mirroring AgentMessage),
+                // so accumulate them — overwriting would show only the last token.
+                // Kept transient: cleared at the turn boundary by commit_streaming,
+                // never committed to the message list.
+                self.streaming_thought
+                    .get_or_insert_with(String::new)
+                    .push_str(&thought.text);
                 true
             }
             Notification::UserMessage(msg) => {
@@ -333,11 +348,18 @@ impl UiState {
                 context_usage,
                 metering,
                 tokens,
+                effort,
             } => {
                 self.context_usage = Some(context_usage.percentage());
                 self.pending_tokens = tokens.clone();
                 if let Some(m) = metering {
                     self.pending_metering = Some(m.clone());
+                }
+                // Sticky: a frame that omits effort means "no update", not
+                // "cleared" — context-only frames interleave with effort frames
+                // mid-turn, so overwriting with None would make it flicker.
+                if let Some(e) = effort {
+                    self.effort = Some(*e);
                 }
                 true
             }
@@ -426,6 +448,9 @@ impl UiState {
                 if let Some(model) = current_model {
                     self.current_model = Some(model.clone());
                 }
+                // Effort is per-session and re-reported by the new session's
+                // metadata; reset so a prior session's level doesn't linger.
+                self.effort = None;
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
@@ -466,7 +491,9 @@ impl UiState {
             }
             Notification::ConfigOptionsUpdated(options) => {
                 if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
-                    self.current_model = model_opt.value.clone();
+                    // Route through set_current_model so the "clear effort on a
+                    // real model change" invariant lives in exactly one place.
+                    self.set_current_model(model_opt.value.clone());
                     true
                 } else {
                     false
@@ -626,7 +653,17 @@ impl UiState {
     }
 
     /// Set the current model name (displayed in toolbar).
+    ///
+    /// All model mutations route through here, so the "clear effort on a real
+    /// model change" invariant lives in exactly one place: effort is
+    /// model-scoped (a non-thinking model never reports it), so a real change
+    /// must drop any stale level — re-reported by the new model's metadata if
+    /// it thinks. Absent that, switching e.g. Opus→Haiku would leave the
+    /// toolbar showing a phantom level.
     pub fn set_current_model(&mut self, model: Option<String>) {
+        if self.current_model != model {
+            self.effort = None;
+        }
         self.current_model = model;
     }
 
@@ -1307,6 +1344,63 @@ mod tests {
         assert!(changed);
         assert_eq!(state.streaming_text(), "hello ");
         assert_eq!(state.activity(), Activity::Streaming);
+    }
+
+    #[test]
+    fn apply_agent_thought_accumulates_deltas() {
+        let mut state = UiState::new(500);
+        // Thought chunks arrive as token-deltas, mirroring agent_message_chunk.
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "I'm".into(),
+        }));
+        let changed = state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: " working".into(),
+        }));
+        assert!(changed);
+        // Must accumulate, not overwrite with only the latest delta.
+        assert_eq!(state.streaming_thought(), Some("I'm working"));
+    }
+
+    #[test]
+    fn agent_thought_is_transient_and_clears_on_turn_end() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "reasoning...".into(),
+        }));
+        assert_eq!(state.streaming_thought(), Some("reasoning..."));
+        // Thinking is a transient preview: it clears at the turn boundary and is
+        // never committed to scrollback (unlike agent message text).
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert_eq!(state.streaming_thought(), None);
+        assert!(
+            state.messages().is_empty(),
+            "thinking must not commit to the message list"
+        );
+    }
+
+    #[test]
+    fn agent_thought_starts_fresh_on_next_turn() {
+        // After a turn boundary clears the buffer, the next turn's first thought
+        // must start clean — not concatenate onto the prior turn's reasoning.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "turn one".into(),
+        }));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert_eq!(state.streaming_thought(), None);
+
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "turn two".into(),
+        }));
+        assert_eq!(
+            state.streaming_thought(),
+            Some("turn two"),
+            "next turn must not carry over the prior turn's thought"
+        );
     }
 
     #[test]
@@ -2442,6 +2536,104 @@ mod tests {
         assert!(state.activity_elapsed().is_some());
     }
 
+    #[test]
+    fn effort_is_sticky_across_omitting_frames_and_resets_on_new_session() {
+        let mut state = UiState::new(500);
+        assert_eq!(state.effort(), None);
+
+        // A thinking turn reports effort.
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(7.5),
+            metering: None,
+            tokens: None,
+            effort: Some(EffortLevel::High),
+        });
+        assert_eq!(state.effort(), Some(EffortLevel::High));
+
+        // A context-only frame mid-turn omits effort — must NOT clear it.
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(8.0),
+            metering: None,
+            tokens: None,
+            effort: None,
+        });
+        assert_eq!(
+            state.effort(),
+            Some(EffortLevel::High),
+            "omitted effort must be sticky"
+        );
+
+        // A new session resets effort (re-reported by the new session if any).
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![],
+            available_models: vec![],
+        });
+        assert_eq!(state.effort(), None, "new session clears stale effort");
+    }
+
+    #[test]
+    fn effort_clears_on_model_change_within_a_session() {
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("opus".into()));
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(7.5),
+            metering: None,
+            tokens: None,
+            effort: Some(EffortLevel::High),
+        });
+        assert_eq!(state.effort(), Some(EffortLevel::High));
+
+        // Switching to a non-thinking model (no new session) must clear effort,
+        // otherwise the toolbar shows a phantom level the new model never reports.
+        state.apply_notification(&Notification::ConfigOptionsUpdated(vec![ConfigOption {
+            key: "model".into(),
+            label: "Model".into(),
+            value: Some("haiku".into()),
+            options: vec![],
+        }]));
+        assert_eq!(state.effort(), None, "model change must clear stale effort");
+
+        // Re-reporting the *same* model must not disturb a freshly-set level.
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(8.0),
+            metering: None,
+            tokens: None,
+            effort: Some(EffortLevel::Medium),
+        });
+        state.set_current_model(Some("haiku".into()));
+        assert_eq!(
+            state.effort(),
+            Some(EffortLevel::Medium),
+            "unchanged model must not clear effort"
+        );
+    }
+
+    #[test]
+    fn effort_clears_when_set_current_model_changes_model() {
+        // The set_current_model path (Kiro's model-command workaround) must
+        // clear effort on a real model change, mirroring the ConfigOptionsUpdated
+        // path — otherwise switching models leaves a phantom toolbar level.
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("opus".into()));
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(7.5),
+            metering: None,
+            tokens: None,
+            effort: Some(EffortLevel::High),
+        });
+        assert_eq!(state.effort(), Some(EffortLevel::High));
+
+        state.set_current_model(Some("haiku".into()));
+        assert_eq!(
+            state.effort(),
+            None,
+            "set_current_model with a different model must clear effort"
+        );
+    }
+
     // --- TurnSummary buffer assembly tests ---
 
     #[test]
@@ -2452,6 +2644,7 @@ mod tests {
             context_usage: ContextUsage::new(50.0),
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
+            effort: None,
         });
         assert!(
             state.last_turn().is_none(),
@@ -2482,6 +2675,7 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.01, None)),
             tokens: None,
+            effort: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
@@ -2510,6 +2704,7 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.02, Some(1000))),
             tokens: None,
+            effort: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
@@ -2520,6 +2715,7 @@ mod tests {
             context_usage: ContextUsage::new(20.0),
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: None,
+            effort: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
@@ -2537,6 +2733,7 @@ mod tests {
             context_usage: ContextUsage::new(10.0),
             metering: Some(TurnMetering::new(0.05, Some(2000))),
             tokens: None,
+            effort: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,

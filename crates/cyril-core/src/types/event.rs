@@ -2,8 +2,8 @@ use crate::types::command::{CommandInfo, ConfigOption};
 use crate::types::message::{AgentMessage, AgentThought, UserMessage};
 use crate::types::plan::Plan;
 use crate::types::session::{
-    CompactionPhase, ContextUsage, ModeId, ModelInfo, SessionId, SessionMode, StopReason,
-    TokenCounts, TurnMetering,
+    CompactionPhase, ContextUsage, EffortLevel, ModeId, ModelInfo, SessionId, SessionMode,
+    StopReason, TokenCounts, TurnMetering,
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 
@@ -59,6 +59,11 @@ pub enum Notification {
         context_usage: ContextUsage,
         metering: Option<TurnMetering>,
         tokens: Option<TokenCounts>,
+        /// Thinking-effort level reported under thinking models (Kiro 2.5.0+).
+        /// `None` when the metadata frame omits it — which happens on
+        /// non-thinking models and (observed) mid-turn on context-only frames,
+        /// so consumers must treat absence as "no update", not "cleared".
+        effort: Option<EffortLevel>,
     },
     /// ACP `usage_update` session notification (unstable_session_usage).
     /// Carries absolute token counts rather than the percentage from
@@ -382,16 +387,19 @@ mod tests {
             context_usage: ContextUsage::new(75.0),
             metering: None,
             tokens: None,
+            effort: Some(EffortLevel::High),
         };
         if let Notification::MetadataUpdated {
             context_usage,
             metering,
             tokens,
+            effort,
         } = n
         {
             assert!((context_usage.percentage() - 75.0).abs() < f64::EPSILON);
             assert!(metering.is_none());
             assert!(tokens.is_none());
+            assert_eq!(effort, Some(EffortLevel::High));
         } else {
             panic!("wrong variant");
         }

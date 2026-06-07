@@ -803,10 +803,7 @@ async fn run_bridge(
                     }
                 };
                 match conn
-                    .ext_method(acp::ExtRequest::new(
-                        "kiro.dev/session/terminate",
-                        raw_arc,
-                    ))
+                    .ext_method(acp::ExtRequest::new("kiro.dev/session/terminate", raw_arc))
                     .await
                 {
                     Ok(_) => {
