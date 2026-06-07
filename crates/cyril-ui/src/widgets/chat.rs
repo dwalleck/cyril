@@ -37,12 +37,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 
     // Render streaming thought
     if let Some(thought) = state.streaming_thought() {
-        lines.push(Line::styled(
-            format!("💭 {thought}"),
-            Style::default()
-                .fg(palette::MUTED_GRAY)
-                .add_modifier(Modifier::ITALIC),
-        ));
+        push_thought_lines(&mut lines, thought);
     }
 
     // Activity indicator — visible in the chat area when the agent is busy
@@ -152,6 +147,24 @@ fn render_subagent_drill_in(
     }
 }
 
+/// Render a (possibly multi-line) agent thought block as muted italic lines.
+/// The 💭 marker prefixes the first line; continuation lines are indented to
+/// align under it, because accumulated thoughts span multiple physical lines
+/// and a single `Line` would not break on embedded newlines.
+fn push_thought_lines(lines: &mut Vec<Line>, text: &str) {
+    let style = Style::default()
+        .fg(palette::MUTED_GRAY)
+        .add_modifier(Modifier::ITALIC);
+    for (i, segment) in text.lines().enumerate() {
+        let rendered = if i == 0 {
+            format!("💭 {segment}")
+        } else {
+            format!("   {segment}")
+        };
+        lines.push(Line::styled(rendered, style));
+    }
+}
+
 fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
     match msg.kind() {
         ChatMessageKind::UserText(text) => {
@@ -176,12 +189,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
             lines.extend(md_lines);
         }
         ChatMessageKind::Thought(text) => {
-            lines.push(Line::styled(
-                format!("💭 {text}"),
-                Style::default()
-                    .fg(palette::MUTED_GRAY)
-                    .add_modifier(Modifier::ITALIC),
-            ));
+            push_thought_lines(lines, text);
         }
         ChatMessageKind::ToolCall(tc) => {
             render_tool_call(lines, tc);
