@@ -93,14 +93,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
             ),
             Span::styled(status_text, Style::default().fg(Color::DarkGray)),
         ];
-        // Review-loop badge (Kiro 2.5.0+). `iteration` is 0-based on the wire,
-        // so display it 1-based: "↻ 1/2" on the first pass, "↻ 2/2" after a
-        // loop-back.
+        // Review-loop badge (Kiro 2.5.0+): "↻ 1/2" on the first pass, "↻ 2/2"
+        // after a loop-back. `display_iteration` owns the 0-based-wire →
+        // 1-based-display conversion (see `LoopState::iteration`).
         if let Some(loop_state) = info.loop_state() {
             spans.push(Span::styled(
                 format!(
                     "  ↻ {}/{}",
-                    loop_state.iteration().saturating_add(1),
+                    loop_state.display_iteration(),
                     loop_state.max_iterations()
                 ),
                 Style::default().fg(Color::Magenta),
@@ -252,6 +252,38 @@ mod tests {
         assert!(
             text.contains("↻ 1/2"),
             "expected first-pass badge '↻ 1/2', got buffer:\n{text}"
+        );
+    }
+
+    #[test]
+    fn render_clamps_over_cap_loop_badge() {
+        // An over-cap wire frame (iteration ≥ max) must not render past the
+        // cap: LoopState clamps iteration to max-1, so iteration 99 with max 2
+        // displays as "↻ 2/2", never "↻ 100/2". This ties the type-level clamp
+        // to the displayed badge end-to-end (clamp + the 1-based conversion).
+        let mut state = MockTuiState::default();
+        let notif = cyril_core::types::Notification::SubagentListUpdated {
+            subagents: vec![make_looping("s1", "checker", 99, 2)],
+            pending_stages: vec![],
+        };
+        state.subagent_tracker.apply_notification(&notif);
+
+        let backend = TestBackend::new(80, 10);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| {
+                render(frame, frame.area(), &state);
+            })
+            .expect("draw should succeed");
+
+        let text = buffer_text(&terminal, 80, 10);
+        assert!(
+            text.contains("↻ 2/2"),
+            "expected clamped badge '↻ 2/2', got buffer:\n{text}"
+        );
+        assert!(
+            !text.contains("100"),
+            "over-cap iteration leaked into the badge:\n{text}"
         );
     }
 

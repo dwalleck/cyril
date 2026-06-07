@@ -491,15 +491,9 @@ impl UiState {
             }
             Notification::ConfigOptionsUpdated(options) => {
                 if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
-                    if self.current_model != model_opt.value {
-                        // effort is model-scoped: a non-thinking model never
-                        // reports it, so a real model change must clear any
-                        // stale level (re-reported by the new model's metadata
-                        // if it thinks). Absent that, switching e.g. Opus→Haiku
-                        // would leave the toolbar showing a phantom level.
-                        self.effort = None;
-                    }
-                    self.current_model = model_opt.value.clone();
+                    // Route through set_current_model so the "clear effort on a
+                    // real model change" invariant lives in exactly one place.
+                    self.set_current_model(model_opt.value.clone());
                     true
                 } else {
                     false
@@ -659,11 +653,15 @@ impl UiState {
     }
 
     /// Set the current model name (displayed in toolbar).
+    ///
+    /// All model mutations route through here, so the "clear effort on a real
+    /// model change" invariant lives in exactly one place: effort is
+    /// model-scoped (a non-thinking model never reports it), so a real change
+    /// must drop any stale level — re-reported by the new model's metadata if
+    /// it thinks. Absent that, switching e.g. Opus→Haiku would leave the
+    /// toolbar showing a phantom level.
     pub fn set_current_model(&mut self, model: Option<String>) {
         if self.current_model != model {
-            // effort is model-scoped; clear it on a real model change so a
-            // non-thinking model doesn't keep showing a stale level (see the
-            // ConfigOptionsUpdated handler for the same invariant).
             self.effort = None;
         }
         self.current_model = model;

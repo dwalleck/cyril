@@ -40,9 +40,18 @@ impl LoopState {
 
     /// Current loop iteration. Observed 0-based on the wire (the first pass is
     /// 0); see docs/kiro-2.5.0-wire-audit.md. Re-verify if the displayed count
-    /// ever looks off-by-one against Kiro's own TUI.
+    /// ever looks off-by-one against Kiro's own TUI. For display, prefer
+    /// [`Self::display_iteration`] so the 0-based→1-based conversion lives here.
     pub fn iteration(&self) -> u32 {
         self.iteration
+    }
+
+    /// The 1-based iteration to show in the UI ("↻ 1/2" on the first pass).
+    /// Centralizes the 0-based-wire → 1-based-display conversion so every
+    /// consumer renders the same value. Saturating, though `iteration` is
+    /// clamped to `max_iterations - 1` at construction so it never overflows.
+    pub fn display_iteration(&self) -> u32 {
+        self.iteration.saturating_add(1)
     }
 
     /// The `max_iterations` safety cap configured for the loop.

@@ -89,8 +89,8 @@ fn parse_subagent_entry(v: &serde_json::Value) -> Option<SubagentInfo> {
 
     // Review-loop progress (Kiro 2.5.0+). Only model loop_state when the stage
     // actually has a loop — `hasLoop: false` leaves it None so "looping" and
-    // "not looping" can't be confused (the iteration/max counters are present
-    // but meaningless when hasLoop is false).
+    // "not looping" can't be confused (the iteration/max counters, if present,
+    // are meaningless when hasLoop is false).
     let loop_state = if v.get("hasLoop").and_then(|h| h.as_bool()).unwrap_or(false) {
         // hasLoop is true, so both counters are expected. If either is missing
         // or non-numeric the frame is corrupt — log and emit no badge rather
@@ -219,11 +219,22 @@ pub(crate) fn to_ext_notification(
             // Thinking-effort level (Kiro 2.5.0+), present only under thinking
             // models. `EffortLevel::from_wire` maps the closed wire set and
             // returns None for empty/unrecognized values, so "" never reaches
-            // the UI as a level.
-            let effort = params
-                .get("effort")
-                .and_then(|e| e.as_str())
-                .and_then(EffortLevel::from_wire);
+            // the UI as a level. An absent field is normal (non-thinking model);
+            // a present-but-non-string field is corrupt, so warn rather than
+            // silently degrading to None (distinguish missing from corrupt).
+            let effort = match params.get("effort") {
+                None => None,
+                Some(e) => match e.as_str() {
+                    Some(s) => EffortLevel::from_wire(s),
+                    None => {
+                        tracing::warn!(
+                            effort = ?e,
+                            "metadata `effort` present but not a string, ignoring"
+                        );
+                        None
+                    }
+                },
+            };
 
             Ok(Some(Notification::MetadataUpdated {
                 context_usage: ContextUsage::new(pct),
@@ -744,6 +755,66 @@ mod tests {
         });
         let info = parse_subagent_entry(&v).expect("entry should parse");
         assert_eq!(info.loop_state(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_when_counters_non_numeric() {
+        // Corrupt frame: hasLoop:true but a counter is the wrong JSON type
+        // (string instead of number). `as_u64()` yields None, so this must be
+        // treated as corrupt and emit no loop_state — not silently become 1/0.
+        let v = json!({
+            "sessionId": "pqr",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review",
+            "status": {"type": "working"},
+            "hasLoop": true,
+            "loopIteration": "two",
+            "loopMaxIterations": 2,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_no_loop_when_max_is_zero() {
+        // Corrupt frame: hasLoop:true with a zero cap. LoopState::new rejects
+        // max == 0 (a zero-cap loop would render a misleading "↻ 1/0"), so the
+        // parser routes this to None via the zero-cap warn branch.
+        let v = json!({
+            "sessionId": "stu",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review",
+            "status": {"type": "working"},
+            "hasLoop": true,
+            "loopIteration": 0,
+            "loopMaxIterations": 0,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        assert_eq!(info.loop_state(), None);
+    }
+
+    #[test]
+    fn parse_subagent_entry_clamps_over_cap_iteration() {
+        // A well-formed but over-cap frame (iteration >= max) is a Kiro-
+        // semantics question, not corruption: LoopState clamps iteration to
+        // max-1 so the badge never renders past the cap (here "↻ 2/2").
+        let v = json!({
+            "sessionId": "vwx",
+            "sessionName": "checker",
+            "agentName": "kiro_default",
+            "initialQuery": "review",
+            "status": {"type": "working"},
+            "hasLoop": true,
+            "loopIteration": 99,
+            "loopMaxIterations": 2,
+        });
+        let info = parse_subagent_entry(&v).expect("entry should parse");
+        let loop_state = info.loop_state().expect("over-cap frame still loops");
+        assert_eq!(loop_state.iteration(), 1, "iteration clamped to max-1");
+        assert_eq!(loop_state.display_iteration(), 2, "displays clamped 2/2");
+        assert_eq!(loop_state.max_iterations(), 2);
     }
 
     #[test]

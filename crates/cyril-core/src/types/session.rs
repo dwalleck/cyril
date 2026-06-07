@@ -480,6 +480,23 @@ mod tests {
     }
 
     #[test]
+    fn effort_level_wire_roundtrips_all_variants() {
+        // Every known level must round-trip wire → variant → wire (== display).
+        // `xhigh` is the historically-common thinking default, so pin it too.
+        for s in ["low", "medium", "high", "xhigh", "max"] {
+            let level = EffortLevel::from_wire(s).expect("known level parses");
+            assert_eq!(level.as_str(), s, "as_str must invert from_wire");
+            assert_eq!(format!("{level}"), s, "Display must match wire string");
+        }
+    }
+
+    #[test]
+    fn effort_level_from_wire_rejects_empty_and_unknown() {
+        assert_eq!(EffortLevel::from_wire(""), None, "empty => None");
+        assert_eq!(EffortLevel::from_wire("turbo"), None, "unknown => None");
+    }
+
+    #[test]
     fn session_status_default_is_disconnected() {
         let status = SessionStatus::default();
         assert_eq!(status, SessionStatus::Disconnected);

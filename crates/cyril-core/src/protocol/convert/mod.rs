@@ -667,6 +667,19 @@ mod tests {
     }
 
     #[test]
+    fn to_ext_notification_metadata_non_string_effort_is_none() {
+        // A present-but-non-string effort field is corrupt (warned, not silent)
+        // and must not surface as a badge.
+        let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": 5});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
+            assert_eq!(effort, None);
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
     fn parse_metadata_with_metering() {
         let params = serde_json::json!({
             "sessionId": "s1",

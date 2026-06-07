@@ -61,9 +61,8 @@ pub enum Notification {
         tokens: Option<TokenCounts>,
         /// Thinking-effort level reported under thinking models (Kiro 2.5.0+).
         /// `None` when the metadata frame omits it — which happens on
-        /// non-thinking models and may also happen mid-turn (e.g. context-only
-        /// frames), so consumers must treat absence as "no update", not
-        /// "cleared".
+        /// non-thinking models and (observed) mid-turn on context-only frames,
+        /// so consumers must treat absence as "no update", not "cleared".
         effort: Option<EffortLevel>,
     },
     /// ACP `usage_update` session notification (unstable_session_usage).
