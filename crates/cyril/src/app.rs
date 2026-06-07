@@ -28,10 +28,13 @@ pub struct App {
     commands: CommandRegistry,
     redraw_needed: bool,
     last_activity: Instant,
+    /// The cwd kiro-cli was spawned in — used to resolve the active agent's
+    /// workspace config (`<cwd>/.kiro/agents/`) when persisting trust grants.
+    cwd: PathBuf,
 }
 
 impl App {
-    pub fn new(bridge: BridgeHandle, max_messages: usize) -> Self {
+    pub fn new(bridge: BridgeHandle, max_messages: usize, cwd: PathBuf) -> Self {
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
         let commands = CommandRegistry::with_builtins();
         let info: Vec<(String, Option<String>)> = commands
@@ -59,6 +62,7 @@ impl App {
             commands,
             redraw_needed: true,
             last_activity: Instant::now(),
+            cwd,
         }
     }
 
@@ -521,9 +525,44 @@ impl App {
         match key.code {
             KeyCode::Up => self.ui_state.approval_select_prev(),
             KeyCode::Down => self.ui_state.approval_select_next(),
-            KeyCode::Enter => self.ui_state.approval_confirm(),
+            KeyCode::Enter => {
+                // A confirmed trust tier (phase 2) returns the chosen option so
+                // we can persist it across sessions to the active agent's config.
+                if let Some(trust) = self.ui_state.approval_confirm() {
+                    self.persist_trust_grant(&trust);
+                }
+            }
             KeyCode::Esc => self.ui_state.approval_cancel(),
             _ => {}
+        }
+    }
+
+    /// Persist a granted trust tier to the active agent's config file so it
+    /// survives across sessions. The session-scoped grant has already been sent;
+    /// this write is best-effort and non-fatal. Built-in agents and agents with
+    /// no on-disk config are intentionally skipped (logged at debug).
+    fn persist_trust_grant(&self, trust: &cyril_core::types::TrustOption) {
+        use cyril_core::kiro_agent_config::{TrustPersistError, persist_trust_grant};
+
+        let Some(agent) = self.session.current_mode_id() else {
+            tracing::debug!("no active agent identity; trust grant not persisted");
+            return;
+        };
+        match persist_trust_grant(
+            agent.as_str(),
+            &self.cwd,
+            &trust.setting_key,
+            &trust.patterns,
+        ) {
+            Ok(path) => {
+                tracing::info!(path = %path.display(), "persisted trust grant across sessions")
+            }
+            Err(e @ (TrustPersistError::BuiltinAgent(_) | TrustPersistError::NoConfig(_))) => {
+                // Expected for the default/built-in agents and ad-hoc agents
+                // without a config file — session-scoped trust still applies.
+                tracing::debug!(reason = %e, "trust grant not persisted");
+            }
+            Err(e) => tracing::warn!(error = %e, "failed to persist trust grant"),
         }
     }
 
