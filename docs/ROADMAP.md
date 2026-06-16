@@ -171,7 +171,7 @@ KAS **never sends `kiro.dev/subagent/list_update`** — cyril's `SubagentTracker
 Unlike v2 (where `configOptions` was always `null`), KAS populates it:
 
 - Surface `configOptions`: `mode` (vibe / spec / quick-spec / bug-fix / plan / autonomous / semantic_reviewer), `autopilot` (on / Supervised), `contentCollection`. The existing mode picker generalizes to these; `autopilot` is a session-level permission posture cyril can expose directly instead of mediating per-tool approvals.
-- Probe and wire `session/set_config_option` (the *set* direction is unverified; `config_option_update` is emitted but round-trip is untested — gate behind the probe result).
+- Wire `session/set_config_option` — **verified working** (2026-06-16): request `{sessionId, configId, value}`, returns the rebuilt `configOptions` (the source of truth — **no `config_option_update` notification fires on set**, so read the response). Caveat: invalid values are silently coerced, not rejected (`autopilot="bogus"` → `"off"`), so cyril should constrain `value` to the advertised option ids client-side.
 
 ### KAS-5 — Filesystem-callback responder (first real proxy-stage hook)
 
@@ -183,6 +183,21 @@ KAS is the first Kiro engine to call ACP `fs/*` callbacks, and it is **capabilit
 - This is the first place cyril can interpose on a Kiro agent's file operations — the natural home for audit, org write-policy, and Windows/WSL path translation as a **stage** rather than ad-hoc TUI code. Build it as/with `crates/cyril-stages/` (Phase 2) rather than inline in the bridge.
 
 **Non-goals:** replicating KAS's spec/quick-spec workflow UIs verbatim; exposing `--v3`/the gated `chat` TUI; treating `_kiro/*` as a vendor-neutral abstraction (it's Kiro-specific — generalize only if ACP standardizes equivalents, per Open Tension #2). The `_kiro/session/{context,compact,export,history,fork,list}` methods are advertised but unprobed — out of scope until a concrete UX needs them.
+
+## Vendor-neutral client features (candidates)
+
+Small client-side UX features that key off **standard ACP** (not a vendor extension), so they work across every registered agent. Independent of the platform phases and the vendor tracks.
+
+### CN1 — Notify on pending approval
+
+**Estimate:** small (~2–4 days).
+**Depends on:** nothing — `session/request_permission` already drives cyril's approval overlay.
+
+Fire a user-attention signal (terminal bell / OS notification, configurable) when a `session/request_permission` is pending and the TUI isn't focused (or after a short idle delay), and clear it on response. Lets the user walk away from a long turn and get pulled back exactly when the agent is blocked on them.
+
+- **Why it's a cyril feature, not a hook:** verified 2026-06-16 that KAS's `HookTrigger` enum has exactly 11 values with **no `Notification`/permission/`WaitingForApproval` trigger** — you can *gate* a permission decision with a `PreToolUse` hook but cannot get a hook that fires *when the agent pauses for you*. Kiro handles that notification at the protocol/client layer instead (`session/request_permission` + the agent's own `_kiro/system/notify`), and the agent-side notification is v2-TUI-only anyway (the Rust TUI's BEL/OSC-9, which cyril never receives — see the notifications research). So cyril is the right place to own this, and doing it generically covers every agent.
+- **Vendor-neutral:** `session/request_permission` is core ACP — this works for Claude, Codex, Kiro (any engine), etc., with no extension dependency.
+- **Scope:** a notifier keyed off the existing `PermissionRequest` → `UiState::show_approval()` path; settings for method (bell / OS notification / none) and trigger (always / only-when-unfocused / after-Ns-idle); clears on approve/deny/cancel. No new wire surface, no overlay/key-chain changes. Could later generalize to a turn-completion notification (the other thing Kiro's v2-TUI-only BEL does).
 
 ## Open tensions
 
