@@ -1,0 +1,220 @@
+# Kiro CLI 2.7.1 — ACP Wire Audit
+
+**Analyzed:** 2026-06-16 (build date 2026-06-15T23:57Z, hash `45f3dc59`, target `x86_64-unknown-linux-gnu`) · **Method:** fresh download + sha256-verified against `prod.download.cli.kiro.dev` manifest, `strings`/symbol inspection of `kiro-cli-chat`, live raw-JSON-RPC probes against both `acp` (default v2) and `acp --agent-engine kas`, and direct reading of the self-extracted `@kiro/agent` TypeScript `.d.ts` definitions.
+
+**Verdict for cyril:** **SAFE TO UPGRADE for the existing path — and a strategic inflection point.** Nothing on cyril's current `kiro-cli acp` (v2 engine) path changed shape. The headline is *additive and opt-in*: 2.7.1 is **the KAS landing** we have tracked since 2.3.0. KAS assets are now embedded in the binary and self-extract, and the KAS agent engine is **reachable and functional over ACP today** via `--agent-engine kas`. The interactive `chat` TUI gates KAS behind a staged-rollout switch, but the ACP surface — the one cyril uses — has no such gate.
+
+---
+
+## Headline: KAS is embedded and works over ACP
+
+Through 2.7.0, `--agent-engine kas` errored with "KAS assets not embedded." That error path is gone. 2.7.1 embeds the KAS server bundle inside `kiro-cli-chat` and self-extracts it on first KAS launch:
+
+- Binary strings: `extracting KAS bundle`, `KAS asset extraction complete`, sha-gated extract-on-first-run (`path does not exist, extracting` / `existing hash is different from embedded hash, extracting` / `asset does not need to be extracted` / `asset extracted successfully`).
+- Extraction target: **`~/.local/share/kiro-cli/kas/`** (verified: extracted on my first `acp --agent-engine kas` run). **801 MB** extracted — this is why the headless tarball jumped to 527 MB xz (from ~250–300 MB pre-KAS).
+- Launch env vars `KIRO_KAS_NODE_PATH` / `KIRO_KAS_SERVER_PATH`; server entry `node_modules/@kiro/agent/dist/server/acp-server.js`, run under node with `--experimental-wasm-modules` (cedar-wasm). bun is extracted separately and only for the v2 TUI.
+
+**Extracted bundle = `@kiro/agent` v0.3.224** (the IDE-extension reverse-engineering had 0.3.17 / 0.3.323). Stack:
+
+- **LangGraph-based agent**: `@langchain/langgraph` ^1.3.0, `@langchain/aws` ^1.3.7, `@langchain/core` ^1.1.45.
+- **Official ACP SDK**: `@agentclientprotocol/sdk` ^0.19.0 — NOT the `sacp` crate the Rust v1/v2 engines use. (Confirms the loose-on-disk IDE dist finding.)
+- **Cedar** policy engine: `@cedar-policy/cedar-wasm` ^4.9.1 (→ the `policyNotifications` capability and 2.6.1's `evaluate_url_permission`).
+- `@huggingface/transformers` ^3.4.1 (local embeddings — knowledge / codeIntelligence), `@kiro/sandbox-proxy` 0.3.224 (bubblewrap), `@modelcontextprotocol/sdk`, hono, grpc, opentelemetry, AWS codewhisperer-streaming + control/runtime-plane clients.
+
+---
+
+## The `--v3` flag and the "V3 not supported" gate
+
+`--v3` is a **hidden, `chat`-only convenience alias** for `--agent-engine=kas`:
+
+```
+--v3    Launch chat with the KAS agent engine (shorthand for --agent-engine=kas)
+```
+
+It only appears under `kiro-cli --help-all` (not plain help), is **rejected by `acp`** ("unexpected argument"), and is conditionally registered on `chat`.
+
+**The gate is frontend-only.** Verified asymmetry on x86_64-linux (glibc, CachyOS):
+
+| Invocation | Result |
+|---|---|
+| `chat --v3` / `chat --agent-engine kas` | **BLOCKED**: `V3 is currently not supported for your system` at `crates/chat-cli/src/cli/chat/mod.rs:5847` |
+| `acp --agent-engine kas` | **WORKS**: full `initialize` + `session/new` succeed |
+
+The word "currently" plus the working ACP path means this is a deliberate staged-rollout switch on the interactive v2 TUI, **not** a platform or missing-asset limitation. Cyril, which drives the ACP path, is unaffected by the gate.
+
+---
+
+## KAS ACP capability surface (vs v2)
+
+`initialize` against the KAS engine advertises (new/changed vs the v2 baseline documented in `docs/kiro-2.7.0-wire-audit.md`):
+
+- **Namespace = `_kiro/*`** (as predicted), not `_kiro.dev/*`. `extensionMethods`: `_kiro/knowledge`, `_kiro/codeIntelligence`, `_kiro/session/context`, `_kiro/session/compact`, `_kiro/session/export`, `_kiro/session/history`.
+- **`sessionCapabilities: { list: {}, fork: { _meta.kiro.messageId: true } }`** — non-empty. On v2 these were empty / unstable; KAS makes `session/list` and `session/fork` real.
+- `_meta.kiro`: `checkpoints: true`, `sessionList: true`, `policyNotifications: true`.
+- New per-run log dir: `~/.kiro/logs/<timestamp>/{kiro,mcp,powers}.log`.
+- `protocolVersion: 1`, prompt capabilities (image, embeddedContext), MCP http+sse — unchanged.
+
+### `session/new` is far richer than v2
+
+KAS returns `sess_<uuid>` session IDs (v2 used a bare uuid). Two big deltas:
+
+**1. `configOptions` is now POPULATED.** On every prior engine (v1.28 → 2.x v2) `configOptions` was *always `null`* and `session/set_config_option` returned "Method not found." KAS returns three live `select` options:
+
+| id | currentValue | options |
+|---|---|---|
+| `mode` | `vibe` | the 7 modes below |
+| `autopilot` | `on` | `on` (Autopilot — execute tools without confirmation) / `off` (Supervised — ask before file changes) |
+| `contentCollection` | `disabled` | `enabled` / `disabled` (service-improvement opt-out) |
+
+**2. Seven bundled modes** (vs v2's vibe/plan-ish):
+
+| id | name | description |
+|---|---|---|
+| `vibe` | Default | General coding assistance |
+| `spec` | Spec | Structured feature development |
+| `quick-spec` | Quick Spec | Fast spec workflow: clarify, then auto-generate requirements, design, and tasks |
+| `bug-fix` | Bug Fix | Structured bug-fix workflow: investigate, diagnose, resolve |
+| `plan` | Plan | Plan-only mode, no changes (welcomeMessage) |
+| `autonomous` | Autonomous | Autonomous execution; asks for a goal, auto-approves all tools except MCP, `/sandbox enable` (welcomeMessage) |
+| `semantic_reviewer` | semantic_reviewer | Behavioral-level code review, narrative organized by concern, local or PR diffs |
+
+`session/new` `_meta`: `schemaVersion: "1.0.0"`, `agentMode`, `workspacePaths`, `createdAt`/`lastModifiedAt`, `semanticReviewEnabled: true`, `ftaEnabled: false`.
+
+---
+
+## Subagent flows ARE changing under KAS
+
+v2's single Rust `agent_crew` tool (DAG-pipeline + summary + session — see `docs/kiro-subagent-tool-schemas.md`) is replaced by a LangGraph orchestration with a richer tool set. Authoritative from the bundle's `.d.ts`:
+
+**`InvokeSubAgent`** (`dist/tools/invoke-subagent.d.ts`) — invoke a single sub-agent execution nested in the parent's workspace context.
+- Input schema: `{ name, prompt, explanation, preset?: string|null, contextFiles?: [{path, startLine?, endLine?}] }` — note the ability to pass **file ranges** into the child (converted to synthetic `read_file` args).
+- **`MAX_CONCURRENT_SUBAGENTS = 5`** — per-parent concurrency semaphore, abort-aware (queued children don't linger after interruption).
+
+**`OrchestrateSubAgent`** (`dist/tools/orchestrate-subagent/`) — the direct successor to `agent_crew`'s DAG pipeline.
+- Input: `{ task, stages: [{ name, role, prompt_template, depends_on?: string[] }] }`.
+- "Executes them in parallel waves using InvokeSubAgent." Validates unique stage names + that all `depends_on` exist + **no cycles (Kahn's algorithm, `validateStages`/`hasCycles`)**.
+
+**`subagent_response`** (`dist/tools/subagent-response.d.ts`) — the tool a subagent calls as its **final action** to return `{ response, files?: [{path, startLine?, endLine?}] }` to the orchestrating parent; the files are pulled into the parent's context.
+
+**`createSubagentInvocationTools`** (`dist/tools/subagent-tool.d.ts`) — generates one tool per registered agent, named **`subagent/<agentId>`**, from a `CustomAgentRegistry`. Autonomous-mode planner/coder sub-agents use a structured input schema `{ user_instruction_verbatim, environmental_context?, explanation }` wrapped in XML framing blocks, with **framing-tag stripping as a prompt-injection defense**.
+
+**Bundled agents** (`dist/bundled-agents/index.d.ts`): `getBundledAgentDefinitions(semanticReviewEnabled, ftaEnabled)` returns the built-in profiles (semantic_reviewer is one; gated by `semanticReviewEnabled`, which was `true`).
+
+### The agent loop is a LangGraph StateGraph
+
+`dist/graphs/`: `chat-agent-graph` (main loop), `custom-agent-graph` (sub-agent loop), `consume-queued-steering`, `context-overflow-handler`, `inject-todo-context`.
+`dist/nodes/`: `context-reset`, `failure-detection`, `intent-detection`, `invoke-spec-agent`, `populate-steering`, `post-tool-steering`, `summarization-detection`, `summarization`, `user-hook`, `user-intervention`.
+
+Notably, **2.7.0's queue-steering wire feature is realized here as graph nodes** (`populate-steering` / `post-tool-steering` / `consume-queued-steering`), draining at tool boundaries — consistent with the 2.7.0 finding that steering drains at tool boundaries.
+
+---
+
+## KAS auth contract: the host must supply the token (verified live)
+
+Unlike v2 (which reads its own auth store), **KAS makes the ACP host provide the bearer token.** Verified by running a full authenticated turn:
+
+- KAS uses `AcpCallbackAuthProvider` and issues a server→client request **`_kiro/auth/getAccessToken`** (params `{}`).
+- The host must reply **`{ accessToken, expiresAt, profileArn, provider? }`**:
+  - `accessToken` required — empty/missing → turn dies with `agent_message_chunk` "[TokenInvalidError] … Host refresh callback returned no access token".
+  - `expiresAt` parsed by `new Date(t).valueOf()`; must be > `now + ~3min` or it throws `malformed expiresAt` / `token already expired`.
+  - **`profileArn` required in practice** — without it the backend 400s mid-turn: "profileArn is required for this request." (KAS logs "Hosts SHOULD include profileArn so KAS can route region.")
+- `kiro-cli-chat acp --agent-engine kas` does **not** self-answer this — it forwards to the topmost ACP client. There is no `--token-path` / fallback on the acp path in 2.7.1.
+- The token lives in kiro's own store: `~/.local/share/kiro-cli/data.sqlite3`, table `auth_kv`, key `kirocli:social:token` → `{access_token, expires_at, refresh_token, profile_arn, provider}`. It refreshes on use (an idle token expires; any authenticated `kiro-cli` op re-mints it).
+
+**Cyril impact:** to drive KAS, cyril must implement an `_kiro/auth/getAccessToken` responder and source a live kiro token (reading kiro's credential store, refreshing as needed). This is a real integration dependency, not a passive one — it activates the dormant `_kiro/auth/getAccessToken` first seen in 2.6.1.
+
+---
+
+## KAS subagent wire format (verified live)
+
+**KAS does not use the v2 `kiro.dev/subagent/list_update` model at all** (zero occurrences in a turn that spawned two subagents). Instead, **subagents are ordinary ACP `tool_call`s tagged `_meta.kiro.kind: "agent-subtask"`**, linked by `agentSubtaskId`. Lifecycle for one subagent (model chose parallel `InvokeSubAgent`, not `OrchestrateSubAgent`):
+
+1. **Spawn** — `tool_call`:
+   ```json
+   { "sessionUpdate":"tool_call", "toolCallId":"invoke_subagent_tooluse_…",
+     "title":"Sub-agent: general-task-execution", "kind":"other", "status":"pending",
+     "rawInput":{"name":"general-task-execution","prompt":"You are \"poet\"…","explanation":"…","contextFiles":[]},
+     "_meta":{"kiro":{"kind":"agent-subtask","agentSubtaskId":"invoke_subagent_tooluse_…"}} }
+   ```
+   `rawInput.name` selects the registered agent; the persona/role goes in `prompt`.
+2. **In progress** — `tool_call_update` `status:"in_progress"`; **`_meta.kiro.agentSubtaskId` rotates to the real child-execution UUID** (the join key for everything below).
+3. **Child returns** — a *separate* `tool_call_update`: `{ toolCallId:"tooluse_…", title:"Subagent Response", status:"completed", rawInput:{response, files:[]}, _meta.kiro:{agentSubtaskId:<childUUID>, toolOrigin:"acp"} }` (the child's `subagent_response` tool).
+4. **Parent completes** — `tool_call_update` on the `invoke_subagent_*` id, `status:"completed"`, `rawOutput:{ response, subExecutionId:<childUUID> }`.
+
+**Permission:** each spawn fires a standard `session/request_permission`: `{ toolCall:{toolCallId, title:"Invoke Agent"}, options:[accept|always-accept|reject|always-reject], _meta.kiro:{ toolId:"invoke_sub_agent", consent:{ capability:"subagent", resource:"<agentId>" } } }`.
+
+**New `session/update` variant `config_option_update`** echoes the full `configOptions` array mid-turn.
+
+**Cyril impact:** the current `SubagentTracker` + `crew_panel` (built on `list_update`) will see *nothing* under KAS. To render KAS crews, cyril groups `tool_call`s by `_meta.kiro.agentSubtaskId` and recognizes `kind:"agent-subtask"` + the `title:"Subagent Response"` child returns. They already render as opaque tool calls today; nested-crew UI is the only gap.
+
+---
+
+## KAS filesystem callbacks (verified live) — capability-negotiated
+
+KAS is the **first Kiro engine to call ACP `fs/*` client callbacks** — but only when the host opts in. Two runs of a write-then-read-back task settled it:
+
+| Client `initialize` advertises | KAS behavior |
+|---|---|
+| `clientCapabilities.fs = {readTextFile, writeTextFile}` | Routes **all** file I/O through server→client `fs/*` callbacks (4 in the run: read-before-write, the write, two verifying reads). File created by the *host*. |
+| no `fs` capability (`{}`) | File I/O happens **in-process** (file created, **zero** callbacks) — identical to v1/v2. |
+
+The methods are the **public ACP names, not `_kiro/fs/*`** (the IDE dist had hinted at the private namespace):
+- `fs/read_text_file` — params `{sessionId, path, line?}` → reply `{content}`. (Reads do **not** require permission.)
+- `fs/write_text_file` — params `{sessionId, path, content}` → reply `{}`. (Writes fire `session/request_permission` with `_meta.kiro.consent: {capability:"fs_write", resource, askType:"implicit", workspaceRoot, consentRound}`.)
+
+The agent's own tool surface (`tool_call` "Write File" kind `edit`, "Read File" kind `read`) is unchanged; the `fs/*` callbacks are how those tools reach disk when the host owns the filesystem.
+
+**Cyril impact — opt-in, NOT a hard requirement.** This refines `reference_kiro_no_fs_callbacks` (true only while the client advertises nothing). Cyril can:
+- Keep advertising no fs capability → KAS does in-process I/O, **no new code needed** (KAS behaves like v2 here).
+- Opt in (advertise fs + implement `fs/read_text_file`/`fs/write_text_file` responders) → gain a real proxy-stage hook over every file op KAS performs (audit, org policy, WSL path translation). This is the first time a Kiro engine makes that interception possible.
+
+---
+
+## Cyril impact
+
+- **Passive compatibility:** unchanged. Cyril's default `kiro-cli acp` (v2 engine) wire shape is unaffected; the entire KAS surface is opt-in behind `--agent-engine kas`.
+- **KAS is adoptable now, not "when it lands."** Cyril can spawn `kiro-cli acp --agent-engine kas` today and bypass the TUI's "V3 not supported" gate entirely. Doing so unlocks: the `_kiro/*` extension namespace, real `session/fork` + `session/list`, populated `configOptions` (including `mode` and `autopilot`, which cyril could surface in its toolbar/pickers), and 7 modes.
+- **Two dialects to support.** KAS uses `_kiro/*`; the v1/v2 engines use `_kiro.dev/*` (now `_kiro/*` in tui.js per 2.7.0, but the backend ACP methods cyril handles are still `kiro.dev/*` / `_kiro.dev/*`). A KAS integration needs a parallel converter arm in `convert/kiro.rs` keyed on the engine.
+- **Subagent display changes** (now verified live — see the KAS subagent wire-format section). Under KAS, subagents are `tool_call`s with `_meta.kiro.kind:"agent-subtask"` grouped by `agentSubtaskId`, **not** `kiro.dev/subagent/list_update`. Cyril's `SubagentTracker`/crew panel see nothing on this path until they group by `agentSubtaskId`.
+- **`configOptions` populated** finally makes `session/set_config_option` plausibly functional under KAS — worth a round-trip probe before relying on it.
+
+---
+
+## Not verified this session (follow-ups)
+
+- **`session/set_config_option` round-trip** under KAS (does setting `autopilot`/`mode` take effect on the wire?). `config_option_update` is *emitted*; the set direction is untested.
+- The **`OrchestrateSubAgent` (DAG) wire shape** specifically — the model chose parallel `InvokeSubAgent` for my prompt; a task that forces staged dependencies would surface the orchestrator's own tool-call shape.
+- A **clean v2 baseline re-capture on 2.7.1** — the default engine did not respond to the piped init+session/new probe in this session (KAS did); v2 baseline here is taken from `docs/kiro-2.7.0-wire-audit.md`, not freshly re-captured.
+
+---
+
+## Reproduce
+
+```sh
+# Download + verify (manifest at prod.download.cli.kiro.dev/stable/latest/manifest.json)
+curl -o kirocli-2.7.1.tar.xz \
+  https://desktop-release.q.us-east-1.amazonaws.com/2.7.1/kirocli-x86_64-linux.tar.xz
+sha256sum kirocli-2.7.1.tar.xz   # f8d22bf104a74f50875503fd6425b10952155c1e7a09b8c1a4f4f3cdc0746ec6
+tar xf kirocli-2.7.1.tar.xz      # binaries under kirocli/bin/
+
+# The gate (interactive TUI) vs the working ACP path
+kirocli/bin/kiro-cli chat --v3                       # -> "V3 is currently not supported for your system" (mod.rs:5847)
+printf '%s\n%s\n' \
+ '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}' \
+ '{"jsonrpc":"2.0","id":1,"method":"session/new","params":{"cwd":"/tmp","mcpServers":[]}}' \
+ | kirocli/bin/kiro-cli-chat acp --agent-engine kas   # -> init + session/new succeed
+
+# KAS bundle self-extracts here on first run; read the .d.ts for authoritative schemas
+ls ~/.local/share/kiro-cli/kas/node_modules/@kiro/agent/dist/{graphs,nodes,tools,bundled-agents}
+cat ~/.local/share/kiro-cli/kas/node_modules/@kiro/agent/dist/tools/orchestrate-subagent/types.d.ts
+
+# Full authenticated turn that forces subagent orchestration and captures the wire.
+# Self-sources the bearer token from kiro's own auth store and answers
+# _kiro/auth/getAccessToken with {accessToken, expiresAt, profileArn}; the secret
+# never leaves the subprocess. Refresh first if idle: `kiro-cli whoami`.
+python3 experiments/conductor-spike/probe-kas-subagent-2.7.1.py
+#   -> logs/probe-kas-subagent-2.7.1.log : subagents arrive as tool_call with
+#      _meta.kiro.kind="agent-subtask", grouped by agentSubtaskId (NOT list_update)
+```
+
+Binary archived at `~/.local/share/kiro-research/binaries/2.7.1/`.
