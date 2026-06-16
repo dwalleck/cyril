@@ -215,6 +215,28 @@ The agent's own tool surface (`tool_call` "Write File" kind `edit`, "Read File" 
 
 ---
 
+## KAS host-responsibility callback map (verified live)
+
+A single turn (write a file + run a shell command + delete + open a URL) with the client advertising `clientCapabilities { fs: {readTextFile, writeTextFile}, terminal: true }` produced the definitive set of **server→client callbacks a host must service to drive KAS**. This is tighter than the ~45-method bundle surface — most of those are client→server methods or situational.
+
+**Core contract for a coding turn:**
+
+| Callback | Direction / shape | Required? |
+|---|---|---|
+| `_kiro/auth/getAccessToken` | `{}` → `{accessToken, expiresAt, profileArn}` | **always** — turn dies without (see auth-contract section) |
+| `_kiro/terminal/shell_type` | `{sessionId}` → `{shellType}` (`bash`/`zsh`/`fish`/`powershell`/`sh`) | fired at session setup; feeds the system prompt's `Shell:` line — an empty reply yields `Shell: undefined` |
+| `session/request_permission` | standard ACP | yes (cyril already implements it) — fires for writes/commands/deletes |
+| `fs/read_text_file` / `fs/write_text_file` | `{sessionId, path[, content]}` → `{content}` / `{}` | only if `fs` capability advertised (else in-process) |
+| `terminal/create` → `terminal/wait_for_exit` → `terminal/output` → `terminal/release` | create: `{sessionId, command, args[], cwd}` → `{terminalId}`; the rest key off `{terminalId}` | only if `terminal: true` advertised (else in-process) |
+
+**Shell execution is host-delegated via ACP `terminal/*`, exactly parallel to fs** — capability-gated on `terminal: true`. Advertise it and every command the agent runs flows through the `create → wait_for_exit → output → release` lifecycle on the host; omit it and KAS runs the shell in-process. `_kiro/terminal/shell_type` is its companion: KAS asks the host once, at session setup, which shell to assume.
+
+**Did NOT fire this turn (situational, despite having bundle handlers):** `_kiro/fs/{delete,stat}` (the delete tool resolved in-process), `_kiro/openExternalUrl` (the agent "fetched" the URL with an in-process web tool rather than asking the host to open it), `_kiro/system/notify`, `_kiro/userInput`. So a host can drive KAS end-to-end with just the five rows above; the rest are opt-in/edge surfaces.
+
+**Cyril impact:** cyril implements **none** of the `terminal/*` callbacks or `_kiro/terminal/shell_type` today, so it cannot host KAS shell unless it adds them (or deliberately omits the `terminal` capability and lets KAS run shell in-process). This is the same opt-in proxy-stage opportunity as fs, one layer up: owning `terminal/*` would let cyril audit/gate/translate every command KAS runs. Reproduced by `experiments/conductor-spike/probe-kas-callbacks-2.7.1.py`.
+
+---
+
 ## KAS session-management + account methods (verified live)
 
 The advertised `_kiro/session/*` methods all resolve, and the bundle handles several more than `initialize` advertises. Probed against a 1-turn KAS session:

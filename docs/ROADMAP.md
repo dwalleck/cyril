@@ -151,6 +151,7 @@ Make a plain KAS prompt turn render correctly. KAS's surface differs from v2 on 
 - A parallel converter arm (in `convert/kiro.rs`, or its Phase-1 successor module) keyed on the active engine: KAS emits `_kiro/*` notifications — `_kiro/tools/didChange`, `_kiro/mcp/status`, `_kiro/progressive_context/items_changed`, `_kiro/governance/state`, `_kiro/powers/items_changed`, `_kiro/steering/documents_changed` — plus `session/update` variants `session_info_update`, `available_commands_update`, `config_option_update`.
 - **Turn completion is signaled in a notification**, not the prompt response: `session_info_update` with `_meta.kiro.turnEnd.stopReason: "end_turn"`. Cyril's busy-state/turn-end logic must recognize this path (today it keys off the `session/prompt` response).
 - `sess_…`-prefixed session ids; non-empty `sessionCapabilities {list, fork}`; per-run log dirs under `~/.kiro/logs/<ts>/`.
+- **Answer `_kiro/terminal/shell_type`** (`{sessionId}` → `{shellType: "bash"|"zsh"|"fish"|"powershell"|"sh"}`) — KAS calls this once at session setup to fill the system prompt's `Shell:` line; a missing/empty reply yields `Shell: undefined`. It's the lightest host callback and is needed even for a plain turn, so it belongs here in KAS-2; the heavier `terminal/*` execution callbacks are KAS-5. See the host-responsibility callback map in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md).
 - Defensive unknown-variant tolerance, as with the steering variants in K1a.
 
 ### KAS-3 — Subagent / crew rendering for the `agent-subtask` model
@@ -173,14 +174,18 @@ Unlike v2 (where `configOptions` was always `null`), KAS populates it:
 - Surface `configOptions`: `mode` (vibe / spec / quick-spec / bug-fix / plan / autonomous / semantic_reviewer), `autopilot` (on / Supervised), `contentCollection`. The existing mode picker generalizes to these; `autopilot` is a session-level permission posture cyril can expose directly instead of mediating per-tool approvals.
 - Wire `session/set_config_option` — **verified working** (2026-06-16): request `{sessionId, configId, value}`, returns the rebuilt `configOptions` (the source of truth — **no `config_option_update` notification fires on set**, so read the response). Caveat: invalid values are silently coerced, not rejected (`autopilot="bogus"` → `"off"`), so cyril should constrain `value` to the advertised option ids client-side.
 
-### KAS-5 — Filesystem-callback responder (first real proxy-stage hook)
+### KAS-5 — Host I/O callback responders: fs **and** terminal (first real proxy-stage hook)
 
 **Depends on:** KAS-1; converges with Phase 2 / Phase 5 (stages).
+**Wire reference:** the host-responsibility callback map in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md), reproduced by `experiments/conductor-spike/probe-kas-callbacks-2.7.1.py`.
 
-KAS is the first Kiro engine to call ACP `fs/*` callbacks, and it is **capability-negotiated**: advertise `clientCapabilities.fs = {readTextFile, writeTextFile}` and KAS routes all file I/O through `fs/read_text_file` / `fs/write_text_file` to the host; advertise nothing and it does in-process I/O (v1/v2 behavior). Opt-in, not mandatory.
+KAS is the first Kiro engine to delegate **both file I/O and shell execution** to the host via ACP callbacks, each **capability-negotiated**: what cyril advertises in `initialize` decides whether KAS calls back or runs in-process (v1/v2 behavior). Opt-in, not mandatory — but the two together are the platform's first real interception point over a Kiro agent's side effects.
 
-- Implement the two responders (public ACP method names, not `_kiro/fs/*`). Reads need no permission; writes already fire `session/request_permission`.
-- This is the first place cyril can interpose on a Kiro agent's file operations — the natural home for audit, org write-policy, and Windows/WSL path translation as a **stage** rather than ad-hoc TUI code. Build it as/with `crates/cyril-stages/` (Phase 2) rather than inline in the bridge.
+- **Filesystem** — advertise `clientCapabilities.fs = {readTextFile, writeTextFile}` → implement `fs/read_text_file` (`{sessionId, path}` → `{content}`, no permission) and `fs/write_text_file` (`{sessionId, path, content}` → `{}`, fires `session/request_permission`). Public ACP method names, not `_kiro/fs/*`. (`_kiro/fs/{delete,stat}` exist in the bundle but did not fire in the verified turn — add only if a probe shows them used.)
+- **Shell/terminal** — advertise `clientCapabilities.terminal = true` → implement the lifecycle `terminal/create` (`{sessionId, command, args[], cwd}` → `{terminalId}`) → `terminal/wait_for_exit` (`{terminalId}` → `{exitStatus}`) → `terminal/output` (`{terminalId}` → `{output, exitStatus}`) → `terminal/release` (+ `terminal/kill`). With `terminal:true` advertised, **every command the agent runs flows through these on the host**; omit the capability and KAS runs shell in-process. Pairs with `_kiro/terminal/shell_type` from KAS-2.
+- cyril implements **none** of these today (empty `clientCapabilities`), so this is purely additive. Owning `fs/*` + `terminal/*` lets cyril audit/gate/translate every file op and command KAS performs — the natural home for transcript audit, org write/exec policy, and Windows/WSL path translation as a **stage** (`crates/cyril-stages/`, Phase 2) rather than ad-hoc bridge code.
+
+**Sequencing:** ship fs first (simpler, no lifecycle), then terminal. Each can land independently behind its capability flag.
 
 **Non-goals:** replicating KAS's spec/quick-spec workflow UIs verbatim; exposing `--v3`/the gated `chat` TUI; treating `_kiro/*` as a vendor-neutral abstraction (it's Kiro-specific — generalize only if ACP standardizes equivalents, per Open Tension #2). The `_kiro/session/{context,compact,export,history,fork,list}` methods are advertised but unprobed — out of scope until a concrete UX needs them.
 
