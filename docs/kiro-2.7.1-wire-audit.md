@@ -147,6 +147,51 @@ Unlike v2 (which reads its own auth store), **KAS makes the ACP host provide the
 
 **Cyril impact:** the current `SubagentTracker` + `crew_panel` (built on `list_update`) will see *nothing* under KAS. To render KAS crews, cyril groups `tool_call`s by `_meta.kiro.agentSubtaskId` and recognizes `kind:"agent-subtask"` + the `title:"Subagent Response"` child returns. They already render as opaque tool calls today; nested-crew UI is the only gap.
 
+### The DAG orchestrator (`OrchestrateSubAgent`) is gated off by default
+
+In vibe mode, the model has only **`invoke_sub_agent`** (parallel/sequential single invokes) — it does *not* get the DAG tool. The bundle gates it:
+
+```js
+if (customAgentRegistry) {
+  if (isSettingEnabled(settings, "subagentOrchestration"))   // off by default
+    chatTools.push(createAcpOrchestrateSubAgentTool(...));
+}
+```
+
+The bundle comment states the purpose: prevent "crews that recursively spawn crews." The setting is a KAS feature toggle (`settings[key].enabled === true`) parsed from `_meta.kiro.settings` via `parseSettings` against `BaseAgentSettingsSchema` (siblings: `knowledge`, `codeIntelligence`, `toolSearch`).
+
+**Activation (verified):** the toggle must be supplied by the host in **`initialize` → `clientCapabilities._meta.kiro.settings.subagentOrchestration = {enabled: true}`** (the server caches this as `clientMeta`). Sending it on `session/new` `_meta` does **not** work. In KAS's own settings-builder (`Hme`, used by the IDE/first-party client) `subagentOrchestration` **defaults to `true`** (sourced from the `chat.*` settings store) — but a bare ACP client that omits it gets `parseSettings(undefined) → {}` → the gate reads `false`. So it is **not** a per-agent JSON field (absent from `agent_config.json.example`); it is a client/host-supplied capability setting at initialize, normally derived by the host from the kiro settings store.
+
+With it enabled, the DAG tool fires. Captured `tool_call` (the orchestrator's own wire shape):
+
+```json
+{ "sessionUpdate":"tool_call", "toolCallId":"tooluse_…", "title":"Orchestrate Sub-agent",
+  "kind":"other", "status":"in_progress",
+  "rawInput": { "task":"…",
+    "stages":[ {"name":"pick","role":"general-task-execution","prompt_template":"…"},
+               {"name":"double","role":"general-task-execution","prompt_template":"…","depends_on":["pick"]},
+               {"name":"report","role":"general-task-execution","prompt_template":"…","depends_on":["double"]} ] },
+  "_meta":{"kiro":{"pipeline":{ "groupId":"pipeline-…",
+    "stages":[ {"name":"pick","role":"general-task-execution","status":"pending","dependsOn":[],"agentSubtaskId":"<uuid>"},
+               {"name":"double","role":"general-task-execution","status":"pending","dependsOn":["pick"],"agentSubtaskId":"<uuid>"},
+               {"name":"report","role":"general-task-execution","status":"pending","dependsOn":["double"],"agentSubtaskId":"<uuid>"} ] }}} }
+```
+
+Two things matter for rendering: (1) `rawInput.stages[].role` is the **registered agent id** (here the bundled `general-task-execution`); the v2 `agent_crew` `role` was a freeform label. (2) **`_meta.kiro.pipeline.stages[]` projects the whole DAG upfront** — each stage carries `dependsOn`, a `status` (advances pending→…), and a pre-assigned `agentSubtaskId` that links to that stage's child `agent-subtask` `tool_call`. This is the KAS analog of v2's `agent_crew` `pendingStages` that cyril's `crew_panel` already consumes — a host can render the full pipeline graph from this one notification.
+
+**`OrchestrateSubAgent` vs v2 `agent_crew` — the schema changed (from `.d.ts`):**
+
+| field | v2 `agent_crew` | KAS `OrchestrateSubAgent` |
+|---|---|---|
+| `task` | ✓ | ✓ |
+| `stages[].{name, role, prompt_template, depends_on}` | ✓ | ✓ |
+| `stages[].loop_to {target, max_iterations, trigger}` | ✓ | **removed** |
+| `stages[].model` (per-stage model) | ✓ | **removed** |
+| `mode` | ✓ | **removed** |
+| cycle handling | loops allowed via `loop_to` | **cycles rejected** (Kahn's algorithm in `validateStages`) |
+
+So KAS orchestration is a **pure acyclic DAG** executed in parallel waves; the v2 review-loop (`loop_to`/`max_iterations`) has no orchestrate-tool equivalent. Iteration moves into the graph layer (`nodes/failure-detection`, the bundled `semantic_reviewer`) or the orchestrator agent re-invoking. When the orchestrator runs, its per-stage children are the same `agent-subtask` `tool_call`s captured above (it calls `InvokeSubAgent` internally), capped at `MAX_CONCURRENT_SUBAGENTS = 5`.
+
 ---
 
 ## KAS filesystem callbacks (verified live) — capability-negotiated
