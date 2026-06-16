@@ -236,13 +236,68 @@ The advertised `_kiro/session/*` methods all resolve, and the bundle handles sev
 
 ---
 
+## KAS hooks — the "kas-unified-hooks" engine (from the bundle)
+
+KAS ships a full hooks engine (`dist/hooks/`: registry, matcher, executor, schema, triggers, actions, loaders, telemetry, `v2-platform-adapter`) whose source cites `.kiro/specs/kas-unified-hooks/design.md`. Its explicit purpose is to **unify three previously-separate hook dialects** onto one `HookTrigger` enum via `normalizeTriggerName()` — which is why IDE-only event names now appear on the CLI/KAS side. *(Read from the shipped `@kiro/agent` 0.3.224 type defs + JS; the ACP methods are statically present — live hook firing over the wire is unprobed.)*
+
+**11 canonical triggers:** `SessionStart`, `Stop`, `PreToolUse`, `PostToolUse`, `PreTaskExec`, `PostTaskExec`, `UserPromptSubmit`, `PostFileCreate`, `PostFileSave`, `PostFileDelete`, `Manual`.
+
+**Alias table (the §9 unification — authored name → canonical):**
+
+| Authored | → Canonical | Dialect |
+|---|---|---|
+| `sessionStart` | SessionStart | IDE camelCase |
+| `agentSpawn` | SessionStart | CLI alias (v1's old `AgentSpawn` folds in here) |
+| `stop` / `agentStop` / `SessionEnd` | Stop | CLI / IDE / OpenPlugin |
+| `userPromptSubmit` / `promptSubmit` | UserPromptSubmit | CLI / IDE |
+| `preToolUse` / `postToolUse` | PreToolUse / PostToolUse | camelCase |
+| `preTaskExecution` / `postTaskExecution` | PreTaskExec / PostTaskExec | IDE |
+| `fileEdited` / `AfterFileEdit` | PostFileSave | IDE / OpenPlugin |
+| `fileCreated` / `fileDeleted` | PostFileCreate / PostFileDelete | IDE |
+| `userTriggered` | Manual | IDE |
+
+There is **no** `Notification` / `PermissionRequest` / `WaitingForApproval` trigger — you can gate a decision in a `PreToolUse` hook but cannot be notified by a hook when the agent pauses for approval (that's a protocol/client concern; see roadmap CN1).
+
+**Hook document** (standalone `.kiro/hooks/*.json` as `{version, hooks[]}`, or inline under an agent profile's `hooks` key; v2 reads `.kiro/hooks/*.json` only — `.kiro.hook` stays IDE/v1):
+
+```jsonc
+{
+  "name": "string",            // required
+  "description": "string?",    // optional
+  "trigger": "string",         // any dialect spelling; normalized at load
+  "matcher": "regex?",         // optional; empty/absent = always match
+  "action": { ... },           // discriminated union (below)
+  "timeout": 60,               // optional seconds; command action only; default 60
+  "enabled": true              // optional; default true
+}
+```
+
+**Action is a discriminated union on `type` — `command` is fully retained, `agent` is additive (the IDE "Ask Kiro" behavior), pick one per hook:**
+
+```jsonc
+// shell hook (classic CLI + IDE): spawns a subprocess, pipes HookInput JSON to stdin,
+// honors `timeout` (default 60s)
+{ "type": "command", "command": "string" }
+
+// agent hook (from the IDE "Ask Kiro" action): no subprocess; splices `prompt` + the
+// trigger-metadata JSON into the model, wrapped in <HOOK_INSTRUCTION> tags; `timeout` ignored
+{ "type": "agent", "prompt": "string" }
+```
+
+**`HookInput`** (piped to a command hook's stdin / appended to an agent hook's prompt) is Claude-Code-shaped: `{ hook_event_name, tool_name, tool_input?, session_id, cwd, trigger, prompt }`.
+
+**ACP surface (split):** the v2 Rust binary exposes only `_kiro/hooks/list` + `_kiro/hooks/didChange` (since ≥2.6.1; likely TUI↔backend, not confirmed on the cyril ACP wire). KAS implements the **full** set: `_kiro/hooks/{list, executeHook, triggerHook, sessionStart, cancel, didChange}`. `_kiro/powers/*` is KAS-only (absent from the v2 binary).
+
+---
+
 ## Cyril impact
 
 - **Passive compatibility:** unchanged. Cyril's default `kiro-cli acp` (v2 engine) wire shape is unaffected; the entire KAS surface is opt-in behind `--agent-engine kas`.
 - **KAS is adoptable now, not "when it lands."** Cyril can spawn `kiro-cli acp --agent-engine kas` today and bypass the TUI's "V3 not supported" gate entirely. Doing so unlocks: the `_kiro/*` extension namespace, real `session/fork` + `session/list`, populated `configOptions` (including `mode` and `autopilot`, which cyril could surface in its toolbar/pickers), and 7 modes.
 - **Two dialects to support.** KAS uses `_kiro/*`; the v1/v2 engines use `_kiro.dev/*` (now `_kiro/*` in tui.js per 2.7.0, but the backend ACP methods cyril handles are still `kiro.dev/*` / `_kiro.dev/*`). A KAS integration needs a parallel converter arm in `convert/kiro.rs` keyed on the engine.
 - **Subagent display changes** (now verified live — see the KAS subagent wire-format section). Under KAS, subagents are `tool_call`s with `_meta.kiro.kind:"agent-subtask"` grouped by `agentSubtaskId`, **not** `kiro.dev/subagent/list_update`. Cyril's `SubagentTracker`/crew panel see nothing on this path until they group by `agentSubtaskId`.
-- **`configOptions` populated** finally makes `session/set_config_option` plausibly functional under KAS — worth a round-trip probe before relying on it.
+- **`configOptions` populated** and `session/set_config_option` is a working SET (verified) — cyril can drive `mode`/`autopilot` from its toolbar/pickers, reading the set *response* (no `config_option_update` echo fires) and constraining `value` to advertised option ids (invalid values silently coerce).
+- **Hooks become a real ACP surface (reverses prior guidance).** The standing "don't implement hooks; they're backend-only" stance holds for v1/v2 but not KAS — KAS exposes `_kiro/hooks/{list,executeHook,triggerHook,…}`, so cyril can observe/list/trigger hooks (and the unified command+agent action model spans IDE+CLI authoring). A prime composable-stage opportunity; direction (client-manages vs server-fires) still to probe.
 
 ---
 
