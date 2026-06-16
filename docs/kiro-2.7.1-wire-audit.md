@@ -100,6 +100,25 @@ v2's single Rust `agent_crew` tool (DAG-pipeline + summary + session — see `do
 
 **Bundled agents** (`dist/bundled-agents/index.d.ts`): `getBundledAgentDefinitions(semanticReviewEnabled, ftaEnabled)` returns the built-in profiles (semantic_reviewer is one; gated by `semanticReviewEnabled`, which was `true`).
 
+### How a crew executes — one-shot, fail-fast DAG (no native loop)
+
+Mental model: KAS exposes subagents through **two tools over one registry** — `InvokeSubAgent` delegates *one* task to one registered agent; `OrchestrateSubAgent` runs a whole *crew* (DAG of registered agents) in a single call. Registered agents (your custom-agent definitions) are the stage `role`s and are also individually callable as `subagent/<agentId>`.
+
+`OrchestrateSubAgent.handle` (from `dist/orchestrate-subagent-*.js`) runs the pipeline exactly once:
+
+1. **Validate** — unique stage names, every `depends_on` exists, and **cycles are rejected** (`hasCycles`/Kahn → "Dependency cycle detected in stages").
+2. **Parallel waves** — every stage whose dependencies are satisfied runs together (`Promise.all`), each as an `InvokeSubAgent` to its `role`; then the next wave. Earlier stages' outputs thread forward into later stages.
+3. **Fail-fast** — the first stage returning `success: false` halts the pipeline (`Pipeline stopped: <stage> failed: <response>`), emits an `Error`, and returns partial results. No stage is retried; no later wave runs.
+4. Throughout, emits `_meta.kiro.pipeline.stages[]` (per-stage `status`/`dependsOn`/`agentSubtaskId`) for rendering.
+
+**There is no loop or retry inside the orchestrator** — cycles rejected, each stage runs once, failure stops rather than re-runs. This is the one thing v2's `agent_crew` had that KAS dropped: `loop_to {target, max_iterations, trigger}` is gone. A loop-on-failure (e.g. validator → re-run implement, max N) therefore **cannot live in the crew payload**; it must be driven one level up:
+
+- the **orchestrating model** re-invoking `OrchestrateSubAgent`/`InvokeSubAgent` after seeing the `Error` result (model-driven — essentially what a "manual" RPI crew already does), or
+- a **blocking command hook** (`PreToolUse`/`PreTaskExec`, non-zero exit → `block` + stderr fed back), with the iteration cap in the hook's own logic.
+- (KAS's agent-loop graph has its own failure-intervention/restart path — `shouldRestartGraph`, `agentIterationLimit`/`agentIterationNumber` — but that retries the *engine's own turn*, not your crew stages, and isn't user-authorable.)
+
+So: **a KAS crew is a one-shot DAG of subagents that fans out in dependency waves and stops on first failure; looping is now an orchestration concern in the driving agent or a hook, not the crew definition.** (Plugin impact: a manual RPI `agent_crew` ports to `OrchestrateSubAgent` directly; a `loop_to`-based validator loop must be reshaped into model-re-invocation or a hook gate.)
+
 ### The agent loop is a LangGraph StateGraph
 
 `dist/graphs/`: `chat-agent-graph` (main loop), `custom-agent-graph` (sub-agent loop), `consume-queued-steering`, `context-overflow-handler`, `inject-todo-context`.
