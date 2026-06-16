@@ -1,0 +1,42 @@
+sessionId: sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d
+
+# running one tiny turn to populate history...
+# turn done
+
+
+==== _kiro/session/history {"sessionId": "sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d"}  ====
+  result keys: ['updates', 'hasMore']
+  result: {"updates": [], "hasMore": false}
+
+==== _kiro/session/context {"sessionId": "sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d"}  ====
+  result keys: NoneType
+  result: null
+
+==== _kiro/session/export {"sessionId": "sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d"}  ====
+  result keys: ['success', 'filePath']
+  result: {"success": true, "filePath": "/home/dwalleck/.claude/tmp/kiro-exports/kiro-session-sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d.zip"}
+
+==== session/list {}  ====
+  result keys: ['sessions']
+  result: {"sessions": [{"sessionId": "sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d", "cwd": "/home/dwalleck/.claude/tmp/kas-sessmeth-iboxf503", "title": "Reply with exactly: ok. Do not use any tools.", "updatedAt": "2026-06-16T19:49:08.777Z", "_meta": {"kiro": {"agentMode": "vibe", "createdAt": "2026-06-16T19:49:05.880Z"}}}, {"sessionId": "sess_c6bbe238-74e7-4671-9f9b-205ac50cf6ce", "cwd": "/home/dwalleck/.claude/tmp/kas-setcfg-1dx3b597", "title": "New Session", "updatedAt": "2026-06-16T19:44:02.746Z", "_meta": {"kiro": {"agentMode": "spec", "createdAt": "2026-06-16T19:44:02.575Z"}}}, {"sessionId": "sess_11ad73f9-b0d3-4ab9-9f95-ce8af4a1c166", "cwd": "/home/dwalleck/.claude/tmp/kas-probe-0f0g_lso", "title": "Use the orchestrate_subagent tool \u2014 the multi-stage DAG pipeline tool, NOT in...", "updatedAt": "2026-06-16T19:30:23.012Z", "_meta": {"kiro": {"agentMode": "vibe", "createdAt": "2026-06-16T1
+
+==== _kiro/session/list {}  ====
+  result keys: ['sessions']
+  result: {"sessions": [{"sessionId": "sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d", "cwd": "/home/dwalleck/.claude/tmp/kas-sessmeth-iboxf503", "title": "Reply with exactly: ok. Do not use any tools.", "updatedAt": "2026-06-16T19:49:08.777Z", "_meta": {"kiro": {"agentMode": "vibe", "createdAt": "2026-06-16T19:49:05.880Z"}}}, {"sessionId": "sess_c6bbe238-74e7-4671-9f9b-205ac50cf6ce", "cwd": "/home/dwalleck/.claude/tmp/kas-setcfg-1dx3b597", "title": "New Session", "updatedAt": "2026-06-16T19:44:02.746Z", "_meta": {"kiro": {"agentMode": "spec", "createdAt": "2026-06-16T19:44:02.575Z"}}}, {"sessionId": "sess_11ad73f9-b0d3-4ab9-9f95-ce8af4a1c166", "cwd": "/home/dwalleck/.claude/tmp/kas-probe-0f0g_lso", "title": "Use the orchestrate_subagent tool \u2014 the multi-stage DAG pipeline tool, NOT in...", "updatedAt": "2026-06-16T19:30:23.012Z", "_meta": {"kiro": {"agentMode": "vibe", "createdAt": "2026-06-16T1
+
+==== session/fork {"sessionId": "sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d"} (creates a forked session) ====
+  ERROR: {"code": -32602, "message": "Invalid params", "data": {"_errors": [], "cwd": {"_errors": ["Invalid input: expected string, received undefined"]}}}
+
+==== _kiro/session/compact {"sessionId": "sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d"} (mutating) ====
+  result keys: ['success']
+  result: {"success": true}
+
+==== _kiro/account/getUsage {}  ====
+  result keys: ['success', 'message', 'data']
+  result: [REDACTED — personal billing data]. Shape: {"success": true, "message": "Plan: <PLAN> | N usage breakdowns", "data": {"planName": "<PLAN>", "billingCycleReset": "<DATE>", "overagesEnabled": <bool>, "isEnterprise": <bool>, "usageBreakdowns": [{"resourceType": "CREDIT", "displayName": "Credits", "used": <num>, "limit": <num>, "percentage": <num>, "currentOverages": <num>, "overageRate": <num>, "overageCharges": <num>, "currency": "USD"}], "bonusCredits": []}}
+
+==== _kiro/permissions/list {"sessionId": "sess_9b78b6e2-5dcb-451a-b31c-5f58686d7b8d"}  ====
+  result keys: ['rules']
+  result: {"rules": [{"capability": "filesystem", "match": ["**"], "exclude": ["./**", "~/.kiro/**"], "effect": "ask", "scope": "kiro", "source": "kiro-scope"}, {"capability": "fs_write", "match": ["~/.kiro/settings/", ".kiro/settings/", "~/.kiro/workspace-roots/", "~/.kiro/sandbox-state/"], "effect": "deny", "scope": "kiro", "source": "kiro-scope"}, {"capability": "fs_write", "match": [".git/**", "**/.git/**", ".git./**", "**/.git./**", ".git /**", "**/.git /**", "**/git~*/**", ".git", ".vscode/**", "**/.vscode/**", ".vscode./**", "**/.vscode./**", ".vscode /**", "**/.vscode /**", "**/vscode~*/**", ".kiro/agents/**", ".kiro./agents/**", ".kiro /agents/**", "kiro~1/agents/**", ".kiro/hooks/**", ".kiro./hooks/**", ".kiro /hooks/**", "kiro~1/hooks/**", "~/.kiro/agents/**", "**/*.code-workspace", "**/mcp.json"], "effect": "ask", "scope": "kiro", "source": "kiro-scope"}, {"capability": "fs_read", "mat
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-session-methods-2.7.1.log

@@ -58,7 +58,7 @@ The word "currently" plus the working ACP path means this is a deliberate staged
 
 KAS returns `sess_<uuid>` session IDs (v2 used a bare uuid). Two big deltas:
 
-**1. `configOptions` is now POPULATED.** On every prior engine (v1.28 → 2.x v2) `configOptions` was *always `null`* and `session/set_config_option` returned "Method not found." KAS returns three live `select` options:
+**1. `configOptions` is now POPULATED, and `session/set_config_option` is a working SET** (verified — on v1.28→2.x v2 it was *always `null`* + "Method not found"). The request is `{sessionId, configId, value}` (value = the option's value-id string; or `{type:"boolean", value}` for boolean options). It **returns the rebuilt `configOptions`** with the updated `currentValue`, and that response is the source of truth — `autopilot on→off`, `mode vibe→spec` both took effect and persisted cumulatively across calls. Two caveats: (a) **no `config_option_update` notification is emitted on an explicit set** (that variant fires during prompt turns, not as a set echo), so a host must read the *response*, not wait for a notification; (b) **invalid values are silently coerced, not rejected** — `autopilot="bogus"` returned no error and resolved to `"off"`. KAS returns three live `select` options:
 
 | id | currentValue | options |
 |---|---|---|
@@ -215,6 +215,27 @@ The agent's own tool surface (`tool_call` "Write File" kind `edit`, "Read File" 
 
 ---
 
+## KAS session-management + account methods (verified live)
+
+The advertised `_kiro/session/*` methods all resolve, and the bundle handles several more than `initialize` advertises. Probed against a 1-turn KAS session:
+
+| Method | Params | Result |
+|---|---|---|
+| `_kiro/session/history` | `{sessionId}` | `{updates:[], hasMore:false}` — paginated replay stream. **Empty even after a completed turn** (the live turn's updates weren't in the history store; likely needs a reload/cursor — flagged). |
+| `_kiro/session/context` | `{sessionId}` | `null` when no context items attached (nullable). |
+| `_kiro/session/export` | `{sessionId}` | `{success:true, filePath:"…/kiro-exports/kiro-session-<sid>.zip"}` — **writes a real `.zip` archive** of the session to disk and returns the path. |
+| `session/list` / `_kiro/session/list` | `{}` | `{sessions:[{sessionId, cwd, title, updatedAt, _meta.kiro:{agentMode, createdAt}}]}` — **global** across all cwds (returned my earlier probe sessions); `title` derived from the first prompt. Both method names hit the same handler. |
+| `session/fork` | `{sessionId, cwd}` | requires `cwd` — `{sessionId}` alone fails `-32602 Invalid params` (`cwd: expected string`). |
+| `_kiro/session/compact` | `{sessionId}` | `{success:true}` — compacts (summarizes) the conversation. |
+
+**Bonus methods handled by the bundle but not in `extensionMethods`** (worked when called directly):
+
+- **`_kiro/account/getUsage`** `{}` → `{success, message, data:{planName, billingCycleReset, overagesEnabled, isEnterprise, usageBreakdowns:[{resourceType:"CREDIT", displayName, used, limit, percentage, currentOverages, overageRate, overageCharges, currency}], bonusCredits}}`. **This is credit/usage data on the wire** — the thing cyril has never had over ACP (credits were previously only readable from the on-disk session sidecar). A KAS-mode cyril can show a live credit gauge by calling this.
+- **`_kiro/permissions/list`** `{sessionId}` → `{rules:[{capability, match:[…], exclude:[…], effect:"ask"|"deny", scope:"kiro", source:"kiro-scope"}]}` — the **Cedar permission ruleset** on the wire (filesystem ask with `~/.kiro/**` excluded, `fs_write` deny on `~/.kiro/settings`/sandbox-state, ask on `.git`/`.vscode`/`.kiro/agents`/`mcp.json`, etc.). Directly relevant to the "organizational permission policies" stage.
+- Also handler-registered, unprobed: `_kiro/session/{delete,rename}` (destructive — not exercised), `_kiro/permissions/explain`, `_kiro/policy/check`, `_kiro/spec/getTaskStatuses`, `_kiro/knowledge`, `_kiro/codeIntelligence`.
+
+---
+
 ## Cyril impact
 
 - **Passive compatibility:** unchanged. Cyril's default `kiro-cli acp` (v2 engine) wire shape is unaffected; the entire KAS surface is opt-in behind `--agent-engine kas`.
@@ -227,8 +248,8 @@ The agent's own tool surface (`tool_call` "Write File" kind `edit`, "Read File" 
 
 ## Not verified this session (follow-ups)
 
-- **`session/set_config_option` round-trip** under KAS (does setting `autopilot`/`mode` take effect on the wire?). `config_option_update` is *emitted*; the set direction is untested.
-- The **`OrchestrateSubAgent` (DAG) wire shape** specifically — the model chose parallel `InvokeSubAgent` for my prompt; a task that forces staged dependencies would surface the orchestrator's own tool-call shape.
+- `_kiro/session/history` returning empty after a live turn — confirm whether a reloaded/persisted session or a pagination cursor surfaces the updates.
+- The destructive/unprobed bonus methods: `_kiro/session/{delete,rename}`, `_kiro/permissions/{explain}`, `_kiro/policy/check`, `_kiro/spec/getTaskStatuses`.
 - A **clean v2 baseline re-capture on 2.7.1** — the default engine did not respond to the piped init+session/new probe in this session (KAS did); v2 baseline here is taken from `docs/kiro-2.7.0-wire-audit.md`, not freshly re-captured.
 
 ---
