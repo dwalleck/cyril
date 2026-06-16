@@ -111,9 +111,24 @@ Mental model: KAS exposes subagents through **two tools over one registry** — 
 `OrchestrateSubAgent.handle` (from `dist/orchestrate-subagent-*.js`) runs the pipeline exactly once:
 
 1. **Validate** — unique stage names, every `depends_on` exists, and **cycles are rejected** (`hasCycles`/Kahn → "Dependency cycle detected in stages").
-2. **Parallel waves** — every stage whose dependencies are satisfied runs together (`Promise.all`), each as an `InvokeSubAgent` to its `role`; then the next wave. Earlier stages' outputs thread forward into later stages.
+2. **Parallel waves** — every stage whose dependencies are satisfied runs together (`Promise.all`), each as an `InvokeSubAgent` to its `role`; then the next wave. Upstream outputs thread into the stage prompt (see *inter-stage context* below).
 3. **Fail-fast** — the first stage returning `success: false` halts the pipeline (`Pipeline stopped: <stage> failed: <response>`), emits an `Error`, and returns partial results. No stage is retried; no later wave runs.
 4. Throughout, emits `_meta.kiro.pipeline.stages[]` (per-stage `status`/`dependsOn`/`agentSubtaskId`) for rendering.
+
+**Inter-stage context (how outputs pass between stages, from `executeStage`).** Each stage's prompt is built as: take the stage's **`prompt_template`** and substitute **`{task}`** with the crew's overall `task` string; then, for **each `depends_on` stage that succeeded**, append that upstream stage's **`response` text** under a header:
+
+```
+<prompt_template, {task} substituted>
+
+---
+## Context from previous stages
+
+## Results from <upstreamStageName>
+
+<upstream stage's response text>
+```
+
+So context flows as **prompt-injected text along the DAG edges only** — `depends_on` stages (not all prior stages), success-only, and only the upstream's text **`response`** (what it returned via `subagent_response`). There is no structured data channel and no placeholder other than `{task}`. Two consequences: (a) an upstream stage's returned **`files`** are *not* auto-attached into a downstream stage's prompt — only its text response is; (b) **file-based handoff between stages** (e.g. a stage writing `.testagent/research.md` for a later stage to read) works via the **filesystem**, not this threading — each stage reads the prior stage's files itself with its fs tools (they persist in the workspace across stages). The threading is a bonus summary in-prompt; the filesystem is the authoritative channel for anything larger than a text blurb.
 
 **There is no loop or retry inside the orchestrator** — cycles rejected, each stage runs once, failure stops rather than re-runs. This is the one thing v2's `agent_crew` had that KAS dropped: `loop_to {target, max_iterations, trigger}` is gone. A loop-on-failure (e.g. validator → re-run implement, max N) therefore **cannot live in the crew payload**; it must be driven one level up:
 
@@ -214,6 +229,17 @@ Two things matter for rendering: (1) `rawInput.stages[].role` is the **registere
 | cycle handling | loops allowed via `loop_to` | **cycles rejected** (Kahn's algorithm in `validateStages`) |
 
 So KAS orchestration is a **pure acyclic DAG** executed in parallel waves; the v2 review-loop (`loop_to`/`max_iterations`) has no orchestrate-tool equivalent. Iteration moves into the graph layer (`nodes/failure-detection`, the bundled `semantic_reviewer`) or the orchestrator agent re-invoking. When the orchestrator runs, its per-stage children are the same `agent-subtask` `tool_call`s captured above (it calls `InvokeSubAgent` internally), capped at `MAX_CONCURRENT_SUBAGENTS = 5`.
+
+---
+
+## `/goal`: a v2 command with no KAS equivalent — autonomous mode instead
+
+The v2 (Rust) engine added `/goal` + a `goal` tool (`{command:"complete", summary}`) in 2.7.0. **KAS does not implement it.** Grepping `@kiro/agent` finds no `goal` tool, no `command:"complete"`, no `SwitchToExecution`, and `/goal` is absent from KAS's `commands/available` (KAS serves its own command set — modes/steering/skills — not the v2 list). KAS's goal-driven execution is instead the **`autonomous` mode**, one of the 7 bundled session modes, defined in `dist/autonomous/`:
+
+- `getAutonomousBrainDefinition(...)` → the "brain" (orchestrator) `CustomAgentDefinition` for `/autonomous`.
+- `getAutonomousSubagentDefinitions(...)` → the subagent definitions the brain drives.
+
+So a goal in KAS is pursued by a **brain orchestrator agent delegating to bundled subagents** (via `InvokeSubAgent`/`OrchestrateSubAgent`), not by a discrete tool call — reusing the per-agent model/permissions and crew machinery documented above. The mode's `session/new` welcome states the contract: *"Autonomous agent will ask for a goal and work towards it. All tools except MCP will be automatically approved. Enable a local sandbox using `/sandbox enable`."* This also explains why v2's `/goal` "loop" never manifested on bare ACP — the actual goal-pursuit loop lives in the autonomous brain+subagents, which only exists in KAS. (Read from the bundle's `dist/autonomous/` exports + the mode definition; not yet probed live.)
 
 ---
 
