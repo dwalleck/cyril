@@ -299,7 +299,7 @@ async fn run_bridge(
         }
     });
 
-    run_loop(std::rc::Rc::new(conn), channels, cwd).await
+    run_loop(std::rc::Rc::new(conn), channels, cwd.to_path_buf()).await
 }
 
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
@@ -309,7 +309,7 @@ async fn run_bridge(
 async fn run_loop(
     conn: std::rc::Rc<agent_client_protocol::ClientSideConnection>,
     mut channels: BridgeChannels,
-    cwd: &std::path::Path,
+    cwd: std::path::PathBuf,
 ) -> crate::Result<()> {
     use acp::Agent;
     use agent_client_protocol as acp;
@@ -517,7 +517,7 @@ async fn run_loop(
             BridgeCommand::LoadSession { session_id } => {
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 match conn
-                    .load_session(acp::LoadSessionRequest::new(acp_session_id.clone(), cwd))
+                    .load_session(acp::LoadSessionRequest::new(acp_session_id.clone(), cwd.clone()))
                     .await
                 {
                     Ok(response) => {
@@ -1201,6 +1201,180 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    // ── cyril-84ca mid-turn harness (Slices 2-7) ──────────────────────────────
+    // In-process fake agent so the command loop is exercised with no kiro-cli
+    // subprocess: ClientSideConnection(KiroClient) <-> AgentSideConnection(FakeAgent)
+    // over a tokio duplex. Everything runs on one LocalSet (the ACP connections are
+    // `!Send` and use `spawn_local`).
+    use std::cell::{Cell, RefCell};
+    use std::rc::Rc;
+    use std::time::Duration;
+
+    use agent_client_protocol as acp;
+    use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
+
+    use crate::protocol::client::KiroClient;
+
+    #[derive(Default)]
+    struct Script {
+        /// Method names the agent received, in order (e.g. "new_session", "prompt").
+        received: Vec<String>,
+        prompt_count: usize,
+    }
+
+    struct FakeAgent {
+        script: Rc<RefCell<Script>>,
+        next_session: Cell<u32>,
+    }
+
+    #[async_trait::async_trait(?Send)]
+    impl acp::Agent for FakeAgent {
+        async fn initialize(
+            &self,
+            _a: acp::InitializeRequest,
+        ) -> acp::Result<acp::InitializeResponse> {
+            Ok(acp::InitializeResponse::new(acp::ProtocolVersion::V1))
+        }
+        async fn authenticate(
+            &self,
+            _a: acp::AuthenticateRequest,
+        ) -> acp::Result<acp::AuthenticateResponse> {
+            Ok(acp::AuthenticateResponse::new())
+        }
+        async fn new_session(
+            &self,
+            _a: acp::NewSessionRequest,
+        ) -> acp::Result<acp::NewSessionResponse> {
+            self.script.borrow_mut().received.push("new_session".into());
+            let n = self.next_session.get();
+            self.next_session.set(n + 1);
+            Ok(acp::NewSessionResponse::new(acp::SessionId::new(format!(
+                "fake-{n}"
+            ))))
+        }
+        async fn prompt(&self, _a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
+            {
+                let mut s = self.script.borrow_mut();
+                s.received.push("prompt".into());
+                s.prompt_count += 1;
+            }
+            Ok(acp::PromptResponse::new(acp::StopReason::EndTurn))
+        }
+        async fn cancel(&self, _a: acp::CancelNotification) -> acp::Result<()> {
+            self.script.borrow_mut().received.push("cancel".into());
+            Ok(())
+        }
+    }
+
+    /// Wire a fake agent to `run_loop` over an in-process duplex and run `body`
+    /// against the live bridge.
+    async fn with_harness<F, Fut>(script: Rc<RefCell<Script>>, body: F)
+    where
+        F: FnOnce(BridgeSender, mpsc::Receiver<RoutedNotification>) -> Fut,
+        Fut: std::future::Future<Output = ()>,
+    {
+        let local = tokio::task::LocalSet::new();
+        local
+            .run_until(async move {
+                let (handle, channels) = create_channel_pair();
+                let client = KiroClient::new(
+                    channels.notification_tx.clone(),
+                    channels.permission_tx.clone(),
+                );
+                let (c_io, a_io) = tokio::io::duplex(64 * 1024);
+                let (cr, cw) = tokio::io::split(c_io);
+                let (ar, aw) = tokio::io::split(a_io);
+                let (conn, c_task) =
+                    acp::ClientSideConnection::new(client, cw.compat_write(), cr.compat(), |f| {
+                        tokio::task::spawn_local(f);
+                    });
+                let fake = FakeAgent {
+                    script,
+                    next_session: Cell::new(0),
+                };
+                // Kept alive for the duration so its IO task can route requests to
+                // FakeAgent (Slice 7 also uses it to push agent->client updates).
+                let (_agent_conn, a_task) =
+                    acp::AgentSideConnection::new(fake, aw.compat_write(), ar.compat(), |f| {
+                        tokio::task::spawn_local(f);
+                    });
+                tokio::task::spawn_local(async move {
+                    let _ = c_task.await;
+                });
+                tokio::task::spawn_local(async move {
+                    let _ = a_task.await;
+                });
+                tokio::task::spawn_local(run_loop(Rc::new(conn), channels, std::env::temp_dir()));
+                let (sender, notif_rx, _perm_rx) = handle.split();
+                body(sender, notif_rx).await;
+            })
+            .await;
+    }
+
+    async fn recv_session_id(
+        rx: &mut mpsc::Receiver<RoutedNotification>,
+    ) -> crate::types::SessionId {
+        loop {
+            let r = tokio::time::timeout(Duration::from_secs(5), rx.recv())
+                .await
+                .expect("SessionCreated within 5s")
+                .expect("notification channel open");
+            if let Notification::SessionCreated { session_id, .. } = r.notification {
+                return session_id;
+            }
+        }
+    }
+
+    /// Drain notifications until the first `TurnCompleted`; return how many were
+    /// seen (expected: exactly 1). Bounded so a hang fails the test instead of stalling.
+    async fn count_turn_completions(rx: &mut mpsc::Receiver<RoutedNotification>) -> usize {
+        let mut n = 0;
+        while let Ok(Some(r)) = tokio::time::timeout(Duration::from_secs(5), rx.recv()).await {
+            if matches!(r.notification, Notification::TurnCompleted { .. }) {
+                n += 1;
+                return n;
+            }
+        }
+        n
+    }
+
+    #[tokio::test]
+    async fn harness_drives_one_turn() {
+        // Slice 2 baseline: the harness runs NewSession -> SendPrompt against the
+        // in-process fake agent, observes exactly one TurnCompleted, and the agent
+        // records the prompt it received (bidirectional delivery works).
+        let script = Rc::new(RefCell::new(Script::default()));
+        let probe = script.clone();
+        with_harness(script, |sender, mut rx| async move {
+            sender
+                .send(BridgeCommand::NewSession {
+                    cwd: std::env::temp_dir(),
+                })
+                .await
+                .unwrap();
+            let sid = recv_session_id(&mut rx).await;
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: sid,
+                    content_blocks: vec!["hi".into()],
+                })
+                .await
+                .unwrap();
+            assert_eq!(
+                count_turn_completions(&mut rx).await,
+                1,
+                "exactly one TurnCompleted"
+            );
+        })
+        .await;
+        let s = probe.borrow();
+        assert!(
+            s.received.contains(&"new_session".to_string()),
+            "fake agent received new_session"
+        );
+        assert_eq!(s.prompt_count, 1, "fake agent received exactly one prompt");
+    }
 
     // Slice DE / design claims 7,8,9 (+ backs claim 10's single-message via
     // AlreadyUnsupported). The fn compiling at all proves claim 7: -32601 is
