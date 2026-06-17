@@ -12,3 +12,6 @@ docs/kiro-tui-*.js.sha256
 # Local Kiro workspace install-state (plugin-installed agents, steering,
 # install lockfiles). Machine-local and regenerable — not project source.
 .kiro/
+
+# prove-it probe build output (cyril-84ca)
+.cyril-84ca/probe/target/
