@@ -1,0 +1,36 @@
+# sessionId: sess_e30044db-4aa7-4c1d-ae0a-0e39ff9b9969 | acting as hooks HOST (own registry + run executeHook)
+
+===== _kiro/hooks/list callbacks (agent -> host): which triggers, what tool =====
+  trigger='promptSubmit'           toolId=None toolTags=None
+  trigger='preToolUse'             toolId='execute_bash' toolTags=['shell', '@builtin']
+  trigger='postToolUse'            toolId='execute_bash' toolTags=['shell', '@builtin']
+  trigger='agentStop'              toolId=None toolTags=None
+  (4 list calls)
+
+===== _kiro/hooks/executeHook callbacks (agent -> host; host ran the command) =====
+  hook='probe-promptSubmit' exit=0  cmd='echo HOOKFIRED trigger=promptSubmit tool=-'
+     userPrompt[:200]='Run the shell command `echo hi` and report its output verbatim.'
+  hook='probe-preToolUse' exit=0  cmd='echo HOOKFIRED trigger=preToolUse tool=execute_bash'
+     userPrompt[:200]='{"command":"echo hi","cwd":null,"run_in_background":false,"timeout":null}'
+  hook='probe-postToolUse' exit=0  cmd='echo HOOKFIRED trigger=postToolUse tool=execute_bash'
+     userPrompt[:200]='{"toolName":"execute_bash","toolArgs":{},"toolResult":"Output:\\nhi\\n\\n\\nExit Code: 0","toolSuccess":true}'
+  hook='probe-agentStop' exit=0  cmd='echo HOOKFIRED trigger=agentStop tool=-'
+     userPrompt[:200]=''
+  (4 execute calls)
+
+===== agent final message (did it incorporate hook output 'HOOKFIRED'?) =====
+  contains 'HOOKFIRED': False
+  head: The hook fired with exit code 0 and no denial, so I'll proceed with the tool call.The output of `echo hi` is:
+
+```
+hi
+```
+
+===== VERDICT =====
+  mode: observe (benign)
+  hooks/list called by agent: True triggers: ['promptSubmit', 'preToolUse', 'postToolUse', 'agentStop']
+  executeHook called (host ran a runCommand hook): True
+  postToolUse fired => the shell tool actually executed: True
+  => end-to-end host-callback hooks FIRED
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-hooks-host-2.7.1.log
