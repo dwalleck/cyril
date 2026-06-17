@@ -387,36 +387,37 @@ async fn run_loop(
                     .map(acp::ContentBlock::from)
                     .collect();
                 let request = acp::PromptRequest::new(acp_session_id, prompt);
-                match conn.prompt(request).await {
-                    Ok(response) => {
-                        let stop_reason =
-                            crate::protocol::convert::to_stop_reason(response.stop_reason);
-                        if channels
-                            .notification_tx
-                            .send(Notification::TurnCompleted { stop_reason }.into())
-                            .await
-                            .is_err()
-                        {
-                            break;
-                        }
-                    }
-                    Err(e) => {
-                        tracing::error!(error = %e, "prompt failed");
-                        // Transport error — no PromptResponse available. EndTurn is a
-                        // placeholder; the BridgeError notification (if sent) carries
-                        // the real failure detail.
-                        if notify_or_closed(
-                            &channels.notification_tx,
+                // cyril-84ca: drive the turn OFF this command loop so commands
+                // queued mid-turn (steer/cancel/...) are processed instead of
+                // blocking behind conn.prompt() for the whole turn. The spawned
+                // task owns the turn's single terminal TurnCompleted (success or
+                // transport error). The ACP connection multiplexes concurrent
+                // requests (.cyril-84ca/findings.md), so a steer the loop issues
+                // while this task is pending still crosses the wire.
+                let turn_conn = conn.clone();
+                let turn_tx = channels.notification_tx.clone();
+                tokio::task::spawn_local(async move {
+                    let note = match turn_conn.prompt(request).await {
+                        Ok(response) => Notification::TurnCompleted {
+                            stop_reason: crate::protocol::convert::to_stop_reason(
+                                response.stop_reason,
+                            ),
+                        },
+                        Err(e) => {
+                            tracing::error!(error = %e, "prompt failed");
+                            // No PromptResponse on a failed turn; EndTurn frees the
+                            // UI from "busy". App-gone is detected by the command
+                            // loop's own recv() ending, so a failed send here only
+                            // means the App already left.
                             Notification::TurnCompleted {
                                 stop_reason: StopReason::EndTurn,
-                            },
-                        )
-                        .await
-                        {
-                            break;
+                            }
                         }
+                    };
+                    if let Err(e) = turn_tx.send(note.into()).await {
+                        tracing::debug!(error = %e, "TurnCompleted send failed (App gone)");
                     }
-                }
+                });
             }
             BridgeCommand::CancelRequest => {
                 if let Some(ref session_id) = active_session_id {
@@ -1221,10 +1222,17 @@ mod tests {
         /// Method names the agent received, in order (e.g. "new_session", "prompt").
         received: Vec<String>,
         prompt_count: usize,
+        /// When set, `prompt` parks on the gate until the test releases it,
+        /// modelling a long-running turn (so mid-turn commands can be observed).
+        block_prompt: bool,
+        /// When set, `prompt` returns an error (the transport/error turn path).
+        prompt_err: bool,
     }
 
     struct FakeAgent {
         script: Rc<RefCell<Script>>,
+        /// Released by the test (`Notify::notify_one`) to let a blocked `prompt` finish.
+        gate: Rc<tokio::sync::Notify>,
         next_session: Cell<u32>,
     }
 
@@ -1254,10 +1262,19 @@ mod tests {
             ))))
         }
         async fn prompt(&self, _a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
-            {
+            // Copy the flags out and DROP the borrow before any await — a RefCell
+            // borrow held across `.await` would panic on re-entry.
+            let (block, err) = {
                 let mut s = self.script.borrow_mut();
                 s.received.push("prompt".into());
                 s.prompt_count += 1;
+                (s.block_prompt, s.prompt_err)
+            };
+            if block {
+                self.gate.notified().await;
+            }
+            if err {
+                return Err(acp::Error::new(-32603, "boom"));
             }
             Ok(acp::PromptResponse::new(acp::StopReason::EndTurn))
         }
@@ -1271,9 +1288,10 @@ mod tests {
     /// against the live bridge.
     async fn with_harness<F, Fut>(script: Rc<RefCell<Script>>, body: F)
     where
-        F: FnOnce(BridgeSender, mpsc::Receiver<RoutedNotification>) -> Fut,
+        F: FnOnce(BridgeSender, mpsc::Receiver<RoutedNotification>, Rc<tokio::sync::Notify>) -> Fut,
         Fut: std::future::Future<Output = ()>,
     {
+        let gate = Rc::new(tokio::sync::Notify::new());
         let local = tokio::task::LocalSet::new();
         local
             .run_until(async move {
@@ -1291,6 +1309,7 @@ mod tests {
                     });
                 let fake = FakeAgent {
                     script,
+                    gate: gate.clone(),
                     next_session: Cell::new(0),
                 };
                 // Kept alive for the duration so its IO task can route requests to
@@ -1307,9 +1326,45 @@ mod tests {
                 });
                 tokio::task::spawn_local(run_loop(Rc::new(conn), channels, std::env::temp_dir()));
                 let (sender, notif_rx, _perm_rx) = handle.split();
-                body(sender, notif_rx).await;
+                body(sender, notif_rx, gate).await;
             })
             .await;
+    }
+
+    /// Send NewSession and return the created session id.
+    async fn start_session(
+        sender: &BridgeSender,
+        rx: &mut mpsc::Receiver<RoutedNotification>,
+    ) -> crate::types::SessionId {
+        sender
+            .send(BridgeCommand::NewSession {
+                cwd: std::env::temp_dir(),
+            })
+            .await
+            .unwrap();
+        recv_session_id(rx).await
+    }
+
+    /// One notification, or None on a `secs`-second timeout.
+    async fn recv_notif(
+        rx: &mut mpsc::Receiver<RoutedNotification>,
+        secs: u64,
+    ) -> Option<Notification> {
+        match tokio::time::timeout(Duration::from_secs(secs), rx.recv()).await {
+            Ok(Some(r)) => Some(r.notification),
+            _ => None,
+        }
+    }
+
+    /// Drain notifications until the first `TurnCompleted` and return its stop
+    /// reason; panic on a 5s timeout (a missing completion is the bug we fence).
+    async fn drain_to_turn(rx: &mut mpsc::Receiver<RoutedNotification>) -> StopReason {
+        while let Some(n) = recv_notif(rx, 5).await {
+            if let Notification::TurnCompleted { stop_reason } = n {
+                return stop_reason;
+            }
+        }
+        panic!("no TurnCompleted within 5s");
     }
 
     async fn recv_session_id(
@@ -1346,14 +1401,8 @@ mod tests {
         // records the prompt it received (bidirectional delivery works).
         let script = Rc::new(RefCell::new(Script::default()));
         let probe = script.clone();
-        with_harness(script, |sender, mut rx| async move {
-            sender
-                .send(BridgeCommand::NewSession {
-                    cwd: std::env::temp_dir(),
-                })
-                .await
-                .unwrap();
-            let sid = recv_session_id(&mut rx).await;
+        with_harness(script, |sender, mut rx, _gate| async move {
+            let sid = start_session(&sender, &mut rx).await;
             sender
                 .send(BridgeCommand::SendPrompt {
                     session_id: sid,
@@ -1374,6 +1423,77 @@ mod tests {
             "fake agent received new_session"
         );
         assert_eq!(s.prompt_count, 1, "fake agent received exactly one prompt");
+    }
+
+    #[tokio::test]
+    async fn loop_frees_during_turn() {
+        // C1: with the prompt parked, a ListSettings sent mid-turn is processed and
+        // its result arrives BEFORE TurnCompleted — proving the loop returned to
+        // recv() rather than blocking on conn.prompt(). The pre-fix inline await
+        // would hold the loop, so nothing could surface until the gate releases
+        // (and TurnCompleted would then be first). FakeAgent has no settings
+        // ext_method, so the result is a BridgeError(operation="settings/list").
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        with_harness(script, |sender, mut rx, gate| async move {
+            let sid = start_session(&sender, &mut rx).await;
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: sid,
+                    content_blocks: vec!["go".into()],
+                })
+                .await
+                .unwrap();
+            sender.send(BridgeCommand::ListSettings).await.unwrap();
+            let first = recv_notif(&mut rx, 5)
+                .await
+                .expect("a mid-turn notification before turn end");
+            // The ListSettings result — SettingsList on Ok, or BridgeError on a
+            // settings error — arrives before any TurnCompleted (which can't fire
+            // while the gate is held). Either proves the loop processed the command
+            // mid-turn; only a leading TurnCompleted would mean the loop blocked.
+            assert!(
+                matches!(&first, Notification::SettingsList { .. })
+                    || matches!(&first, Notification::BridgeError { operation, .. } if operation == "settings/list"),
+                "expected mid-turn ListSettings result before TurnCompleted, got {first:?}"
+            );
+            gate.notify_one();
+            assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn turn_error_still_completes_once() {
+        // C6: a turn whose prompt fails still emits exactly one TurnCompleted
+        // (EndTurn), never zero — the off-loop task must notify on the Err path or
+        // the UI stays stuck busy forever.
+        let script = Rc::new(RefCell::new(Script {
+            prompt_err: true,
+            ..Default::default()
+        }));
+        with_harness(script, |sender, mut rx, _gate| async move {
+            let sid = start_session(&sender, &mut rx).await;
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: sid,
+                    content_blocks: vec!["go".into()],
+                })
+                .await
+                .unwrap();
+            assert_eq!(
+                drain_to_turn(&mut rx).await,
+                StopReason::EndTurn,
+                "error turn completes as EndTurn"
+            );
+            assert!(
+                !matches!(recv_notif(&mut rx, 1).await, Some(Notification::TurnCompleted { .. })),
+                "exactly one TurnCompleted (no second)"
+            );
+        })
+        .await;
     }
 
     // Slice DE / design claims 7,8,9 (+ backs claim 10's single-message via
