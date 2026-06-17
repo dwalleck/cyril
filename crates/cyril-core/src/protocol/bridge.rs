@@ -337,6 +337,9 @@ async fn run_loop(
     // SessionController's reset of `steering_unsupported` on SessionCreated.
     let mut steering_unsupported: std::collections::HashSet<crate::types::SessionId> =
         std::collections::HashSet::new();
+    // cyril-84ca: the in-flight turn's task — at most one. `is_finished()` makes
+    // the "busy" check self-clearing, so a completed turn never blocks the next.
+    let mut prompt_task: Option<tokio::task::JoinHandle<()>> = None;
 
     while let Some(cmd) = channels.command_rx.recv().await {
         match cmd {
@@ -381,6 +384,25 @@ async fn run_loop(
                 session_id,
                 content_blocks,
             } => {
+                // cyril-84ca: at most one turn in flight. A SendPrompt arriving
+                // while a turn runs must NOT start a second conn.prompt() (two
+                // concurrent turns on one session is undefined); reject it with a
+                // BridgeError. `is_finished()` self-clears, so the next turn after
+                // this one completes is allowed.
+                if prompt_task.as_ref().is_some_and(|h| !h.is_finished()) {
+                    if notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeError {
+                            operation: "prompt".into(),
+                            message: "a turn is already in progress".into(),
+                        },
+                    )
+                    .await
+                    {
+                        break;
+                    }
+                    continue;
+                }
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 let prompt: Vec<acp::ContentBlock> = content_blocks
                     .into_iter()
@@ -396,7 +418,7 @@ async fn run_loop(
                 // while this task is pending still crosses the wire.
                 let turn_conn = conn.clone();
                 let turn_tx = channels.notification_tx.clone();
-                tokio::task::spawn_local(async move {
+                prompt_task = Some(tokio::task::spawn_local(async move {
                     let note = match turn_conn.prompt(request).await {
                         Ok(response) => Notification::TurnCompleted {
                             stop_reason: crate::protocol::convert::to_stop_reason(
@@ -417,7 +439,7 @@ async fn run_loop(
                     if let Err(e) = turn_tx.send(note.into()).await {
                         tracing::debug!(error = %e, "TurnCompleted send failed (App gone)");
                     }
-                });
+                }));
             }
             BridgeCommand::CancelRequest => {
                 if let Some(ref session_id) = active_session_id {
@@ -1491,6 +1513,67 @@ mod tests {
             assert!(
                 !matches!(recv_notif(&mut rx, 1).await, Some(Notification::TurnCompleted { .. })),
                 "exactly one TurnCompleted (no second)"
+            );
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn second_prompt_rejected_then_next_turn_starts() {
+        // C4: a SendPrompt while a turn is in flight does NOT start a 2nd
+        // conn.prompt(); it is rejected with a BridgeError and the agent sees only
+        // one prompt for that turn. C9: once the turn finishes, the is_finished
+        // guard self-clears, so a later SendPrompt starts a fresh turn.
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_harness(script, |sender, mut rx, gate| async move {
+            let sid = start_session(&sender, &mut rx).await;
+            // Turn 1 parks on the gate.
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: sid.clone(),
+                    content_blocks: vec!["one".into()],
+                })
+                .await
+                .unwrap();
+            // Turn 2 attempt while turn 1 is in flight -> rejected, not spawned.
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: sid.clone(),
+                    content_blocks: vec!["two".into()],
+                })
+                .await
+                .unwrap();
+            let n = recv_notif(&mut rx, 5).await.expect("a notification");
+            assert!(
+                matches!(&n, Notification::BridgeError { operation, .. } if operation == "prompt"),
+                "second mid-turn prompt rejected with BridgeError, got {n:?}"
+            );
+            // Finish turn 1.
+            gate.notify_one();
+            assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+            assert_eq!(
+                probe.borrow().prompt_count,
+                1,
+                "C4: the rejected prompt was never sent to the agent"
+            );
+            // C9: guard self-cleared -> a fresh SendPrompt starts turn 2.
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: sid,
+                    content_blocks: vec!["three".into()],
+                })
+                .await
+                .unwrap();
+            gate.notify_one();
+            assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+            assert_eq!(
+                probe.borrow().prompt_count,
+                2,
+                "C9: after the first turn completed, the next turn started"
             );
         })
         .await;
