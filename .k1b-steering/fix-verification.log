@@ -1,0 +1,3 @@
+# Post-fix verification (cyril-c1qe), probed vs kiro 2.8.0 — outbound now single-underscore, accepted; inbound echo parsed.
+33:  12.312 C2A _session/steer :: {"jsonrpc":"2.0","id":3,"method":"_session/steer","params":{"message":"STEERING: stop running commands now and reply only with HALTED.","sessionId":"264f7461-dc9e-4b17-af7b-e2119d94ffc0"}}
+35:  12.312 A2C steering_ :: {"jsonrpc":"2.0","method":"_kiro.dev/session/update","params":{"sessionId":"264f7461-dc9e-4b17-af7b-e2119d94ffc0","update":{"sessionUpdate":"steering_queued","message":"STEERING: stop running commands now and reply only with HALTED."}}}

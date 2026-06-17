@@ -220,6 +220,14 @@ fn should_skip_steer(
     unsupported.contains(session_id)
 }
 
+/// Code-side ext-methods for queue steering (Kiro 2.7.0+). UNPREFIXED on
+/// purpose: the ACP library prepends a single `_` (`format!("_{}")`), so the
+/// wire shows `_session/steer[/clear]`. A leading `_` here would double it to
+/// `__session/steer` (-32601) — the cyril-c1qe regression. cf. `session/spawn`.
+/// Regression fence: `steer_methods_are_unprefixed`.
+const STEER_EXT_METHOD: &str = "session/steer";
+const STEER_CLEAR_EXT_METHOD: &str = "session/steer/clear";
+
 /// Serialize a JSON value to an `Arc<RawValue>` for use with `ext_method`.
 fn to_raw_arc(
     params: &serde_json::Value,
@@ -1056,8 +1064,10 @@ async fn run_bridge(
                 };
                 // Ok({queued:true}) carries no new info: the `steering_queued`
                 // echo is the source of truth, so success emits nothing here.
+                // `STEER_EXT_METHOD` is unprefixed — ext_method adds the single
+                // `_` (wire `_session/steer`); see the const's doc-comment.
                 if let Err(e) = conn
-                    .ext_method(acp::ExtRequest::new("_session/steer", raw_arc))
+                    .ext_method(acp::ExtRequest::new(STEER_EXT_METHOD, raw_arc))
                     .await
                 {
                     // The real lookup (always false today: the pre-send gate
@@ -1123,8 +1133,9 @@ async fn run_bridge(
                     }
                 };
                 // The `steering_cleared` echo is the source of truth on success.
+                // Unprefixed: ext_method adds the single `_` (wire `_session/steer/clear`).
                 if let Err(e) = conn
-                    .ext_method(acp::ExtRequest::new("_session/steer/clear", raw_arc))
+                    .ext_method(acp::ExtRequest::new(STEER_CLEAR_EXT_METHOD, raw_arc))
                     .await
                 {
                     // Real lookup, not a literal `false` — see the SteerSession
@@ -1224,6 +1235,34 @@ mod tests {
         assert!(should_skip_steer(&unsupported, &a));
         // ...but a DIFFERENT session still steers (the guard is not global).
         assert!(!should_skip_steer(&unsupported, &b));
+    }
+
+    // Regression fence for cyril-c1qe (the PR's primary outbound fix). The ACP
+    // library prepends exactly one `_` to ext methods (`format!("_{}")`,
+    // agent-client-protocol lib.rs:213/221), so the code-side method MUST be
+    // unprefixed for the wire to show a single leading `_`. K1a passed
+    // `"_session/steer"`, which doubled to `__session/steer` -> -32601 and
+    // killed steering silently. This is the outbound counterpart to
+    // convert::kiro's `steering_rides_stripped_method_not_underscore`.
+    #[test]
+    fn steer_methods_are_unprefixed() {
+        for m in [STEER_EXT_METHOD, STEER_CLEAR_EXT_METHOD] {
+            assert!(
+                !m.starts_with('_'),
+                "steer ext method `{m}` must be unprefixed; the ACP lib adds the single `_`"
+            );
+            // Mirror the library's prepend: exactly one leading underscore, never two.
+            let wire = format!("_{m}");
+            assert!(
+                !wire.starts_with("__"),
+                "wire method `{wire}` must not be double-underscored (-32601)"
+            );
+        }
+        // Pin the exact wire forms kiro 2.7.0+ accepts. Oracle: the post-fix
+        // capture in .k1b-steering/fix-verification.log shows `_session/steer`
+        // accepted (pre-fix `__session/steer` returned -32601).
+        assert_eq!(format!("_{STEER_EXT_METHOD}"), "_session/steer");
+        assert_eq!(format!("_{STEER_CLEAR_EXT_METHOD}"), "_session/steer/clear");
     }
 
     #[tokio::test]

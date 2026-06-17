@@ -1,0 +1,4 @@
+6:   0.960 C2A session/prompt :: {"jsonrpc":"2.0","id":2,"method":"session/prompt","params":{"sessionId":"6a672900-d0d3-4b36-9324-ab8129186de3","prompt":[{"type":"text","text":"You have the execute_bash tool. Run these three commands one at a time, waiting for each to finish before starting the next: (1) sleep 2 && echo STEP_ONE  (2) sleep 2 && echo STEP_TWO  (3) sleep 2 && echo STEP_THREE. After all three finish, reply with the word DONE."}]}}
+31:  12.838 A2C "result" :: {"jsonrpc":"2.0","result":{"stopReason":"end_turn"},"id":2}
+32:  12.839 C2A _session/steer :: {"jsonrpc":"2.0","id":3,"method":"__session/steer","params":{"message":"STEERING: stop running commands now and reply only with HALTED.","sessionId":"6a672900-d0d3-4b36-9324-ab8129186de3"}}
+33:  12.839 A2C _session/steer :: {"jsonrpc":"2.0","error":{"code":-32601,"message":"Method not found","data":"__session/steer"},"id":3}
