@@ -39,6 +39,30 @@ For a PRD or epic, use `-t epic` and link child issues with
 `--deps "parent-child:<epic-id>"` (or `rivets dep add` after the fact). Record
 an upstream/external link (a GitHub URL, a ROADMAP phase) with `--external-ref`.
 
+## ROADMAP traceability (convention)
+
+Every issue derived from [`docs/ROADMAP.md`](../ROADMAP.md) **must** carry its
+milestone id in `--external-ref`, formatted `ROADMAP:<milestone-id>` — e.g.
+`ROADMAP:KAS-2a`, `ROADMAP:K1b`. This is the durable link between a ticket and
+the roadmap, and it makes coverage queryable: the set of milestones that have
+issues is exactly the `ROADMAP:` external-refs in the tracker.
+
+**Coverage check** — "which ROADMAP milestones don't have issues yet?" is the
+universe (milestone headers in ROADMAP.md) minus the filed set:
+
+```sh
+# filed: milestones that have an issue
+rivets list --json | python3 -c "import json,sys; \
+  [print(i['external_ref']) for i in json.load(sys.stdin) \
+   if str(i.get('external_ref','')).startswith('ROADMAP:')]" | sort -u
+# universe: milestone headers
+grep -oE '### (KAS-[0-9a-d]+|K[0-9]|Phase [0-9])' docs/ROADMAP.md | sed 's/### //' | sort -u
+```
+
+Milestones deferred rather than filed individually live as checklist items in a
+**tail epic** (`-t epic`); that epic is the worklist for the next breakdown pass,
+so nothing is silently dropped.
+
 ## When a skill says "fetch the relevant ticket"
 
 ```sh
