@@ -205,6 +205,8 @@ All agent interactions are notification-driven. Commands return immediately; res
 
 Kiro v1.29+ supports subagents — child sessions spawned from the main agent that run in parallel with their own tool access and message streams. Cyril observes, displays, and controls these via:
 
+> **KAS uses a different subagent model.** This whole section describes the **v1/v2** engine (`agent_crew` + `kiro.dev/subagent/list_update`, which `SubagentTracker`/`crew_panel` key off). The **KAS** engine sends **no `list_update`** — its subagents are plain `tool_call`s tagged `_meta.kiro.kind: "agent-subtask"`, grouped by `agentSubtaskId`, with an `OrchestrateSubAgent` DAG tool (one-shot, fail-fast, no loop) and bundled verification agents (`semantic_reviewer`, `functional_task_alignment`). Rendering KAS crews needs a separate path — see ROADMAP KAS-3 and [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md).
+
 **Components:**
 
 - **`SubagentTracker`** (`cyril-core/src/subagent.rs`) — Pure state machine defined in `cyril-core`, held as a field inside `UiState` (cyril-ui). Tracks metadata from `kiro.dev/subagent/list_update` notifications: which subagents are active, their status, group, dependencies, and inbox counters. `apply_notification(&Notification) -> bool`, same pattern as `SessionController`.
@@ -266,6 +268,8 @@ On Windows, all paths crossing the WSL boundary go through `win_to_wsl()` / `wsl
 
 For the comprehensive protocol reference with example requests/responses, see **[docs/kiro-acp-protocol.md](docs/kiro-acp-protocol.md)**.
 
+> **⚠️ Two engines as of kiro-cli 2.7.1.** Everything in this section describes the **v1/v2 (Rust) engine** — cyril's current default (`kiro-cli acp`). 2.7.1 embeds a **second engine, KAS** (`acp --agent-engine kas` / hidden `chat --v3`), a TypeScript/LangGraph agent with its own **`_kiro/*` dialect** that differs on several points below. KAS is reachable over ACP today and is the strategic direction. Several v2-only claims in this section are **not** true for KAS — they're flagged inline. **Full KAS wire reference: [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md)** (auth contract, subagent/crew model, fs+terminal host callbacks, hooks, bundled agents, steering fileMatch, agent-config migration). The KAS integration plan is **ROADMAP "KAS engine integration track" (KAS-1…6)**.
+
 - **Protocol**: JSON-RPC 2.0 over stdio (ACP v2025-01-01)
 - The `agent-client-protocol` crate (v0.9) from crates.io is the source of truth for ACP types. Actual type definitions live in `agent-client-protocol-schema` (transitive dependency).
 - Tool calls with `kind == ToolKind::Other` are "planning" steps from the agent and are filtered from display.
@@ -314,13 +318,15 @@ A notification (fire-and-forget, no response expected). Cyril sends this on Esc 
 
 Includes more than just `session_id`:
 - `modes` — `SessionModeState` with `current_mode_id` and `available_modes` list (displayed in toolbar)
-- `config_options` — always `null` in Kiro v1.28.0 (`session/set_config_option` is not implemented)
+- `config_options` — always `null` on the v1/v2 engine (`session/set_config_option` not implemented). **KAS populates it** (`mode`/`autopilot`/`contentCollection`) and `set_config_option` works there.
 
-### Methods NOT implemented by Kiro v1.28.0
+### Methods NOT implemented by the v1/v2 engine (KAS differs — see the KAS audit)
 
-- `session/set_config_option` — returns "Method not found". Use `kiro.dev/commands/execute` with `model` command instead.
+These hold for the default v1/v2 (Rust) engine. **KAS implements several of them** — verify against `docs/kiro-2.7.1-wire-audit.md` before assuming a method is unavailable when running `--agent-engine kas`.
+
+- `session/set_config_option` — v1/v2: "Method not found" (use `kiro.dev/commands/execute` with `model`). **KAS: works** (`{sessionId, configId, value}` → rebuilt `configOptions`).
 - `session/set_model` — behind unstable feature flag, not advertised in capabilities.
-- `session/fork`, `session/resume`, `session/list` — unstable, `sessionCapabilities: {}`.
+- `session/fork`, `session/resume`, `session/list` — v1/v2: unstable, `sessionCapabilities: {}`. **KAS: `sessionCapabilities {list, fork}` are non-empty and functional.**
 
 ## Adding New Features
 

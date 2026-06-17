@@ -6,6 +6,20 @@
 
 ---
 
+## Contents
+
+**TL;DR:** 2.7.1 embeds the KAS engine (TypeScript/LangGraph), reachable today via `acp --agent-engine kas` (the `chat --v3` TUI is gated). KAS is a *second agent on the same wire*: `_kiro/*` dialect, host-supplied auth, capability-negotiated fs **and** terminal callbacks, an `agent-subtask` subagent model with a one-shot fail-fast DAG (no native loop), built-in `semantic_reviewer`/`fta`/`Explore` agents, and IDE-parity steering (`fileMatch`). cyril's default v2 path is unchanged; KAS adoption is the [ROADMAP KAS track](ROADMAP.md).
+
+- [Headline: embedded & works over ACP](#headline-kas-is-embedded-and-works-over-acp) · [The `--v3` flag / "V3 not supported" gate](#the---v3-flag-and-the-v3-not-supported-gate)
+- [KAS ACP capability surface (vs v2)](#kas-acp-capability-surface-vs-v2) — `_kiro/*` namespace, `session/new` (7 modes, populated `configOptions`, working `set_config_option`)
+- [Subagent flows are changing](#subagent-flows-are-changing-under-kas) — InvokeSubAgent/OrchestrateSubAgent/subagent_response schemas; bundled agents (Explore/semantic_reviewer/fta) + enable path; user-agent file formats & the CLI-only **migration trap**; **how a crew executes** (one-shot fail-fast DAG, fan-out cap 5, inter-stage context, no-loop = design choice); LangGraph StateGraph; the gated DAG orchestrator
+- [Auth contract](#kas-auth-contract-the-host-must-supply-the-token-verified-live) · [Subagent wire format](#kas-subagent-wire-format-verified-live) · [`/goal` = autonomous mode](#goal-a-v2-command-with-no-kas-equivalent--autonomous-mode-instead)
+- [Filesystem callbacks](#kas-filesystem-callbacks-verified-live--capability-negotiated) · [Host-responsibility callback map](#kas-host-responsibility-callback-map-verified-live) (auth/shell_type/permission/fs/terminal)
+- [Session-management + account methods](#kas-session-management--account-methods-verified-live) · [Hooks (kas-unified-hooks)](#kas-hooks--the-kas-unified-hooks-engine-from-the-bundle) · [Steering `fileMatch`](#steering-inclusion-under-kas--filematch-now-works-against-openfiles)
+- [Cyril impact](#cyril-impact) · [Not verified (follow-ups)](#not-verified-this-session-follow-ups) · [Reproduce](#reproduce)
+
+---
+
 ## Headline: KAS is embedded and works over ACP
 
 Through 2.7.0, `--agent-engine kas` errored with "KAS assets not embedded." That error path is gone. 2.7.1 embeds the KAS server bundle inside `kiro-cli-chat` and self-extracts it on first KAS launch:
