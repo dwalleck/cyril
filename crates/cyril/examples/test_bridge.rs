@@ -573,5 +573,17 @@ fn print_notification(n: &Notification) {
             let pct = *used as f64 / (*size).max(1) as f64 * 100.0;
             println!("  [UsageUpdated] {used}/{size} tokens ({pct:.1}%)");
         }
+        Notification::SteeringQueued { message } => {
+            println!("  [SteeringQueued] {message}");
+        }
+        Notification::SteeringConsumed { content } => {
+            println!("  [SteeringConsumed] {content}");
+        }
+        Notification::SteeringCleared => {
+            println!("  [SteeringCleared]");
+        }
+        Notification::SteeringUnsupported { message } => {
+            println!("  [SteeringUnsupported] {message}");
+        }
     }
 }

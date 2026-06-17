@@ -127,6 +127,28 @@ pub enum Notification {
         fallback: Option<String>,
     },
 
+    // Queue steering (Kiro 2.7.0+, `_kiro.dev/session/update` echoes; ROADMAP K1a).
+    // These are echoes of a steer the client requested — emitted for cyril's own
+    // steers AND (future, multi-client) for steers another client originated, so
+    // the converter produces them unconditionally. K1a routes them global; the
+    // session_id from the envelope is intentionally dropped (only ToolCallChunk is
+    // promoted to scoped routing today — scoped steering is K1c, cyril-28z2).
+    /// A steer was accepted and queued for injection at the next tool boundary.
+    SteeringQueued {
+        message: String,
+    },
+    /// A queued steer was injected into the turn at a tool boundary.
+    SteeringConsumed {
+        content: String,
+    },
+    /// The queued steer was dropped before pickup (via `_session/steer/clear`).
+    SteeringCleared,
+    /// The agent does not implement `_session/steer` (`-32601`); bridge-synthesized,
+    /// not a wire echo. Surfaced once per session as a system message.
+    SteeringUnsupported {
+        message: String,
+    },
+
     // Subagent lifecycle (kiro.dev/subagent/*)
     SubagentListUpdated {
         subagents: Vec<crate::types::SubagentInfo>,
