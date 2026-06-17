@@ -109,14 +109,13 @@ def pump(until, to=60):
             return o
     return None
 
-# NOTE: hooks are gated behind featureFlags.v2Hooks, which the KAS server derives
-# from settings `hooks.enabled === true && hooks.v2 === true` (bundle:
-# `.hooks?.enabled && (s.hooks.v2===true ? new HooksModuleCache(...) ...)`).
-# That flag is NOT honored via session `_meta.kiro.settings` (verified: neither
-# `v2Hooks:{enabled}` nor `hooks:{enabled,v2}` toggles it) — unlike
-# subagentOrchestration/fta/semanticReview. It's a GLOBAL on-disk flag
-# (~/.kiro/settings/cli.json), read independently of session params. We send the
-# discovered shape anyway to document the attempt; expect hooks/list to still error.
+# NOTE (corrected by probe-kas-hooks-enabled-2.7.1.py): hooks are gated behind
+# `clientMeta.hooks.enabled && clientMeta.hooks.v2 === true`. This probe sends the
+# flag under `_meta.kiro.settings.hooks`, which is the WRONG location — the gate
+# reads `_meta.kiro.hooks` directly (a SIBLING of `settings`). So with this probe
+# hooks/list still errors "v2Hooks is disabled"; that's expected and documents the
+# dead-end. The working enable path is in probe-kas-hooks-enabled-2.7.1.py. (The
+# getUsage + session_info_update captures below are unaffected and valid.)
 SETTINGS = {"kiro": {"settings": {"hooks": {"enabled": True, "v2": True}}}}
 req("initialize", {"protocolVersion": 1, "clientCapabilities": {"_meta": SETTINGS}})
 pump(1, 20)
@@ -159,10 +158,9 @@ for u in SESSION_INFO:
 
 log("\n===== HOOKS DIRECTION =====")
 log("  server->client _kiro/hooks/* calls during session:", SERVER_HOOK_CALLS or "(none)")
-log("  _kiro/hooks/list gated behind global settings flag hooks.enabled+v2 (NOT session-settable).")
-log("  Bundle: KAS runs hook command-actions in-process (CommandAction({processRunner})).")
-log("  => DIRECTION: hooks are SERVER-RUN (KAS executes them; host is NOT called back),")
-log("     with a CLIENT-FACING request API (_kiro/hooks/{list,executeHook,triggerHook}) for")
-log("     observe/manage/trigger. No server->client hook callback observed (gate off this run).")
+log("  NOTE: hooks/list errored above because this probe set the flag in the WRONG place")
+log("  (_meta.kiro.settings.hooks). The working enable path is _meta.kiro.hooks={enabled,v2}")
+log("  (sibling of settings) — see probe-kas-hooks-enabled-2.7.1.py. Bundle shows hooks run")
+log("  SERVER-SIDE (CommandAction({processRunner})); host is not called back to run them.")
 PIN.close(); proc.terminate()
 log(f"\n# log: {LOG}")
