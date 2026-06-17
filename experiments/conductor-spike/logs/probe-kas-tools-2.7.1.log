@@ -1,0 +1,51 @@
+# KAS 2.7.1 tool advertisement via _kiro/tools/didChange
+# session/new 'tools' field present: False
+
+=== BUILT-IN tool tags (4) — coarse categories, NOT individual ids ===
+  read       read-file, diagnostics, search tools
+  shell      run-commands tools
+  web        web search tools
+  write      write-file tools
+
+=== MCP per-tool tags (39) — from this host's installed powers, not KAS-intrinsic ===
+  @power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server/cdk_best_practices
+  @power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server/check_cloudformation_template_compliance
+  @power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server/get_cloudformation_pre_deploy_validation_instructions
+  @power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server/read_iac_documentation_page
+  @power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server/search_cdk_documentation
+  @power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server/search_cdk_samples_and_constructs
+  @power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server/search_cloudformation_documentation
+  @power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server/troubleshoot_cloudformation_deployment
+  @power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server/validate_cloudformation_template
+  @power-aws-observability-awslabs.aws-documentation-mcp-server/read_documentation
+  @power-aws-observability-awslabs.aws-documentation-mcp-server/read_sections
+  @power-aws-observability-awslabs.aws-documentation-mcp-server/recommend
+  @power-aws-observability-awslabs.aws-documentation-mcp-server/search_documentation
+  @power-aws-observability-awslabs.cloudtrail-mcp-server/get_query_results
+  @power-aws-observability-awslabs.cloudtrail-mcp-server/get_query_status
+  @power-aws-observability-awslabs.cloudtrail-mcp-server/lake_query
+  @power-aws-observability-awslabs.cloudtrail-mcp-server/list_event_data_stores
+  @power-aws-observability-awslabs.cloudtrail-mcp-server/lookup_events
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/analyze_log_group
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/analyze_metric
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/cancel_logs_insight_query
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/describe_log_groups
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/execute_cwl_insights_batch
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/execute_log_insights_query
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/execute_promql_query
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/execute_promql_range_query
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/get_active_alarms
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/get_alarm_history
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/get_logs_insight_query_results
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/get_metric_data
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/get_metric_metadata
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/get_promql_label_values
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/get_promql_labels
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/get_promql_series
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/get_recommended_metric_alarms
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/recommend_indexes_account
+  @power-aws-observability-awslabs.cloudwatch-mcp-server/recommend_indexes_loggroup
+  @power-context7-context7/query-docs
+  @power-context7-context7/resolve-library-id
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-tools-2.7.1.log

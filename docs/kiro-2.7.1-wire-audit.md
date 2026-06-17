@@ -16,6 +16,7 @@
 - [Auth contract](#kas-auth-contract-the-host-must-supply-the-token-verified-live) · [Subagent wire format](#kas-subagent-wire-format-verified-live) · [`/goal` = autonomous mode](#goal-a-v2-command-with-no-kas-equivalent--autonomous-mode-instead)
 - [Filesystem callbacks](#kas-filesystem-callbacks-verified-live--capability-negotiated) · [Host-responsibility callback map](#kas-host-responsibility-callback-map-verified-live) (auth/shell_type/permission/fs/terminal)
 - [Session-management + account methods](#kas-session-management--account-methods-verified-live) · [Hooks (kas-unified-hooks)](#kas-hooks--the-kas-unified-hooks-engine-from-the-bundle) · [Steering `fileMatch`](#steering-inclusion-under-kas--filematch-now-works-against-openfiles)
+- [KAS live wire captures (2026-06-16)](#kas-live-wire-captures-2026-06-16-tool-advertisement-session_info_update-usage) — tool advertisement (`_kiro/tools/didChange` = category tags), `session_info_update` `kind`-multiplexer (turn-end/metering/context-breakdown), `_kiro/account/getUsage` shape
 - [Cyril impact](#cyril-impact) · [cyril type-coverage gaps (Rust vs KAS `.d.ts`)](#cyril-type-coverage-gaps-rust-types-vs-kas-typescript-dts) · [Not verified (follow-ups)](#not-verified-this-session-follow-ups) · [Reproduce](#reproduce)
 
 ---
@@ -426,6 +427,8 @@ There is **no** `Notification` / `PermissionRequest` / `WaitingForApproval` trig
 
 **ACP surface (split):** the v2 Rust binary exposes only `_kiro/hooks/list` + `_kiro/hooks/didChange` (since ≥2.6.1; likely TUI↔backend, not confirmed on the cyril ACP wire). KAS implements the **full** set: `_kiro/hooks/{list, executeHook, triggerHook, sessionStart, cancel, didChange}`. `_kiro/powers/*` is KAS-only (absent from the v2 binary).
 
+**Gating + direction (verified live 2026-06-16, `probe-kas-hooks-usage-2.7.1.py`):** the whole hooks surface is **gated behind a feature flag** — `_kiro/hooks/list` returns `-32603 "_kiro/hooks/list is not available when v2Hooks is disabled"` until enabled. The server derives the flag from settings `hooks.enabled === true && hooks.v2 === true` (bundle: `.hooks?.enabled && (s.hooks.v2 === true ? new HooksModuleCache(...))`). Unlike `subagentOrchestration`/`fta`/`semanticReview`, **this flag is NOT session-settable** — sending `_meta.kiro.settings.{v2Hooks|hooks}` does not toggle it (verified both shapes); it's a **global on-disk flag** (`~/.kiro/settings/cli.json`) the KAS server reads independently. **Direction:** hooks are **server-run, not host-fired** — KAS executes command-action hooks in-process (`CommandAction({processRunner})`) and agent-action hooks against its own model; no `_kiro/hooks/*` server→client callback fired during a tool-using turn. The host-facing API (`list`/`executeHook`/`triggerHook`) is **client→server requests** for observe/manage/trigger. So for cyril a hooks stage means *driving and observing* the engine's hooks, not implementing a callback responder.
+
 ---
 
 ## Steering inclusion under KAS — `fileMatch` now works (against `openFiles`)
@@ -446,6 +449,67 @@ A real CLI↔IDE gap-closure. The v1/v2 Rust engine parsed steering `inclusion` 
 
 ---
 
+## KAS live wire captures (2026-06-16): tool advertisement, `session_info_update`, usage
+
+Three surfaces captured live this session (`probe-kas-tools-2.7.1.py`, `probe-kas-hooks-usage-2.7.1.py`).
+
+### Tool advertisement — `_kiro/tools/didChange` pushes **category tags**, not tool ids
+
+KAS does **not** enumerate built-in tool ids on the wire. At `session/new` (and on every change — MCP connect/disconnect, powers activate, `/agent` swap) it pushes `_kiro/tools/didChange` with a tag list:
+
+- **Built-ins → 4 coarse category tags:** `read` ("read-file, diagnostics, search tools"), `write` ("write-file tools"), `shell` ("run-commands tools"), `web` ("web search tools"). `source: "builtin"`.
+- **MCP tools → one tag per tool** (`@server/tool` + the tool's own description). `source: "mcp"`.
+- `session/new` has **no** `tools` field; the granular built-in ids live only in the system prompt + bundle.
+
+The granular built-in set (from the `@kiro/agent` bundle `dist/tools/`; **wire ids are snake_case** — confirmed by `turn_completion._meta.kiro.promptTurnSummaries[].usedTools: ["execute_bash"]`):
+
+| Group | Tool ids |
+|---|---|
+| File I/O | `fs_write` (create/strReplace/insert), `fs_append`, `str_replace`, `delete_file`, `read_file`, `read_multiple_files`, `list_directory`, `file_search` |
+| Shell / process | `execute_bash`, `control_process` (OS-specific id), `get_process_output`, `list_processes` |
+| Search / code-intel | `grep_search`, `code` (AST + LSP), **c2s** ×7: `c2s_list_packages`, `c2s_list_modules`, `c2s_list_functions`, `c2s_describe_module`, `c2s_describe_function`, `c2s_traverse_modules`, `c2s_traverse_functions` |
+| Subagents | `subagent` (InvokeSubAgent), `orchestrate_subagent` (DAG), `subagent_response` (internal child-return) |
+| Context / session | `disclose_context`, `report_progress`, `update_session_information`, `todo_list`, `get_user_input` |
+| Knowledge / web | `knowledge`, `web_fetch`, `tool_search` (BM25 over deferred MCP tools) |
+| Hooks / powers | `create_hook`, `kiro_powers` |
+| MCP | wrapped per-tool via `acp-mcp-wrapper` / remote-tool discovery |
+
+Deltas vs the v2 built-in set: KAS **splits** the monolithic `fs_write`/`read` into granular tools, **adds** `c2s_*`, `control_process`/`list_processes`, `file_search`, `disclose_context`, `report_progress`, `update_session_information`, `create_hook`, `kiro_powers`, `tool_search`; and the v2 `goal`/`use_aws` built-ins are **not** in the KAS tool index.
+
+### `session_info_update` is a `kind`-discriminated multiplexer (the KAS metadata + turn-lifecycle channel)
+
+The single `session/update` variant `session_info_update` carries everything v2 split across `kiro.dev/metadata` + the prompt response. The discriminator is `_meta.kiro.kind`; six kinds observed in one turn:
+
+| `kind` | Payload (`_meta.kiro`) | v2 analog |
+|---|---|---|
+| `context_usage` | `usagePercentage` + `breakdown.{contextFiles,tools,kiroResponses,yourPrompts,sessionFiles}` each `{tokens, percent, items?}` | `contextUsagePercentage` (but KAS adds a **per-category** token breakdown v2 never had) |
+| `user_message_id_assigned` | `userMessageId` | (none) |
+| `focus_update` | `focus.title` / `title` | (none — turn title) |
+| `turn_start` | `turnStart: true` | (none) |
+| `turn_completion` | `promptTurnSummaries: [{unit:"credit", usage:<f64>, usedTools:[...]}]`, `elapsedTime` (ms), `status:"success"` | `meteringUsage` + `turnDurationMs` |
+| `turn_end` | `turnEnd.stopReason` (`"end_turn"`) | the `session/prompt` response `stopReason` |
+
+Load-bearing for cyril (→ KAS-2): **turn completion is `kind:"turn_end"`** (not the prompt response), **metering is `kind:"turn_completion"`** (credits + elapsedTime + usedTools), and context is a **richer breakdown** than cyril's flat `TokenCounts`.
+
+### `_kiro/account/getUsage` — the `/usage` analog (message shape; values redacted)
+
+A client→server request returning the billing/usage panel data:
+
+```jsonc
+{ "success": bool, "message": str, "data": {
+    "planName": str, "billingCycleReset": str,
+    "overagesEnabled": bool, "isEnterprise": bool,
+    "usageBreakdowns": [ { "resourceType": str, "displayName": str,
+        "used": float, "limit": int, "percentage": int,
+        "currentOverages": int, "overageRate": float,
+        "overageCharges": int, "currency": str } ],
+    "bonusCredits": [] } }
+```
+
+This is the on-wire source for a cyril `/usage` panel under KAS (v2 has no equivalent ACP method — it uses the `/usage` slash command). → KAS-4.
+
+---
+
 ## Cyril impact
 
 - **Passive compatibility:** unchanged. Cyril's default `kiro-cli acp` (v2 engine) wire shape is unaffected; the entire KAS surface is opt-in behind `--agent-engine kas`.
@@ -453,7 +517,7 @@ A real CLI↔IDE gap-closure. The v1/v2 Rust engine parsed steering `inclusion` 
 - **Two dialects to support.** KAS uses `_kiro/*`; the v1/v2 engines use `_kiro.dev/*` (now `_kiro/*` in tui.js per 2.7.0, but the backend ACP methods cyril handles are still `kiro.dev/*` / `_kiro.dev/*`). A KAS integration needs a parallel converter arm in `convert/kiro.rs` keyed on the engine.
 - **Subagent display changes** (now verified live — see the KAS subagent wire-format section). Under KAS, subagents are `tool_call`s with `_meta.kiro.kind:"agent-subtask"` grouped by `agentSubtaskId`, **not** `kiro.dev/subagent/list_update`. Cyril's `SubagentTracker`/crew panel see nothing on this path until they group by `agentSubtaskId`.
 - **`configOptions` populated** and `session/set_config_option` is a working SET (verified) — cyril can drive `mode`/`autopilot` from its toolbar/pickers, reading the set *response* (no `config_option_update` echo fires) and constraining `value` to advertised option ids (invalid values silently coerce).
-- **Hooks become a real ACP surface (reverses prior guidance).** The standing "don't implement hooks; they're backend-only" stance holds for v1/v2 but not KAS — KAS exposes `_kiro/hooks/{list,executeHook,triggerHook,…}`, so cyril can observe/list/trigger hooks (and the unified command+agent action model spans IDE+CLI authoring). A prime composable-stage opportunity; direction (client-manages vs server-fires) still to probe.
+- **Hooks become a real ACP surface (reverses prior guidance).** The standing "don't implement hooks; they're backend-only" stance holds for v1/v2 but not KAS — KAS exposes `_kiro/hooks/{list,executeHook,triggerHook,…}`, so cyril can observe/list/trigger hooks (and the unified command+agent action model spans IDE+CLI authoring). A prime composable-stage opportunity. **Direction resolved (2026-06-16):** hooks are **server-run** (KAS executes command/agent actions in-process — no host callback) and the surface is **gated behind a global `hooks.enabled+v2` flag** that is *not* session-settable; the host role is to *drive and observe* via `_kiro/hooks/{list,executeHook,triggerHook}` client→server requests, not to implement a callback responder. See the hooks section.
 - **`sacp-conductor` proxying is NOT broken on 2.7.1 (corrects a prior "collateral break" note).** A 2.6.1-era observation recorded that `sacp-conductor 11.0.0` failed to proxy kiro-cli ("server shut down unexpectedly" at init). Re-tested 2026-06-16 with the unchanged conductor binary against the archived 2.5.1/2.6.1/2.7.1 binaries: conductor proxies **all three** cleanly via both a raw `initialize`+`session/new` handshake and the full `test_bridge` 10-step run incl. a real prompt turn (exit 0, 0 errors). Binary×binary is identical to the audit day, so the original failure was **environmental — an expired auth token** (`kiro-cli-chat` exits at startup when unauthenticated, which conductor surfaces as a shutdown-at-init; init/session-new are local, so the backend wasn't the variable), **not a 2.6.0 binary regression.** The Phase-1 conductor-integration path is unblocked through 2.7.1. Repro: `experiments/conductor-spike/conductor-wrapper-2.7.1.sh` + `cargo run --example test_bridge -- --agent-command <wrapper>` (captured in `experiments/conductor-spike/test_bridge-conductor-2.7.1.out`).
 
 ---
@@ -485,8 +549,13 @@ Ordered by strategic weight. Field lists are from the self-extracted `@kiro/agen
 
 ## Not verified this session (follow-ups)
 
+**Resolved 2026-06-16** (see "KAS live wire captures" above): KAS tool advertisement (`_kiro/tools/didChange` = category tags + per-MCP-tool); `session_info_update` `kind`-discriminator shape incl. turn-end/metering/context-breakdown; `_kiro/account/getUsage` message shape; hooks gating (`hooks.enabled+v2`, global flag) + direction (server-run, client-managed).
+
+Still open:
+- **Hooks with the gate ON** — `hooks.enabled+v2` is a global on-disk flag, not session-settable, so this session couldn't enable it without writing `~/.kiro/settings/cli.json`. With the flag on: confirm the `_kiro/hooks/list` response shape and whether the server *ever* pushes a `_kiro/hooks/*` server→client message (the bundle says it runs hooks in-process, so expected: no host callback — but unverified with the gate live).
 - `_kiro/session/history` returning empty after a live turn — confirm whether a reloaded/persisted session or a pagination cursor surfaces the updates.
 - The destructive/unprobed bonus methods: `_kiro/session/{delete,rename}`, `_kiro/permissions/{explain}`, `_kiro/policy/check`, `_kiro/spec/getTaskStatuses`.
+- The other `_kiro/*` push streams seen by name but not captured live: `_kiro/progressive_context/items_changed`, `_kiro/governance/state`, `_kiro/powers/items_changed`, `_kiro/steering/documents_changed`.
 - A **clean v2 baseline re-capture on 2.7.1** — the default engine did not respond to the piped init+session/new probe in this session (KAS did); v2 baseline here is taken from `docs/kiro-2.7.0-wire-audit.md`, not freshly re-captured.
 
 ---

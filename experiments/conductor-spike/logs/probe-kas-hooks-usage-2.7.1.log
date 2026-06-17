@@ -1,0 +1,63 @@
+# sessionId: sess_0b38c4b1-b176-4d4e-a0c3-d2201f53a790 | attempted hooks.enabled+v2 via _meta.kiro.settings (NOT honored — global flag)
+
+===== _kiro/hooks/list response =====
+ERROR: {"code": -32603, "message": "Internal error", "data": {"details": "_kiro/hooks/list is not available when v2Hooks is disabled"}}
+
+===== _kiro/account/getUsage MESSAGE SHAPE (values redacted to types) =====
+{
+  "success": "bool",
+  "message": "str",
+  "data": {
+    "planName": "str",
+    "billingCycleReset": "str",
+    "overagesEnabled": "bool",
+    "isEnterprise": "bool",
+    "usageBreakdowns": [
+      {
+        "resourceType": "str",
+        "displayName": "str",
+        "used": "float",
+        "limit": "int",
+        "percentage": "int",
+        "currentOverages": "int",
+        "overageRate": "float",
+        "overageCharges": "int",
+        "currency": "str"
+      },
+      "...(len=1)"
+    ],
+    "bonusCredits": []
+  }
+}
+
+===== session_info_update notifications (10) — _meta.kiro shape =====
+  update keys: ['_meta', 'sessionUpdate']
+  _meta.kiro: {"contextUsage": {"usagePercentage": 0}, "breakdown": {"contextFiles": {"tokens": 0, "percent": 0, "items": []}, "tools": {"tokens": 4537, "percent": 2.3}, "kiroResponses": {"tokens": 0, "percent": 0}, "yourPrompts": {"tokens": 0, "percent": 0}, "sessionFiles": {"tokens": 0, "percent": 0, "items": []}}, "kind": "context_usage", "usagePercentage": 0}
+  update keys: ['_meta', 'sessionUpdate']
+  _meta.kiro: {"userMessageId": "80d2841d-b656-49e9-84d3-1775b486374b", "kind": "user_message_id_assigned"}
+  update keys: ['_meta', 'sessionUpdate', 'title']
+  _meta.kiro: {"focus": {"title": "Run the shell command `echo hi` and report its output."}, "kind": "focus_update", "title": "Run the shell command `echo hi` and report its output."}
+  update keys: ['_meta', 'sessionUpdate']
+  _meta.kiro: {"turnStart": true, "kind": "turn_start"}
+  update keys: ['_meta', 'sessionUpdate']
+  _meta.kiro: {"contextUsage": {"usagePercentage": 1.963499903678894}, "kind": "context_usage", "usagePercentage": 1.963499903678894}
+  update keys: ['_meta', 'sessionUpdate']
+  _meta.kiro: {"contextUsage": {"usagePercentage": 1.963499903678894}, "breakdown": {"contextFiles": {"tokens": 0, "percent": 0, "items": []}, "tools": {"tokens": 19299, "percent": 1.9}, "kiroResponses": {"tokens": 0, "percent": 0}, "yourPrompts": {"tokens": 0, "percent": 0}, "sessionFiles": {"tokens": 0, "percent": 0, "items": []}}, "kind": "context_usage", "usagePercentage": 1.963499903678894}
+  update keys: ['_meta', 'sessionUpdate']
+  _meta.kiro: {"contextUsage": {"usagePercentage": 4.570199966430664}, "kind": "context_usage", "usagePercentage": 4.570199966430664}
+  update keys: ['_meta', 'sessionUpdate']
+  _meta.kiro: {"contextUsage": {"usagePercentage": 4.570199966430664}, "breakdown": {"contextFiles": {"tokens": 0, "percent": 0, "items": []}, "tools": {"tokens": 24267, "percent": 2.4}, "kiroResponses": {"tokens": 0, "percent": 0}, "yourPrompts": {"tokens": 0, "percent": 0}, "sessionFiles": {"tokens": 0, "percent": 0, "items": []}}, "kind": "context_usage", "usagePercentage": 4.570199966430664}
+  update keys: ['_meta', 'sessionUpdate']
+  _meta.kiro: {"promptTurnSummaries": [{"unit": "credit", "unitPlural": "credits", "usage": 0.11581283515754562, "usedTools": ["execute_bash"]}], "elapsedTime": 5329, "status": "success", "kind": "turn_completion"}
+  update keys: ['_meta', 'sessionUpdate']
+  _meta.kiro: {"turnEnd": {"stopReason": "end_turn"}, "kind": "turn_end", "stopReason": "end_turn"}
+
+===== HOOKS DIRECTION =====
+  server->client _kiro/hooks/* calls during session: (none)
+  _kiro/hooks/list gated behind global settings flag hooks.enabled+v2 (NOT session-settable).
+  Bundle: KAS runs hook command-actions in-process (CommandAction({processRunner})).
+  => DIRECTION: hooks are SERVER-RUN (KAS executes them; host is NOT called back),
+     with a CLIENT-FACING request API (_kiro/hooks/{list,executeHook,triggerHook}) for
+     observe/manage/trigger. No server->client hook callback observed (gate off this run).
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-hooks-usage-2.7.1.log
