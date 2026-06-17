@@ -89,14 +89,14 @@ Parallel to the platform phases above (addresses Open Tension #6: keep shipping 
 
 **Estimate:** 1.5–2.5 weeks across three milestones.
 **Depends on:** nothing (orthogonal to Phases 1–5). Requires kiro-cli ≥ 2.7.0 at runtime; degrades gracefully on older binaries.
-**Wire reference:** [`docs/kiro-2.7.0-wire-audit.md`](kiro-2.7.0-wire-audit.md) — `_session/steer` / `_session/steer/clear` requests, `steering_queued` / `steering_consumed` / `steering_cleared` variants on `kiro.dev/session/update`.
+**Wire reference:** [`docs/kiro-2.7.0-wire-audit.md`](kiro-2.7.0-wire-audit.md) — `_session/steer` / `_session/steer/clear` requests, `steering_queued` / `steering_consumed` / `steering_cleared` variants on **`_kiro.dev/session/update`** (underscore-dot prefix; confirmed by captured wire `experiments/conductor-spike/logs/probe-steer-goal-2.7.0.log`, NOT the unprefixed `kiro.dev/session/update`).
 
 Steering lets the user redirect the agent mid-turn without cancelling: the message is queued, injected at the next tool boundary, and the model arbitrates (advisory, not imperative). This also fixes a latent cyril bug: today Enter-while-busy submits a second `session/prompt` mid-turn (`app.rs` Layer-4 Enter → `submit_input()` with no busy guard), which has no defined semantics.
 
 **Milestone K1a — Wire + state plumbing (no UX change)**
 
 - `BridgeCommand::SteerSession { session_id, message }` and `BridgeCommand::ClearSteering { session_id }`; bridge sends `_session/steer[/clear]` as awaited ExtRequests (the commands/execute lesson applies: requests with ids, never notifications). Bridge MUST emit a notification on both success and error paths (existing invariant).
-- `Notification::SteeringQueued { message }`, `SteeringConsumed { content }`, `SteeringCleared` variants; handle the three `sessionUpdate` variants in `convert/kiro.rs` — today they fall into the unknown-variant `Err` arm. Do this defensively regardless of UX timing: a future multi-client observer setup could receive steering echoes cyril didn't originate.
+- `Notification::SteeringQueued { message }`, `SteeringConsumed { content }`, `SteeringCleared` variants; handle the three `sessionUpdate` variants in `convert/kiro.rs` via a **new outer match arm `"_kiro.dev/session/update"`** — today these fall through to the outer `other =>` arm (`convert/kiro.rs:674`) and are **silently dropped (`Ok(None)`)**, NOT the inner unknown-variant `Err` arm (which lives under the unprefixed `kiro.dev/session/update` and is unreachable for these). Do this defensively regardless of UX timing: a future multi-client observer setup could receive steering echoes cyril didn't originate.
 - Support gating: there is no capability flag and no `commands/available` entry for steering — the only gate is optimistic send. On `-32601 Method not found` (clean, no hang — verified against 2.6.1), surface one system message ("steering requires kiro-cli 2.7.0+") and remember unsupported for the session. Optionally retain `agentInfo.version` from `initialize` in `SessionController` (currently discarded) for a nicer preflight message.
 - Tests: convert-layer tests for all three variants (including unknown-field tolerance), `SessionController`/`UiState` state tests, bridge error-path test.
 
