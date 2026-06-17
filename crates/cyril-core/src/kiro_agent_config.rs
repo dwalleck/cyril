@@ -38,6 +38,8 @@ fn tool_for_setting_key(setting_key: &str) -> Option<&'static str> {
 /// session-scoped grant already succeeded — but it must be visible, never silent.
 #[derive(Debug, thiserror::Error)]
 pub enum TrustPersistError {
+    #[error("agent name '{0}' is not a plain filename component")]
+    InvalidAgentName(String),
     #[error("agent '{0}' is a Kiro built-in; trust is not persisted for it")]
     BuiltinAgent(String),
     #[error("unknown trust setting_key '{0}'")]
@@ -65,6 +67,19 @@ pub enum TrustPersistError {
     },
 }
 
+/// True only if `name` is a single, normal path component — no separators, no
+/// `.`/`..`, not empty, not absolute. `agent_name` is server-supplied (it comes
+/// from Kiro's `currentModeId` / `AgentSwitched.name`, ultimately derived from a
+/// config filename), so it must never be trusted to build a path: a value like
+/// `../../foo` would resolve outside `.kiro/agents/`. Validate at the boundary.
+fn is_plain_agent_name(name: &str) -> bool {
+    let mut components = Path::new(name).components();
+    matches!(
+        (components.next(), components.next()),
+        (Some(std::path::Component::Normal(_)), None)
+    )
+}
+
 /// The directory holding global agent configs (`~/.kiro/agents`), if a home
 /// directory can be determined. Mirrors `cyril`'s `config_dir()` HOME/USERPROFILE
 /// fallback so it behaves the same inside WSL and on Linux.
@@ -87,6 +102,13 @@ pub fn resolve_agent_config_path(agent_name: &str, cwd: &Path) -> Option<PathBuf
 /// Resolution core with an injectable global dir, so tests don't mutate `HOME`
 /// (env mutation is `unsafe` in Rust 2024, which the workspace forbids).
 fn resolve_in_dirs(agent_name: &str, cwd: &Path, global_dir: Option<&Path>) -> Option<PathBuf> {
+    if !is_plain_agent_name(agent_name) {
+        tracing::warn!(
+            agent = agent_name,
+            "refusing to resolve a config path from a non-plain agent name"
+        );
+        return None;
+    }
     let file = format!("{agent_name}.json");
 
     let workspace = cwd.join(".kiro").join("agents").join(&file);
@@ -123,6 +145,9 @@ pub fn persist_trust_grant(
     setting_key: &str,
     patterns: &[String],
 ) -> Result<PathBuf, TrustPersistError> {
+    if !is_plain_agent_name(agent_name) {
+        return Err(TrustPersistError::InvalidAgentName(agent_name.to_string()));
+    }
     if BUILTIN_AGENTS.contains(&agent_name) {
         return Err(TrustPersistError::BuiltinAgent(agent_name.to_string()));
     }
@@ -131,7 +156,8 @@ pub fn persist_trust_grant(
     let path = resolve_agent_config_path(agent_name, cwd)
         .ok_or_else(|| TrustPersistError::NoConfig(agent_name.to_string()))?;
 
-    // Re-read fresh so a concurrent native-TUI write isn't clobbered.
+    // Re-read fresh to shrink the window where a concurrent native-TUI write is
+    // lost (temp+rename narrows but cannot fully close it).
     let content = std::fs::read_to_string(&path).map_err(|source| TrustPersistError::Read {
         path: path.clone(),
         source,
@@ -225,7 +251,15 @@ fn write_atomic(path: &Path, content: &str) -> std::io::Result<()> {
     })?;
     let tmp = dir.join(format!(".{file_name}.cyril.tmp"));
     std::fs::write(&tmp, content)?;
-    std::fs::rename(&tmp, path)
+    if let Err(e) = std::fs::rename(&tmp, path) {
+        // Best-effort cleanup so a failed rename doesn't strand the temp file
+        // next to the user's config.
+        if let Err(rm) = std::fs::remove_file(&tmp) {
+            tracing::debug!(tmp = %tmp.display(), error = %rm, "could not remove temp file after a failed rename");
+        }
+        return Err(e);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -282,6 +316,65 @@ mod tests {
             .as_array()
             .unwrap();
         assert_eq!(cmds2.len(), 3, "dedup keeps echo hello, adds only ls");
+    }
+
+    #[test]
+    fn persist_rejects_traversal_agent_names() {
+        let tmp = tempfile::tempdir().unwrap();
+        for bad in ["../evil", "..", "a/b", "/abs", "", "."] {
+            let err =
+                persist_trust_grant(bad, tmp.path(), "allowedCommands", &["x".into()]).unwrap_err();
+            assert!(
+                matches!(err, TrustPersistError::InvalidAgentName(_)),
+                "expected InvalidAgentName for {bad:?}, got {err:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn persist_errors_on_corrupt_config_without_clobbering() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_agent(tmp.path(), "broken", "{ not json");
+        let original = std::fs::read(&path).unwrap();
+
+        let err = persist_trust_grant("broken", tmp.path(), "allowedCommands", &["echo".into()])
+            .unwrap_err();
+        assert!(
+            matches!(err, TrustPersistError::Parse { .. }),
+            "got {err:?}"
+        );
+        // The corrupt file must be left exactly as it was — never overwritten.
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+    }
+
+    #[test]
+    fn persist_errors_on_non_object_config_without_clobbering() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = write_agent(tmp.path(), "arr", "[]");
+        let original = std::fs::read(&path).unwrap();
+
+        let err = persist_trust_grant("arr", tmp.path(), "allowedCommands", &["echo".into()])
+            .unwrap_err();
+        assert!(
+            matches!(err, TrustPersistError::NotAnObject { .. }),
+            "got {err:?}"
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+    }
+
+    #[test]
+    fn persist_leaves_no_temp_file_behind() {
+        let tmp = tempfile::tempdir().unwrap();
+        write_agent(tmp.path(), "clean", "{}");
+        persist_trust_grant("clean", tmp.path(), "allowedCommands", &["echo".into()]).unwrap();
+
+        let agents = tmp.path().join(".kiro").join("agents");
+        let strays: Vec<_> = std::fs::read_dir(&agents)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_name().to_string_lossy().contains(".cyril.tmp"))
+            .collect();
+        assert!(strays.is_empty(), "temp file left behind: {strays:?}");
     }
 
     #[test]
