@@ -1,0 +1,259 @@
+# sessionId: sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29
+# captured userMessageId: f0407578-4b69-40cf-b6a5-00bed46909ac
+
+===== _kiro/permissions/list  params={"sessionId": "sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29"} =====
+  RESULT: {
+  "rules": [
+    {
+      "capability": "filesystem",
+      "match": [
+        "**"
+      ],
+      "exclude": [
+        "./**",
+        "~/.kiro/**"
+      ],
+      "effect": "ask",
+      "scope": "kiro",
+      "source": "kiro-scope"
+    },
+    {
+      "capability": "fs_write",
+      "match": [
+        "~/.kiro/settings/",
+        ".kiro/settings/",
+        "~/.kiro/workspace-roots/",
+        "~/.kiro/sandbox-state/"
+      ],
+      "effect": "deny",
+      "scope": "kiro",
+      "source": "kiro-scope"
+    },
+    {
+      "capability": "fs_write",
+      "match": [
+        ".git/**",
+        "**/.git/**",
+        ".git./**",
+        "**/.git./**",
+        ".git /**",
+        "**/.git /**",
+        "**/git~*/**",
+        ".git",
+        ".vscode/**",
+        "**/.vscode/**",
+        ".vscode./**",
+        "**/.vscode./**",
+        ".vscode /**",
+        "**/.vscode /**",
+        "**/vscode~*/**",
+        ".kiro/agents/**",
+        ".kiro./agents/**",
+        ".kiro /agents/**",
+        "kiro~1/agents/**",
+        ".kiro/hooks/**",
+        ".kiro./hooks/**",
+        ".kiro /hooks/**",
+        "kiro~1/hooks/**",
+        "~/.kiro/agents/**",
+        "**/*.code-workspace",
+        "**/mcp.json"
+      ],
+      "effect": "ask",
+      "scope": "kiro",
+      "source": "kiro-scope"
+    },
+    {
+      "capability": "fs_read",
+      "match": [
+        "./**"
+      ],
+      "effect": "allow",
+      "scope": "agent",
+      "source": "agent-profile"
+    },
+    {
+      "capability": "shell",
+      "match": [
+        "pwd",
+        "whoami",
+        "uname",
+        "cal",
+        "id",
+        "groups",
+        "tty",
+        "uptime",
+        "free",
+        "lsb_release",
+        "which"
+      ],
+      "effect": "allow",
+      "scope": "agent",
+      "source": "agent-profile"
+    },
+    {
+      "capability": "shell",
+      "match": [
+        "git status",
+        "git status -s",
+        "git status --short",
+        "git status -b",
+        "git status --branch",
+        "git log",
+        "git log *",
+        "git diff",
+        "git blame *",
+        "git version",
+        "git branch",
+        "git branch -v",
+        "git branch -vv",
+        "git branch -a",
+        "git branch -r",
+        "git branch --list",
+        "git branch --list *",
+        "git tag",
+        "git tag -l",
+        "git tag -l *",
+        "git tag --list",
+        "git tag --list *",
+        "git remote",
+        "git remote -v",
+        "git remote show *",
+        "git reflog",
+        "git reflog show",
+        "git reflog show *"
+      ],
+      "effect": "allow",
+      "scope": "agent",
+      "source": "agent-profile"
+    },
+    {
+      "capability": "shell",
+      "match": [
+        "cargo metadata",
+        "cargo metadata *",
+        "cargo tree",
+        "cargo tree *",
+        "cargo search *",
+        "cargo locate-project",
+        "cargo version",
+        "cargo --version"
+      ],
+      "effect": "allow",
+      "scope": "agent",
+      "source": "agent-profile"
+    },
+    {
+      "capability": "shell",
+      "match": [
+        "npm list",
+        "npm list *",
+        "npm ls",
+        "npm ls *",
+        "npm view *",
+        "npm outdated",
+        "npm outdated *",
+        "npm search *",
+        "npm info *",
+        "npm show *",
+        "npm whoami",
+        "npm --version",
+        "npm audit"
+      ],
+      "effect": "allow",
+      "scope": "agent",
+      "source": "agent-profile"
+    },
+    {
+      "capability": "shell",
+      "match": [
+        "npm audit *"
+      ],
+      "exclude": [
+        "npm audit fix*"
+      ],
+      "effect": "allow",
+      "scope": "agent",
+      "source": "agent-profile"
+    },
+    {
+      "capability": "shell",
+      "match": [
+        "docker ps",
+        "docker ps *",
+        "docker images",
+        "docker images *",
+        "docker inspect *",
+        "docker logs *",
+        "docker version",
+        "docker info",
+        "docker top *",
+        "docker stats",
+        "docker stats *",
+        "docker port *",
+        "docker history *",
+        "docker diff *"
+      ],
+      "effect": "allow",
+      "scope": "agent",
+      "source": "agent-profile"
+    },
+    {
+      "capability": "shell",
+      "match": [
+        "kubectl get *",
+        "kubectl describe *",
+        "kubectl logs *",
+        "kubectl version",
+        "kubectl cluster-info",
+        "kubectl top *",
+        "kubectl api-resources",
+        "kubectl explain *"
+      ],
+      "effect": "allow",
+      "scope": "agent",
+      "source": "agent-profile"
+    },
+    {
+      "capability": "shell",
+      "match": [
+        "rustup show",
+        "rustup show *",
+        "rustup which *",
+        "rustup version",
+        "rustup --version"
+      ],
+      "effect": "allow",
+      "scope": "agent",
+      "source": "agent-profile"
+    }
+  ]
+}
+
+===== _kiro/permissions/list  params={"sessionId": "sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29", "scope": "session"} =====
+  RESULT: {"rules": []}
+
+===== _kiro/permissions/explain  params={"sessionId": "sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29", "capability": "shell", "resource": "rm -rf /"} =====
+  RESULT: {"capability": "shell", "resource": "rm -rf /", "effect": "ask", "isExplicitAsk": false}
+
+===== _kiro/permissions/explain  params={"sessionId": "sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29", "capability": "fs_read", "resource": "/etc/passwd"} =====
+  RESULT: {"capability": "fs_read", "resource": "/etc/passwd", "effect": "ask", "isExplicitAsk": true, "matchedRule": {"capability": "filesystem", "match": ["**"], "exclude": ["./**", "~/.kiro/**"], "effect": "ask"}, "scope": "kiro", "source": "kiro-scope"}
+
+===== _kiro/policy/check  params={"sessionId": "sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29", "capability": "fs_read", "paths": ["/etc/passwd"]} =====
+  RESULT: {"outcome": "allow"}
+
+===== _kiro/policy/check  params={"sessionId": "sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29", "capability": "shell", "command": "ls -la"} =====
+  RESULT: {"outcome": "allow"}
+
+===== _kiro/codeIntelligence  params={"sessionId": "sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29", "subcommand": "status"} =====
+  RESULT: {"success": true, "status": {"initialized": false, "languages": [], "lspServers": [{"name": "typescript-language-server", "languages": ["typescript"], "status": "available", "isAvailable": true, "initDurationMs": null}, {"name": "rust-analyzer", "languages": ["rust"], "status": "available", "isAvailable": true, "initDurationMs": null}, {"name": "pyright", "languages": ["python"], "status": "available", "isAvailable": true, "initDurationMs": null}, {"name": "gopls", "languages": ["go"], "status": "not_installed", "isAvailable": false, "initDurationMs": null}, {"name": "jdtls", "languages": ["java"], "status": "not_installed", "isAvailable": false, "initDurationMs": null}, {"name": "solargraph", "languages": ["ruby"], "status": "not_installed", "isAvailable": false, "initDurationMs": null}, {"name": "clangd", "languages": ["cpp"], "status": "available", "isAvailable": true, "initDurationMs": null}, {"name": "kotlin-language-server", "languages": ["kotlin"], "status": "not_installed", "isAvailable": false, "initDurationMs": null}]}}
+
+===== _kiro/session/context  params={"sessionId": "sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29", "subcommand": "show"} =====
+  RESULT: {"success": true, "entries": []}
+
+===== _kiro/session/history  params={"sessionId": "sess_1663b98f-e8e4-4f3d-8afd-57dc21ea3e29", "beforeMessageId": "f0407578-4b69-40cf-b6a5-00bed46909ac", "limit": 10} =====
+  RESULT: {"updates": [], "hasMore": false}
+
+# permission prompts triggered during this probe: ['policy_check', 'ls -la']
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-client-methods-2.7.1.log

@@ -531,6 +531,19 @@ This is the on-wire source for a cyril `/usage` panel under KAS (v2 has no equiv
 
 Plus standard `session/update` variants on the KAS wire: `agent_message_chunk`, `tool_call`/`tool_call_update`, `available_commands_update` (KAS pushes the slash-command list), `config_option_update` (config options push, unlike v2), and the `session_info_update` `kind`s above. → all feed the KAS-2 converter arm.
 
+### Client→agent methods (verified live, `probe-kas-client-methods-2.7.1.py`)
+
+The read-only/non-destructive subset of `AgentCapabilityTypes` (the methods cyril *calls on* KAS) all work today:
+
+- **`_kiro/permissions/list` `{sessionId, scope?}`** → the **resolved Cedar/TrustV2 policy ruleset** — the org-policy substrate. The default set has two scopes: **`kiro-scope` guardrails** (`filesystem` `ask` outside cwd/`~/.kiro`; `fs_write` `deny` on `~/.kiro/settings`, `.kiro/settings`, workspace-roots, sandbox-state; `fs_write` `ask` on `.git/**`, `.vscode/**`, `.kiro/{agents,hooks}/**`, `*.code-workspace`, `mcp.json`) and the **`agent-profile` allowlist** (`fs_read allow ./**` + a read-only `shell` whitelist: `pwd/whoami/uname/id/...`, `git status|log|diff|blame|branch|tag|remote|reflog`, `cargo metadata|tree`, `npm list|view|audit` (excl. `audit fix`), `docker ps|images|inspect|logs`, `kubectl get|describe|logs`, `rustup show`). `scope:"session"` → `{rules: []}` (no session overrides by default). Each rule = `{capability, match[], exclude?, effect:'allow'|'deny'|'ask', scope, source}`.
+- **`_kiro/permissions/explain` `{capability?, resource, toolId?}`** → `{capability, resource, effect, isExplicitAsk, matchedRule?, scope?, source?}`. `fs_read /etc/passwd` → `ask, isExplicitAsk:true` (matched the kiro-scope `filesystem` rule); `shell "rm -rf /"` → `ask, isExplicitAsk:false` (implicit default ask, no rule matched).
+- **`_kiro/policy/check` `{capability, paths?|command?}`** → `{outcome:'allow'|'deny', reason?}`. Confirms the covenant: an `ask` effect is **resolved by firing `session/request_permission`** (the probe saw prompts titled `policy_check` and `ls -la`) and returns the post-decision outcome. So a client gating its own tool via `policy/check` triggers the normal approval flow.
+- **`_kiro/codeIntelligence` `{subcommand:'status'}`** (gated by `settings.codeIntelligence`) → `{success, status:{initialized, languages[], lspServers:[{name, languages[], status:'available'|'not_installed'|'initialized', isAvailable, initDurationMs?}]}}`. Live: ts-language-server / rust-analyzer / pyright / clangd `available`; gopls / jdtls / solargraph / kotlin-language-server `not_installed`. **Maps directly onto cyril's existing `CodePanelData`/`LspServerInfo` types** — the `/code` panel works against KAS with a converter arm.
+- **`_kiro/session/context` `{subcommand:'show'}`** → `{success, entries: ContextEntry[]}` (empty here). add/remove/clear also available.
+- **`_kiro/session/history` `{sessionId, beforeMessageId, limit?}`** → `{updates: SessionUpdate[], hasMore, oldestLoadedMessageId?}` — paginated replay (empty when the cursor is the first message, as here; no error — confirms it was the missing cursor, not a broken method).
+
+Not fired (state-changing — deferred): `session/{delete,rename,compact,export}`, `checkpoint/{revert,revertMultiple}`, `spec/{invoke,resolveSession,getTaskStatuses}`, `mcp/{resetServer,getPrompt,getResource}`, `hooks/triggerHook`.
+
 ---
 
 ## Cyril impact
@@ -580,7 +593,8 @@ Ordered by strategic weight. Field lists are from the self-extracted `@kiro/agen
 
 Still open (live-firing, not type-discovery):
 - ~~**Hooks end-to-end**~~ — **DONE 2026-06-16** (`probe-kas-hooks-host-2.7.1.py`): host-callback fired across all four triggers, `executeHook` ran, and a `preToolUse` exit-2 blocked the tool. See the hooks section.
-- **Live-firing the typed client→agent methods** — `session/{export,compact,delete,rename}`, `checkpoint/*`, `spec/*`, `permissions/*`, `policy/check`, `codeIntelligence` are now typed but unexercised on the wire.
+- ~~**Read-only client→agent methods**~~ — **DONE 2026-06-16** (`probe-kas-client-methods-2.7.1.py`): `permissions/{list,explain}`, `policy/check`, `codeIntelligence`, `session/{context,history}` all fired. See "Client→agent methods" above.
+- **The state-changing client→agent methods** remain unexercised: `session/{export,compact,delete,rename}`, `checkpoint/{revert,revertMultiple}`, `spec/*`, `mcp/{resetServer,getPrompt,getResource}`, `hooks/triggerHook`. Out of scope until a concrete cyril UX needs them (and the destructive ones want care).
 - A **clean v2 baseline re-capture on 2.7.1** — the default engine did not respond to the piped init+session/new probe in this session (KAS did); v2 baseline here is taken from `docs/kiro-2.7.0-wire-audit.md`, not freshly re-captured.
 
 ---

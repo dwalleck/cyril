@@ -34,6 +34,8 @@ Plus the **bare-ACP** host callbacks (negotiated via standard `clientCapabilitie
 
 ### 1b. Client → Agent **requests** (`agent-capabilities/index.d.ts` → `AgentCapabilityTypes`) — what cyril can call KAS to do
 
+> The read-only subset (`permissions/list`, `permissions/explain`, `policy/check`, `codeIntelligence`, `session/context`, `session/history`) is **verified live** — see the 2.7.1 audit's "Client→agent methods" capture (incl. the default Cedar policy ruleset and the LSP-server matrix). `policy/check` resolves an `ask` effect by firing `session/request_permission`.
+
 | Method | Params | Response |
 |---|---|---|
 | `_kiro/session/delete` | `{sessionId}` | `{success}` |
