@@ -17,7 +17,7 @@ pub use code_panel::{CodeCommandResponse, CodePanelData, LspServerInfo, LspStatu
 pub use command::{CommandInfo, CommandOption, ConfigOption};
 pub use event::{
     BridgeCommand, Notification, PermissionOption, PermissionOptionKind, PermissionRequest,
-    PermissionResponse, RoutedNotification,
+    PermissionResponse, RoutedNotification, TrustOption,
 };
 pub use hook::HookInfo;
 pub use message::{AgentMessage, AgentThought, UserMessage};

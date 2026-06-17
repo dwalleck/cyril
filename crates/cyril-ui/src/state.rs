@@ -713,7 +713,9 @@ impl UiState {
             tool_call: request.tool_call,
             message: request.message,
             options: request.options,
+            trust_options: request.trust_options,
             selected: 0,
+            phase: ApprovalPhase::SelectOption,
             responder: request.responder,
         });
     }
@@ -1065,46 +1067,98 @@ impl UiState {
 
     /// Move approval selection to the next option.
     pub fn approval_select_next(&mut self) {
-        if let Some(ref mut approval) = self.approval
-            && approval.selected + 1 < approval.options.len()
-        {
-            approval.selected += 1;
+        if let Some(ref mut approval) = self.approval {
+            let max = match approval.phase {
+                ApprovalPhase::SelectOption => approval.options.len(),
+                ApprovalPhase::SelectTrust => approval.trust_options.len(),
+            };
+            if approval.selected + 1 < max {
+                approval.selected += 1;
+            }
         }
     }
 
     /// Confirm the current approval selection, sending the response.
     ///
-    /// Maps the selected option's `kind` to a `PermissionResponse` semantically
-    /// — not by button index — so a `RejectAlways` option from the agent is
-    /// correctly distinguished from a plain `Reject`.
-    pub fn approval_confirm(&mut self) {
-        if let Some(approval) = self.approval.take() {
-            let response = match approval.options.get(approval.selected) {
-                Some(opt) => PermissionResponse::from(opt.kind),
-                None => {
-                    // Shouldn't happen — the selector is bounded by options.len()
-                    // elsewhere. If it ever does, defaulting to Cancel silently
-                    // turns a user's Enter press into a rejection, so log first.
-                    tracing::warn!(
-                        selected = approval.selected,
-                        options_len = approval.options.len(),
-                        "approval_confirm selection out of bounds; defaulting to Cancel"
-                    );
-                    PermissionResponse::Cancel
+    /// In phase 1 (SelectOption): if AllowAlways is chosen and trust options
+    /// exist, transitions to phase 2 (SelectTrust). Otherwise sends the
+    /// response immediately.
+    ///
+    /// In phase 2 (SelectTrust): sends AllowAlways with the selected trust
+    /// option label and **returns the chosen `TrustOption`** so the caller (App)
+    /// can persist the grant to the active agent's config for cross-session
+    /// trust. Returns `None` in every other case (phase-2 transition, immediate
+    /// allow/reject, no active dialog).
+    pub fn approval_confirm(&mut self) -> Option<cyril_core::types::TrustOption> {
+        // Take ownership upfront. Only the phase-2 transition puts the dialog
+        // back; every other path consumes it to send a response.
+        let mut approval = self.approval.take()?;
+
+        match approval.phase {
+            ApprovalPhase::SelectOption => {
+                let opt_kind = approval.options.get(approval.selected).map(|o| o.kind);
+                match opt_kind {
+                    Some(PermissionOptionKind::AllowAlways)
+                        if !approval.trust_options.is_empty() =>
+                    {
+                        // Transition to phase 2 — restore the dialog, advanced.
+                        approval.phase = ApprovalPhase::SelectTrust;
+                        approval.selected = 0;
+                        self.approval = Some(approval);
+                    }
+                    Some(kind) => {
+                        let response = PermissionResponse::from(kind);
+                        if approval.responder.send(response).is_err() {
+                            tracing::debug!(
+                                "approval response dropped — agent receiver no longer listening"
+                            );
+                        }
+                    }
+                    None => {
+                        tracing::warn!(
+                            "approval_confirm selection out of bounds; defaulting to Cancel"
+                        );
+                        if approval.responder.send(PermissionResponse::Cancel).is_err() {
+                            tracing::debug!(
+                                "approval response dropped — agent receiver no longer listening"
+                            );
+                        }
+                    }
                 }
-            };
-            // A failed send means the bridge's oneshot receiver was dropped
-            // (agent cancelled, session torn down). Nothing to recover — the
-            // user's choice is moot — but log so the drop is visible if we're
-            // ever investigating why an agent didn't receive a decision.
-            if approval.responder.send(response).is_err() {
-                tracing::debug!("approval response dropped — agent receiver no longer listening");
+                None
+            }
+            ApprovalPhase::SelectTrust => {
+                // Keep the full chosen option (setting_key + patterns) so the
+                // caller can persist it; the response only carries the label.
+                let chosen = approval.trust_options.get(approval.selected).cloned();
+                let response = PermissionResponse::AllowAlways {
+                    trust_option: chosen.as_ref().map(|t| t.label.clone()),
+                };
+                if approval.responder.send(response).is_err() {
+                    tracing::debug!(
+                        "approval response dropped — agent receiver no longer listening"
+                    );
+                }
+                chosen
             }
         }
     }
 
-    /// Cancel the approval dialog, sending a Cancel response.
+    /// Cancel the approval dialog or go back from phase 2 to phase 1.
     pub fn approval_cancel(&mut self) {
+        if let Some(ref mut approval) = self.approval
+            && approval.phase == ApprovalPhase::SelectTrust
+        {
+            // Go back to phase 1, restoring the cursor to the AllowAlways option
+            // the user picked to enter phase 2 rather than snapping to the first.
+            approval.phase = ApprovalPhase::SelectOption;
+            approval.selected = approval
+                .options
+                .iter()
+                .position(|o| o.kind == PermissionOptionKind::AllowAlways)
+                .unwrap_or(0);
+            return;
+        }
         if let Some(approval) = self.approval.take() {
             // Same rationale as approval_confirm: a dropped receiver means the
             // request was already cancelled upstream; log at debug level.
@@ -2861,6 +2915,7 @@ mod tests {
             tool_call,
             message: "Allow?".into(),
             options,
+            trust_options: Vec::new(),
             responder: tx,
         };
         (req, rx)
@@ -2912,7 +2967,7 @@ mod tests {
         state.approval_confirm();
 
         let response = rx.blocking_recv().expect("responder fired");
-        assert!(matches!(response, PermissionResponse::AllowAlways));
+        assert!(matches!(response, PermissionResponse::AllowAlways { .. }));
     }
 
     #[test]
@@ -2944,6 +2999,211 @@ mod tests {
 
         let response = rx.blocking_recv().expect("responder fired");
         assert!(matches!(response, PermissionResponse::Cancel));
+    }
+
+    fn make_approval_request_with_trust(
+        options: Vec<cyril_core::types::PermissionOption>,
+        trust_options: Vec<cyril_core::types::TrustOption>,
+    ) -> (
+        cyril_core::types::PermissionRequest,
+        tokio::sync::oneshot::Receiver<cyril_core::types::PermissionResponse>,
+    ) {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let tool_call = cyril_core::types::ToolCall::new(
+            cyril_core::types::ToolCallId::new("tc_1"),
+            "echo hi".into(),
+            cyril_core::types::ToolKind::Execute,
+            cyril_core::types::ToolCallStatus::Pending,
+            None,
+        );
+        let req = cyril_core::types::PermissionRequest {
+            tool_call,
+            message: "Allow?".into(),
+            options,
+            trust_options,
+            responder: tx,
+        };
+        (req, rx)
+    }
+
+    #[test]
+    fn approval_allow_always_with_trust_options_transitions_to_phase2() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, TrustOption};
+
+        let (req, _rx) = make_approval_request_with_trust(
+            vec![PermissionOption {
+                id: "always".into(),
+                label: "Always".into(),
+                kind: PermissionOptionKind::AllowAlways,
+                is_destructive: false,
+            }],
+            vec![TrustOption {
+                label: "Full command".into(),
+                display: "echo hi".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec!["echo hi".into()],
+            }],
+        );
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_confirm(); // should NOT send — transitions to phase 2
+
+        assert!(state.has_approval());
+        let approval = state.approval.as_ref().expect("still active");
+        assert_eq!(approval.phase, ApprovalPhase::SelectTrust);
+        assert_eq!(approval.selected, 0);
+    }
+
+    #[test]
+    fn approval_phase2_confirm_sends_allow_always_with_trust_label() {
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionKind, PermissionResponse, TrustOption,
+        };
+
+        let (req, rx) = make_approval_request_with_trust(
+            vec![PermissionOption {
+                id: "always".into(),
+                label: "Always".into(),
+                kind: PermissionOptionKind::AllowAlways,
+                is_destructive: false,
+            }],
+            vec![
+                TrustOption {
+                    label: "Full command".into(),
+                    display: "echo hi".into(),
+                    setting_key: "allowedCommands".into(),
+                    patterns: vec!["echo hi".into()],
+                },
+                TrustOption {
+                    label: "Base command".into(),
+                    display: "echo *".into(),
+                    setting_key: "allowedCommands".into(),
+                    patterns: vec!["echo( .*)?".into()],
+                },
+            ],
+        );
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_confirm(); // → phase 2
+        state.approval_select_next(); // select "Base command"
+        let persisted = state.approval_confirm(); // send + return chosen tier
+
+        // The full chosen TrustOption is returned so App can persist its
+        // patterns to the agent config (setting_key + patterns, not just label).
+        let persisted = persisted.expect("phase-2 confirm returns the chosen tier");
+        assert_eq!(persisted.label, "Base command");
+        assert_eq!(persisted.setting_key, "allowedCommands");
+        assert_eq!(persisted.patterns, vec!["echo( .*)?".to_string()]);
+
+        let response = rx.blocking_recv().expect("responder fired");
+        match response {
+            PermissionResponse::AllowAlways { trust_option } => {
+                assert_eq!(trust_option.as_deref(), Some("Base command"));
+            }
+            other => panic!("expected AllowAlways, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn approval_phase2_esc_returns_to_phase1() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, TrustOption};
+
+        let (req, _rx) = make_approval_request_with_trust(
+            vec![PermissionOption {
+                id: "always".into(),
+                label: "Always".into(),
+                kind: PermissionOptionKind::AllowAlways,
+                is_destructive: false,
+            }],
+            vec![TrustOption {
+                label: "Full command".into(),
+                display: "echo hi".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec![],
+            }],
+        );
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_confirm(); // → phase 2
+        assert_eq!(
+            state.approval.as_ref().expect("active").phase,
+            ApprovalPhase::SelectTrust
+        );
+
+        state.approval_cancel(); // should go back, not dismiss
+        assert!(state.has_approval());
+        assert_eq!(
+            state.approval.as_ref().expect("active").phase,
+            ApprovalPhase::SelectOption
+        );
+    }
+
+    #[test]
+    fn approval_phase2_back_restores_allow_always_selection() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, TrustOption};
+
+        // AllowAlways is NOT the first option, so restoring to index 0 would be
+        // wrong — the cursor must return to the AllowAlways row (index 1).
+        let (req, _rx) = make_approval_request_with_trust(
+            vec![
+                PermissionOption {
+                    id: "once".into(),
+                    label: "Allow Once".into(),
+                    kind: PermissionOptionKind::AllowOnce,
+                    is_destructive: false,
+                },
+                PermissionOption {
+                    id: "always".into(),
+                    label: "Always".into(),
+                    kind: PermissionOptionKind::AllowAlways,
+                    is_destructive: false,
+                },
+            ],
+            vec![TrustOption {
+                label: "Full command".into(),
+                display: "echo hi".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec![],
+            }],
+        );
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_select_next(); // move cursor to AllowAlways (index 1)
+        state.approval_confirm(); // → phase 2 (selected reset to 0 for the tier list)
+        state.approval_cancel(); // back to phase 1
+
+        let approval = state.approval.as_ref().expect("active");
+        assert_eq!(approval.phase, ApprovalPhase::SelectOption);
+        assert_eq!(approval.selected, 1, "cursor should return to AllowAlways");
+    }
+
+    #[test]
+    fn approval_allow_always_without_trust_options_sends_immediately() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, PermissionResponse};
+
+        let (req, rx) = make_approval_request(vec![PermissionOption {
+            id: "always".into(),
+            label: "Always".into(),
+            kind: PermissionOptionKind::AllowAlways,
+            is_destructive: false,
+        }]);
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_confirm(); // no trust options → sends immediately
+
+        assert!(!state.has_approval());
+        let response = rx.blocking_recv().expect("responder fired");
+        match response {
+            PermissionResponse::AllowAlways { trust_option } => {
+                assert_eq!(trust_option, None);
+            }
+            other => panic!("expected AllowAlways, got {other:?}"),
+        }
     }
 
     // ---------- SessionCreated welcome-message injection ----------

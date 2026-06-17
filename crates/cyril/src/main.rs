@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     rt.block_on(async {
-        let mut app = app::App::new(bridge, config.ui.max_messages);
+        let mut app = app::App::new(bridge, config.ui.max_messages, cwd.clone());
 
         // Create initial session
         app.create_initial_session(cwd).await;

@@ -245,21 +245,86 @@ pub(crate) fn extract_permission_message(args: &acp::RequestPermissionRequest) -
         .unwrap_or_else(|| "Permission requested".to_string())
 }
 
+/// Extract trust options from `_meta.trustOptions[]` on the permission request.
+///
+/// Malformed entries are dropped (and logged) rather than materialized with
+/// sentinel fields, so every returned `TrustOption` has a real `setting_key`
+/// the persistence layer can act on.
+pub(crate) fn extract_trust_options(args: &acp::RequestPermissionRequest) -> Vec<TrustOption> {
+    let Some(meta) = &args.meta else {
+        return Vec::new();
+    };
+    let Some(trust_options_val) = meta.get("trustOptions") else {
+        return Vec::new();
+    };
+    let Some(arr) = trust_options_val.as_array() else {
+        tracing::warn!("_meta.trustOptions is present but not an array; offering no trust tiers");
+        return Vec::new();
+    };
+    let parsed: Vec<TrustOption> = arr.iter().filter_map(parse_trust_option).collect();
+    if parsed.len() != arr.len() {
+        tracing::warn!(
+            raw = arr.len(),
+            parsed = parsed.len(),
+            "dropped malformed trust option(s) from _meta.trustOptions"
+        );
+    }
+    parsed
+}
+
+/// Parse a single `_meta.trustOptions[]` entry. Returns `None` (so the caller
+/// drops it) when a required field is absent or the wrong type — notably
+/// `setting_key`, which the persistence layer keys on: an entry without it is
+/// malformed, not a tier with an empty key.
+fn parse_trust_option(v: &serde_json::Value) -> Option<TrustOption> {
+    let label = v.get("label")?.as_str()?.to_string();
+    let display = v.get("display")?.as_str()?.to_string();
+    let setting_key = v
+        .get("setting_key")
+        .or_else(|| v.get("settingKey"))
+        .and_then(|v| v.as_str())?
+        .to_string();
+    let patterns = v
+        .get("patterns")
+        .and_then(|p| p.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|s| s.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+    Some(TrustOption {
+        label,
+        display,
+        setting_key,
+        patterns,
+    })
+}
+
 /// Convert our `PermissionResponse` back into an ACP `RequestPermissionResponse`.
 /// Uses the option IDs from the original request to map our response variants.
 pub(crate) fn from_permission_response(
     response: PermissionResponse,
     args: &acp::RequestPermissionRequest,
 ) -> acp::RequestPermissionResponse {
-    let outcome = match response {
+    let outcome = match &response {
         PermissionResponse::Cancel => acp::RequestPermissionOutcome::Cancelled,
         PermissionResponse::AllowOnce => {
             let option_id = find_option_id(args, acp::PermissionOptionKind::AllowOnce);
             acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
         }
-        PermissionResponse::AllowAlways => {
+        PermissionResponse::AllowAlways { trust_option } => {
             let option_id = find_option_id(args, acp::PermissionOptionKind::AllowAlways);
-            acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
+            let mut selected = acp::SelectedPermissionOutcome::new(option_id);
+            if let Some(label) = trust_option {
+                let mut meta = serde_json::Map::new();
+                meta.insert(
+                    "trustOption".to_string(),
+                    serde_json::Value::String(label.clone()),
+                );
+                selected = selected.meta(meta);
+            }
+            acp::RequestPermissionOutcome::Selected(selected)
         }
         PermissionResponse::Reject => {
             let option_id = find_option_id(args, acp::PermissionOptionKind::RejectOnce);
@@ -1094,6 +1159,142 @@ mod tests {
             resp.outcome,
             acp::RequestPermissionOutcome::Cancelled
         ));
+    }
+
+    #[test]
+    fn extract_trust_options_parses_shell_payload() {
+        let meta: serde_json::Map<String, serde_json::Value> = serde_json::from_str(
+            r#"{
+                "trustOptions": [
+                    {
+                        "label": "Full command",
+                        "display": "echo hello",
+                        "setting_key": "allowedCommands",
+                        "patterns": ["echo hello"]
+                    },
+                    {
+                        "label": "Base command",
+                        "display": "echo *",
+                        "setting_key": "allowedCommands",
+                        "patterns": ["echo( .*)?"]
+                    }
+                ]
+            }"#,
+        )
+        .unwrap();
+
+        let fields = acp::ToolCallUpdateFields::new();
+        let args = acp::RequestPermissionRequest::new(
+            "s1",
+            acp::ToolCallUpdate::new("tc_1", fields),
+            vec![],
+        )
+        .meta(meta);
+
+        let opts = extract_trust_options(&args);
+        assert_eq!(opts.len(), 2);
+        assert_eq!(opts[0].label, "Full command");
+        assert_eq!(opts[0].display, "echo hello");
+        assert_eq!(opts[0].setting_key, "allowedCommands");
+        assert_eq!(opts[0].patterns, vec!["echo hello"]);
+        assert_eq!(opts[1].label, "Base command");
+        assert_eq!(opts[1].patterns, vec!["echo( .*)?"]);
+    }
+
+    #[test]
+    fn extract_trust_options_returns_empty_without_meta() {
+        let fields = acp::ToolCallUpdateFields::new();
+        let args = acp::RequestPermissionRequest::new(
+            "s1",
+            acp::ToolCallUpdate::new("tc_1", fields),
+            vec![],
+        );
+        assert!(extract_trust_options(&args).is_empty());
+    }
+
+    #[test]
+    fn extract_trust_options_handles_camel_case_setting_key() {
+        let meta: serde_json::Map<String, serde_json::Value> = serde_json::from_str(
+            r#"{
+                "trustOptions": [
+                    {
+                        "label": "Specific paths",
+                        "display": "/tmp/file",
+                        "settingKey": "runtime_read_paths",
+                        "patterns": ["/tmp/file"]
+                    }
+                ]
+            }"#,
+        )
+        .unwrap();
+
+        let fields = acp::ToolCallUpdateFields::new();
+        let args = acp::RequestPermissionRequest::new(
+            "s1",
+            acp::ToolCallUpdate::new("tc_1", fields),
+            vec![],
+        )
+        .meta(meta);
+
+        let opts = extract_trust_options(&args);
+        assert_eq!(opts.len(), 1);
+        assert_eq!(opts[0].setting_key, "runtime_read_paths");
+    }
+
+    #[test]
+    fn extract_trust_options_drops_entry_missing_setting_key() {
+        // A well-formed tier plus one missing `setting_key`: the malformed one
+        // is dropped (not materialized with an empty key) and the good one
+        // survives — no sentinel reaches the persistence layer.
+        let meta: serde_json::Map<String, serde_json::Value> = serde_json::from_str(
+            r#"{
+                "trustOptions": [
+                    {
+                        "label": "Full command",
+                        "display": "echo hello",
+                        "setting_key": "allowedCommands",
+                        "patterns": ["echo hello"]
+                    },
+                    {
+                        "label": "No key",
+                        "display": "echo *",
+                        "patterns": ["echo( .*)?"]
+                    }
+                ]
+            }"#,
+        )
+        .unwrap();
+
+        let fields = acp::ToolCallUpdateFields::new();
+        let args = acp::RequestPermissionRequest::new(
+            "s1",
+            acp::ToolCallUpdate::new("tc_1", fields),
+            vec![],
+        )
+        .meta(meta);
+
+        let opts = extract_trust_options(&args);
+        assert_eq!(opts.len(), 1, "the setting_key-less tier must be dropped");
+        assert_eq!(opts[0].label, "Full command");
+        assert_eq!(opts[0].setting_key, "allowedCommands");
+    }
+
+    #[test]
+    fn extract_trust_options_returns_empty_when_not_an_array() {
+        // `trustOptions` present but the wrong shape → no tiers (distinct from
+        // the absent-meta case, and logged at warn rather than silently empty).
+        let meta: serde_json::Map<String, serde_json::Value> =
+            serde_json::from_str(r#"{ "trustOptions": "not-an-array" }"#).unwrap();
+
+        let fields = acp::ToolCallUpdateFields::new();
+        let args = acp::RequestPermissionRequest::new(
+            "s1",
+            acp::ToolCallUpdate::new("tc_1", fields),
+            vec![],
+        )
+        .meta(meta);
+
+        assert!(extract_trust_options(&args).is_empty());
     }
 
     #[test]
