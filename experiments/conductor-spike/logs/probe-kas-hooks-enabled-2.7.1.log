@@ -1,5 +1,5 @@
-# CWD=/home/dwalleck/.claude/tmp/kas-hooks-en-8cil58er  hook: PreToolUse command -> /home/dwalleck/.claude/tmp/kas-hooks-en-8cil58er/HOOK_FIRED
-# sessionId: sess_57b4d1ef-0457-4fd9-949e-7c1db0dcd2e4 | hooks enabled via _meta.kiro.hooks={enabled:true,v2:true}
+# CWD=/home/dwalleck/.claude/tmp/kas-hooks-en-fu640185  hook: PreToolUse command -> /home/dwalleck/.claude/tmp/kas-hooks-en-fu640185/HOOK_FIRED
+# sessionId: sess_edac207f-466b-4d7c-97fe-d341c1fe2a02 | hooks enabled via _meta.kiro.hooks={enabled:true,v2:true}
 
 ===== _kiro/hooks/list (gate ON, one PreToolUse hook configured) =====
 SHAPE: {"hooks": []}
@@ -13,13 +13,17 @@ RAW  : {"hooks": []}
   marker file written (PreToolUse command actually ran): False -> (absent)
   server->client _kiro/hooks/* notifications during turn: (none)
 
-===== CONCLUSION =====
-  CONFIRMED enable path: client _meta.kiro.hooks={enabled:true,v2:true} (SIBLING to _meta.kiro.settings),
-    set at initialize; session-settable. (NOT _meta.kiro.settings.* and NOT ~/.kiro/settings/cli.json hooks.)
-  CONFIRMED _kiro/hooks/list works once enabled; response shape {hooks: [...]}.
-  NOT shown here: a workspace .kiro/hooks/*.json loading+firing — the temp-repo hook did NOT appear in
-    hooks/list nor run (discovery nuance unresolved: likely needs the workspace recognized, a global
-    ~/.kiro/hooks/ location, or a specific trigger/schema). Direction (server-run via CommandAction/
-    processRunner; host not called back) is from the BUNDLE code, not empirically reproduced in this run.
+===== CONCLUSION (see @kiro/acp-type-covenant/dist/capabilities/hooks/types.d.ts) =====
+  Enable path: client _meta.kiro.hooks={enabled:true} at initialize (SIBLING of _meta.kiro.settings,
+    NOT inside it; NOT ~/.kiro/settings/cli.json). Covenant: KiroClientMetaHooksExtension{hooks?:{enabled:true}}.
+  DIRECTION = HOST-CALLBACK (corrected): once advertised, the AGENT calls back to the CLIENT —
+    _kiro/hooks/list {trigger,sessionId,toolId?,...} -> client returns matching hooks; then
+    _kiro/hooks/executeHook {hookId,command,userPrompt,...} -> the CLIENT spawns the command and
+    returns {output,exitCode,cancelled}. Only runCommand crosses ACP; askAgent is agent-side prompt.
+  This probe could NOT reproduce firing because it acts as a passive client: it answered KAS's
+    _kiro/hooks/list callback with generic {} (no hooks) and its own client->server hooks/list omitted
+    the REQUIRED `trigger` param. A faithful repro must act as the hooks HOST: return a hook from list,
+    then service the executeHook callback. The @kiro/agent processRunner path is the in-process fallback
+    for clients that do NOT advertise hooks.
 
 # log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-hooks-enabled-2.7.1.log

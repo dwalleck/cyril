@@ -1,4 +1,4 @@
-# sessionId: sess_cda7dd3f-208e-40e5-87a7-e8fc417b85dd | attempted hooks.enabled+v2 via _meta.kiro.settings (NOT honored — global flag)
+# sessionId: sess_8f59a9c6-5eb1-4492-a0a1-1186bfc7efe8 | attempted hooks.enabled+v2 via _meta.kiro.settings (NOT honored — global flag)
 
 ===== _kiro/hooks/list response =====
 ERROR: {"code": -32603, "message": "Internal error", "data": {"details": "_kiro/hooks/list is not available when v2Hooks is disabled"}}
@@ -34,29 +34,30 @@ ERROR: {"code": -32603, "message": "Internal error", "data": {"details": "_kiro/
   update keys: ['_meta', 'sessionUpdate']
   _meta.kiro: {"contextUsage": {"usagePercentage": 0}, "breakdown": {"contextFiles": {"tokens": 0, "percent": 0, "items": []}, "tools": {"tokens": 4537, "percent": 2.3}, "kiroResponses": {"tokens": 0, "percent": 0}, "yourPrompts": {"tokens": 0, "percent": 0}, "sessionFiles": {"tokens": 0, "percent": 0, "items": []}}, "kind": "context_usage", "usagePercentage": 0}
   update keys: ['_meta', 'sessionUpdate']
-  _meta.kiro: {"userMessageId": "465bf60d-89b5-4eb6-b2c7-610501c05b46", "kind": "user_message_id_assigned"}
+  _meta.kiro: {"userMessageId": "264229bd-c824-4437-a1bc-8b498714c778", "kind": "user_message_id_assigned"}
   update keys: ['_meta', 'sessionUpdate', 'title']
   _meta.kiro: {"focus": {"title": "Run the shell command `echo hi` and report its output."}, "kind": "focus_update", "title": "Run the shell command `echo hi` and report its output."}
   update keys: ['_meta', 'sessionUpdate']
   _meta.kiro: {"turnStart": true, "kind": "turn_start"}
   update keys: ['_meta', 'sessionUpdate']
-  _meta.kiro: {"contextUsage": {"usagePercentage": 5.081000328063965}, "kind": "context_usage", "usagePercentage": 5.081000328063965}
+  _meta.kiro: {"contextUsage": {"usagePercentage": 2.064199924468994}, "kind": "context_usage", "usagePercentage": 2.064199924468994}
   update keys: ['_meta', 'sessionUpdate']
-  _meta.kiro: {"contextUsage": {"usagePercentage": 5.081000328063965}, "breakdown": {"contextFiles": {"tokens": 0, "percent": 0, "items": []}, "tools": {"tokens": 24267, "percent": 2.4}, "kiroResponses": {"tokens": 0, "percent": 0}, "yourPrompts": {"tokens": 0, "percent": 0}, "sessionFiles": {"tokens": 0, "percent": 0, "items": []}}, "kind": "context_usage", "usagePercentage": 5.081000328063965}
+  _meta.kiro: {"contextUsage": {"usagePercentage": 2.064199924468994}, "breakdown": {"contextFiles": {"tokens": 0, "percent": 0, "items": []}, "tools": {"tokens": 24267, "percent": 2.4}, "kiroResponses": {"tokens": 0, "percent": 0}, "yourPrompts": {"tokens": 0, "percent": 0}, "sessionFiles": {"tokens": 0, "percent": 0, "items": []}}, "kind": "context_usage", "usagePercentage": 2.064199924468994}
   update keys: ['_meta', 'sessionUpdate']
   _meta.kiro: {"contextUsage": {"usagePercentage": 5.192200183868408}, "kind": "context_usage", "usagePercentage": 5.192200183868408}
   update keys: ['_meta', 'sessionUpdate']
   _meta.kiro: {"contextUsage": {"usagePercentage": 5.192200183868408}, "breakdown": {"contextFiles": {"tokens": 0, "percent": 0, "items": []}, "tools": {"tokens": 24267, "percent": 2.4}, "kiroResponses": {"tokens": 0, "percent": 0}, "yourPrompts": {"tokens": 0, "percent": 0}, "sessionFiles": {"tokens": 0, "percent": 0, "items": []}}, "kind": "context_usage", "usagePercentage": 5.192200183868408}
   update keys: ['_meta', 'sessionUpdate']
-  _meta.kiro: {"promptTurnSummaries": [{"unit": "credit", "unitPlural": "credits", "usage": 0.3309979097844113, "usedTools": ["execute_bash"]}], "elapsedTime": 6131, "status": "success", "kind": "turn_completion"}
+  _meta.kiro: {"promptTurnSummaries": [{"unit": "credit", "unitPlural": "credits", "usage": 0.23594119336650088, "usedTools": ["execute_bash"]}], "elapsedTime": 6521, "status": "success", "kind": "turn_completion"}
   update keys: ['_meta', 'sessionUpdate']
   _meta.kiro: {"turnEnd": {"stopReason": "end_turn"}, "kind": "turn_end", "stopReason": "end_turn"}
 
 ===== HOOKS DIRECTION =====
   server->client _kiro/hooks/* calls during session: (none)
   NOTE: hooks/list errored above because this probe set the flag in the WRONG place
-  (_meta.kiro.settings.hooks). The working enable path is _meta.kiro.hooks={enabled,v2}
-  (sibling of settings) — see probe-kas-hooks-enabled-2.7.1.py. Bundle shows hooks run
-  SERVER-SIDE (CommandAction({processRunner})); host is not called back to run them.
+  (_meta.kiro.settings.hooks). Working enable path: _meta.kiro.hooks={enabled} (sibling of
+  settings) — see probe-kas-hooks-enabled-2.7.1.py. DIRECTION is a HOST-CALLBACK model per
+  @kiro/acp-type-covenant: the agent calls _kiro/hooks/{list,executeHook} back on the CLIENT,
+  which runs runCommand hooks. (processRunner in @kiro/agent is the no-client fallback.)
 
 # log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-hooks-usage-2.7.1.log

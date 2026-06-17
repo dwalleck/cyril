@@ -17,8 +17,13 @@ This probe:
      (= hook ran server-side) and (b) whether any `_kiro/hooks/*` server->client
      notification fired.
 
-Confirms direction: hooks run in-process on the SERVER (KAS), host is not asked to run them.
-Auth token self-sourced; never logged.
+NOTE on direction: the authoritative contract is `@kiro/acp-type-covenant/dist/capabilities/
+hooks/types.d.ts`, which shows hooks are a HOST-CALLBACK model — when the client advertises
+`_meta.kiro.hooks.enabled`, the agent calls `_kiro/hooks/list` + `_kiro/hooks/executeHook`
+BACK on the client, and the CLIENT runs runCommand hooks. This probe is a passive client so it
+does NOT reproduce firing (it returns no hooks and omits the required `trigger` param) — it only
+confirms the enable path. The `@kiro/agent` processRunner is the in-process fallback for clients
+that don't advertise hooks. Auth token self-sourced; never logged.
 """
 import json, os, subprocess, threading, queue, time, tempfile, sqlite3, pathlib
 
@@ -151,13 +156,17 @@ log("  workspace .kiro/hooks/test.json loaded (hooks/list non-empty):", bool(hr 
 log("  marker file written (PreToolUse command actually ran):", fired,
     "->", (open(MARKER).read().strip() if fired else "(absent)"))
 log("  server->client _kiro/hooks/* notifications during turn:", HOOK_NOTIFS or "(none)")
-log("\n===== CONCLUSION =====")
-log("  CONFIRMED enable path: client _meta.kiro.hooks={enabled:true,v2:true} (SIBLING to _meta.kiro.settings),")
-log("    set at initialize; session-settable. (NOT _meta.kiro.settings.* and NOT ~/.kiro/settings/cli.json hooks.)")
-log("  CONFIRMED _kiro/hooks/list works once enabled; response shape {hooks: [...]}.")
-log("  NOT shown here: a workspace .kiro/hooks/*.json loading+firing — the temp-repo hook did NOT appear in")
-log("    hooks/list nor run (discovery nuance unresolved: likely needs the workspace recognized, a global")
-log("    ~/.kiro/hooks/ location, or a specific trigger/schema). Direction (server-run via CommandAction/")
-log("    processRunner; host not called back) is from the BUNDLE code, not empirically reproduced in this run.")
+log("\n===== CONCLUSION (see @kiro/acp-type-covenant/dist/capabilities/hooks/types.d.ts) =====")
+log("  Enable path: client _meta.kiro.hooks={enabled:true} at initialize (SIBLING of _meta.kiro.settings,")
+log("    NOT inside it; NOT ~/.kiro/settings/cli.json). Covenant: KiroClientMetaHooksExtension{hooks?:{enabled:true}}.")
+log("  DIRECTION = HOST-CALLBACK (corrected): once advertised, the AGENT calls back to the CLIENT —")
+log("    _kiro/hooks/list {trigger,sessionId,toolId?,...} -> client returns matching hooks; then")
+log("    _kiro/hooks/executeHook {hookId,command,userPrompt,...} -> the CLIENT spawns the command and")
+log("    returns {output,exitCode,cancelled}. Only runCommand crosses ACP; askAgent is agent-side prompt.")
+log("  This probe could NOT reproduce firing because it acts as a passive client: it answered KAS's")
+log("    _kiro/hooks/list callback with generic {} (no hooks) and its own client->server hooks/list omitted")
+log("    the REQUIRED `trigger` param. A faithful repro must act as the hooks HOST: return a hook from list,")
+log("    then service the executeHook callback. The @kiro/agent processRunner path is the in-process fallback")
+log("    for clients that do NOT advertise hooks.")
 PIN.close(); proc.terminate()
 log(f"\n# log: {LOG}")
