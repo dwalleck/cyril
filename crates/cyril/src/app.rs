@@ -698,12 +698,18 @@ fn summarize_description(desc: &str) -> String {
     let first_para = desc.trim().split("\n\n").next().unwrap_or("").trim();
     // Collapse hard-wrapped newlines and runs of whitespace into single spaces.
     let collapsed = first_para.split_whitespace().collect::<Vec<_>>().join(" ");
-    // Prefer the first sentence (terminator followed by a space) to keep rows short.
-    // Fall back to the whole collapsed paragraph when there is no sentence boundary.
-    collapsed
-        .find(". ")
-        .map(|idx| collapsed[..=idx].to_string())
-        .unwrap_or(collapsed)
+    // Prefer the first sentence — the earliest sentence terminator followed by a
+    // space — to keep rows short. Fall back to the whole collapsed paragraph when
+    // there is no sentence boundary. `..=idx` is byte-safe: every terminator is
+    // ASCII, so `idx` lands on a char boundary.
+    let boundary = [". ", "? ", "! "]
+        .into_iter()
+        .filter_map(|term| collapsed.find(term))
+        .min();
+    match boundary {
+        Some(idx) => collapsed[..=idx].to_string(),
+        None => collapsed,
+    }
 }
 
 /// Append per-file context items (indented) under a context-breakdown category.
@@ -1150,6 +1156,23 @@ mod tests {
     }
 
     #[test]
+    fn summarize_description_truncates_at_question_or_exclamation() {
+        // A first sentence ending in '?' or '!' must truncate there — not fall
+        // through and return the whole paragraph (the prior ". "-only split did).
+        // Relevant for third-party (MCP) tool descriptions cyril doesn't control.
+        assert_eq!(
+            summarize_description("Need a file? Use the read tool."),
+            "Need a file?"
+        );
+        assert_eq!(
+            summarize_description("Run it! Then check the output."),
+            "Run it!"
+        );
+        // The earliest terminator wins regardless of which kind it is.
+        assert_eq!(summarize_description("Why? Because. More."), "Why?");
+    }
+
+    #[test]
     fn format_response_context_breakdown() {
         let response = serde_json::json!({
             "success": true,
@@ -1200,8 +1223,10 @@ mod tests {
         let result = format_command_response("context", &response);
         // Category summary still present.
         assert!(result.contains("Context files: 8495 tokens (4.2%)"));
-        // Per-file rows are rendered, indented under the category.
-        assert!(result.contains("    AGENTS.md — 1843 tokens (0.9%)"));
+        // Per-file rows are rendered, indented under the category. The trailing
+        // newline pins the exact row format (indent, em-dash, .1 precision) and
+        // proves a plain matched row carries no stray (auto)/(unmatched) tag.
+        assert!(result.contains("    AGENTS.md — 1843 tokens (0.9%)\n"));
         // Heaviest file sorts before lighter ones.
         let heavy = result.find("review-process.md").unwrap();
         let light = result.find("AGENTS.md").unwrap();
