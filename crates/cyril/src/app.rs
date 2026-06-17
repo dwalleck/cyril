@@ -539,21 +539,23 @@ impl App {
 
     /// Persist a granted trust tier to the active agent's config file so it
     /// survives across sessions. The session-scoped grant has already been sent;
-    /// this write is best-effort and non-fatal. Built-in agents and agents with
-    /// no on-disk config are intentionally skipped (logged at debug).
-    fn persist_trust_grant(&self, trust: &cyril_core::types::TrustOption) {
+    /// this write is non-fatal. Built-in agents and agents with no on-disk config
+    /// are intentionally skipped (logged at debug); a genuine write/parse failure
+    /// is surfaced to the user, since they explicitly asked to "always allow".
+    fn persist_trust_grant(&mut self, trust: &cyril_core::types::TrustOption) {
         use cyril_core::kiro_agent_config::{TrustPersistError, persist_trust_grant};
 
-        let Some(agent) = self.session.current_mode_id() else {
+        // Own the agent name so the immutable session borrow ends before we may
+        // need `&mut self.ui_state` to report a failure below.
+        let Some(agent) = self
+            .session
+            .current_mode_id()
+            .map(|m| m.as_str().to_string())
+        else {
             tracing::debug!("no active agent identity; trust grant not persisted");
             return;
         };
-        match persist_trust_grant(
-            agent.as_str(),
-            &self.cwd,
-            &trust.setting_key,
-            &trust.patterns,
-        ) {
+        match persist_trust_grant(&agent, &self.cwd, &trust.setting_key, &trust.patterns) {
             Ok(path) => {
                 tracing::info!(path = %path.display(), "persisted trust grant across sessions")
             }
@@ -562,7 +564,15 @@ impl App {
                 // without a config file — session-scoped trust still applies.
                 tracing::debug!(reason = %e, "trust grant not persisted");
             }
-            Err(e) => tracing::warn!(error = %e, "failed to persist trust grant"),
+            Err(e) => {
+                // A genuine persistence failure (write/parse/serialize/invalid
+                // config). Don't let it vanish into the log — the user must learn
+                // the grant won't survive the session.
+                tracing::warn!(error = %e, "failed to persist trust grant");
+                self.ui_state.add_system_message(format!(
+                    "Trust applied for this session, but saving it across sessions failed: {e}"
+                ));
+            }
         }
     }
 
