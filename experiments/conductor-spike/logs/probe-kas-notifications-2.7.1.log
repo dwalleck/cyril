@@ -1,0 +1,45 @@
+# KAS 2.7.1 server->client NOTIFICATION catalog (one tool-using turn, default settings)
+# sessionId: sess_a01dc898-279e-403f-b0eb-cebb9a96de22
+
+===== _kiro/* and other notification METHODS =====
+
+[ 1x] _kiro/governance/state
+      {"sessionId": "str", "isEnterprise": "bool", "features": {"mcpEnabled": "bool", "webToolsEnabled": "bool", "usageAnalytics": "bool", "contentCollection": "bool", "promptLogging": "bool", "codeReferenceTracker": "bool", "autonomousAgents": "bool"}}
+
+[10x] _kiro/mcp/status
+      {"sessionId": "str", "servers": [{"name": "str", "authType": "str", "status": "str"}, "...(len=8)"]}
+
+[ 1x] _kiro/powers/items_changed
+      {"sessionId": "str", "status": "str", "powers": [{"name": "str", "description": "str", "keywords": ["str", "...(len=7)"]}, "...(len=4)"]}
+
+[ 2x] _kiro/progressive_context/items_changed
+      {"sessionId": "str", "status": "str", "items": [{"name": "str", "type": "str", "description": "str", "scope": "str", "uri": "str"}, "...(len=3)"]}
+
+[ 1x] _kiro/steering/documents_changed
+      {"sessionId": "str", "status": "str", "documents": []}
+
+[ 7x] _kiro/tools/didChange
+      {"sessionId": "str", "tags": [{"source": "str", "tag": "str", "description": "str"}, "...(len=4)"]}
+
+===== session/update variants (session_info_update broken out by _meta.kiro.kind) =====
+  [ 4x] agent_message_chunk
+  [ 2x] available_commands_update
+  [ 1x] config_option_update
+  [ 6x] session_info_update:context_usage
+  [ 1x] session_info_update:focus_update
+  [ 1x] session_info_update:turn_completion
+  [ 1x] session_info_update:turn_end
+  [ 1x] session_info_update:turn_start
+  [ 1x] session_info_update:user_message_id_assigned
+  [ 1x] tool_call
+  [ 3x] tool_call_update
+
+===== targeted streams from the audit's 'Not verified' list =====
+  OBSERVED     _kiro/progressive_context/items_changed
+  OBSERVED     _kiro/governance/state
+  OBSERVED     _kiro/powers/items_changed
+  OBSERVED     _kiro/steering/documents_changed
+  OBSERVED     _kiro/tools/didChange
+  OBSERVED     _kiro/mcp/status
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-notifications-2.7.1.log

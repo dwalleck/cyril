@@ -508,6 +508,21 @@ A client→server request returning the billing/usage panel data:
 
 This is the on-wire source for a cyril `/usage` panel under KAS (v2 has no equivalent ACP method — it uses the `/usage` slash command). → KAS-4.
 
+### The full `_kiro/*` notification catalog (one default-settings tool-using turn)
+
+`probe-kas-notifications-2.7.1.py` recorded every server→client notification. **All four streams that the audit had listed as "seen by name, not captured" fire on a plain turn** (no special settings) — shapes (values redacted to types):
+
+| Notification | Shape | For cyril |
+|---|---|---|
+| `_kiro/governance/state` | `{sessionId, isEnterprise, features:{mcpEnabled, webToolsEnabled, usageAnalytics, contentCollection, promptLogging, codeReferenceTracker, autonomousAgents}}` | **Org-policy feature flags** (Cedar-derived). cyril should gate UI/affordances on these (e.g. hide web tools when `webToolsEnabled:false`, surface `autonomousAgents`/`promptLogging` posture). |
+| `_kiro/mcp/status` (10×) | `{sessionId, servers:[{name, authType, status}]}` | Per-server MCP connection status; fires repeatedly as servers connect. The KAS analog of v2's `kiro.dev/mcp/*` one-offs. |
+| `_kiro/powers/items_changed` | `{sessionId, status, powers:[{name, description, keywords[]}]}` | The "powers" catalog (activatable tool bundles). |
+| `_kiro/progressive_context/items_changed` (2×) | `{sessionId, status, items:[{name, type, description, scope, uri}]}` | Available progressive-context items (steering/knowledge/etc.). |
+| `_kiro/steering/documents_changed` | `{sessionId, status, documents:[]}` | Active steering docs (empty here — temp cwd had none; see steering section). |
+| `_kiro/tools/didChange` (7×) | `{sessionId, tags:[{source, tag, description}]}` | Tool advertisement (above). |
+
+Plus standard `session/update` variants on the KAS wire: `agent_message_chunk`, `tool_call`/`tool_call_update`, `available_commands_update` (KAS pushes the slash-command list), `config_option_update` (config options push, unlike v2), and the `session_info_update` `kind`s above. → all feed the KAS-2 converter arm.
+
 ---
 
 ## Cyril impact
@@ -549,13 +564,12 @@ Ordered by strategic weight. Field lists are from the self-extracted `@kiro/agen
 
 ## Not verified this session (follow-ups)
 
-**Resolved 2026-06-16** (see "KAS live wire captures" above): KAS tool advertisement (`_kiro/tools/didChange` = category tags + per-MCP-tool); `session_info_update` `kind`-discriminator shape incl. turn-end/metering/context-breakdown; `_kiro/account/getUsage` message shape; hooks gating (`hooks.enabled+v2`, global flag) + direction (server-run, client-managed).
+**Resolved 2026-06-16** (see "KAS live wire captures" above): KAS tool advertisement (`_kiro/tools/didChange` = category tags + per-MCP-tool); `session_info_update` `kind`-discriminator shape incl. turn-end/metering/context-breakdown; `_kiro/account/getUsage` message shape; hooks gating (`hooks.enabled+v2`, global flag) + direction (server-run, client-managed); **the full `_kiro/*` notification catalog** — `governance/state`, `mcp/status`, `powers/items_changed`, `progressive_context/items_changed`, `steering/documents_changed` all fire on a plain default-settings turn (shapes captured).
 
 Still open:
 - **Hooks with the gate ON** — `hooks.enabled+v2` is a global on-disk flag, not session-settable, so this session couldn't enable it without writing `~/.kiro/settings/cli.json`. With the flag on: confirm the `_kiro/hooks/list` response shape and whether the server *ever* pushes a `_kiro/hooks/*` server→client message (the bundle says it runs hooks in-process, so expected: no host callback — but unverified with the gate live).
 - `_kiro/session/history` returning empty after a live turn — confirm whether a reloaded/persisted session or a pagination cursor surfaces the updates.
 - The destructive/unprobed bonus methods: `_kiro/session/{delete,rename}`, `_kiro/permissions/{explain}`, `_kiro/policy/check`, `_kiro/spec/getTaskStatuses`.
-- The other `_kiro/*` push streams seen by name but not captured live: `_kiro/progressive_context/items_changed`, `_kiro/governance/state`, `_kiro/powers/items_changed`, `_kiro/steering/documents_changed`.
 - A **clean v2 baseline re-capture on 2.7.1** — the default engine did not respond to the piped init+session/new probe in this session (KAS did); v2 baseline here is taken from `docs/kiro-2.7.0-wire-audit.md`, not freshly re-captured.
 
 ---
