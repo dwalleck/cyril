@@ -1149,9 +1149,14 @@ impl UiState {
         if let Some(ref mut approval) = self.approval
             && approval.phase == ApprovalPhase::SelectTrust
         {
-            // Go back to phase 1
+            // Go back to phase 1, restoring the cursor to the AllowAlways option
+            // the user picked to enter phase 2 rather than snapping to the first.
             approval.phase = ApprovalPhase::SelectOption;
-            approval.selected = 0;
+            approval.selected = approval
+                .options
+                .iter()
+                .position(|o| o.kind == PermissionOptionKind::AllowAlways)
+                .unwrap_or(0);
             return;
         }
         if let Some(approval) = self.approval.take() {
@@ -3134,6 +3139,46 @@ mod tests {
             state.approval.as_ref().expect("active").phase,
             ApprovalPhase::SelectOption
         );
+    }
+
+    #[test]
+    fn approval_phase2_back_restores_allow_always_selection() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, TrustOption};
+
+        // AllowAlways is NOT the first option, so restoring to index 0 would be
+        // wrong — the cursor must return to the AllowAlways row (index 1).
+        let (req, _rx) = make_approval_request_with_trust(
+            vec![
+                PermissionOption {
+                    id: "once".into(),
+                    label: "Allow Once".into(),
+                    kind: PermissionOptionKind::AllowOnce,
+                    is_destructive: false,
+                },
+                PermissionOption {
+                    id: "always".into(),
+                    label: "Always".into(),
+                    kind: PermissionOptionKind::AllowAlways,
+                    is_destructive: false,
+                },
+            ],
+            vec![TrustOption {
+                label: "Full command".into(),
+                display: "echo hi".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec![],
+            }],
+        );
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_select_next(); // move cursor to AllowAlways (index 1)
+        state.approval_confirm(); // → phase 2 (selected reset to 0 for the tier list)
+        state.approval_cancel(); // back to phase 1
+
+        let approval = state.approval.as_ref().expect("active");
+        assert_eq!(approval.phase, ApprovalPhase::SelectOption);
+        assert_eq!(approval.selected, 1, "cursor should return to AllowAlways");
     }
 
     #[test]
