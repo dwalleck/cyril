@@ -263,29 +263,28 @@ mod tests {
         let mut ctrl = SessionController::new();
         // Depth sequence across queued,queued,consumed,cleared = 1,2,1,0.
         assert!(ctrl.apply_notification(&Notification::SteeringQueued {
-            message: "a".into()
+            message: Some("a".into())
         }));
         assert_eq!(ctrl.steering_depth(), 1);
         ctrl.apply_notification(&Notification::SteeringQueued {
-            message: "b".into(),
+            message: Some("b".into()),
         });
         assert_eq!(ctrl.steering_depth(), 2);
         ctrl.apply_notification(&Notification::SteeringConsumed {
-            content: "a".into(),
+            content: Some("a".into()),
         });
         assert_eq!(ctrl.steering_depth(), 1);
         ctrl.apply_notification(&Notification::SteeringCleared);
         assert_eq!(ctrl.steering_depth(), 0);
-        // Floor: consumed at 0 stays 0 (no underflow).
-        ctrl.apply_notification(&Notification::SteeringConsumed {
-            content: "x".into(),
-        });
+        // Floor: consumed at 0 stays 0 (no underflow). Also exercises the C1 path:
+        // a `content: None` consumed echo still decrements (here, floored at 0).
+        ctrl.apply_notification(&Notification::SteeringConsumed { content: None });
         assert_eq!(ctrl.steering_depth(), 0);
 
         // Unsupported flag set, then a NEW session must reset flag AND depth
         // (a 2.6.1 session's "unsupported" must not leak onto a fresh 2.7.0 one).
         ctrl.apply_notification(&Notification::SteeringQueued {
-            message: "c".into(),
+            message: Some("c".into()),
         });
         assert!(ctrl.apply_notification(&Notification::SteeringUnsupported {
             message: "steering requires kiro-cli 2.7.0+".into()

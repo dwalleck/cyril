@@ -574,10 +574,16 @@ fn print_notification(n: &Notification) {
             println!("  [UsageUpdated] {used}/{size} tokens ({pct:.1}%)");
         }
         Notification::SteeringQueued { message } => {
-            println!("  [SteeringQueued] {message}");
+            println!(
+                "  [SteeringQueued] {}",
+                message.as_deref().unwrap_or("<no text>")
+            );
         }
         Notification::SteeringConsumed { content } => {
-            println!("  [SteeringConsumed] {content}");
+            println!(
+                "  [SteeringConsumed] {}",
+                content.as_deref().unwrap_or("<no text>")
+            );
         }
         Notification::SteeringCleared => {
             println!("  [SteeringCleared]");

@@ -679,46 +679,62 @@ pub(crate) fn to_ext_notification(
         // an `Err` (unlike the unprefixed arm) — the `_kiro.dev/*` dialect must
         // tolerate future variants we don't model yet.
         "_kiro.dev/session/update" => {
+            // `<unknown>` only appears if the envelope omitted sessionId (an
+            // anomaly worth seeing in the log itself).
+            let session_id = params
+                .get("sessionId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("<unknown>");
             let update = params.get("update");
             match update
                 .and_then(|u| u.get("sessionUpdate"))
                 .and_then(|s| s.as_str())
             {
+                // queued/consumed always emit so the depth counter transitions; a
+                // missing payload field degrades only the (K1b) display text and
+                // becomes `None`, never a `Some("")` sentinel.
                 Some("steering_queued") => {
-                    match update
+                    let message = update
                         .and_then(|u| u.get("message"))
-                        .and_then(|v| v.as_str())
-                    {
-                        Some(message) => Ok(Some(Notification::SteeringQueued {
-                            message: message.to_string(),
-                        })),
-                        None => {
-                            tracing::warn!("steering_queued missing message field, dropping");
-                            Ok(None)
-                        }
+                        .and_then(|v| v.as_str());
+                    if message.is_none() {
+                        tracing::warn!(
+                            session_id,
+                            "steering_queued missing message field; counting with no text"
+                        );
                     }
+                    Ok(Some(Notification::SteeringQueued {
+                        message: message.map(str::to_string),
+                    }))
                 }
                 Some("steering_consumed") => {
-                    match update
+                    let content = update
                         .and_then(|u| u.get("content"))
-                        .and_then(|v| v.as_str())
-                    {
-                        Some(content) => Ok(Some(Notification::SteeringConsumed {
-                            content: content.to_string(),
-                        })),
-                        None => {
-                            tracing::warn!("steering_consumed missing content field, dropping");
-                            Ok(None)
-                        }
+                        .and_then(|v| v.as_str());
+                    if content.is_none() {
+                        tracing::warn!(
+                            session_id,
+                            "steering_consumed missing content field; decrementing with no text"
+                        );
                     }
+                    Ok(Some(Notification::SteeringConsumed {
+                        content: content.map(str::to_string),
+                    }))
                 }
                 Some("steering_cleared") => Ok(Some(Notification::SteeringCleared)),
                 Some(other) => {
-                    tracing::debug!(variant = other, "unhandled _kiro.dev steering variant");
+                    tracing::debug!(
+                        session_id,
+                        variant = other,
+                        "unhandled _kiro.dev steering variant"
+                    );
                     Ok(None)
                 }
                 None => {
-                    tracing::debug!("_kiro.dev/session/update missing sessionUpdate field");
+                    tracing::debug!(
+                        session_id,
+                        "_kiro.dev/session/update missing sessionUpdate field"
+                    );
                     Ok(None)
                 }
             }
@@ -735,6 +751,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use serde_json::json;
 
     // Slice B / design claims 1-6. Oracle: captured wire frames from
     // experiments/conductor-spike/logs/probe-steer-goal-2.7.0.log (L25/37/120).
@@ -749,7 +766,7 @@ mod tests {
         });
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &params),
-            Ok(Some(Notification::SteeringQueued { message })) if message == "stop now"
+            Ok(Some(Notification::SteeringQueued { message })) if message.as_deref() == Some("stop now")
         ));
     }
 
@@ -761,7 +778,7 @@ mod tests {
         });
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &params),
-            Ok(Some(Notification::SteeringConsumed { content })) if content == "stop now"
+            Ok(Some(Notification::SteeringConsumed { content })) if content.as_deref() == Some("stop now")
         ));
     }
 
@@ -779,12 +796,21 @@ mod tests {
     }
 
     #[test]
-    fn steering_missing_field_drops() {
-        // No sentinel: missing message/content -> Ok(None), never SteeringQueued{""}.
+    fn steering_missing_field_still_emits_with_none() {
+        // C1 regression (PR #18 review): a queued/consumed echo with no payload
+        // field must STILL emit the notification (so the depth counter transitions
+        // — a dropped decrement would permanently inflate the queue). The absent
+        // field becomes `None`, never a `Some("")` sentinel.
         let q = json!({"update": {"sessionUpdate": "steering_queued"}});
-        assert!(matches!(to_ext_notification(STEER_METHOD, &q), Ok(None)));
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &q),
+            Ok(Some(Notification::SteeringQueued { message: None }))
+        ));
         let c = json!({"update": {"sessionUpdate": "steering_consumed"}});
-        assert!(matches!(to_ext_notification(STEER_METHOD, &c), Ok(None)));
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &c),
+            Ok(Some(Notification::SteeringConsumed { content: None }))
+        ));
     }
 
     #[test]
@@ -812,7 +838,6 @@ mod tests {
             "unprefixed arm must still Err on a non-tool_call_chunk variant"
         );
     }
-    use serde_json::json;
 
     #[test]
     fn parse_subagent_entry_extracts_review_loop_fields() {

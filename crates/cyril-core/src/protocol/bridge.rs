@@ -13,6 +13,10 @@ const COMMAND_CAPACITY: usize = 32;
 const NOTIFICATION_CAPACITY: usize = 256;
 const PERMISSION_CAPACITY: usize = 16;
 
+/// User-facing notice when the backend lacks `_session/steer` (-32601). One copy
+/// so the SteerSession and ClearSteering arms can't drift (ROADMAP K1a).
+const STEERING_UNSUPPORTED_MSG: &str = "steering requires kiro-cli 2.7.0+";
+
 /// Handle held by the App (Send side) to communicate with the ACP bridge.
 pub struct BridgeHandle {
     command_tx: mpsc::Sender<BridgeCommand>,
@@ -177,6 +181,12 @@ enum SteerErrorAction {
     /// First `-32601` for this session: mark unsupported and notify the user once.
     MarkAndNotify,
     /// `-32601` but the session was already marked: stay silent (emit-once).
+    ///
+    /// NOTE: unreachable from the live handlers — `should_skip_steer` already
+    /// `continue`s before the request is sent for any session in the unsupported
+    /// set, so `already_unsupported` is always `false` at the call site. The
+    /// emit-once guarantee is enforced by that pre-send gate, not by this arm;
+    /// the arm exists to keep the classifier total and unit-testable in isolation.
     AlreadyUnsupported,
     /// Any other error: surface as a generic bridge error; do NOT mark unsupported.
     BridgeError,
@@ -197,6 +207,17 @@ fn steer_error_action(
         (true, true) => SteerErrorAction::AlreadyUnsupported,
         (false, _) => SteerErrorAction::BridgeError,
     }
+}
+
+/// Pre-send gate for `_session/steer[/clear]`: skip (and emit nothing) when the
+/// target session is already known-unsupported. The set is session-keyed, so a
+/// `-32601` on one session must NEVER suppress steering on a different one — the
+/// guard is per-session, not global. Pure, so that invariant is unit-testable.
+fn should_skip_steer(
+    unsupported: &std::collections::HashSet<crate::types::SessionId>,
+    session_id: &crate::types::SessionId,
+) -> bool {
+    unsupported.contains(session_id)
 }
 
 /// Serialize a JSON value to an `Arc<RawValue>` for use with `ext_method`.
@@ -289,6 +310,9 @@ async fn run_bridge(
     let mut active_session_id: Option<acp::SessionId> = None;
     // Sessions whose backend lacks `_session/steer` (-32601). Remembered so we
     // skip re-sending and surface the unsupported notice only once (ROADMAP K1a).
+    // Per-session: an entry is evicted when its session id (re)enters via
+    // NewSession/LoadSession, so a re-used id re-probes — mirroring
+    // SessionController's reset of `steering_unsupported` on SessionCreated.
     let mut steering_unsupported: std::collections::HashSet<crate::types::SessionId> =
         std::collections::HashSet::new();
 
@@ -302,6 +326,11 @@ async fn run_bridge(
                 {
                     Ok(response) => {
                         active_session_id = Some(response.session_id.clone());
+                        // A (re)entered session re-probes steering: drop any stale
+                        // unsupported mark so it can't silently swallow steers.
+                        steering_unsupported.remove(&crate::types::SessionId::new(
+                            response.session_id.to_string(),
+                        ));
                         let notification = session_created_from_response(
                             response.session_id.to_string(),
                             response.modes.as_ref(),
@@ -471,6 +500,9 @@ async fn run_bridge(
                 {
                     Ok(response) => {
                         active_session_id = Some(acp_session_id);
+                        // A reloaded session re-probes steering: a caller-supplied
+                        // id may carry a stale unsupported mark from a prior life.
+                        steering_unsupported.remove(&session_id);
                         tracing::info!(session_id = session_id.as_str(), "session loaded");
                         let notification = session_created_from_response(
                             session_id.as_str().to_string(),
@@ -993,7 +1025,7 @@ async fn run_bridge(
             } => {
                 // Pre-send gate: a session known-unsupported is never re-sent and
                 // emits nothing (the unsupported notice fired on the first -32601).
-                if steering_unsupported.contains(&session_id) {
+                if should_skip_steer(&steering_unsupported, &session_id) {
                     tracing::debug!(
                         session_id = session_id.as_str(),
                         "steering unsupported for session, skipping steer"
@@ -1034,7 +1066,7 @@ async fn run_bridge(
                             if notify_or_closed(
                                 &channels.notification_tx,
                                 Notification::SteeringUnsupported {
-                                    message: "steering requires kiro-cli 2.7.0+".to_string(),
+                                    message: STEERING_UNSUPPORTED_MSG.to_string(),
                                 },
                             )
                             .await
@@ -1061,7 +1093,7 @@ async fn run_bridge(
                 }
             }
             BridgeCommand::ClearSteering { session_id } => {
-                if steering_unsupported.contains(&session_id) {
+                if should_skip_steer(&steering_unsupported, &session_id) {
                     tracing::debug!(
                         session_id = session_id.as_str(),
                         "steering unsupported for session, skipping clear"
@@ -1098,7 +1130,7 @@ async fn run_bridge(
                             if notify_or_closed(
                                 &channels.notification_tx,
                                 Notification::SteeringUnsupported {
-                                    message: "steering requires kiro-cli 2.7.0+".to_string(),
+                                    message: STEERING_UNSUPPORTED_MSG.to_string(),
                                 },
                             )
                             .await
@@ -1166,6 +1198,27 @@ mod tests {
             steer_error_action(ErrorCode::InternalError, true),
             SteerErrorAction::BridgeError
         );
+    }
+
+    // Slice 2b / pre-send gate. The unsupported set is session-keyed, so the
+    // guard is per-session: a -32601 on one session must not suppress steering
+    // on another. Three named fixtures, including "a different session still
+    // steers" (the global-vs-per-session guard).
+    #[test]
+    fn should_skip_steer_is_per_session() {
+        use crate::types::SessionId;
+        let mut unsupported = std::collections::HashSet::new();
+        let a = SessionId::new("sess_a");
+        let b = SessionId::new("sess_b");
+
+        // Empty set: nothing is skipped.
+        assert!(!should_skip_steer(&unsupported, &a));
+
+        unsupported.insert(a.clone());
+        // The marked session is skipped...
+        assert!(should_skip_steer(&unsupported, &a));
+        // ...but a DIFFERENT session still steers (the guard is not global).
+        assert!(!should_skip_steer(&unsupported, &b));
     }
 
     #[tokio::test]
