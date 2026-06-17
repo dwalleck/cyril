@@ -830,6 +830,18 @@ impl UiState {
         }
     }
 
+    /// Insert a block of text at the cursor (used for bracketed paste).
+    ///
+    /// Carriage returns from other platforms/terminals (`\r\n`, lone `\r`) are
+    /// normalized to `\n` so they neither corrupt the rendered buffer nor leak
+    /// into the prompt sent to the agent.
+    pub fn insert_text(&mut self, text: &str) {
+        let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
+        self.input_text.insert_str(self.input_cursor, &normalized);
+        self.input_cursor += normalized.len();
+        self.update_autocomplete();
+    }
+
     // --- File completer and autocomplete ---
 
     /// Set the file completer for @-file autocomplete.
@@ -1736,6 +1748,50 @@ mod tests {
         assert_eq!(text, "hello");
         assert_eq!(state.input_text(), "");
         assert_eq!(state.input_cursor(), 0);
+    }
+
+    #[test]
+    fn insert_text_at_cursor_interleaves_and_advances() {
+        let mut state = UiState::new(500);
+        state.input_text = "abcd".into();
+        state.input_cursor = 2;
+        state.insert_text("XY");
+        assert_eq!(state.input_text(), "abXYcd");
+        assert_eq!(state.input_cursor(), 4);
+    }
+
+    #[test]
+    fn insert_text_multibyte_keeps_byte_cursor_on_a_char_boundary() {
+        let mut state = UiState::new(500);
+        state.input_text = "é".into(); // 2 bytes
+        state.input_cursor = "é".len(); // byte cursor at 2
+        state.insert_text("日本"); // 6 bytes
+        assert_eq!(state.input_text(), "é日本");
+        assert_eq!(state.input_cursor(), 8);
+        // The cursor must land on a valid char boundary: a following backspace
+        // removes exactly one char and does not panic slicing the buffer.
+        state.handle_input_key(crossterm::event::KeyEvent::from(
+            crossterm::event::KeyCode::Backspace,
+        ));
+        assert_eq!(state.input_text(), "é日");
+    }
+
+    #[test]
+    fn insert_text_normalizes_carriage_returns() {
+        let mut state = UiState::new(500);
+        state.insert_text("a\r\nb\rc");
+        assert_eq!(state.input_text(), "a\nb\nc");
+        assert_eq!(state.input_cursor(), state.input_text().len());
+    }
+
+    #[test]
+    fn insert_text_empty_is_noop() {
+        let mut state = UiState::new(500);
+        state.input_text = "abc".into();
+        state.input_cursor = 1;
+        state.insert_text("");
+        assert_eq!(state.input_text(), "abc");
+        assert_eq!(state.input_cursor(), 1);
     }
 
     #[test]
