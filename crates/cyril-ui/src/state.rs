@@ -268,6 +268,9 @@ impl UiState {
                 // Flush any pending user replay so the user turn commits
                 // before any subsequent agent text.
                 self.flush_streaming_user_text();
+                // A preceding thought block ends once response text begins —
+                // commit it first so it is ordered before the response.
+                self.flush_streaming_thought();
                 if msg.is_streaming {
                     self.streaming_text.push_str(&msg.text);
                     self.set_activity(Activity::Streaming);
@@ -281,8 +284,9 @@ impl UiState {
             Notification::AgentThought(thought) => {
                 // Thought chunks stream as token-deltas (mirroring AgentMessage),
                 // so accumulate them — overwriting would show only the last token.
-                // Kept transient: cleared at the turn boundary by commit_streaming,
-                // never committed to the message list.
+                // The accumulated block is committed to the message list at the
+                // next boundary (response text, tool call, user replay, turn end)
+                // via flush_streaming_thought, so reasoning persists in scrollback.
                 self.streaming_thought
                     .get_or_insert_with(String::new)
                     .push_str(&thought.text);
@@ -295,6 +299,8 @@ impl UiState {
                 // (tool call, turn complete, agent message). Flush any pending
                 // agent text first so ordering is preserved.
                 self.flush_streaming_agent_text();
+                // Any pending thought belongs to the previous agent turn.
+                self.flush_streaming_thought();
                 self.streaming_user_text.push_str(&msg.text);
                 if !msg.is_streaming {
                     self.flush_streaming_user_text();
@@ -307,6 +313,8 @@ impl UiState {
                 // concatenating into one message.
                 self.flush_streaming_user_text();
                 self.flush_streaming_agent_text();
+                // Commit any reasoning that preceded the tool call.
+                self.flush_streaming_thought();
 
                 // Commit tool call directly to messages in chronological position.
                 // This ensures tool calls stay between the text segments that
@@ -611,7 +619,7 @@ impl UiState {
         // Clear active display — tool calls are already in messages
         self.active_tool_calls.clear();
         self.tool_call_index.clear();
-        self.streaming_thought = None;
+        self.flush_streaming_thought();
         self.enforce_message_limit();
     }
 
@@ -638,8 +646,31 @@ impl UiState {
         }
     }
 
+    /// Commit any accumulated thought chunks to a single `Thought` message so the
+    /// reasoning block persists in the chat log instead of vanishing when the live
+    /// preview clears. Called at every boundary where a thought block ends (agent
+    /// response text, tool call, user replay, turn completion).
+    fn flush_streaming_thought(&mut self) {
+        if let Some(text) = self.streaming_thought.take()
+            && !text.trim().is_empty()
+        {
+            self.messages.push(ChatMessage::thought(text));
+            self.messages_version += 1;
+        }
+    }
+
     /// Add a user message to the chat history.
+    ///
+    /// Flushes any pending streaming agent text and reasoning first, so they
+    /// commit in chronological order *before* the user's message. This matters on
+    /// the Enter-while-busy / `/code` paths, where a user message can be added
+    /// mid-turn while a thought block is still accumulating — without the flush
+    /// the reasoning would commit after the user message (and a later thought
+    /// chunk would merge onto it). On the normal path both buffers are already
+    /// empty, so the flushes are no-ops.
     pub fn add_user_message(&mut self, text: &str) {
+        self.flush_streaming_agent_text();
+        self.flush_streaming_thought();
         self.messages.push(ChatMessage::user_text(text.to_string()));
         self.messages_version += 1;
         self.enforce_message_limit();
@@ -1428,22 +1459,96 @@ mod tests {
     }
 
     #[test]
-    fn agent_thought_is_transient_and_clears_on_turn_end() {
+    fn thought_persists_to_chat_log_on_turn_complete() {
         let mut state = UiState::new(500);
         state.apply_notification(&Notification::AgentThought(AgentThought {
-            text: "reasoning...".into(),
+            text: "reasoning".into(),
         }));
-        assert_eq!(state.streaming_thought(), Some("reasoning..."));
-        // Thinking is a transient preview: it clears at the turn boundary and is
-        // never committed to scrollback (unlike agent message text).
+        assert_eq!(state.streaming_thought(), Some("reasoning"));
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         });
+        // Live preview cleared, but the thought is committed to scrollback.
         assert_eq!(state.streaming_thought(), None);
+        assert_eq!(state.messages().len(), 1);
         assert!(
-            state.messages().is_empty(),
-            "thinking must not commit to the message list"
+            matches!(state.messages()[0].kind(), ChatMessageKind::Thought(t) if t == "reasoning")
         );
+    }
+
+    #[test]
+    fn thought_commits_before_agent_response() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "thinking".into(),
+        }));
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "answer".into(),
+            is_streaming: true,
+        }));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        // Thought commits BEFORE the response text, preserving chronological order.
+        let msgs = state.messages();
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(msgs[0].kind(), ChatMessageKind::Thought(t) if t == "thinking"));
+        assert!(matches!(msgs[1].kind(), ChatMessageKind::AgentText(t) if t == "answer"));
+    }
+
+    #[test]
+    fn empty_thought_is_not_committed() {
+        let mut state = UiState::new(500);
+        // A whitespace-only thought must not create a noise message.
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "   ".into(),
+        }));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert!(state.messages().is_empty());
+    }
+
+    #[test]
+    fn thought_commits_before_user_message() {
+        // Enter-while-busy / steering: a user message added mid-thinking must
+        // commit the accumulated reasoning BEFORE it, not after (and not merge a
+        // later thought chunk onto it).
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "reasoning".into(),
+        }));
+        state.add_user_message("steer left");
+
+        let msgs = state.messages();
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(msgs[0].kind(), ChatMessageKind::Thought(t) if t == "reasoning"));
+        assert!(matches!(msgs[1].kind(), ChatMessageKind::UserText(t) if t == "steer left"));
+        assert_eq!(state.streaming_thought(), None);
+    }
+
+    #[test]
+    fn thought_commits_before_tool_call() {
+        // A thought preceding a tool call must land before it in the message
+        // list — the boundary where chronological order matters most.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "planning the edit".into(),
+        }));
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "fs_write".into(),
+            ToolKind::Write,
+            ToolCallStatus::InProgress,
+            None,
+        );
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+
+        let msgs = state.messages();
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(msgs[0].kind(), ChatMessageKind::Thought(t) if t == "planning the edit"));
+        assert!(matches!(msgs[1].kind(), ChatMessageKind::ToolCall(_)));
+        assert_eq!(state.streaming_thought(), None);
     }
 
     #[test]
