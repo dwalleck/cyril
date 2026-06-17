@@ -128,7 +128,7 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 
 **Why its own track (not a K-item):** the K-track is feature-parity within the v2 engine cyril already drives; KAS is a parallel engine with its own dialect and lifecycle. It also intersects the platform vision — KAS is the first Kiro engine that exposes filesystem callbacks, which is a genuine proxy-stage interception point (links to Phase 5).
 
-**Estimate:** ~5–8 weeks across five milestones.
+**Estimate:** ~6–9 weeks across seven milestones (KAS-1…7).
 **Depends on:** Phase 1's transport refactor is the clean home for the `--agent-engine kas` arg (`Vec<String>` agent command); KAS-1 can land before it by appending the flag, but prefers it. Otherwise orthogonal to Phases 2–5 and the K-track. Requires kiro-cli ≥ 2.7.1 at runtime.
 **Wire reference:** [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) — the full audit, plus the reproducible probes in [`experiments/conductor-spike/`](../experiments/conductor-spike/) (`probe-kas-subagent`, `probe-kas-fs`, `probe-kas-orchestrate`, all 2.7.1).
 **Prerequisite — ACP crate version drift (verify before KAS-2).** cyril pins `agent-client-protocol` **0.9**; KAS ships the official `@agentclientprotocol/sdk` **^0.19**. Not a v2-path bug (the v1/v2 engines use `sacp`, not the SDK), but driving KAS means a 0.9 client talks to a 0.19 agent — any `SessionUpdate` variant or `clientCapabilities` field added across 0.9→0.19 (e.g. session list/fork shapes, richer config options) is absent from cyril's generated enums and would deserialize-fail or be dropped. Audit the 0.9→0.19 changelog and bump/verify the crate before KAS-2 relies on newer standard methods. Cheap to check now, expensive to discover as a mystery deserialization failure mid-integration.
@@ -207,6 +207,17 @@ KAS implements IDE-grade conditional features that key off the session's **open 
 - Synthesize an `openFiles`/`activeFile` set and feed it to KAS (via the `_meta.kiro`/document channel the engine reads into its graph state) — sourced from files the user `@`-attaches or references, files the agent recently touched, and/or the cwd.
 - This is the smallest change that turns on a whole class of IDE-parity behavior (conditional steering, spec activeFile logic) without cyril implementing those features itself — the engine already does, it just needs the input.
 - Vendor-note: this is Kiro-specific plumbing (`_meta.kiro` open-file state), but the *concept* (telling an agent "these files are in play") is generalizable if other ACP agents grow similar context hooks.
+
+### KAS-7 — Hooks host (org write/exec-policy interception point)
+
+**Depends on:** KAS-1; converges with Phase 2 / Phase 5 (stages). Fully de-risked — fired end-to-end 2026-06-16.
+
+KAS hooks are a **host-callback** model, and cyril is the host. Verified live (`experiments/conductor-spike/probe-kas-hooks-host-2.7.1.py`, contract in [`docs/kiro-kas-acp-covenant.md`](kiro-kas-acp-covenant.md) §1a + the 2.7.1 audit hooks section):
+
+- Advertise `clientCapabilities._meta.kiro.hooks = {enabled: true}` at `initialize` (sibling of `settings`; **no `v2`**).
+- Implement two responders: **`_kiro/hooks/list`** (`{trigger, sessionId, toolId?, toolTags?, workspacePaths?}` → `{hooks: AcpContextualHook[]}`) and **`_kiro/hooks/executeHook`** (`{hookId, hookName, command, sessionId, userPrompt, timeout?}` → `{output?, exitCode, cancelled}`); optionally `_kiro/hooks/sessionStart`. The agent queries `list` at `promptSubmit`/`preToolUse`/`postToolUse`/`agentStop` (preToolUse/postToolUse carry `toolId`+`toolTags`); cyril **owns the hook registry** (it returns the hooks) and **runs runCommand hooks** (askAgent hooks are agent-side prompt injection, never crossing to executeHook).
+- **This is the org write/exec-policy stage's wire mechanism:** a `preToolUse` `executeHook` returning `{exitCode: 2, output: "<reason>"}` **blocks the tool** and feeds the reason to the agent. cyril can audit/gate/deny every tool call with an explanation — without a regex engine of its own, and composably as a stage.
+- Handle the `_kiro/hooks/{cancel,didChange}` agent→client notifications (cancel in-flight on `session/cancel`; refresh the registry view on didChange).
 
 **Non-goals:** replicating KAS's spec/quick-spec workflow UIs verbatim; exposing `--v3`/the gated `chat` TUI; treating `_kiro/*` as a vendor-neutral abstraction (it's Kiro-specific — generalize only if ACP standardizes equivalents, per Open Tension #2). The `_kiro/session/{context,compact,export,history,fork,list}` methods are advertised but unprobed — out of scope until a concrete UX needs them.
 
