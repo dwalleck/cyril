@@ -14,6 +14,11 @@ pub struct SessionController {
     pending_tokens: Option<TokenCounts>,
     pending_metering: Option<TurnMetering>,
     last_turn: Option<TurnSummary>,
+    // Queue steering (Kiro 2.7.0+; ROADMAP K1a). `steering_depth` = count of
+    // un-consumed steers; `steering_unsupported` is set on a -32601 from
+    // `_session/steer` and remembered for the session. Both reset on a new session.
+    steering_depth: usize,
+    steering_unsupported: bool,
 }
 
 impl SessionController {
@@ -32,6 +37,8 @@ impl SessionController {
             pending_tokens: None,
             pending_metering: None,
             last_turn: None,
+            steering_depth: 0,
+            steering_unsupported: false,
         }
     }
 
@@ -78,6 +85,16 @@ impl SessionController {
 
     pub fn last_turn(&self) -> Option<&TurnSummary> {
         self.last_turn.as_ref()
+    }
+
+    /// Count of un-consumed queued steers (K1a state; K1b renders it).
+    pub fn steering_depth(&self) -> usize {
+        self.steering_depth
+    }
+
+    /// Whether `_session/steer` is known-unsupported for this session (set on -32601).
+    pub fn steering_unsupported(&self) -> bool {
+        self.steering_unsupported
     }
 
     // Mutators
@@ -170,7 +187,27 @@ impl SessionController {
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
+                self.steering_depth = 0;
+                self.steering_unsupported = false;
                 self.status = SessionStatus::Active;
+                true
+            }
+            // Queue steering (K1a). Depth tracks un-consumed steers; the flag
+            // remembers a -32601 for the session.
+            Notification::SteeringQueued { .. } => {
+                self.steering_depth = self.steering_depth.saturating_add(1);
+                true
+            }
+            Notification::SteeringConsumed { .. } => {
+                self.steering_depth = self.steering_depth.saturating_sub(1);
+                true
+            }
+            Notification::SteeringCleared => {
+                self.steering_depth = 0;
+                true
+            }
+            Notification::SteeringUnsupported { .. } => {
+                self.steering_unsupported = true;
                 true
             }
             Notification::UsageUpdated { used, size } => {
@@ -216,6 +253,57 @@ mod tests {
         assert!(ctrl.current_model().is_none());
         assert!(ctrl.current_mode_id().is_none());
         assert!(ctrl.context_usage().is_none());
+        assert_eq!(ctrl.steering_depth(), 0);
+        assert!(!ctrl.steering_unsupported());
+    }
+
+    // Slice C / design claim 11: depth transitions, floor, flag, reset on new session.
+    #[test]
+    fn steering_state_transitions_and_reset() {
+        let mut ctrl = SessionController::new();
+        // Depth sequence across queued,queued,consumed,cleared = 1,2,1,0.
+        assert!(ctrl.apply_notification(&Notification::SteeringQueued {
+            message: "a".into()
+        }));
+        assert_eq!(ctrl.steering_depth(), 1);
+        ctrl.apply_notification(&Notification::SteeringQueued {
+            message: "b".into(),
+        });
+        assert_eq!(ctrl.steering_depth(), 2);
+        ctrl.apply_notification(&Notification::SteeringConsumed {
+            content: "a".into(),
+        });
+        assert_eq!(ctrl.steering_depth(), 1);
+        ctrl.apply_notification(&Notification::SteeringCleared);
+        assert_eq!(ctrl.steering_depth(), 0);
+        // Floor: consumed at 0 stays 0 (no underflow).
+        ctrl.apply_notification(&Notification::SteeringConsumed {
+            content: "x".into(),
+        });
+        assert_eq!(ctrl.steering_depth(), 0);
+
+        // Unsupported flag set, then a NEW session must reset flag AND depth
+        // (a 2.6.1 session's "unsupported" must not leak onto a fresh 2.7.0 one).
+        ctrl.apply_notification(&Notification::SteeringQueued {
+            message: "c".into(),
+        });
+        assert!(ctrl.apply_notification(&Notification::SteeringUnsupported {
+            message: "steering requires kiro-cli 2.7.0+".into()
+        }));
+        assert!(ctrl.steering_unsupported());
+        assert_eq!(ctrl.steering_depth(), 1);
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("fresh"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        assert!(
+            !ctrl.steering_unsupported(),
+            "unsupported flag must reset on new session"
+        );
+        assert_eq!(ctrl.steering_depth(), 0, "depth must reset on new session");
     }
 
     #[test]
