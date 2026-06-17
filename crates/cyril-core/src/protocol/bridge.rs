@@ -1255,6 +1255,8 @@ mod tests {
         block_prompt: bool,
         /// When set, `prompt` returns an error (the transport/error turn path).
         prompt_err: bool,
+        /// Set by `cancel`; makes a woken `prompt` resolve as Cancelled (ACP semantics).
+        cancelled: bool,
     }
 
     struct FakeAgent {
@@ -1301,14 +1303,40 @@ mod tests {
             if block {
                 self.gate.notified().await;
             }
+            // A cancel that woke us wins over the error/normal paths (ACP: a
+            // cancelled turn resolves Cancelled).
+            if self.script.borrow().cancelled {
+                return Ok(acp::PromptResponse::new(acp::StopReason::Cancelled));
+            }
             if err {
                 return Err(acp::Error::new(-32603, "boom"));
             }
             Ok(acp::PromptResponse::new(acp::StopReason::EndTurn))
         }
         async fn cancel(&self, _a: acp::CancelNotification) -> acp::Result<()> {
-            self.script.borrow_mut().received.push("cancel".into());
+            {
+                let mut s = self.script.borrow_mut();
+                s.received.push("cancel".into());
+                s.cancelled = true;
+            }
+            // Wake a parked prompt so it resolves Cancelled (mirrors a real agent
+            // ending the turn on session/cancel).
+            self.gate.notify_one();
             Ok(())
+        }
+        async fn ext_method(
+            &self,
+            args: acp::ExtRequest,
+        ) -> acp::Result<acp::ExtResponse> {
+            // Record by stripped method name (e.g. "ext:session/steer"); the ACP
+            // library already stripped the leading `_` before dispatch.
+            self.script
+                .borrow_mut()
+                .received
+                .push(format!("ext:{}", args.method));
+            Ok(acp::ExtResponse::new(
+                to_raw_arc(&serde_json::json!({})).expect("serialize empty params"),
+            ))
         }
     }
 
@@ -1399,6 +1427,19 @@ mod tests {
             }
         }
         panic!("no TurnCompleted within 5s");
+    }
+
+    /// Poll the agent's `received` log for `marker` (e.g. "ext:session/steer"),
+    /// yielding between checks; returns false after `secs`. Used to observe that a
+    /// command reached the agent while a turn is still parked.
+    async fn wait_for_received(probe: &Rc<RefCell<Script>>, marker: &str, secs: u64) -> bool {
+        for _ in 0..(secs * 100) {
+            if probe.borrow().received.iter().any(|m| m == marker) {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        false
     }
 
     async fn recv_session_id(
@@ -1616,6 +1657,77 @@ mod tests {
             assert!(
                 matches!(returned, Ok(Ok(Ok(())))),
                 "run_loop returned cleanly after a mid-turn Shutdown, got {returned:?}"
+            );
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn steer_reaches_agent_mid_turn() {
+        // C2 (headline): a SteerSession sent while the prompt is parked reaches the
+        // agent (_session/steer) BEFORE the turn completes. Pre-Slice-3 the blocked
+        // loop would not dequeue the steer until the turn ended.
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_harness(script, move |sender, mut rx, gate, _loop| async move {
+            let sid = start_session(&sender, &mut rx).await;
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: sid.clone(),
+                    content_blocks: vec!["go".into()],
+                })
+                .await
+                .unwrap();
+            sender
+                .send(BridgeCommand::SteerSession {
+                    session_id: sid,
+                    message: "stop".into(),
+                })
+                .await
+                .unwrap();
+            assert!(
+                wait_for_received(&probe, "ext:session/steer", 5).await,
+                "steer reached the agent mid-turn; received = {:?}",
+                probe.borrow().received
+            );
+            gate.notify_one();
+            drain_to_turn(&mut rx).await;
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn cancel_resolves_busy_turn() {
+        // C3 (headline): a CancelRequest mid-turn reaches the agent (session/cancel)
+        // and the parked prompt resolves to Cancelled — one TurnCompleted{Cancelled},
+        // no hang. The blocked loop (pre-Slice-3) would never dequeue the cancel, so
+        // drain_to_turn would time out.
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_harness(script, move |sender, mut rx, _gate, _loop| async move {
+            let sid = start_session(&sender, &mut rx).await;
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: sid,
+                    content_blocks: vec!["forever".into()],
+                })
+                .await
+                .unwrap();
+            sender.send(BridgeCommand::CancelRequest).await.unwrap();
+            assert_eq!(
+                drain_to_turn(&mut rx).await,
+                StopReason::Cancelled,
+                "cancel resolved the parked turn as Cancelled"
+            );
+            assert!(
+                probe.borrow().received.contains(&"cancel".to_string()),
+                "agent received the cancel mid-turn"
             );
         })
         .await;

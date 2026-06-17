@@ -8,7 +8,8 @@
 // System under test: agent-client-protocol 0.10.2 ClientSideConnection (request
 // multiplexing). Counterparty: REAL kiro-cli 2.8.0 behind the wire-tee oracle.
 //
-// Run (from repo root):  cd .cyril-84ca/probe && cargo run
+// Run (from repo root):  cd .cyril-84ca/probe && cargo run --bin probe-84ca
+//   (the crate also has a `cancel` bin, so `cargo run` alone is ambiguous)
 // Oracle: ../../.k1b-steering/wire_shim.py logs every frame to /tmp/k1b_wire.log,
 // independent of this probe. Compare C2A `_session/steer` time vs A2C
 // `session/prompt` result time.
