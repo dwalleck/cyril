@@ -1085,13 +1085,14 @@ impl UiState {
     /// response immediately.
     ///
     /// In phase 2 (SelectTrust): sends AllowAlways with the selected trust
-    /// option label.
-    pub fn approval_confirm(&mut self) {
+    /// option label and **returns the chosen `TrustOption`** so the caller (App)
+    /// can persist the grant to the active agent's config for cross-session
+    /// trust. Returns `None` in every other case (phase-2 transition, immediate
+    /// allow/reject, no active dialog).
+    pub fn approval_confirm(&mut self) -> Option<cyril_core::types::TrustOption> {
         // Take ownership upfront. Only the phase-2 transition puts the dialog
         // back; every other path consumes it to send a response.
-        let Some(mut approval) = self.approval.take() else {
-            return;
-        };
+        let mut approval = self.approval.take()?;
 
         match approval.phase {
             ApprovalPhase::SelectOption => {
@@ -1124,20 +1125,21 @@ impl UiState {
                         }
                     }
                 }
+                None
             }
             ApprovalPhase::SelectTrust => {
-                let trust_label = approval
-                    .trust_options
-                    .get(approval.selected)
-                    .map(|t| t.label.clone());
+                // Keep the full chosen option (setting_key + patterns) so the
+                // caller can persist it; the response only carries the label.
+                let chosen = approval.trust_options.get(approval.selected).cloned();
                 let response = PermissionResponse::AllowAlways {
-                    trust_option: trust_label,
+                    trust_option: chosen.as_ref().map(|t| t.label.clone()),
                 };
                 if approval.responder.send(response).is_err() {
                     tracing::debug!(
                         "approval response dropped — agent receiver no longer listening"
                     );
                 }
+                chosen
             }
         }
     }
@@ -3081,7 +3083,14 @@ mod tests {
         state.show_approval(req);
         state.approval_confirm(); // → phase 2
         state.approval_select_next(); // select "Base command"
-        state.approval_confirm(); // send
+        let persisted = state.approval_confirm(); // send + return chosen tier
+
+        // The full chosen TrustOption is returned so App can persist its
+        // patterns to the agent config (setting_key + patterns, not just label).
+        let persisted = persisted.expect("phase-2 confirm returns the chosen tier");
+        assert_eq!(persisted.label, "Base command");
+        assert_eq!(persisted.setting_key, "allowedCommands");
+        assert_eq!(persisted.patterns, vec!["echo( .*)?".to_string()]);
 
         let response = rx.blocking_recv().expect("responder fired");
         match response {
