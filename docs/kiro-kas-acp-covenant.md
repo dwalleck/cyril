@@ -157,6 +157,8 @@ All carry `BaseCapabilityRequest {sessionId, _meta?}` / `BaseCapabilityResponse 
 
 ## 6. Client-injected custom agents (`session/types.d.ts`)
 
+> **Verified live 2026-06-16** (`experiments/conductor-spike/probe-kas-client-agent-2.7.1.py`): a `ClientCustomAgent` passed via `session/new` `_meta.kiro.customAgents` loads with no rejection and runs as a first-class `orchestrate_subagent` role — the injected prompt + tools fully took effect (a distinctive client-only persona showed up in the subagent's output). Confirms `CustomAgentSource.CLIENT_PROVIDED` is the native skill/agent-injection hook. See the 2.7.1 audit "Client-injected custom agents" capture.
+
 `session/new` accepts `_meta.kiro` = `KiroNewSessionRequestMeta {introspectArtifactsPath?, customAgents?: ClientCustomAgent[]}`. This is the native skill/agent-injection hook (highest-precedence agent source). `ClientCustomAgent`:
 
 ```ts

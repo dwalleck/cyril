@@ -73,7 +73,7 @@ Pick `claude-acp` as the first non-Kiro target (largest user base, well-supporte
 
 Each new stage is reusable across all supported vendors. Candidates in rough priority order:
 
-- **Skill resolver** — supplement whatever skill system the underlying agent has (or doesn't have)
+- **Skill resolver** — supplement whatever skill system the underlying agent has (or doesn't have). On KAS there's a **native injection hook** (no proxy rewriting needed): `session/new` `_meta.kiro.customAgents: ClientCustomAgent[]` (`CustomAgentSource.CLIENT_PROVIDED`, highest precedence) — **verified live 2026-06-16** (`probe-kas-client-agent-2.7.1.py`): a client-supplied agent loads with no rejection and runs as a first-class `orchestrate_subagent` role with its injected prompt+tools. So the skill/agent-injection half of the platform vision is wire-proven on KAS, complementing the interception half (hooks + fs/terminal host callbacks, KAS-5/KAS-7).
 - **Context injector** — auto-attach project context, steering files, environment metadata per turn
 - **Auto-approval policy** — bypass permission prompts for whitelisted tools according to org rules
 - **Persistent memory** — cross-session memory synthesis the underlying agent doesn't ship natively

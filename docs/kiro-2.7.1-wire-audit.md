@@ -563,7 +563,17 @@ KAS ships the IDE's **requirements → design → tasks** spec engine on the CLI
 - **terminal:** the full lifecycle `terminal/create {command:"echo", args:["done-42"]}` → `terminal/wait_for_exit` → `terminal/output` → `terminal/release` (cyril spawned the process and returned `{output, exitStatus:{exitCode}}`). The agent reported the output verbatim.
 - **Method forms:** KAS used the **bare-ACP** names (`fs/read_text_file`, `fs/write_text_file`, `terminal/{create,wait_for_exit,output,release}`), not the `_kiro/fs/*` supersets, for these basic ops. `_kiro/terminal/shell_type` still fires at setup.
 
-**This is the platform thesis, proven:** capability-gated, KAS delegates *every* side effect to cyril, so a cyril stage can audit / gate / translate / record all file and shell activity (transcript audit, org write/exec policy, Windows↔WSL path translation) — the same shape as the hooks host-callback, now confirmed for the two heaviest side-effect channels.
+**This is the platform thesis (interception side), proven:** capability-gated, KAS delegates *every* side effect to cyril, so a cyril stage can audit / gate / translate / record all file and shell activity (transcript audit, org write/exec policy, Windows↔WSL path translation) — the same shape as the hooks host-callback, now confirmed for the two heaviest side-effect channels.
+
+### Client-injected custom agents (verified live — the injection side)
+
+`probe-kas-client-agent-2.7.1.py` passed a client-defined agent to `session/new` via `_meta.kiro.customAgents: [ClientCustomAgent]` (a deliberately distinctive `pirate-reviewer`: prompt = "always pirate speak, end every sentence with Arrr!", `tools:["fs_read","grep_search"]`, `permissions.rules`). Result:
+
+- **Accepted with zero rejection** — no `_kiro/customAgent/{not_found,config_error}` notification, no JSON-RPC error.
+- **Usable as a first-class role** — the main agent ran `orchestrate_subagent` with a stage `role: "pirate-reviewer"` (seen in the pipeline) → `Sub-agent: pirate-reviewer` executed, used Grep Search (within its declared tools), returned a review.
+- **The injected definition took effect** — the subagent's output was unmistakably the injected persona ("Ahoy matey… ye scurvy code… Arrr!" on every sentence). The behavior came *only* from the client-supplied prompt; nothing on disk defined this agent.
+
+**This is the platform thesis (injection side), proven:** `CustomAgentSource.CLIENT_PROVIDED` is real and highest-precedence — cyril can hand KAS skills/agents at session start (the native alternative to proxy file-rewriting), and they load + run as first-class roles. Combined with the interception capstones above (hooks gate + fs/terminal side effects), cyril can both **inject behavior** and **mediate every action** of a KAS agent without reimplementing agent logic — the whole stage-platform argument, demonstrated on the wire.
 
 ---
 
