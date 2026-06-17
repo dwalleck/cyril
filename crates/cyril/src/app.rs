@@ -739,6 +739,76 @@ impl App {
     }
 }
 
+/// Produce a concise one-line summary from a (possibly multi-line) tool description.
+///
+/// Tool descriptions frequently begin with a leading newline and hard-wrap their
+/// opening sentence across physical lines (e.g. the `subagent` tool's first line ends
+/// mid-sentence at "Each stage runs as a"). Taking the first physical line therefore
+/// truncates mid-sentence. Instead, take the first paragraph (up to a blank line),
+/// collapse its internal whitespace, and return its first sentence.
+fn summarize_description(desc: &str) -> String {
+    // First paragraph: everything up to the first blank line.
+    let first_para = desc.trim().split("\n\n").next().unwrap_or("").trim();
+    // Collapse hard-wrapped newlines and runs of whitespace into single spaces.
+    let collapsed = first_para.split_whitespace().collect::<Vec<_>>().join(" ");
+    // Prefer the first sentence — the earliest sentence terminator followed by a
+    // space — to keep rows short. Fall back to the whole collapsed paragraph when
+    // there is no sentence boundary. `..=idx` is byte-safe: every terminator is
+    // ASCII, so `idx` lands on a char boundary.
+    let boundary = [". ", "? ", "! "]
+        .into_iter()
+        .filter_map(|term| collapsed.find(term))
+        .min();
+    match boundary {
+        Some(idx) => collapsed[..=idx].to_string(),
+        None => collapsed,
+    }
+}
+
+/// Append per-file context items (indented) under a context-breakdown category.
+///
+/// Kiro's `/context` response nests an `items` array under categories like
+/// `contextFiles`/`sessionFiles`, each item carrying `name`, `tokens`,
+/// `percent`, `matched`, and an optional `auto_included` flag. Items are
+/// rendered largest-first so the heaviest contributors surface at the top.
+/// Categories without an `items` array (e.g. `tools`) are left untouched.
+fn append_context_items(out: &mut String, category: &serde_json::Value) {
+    let Some(items) = category.get("items").and_then(|i| i.as_array()) else {
+        return;
+    };
+
+    // Sort by token count descending without mutating the source array.
+    let mut sorted: Vec<&serde_json::Value> = items.iter().collect();
+    sorted.sort_by(|a, b| {
+        let at = a.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
+        let bt = b.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
+        bt.cmp(&at)
+    });
+
+    for item in sorted {
+        let name = item.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+        let tokens = item.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
+        let pct = item.get("percent").and_then(|p| p.as_f64()).unwrap_or(0.0);
+        // Optional flags: surface only when they tell the user something useful.
+        let auto = item
+            .get("auto_included")
+            .and_then(|a| a.as_bool())
+            .unwrap_or(false);
+        let matched = item
+            .get("matched")
+            .and_then(|m| m.as_bool())
+            .unwrap_or(true);
+        let mut tags = String::new();
+        if auto {
+            tags.push_str(" (auto)");
+        }
+        if !matched {
+            tags.push_str(" (unmatched)");
+        }
+        out.push_str(&format!("    {name} — {tokens} tokens ({pct:.1}%){tags}\n"));
+    }
+}
+
 /// Format a `kiro.dev/commands/execute` response for display as a system message.
 ///
 /// The response shape is `{"success": bool, "message": "...", "data": {...}}`.
@@ -757,14 +827,11 @@ fn format_command_response(command: &str, response: &serde_json::Value) -> Strin
         for tool in tools {
             let name = tool.get("name").and_then(|n| n.as_str()).unwrap_or("?");
             let source = tool.get("source").and_then(|s| s.as_str()).unwrap_or("");
-            let desc = tool
-                .get("description")
-                .and_then(|d| d.as_str())
-                .unwrap_or("")
-                .lines()
-                .find(|l| !l.trim().is_empty())
-                .unwrap_or("")
-                .trim();
+            let desc = summarize_description(
+                tool.get("description")
+                    .and_then(|d| d.as_str())
+                    .unwrap_or(""),
+            );
             let source_tag = if !source.is_empty() && source != "built-in" {
                 format!(" ({source})")
             } else {
@@ -799,6 +866,7 @@ fn format_command_response(command: &str, response: &serde_json::Value) -> Strin
                 let cat_pct = cat.get("percent").and_then(|p| p.as_f64()).unwrap_or(0.0);
                 if tokens > 0 {
                     out.push_str(&format!("  {label}: {tokens} tokens ({cat_pct:.1}%)\n"));
+                    append_context_items(&mut out, cat);
                 }
             }
         }
@@ -1110,15 +1178,51 @@ mod tests {
             "message": "Available tools:",
             "data": {
                 "tools": [
-                    {"name": "read", "description": "Read a file\nMore details", "source": "built-in"},
+                    {"name": "read", "description": "Read a file.\nMore details", "source": "built-in"},
                     {"name": "fetch", "description": "Fetch a URL", "source": "mcp-server"}
                 ]
             }
         });
         let result = format_command_response("tools", &response);
         assert!(result.contains("Available tools:"));
-        assert!(result.contains("  read — Read a file\n"));
+        // First sentence only; the trailing line is dropped.
+        assert!(result.contains("  read — Read a file.\n"));
         assert!(result.contains("  fetch — Fetch a URL (mcp-server)\n"));
+    }
+
+    #[test]
+    fn summarize_description_joins_hard_wrapped_first_sentence() {
+        // Mirrors the real `subagent` tool description, whose opening sentence is
+        // hard-wrapped across physical lines and preceded by a leading newline.
+        let desc = "\nSpawn and coordinate multiple AI agents in a pipeline (DAG). Each stage runs as a\npersistent session. Stages with no depends_on start immediately in parallel.\n\nMODES:\n- blocking";
+        // Must not cut off mid-sentence at "Each stage runs as a".
+        assert_eq!(
+            summarize_description(desc),
+            "Spawn and coordinate multiple AI agents in a pipeline (DAG)."
+        );
+    }
+
+    #[test]
+    fn summarize_description_no_sentence_boundary_returns_paragraph() {
+        let desc = "Read a file\nMore details";
+        assert_eq!(summarize_description(desc), "Read a file More details");
+    }
+
+    #[test]
+    fn summarize_description_truncates_at_question_or_exclamation() {
+        // A first sentence ending in '?' or '!' must truncate there — not fall
+        // through and return the whole paragraph (the prior ". "-only split did).
+        // Relevant for third-party (MCP) tool descriptions cyril doesn't control.
+        assert_eq!(
+            summarize_description("Need a file? Use the read tool."),
+            "Need a file?"
+        );
+        assert_eq!(
+            summarize_description("Run it! Then check the output."),
+            "Run it!"
+        );
+        // The earliest terminator wins regardless of which kind it is.
+        assert_eq!(summarize_description("Why? Because. More."), "Why?");
     }
 
     #[test]
@@ -1144,6 +1248,47 @@ mod tests {
         assert!(result.contains("Your prompts: 2000 tokens (20.0%)"));
         // Zero-token categories should be omitted
         assert!(!result.contains("Kiro responses"));
+    }
+
+    #[test]
+    fn format_response_context_breakdown_lists_files() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "",
+            "data": {
+                "contextUsagePercentage": 7.6,
+                "model": "auto",
+                "breakdown": {
+                    "contextFiles": {
+                        "tokens": 8495,
+                        "percent": 4.2,
+                        "items": [
+                            {"name": "AGENTS.md", "tokens": 1843, "percent": 0.92, "matched": true},
+                            {"name": "review-process.md", "tokens": 5004, "percent": 2.5, "matched": true},
+                            {"name": "SKILL.md", "tokens": 130, "percent": 0.06, "matched": true, "auto_included": true},
+                            {"name": "stale.md", "tokens": 50, "percent": 0.02, "matched": false}
+                        ]
+                    },
+                    "tools": {"tokens": 6665, "percent": 3.3}
+                }
+            }
+        });
+        let result = format_command_response("context", &response);
+        // Category summary still present.
+        assert!(result.contains("Context files: 8495 tokens (4.2%)"));
+        // Per-file rows are rendered, indented under the category. The trailing
+        // newline pins the exact row format (indent, em-dash, .1 precision) and
+        // proves a plain matched row carries no stray (auto)/(unmatched) tag.
+        assert!(result.contains("    AGENTS.md — 1843 tokens (0.9%)\n"));
+        // Heaviest file sorts before lighter ones.
+        let heavy = result.find("review-process.md").unwrap();
+        let light = result.find("AGENTS.md").unwrap();
+        assert!(heavy < light, "items should be sorted by tokens descending");
+        // Optional flags surface useful state.
+        assert!(result.contains("SKILL.md — 130 tokens (0.1%) (auto)"));
+        assert!(result.contains("stale.md — 50 tokens (0.0%) (unmatched)"));
+        // Categories without items (tools) render no child rows.
+        assert!(result.contains("Tools: 6665 tokens (3.3%)"));
     }
 
     #[test]
