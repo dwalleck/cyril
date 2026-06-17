@@ -369,6 +369,16 @@ pub enum BridgeCommand {
         session_id: SessionId,
         content: String,
     },
+    /// Queue a mid-turn steer (Kiro 2.7.0+; ROADMAP K1a). Sent as an awaited
+    /// `_session/steer` ExtRequest. -32601 marks the session unsupported.
+    SteerSession {
+        session_id: SessionId,
+        message: String,
+    },
+    /// Drop the queued steer before pickup, via `_session/steer/clear`.
+    ClearSteering {
+        session_id: SessionId,
+    },
     Shutdown,
 }
 

@@ -171,6 +171,34 @@ pub fn spawn_bridge(agent_command: AgentCommand, cwd: PathBuf) -> crate::Result<
     Ok(handle)
 }
 
+/// Outcome of an error from a `_session/steer[/clear]` request (ROADMAP K1a).
+#[derive(Debug, PartialEq, Eq)]
+enum SteerErrorAction {
+    /// First `-32601` for this session: mark unsupported and notify the user once.
+    MarkAndNotify,
+    /// `-32601` but the session was already marked: stay silent (emit-once).
+    AlreadyUnsupported,
+    /// Any other error: surface as a generic bridge error; do NOT mark unsupported.
+    BridgeError,
+}
+
+/// Pure classifier so the -32601 gate is unit-testable without a live backend.
+/// Only `MethodNotFound` (-32601) means "steering absent"; any other code is a
+/// transient/other failure that must NOT permanently disable steering.
+fn steer_error_action(
+    code: agent_client_protocol::ErrorCode,
+    already_unsupported: bool,
+) -> SteerErrorAction {
+    match (
+        code == agent_client_protocol::ErrorCode::MethodNotFound,
+        already_unsupported,
+    ) {
+        (true, false) => SteerErrorAction::MarkAndNotify,
+        (true, true) => SteerErrorAction::AlreadyUnsupported,
+        (false, _) => SteerErrorAction::BridgeError,
+    }
+}
+
 /// Serialize a JSON value to an `Arc<RawValue>` for use with `ext_method`.
 fn to_raw_arc(
     params: &serde_json::Value,
@@ -259,6 +287,10 @@ async fn run_bridge(
 
     // 5. Command loop
     let mut active_session_id: Option<acp::SessionId> = None;
+    // Sessions whose backend lacks `_session/steer` (-32601). Remembered so we
+    // skip re-sending and surface the unsupported notice only once (ROADMAP K1a).
+    let mut steering_unsupported: std::collections::HashSet<crate::types::SessionId> =
+        std::collections::HashSet::new();
 
     while let Some(cmd) = channels.command_rx.recv().await {
         match cmd {
@@ -955,6 +987,143 @@ async fn run_bridge(
                     }
                 }
             }
+            BridgeCommand::SteerSession {
+                session_id,
+                message,
+            } => {
+                // Pre-send gate: a session known-unsupported is never re-sent and
+                // emits nothing (the unsupported notice fired on the first -32601).
+                if steering_unsupported.contains(&session_id) {
+                    tracing::debug!(
+                        session_id = session_id.as_str(),
+                        "steering unsupported for session, skipping steer"
+                    );
+                    continue;
+                }
+                let params = serde_json::json!({
+                    "sessionId": session_id.as_str(),
+                    "message": message,
+                });
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
+                    Err(e) => {
+                        tracing::error!(error = %e, "failed to serialize steer params");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("steer '{}'", session_id.as_str()),
+                                message: format!("serialize params: {e}"),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
+                        continue;
+                    }
+                };
+                // Ok({queued:true}) carries no new info: the `steering_queued`
+                // echo is the source of truth, so success emits nothing here.
+                if let Err(e) = conn
+                    .ext_method(acp::ExtRequest::new("_session/steer", raw_arc))
+                    .await
+                {
+                    match steer_error_action(e.code, steering_unsupported.contains(&session_id)) {
+                        SteerErrorAction::MarkAndNotify => {
+                            steering_unsupported.insert(session_id.clone());
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::SteeringUnsupported {
+                                    message: "steering requires kiro-cli 2.7.0+".to_string(),
+                                },
+                            )
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                        SteerErrorAction::AlreadyUnsupported => {}
+                        SteerErrorAction::BridgeError => {
+                            tracing::error!(error = %e, session_id = session_id.as_str(), "steer failed");
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::BridgeError {
+                                    operation: format!("steer '{}'", session_id.as_str()),
+                                    message: e.to_string(),
+                                },
+                            )
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            BridgeCommand::ClearSteering { session_id } => {
+                if steering_unsupported.contains(&session_id) {
+                    tracing::debug!(
+                        session_id = session_id.as_str(),
+                        "steering unsupported for session, skipping clear"
+                    );
+                    continue;
+                }
+                let params = serde_json::json!({ "sessionId": session_id.as_str() });
+                let raw_arc = match to_raw_arc(&params) {
+                    Ok(arc) => arc,
+                    Err(e) => {
+                        tracing::error!(error = %e, "failed to serialize steer/clear params");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: format!("steer/clear '{}'", session_id.as_str()),
+                                message: format!("serialize params: {e}"),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
+                        continue;
+                    }
+                };
+                // The `steering_cleared` echo is the source of truth on success.
+                if let Err(e) = conn
+                    .ext_method(acp::ExtRequest::new("_session/steer/clear", raw_arc))
+                    .await
+                {
+                    match steer_error_action(e.code, steering_unsupported.contains(&session_id)) {
+                        SteerErrorAction::MarkAndNotify => {
+                            steering_unsupported.insert(session_id.clone());
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::SteeringUnsupported {
+                                    message: "steering requires kiro-cli 2.7.0+".to_string(),
+                                },
+                            )
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                        SteerErrorAction::AlreadyUnsupported => {}
+                        SteerErrorAction::BridgeError => {
+                            tracing::error!(error = %e, session_id = session_id.as_str(), "steer/clear failed");
+                            if notify_or_closed(
+                                &channels.notification_tx,
+                                Notification::BridgeError {
+                                    operation: format!("steer/clear '{}'", session_id.as_str()),
+                                    message: e.to_string(),
+                                },
+                            )
+                            .await
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
             BridgeCommand::Shutdown => {
                 tracing::info!("bridge shutting down");
                 break;
@@ -970,6 +1139,34 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    // Slice DE / design claims 7,8,9 (+ backs claim 10's single-message via
+    // AlreadyUnsupported). The fn compiling at all proves claim 7: -32601 is
+    // detectable via agent_client_protocol::ErrorCode::MethodNotFound.
+    #[test]
+    fn steer_error_action_classifies() {
+        use agent_client_protocol::ErrorCode;
+        // claim 8: first -32601 -> mark + notify.
+        assert_eq!(
+            steer_error_action(ErrorCode::MethodNotFound, false),
+            SteerErrorAction::MarkAndNotify
+        );
+        // emit-once: already marked -> silent (backs claim 10's single message).
+        assert_eq!(
+            steer_error_action(ErrorCode::MethodNotFound, true),
+            SteerErrorAction::AlreadyUnsupported
+        );
+        // claim 9: any other code -> BridgeError, NEVER marks unsupported,
+        // regardless of the flag (a transient -32603 must not disable steering).
+        assert_eq!(
+            steer_error_action(ErrorCode::InternalError, false),
+            SteerErrorAction::BridgeError
+        );
+        assert_eq!(
+            steer_error_action(ErrorCode::InternalError, true),
+            SteerErrorAction::BridgeError
+        );
+    }
 
     #[tokio::test]
     async fn send_on_closed_channel_returns_error() {
