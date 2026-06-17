@@ -17,7 +17,7 @@
 - [Filesystem callbacks](#kas-filesystem-callbacks-verified-live--capability-negotiated) · [Host-responsibility callback map](#kas-host-responsibility-callback-map-verified-live) (auth/shell_type/permission/fs/terminal)
 - [Session-management + account methods](#kas-session-management--account-methods-verified-live) · [Hooks (kas-unified-hooks)](#kas-hooks--the-kas-unified-hooks-engine-from-the-bundle) · [Steering `fileMatch`](#steering-inclusion-under-kas--filematch-now-works-against-openfiles)
 - [KAS live wire captures (2026-06-16)](#kas-live-wire-captures-2026-06-16-tool-advertisement-session_info_update-usage) — tool advertisement (`_kiro/tools/didChange` = category tags), `session_info_update` `kind`-multiplexer (turn-end/metering/context-breakdown), `_kiro/account/getUsage` shape
-- [Cyril impact](#cyril-impact) · [cyril type-coverage gaps (Rust vs KAS `.d.ts`)](#cyril-type-coverage-gaps-rust-types-vs-kas-typescript-dts) · [Not verified (follow-ups)](#not-verified-this-session-follow-ups) · [Reproduce](#reproduce)
+- [Cyril impact](#cyril-impact) · [cyril type-coverage gaps (Rust vs KAS `.d.ts`)](#cyril-type-coverage-gaps-rust-types-vs-kas-typescript-dts) · [Probe coverage: proven vs. not-yet-proven](#probe-coverage-proven-on-the-wire-vs-not-yet-proven) · [Reproduce](#reproduce)
 
 ---
 
@@ -623,18 +623,34 @@ Ordered by strategic weight. Field lists are from the self-extracted `@kiro/agen
 
 ---
 
-## Not verified this session (follow-ups)
+## Probe coverage: proven on the wire vs. not-yet-proven
 
-**Resolved 2026-06-16** (see "KAS live wire captures" above): KAS tool advertisement (`_kiro/tools/didChange` = category tags + per-MCP-tool); `session_info_update` `kind`-discriminator shape incl. turn-end/metering/context-breakdown; `_kiro/account/getUsage` message shape; hooks gating (enabled via client `_meta.kiro.hooks={enabled}` at initialize — sibling of `settings`, *not* a cli.json flag) + direction (**host-callback**: agent calls `_kiro/hooks/{list,executeHook}` back on the client, which runs the command — corrected from an initial wrong "server-run" reading; authoritative source is the `@kiro/acp-type-covenant` hooks contract); **the full `_kiro/*` notification catalog** — `governance/state`, `mcp/status`, `powers/items_changed`, `progressive_context/items_changed`, `steering/documents_changed` all fire on a plain default-settings turn (shapes captured).
+This audit mixes two evidence levels. **Typed** = the shape is in the `@kiro/acp-type-covenant` `.d.ts` (authoritative for the contract, but only that). **Fired** = exercised live this session against the real 2.7.1 binary (`experiments/conductor-spike/probe-kas-*-2.7.1.py`). The list below is the honest line between them.
 
-**Resolved 2026-06-16 by the covenant pass** ([docs/kiro-kas-acp-covenant.md](kiro-kas-acp-covenant.md)): the "destructive/unprobed bonus methods" (`session/{delete,rename}`, `permissions/explain`, `policy/check`, `spec/getTaskStatuses`) are all typed client→agent requests with known params/responses; `_kiro/session/history` returned empty only because it's a **paginated** request (`{sessionId, beforeMessageId, limit?}` → `{updates, hasMore, oldestLoadedMessageId?}`) and the probe sent no cursor; the hooks enable flag is `_meta.kiro.hooks={enabled:true}` (no `v2`, no cli.json) — the earlier "global on-disk flag" theory was wrong.
+### Proven live (fired end-to-end) ✅
 
-Still open (live-firing, not type-discovery):
-- ~~**Hooks end-to-end**~~ — **DONE 2026-06-16** (`probe-kas-hooks-host-2.7.1.py`): host-callback fired across all four triggers, `executeHook` ran, and a `preToolUse` exit-2 blocked the tool. See the hooks section.
-- ~~**Read-only client→agent methods**~~ — **DONE 2026-06-16** (`probe-kas-client-methods-2.7.1.py`): `permissions/{list,explain}`, `policy/check`, `codeIntelligence`, `session/{context,history}` all fired. See "Client→agent methods" above.
-- ~~**The spec workflow**~~ — **DONE 2026-06-16** (`probe-kas-spec-2.7.1.py`, `-design-`, `-executetask-`): the **full lifecycle** `createSpec` → `generateDocument design` → `generateDocument tasks` → `getTaskStatuses` → **`executeTask`** (implements a task, writes real source, flips status to completed/succeed) all fired. See "The spec workflow" above. Only `runAllTasks` (batch-implement every task) is left — same shape as `executeTask`, just looped.
-- **The remaining state-changing client→agent methods** remain unexercised: `session/{export,compact,delete,rename}`, `checkpoint/{revert,revertMultiple}`, `mcp/{resetServer,getPrompt,getResource}`, `hooks/triggerHook`, `spec/runAllTasks`. Out of scope until a concrete cyril UX needs them (and the destructive ones want care).
-- A **clean v2 baseline re-capture on 2.7.1** — the default engine did not respond to the piped init+session/new probe in this session (KAS did); v2 baseline here is taken from `docs/kiro-2.7.0-wire-audit.md`, not freshly re-captured.
+- **Auth + session:** `initialize`, `session/new` (vibe + spec modes), `_kiro/auth/getAccessToken` responder.
+- **Turn lifecycle:** `session_info_update` kinds `turn_start` / `turn_completion` (credits + `usedTools`) / `turn_end` / `context_usage` (per-category breakdown) / `focus_update` / `user_message_id_assigned`.
+- **Notifications (6 of 18):** `governance/state`, `mcp/status`, `powers/items_changed`, `progressive_context/items_changed`, `steering/documents_changed`, `tools/didChange` — all fire on a plain turn.
+- **Host callbacks:** hooks (`_kiro/hooks/list` + `executeHook`, incl. `preToolUse` exit-2 **blocking**), **fs** (`fs/read_text_file`, `fs/write_text_file`), **terminal** (`terminal/create→wait_for_exit→output→release`), `_kiro/terminal/shell_type`, **`_kiro/userInput`** (rich structured questions w/ sub-options, via the spec flow), **`_kiro/tool/{get_diagnostics,semantic_rename,smart_relocate}`**.
+- **Client→agent requests:** `permissions/{list,explain}`, `policy/check`, `codeIntelligence` (status), `session/{context,history}`, `account/getUsage`.
+- **Spec lifecycle:** `resolveSession` (fresh) → `invoke createSpec` → `generateDocument {design,tasks}` → `getTaskStatuses` → `executeTask` (writes real source, flips status).
+- **Injection:** client-provided `customAgents` via `session/new` `_meta.kiro` (loads + runs as a role).
+
+### Typed but NOT fired (contract known, behavior unconfirmed) ⚠️
+
+- **Notifications (12 of 18), situational:** `code_references` (license-attributed output), `sandbox/status` (sandbox fallback), `mcp/governance_disabled`, `policy/changed` + `policy/error` (mid-session policy reload), `hooks/cancel` (on `session/cancel` with hooks on), `hooks/didChange` (`.kiro/hooks/` change mid-session), `spec/taskStatusChanged` (the *notification* — we read statuses via the `getTaskStatuses` request instead), `customAgent/{not_found,config_error}` (we only injected a *valid* agent), `error/rate_limit`, `system/notify`.
+- **`session_info_update` kinds (12 of 18) not observed:** `steering_inclusion`, `display_error`, `summarization_{started,completed,failed,separator}`, `summary_message`, `recap`, `queued` (concurrent sessions), `hook_update`, `pending_interaction` / `interaction_resolved` (only seen indirectly via `userInput`).
+- **Host callbacks not triggered:** `secret/{get,store,delete}`, `openExternalUrl`, `mcp/elicitation`, `hooks/sessionStart` (no real session-start hook), `terminal/kill` (no cancellation path), and the **Kiro fs supersets** `_kiro/fs/{read_file,write_file,delete,stat,read_directory}` — KAS used the bare-ACP `fs/*` for basic ops, so these never fired.
+- **Client→agent requests not fired:** `session/{delete,rename,compact,export}`, `session/{fork,list}` (the non-empty `sessionCapabilities`), `checkpoint/{revert,revertMultiple}` (need a snapshot), `mcp/{resetServer,getPrompt,getResource}`, `hooks/triggerHook` (client-initiated), `spec/runAllTasks`, `spec/resolveSession` `strategy:"reuse"`, `spec/invoke` `documentType:"bugfix"` / `action:"update"`.
+- **Settings / modes not exercised:** KAS modes `autonomous` / `bug-fix` / `plan` / `quick-spec`; most `AgentSettings` flags (`_parallelTasks`, `_steeringReminders`, `_sessionRecap`, `_mergeVibeSpec`, `_delegate`, `_providerPowers`, `thinking`, `tangentMode`, `disableAutoCompaction`, `todoList`, `checkpoint`, `toolSearch`, `knowledge`, `compaction`); the `c2s_*` code-to-spec tools (gated `_c2s`); the knowledge base.
+
+### Methodological caveats (true of *every* "fired" result above)
+
+- **One environment.** All probes ran single-client, raw-JSON-RPC, against **this user's** account: a **social (GitHub) token**, this set of installed **powers/MCP**, **non-enterprise** governance. Builder-ID / external-IdP auth, enterprise governance (`isEnterprise:true`, disabled features), or a different MCP/powers set may change auth, tool advertisement, governance flags, and policy rules.
+- **Bare ACP, not the TUI.** Probes drive the ACP wire directly; v2-TUI-only behaviors (the BEL/OSC-9 notifications) are out of scope by construction.
+- **"Not fired" ≠ "broken."** Almost everything in the ⚠️ list is typed in the covenant and simply wasn't triggered (often it needs a specific condition: a rate limit, a sandbox fallback, a malformed agent, concurrent sessions). Treat it as *unconfirmed*, not *absent*.
+- **A clean v2 baseline re-capture on 2.7.1 is still owed** — the default (v2) engine didn't respond to the piped init+session/new probe this session; the v2 baseline here is inherited from `docs/kiro-2.7.0-wire-audit.md`, not freshly re-captured on the 2.7.1 binary.
 
 ---
 
