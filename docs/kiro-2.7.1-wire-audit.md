@@ -8,7 +8,7 @@
 
 ## Contents
 
-**TL;DR:** 2.7.1 embeds the KAS engine (TypeScript/LangGraph), reachable today via `acp --agent-engine kas` (the `chat --v3` TUI is gated). KAS is a *second agent on the same wire*: `_kiro/*` dialect, host-supplied auth, capability-negotiated fs **and** terminal callbacks, an `agent-subtask` subagent model with a one-shot fail-fast DAG (no native loop), built-in `semantic_reviewer`/`fta`/`Explore` agents, and IDE-parity steering (`fileMatch`). cyril's default v2 path is unchanged; KAS adoption is the [ROADMAP KAS track](ROADMAP.md).
+**TL;DR:** 2.7.1 embeds the KAS engine (TypeScript/LangGraph), reachable today via `acp --agent-engine kas` (the `chat --v3` TUI is gated). KAS is a *second agent on the same wire*: `_kiro/*` dialect, host-supplied auth, capability-negotiated fs **and** terminal callbacks, an `agent-subtask` subagent model with a one-shot fail-fast DAG (no native loop), built-in `semantic_reviewer`/`fta`/`Explore` agents, and IDE-parity steering (`fileMatch`). cyril's default v2 path is unchanged; KAS adoption is the [ROADMAP KAS track](ROADMAP.md). **Authoritative `_kiro/*` wire contract: [docs/kiro-kas-acp-covenant.md](kiro-kas-acp-covenant.md)** (the curated `@kiro/acp-type-covenant` reference — method catalog, handshake flags, session_info_update union, host-callback signatures; supersedes the reconstructed shapes in this audit).
 
 - [Headline: embedded & works over ACP](#headline-kas-is-embedded-and-works-over-acp) · [The `--v3` flag / "V3 not supported" gate](#the---v3-flag-and-the-v3-not-supported-gate)
 - [KAS ACP capability surface (vs v2)](#kas-acp-capability-surface-vs-v2) — `_kiro/*` namespace, `session/new` (7 modes, populated `configOptions`, working `set_config_option`)
@@ -456,6 +456,8 @@ A real CLI↔IDE gap-closure. The v1/v2 Rust engine parsed steering `inclusion` 
 
 ## KAS live wire captures (2026-06-16): tool advertisement, `session_info_update`, usage
 
+> **Superseded by the covenant.** The shapes below were reconstructed from live traffic; the **authoritative, exhaustive contract** for every `_kiro/*` method/notification/handshake is now extracted in **[docs/kiro-kas-acp-covenant.md](kiro-kas-acp-covenant.md)** (from the `@kiro/acp-type-covenant` types package). Where the two differ, the covenant wins — e.g. `session_info_update` actually has **18** `kind`s (only 6 fired in the capture below), and the hooks enable flag is `{enabled:true}` with no `v2`. Read the covenant doc for the full method catalog, `KiroClientMeta` handshake flags, `AgentSettings`, Trust-v2, client-injected agents, and the fs/terminal/auth/hooks host-callback signatures.
+
 Three surfaces captured live this session (`probe-kas-tools-2.7.1.py`, `probe-kas-hooks-usage-2.7.1.py`).
 
 ### Tool advertisement — `_kiro/tools/didChange` pushes **category tags**, not tool ids
@@ -571,10 +573,11 @@ Ordered by strategic weight. Field lists are from the self-extracted `@kiro/agen
 
 **Resolved 2026-06-16** (see "KAS live wire captures" above): KAS tool advertisement (`_kiro/tools/didChange` = category tags + per-MCP-tool); `session_info_update` `kind`-discriminator shape incl. turn-end/metering/context-breakdown; `_kiro/account/getUsage` message shape; hooks gating (enabled via client `_meta.kiro.hooks={enabled}` at initialize — sibling of `settings`, *not* a cli.json flag) + direction (**host-callback**: agent calls `_kiro/hooks/{list,executeHook}` back on the client, which runs the command — corrected from an initial wrong "server-run" reading; authoritative source is the `@kiro/acp-type-covenant` hooks contract); **the full `_kiro/*` notification catalog** — `governance/state`, `mcp/status`, `powers/items_changed`, `progressive_context/items_changed`, `steering/documents_changed` all fire on a plain default-settings turn (shapes captured).
 
-Still open:
-- **Hooks with the gate ON** — `hooks.enabled+v2` is a global on-disk flag, not session-settable, so this session couldn't enable it without writing `~/.kiro/settings/cli.json`. With the flag on: confirm the `_kiro/hooks/list` response shape and whether the server *ever* pushes a `_kiro/hooks/*` server→client message (the bundle says it runs hooks in-process, so expected: no host callback — but unverified with the gate live).
-- `_kiro/session/history` returning empty after a live turn — confirm whether a reloaded/persisted session or a pagination cursor surfaces the updates.
-- The destructive/unprobed bonus methods: `_kiro/session/{delete,rename}`, `_kiro/permissions/{explain}`, `_kiro/policy/check`, `_kiro/spec/getTaskStatuses`.
+**Resolved 2026-06-16 by the covenant pass** ([docs/kiro-kas-acp-covenant.md](kiro-kas-acp-covenant.md)): the "destructive/unprobed bonus methods" (`session/{delete,rename}`, `permissions/explain`, `policy/check`, `spec/getTaskStatuses`) are all typed client→agent requests with known params/responses; `_kiro/session/history` returned empty only because it's a **paginated** request (`{sessionId, beforeMessageId, limit?}` → `{updates, hasMore, oldestLoadedMessageId?}`) and the probe sent no cursor; the hooks enable flag is `_meta.kiro.hooks={enabled:true}` (no `v2`, no cli.json) — the earlier "global on-disk flag" theory was wrong.
+
+Still open (live-firing, not type-discovery):
+- **Hooks end-to-end** — the contract is a host-callback; a faithful repro needs cyril to *act as the hooks host* (return a hook from the agent's `_kiro/hooks/list` callback, then service `_kiro/hooks/executeHook`). Not yet exercised.
+- **Live-firing the typed client→agent methods** — `session/{export,compact,delete,rename}`, `checkpoint/*`, `spec/*`, `permissions/*`, `policy/check`, `codeIntelligence` are now typed but unexercised on the wire.
 - A **clean v2 baseline re-capture on 2.7.1** — the default engine did not respond to the piped init+session/new probe in this session (KAS did); v2 baseline here is taken from `docs/kiro-2.7.0-wire-audit.md`, not freshly re-captured.
 
 ---
