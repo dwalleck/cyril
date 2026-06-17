@@ -98,7 +98,20 @@ v2's single Rust `agent_crew` tool (DAG-pipeline + summary + session — see `do
 
 **`createSubagentInvocationTools`** (`dist/tools/subagent-tool.d.ts`) — generates one tool per registered agent, named **`subagent/<agentId>`**, from a `CustomAgentRegistry`. Autonomous-mode planner/coder sub-agents use a structured input schema `{ user_instruction_verbatim, environmental_context?, explanation }` wrapped in XML framing blocks, with **framing-tag stripping as a prompt-injection defense**.
 
-**Bundled agents** (`dist/bundled-agents/index.d.ts`): `getBundledAgentDefinitions(semanticReviewEnabled, ftaEnabled)` returns the built-in profiles (semantic_reviewer is one; gated by `semanticReviewEnabled`, which was `true`).
+**Bundled agents** (`dist/bundled-agents/`, `getBundledAgentDefinitions(semanticReviewEnabled, ftaEnabled)`) — three built-in agents, each authored as a **markdown doc + YAML frontmatter** and parsed by `custom-agent-parser` (gray-matter):
+
+| agent | purpose | tools | gating |
+|---|---|---|---|
+| **`Explore`** | read-only codebase understanding — architecture, dependency/data-flow tracing ("explain, don't change"). Primary consumer of the `c2s_*` CodeToSpec tools. | `read_file`, `list_directory`, `grep_search`, `file_search`, `fs_write`, + full `c2s_*` suite (`code_to_spec`, `c2s_list_packages/modules/functions`, `c2s_describe_function/module`, `c2s_traverse_functions/modules`) | always available |
+| **`semantic_reviewer`** | behavioral code review (by concern, not file); diff-driven, layered output to `./semantic-review/…md` with confidence qualifiers + APPROVED/NEEDS_CHANGES verdict across iterative passes | `read_file`, `fs_write`, `grep_search`, `file_search`, `execute_bash`, `@sandbox/github_*` (PR/issue/CI); `includePowers`+`includeMcpJson` | `semanticReview` setting |
+| **`functional_task_alignment`** (fta) | claim-based output validation / devil's-advocate — decomposes the user's request and verifies each claim against the **diff/on-disk state** ("the diff wins; the agent's summary is unverified claims") | `read_file`, `fs_write`, `str_replace`, `grep_search`, `file_search`, `execute_bash` | `fta` setting |
+
+**Enable path** — both gated agents are KAS feature settings on the same `_meta.kiro.settings` channel as `subagentOrchestration` (set at `initialize`, default applies otherwise):
+
+- `resolveSemanticReview = parsed.data.semanticReview?.enabled ?? persistedMetadata ?? **true**` → semantic_reviewer is **on by default**.
+- `resolveFta = parsed.data.fta?.enabled ?? persistedMetadata ?? **false**` → fta is **off by default**; enable with `initialize` `clientCapabilities._meta.kiro.settings.fta = {enabled: true}` (verified mechanism — same as `subagentOrchestration`).
+
+Note the cluster: `semantic_reviewer` and `fta` are the **verification agents**, and `fta` in particular is KAS's built-in answer to a "validator" stage (diff-grounded, claim-based) — the role a custom `crew-dag-loop` validator played, shipped as a one-shot bundled agent rather than a declarative loop.
 
 ### How a crew executes — one-shot, fail-fast DAG (no native loop)
 
