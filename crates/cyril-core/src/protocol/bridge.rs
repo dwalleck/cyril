@@ -1211,6 +1211,12 @@ async fn run_loop(
             }
             BridgeCommand::Shutdown => {
                 tracing::info!("bridge shutting down");
+                // cyril-84ca: abort an in-flight turn so its task doesn't linger
+                // past run_loop's return holding the connection. The loop being
+                // free (Slice 3) is what lets Shutdown be processed mid-turn at all.
+                if let Some(handle) = prompt_task.take() {
+                    handle.abort();
+                }
                 break;
             }
         }
@@ -1310,7 +1316,12 @@ mod tests {
     /// against the live bridge.
     async fn with_harness<F, Fut>(script: Rc<RefCell<Script>>, body: F)
     where
-        F: FnOnce(BridgeSender, mpsc::Receiver<RoutedNotification>, Rc<tokio::sync::Notify>) -> Fut,
+        F: FnOnce(
+            BridgeSender,
+            mpsc::Receiver<RoutedNotification>,
+            Rc<tokio::sync::Notify>,
+            tokio::task::JoinHandle<crate::Result<()>>,
+        ) -> Fut,
         Fut: std::future::Future<Output = ()>,
     {
         let gate = Rc::new(tokio::sync::Notify::new());
@@ -1346,9 +1357,10 @@ mod tests {
                 tokio::task::spawn_local(async move {
                     let _ = a_task.await;
                 });
-                tokio::task::spawn_local(run_loop(Rc::new(conn), channels, std::env::temp_dir()));
+                let loop_handle =
+                    tokio::task::spawn_local(run_loop(Rc::new(conn), channels, std::env::temp_dir()));
                 let (sender, notif_rx, _perm_rx) = handle.split();
-                body(sender, notif_rx, gate).await;
+                body(sender, notif_rx, gate, loop_handle).await;
             })
             .await;
     }
@@ -1423,7 +1435,7 @@ mod tests {
         // records the prompt it received (bidirectional delivery works).
         let script = Rc::new(RefCell::new(Script::default()));
         let probe = script.clone();
-        with_harness(script, |sender, mut rx, _gate| async move {
+        with_harness(script, |sender, mut rx, _gate, _loop| async move {
             let sid = start_session(&sender, &mut rx).await;
             sender
                 .send(BridgeCommand::SendPrompt {
@@ -1459,7 +1471,7 @@ mod tests {
             block_prompt: true,
             ..Default::default()
         }));
-        with_harness(script, |sender, mut rx, gate| async move {
+        with_harness(script, |sender, mut rx, gate, _loop| async move {
             let sid = start_session(&sender, &mut rx).await;
             sender
                 .send(BridgeCommand::SendPrompt {
@@ -1496,7 +1508,7 @@ mod tests {
             prompt_err: true,
             ..Default::default()
         }));
-        with_harness(script, |sender, mut rx, _gate| async move {
+        with_harness(script, |sender, mut rx, _gate, _loop| async move {
             let sid = start_session(&sender, &mut rx).await;
             sender
                 .send(BridgeCommand::SendPrompt {
@@ -1529,7 +1541,7 @@ mod tests {
             ..Default::default()
         }));
         let probe = script.clone();
-        with_harness(script, |sender, mut rx, gate| async move {
+        with_harness(script, |sender, mut rx, gate, _loop| async move {
             let sid = start_session(&sender, &mut rx).await;
             // Turn 1 parks on the gate.
             sender
@@ -1574,6 +1586,36 @@ mod tests {
                 probe.borrow().prompt_count,
                 2,
                 "C9: after the first turn completed, the next turn started"
+            );
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn shutdown_aborts_inflight_prompt() {
+        // C7: Shutdown received while a turn is parked aborts the turn task and
+        // run_loop returns promptly. Pre-Slice-3 the loop blocked on conn.prompt(),
+        // so Shutdown could not be processed until the turn ended; here run_loop
+        // must return within the bound even though the prompt never completes.
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        with_harness(script, |sender, mut rx, _gate, loop_handle| async move {
+            let sid = start_session(&sender, &mut rx).await;
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: sid,
+                    content_blocks: vec!["forever".into()],
+                })
+                .await
+                .unwrap();
+            // The turn parks (gate never released). Shutdown must still be processed.
+            sender.send(BridgeCommand::Shutdown).await.unwrap();
+            let returned = tokio::time::timeout(Duration::from_secs(2), loop_handle).await;
+            assert!(
+                matches!(returned, Ok(Ok(Ok(())))),
+                "run_loop returned cleanly after a mid-turn Shutdown, got {returned:?}"
             );
         })
         .await;
