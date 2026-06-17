@@ -34,7 +34,7 @@ Plus the **bare-ACP** host callbacks (negotiated via standard `clientCapabilitie
 
 ### 1b. Client → Agent **requests** (`agent-capabilities/index.d.ts` → `AgentCapabilityTypes`) — what cyril can call KAS to do
 
-> The read-only subset (`permissions/list`, `permissions/explain`, `policy/check`, `codeIntelligence`, `session/context`, `session/history`) is **verified live** — see the 2.7.1 audit's "Client→agent methods" capture (incl. the default Cedar policy ruleset and the LSP-server matrix). `policy/check` resolves an `ask` effect by firing `session/request_permission`.
+> The read-only subset (`permissions/list`, `permissions/explain`, `policy/check`, `codeIntelligence`, `session/context`, `session/history`) is **verified live** — see the 2.7.1 audit's "Client→agent methods" capture (incl. the default Cedar policy ruleset and the LSP-server matrix). `policy/check` resolves an `ask` effect by firing `session/request_permission`. The **spec workflow** (`spec/resolveSession` → `spec/invoke {operation:'createSpec'}`) is also verified — it's **async** (returns `{sessionId}` immediately, then streams a full turn that self-scaffolds `.kiro/specs/<feature>/{requirements.md,.config.kiro}` via bundled subagents); `createSpec` is the requirements phase only (design/tasks via `generateDocument`). See the audit "spec workflow" capture + `experiments/conductor-spike/spec-sample-2.7.1/`.
 
 | Method | Params | Response |
 |---|---|---|
