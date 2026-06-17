@@ -575,6 +575,13 @@ KAS ships the IDE's **requirements → design → tasks** spec engine on the CLI
 
 **This is the platform thesis (injection side), proven:** `CustomAgentSource.CLIENT_PROVIDED` is real and highest-precedence — cyril can hand KAS skills/agents at session start (the native alternative to proxy file-rewriting), and they load + run as first-class roles. Combined with the interception capstones above (hooks gate + fs/terminal side effects), cyril can both **inject behavior** and **mediate every action** of a KAS agent without reimplementing agent logic — the whole stage-platform argument, demonstrated on the wire.
 
+### `userInput` + client-side LSP tool callbacks (verified live)
+
+Two more opt-in client capabilities, both confirmed (`probe-kas-userinput-2.7.1.py`, `probe-kas-client-tools-2.7.1.py`):
+
+- **`_kiro/userInput`** (gated by `_meta.kiro.userInput:true`) — the rich structured-question callback. **Trigger nuance:** the `get_user_input` tool (id `user_input`) is **`spec`-tagged** in the bundle — it is *not* in the default vibe agent's toolkit (a plain "ask me a question" prompt makes the agent ask in chat instead). It surfaces in the **spec flow**; with `userInput` advertised, the spec's clarifying questions route to the client. Captured shape: `{sessionId, toolCallId, question, options: [{title, description, recommended, subOptionsLabel?, subOptions?: [{title, description}]}]}` → client returns `{action:'answered'|'dismissed', answer}`. Live examples: *"new feature or a bugfix?"* (3 options, one `recommended`) and *"What do you want to start with?"* (with **nested `subOptions`** — High-/Low-Level Design under "Technical Design"). It **coexists with `session/request_permission`** — userInput is the *question* channel (multi-option, nested, recommended-flagged — far richer than the binary allow/reject prompt); permission requests remain the *tool-approval* channel (both fired in the same turn).
+- **`_kiro/tool/{get_diagnostics, semantic_rename, smart_relocate}`** (gated by `_meta.kiro.clientTool{GetDiagnostics,SemanticRename,SmartRelocate}:true`) — all three fired and were delegated to the client (canned responses accepted). Captured params: `get_diagnostics {paths:[...]}`; `semantic_rename {path, line, character, oldName, newName}`; `smart_relocate {sourcePath, destinationPath}`. Each also carries a streaming-validation `_meta` (`_isValid`/`_activePath`/`_completedPaths`). These let cyril supply LSP-backed rename/relocate/diagnostics from its own editor integration instead of KAS's built-ins — relevant if cyril ever fronts an LSP.
+
 ---
 
 ## Cyril impact

@@ -14,6 +14,8 @@ Three typed maps in the covenant define the entire surface. Direction is explici
 
 ### 1a. Agent → Client **requests** (`client-capabilities/index.d.ts` → `ClientCapabilityTypes`) — the host must implement responders
 
+> **Verified live 2026-06-16:** `auth/getAccessToken`, `hooks/{list,executeHook}` (with preToolUse-blocking), the fs/terminal callbacks (§5), `userInput`, and `tool/{get_diagnostics,semantic_rename,smart_relocate}` all fire when advertised. **`userInput` trigger nuance:** the `get_user_input` tool is `spec`-tagged — it only surfaces in the spec flow (the spec clarifying questions), not the default vibe agent; with `userInput` advertised those route here. `userInput` carries `{question, options:[{title, description, recommended, subOptionsLabel?, subOptions?}]}` and **coexists** with `session/request_permission` (questions vs tool-approvals). See the 2.7.1 audit "userInput + client-side LSP tool callbacks" capture.
+
 | Method | Params | Response |
 |---|---|---|
 | `_kiro/auth/getAccessToken` | `{}` | `GetAccessTokenResponse {accessToken, expiresAt, profileArn?, authMethod?, provider?}` |
