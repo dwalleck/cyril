@@ -9,8 +9,9 @@ steer reach kiro **mid-turn**, or only **after the turn ends**?
 
 ## Probe
 
-`probe.rs` (ran as `cargo run --example probe_steer_midturn`). Drives cyril's
-REAL `spawn_bridge`; builds nothing from the K1b feature — only the K1a
+`probe.rs` (a throwaway; to re-run, copy it into `crates/cyril/examples/` as
+`probe_steer_midturn.rs`, then `cargo run --example probe_steer_midturn`).
+Drives cyril's REAL `spawn_bridge`; builds nothing from the K1b feature — only the K1a
 `SteerSession` primitive + the bridge. NewSession → SendPrompt (3× `sleep 2`
 bash steps, `--trust-all-tools`) → at +1.5s enqueue `SteerSession`. Timestamps
 every notification relative to prompt-send.

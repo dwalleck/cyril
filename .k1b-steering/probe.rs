@@ -8,7 +8,9 @@
 // the steer surface BEFORE TurnCompleted (bridge allows mid-turn steering) or
 // AFTER (bridge command loop blocked on conn.prompt().await for the whole turn)?
 //
-// Run:  cargo run --example probe_steer_midturn
+// Run:  this file is NOT a live example target (crates/cyril/examples/ has only
+//       test_bridge.rs). To re-run, copy it back into crates/cyril/examples/ as
+//       probe_steer_midturn.rs, then `cargo run --example probe_steer_midturn`.
 // Oracle: /tmp/k1b_wire.log (wire_shim timestamps) — compare C2A _session/steer
 // frame time vs A2C session/prompt response time, independent of this probe.
 
