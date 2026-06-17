@@ -426,6 +426,11 @@ pub(crate) fn to_ext_notification(
             let session_update = update
                 .and_then(|u| u.get("sessionUpdate"))
                 .and_then(|s| s.as_str());
+            // For steering-echo logs only ("<unknown>" if the envelope omits it).
+            let session_id = params
+                .get("sessionId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("<unknown>");
             match session_update {
                 Some("tool_call_chunk") => {
                     let tool_call_id = match update
@@ -461,6 +466,41 @@ pub(crate) fn to_ext_notification(
                         session_id: ext_session_id,
                     }))
                 }
+                // Queue-steering echoes (Kiro 2.7.0+; ROADMAP K1a). They ride the
+                // SAME wire method as tool_call_chunk — `_kiro.dev/session/update`,
+                // delivered here as `kiro.dev/session/update` after the ACP library
+                // strips the single leading `_` ext-prefix. Always emit so the depth
+                // counter transitions; a missing payload field degrades only the
+                // (K1b) display text and becomes `None`, never a `Some("")` sentinel.
+                Some("steering_queued") => {
+                    let message = update
+                        .and_then(|u| u.get("message"))
+                        .and_then(|v| v.as_str());
+                    if message.is_none() {
+                        tracing::warn!(
+                            session_id,
+                            "steering_queued missing message field; counting with no text"
+                        );
+                    }
+                    Ok(Some(Notification::SteeringQueued {
+                        message: message.map(str::to_string),
+                    }))
+                }
+                Some("steering_consumed") => {
+                    let content = update
+                        .and_then(|u| u.get("content"))
+                        .and_then(|v| v.as_str());
+                    if content.is_none() {
+                        tracing::warn!(
+                            session_id,
+                            "steering_consumed missing content field; decrementing with no text"
+                        );
+                    }
+                    Ok(Some(Notification::SteeringConsumed {
+                        content: content.map(str::to_string),
+                    }))
+                }
+                Some("steering_cleared") => Ok(Some(Notification::SteeringCleared)),
                 Some(other) => {
                     tracing::debug!(variant = other, "unhandled kiro.dev/session/update variant");
                     Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
@@ -671,74 +711,6 @@ pub(crate) fn to_ext_notification(
             );
             Ok(None)
         }
-        // Queue steering echoes (Kiro 2.7.0+; ROADMAP K1a). These ride the
-        // UNDERSCORE-prefixed `_kiro.dev/session/update` — distinct from the
-        // unprefixed `kiro.dev/session/update` arm above. Verified against
-        // captured wire (`experiments/conductor-spike/logs/probe-steer-goal-2.7.0.log`).
-        // Tolerant by design: an unknown/missing sub-variant is dropped, NOT
-        // an `Err` (unlike the unprefixed arm) — the `_kiro.dev/*` dialect must
-        // tolerate future variants we don't model yet.
-        "_kiro.dev/session/update" => {
-            // `<unknown>` only appears if the envelope omitted sessionId (an
-            // anomaly worth seeing in the log itself).
-            let session_id = params
-                .get("sessionId")
-                .and_then(|v| v.as_str())
-                .unwrap_or("<unknown>");
-            let update = params.get("update");
-            match update
-                .and_then(|u| u.get("sessionUpdate"))
-                .and_then(|s| s.as_str())
-            {
-                // queued/consumed always emit so the depth counter transitions; a
-                // missing payload field degrades only the (K1b) display text and
-                // becomes `None`, never a `Some("")` sentinel.
-                Some("steering_queued") => {
-                    let message = update
-                        .and_then(|u| u.get("message"))
-                        .and_then(|v| v.as_str());
-                    if message.is_none() {
-                        tracing::warn!(
-                            session_id,
-                            "steering_queued missing message field; counting with no text"
-                        );
-                    }
-                    Ok(Some(Notification::SteeringQueued {
-                        message: message.map(str::to_string),
-                    }))
-                }
-                Some("steering_consumed") => {
-                    let content = update
-                        .and_then(|u| u.get("content"))
-                        .and_then(|v| v.as_str());
-                    if content.is_none() {
-                        tracing::warn!(
-                            session_id,
-                            "steering_consumed missing content field; decrementing with no text"
-                        );
-                    }
-                    Ok(Some(Notification::SteeringConsumed {
-                        content: content.map(str::to_string),
-                    }))
-                }
-                Some("steering_cleared") => Ok(Some(Notification::SteeringCleared)),
-                Some(other) => {
-                    tracing::debug!(
-                        session_id,
-                        variant = other,
-                        "unhandled _kiro.dev steering variant"
-                    );
-                    Ok(None)
-                }
-                None => {
-                    tracing::debug!(
-                        session_id,
-                        "_kiro.dev/session/update missing sessionUpdate field"
-                    );
-                    Ok(None)
-                }
-            }
-        }
         other => {
             tracing::debug!(method = other, "unknown extension notification");
             Ok(None)
@@ -753,9 +725,11 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    // Slice B / design claims 1-6. Oracle: captured wire frames from
-    // experiments/conductor-spike/logs/probe-steer-goal-2.7.0.log (L25/37/120).
-    const STEER_METHOD: &str = "_kiro.dev/session/update";
+    // Slice B / design claims 1-6 + cyril-c1qe. Steering rides wire method
+    // `_kiro.dev/session/update`; the ACP library strips the single leading `_`
+    // before delivery, so the converter receives the STRIPPED form below and
+    // steering shares tool_call_chunk's `kiro.dev/session/update` arm.
+    const STEER_METHOD: &str = "kiro.dev/session/update";
 
     #[test]
     fn steering_queued_converts() {
@@ -814,29 +788,32 @@ mod tests {
     }
 
     #[test]
-    fn steering_unknown_variant_drops() {
-        // Tolerant: unknown sub-variant / missing sessionUpdate -> Ok(None), NOT Err.
+    fn steering_unknown_variant_errs() {
+        // Steering now shares the `kiro.dev/session/update` arm with tool_call_chunk,
+        // which Errs on a genuinely unknown sub-variant (existing behavior, preserved).
+        // A future steering variant we don't model yet is logged + dropped via the Err.
         let unknown = json!({"update": {"sessionUpdate": "steering_paused"}});
-        assert!(matches!(
-            to_ext_notification(STEER_METHOD, &unknown),
-            Ok(None)
-        ));
+        assert!(to_ext_notification(STEER_METHOD, &unknown).is_err());
         let missing = json!({"update": {}});
-        assert!(matches!(
-            to_ext_notification(STEER_METHOD, &missing),
-            Ok(None)
-        ));
+        assert!(to_ext_notification(STEER_METHOD, &missing).is_err());
     }
 
     #[test]
-    fn unprefixed_session_update_unchanged() {
-        // Regression: the unprefixed arm still errors on an unknown variant
-        // (unlike the tolerant _kiro.dev arm), proving the two are distinct.
-        let params = json!({"update": {"sessionUpdate": "steering_queued", "message": "x"}});
-        assert!(
-            to_ext_notification("kiro.dev/session/update", &params).is_err(),
-            "unprefixed arm must still Err on a non-tool_call_chunk variant"
-        );
+    fn steering_rides_stripped_method_not_underscore() {
+        // Regression fence for cyril-c1qe: the ACP lib strips the single leading `_`
+        // from ext methods, so steering echoes (wire `_kiro.dev/session/update`) reach
+        // the converter as `kiro.dev/session/update`. K1a keyed a dead arm on the raw
+        // underscore form. Assert the STRIPPED method handles steering, and the raw
+        // underscore form is NOT a steering match (it falls to the catch-all).
+        let frame = json!({"update": {"sessionUpdate": "steering_queued", "message": "x"}});
+        assert!(matches!(
+            to_ext_notification("kiro.dev/session/update", &frame),
+            Ok(Some(Notification::SteeringQueued { .. }))
+        ));
+        assert!(matches!(
+            to_ext_notification("_kiro.dev/session/update", &frame),
+            Ok(None)
+        ));
     }
 
     #[test]

@@ -1056,8 +1056,12 @@ async fn run_bridge(
                 };
                 // Ok({queued:true}) carries no new info: the `steering_queued`
                 // echo is the source of truth, so success emits nothing here.
+                // Method is the UNPREFIXED `session/steer`: ext_method prepends a
+                // single `_` (`format!("_{}")`), so the wire shows `_session/steer`.
+                // A leading `_` here would double it to `__session/steer` (-32601);
+                // cf. SpawnSession's `session/spawn`.
                 if let Err(e) = conn
-                    .ext_method(acp::ExtRequest::new("_session/steer", raw_arc))
+                    .ext_method(acp::ExtRequest::new("session/steer", raw_arc))
                     .await
                 {
                     // The real lookup (always false today: the pre-send gate
@@ -1123,8 +1127,9 @@ async fn run_bridge(
                     }
                 };
                 // The `steering_cleared` echo is the source of truth on success.
+                // Unprefixed: ext_method adds the single `_` (wire `_session/steer/clear`).
                 if let Err(e) = conn
-                    .ext_method(acp::ExtRequest::new("_session/steer/clear", raw_arc))
+                    .ext_method(acp::ExtRequest::new("session/steer/clear", raw_arc))
                     .await
                 {
                     // Real lookup, not a literal `false` — see the SteerSession
