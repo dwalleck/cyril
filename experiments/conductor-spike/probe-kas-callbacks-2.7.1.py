@@ -53,7 +53,9 @@ def handle(o):
     if CALLS[m]==1:
         log(f"\n>>> [{m}]  (params: {json.dumps(p)[:300]})")
     if m=="_kiro/auth/getAccessToken":
-        reply(rid, read_token() or {})
+        tok=read_token()
+        if tok is None: log("[WARN] NO KIRO TOKEN in auth store — replying empty; any INCONCLUSIVE/feature-absent verdict below is a SETUP FAILURE, not a finding (run `kiro-cli whoami`)")
+        reply(rid, tok or {})
     elif m=="session/request_permission":
         opts=p.get("options",[]); pick=next((x for x in opts if "allow" in (x.get("kind","")+x.get("optionId","")).lower()),opts[0] if opts else None)
         reply(rid, {"outcome":{"outcome":"selected","optionId":pick["optionId"]}} if pick else {"outcome":{"outcome":"cancelled"}})

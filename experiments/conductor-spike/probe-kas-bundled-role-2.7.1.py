@@ -49,7 +49,10 @@ def reply(rid,res): PIN.write(json.dumps({"jsonrpc":"2.0","id":rid,"result":res}
 TOOLS=[]; AGENT=[]; PIPELINE=[]; ROLES=set(); ERRORS=[]
 def handle(o):
     m=o.get("method"); rid=o.get("id"); p=o.get("params",{}) or {}
-    if m=="_kiro/auth/getAccessToken": reply(rid, read_token() or {})
+    if m=="_kiro/auth/getAccessToken":
+        tok=read_token()
+        if tok is None: log("[WARN] NO KIRO TOKEN in auth store — replying empty; any INCONCLUSIVE/feature-absent verdict below is a SETUP FAILURE, not a finding (run `kiro-cli whoami`)")
+        reply(rid, tok or {})
     elif m=="_kiro/terminal/shell_type": reply(rid,{"shellType":"bash"})
     elif m=="session/request_permission":
         opts=p.get("options",[]); pick=next((x for x in opts if "allow" in (x.get("kind","")+x.get("optionId","")).lower()),opts[0] if opts else None)

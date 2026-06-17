@@ -93,11 +93,19 @@ rid = send("initialize", {"protocolVersion": 1,
 wait_for(rid, 20)
 rid = send("session/new", {"cwd": CWD, "mcpServers": []})
 r = wait_for(rid, 30)
+if not r or "error" in r:
+    print(f"[ERROR] session/new failed: {r} — aborting", flush=True)
+    proc.terminate(); sys.exit(1)
 session_id = r["result"]["sessionId"]
 print(f"[ok] session={session_id}", flush=True)
 rid = send("_kiro.dev/commands/execute",
            {"command": {"command": "model", "args": {"value": MODEL}}, "sessionId": session_id})
-wait_for(rid, 30)
+mr = wait_for(rid, 30)
+if not mr or "error" in mr or not mr.get("result", {}).get("success"):
+    print(f"[ERROR] model switch to {MODEL} failed: {mr} — aborting "
+          f"(goal-loop findings would be attributed to the wrong model)", flush=True)
+    proc.terminate(); sys.exit(1)
+print(f"[model] {mr['result'].get('message')}", flush=True)
 
 rid = send("_kiro.dev/commands/execute",
            {"command": {"command": "goal",
@@ -112,6 +120,9 @@ prid = send("session/prompt", {"sessionId": session_id, "prompt": [{"type": "tex
     "text": f"Work toward the goal. Create the file {GOAL_PATH} with content DONE "
             f"using your file or shell tools."}]})
 pr = wait_for(prid, 420)
+if not pr or "error" in pr:
+    print(f"[WARN] driving turn did not complete cleanly: {json.dumps(pr.get('error') if pr else None)[:160]}\n"
+          f"       => goal-iteration counts below may be INCOMPLETE, not a confirmed 'loop never manifested' finding", flush=True)
 print(f"[prompt done] stop={pr.get('result', {}).get('stopReason') if pr else None}", flush=True)
 
 # watch for goal/status + any further turns for 90s

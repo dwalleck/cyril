@@ -103,7 +103,14 @@ def main() -> int:
     rid = send("_kiro.dev/commands/execute",
                {"command": {"command": "model", "args": {"value": MODEL}}, "sessionId": session_id})
     mr = wait_for(rid, 30)
-    print(f"[model] {json.dumps(mr.get('result', mr.get('error')))[:160] if mr else 'NO RESPONSE'}")
+    if not mr or "error" in mr or not mr.get("result", {}).get("success"):
+        print(f"[ERROR] model switch to {MODEL} failed: {mr} — aborting "
+              f"(token rows below would be mis-attributed to the wrong model)")
+        proc.terminate(); return 1
+    got = mr["result"].get("data", {}).get("model", {}).get("id")
+    print(f"[model] changed to {got!r}: {mr['result'].get('message')}")
+    if got != MODEL:
+        print(f"[WARN] active model is {got!r}, expected {MODEL!r} — token rows may mis-attribute")
 
     if EFFORT:
         rid = send("_kiro.dev/commands/execute",
@@ -115,6 +122,9 @@ def main() -> int:
     print(f"[prompt] {PROMPT[:70]}...")
     rid = send("session/prompt", {"sessionId": session_id, "prompt": [{"type": "text", "text": PROMPT}]})
     pr = wait_for(rid, 300)
+    if not pr or "error" in pr:
+        print(f"[WARN] turn did not complete cleanly: {json.dumps(pr.get('error') if pr else None)[:160]}\n"
+              f"       => any 'tokens null' reading below is INCONCLUSIVE (no usage accrued), not a confirmed finding")
     stop = pr.get("result", {}).get("stopReason") if pr else None
     # did the turn use tools / think?
     with lock:

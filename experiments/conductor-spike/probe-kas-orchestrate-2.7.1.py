@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Probe: capture KAS subagent/orchestration notification wire format (2.7.1).
+Probe: capture the KAS `orchestrate_subagent` DAG-pipeline wire format (2.7.1).
 
-Runs an authenticated KAS ACP session (--agent-engine kas), drives one prompt
-turn that forces subagent orchestration with benign text-only work, and records
-EVERY server->client message: session/update notifications, session/request_permission
+Runs an authenticated KAS ACP session (--agent-engine kas) with subagent
+orchestration explicitly enabled via `_meta.kiro.settings` at BOTH `initialize`
+and `session/new`, then drives one prompt turn that forces the multi-stage
+`orchestrate_subagent` tool (NOT individual invoke_subagent calls) to run a
+THREE-stage DEPENDENT pipeline (pick -> double -> report). Records every
+server->client message: session/update notifications, session/request_permission
 requests, and any fs/* client callbacks. Auto-approves permissions and answers
 fs callbacks so the turn completes unattended.
 
 Usage:
-  python3 probe-kas-subagent-2.7.1.py [KIRO_BIN]
+  python3 probe-kas-orchestrate-2.7.1.py [KIRO_BIN]
 Default KIRO_BIN = ~/.local/share/kiro-research/binaries/2.7.1/kiro-cli-chat
 """
 import json, os, subprocess, sys, threading, queue, time, tempfile, pathlib, sqlite3

@@ -56,7 +56,9 @@ def pump(until_id, timeout=40):
         except: continue
         if "method" in o and "id" in o:          # server->client request
             if o["method"] == "_kiro/auth/getAccessToken":
-                reply(o["id"], read_token() or {})
+                tok = read_token()
+                if tok is None: print("[WARN] NO KIRO TOKEN in auth store — replying empty; any INCONCLUSIVE verdict below is a SETUP FAILURE, not a finding (run `kiro-cli whoami`)")
+                reply(o["id"], tok or {})
             else:
                 reply(o["id"], {})
         elif "method" in o:                        # notification

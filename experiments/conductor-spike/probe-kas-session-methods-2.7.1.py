@@ -55,7 +55,10 @@ def pump(until_id, timeout=120):
         except: continue
         if "method" in o and "id" in o:
             m=o["method"]
-            if m=="_kiro/auth/getAccessToken": reply(o["id"], read_token() or {})
+            if m=="_kiro/auth/getAccessToken":
+                tok=read_token()
+                if tok is None: log("[WARN] NO KIRO TOKEN in auth store — replying empty; any INCONCLUSIVE/feature-absent verdict below is a SETUP FAILURE, not a finding (run `kiro-cli whoami`)")
+                reply(o["id"], tok or {})
             elif m=="session/request_permission":
                 opts=o["params"].get("options",[])
                 pick=next((x for x in opts if "allow" in (x.get("kind","")+x.get("optionId","")).lower()), opts[0] if opts else None)

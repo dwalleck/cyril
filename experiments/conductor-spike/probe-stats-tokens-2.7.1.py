@@ -98,6 +98,9 @@ log("\n# running one turn...")
 NOTIFS.clear()
 pid=req("session/prompt", {"sessionId":sid,"prompt":[{"type":"text","text":"Reply with exactly: ok"}]})
 pr=pump(pid, timeout=120)
+if pr is None or "error" in pr:
+    log("# WARNING: turn did not complete cleanly:", json.dumps(pr.get("error") if pr else None)[:160])
+    log("#   => any 'tokens still null' reading below is INCONCLUSIVE (no usage accrued), not a confirmed finding")
 log("# prompt response:", json.dumps(pr.get("result") if pr else None)[:200])
 
 # the metadata notification cyril parses (camelCase inputTokens/outputTokens)
