@@ -671,6 +671,58 @@ pub(crate) fn to_ext_notification(
             );
             Ok(None)
         }
+        // Queue steering echoes (Kiro 2.7.0+; ROADMAP K1a). These ride the
+        // UNDERSCORE-prefixed `_kiro.dev/session/update` — distinct from the
+        // unprefixed `kiro.dev/session/update` arm above. Verified against
+        // captured wire (`experiments/conductor-spike/logs/probe-steer-goal-2.7.0.log`).
+        // Tolerant by design: an unknown/missing sub-variant is dropped, NOT
+        // an `Err` (unlike the unprefixed arm) — the `_kiro.dev/*` dialect must
+        // tolerate future variants we don't model yet.
+        "_kiro.dev/session/update" => {
+            let update = params.get("update");
+            match update
+                .and_then(|u| u.get("sessionUpdate"))
+                .and_then(|s| s.as_str())
+            {
+                Some("steering_queued") => {
+                    match update
+                        .and_then(|u| u.get("message"))
+                        .and_then(|v| v.as_str())
+                    {
+                        Some(message) => Ok(Some(Notification::SteeringQueued {
+                            message: message.to_string(),
+                        })),
+                        None => {
+                            tracing::warn!("steering_queued missing message field, dropping");
+                            Ok(None)
+                        }
+                    }
+                }
+                Some("steering_consumed") => {
+                    match update
+                        .and_then(|u| u.get("content"))
+                        .and_then(|v| v.as_str())
+                    {
+                        Some(content) => Ok(Some(Notification::SteeringConsumed {
+                            content: content.to_string(),
+                        })),
+                        None => {
+                            tracing::warn!("steering_consumed missing content field, dropping");
+                            Ok(None)
+                        }
+                    }
+                }
+                Some("steering_cleared") => Ok(Some(Notification::SteeringCleared)),
+                Some(other) => {
+                    tracing::debug!(variant = other, "unhandled _kiro.dev steering variant");
+                    Ok(None)
+                }
+                None => {
+                    tracing::debug!("_kiro.dev/session/update missing sessionUpdate field");
+                    Ok(None)
+                }
+            }
+        }
         other => {
             tracing::debug!(method = other, "unknown extension notification");
             Ok(None)
@@ -683,6 +735,83 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    // Slice B / design claims 1-6. Oracle: captured wire frames from
+    // experiments/conductor-spike/logs/probe-steer-goal-2.7.0.log (L25/37/120).
+    const STEER_METHOD: &str = "_kiro.dev/session/update";
+
+    #[test]
+    fn steering_queued_converts() {
+        // L25 shape, plus a stray `content` to prove we read `message`, not it.
+        let params = json!({
+            "sessionId": "2dc3c608",
+            "update": {"sessionUpdate": "steering_queued", "message": "stop now", "content": "WRONG"}
+        });
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &params),
+            Ok(Some(Notification::SteeringQueued { message })) if message == "stop now"
+        ));
+    }
+
+    #[test]
+    fn steering_consumed_converts() {
+        let params = json!({
+            "sessionId": "2dc3c608",
+            "update": {"sessionUpdate": "steering_consumed", "content": "stop now"}
+        });
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &params),
+            Ok(Some(Notification::SteeringConsumed { content })) if content == "stop now"
+        ));
+    }
+
+    #[test]
+    fn steering_cleared_converts() {
+        // L120: payload-free frame must still produce the notification.
+        let params = json!({
+            "sessionId": "2dc3c608",
+            "update": {"sessionUpdate": "steering_cleared", "foo": 1}
+        });
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &params),
+            Ok(Some(Notification::SteeringCleared))
+        ));
+    }
+
+    #[test]
+    fn steering_missing_field_drops() {
+        // No sentinel: missing message/content -> Ok(None), never SteeringQueued{""}.
+        let q = json!({"update": {"sessionUpdate": "steering_queued"}});
+        assert!(matches!(to_ext_notification(STEER_METHOD, &q), Ok(None)));
+        let c = json!({"update": {"sessionUpdate": "steering_consumed"}});
+        assert!(matches!(to_ext_notification(STEER_METHOD, &c), Ok(None)));
+    }
+
+    #[test]
+    fn steering_unknown_variant_drops() {
+        // Tolerant: unknown sub-variant / missing sessionUpdate -> Ok(None), NOT Err.
+        let unknown = json!({"update": {"sessionUpdate": "steering_paused"}});
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &unknown),
+            Ok(None)
+        ));
+        let missing = json!({"update": {}});
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &missing),
+            Ok(None)
+        ));
+    }
+
+    #[test]
+    fn unprefixed_session_update_unchanged() {
+        // Regression: the unprefixed arm still errors on an unknown variant
+        // (unlike the tolerant _kiro.dev arm), proving the two are distinct.
+        let params = json!({"update": {"sessionUpdate": "steering_queued", "message": "x"}});
+        assert!(
+            to_ext_notification("kiro.dev/session/update", &params).is_err(),
+            "unprefixed arm must still Err on a non-tool_call_chunk variant"
+        );
+    }
     use serde_json::json;
 
     #[test]
