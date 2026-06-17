@@ -371,6 +371,24 @@ There is **no** `Notification` / `PermissionRequest` / `WaitingForApproval` trig
 
 ---
 
+## Steering inclusion under KAS — `fileMatch` now works (against `openFiles`)
+
+A real CLI↔IDE gap-closure. The v1/v2 Rust engine parsed steering `inclusion` frontmatter but ignored `fileMatch` entirely (the string isn't even in the binary) — all steering loaded unconditionally. **KAS implements it:**
+
+- Frontmatter schema: `inclusion: enum["always", "fileMatch", "manual", "auto"]` + `fileMatchPattern: string | string[]`, validated ("fileMatchPattern required when inclusion is fileMatch").
+- `matchDocsForFiles` glob-matches each fileMatch doc via **`minimatch(filePath, pattern, {dot})`** — workspace-relative, single-or-array patterns. So `fileMatchPattern: "components/**/*.tsx"` is honored exactly like the IDE.
+
+**But it matches against `openFiles`.** The populate-steering node calls `getSteeringDocuments({ files: openFiles.length > 0 ? openFiles : undefined })`, and the fileMatch lookup runs only `hasFiles ? getMatchedDocuments(filePaths) : []`. So:
+
+- **IDE + KAS:** open editor tabs supply `openFiles`, so fileMatch steering triggers — the gap is closed in practice.
+- **Bare ACP CLI + KAS:** no open files → `hasFiles` is false → the fileMatch lookup is skipped → only `inclusion: always` docs load (effectively the v1/v2 behavior). The feature is *implemented but dormant* for lack of input, not unimplemented.
+
+(Same `openFiles`/`activeFile` session state also drives spec mode's `activeFile` logic via `minimatch`.)
+
+**Cyril impact / TODO:** cyril is a chat TUI with no editor "open files," so against KAS today fileMatch steering never fires. To light it up, cyril must **synthesize an `openFiles`/`activeFile` set** (from `@`-attached/referenced files, recently-touched files, or cwd) and feed it to KAS via the `_meta.kiro`/document channel. This is the smallest change that turns on a class of IDE-parity behavior (conditional steering, spec `activeFile`) without cyril reimplementing those features — the engine already does them; it just needs the input. Tracked as **ROADMAP KAS-6**.
+
+---
+
 ## Cyril impact
 
 - **Passive compatibility:** unchanged. Cyril's default `kiro-cli acp` (v2 engine) wire shape is unaffected; the entire KAS surface is opt-in behind `--agent-engine kas`.

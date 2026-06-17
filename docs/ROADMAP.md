@@ -187,6 +187,16 @@ KAS is the first Kiro engine to delegate **both file I/O and shell execution** t
 
 **Sequencing:** ship fs first (simpler, no lifecycle), then terminal. Each can land independently behind its capability flag.
 
+### KAS-6 — Open-file context (lights up conditional steering + spec activeFile)
+
+**Depends on:** KAS-1; pairs with KAS-2.
+
+KAS implements IDE-grade conditional features that key off the session's **open files** — but they sit dormant if the client never supplies that context (verified: steering `inclusion: fileMatch` glob-matches `fileMatchPattern` via `minimatch` against `openFiles`, and the fileMatch lookup is skipped entirely when `openFiles` is empty; spec mode similarly keys off `activeFile`/`openFiles`). cyril is a chat TUI with no editor "open files," so against KAS today these features never trigger — you'd get only `inclusion: always` steering, i.e. the old v1/v2 behavior.
+
+- Synthesize an `openFiles`/`activeFile` set and feed it to KAS (via the `_meta.kiro`/document channel the engine reads into its graph state) — sourced from files the user `@`-attaches or references, files the agent recently touched, and/or the cwd.
+- This is the smallest change that turns on a whole class of IDE-parity behavior (conditional steering, spec activeFile logic) without cyril implementing those features itself — the engine already does, it just needs the input.
+- Vendor-note: this is Kiro-specific plumbing (`_meta.kiro` open-file state), but the *concept* (telling an agent "these files are in play") is generalizable if other ACP agents grow similar context hooks.
+
 **Non-goals:** replicating KAS's spec/quick-spec workflow UIs verbatim; exposing `--v3`/the gated `chat` TUI; treating `_kiro/*` as a vendor-neutral abstraction (it's Kiro-specific — generalize only if ACP standardizes equivalents, per Open Tension #2). The `_kiro/session/{context,compact,export,history,fork,list}` methods are advertised but unprobed — out of scope until a concrete UX needs them.
 
 ## Vendor-neutral client features (candidates)
