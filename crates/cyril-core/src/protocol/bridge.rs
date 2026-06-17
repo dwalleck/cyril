@@ -263,9 +263,8 @@ async fn notify_or_closed(
 async fn run_bridge(
     agent_command: &AgentCommand,
     cwd: &std::path::Path,
-    mut channels: BridgeChannels,
+    channels: BridgeChannels,
 ) -> crate::Result<()> {
-    use acp::Agent;
     use agent_client_protocol as acp;
     use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
@@ -299,6 +298,21 @@ async fn run_bridge(
             tracing::error!(error = %e, "ACP IO task failed");
         }
     });
+
+    run_loop(std::rc::Rc::new(conn), channels, cwd).await
+}
+
+/// Handshake + the single-consumer command loop, split out of `run_bridge` so
+/// tests can drive it against an in-process fake agent (no `kiro-cli`
+/// subprocess). `conn` is `Rc` so a prompt future can be driven off this loop
+/// (cyril-84ca) without moving the connection out of the loop's reach.
+async fn run_loop(
+    conn: std::rc::Rc<agent_client_protocol::ClientSideConnection>,
+    mut channels: BridgeChannels,
+    cwd: &std::path::Path,
+) -> crate::Result<()> {
+    use acp::Agent;
+    use agent_client_protocol as acp;
 
     // 4. ACP handshake
     let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::V1)
