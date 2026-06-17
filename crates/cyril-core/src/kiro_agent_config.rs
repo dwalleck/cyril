@@ -250,13 +250,21 @@ fn write_atomic(path: &Path, content: &str) -> std::io::Result<()> {
         )
     })?;
     let tmp = dir.join(format!(".{file_name}.cyril.tmp"));
-    std::fs::write(&tmp, content)?;
-    if let Err(e) = std::fs::rename(&tmp, path) {
-        // Best-effort cleanup so a failed rename doesn't strand the temp file
-        // next to the user's config.
+
+    // Best-effort cleanup so a partial write or a failed rename never strands the
+    // temp file next to the user's config.
+    let cleanup = || {
         if let Err(rm) = std::fs::remove_file(&tmp) {
-            tracing::debug!(tmp = %tmp.display(), error = %rm, "could not remove temp file after a failed rename");
+            tracing::debug!(tmp = %tmp.display(), error = %rm, "could not remove temp file after a failed atomic write");
         }
+    };
+
+    if let Err(e) = std::fs::write(&tmp, content) {
+        cleanup();
+        return Err(e);
+    }
+    if let Err(e) = std::fs::rename(&tmp, path) {
+        cleanup();
         return Err(e);
     }
     Ok(())
