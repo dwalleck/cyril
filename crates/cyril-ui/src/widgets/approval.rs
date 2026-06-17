@@ -96,6 +96,9 @@ fn render_trust_phase(frame: &mut Frame, area: Rect, state: &ApprovalState) {
             format!("    {}", trust.display),
             display_style,
         ));
+        // Blank separator between options — matches the 3-lines-per-option
+        // height reserved above (label + display + blank).
+        lines.push(Line::default());
     }
 
     let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
@@ -157,5 +160,78 @@ mod tests {
                 render(frame, frame.area(), &state);
             })
             .expect("draw");
+    }
+
+    /// Flatten a `TestBackend` buffer into one string per row, joined by `\n`.
+    fn buffer_text(terminal: &Terminal<TestBackend>) -> String {
+        let buffer = terminal.backend().buffer();
+        let area = *buffer.area();
+        (0..area.height)
+            .map(|y| {
+                (0..area.width)
+                    .map(|x| buffer[(x, y)].symbol())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn trust_option(label: &str, display: &str) -> cyril_core::types::TrustOption {
+        cyril_core::types::TrustOption {
+            label: label.into(),
+            display: display.into(),
+            setting_key: "allowedCommands".into(),
+            patterns: vec![display.into()],
+        }
+    }
+
+    #[test]
+    fn trust_phase_renders_each_tier_label_and_display() {
+        let state = ApprovalState {
+            tool_call: cyril_core::types::ToolCall::new(
+                cyril_core::types::ToolCallId::new("tc_1"),
+                "echo hello".into(),
+                cyril_core::types::ToolKind::Execute,
+                cyril_core::types::ToolCallStatus::Pending,
+                None,
+            ),
+            message: "Allow execution?".into(),
+            options: vec![cyril_core::types::PermissionOption {
+                id: "always".into(),
+                label: "Always Allow".into(),
+                kind: cyril_core::types::PermissionOptionKind::AllowAlways,
+                is_destructive: false,
+            }],
+            trust_options: vec![
+                trust_option("Full command", "echo hello"),
+                trust_option("Base command", "echo *"),
+            ],
+            selected: 1,
+            phase: ApprovalPhase::SelectTrust,
+            responder: tokio::sync::oneshot::channel().0,
+        };
+
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state))
+            .expect("draw");
+
+        let text = buffer_text(&terminal);
+        // Both tiers' labels and display strings must be present, and the
+        // selected (second) tier carries the ▸ marker.
+        assert!(
+            text.contains("Full command"),
+            "missing tier 0 label:\n{text}"
+        );
+        assert!(
+            text.contains("Base command"),
+            "missing tier 1 label:\n{text}"
+        );
+        assert!(
+            text.contains("echo hello"),
+            "missing tier 0 display:\n{text}"
+        );
+        assert!(text.contains('▸'), "missing selection marker:\n{text}");
     }
 }
