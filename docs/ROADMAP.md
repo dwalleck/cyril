@@ -128,44 +128,72 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 
 **Why its own track (not a K-item):** the K-track is feature-parity within the v2 engine cyril already drives; KAS is a parallel engine with its own dialect and lifecycle. It also intersects the platform vision — KAS is the first Kiro engine that exposes filesystem callbacks, which is a genuine proxy-stage interception point (links to Phase 5).
 
-**Estimate:** ~6–9 weeks across seven milestones (KAS-1…7).
-**Depends on:** Phase 1's transport refactor is the clean home for the `--agent-engine kas` arg (`Vec<String>` agent command); KAS-1 can land before it by appending the flag, but prefers it. Otherwise orthogonal to Phases 2–5 and the K-track. Requires kiro-cli ≥ 2.7.1 at runtime.
+**Estimate:** ~7–10 weeks across milestones KAS-0…7 (KAS-2 split into 2a–2d during the 2026-06-16 grilling). The **walking skeleton is KAS-0 → KAS-1 → KAS-2a**.
+**Depends on:** spawn-level engine selection needs **no new transport work** — `main.rs` already takes `--agent-command <Vec<String>>` → `AgentCommand::try_from_argv`, so appending `--agent-engine kas` is free today. Phase 1's refactor is still the tidy long-term home for the arg, but does not gate this track. Otherwise orthogonal to Phases 2–5 and the K-track. Requires kiro-cli ≥ 2.7.1 at runtime.
+**Sequencing (decided 2026-06-16):** **K1 (queue steering) ships before this track.** K1 is higher-certainty value (real v2 users, today) and only weakly coupled — it adds three `sessionUpdate` variants to `convert/kiro.rs`, which KAS-0's `Engine`-trait port then absorbs at negligible cost. Honors Open Tension #6 and keeps the credential-custodian surface (KAS-1) off the critical path until concrete v2 value has shipped.
+**Architecture (see [ADR-0001](adr/0001-kiro-engine-trait.md), [ADR-0002](adr/0002-kas-cargo-feature-gate.md)):** engine is **per-session and immutable** at session creation; the two engines sit behind a **small Kiro-scoped `Engine` trait** (convert notification → internal `Notification`; declare `client_capabilities`; detect turn-end) **plus optional capability sub-traits** (`AuthResponder`≈KAS-1, `HostIo`≈KAS-5, `HooksHost`≈KAS-7, `GovernanceSource`≈KAS-2c) that KAS implements and v2 does not. Engine nests *under* the Kiro vendor — **not** the same mechanism as the Phase-1/4 vendor seam (Claude does not implement `Engine`). KAS code, especially the credential-reading `AuthResponder`, lives behind a default-off **`kas` cargo feature**; a default build cannot read the kiro token. **"KAS-2" in milestones below now means KAS-2a (the walking skeleton)** unless noted.
 **Wire reference:** [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) — the full audit, plus the reproducible probes in [`experiments/conductor-spike/`](../experiments/conductor-spike/) (`probe-kas-subagent`, `probe-kas-fs`, `probe-kas-orchestrate`, all 2.7.1).
-**Prerequisite — ACP crate version drift (verify before KAS-2).** cyril pins `agent-client-protocol` **0.9**; KAS ships the official `@agentclientprotocol/sdk` **^0.19**. Not a v2-path bug (the v1/v2 engines use `sacp`, not the SDK), but driving KAS means a 0.9 client talks to a 0.19 agent — any `SessionUpdate` variant or `clientCapabilities` field added across 0.9→0.19 (e.g. session list/fork shapes, richer config options) is absent from cyril's generated enums and would deserialize-fail or be dropped. Audit the 0.9→0.19 changelog and bump/verify the crate before KAS-2 relies on newer standard methods. Cheap to check now, expensive to discover as a mystery deserialization failure mid-integration.
+**Prerequisite — ACP crate coverage (KAS-0 verification spike, *not* a blocker).** *Corrected 2026-06-16 (grilling).* The earlier "cyril pins **0.9**, KAS ships **^0.19**, bump before KAS-2" note was stale and conflated two version lines. Facts: cyril is **already on `agent-client-protocol` 0.10.2 / schema 0.11.2** (Cargo.lock), and **0.11.2 already carries the typed `SessionInfoUpdate` variant** that KAS's `turn_end` rides — so the walking skeleton (KAS-2a) is **not** gated on an SDK migration. The "0.19" was the *TypeScript* `@agentclientprotocol/sdk` version, a different numbering line from the Rust crate (apples to oranges). Residual risk is narrower and operational: `SessionUpdate` is `#[serde(tag = "sessionUpdate")]` with **no `#[serde(other)]` catch-all** (`#[non_exhaustive]` is a Rust API attribute, not serde tolerance), so a *future* KAS-emitted typed `session/update` variant absent from 0.11.2 would hard-fail at the acp-crate deserialization layer **before** `convert/` runs — and, unlike the raw `_kiro/*` ext path (which is JSON-tolerant), standard `session/update` offers no raw fallback hook. Mitigation chosen during grilling: a **KAS-0 verification spike** confirms 0.11.2 deserializes every typed `session/update` variant KAS emits live (`agent_message_chunk`, `tool_call`/`tool_call_update`, `available_commands_update`, `config_option_update`, `session_info_update`); the no-catch-all is a documented upgrade-trigger, not a code defense (forking the crate or intercepting beneath the acp Client trait is deferred until a live unknown variant actually bites).
+
+### KAS-0 — `Engine` trait + v2 port + gating (invisible foundation)
+
+**Depends on:** nothing. Ships **no** user-visible change — its acceptance criterion is strict v2 parity.
+
+Stand up the seam everything else hangs off, without changing v2 behavior:
+
+- Introduce the Kiro-scoped **`Engine` trait** (core surface) + the first **capability sub-trait** stubs, and **port today's `convert/kiro.rs` behind a `V2Engine` impl** with zero behavior change. This is a pure refactor of the most load-bearing working code — its oracle is **behavioral**: every existing v2 test passes *and* a live `kiro-cli acp` session streams / tool-calls / renders subagents / mode-picks identically (CLAUDE.md "verify functional wiring end-to-end after any refactor").
+- Wire the **runtime engine gate**: an `AgentEngine` enum on the bridge/session (default v2), selectable via config / `/engine`; selecting any non-v2 engine cleanly reports "not available yet" until KAS-1.
+- Establish the **`kas` cargo feature** (default off, empty for now) — the project's first feature flag; add a CI lane that builds + lints + tests `--features kas` so it cannot bitrot under "warnings are errors."
+- **ACP-coverage verification spike** (see Prerequisite above): confirm schema 0.11.2 deserializes every typed `session/update` variant KAS emits live; the stale 0.9 version facts were fixed 2026-06-16 in this file and CLAUDE.md.
 
 ### KAS-1 — Engine selection + auth responder (the entry gate)
 
-**Depends on:** nothing hard (prefers Phase 1).
+**Depends on:** KAS-0 (the engine gate + `kas` feature exist; KAS-1 fills in the `AuthResponder` and the live KAS spawn).
 
 Without a host-supplied token, every KAS turn dies immediately (`[TokenInvalidError] … Host refresh callback returned no access token`). This milestone is the precondition for everything below.
 
-- Engine selection: spawn `kiro-cli acp --agent-engine kas` (config/flag-gated; default stays v2). A new `AgentEngine` enum on the bridge/session, surfaced as a startup option or `/engine kas`.
+- Make the KAS spawn real: the `AgentEngine` gate from KAS-0 now resolves `kas` to a live `kiro-cli acp --agent-engine kas` process (default stays v2). All new KAS code lands behind the `kas` cargo feature established in KAS-0.
 - Implement an **`_kiro/auth/getAccessToken`** server→client request responder: reply `{ accessToken, expiresAt, profileArn }`. KAS validates `expiresAt` is > now + ~3 min and **requires `profileArn`** (backend 400s "profileArn is required" without it).
 - Token sourcing — **mirror Kiro's own responder, don't just read the sqlite row.** Kiro implements this in `crates/chat-cli-v2/src/auth/{kas_token.rs, refresh_coordinator.rs, social.rs, builder_id.rs, external_idp.rs}`: it (1) resolves the active token across **three types** — social (GitHub → `kirocli:social:token`, carries `profile_arn`), AWS Builder ID, and external IdP (`kirocli:external-idp:token`); (2) **proactively OIDC-refreshes** (`create_token`, `grant_type=refresh_token`, `oidc.*.amazonaws.com`) before the ~3-min pre-expiry buffer, through a **lock-guarded `refresh_coordinator`** that serializes concurrent refreshes; (3) answers `{accessToken, expiresAt, profileArn}`. A naive "read `kirocli:social:token` and return it" responder breaks on the refresh-buffer (the failure our probes hit) and on Builder-ID/external-IdP users. Cleanest for cyril: **delegate to kiro-cli's own auth** rather than reimplement the OIDC refresh + multi-type resolution. **This makes cyril a custodian of a kiro credential** — handle it as such (no logging, read-only, minimal lifetime). See new Open Tension #7.
 - Tests: auth-responder unit test (shape + expired-token rejection), engine-select plumbing, a gated end-to-end smoke against a live KAS session.
 
-### KAS-2 — `_kiro/*` dialect + turn lifecycle parity
+### KAS-2a — Walking skeleton: a plain KAS turn renders **and ends**
 
-**Depends on:** KAS-1.
+**Depends on:** KAS-1. **This is the milestone that earns a demo** — select KAS, authenticate, prompt, watch text + tool calls stream, turn completes, input is live again.
 
-Make a plain KAS prompt turn render correctly. KAS's surface differs from v2 on several load-bearing points:
+The *minimum* for a plain turn to render and end cleanly. The other `_kiro/*` surfaces (governance, mcp/status, powers, progressive_context) and the other `session_info_update` kinds all fire on a plain turn too, but cyril's existing **unknown-variant `debug!` arm drops them gracefully** — so they are deferred to 2b–2d without hanging anything.
 
-- A parallel converter arm (in `convert/kiro.rs`, or its Phase-1 successor module) keyed on the active engine: KAS emits `_kiro/*` notifications — `_kiro/tools/didChange`, `_kiro/mcp/status`, `_kiro/progressive_context/items_changed`, `_kiro/governance/state`, `_kiro/powers/items_changed`, `_kiro/steering/documents_changed` — plus `session/update` variants `session_info_update`, `available_commands_update`, `config_option_update`. **All of these fire on a plain default-settings turn** (verified live 2026-06-16, shapes in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) "KAS live wire captures") — so the arm must handle the whole set, not just message/tool chunks.
-- **`_kiro/governance/state` is org-policy gating cyril should honor:** `{isEnterprise, features:{mcpEnabled, webToolsEnabled, usageAnalytics, contentCollection, promptLogging, codeReferenceTracker, autonomousAgents}}`. Gate UI/affordances on it (hide web tools when `webToolsEnabled:false`, surface `autonomousAgents`/`promptLogging` posture) rather than assuming everything is on. v2 has no equivalent.
-- **`session_info_update` is a `kind`-discriminated multiplexer** (verified live 2026-06-16) — one `session/update` variant carries everything v2 split across `kiro.dev/metadata` + the prompt response, keyed on `_meta.kiro.kind`. The converter must dispatch on `kind`:
-  - `turn_end` → `turnEnd.stopReason` (**this** is turn completion, not the prompt response — cyril's busy-state/turn-end logic keys off the response today and must learn this path).
-  - `turn_completion` → `promptTurnSummaries: [{unit:"credit", usage:<f64>, usedTools:[...]}]` + `elapsedTime` (ms) + `status` — the metering analog (maps to cyril's `TurnMetering`).
-  - `context_usage` → `usagePercentage` + a **per-category** `breakdown.{contextFiles,tools,kiroResponses,yourPrompts,sessionFiles}` (each `{tokens, percent, items?}`) — richer than cyril's flat `TokenCounts`; either map to `ContextUsage` + extend tokens, or model the breakdown.
-  - `focus_update` (turn title), `user_message_id_assigned`, `turn_start` — lifecycle/metadata, surface or ignore as needed.
-  See the "KAS live wire captures" section in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md).
-- `sess_…`-prefixed session ids; non-empty `sessionCapabilities {list, fork}`; per-run log dirs under `~/.kiro/logs/<ts>/`.
-- **Answer `_kiro/terminal/shell_type`** (`{sessionId}` → `{shellType: "bash"|"zsh"|"fish"|"powershell"|"sh"}`) — KAS calls this once at session setup to fill the system prompt's `Shell:` line; a missing/empty reply yields `Shell: undefined`. It's the lightest host callback and is needed even for a plain turn, so it belongs here in KAS-2; the heavier `terminal/*` execution callbacks are KAS-5. See the host-responsibility callback map in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md).
-- Defensive unknown-variant tolerance, as with the steering variants in K1a.
+- Converter arm (engine-keyed, in the `Engine`-trait structure from KAS-0) for **`agent_message_chunk` / `agent_thought_chunk` / `tool_call` / `tool_call_update`** only.
+- **`session_info_update` → `kind: "turn_end"`** mapped to cyril's turn-completion / busy-clear. **This — not the `session/prompt` response — is the turn-completion signal under KAS** (audit §"session_info_update"). **Hang-proofing acceptance criterion:** confirm cyril's prompt-response await is **non-blocking** under KAS — drive completion off `turn_end` and treat the prompt response as secondary/whenever-it-arrives, so a non-returning response cannot freeze the skeleton. Verify with the existing `probe-kas-*` scripts (no new probe needed).
+- Answer **`_kiro/terminal/shell_type`** (`{sessionId}` → `{shellType: "bash"|"zsh"|"fish"|"powershell"|"sh"}`) — the lightest host callback, called once at session setup; a missing reply yields `Shell: undefined` in the system prompt.
+- Handle **`sess_…`-prefixed session ids** and per-run log dirs under `~/.kiro/logs/<ts>/`.
+- Defensive unknown-variant tolerance for everything else (one `debug!` line noting `_kiro/*` surfaces are intentionally dormant pre-2b).
+
+### KAS-2b — Metering + context-usage breakdown
+
+**Depends on:** KAS-2a. The remaining `session_info_update` kinds — additive data whose absence loses information but hangs nothing:
+
+- `turn_completion` → `promptTurnSummaries: [{unit:"credit", usage:<f64>, usedTools:[...]}]` + `elapsedTime` (ms) + `status` — the metering analog (maps to cyril's `TurnMetering`).
+- `context_usage` → `usagePercentage` + a **per-category** `breakdown.{contextFiles,tools,kiroResponses,yourPrompts,sessionFiles}` (each `{tokens, percent, items?}`) — richer than cyril's flat `TokenCounts`; either map to `ContextUsage` + extend tokens, or model the breakdown.
+- `focus_update` (turn title), `user_message_id_assigned`, `turn_start` — lifecycle/metadata, surface or ignore as needed.
+
+See the "KAS live wire captures" section in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md).
+
+### KAS-2c — Governance gating (`GovernanceSource` sub-trait)
+
+**Depends on:** KAS-2a.
+
+- **`_kiro/governance/state`** `{isEnterprise, features:{mcpEnabled, webToolsEnabled, usageAnalytics, contentCollection, promptLogging, codeReferenceTracker, autonomousAgents}}` — org-policy feature flags (Cedar-derived). Gate UI/affordances on them (hide web tools when `webToolsEnabled:false`, surface `autonomousAgents`/`promptLogging` posture) rather than assuming everything is on. v2 has no equivalent; implement as the `GovernanceSource` capability sub-trait.
+
+### KAS-2d — Agent-config migration notice
+
+**Depends on:** KAS-2a.
+
 - **Agent-config migration trap.** KAS's loader **silently skips** any `.kiro/agents/` profile that uses the v1/v2 fields (`allowedTools`/`toolsSettings`) and lacks a `permissions` block — it's treated as "CLI-only" and dropped (debug-logged, not loaded). So a user's existing agent library is *invisible* under KAS until migrated (add a `permissions` block; move `allowedTools`→`tools`/`permissions`). Cyril should **detect CLI-only profiles when running the KAS engine and surface them** (a one-time "N agents won't load under KAS — migrate?" notice), rather than letting them vanish silently. Format is irrelevant (`.json`/`.md`/`.yaml` all load); the field set is the gate. See the "User agent files" note in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md).
 
 ### KAS-3 — Subagent / crew rendering for the `agent-subtask` model
 
-**Depends on:** KAS-2.
+**Depends on:** KAS-2a.
 
 KAS **never sends `kiro.dev/subagent/list_update`** — cyril's `SubagentTracker` + `crew_panel`, which key off `list_update`, see nothing. KAS subagents are ordinary `tool_call`s tagged `_meta.kiro.kind: "agent-subtask"`:
 

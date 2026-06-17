@@ -271,7 +271,7 @@ For the comprehensive protocol reference with example requests/responses, see **
 > **⚠️ Two engines as of kiro-cli 2.7.1.** Everything in this section describes the **v1/v2 (Rust) engine** — cyril's current default (`kiro-cli acp`). 2.7.1 embeds a **second engine, KAS** (`acp --agent-engine kas` / hidden `chat --v3`), a TypeScript/LangGraph agent with its own **`_kiro/*` dialect** that differs on several points below. KAS is reachable over ACP today and is the strategic direction. Several v2-only claims in this section are **not** true for KAS — they're flagged inline. **Full KAS wire reference: [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md)** (auth contract, subagent/crew model, fs+terminal host callbacks, hooks, bundled agents, steering fileMatch, agent-config migration). **Authoritative `_kiro/*` type contract: [docs/kiro-kas-acp-covenant.md](docs/kiro-kas-acp-covenant.md)** — the curated `@kiro/acp-type-covenant` reference (full method catalog, `KiroClientMeta` handshake flags, `AgentSettings`, `session_info_update` union, host-callback signatures). **For any KAS `_kiro/*` question, read the covenant doc/package FIRST** — it is the wire contract; `@kiro/agent` is only the implementation, and reading it instead produced wrong conclusions. The KAS integration plan is **ROADMAP "KAS engine integration track" (KAS-1…6)**.
 
 - **Protocol**: JSON-RPC 2.0 over stdio (ACP v2025-01-01)
-- The `agent-client-protocol` crate (v0.9) from crates.io is the source of truth for ACP types. Actual type definitions live in `agent-client-protocol-schema` (transitive dependency).
+- The `agent-client-protocol` crate (v0.10.2; schema `agent-client-protocol-schema` v0.11.2) from crates.io is the source of truth for ACP types. Actual type definitions live in the schema crate (transitive dependency). Note: `SessionUpdate` is a serde-tagged enum with no `#[serde(other)]` catch-all, so an unknown typed `session/update` variant hard-fails at deserialization before reaching `convert/`; the `_kiro.dev/*` / `_kiro/*` ext dialects ride the raw-JSON `ext_notification` path and are not subject to this.
 - Tool calls with `kind == ToolKind::Other` are "planning" steps from the agent and are filtered from display.
 - **Kiro logs**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux). Set `KIRO_LOG_LEVEL=debug` for verbose output.
 - **Wire format = binary × backend.** What kiro-cli emits depends on both the binary version and the AWS backend's current behavior. Same-day captures with different binaries isolate binary changes; same-binary captures across time isolate backend rollouts. Mixing the axes conflates both — the metering fields appearing on `_kiro.dev/metadata` between April and May 2026 was a backend rollout, not a binary change.
@@ -445,5 +445,19 @@ These are project invariants maintained from inception, not aspirations. Maintai
 - Path translation (`C:\` ↔ `/mnt/c/`) is active only on Windows; on Linux it's a no-op
 - Terminal commands from the agent run natively on the host OS
 - Logs go to `cyril.log` in the working directory (append mode) to avoid TUI conflicts
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in **rivets**, a local Rust JSONL-backed tracker (`rivets` CLI; run `rivets init` first). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), applied as rivets labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
 
