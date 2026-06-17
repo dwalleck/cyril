@@ -113,6 +113,23 @@ v2's single Rust `agent_crew` tool (DAG-pipeline + summary + session — see `do
 
 Note the cluster: `semantic_reviewer` and `fta` are the **verification agents**, and `fta` in particular is KAS's built-in answer to a "validator" stage (diff-grounded, claim-based) — the role a custom `crew-dag-loop` validator played, shipped as a one-shot bundled agent rather than a declarative loop.
 
+### User agent files: format is free, but the field set gates loading (migration trap)
+
+KAS's custom-agent loader (`custom-agent-parser`, gray-matter) accepts user agents from `.kiro/agents/` (workspace) and `~/.kiro/agents/` (global) in **`.json`, `.md` (YAML frontmatter + prompt body), and `.yml`/`.yaml`** (explicit `endsWith` checks for all four). Format is interchangeable — all parse to the same `CustomAgentDefinition`. The **gate is the field set, not the extension:**
+
+```js
+CLI_ONLY_FIELDS  = ["allowedTools", "toolsSettings"];   // v1/v2 schema
+KAS_MARKER_FIELDS = ["permissions"];                    // "KAS-aware" marker
+// if the profile uses a CLI-only field AND has no `permissions` marker:
+//   logger.debug("[ProfileLoader] Ignoring CLI-only agent profile")  → SKIPPED ENTIRELY
+```
+
+So KAS **silently skips** any agent that uses `allowedTools`/`toolsSettings` and lacks a `permissions` block — the whole agent is dropped (logged at debug), not loaded-with-fields-ignored. Consequences:
+
+- **Existing v1/v2 JSON agents don't load under KAS.** An agent with `tools` + `allowedTools` and no `permissions` (e.g. a typical CLI agent profile) is treated as CLI-only and ignored by KAS. It still works on the v1/v2 Rust engine.
+- **KAS-shaped agents load in any format.** Use `tools`/`excludedTools` + a `permissions` block (and `model`/`resources`/`includeMcpJson`/`includePowers`) — verified: the JSON probe agents (`probe-ro.json`/`probe-rw.json`) with `permissions`+`tools`+`model` loaded and enforced under KAS.
+- **Migration = add `permissions` and move `allowedTools`→`tools`/`permissions`.** The `permissions` field is the "this agent is for KAS" marker; without it, a CLI-fielded agent is invisible to KAS.
+
 ### How a crew executes — one-shot, fail-fast DAG (no native loop)
 
 Mental model: KAS exposes subagents through **two tools over one registry** — `InvokeSubAgent` delegates *one* task to one registered agent; `OrchestrateSubAgent` runs a whole *crew* (DAG of registered agents) in a single call. Registered agents (your custom-agent definitions) are the stage `role`s and are also individually callable as `subagent/<agentId>`.
