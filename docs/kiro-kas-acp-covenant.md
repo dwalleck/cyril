@@ -133,6 +133,8 @@ One `session/update` variant carries everything v2 split across `kiro.dev/metada
 
 ## 5. Host-callback contracts: auth / fs / terminal (KAS-1 / KAS-5)
 
+> **Verified live 2026-06-16** (`experiments/conductor-spike/probe-kas-fs-terminal-host-2.7.1.py`): advertising `clientCapabilities.fs={readTextFile,writeTextFile}` + `terminal:true` makes KAS route **all** file I/O and shell execution back to the client. Observed: `fs/read_text_file`, `fs/write_text_file` (the agent does read-before-write + verify-after-write), and the terminal lifecycle `terminal/create` → `wait_for_exit` → `output` → `release` — using the **bare-ACP** names (not the `_kiro/fs/*` supersets) for basic ops. A file written only via the client's `fs/write_text_file` responder landed on disk → the delegation is real, not advisory. See the 2.7.1 audit "fs + terminal host callbacks" capture.
+
 `GetAccessTokenResponse {accessToken, expiresAt (≥ now+3min or rejected), profileArn?, authMethod?, provider?}`.
 
 **Method-name split** (the host dispatcher must handle both forms): base read/write + all terminal lifecycle use **bare ACP**; Kiro supersets/extras use **`_kiro/`**.
