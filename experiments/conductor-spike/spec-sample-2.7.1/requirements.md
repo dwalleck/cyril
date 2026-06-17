@@ -2,88 +2,89 @@
 
 ## Introduction
 
-`csv2json` is a command-line tool that reads a CSV file and converts it into a JSON array of objects. Each row in the CSV becomes a JSON object with keys derived from the header row. The tool supports a `--pretty` flag to output human-readable, indented JSON.
+`csv2json` is a command-line tool that reads a CSV file and converts it into a JSON array of row objects. Each row in the CSV becomes a JSON object where column headers serve as keys. The tool supports a `--pretty` flag for human-readable formatted output.
 
 ## Glossary
 
-- **CLI**: The csv2json command-line interface application
+- **CLI**: The command-line interface through which users invoke the csv2json tool
 - **CSV_File**: A comma-separated values file with a header row followed by zero or more data rows
 - **Header_Row**: The first row of the CSV_File, containing column names used as JSON object keys
-- **Data_Row**: Any row in the CSV_File after the Header_Row, containing values for each column
-- **JSON_Array**: The output format; an array where each element is an object representing one Data_Row
-- **Pretty_Mode**: An output mode activated by the --pretty flag that produces indented, human-readable JSON
+- **Row_Object**: A JSON object representing a single CSV data row, with Header_Row values as keys and cell values as string values
+- **JSON_Array**: The output array containing one Row_Object per data row in the CSV_File
+- **Pretty_Flag**: The `--pretty` command-line option that enables indented, human-readable JSON output
+- **Parser**: The component responsible for reading and interpreting CSV_File content
+- **Serializer**: The component responsible for converting parsed data into JSON output
 
 ## Requirements
 
-### Requirement 1: CSV File Input
+### Requirement 1: Read and Parse CSV Input
 
-**User Story:** As a user, I want to specify a CSV file path as input, so that the tool knows which file to convert.
-
-#### Acceptance Criteria
-
-1. WHEN a file path argument is provided as the first positional argument, THE CLI SHALL read the file at that path as a CSV_File
-2. IF the file path does not exist, THEN THE CLI SHALL exit with a non-zero exit code and print an error message to stderr indicating the file was not found
-3. IF the file path argument is not provided, THEN THE CLI SHALL exit with a non-zero exit code and print a usage message to stderr showing the expected invocation syntax
-4. IF the file path points to a directory or non-regular file, THEN THE CLI SHALL exit with a non-zero exit code and print an error message to stderr indicating that the path is not a regular file
-5. IF more than one positional argument is provided, THEN THE CLI SHALL use the first positional argument as the file path and ignore additional positional arguments
-
-### Requirement 2: CSV Parsing
-
-**User Story:** As a user, I want the tool to correctly parse CSV data, so that all fields are accurately represented in the output.
+**User Story:** As a user, I want to provide a CSV file path as an argument, so that the tool can read and parse its contents.
 
 #### Acceptance Criteria
 
-1. WHEN a valid CSV_File is read, THE CLI SHALL use the Header_Row to determine the keys for each JSON object
-2. WHEN a valid CSV_File is read, THE CLI SHALL create one JSON object per Data_Row with values mapped to the corresponding Header_Row keys
-3. WHEN a CSV_File contains only a Header_Row and no Data_Rows, THE CLI SHALL output an empty JSON_Array
-4. WHEN a field in the CSV_File is enclosed in double quotes, THE CLI SHALL treat the content between quotes as a single field value, including any commas, newline characters, and escaped double quotes (represented as two consecutive double quotes) within
-5. IF a Data_Row contains fewer fields than the Header_Row, THEN THE CLI SHALL use empty strings for the missing fields
-6. IF a Data_Row contains more fields than the Header_Row, THEN THE CLI SHALL ignore the extra fields
-7. WHEN a field in the CSV_File is not enclosed in double quotes, THE CLI SHALL preserve the field value exactly as it appears between delimiters, including any leading or trailing whitespace
+1. WHEN a file path is provided as the first positional argument, THE CLI SHALL read the file at the specified path
+2. WHEN the CSV_File contains a Header_Row and data rows, THE Parser SHALL parse each data row into a Row_Object using Header_Row values as keys
+3. IF the file path argument is missing, THEN THE CLI SHALL print a usage message to standard error and exit with a non-zero exit code
+4. IF the specified file does not exist, THEN THE CLI SHALL print an error message indicating the file was not found to standard error and exit with a non-zero exit code
+5. IF the specified file is not valid CSV (malformed quoting, inconsistent column counts across rows, or non-text binary content), THEN THE CLI SHALL print an error message indicating a parse failure to standard error and exit with a non-zero exit code
+6. IF the specified file cannot be read due to insufficient permissions, THEN THE CLI SHALL print an error message indicating the file is not readable to standard error and exit with a non-zero exit code
 
-### Requirement 3: JSON Output
+### Requirement 2: Produce JSON Array Output
 
-**User Story:** As a user, I want the tool to output a valid JSON array to stdout, so that I can pipe it into other tools or redirect it to a file.
-
-#### Acceptance Criteria
-
-1. THE CLI SHALL write the JSON_Array to stdout
-2. THE CLI SHALL produce output that is valid JSON conforming to RFC 8259
-3. WHEN the --pretty flag is not provided, THE CLI SHALL output compact JSON with no whitespace between tokens except where required by JSON syntax
-4. WHEN the --pretty flag is provided, THE CLI SHALL output JSON indented with 2 spaces per nesting level
-5. THE CLI SHALL output all field values as JSON strings
-6. THE CLI SHALL terminate output with a single trailing newline character
-7. WHEN conversion succeeds, THE CLI SHALL exit with exit code 0
-
-### Requirement 4: Pretty Print Flag
-
-**User Story:** As a user, I want a --pretty flag, so that I can get human-readable JSON output when needed.
+**User Story:** As a user, I want the tool to output a JSON array of row objects, so that I can use the converted data in JSON-consuming applications.
 
 #### Acceptance Criteria
 
-1. WHEN the --pretty flag is provided, THE CLI SHALL activate Pretty_Mode
-2. WHEN the -p shorthand flag is provided, THE CLI SHALL activate Pretty_Mode
-3. WHILE Pretty_Mode is active, THE CLI SHALL output the JSON_Array with each opening bracket, object, and closing bracket on separate lines, indented with 2 spaces per nesting level
-4. WHEN neither --pretty nor -p is provided, THE CLI SHALL output compact JSON with no unnecessary whitespace
+1. WHEN the CSV_File is successfully parsed, THE Serializer SHALL produce a valid JSON_Array containing one Row_Object per data row
+2. THE Serializer SHALL preserve the order of rows from the CSV_File in the JSON_Array
+3. THE Serializer SHALL use Header_Row values as keys in each Row_Object
+4. THE Serializer SHALL represent all cell values as JSON strings, including empty cells which SHALL be represented as empty strings (`""`)
+5. WHEN the JSON_Array is successfully serialized, THE CLI SHALL write the JSON_Array to standard output and exit with code 0
+6. IF a data row contains fewer fields than the Header_Row, THEN THE Serializer SHALL assign an empty string (`""`) as the value for each missing trailing field
+7. IF a data row contains more fields than the Header_Row, THEN THE CLI SHALL print an error message indicating a column count mismatch to standard error and exit with a non-zero exit code
 
-### Requirement 5: Error Handling
+### Requirement 3: Pretty Print Option
 
-**User Story:** As a user, I want clear error messages, so that I can understand what went wrong when the tool fails.
-
-#### Acceptance Criteria
-
-1. IF the CSV_File cannot be read due to a permissions error, THEN THE CLI SHALL exit with a non-zero exit code and print an error message to stderr indicating the file could not be accessed due to insufficient permissions
-2. IF the CSV_File is empty (zero bytes), THEN THE CLI SHALL exit with a non-zero exit code and print an error message to stderr indicating the file is empty
-3. THE CLI SHALL never write error messages to stdout
-4. IF the CSV_File cannot be read due to an I/O error other than permissions or file-not-found, THEN THE CLI SHALL exit with a non-zero exit code and print an error message to stderr indicating the nature of the read failure
-5. THE CLI SHALL include the file path in all error messages printed to stderr
-
-### Requirement 6: Round-Trip Fidelity
-
-**User Story:** As a developer, I want to verify that parsing and serialization are consistent, so that data integrity is maintained.
+**User Story:** As a user, I want a `--pretty` flag, so that I can produce indented JSON output for readability.
 
 #### Acceptance Criteria
 
-1. WHEN a valid CSV_File with a Header_Row and one or more Data_Rows is parsed to a JSON_Array and then converted back to CSV format, THE resulting CSV SHALL contain the same field values in the same row and column positions as the original
-2. WHEN performing round-trip conversion, THE column order in the resulting CSV SHALL match the column order in the original Header_Row
-3. WHEN performing round-trip conversion, differences in field quoting between the original and resulting CSV SHALL NOT be considered a fidelity failure provided the unquoted field values are identical
+1. WHEN the Pretty_Flag is provided, THE Serializer SHALL output the JSON_Array with 2-space indentation and a newline character after each bracket, brace, colon-value pair, and array element
+2. WHEN the Pretty_Flag is not provided, THE Serializer SHALL output the JSON_Array with no whitespace between tokens except within string values
+3. THE Serializer SHALL terminate the JSON output with a single trailing newline character
+
+### Requirement 4: Handle Empty CSV Files
+
+**User Story:** As a user, I want predictable output when the CSV file has no data rows, so that downstream tooling handles edge cases gracefully.
+
+#### Acceptance Criteria
+
+1. WHEN the CSV_File contains only a Header_Row and no data rows, THE Serializer SHALL output an empty JSON_Array (`[]`) to standard output
+2. IF the CSV_File is completely empty (zero bytes), THEN THE CLI SHALL print an error message indicating the file is empty to standard error and exit with a non-zero exit code
+3. IF the CSV_File contains only whitespace characters (spaces, tabs, or newline characters) and no printable content, THEN THE CLI SHALL treat the file as empty, print an error message indicating the file is empty to standard error, and exit with a non-zero exit code
+4. WHEN the CSV_File contains only a Header_Row and no data rows and the Pretty_Flag is provided, THE Serializer SHALL output an empty JSON_Array (`[]`) with no additional whitespace or newlines inside the brackets
+
+### Requirement 5: CSV Parsing Correctness
+
+**User Story:** As a user, I want the parser to correctly handle standard CSV features, so that quoted fields and special characters are converted accurately.
+
+#### Acceptance Criteria
+
+1. WHEN a cell value is enclosed in double quotes, THE Parser SHALL remove the enclosing quotes and use the inner content as the value
+2. WHEN a quoted cell value contains a comma, THE Parser SHALL treat the comma as literal content within that field
+3. WHEN a quoted cell value contains escaped double quotes (two consecutive double quotes), THE Parser SHALL replace them with a single double quote in the output
+4. WHEN a quoted cell value contains a newline character (LF, CR, or CRLF), THE Parser SHALL preserve the newline as literal content within that field
+5. WHEN an unquoted cell value contains leading or trailing whitespace, THE Parser SHALL preserve the whitespace as part of the value
+6. IF a cell value contains an opening double quote that is never closed before end of file, THEN THE Parser SHALL report a parse error and THE CLI SHALL exit with a non-zero exit code
+7. WHEN an unquoted cell value contains a double quote character that is not at the start of the field, THE Parser SHALL treat the double quote as literal content
+
+### Requirement 6: Round-Trip Property (Parse and Serialize)
+
+**User Story:** As a developer, I want to verify that parsing and serialization are consistent, so that no data is lost or corrupted during conversion.
+
+#### Acceptance Criteria
+
+1. FOR ALL valid CSV_Files with N data rows, THE Serializer SHALL produce a JSON_Array of exactly N Row_Objects where each Row_Object contains exactly the same number of keys as there are columns in the Header_Row
+2. FOR ALL valid JSON_Arrays produced by THE Serializer, parsing the JSON output with any standards-compliant JSON parser SHALL produce an array of objects identical in structure and values to the internal Row_Objects
+3. FOR ALL Row_Objects produced by THE Parser, the set of keys SHALL equal the set of Header_Row values and the value for each key SHALL be the exact string content of the corresponding cell after quote removal and escape processing
