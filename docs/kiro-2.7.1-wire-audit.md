@@ -217,6 +217,17 @@ Unlike v2 (which reads its own auth store), **KAS makes the ACP host provide the
 
 **Cyril impact:** to drive KAS, cyril must implement an `_kiro/auth/getAccessToken` responder and source a live kiro token (reading kiro's credential store, refreshing as needed). This is a real integration dependency, not a passive one — it activates the dormant `_kiro/auth/getAccessToken` first seen in 2.6.1.
 
+### How Kiro itself answers it (the reference for cyril) — Rust-side, not tui.js
+
+The responder is implemented in the **Rust chat-cli**, not the TUI bundle (tui.js has a single incidental `getAccessToken` reference; auth is not in the display layer). The relevant modules:
+
+- **`crates/chat-cli-v2/src/auth/kas_token.rs`** — the KAS-specific token resolution ("kas-token Resolve and refresh"). This is the responder logic that assembles `{accessToken, expiresAt, profileArn}`.
+- **`crates/chat-cli-v2/src/auth/refresh_coordinator.rs`** — refresh **with a lock** ("refresh lock timed out (peer wedged?)"). This is what proactively refreshes *before* the ~3-min pre-expiry buffer and serializes concurrent refreshes — i.e., the piece our probes lacked (we had to force a refresh with a v2 turn because `whoami` only refreshes when fully expired).
+- **`social.rs` / `builder_id.rs` / `external_idp.rs`** — three token *types* a host must handle: social (GitHub → `kirocli:social:token`, carries the profile ARN), AWS Builder ID, and external IdP (`kirocli:external-idp:token`). The active one depends on how the user logged in.
+- Refresh itself is **OIDC** (`create_token`, `grant_type=refresh_token`, against `oidc.*.amazonaws.com`), using the stored `refresh_token`.
+
+So the first-party flow is: **resolve** the active token across the three types → if inside the expiry buffer, **OIDC-refresh** through the lock-guarded coordinator → **answer** with `{accessToken, expiresAt, profileArn}`. The implication for cyril's KAS-1: the responder is *not* "read the sqlite row" — it must mirror `kas_token.rs` + `refresh_coordinator` (multi-token-type resolution + proactive OIDC refresh + a refresh lock), or — since cyril already depends on kiro-cli's auth — delegate to kiro-cli rather than reimplement the OIDC dance.
+
 ---
 
 ## KAS subagent wire format (verified live)
