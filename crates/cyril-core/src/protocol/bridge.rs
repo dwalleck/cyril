@@ -1060,6 +1060,9 @@ async fn run_bridge(
                     .ext_method(acp::ExtRequest::new("_session/steer", raw_arc))
                     .await
                 {
+                    // The real lookup (always false today: the pre-send gate
+                    // above already skipped marked sessions) rather than a literal
+                    // `false`, so emit-once stays correct if that gate is relaxed.
                     match steer_error_action(e.code, steering_unsupported.contains(&session_id)) {
                         SteerErrorAction::MarkAndNotify => {
                             steering_unsupported.insert(session_id.clone());
@@ -1124,6 +1127,8 @@ async fn run_bridge(
                     .ext_method(acp::ExtRequest::new("_session/steer/clear", raw_arc))
                     .await
                 {
+                    // Real lookup, not a literal `false` — see the SteerSession
+                    // arm above: keeps emit-once correct if the pre-send gate changes.
                     match steer_error_action(e.code, steering_unsupported.contains(&session_id)) {
                         SteerErrorAction::MarkAndNotify => {
                             steering_unsupported.insert(session_id.clone());
