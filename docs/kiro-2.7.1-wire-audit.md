@@ -557,6 +557,8 @@ Only two, and cyril's v2 coverage is otherwise *richer* than stock ACP (it model
 
 ### [KAS] — structures cyril has no type for (integration-track inventory)
 
+> **Now grounded in the covenant.** This inventory was first built against the `@kiro/agent` *implementation* schemas; the **authoritative** versions (exact fields/optionality) and the full delta-vs-cyril list live in **[docs/kiro-kas-acp-covenant.md](kiro-kas-acp-covenant.md) §10** (e.g. `ToolCallStatus` 4→7 states incl. `awaiting_approval`/`approved`/`denied`/`executing`; `ToolKind` keeps `delete`/`move` distinct where cyril folds them into Write; `ClientCustomAgent`, `AgentSettings`, Trust-v2 `_meta.kiro` permission extensions, `UsageData`, and the 21-method client→agent surface). The items below remain a correct strategic summary; the covenant is the source for exact shapes.
+
 Ordered by strategic weight. Field lists are from the self-extracted `@kiro/agent` `.d.ts`.
 
 - **Client-injected custom agents — the platform-vision hook.** `CustomAgentSource.CLIENT_PROVIDED` (`services/custom-agent-registry.d.ts`) = *"Injected by the client via ACP `newSession.customAgents` parameter. Highest precedence — overrides all file-based sources."* This is the **native wire mechanism** for cyril's skill/agent-injection vision — no proxy file-rewriting needed; pass definitions at `session/new`. cyril has no `CustomAgentDefinition` type and no `BridgeCommand` carrying agents. Fields: `id, description, prompt, tools (string[]|'*'), excludedTools, presets, model, specOnly, includeMcpJson, includePowers, hideExecution, mcpServers, resources, permissions.rules, supportsTemplating, agentMode, welcomeMessage`. → ROADMAP KAS-3/skill-stage.
