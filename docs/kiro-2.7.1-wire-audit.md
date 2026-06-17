@@ -113,6 +113,8 @@ v2's single Rust `agent_crew` tool (DAG-pipeline + summary + session — see `do
 
 Note the cluster: `semantic_reviewer` and `fta` are the **verification agents**, and `fta` in particular is KAS's built-in answer to a "validator" stage (diff-grounded, claim-based) — the role a custom `crew-dag-loop` validator played, shipped as a one-shot bundled agent rather than a declarative loop.
 
+**Bundled agents work as `OrchestrateSubAgent` stage roles (verified, `probe-kas-bundled-role-2.7.1.py`).** A 2-stage crew with `validate: { role: "functional_task_alignment", depends_on: ["describe"] }` ran end-to-end — `_meta.kiro.pipeline.stages` showed the bundled agent as the stage `role`, it executed as a `Sub-agent: functional_task_alignment` child, `depends_on` ordering held, and there was no unknown-role/validation error. So you can compose a pipeline like `implement → fta → semantic_reviewer` declaratively, using the bundled verification agents as stage roles. Requires **both** `subagentOrchestration` (set at `initialize`) **and** the agent's own flag (`fta`/`semanticReview`, set at `session/new`) enabled — the orchestrate tool only registers the agent as a selectable `role` when it's enabled.
+
 ### User agent files: format is free, but the field set gates loading (migration trap)
 
 KAS's custom-agent loader (`custom-agent-parser`, gray-matter) accepts user agents from `.kiro/agents/` (workspace) and `~/.kiro/agents/` (global) in **`.json`, `.md` (YAML frontmatter + prompt body), and `.yml`/`.yaml`** (explicit `endsWith` checks for all four). Format is interchangeable — all parse to the same `CustomAgentDefinition`. The **gate is the field set, not the extension:**
