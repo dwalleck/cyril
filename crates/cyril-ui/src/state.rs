@@ -82,6 +82,10 @@ pub struct UiState {
     quit_requested: bool,
     deep_idle: bool,
 
+    // Queue steering (K1a). Count of un-consumed steers, mirrored from the
+    // `steering_*` notifications for K1b's toolbar chip. Render is K1b.
+    steering_queued: usize,
+
     // Config
     max_messages: usize,
 }
@@ -257,8 +261,14 @@ impl UiState {
             mouse_captured: false,
             quit_requested: false,
             deep_idle: false,
+            steering_queued: 0,
             max_messages,
         }
+    }
+
+    /// Number of un-consumed queued steers (K1a state; K1b renders it).
+    pub fn steering_queued(&self) -> usize {
+        self.steering_queued
     }
 
     /// Apply a notification from the bridge. Returns `true` if the UI state changed.
@@ -444,6 +454,24 @@ impl UiState {
                 self.add_system_message(format!("Rate limited: {message}"));
                 true
             }
+            // Queue steering (K1a). UiState mirrors the un-consumed steer count
+            // for K1b's chip; the local-echo transcript entry is K1b (cyril-bm1j).
+            Notification::SteeringQueued { .. } => {
+                self.steering_queued = self.steering_queued.saturating_add(1);
+                true
+            }
+            Notification::SteeringConsumed { .. } => {
+                self.steering_queued = self.steering_queued.saturating_sub(1);
+                true
+            }
+            Notification::SteeringCleared => {
+                self.steering_queued = 0;
+                true
+            }
+            Notification::SteeringUnsupported { message } => {
+                self.add_system_message(message.clone());
+                true
+            }
             Notification::SessionCreated {
                 session_id,
                 current_mode,
@@ -463,6 +491,11 @@ impl UiState {
                 self.pending_tokens = None;
                 self.pending_metering = None;
                 self.session_cost = cyril_core::types::SessionCost::new();
+                // Steering depth is per-session; reset the mirror so a prior
+                // session's un-consumed steers don't leak a phantom chip count
+                // onto the fresh session (SessionController resets steering_depth
+                // identically — the two mirrors must stay in lockstep).
+                self.steering_queued = 0;
                 self.add_system_message(format!("Session created: {}", session_id.as_str()));
                 // If the active mode carries a Kiro-specific welcome message
                 // (e.g. kiro_planner's "Transform any idea..."), surface it.
@@ -1429,6 +1462,70 @@ mod tests {
         assert_eq!(state.streaming_text(), "");
         assert_eq!(state.activity(), Activity::Idle);
         assert!(!state.should_quit());
+        assert_eq!(state.steering_queued(), 0);
+    }
+
+    // Slice A / design claim 12: SteeringUnsupported -> exactly one system message.
+    #[test]
+    fn steering_unsupported_adds_one_message() {
+        let mut state = UiState::new(500);
+        let before = state.messages().len();
+        let changed = state.apply_notification(&Notification::SteeringUnsupported {
+            message: "steering requires kiro-cli 2.7.0+".into(),
+        });
+        assert!(changed);
+        assert_eq!(state.messages().len(), before + 1);
+        let last = state.messages().last().unwrap();
+        assert!(
+            matches!(last.kind(), ChatMessageKind::System(s) if s.contains("kiro-cli 2.7.0+")),
+            "expected a system message containing the steering text, got {:?}",
+            last.kind()
+        );
+    }
+
+    // Slice A / design claim 13: queue mirror queued->1, consumed->0, floor at 0.
+    #[test]
+    fn steering_queue_mirror() {
+        let mut state = UiState::new(500);
+        assert_eq!(state.steering_queued(), 0);
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("a".into()),
+        });
+        assert_eq!(state.steering_queued(), 1);
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("b".into()),
+        });
+        assert_eq!(state.steering_queued(), 2);
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: Some("a".into()),
+        });
+        assert_eq!(state.steering_queued(), 1);
+        state.apply_notification(&Notification::SteeringCleared);
+        assert_eq!(state.steering_queued(), 0);
+        // floor: consumed at 0 stays 0 (no underflow panic). `content: None`
+        // (C1 path) still decrements — here floored at 0.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        assert_eq!(state.steering_queued(), 0);
+
+        // A new session must reset the mirror, in lockstep with
+        // SessionController.steering_depth — an un-consumed steer must not leak a
+        // phantom chip count onto the fresh session.
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("leftover".into()),
+        });
+        assert_eq!(state.steering_queued(), 1);
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("fresh"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        assert_eq!(
+            state.steering_queued(),
+            0,
+            "steering_queued must reset on a new session"
+        );
     }
 
     #[test]

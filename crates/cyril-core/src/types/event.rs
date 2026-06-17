@@ -127,6 +127,39 @@ pub enum Notification {
         fallback: Option<String>,
     },
 
+    // Queue steering (Kiro 2.7.0+, `_kiro.dev/session/update` echoes; ROADMAP K1a).
+    // The three echo variants below are echoes of a steer the client requested —
+    // emitted for cyril's own steers AND (future, multi-client) for steers another
+    // client originated. The converter produces them unconditionally: even when the
+    // payload field is absent the variant is still emitted, so the depth counter
+    // always transitions (a dropped transition would desync it permanently). K1a
+    // routes them global; the session_id from the envelope is intentionally dropped
+    // (only ToolCallChunk is promoted to scoped routing today — scoped steering is
+    // K1c, cyril-28z2). `SteeringUnsupported` is the exception: it is
+    // bridge-synthesized, not a converter-produced wire echo.
+    /// A steer was accepted and queued for injection at the next tool boundary.
+    /// `message` is the steer text, or `None` when the echo omitted it — the frame
+    /// is still counted; only the (K1b) display text degrades. Never `Some("")`.
+    SteeringQueued {
+        message: Option<String>,
+    },
+    /// A queued steer was injected into the turn at a tool boundary. `content` is
+    /// the injected text, or `None` when the echo omitted it. The variant is emitted
+    /// (and depth decremented) regardless of whether `content` parsed — dropping it
+    /// on a missing field would permanently inflate the queue counter.
+    SteeringConsumed {
+        content: Option<String>,
+    },
+    /// The queued steer was dropped before pickup (via `_session/steer/clear`).
+    SteeringCleared,
+    /// The agent does not implement `_session/steer` (`-32601`); bridge-synthesized,
+    /// not a wire echo. Surfaced once per session as a system message. The
+    /// once-per-session dedup lives in the bridge (its `steering_unsupported` set),
+    /// NOT in `UiState`, which adds a system message for every one it receives.
+    SteeringUnsupported {
+        message: String,
+    },
+
     // Subagent lifecycle (kiro.dev/subagent/*)
     SubagentListUpdated {
         subagents: Vec<crate::types::SubagentInfo>,
@@ -346,6 +379,18 @@ pub enum BridgeCommand {
     SendMessage {
         session_id: SessionId,
         content: String,
+    },
+    /// Queue a mid-turn steer (Kiro 2.7.0+; ROADMAP K1a). Sent as an awaited
+    /// `_session/steer` ExtRequest. -32601 marks the session unsupported.
+    SteerSession {
+        session_id: SessionId,
+        message: String,
+    },
+    /// Drop the queued steer before pickup, via `_session/steer/clear`. Like
+    /// `SteerSession`, a session already marked unsupported (prior -32601) is
+    /// skipped silently — the bridge never re-sends on an unsupported session.
+    ClearSteering {
+        session_id: SessionId,
     },
     Shutdown,
 }
