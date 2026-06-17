@@ -120,6 +120,7 @@ Steering lets the user redirect the agent mid-turn without cancelling: the messa
 
 - `/goal` status UI — blocked on upstream: the iterative-loop notifications (`kiro.dev/goal/status`) never fired on the bare ACP path in 2.7.0 probes, and `subcommand:"status"` has an upstream misparse bug. The command itself already works in cyril via dynamic registration. Revisit on the next Kiro release.
 - `goal` tool-call visibility: the agent's `goal {command:"complete"}` calls arrive with `kind:"other"`, which cyril filters from display as "planning" steps — a completed goal is currently invisible. Small convert/display exception once `/goal` usage is real.
+- **Tool-call content beyond text/diff is silently dropped** (v2 wire; surfaced by the 2.7.1 Rust-vs-`.d.ts` type comparison). `convert_tool_call_content` (`convert/mod.rs:131`) keeps only `Diff` and `Content(ContentBlock::Text)` and returns `None` for every other `ContentBlock` (Image / Audio / ResourceLink / EmbeddedResource) and the entire `Terminal` variant; `ToolCallContent` (`types/tool_call.rs:45`) has no variant to hold them either. A tool emitting an image, embedded resource, or terminal embed vanishes from the UI — a silent drop against the project's "no silent failure" rule. Low-frequency on Kiro today (mostly text+diff), so unscheduled, but it is the one genuinely actionable gap on the wire cyril already speaks. Fix: add a `Resource`/`Image` (and/or `Terminal`) `ToolCallContent` variant, or at minimum a text fallback + `debug!` instead of `None`. See the type-coverage section in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md).
 
 ## KAS engine integration track
 
@@ -130,6 +131,7 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 **Estimate:** ~5–8 weeks across five milestones.
 **Depends on:** Phase 1's transport refactor is the clean home for the `--agent-engine kas` arg (`Vec<String>` agent command); KAS-1 can land before it by appending the flag, but prefers it. Otherwise orthogonal to Phases 2–5 and the K-track. Requires kiro-cli ≥ 2.7.1 at runtime.
 **Wire reference:** [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) — the full audit, plus the reproducible probes in [`experiments/conductor-spike/`](../experiments/conductor-spike/) (`probe-kas-subagent`, `probe-kas-fs`, `probe-kas-orchestrate`, all 2.7.1).
+**Prerequisite — ACP crate version drift (verify before KAS-2).** cyril pins `agent-client-protocol` **0.9**; KAS ships the official `@agentclientprotocol/sdk` **^0.19**. Not a v2-path bug (the v1/v2 engines use `sacp`, not the SDK), but driving KAS means a 0.9 client talks to a 0.19 agent — any `SessionUpdate` variant or `clientCapabilities` field added across 0.9→0.19 (e.g. session list/fork shapes, richer config options) is absent from cyril's generated enums and would deserialize-fail or be dropped. Audit the 0.9→0.19 changelog and bump/verify the crate before KAS-2 relies on newer standard methods. Cheap to check now, expensive to discover as a mystery deserialization failure mid-integration.
 
 ### KAS-1 — Engine selection + auth responder (the entry gate)
 
@@ -173,6 +175,7 @@ KAS **never sends `kiro.dev/subagent/list_update`** — cyril's `SubagentTracker
 Unlike v2 (where `configOptions` was always `null`), KAS populates it:
 
 - Surface `configOptions`: `mode` (vibe / spec / quick-spec / bug-fix / plan / autonomous / semantic_reviewer), `autopilot` (on / Supervised), `contentCollection`. The existing mode picker generalizes to these; `autopilot` is a session-level permission posture cyril can expose directly instead of mediating per-tool approvals.
+- **Read the *initial* `configOptions` from the `session/new` response.** `session_created_from_response` (`convert/mod.rs:61`) currently reads only `modes`+`models` and ignores `config_options` (correct for v2, where it's always `null`). Under KAS it's populated, so the initial set must be lifted here; today cyril would only pick up config state from a later `config_option_update` — and on KAS the *set* path fires no echo (see below), so the initial read is the only way to learn the starting `mode`/`autopilot`. Surfaced by the 2.7.1 Rust-vs-`.d.ts` type comparison.
 - Wire `session/set_config_option` — **verified working** (2026-06-16): request `{sessionId, configId, value}`, returns the rebuilt `configOptions` (the source of truth — **no `config_option_update` notification fires on set**, so read the response). Caveat: invalid values are silently coerced, not rejected (`autopilot="bogus"` → `"off"`), so cyril should constrain `value` to the advertised option ids client-side.
 
 ### KAS-5 — Host I/O callback responders: fs **and** terminal (first real proxy-stage hook)

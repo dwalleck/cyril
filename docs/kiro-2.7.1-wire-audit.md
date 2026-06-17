@@ -16,7 +16,7 @@
 - [Auth contract](#kas-auth-contract-the-host-must-supply-the-token-verified-live) · [Subagent wire format](#kas-subagent-wire-format-verified-live) · [`/goal` = autonomous mode](#goal-a-v2-command-with-no-kas-equivalent--autonomous-mode-instead)
 - [Filesystem callbacks](#kas-filesystem-callbacks-verified-live--capability-negotiated) · [Host-responsibility callback map](#kas-host-responsibility-callback-map-verified-live) (auth/shell_type/permission/fs/terminal)
 - [Session-management + account methods](#kas-session-management--account-methods-verified-live) · [Hooks (kas-unified-hooks)](#kas-hooks--the-kas-unified-hooks-engine-from-the-bundle) · [Steering `fileMatch`](#steering-inclusion-under-kas--filematch-now-works-against-openfiles)
-- [Cyril impact](#cyril-impact) · [Not verified (follow-ups)](#not-verified-this-session-follow-ups) · [Reproduce](#reproduce)
+- [Cyril impact](#cyril-impact) · [cyril type-coverage gaps (Rust vs KAS `.d.ts`)](#cyril-type-coverage-gaps-rust-types-vs-kas-typescript-dts) · [Not verified (follow-ups)](#not-verified-this-session-follow-ups) · [Reproduce](#reproduce)
 
 ---
 
@@ -454,6 +454,31 @@ A real CLI↔IDE gap-closure. The v1/v2 Rust engine parsed steering `inclusion` 
 - **Subagent display changes** (now verified live — see the KAS subagent wire-format section). Under KAS, subagents are `tool_call`s with `_meta.kiro.kind:"agent-subtask"` grouped by `agentSubtaskId`, **not** `kiro.dev/subagent/list_update`. Cyril's `SubagentTracker`/crew panel see nothing on this path until they group by `agentSubtaskId`.
 - **`configOptions` populated** and `session/set_config_option` is a working SET (verified) — cyril can drive `mode`/`autopilot` from its toolbar/pickers, reading the set *response* (no `config_option_update` echo fires) and constraining `value` to advertised option ids (invalid values silently coerce).
 - **Hooks become a real ACP surface (reverses prior guidance).** The standing "don't implement hooks; they're backend-only" stance holds for v1/v2 but not KAS — KAS exposes `_kiro/hooks/{list,executeHook,triggerHook,…}`, so cyril can observe/list/trigger hooks (and the unified command+agent action model spans IDE+CLI authoring). A prime composable-stage opportunity; direction (client-manages vs server-fires) still to probe.
+
+---
+
+## cyril type-coverage gaps (Rust types vs KAS TypeScript `.d.ts`)
+
+The KAS bundle ships `.d.ts` definitions for its types. Diffing cyril's domain types (`crates/cyril-core/src/types/`) **and its converter** (`crates/cyril-core/src/protocol/convert/mod.rs`) against them separates two piles: drops on the **v2 wire cyril speaks today** (actionable now), and the **KAS `_kiro/*` dialect** cyril doesn't model yet (expected; tracked in the [ROADMAP KAS track](ROADMAP.md)). Caveat throughout: cyril's types model v2; a blanket field-diff against the KAS schemas is noise — these are the load-bearing items only.
+
+### [v2] — drops on the wire cyril already talks to
+
+Only two, and cyril's v2 coverage is otherwise *richer* than stock ACP (it models `welcomeMessage`, thinking `effort`, per-turn `metering`, token breakdown, subagent `loop_state`/`role`/`dependsOn`/`createdAtMs`, inbox, compaction phases).
+
+- **Tool-call content silently drops everything that isn't text-or-diff.** `convert_tool_call_content` (convert/mod.rs:131) keeps `Diff` and `Content(ContentBlock::Text)` and returns `None` for all other `ContentBlock`s (**Image / Audio / ResourceLink / EmbeddedResource**) and for the entire **`Terminal`** variant. cyril's `ToolCallContent` enum (`types/tool_call.rs:45`) has only `Diff` and `Text` to receive them. A Kiro tool emitting an image, an embedded resource (rendered artifact), or a terminal embed vanishes from the UI with no trace — a silent drop of exactly the kind the project's "no silent failure" rule targets. Low-frequency on Kiro today (mostly text+diff). **Near-term v2 fix candidate** (added to ROADMAP as a protocol-parity item).
+- **`ToolKind` collapses `Edit`/`Delete`/`Move` → `Write`** (convert/mod.rs:13-15). ACP distinguishes delete and move; cyril renders a "remove file" call identically to an edit. Deliberate simplification; a label/icon fidelity gap, not a correctness bug.
+
+### [KAS] — structures cyril has no type for (integration-track inventory)
+
+Ordered by strategic weight. Field lists are from the self-extracted `@kiro/agent` `.d.ts`.
+
+- **Client-injected custom agents — the platform-vision hook.** `CustomAgentSource.CLIENT_PROVIDED` (`services/custom-agent-registry.d.ts`) = *"Injected by the client via ACP `newSession.customAgents` parameter. Highest precedence — overrides all file-based sources."* This is the **native wire mechanism** for cyril's skill/agent-injection vision — no proxy file-rewriting needed; pass definitions at `session/new`. cyril has no `CustomAgentDefinition` type and no `BridgeCommand` carrying agents. Fields: `id, description, prompt, tools (string[]|'*'), excludedTools, presets, model, specOnly, includeMcpJson, includePowers, hideExecution, mcpServers, resources, permissions.rules, supportsTemplating, agentMode, welcomeMessage`. → ROADMAP KAS-3/skill-stage.
+- **Declarative permission policy** — `permissions.rules[]: {capability, match[], exclude[], effect: "allow"|"deny"|"ask"}` (`services/custom-agents/types.d.ts`). Precisely the wire shape for cyril's *organizational permission policies* stage. cyril today models only **reactive per-request** approval (`PermissionOption`/`PermissionResponse`), no declarative-policy type. `KAS_MARKER_FIELDS = ["permissions"]`: a `permissions` block is what marks a JSON profile KAS-aware (the CLI-only migration gate). → ROADMAP KAS-3 / permission-policy stage.
+- **Client-provided steering** — `ClientSteeringDescriptor: {name, inclusion: "always"|"fileMatch"|"manual", fileMatchPattern?, content}`, 1 MB total budget (`steering/client-steering-schema.d.ts`). cyril has **no steering type at all** (it relies on Kiro loading files itself). KAS lets the client push steering docs into the session and honors `fileMatch` via minimatch against open files. → ROADMAP KAS-6.
+- **Crew DAG = `OrchestrateSubAgent`** — `stages[]: {name, role, prompt_template, depends_on?}`, `StageResult: {name, role, response, success, agentSubtaskId}` (`tools/orchestrate-subagent/types.d.ts`). cyril's `PendingStage` already carries `name`/`role`/`depends_on` (forward-compatible); missing **`prompt_template`**, the **result side entirely**, and **`agentSubtaskId`** — the grouping key KAS uses *instead of* `subagent/list_update` (which KAS never sends). → ROADMAP KAS-3.
+- **Single-subagent `InvokeSubAgent`** — `{name, prompt, explanation, preset?, contextFiles[]: {path, startLine, endLine}}` (`tools/invoke-subagent.d.ts`, `MAX_CONCURRENT_SUBAGENTS = 5`). cyril's `SpawnSession` carries only `task`+`name`. The key miss is **`contextFiles`** (file-range injection) — the clean answer to "pass files to a code-review subagent." Also `preset` (selects a `presets` entry) and `explanation`.
+- **Session-creation `configOptions`.** `session_created_from_response` (convert/mod.rs:61) reads only `modes`+`models` from the `session/new` response; it ignores `config_options`. Fine on v2 (always null) — but **KAS populates it** (`mode`/`autopilot`/`contentCollection`). cyril catches later `ConfigOptionUpdate` notifications but would miss the **initial** set. → ROADMAP KAS-4.
+- **ACP version drift (forward-looking).** cyril pins `agent-client-protocol` **0.9**; KAS ships official `@agentclientprotocol/sdk` **^0.19**. Not a today-bug (Kiro v2 uses `sacp`, not the SDK), but a 0.9 client against a 0.19 agent won't have enum variants/capability fields added between 0.9→0.19 (session list/fork, richer config options). KAS-track checklist: verify/bump the crate before relying on newer standard methods. **Added to ROADMAP as a KAS-track prerequisite.**
 
 ---
 
