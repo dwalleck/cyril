@@ -540,7 +540,10 @@ async fn run_loop(
             BridgeCommand::LoadSession { session_id } => {
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 match conn
-                    .load_session(acp::LoadSessionRequest::new(acp_session_id.clone(), cwd.clone()))
+                    .load_session(acp::LoadSessionRequest::new(
+                        acp_session_id.clone(),
+                        cwd.clone(),
+                    ))
                     .await
                 {
                     Ok(response) => {
@@ -1324,10 +1327,7 @@ mod tests {
             self.gate.notify_one();
             Ok(())
         }
-        async fn ext_method(
-            &self,
-            args: acp::ExtRequest,
-        ) -> acp::Result<acp::ExtResponse> {
+        async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
             // Record by stripped method name (e.g. "ext:session/steer"); the ACP
             // library already stripped the leading `_` before dispatch.
             self.script
@@ -1385,8 +1385,11 @@ mod tests {
                 tokio::task::spawn_local(async move {
                     let _ = a_task.await;
                 });
-                let loop_handle =
-                    tokio::task::spawn_local(run_loop(Rc::new(conn), channels, std::env::temp_dir()));
+                let loop_handle = tokio::task::spawn_local(run_loop(
+                    Rc::new(conn),
+                    channels,
+                    std::env::temp_dir(),
+                ));
                 let (sender, notif_rx, _perm_rx) = handle.split();
                 body(sender, notif_rx, gate, loop_handle).await;
             })
@@ -1564,7 +1567,10 @@ mod tests {
                 "error turn completes as EndTurn"
             );
             assert!(
-                !matches!(recv_notif(&mut rx, 1).await, Some(Notification::TurnCompleted { .. })),
+                !matches!(
+                    recv_notif(&mut rx, 1).await,
+                    Some(Notification::TurnCompleted { .. })
+                ),
                 "exactly one TurnCompleted (no second)"
             );
         })

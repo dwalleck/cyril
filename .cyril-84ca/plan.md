@@ -218,6 +218,13 @@ acceptance fences (overriding `FakeAgent::ext_method` + `cancel` to record/gate)
 
 ## Slice 7: Streaming-before-completion ordering fence (C5)
 
+**RESOLVED (empirical, not a unit fence):** The zero-gap unit harness exposed a theoretical
+`agent-client-protocol` race (responses resolve inline; notifications queue via `incoming_tx`), but
+against real kiro **both v2 and KAS preserve ordering** (`.cyril-84ca/c5-ordering-evidence.log`, probe
+`.cyril-84ca/notif_order.rs`). Ordering is not a property cyril-84ca controls or regresses, and is not
+deterministically unit-testable without faking backend timing — so C5 is verified empirically and the
+zero-gap library race is filed as **cyril-9akh**. No production code or unit fence shipped for this slice.
+
 **Claim:** C5 — every streaming notification of a turn is emitted before that turn's `TurnCompleted`.
 **Oracle:** harness — FakeAgent emits N `session/update` (`agent_message_chunk`) via the agent→client
 notification path, then returns; the test asserts the bridge's notification order. Empirical cross-check: the
