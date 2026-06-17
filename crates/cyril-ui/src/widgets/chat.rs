@@ -155,6 +155,12 @@ fn push_thought_lines(lines: &mut Vec<Line>, text: &str) {
     let style = Style::default()
         .fg(palette::MUTED_GRAY)
         .add_modifier(Modifier::ITALIC);
+    if text.is_empty() {
+        // Live preview before the first thought token: keep the 💭 placeholder
+        // visible instead of rendering nothing (`"".lines()` yields no rows).
+        lines.push(Line::styled("💭 ", style));
+        return;
+    }
     for (i, segment) in text.lines().enumerate() {
         let rendered = if i == 0 {
             format!("💭 {segment}")
@@ -565,6 +571,27 @@ mod tests {
                 render(frame, frame.area(), &state);
             })
             .expect("draw");
+    }
+
+    #[test]
+    fn push_thought_lines_renders_multiline_with_marker_and_indent() {
+        // A multi-line thought block: 💭 on the first row, continuation rows
+        // indented under it (a single Line would not break on the \n).
+        let mut lines: Vec<Line> = Vec::new();
+        push_thought_lines(&mut lines, "first line\nsecond line");
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].to_string(), "💭 first line");
+        assert_eq!(lines[1].to_string(), "   second line");
+    }
+
+    #[test]
+    fn push_thought_lines_keeps_marker_for_empty_preview() {
+        // Empty live preview (thinking started, no token yet) must still show the
+        // 💭 placeholder rather than nothing.
+        let mut lines: Vec<Line> = Vec::new();
+        push_thought_lines(&mut lines, "");
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].to_string(), "💭 ");
     }
 
     #[test]

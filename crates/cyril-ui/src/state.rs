@@ -660,7 +660,17 @@ impl UiState {
     }
 
     /// Add a user message to the chat history.
+    ///
+    /// Flushes any pending streaming agent text and reasoning first, so they
+    /// commit in chronological order *before* the user's message. This matters on
+    /// the Enter-while-busy / `/code` paths, where a user message can be added
+    /// mid-turn while a thought block is still accumulating — without the flush
+    /// the reasoning would commit after the user message (and a later thought
+    /// chunk would merge onto it). On the normal path both buffers are already
+    /// empty, so the flushes are no-ops.
     pub fn add_user_message(&mut self, text: &str) {
+        self.flush_streaming_agent_text();
+        self.flush_streaming_thought();
         self.messages.push(ChatMessage::user_text(text.to_string()));
         self.messages_version += 1;
         self.enforce_message_limit();
@@ -1431,6 +1441,48 @@ mod tests {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         });
         assert!(state.messages().is_empty());
+    }
+
+    #[test]
+    fn thought_commits_before_user_message() {
+        // Enter-while-busy / steering: a user message added mid-thinking must
+        // commit the accumulated reasoning BEFORE it, not after (and not merge a
+        // later thought chunk onto it).
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "reasoning".into(),
+        }));
+        state.add_user_message("steer left");
+
+        let msgs = state.messages();
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(msgs[0].kind(), ChatMessageKind::Thought(t) if t == "reasoning"));
+        assert!(matches!(msgs[1].kind(), ChatMessageKind::UserText(t) if t == "steer left"));
+        assert_eq!(state.streaming_thought(), None);
+    }
+
+    #[test]
+    fn thought_commits_before_tool_call() {
+        // A thought preceding a tool call must land before it in the message
+        // list — the boundary where chronological order matters most.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "planning the edit".into(),
+        }));
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_1"),
+            "fs_write".into(),
+            ToolKind::Write,
+            ToolCallStatus::InProgress,
+            None,
+        );
+        state.apply_notification(&Notification::ToolCallStarted(tc));
+
+        let msgs = state.messages();
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(msgs[0].kind(), ChatMessageKind::Thought(t) if t == "planning the edit"));
+        assert!(matches!(msgs[1].kind(), ChatMessageKind::ToolCall(_)));
+        assert_eq!(state.streaming_thought(), None);
     }
 
     #[test]
