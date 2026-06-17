@@ -1,0 +1,20 @@
+sessionId: d2022d37-fbc5-46a4-ba39-34b359187103
+notification methods after session/new: ['_kiro.dev/commands/available', '_kiro.dev/metadata', '_kiro.dev/subagent/list_update']
+commands/available count: 0 | stats present?: False
+command names: []
+
+# running one turn...
+# prompt response: {"stopReason": "end_turn"}
+
+# _kiro.dev/metadata notifications: 1
+  method: _kiro.dev/metadata
+  inputTokens/outputTokens/cachedTokens: None None None
+  full: {"sessionId": "d2022d37-fbc5-46a4-ba39-34b359187103", "contextUsagePercentage": 1.6816999912261963, "meteringUsage": [{"value": 0.11752005532338311, "unit": "credit", "unitPlural": "credits"}], "turnDurationMs": 4225, "effort": "high"}
+
+# executing /stats via kiro.dev/commands/execute ...
+  ERROR: {"code": -32601, "message": "Method not found", "data": "kiro.dev/commands/execute"}
+
+# executing /stats via _kiro.dev/commands/execute ...
+  stats result: {"success": true, "message": "1 request recorded", "data": {"stats": [{"request_id": "df01023c-5b3a-42e5-9676-01959da7761c", "timestamp": "2026-06-16T20:00:02.004210870+00:00", "duration_ms": 4225.132063, "ttfc_ms": 4224.872133, "input_tokens": null, "output_tokens": null, "status_code": null, "had_tool_use": false, "error": null}], "summary": {"avg_ms": 4225.132063, "p90_ms": 4225.132063, "max_ms": 4225.132063, "errors": 0}}}
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-stats-tokens-2.7.1.log

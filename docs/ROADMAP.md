@@ -81,6 +81,143 @@ Each new stage is reusable across all supported vendors. Candidates in rough pri
 
 Each stage is its own subprocess, written in any language that speaks `sacp-proxy`'s protocol. Stages can be authored by third parties and dropped into a user's chain config.
 
+## Kiro feature-parity track
+
+Parallel to the platform phases above (addresses Open Tension #6: keep shipping a strictly-better-than-status-quo Kiro experience while the platform is built underneath). Track items are independent of Phases 1–5 unless noted; they touch `convert/kiro.rs`, which is already the designated home for Kiro deviations, so they move cleanly if Phase 1 relocates that module.
+
+### K1 — Queue steering (Kiro 2.7.0+)
+
+**Estimate:** 1.5–2.5 weeks across three milestones.
+**Depends on:** nothing (orthogonal to Phases 1–5). Requires kiro-cli ≥ 2.7.0 at runtime; degrades gracefully on older binaries.
+**Wire reference:** [`docs/kiro-2.7.0-wire-audit.md`](kiro-2.7.0-wire-audit.md) — `_session/steer` / `_session/steer/clear` requests, `steering_queued` / `steering_consumed` / `steering_cleared` variants on `kiro.dev/session/update`.
+
+Steering lets the user redirect the agent mid-turn without cancelling: the message is queued, injected at the next tool boundary, and the model arbitrates (advisory, not imperative). This also fixes a latent cyril bug: today Enter-while-busy submits a second `session/prompt` mid-turn (`app.rs` Layer-4 Enter → `submit_input()` with no busy guard), which has no defined semantics.
+
+**Milestone K1a — Wire + state plumbing (no UX change)**
+
+- `BridgeCommand::SteerSession { session_id, message }` and `BridgeCommand::ClearSteering { session_id }`; bridge sends `_session/steer[/clear]` as awaited ExtRequests (the commands/execute lesson applies: requests with ids, never notifications). Bridge MUST emit a notification on both success and error paths (existing invariant).
+- `Notification::SteeringQueued { message }`, `SteeringConsumed { content }`, `SteeringCleared` variants; handle the three `sessionUpdate` variants in `convert/kiro.rs` — today they fall into the unknown-variant `Err` arm. Do this defensively regardless of UX timing: a future multi-client observer setup could receive steering echoes cyril didn't originate.
+- Support gating: there is no capability flag and no `commands/available` entry for steering — the only gate is optimistic send. On `-32601 Method not found` (clean, no hang — verified against 2.6.1), surface one system message ("steering requires kiro-cli 2.7.0+") and remember unsupported for the session. Optionally retain `agentInfo.version` from `initialize` in `SessionController` (currently discarded) for a nicer preflight message.
+- Tests: convert-layer tests for all three variants (including unknown-field tolerance), `SessionController`/`UiState` state tests, bridge error-path test.
+
+**Milestone K1b — TUI UX**
+
+- **Enter-while-busy steers.** When `session.status() == Busy` and the input is non-slash text, submit routes to `SteerSession` instead of `session/prompt`. Local echo in the transcript as a visually distinct entry (e.g. `↪ steer: <msg> — queued`), updated when `steering_consumed` arrives. When idle, behavior is unchanged (steer-on-idle is wire-valid but `session/prompt` is the honest default).
+- Toolbar chip while ≥1 steer is queued (`⏎ steering queued`); cleared on consumed/cleared/turn end.
+- `/steer <msg>` and `/steer clear` slash commands as the explicit path (also the only path for queuing a steer against an idle session, which Kiro holds for the next turn).
+- Esc stays cancel — steer-clear is explicit only. No new overlay, so no key-chain or mouse-guard changes.
+- UI copy must frame steering as advisory ("suggests a course correction; the agent weighs it against the current task") — live testing showed the model can and does decline.
+
+**Milestone K1c — Polish + parity (optional, evaluate after K1b)**
+
+- Queue-mode parity with Kiro's Ctrl+S toggle: a client-side buffer that flushes to `session/prompt` on `TurnCompleted` instead of steering mid-turn. Pure cyril-side feature; no new wire surface.
+- Subagent steering: `_session/steer` against subagent session ids is unprobed — probe first, then wire `/steer @<name> <msg>` through the existing `SubagentTracker::find_by_name` lookup if it works.
+- Document in `docs/kiro-acp-protocol.md` and the CLAUDE.md notification table.
+
+**Non-goals:** replicating Kiro's TUI mode-toggle UI verbatim; steering as a vendor-neutral abstraction (it's a Kiro extension today — generalize only if/when ACP standardizes an equivalent, per Open Tension #2).
+
+### K2 — Candidate backlog (unscheduled)
+
+- `/goal` status UI — blocked on upstream: the iterative-loop notifications (`kiro.dev/goal/status`) never fired on the bare ACP path in 2.7.0 probes, and `subcommand:"status"` has an upstream misparse bug. The command itself already works in cyril via dynamic registration. Revisit on the next Kiro release.
+- `goal` tool-call visibility: the agent's `goal {command:"complete"}` calls arrive with `kind:"other"`, which cyril filters from display as "planning" steps — a completed goal is currently invisible. Small convert/display exception once `/goal` usage is real.
+- **Tool-call content beyond text/diff is silently dropped** (v2 wire; surfaced by the 2.7.1 Rust-vs-`.d.ts` type comparison). `convert_tool_call_content` (`convert/mod.rs:131`) keeps only `Diff` and `Content(ContentBlock::Text)` and returns `None` for every other `ContentBlock` (Image / Audio / ResourceLink / EmbeddedResource) and the entire `Terminal` variant; `ToolCallContent` (`types/tool_call.rs:45`) has no variant to hold them either. A tool emitting an image, embedded resource, or terminal embed vanishes from the UI — a silent drop against the project's "no silent failure" rule. Low-frequency on Kiro today (mostly text+diff), so unscheduled, but it is the one genuinely actionable gap on the wire cyril already speaks. Fix: add a `Resource`/`Image` (and/or `Terminal`) `ToolCallContent` variant, or at minimum a text fallback + `debug!` instead of `None`. See the type-coverage section in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md).
+
+## KAS engine integration track
+
+KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self-extracting as of kiro-cli 2.7.1 and reachable today over `kiro-cli acp --agent-engine kas` (the `chat --v3` TUI path is gated by a staged "V3 not supported" check; the ACP path cyril uses is not). KAS is a *different agent on the same wire*: it speaks a `_kiro/*` extension dialect (not v2's `kiro.dev/*` / `_kiro.dev/*`), makes the host supply auth, can call ACP `fs/*` callbacks, and replaces the `agent_crew`/`list_update` subagent model with `agent-subtask` tool calls. This track makes KAS a first-class, opt-in engine in cyril.
+
+**Why its own track (not a K-item):** the K-track is feature-parity within the v2 engine cyril already drives; KAS is a parallel engine with its own dialect and lifecycle. It also intersects the platform vision — KAS is the first Kiro engine that exposes filesystem callbacks, which is a genuine proxy-stage interception point (links to Phase 5).
+
+**Estimate:** ~5–8 weeks across five milestones.
+**Depends on:** Phase 1's transport refactor is the clean home for the `--agent-engine kas` arg (`Vec<String>` agent command); KAS-1 can land before it by appending the flag, but prefers it. Otherwise orthogonal to Phases 2–5 and the K-track. Requires kiro-cli ≥ 2.7.1 at runtime.
+**Wire reference:** [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) — the full audit, plus the reproducible probes in [`experiments/conductor-spike/`](../experiments/conductor-spike/) (`probe-kas-subagent`, `probe-kas-fs`, `probe-kas-orchestrate`, all 2.7.1).
+**Prerequisite — ACP crate version drift (verify before KAS-2).** cyril pins `agent-client-protocol` **0.9**; KAS ships the official `@agentclientprotocol/sdk` **^0.19**. Not a v2-path bug (the v1/v2 engines use `sacp`, not the SDK), but driving KAS means a 0.9 client talks to a 0.19 agent — any `SessionUpdate` variant or `clientCapabilities` field added across 0.9→0.19 (e.g. session list/fork shapes, richer config options) is absent from cyril's generated enums and would deserialize-fail or be dropped. Audit the 0.9→0.19 changelog and bump/verify the crate before KAS-2 relies on newer standard methods. Cheap to check now, expensive to discover as a mystery deserialization failure mid-integration.
+
+### KAS-1 — Engine selection + auth responder (the entry gate)
+
+**Depends on:** nothing hard (prefers Phase 1).
+
+Without a host-supplied token, every KAS turn dies immediately (`[TokenInvalidError] … Host refresh callback returned no access token`). This milestone is the precondition for everything below.
+
+- Engine selection: spawn `kiro-cli acp --agent-engine kas` (config/flag-gated; default stays v2). A new `AgentEngine` enum on the bridge/session, surfaced as a startup option or `/engine kas`.
+- Implement an **`_kiro/auth/getAccessToken`** server→client request responder: reply `{ accessToken, expiresAt, profileArn }`. KAS validates `expiresAt` is > now + ~3 min and **requires `profileArn`** (backend 400s "profileArn is required" without it).
+- Token sourcing — **mirror Kiro's own responder, don't just read the sqlite row.** Kiro implements this in `crates/chat-cli-v2/src/auth/{kas_token.rs, refresh_coordinator.rs, social.rs, builder_id.rs, external_idp.rs}`: it (1) resolves the active token across **three types** — social (GitHub → `kirocli:social:token`, carries `profile_arn`), AWS Builder ID, and external IdP (`kirocli:external-idp:token`); (2) **proactively OIDC-refreshes** (`create_token`, `grant_type=refresh_token`, `oidc.*.amazonaws.com`) before the ~3-min pre-expiry buffer, through a **lock-guarded `refresh_coordinator`** that serializes concurrent refreshes; (3) answers `{accessToken, expiresAt, profileArn}`. A naive "read `kirocli:social:token` and return it" responder breaks on the refresh-buffer (the failure our probes hit) and on Builder-ID/external-IdP users. Cleanest for cyril: **delegate to kiro-cli's own auth** rather than reimplement the OIDC refresh + multi-type resolution. **This makes cyril a custodian of a kiro credential** — handle it as such (no logging, read-only, minimal lifetime). See new Open Tension #7.
+- Tests: auth-responder unit test (shape + expired-token rejection), engine-select plumbing, a gated end-to-end smoke against a live KAS session.
+
+### KAS-2 — `_kiro/*` dialect + turn lifecycle parity
+
+**Depends on:** KAS-1.
+
+Make a plain KAS prompt turn render correctly. KAS's surface differs from v2 on several load-bearing points:
+
+- A parallel converter arm (in `convert/kiro.rs`, or its Phase-1 successor module) keyed on the active engine: KAS emits `_kiro/*` notifications — `_kiro/tools/didChange`, `_kiro/mcp/status`, `_kiro/progressive_context/items_changed`, `_kiro/governance/state`, `_kiro/powers/items_changed`, `_kiro/steering/documents_changed` — plus `session/update` variants `session_info_update`, `available_commands_update`, `config_option_update`.
+- **Turn completion is signaled in a notification**, not the prompt response: `session_info_update` with `_meta.kiro.turnEnd.stopReason: "end_turn"`. Cyril's busy-state/turn-end logic must recognize this path (today it keys off the `session/prompt` response).
+- `sess_…`-prefixed session ids; non-empty `sessionCapabilities {list, fork}`; per-run log dirs under `~/.kiro/logs/<ts>/`.
+- **Answer `_kiro/terminal/shell_type`** (`{sessionId}` → `{shellType: "bash"|"zsh"|"fish"|"powershell"|"sh"}`) — KAS calls this once at session setup to fill the system prompt's `Shell:` line; a missing/empty reply yields `Shell: undefined`. It's the lightest host callback and is needed even for a plain turn, so it belongs here in KAS-2; the heavier `terminal/*` execution callbacks are KAS-5. See the host-responsibility callback map in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md).
+- Defensive unknown-variant tolerance, as with the steering variants in K1a.
+- **Agent-config migration trap.** KAS's loader **silently skips** any `.kiro/agents/` profile that uses the v1/v2 fields (`allowedTools`/`toolsSettings`) and lacks a `permissions` block — it's treated as "CLI-only" and dropped (debug-logged, not loaded). So a user's existing agent library is *invisible* under KAS until migrated (add a `permissions` block; move `allowedTools`→`tools`/`permissions`). Cyril should **detect CLI-only profiles when running the KAS engine and surface them** (a one-time "N agents won't load under KAS — migrate?" notice), rather than letting them vanish silently. Format is irrelevant (`.json`/`.md`/`.yaml` all load); the field set is the gate. See the "User agent files" note in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md).
+
+### KAS-3 — Subagent / crew rendering for the `agent-subtask` model
+
+**Depends on:** KAS-2.
+
+KAS **never sends `kiro.dev/subagent/list_update`** — cyril's `SubagentTracker` + `crew_panel`, which key off `list_update`, see nothing. KAS subagents are ordinary `tool_call`s tagged `_meta.kiro.kind: "agent-subtask"`:
+
+- Group child tool calls by **`_meta.kiro.agentSubtaskId`** (rotates from the spawn `toolCallId` to the child-execution UUID at `in_progress`); recognize the `title: "Subagent Response"` child returns (`rawInput.{response,files}`) and the parent `rawOutput.{response,subExecutionId}`.
+- For the DAG orchestrator (`orchestrate_subagent`), render **`_meta.kiro.pipeline.stages[]`** — it projects the whole graph upfront (`name`, `role` = registered agent id, `dependsOn`, `status`, per-stage `agentSubtaskId`). This is the KAS analog of the v2 `agent_crew` `pendingStages` the `crew_panel` already understands; adapt that renderer rather than rebuild.
+- Note the orchestrator is gated behind the `subagentOrchestration` setting, enabled by the host at **`initialize` → `clientCapabilities._meta.kiro.settings.subagentOrchestration = {enabled:true}}`** (not `session/new`); decide whether cyril asserts it by default.
+- Keep the existing `_meta.kiro.agentSubtaskId` grouping behind the engine flag so v2 `list_update` rendering is untouched.
+
+### KAS-4 — Config options + modes UX
+
+**Depends on:** KAS-2.
+
+Unlike v2 (where `configOptions` was always `null`), KAS populates it:
+
+- Surface `configOptions`: `mode` (vibe / spec / quick-spec / bug-fix / plan / autonomous / semantic_reviewer), `autopilot` (on / Supervised), `contentCollection`. The existing mode picker generalizes to these; `autopilot` is a session-level permission posture cyril can expose directly instead of mediating per-tool approvals.
+- **Read the *initial* `configOptions` from the `session/new` response.** `session_created_from_response` (`convert/mod.rs:61`) currently reads only `modes`+`models` and ignores `config_options` (correct for v2, where it's always `null`). Under KAS it's populated, so the initial set must be lifted here; today cyril would only pick up config state from a later `config_option_update` — and on KAS the *set* path fires no echo (see below), so the initial read is the only way to learn the starting `mode`/`autopilot`. Surfaced by the 2.7.1 Rust-vs-`.d.ts` type comparison.
+- Wire `session/set_config_option` — **verified working** (2026-06-16): request `{sessionId, configId, value}`, returns the rebuilt `configOptions` (the source of truth — **no `config_option_update` notification fires on set**, so read the response). Caveat: invalid values are silently coerced, not rejected (`autopilot="bogus"` → `"off"`), so cyril should constrain `value` to the advertised option ids client-side.
+
+### KAS-5 — Host I/O callback responders: fs **and** terminal (first real proxy-stage hook)
+
+**Depends on:** KAS-1; converges with Phase 2 / Phase 5 (stages).
+**Wire reference:** the host-responsibility callback map in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md), reproduced by `experiments/conductor-spike/probe-kas-callbacks-2.7.1.py`.
+
+KAS is the first Kiro engine to delegate **both file I/O and shell execution** to the host via ACP callbacks, each **capability-negotiated**: what cyril advertises in `initialize` decides whether KAS calls back or runs in-process (v1/v2 behavior). Opt-in, not mandatory — but the two together are the platform's first real interception point over a Kiro agent's side effects.
+
+- **Filesystem** — advertise `clientCapabilities.fs = {readTextFile, writeTextFile}` → implement `fs/read_text_file` (`{sessionId, path}` → `{content}`, no permission) and `fs/write_text_file` (`{sessionId, path, content}` → `{}`, fires `session/request_permission`). Public ACP method names, not `_kiro/fs/*`. (`_kiro/fs/{delete,stat}` exist in the bundle but did not fire in the verified turn — add only if a probe shows them used.)
+- **Shell/terminal** — advertise `clientCapabilities.terminal = true` → implement the lifecycle `terminal/create` (`{sessionId, command, args[], cwd}` → `{terminalId}`) → `terminal/wait_for_exit` (`{terminalId}` → `{exitStatus}`) → `terminal/output` (`{terminalId}` → `{output, exitStatus}`) → `terminal/release` (+ `terminal/kill`). With `terminal:true` advertised, **every command the agent runs flows through these on the host**; omit the capability and KAS runs shell in-process. Pairs with `_kiro/terminal/shell_type` from KAS-2.
+- cyril implements **none** of these today (empty `clientCapabilities`), so this is purely additive. Owning `fs/*` + `terminal/*` lets cyril audit/gate/translate every file op and command KAS performs — the natural home for transcript audit, org write/exec policy, and Windows/WSL path translation as a **stage** (`crates/cyril-stages/`, Phase 2) rather than ad-hoc bridge code.
+
+**Sequencing:** ship fs first (simpler, no lifecycle), then terminal. Each can land independently behind its capability flag.
+
+### KAS-6 — Open-file context (lights up conditional steering + spec activeFile)
+
+**Depends on:** KAS-1; pairs with KAS-2.
+
+KAS implements IDE-grade conditional features that key off the session's **open files** — but they sit dormant if the client never supplies that context (verified: steering `inclusion: fileMatch` glob-matches `fileMatchPattern` via `minimatch` against `openFiles`, and the fileMatch lookup is skipped entirely when `openFiles` is empty; spec mode similarly keys off `activeFile`/`openFiles`). cyril is a chat TUI with no editor "open files," so against KAS today these features never trigger — you'd get only `inclusion: always` steering, i.e. the old v1/v2 behavior.
+
+- Synthesize an `openFiles`/`activeFile` set and feed it to KAS (via the `_meta.kiro`/document channel the engine reads into its graph state) — sourced from files the user `@`-attaches or references, files the agent recently touched, and/or the cwd.
+- This is the smallest change that turns on a whole class of IDE-parity behavior (conditional steering, spec activeFile logic) without cyril implementing those features itself — the engine already does, it just needs the input.
+- Vendor-note: this is Kiro-specific plumbing (`_meta.kiro` open-file state), but the *concept* (telling an agent "these files are in play") is generalizable if other ACP agents grow similar context hooks.
+
+**Non-goals:** replicating KAS's spec/quick-spec workflow UIs verbatim; exposing `--v3`/the gated `chat` TUI; treating `_kiro/*` as a vendor-neutral abstraction (it's Kiro-specific — generalize only if ACP standardizes equivalents, per Open Tension #2). The `_kiro/session/{context,compact,export,history,fork,list}` methods are advertised but unprobed — out of scope until a concrete UX needs them.
+
+## Vendor-neutral client features (candidates)
+
+Small client-side UX features that key off **standard ACP** (not a vendor extension), so they work across every registered agent. Independent of the platform phases and the vendor tracks.
+
+### CN1 — Notify on pending approval
+
+**Estimate:** small (~2–4 days).
+**Depends on:** nothing — `session/request_permission` already drives cyril's approval overlay.
+
+Fire a user-attention signal (terminal bell / OS notification, configurable) when a `session/request_permission` is pending and the TUI isn't focused (or after a short idle delay), and clear it on response. Lets the user walk away from a long turn and get pulled back exactly when the agent is blocked on them.
+
+- **Why it's a cyril feature, not a hook:** verified 2026-06-16 that KAS's `HookTrigger` enum has exactly 11 values with **no `Notification`/permission/`WaitingForApproval` trigger** — you can *gate* a permission decision with a `PreToolUse` hook but cannot get a hook that fires *when the agent pauses for you*. Kiro handles that notification at the protocol/client layer instead (`session/request_permission` + the agent's own `_kiro/system/notify`), and the agent-side notification is v2-TUI-only anyway (the Rust TUI's BEL/OSC-9, which cyril never receives — see the notifications research). So cyril is the right place to own this, and doing it generically covers every agent.
+- **Vendor-neutral:** `session/request_permission` is core ACP — this works for Claude, Codex, Kiro (any engine), etc., with no extension dependency.
+- **Scope:** a notifier keyed off the existing `PermissionRequest` → `UiState::show_approval()` path; settings for method (bell / OS notification / none) and trigger (always / only-when-unfocused / after-Ns-idle); clears on approve/deny/cancel. No new wire surface, no overlay/key-chain changes. Could later generalize to a turn-completion notification (the other thing Kiro's v2-TUI-only BEL does).
+
 ## Open tensions
 
 1. **Kiro is conspicuously absent from the ACP registry.** Cyril's most-tested agent is the one outside the curated ecosystem. Either ignore (use Kiro by direct path, others via registry) or advocate to AWS for registry membership.
@@ -89,6 +226,7 @@ Each stage is its own subprocess, written in any language that speaks `sacp-prox
 4. **Stages framework is ahead of the curve.** No standardized stage registry exists yet; `sacp-conductor` and `sacp-proxy` are one project's framework. If that stack doesn't become canonical, cyril's stages story may need to migrate.
 5. **Single-maintainer risk on the Rust tooling tier.** `sacp`, `sacp-tokio`, `sacp-conductor`, `sacp-proxy`, and `acpr` are all published by Niko Matsakis. The protocol itself is multi-stakeholder; the Rust tooling is one-person-led. Mitigated by clean exit ramps (all MIT/Apache), but worth knowing.
 6. **Mission drift.** "Vendor-neutral platform" is more ambitious than "Kiro client." Need to keep shipping a strictly-better-than-status-quo Kiro experience while building the platform underneath.
+7. **KAS makes cyril a credential custodian** (added 2026-06-16, KAS-1). Driving the KAS engine requires cyril to read kiro's bearer token from its on-disk auth store and hand it to the KAS subprocess via `_kiro/auth/getAccessToken` — a responsibility the v2 engine never imposed (it self-authenticates). This is read-only access to a token cyril doesn't own, with refresh-on-expiry, and it widens cyril's security surface. Acceptable for a local Kiro engine, but a real consideration before KAS is default-on, and it does not generalize to other vendors (each has its own auth — Open Tension #3).
 
 ## Reference / further reading
 

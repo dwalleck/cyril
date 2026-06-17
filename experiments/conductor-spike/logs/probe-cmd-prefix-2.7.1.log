@@ -1,0 +1,14 @@
+sessionId: ad662e47-62e9-4d8f-97ab-8068e47850e3
+
+# commands/available notifications seen: 1
+  method: _kiro.dev/commands/available | param keys: ['sessionId', 'commands', 'prompts', 'tools', 'mcpServers']
+  raw params: {"sessionId": "ad662e47-62e9-4d8f-97ab-8068e47850e3", "commands": [{"name": "/agent", "description": "Select or list available agents", "meta": {"optionsMethod": "_kiro.dev/commands/agent/options", "inputType": "selection", "hint": "", "subcommands": ["create", "edit", "swap"], "subcommandHints": {"create": "<name>", "edit": "[name]", "swap": "<name>"}}}, {"name": "/chat", "description": "Load a previous session or start a new one", "meta": {"inputType": "selection", "local": true, "hint": "save <path>, load <path>, new [prompt]", "subcommands": ["save", "load", "new"], "subcommandHints": {"save": "[--force] <path>", "load": "<path>", "new": "[prompt]"}}}, {"name": "/clear", "description": "
+
+# resolved registry: key='commands' count=23
+  names sample: ['/agent', '/chat', '/clear', '/code', '/compact', '/context', '/effort', '/feedback', '/guide', '/help', '/hooks', '/knowledge', '/mcp', '/model', '/paste', '/plan', '/prompts', '/quit', '/reply', '/rewind']
+
+execute via kiro.dev/commands/execute: ERROR {"code": -32601, "message": "Method not found", "data": "kiro.dev/commands/execute"}
+
+execute via _kiro.dev/commands/execute: OK {"success": true, "message": "No requests recorded yet", "data": {"stats": [], "summary": null}}
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-cmd-prefix-2.7.1.log

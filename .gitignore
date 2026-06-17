@@ -8,3 +8,7 @@ win-kiro.log
 docs/kiro-binaries-*/
 docs/kiro-tui-*.js
 docs/kiro-tui-*.js.sha256
+
+# Local Kiro workspace install-state (plugin-installed agents, steering,
+# install lockfiles). Machine-local and regenerable — not project source.
+.kiro/
