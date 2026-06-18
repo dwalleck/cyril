@@ -59,6 +59,11 @@ pub enum CommandResultKind {
     },
     /// Command dispatched to bridge (already sent).
     Dispatched,
+    /// Queue-steer the user's message (ROADMAP K1b, cyril-bm1j). The App routes
+    /// this through its async `dispatch_steer` (optimistic echo + `SteerSession`),
+    /// because the command layer has no UI access and must not touch the bridge
+    /// directly — same split as `ShowPicker`.
+    Steer { text: String },
     /// Quit the application.
     Quit,
 }
@@ -85,6 +90,12 @@ impl CommandResult {
     pub fn dispatched() -> Self {
         Self {
             kind: CommandResultKind::Dispatched,
+        }
+    }
+
+    pub fn steer(text: String) -> Self {
+        Self {
+            kind: CommandResultKind::Steer { text },
         }
     }
 
@@ -145,13 +156,14 @@ impl CommandRegistry {
     pub fn with_builtins() -> Self {
         let mut registry = Self::new();
         let names: Vec<&str> = vec![
-            "help", "clear", "quit", "new", "load", "sessions", "spawn", "kill", "msg",
+            "help", "clear", "quit", "new", "load", "steer", "sessions", "spawn", "kill", "msg",
         ];
         registry.register(Arc::new(builtin::HelpCommand::new(&names)));
         registry.register(Arc::new(builtin::ClearCommand));
         registry.register(Arc::new(builtin::QuitCommand));
         registry.register(Arc::new(builtin::NewCommand));
         registry.register(Arc::new(builtin::LoadCommand));
+        registry.register(Arc::new(builtin::SteerCommand));
         registry.register(Arc::new(subagent::SessionsCommand));
         registry.register(Arc::new(subagent::SpawnCommand));
         registry.register(Arc::new(subagent::KillCommand));
@@ -432,6 +444,51 @@ mod tests {
         assert!(
             matches!(result.kind, CommandResultKind::SystemMessage(ref s) if s == "Echo: test")
         );
+    }
+
+    // cyril-bm1j Slice 12 / claims C10, C11: /steer parses + rejects empty.
+    #[tokio::test]
+    async fn steer_command_parses_message_and_rejects_empty() {
+        let cmd = crate::commands::builtin::SteerCommand;
+        let session = crate::session::SessionController::new();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+        };
+
+        // C10: a message -> Steer{text}.
+        let r = cmd.execute(&ctx, "fix tests").await.unwrap();
+        assert!(
+            matches!(r.kind, CommandResultKind::Steer { ref text } if text == "fix tests"),
+            "got {:?}",
+            r.kind
+        );
+        // Trim outer whitespace, preserve inner spaces.
+        let r = cmd.execute(&ctx, "  a b  ").await.unwrap();
+        assert!(matches!(r.kind, CommandResultKind::Steer { ref text } if text == "a b"));
+
+        // C11: empty / whitespace-only -> usage SystemMessage, NEVER a Steer
+        // (an empty steer must not reach the backend).
+        for empty in ["", "   "] {
+            let r = cmd.execute(&ctx, empty).await.unwrap();
+            assert!(
+                matches!(r.kind, CommandResultKind::SystemMessage(ref s) if s.contains("Usage")),
+                "empty arg {empty:?} must be usage, got {:?}",
+                r.kind
+            );
+        }
+    }
+
+    // cyril-bm1j Slice 12: /steer is registered and routes its args through parse().
+    #[test]
+    fn steer_command_registered_and_parses_args() {
+        let registry = CommandRegistry::with_builtins();
+        let (cmd, args) = registry.parse("/steer go now").unwrap();
+        assert_eq!(cmd.name(), "steer");
+        assert_eq!(args, "go now");
     }
 
     #[tokio::test]

@@ -655,6 +655,19 @@ impl App {
             let command_name = cmd.name().to_string();
             let args = args.to_string();
             match cmd.execute(&ctx, &args).await {
+                // /steer needs the async steer path (echo + SteerSession); route it
+                // through the same dispatch_steer as Enter-while-busy.
+                Ok(CommandResult {
+                    kind: CommandResultKind::Steer { text },
+                }) => {
+                    return dispatch_steer(
+                        &mut self.ui_state,
+                        &self.session,
+                        &self.bridge_sender,
+                        text,
+                    )
+                    .await;
+                }
                 Ok(result) => self.handle_command_result(result),
                 Err(e) => {
                     tracing::error!(
@@ -740,6 +753,11 @@ impl App {
             }
             CommandResultKind::Dispatched => {
                 // Already sent via bridge
+            }
+            CommandResultKind::Steer { .. } => {
+                // Routed in submit_input before reaching here (needs async
+                // dispatch_steer). Reaching this arm is a routing bug.
+                tracing::error!("Steer result reached handle_command_result — routing bug");
             }
             CommandResultKind::Quit => {
                 self.ui_state.request_quit();
