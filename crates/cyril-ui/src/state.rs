@@ -716,6 +716,20 @@ impl UiState {
         self.enforce_message_limit();
     }
 
+    /// Append an optimistic queue-steer echo (ROADMAP K1b, cyril-bm1j). Added the
+    /// instant the user sends a steer — the wire echoes (`SteeringConsumed` /
+    /// `Cleared` / `Unsupported`) reconcile it in place later. Mirrors
+    /// `add_user_message`'s streaming-flush so the echo commits in chronological
+    /// order even if a thought/text block is mid-stream.
+    pub fn add_steer_echo(&mut self, text: &str) {
+        self.flush_streaming_agent_text();
+        self.flush_streaming_thought();
+        self.messages
+            .push(ChatMessage::steer_echo(text.to_string()));
+        self.messages_version += 1;
+        self.enforce_message_limit();
+    }
+
     /// Set the current model name (displayed in toolbar).
     ///
     /// All model mutations route through here, so the "clear effort on a real
@@ -1481,6 +1495,35 @@ mod tests {
             "expected a system message containing the steering text, got {:?}",
             last.kind()
         );
+    }
+
+    // cyril-bm1j Slice 2 / claim C3: optimistic steer echo appended on send.
+    #[test]
+    fn add_steer_echo_appends_queued() {
+        let mut state = UiState::new(500);
+
+        // (a) the echo carries the user's text, optimistically Queued.
+        state.add_steer_echo("fix tests");
+        let last = state.messages().last().expect("one message");
+        assert!(
+            matches!(last.kind(),
+                ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued } if text == "fix tests"),
+            "expected SteerEcho{{Queued,\"fix tests\"}}, got {:?}",
+            last.kind()
+        );
+
+        // (b) FIFO insertion order is preserved (precondition for Slice 3's oldest-first reconcile).
+        state.add_steer_echo("then this");
+        let msgs = state.messages();
+        assert!(matches!(msgs[msgs.len() - 2].kind(),
+            ChatMessageKind::SteerEcho { text, .. } if text == "fix tests"));
+        assert!(matches!(msgs[msgs.len() - 1].kind(),
+            ChatMessageKind::SteerEcho { text, .. } if text == "then this"));
+
+        // (c) empty text still appends a Queued echo (degenerate-but-valid; no silent drop).
+        state.add_steer_echo("");
+        assert!(matches!(state.messages().last().unwrap().kind(),
+            ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued } if text.is_empty()));
     }
 
     // Slice A / design claim 13: queue mirror queued->1, consumed->0, floor at 0.
