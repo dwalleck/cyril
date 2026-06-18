@@ -2,7 +2,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
 
 use crate::palette;
-use crate::traits::{ChatMessage, ChatMessageKind, TrackedToolCall, TuiState};
+use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus, TrackedToolCall, TuiState};
 use crate::widgets::markdown;
 
 /// Render the chat area. If a subagent is focused, renders the focused
@@ -234,6 +234,25 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
             ));
             for line in text.lines() {
                 lines.push(Line::raw(format!("  {line}")));
+            }
+        }
+        ChatMessageKind::SteerEcho { text, status } => {
+            let (suffix, color) = match status {
+                SteerEchoStatus::Queued => ("queued", Color::Yellow),
+                SteerEchoStatus::Applied => ("applied", palette::AGENT_GREEN),
+                SteerEchoStatus::Cleared => ("cleared", Color::DarkGray),
+                SteerEchoStatus::Unsupported => ("not supported", Color::Red),
+            };
+            let style = Style::default().fg(color).add_modifier(Modifier::ITALIC);
+            // Steers are short; render the first line with the status suffix and
+            // indent any continuation lines under it.
+            let first = text.lines().next().unwrap_or("");
+            lines.push(Line::styled(
+                format!("  ↳ steer: {first} — {suffix}"),
+                style,
+            ));
+            for line in text.lines().skip(1) {
+                lines.push(Line::styled(format!("    {line}"), style));
             }
         }
     }
@@ -777,6 +796,53 @@ mod tests {
         assert!(
             header.contains("Run(cargo test)"),
             "should show Run(cmd): {header}"
+        );
+    }
+
+    #[test]
+    fn steer_echo_renders_distinct_suffix_per_status() {
+        use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus};
+
+        // Stress fixture (Slice 1): one render per status, Unicode + arrow text.
+        // Bug classes: ASCII assumption (Unicode must not panic/mangle) and a
+        // tie-break that never fires (Applied suffix must differ from Queued).
+        let statuses = [
+            (SteerEchoStatus::Queued, "queued"),
+            (SteerEchoStatus::Applied, "applied"),
+            (SteerEchoStatus::Cleared, "cleared"),
+            (SteerEchoStatus::Unsupported, "not supported"),
+        ];
+        let mut rendered = Vec::new();
+        for (status, expected) in statuses {
+            let msg = ChatMessage {
+                kind: ChatMessageKind::SteerEcho {
+                    text: "café→ stop".into(),
+                    status,
+                },
+                timestamp: std::time::Instant::now(),
+            };
+            let mut lines = Vec::new();
+            render_message(&mut lines, &msg, 80);
+            let text = lines[0].to_string();
+            assert!(
+                text.contains("steer: café→ stop"),
+                "Unicode steer text must render intact: {text:?}"
+            );
+            assert!(
+                text.contains(expected),
+                "status {status:?} must render suffix {expected:?}: {text:?}"
+            );
+            rendered.push(text);
+        }
+        assert_ne!(
+            rendered[0], rendered[1],
+            "Queued and Applied must render distinctly (tie-break wired)"
+        );
+        let unique: std::collections::HashSet<_> = rendered.iter().collect();
+        assert_eq!(
+            unique.len(),
+            4,
+            "all four statuses must render distinctly: {rendered:?}"
         );
     }
 

@@ -77,6 +77,18 @@ pub struct ChatMessage {
     pub timestamp: std::time::Instant,
 }
 
+/// Lifecycle of a queue-steer the user sent (ROADMAP K1b, cyril-bm1j). The echo
+/// is added optimistically on send (`Queued`) and reconciled in place as the
+/// wire echoes arrive: `Applied` on `SteeringConsumed`, `Cleared` on
+/// `SteeringCleared`, `Unsupported` on `SteeringUnsupported`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SteerEchoStatus {
+    Queued,
+    Applied,
+    Cleared,
+    Unsupported,
+}
+
 #[derive(Debug, Clone)]
 pub enum ChatMessageKind {
     UserText(String),
@@ -89,6 +101,12 @@ pub enum ChatMessageKind {
     CommandOutput {
         command: String,
         text: String,
+    },
+    /// A queue-steer the user sent, with its reconciled lifecycle status
+    /// (ROADMAP K1b). `text` is the user's own steer message.
+    SteerEcho {
+        text: String,
+        status: SteerEchoStatus,
     },
 }
 
@@ -138,6 +156,17 @@ impl ChatMessage {
     pub fn thought(text: String) -> Self {
         Self {
             kind: ChatMessageKind::Thought(text),
+            timestamp: std::time::Instant::now(),
+        }
+    }
+
+    /// A queue-steer echo, optimistically `Queued` (ROADMAP K1b, cyril-bm1j).
+    pub fn steer_echo(text: String) -> Self {
+        Self {
+            kind: ChatMessageKind::SteerEcho {
+                text,
+                status: SteerEchoStatus::Queued,
+            },
             timestamp: std::time::Instant::now(),
         }
     }
