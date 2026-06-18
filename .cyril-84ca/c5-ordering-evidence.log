@@ -1,0 +1,31 @@
+# C5 ordering — empirical evidence (cyril-84ca Slice 7)
+# Probe: .cyril-84ca/notif_order.rs drives cyril's REAL bridge (spawn_bridge) against
+# real kiro-cli 2.8.0 and reports the order AgentMessage vs TurnCompleted arrive on
+# cyril's notification channel. Date: 2026-06-17.
+#
+# Question: does streamed agent text arrive before TurnCompleted on the notification
+# channel, and does it differ by backend (v2 vs KAS)?
+
+== v2 (kiro-cli acp, default engine) ==
+agent_args = ["acp"]
+order = ["msg", "msg", "TURN"]
+AgentMessages: 2 before TURN, 0 after TURN (total 2)
+=> OK: all 2 AgentMessages preceded TurnCompleted
+
+== KAS / v3 (kiro-cli acp --agent-engine kas) ==
+agent_args = ["acp", "--agent-engine", "kas"]
+order = ["msg", "TURN"]
+AgentMessages: 1 before TURN, 0 after TURN (total 1)
+=> OK: all 1 AgentMessages preceded TurnCompleted
+
+## Conclusion
+Ordering HOLDS for BOTH v2 and KAS — not a v2/KAS difference. The reorder seen in the
+zero-gap unit harness is a theoretical agent-client-protocol library race (responses
+resolve inline; notifications are queued via incoming_tx), filed as cyril-9akh. Real
+backends leave enough timing gap for the notification queue to drain before the
+response resolves, so cyril never reorders in practice. cyril-84ca's off-loop change
+neither causes nor regresses this (the pre-fix inline conn.prompt().await shared the
+identical library behavior).
+
+Bonus: KAS runs through cyril's current bridge today and maps its turn-end to
+TurnCompleted (a real prompt response crosses the wire), not only session_info_update.

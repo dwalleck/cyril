@@ -1,0 +1,18 @@
+# Throwaway prove-it probe for cyril-84ca. Standalone crate (its own [workspace]
+# so cyril's workspace ignores it). Uses the REAL agent-client-protocol 0.10.2 —
+# the system under test is its ClientSideConnection request multiplexing.
+[package]
+name = "probe-84ca"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+agent-client-protocol = "0.10"
+async-trait = "0.1"
+tokio = { version = "1", features = ["rt", "macros", "process", "io-util", "time"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+serde_json = { version = "1", features = ["raw_value"] }
+anyhow = "1"

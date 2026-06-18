@@ -1,0 +1,7 @@
+1:   0.001 C2A (other) :: {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false},"clientI
+3:   0.056 C2A session/new :: {"jsonrpc":"2.0","id":1,"method":"session/new","params":{"cwd":"/home/dwalleck/repos/cyril/.cyril-84ca/probe","mcpServers":[]}}
+6:   0.591 C2A session/prompt :: {"jsonrpc":"2.0","id":2,"method":"session/prompt","params":{"sessionId":"d953d61b-a261-4164-bc8d-41ae7f7e5d9b","prompt":[{"type":"text","text":"You have the execute_ba
+13:   2.092 C2A _session/steer :: {"jsonrpc":"2.0","id":3,"method":"_session/steer","params":{"message":"STEERING: stop running commands now and reply only with HALTED.","sessionId":"d953d61b-a261-416
+15:   2.093 A2C steering_ :: {"jsonrpc":"2.0","method":"_kiro.dev/session/update","params":{"sessionId":"d953d61b-a261-4164-bc8d-41ae7f7e5d9b","update":{"sessionUpdate":"steering_queued","message":"ST
+20:   4.499 A2C steering_ :: {"jsonrpc":"2.0","method":"_kiro.dev/session/update","params":{"sessionId":"d953d61b-a261-4164-bc8d-41ae7f7e5d9b","update":{"sessionUpdate":"steering_consumed","content":"
+47:   6.086 A2C "result" :: {"jsonrpc":"2.0","result":{"stopReason":"end_turn"},"id":2}
