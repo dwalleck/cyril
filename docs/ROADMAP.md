@@ -174,6 +174,8 @@ The *minimum* for a plain turn to render and end cleanly. The other `_kiro/*` su
 - Handle **`sess_…`-prefixed session ids** and per-run log dirs under `~/.kiro/logs/<ts>/`.
 - Defensive unknown-variant tolerance for everything else (one `debug!` line noting `_kiro/*` surfaces are intentionally dormant pre-2b).
 
+> **Note — the off-loop busy-guard + `TurnCompleted` emission from PR #22 (cyril-84ca) must be reworked here.** That PR drives the v2 turn off the command loop: `TurnCompleted` is emitted when `conn.prompt().await` resolves, and the one-turn busy-guard keys off `prompt_task.is_finished()`. Both encode **"prompt response == turn end"** — correct for v2, **false for KAS**, where turn-end is `session_info_update → turn_end` and the prompt response is secondary/late. So under KAS, `is_finished()` stays false after a logical turn-end (the next legitimate prompt is wrongly rejected with "a turn is already in progress") and `TurnCompleted` fires late/never — the exact hang this milestone's non-blocking acceptance criterion guards against. Fix: route **both** the busy-guard and `TurnCompleted` emission through the engine's turn-end signal (KAS-0's turn-end detection in the `Engine` trait), not `prompt_task.is_finished()` / `prompt().await`. The concrete code is the `SendPrompt` guard + the spawned `prompt_task` in `bridge.rs`; tracked on **cyril-atjw (KAS-0)**.
+
 ### KAS-2b — Metering + context-usage breakdown
 
 **Depends on:** KAS-2a. The remaining `session_info_update` kinds — additive data whose absence loses information but hangs nothing:

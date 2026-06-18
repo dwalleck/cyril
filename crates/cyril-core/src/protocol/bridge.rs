@@ -337,9 +337,12 @@ async fn run_loop(
     // SessionController's reset of `steering_unsupported` on SessionCreated.
     let mut steering_unsupported: std::collections::HashSet<crate::types::SessionId> =
         std::collections::HashSet::new();
-    // cyril-84ca: the in-flight turn's task — at most one. `is_finished()` makes
-    // the "busy" check self-clearing, so a completed turn never blocks the next.
-    let mut prompt_task: Option<tokio::task::JoinHandle<()>> = None;
+    // cyril-84ca: the in-flight turn's task + the session it runs on — at most
+    // one. `is_finished()` makes the "busy" check self-clearing, so a completed
+    // turn never blocks the next. The session id is kept so CancelRequest targets
+    // the running turn even when a mid-turn NewSession/LoadSession (the loop is
+    // now free during a turn) has retargeted `active_session_id`.
+    let mut prompt_task: Option<(tokio::task::JoinHandle<()>, acp::SessionId)> = None;
 
     while let Some(cmd) = channels.command_rx.recv().await {
         match cmd {
@@ -389,7 +392,7 @@ async fn run_loop(
                 // concurrent turns on one session is undefined); reject it with a
                 // BridgeError. `is_finished()` self-clears, so the next turn after
                 // this one completes is allowed.
-                if prompt_task.as_ref().is_some_and(|h| !h.is_finished()) {
+                if prompt_task.as_ref().is_some_and(|(h, _)| !h.is_finished()) {
                     if notify_or_closed(
                         &channels.notification_tx,
                         Notification::BridgeError {
@@ -408,7 +411,7 @@ async fn run_loop(
                     .into_iter()
                     .map(acp::ContentBlock::from)
                     .collect();
-                let request = acp::PromptRequest::new(acp_session_id, prompt);
+                let request = acp::PromptRequest::new(acp_session_id.clone(), prompt);
                 // cyril-84ca: drive the turn OFF this command loop so commands
                 // queued mid-turn (steer/cancel/...) are processed instead of
                 // blocking behind conn.prompt() for the whole turn. The spawned
@@ -418,7 +421,7 @@ async fn run_loop(
                 // while this task is pending still crosses the wire.
                 let turn_conn = conn.clone();
                 let turn_tx = channels.notification_tx.clone();
-                prompt_task = Some(tokio::task::spawn_local(async move {
+                let handle = tokio::task::spawn_local(async move {
                     let note = match turn_conn.prompt(request).await {
                         Ok(response) => Notification::TurnCompleted {
                             stop_reason: crate::protocol::convert::to_stop_reason(
@@ -439,10 +442,20 @@ async fn run_loop(
                     if let Err(e) = turn_tx.send(note.into()).await {
                         tracing::debug!(error = %e, "TurnCompleted send failed (App gone)");
                     }
-                }));
+                });
+                prompt_task = Some((handle, acp_session_id));
             }
             BridgeCommand::CancelRequest => {
-                if let Some(ref session_id) = active_session_id {
+                // cyril-84ca: prefer the in-flight turn's own session. The command
+                // loop is now free during a turn, so a mid-turn NewSession/LoadSession
+                // can retarget `active_session_id`; cancel must still hit the running
+                // turn, not the newly-created session. Fall back to `active_session_id`
+                // when no turn is in flight (the guard self-clears via is_finished).
+                let cancel_target = match prompt_task.as_ref() {
+                    Some((h, sid)) if !h.is_finished() => Some(sid),
+                    _ => active_session_id.as_ref(),
+                };
+                if let Some(session_id) = cancel_target {
                     if let Err(e) = conn
                         .cancel(acp::CancelNotification::new(session_id.clone()))
                         .await
@@ -1217,7 +1230,7 @@ async fn run_loop(
                 // cyril-84ca: abort an in-flight turn so its task doesn't linger
                 // past run_loop's return holding the connection. The loop being
                 // free (Slice 3) is what lets Shutdown be processed mid-turn at all.
-                if let Some(handle) = prompt_task.take() {
+                if let Some((handle, _)) = prompt_task.take() {
                     handle.abort();
                 }
                 break;
@@ -1260,6 +1273,9 @@ mod tests {
         prompt_err: bool,
         /// Set by `cancel`; makes a woken `prompt` resolve as Cancelled (ACP semantics).
         cancelled: bool,
+        /// Session ids the agent was asked to cancel, in order. Lets a test assert
+        /// WHICH session a CancelRequest targeted (cyril-84ca cancel-retarget fence).
+        cancelled_sessions: Vec<String>,
     }
 
     struct FakeAgent {
@@ -1316,11 +1332,12 @@ mod tests {
             }
             Ok(acp::PromptResponse::new(acp::StopReason::EndTurn))
         }
-        async fn cancel(&self, _a: acp::CancelNotification) -> acp::Result<()> {
+        async fn cancel(&self, a: acp::CancelNotification) -> acp::Result<()> {
             {
                 let mut s = self.script.borrow_mut();
                 s.received.push("cancel".into());
                 s.cancelled = true;
+                s.cancelled_sessions.push(a.session_id.to_string());
             }
             // Wake a parked prompt so it resolves Cancelled (mirrors a real agent
             // ending the turn on session/cancel).
@@ -1734,6 +1751,51 @@ mod tests {
             assert!(
                 probe.borrow().received.contains(&"cancel".to_string()),
                 "agent received the cancel mid-turn"
+            );
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn cancel_targets_inflight_turn_after_midturn_new_session() {
+        // cyril-84ca cancel-retarget fence: the command loop is now free during a
+        // turn, so a mid-turn NewSession retargets `active_session_id` to the new
+        // session (S2) while the in-flight turn still runs on S1. A subsequent
+        // CancelRequest must cancel S1 (the running turn), NOT S2 — otherwise Esc
+        // can't stop the busy turn. The buggy code (cancel `active_session_id`)
+        // sends session/cancel for S2; this fence asserts the wire-targeted id is S1.
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_harness(script, move |sender, mut rx, _gate, _loop| async move {
+            let s1 = start_session(&sender, &mut rx).await;
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: s1.clone(),
+                    content_blocks: vec!["forever".into()],
+                })
+                .await
+                .unwrap();
+            // Mid-turn NewSession -> S2 becomes `active_session_id` while S1 runs.
+            let s2 = start_session(&sender, &mut rx).await;
+            assert_ne!(s1.as_str(), s2.as_str(), "second session is distinct");
+            // Cancel must resolve S1's parked turn, not the freshly-created S2.
+            sender.send(BridgeCommand::CancelRequest).await.unwrap();
+            assert_eq!(
+                drain_to_turn(&mut rx).await,
+                StopReason::Cancelled,
+                "the in-flight S1 turn resolved Cancelled"
+            );
+            let cancelled = probe.borrow().cancelled_sessions.clone();
+            assert!(
+                cancelled.contains(&s1.as_str().to_string()),
+                "cancel targeted the in-flight turn's session S1; got {cancelled:?}"
+            );
+            assert!(
+                !cancelled.contains(&s2.as_str().to_string()),
+                "cancel did NOT target the mid-turn-created session S2; got {cancelled:?}"
             );
         })
         .await;
