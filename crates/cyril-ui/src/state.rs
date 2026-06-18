@@ -462,6 +462,23 @@ impl UiState {
             }
             Notification::SteeringConsumed { .. } => {
                 self.steering_queued = self.steering_queued.saturating_sub(1);
+                // Reconcile the optimistic echo (K1b, cyril-bm1j): one steer was
+                // injected at this tool boundary, so flip the OLDEST still-Queued
+                // echo to Applied. FIFO — `content` is advisory, never a match key.
+                if let Some(msg) = self.messages.iter_mut().find(|m| {
+                    matches!(
+                        m.kind,
+                        ChatMessageKind::SteerEcho {
+                            status: SteerEchoStatus::Queued,
+                            ..
+                        }
+                    )
+                }) {
+                    if let ChatMessageKind::SteerEcho { status, .. } = &mut msg.kind {
+                        *status = SteerEchoStatus::Applied;
+                    }
+                    self.messages_version += 1;
+                }
                 true
             }
             Notification::SteeringCleared => {
@@ -1524,6 +1541,69 @@ mod tests {
         state.add_steer_echo("");
         assert!(matches!(state.messages().last().unwrap().kind(),
             ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued } if text.is_empty()));
+    }
+
+    // cyril-bm1j Slice 3 / claim C4: SteeringConsumed flips the OLDEST Queued echo.
+    #[test]
+    fn consumed_flips_oldest_queued_echo() {
+        let mut state = UiState::new(500);
+
+        // Helper: collect the statuses of all SteerEcho messages in order.
+        fn steer_statuses(s: &UiState) -> Vec<SteerEchoStatus> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho { status, .. } => Some(*status),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        state.add_steer_echo("E1");
+        state.add_steer_echo("E2");
+        state.add_steer_echo("E3");
+
+        // First consume (content None) flips E1 only — not E2/E3.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Queued,
+                SteerEchoStatus::Queued
+            ],
+            "oldest (E1) flips first"
+        );
+
+        // Second consume (content Some, NOT matching any echo text) flips E2, not E3
+        // — proving `content` is not used as a correlation key.
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: Some("unrelated text".into()),
+        });
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Queued
+            ],
+            "FIFO holds across interleaving; content ignored"
+        );
+
+        // Adversarial: consume with NO Queued echo left after E3 flips -> the 4th
+        // consume finds nothing, no panic, chip saturating_sub floors at 0.
+        state.apply_notification(&Notification::SteeringConsumed { content: None }); // flips E3
+        state.apply_notification(&Notification::SteeringConsumed { content: None }); // nothing to flip
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Applied
+            ],
+            "empty-queue consume is a no-op on echoes"
+        );
+        assert_eq!(state.steering_queued(), 0, "chip floors at 0, no underflow");
     }
 
     // Slice A / design claim 13: queue mirror queued->1, consumed->0, floor at 0.
