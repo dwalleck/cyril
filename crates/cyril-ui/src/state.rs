@@ -504,6 +504,20 @@ impl UiState {
             }
             Notification::SteeringUnsupported { message } => {
                 self.add_system_message(message.clone());
+                // Reconcile (K1b): the backend can't steer, so every still-Queued
+                // echo is dead. Flip ALL Queued -> Unsupported — on a burst, several
+                // steers may be in flight before the single (bridge-dedup'd) notice
+                // arrives, and none will succeed. Terminal states untouched.
+                // (add_system_message already bumped messages_version.)
+                for msg in self.messages.iter_mut() {
+                    if let ChatMessageKind::SteerEcho {
+                        status: status @ SteerEchoStatus::Queued,
+                        ..
+                    } = &mut msg.kind
+                    {
+                        *status = SteerEchoStatus::Unsupported;
+                    }
+                }
                 true
             }
             Notification::SessionCreated {
@@ -1659,6 +1673,55 @@ mod tests {
         let mut empty = UiState::new(500);
         empty.apply_notification(&Notification::SteeringCleared);
         assert_eq!(empty.steering_queued(), 0);
+    }
+
+    // cyril-bm1j Slice 5 / claim C6: SteeringUnsupported flips ALL Queued (burst) + one notice.
+    #[test]
+    fn unsupported_flips_all_echoes_and_one_message() {
+        fn steer_statuses(s: &UiState) -> Vec<SteerEchoStatus> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho { status, .. } => Some(*status),
+                    _ => None,
+                })
+                .collect()
+        }
+        fn system_count(s: &UiState) -> usize {
+            s.messages()
+                .iter()
+                .filter(|m| matches!(m.kind(), ChatMessageKind::System(_)))
+                .count()
+        }
+
+        let mut state = UiState::new(500);
+        state.add_steer_echo("E1");
+        state.add_steer_echo("E2");
+        // Flip E1 -> Applied: an already-terminal echo must NOT be re-flipped.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        // Now add two more Queued (burst still in flight when the notice lands).
+        state.add_steer_echo("E3");
+        state.add_steer_echo("E4");
+
+        state.apply_notification(&Notification::SteeringUnsupported {
+            message: "steering requires kiro-cli 2.7.0+".into(),
+        });
+
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied,     // E1 preserved
+                SteerEchoStatus::Unsupported, // E2
+                SteerEchoStatus::Unsupported, // E3
+                SteerEchoStatus::Unsupported, // E4
+            ],
+            "burst: ALL Queued flip on one notice; Applied untouched"
+        );
+        assert_eq!(
+            system_count(&state),
+            1,
+            "exactly one system notice (K1a behavior preserved)"
+        );
     }
 
     // Slice A / design claim 13: queue mirror queued->1, consumed->0, floor at 0.
