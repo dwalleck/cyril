@@ -41,6 +41,8 @@ pub trait TuiState {
     /// Current thinking-effort level, if a thinking model is active and the
     /// agent has reported it. `None` otherwise.
     fn effort(&self) -> Option<EffortLevel>;
+    /// Count of un-consumed queued steers (ROADMAP K1b). Drives the toolbar chip.
+    fn steering_queued(&self) -> usize;
     fn context_usage(&self) -> Option<f64>;
     fn credit_usage(&self) -> Option<(f64, f64)>;
     fn last_turn(&self) -> Option<&cyril_core::types::TurnSummary>;
@@ -416,6 +418,7 @@ pub mod test_support {
         pub current_mode: Option<String>,
         pub current_model: Option<String>,
         pub effort: Option<EffortLevel>,
+        pub steering_queued: usize,
         pub context_usage: Option<f64>,
         pub credit_usage: Option<(f64, f64)>,
         pub last_turn: Option<cyril_core::types::TurnSummary>,
@@ -452,6 +455,7 @@ pub mod test_support {
                 current_mode: None,
                 current_model: None,
                 effort: None,
+                steering_queued: 0,
                 context_usage: None,
                 credit_usage: None,
                 last_turn: None,
@@ -518,6 +522,9 @@ pub mod test_support {
         }
         fn effort(&self) -> Option<EffortLevel> {
             self.effort
+        }
+        fn steering_queued(&self) -> usize {
+            self.steering_queued
         }
         fn context_usage(&self) -> Option<f64> {
             self.context_usage

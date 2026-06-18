@@ -151,6 +151,10 @@ impl TuiState for UiState {
         self.effort
     }
 
+    fn steering_queued(&self) -> usize {
+        self.steering_queued
+    }
+
     fn context_usage(&self) -> Option<f64> {
         self.context_usage
     }
@@ -1767,6 +1771,22 @@ mod tests {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         });
         assert_eq!(state.steering_queued(), 0);
+    }
+
+    // cyril-bm1j Slice 7: steering_queued() is readable through &dyn TuiState (live, not cached).
+    #[test]
+    fn steering_queued_exposed_via_tuistate_trait() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("a".into()),
+        });
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("b".into()),
+        });
+        assert_eq!((&state as &dyn TuiState).steering_queued(), 2);
+        // Live, not a stale snapshot: a consume is reflected through the trait.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        assert_eq!((&state as &dyn TuiState).steering_queued(), 1);
     }
 
     // Slice A / design claim 13: queue mirror queued->1, consumed->0, floor at 0.
