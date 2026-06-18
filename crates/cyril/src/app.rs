@@ -1328,6 +1328,18 @@ mod tests {
             classify_submit(&SessionStatus::Initializing, true),
             SubmitRoute::Prompt
         );
+        // Error is the only data-carrying SessionStatus variant; the design lists
+        // (Error,true)->Prompt. A future broadening of the steer predicate must not
+        // silently route an errored session's Enter to a steer it can't accept.
+        assert_eq!(
+            classify_submit(
+                &SessionStatus::Error {
+                    message: "boom".into()
+                },
+                true
+            ),
+            SubmitRoute::Prompt
+        );
     }
 
     // cyril-bm1j Slice 10 / claim C7: steer gate truth table.
