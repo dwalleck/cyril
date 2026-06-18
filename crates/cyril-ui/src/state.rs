@@ -483,6 +483,23 @@ impl UiState {
             }
             Notification::SteeringCleared => {
                 self.steering_queued = 0;
+                // Reconcile (K1b): every still-Queued steer was dropped before
+                // pickup. Flip all Queued -> Cleared; terminal states (Applied/
+                // Unsupported) are NOT re-flipped.
+                let mut changed = false;
+                for msg in self.messages.iter_mut() {
+                    if let ChatMessageKind::SteerEcho {
+                        status: status @ SteerEchoStatus::Queued,
+                        ..
+                    } = &mut msg.kind
+                    {
+                        *status = SteerEchoStatus::Cleared;
+                        changed = true;
+                    }
+                }
+                if changed {
+                    self.messages_version += 1;
+                }
                 true
             }
             Notification::SteeringUnsupported { message } => {
@@ -1604,6 +1621,44 @@ mod tests {
             "empty-queue consume is a no-op on echoes"
         );
         assert_eq!(state.steering_queued(), 0, "chip floors at 0, no underflow");
+    }
+
+    // cyril-bm1j Slice 4 / claim C5: SteeringCleared flips ALL Queued, preserves terminals.
+    #[test]
+    fn cleared_flips_all_queued_echoes() {
+        fn steer_statuses(s: &UiState) -> Vec<SteerEchoStatus> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho { status, .. } => Some(*status),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        let mut state = UiState::new(500);
+        state.add_steer_echo("E1");
+        state.add_steer_echo("E2");
+        state.add_steer_echo("E3");
+        // Flip E1 -> Applied so we can prove Cleared does NOT clobber a terminal state.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+
+        state.apply_notification(&Notification::SteeringCleared);
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied, // E1 preserved, NOT re-flipped to Cleared
+                SteerEchoStatus::Cleared, // E2
+                SteerEchoStatus::Cleared, // E3
+            ],
+            "all Queued -> Cleared; Applied untouched"
+        );
+        assert_eq!(state.steering_queued(), 0);
+
+        // Adversarial: empty transcript + Cleared -> no panic, chip stays 0.
+        let mut empty = UiState::new(500);
+        empty.apply_notification(&Notification::SteeringCleared);
+        assert_eq!(empty.steering_queued(), 0);
     }
 
     // Slice A / design claim 13: queue mirror queued->1, consumed->0, floor at 0.
