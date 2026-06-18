@@ -76,6 +76,16 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         ));
     }
 
+    // Queued steers (K1b) — mid-turn steers awaiting pickup at a tool boundary.
+    let steers = state.steering_queued();
+    if steers >= 1 {
+        parts.push(Span::raw(" · "));
+        parts.push(Span::styled(
+            format!("⇄ {steers} steer{}", if steers == 1 { "" } else { "s" }),
+            Style::default().fg(Color::Yellow),
+        ));
+    }
+
     // Code intelligence indicator
     if state.code_intelligence_active() {
         parts.push(Span::raw(" · "));
@@ -290,6 +300,61 @@ mod tests {
             !text.contains("◇"),
             "no effort badge when absent, got: {text:?}"
         );
+    }
+
+    // cyril-bm1j Slice 8 / claim C8: toolbar chip iff steering_queued() >= 1.
+    fn toolbar_text(state: &MockTuiState) -> String {
+        let backend = TestBackend::new(80, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), state))
+            .expect("draw");
+        let buf = terminal.backend().buffer();
+        (0..80)
+            .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
+            .collect()
+    }
+
+    #[test]
+    fn renders_steer_chip_when_queued() {
+        // 0 -> no chip.
+        let none = toolbar_text(&MockTuiState {
+            steering_queued: 0,
+            ..Default::default()
+        });
+        assert!(
+            !none.contains("steer") && !none.contains("⇄"),
+            "no chip at 0: {none:?}"
+        );
+
+        // 2 -> chip shows the count.
+        let two = toolbar_text(&MockTuiState {
+            session_label: Some("s".into()),
+            steering_queued: 2,
+            ..Default::default()
+        });
+        assert!(
+            two.contains('2') && two.contains("steer"),
+            "chip at 2: {two:?}"
+        );
+
+        // 1 -> count present.
+        let one = toolbar_text(&MockTuiState {
+            session_label: Some("s".into()),
+            steering_queued: 1,
+            ..Default::default()
+        });
+        assert!(
+            one.contains('1') && one.contains("steer"),
+            "chip at 1: {one:?}"
+        );
+
+        // Adversarial: large count on an 80-wide terminal renders without panic.
+        let _ = toolbar_text(&MockTuiState {
+            session_label: Some("s".into()),
+            steering_queued: 999,
+            ..Default::default()
+        });
     }
 
     #[test]

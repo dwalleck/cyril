@@ -59,6 +59,38 @@ impl Command for ClearCommand {
     }
 }
 
+/// /steer — queue a mid-turn steer (ROADMAP K1b, cyril-bm1j). The explicit path;
+/// Enter-while-busy is the implicit one. Works busy (steer this turn) and idle
+/// (backend queues for the next turn — probe-confirmed). Returns a `Steer` result
+/// the App routes through `dispatch_steer`; the command itself never touches the
+/// bridge or UI.
+pub struct SteerCommand;
+
+#[async_trait::async_trait]
+impl Command for SteerCommand {
+    fn name(&self) -> &str {
+        "steer"
+    }
+
+    fn description(&self) -> &str {
+        "Steer the agent mid-turn (advisory; the agent may decline)"
+    }
+
+    async fn execute(&self, _ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        // Load-bearing: an empty arg must NOT produce an empty steer to the
+        // backend — return usage instead. Enforced at runtime (survives release),
+        // not a debug_assert, because the wrong output would reach the wire.
+        let msg = args.trim();
+        if msg.is_empty() {
+            Ok(CommandResult::system_message(
+                "Usage: /steer <message>".to_string(),
+            ))
+        } else {
+            Ok(CommandResult::steer(msg.to_string()))
+        }
+    }
+}
+
 /// /quit — quit the application
 pub struct QuitCommand;
 

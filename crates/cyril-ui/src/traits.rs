@@ -41,6 +41,8 @@ pub trait TuiState {
     /// Current thinking-effort level, if a thinking model is active and the
     /// agent has reported it. `None` otherwise.
     fn effort(&self) -> Option<EffortLevel>;
+    /// Count of un-consumed queued steers (ROADMAP K1b). Drives the toolbar chip.
+    fn steering_queued(&self) -> usize;
     fn context_usage(&self) -> Option<f64>;
     fn credit_usage(&self) -> Option<(f64, f64)>;
     fn last_turn(&self) -> Option<&cyril_core::types::TurnSummary>;
@@ -77,6 +79,18 @@ pub struct ChatMessage {
     pub timestamp: std::time::Instant,
 }
 
+/// Lifecycle of a queue-steer the user sent (ROADMAP K1b, cyril-bm1j). The echo
+/// is added optimistically on send (`Queued`) and reconciled in place as the
+/// wire echoes arrive: `Applied` on `SteeringConsumed`, `Cleared` on
+/// `SteeringCleared`, `Unsupported` on `SteeringUnsupported`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SteerEchoStatus {
+    Queued,
+    Applied,
+    Cleared,
+    Unsupported,
+}
+
 #[derive(Debug, Clone)]
 pub enum ChatMessageKind {
     UserText(String),
@@ -89,6 +103,12 @@ pub enum ChatMessageKind {
     CommandOutput {
         command: String,
         text: String,
+    },
+    /// A queue-steer the user sent, with its reconciled lifecycle status
+    /// (ROADMAP K1b). `text` is the user's own steer message.
+    SteerEcho {
+        text: String,
+        status: SteerEchoStatus,
     },
 }
 
@@ -138,6 +158,17 @@ impl ChatMessage {
     pub fn thought(text: String) -> Self {
         Self {
             kind: ChatMessageKind::Thought(text),
+            timestamp: std::time::Instant::now(),
+        }
+    }
+
+    /// A queue-steer echo, optimistically `Queued` (ROADMAP K1b, cyril-bm1j).
+    pub fn steer_echo(text: String) -> Self {
+        Self {
+            kind: ChatMessageKind::SteerEcho {
+                text,
+                status: SteerEchoStatus::Queued,
+            },
             timestamp: std::time::Instant::now(),
         }
     }
@@ -387,6 +418,7 @@ pub mod test_support {
         pub current_mode: Option<String>,
         pub current_model: Option<String>,
         pub effort: Option<EffortLevel>,
+        pub steering_queued: usize,
         pub context_usage: Option<f64>,
         pub credit_usage: Option<(f64, f64)>,
         pub last_turn: Option<cyril_core::types::TurnSummary>,
@@ -423,6 +455,7 @@ pub mod test_support {
                 current_mode: None,
                 current_model: None,
                 effort: None,
+                steering_queued: 0,
                 context_usage: None,
                 credit_usage: None,
                 last_turn: None,
@@ -489,6 +522,9 @@ pub mod test_support {
         }
         fn effort(&self) -> Option<EffortLevel> {
             self.effort
+        }
+        fn steering_queued(&self) -> usize {
+            self.steering_queued
         }
         fn context_usage(&self) -> Option<f64> {
             self.context_usage

@@ -151,6 +151,10 @@ impl TuiState for UiState {
         self.effort
     }
 
+    fn steering_queued(&self) -> usize {
+        self.steering_queued
+    }
+
     fn context_usage(&self) -> Option<f64> {
         self.context_usage
     }
@@ -406,6 +410,11 @@ impl UiState {
                 if let Some(m) = self.last_turn.as_ref().and_then(|t| t.metering()) {
                     self.session_cost.record_turn(m);
                 }
+                // Reset the steer chip on turn-end (K1b, cyril-bm1j): a steer
+                // un-consumed by turn-end can't drain (no more tool boundaries this
+                // turn), so the live HUD count must not stick. The SteerEcho entries
+                // in scrollback keep their last status — intended chip/echo divergence.
+                self.steering_queued = 0;
                 self.set_activity(Activity::Ready);
                 true
             }
@@ -462,14 +471,32 @@ impl UiState {
             }
             Notification::SteeringConsumed { .. } => {
                 self.steering_queued = self.steering_queued.saturating_sub(1);
+                // Reconcile the optimistic echo (K1b, cyril-bm1j): one steer was
+                // injected at this tool boundary, so flip the OLDEST still-Queued
+                // echo to Applied. FIFO — `content` is advisory, never a match key.
+                if self.flip_queued_steer_echoes(SteerEchoStatus::Applied, true) {
+                    self.messages_version += 1;
+                }
                 true
             }
             Notification::SteeringCleared => {
                 self.steering_queued = 0;
+                // Reconcile (K1b): every still-Queued steer was dropped before
+                // pickup. Flip all Queued -> Cleared; terminal states are untouched.
+                if self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false) {
+                    self.messages_version += 1;
+                }
                 true
             }
             Notification::SteeringUnsupported { message } => {
+                // add_system_message bumps messages_version unconditionally, so the
+                // echo flips below are covered by that redraw.
                 self.add_system_message(message.clone());
+                // Reconcile (K1b): the backend can't steer, so every still-Queued
+                // echo is dead. Flip ALL Queued -> Unsupported — on a burst, several
+                // steers may be in flight before the single (bridge-dedup'd) notice
+                // arrives, and none will succeed. Terminal states untouched.
+                self.flip_queued_steer_echoes(SteerEchoStatus::Unsupported, false);
                 true
             }
             Notification::SessionCreated {
@@ -496,6 +523,12 @@ impl UiState {
                 // onto the fresh session (SessionController resets steering_depth
                 // identically — the two mirrors must stay in lockstep).
                 self.steering_queued = 0;
+                // Finalize any leftover Queued steer echoes from the old session.
+                // The new session is a different session_id; its SteeringConsumed
+                // would otherwise FIFO-flip an orphan echo from the dead session
+                // (cross-session mis-attribution). The old steers can never drain
+                // here, so mark them Cleared.
+                self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false);
                 self.add_system_message(format!("Session created: {}", session_id.as_str()));
                 // If the active mode carries a Kiro-specific welcome message
                 // (e.g. kiro_planner's "Transform any idea..."), surface it.
@@ -714,6 +747,46 @@ impl UiState {
         self.messages.push(ChatMessage::system(text));
         self.messages_version += 1;
         self.enforce_message_limit();
+    }
+
+    /// Append an optimistic queue-steer echo (ROADMAP K1b, cyril-bm1j). Added the
+    /// instant the user sends a steer — the wire echoes (`SteeringConsumed` /
+    /// `Cleared` / `Unsupported`) reconcile it in place later. Mirrors
+    /// `add_user_message`'s streaming-flush so the echo commits in chronological
+    /// order even if a thought/text block is mid-stream.
+    pub fn add_steer_echo(&mut self, text: &str) {
+        self.flush_streaming_agent_text();
+        self.flush_streaming_thought();
+        self.messages
+            .push(ChatMessage::steer_echo(text.to_string()));
+        self.messages_version += 1;
+        self.enforce_message_limit();
+    }
+
+    /// Reconcile optimistic steer echoes in place (ROADMAP K1b, cyril-bm1j).
+    /// Flips still-`Queued` echoes to `to`; terminal echoes (Applied/Cleared/
+    /// Unsupported) are never re-flipped. With `oldest_only` it flips just the
+    /// first (FIFO — for `SteeringConsumed`, where one steer drained); otherwise
+    /// all of them (`SteeringCleared`/`SteeringUnsupported`, and session-end
+    /// finalization). Returns whether any echo changed, so the caller bumps
+    /// `messages_version` exactly when the transcript changed. Single source for
+    /// the flip logic so the three reconciliation arms can't drift.
+    fn flip_queued_steer_echoes(&mut self, to: SteerEchoStatus, oldest_only: bool) -> bool {
+        let mut changed = false;
+        for msg in self.messages.iter_mut() {
+            if let ChatMessageKind::SteerEcho {
+                status: status @ SteerEchoStatus::Queued,
+                ..
+            } = &mut msg.kind
+            {
+                *status = to;
+                changed = true;
+                if oldest_only {
+                    break;
+                }
+            }
+        }
+        changed
     }
 
     /// Set the current model name (displayed in toolbar).
@@ -1480,6 +1553,284 @@ mod tests {
             matches!(last.kind(), ChatMessageKind::System(s) if s.contains("kiro-cli 2.7.0+")),
             "expected a system message containing the steering text, got {:?}",
             last.kind()
+        );
+    }
+
+    // cyril-bm1j Slice 2 / claim C3: optimistic steer echo appended on send.
+    #[test]
+    fn add_steer_echo_appends_queued() {
+        let mut state = UiState::new(500);
+
+        // (a) the echo carries the user's text, optimistically Queued.
+        state.add_steer_echo("fix tests");
+        let last = state.messages().last().expect("one message");
+        assert!(
+            matches!(last.kind(),
+                ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued } if text == "fix tests"),
+            "expected SteerEcho{{Queued,\"fix tests\"}}, got {:?}",
+            last.kind()
+        );
+
+        // (b) FIFO insertion order is preserved (precondition for Slice 3's oldest-first reconcile).
+        state.add_steer_echo("then this");
+        let msgs = state.messages();
+        assert!(matches!(msgs[msgs.len() - 2].kind(),
+            ChatMessageKind::SteerEcho { text, .. } if text == "fix tests"));
+        assert!(matches!(msgs[msgs.len() - 1].kind(),
+            ChatMessageKind::SteerEcho { text, .. } if text == "then this"));
+
+        // (c) empty text still appends a Queued echo (degenerate-but-valid; no silent drop).
+        state.add_steer_echo("");
+        assert!(matches!(state.messages().last().unwrap().kind(),
+            ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued } if text.is_empty()));
+    }
+
+    // cyril-bm1j Slice 3 / claim C4: SteeringConsumed flips the OLDEST Queued echo.
+    #[test]
+    fn consumed_flips_oldest_queued_echo() {
+        let mut state = UiState::new(500);
+
+        // Helper: collect the statuses of all SteerEcho messages in order.
+        fn steer_statuses(s: &UiState) -> Vec<SteerEchoStatus> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho { status, .. } => Some(*status),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        state.add_steer_echo("E1");
+        state.add_steer_echo("E2");
+        state.add_steer_echo("E3");
+
+        // First consume (content None) flips E1 only — not E2/E3.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Queued,
+                SteerEchoStatus::Queued
+            ],
+            "oldest (E1) flips first"
+        );
+
+        // Second consume (content Some, NOT matching any echo text) flips E2, not E3
+        // — proving `content` is not used as a correlation key.
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: Some("unrelated text".into()),
+        });
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Queued
+            ],
+            "FIFO holds across interleaving; content ignored"
+        );
+
+        // Adversarial: consume with NO Queued echo left after E3 flips -> the 4th
+        // consume finds nothing, no panic, chip saturating_sub floors at 0.
+        state.apply_notification(&Notification::SteeringConsumed { content: None }); // flips E3
+        state.apply_notification(&Notification::SteeringConsumed { content: None }); // nothing to flip
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Applied,
+                SteerEchoStatus::Applied
+            ],
+            "empty-queue consume is a no-op on echoes"
+        );
+        assert_eq!(state.steering_queued(), 0, "chip floors at 0, no underflow");
+    }
+
+    // cyril-bm1j Slice 4 / claim C5: SteeringCleared flips ALL Queued, preserves terminals.
+    #[test]
+    fn cleared_flips_all_queued_echoes() {
+        fn steer_statuses(s: &UiState) -> Vec<SteerEchoStatus> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho { status, .. } => Some(*status),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        let mut state = UiState::new(500);
+        state.add_steer_echo("E1");
+        state.add_steer_echo("E2");
+        state.add_steer_echo("E3");
+        // Flip E1 -> Applied so we can prove Cleared does NOT clobber a terminal state.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+
+        state.apply_notification(&Notification::SteeringCleared);
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied, // E1 preserved, NOT re-flipped to Cleared
+                SteerEchoStatus::Cleared, // E2
+                SteerEchoStatus::Cleared, // E3
+            ],
+            "all Queued -> Cleared; Applied untouched"
+        );
+        assert_eq!(state.steering_queued(), 0);
+
+        // Adversarial: empty transcript + Cleared -> no panic, chip stays 0.
+        let mut empty = UiState::new(500);
+        empty.apply_notification(&Notification::SteeringCleared);
+        assert_eq!(empty.steering_queued(), 0);
+    }
+
+    // cyril-bm1j Slice 5 / claim C6: SteeringUnsupported flips ALL Queued (burst) + one notice.
+    #[test]
+    fn unsupported_flips_all_echoes_and_one_message() {
+        fn steer_statuses(s: &UiState) -> Vec<SteerEchoStatus> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho { status, .. } => Some(*status),
+                    _ => None,
+                })
+                .collect()
+        }
+        fn system_count(s: &UiState) -> usize {
+            s.messages()
+                .iter()
+                .filter(|m| matches!(m.kind(), ChatMessageKind::System(_)))
+                .count()
+        }
+
+        let mut state = UiState::new(500);
+        state.add_steer_echo("E1");
+        state.add_steer_echo("E2");
+        // Flip E1 -> Applied: an already-terminal echo must NOT be re-flipped.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        // Now add two more Queued (burst still in flight when the notice lands).
+        state.add_steer_echo("E3");
+        state.add_steer_echo("E4");
+
+        state.apply_notification(&Notification::SteeringUnsupported {
+            message: "steering requires kiro-cli 2.7.0+".into(),
+        });
+
+        assert_eq!(
+            steer_statuses(&state),
+            vec![
+                SteerEchoStatus::Applied,     // E1 preserved
+                SteerEchoStatus::Unsupported, // E2
+                SteerEchoStatus::Unsupported, // E3
+                SteerEchoStatus::Unsupported, // E4
+            ],
+            "burst: ALL Queued flip on one notice; Applied untouched"
+        );
+        assert_eq!(
+            system_count(&state),
+            1,
+            "exactly one system notice (K1a behavior preserved)"
+        );
+    }
+
+    // cyril-bm1j Slice 6 / claim C9: TurnCompleted resets the steer chip counter.
+    #[test]
+    fn turn_completed_resets_steering_queued() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("a".into()),
+        });
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("b".into()),
+        });
+        state.add_steer_echo("a"); // a live echo, still Queued
+        assert_eq!(state.steering_queued(), 2);
+
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert_eq!(
+            state.steering_queued(),
+            0,
+            "turn-end clears the live chip (today's code FAILS this)"
+        );
+        // Intended divergence: the scrollback echo keeps its status (not flipped).
+        assert!(
+            state.messages().iter().any(|m| matches!(
+                m.kind(),
+                ChatMessageKind::SteerEcho {
+                    status: SteerEchoStatus::Queued,
+                    ..
+                }
+            )),
+            "echo status is unchanged by turn-end (chip is the live HUD, echo is history)"
+        );
+
+        // Adversarial: TurnCompleted at chip 0 stays 0 (no underflow).
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert_eq!(state.steering_queued(), 0);
+    }
+
+    // cyril-bm1j Slice 7: steering_queued() is readable through &dyn TuiState (live, not cached).
+    #[test]
+    fn steering_queued_exposed_via_tuistate_trait() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("a".into()),
+        });
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("b".into()),
+        });
+        assert_eq!((&state as &dyn TuiState).steering_queued(), 2);
+        // Live, not a stale snapshot: a consume is reflected through the trait.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        assert_eq!((&state as &dyn TuiState).steering_queued(), 1);
+    }
+
+    // cyril-bm1j code-review fix: a new session must finalize the prior session's
+    // Queued echoes, else the new session's SteeringConsumed FIFO-flips an orphan.
+    #[test]
+    fn session_created_finalizes_prior_session_steer_echoes() {
+        fn status_of(state: &UiState, text: &str) -> Option<SteerEchoStatus> {
+            state.messages().iter().find_map(|m| match m.kind() {
+                ChatMessageKind::SteerEcho { text: t, status } if t == text => Some(*status),
+                _ => None,
+            })
+        }
+
+        let mut state = UiState::new(500);
+        state.add_steer_echo("old-session steer"); // Queued, never consumed
+
+        // New session abandons the old steer.
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("fresh"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        assert_eq!(
+            status_of(&state, "old-session steer"),
+            Some(SteerEchoStatus::Cleared),
+            "prior-session echo must be finalized on new session, not left Queued"
+        );
+
+        // New session steer + consume must flip the NEW echo, not the old orphan.
+        state.add_steer_echo("new-session steer");
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        assert_eq!(
+            status_of(&state, "new-session steer"),
+            Some(SteerEchoStatus::Applied),
+            "new session's consume flips the NEW echo"
+        );
+        assert_eq!(
+            status_of(&state, "old-session steer"),
+            Some(SteerEchoStatus::Cleared),
+            "old orphan echo is NOT re-flipped to Applied by the new session"
         );
     }
 

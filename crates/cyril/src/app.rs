@@ -655,6 +655,19 @@ impl App {
             let command_name = cmd.name().to_string();
             let args = args.to_string();
             match cmd.execute(&ctx, &args).await {
+                // /steer needs the async steer path (echo + SteerSession); route it
+                // through the same dispatch_steer as Enter-while-busy.
+                Ok(CommandResult {
+                    kind: CommandResultKind::Steer { text },
+                }) => {
+                    return dispatch_steer(
+                        &mut self.ui_state,
+                        &self.session,
+                        &self.bridge_sender,
+                        text,
+                    )
+                    .await;
+                }
                 Ok(result) => self.handle_command_result(result),
                 Err(e) => {
                     tracing::error!(
@@ -669,7 +682,17 @@ impl App {
             return Ok(());
         }
 
-        // Send as prompt
+        // Route by session state (K1b, cyril-bm1j): a busy turn steers instead of
+        // firing a second SendPrompt the bridge would reject — the cyril-2vcc fix.
+        // Prompt/NoSession fall through to the existing block (which handles the
+        // no-session advisory itself).
+        if classify_submit(self.session.status(), self.session.id().is_some()) == SubmitRoute::Steer
+        {
+            return dispatch_steer(&mut self.ui_state, &self.session, &self.bridge_sender, text)
+                .await;
+        }
+
+        // Send as prompt (idle path, unchanged)
         let session_id = match self.session.id() {
             Some(id) => id.clone(),
             None => {
@@ -731,12 +754,114 @@ impl App {
             CommandResultKind::Dispatched => {
                 // Already sent via bridge
             }
+            CommandResultKind::Steer { .. } => {
+                // Routed in submit_input before reaching here (needs async
+                // dispatch_steer). Reaching this arm is a routing bug.
+                tracing::error!("Steer result reached handle_command_result — routing bug");
+            }
             CommandResultKind::Quit => {
                 self.ui_state.request_quit();
             }
         }
         self.redraw_needed = true;
     }
+}
+
+/// Where a non-empty, non-command Enter submit should go (ROADMAP K1b, cyril-bm1j).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SubmitRoute {
+    /// Busy turn in flight → steer it mid-turn instead of starting a 2nd prompt.
+    Steer,
+    /// Idle/other state → send as a normal prompt (unchanged pre-K1b behavior).
+    Prompt,
+    /// No active session → advisory; nothing to prompt or steer.
+    NoSession,
+}
+
+/// Classify a non-empty, non-command Enter submit. Pure decision (the CI-testable
+/// seam behind `submit_input`): only `Busy` steers; everything else with a session
+/// prompts; no session is advisory. `has_session` is checked first — you cannot
+/// steer or prompt a session that does not exist.
+///
+/// Precondition (sanity-hint, caller-guaranteed): called only for non-empty,
+/// non-command text — `submit_input` early-returns on empty and dispatches slash
+/// commands before reaching here. The function ignores text content, so a
+/// violation still yields a correct route; no runtime enforcement is needed.
+fn classify_submit(status: &SessionStatus, has_session: bool) -> SubmitRoute {
+    if !has_session {
+        SubmitRoute::NoSession
+    } else if matches!(status, SessionStatus::Busy) {
+        SubmitRoute::Steer
+    } else {
+        SubmitRoute::Prompt
+    }
+}
+
+/// Whether a steer can be delivered, or why not (ROADMAP K1b, cyril-bm1j).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SteerGate {
+    Send,
+    AdvisoryUnsupported,
+    AdvisoryNoSession,
+}
+
+/// Decide whether a steer should be sent. `has_session` is checked BEFORE
+/// `unsupported` — the message a user sees for "no session" must win over
+/// "unsupported", and a steer needs a session id regardless. Pure (CI-testable).
+fn steer_gate(unsupported: bool, has_session: bool) -> SteerGate {
+    if !has_session {
+        SteerGate::AdvisoryNoSession
+    } else if unsupported {
+        SteerGate::AdvisoryUnsupported
+    } else {
+        SteerGate::Send
+    }
+}
+
+/// Dispatch a queue-steer: the single path shared by Enter-while-busy and the
+/// `/steer` command (ROADMAP K1b, cyril-bm1j). Applies `steer_gate`, adds the
+/// optimistic echo, and emits `SteerSession` — or an advisory when it can't.
+/// Gating on `steering_unsupported()` is the keystone that keeps the optimistic
+/// echo reconcilable: the bridge drops a steer on a known-unsupported session
+/// silently (no notification), so we must not add a `Queued` echo that would
+/// then never resolve.
+///
+/// Precondition (sanity-hint, caller-guaranteed): `text` is non-empty —
+/// `submit_input` early-returns on empty input and `/steer` returns usage for an
+/// empty arg. An empty steer would be a backend no-op, not wrong cyril output, so
+/// a `debug_assert!` suffices (no release-time refusal needed).
+async fn dispatch_steer(
+    ui: &mut UiState,
+    session: &SessionController,
+    bridge: &BridgeSender,
+    text: String,
+) -> cyril_core::Result<()> {
+    debug_assert!(
+        !text.is_empty(),
+        "dispatch_steer callers guarantee non-empty text"
+    );
+    match steer_gate(session.steering_unsupported(), session.id().is_some()) {
+        SteerGate::Send => {
+            // id() is Some — steer_gate just checked has_session.
+            let Some(session_id) = session.id().cloned() else {
+                return Ok(());
+            };
+            ui.add_steer_echo(&text);
+            bridge
+                .send(BridgeCommand::SteerSession {
+                    session_id,
+                    message: text,
+                })
+                .await?;
+        }
+        SteerGate::AdvisoryUnsupported => ui.add_system_message(
+            "Steering isn't supported by this backend (needs kiro-cli 2.7.0+).".into(),
+        ),
+        SteerGate::AdvisoryNoSession => {
+            ui.add_system_message("No active session — nothing to steer.".into())
+        }
+    }
+    Ok(())
 }
 
 /// Produce a concise one-line summary from a (possibly multi-line) tool description.
@@ -1170,6 +1295,134 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    // cyril-bm1j Slice 9 / claims C1, C2: submit routing truth table.
+    #[test]
+    fn classify_submit_truth_table() {
+        // C1: busy + session -> Steer.
+        assert_eq!(
+            classify_submit(&SessionStatus::Busy, true),
+            SubmitRoute::Steer
+        );
+        // C2: idle (Active) + session -> Prompt.
+        assert_eq!(
+            classify_submit(&SessionStatus::Active, true),
+            SubmitRoute::Prompt
+        );
+        // No session -> NoSession.
+        assert_eq!(
+            classify_submit(&SessionStatus::Disconnected, false),
+            SubmitRoute::NoSession
+        );
+        // Adversarial: busy but no session -> NoSession (no-session beats busy).
+        assert_eq!(
+            classify_submit(&SessionStatus::Busy, false),
+            SubmitRoute::NoSession
+        );
+        // Only Busy steers — other present-session states prompt (unchanged path).
+        assert_eq!(
+            classify_submit(&SessionStatus::Compacting, true),
+            SubmitRoute::Prompt
+        );
+        assert_eq!(
+            classify_submit(&SessionStatus::Initializing, true),
+            SubmitRoute::Prompt
+        );
+        // Error is the only data-carrying SessionStatus variant; the design lists
+        // (Error,true)->Prompt. A future broadening of the steer predicate must not
+        // silently route an errored session's Enter to a steer it can't accept.
+        assert_eq!(
+            classify_submit(
+                &SessionStatus::Error {
+                    message: "boom".into()
+                },
+                true
+            ),
+            SubmitRoute::Prompt
+        );
+    }
+
+    // cyril-bm1j Slice 10 / claim C7: steer gate truth table.
+    #[test]
+    fn steer_gate_truth_table() {
+        assert_eq!(steer_gate(false, true), SteerGate::Send);
+        assert_eq!(steer_gate(true, true), SteerGate::AdvisoryUnsupported);
+        assert_eq!(steer_gate(false, false), SteerGate::AdvisoryNoSession);
+        // Adversarial: unsupported AND no session -> NoSession wins (checked first).
+        assert_eq!(steer_gate(true, false), SteerGate::AdvisoryNoSession);
+    }
+
+    // cyril-bm1j Slice 11 / claims C1+C3+C7 integration + cyril-2vcc regression.
+    #[tokio::test]
+    async fn dispatch_steer_busy_sends_steer_and_echoes() {
+        let (tx, mut rx) = mpsc::channel(8);
+        let bridge = BridgeSender::from_sender(tx);
+        let mut ui = UiState::new(500);
+        let mut session = SessionController::new();
+        session.set_session(SessionId::new("sess_1"), SessionStatus::Busy);
+
+        dispatch_steer(&mut ui, &session, &bridge, "halt".into())
+            .await
+            .unwrap();
+
+        // cyril-2vcc: a busy submit emits SteerSession, NOT a second SendPrompt
+        // (which the bridge would reject -> the message would be lost).
+        match rx.try_recv() {
+            Ok(BridgeCommand::SteerSession { message, .. }) => assert_eq!(message, "halt"),
+            other => panic!("expected SteerSession{{halt}}, got {other:?}"),
+        }
+        // Optimistic Queued echo present immediately.
+        assert!(
+            ui.messages().iter().any(|m| matches!(
+                m.kind(),
+                cyril_ui::traits::ChatMessageKind::SteerEcho {
+                    text,
+                    status: cyril_ui::traits::SteerEchoStatus::Queued,
+                } if text == "halt"
+            )),
+            "expected a Queued steer echo for 'halt'"
+        );
+    }
+
+    // cyril-bm1j Slice 11 / claim C7 keystone: unsupported -> no send, no echo.
+    #[tokio::test]
+    async fn dispatch_steer_unsupported_sends_nothing_no_echo() {
+        let (tx, mut rx) = mpsc::channel(8);
+        let bridge = BridgeSender::from_sender(tx);
+        let mut ui = UiState::new(500);
+        let mut session = SessionController::new();
+        session.set_session(SessionId::new("sess_1"), SessionStatus::Busy);
+        session.apply_notification(&Notification::SteeringUnsupported {
+            message: "steering requires kiro-cli 2.7.0+".into(),
+        });
+
+        dispatch_steer(&mut ui, &session, &bridge, "halt".into())
+            .await
+            .unwrap();
+
+        // Keystone: nothing sent on a known-unsupported session, so no optimistic
+        // echo can ever get stuck (the bridge drops such steers silently).
+        assert!(
+            rx.try_recv().is_err(),
+            "unsupported session must not send a SteerSession"
+        );
+        assert!(
+            !ui.messages().iter().any(|m| matches!(
+                m.kind(),
+                cyril_ui::traits::ChatMessageKind::SteerEcho {
+                    status: cyril_ui::traits::SteerEchoStatus::Queued,
+                    ..
+                }
+            )),
+            "no Queued echo on an unsupported session"
+        );
+        assert!(
+            ui.messages()
+                .iter()
+                .any(|m| matches!(m.kind(), cyril_ui::traits::ChatMessageKind::System(_))),
+            "an advisory system message is shown instead"
+        );
+    }
 
     #[test]
     fn format_response_tools_list() {
