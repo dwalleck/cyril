@@ -246,12 +246,13 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
             let style = Style::default().fg(color).add_modifier(Modifier::ITALIC);
             // Steers are short; render the first line with the status suffix and
             // indent any continuation lines under it.
-            let first = text.lines().next().unwrap_or("");
+            let mut lines_iter = text.lines();
+            let first = lines_iter.next().unwrap_or("");
             lines.push(Line::styled(
                 format!("  ↳ steer: {first} — {suffix}"),
                 style,
             ));
-            for line in text.lines().skip(1) {
+            for line in lines_iter {
                 lines.push(Line::styled(format!("    {line}"), style));
             }
         }
