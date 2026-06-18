@@ -406,6 +406,11 @@ impl UiState {
                 if let Some(m) = self.last_turn.as_ref().and_then(|t| t.metering()) {
                     self.session_cost.record_turn(m);
                 }
+                // Reset the steer chip on turn-end (K1b, cyril-bm1j): a steer
+                // un-consumed by turn-end can't drain (no more tool boundaries this
+                // turn), so the live HUD count must not stick. The SteerEcho entries
+                // in scrollback keep their last status — intended chip/echo divergence.
+                self.steering_queued = 0;
                 self.set_activity(Activity::Ready);
                 true
             }
@@ -1722,6 +1727,46 @@ mod tests {
             1,
             "exactly one system notice (K1a behavior preserved)"
         );
+    }
+
+    // cyril-bm1j Slice 6 / claim C9: TurnCompleted resets the steer chip counter.
+    #[test]
+    fn turn_completed_resets_steering_queued() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("a".into()),
+        });
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("b".into()),
+        });
+        state.add_steer_echo("a"); // a live echo, still Queued
+        assert_eq!(state.steering_queued(), 2);
+
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert_eq!(
+            state.steering_queued(),
+            0,
+            "turn-end clears the live chip (today's code FAILS this)"
+        );
+        // Intended divergence: the scrollback echo keeps its status (not flipped).
+        assert!(
+            state.messages().iter().any(|m| matches!(
+                m.kind(),
+                ChatMessageKind::SteerEcho {
+                    status: SteerEchoStatus::Queued,
+                    ..
+                }
+            )),
+            "echo status is unchanged by turn-end (chip is the live HUD, echo is history)"
+        );
+
+        // Adversarial: TurnCompleted at chip 0 stays 0 (no underflow).
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        assert_eq!(state.steering_queued(), 0);
     }
 
     // Slice A / design claim 13: queue mirror queued->1, consumed->0, floor at 0.
