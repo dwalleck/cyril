@@ -63,6 +63,7 @@ When reverse-engineering Kiro CLI or similar tools, follow this priority order:
 2. **Bundled source extraction** — Kiro ships a bundled `tui.js` (React/Ink TUI) that contains TypeScript interfaces and protocol handling; extract and read it
 3. **Binary string extraction** — `strings` / symbol analysis on unstripped binaries as a last resort
 4. **Protocol tracing** — use the logging proxy at `experiments/kiro-proxy-rs/` to capture live ACP traffic
+5. **Embedded doc-manifest delta** — `kiro-cli-chat` embeds a build-time documentation index (`{generated_at, total_docs, documents[]}`, two manifests in 2.8.1) that is a *superset* of the public kiro.dev docs and leaks unannounced features (e.g. `voice-mode`/Whisper). Diff `documents[]` (by `path`+`title`+`validated`) against the prior release each audit; baseline + extractor output at `docs/kiro-docs-index-2.8.1*`. See the doc-manifest addendum in the wire-audit methodology.
 
 Check logs and databases before attempting binary analysis — they're more reliable and faster to work with.
 

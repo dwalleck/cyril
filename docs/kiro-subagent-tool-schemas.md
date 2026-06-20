@@ -381,3 +381,41 @@ Parsing it would let the crew panel show planned stages sooner.
 > trap. Any code that special-cases the orchestrator's subagent tool call MUST match the
 > full set `{"session_management", "subagent", "agent_crew"}` (see *Tool-name aliasing*
 > above), not a single literal, and tolerate `raw_input` being absent (it's `Option`).
+
+## KAS subagent observability — and how it relates to the `_kiro/sessions/changed` roster
+
+Verified against the embedded `@kiro/agent` 0.3.257 source maps (2026-06-18; see
+[kiro-2.8.1-wire-audit.md](kiro-2.8.1-wire-audit.md)). On the **KAS** engine subagent activity
+is surfaced through a different channel than the v2 `subagent/list_update`:
+
+- **Subagents are real persisted sessions, but they do NOT appear in the live roster.** The
+  covenant `CreatedReasonSchema = z.enum(['human','rewind','subagent','thread'])` and the
+  `SessionMetadata` / `SessionSummary` schemas carry `parentSessionId` + `parentExecutionId`,
+  so a subagent session is persisted with its parent linkage and shows up in **`session/list`**
+  (full history). But the new live **`_kiro/sessions/changed`** roster excludes it:
+  `SessionRosterManager.track()` is reached only via `trackSessionInRoster()`, which the
+  `agent.ts` source calls from exactly two sites — the ACP **`session/new`** and
+  **`session/load`** handlers. Subagents are spawned internally by the subagent tool
+  (`createSubagentInvocationTools` → tools named `subagent/<agentId>`), never via `session/new`,
+  and the `SessionRosterEntry` has no `parentSessionId` field.
+- **Live subagent work streams through the PARENT session.** `execution-message-adapter.ts`
+  tags sub-agent tool calls/results with `subExecutionId` (*"Add subExecutionId if this tool
+  call belongs to a sub-agent"*), which becomes **`agentSubtaskId`** on the wire — the same
+  grouping CLAUDE.md documents for the KAS engine. So a KAS crew panel is built from the
+  focused session's `session/update` stream grouped by `agentSubtaskId`, **not** from the
+  session roster.
+- **cyril implication:** keep `SessionTracker` (top-level/peer, roster-fed) and
+  `SubagentTracker` / crew rendering (parent-stream-fed) as separate concerns — KAS draws the
+  same line at the protocol level. The `_kiro/sessions/changed` roster feeds the *session-level*
+  (peer-session) workflow path, not subagent rendering (which stays KAS-3's `agentSubtaskId`
+  job).
+
+> **Docs-vs-bundle discrepancy — built-in semantic reviewer.** The public docs
+> (https://kiro.dev/docs/cli/chat/subagents/) state there are no pre-built reviewer agents
+> (review agents are user-configured). The 0.3.257 bundle disagrees: there is a **per-session
+> `semanticReviewEnabled` toggle** gating a built-in *"semantic-reviewer subagent"* — a
+> covenant `SessionMetadata` field ("Whether the semantic-reviewer subagent participates in
+> this session", persisted across reload) plus a `prompt-template.ts` Mustache section
+> `{{#semanticReviewEnabled}}…{{/semanticReviewEnabled}}` wrapping reviewer content in the
+> planner profiles. This confirms the bundled `semantic_reviewer` / `functional_task_alignment`
+> verification agents the CLAUDE.md KAS note describes; the public docs understate it.

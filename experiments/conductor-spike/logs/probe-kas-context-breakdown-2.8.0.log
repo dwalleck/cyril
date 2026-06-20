@@ -1,0 +1,42 @@
+# KIRO=/home/dwalleck/.local/share/kiro-research/binaries/2.8.0/kiro-cli-chat
+# CWD=/home/dwalleck/.claude/tmp/kas-ctxbd-u2v823k1  (notes.md = 23373 bytes)
+# agentCapabilities: {"loadSession": true, "promptCapabilities": {"image": true, "embeddedContext": true}, "mcpCapabilities": {"http": true, "sse": true}, "sessionCapabilities": {"list": {}, "fork": {"_meta": {"kiro": {"messageId": true}}}}, "_meta": {"kiro": {
+# sessionId: sess_74a5babc-c25c-4938-9955-e9fe6e1d38fc
+# turn complete: True  context_usage frames seen: 6
+
+===== secondary: v2-style kiro.dev/commands/execute {command:'context'} =====
+  error: {"code": -32603, "message": "Internal error", "data": {"details": "[PersistenceClassification] Ext method \"kiro.dev/commands/execute\" has no persistence classification. Add it to KnownExtMethod in p
+
+===== context_usage frames (cadence) =====
+  [0] usagePercentage=4.3  breakdown=present buckets=['contextFiles', 'tools', 'kiroResponses', 'yourPrompts', 'sessionFiles']
+  [1] usagePercentage=1.9782999753952026  breakdown=absent
+  [2] usagePercentage=1.9782999753952026  breakdown=present buckets=['contextFiles', 'tools', 'kiroResponses', 'yourPrompts', 'sessionFiles']
+  [3] usagePercentage=7.890799522399902  breakdown=absent
+  [4] usagePercentage=7.890799522399902  breakdown=present buckets=['contextFiles', 'tools', 'kiroResponses', 'yourPrompts', 'sessionFiles']
+  [5] usagePercentage=7.890799522399902  breakdown=present buckets=['contextFiles', 'tools', 'kiroResponses', 'yourPrompts', 'sessionFiles']
+
+===== per-bucket analysis (most-populated frame) =====
+  usagePercentage=7.890799522399902
+  contextFiles   : tokens=0, percent=0, items=0 entries, keys=['items', 'percent', 'tokens']
+  tools          : tokens=33703, percent=3.4, items=ABSENT, keys=['percent', 'tokens']
+  yourPrompts    : tokens=4378, percent=4.5, items=ABSENT, keys=['percent', 'tokens']
+  kiroResponses  : tokens=32, percent=0, items=ABSENT, keys=['percent', 'tokens']
+  sessionFiles   : tokens=0, percent=0, items=0 entries, keys=['items', 'percent', 'tokens']
+
+===== THE ANSWER: full `tools` bucket verbatim =====
+{
+  "tokens": 33703,
+  "percent": 3.4
+}
+
+  >>> tools.items present?  -> NO 
+
+===== positive control: full `contextFiles` bucket verbatim =====
+{
+  "tokens": 0,
+  "percent": 0,
+  "items": []
+}
+  >>> contextFiles.items present? -> YES
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-context-breakdown-2.8.0.log
