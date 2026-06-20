@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use cyril_core::types::{CommandOption, EffortLevel, HookInfo, Plan};
+use cyril_core::types::{CommandOption, EffortLevel, HookInfo, Plan, VoiceStatus};
 
 /// Activity state derived from UiState — used for adaptive frame rate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -43,6 +43,15 @@ pub trait TuiState {
     fn effort(&self) -> Option<EffortLevel>;
     /// Count of un-consumed queued steers (ROADMAP K1b). Drives the toolbar chip.
     fn steering_queued(&self) -> usize;
+    /// Current voice-input status (ROADMAP CN2). Defaults to `Idle` for state
+    /// impls that don't track voice (e.g. render-test mocks).
+    fn voice_status(&self) -> VoiceStatus {
+        VoiceStatus::Idle
+    }
+    /// Current voice input level in `0.0..=1.0`, meaningful while listening.
+    fn voice_level(&self) -> f32 {
+        0.0
+    }
     fn context_usage(&self) -> Option<f64>;
     fn credit_usage(&self) -> Option<(f64, f64)>;
     fn last_turn(&self) -> Option<&cyril_core::types::TurnSummary>;

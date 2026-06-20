@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/cyril-core", "crates/cyril-ui", "crates/cyril"]
+members = ["crates/cyril-core", "crates/cyril-ui", "crates/cyril-voice", "crates/cyril"]
 
 [workspace.package]
 version = "0.2.0-alpha.1"

@@ -424,6 +424,7 @@ dependencies = [
  "crossterm",
  "cyril-core",
  "cyril-ui",
+ "cyril-voice",
  "futures-util",
  "ratatui",
  "rstest",
@@ -473,6 +474,15 @@ dependencies = [
  "tokio",
  "tracing",
  "unicode-width",
+]
+
+[[package]]
+name = "cyril-voice"
+version = "0.2.0-alpha.1"
+dependencies = [
+ "cyril-core",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

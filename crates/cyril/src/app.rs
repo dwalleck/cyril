@@ -19,6 +19,20 @@ use cyril_core::types::code_panel::CodeCommandResponse;
 /// Lines per mouse wheel tick (finer-grained than keyboard half-page scroll).
 const MOUSE_SCROLL_LINES: usize = 3;
 
+/// Spawn the voice engine when the `voice` feature is enabled. This is the only
+/// feature-gated site — everything downstream operates on the always-present
+/// `Option<VoiceHandle>` and cyril-core voice types, so the `select!` arm and
+/// command routing need no `#[cfg]`.
+#[cfg(feature = "voice")]
+fn spawn_voice_engine() -> Option<cyril_core::voice::VoiceHandle> {
+    Some(cyril_voice::spawn_voice())
+}
+
+#[cfg(not(feature = "voice"))]
+fn spawn_voice_engine() -> Option<cyril_core::voice::VoiceHandle> {
+    None
+}
+
 pub struct App {
     bridge_sender: BridgeSender,
     notification_rx: mpsc::Receiver<RoutedNotification>,
@@ -31,6 +45,18 @@ pub struct App {
     /// The cwd kiro-cli was spawned in — used to resolve the active agent's
     /// workspace config (`<cwd>/.kiro/agents/`) when persisting trust grants.
     cwd: PathBuf,
+    /// Voice-input engine handle (ROADMAP CN2). `None` when the `voice` feature
+    /// is off (or the engine could not start). The type lives in cyril-core so
+    /// this field and its `select!` arm compile regardless of the feature.
+    voice: Option<cyril_core::voice::VoiceHandle>,
+    /// Authoritative "is voice capturing?" intent. Flipped on each successful
+    /// Start/Stop send (and cleared on engine `Error`). Toggling reads this —
+    /// NOT the lagging `ui_state.voice_status()` projection — so rapid `/voice`
+    /// presses (drained as a batch before the engine's Status echo arrives)
+    /// alternate Start/Stop correctly instead of both sending `Start`. In V1a
+    /// the engine only changes capture state in response to commands, so this
+    /// optimistic model tracks it exactly; see the V1b note in `handle_voice_event`.
+    voice_active: bool,
 }
 
 impl App {
@@ -63,6 +89,8 @@ impl App {
             redraw_needed: true,
             last_activity: Instant::now(),
             cwd,
+            voice: spawn_voice_engine(),
+            voice_active: false,
         }
     }
 
@@ -150,7 +178,18 @@ impl App {
                     self.redraw_needed = true;
                 }
 
-                // Priority 4: Redraw tick
+                // Priority 4: Voice engine events (CN2). Resolves to `pending`
+                // (never fires) when the voice feature is off — `voice` is None.
+                voice_event = Self::next_voice_event(&mut self.voice) => {
+                    match voice_event {
+                        Some(ev) => self.handle_voice_event(ev),
+                        // Channel closed: the engine thread exited. Stop polling
+                        // so the branch parks on `pending` instead of busy-looping.
+                        None => self.voice = None,
+                    }
+                }
+
+                // Priority 5: Redraw tick
                 _ = redraw_interval.tick() => {
                     // Flush stream buffer on tick
                     if self.ui_state.flush_stream_buffer() {
@@ -173,12 +212,14 @@ impl App {
                 }
             }
 
-            // Adaptive frame rate — account for subagent activity as well as main session.
-            let effective_activity = if self.ui_state.any_subagent_active() {
-                Activity::Streaming
-            } else {
-                self.ui_state.activity()
-            };
+            // Adaptive frame rate — account for subagent and voice activity as
+            // well as the main session (the voice meter animates while listening).
+            let effective_activity =
+                if self.ui_state.any_subagent_active() || self.ui_state.any_voice_active() {
+                    Activity::Streaming
+                } else {
+                    self.ui_state.activity()
+                };
             let new_duration = Self::redraw_duration(effective_activity);
             redraw_interval = tokio::time::interval(new_duration);
             redraw_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -759,11 +800,80 @@ impl App {
                 // dispatch_steer). Reaching this arm is a routing bug.
                 tracing::error!("Steer result reached handle_command_result — routing bug");
             }
+            CommandResultKind::ToggleVoice => {
+                self.toggle_voice();
+            }
             CommandResultKind::Quit => {
                 self.ui_state.request_quit();
             }
         }
         self.redraw_needed = true;
+    }
+
+    /// Await the next event from the voice engine, or never resolve when voice
+    /// is disabled (the handle is `None`). Lets the `select!` arm stay cfg-free.
+    async fn next_voice_event(
+        voice: &mut Option<cyril_core::voice::VoiceHandle>,
+    ) -> Option<VoiceEvent> {
+        match voice {
+            Some(handle) => handle.recv_event().await,
+            None => std::future::pending().await,
+        }
+    }
+
+    /// Apply a voice engine event to UI state (ROADMAP CN2).
+    fn handle_voice_event(&mut self, event: VoiceEvent) {
+        match event {
+            VoiceEvent::Level(level) => self.ui_state.set_voice_level(level),
+            VoiceEvent::Status(status) => self.ui_state.set_voice_status(status),
+            // The payoff: a finished transcript drops into the input buffer.
+            VoiceEvent::Transcript(text) => self.ui_state.insert_text(&text),
+            VoiceEvent::Error(msg) => {
+                // The engine bailed → it is no longer capturing. Clear intent so
+                // the next /voice starts fresh.
+                self.voice_active = false;
+                self.ui_state.set_voice_status(VoiceStatus::Idle);
+                self.ui_state
+                    .add_system_message(format!("Voice error: {msg}"));
+            }
+        }
+        // Note (V1b): when the engine gains engine-initiated stops (silence
+        // timeout), do NOT naively reconcile `voice_active` from a `Status(Idle)`
+        // event — a stale Idle from a completed Stop can arrive after a newer
+        // Start and wedge the toggle. Tag commands/events with a generation, or
+        // emit a distinct auto-stopped event, and reconcile on that.
+        self.redraw_needed = true;
+    }
+
+    /// Toggle voice capture (the `/voice` command). Decides Start vs Stop from
+    /// the authoritative `voice_active` intent (not the lagging UI projection),
+    /// and reports gracefully if voice isn't compiled in or is backpressured.
+    /// `redraw_needed` is set by the caller (`handle_command_result`).
+    fn toggle_voice(&mut self) {
+        let Some(handle) = self.voice.as_ref() else {
+            self.ui_state.add_system_message(
+                "Voice input isn't compiled in — rebuild with `--features voice`.".into(),
+            );
+            return;
+        };
+        let cmd = if self.voice_active {
+            VoiceCommand::Stop
+        } else {
+            VoiceCommand::Start
+        };
+        match handle.try_send_command(cmd) {
+            // Flip intent only on a successful send so it never drifts from
+            // what the engine was actually told.
+            Ok(()) => self.voice_active = !self.voice_active,
+            Err(e) => {
+                tracing::warn!(error = %e, "failed to send voice command");
+                let detail = match e {
+                    cyril_core::voice::VoiceError::Busy => "Voice engine busy — try again.",
+                    cyril_core::voice::VoiceError::ChannelClosed => "Voice subsystem unavailable.",
+                };
+                self.ui_state.add_system_message(detail.into());
+            }
+        }
     }
 }
 

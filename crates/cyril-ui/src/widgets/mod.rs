@@ -8,3 +8,4 @@ pub mod markdown;
 pub mod picker;
 pub mod suggestions;
 pub mod toolbar;
+pub mod voice;

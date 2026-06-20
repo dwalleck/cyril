@@ -86,6 +86,11 @@ pub struct UiState {
     // `steering_*` notifications for K1b's toolbar chip. Render is K1b.
     steering_queued: usize,
 
+    // Voice input (CN2 / V1a). Projected by App from VoiceEvents. `voice_level`
+    // is only meaningful while `voice_status == Listening`.
+    voice_status: VoiceStatus,
+    voice_level: f32,
+
     // Config
     max_messages: usize,
 }
@@ -153,6 +158,14 @@ impl TuiState for UiState {
 
     fn steering_queued(&self) -> usize {
         self.steering_queued
+    }
+
+    fn voice_status(&self) -> VoiceStatus {
+        self.voice_status
+    }
+
+    fn voice_level(&self) -> f32 {
+        self.voice_level
     }
 
     fn context_usage(&self) -> Option<f64> {
@@ -266,6 +279,8 @@ impl UiState {
             quit_requested: false,
             deep_idle: false,
             steering_queued: 0,
+            voice_status: VoiceStatus::Idle,
+            voice_level: 0.0,
             max_messages,
         }
     }
@@ -1046,6 +1061,28 @@ impl UiState {
     /// True if any subagent stream is actively streaming or running tools.
     pub fn any_subagent_active(&self) -> bool {
         self.subagents.any_active()
+    }
+
+    // --- Voice input (CN2 / V1a) ---
+
+    /// Update the voice status. Clears the level when leaving the listening
+    /// state so a stale meter doesn't linger.
+    pub fn set_voice_status(&mut self, status: VoiceStatus) {
+        if !matches!(status, VoiceStatus::Listening) {
+            self.voice_level = 0.0;
+        }
+        self.voice_status = status;
+    }
+
+    /// Update the current voice input level (clamped to `0.0..=1.0`).
+    pub fn set_voice_level(&mut self, level: f32) {
+        self.voice_level = level.clamp(0.0, 1.0);
+    }
+
+    /// True while voice capture/transcription is in progress — drives the
+    /// fast-tick frame rate so the meter animates.
+    pub fn any_voice_active(&self) -> bool {
+        !matches!(self.voice_status, VoiceStatus::Idle)
     }
 
     /// Recompute autocomplete suggestions based on current input text.
@@ -2301,6 +2338,36 @@ mod tests {
         assert_eq!(text, "hello");
         assert_eq!(state.input_text(), "");
         assert_eq!(state.input_cursor(), 0);
+    }
+
+    #[test]
+    fn voice_status_listening_tracks_level_then_clears_on_idle() {
+        let mut state = UiState::new(500);
+        assert!(!state.any_voice_active());
+
+        state.set_voice_status(VoiceStatus::Listening);
+        state.set_voice_level(0.8);
+        assert!(state.any_voice_active());
+        assert_eq!(state.voice_status(), VoiceStatus::Listening);
+        assert!((state.voice_level() - 0.8).abs() < f32::EPSILON);
+
+        // Leaving the listening state clears the meter so it doesn't linger.
+        state.set_voice_status(VoiceStatus::Transcribing);
+        assert!(state.any_voice_active());
+        assert_eq!(state.voice_level(), 0.0);
+
+        state.set_voice_status(VoiceStatus::Idle);
+        assert!(!state.any_voice_active());
+    }
+
+    #[test]
+    fn voice_level_is_clamped() {
+        let mut state = UiState::new(500);
+        state.set_voice_status(VoiceStatus::Listening);
+        state.set_voice_level(2.5);
+        assert_eq!(state.voice_level(), 1.0);
+        state.set_voice_level(-1.0);
+        assert_eq!(state.voice_level(), 0.0);
     }
 
     #[test]
