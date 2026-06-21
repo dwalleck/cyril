@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 
 use crate::protocol::convert::session_created_from_response;
+use crate::protocol::engine::{Engine, V2Engine};
 use crate::types::StopReason;
 use crate::types::agent_command::AgentCommand;
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
@@ -274,10 +275,14 @@ async fn run_bridge(
     // 1. Spawn agent process
     let process = AgentProcess::spawn(agent_command, cwd).await?;
 
-    // 2. Create KiroClient
+    // 2. Bind the engine (KAS-0, ADR-0001) and create the KiroClient that
+    //    dispatches conversion through it. v2 is the only engine wired today;
+    //    the bridge holds one `Rc<dyn Engine>` for its life.
+    let engine: std::rc::Rc<dyn Engine> = std::rc::Rc::new(V2Engine);
     let client = KiroClient::new(
         channels.notification_tx.clone(),
         channels.permission_tx.clone(),
+        engine.clone(),
     );
 
     // 3. Create the ACP connection.
@@ -299,7 +304,7 @@ async fn run_bridge(
         }
     });
 
-    run_loop(std::rc::Rc::new(conn), channels, cwd.to_path_buf()).await
+    run_loop(std::rc::Rc::new(conn), channels, cwd.to_path_buf(), engine).await
 }
 
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
@@ -310,6 +315,7 @@ async fn run_loop(
     conn: std::rc::Rc<agent_client_protocol::ClientSideConnection>,
     mut channels: BridgeChannels,
     cwd: std::path::PathBuf,
+    engine: std::rc::Rc<dyn Engine>,
 ) -> crate::Result<()> {
     use acp::Agent;
     use agent_client_protocol as acp;
@@ -317,7 +323,7 @@ async fn run_loop(
     // 4. ACP handshake
     let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::V1)
         .client_info(acp::Implementation::new("cyril", env!("CARGO_PKG_VERSION")))
-        .client_capabilities(acp::ClientCapabilities::new());
+        .client_capabilities(engine.client_capabilities());
 
     let _init_response: acp::InitializeResponse =
         conn.initialize(init_request).await.map_err(|e| {
@@ -1374,9 +1380,11 @@ mod tests {
         local
             .run_until(async move {
                 let (handle, channels) = create_channel_pair();
+                let engine: Rc<dyn Engine> = Rc::new(V2Engine);
                 let client = KiroClient::new(
                     channels.notification_tx.clone(),
                     channels.permission_tx.clone(),
+                    engine.clone(),
                 );
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);
                 let (cr, cw) = tokio::io::split(c_io);
@@ -1406,6 +1414,7 @@ mod tests {
                     Rc::new(conn),
                     channels,
                     std::env::temp_dir(),
+                    engine,
                 ));
                 let (sender, notif_rx, _perm_rx) = handle.split();
                 body(sender, notif_rx, gate, loop_handle).await;

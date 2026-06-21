@@ -11,7 +11,9 @@ Shape: 7 slices, ordered so each is independently green. Slices 1 and 2 are inde
 
 ## Slice 1: `Engine` trait + `V2Engine`, wired through `convert` and `client_capabilities`
 
-**Claim:** D6 + Engine core surface. The Kiro-scoped `Engine` trait (`convert`, `client_capabilities`, `as_auth_responder() -> Option<&dyn AuthResponder>` default `None`) exists; `V2Engine` implements it by **delegating `convert` to the existing `convert::session_update_to_notification` / `convert::kiro::to_ext_notification`** and returning the same empty `ClientCapabilities`. `KiroClient` calls `engine.convert(...)`; `run_bridge` builds `Rc<dyn Engine> = V2Engine` and uses `engine.client_capabilities()` at the handshake.
+**Claim:** Engine core surface (D6 deferred to KAS-1 — see below). The Kiro-scoped `Engine` trait has TWO convert methods (`convert_session_update` → `Option`, `convert_ext_notification` → `Result<Option>` — the plan's "convert" was shorthand for both wire dialects) + `client_capabilities`; `V2Engine` implements it by **delegating to the existing `convert::session_update_to_notification` / `convert::kiro::to_ext_notification`** and returning the same empty `ClientCapabilities`. `KiroClient` calls `engine.convert_*`; `run_bridge` builds `Rc<dyn Engine> = V2Engine` and uses `engine.client_capabilities()` at the handshake.
+
+> **D6 (capability `as_*` accessor + `AuthResponder` stub) moved to KAS-1 (cyril-evwh).** Checkpointed-build found a consumer-less stub is dead code under `-D warnings` (no `#[allow]` allowed). ADR-0001 amended; the accessor pattern lands with its first real consumer in KAS-1.
 
 **Oracle:** every existing `convert`/`client` test passes **unchanged** (delegation is identity); plus a direct equality check `V2Engine.convert(frame) == <old direct convert>(frame)` over captured frames.
 

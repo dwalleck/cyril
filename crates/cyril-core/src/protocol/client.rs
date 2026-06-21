@@ -17,17 +17,22 @@ pub(crate) struct KiroClient {
     notification_tx: mpsc::Sender<RoutedNotification>,
     permission_tx: mpsc::Sender<PermissionRequest>,
     tool_call_inputs: RefCell<HashMap<String, serde_json::Value>>,
+    /// The bound engine (ADR-0001): all wire→internal conversion dispatches
+    /// through it, so v2 and KAS share this client unchanged.
+    engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
 }
 
 impl KiroClient {
     pub fn new(
         notification_tx: mpsc::Sender<RoutedNotification>,
         permission_tx: mpsc::Sender<PermissionRequest>,
+        engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
     ) -> Self {
         Self {
             notification_tx,
             permission_tx,
             tool_call_inputs: RefCell::new(HashMap::new()),
+            engine,
         }
     }
 }
@@ -98,7 +103,7 @@ impl acp::Client for KiroClient {
 
         let notification = {
             let inputs = self.tool_call_inputs.borrow();
-            convert::session_update_to_notification(&args, &inputs)
+            self.engine.convert_session_update(&args, &inputs)
         };
         if let Some(notification) = notification {
             // Every session notification carries the session_id from the
@@ -128,7 +133,10 @@ impl acp::Client for KiroClient {
             }
         };
 
-        match convert::kiro::to_ext_notification(args.method.as_ref(), &params) {
+        match self
+            .engine
+            .convert_ext_notification(args.method.as_ref(), &params)
+        {
             Ok(Some(notification)) => {
                 // ToolCallChunk carries an inline session_id from the outer
                 // kiro.dev/session/update envelope. Promote it to the
