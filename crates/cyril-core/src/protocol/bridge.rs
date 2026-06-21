@@ -279,8 +279,12 @@ async fn run_bridge(
     //    dispatches conversion through it. v2 is the only engine wired today;
     //    the bridge holds one `Rc<dyn Engine>` for its life.
     let engine: std::rc::Rc<dyn Engine> = std::rc::Rc::new(V2Engine);
+    // Internal notification channel (ADR-0004): the KiroClient and the off-loop
+    // prompt task feed `inbound_tx`; `run_loop` drains `inbound_rx`, observes
+    // turn-end, and forwards to the App's `channels.notification_tx`.
+    let (inbound_tx, inbound_rx) = mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
     let client = KiroClient::new(
-        channels.notification_tx.clone(),
+        inbound_tx.clone(),
         channels.permission_tx.clone(),
         engine.clone(),
     );
@@ -304,7 +308,15 @@ async fn run_bridge(
         }
     });
 
-    run_loop(std::rc::Rc::new(conn), channels, cwd.to_path_buf(), engine).await
+    run_loop(
+        std::rc::Rc::new(conn),
+        channels,
+        cwd.to_path_buf(),
+        engine,
+        inbound_tx,
+        inbound_rx,
+    )
+    .await
 }
 
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
@@ -316,6 +328,11 @@ async fn run_loop(
     mut channels: BridgeChannels,
     cwd: std::path::PathBuf,
     engine: std::rc::Rc<dyn Engine>,
+    // Single-mediator internal channel (ADR-0004): the KiroClient and the
+    // off-loop prompt task feed `inbound_tx`; the loop drains `inbound_rx`,
+    // observes `TurnCompleted` to clear the busy flag, and forwards to the App.
+    inbound_tx: mpsc::Sender<RoutedNotification>,
+    mut inbound_rx: mpsc::Receiver<RoutedNotification>,
 ) -> crate::Result<()> {
     use acp::Agent;
     use agent_client_protocol as acp;
@@ -343,15 +360,30 @@ async fn run_loop(
     // SessionController's reset of `steering_unsupported` on SessionCreated.
     let mut steering_unsupported: std::collections::HashSet<crate::types::SessionId> =
         std::collections::HashSet::new();
-    // cyril-84ca: the in-flight turn's task + the session it runs on — at most
-    // one. `is_finished()` makes the "busy" check self-clearing, so a completed
-    // turn never blocks the next. The session id is kept so CancelRequest targets
-    // the running turn even when a mid-turn NewSession/LoadSession (the loop is
-    // now free during a turn) has retargeted `active_session_id`.
-    let mut prompt_task: Option<(tokio::task::JoinHandle<()>, acp::SessionId)> = None;
+    // cyril-atjw (KAS-0, ADR-0004): the in-flight turn's task, kept ONLY so
+    // `Shutdown` can abort it (so it can't linger holding the connection past
+    // run_loop's return). It is no longer the "is a turn running" signal.
+    let mut prompt_task: Option<tokio::task::JoinHandle<()>> = None;
+    // The session whose turn is in flight — at most one (ADR-0004). Set on
+    // SendPrompt, cleared when the loop OBSERVES that turn's `TurnCompleted` on
+    // the internal channel (engine-agnostic: v2 synthesizes it from the prompt
+    // response, KAS from `session_info_update->turn_end`). Drives the busy-guard
+    // and the CancelRequest target — a mid-turn NewSession can retarget
+    // `active_session_id`, so cancel must use this, not that.
+    //
+    // NB (cyril-j16p / KAS-2a): under KAS the prompt task may outlive `turn_end`,
+    // so this flag and `prompt_task` will intentionally diverge there; in v2 they
+    // clear together (the prompt resolves AT turn-end). Do not re-merge them.
+    let mut turn_in_flight: Option<acp::SessionId> = None;
 
-    while let Some(cmd) = channels.command_rx.recv().await {
-        match cmd {
+    loop {
+        // Single mediator (ADR-0004): one `select!` services commands AND the
+        // internal notification stream, so the loop stays free during a turn
+        // (cyril-84ca) and OBSERVES every `TurnCompleted` to clear `turn_in_flight`.
+        tokio::select! {
+            cmd = channels.command_rx.recv() => {
+                let Some(cmd) = cmd else { break }; // App dropped the command channel.
+                match cmd {
             BridgeCommand::NewSession { cwd: session_cwd } => {
                 let translated_cwd = crate::platform::path::to_agent(&session_cwd);
                 match conn
@@ -393,12 +425,12 @@ async fn run_loop(
                 session_id,
                 content_blocks,
             } => {
-                // cyril-84ca: at most one turn in flight. A SendPrompt arriving
-                // while a turn runs must NOT start a second conn.prompt() (two
-                // concurrent turns on one session is undefined); reject it with a
-                // BridgeError. `is_finished()` self-clears, so the next turn after
-                // this one completes is allowed.
-                if prompt_task.as_ref().is_some_and(|(h, _)| !h.is_finished()) {
+                // cyril-84ca / ADR-0004: at most one turn in flight. A SendPrompt
+                // arriving while a turn runs must NOT start a second conn.prompt()
+                // (two concurrent turns on one session is undefined); reject it with
+                // a BridgeError. `turn_in_flight` clears when the loop observes this
+                // turn's TurnCompleted, so the next turn is then allowed.
+                if turn_in_flight.is_some() {
                     if notify_or_closed(
                         &channels.notification_tx,
                         Notification::BridgeError {
@@ -426,7 +458,9 @@ async fn run_loop(
                 // requests (.cyril-84ca/findings.md), so a steer the loop issues
                 // while this task is pending still crosses the wire.
                 let turn_conn = conn.clone();
-                let turn_tx = channels.notification_tx.clone();
+                // ADR-0004: the synthesized TurnCompleted goes to the INTERNAL
+                // channel, so the loop is the single observer that clears the flag.
+                let turn_tx = inbound_tx.clone();
                 let handle = tokio::task::spawn_local(async move {
                     let note = match turn_conn.prompt(request).await {
                         Ok(response) => Notification::TurnCompleted {
@@ -449,18 +483,15 @@ async fn run_loop(
                         tracing::debug!(error = %e, "TurnCompleted send failed (App gone)");
                     }
                 });
-                prompt_task = Some((handle, acp_session_id));
+                turn_in_flight = Some(acp_session_id);
+                prompt_task = Some(handle);
             }
             BridgeCommand::CancelRequest => {
-                // cyril-84ca: prefer the in-flight turn's own session. The command
-                // loop is now free during a turn, so a mid-turn NewSession/LoadSession
+                // cyril-84ca / ADR-0004: prefer the in-flight turn's own session.
+                // The loop is free during a turn, so a mid-turn NewSession/LoadSession
                 // can retarget `active_session_id`; cancel must still hit the running
-                // turn, not the newly-created session. Fall back to `active_session_id`
-                // when no turn is in flight (the guard self-clears via is_finished).
-                let cancel_target = match prompt_task.as_ref() {
-                    Some((h, sid)) if !h.is_finished() => Some(sid),
-                    _ => active_session_id.as_ref(),
-                };
+                // turn. Fall back to `active_session_id` when no turn is in flight.
+                let cancel_target = turn_in_flight.as_ref().or(active_session_id.as_ref());
                 if let Some(session_id) = cancel_target {
                     if let Err(e) = conn
                         .cancel(acp::CancelNotification::new(session_id.clone()))
@@ -1235,14 +1266,27 @@ async fn run_loop(
                 tracing::info!("bridge shutting down");
                 // cyril-84ca: abort an in-flight turn so its task doesn't linger
                 // past run_loop's return holding the connection. The loop being
-                // free (Slice 3) is what lets Shutdown be processed mid-turn at all.
-                if let Some((handle, _)) = prompt_task.take() {
+                // free is what lets Shutdown be processed mid-turn at all.
+                if let Some(handle) = prompt_task.take() {
                     handle.abort();
                 }
                 break;
             }
-        }
-    }
+                } // match cmd
+            } // select! command branch
+            Some(routed) = inbound_rx.recv() => {
+                // ADR-0004 single-mediator forward: observe TurnCompleted to clear
+                // the busy flag, then forward to the App. Both v2 and KAS emit the
+                // same marker, so the loop is the one place turn-end is observed.
+                if matches!(routed.notification, Notification::TurnCompleted { .. }) {
+                    turn_in_flight = None;
+                }
+                if channels.notification_tx.send(routed).await.is_err() {
+                    break; // App dropped the notification channel.
+                }
+            }
+        } // select!
+    } // loop
 
     Ok(())
 }
@@ -1381,8 +1425,10 @@ mod tests {
             .run_until(async move {
                 let (handle, channels) = create_channel_pair();
                 let engine: Rc<dyn Engine> = Rc::new(V2Engine);
+                let (inbound_tx, inbound_rx) =
+                    mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
                 let client = KiroClient::new(
-                    channels.notification_tx.clone(),
+                    inbound_tx.clone(),
                     channels.permission_tx.clone(),
                     engine.clone(),
                 );
@@ -1415,6 +1461,8 @@ mod tests {
                     channels,
                     std::env::temp_dir(),
                     engine,
+                    inbound_tx,
+                    inbound_rx,
                 ));
                 let (sender, notif_rx, _perm_rx) = handle.split();
                 body(sender, notif_rx, gate, loop_handle).await;
@@ -1607,8 +1655,9 @@ mod tests {
     async fn second_prompt_rejected_then_next_turn_starts() {
         // C4: a SendPrompt while a turn is in flight does NOT start a 2nd
         // conn.prompt(); it is rejected with a BridgeError and the agent sees only
-        // one prompt for that turn. C9: once the turn finishes, the is_finished
-        // guard self-clears, so a later SendPrompt starts a fresh turn.
+        // one prompt for that turn. C9: once the turn's TurnCompleted is observed
+        // on the internal channel, `turn_in_flight` clears (ADR-0004), so a later
+        // SendPrompt starts a fresh turn.
         let script = Rc::new(RefCell::new(Script {
             block_prompt: true,
             ..Default::default()
@@ -1645,7 +1694,7 @@ mod tests {
                 1,
                 "C4: the rejected prompt was never sent to the agent"
             );
-            // C9: guard self-cleared -> a fresh SendPrompt starts turn 2.
+            // C9: turn_in_flight cleared (TurnCompleted observed) -> fresh turn 2.
             sender
                 .send(BridgeCommand::SendPrompt {
                     session_id: sid,
