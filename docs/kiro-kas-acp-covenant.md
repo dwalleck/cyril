@@ -2,6 +2,14 @@
 
 **Source:** `@kiro/acp-type-covenant` (the types-only "wire covenant" package), shipped inside the extracted KAS bundle at `~/.local/share/kiro-cli/kas/node_modules/@kiro/acp-type-covenant/dist/`. Extracted from v0.3.224 (kiro-cli 2.7.1), 2026-06-16.
 
+> **⚠ Currency — this catalog is synced at 0.3.224; the on-disk/installed package is now 0.3.257 (kiro-cli 2.8.1).** Clean method-level diff (package vs the §1 catalogs, 2026-06-21) = **exactly 6 methods the catalogs below do not yet list:**
+> - **`_kiro/safety/{statusChanged,propertiesChanged}`** — notifications; the Infrastructure Safety gate that **can block tool calls** (2.8.0). → ROADMAP KAS-8 / cyril-3ald.
+> - **`_kiro/sessions/changed`** — notification; multi-client observer roster CDC (2.8.1). → kiro-2.8.1-wire-audit.md.
+> - **`_kiro/hooks/setEnabled`** — client→agent request; persist a hook's enabled state (2.8.1). → belongs in §1b, hooks family (KAS-7).
+> - **`_kiro/search/{find_files,text_search}`** — **host callbacks** (agent→client requests; `BaseCapabilityRequest`/`Response` shape, same family as fs/terminal, negotiated by advertisement — *not* in the three type-maps, exactly like fs/terminal). `find_files {pattern, exclude?, maxResults}` → `{files[]}`; `text_search {pattern, caseSensitive, includePattern?, excludePattern?}` → `{matches:[{filePath,lineNumber,lineText,isContext}]}`. → belongs in §1a; tracked as an opt-in host callback in ROADMAP KAS-8.
+>
+> Re-sync per release (docs/README.md "How to update" step 6) before trusting §1 as exhaustive. The [ROADMAP KAS-track coverage matrix](ROADMAP.md#kas-engine-integration-track) maps all 6 against milestones.
+
 **Why this doc exists / how to use it.** This package is the **authoritative contract** for every KAS `_kiro/*` method, notification, and `_meta.kiro` handshake shape — one `.d.ts` per capability. It is a **different package** from `@kiro/agent` (the implementation, whose `dist/tools/`, `dist/services/`, `dist/steering/` `.d.ts` describe internal classes, *not* the wire). **For any KAS wire question, read the covenant first.** Reading only `@kiro/agent` previously produced two wrong hooks conclusions (the enable path and a "server-run" direction that is actually a host-callback) — see [kiro-2.7.1-wire-audit.md](kiro-2.7.1-wire-audit.md). This reference supersedes the hand-reconstructed shapes captured live in that audit's "KAS live wire captures" section.
 
 > Naming: the acp crate cyril uses auto-prefixes `_` outbound / strips inbound, so cyril code refers to these as `kiro/...` while the wire shows `_kiro/...`. Bare-ACP methods (`fs/read_text_file`, `terminal/create`, …) are **not** prefixed.

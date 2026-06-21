@@ -140,6 +140,43 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 **Wire reference:** [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) — the full audit, plus the reproducible probes in [`experiments/conductor-spike/`](../experiments/conductor-spike/) (`probe-kas-subagent`, `probe-kas-fs`, `probe-kas-orchestrate`, all 2.7.1).
 **Prerequisite — ACP crate coverage (KAS-0 verification spike, *not* a blocker).** *Corrected 2026-06-16 (grilling).* The earlier "cyril pins **0.9**, KAS ships **^0.19**, bump before KAS-2" note was stale and conflated two version lines. Facts: cyril is **already on `agent-client-protocol` 0.10.2 / schema 0.11.2** (Cargo.lock), and **0.11.2 already carries the typed `SessionInfoUpdate` variant** that KAS's `turn_end` rides — so the walking skeleton (KAS-2a) is **not** gated on an SDK migration. The "0.19" was the *TypeScript* `@agentclientprotocol/sdk` version, a different numbering line from the Rust crate (apples to oranges). Residual risk is narrower and operational: `SessionUpdate` is `#[serde(tag = "sessionUpdate")]` with **no `#[serde(other)]` catch-all** (`#[non_exhaustive]` is a Rust API attribute, not serde tolerance), so a *future* KAS-emitted typed `session/update` variant absent from 0.11.2 would hard-fail at the acp-crate deserialization layer **before** `convert/` runs — and, unlike the raw `_kiro/*` ext path (which is JSON-tolerant), standard `session/update` offers no raw fallback hook. Mitigation chosen during grilling: a **KAS-0 verification spike** confirms 0.11.2 deserializes every typed `session/update` variant KAS emits live (`agent_message_chunk`, `tool_call`/`tool_call_update`, `available_commands_update`, `config_option_update`, `session_info_update`); the no-catch-all is a documented upgrade-trigger, not a code defense (forking the crate or intercepting beneath the acp Client trait is deferred until a live unknown variant actually bites).
 
+**Protocol coverage matrix.** The milestones below were built bottom-up from probes; this matrix is the top-down completeness check against the covenant's full surface ([`kiro-kas-acp-covenant.md`](kiro-kas-acp-covenant.md) §1 — the authoritative method catalog). Legend: ✅ has a milestone · ⚠ consciously deferred, *or* tolerated by KAS-2a's unknown-variant `debug!` arm (invisible, not broken) · ❌ no milestone → **KAS-8**.
+
+*Agent→client requests (host callbacks — cyril answers these only when it advertises the gating `_meta.kiro` flag):*
+
+| Surface | Coverage |
+|---|---|
+| `auth/getAccessToken` | ✅ KAS-1 |
+| `fs/*` · `_kiro/fs/*` | ✅ KAS-5a |
+| `terminal/*` · `_kiro/terminal/shell_type` | ✅ KAS-5b / 2a |
+| `hooks/{list,executeHook,sessionStart}` | ✅ KAS-7 |
+| `userInput` | ✅ CN1 (optional) |
+| `secret/*` · `openExternalUrl` · `tool/{semantic_rename,smart_relocate,get_diagnostics}` · `mcp/elicitation` · `search/{find_files,text_search}` | ❌ KAS-8 — opt-in (omit the flag → never called) |
+
+*Client→agent requests (optional — cyril chooses to call these):*
+
+| Surface | Coverage |
+|---|---|
+| `permissions/{list,explain}` · `policy/check` | ✅ KAS-7 |
+| `account/getUsage` · `codeIntelligence` | ✅ KAS-4 |
+| `session/{compact,export,history,context,delete,rename}` · `spec/*` | ⚠ KAS-7 non-goals |
+| `checkpoint/{revert,revertMultiple}` · `mcp/{resetServer,getPrompt,getResource}` · `hooks/{triggerHook,setEnabled}` · `tasks/*` · `knowledge` | ❌ KAS-8 |
+
+*Agent→client notifications (the converter receives all; unhandled = invisible, not protocol-breaking):*
+
+| Surface | Coverage |
+|---|---|
+| `session_info_update` (18-kind union) | ✅ KAS-2a (turn_end) + KAS-2b |
+| `governance/state` | ✅ KAS-2c |
+| `hooks/{cancel,didChange}` | ✅ KAS-7 |
+| `steering/documents_changed` · `workspace/{active_file,currently_open_files}` | ✅ KAS-6 |
+| `powers/items_changed` · `progressive_context/items_changed` · `system/notify` · `sessions/changed` · `tools/didChange` | ⚠ tolerated; surface opportunistically |
+| `safety/{statusChanged,propertiesChanged}` | ❌ KAS-8 — **can block tool calls** (enforcement, not display) |
+| `error/rate_limit` | ❌ KAS-8 — UX-important |
+| `mcp/{status,governance_disabled}` · `policy/{changed,error}` · `code_references` · `customAgent/{not_found,config_error}` | ❌ KAS-8 |
+
+**Currency caveat:** the covenant *doc* catalog is synced at `@kiro/agent` 0.3.224; the installed package is 0.3.257 (2.8.1). Clean method-level diff = exactly 6 uncataloged methods, all mapped above: `safety/{statusChanged,propertiesChanged}`, `sessions/changed`, `hooks/setEnabled`, `search/{find_files,text_search}` (the last are **host callbacks** in the fs/terminal family). Re-sync the covenant per release (README step 6) so this matrix stays exhaustive.
+
 ### KAS-0 — `Engine` trait + v2 port + gating (invisible foundation)
 
 **Depends on:** nothing. Ships **no** user-visible change — its acceptance criterion is strict v2 parity.
@@ -155,7 +192,9 @@ Stand up the seam everything else hangs off, without changing v2 behavior:
 
 **Depends on:** KAS-0 (the engine gate + `kas` feature exist; KAS-1 fills in the `AuthResponder` and the live KAS spawn).
 
-Without a host-supplied token, every KAS turn dies immediately (`[TokenInvalidError] … Host refresh callback returned no access token`). This milestone is the precondition for everything below.
+Without a host-supplied token, every KAS turn dies immediately (`[TokenInvalidError] … Host refresh callback returned no access token`) — **when spawned the way the v3 TUI does.** But there are two spawn shapes, and only one needs the responder (see the free-path note next).
+
+**Free-path de-risking (verified live 2026-06-21).** A first live KAS turn is reachable with **zero credential-custodian code**: spawning `acp-server.js` **directly** over stdio with no `--auth` flag uses KAS's default file-auth (reads the SSO cache, self-refreshes), so `_kiro/auth/getAccessToken` never fires — only the `kiro-cli` *wrapper* spawn injects `--auth=acp-callback` and makes the responder mandatory. This moves Open Tension #7 **off the critical path for the walking-skeleton demo**: ship the free path first (the responder below is for the blessed wrapper lifecycle + Builder-ID/external-IdP users); the trade-off is that direct spawn makes cyril own server-entry + node-runtime discovery. **Full auth-mode + flag contract, 5-tier priority, and the probe:** [`kiro-2.8.1-wire-audit.md` § KAS runtime behavior](kiro-2.8.1-wire-audit.md#kas-runtime-behavior--live-capture-2026-06-21-addendum) (+ memory `reference_kiro_kas_launch_contract`).
 
 - Make the KAS spawn real: the `AgentEngine` gate from KAS-0 now resolves the KAS engine to a live `kiro-cli acp --agent-engine <flag>` process (default stays v2). All new KAS code lands behind the `kas` cargo feature established in KAS-0. **The CLI engine flag is version-dependent:** kiro-cli **2.8.0 renamed `--agent-engine kas` → `v3`** (probe-verified 2026-06-19: `kas` is rejected; the accepted values are `v1`/`v2`/`v3`), whereas 2.7.1 accepted `kas`. Resolve the flag from the installed version rather than hardcoding `kas`. (The `kas` cargo feature is cyril's own gate and is unrelated to this CLI flag.)
 - Implement an **`_kiro/auth/getAccessToken`** server→client request responder: reply `{ accessToken, expiresAt, profileArn }`. KAS validates `expiresAt` is > now + ~3 min and **requires `profileArn`** (backend 400s "profileArn is required" without it).
@@ -225,19 +264,19 @@ Unlike v2 (where `configOptions` was always `null`), KAS populates it:
 ### KAS-5 — Host I/O callback responders: fs **and** terminal (first real proxy-stage hook)
 
 **Depends on:** KAS-2a (the walking skeleton must render a turn first). **Pulled ahead of KAS-3/KAS-4** per the revised milestone order — this is the **first `cyril-stages` deliverable**, converging the KAS track with Phase 2.
-**Wire reference:** the host-responsibility callback map in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md), reproduced by `experiments/conductor-spike/probe-kas-callbacks-2.7.1.py`.
+**Wire reference:** the host-responsibility callback map in [`docs/kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md), reproduced by `experiments/conductor-spike/probe-kas-callbacks-2.7.1.py` and (the three-mode fs gating + a working real-disk responder) `probe-kas-fs-callbacks-2.8.1.py`.
 
 KAS is the first Kiro engine to delegate **both file I/O and shell execution** to the host via ACP callbacks, each **capability-negotiated**: what cyril advertises in `initialize` decides whether KAS calls back or runs in-process (v1/v2 behavior). Opt-in, not mandatory — but the two together are the platform's first real interception point over a Kiro agent's side effects.
 
 > **Verified end-to-end 2026-06-16** (`experiments/conductor-spike/probe-kas-fs-terminal-host-2.7.1.py`): advertising `fs={readTextFile,writeTextFile}` + `terminal:true` and implementing real responders, KAS routed **every** read/write/exec of a tool-using turn through the client (bare-ACP names; agent does read-before-write + verify-after-write; terminal lifecycle `create→wait_for_exit→output→release`). A file written only via our `fs/write_text_file` responder landed on disk → the delegation is real. The platform thesis is proven; this milestone is now implementation, not investigation.
 
-- **Filesystem** — advertise `clientCapabilities.fs = {readTextFile, writeTextFile}` → implement `fs/read_text_file` (`{sessionId, path}` → `{content}`, no permission) and `fs/write_text_file` (`{sessionId, path, content}` → `{}`, fires `session/request_permission`). Public ACP method names, not `_kiro/fs/*`. (`_kiro/fs/{delete,stat}` exist in the bundle but did not fire in the verified turn — add only if a probe shows them used.)
+- **Filesystem — three advertisement-selected modes** (mapped live 2026-06-21): advertise **nothing** → KAS does fs **in-process**; advertise `fs={readTextFile,writeTextFile}` → **base ACP** `fs/read_text_file`+`fs/write_text_file` (portable, public names); advertise `fs._meta.kiro={readFile,writeFile,stat,readDirectory,delete}` → the **Kiro superset** `_kiro/fs/*` (range-aware writes, plus stat/read_directory/delete). **The superset wins when both are advertised**, so this is a real cyril choice — base for vendor-portability vs. the richer kiro tier (which must implement all five, since the agent stats + lists the dir before writing). KAS sends **absolute** paths, which is why `platform/path.rs` is load-bearing. Full shapes, gating, and the working responder reference: [`kiro-2.8.1-wire-audit.md` § KAS runtime behavior](kiro-2.8.1-wire-audit.md#kas-runtime-behavior--live-capture-2026-06-21-addendum).
 - **Shell/terminal** — advertise `clientCapabilities.terminal = true` → implement the lifecycle `terminal/create` (`{sessionId, command, args[], cwd}` → `{terminalId}`) → `terminal/wait_for_exit` (`{terminalId}` → `{exitStatus}`) → `terminal/output` (`{terminalId}` → `{output, exitStatus}`) → `terminal/release` (+ `terminal/kill`). With `terminal:true` advertised, **every command the agent runs flows through these on the host**; omit the capability and KAS runs shell in-process. Pairs with `_kiro/terminal/shell_type` from KAS-2.
 - cyril implements **none** of these today (empty `clientCapabilities`), so this is purely additive. Owning `fs/*` + `terminal/*` lets cyril audit/gate/translate every file op and command KAS performs — the natural home for transcript audit, org write/exec policy, and Windows/WSL path translation as a **stage** (`crates/cyril-stages/`, Phase 2) rather than ad-hoc bridge code.
 
 **Sub-milestones — ship fs first (simpler, no lifecycle), then terminal; each lands independently behind its capability flag:**
 
-- **KAS-5a — fs callbacks.** Advertise `fs={readTextFile,writeTextFile}`; implement `fs/read_text_file` / `fs/write_text_file` in the `cyril-stages` host-callback layer (not the bridge). Write fires `session/request_permission`. **Cross-platform acceptance:** `platform/path.rs` translation is now load-bearing — verify on **Linux** (no-op) *and* **Windows** (`C:\`↔`/mnt/c` both directions) that paths in/out of the responder are correct, a file written only via the responder lands at the right host path, and the agent's read-before-write/verify-after-write loop sees consistent paths.
+- **KAS-5a — fs callbacks.** Pick a tier (per the three-mode finding above): **base** `fs={readTextFile,writeTextFile}` (portable, public ACP names — recommended default) or the **kiro superset** `fs._meta.kiro={readFile,writeFile,stat,readDirectory,delete}` (range-aware, but requires implementing stat + read_directory + delete too). Implement the chosen tier in the `cyril-stages` host-callback layer (not the bridge). Write fires `session/request_permission`. **Cross-platform acceptance:** `platform/path.rs` translation is now load-bearing — KAS sends absolute paths, so verify on **Linux** (no-op) *and* **Windows** (`C:\`↔`/mnt/c` both directions) that paths in/out of the responder are correct, a file written only via the responder lands at the right host path, and the agent's read-before-write/verify-after-write loop sees consistent paths. The Python responder in `probe-kas-fs-callbacks-2.8.1.py` is a line-for-line reference for the Rust implementation.
 - **KAS-5b — terminal callbacks.** Advertise `terminal:true`; implement `terminal/create→wait_for_exit→output→release` (+ `kill`). Pairs with `_kiro/terminal/shell_type` (KAS-2a). **Cross-platform acceptance:** verify command execution on **Linux** (native) and **Windows** (decide + test native-host vs WSL execution, per the original mission's terminal concern), exit-status/output capture, and that `shell_type` matches the shell commands actually run on.
 
 Both sub-milestones are the same host-executor shape as KAS-7's hook responder, so they share the `cyril-stages` home: process spawning, path translation, and the org write/exec-policy gate belong in one layer, not scattered across the bridge.
@@ -269,6 +308,34 @@ KAS hooks are a **host-callback** model, and cyril is the host. Verified live (`
 **Non-goals:** replicating KAS's spec/quick-spec workflow UIs verbatim; exposing `--v3`/the gated `chat` TUI; treating `_kiro/*` as a vendor-neutral abstraction (it's Kiro-specific — generalize only if ACP standardizes equivalents, per Open Tension #2). The `_kiro/session/{compact,export,fork,list}` methods are advertised but unprobed — out of scope until a concrete UX needs them.
 
 > **Spec workflow (full arc verified live 2026-06-16, but out of scope as a built UI):** the whole `_kiro/spec/resolveSession` → `invoke createSpec` (requirements) → `invoke generateDocument design` → `invoke generateDocument tasks` → `getTaskStatuses` chain works. Each `invoke` is async (returns `{sessionId}`, then streams a full turn), self-scaffolding `.kiro/specs/<feature>/{requirements,design,tasks}.md` (EARS requirements; mermaid-architecture design; checkbox tasks with `_Requirements: X.Y_` traceability) via bundled subagents (`feature-requirements-first-workflow`, `requirement-detailer`) + interactive questions; `getTaskStatuses` returns a hierarchical `{taskId, markdownStatus, isLeaf, isOptional, subTasks[]}` tree. **`executeTask` also verified** — it returns `{sessionId, executionId}`, delegates to the bundled `spec-task-execution` subagent, writes real source, and flips the task to `completed`/`succeed`. If cyril ever surfaces spec, the whole lifecycle rides the **KAS-3 agent-subtask rendering** + the `pending_interaction`/`userInput` path — no new primitive. (Only `runAllTasks`, a looped `executeTask`, is unexercised.) See the 2.7.1 audit "spec workflow" capture and `experiments/conductor-spike/spec-sample-2.7.1/`.
+
+### KAS-8 — Remaining protocol surfaces (completeness sweep)
+
+**Depends on:** KAS-2a (the converter + host-callback layer exist). Mostly small/additive; several items are conscious **decline** decisions, not implementation work. This milestone exists so every surface the coverage matrix marks ❌ is *decided*, not silently missing — it closes the "is the KAS protocol fully wired?" question.
+
+**Functional gaps — promote from silently-tolerated to tracked (each filed as a rivets issue):**
+
+- **`_kiro/safety/{statusChanged,propertiesChanged}` — Infrastructure Safety gate (kiro-cli 2.8.0+).** Cedar/AWS-governance signals that **can block a tool call**. Unlike the other notification gaps this is *enforcement*, not display: dropping it means cyril presents a tool as runnable that KAS will refuse, or misses a posture change. Surface the safety status and reflect a safety-blocked tool in the UI (pairs with the KAS-2c `GovernanceSource` sub-trait). Tracked on **cyril-3ald**.
+- **`_kiro/error/rate_limit`.** Currently dropped by the unknown-variant arm — the user sees a stalled turn with no reason. Surface as a system message (and clear on next turn). Tracked on **cyril-3zy4**.
+- **`_kiro/mcp/*` — MCP-management subsystem** (`status` + `governance_disabled` notifications; `resetServer` / `getPrompt` / `getResource` / `elicitation` requests). v2 has a `/mcp` command; under KAS the MCP surface is this `_kiro/*` dialect. A `/mcp` panel + OAuth-reset flow. Tracked on **cyril-nk4o**.
+
+**Opt-in host callbacks — decide advertise-or-not (default: don't advertise; KAS falls back in-process):**
+
+- `secret/{get,store,delete}` (gated `secretStorage`) — only if cyril ever custodies MCP/OAuth secrets for KAS; default **decline**.
+- `openExternalUrl` (gated `openExternalUrl`) — open auth/doc URLs from the host; cheap, decide per UX.
+- `tool/{semantic_rename,smart_relocate,get_diagnostics}` (gated `clientTool*`) — client-side **LSP** callbacks; a chat TUI has no language server, so **decline** (KAS uses its own).
+- `mcp/elicitation` — MCP structured prompts; bundle with the `/mcp` work above.
+- `search/{find_files,text_search}` — **host callbacks** (fs/terminal family): `find_files {pattern,exclude?,maxResults}`→`{files[]}`, `text_search {pattern,caseSensitive,includePattern?,excludePattern?}`→`{matches[]}`. The agent delegates file/grep search to the host — a natural **decline** for now (KAS searches in-process), but it's the same audit/gate interception surface as fs/terminal if cyril ever wants to own search too. Characterized 2026-06-21; not yet in the covenant doc catalog.
+
+**Optional client→agent calls — add when a UX needs them:**
+
+- `checkpoint/{revert,revertMultiple}` — the KAS analog of v2 `/rewind`; wire when cyril surfaces rewind under KAS.
+- `hooks/{triggerHook,setEnabled}` — `setEnabled` (persist a hook's enabled state, 2.8.1) pairs with a KAS-7 hooks tree UI (enable/disable from the view); `triggerHook` is the manual-fire path. Wire with the KAS-7 hooks work.
+- `tasks/{list,get_metadata}`, `_kiro/knowledge` — feature-specific; out of scope until their UX lands.
+
+**Tolerated notifications — surface opportunistically (the `debug!` arm keeps them non-fatal):** `powers/items_changed`, `progressive_context/items_changed`, `system/notify`, `_kiro/sessions/changed` (the multi-client observer roster — feeds the session-level-workflow direction), `tools/didChange`.
+
+**Conscious exclusions (restated):** `session/{compact,export,history,context,delete,rename}` and the full `spec/*` workflow stay KAS-7 non-goals; `customAgent/{not_found,config_error}` ride the Phase-5 client-agent-injection work, not this track.
 
 ## Vendor-neutral client features (candidates)
 

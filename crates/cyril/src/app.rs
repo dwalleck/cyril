@@ -1277,6 +1277,23 @@ fn dispatch_code_command(
                     return Vec::new();
                 }
             };
+            // cyril-8ej2: a /code prompt injected mid-turn would hit the bridge's
+            // one-turn guard (bridge.rs rejects a 2nd SendPrompt while a turn is in
+            // flight), so the SendPrompt would be dropped AFTER we'd committed a
+            // UserText + set Sending — a commit-without-send desync. Advise and drop
+            // instead, committing nothing (mirrors the no-session branch above). This
+            // is a runtime check by necessity: a debug_assert would compile out and
+            // silently re-open the desync in release. Scope is Busy only, matching
+            // classify_submit — other statuses carry no in-flight prompt_task. debug!
+            // (not warn!) because a busy mid-turn injection is expected, not anomalous.
+            if matches!(session.status(), SessionStatus::Busy) {
+                tracing::debug!("/code prompt dropped: a turn is already in progress");
+                ui_state.add_system_message(
+                    "/code: agent is busy — prompt not sent. Try again after the current turn."
+                        .into(),
+                );
+                return Vec::new();
+            }
             let display = label.as_deref().unwrap_or("Code Intelligence");
             ui_state.add_system_message(format!("/code: {display}"));
             ui_state.add_user_message(&text);
@@ -2142,6 +2159,19 @@ mod tests {
         session
     }
 
+    fn busy_code_session() -> cyril_core::session::SessionController {
+        let mut session = cyril_core::session::SessionController::new();
+        session.set_session(SessionId::new("sess_1"), SessionStatus::Busy);
+        session
+    }
+
+    fn code_prompt_json() -> serde_json::Value {
+        serde_json::json!({
+            "success": true,
+            "data": { "executePrompt": "Analyze the code...", "label": "Code Summary" }
+        })
+    }
+
     #[test]
     fn dispatch_code_panel_opens_overlay() {
         let session = code_session();
@@ -2253,6 +2283,95 @@ mod tests {
         assert_eq!(result.len(), 1);
         assert!(matches!(result[0], BridgeCommand::SendPrompt { .. }));
         assert_eq!(ui.activity(), Activity::Sending);
+        // claim #1: the active path commits the injected prompt as a UserText.
+        assert!(
+            ui.messages().iter().any(|m| matches!(
+                m.kind(),
+                cyril_ui::traits::ChatMessageKind::UserText(t) if t == "Analyze the code..."
+            )),
+            "active path must commit the injected prompt"
+        );
+    }
+
+    // cyril-8ej2: busy-guard fences for the /code Prompt arm. A /code prompt
+    // injected mid-turn would hit the bridge's one-turn guard and be dropped
+    // AFTER a UserText was committed + activity set Sending (commit-without-send
+    // desync). The guard advises and drops instead.
+
+    #[test]
+    fn dispatch_code_prompt_busy_drops_no_send() {
+        // claim #2: busy + Prompt emits zero bridge commands.
+        let mut ui = UiState::new(500);
+        let result = dispatch_code_command(&code_prompt_json(), &busy_code_session(), &mut ui);
+        assert!(
+            result.is_empty(),
+            "busy must not emit a SendPrompt the bridge would reject"
+        );
+    }
+
+    #[test]
+    fn dispatch_code_prompt_busy_commits_no_user_message() {
+        // claim #3: no commit-without-send desync.
+        let mut ui = UiState::new(500);
+        dispatch_code_command(&code_prompt_json(), &busy_code_session(), &mut ui);
+        assert!(
+            !ui.messages()
+                .iter()
+                .any(|m| matches!(m.kind(), cyril_ui::traits::ChatMessageKind::UserText(_))),
+            "busy must not commit a UserText it will never send"
+        );
+    }
+
+    #[test]
+    fn dispatch_code_prompt_busy_leaves_activity() {
+        // claim #4: busy must not strand activity at Sending.
+        let mut ui = UiState::new(500);
+        ui.set_activity(Activity::Streaming);
+        dispatch_code_command(&code_prompt_json(), &busy_code_session(), &mut ui);
+        assert_eq!(
+            ui.activity(),
+            Activity::Streaming,
+            "busy must leave the in-flight activity untouched"
+        );
+    }
+
+    #[test]
+    fn dispatch_code_prompt_busy_advises() {
+        // claim #5: the drop is visible to the user as a System advisory.
+        let mut ui = UiState::new(500);
+        dispatch_code_command(&code_prompt_json(), &busy_code_session(), &mut ui);
+        assert!(
+            ui.messages().iter().any(|m| matches!(
+                m.kind(),
+                cyril_ui::traits::ChatMessageKind::System(t) if t.contains("busy")
+            )),
+            "busy drop must surface a System advisory"
+        );
+    }
+
+    #[test]
+    fn dispatch_code_panel_opens_when_busy() {
+        // claim #7 (stress fixture 1): the guard is scoped to the Prompt arm —
+        // a Panel response arriving while busy still opens the panel.
+        let mut ui = UiState::new(500);
+        let result = dispatch_code_command(
+            &serde_json::json!({
+                "success": true,
+                "data": {
+                    "status": "initialized",
+                    "detectedLanguages": ["rust"],
+                    "projectMarkers": [],
+                    "lsps": []
+                }
+            }),
+            &busy_code_session(),
+            &mut ui,
+        );
+        assert!(result.is_empty());
+        assert!(
+            ui.has_code_panel(),
+            "busy must not suppress a Panel response"
+        );
     }
 
     #[test]

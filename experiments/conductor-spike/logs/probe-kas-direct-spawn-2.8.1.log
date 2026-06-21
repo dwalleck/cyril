@@ -1,0 +1,259 @@
+# spawn: node --experimental-wasm-modules /home/dwalleck/.local/share/kiro-cli/kas/node_modules/@kiro/agent/dist/server/acp-server.js --transport=stdio
+# cwd:   /home/dwalleck/.claude/tmp/kas-direct-um6idl1t
+# auth: default (no --auth flag) -> ~/.aws/sso/cache/kiro-auth-token.json
+
+==== initialize result ====
+{
+  "agentCapabilities": {
+    "_meta": {
+      "kiro": {
+        "checkpoints": true,
+        "extensionMethods": [
+          "_kiro/knowledge",
+          "_kiro/codeIntelligence",
+          "_kiro/session/context",
+          "_kiro/session/compact",
+          "_kiro/session/export",
+          "_kiro/session/history"
+        ],
+        "logging": {
+          "channels": [
+            {
+              "filePath": "/home/dwalleck/.kiro/logs/20260621T155750256/kiro.log",
+              "name": "kiro"
+            },
+            {
+              "filePath": "/home/dwalleck/.kiro/logs/20260621T155750256/mcp.log",
+              "name": "mcp"
+            },
+            {
+              "filePath": "/home/dwalleck/.kiro/logs/20260621T155750256/powers.log",
+              "name": "powers"
+            }
+          ],
+          "logDir": "/home/dwalleck/.kiro/logs/20260621T155750256"
+        },
+        "policyNotifications": true,
+        "sessionList": true
+      }
+    },
+    "loadSession": true,
+    "mcpCapabilities": {
+      "http": true,
+      "sse": true
+    },
+    "promptCapabilities": {
+      "embeddedContext": true,
+      "image": true
+    },
+    "sessionCapabilities": {
+      "fork": {
+        "_meta": {
+          "kiro": {
+            "messageId": true
+          }
+        }
+      },
+      "list": {}
+    }
+  },
+  "authMethods": [
+    {
+      "id": "aws-builder-id",
+      "name": "AWS Builder ID"
+    },
+    {
+      "id": "aws-iam-identity-center",
+      "name": "AWS IAM Identity Center"
+    }
+  ],
+  "protocolVersion": 1
+}
+
+==== session/new result ====
+{
+  "_meta": {
+    "agentMode": "vibe",
+    "createdAt": "2026-06-21T15:57:50.549Z",
+    "ftaEnabled": false,
+    "id": "sess_5f406532-f293-4b5a-8e6e-675c4b03f8cd",
+    "lastModifiedAt": "2026-06-21T15:57:50.549Z",
+    "schemaVersion": "1.0.0",
+    "semanticReviewEnabled": true,
+    "title": "New Session",
+    "workspacePaths": [
+      "/home/dwalleck/.claude/tmp/kas-direct-um6idl1t"
+    ]
+  },
+  "configOptions": [
+    {
+      "category": "mode",
+      "currentValue": "vibe",
+      "id": "mode",
+      "name": "Mode",
+      "options": [
+        {
+          "name": "Default",
+          "value": "vibe"
+        },
+        {
+          "name": "Spec",
+          "value": "spec"
+        },
+        {
+          "name": "Quick Spec",
+          "value": "quick-spec"
+        },
+        {
+          "name": "Bug Fix",
+          "value": "bug-fix"
+        },
+        {
+          "name": "Plan",
+          "value": "plan"
+        },
+        {
+          "name": "Autonomous",
+          "value": "autonomous"
+        },
+        {
+          "name": "semantic_reviewer",
+          "value": "semantic_reviewer"
+        }
+      ],
+      "type": "select"
+    },
+    {
+      "currentValue": "on",
+      "id": "autopilot",
+      "name": "Autopilot",
+      "options": [
+        {
+          "description": "Agent executes tools without confirmation",
+          "name": "Autopilot",
+          "value": "on"
+        },
+        {
+          "description": "Agent asks for approval before file changes",
+          "name": "Supervised",
+          "value": "off"
+        }
+      ],
+      "type": "select"
+    },
+    {
+      "currentValue": "disabled",
+      "id": "contentCollection",
+      "name": "Content Collection",
+      "options": [
+        {
+          "description": "Allow content to be used for service improvement",
+          "name": "Enabled",
+          "value": "enabled"
+        },
+        {
+          "description": "Opt out of content collection",
+          "name": "Disabled",
+          "value": "disabled"
+        }
+      ],
+      "type": "select"
+    }
+  ],
+  "modes": {
+    "availableModes": [
+      {
+        "_meta": {
+          "kiro": {
+            "source": "bundled"
+          }
+        },
+        "description": "General coding assistance",
+        "id": "vibe",
+        "name": "Default"
+      },
+      {
+        "_meta": {
+          "kiro": {
+            "source": "bundled"
+          }
+        },
+        "description": "Structured feature development",
+        "id": "spec",
+        "name": "Spec"
+      },
+      {
+        "_meta": {
+          "kiro": {
+            "source": "bundled"
+          }
+        },
+        "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+        "id": "quick-spec",
+        "name": "Quick Spec"
+      },
+      {
+        "_meta": {
+          "kiro": {
+            "source": "bundled"
+          }
+        },
+        "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+        "id": "bug-fix",
+        "name": "Bug Fix"
+      },
+      {
+        "_meta": {
+          "kiro": {
+            "source": "bundled",
+            "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+          }
+        },
+        "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+        "id": "plan",
+        "name": "Plan"
+      },
+      {
+        "_meta": {
+          "kiro": {
+            "source": "bundled",
+            "welcomeMessage": "Autonomous agent will ask for a goal and work towards it. All tools except MCP will be automatically approved. Enable a local sandbox using /sandbox enable."
+          }
+        },
+        "description": "Autonomous agent execution",
+        "id": "autonomous",
+        "name": "Autonomous"
+      },
+      {
+        "_meta": {
+          "kiro": {
+            "source": "bundled"
+          }
+        },
+        "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+        "id": "semantic_reviewer",
+        "name": "semantic_reviewer"
+      }
+    ],
+    "currentModeId": "vibe"
+  },
+  "sessionId": "sess_5f406532-f293-4b5a-8e6e-675c4b03f8cd"
+}
+
+sessionId: sess_5f406532-f293-4b5a-8e6e-675c4b03f8cd
+
+==== running one tiny turn ====
+prompt response: {
+  "stopReason": "end_turn"
+}
+
+============================================================
+VERDICT
+============================================================
+_kiro/auth/getAccessToken calls : 0
+FREE PATH (file auth, no callback): CONFIRMED
+agent->client request methods    : {}
+session/update variants seen     : {"available_commands_update": 2, "session_info_update": 10, "config_option_update": 1, "agent_message_chunk": 1}
+
+# stdout log : /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-direct-spawn-2.8.1.log
+# stderr log : /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-direct-spawn-2.8.1.log.stderr
