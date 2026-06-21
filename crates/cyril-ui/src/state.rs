@@ -1860,7 +1860,9 @@ mod tests {
         );
     }
 
-    // cyril-bm1j Slice 6 / claim C9: TurnCompleted resets the steer chip counter.
+    // cyril-7z7u (supersedes cyril-bm1j Slice 6 / claim C9): TurnCompleted does NOT
+    // reset the steer chip — a steer pending at turn-end drains via a later
+    // SteeringConsumed, not via a turn-end reset.
     #[test]
     fn turn_completed_does_not_reset_pending_steer() {
         // cyril-7z7u claim 3 (rewrites the old turn_completed_resets test, which
@@ -1969,7 +1971,37 @@ mod tests {
         );
     }
 
-    // Slice A / design claim 13: queue mirror queued->1, consumed->0, floor at 0.
+    // cyril-7z7u claim 4 (single-client): a bare wire SteeringQueued with no
+    // preceding add_steer_echo is a no-op — the chip stays 0 and no echo is added.
+    // Pins the optimistic model from zero (the other tests only assert "no re-count"
+    // starting from an already-optimistic count, so they can't catch a regression
+    // that makes the wire arm increment again).
+    #[test]
+    fn bare_wire_steering_queued_is_a_noop() {
+        let mut state = UiState::new(500);
+        let before = state.messages().len();
+        let changed = state.apply_notification(&Notification::SteeringQueued {
+            message: Some("from another observer".into()),
+        });
+        assert!(
+            !changed,
+            "wire SteeringQueued changes no UiState (returns false)"
+        );
+        assert_eq!(
+            state.steering_queued(),
+            0,
+            "wire SteeringQueued must not increment the optimistic chip from zero"
+        );
+        assert_eq!(
+            state.messages().len(),
+            before,
+            "wire SteeringQueued adds no SteerEcho (echoes are local-send only)"
+        );
+    }
+
+    // cyril-7z7u (supersedes Slice A / design claim 13): optimistic chip mirror —
+    // add_steer_echo->+1, wire SteeringQueued is a no-op, SteeringConsumed->-1,
+    // Cleared/SessionCreated->0, floor at 0.
     #[test]
     fn steering_queue_mirror() {
         // cyril-7z7u: the chip is OPTIMISTIC — driven by add_steer_echo (user-send),
