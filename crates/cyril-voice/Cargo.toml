@@ -1,0 +1,22 @@
+[package]
+name = "cyril-voice"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Voice input (speech-to-text) engine for the Cyril ACP client"
+
+[lints]
+workspace = true
+
+[dependencies]
+cyril-core = { path = "../cyril-core" }
+tokio = { workspace = true, features = ["sync", "rt", "macros", "time"] }
+tracing = { workspace = true }
+
+# V1b+ will add audio capture (cpal) and a remote transcriber (reqwest) here,
+# behind sub-features. V1a is a stub engine with no heavy deps.
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }

@@ -64,6 +64,10 @@ pub enum CommandResultKind {
     /// because the command layer has no UI access and must not touch the bridge
     /// directly — same split as `ShowPicker`.
     Steer { text: String },
+    /// Toggle voice input on/off (ROADMAP CN2 / V1a). The command layer has no
+    /// access to the voice engine handle (which the App owns), so it returns
+    /// this and the App flips capture state — same split as `Steer`/`ShowPicker`.
+    ToggleVoice,
     /// Quit the application.
     Quit,
 }
@@ -96,6 +100,12 @@ impl CommandResult {
     pub fn steer(text: String) -> Self {
         Self {
             kind: CommandResultKind::Steer { text },
+        }
+    }
+
+    pub fn toggle_voice() -> Self {
+        Self {
+            kind: CommandResultKind::ToggleVoice,
         }
     }
 
@@ -156,7 +166,8 @@ impl CommandRegistry {
     pub fn with_builtins() -> Self {
         let mut registry = Self::new();
         let names: Vec<&str> = vec![
-            "help", "clear", "quit", "new", "load", "steer", "sessions", "spawn", "kill", "msg",
+            "help", "clear", "quit", "new", "load", "steer", "voice", "sessions", "spawn", "kill",
+            "msg",
         ];
         registry.register(Arc::new(builtin::HelpCommand::new(&names)));
         registry.register(Arc::new(builtin::ClearCommand));
@@ -164,6 +175,7 @@ impl CommandRegistry {
         registry.register(Arc::new(builtin::NewCommand));
         registry.register(Arc::new(builtin::LoadCommand));
         registry.register(Arc::new(builtin::SteerCommand));
+        registry.register(Arc::new(builtin::VoiceToggleCommand));
         registry.register(Arc::new(subagent::SessionsCommand));
         registry.register(Arc::new(subagent::SpawnCommand));
         registry.register(Arc::new(subagent::KillCommand));
@@ -543,6 +555,33 @@ mod tests {
         let result = builtin::QuitCommand.execute(&ctx, "").await;
         assert!(result.is_ok());
         assert!(matches!(result.unwrap().kind, CommandResultKind::Quit));
+    }
+
+    #[tokio::test]
+    async fn voice_command_returns_toggle_voice() {
+        let session = crate::session::SessionController::new();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+        };
+
+        let result = builtin::VoiceToggleCommand.execute(&ctx, "").await;
+        assert!(result.is_ok());
+        assert!(matches!(
+            result.unwrap().kind,
+            CommandResultKind::ToggleVoice
+        ));
+    }
+
+    #[test]
+    fn voice_command_registered_and_parses() {
+        let registry = CommandRegistry::with_builtins();
+        let (cmd, args) = registry.parse("/voice").expect("/voice is registered");
+        assert_eq!(cmd.name(), "voice");
+        assert_eq!(args, "");
     }
 
     #[tokio::test]

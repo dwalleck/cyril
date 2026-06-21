@@ -14,9 +14,16 @@ workspace = true
 name = "cyril"
 path = "src/main.rs"
 
+[features]
+default = []
+# Speech-to-text voice input (ROADMAP CN2). Off by default — pulls in the
+# cyril-voice engine and (later) its audio/ML deps. Build with `--features voice`.
+voice = ["dep:cyril-voice"]
+
 [dependencies]
 cyril-core = { path = "../cyril-core" }
 cyril-ui = { path = "../cyril-ui" }
+cyril-voice = { path = "../cyril-voice", optional = true }
 tokio = { workspace = true, features = ["full"] }
 clap = { workspace = true }
 tracing = { workspace = true }

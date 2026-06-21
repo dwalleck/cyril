@@ -6,5 +6,6 @@ pub mod protocol;
 pub mod session;
 pub mod subagent;
 pub mod types;
+pub mod voice;
 
 pub use error::{Error, ErrorKind, Result};

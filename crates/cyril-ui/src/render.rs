@@ -19,6 +19,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
 
     // Runtime-variable panel heights are owned by their widget's height_for().
     let crew_height = crate::widgets::crew_panel::height_for(state);
+    let voice_height = crate::widgets::voice::height_for(state);
     let suggestions_height = crate::widgets::suggestions::height_for(state);
     let input_height = crate::widgets::input::height_for(state);
 
@@ -26,6 +27,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         toolbar_area,
         chat_area,
         crew_area,
+        voice_area,
         input_area,
         suggestions_area,
         status_area,
@@ -33,6 +35,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         Constraint::Length(1),
         Constraint::Min(5),
         Constraint::Length(crew_height),
+        Constraint::Length(voice_height),
         Constraint::Length(input_height),
         Constraint::Length(suggestions_height),
         Constraint::Length(1),
@@ -43,6 +46,9 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     crate::widgets::chat::render(frame, chat_area, state);
     if crew_height > 0 {
         crate::widgets::crew_panel::render(frame, crew_area, state);
+    }
+    if voice_height > 0 {
+        crate::widgets::voice::render(frame, voice_area, state);
     }
     crate::widgets::input::render(frame, input_area, state);
     if suggestions_height > 0 {

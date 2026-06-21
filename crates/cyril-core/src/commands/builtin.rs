@@ -117,6 +117,30 @@ impl Command for QuitCommand {
     }
 }
 
+/// /voice — toggle voice input (push-to-talk speech-to-text). The App owns the
+/// voice engine handle, so this just signals intent; the App flips capture
+/// state and reports if voice support isn't compiled in (ROADMAP CN2 / V1a).
+pub struct VoiceToggleCommand;
+
+#[async_trait::async_trait]
+impl Command for VoiceToggleCommand {
+    fn name(&self) -> &str {
+        "voice"
+    }
+
+    fn description(&self) -> &str {
+        "Toggle voice input (speech-to-text)"
+    }
+
+    async fn execute(
+        &self,
+        _ctx: &CommandContext<'_>,
+        _args: &str,
+    ) -> crate::Result<CommandResult> {
+        Ok(CommandResult::toggle_voice())
+    }
+}
+
 /// /new — create a new session
 pub struct NewCommand;
 
