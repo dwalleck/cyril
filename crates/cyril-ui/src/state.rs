@@ -425,11 +425,13 @@ impl UiState {
                 if let Some(m) = self.last_turn.as_ref().and_then(|t| t.metering()) {
                     self.session_cost.record_turn(m);
                 }
-                // Reset the steer chip on turn-end (K1b, cyril-bm1j): a steer
-                // un-consumed by turn-end can't drain (no more tool boundaries this
-                // turn), so the live HUD count must not stick. The SteerEcho entries
-                // in scrollback keep their last status — intended chip/echo divergence.
-                self.steering_queued = 0;
+                // cyril-7z7u: do NOT reset the steer chip at turn-end. The probe
+                // (`.cyril-7z7u/findings.md`) showed the backend pairs
+                // `steering_queued`+`steering_consumed` within one turn and DEFERS a
+                // late steer's whole pair to the next turn — so a steer pending at
+                // turn-end is genuinely still queued and drains via `SteeringConsumed`
+                // (possibly next turn). The optimistic chip drains on consumed, not
+                // on turn-end; resetting here would under-count a pending steer.
                 self.set_activity(Activity::Ready);
                 true
             }
@@ -478,12 +480,12 @@ impl UiState {
                 self.add_system_message(format!("Rate limited: {message}"));
                 true
             }
-            // Queue steering (K1a). UiState mirrors the un-consumed steer count
-            // for K1b's chip; the local-echo transcript entry is K1b (cyril-bm1j).
-            Notification::SteeringQueued { .. } => {
-                self.steering_queued = self.steering_queued.saturating_add(1);
-                true
-            }
+            // cyril-7z7u: the chip count is optimistic (incremented at
+            // `add_steer_echo`), so the wire confirmation must NOT re-count cyril's
+            // own steer — that would double-count. A steer originated by ANOTHER
+            // observer (wire echo with no local optimistic echo) is not counted
+            // today; that's the single-client model — see cyril-8lfs.
+            Notification::SteeringQueued { .. } => false,
             Notification::SteeringConsumed { .. } => {
                 self.steering_queued = self.steering_queued.saturating_sub(1);
                 // Reconcile the optimistic echo (K1b, cyril-bm1j): one steer was
@@ -507,10 +509,12 @@ impl UiState {
                 // add_system_message bumps messages_version unconditionally, so the
                 // echo flips below are covered by that redraw.
                 self.add_system_message(message.clone());
-                // Reconcile (K1b): the backend can't steer, so every still-Queued
-                // echo is dead. Flip ALL Queued -> Unsupported — on a burst, several
-                // steers may be in flight before the single (bridge-dedup'd) notice
-                // arrives, and none will succeed. Terminal states untouched.
+                // cyril-7z7u: every optimistic steer is dead (the backend can't
+                // steer), so clear the chip too — not just the echoes; otherwise the
+                // optimistic count would leak. Flip ALL Queued -> Unsupported (a
+                // burst may have several in flight before the single bridge-dedup'd
+                // notice). Terminal states untouched.
+                self.steering_queued = 0;
                 self.flip_queued_steer_echoes(SteerEchoStatus::Unsupported, false);
                 true
             }
@@ -533,10 +537,11 @@ impl UiState {
                 self.pending_tokens = None;
                 self.pending_metering = None;
                 self.session_cost = cyril_core::types::SessionCost::new();
-                // Steering depth is per-session; reset the mirror so a prior
-                // session's un-consumed steers don't leak a phantom chip count
-                // onto the fresh session (SessionController resets steering_depth
-                // identically — the two mirrors must stay in lockstep).
+                // The chip is per-session; reset it so a prior session's pending
+                // steers don't leak a phantom count onto the fresh session.
+                // (cyril-7z7u: the chip is now optimistic — driven by add_steer_echo,
+                // not the wire — so it no longer mirrors SessionController.steering_depth,
+                // which is an unread parallel counter slated for removal: cyril-85py.)
                 self.steering_queued = 0;
                 // Finalize any leftover Queued steer echoes from the old session.
                 // The new session is a different session_id; its SteeringConsumed
@@ -774,6 +779,12 @@ impl UiState {
         self.flush_streaming_thought();
         self.messages
             .push(ChatMessage::steer_echo(text.to_string()));
+        // cyril-7z7u: the chip is optimistic — `steering_queued` mirrors the count
+        // of Queued echoes, incremented here at user-send rather than at the wire
+        // `steering_queued` (which the backend may DEFER to the next turn for a
+        // late steer — see `.cyril-7z7u/findings.md`). Drained by `SteeringConsumed`;
+        // zeroed by `SteeringCleared`/`SteeringUnsupported`/`SessionCreated`.
+        self.steering_queued = self.steering_queued.saturating_add(1);
         self.messages_version += 1;
         self.enforce_message_limit();
     }
@@ -1610,6 +1621,8 @@ mod tests {
 
         // (a) the echo carries the user's text, optimistically Queued.
         state.add_steer_echo("fix tests");
+        // cyril-7z7u claim 1: the chip increments optimistically at send.
+        assert_eq!(state.steering_queued(), 1, "chip == #Queued echoes (1)");
         let last = state.messages().last().expect("one message");
         assert!(
             matches!(last.kind(),
@@ -1630,6 +1643,71 @@ mod tests {
         state.add_steer_echo("");
         assert!(matches!(state.messages().last().unwrap().kind(),
             ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued } if text.is_empty()));
+        // cyril-7z7u claim 1: three sends -> chip 3 (incl. the empty one).
+        assert_eq!(state.steering_queued(), 3, "chip == #Queued echoes (3)");
+    }
+
+    // cyril-7z7u claim 5: SteeringUnsupported clears the optimistic chip (not just
+    // the echoes) — else the optimistic count would leak on an unsupported steer.
+    #[test]
+    fn unsupported_clears_chip() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("a");
+        state.add_steer_echo("b");
+        assert_eq!(state.steering_queued(), 2);
+        state.apply_notification(&Notification::SteeringUnsupported {
+            message: "steering requires kiro-cli 2.7.0+".into(),
+        });
+        assert_eq!(
+            state.steering_queued(),
+            0,
+            "unsupported clears the optimistic chip"
+        );
+        assert!(
+            state.messages().iter().all(|m| !matches!(
+                m.kind(),
+                ChatMessageKind::SteerEcho {
+                    status: SteerEchoStatus::Queued,
+                    ..
+                }
+            )),
+            "all Queued echoes flipped off Queued"
+        );
+    }
+
+    // cyril-7z7u claim 8 (stress: identical content): two same-content steers drain
+    // in FIFO order — the flip is POSITIONAL, never keyed on `content`.
+    #[test]
+    fn fifo_multi_steer_drains_same_content() {
+        fn statuses(s: &UiState) -> Vec<SteerEchoStatus> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho { status, .. } => Some(*status),
+                    _ => None,
+                })
+                .collect()
+        }
+        let mut state = UiState::new(500);
+        state.add_steer_echo("same");
+        state.add_steer_echo("same");
+        assert_eq!(state.steering_queued(), 2);
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: Some("same".into()),
+        });
+        assert_eq!(
+            statuses(&state),
+            vec![SteerEchoStatus::Applied, SteerEchoStatus::Queued],
+            "oldest same-content steer flips first (positional, not content-keyed)"
+        );
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: Some("same".into()),
+        });
+        assert_eq!(
+            statuses(&state),
+            vec![SteerEchoStatus::Applied, SteerEchoStatus::Applied]
+        );
+        assert_eq!(state.steering_queued(), 0);
     }
 
     // cyril-bm1j Slice 3 / claim C4: SteeringConsumed flips the OLDEST Queued echo.
@@ -1784,26 +1862,24 @@ mod tests {
 
     // cyril-bm1j Slice 6 / claim C9: TurnCompleted resets the steer chip counter.
     #[test]
-    fn turn_completed_resets_steering_queued() {
+    fn turn_completed_does_not_reset_pending_steer() {
+        // cyril-7z7u claim 3 (rewrites the old turn_completed_resets test, which
+        // locked the now-removed reset). A late steer is queued mid-turn and the
+        // backend defers it to the next turn (probe: .cyril-7z7u/findings.md), so
+        // TurnCompleted must NOT reset the chip or finalize the echo — the steer is
+        // genuinely still pending and drains via the next turn's SteeringConsumed.
         let mut state = UiState::new(500);
-        state.apply_notification(&Notification::SteeringQueued {
-            message: Some("a".into()),
-        });
-        state.apply_notification(&Notification::SteeringQueued {
-            message: Some("b".into()),
-        });
-        state.add_steer_echo("a"); // a live echo, still Queued
-        assert_eq!(state.steering_queued(), 2);
+        state.add_steer_echo("a"); // optimistic: chip 1, echo Queued
+        assert_eq!(state.steering_queued(), 1);
 
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         });
         assert_eq!(
             state.steering_queued(),
-            0,
-            "turn-end clears the live chip (today's code FAILS this)"
+            1,
+            "turn-end must NOT reset a pending steer (it drains next turn)"
         );
-        // Intended divergence: the scrollback echo keeps its status (not flipped).
         assert!(
             state.messages().iter().any(|m| matches!(
                 m.kind(),
@@ -1812,10 +1888,24 @@ mod tests {
                     ..
                 }
             )),
-            "echo status is unchanged by turn-end (chip is the live HUD, echo is history)"
+            "the pending echo stays Queued across turn-end"
         );
 
-        // Adversarial: TurnCompleted at chip 0 stays 0 (no underflow).
+        // Next turn consumes the deferred steer -> chip drains, echo flips.
+        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        assert_eq!(state.steering_queued(), 0, "consumed drains the chip");
+        assert!(
+            state.messages().iter().any(|m| matches!(
+                m.kind(),
+                ChatMessageKind::SteerEcho {
+                    status: SteerEchoStatus::Applied,
+                    ..
+                }
+            )),
+            "consumed flips the surviving echo to Applied"
+        );
+
+        // Adversarial: TurnCompleted at chip 0 stays 0 (no spurious reset/underflow).
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         });
@@ -1826,12 +1916,10 @@ mod tests {
     #[test]
     fn steering_queued_exposed_via_tuistate_trait() {
         let mut state = UiState::new(500);
-        state.apply_notification(&Notification::SteeringQueued {
-            message: Some("a".into()),
-        });
-        state.apply_notification(&Notification::SteeringQueued {
-            message: Some("b".into()),
-        });
+        // cyril-7z7u: the chip is optimistic — drive it via add_steer_echo
+        // (user-send), not the wire SteeringQueued (which no longer counts).
+        state.add_steer_echo("a");
+        state.add_steer_echo("b");
         assert_eq!((&state as &dyn TuiState).steering_queued(), 2);
         // Live, not a stale snapshot: a consume is reflected through the trait.
         state.apply_notification(&Notification::SteeringConsumed { content: None });
@@ -1884,33 +1972,44 @@ mod tests {
     // Slice A / design claim 13: queue mirror queued->1, consumed->0, floor at 0.
     #[test]
     fn steering_queue_mirror() {
+        // cyril-7z7u: the chip is OPTIMISTIC — driven by add_steer_echo (user-send),
+        // drained by SteeringConsumed, zeroed by Cleared/SessionCreated. The wire
+        // SteeringQueued no longer counts (it would double-count the optimistic add).
+        // (Rewrites the old wire-driven mirror.)
         let mut state = UiState::new(500);
         assert_eq!(state.steering_queued(), 0);
+
+        state.add_steer_echo("a");
+        state.add_steer_echo("b");
+        assert_eq!(state.steering_queued(), 2, "optimistic: counted at send");
+
+        // claim 4: a wire SteeringQueued must NOT change the count (no double-count).
         state.apply_notification(&Notification::SteeringQueued {
             message: Some("a".into()),
         });
-        assert_eq!(state.steering_queued(), 1);
-        state.apply_notification(&Notification::SteeringQueued {
-            message: Some("b".into()),
-        });
-        assert_eq!(state.steering_queued(), 2);
+        assert_eq!(
+            state.steering_queued(),
+            2,
+            "wire steering_queued must not re-count an already-optimistic steer"
+        );
+
+        // claim 2 (count): consumed decrements.
         state.apply_notification(&Notification::SteeringConsumed {
             content: Some("a".into()),
         });
         assert_eq!(state.steering_queued(), 1);
+
+        // claim 6: cleared zeroes the count.
         state.apply_notification(&Notification::SteeringCleared);
         assert_eq!(state.steering_queued(), 0);
-        // floor: consumed at 0 stays 0 (no underflow panic). `content: None`
-        // (C1 path) still decrements — here floored at 0.
+
+        // claim 9: consumed at 0 floors at 0 (saturating, no underflow panic).
         state.apply_notification(&Notification::SteeringConsumed { content: None });
         assert_eq!(state.steering_queued(), 0);
 
-        // A new session must reset the mirror, in lockstep with
-        // SessionController.steering_depth — an un-consumed steer must not leak a
-        // phantom chip count onto the fresh session.
-        state.apply_notification(&Notification::SteeringQueued {
-            message: Some("leftover".into()),
-        });
+        // claim 7: a new session zeroes the count — a pending optimistic steer must
+        // not leak a phantom chip onto the fresh session.
+        state.add_steer_echo("leftover");
         assert_eq!(state.steering_queued(), 1);
         state.apply_notification(&Notification::SessionCreated {
             session_id: SessionId::new("fresh"),
