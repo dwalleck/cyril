@@ -1,0 +1,23 @@
+sessionId: 98383c9b-c3d5-44cc-82f4-93ca2fb28a6c
+
+# TURN 1 (long, no-tool) — steer fired on first chunk (mid-turn)
+  turn-1 prompt: 'Reply with exactly one word: alpha. Do not use any tools.'
+  -> sent _session/steer (id=4) mid-turn-1
+  turn 1 stopReason: end_turn
+
+# TURN 2 (tool boundary) — does the queued steer drain?
+  [turn 2] steering_queued: STEER-PROBE-MARKER: from now on, end every reply with the word ZEBRA.
+  [turn 2] steering_consumed: STEER-PROBE-MARKER: from now on, end every reply with the word ZEBRA.
+  turn 2 stopReason: end_turn
+
+============================================================
+VERDICT
+============================================================
+turn-1 steering events : []
+turn-2 steering events : ['steering_queued', 'steering_consumed']
+queued mid-turn-1, consumed IN turn-1 : False
+SURVIVES turn-end (consumed in turn 2): True
+corroboration — turn-2 reply contains ZEBRA: True
+
+# cwd: /home/dwalleck/.claude/tmp/cyril-7z7u-iuws8gtk
+# log: /home/dwalleck/repos/cyril/.claude/worktrees/cyril-7z7u/.cyril-7z7u/probe-cross-turn-steer.log
