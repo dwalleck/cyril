@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "clippy on stop",
+      "trigger": "Stop",
+      "description": "Runs workspace-wide clippy with warnings denied once per turn at session stop, surfacing any lint failures.",
+      "action": {
+        "type": "command",
+        "command": "cargo clippy --workspace --all-targets -- -D warnings",
+        "timeout": 300
+      }
+    }
+  ]
+}

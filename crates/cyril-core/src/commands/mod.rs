@@ -331,6 +331,7 @@ pub(crate) fn parse_options_response(response: &serde_json::Value) -> Vec<Comman
 
 #[cfg(test)]
 #[expect(clippy::unwrap_used)]
+#[expect(clippy::expect_used)]
 mod tests {
     use super::*;
 

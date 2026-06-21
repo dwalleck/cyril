@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "rustfmt on save",
+      "trigger": "PostFileSave",
+      "description": "Formats Rust files with rustfmt (edition 2024) immediately after they are saved.",
+      "matcher": "\\.rs$",
+      "action": {
+        "type": "command",
+        "command": "rustfmt --edition 2024 \"{{filePath}}\"",
+        "timeout": 30
+      }
+    }
+  ]
+}

@@ -6,7 +6,7 @@
 
 ## Workspace Layout
 
-Three-crate Rust workspace (Edition 2024, Rust ≥1.94.0):
+Four-crate Rust workspace (Edition 2024, Rust ≥1.94.0):
 
 ```
 crates/
@@ -56,6 +56,10 @@ crates/
         hooks_panel.rs # Hooks overlay popup (three-column table)
         picker.rs     # Fuzzy-filtered selection list (nucleo-matcher)
         approval.rs   # Permission approval dialog
+
+  cyril-voice/    # Library — voice input (speech-to-text) engine
+    src/
+      lib.rs        # STT engine entry point
 ```
 
 ## Architecture
@@ -98,12 +102,43 @@ Commands implement `Command` trait (`name`, `description`, `execute`). `CommandR
 3. Notifications
 4. Redraw timer (adaptive: 33ms streaming → 500ms idle)
 
-## Repo-Specific Patterns
+## Rust Engineering Rules
 
-### Error Handling Boundary
-- `cyril-core` and `cyril-ui` define their own `Error`/`ErrorKind` enums via `thiserror`
-- The binary crate uses `Box<dyn Error>` at the top level
-- Lints: `unsafe_code = "forbid"`, `unwrap_used = "deny"`, `expect_used = "warn"`
+These are the non-negotiable conventions for this workspace. They take precedence over generic Rust habits.
+
+### Build, Test & Verify (run before declaring work done)
+A green build is necessary but not sufficient — run the full gate, not just `cargo build`:
+
+```bash
+cargo fmt --all                              # format (edition 2024)
+cargo clippy --workspace --all-targets -- -D warnings   # lints must be clean
+cargo test --workspace                       # unit + integration tests
+```
+
+- Lints are CI-grade discipline even though no CI workflow exists yet: treat any clippy warning as a failure.
+- `unwrap_used = "deny"` and `expect_used = "warn"` are enforced workspace-wide (`Cargo.toml [workspace.lints]`). A clippy run surfaces violations.
+- When `cargo clippy --fix` rewrites files via the shell, formatting is reapplied by `.claude/hooks/cargo-fmt-after-clippy.sh` — do not hand-format around it.
+
+### Error Handling
+- `cyril-core` and `cyril-ui` each define their own `Error`/`ErrorKind` enums via `thiserror`. The binary crate uses `Box<dyn Error>` (and `anyhow`) only at the top level.
+- **Map external errors at the boundary.** Errors from `agent-client-protocol`, `serde_json`, `toml`, etc. get translated into a typed `ErrorKind` variant inside the module that calls them — they must not leak into a crate's public API.
+- Preserve the source chain: put inner errors in `#[source]` / `#[from]` fields rather than formatting them into a `String` early. Only flatten to a string at the outermost boundary where the chain is logged.
+- Prefer dedicated enum variants over `reason: String` sentinels when a caller might branch on the cause.
+
+### No `.unwrap()` / `.expect()` in production code (tests are exempt)
+- `unwrap_used = "deny"` makes `.unwrap()` a hard error outside tests. Handle the `None`/`Err` case with `?`, `match`, or a typed error.
+- `expect_used` is `warn` only because tests legitimately use `.expect()`. Do not introduce `.expect()` in non-test code.
+- Do not silence these with `#[allow(...)]` at the call site — fix the code. If a lint is genuinely wrong, change it in `[workspace.lints]` with a comment, not inline.
+
+### Parse, don't validate, at deserialization boundaries
+- Untrusted input — most importantly the raw ACP protocol messages decoded in `convert.rs` — should be turned into typed domain values as early as possible, not passed around as loose strings/`Value`s and re-checked later.
+- A free `validate_x(&T)` that nothing constructs is usually a missed newtype. Wrap the invariant in a type with a fallible constructor.
+
+### Exhaustive matching over `_ =>` for protocol and error enums
+- When converting ACP messages (`convert.rs`) or projecting one error/event enum into another, match every variant explicitly. Avoid `_ => ...` catch-alls.
+- This makes a new ACP protocol variant a compile error that forces a conscious decision, instead of silently falling through. `convert.rs` is the file most likely to drift as `agent-client-protocol` is upgraded — exhaustiveness is the guardrail.
+
+## Repo-Specific Patterns
 
 ### ACP Client (`!Send`)
 `KiroClient` implements `acp::Client` with `async_trait(?Send)` because it uses `RefCell<HashMap>` for tool call input caching. Lives exclusively in the bridge thread.

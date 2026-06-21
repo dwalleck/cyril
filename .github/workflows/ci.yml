@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Validate commit messages follow conventional commits.
+  commitlint:
+    name: Validate Commits
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit messages
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          COMMITS=$(git log --format="%s" origin/${{ github.base_ref }}..HEAD)
+
+          # Type required; optional lowercase scope; optional `!`; >=3 char description.
+          PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore)(\([a-z][a-z0-9-]*\))?!?: .{3,}"
+
+          FAILED=0
+          while IFS= read -r msg; do
+            if [[ -z "$msg" ]]; then
+              continue
+            fi
+            if [[ ! "$msg" =~ $PATTERN ]] && [[ ! "$msg" =~ ^Merge ]]; then
+              echo "❌ Invalid commit: $msg"
+              FAILED=1
+            else
+              echo "✅ Valid commit: $msg"
+            fi
+          done <<< "$COMMITS"
+
+          if [[ $FAILED -eq 1 ]]; then
+            echo ""
+            echo "Expected format: <type>[optional scope]: <description>"
+            echo "Valid types: feat, fix, docs, style, refactor, perf, test, build, ci, chore"
+            echo "Scopes should be lowercase (e.g., ui, core, voice, commands)"
+            echo "Description must be at least 3 characters"
+            exit 1
+          fi
+          echo ""
+          echo "All commits follow conventional format!"
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # The repo's rust-toolchain.toml pins the channel + components (rustfmt,
+      # clippy), so checkout is enough — the toolchain file drives the install.
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Run tests
+        run: cargo nextest run --workspace --all-features
+
+      - name: Run doc tests
+        run: cargo test --doc --workspace --all-features
+
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --all-features
+
+  # Summary job that requires all other jobs to pass — use this as the single
+  # required status check in branch protection.
+  ci-success:
+    name: CI Success
+    if: always()
+    needs: [commitlint, format, lint, test, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs
+        run: |
+          # commitlint is skipped on push events, so "skipped" is allowed.
+          if [[ "${{ needs.commitlint.result }}" != "success" ]] && \
+             [[ "${{ needs.commitlint.result }}" != "skipped" ]]; then
+            echo "Commit validation failed"
+            exit 1
+          fi
+          if [[ "${{ needs.format.result }}" != "success" ]] || \
+             [[ "${{ needs.lint.result }}" != "success" ]] || \
+             [[ "${{ needs.test.result }}" != "success" ]] || \
+             [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "One or more CI jobs failed"
+            exit 1
+          fi
+          echo "All CI jobs passed successfully!"
