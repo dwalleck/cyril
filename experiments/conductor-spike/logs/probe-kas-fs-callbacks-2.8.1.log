@@ -1,0 +1,42 @@
+
+============================================================
+RUN A-none  clientCapabilities={}
+============================================================
+  stopReason       : end_turn
+  getAccessToken   : 0 (expect 0 — free path)
+  fs callbacks     : {}
+  other inbound    : {}
+  file on disk     : True  content='KAS_FS_PROBE_OK'
+
+============================================================
+RUN B-base  clientCapabilities={"fs": {"readTextFile": true, "writeTextFile": true}}
+============================================================
+  stopReason       : end_turn
+  getAccessToken   : 0 (expect 0 — free path)
+  fs callbacks     : {"fs/read_text_file": 3, "fs/write_text_file": 1}
+  other inbound    : {}
+  file on disk     : True  content='KAS_FS_PROBE_OK'
+    sample fs/read_text_file: {"path": "/home/dwalleck/.claude/tmp/kas-fs-B-base-mz_skbot/probe_kas.txt"}
+    sample fs/write_text_file: {"path": "/home/dwalleck/.claude/tmp/kas-fs-B-base-mz_skbot/probe_kas.txt", "content": "KAS_FS_PROBE_OK\n"}
+
+============================================================
+RUN C-kiro  clientCapabilities={"fs": {"readTextFile": true, "writeTextFile": true, "_meta": {"kiro": {"readFile": true, "writeFile": true, "stat": true, "readDirectory": true, "delete": true}}}}
+============================================================
+  stopReason       : end_turn
+  getAccessToken   : 0 (expect 0 — free path)
+  fs callbacks     : {"_kiro/fs/stat": 4, "_kiro/fs/read_directory": 1, "_kiro/fs/read_file": 3, "_kiro/fs/write_file": 1}
+  other inbound    : {}
+  file on disk     : True  content='KAS_FS_PROBE_OK'
+    sample _kiro/fs/stat: {"path": "/home/dwalleck/.claude/tmp/kas-fs-C-kiro-1jporuru"}
+    sample _kiro/fs/read_directory: {"path": "/home/dwalleck/.claude/tmp/kas-fs-C-kiro-1jporuru"}
+    sample _kiro/fs/read_file: {"path": "/home/dwalleck/.claude/tmp/kas-fs-C-kiro-1jporuru/probe_kas.txt"}
+    sample _kiro/fs/write_file: {"path": "/home/dwalleck/.claude/tmp/kas-fs-C-kiro-1jporuru/probe_kas.txt", "content": "KAS_FS_PROBE_OK\n"}
+
+============================================================
+SUMMARY
+============================================================
+  A-none   -> in-process (no fs callbacks)     calls={} disk=True ok=True
+  B-base   -> base ACP fs/*                    calls={"fs/read_text_file": 3, "fs/write_text_file": 1} disk=True ok=True
+  C-kiro   -> kiro superset _kiro/fs/*         calls={"_kiro/fs/stat": 4, "_kiro/fs/read_directory": 1, "_kiro/fs/read_file": 3, "_kiro/fs/write_file": 1} disk=True ok=True
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-fs-callbacks-2.8.1.log
