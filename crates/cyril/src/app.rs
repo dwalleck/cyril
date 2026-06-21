@@ -851,9 +851,16 @@ impl App {
     /// `redraw_needed` is set by the caller (`handle_command_result`).
     fn toggle_voice(&mut self) {
         let Some(handle) = self.voice.as_ref() else {
-            self.ui_state.add_system_message(
-                "Voice input isn't compiled in — rebuild with `--features voice`.".into(),
-            );
+            // `voice` is None for two distinct reasons: the feature was never
+            // compiled in, or the engine thread exited at runtime (the select!
+            // arm cleared the handle). Report them differently — `cfg!` keeps
+            // this a single code path with no `#[cfg]` block.
+            let detail = if cfg!(feature = "voice") {
+                "Voice engine is unavailable — it stopped unexpectedly."
+            } else {
+                "Voice input isn't compiled in — rebuild with `--features voice`."
+            };
+            self.ui_state.add_system_message(detail.into());
             return;
         };
         let cmd = if self.voice_active {

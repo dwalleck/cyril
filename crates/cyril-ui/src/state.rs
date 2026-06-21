@@ -1074,9 +1074,19 @@ impl UiState {
         self.voice_status = status;
     }
 
-    /// Update the current voice input level (clamped to `0.0..=1.0`).
+    /// Update the current voice input level, normalized to `0.0..=1.0`.
+    ///
+    /// A `NaN` input — possible once V1b derives the level from real audio (RMS
+    /// over an empty buffer / divide-by-zero) — is treated as silence rather
+    /// than stored. (`clamp(0.0, 1.0)` itself never panics — the bounds are
+    /// valid — but it would *propagate* NaN, and NaN compares false to
+    /// everything, so it has no business living in a level field.)
     pub fn set_voice_level(&mut self, level: f32) {
-        self.voice_level = level.clamp(0.0, 1.0);
+        self.voice_level = if level.is_nan() {
+            0.0
+        } else {
+            level.clamp(0.0, 1.0)
+        };
     }
 
     /// True while voice capture/transcription is in progress — drives the
@@ -2368,6 +2378,17 @@ mod tests {
         assert_eq!(state.voice_level(), 1.0);
         state.set_voice_level(-1.0);
         assert_eq!(state.voice_level(), 0.0);
+    }
+
+    #[test]
+    fn voice_level_nan_normalizes_to_silence() {
+        // V1b RMS can yield NaN (empty buffer / divide-by-zero); it must never
+        // be stored as the level (NaN compares false to everything).
+        let mut state = UiState::new(500);
+        state.set_voice_status(VoiceStatus::Listening);
+        state.set_voice_level(f32::NAN);
+        assert_eq!(state.voice_level(), 0.0);
+        assert!(!state.voice_level().is_nan());
     }
 
     #[test]

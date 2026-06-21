@@ -44,6 +44,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 }
 
 /// Build a fixed-width bar like `[█████░░░░░░░]` from a `0.0..=1.0` level.
+///
+/// Total for every `f32`: `clamp(0.0, 1.0)` never panics (the bounds are
+/// valid), and the `as usize` cast saturates — so `NaN`/±∞/out-of-range all
+/// resolve to a valid cell count (`NaN → 0`, an empty bar). The source of this
+/// value, [`UiState::set_voice_level`], also normalizes `NaN` away.
 fn meter_bar(level: f32) -> String {
     let filled = (level.clamp(0.0, 1.0) * METER_CELLS as f32).round() as usize;
     let filled = filled.min(METER_CELLS);
@@ -70,6 +75,13 @@ mod tests {
     fn meter_bar_clamps_out_of_range() {
         assert_eq!(meter_bar(-1.0), "[░░░░░░░░░░░░]");
         assert_eq!(meter_bar(2.0), "[████████████]");
+    }
+
+    #[test]
+    fn meter_bar_nan_renders_empty_without_panicking() {
+        // Documents the totality: NaN saturates through the `as usize` cast to
+        // an empty bar rather than panicking.
+        assert_eq!(meter_bar(f32::NAN), "[░░░░░░░░░░░░]");
     }
 
     #[test]
