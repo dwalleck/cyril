@@ -1,6 +1,6 @@
 # Kiro CLI 2.8.1 — wire audit (diff vs 2.8.0)
 
-**Analyzed:** 2026-06-18 · **Method:** downloaded + SHA-verified 2.8.1 headless tarball (archived to `~/.local/share/kiro-research/binaries/2.8.1/`) vs archived 2.8.0; same-binary live v2 surface capture; `nm`+`rustfilt` symbol diff of `kiro-cli-chat`; carved + sha-validated embedded `tui.js` from both binaries; embedded `@kiro/agent` version probe; self-extracted KAS 0.3.257 bundle + covenant type diff. Single environment (this user's social/GitHub token, non-enterprise).
+**Analyzed:** 2026-06-18 (binary/bundle diff) + **2026-06-21 runtime addendum** (live KAS auth-mode + fs-gating behavior — see [§ KAS runtime behavior](#kas-runtime-behavior--live-capture-2026-06-21-addendum)) · **Method:** downloaded + SHA-verified 2.8.1 headless tarball (archived to `~/.local/share/kiro-research/binaries/2.8.1/`) vs archived 2.8.0; same-binary live v2 surface capture; `nm`+`rustfilt` symbol diff of `kiro-cli-chat`; carved + sha-validated embedded `tui.js` from both binaries; embedded `@kiro/agent` version probe; self-extracted KAS 0.3.257 bundle + covenant type diff. Single environment (this user's social/GitHub token, non-enterprise).
 
 **Verdict for cyril: SAFE — nothing changed on the v2 path cyril drives.** 2.8.1 is a **TUI-only patch release** for the v2 engine (MCP OAuth clipboard, subagent-approval rendering, welcome link). cyril's default `kiro-cli acp` (v2) wire surface is identical to 2.8.0 — proven from three independent angles. **The only additive wire change is KAS-side and undocumented in the changelog:** the embedded KAS bundle jumped `@kiro/agent` 0.3.234 → 0.3.257, adding two new `_kiro/*` methods (`_kiro/sessions/changed`, `_kiro/hooks/setEnabled`).
 
@@ -61,6 +61,34 @@ The chat binary grew ~335 KB; only ~1.1 KB of that is tui.js and the Rust symbol
 **Type/map goldmine intact + grew:** `@kiro/agent/dist` `.d.ts` 661 → 664; covenant `.d.ts` 68 → 69 (31 capability dirs). Per-capability typed contracts keep shipping with full doc comments.
 
 KAS init handshake shape unchanged (`extensionMethods`: `_kiro/knowledge`, `_kiro/codeIntelligence`, `_kiro/session/{context,compact,export,history}`; `sessionCapabilities {list, fork}` non-empty; `checkpoints`, `sessionList`, `policyNotifications` meta flags).
+
+## KAS runtime behavior — live capture (2026-06-21 addendum)
+
+> Behavioral/gating facts the **covenant cannot hold** (it documents `_kiro/*` *types*; these are server-launch flags and capability-negotiated routing). Captured against the self-extracted 0.3.257 bundle by **directly spawning the server** (`node --experimental-wasm-modules ~/.local/share/kiro-cli/kas/node_modules/@kiro/agent/dist/server/acp-server.js`), bypassing the `kiro-cli`/`--v3` wrapper. Probes: `experiments/conductor-spike/probe-kas-direct-spawn-2.8.1.py`, `probe-kas-fs-callbacks-2.8.1.py`. This is the authoritative source for KAS auth-mode + fs-gating behavior (ROADMAP KAS-1 / KAS-5 reference it).
+
+### Auth: the "free path" (no host responder needed)
+
+`acp-server.js` parses `--auth=user|machine|acp-callback` (default `user`) and `--transport=stdio|ws` (default `stdio`). `selectAuthProvider` resolves in 5-tier priority: (1) `KIRO_API_KEY` env → `EnvAuthProvider`; (2) `--auth=acp-callback` → `AcpCallbackAuthProvider` (host callback `_kiro/auth/getAccessToken`, 3-min pre-expiry buffer, single-flight refresh); (3) `--auth=machine` → plain-text token at `--token-path` or `/tmp/access_token`; (4) `--token-path=X` → JSON token at X; (5) **default → `FileAuthProvider` reading `~/.aws/sso/cache/kiro-auth-token.json`, self-refreshing via the file's `refreshToken`.**
+
+Consequence — two spawn shapes differ:
+- **Wrapper** `kiro-cli acp --agent-engine <v3|kas>` injects `--auth=acp-callback` → `_kiro/auth/getAccessToken` is **mandatory** (the `[TokenInvalidError]` our earlier probes hit).
+- **Direct spawn** with **no `--auth`** → tier 5 → **`_kiro/auth/getAccessToken` fired 0 times** across a full `initialize` + `session/new` + tool-using turn (`stopReason: end_turn`); stderr logged `[INFO] Auth: default token file`. So a live KAS turn is reachable with **zero credential-custodian code** if the user has run `kiro-cli login`. Trade-off: direct spawn makes cyril own server-entry discovery (`KIRO_KAS_SERVER_PATH` else walk `node_modules/@kiro/agent/dist/server/acp-server.js`), the node runtime (`KIRO_AGENT_PATH`), and `--experimental-wasm-modules`.
+
+### Filesystem callbacks: three advertisement-selected modes
+
+The gate is `acp-server.js` `resolveCapabilities`. Same create-then-read prompt, three runs:
+
+| `clientCapabilities` advertised | KAS behavior | callbacks |
+|---|---|---|
+| nothing | fs **in-process** (writes cwd itself) | none — the v1/v2 behavior |
+| `fs = {readTextFile, writeTextFile}` | **base ACP** | `fs/read_text_file` (`{sessionId,path,line?,limit?}`→`{content}`, no permission), `fs/write_text_file` (`{sessionId,path,content}`→`{}`, fires `session/request_permission`) |
+| `fs._meta.kiro = {readFile,writeFile,stat,readDirectory,delete:true}` | **Kiro superset** | `_kiro/fs/read_file`, `_kiro/fs/write_file` (+`_meta.kiro.range {start,end:{line,character}}` for strReplace/insert), `_kiro/fs/stat`→`{type,size}`, `_kiro/fs/read_directory`→`{entries:[{name,type}]}`, `_kiro/fs/delete` |
+
+**The superset wins when both are advertised** (Run C offered base + kiro flags; only `_kiro/fs/*` fired). The agent **stats + lists the dir before writing**, so the kiro tier must implement all five (not just read/write). KAS sends **absolute** paths (`resolveAcpPath(cwd, path)`) — why `platform/path.rs` is load-bearing for the KAS-5 responder. (Terminal callbacks `terminal/create→wait_for_exit→output→release` + `_kiro/terminal/shell_type` were verified the same way 2026-06-16 — see [the 2.7.1 audit host-callback map](kiro-2.7.1-wire-audit.md).)
+
+### session/new shape (reinforces KAS-4)
+
+`configOptions` is **populated** (v2 returns `null`): three `select`s — `mode` (`vibe`/`spec`/`quick-spec`/`bug-fix`/`plan`/`autonomous`/`semantic_reviewer`, default `vibe`), `autopilot` (`on` default / `off`=Supervised), `contentCollection` (default `disabled`). sessionId is `sess_…`-prefixed; `_meta.agentMode: "vibe"`.
 
 ## Cyril impact
 
