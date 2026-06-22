@@ -9,6 +9,7 @@ use crate::types::StopReason;
 use crate::types::agent_command::AgentCommand;
 use crate::types::agent_engine::AgentEngine;
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
+use crate::types::kas_spawn::KasSpawn;
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -123,6 +124,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
 pub fn spawn_bridge(
     agent_command: AgentCommand,
     agent_engine: AgentEngine,
+    kas_spawn: KasSpawn,
     cwd: PathBuf,
 ) -> crate::Result<BridgeHandle> {
     let (handle, channels) = create_channel_pair();
@@ -141,7 +143,9 @@ pub fn spawn_bridge(
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
                     local.block_on(&rt, async move {
-                        match run_bridge(&agent_command, agent_engine, &cwd, channels).await {
+                        match run_bridge(&agent_command, agent_engine, kas_spawn, &cwd, channels)
+                            .await
+                        {
                             Ok(()) => None,
                             Err(e) => {
                                 tracing::error!(error = %e, "bridge terminated with error");
@@ -282,29 +286,37 @@ fn engine_for(agent_engine: AgentEngine) -> Result<std::rc::Rc<dyn Engine>, Stri
     }
 }
 
-/// Resolve the subprocess command to spawn for the bound engine. The KAS free
-/// path (KAS-1 Part A) discovers the bundled `node + acp-server.js` argv; on a
-/// missing precondition it returns the actionable reason for a
-/// `BridgeDisconnected` (spec B6). v2 spawns the CLI `agent_command`.
+/// Resolve the subprocess command to spawn for the bound engine + KAS spawn
+/// shape. KAS free path (Part A) discovers the bundled `node + acp-server.js`
+/// argv; KAS wrapper (Part B) builds `kiro-cli acp --agent-engine <flag>`. Either
+/// missing precondition becomes the actionable reason for a `BridgeDisconnected`
+/// (spec B6). v2 spawns the CLI `agent_command`.
 #[cfg(feature = "kas")]
 fn resolve_spawn_command(
     agent_command: &AgentCommand,
     agent_engine: AgentEngine,
+    kas_spawn: KasSpawn,
 ) -> Result<AgentCommand, String> {
     match agent_engine {
-        AgentEngine::Kas => {
-            crate::protocol::kas::discovery::resolve_kas_command().map_err(|m| m.reason())
-        }
+        AgentEngine::Kas => match kas_spawn {
+            KasSpawn::Free => {
+                crate::protocol::kas::discovery::resolve_kas_command().map_err(|m| m.reason())
+            }
+            KasSpawn::Wrapper => {
+                crate::protocol::kas::version::build_wrapper_command(agent_command)
+            }
+        },
         AgentEngine::V2 => Ok(agent_command.clone()),
     }
 }
 
 /// Default build: only v2 is reachable here — the engine gate already refused
-/// `Kas` before any spawn — so the engine selector is irrelevant.
+/// `Kas` before any spawn — so the engine/spawn selectors are irrelevant.
 #[cfg(not(feature = "kas"))]
 fn resolve_spawn_command(
     agent_command: &AgentCommand,
     _agent_engine: AgentEngine,
+    _kas_spawn: KasSpawn,
 ) -> Result<AgentCommand, String> {
     Ok(agent_command.clone())
 }
@@ -312,6 +324,7 @@ fn resolve_spawn_command(
 async fn run_bridge(
     agent_command: &AgentCommand,
     agent_engine: AgentEngine,
+    kas_spawn: KasSpawn,
     cwd: &std::path::Path,
     channels: BridgeChannels,
 ) -> crate::Result<()> {
@@ -341,7 +354,7 @@ async fn run_bridge(
     //    precondition becomes a specific, actionable BridgeDisconnected reason
     //    (spec B6 — no auto-recover, no v2 fallback). v2 (and any default build)
     //    spawns the CLI `agent_command` unchanged. The clone is startup-only.
-    let spawn_command = match resolve_spawn_command(agent_command, agent_engine) {
+    let spawn_command = match resolve_spawn_command(agent_command, agent_engine, kas_spawn) {
         Ok(cmd) => cmd,
         Err(reason) => {
             notify_or_closed(

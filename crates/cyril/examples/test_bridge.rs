@@ -46,7 +46,12 @@ async fn main() -> anyhow::Result<()> {
     println!("CWD: {}\n", cwd.display());
 
     let agent_command = cyril_core::types::AgentCommand::try_from_argv(cli.agent_command)?;
-    let bridge = spawn_bridge(agent_command, AgentEngine::default(), cwd.clone())?;
+    let bridge = spawn_bridge(
+        agent_command,
+        AgentEngine::default(),
+        KasSpawn::default(),
+        cwd.clone(),
+    )?;
     let (sender, mut notification_rx, mut permission_rx) = bridge.split();
     println!("[OK] Bridge spawned\n");
 

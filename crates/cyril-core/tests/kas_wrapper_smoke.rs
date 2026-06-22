@@ -1,15 +1,15 @@
-//! Gated live smoke (KAS-1 Part A, claim C1): a free-path KAS turn runs to
-//! completion THROUGH cyril's bridge — not the raw probe harness.
+//! Gated live smoke (KAS-1 Part B, claims C1-wrapper + C10-live): a KAS turn via
+//! the WRAPPER spawn (`kiro-cli acp --agent-engine <flag>`, `--auth=acp-callback`)
+//! completes — which means cyril's `_kiro/auth/getAccessToken` responder fired
+//! and returned a token KAS accepted. A wrong responder method-string, a missing
+//! `profileArn`, or a stale token would surface here as a `BridgeDisconnected`
+//! (the turn could not authenticate), failing the test loudly.
 //!
-//! Manual-gated (design caveat): needs `--features kas`, a prior `kiro-cli
-//! login` (populates the tier-5 token file), the self-extracted KAS bundle, and
-//! `node`. Oracle parity with prove-it-prototype: the bridge spawns the
-//! identical no-`--auth` argv the probe used (unit-fenced by
-//! `discovery::resolve_happy_path_builds_probe_argv`), which the probe proved
-//! completes with `_kiro/auth/getAccessToken` fired 0×. This smoke asserts the
-//! user-observable end of that: a `TurnCompleted` with no `BridgeDisconnected`.
+//! Manual-gated: needs `--features kas`, a prior `kiro-cli login` (fresh token),
+//! and kiro-cli >= 2.7.1. Run once per identity to cover C10-live (social +
+//! AWS-IdP); AWS Builder-ID is unit-only (spec SC2, accepted).
 //!
-//! Run: cargo test -p cyril-core --features kas --test kas_freepath_smoke \
+//! Run: cargo test -p cyril-core --features kas --test kas_wrapper_smoke \
 //!        -- --ignored --nocapture
 #![cfg(feature = "kas")]
 #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -21,15 +21,19 @@ use cyril_core::types::*;
 use tokio::sync::mpsc::Receiver;
 
 #[tokio::test]
-#[ignore = "live: needs --features kas, kiro-cli login, the KAS bundle, and node"]
-async fn freepath_turn_completes_through_bridge() {
-    // For the KAS free path the `agent_command` param is ignored — the bridge
-    // resolves the bundled `node + acp-server.js` argv via discovery — so a
-    // placeholder is fine here.
-    let placeholder = AgentCommand::new("unused-for-kas-free-path");
+#[ignore = "live: needs --features kas, a fresh kiro-cli login, kiro-cli >= 2.7.1"]
+async fn wrapper_turn_completes_with_auth_responder() {
+    // The wrapper spawns `<program> acp --agent-engine <flag>`; the program comes
+    // from the bound agent command (default kiro-cli).
+    let agent_command = AgentCommand::new("kiro-cli").with_args(vec!["acp".to_string()]);
     let cwd = std::env::temp_dir();
-    let bridge = spawn_bridge(placeholder, AgentEngine::Kas, KasSpawn::Free, cwd.clone())
-        .expect("spawn_bridge");
+    let bridge = spawn_bridge(
+        agent_command,
+        AgentEngine::Kas,
+        KasSpawn::Wrapper,
+        cwd.clone(),
+    )
+    .expect("spawn_bridge");
     let (sender, mut notif_rx, _perm_rx) = bridge.split();
 
     sender
@@ -46,8 +50,6 @@ async fn freepath_turn_completes_through_bridge() {
         .await
         .expect("send SendPrompt");
 
-    // Drive to TurnCompleted; fail loudly on BridgeDisconnected (a missing
-    // precondition or an auth failure) or a 180s timeout.
     let deadline = tokio::time::Instant::now() + Duration::from_secs(180);
     loop {
         let routed = tokio::time::timeout_at(deadline, notif_rx.recv())
@@ -55,16 +57,17 @@ async fn freepath_turn_completes_through_bridge() {
             .expect("a TurnCompleted within 180s")
             .expect("notification channel open");
         match routed.notification {
-            Notification::TurnCompleted { .. } => return, // C1 satisfied
+            // Reaching turn-end PROVES the getAccessToken responder authenticated
+            // the session (the wrapper cannot turn without a valid host token).
+            Notification::TurnCompleted { .. } => return,
             Notification::BridgeDisconnected { reason } => {
-                panic!("free-path KAS turn disconnected: {reason}")
+                panic!("wrapper KAS turn disconnected (auth responder?): {reason}")
             }
-            _ => {} // streamed text / metadata — keep draining
+            _ => {}
         }
     }
 }
 
-/// Drain until the first `SessionCreated`; panic on disconnect or 30s timeout.
 async fn recv_session(rx: &mut Receiver<RoutedNotification>) -> SessionId {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
     loop {
