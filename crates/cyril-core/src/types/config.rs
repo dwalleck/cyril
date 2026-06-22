@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use super::agent_engine::AgentEngine;
+
 /// Application configuration, loaded from a TOML file.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
@@ -39,6 +41,9 @@ pub struct AgentConfig {
     pub agent_name: String,
     /// Extra args for agent subprocess.
     pub extra_args: Vec<String>,
+    /// Which Kiro engine to drive (KAS-0, ADR-0001). TOML `engine = "v2"` or
+    /// `"kas"`; the `--agent-engine` flag overrides this. Defaults to v2.
+    pub engine: AgentEngine,
 }
 
 impl Default for AgentConfig {
@@ -46,6 +51,7 @@ impl Default for AgentConfig {
         Self {
             agent_name: "kiro-cli".to_string(),
             extra_args: Vec::new(),
+            engine: AgentEngine::default(),
         }
     }
 }
