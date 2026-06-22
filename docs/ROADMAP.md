@@ -325,7 +325,7 @@ KAS hooks are a **host-callback** model, and cyril is the host. Verified live (`
 
 **Opt-in host callbacks — decide advertise-or-not (default: don't advertise; KAS falls back in-process):**
 
-- `secret/{get,store,delete}` (gated `secretStorage`) — only if cyril ever custodies MCP/OAuth secrets for KAS; default **decline**.
+- `secret/{get,store,delete}` (gated `secretStorage`) — **purpose pinned (source 2026-06-21):** persistence backend for **remote-MCP OAuth state only** — OAuth client-registration info, access/refresh tokens, and PKCE verifier, keyed `kiro.mcp.<sha256(url+headers)>` per connection (`AcpSecretStorage`/`CredentialStorageManager`). Not a general secret API. Declining only means OAuth'd remote MCP servers re-auth each session (KAS keeps its own backend); stdio/non-OAuth MCP unaffected. Advertise only if cyril hosts KAS with remote OAuth MCP **and** backs it with real secure storage (never plaintext — cyril becomes custodian of MCP OAuth tokens). Default **decline**. See memory `reference_kiro_kas_secret_storage`.
 - `openExternalUrl` (gated `openExternalUrl`) — open auth/doc URLs from the host; cheap, decide per UX.
 - `tool/{semantic_rename,smart_relocate,get_diagnostics}` (gated `clientTool*`) — client-side **LSP** callbacks; a chat TUI has no language server, so **decline** (KAS uses its own).
 - `mcp/elicitation` — MCP structured prompts; bundle with the `/mcp` work above.
