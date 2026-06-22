@@ -174,16 +174,19 @@ impl acp::Client for KiroClient {
     /// default. The v2 free path never sends this, and the cfg-split keeps the
     /// credential code out of a default build (ADR-0002).
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
-        Self::handle_ext_request(args)
+        Self::handle_ext_request(args).await
     }
 }
 
 impl KiroClient {
+    // `#[cfg]` blocks (not a `cfg!(...)` runtime branch) are required: the `kas`
+    // module — and thus `kas::auth::respond_get_access_token` — does not exist in
+    // a default build, so a single body referencing it would fail to compile.
     /// Route an ext request: KAS-1 handles only `getAccessToken`.
     #[cfg(feature = "kas")]
-    fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+    async fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         if args.method.as_ref() == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
-            return crate::protocol::kas::auth::respond_get_access_token();
+            return crate::protocol::kas::auth::respond_get_access_token().await;
         }
         // Other ext requests (fs/terminal host callbacks) are KAS-5 (cyril-7bdu).
         default_ext_response()
@@ -191,7 +194,7 @@ impl KiroClient {
 
     /// Default build: no KAS ext requests are handled.
     #[cfg(not(feature = "kas"))]
-    fn handle_ext_request(_args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+    async fn handle_ext_request(_args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         default_ext_response()
     }
 }

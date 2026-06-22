@@ -48,8 +48,13 @@ struct AuthReply {
 /// of the three required fields is absent or empty. `profileArn` is load-bearing
 /// — KAS 400s "profileArn is required" — so an absent field is an error, not a
 /// silent empty default.
-fn read_token_file(path: &Path) -> Result<AuthReply, String> {
-    let raw = std::fs::read_to_string(path).map_err(|e| format!("read kiro token file: {e}"))?;
+async fn read_token_file(path: &Path) -> Result<AuthReply, String> {
+    // Non-blocking: the bridge is a single-threaded runtime and this fires on the
+    // live ext-request path, so a slow home mount (e.g. NFS) must not stall the
+    // executor and the notification stream while a token is read.
+    let raw = tokio::fs::read_to_string(path)
+        .await
+        .map_err(|e| format!("read kiro token file: {e}"))?;
     let v: serde_json::Value =
         serde_json::from_str(&raw).map_err(|e| format!("parse kiro token file: {e}"))?;
     let field = |k: &str| -> Result<String, String> {
@@ -65,12 +70,17 @@ fn read_token_file(path: &Path) -> Result<AuthReply, String> {
     })
 }
 
-/// Parse an RFC3339 UTC timestamp (`YYYY-MM-DDTHH:MM:SS[.fff]Z`) to unix epoch
-/// seconds; sub-second precision and the trailing `Z` are ignored (second
-/// precision suffices for a 180s buffer). Strict on layout — returns `None` on
-/// any shape mismatch, which [`is_stale`] treats as stale (fail safe). Uses the
-/// canonical days-from-civil algorithm (Howard Hinnant).
+/// Parse an RFC3339 **UTC** timestamp (`YYYY-MM-DDTHH:MM:SS[.fff]Z`) to unix
+/// epoch seconds; sub-second precision is ignored (second precision suffices for
+/// a 180s buffer). A trailing `Z` is **required** — a numeric offset (`+02:00`)
+/// would otherwise be silently read as UTC and mis-date the token, so a non-`Z`
+/// stamp returns `None` (which [`is_stale`] treats as stale, fail safe). Strict
+/// on layout. Uses the canonical days-from-civil algorithm (Howard Hinnant).
 fn rfc3339_to_epoch(s: &str) -> Option<i64> {
+    // Require explicit UTC; a non-Z offset would be dropped and mis-dated.
+    if !s.ends_with('Z') {
+        return None;
+    }
     let b = s.as_bytes();
     if b.len() < 19
         || b.get(4) != Some(&b'-')
@@ -139,11 +149,13 @@ fn build_response(reply: &AuthReply) -> Result<acp::ExtResponse, String> {
 /// token returns an actionable error instead of a known-bad reply; automatic
 /// refresh-on-stale is deferred to **cyril-taba** (the token was fresh
 /// throughout the KAS-1 build, so the stale path can't be live-verified yet).
-pub(crate) fn respond_get_access_token() -> acp::Result<acp::ExtResponse> {
+pub(crate) async fn respond_get_access_token() -> acp::Result<acp::ExtResponse> {
     let path = crate::protocol::kas::discovery::default_token_path().ok_or_else(|| {
         acp::Error::new(-32603, "no home directory to locate the kiro token file")
     })?;
-    let reply = read_token_file(&path).map_err(|e| acp::Error::new(-32603, e))?;
+    let reply = read_token_file(&path)
+        .await
+        .map_err(|e| acp::Error::new(-32603, e))?;
     if is_stale(&reply.expires_at, now_epoch()) {
         return Err(acp::Error::new(
             -32000,
@@ -166,14 +178,14 @@ mod tests {
     }
 
     // C8/C10: a well-formed token file yields all three fields.
-    #[test]
-    fn read_token_file_extracts_three_fields() {
+    #[tokio::test]
+    async fn read_token_file_extracts_three_fields() {
         let dir = tempfile::tempdir().unwrap();
         let p = write_token(
             dir.path(),
             r#"{"accessToken":"AT","expiresAt":"2026-06-22T03:13:22.609Z","profileArn":"arn:aws:codewhisperer:::profile/X","refreshToken":"RT","provider":"Github"}"#,
         );
-        let reply = read_token_file(&p).expect("valid token file");
+        let reply = read_token_file(&p).await.expect("valid token file");
         assert_eq!(reply.access_token.0, "AT");
         assert_eq!(reply.expires_at, "2026-06-22T03:13:22.609Z");
         assert!(reply.profile_arn.starts_with("arn:aws:"));
@@ -181,26 +193,31 @@ mod tests {
 
     // C10 (the load-bearing field): a token file missing profileArn is an Err,
     // NOT a reply with an empty profileArn (which would 400 at KAS).
-    #[test]
-    fn read_token_file_missing_profile_arn_errors() {
+    #[tokio::test]
+    async fn read_token_file_missing_profile_arn_errors() {
         let dir = tempfile::tempdir().unwrap();
         let p = write_token(
             dir.path(),
             r#"{"accessToken":"AT","expiresAt":"2026-06-22T03:13:22Z"}"#,
         );
-        let err = read_token_file(&p).unwrap_err();
+        let err = read_token_file(&p).await.unwrap_err();
         assert!(err.contains("profileArn"), "got {err}");
     }
 
     // An empty-string field is also "missing".
-    #[test]
-    fn read_token_file_empty_field_errors() {
+    #[tokio::test]
+    async fn read_token_file_empty_field_errors() {
         let dir = tempfile::tempdir().unwrap();
         let p = write_token(
             dir.path(),
             r#"{"accessToken":"","expiresAt":"2026-06-22T03:13:22Z","profileArn":"arn"}"#,
         );
-        assert!(read_token_file(&p).unwrap_err().contains("accessToken"));
+        assert!(
+            read_token_file(&p)
+                .await
+                .unwrap_err()
+                .contains("accessToken")
+        );
     }
 
     // C11 custodian: neither the AccessToken's nor the AuthReply's Debug leaks
@@ -234,6 +251,9 @@ mod tests {
         assert_eq!(rfc3339_to_epoch("not-a-date"), None);
         assert_eq!(rfc3339_to_epoch("2026/06/22 03:13:22"), None);
         assert_eq!(rfc3339_to_epoch("2026-13-22T03:13:22Z"), None); // month 13
+        // A non-UTC offset is rejected (not silently read as UTC) -> fail safe.
+        assert_eq!(rfc3339_to_epoch("2026-06-22T03:13:22+02:00"), None);
+        assert_eq!(rfc3339_to_epoch("2026-06-22T03:13:22"), None); // no zone
     }
 
     // C9 (the deterministic part): the stale boundary is exactly now + buffer.
