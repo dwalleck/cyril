@@ -498,23 +498,21 @@ async fn run_loop(
                 // channel, so the loop is the single observer that clears the flag.
                 let turn_tx = inbound_tx.clone();
                 let handle = tokio::task::spawn_local(async move {
-                    let note = match turn_conn.prompt(request).await {
-                        Ok(response) => Notification::TurnCompleted {
-                            stop_reason: crate::protocol::convert::to_stop_reason(
-                                response.stop_reason,
-                            ),
-                        },
+                    // One TurnCompleted construction for both arms (success and
+                    // transport error) so the terminal marker can't drift between
+                    // them — e.g. when KAS-2a adds a turn id field to TurnCompleted.
+                    let stop_reason = match turn_conn.prompt(request).await {
+                        Ok(response) => crate::protocol::convert::to_stop_reason(response.stop_reason),
                         Err(e) => {
                             tracing::error!(error = %e, "prompt failed");
                             // No PromptResponse on a failed turn; EndTurn frees the
                             // UI from "busy". App-gone is detected by the command
                             // loop's own recv() ending, so a failed send here only
                             // means the App already left.
-                            Notification::TurnCompleted {
-                                stop_reason: StopReason::EndTurn,
-                            }
+                            StopReason::EndTurn
                         }
                     };
+                    let note = Notification::TurnCompleted { stop_reason };
                     if let Err(e) = turn_tx.send(note.into()).await {
                         tracing::debug!(error = %e, "TurnCompleted send failed (App gone)");
                     }

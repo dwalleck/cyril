@@ -2129,7 +2129,9 @@ mod tests {
     // for KAS-2a (cyril-j16p), not a code defense. The standard ACP variants
     // (tool_call, available_commands_update, …) the probe logs truncated are
     // already exercised by the v2 convert tests above via the same deser path;
-    // the KAS-distinctive `session_info_update` is the load-bearing capture here.
+    // the KAS-distinctive `session_info_update` envelope is exercised here (the
+    // captured instance is a `user_message_id_assigned` sub-kind — the `turn_end`
+    // sub-kind ADR-0004 keys off is a KAS-2a capture, cyril-j16p).
     #[test]
     fn schema_deserializes_captured_kas_session_updates() {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/kas");

@@ -14,6 +14,9 @@ longer ones (`tool_call`, `tool_call_update`, `available_commands_update`,
 `config_option_update`) failed to parse. Those are **standard ACP variants** the
 v2 engine also emits and that the v2 `convert` tests already exercise via the
 same `acp::SessionNotification` deser path — so they are covered. The
-KAS-distinctive variant is **`session_info_update`** (the `turn_end` carrier),
-which is captured here. A full multi-variant live capture is a KAS-2a task
-(cyril-j16p), where live KAS work happens anyway.
+KAS-distinctive variant is **`session_info_update`** — the envelope that, via
+`_meta.kiro.kind`, carries KAS sub-kinds including `turn_end`. The instance
+captured here is a `user_message_id_assigned` sub-kind; the load-bearing
+`turn_end` sub-kind is **not yet captured** (no turn_end frame survived the log
+truncation) and is deferred to the KAS-2a live capture (cyril-j16p), where live
+KAS work happens anyway.

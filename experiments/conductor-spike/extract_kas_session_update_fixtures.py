@@ -25,7 +25,11 @@ for path in sorted(glob.glob("experiments/conductor-spike/logs/*kas*.log")):
             src[variant] = os.path.basename(path)
 outdir = "crates/cyril-core/tests/fixtures/kas"
 for variant, params in sorted(found.items()):
-    # Scrub volatile ids to a stable placeholder so the fixture is deterministic.
+    # NOTE: ids are NOT scrubbed — fixtures embed the captured sessionId /
+    # userMessageId verbatim. The deser test only checks parse success + variant
+    # presence, not id values, so a re-run with a fresh capture will rewrite these
+    # ids (expect a git diff). Dedup keys on `sessionUpdate` alone, so for a union
+    # variant like session_info_update only the FIRST sub-kind seen is captured.
     with open(f"{outdir}/{variant}.json", "w") as f:
         json.dump(params, f, indent=2, ensure_ascii=False)
         f.write("\n")
