@@ -168,23 +168,33 @@ mod tests {
     fn default_token() -> String {
         format!("{HOME}/{TOKEN_FILE_REL}")
     }
+    /// A `<dir>/node` candidate carrying the platform exe suffix (`node.exe` on
+    /// Windows), so the injected `exists` set matches what [`find_on_path`]
+    /// actually looks for. `PathBuf` hashing/equality is separator-agnostic, so
+    /// the forward slashes here still match `find_on_path`'s `Path::join` output.
+    fn node(dir: &str) -> String {
+        format!("{dir}/node{}", std::env::consts::EXE_SUFFIX)
+    }
 
     // C2: happy path — defaults resolve to the exact probe-proven argv.
     #[test]
     fn resolve_happy_path_builds_probe_argv() {
         let path = OsString::from("/usr/bin");
-        let exists = exists_set(&[&default_server(), &default_token(), "/usr/bin/node"]);
+        let exists = exists_set(&[&default_server(), &default_token(), &node("/usr/bin")]);
         let cmd = resolve(Some(Path::new(HOME)), None, None, Some(&path), exists)
             .expect("all preconditions present");
-        assert_eq!(cmd.program(), "/usr/bin/node");
+        // Compare as paths, not strings: on Windows `find_on_path`/`Path::join`
+        // yield `\` separators and a `.exe` suffix that an exact string compare
+        // against a Unix literal would fail.
+        assert_eq!(Path::new(cmd.program()), Path::new(&node("/usr/bin")));
+        let args = cmd.args();
+        assert_eq!(args.len(), 3);
+        assert_eq!(args[0], "--experimental-wasm-modules");
         assert_eq!(
-            cmd.args(),
-            &[
-                "--experimental-wasm-modules".to_string(),
-                default_server(),
-                "--transport=stdio".to_string(),
-            ]
+            Path::new(&args[1]),
+            Path::new(HOME).join(DEFAULT_SERVER_REL)
         );
+        assert_eq!(args[2], "--transport=stdio");
     }
 
     // C3a: server missing while node IS present → Server, NOT Node (the
@@ -192,7 +202,7 @@ mod tests {
     #[test]
     fn resolve_missing_server_reports_server_not_node() {
         let path = OsString::from("/usr/bin");
-        let exists = exists_set(&[&default_token(), "/usr/bin/node"]); // server absent
+        let exists = exists_set(&[&default_token(), &node("/usr/bin")]); // server absent
         let err = resolve(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
         assert_eq!(err, KasMissing::Server(PathBuf::from(default_server())));
     }
@@ -210,7 +220,7 @@ mod tests {
     #[test]
     fn resolve_missing_token_is_not_logged_in() {
         let path = OsString::from("/usr/bin");
-        let exists = exists_set(&[&default_server(), "/usr/bin/node"]); // token absent
+        let exists = exists_set(&[&default_server(), &node("/usr/bin")]); // token absent
         let err = resolve(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
         assert_eq!(err, KasMissing::NotLoggedIn(PathBuf::from(default_token())));
     }
@@ -234,7 +244,7 @@ mod tests {
     #[test]
     fn resolve_server_path_with_spaces_is_one_arg() {
         let spaced = "/opt/my kas/acp-server.js";
-        let exists = exists_set(&[spaced, &default_token(), "/usr/bin/node"]);
+        let exists = exists_set(&[spaced, &default_token(), &node("/usr/bin")]);
         let path = OsString::from("/usr/bin");
         let cmd = resolve(
             Some(Path::new(HOME)),
@@ -271,10 +281,10 @@ mod tests {
     #[test]
     fn find_on_path_returns_first_match() {
         let path = std::env::join_paths(["/a", "/b"]).unwrap();
-        let exists = exists_set(&["/b/node"]); // only /b has node
+        let exists = exists_set(&[&node("/b")]); // only /b has node
         assert_eq!(
             find_on_path(Some(&path), exists),
-            Some(PathBuf::from("/b/node"))
+            Some(PathBuf::from(node("/b")))
         );
     }
 
