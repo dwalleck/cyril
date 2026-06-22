@@ -80,13 +80,19 @@ fn is_plain_agent_name(name: &str) -> bool {
     )
 }
 
-/// The directory holding global agent configs (`~/.kiro/agents`), if a home
-/// directory can be determined. Mirrors `cyril`'s `config_dir()` HOME/USERPROFILE
-/// fallback so it behaves the same inside WSL and on Linux.
-fn global_agents_dir() -> Option<PathBuf> {
+/// The user's home directory: `HOME`, falling back to `USERPROFILE` so it
+/// behaves the same inside WSL and on Linux. Shared by the agent-config path
+/// resolution and the KAS-engine free-path spawn discovery.
+pub(crate) fn home_dir() -> Option<PathBuf> {
     std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
-        .map(|home| PathBuf::from(home).join(".kiro").join("agents"))
+        .map(PathBuf::from)
+}
+
+/// The directory holding global agent configs (`~/.kiro/agents`), if a home
+/// directory can be determined.
+fn global_agents_dir() -> Option<PathBuf> {
+    home_dir().map(|home| home.join(".kiro").join("agents"))
 }
 
 /// Resolve the agent config file Kiro actually reads for `agent_name` when

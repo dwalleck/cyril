@@ -282,6 +282,33 @@ fn engine_for(agent_engine: AgentEngine) -> Result<std::rc::Rc<dyn Engine>, Stri
     }
 }
 
+/// Resolve the subprocess command to spawn for the bound engine. The KAS free
+/// path (KAS-1 Part A) discovers the bundled `node + acp-server.js` argv; on a
+/// missing precondition it returns the actionable reason for a
+/// `BridgeDisconnected` (spec B6). v2 spawns the CLI `agent_command`.
+#[cfg(feature = "kas")]
+fn resolve_spawn_command(
+    agent_command: &AgentCommand,
+    agent_engine: AgentEngine,
+) -> Result<AgentCommand, String> {
+    match agent_engine {
+        AgentEngine::Kas => {
+            crate::protocol::kas::discovery::resolve_kas_command().map_err(|m| m.reason())
+        }
+        AgentEngine::V2 => Ok(agent_command.clone()),
+    }
+}
+
+/// Default build: only v2 is reachable here — the engine gate already refused
+/// `Kas` before any spawn — so the engine selector is irrelevant.
+#[cfg(not(feature = "kas"))]
+fn resolve_spawn_command(
+    agent_command: &AgentCommand,
+    _agent_engine: AgentEngine,
+) -> Result<AgentCommand, String> {
+    Ok(agent_command.clone())
+}
+
 async fn run_bridge(
     agent_command: &AgentCommand,
     agent_engine: AgentEngine,
@@ -309,8 +336,23 @@ async fn run_bridge(
         }
     };
 
-    // 1. Spawn agent process
-    let process = AgentProcess::spawn(agent_command, cwd).await?;
+    // 1. Resolve the spawn command, then spawn. The KAS free path (KAS-1 Part A)
+    //    resolves the bundled node + acp-server.js argv via discovery; any missing
+    //    precondition becomes a specific, actionable BridgeDisconnected reason
+    //    (spec B6 — no auto-recover, no v2 fallback). v2 (and any default build)
+    //    spawns the CLI `agent_command` unchanged. The clone is startup-only.
+    let spawn_command = match resolve_spawn_command(agent_command, agent_engine) {
+        Ok(cmd) => cmd,
+        Err(reason) => {
+            notify_or_closed(
+                &channels.notification_tx,
+                Notification::BridgeDisconnected { reason },
+            )
+            .await;
+            return Ok(());
+        }
+    };
+    let process = AgentProcess::spawn(&spawn_command, cwd).await?;
 
     // 2. Create the KiroClient that dispatches conversion through the bound engine.
     // Internal notification channel (ADR-0004): the KiroClient and the off-loop
