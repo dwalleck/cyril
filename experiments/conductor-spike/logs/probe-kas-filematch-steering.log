@@ -1,0 +1,37 @@
+# binary: /home/dwalleck/.local/share/kiro-research/binaries/2.8.1/kiro-cli-chat
+
+##### condition [match] open_files=['App.tsx'] #####
+  server->client request methods seen: ['_kiro/auth/getAccessToken', '_kiro/hooks/list', '_kiro/hooks/sessionStart', '_kiro/terminal/shell_type']
+  open-files/active-file callback invoked by KAS: False
+  progressive_context AVAILABLE catalog: ['code-testing-agent', 'codebase-summary', 'rust-best-practices']
+  steering documents_changed (last): ['always-canary', 'tsx-canary', 'rust-rules', 'architecture-selection', 'quick-spec', 'bug-fix']
+  steering documents_changed (all):  [['always-canary', 'tsx-canary', 'rust-rules', 'architecture-selection', 'quick-spec', 'bug-fix']]
+  steering_inclusion updates:        []
+
+##### condition [nomatch] open_files=['App.txt'] #####
+  server->client request methods seen: ['_kiro/auth/getAccessToken', '_kiro/hooks/list', '_kiro/hooks/sessionStart', '_kiro/terminal/shell_type']
+  open-files/active-file callback invoked by KAS: False
+  progressive_context AVAILABLE catalog: ['code-testing-agent', 'codebase-summary', 'rust-best-practices']
+  steering documents_changed (last): ['always-canary', 'tsx-canary', 'rust-rules', 'architecture-selection', 'quick-spec', 'bug-fix']
+  steering documents_changed (all):  [['always-canary', 'tsx-canary', 'rust-rules', 'architecture-selection', 'quick-spec', 'bug-fix']]
+  steering_inclusion updates:        []
+
+##### condition [none] open_files=[] #####
+  server->client request methods seen: ['_kiro/auth/getAccessToken', '_kiro/hooks/list', '_kiro/hooks/sessionStart', '_kiro/terminal/shell_type']
+  open-files/active-file callback invoked by KAS: False
+  progressive_context AVAILABLE catalog: ['code-testing-agent', 'codebase-summary', 'rust-best-practices']
+  steering documents_changed (last): ['always-canary', 'tsx-canary', 'rust-rules', 'architecture-selection', 'quick-spec', 'bug-fix']
+  steering documents_changed (all):  [['always-canary', 'tsx-canary', 'rust-rules', 'architecture-selection', 'quick-spec', 'bug-fix']]
+  steering_inclusion updates:        []
+
+===== VERDICT =====
+  [match  ] always-canary loaded=True   tsx-fileMatch loaded=True
+  [nomatch] always-canary loaded=True   tsx-fileMatch loaded=True
+  [none   ] always-canary loaded=True   tsx-fileMatch loaded=True
+
+Expected if fileMatch fires from client-reported open files:
+  always: True/True? (always=True everywhere)   tsx -> True only in [match]
+If tsx is False in [match] too: either KAS never asked for open files (see callback log)
+  or our open-files channel/shape was wrong (see server->client request methods).
+
+# full log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-filematch-steering.log

@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::agent_engine::AgentEngine;
+use super::kas_spawn::KasSpawn;
 
 /// Application configuration, loaded from a TOML file.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -44,6 +45,10 @@ pub struct AgentConfig {
     /// Which Kiro engine to drive (KAS-0, ADR-0001). TOML `engine = "v2"` or
     /// `"kas"`; the `--agent-engine` flag overrides this. Defaults to v2.
     pub engine: AgentEngine,
+    /// For the KAS engine: which spawn shape (KAS-1, cyril-evwh). TOML `kas_spawn
+    /// = "free"` (default, zero-credential direct spawn) or `"wrapper"`
+    /// (`kiro-cli acp --agent-engine v3` + the auth responder). Ignored for v2.
+    pub kas_spawn: KasSpawn,
 }
 
 impl Default for AgentConfig {
@@ -52,6 +57,7 @@ impl Default for AgentConfig {
             agent_name: "kiro-cli".to_string(),
             extra_args: Vec::new(),
             engine: AgentEngine::default(),
+            kas_spawn: KasSpawn::default(),
         }
     }
 }

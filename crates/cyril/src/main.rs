@@ -51,8 +51,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // The `--agent-engine` flag overrides `[agent] engine` in config; config
     // defaults to v2 (KAS-0, ADR-0002).
     let agent_engine = cli.agent_engine.unwrap_or(config.agent.engine);
-    let bridge =
-        cyril_core::protocol::bridge::spawn_bridge(agent_command, agent_engine, cwd.clone())?;
+    // KAS spawn shape (KAS-1): `[agent] kas_spawn` (free | wrapper); free default.
+    let bridge = cyril_core::protocol::bridge::spawn_bridge(
+        agent_command,
+        agent_engine,
+        config.agent.kas_spawn,
+        cwd.clone(),
+    )?;
 
     // Build and run TUI
     let rt = tokio::runtime::Builder::new_multi_thread()

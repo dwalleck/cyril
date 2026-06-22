@@ -13,8 +13,10 @@ workspace = true
 [features]
 # KAS engine support (ADR-0002). Default-off; EMPTY in KAS-0 — it only fixes the
 # gate so the credential-reading code KAS-1 (cyril-evwh) adds is compiled in only
-# under `--features kas`. A default build cannot read the kiro token.
-kas = []
+# under `--features kas`. A default build cannot read the kiro token. Pulls in
+# `tokio/fs` so the auth responder reads the token file without blocking the
+# bridge's single-threaded executor; the default build keeps a minimal tokio.
+kas = ["tokio/fs"]
 
 [dependencies]
 thiserror = { workspace = true }

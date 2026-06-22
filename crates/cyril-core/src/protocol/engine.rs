@@ -4,13 +4,14 @@
 //! declares the client capabilities to advertise at the ACP handshake.
 //!
 //! Engine is bound once at agent-subprocess spawn; the bridge holds one
-//! `Rc<dyn Engine>` for its life (ADR-0001). KAS-0 ships the core trait +
-//! `V2Engine` (a behavior-identical port of today's `convert::` calls).
-//! Optional capability sub-traits (`AuthResponder`≈KAS-1, `HostIo`≈KAS-5, …),
-//! queried through defaulted `as_*` accessors, land **with their first
-//! consumer** — KAS-1 (cyril-evwh) introduces the pattern; a consumer-less stub
-//! in KAS-0 would be dead code under the workspace's `-D warnings`. `KasEngine`
-//! follows in KAS-1+ behind the `kas` cargo feature (ADR-0002).
+//! `Rc<dyn Engine>` for its life (ADR-0001). KAS-0 shipped the core trait +
+//! `V2Engine` (a behavior-identical port of today's `convert::` calls); KAS-1
+//! adds `KasEngine` behind the `kas` cargo feature (ADR-0002) for the
+//! free-path direct spawn.
+//! Optional capability sub-traits (`AuthResponder`≈KAS-1 Part B, `HostIo`≈KAS-5,
+//! …), queried through defaulted `as_*` accessors, land **with their first
+//! consumer** — a consumer-less stub would be dead code under the workspace's
+//! `-D warnings`.
 
 use std::collections::HashMap;
 
@@ -52,6 +53,42 @@ pub(crate) trait Engine {
 pub(crate) struct V2Engine;
 
 impl Engine for V2Engine {
+    fn client_capabilities(&self) -> acp::ClientCapabilities {
+        acp::ClientCapabilities::new()
+    }
+
+    fn convert_session_update(
+        &self,
+        args: &acp::SessionNotification,
+        cached_inputs: &HashMap<String, serde_json::Value>,
+    ) -> Option<Notification> {
+        convert::session_update_to_notification(args, cached_inputs)
+    }
+
+    fn convert_ext_notification(
+        &self,
+        method: &str,
+        params: &serde_json::Value,
+    ) -> crate::Result<Option<Notification>> {
+        convert::kiro::to_ext_notification(method, params)
+    }
+}
+
+/// The KAS engine (TypeScript/LangGraph, `_kiro/*` dialect), reached via the
+/// free-path direct spawn (KAS-1, cyril-evwh). Gated behind the `kas` cargo
+/// feature (ADR-0002) so a default build links no KAS code.
+///
+/// KAS-1 does **not** render the KAS dialect — that is KAS-2a (cyril-j16p). The
+/// converters delegate to the generic `convert::` fns so standard ACP
+/// `session/update` variants still surface and unrecognized `_kiro/*` frames
+/// fall to the existing unknown-variant drop; the probe confirmed a plain turn
+/// completes this way without hanging. Capabilities are empty (no fs callbacks —
+/// KAS-5, cyril-7bdu).
+#[cfg(feature = "kas")]
+pub(crate) struct KasEngine;
+
+#[cfg(feature = "kas")]
+impl Engine for KasEngine {
     fn client_capabilities(&self) -> acp::ClientCapabilities {
         acp::ClientCapabilities::new()
     }

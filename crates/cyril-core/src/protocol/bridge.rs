@@ -9,6 +9,7 @@ use crate::types::StopReason;
 use crate::types::agent_command::AgentCommand;
 use crate::types::agent_engine::AgentEngine;
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
+use crate::types::kas_spawn::KasSpawn;
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -123,6 +124,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
 pub fn spawn_bridge(
     agent_command: AgentCommand,
     agent_engine: AgentEngine,
+    kas_spawn: KasSpawn,
     cwd: PathBuf,
 ) -> crate::Result<BridgeHandle> {
     let (handle, channels) = create_channel_pair();
@@ -141,7 +143,9 @@ pub fn spawn_bridge(
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
                     local.block_on(&rt, async move {
-                        match run_bridge(&agent_command, agent_engine, &cwd, channels).await {
+                        match run_bridge(&agent_command, agent_engine, kas_spawn, &cwd, channels)
+                            .await
+                        {
                             Ok(()) => None,
                             Err(e) => {
                                 tracing::error!(error = %e, "bridge terminated with error");
@@ -267,20 +271,60 @@ async fn notify_or_closed(
 }
 
 /// Select the engine impl for the bound [`AgentEngine`], or a user-facing reason
-/// it is unavailable. KAS-0 wires only v2; `Kas` reports "not available yet"
-/// (KAS-1/cyril-evwh makes the spawn real, behind the `kas` cargo feature). Pure
-/// — unit-testable without a subprocess, and the single place the
-/// engine-to-`AgentEngine` mapping lives.
+/// it is unavailable. v2 is always available; `Kas` resolves to
+/// [`crate::protocol::engine::KasEngine`] only under the `kas` cargo feature
+/// (ADR-0002) — a default build reports that the feature is required rather than
+/// linking any KAS code. Pure — unit-testable without a subprocess, and the
+/// single place the engine-to-`AgentEngine` mapping lives.
 fn engine_for(agent_engine: AgentEngine) -> Result<std::rc::Rc<dyn Engine>, String> {
     match agent_engine {
         AgentEngine::V2 => Ok(std::rc::Rc::new(V2Engine)),
-        AgentEngine::Kas => Err("KAS engine is not available yet".to_string()),
+        #[cfg(feature = "kas")]
+        AgentEngine::Kas => Ok(std::rc::Rc::new(crate::protocol::engine::KasEngine)),
+        #[cfg(not(feature = "kas"))]
+        AgentEngine::Kas => Err("KAS engine requires a build with --features kas".to_string()),
     }
+}
+
+/// Resolve the subprocess command to spawn for the bound engine + KAS spawn
+/// shape. KAS free path (Part A) discovers the bundled `node + acp-server.js`
+/// argv; KAS wrapper (Part B) builds `kiro-cli acp --agent-engine <flag>`. Either
+/// missing precondition becomes the actionable reason for a `BridgeDisconnected`
+/// (spec B6). v2 spawns the CLI `agent_command`.
+#[cfg(feature = "kas")]
+fn resolve_spawn_command(
+    agent_command: &AgentCommand,
+    agent_engine: AgentEngine,
+    kas_spawn: KasSpawn,
+) -> Result<AgentCommand, String> {
+    match agent_engine {
+        AgentEngine::Kas => match kas_spawn {
+            KasSpawn::Free => {
+                crate::protocol::kas::discovery::resolve_kas_command().map_err(|m| m.reason())
+            }
+            KasSpawn::Wrapper => {
+                crate::protocol::kas::version::build_wrapper_command(agent_command)
+            }
+        },
+        AgentEngine::V2 => Ok(agent_command.clone()),
+    }
+}
+
+/// Default build: only v2 is reachable here — the engine gate already refused
+/// `Kas` before any spawn — so the engine/spawn selectors are irrelevant.
+#[cfg(not(feature = "kas"))]
+fn resolve_spawn_command(
+    agent_command: &AgentCommand,
+    _agent_engine: AgentEngine,
+    _kas_spawn: KasSpawn,
+) -> Result<AgentCommand, String> {
+    Ok(agent_command.clone())
 }
 
 async fn run_bridge(
     agent_command: &AgentCommand,
     agent_engine: AgentEngine,
+    kas_spawn: KasSpawn,
     cwd: &std::path::Path,
     channels: BridgeChannels,
 ) -> crate::Result<()> {
@@ -305,8 +349,23 @@ async fn run_bridge(
         }
     };
 
-    // 1. Spawn agent process
-    let process = AgentProcess::spawn(agent_command, cwd).await?;
+    // 1. Resolve the spawn command, then spawn. The KAS free path (KAS-1 Part A)
+    //    resolves the bundled node + acp-server.js argv via discovery; any missing
+    //    precondition becomes a specific, actionable BridgeDisconnected reason
+    //    (spec B6 — no auto-recover, no v2 fallback). v2 (and any default build)
+    //    spawns the CLI `agent_command` unchanged. The clone is startup-only.
+    let spawn_command = match resolve_spawn_command(agent_command, agent_engine, kas_spawn) {
+        Ok(cmd) => cmd,
+        Err(reason) => {
+            notify_or_closed(
+                &channels.notification_tx,
+                Notification::BridgeDisconnected { reason },
+            )
+            .await;
+            return Ok(());
+        }
+    };
+    let process = AgentProcess::spawn(&spawn_command, cwd).await?;
 
     // 2. Create the KiroClient that dispatches conversion through the bound engine.
     // Internal notification channel (ADR-0004): the KiroClient and the off-loop
@@ -1355,17 +1414,33 @@ mod tests {
 
     use crate::protocol::client::KiroClient;
 
-    // Slice 4 (D7 gate): V2 selects an engine; Kas reports a clean "not available
-    // yet" reason — NO panic/unwrap. Designed to fail if Kas panics or V2 errors.
+    // V2 always selects an engine — NO panic/unwrap.
     #[test]
-    fn engine_for_v2_ok_kas_unavailable() {
+    fn engine_for_v2_ok() {
         assert!(engine_for(AgentEngine::V2).is_ok(), "v2 selects an engine");
+    }
+
+    // KAS-1 C4 (gate-on): under `--features kas`, Kas resolves to the KasEngine.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn engine_for_kas_ok_under_feature() {
+        assert!(
+            engine_for(AgentEngine::Kas).is_ok(),
+            "Kas selects the KasEngine when built with --features kas"
+        );
+    }
+
+    // KAS-1 C5 (gate-off): without the feature, Kas reports a clean reason naming
+    // the feature — NO panic/unwrap, and the KAS code is not compiled in.
+    #[cfg(not(feature = "kas"))]
+    #[test]
+    fn engine_for_kas_unavailable_without_feature() {
         match engine_for(AgentEngine::Kas) {
             Err(reason) => assert!(
-                reason.contains("not available yet"),
-                "Kas gives a clean reason, got {reason:?}"
+                reason.contains("--features kas"),
+                "Kas gives a clean reason naming the feature, got {reason:?}"
             ),
-            Ok(_) => panic!("Kas must not be wired in KAS-0"),
+            Ok(_) => panic!("Kas must error without --features kas"),
         }
     }
 

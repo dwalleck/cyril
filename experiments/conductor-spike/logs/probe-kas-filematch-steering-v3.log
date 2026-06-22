@@ -1,0 +1,20 @@
+# binary: /home/dwalleck/.local/bin/kiro-cli
+
+##### TURN 1 (read App.tsx, list tokens) #####
+  tools: ['Read File', 'Read File']
+  steering_inclusion this turn: [['file:///home/dwalleck/.claude/tmp/kas-fm3-l8igeowv/.kiro/steering/tsx-canary.md']]
+  ALWAYS in reply: True | TSX in reply: True
+  reply: '`ALWAYS_CANARY_TOKEN_7K2`\n`TSX_FILEMATCH_CANARY_TOKEN_9F3`'
+
+##### TURN 2 (NO file read, list tokens again) #####
+  tools: []
+  steering_inclusion this turn: []
+  ALWAYS in reply: True | TSX in reply: True
+  reply: '`ALWAYS_CANARY_TOKEN_7K2`\n`TSX_FILEMATCH_CANARY_TOKEN_9F3`'
+
+===== VERDICT =====
+  TURN 1: ALWAYS=True TSX=True  (expect T/T; injection event: True)
+  TURN 2: ALWAYS=True TSX=True  no-read=True
+  => PERSISTS: tsx steering still active in turn 2 with NO new injection and NO file read (resident, deduped).
+
+# full log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-filematch-steering-v3.log

@@ -1,0 +1,83 @@
+//! Gated live smoke (KAS-1 Part A, claim C1): a free-path KAS turn runs to
+//! completion THROUGH cyril's bridge — not the raw probe harness.
+//!
+//! Manual-gated (design caveat): needs `--features kas`, a prior `kiro-cli
+//! login` (populates the tier-5 token file), the self-extracted KAS bundle, and
+//! `node`. Oracle parity with prove-it-prototype: the bridge spawns the
+//! identical no-`--auth` argv the probe used (unit-fenced by
+//! `discovery::resolve_happy_path_builds_probe_argv`), which the probe proved
+//! completes with `_kiro/auth/getAccessToken` fired 0×. This smoke asserts the
+//! user-observable end of that: a `TurnCompleted` with no `BridgeDisconnected`.
+//!
+//! Run: cargo test -p cyril-core --features kas --test kas_freepath_smoke \
+//!        -- --ignored --nocapture
+#![cfg(feature = "kas")]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
+use std::time::Duration;
+
+use cyril_core::protocol::bridge::spawn_bridge;
+use cyril_core::types::*;
+use tokio::sync::mpsc::Receiver;
+
+#[tokio::test]
+#[ignore = "live: needs --features kas, kiro-cli login, the KAS bundle, and node"]
+async fn freepath_turn_completes_through_bridge() {
+    // For the KAS free path the `agent_command` param is ignored — the bridge
+    // resolves the bundled `node + acp-server.js` argv via discovery — so a
+    // placeholder is fine here.
+    let placeholder = AgentCommand::new("unused-for-kas-free-path");
+    let cwd = std::env::temp_dir();
+    let bridge = spawn_bridge(placeholder, AgentEngine::Kas, KasSpawn::Free, cwd.clone())
+        .expect("spawn_bridge");
+    let (sender, mut notif_rx, _perm_rx) = bridge.split();
+
+    sender
+        .send(BridgeCommand::NewSession { cwd })
+        .await
+        .expect("send NewSession");
+    let session_id = recv_session(&mut notif_rx).await;
+
+    sender
+        .send(BridgeCommand::SendPrompt {
+            session_id,
+            content_blocks: vec!["Reply with exactly: ok. Do not use any tools.".into()],
+        })
+        .await
+        .expect("send SendPrompt");
+
+    // Drive to TurnCompleted; fail loudly on BridgeDisconnected (a missing
+    // precondition or an auth failure) or a 180s timeout.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(180);
+    loop {
+        let routed = tokio::time::timeout_at(deadline, notif_rx.recv())
+            .await
+            .expect("a TurnCompleted within 180s")
+            .expect("notification channel open");
+        match routed.notification {
+            Notification::TurnCompleted { .. } => return, // C1 satisfied
+            Notification::BridgeDisconnected { reason } => {
+                panic!("free-path KAS turn disconnected: {reason}")
+            }
+            _ => {} // streamed text / metadata — keep draining
+        }
+    }
+}
+
+/// Drain until the first `SessionCreated`; panic on disconnect or 30s timeout.
+async fn recv_session(rx: &mut Receiver<RoutedNotification>) -> SessionId {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(30);
+    loop {
+        let routed = tokio::time::timeout_at(deadline, rx.recv())
+            .await
+            .expect("SessionCreated within 30s")
+            .expect("notification channel open");
+        match routed.notification {
+            Notification::SessionCreated { session_id, .. } => return session_id,
+            Notification::BridgeDisconnected { reason } => {
+                panic!("bridge disconnected before session: {reason}")
+            }
+            _ => {}
+        }
+    }
+}
