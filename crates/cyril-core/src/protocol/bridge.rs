@@ -283,11 +283,12 @@ async fn run_bridge(
     // prompt task feed `inbound_tx`; `run_loop` drains `inbound_rx`, observes
     // turn-end, and forwards to the App's `channels.notification_tx`.
     let (inbound_tx, inbound_rx) = mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
-    let client = KiroClient::new(
-        inbound_tx.clone(),
-        channels.permission_tx.clone(),
-        engine.clone(),
-    );
+    // Internal request channel (ADR-0004): server->client requests (permission
+    // now; KAS-5/cyril-7bdu fs+terminal later) route through the loop, which
+    // FORWARDS them to the App without awaiting resolution — the response flows
+    // back on the request's embedded `responder` oneshot, bypassing the loop.
+    let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
+    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone());
 
     // 3. Create the ACP connection.
     //    ClientSideConnection::new returns (conn, io_task).
@@ -315,6 +316,7 @@ async fn run_bridge(
         engine,
         inbound_tx,
         inbound_rx,
+        req_rx,
     )
     .await
 }
@@ -333,6 +335,10 @@ async fn run_loop(
     // observes `TurnCompleted` to clear the busy flag, and forwards to the App.
     inbound_tx: mpsc::Sender<RoutedNotification>,
     mut inbound_rx: mpsc::Receiver<RoutedNotification>,
+    // Internal request channel (ADR-0004): the KiroClient sends server->client
+    // requests here; the loop forwards them to the App's `permission_tx` and
+    // never awaits their resolution.
+    mut req_rx: mpsc::Receiver<PermissionRequest>,
 ) -> crate::Result<()> {
     use acp::Agent;
     use agent_client_protocol as acp;
@@ -1285,6 +1291,16 @@ async fn run_loop(
                     break; // App dropped the notification channel.
                 }
             }
+            Some(req) = req_rx.recv() => {
+                // ADR-0004 non-blocking forward: hand the server->client request to
+                // the App and return immediately. The loop NEVER awaits the response
+                // (a permission decision is a human action) — it travels back on the
+                // request's embedded `responder` oneshot, bypassing the loop. v2 is
+                // identity mediation; KAS-5 (cyril-7bdu) gates/transforms here.
+                if channels.permission_tx.send(req).await.is_err() {
+                    break; // App dropped the permission channel.
+                }
+            }
         } // select!
     } // loop
 
@@ -1321,6 +1337,10 @@ mod tests {
         block_prompt: bool,
         /// When set, `prompt` returns an error (the transport/error turn path).
         prompt_err: bool,
+        /// When set, `prompt` issues a server->client `request_permission` (which
+        /// blocks until the client answers) before completing — exercises Slice 3's
+        /// loop request-forward path (ADR-0004).
+        request_perm: bool,
         /// Set by `cancel`; makes a woken `prompt` resolve as Cancelled (ACP semantics).
         cancelled: bool,
         /// Session ids the agent was asked to cancel, in order. Lets a test assert
@@ -1333,6 +1353,10 @@ mod tests {
         /// Released by the test (`Notify::notify_one`) to let a blocked `prompt` finish.
         gate: Rc<tokio::sync::Notify>,
         next_session: Cell<u32>,
+        /// The agent's own side of the connection, populated AFTER construction so
+        /// `prompt` can issue server->client requests (request_permission). The
+        /// AgentSideConnection holds the FakeAgent, so this cell breaks the cycle.
+        agent_conn: Rc<RefCell<Option<Rc<acp::AgentSideConnection>>>>,
     }
 
     #[async_trait::async_trait(?Send)]
@@ -1360,15 +1384,38 @@ mod tests {
                 "fake-{n}"
             ))))
         }
-        async fn prompt(&self, _a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
+        async fn prompt(&self, a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
             // Copy the flags out and DROP the borrow before any await — a RefCell
             // borrow held across `.await` would panic on re-entry.
-            let (block, err) = {
+            let (block, err, want_perm) = {
                 let mut s = self.script.borrow_mut();
                 s.received.push("prompt".into());
                 s.prompt_count += 1;
-                (s.block_prompt, s.prompt_err)
+                (s.block_prompt, s.prompt_err, s.request_perm)
             };
+            if want_perm {
+                // Server->client permission request. KiroClient sends it to the loop,
+                // which FORWARDS it to the App (ADR-0004); this call BLOCKS until the
+                // App answers via the embedded responder oneshot. The loop must keep
+                // running while we wait here — that's what Slice 3 verifies.
+                use acp::Client as _;
+                let conn = self.agent_conn.borrow().clone();
+                if let Some(conn) = conn {
+                    let req = acp::RequestPermissionRequest::new(
+                        a.session_id.clone(),
+                        acp::ToolCallUpdate::new(
+                            acp::ToolCallId::new("tc-perm"),
+                            acp::ToolCallUpdateFields::new().title("run a command"),
+                        ),
+                        vec![acp::PermissionOption::new(
+                            acp::PermissionOptionId::new("allow-once"),
+                            "Allow once",
+                            acp::PermissionOptionKind::AllowOnce,
+                        )],
+                    );
+                    conn.request_permission(req).await?;
+                }
+            }
             if block {
                 self.gate.notified().await;
             }
@@ -1414,6 +1461,7 @@ mod tests {
         F: FnOnce(
             BridgeSender,
             mpsc::Receiver<RoutedNotification>,
+            mpsc::Receiver<PermissionRequest>,
             Rc<tokio::sync::Notify>,
             tokio::task::JoinHandle<crate::Result<()>>,
         ) -> Fut,
@@ -1427,11 +1475,8 @@ mod tests {
                 let engine: Rc<dyn Engine> = Rc::new(V2Engine);
                 let (inbound_tx, inbound_rx) =
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
-                let client = KiroClient::new(
-                    inbound_tx.clone(),
-                    channels.permission_tx.clone(),
-                    engine.clone(),
-                );
+                let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
+                let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone());
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);
                 let (cr, cw) = tokio::io::split(c_io);
                 let (ar, aw) = tokio::io::split(a_io);
@@ -1439,17 +1484,22 @@ mod tests {
                     acp::ClientSideConnection::new(client, cw.compat_write(), cr.compat(), |f| {
                         tokio::task::spawn_local(f);
                     });
+                let agent_conn_cell: Rc<RefCell<Option<Rc<acp::AgentSideConnection>>>> =
+                    Rc::new(RefCell::new(None));
                 let fake = FakeAgent {
                     script,
                     gate: gate.clone(),
                     next_session: Cell::new(0),
+                    agent_conn: agent_conn_cell.clone(),
                 };
-                // Kept alive for the duration so its IO task can route requests to
-                // FakeAgent (Slice 7 also uses it to push agent->client updates).
-                let (_agent_conn, a_task) =
+                // Kept alive (via the cell) for the duration so its IO task can route
+                // requests, and shared INTO the FakeAgent so `prompt` can issue
+                // server->client requests (request_permission).
+                let (agent_conn, a_task) =
                     acp::AgentSideConnection::new(fake, aw.compat_write(), ar.compat(), |f| {
                         tokio::task::spawn_local(f);
                     });
+                *agent_conn_cell.borrow_mut() = Some(Rc::new(agent_conn));
                 tokio::task::spawn_local(async move {
                     let _ = c_task.await;
                 });
@@ -1463,9 +1513,10 @@ mod tests {
                     engine,
                     inbound_tx,
                     inbound_rx,
+                    req_rx,
                 ));
-                let (sender, notif_rx, _perm_rx) = handle.split();
-                body(sender, notif_rx, gate, loop_handle).await;
+                let (sender, notif_rx, perm_rx) = handle.split();
+                body(sender, notif_rx, perm_rx, gate, loop_handle).await;
             })
             .await;
     }
@@ -1553,21 +1604,24 @@ mod tests {
         // records the prompt it received (bidirectional delivery works).
         let script = Rc::new(RefCell::new(Script::default()));
         let probe = script.clone();
-        with_harness(script, |sender, mut rx, _gate, _loop| async move {
-            let sid = start_session(&sender, &mut rx).await;
-            sender
-                .send(BridgeCommand::SendPrompt {
-                    session_id: sid,
-                    content_blocks: vec!["hi".into()],
-                })
-                .await
-                .unwrap();
-            assert_eq!(
-                count_turn_completions(&mut rx).await,
-                1,
-                "exactly one TurnCompleted"
-            );
-        })
+        with_harness(
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["hi".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    count_turn_completions(&mut rx).await,
+                    1,
+                    "exactly one TurnCompleted"
+                );
+            },
+        )
         .await;
         let s = probe.borrow();
         assert!(
@@ -1589,7 +1643,7 @@ mod tests {
             block_prompt: true,
             ..Default::default()
         }));
-        with_harness(script, |sender, mut rx, gate, _loop| async move {
+        with_harness(script, |sender, mut rx, _perm_rx, gate, _loop| async move {
             let sid = start_session(&sender, &mut rx).await;
             sender
                 .send(BridgeCommand::SendPrompt {
@@ -1626,28 +1680,83 @@ mod tests {
             prompt_err: true,
             ..Default::default()
         }));
-        with_harness(script, |sender, mut rx, _gate, _loop| async move {
-            let sid = start_session(&sender, &mut rx).await;
-            sender
-                .send(BridgeCommand::SendPrompt {
-                    session_id: sid,
-                    content_blocks: vec!["go".into()],
-                })
-                .await
-                .unwrap();
-            assert_eq!(
-                drain_to_turn(&mut rx).await,
-                StopReason::EndTurn,
-                "error turn completes as EndTurn"
-            );
-            assert!(
-                !matches!(
-                    recv_notif(&mut rx, 1).await,
-                    Some(Notification::TurnCompleted { .. })
-                ),
-                "exactly one TurnCompleted (no second)"
-            );
-        })
+        with_harness(
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    drain_to_turn(&mut rx).await,
+                    StopReason::EndTurn,
+                    "error turn completes as EndTurn"
+                );
+                assert!(
+                    !matches!(
+                        recv_notif(&mut rx, 1).await,
+                        Some(Notification::TurnCompleted { .. })
+                    ),
+                    "exactly one TurnCompleted (no second)"
+                );
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn permission_forwards_through_loop_without_blocking() {
+        // Slice 3 (D5 / ADR-0004): a server->client permission request routes THROUGH
+        // the loop to the App; the loop forwards it and NEVER awaits the decision (a
+        // command sent while the permission is outstanding is still processed); and
+        // the response round-trips to the agent (the turn completes). Designed to FAIL
+        // if the loop awaited the responder — the mid-permission command would never
+        // be processed and the turn would never complete (a freeze).
+        let script = Rc::new(RefCell::new(Script {
+            request_perm: true,
+            ..Default::default()
+        }));
+        with_harness(
+            script,
+            |sender, mut rx, mut perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                // The agent's prompt issues request_permission; the loop FORWARDS it
+                // to the App. Receiving it here proves the request-forward path works.
+                let req = tokio::time::timeout(Duration::from_secs(5), perm_rx.recv())
+                    .await
+                    .expect("permission forwarded within 5s")
+                    .expect("a permission request");
+                assert!(!req.options.is_empty(), "forwarded request keeps its options");
+                // The permission is OUTSTANDING (unanswered). A command sent now must
+                // still be processed — proving the loop did NOT block on the decision.
+                sender.send(BridgeCommand::ListSettings).await.unwrap();
+                let mid = recv_notif(&mut rx, 5)
+                    .await
+                    .expect("a command result while the permission is outstanding");
+                assert!(
+                    matches!(&mid, Notification::SettingsList { .. })
+                        || matches!(&mid, Notification::BridgeError { operation, .. } if operation == "settings/list"),
+                    "ListSettings processed while permission outstanding (loop not blocked), got {mid:?}"
+                );
+                // Answer the permission -> the agent's request_permission returns ->
+                // the turn completes (the response round-tripped via the responder).
+                req.responder
+                    .send(crate::types::event::PermissionResponse::AllowOnce)
+                    .unwrap();
+                assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+            },
+        )
         .await;
     }
 
@@ -1663,7 +1772,7 @@ mod tests {
             ..Default::default()
         }));
         let probe = script.clone();
-        with_harness(script, |sender, mut rx, gate, _loop| async move {
+        with_harness(script, |sender, mut rx, _perm_rx, gate, _loop| async move {
             let sid = start_session(&sender, &mut rx).await;
             // Turn 1 parks on the gate.
             sender
@@ -1723,23 +1832,26 @@ mod tests {
             block_prompt: true,
             ..Default::default()
         }));
-        with_harness(script, |sender, mut rx, _gate, loop_handle| async move {
-            let sid = start_session(&sender, &mut rx).await;
-            sender
-                .send(BridgeCommand::SendPrompt {
-                    session_id: sid,
-                    content_blocks: vec!["forever".into()],
-                })
-                .await
-                .unwrap();
-            // The turn parks (gate never released). Shutdown must still be processed.
-            sender.send(BridgeCommand::Shutdown).await.unwrap();
-            let returned = tokio::time::timeout(Duration::from_secs(2), loop_handle).await;
-            assert!(
-                matches!(returned, Ok(Ok(Ok(())))),
-                "run_loop returned cleanly after a mid-turn Shutdown, got {returned:?}"
-            );
-        })
+        with_harness(
+            script,
+            |sender, mut rx, _perm_rx, _gate, loop_handle| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["forever".into()],
+                    })
+                    .await
+                    .unwrap();
+                // The turn parks (gate never released). Shutdown must still be processed.
+                sender.send(BridgeCommand::Shutdown).await.unwrap();
+                let returned = tokio::time::timeout(Duration::from_secs(2), loop_handle).await;
+                assert!(
+                    matches!(returned, Ok(Ok(Ok(())))),
+                    "run_loop returned cleanly after a mid-turn Shutdown, got {returned:?}"
+                );
+            },
+        )
         .await;
     }
 
@@ -1753,30 +1865,33 @@ mod tests {
             ..Default::default()
         }));
         let probe = script.clone();
-        with_harness(script, move |sender, mut rx, gate, _loop| async move {
-            let sid = start_session(&sender, &mut rx).await;
-            sender
-                .send(BridgeCommand::SendPrompt {
-                    session_id: sid.clone(),
-                    content_blocks: vec!["go".into()],
-                })
-                .await
-                .unwrap();
-            sender
-                .send(BridgeCommand::SteerSession {
-                    session_id: sid,
-                    message: "stop".into(),
-                })
-                .await
-                .unwrap();
-            assert!(
-                wait_for_received(&probe, "ext:session/steer", 5).await,
-                "steer reached the agent mid-turn; received = {:?}",
-                probe.borrow().received
-            );
-            gate.notify_one();
-            drain_to_turn(&mut rx).await;
-        })
+        with_harness(
+            script,
+            move |sender, mut rx, _perm_rx, gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                sender
+                    .send(BridgeCommand::SteerSession {
+                        session_id: sid,
+                        message: "stop".into(),
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "ext:session/steer", 5).await,
+                    "steer reached the agent mid-turn; received = {:?}",
+                    probe.borrow().received
+                );
+                gate.notify_one();
+                drain_to_turn(&mut rx).await;
+            },
+        )
         .await;
     }
 
@@ -1791,26 +1906,29 @@ mod tests {
             ..Default::default()
         }));
         let probe = script.clone();
-        with_harness(script, move |sender, mut rx, _gate, _loop| async move {
-            let sid = start_session(&sender, &mut rx).await;
-            sender
-                .send(BridgeCommand::SendPrompt {
-                    session_id: sid,
-                    content_blocks: vec!["forever".into()],
-                })
-                .await
-                .unwrap();
-            sender.send(BridgeCommand::CancelRequest).await.unwrap();
-            assert_eq!(
-                drain_to_turn(&mut rx).await,
-                StopReason::Cancelled,
-                "cancel resolved the parked turn as Cancelled"
-            );
-            assert!(
-                probe.borrow().received.contains(&"cancel".to_string()),
-                "agent received the cancel mid-turn"
-            );
-        })
+        with_harness(
+            script,
+            move |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["forever".into()],
+                    })
+                    .await
+                    .unwrap();
+                sender.send(BridgeCommand::CancelRequest).await.unwrap();
+                assert_eq!(
+                    drain_to_turn(&mut rx).await,
+                    StopReason::Cancelled,
+                    "cancel resolved the parked turn as Cancelled"
+                );
+                assert!(
+                    probe.borrow().received.contains(&"cancel".to_string()),
+                    "agent received the cancel mid-turn"
+                );
+            },
+        )
         .await;
     }
 
@@ -1827,35 +1945,38 @@ mod tests {
             ..Default::default()
         }));
         let probe = script.clone();
-        with_harness(script, move |sender, mut rx, _gate, _loop| async move {
-            let s1 = start_session(&sender, &mut rx).await;
-            sender
-                .send(BridgeCommand::SendPrompt {
-                    session_id: s1.clone(),
-                    content_blocks: vec!["forever".into()],
-                })
-                .await
-                .unwrap();
-            // Mid-turn NewSession -> S2 becomes `active_session_id` while S1 runs.
-            let s2 = start_session(&sender, &mut rx).await;
-            assert_ne!(s1.as_str(), s2.as_str(), "second session is distinct");
-            // Cancel must resolve S1's parked turn, not the freshly-created S2.
-            sender.send(BridgeCommand::CancelRequest).await.unwrap();
-            assert_eq!(
-                drain_to_turn(&mut rx).await,
-                StopReason::Cancelled,
-                "the in-flight S1 turn resolved Cancelled"
-            );
-            let cancelled = probe.borrow().cancelled_sessions.clone();
-            assert!(
-                cancelled.contains(&s1.as_str().to_string()),
-                "cancel targeted the in-flight turn's session S1; got {cancelled:?}"
-            );
-            assert!(
-                !cancelled.contains(&s2.as_str().to_string()),
-                "cancel did NOT target the mid-turn-created session S2; got {cancelled:?}"
-            );
-        })
+        with_harness(
+            script,
+            move |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let s1 = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: s1.clone(),
+                        content_blocks: vec!["forever".into()],
+                    })
+                    .await
+                    .unwrap();
+                // Mid-turn NewSession -> S2 becomes `active_session_id` while S1 runs.
+                let s2 = start_session(&sender, &mut rx).await;
+                assert_ne!(s1.as_str(), s2.as_str(), "second session is distinct");
+                // Cancel must resolve S1's parked turn, not the freshly-created S2.
+                sender.send(BridgeCommand::CancelRequest).await.unwrap();
+                assert_eq!(
+                    drain_to_turn(&mut rx).await,
+                    StopReason::Cancelled,
+                    "the in-flight S1 turn resolved Cancelled"
+                );
+                let cancelled = probe.borrow().cancelled_sessions.clone();
+                assert!(
+                    cancelled.contains(&s1.as_str().to_string()),
+                    "cancel targeted the in-flight turn's session S1; got {cancelled:?}"
+                );
+                assert!(
+                    !cancelled.contains(&s2.as_str().to_string()),
+                    "cancel did NOT target the mid-turn-created session S2; got {cancelled:?}"
+                );
+            },
+        )
         .await;
     }
 
