@@ -97,19 +97,30 @@ fn rfc3339_to_epoch(s: &str) -> Option<i64> {
 }
 
 /// True when the token is expired or within the pre-expiry buffer (KAS would
-/// reject it), or when its timestamp can't be parsed (fail safe). Pure.
-fn is_stale(expires_at: &str, now_epoch: i64) -> bool {
-    match rfc3339_to_epoch(expires_at) {
-        Some(exp) => exp <= now_epoch + EXPIRY_BUFFER_SECS,
-        None => true,
+/// reject it), or when the expiry can't be parsed, or the clock is unreadable
+/// (all three fail safe → stale, so a token cyril cannot time-check is never
+/// forwarded). Pure.
+fn is_stale(expires_at: &str, now_epoch: Option<i64>) -> bool {
+    match (now_epoch, rfc3339_to_epoch(expires_at)) {
+        (Some(now), Some(exp)) => exp <= now + EXPIRY_BUFFER_SECS,
+        // Unreadable clock OR unparseable expiry → treat as stale.
+        _ => true,
     }
 }
 
-fn now_epoch() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0)
+/// Current unix epoch seconds, or `None` if the system clock predates
+/// `UNIX_EPOCH` (a broken/backwards clock). `None` makes [`is_stale`] fail safe
+/// rather than masking the error as epoch 0 — which would make every real,
+/// future-dated token look *fresh* and forward a credential cyril never
+/// validated against the real time.
+fn now_epoch() -> Option<i64> {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(d) => Some(d.as_secs() as i64),
+        Err(e) => {
+            tracing::warn!(error = %e, "system clock before UNIX_EPOCH; treating KAS token as stale");
+            None
+        }
+    }
 }
 
 /// Build the `{accessToken, expiresAt, profileArn}` ExtResponse KAS expects.
@@ -210,7 +221,7 @@ mod tests {
     }
 
     // rfc3339_to_epoch matches a reference value (cross-checked: `date -u -d
-    // 2026-06-22T03:13:22Z +%s` == 1781061202).
+    // 2026-06-22T03:13:22Z +%s` == 1782098002).
     #[test]
     fn rfc3339_epoch_reference() {
         assert_eq!(
@@ -231,13 +242,15 @@ mod tests {
         let exp = "2026-06-22T03:13:22Z"; // epoch 1_782_098_002
         let base = 1_782_098_002;
         // Expiring exactly at now+buffer is STALE (<=), one second later is fresh.
-        assert!(is_stale(exp, base - EXPIRY_BUFFER_SECS));
-        assert!(!is_stale(exp, base - EXPIRY_BUFFER_SECS - 1));
+        assert!(is_stale(exp, Some(base - EXPIRY_BUFFER_SECS)));
+        assert!(!is_stale(exp, Some(base - EXPIRY_BUFFER_SECS - 1)));
         // Already past -> stale; far future -> fresh.
-        assert!(is_stale(exp, base + 10));
-        assert!(!is_stale(exp, base - 100_000));
-        // Unparseable -> stale (fail safe).
-        assert!(is_stale("garbage", base));
+        assert!(is_stale(exp, Some(base + 10)));
+        assert!(!is_stale(exp, Some(base - 100_000)));
+        // Unparseable expiry -> stale (fail safe).
+        assert!(is_stale("garbage", Some(base)));
+        // Unreadable clock -> stale (fail safe), never reported fresh.
+        assert!(is_stale(exp, None));
     }
 
     // build_response emits exactly the three camelCase keys KAS validates.

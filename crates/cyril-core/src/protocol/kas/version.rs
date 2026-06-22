@@ -9,7 +9,10 @@ use crate::types::AgentCommand;
 /// (`2.10.0` > `2.8.0`). Returns `Err` on a malformed string.
 fn parse_semver(s: &str) -> Result<(u32, u32, u32), String> {
     let mut it = s.trim().split('.');
-    let mut next = |s: &str| -> Result<u32, String> {
+    // Pulls the next dotted component's leading digit-run. Captures `it` and the
+    // outer `s` (for the error) — it takes no argument, so there is no shadowed
+    // parameter to confuse with the version string it reports.
+    let mut next = || -> Result<u32, String> {
         it.next()
             .map(|c| c.trim_start_matches(|ch: char| !ch.is_ascii_digit()))
             .map(|c| {
@@ -21,7 +24,7 @@ fn parse_semver(s: &str) -> Result<(u32, u32, u32), String> {
             .and_then(|c| c.parse().ok())
             .ok_or_else(|| format!("malformed kiro-cli version {s:?}"))
     };
-    let (maj, min, pat) = (next(s)?, next(s)?, next(s)?);
+    let (maj, min, pat) = (next()?, next()?, next()?);
     Ok((maj, min, pat))
 }
 
@@ -46,6 +49,16 @@ fn kiro_cli_version(program: &str) -> Result<String, String> {
         .arg("--version")
         .output()
         .map_err(|e| format!("run `{program} --version`: {e}"))?;
+    // A non-zero exit (crashed binary, wrong program, re-login prompt) would
+    // otherwise surface as a generic "could not parse" — report the real cause.
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        return Err(format!(
+            "`{program} --version` exited {}: {}",
+            out.status,
+            stderr.trim()
+        ));
+    }
     let text = String::from_utf8_lossy(&out.stdout);
     text.split_whitespace()
         .find(|t| t.starts_with(|c: char| c.is_ascii_digit()))
