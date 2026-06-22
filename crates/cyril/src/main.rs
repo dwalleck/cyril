@@ -42,7 +42,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawn bridge
     let agent_command = cyril_core::types::AgentCommand::try_from_argv(cli.agent_command)?;
-    let bridge = cyril_core::protocol::bridge::spawn_bridge(agent_command, cwd.clone())?;
+    // KAS-0: engine defaults to v2; the `--agent-engine` flag arrives in Slice 5.
+    let agent_engine = cyril_core::types::AgentEngine::default();
+    let bridge =
+        cyril_core::protocol::bridge::spawn_bridge(agent_command, agent_engine, cwd.clone())?;
 
     // Build and run TUI
     let rt = tokio::runtime::Builder::new_multi_thread()

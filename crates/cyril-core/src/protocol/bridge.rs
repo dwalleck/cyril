@@ -7,6 +7,7 @@ use crate::protocol::convert::session_created_from_response;
 use crate::protocol::engine::{Engine, V2Engine};
 use crate::types::StopReason;
 use crate::types::agent_command::AgentCommand;
+use crate::types::agent_engine::AgentEngine;
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
 
 /// Channel capacities
@@ -119,7 +120,11 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
 /// `Err`), a `Notification::BridgeDisconnected` is emitted before the thread
 /// exits so the App receives a structured signal instead of a silent channel
 /// close.
-pub fn spawn_bridge(agent_command: AgentCommand, cwd: PathBuf) -> crate::Result<BridgeHandle> {
+pub fn spawn_bridge(
+    agent_command: AgentCommand,
+    agent_engine: AgentEngine,
+    cwd: PathBuf,
+) -> crate::Result<BridgeHandle> {
     let (handle, channels) = create_channel_pair();
     // Cloned before `channels` is moved into the thread so that fail-stop
     // paths can still emit a final disconnect notification.
@@ -136,7 +141,7 @@ pub fn spawn_bridge(agent_command: AgentCommand, cwd: PathBuf) -> crate::Result<
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
                     local.block_on(&rt, async move {
-                        match run_bridge(&agent_command, &cwd, channels).await {
+                        match run_bridge(&agent_command, agent_engine, &cwd, channels).await {
                             Ok(()) => None,
                             Err(e) => {
                                 tracing::error!(error = %e, "bridge terminated with error");
@@ -261,8 +266,21 @@ async fn notify_or_closed(
     tx.send(notification.into()).await.is_err()
 }
 
+/// Select the engine impl for the bound [`AgentEngine`], or a user-facing reason
+/// it is unavailable. KAS-0 wires only v2; `Kas` reports "not available yet"
+/// (KAS-1/cyril-evwh makes the spawn real, behind the `kas` cargo feature). Pure
+/// — unit-testable without a subprocess, and the single place the
+/// engine-to-`AgentEngine` mapping lives.
+fn engine_for(agent_engine: AgentEngine) -> Result<std::rc::Rc<dyn Engine>, String> {
+    match agent_engine {
+        AgentEngine::V2 => Ok(std::rc::Rc::new(V2Engine)),
+        AgentEngine::Kas => Err("KAS engine is not available yet".to_string()),
+    }
+}
+
 async fn run_bridge(
     agent_command: &AgentCommand,
+    agent_engine: AgentEngine,
     cwd: &std::path::Path,
     channels: BridgeChannels,
 ) -> crate::Result<()> {
@@ -272,13 +290,25 @@ async fn run_bridge(
     use crate::protocol::client::KiroClient;
     use crate::protocol::transport::AgentProcess;
 
+    // 0. Engine gate (KAS-0, ADR-0001): bind the one engine the bridge uses for
+    //    its life BEFORE spawning the subprocess, so an unavailable engine
+    //    refuses cleanly (a disconnect notice, no panic) without spawning anything.
+    let engine = match engine_for(agent_engine) {
+        Ok(engine) => engine,
+        Err(reason) => {
+            notify_or_closed(
+                &channels.notification_tx,
+                Notification::BridgeDisconnected { reason },
+            )
+            .await;
+            return Ok(());
+        }
+    };
+
     // 1. Spawn agent process
     let process = AgentProcess::spawn(agent_command, cwd).await?;
 
-    // 2. Bind the engine (KAS-0, ADR-0001) and create the KiroClient that
-    //    dispatches conversion through it. v2 is the only engine wired today;
-    //    the bridge holds one `Rc<dyn Engine>` for its life.
-    let engine: std::rc::Rc<dyn Engine> = std::rc::Rc::new(V2Engine);
+    // 2. Create the KiroClient that dispatches conversion through the bound engine.
     // Internal notification channel (ADR-0004): the KiroClient and the off-loop
     // prompt task feed `inbound_tx`; `run_loop` drains `inbound_rx`, observes
     // turn-end, and forwards to the App's `channels.notification_tx`.
@@ -1326,6 +1356,20 @@ mod tests {
     use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
     use crate::protocol::client::KiroClient;
+
+    // Slice 4 (D7 gate): V2 selects an engine; Kas reports a clean "not available
+    // yet" reason — NO panic/unwrap. Designed to fail if Kas panics or V2 errors.
+    #[test]
+    fn engine_for_v2_ok_kas_unavailable() {
+        assert!(engine_for(AgentEngine::V2).is_ok(), "v2 selects an engine");
+        match engine_for(AgentEngine::Kas) {
+            Err(reason) => assert!(
+                reason.contains("not available yet"),
+                "Kas gives a clean reason, got {reason:?}"
+            ),
+            Ok(_) => panic!("Kas must not be wired in KAS-0"),
+        }
+    }
 
     #[derive(Default)]
     struct Script {
