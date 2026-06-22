@@ -1,0 +1,51 @@
+# binary: /home/dwalleck/.local/bin/kiro-cli
+# cwd: /home/dwalleck/.claude/tmp/v2-code-nv2fwipn
+# pre-existing lsp.json: False
+# 'code' in available commands: True  (sample: ['/agent', '/chat', '/clear', '/code', '/compact', '/context', '/effort', '/feedback', '/goal', '/guide', '/help', '/hooks'])
+
+[_kiro.dev/commands/execute] RESPONSE: {"success": true, "message": "", "data": {"status": "initializing", "message": "Workspace initialization started", "warning": null, "rootPath": "/home/dwalleck/.claude/tmp/v2-code-nv2fwipn", "detectedLanguages": ["rust"], "projectMarkers": ["Cargo.toml"], "lsps": [{"name": "typescript-language-server", "languages": ["typescript"], "status": "available", "isAvailable": true, "initDurationMs": null, "workspaceFolders": []}, {"name": "rust-analyzer", "languages": ["rust"], "status": "initializing", "isAvailable": true, "initDurationMs": null, "workspaceFolders": []}, {"name": "pyright", "language
+
+# AFTER /code init -> lsp.json exists: True
+  CONTENT:
+{
+  "languages": {
+    "typescript": {
+      "name": "typescript-language-server",
+      "command": "typescript-language-server",
+      "args": [
+        "--stdio"
+      ],
+      "file_extensions": [
+        "ts",
+        "js",
+        "tsx",
+        "jsx"
+      ],
+      "file_patterns": [],
+      "project_patterns": [
+        "package.json",
+        "tsconfig.json"
+      ],
+      "exclude_patterns": [
+        "**/node_modules/**",
+        "**/dist/**"
+      ],
+      "multi_workspace": false,
+      "initialization_options": {
+        "preferences": {
+          "disableSuggestions": false
+        }
+      },
+      "request_timeout_secs": 60
+    },
+    "rust": {
+      "name": "rust-analyzer",
+      "command": "rust-analyzer",
+      "args": [],
+      "file_extensions": [
+        "rs"
+      ],
+
+  .kiro file: .kiro/settings/lsp.json
+
+# log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-v2-code-init.log
