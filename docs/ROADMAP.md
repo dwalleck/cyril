@@ -169,7 +169,7 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 | `session_info_update` (18-kind union) | ✅ KAS-2a (turn_end) + KAS-2b |
 | `governance/state` | ✅ KAS-2c |
 | `hooks/{cancel,didChange}` | ✅ KAS-7 |
-| `steering/documents_changed` · `workspace/{active_file,currently_open_files}` | ✅ KAS-6 |
+| `steering/documents_changed` (catalog; the *injection* signal is `session_info_update:steering_inclusion`, KAS-2b) | ✅ KAS-6 |
 | `powers/items_changed` · `progressive_context/items_changed` · `system/notify` · `sessions/changed` · `tools/didChange` | ⚠ tolerated; surface opportunistically |
 | `safety/{statusChanged,propertiesChanged}` | ❌ KAS-8 — **can block tool calls** (enforcement, not display) |
 | `error/rate_limit` | ❌ KAS-8 — UX-important |
@@ -281,15 +281,19 @@ KAS is the first Kiro engine to delegate **both file I/O and shell execution** t
 
 Both sub-milestones are the same host-executor shape as KAS-7's hook responder, so they share the `cyril-stages` home: process spawning, path translation, and the org write/exec-policy gate belong in one layer, not scattered across the bridge.
 
-### KAS-6 — Open-file context (lights up conditional steering + spec activeFile)
+### KAS-6 — Conversation-file context (lights up conditional `fileMatch` steering + spec activeFile)
 
 **Depends on:** KAS-1; pairs with KAS-2.
 
-KAS implements IDE-grade conditional features that key off the session's **open files** — but they sit dormant if the client never supplies that context (verified: steering `inclusion: fileMatch` glob-matches `fileMatchPattern` via `minimatch` against `openFiles`, and the fileMatch lookup is skipped entirely when `openFiles` is empty; spec mode similarly keys off `activeFile`/`openFiles`). cyril is a chat TUI with no editor "open files," so against KAS today these features never trigger — you'd get only `inclusion: always` steering, i.e. the old v1/v2 behavior.
+> **Corrected 2026-06-21** — this milestone's original premise was wrong. It assumed `fileMatch` steering keys off an IDE-supplied `openFiles` set (editor tabs) fed via a callback, and is therefore *dormant* for a chat client. It is not. **fileMatch matches files already in the *conversation*** — file content blocks attached to a prompt + paths the agent reads via `read_file` (`getWorkspaceFiles()` in `@kiro/agent`) — re-checked at every tool boundary, and the injected doc stays resident for the session. Verified live (`experiments/conductor-spike/probe-kas-filematch-steering{,-v2,-v3-persistence}.py`); see the [2.7.1 audit steering section](kiro-2.7.1-wire-audit.md#steering-inclusion-under-kas--filematch-matches-conversation-files-not-ide-open-tabs).
 
-- Synthesize an `openFiles`/`activeFile` set and feed it to KAS (via the `_meta.kiro`/document channel the engine reads into its graph state) — sourced from files the user `@`-attaches or references, files the agent recently touched, and/or the cwd.
-- This is the smallest change that turns on a whole class of IDE-parity behavior (conditional steering, spec activeFile logic) without cyril implementing those features itself — the engine already does, it just needs the input.
-- Vendor-note: this is Kiro-specific plumbing (`_meta.kiro` open-file state), but the *concept* (telling an agent "these files are in play") is generalizable if other ACP agents grow similar context hooks.
+What this actually means:
+
+- **The common case already works, no client work required:** any file the agent reads via `read_file` triggers its matching `fileMatch` steering for the rest of the session (steering is sticky once injected — deduped, never evicted). KAS does **not** call `_kiro/workspace/{currently_open_files,active_file}` in a bare-ACP session, so there's nothing to "fill in" there.
+- **The real client lever — let the user trigger it deliberately:** map `@`-attached / referenced files to ACP **file content blocks** on `session/prompt`. KAS records those as `document.type:"file"` workspace files, so attaching `Foo.tsx` activates `fileMatchPattern:"**/*.tsx"` steering. This is the small, high-leverage change — not "synthesize an editor open-files set."
+- **Surface what's active (UI):** build an "active rules/steering" view from `session_info_update:steering_inclusion` (the injection events, by URI) cross-referenced with `_kiro/steering/documents_changed` (the catalog, each doc tagged `always|fileMatch|manual`). **Do not** read `/context` for this — it lists only user-attached files and token buckets, never steering.
+- **Separate, smaller lever (don't conflate):** the wire `openFiles`/`activeFile` graph-state fields *do* exist on `_meta.kiro`, but a code comment ties them to **intent-detection weighting** (and possibly spec `activeFile`) — *not* steering. Supplying them is optional and independent of the steering win above; treat it as a nice-to-have, not the point of this milestone.
+- Vendor-note: file content blocks are standard ACP; the steering activation they cause is Kiro-specific, but the *concept* (telling an agent "these files are in play") generalizes if other ACP agents grow similar context hooks.
 
 ### KAS-7 — Hooks host (org write/exec-policy interception point)
 

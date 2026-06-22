@@ -8,14 +8,14 @@
 
 ## Contents
 
-**TL;DR:** 2.7.1 embeds the KAS engine (TypeScript/LangGraph), reachable today via `acp --agent-engine kas` (the `chat --v3` TUI is gated). KAS is a *second agent on the same wire*: `_kiro/*` dialect, host-supplied auth, capability-negotiated fs **and** terminal callbacks, an `agent-subtask` subagent model with a one-shot fail-fast DAG (no native loop), built-in `semantic_reviewer`/`fta`/`Explore` agents, and IDE-parity steering (`fileMatch`). cyril's default v2 path is unchanged; KAS adoption is the [ROADMAP KAS track](ROADMAP.md). **Authoritative `_kiro/*` wire contract: [docs/kiro-kas-acp-covenant.md](kiro-kas-acp-covenant.md)** (the curated `@kiro/acp-type-covenant` reference — method catalog, handshake flags, session_info_update union, host-callback signatures; supersedes the reconstructed shapes in this audit).
+**TL;DR:** 2.7.1 embeds the KAS engine (TypeScript/LangGraph), reachable today via `acp --agent-engine kas` (the `chat --v3` TUI is gated). KAS is a *second agent on the same wire*: `_kiro/*` dialect, host-supplied auth, capability-negotiated fs **and** terminal callbacks, an `agent-subtask` subagent model with a one-shot fail-fast DAG (no native loop), built-in `semantic_reviewer`/`fta`/`Explore` agents, and conversation-gated `fileMatch` steering (matches files *in the conversation*, not IDE open-tabs — corrected 2026-06-21). cyril's default v2 path is unchanged; KAS adoption is the [ROADMAP KAS track](ROADMAP.md). **Authoritative `_kiro/*` wire contract: [docs/kiro-kas-acp-covenant.md](kiro-kas-acp-covenant.md)** (the curated `@kiro/acp-type-covenant` reference — method catalog, handshake flags, session_info_update union, host-callback signatures; supersedes the reconstructed shapes in this audit).
 
 - [Headline: embedded & works over ACP](#headline-kas-is-embedded-and-works-over-acp) · [The `--v3` flag / "V3 not supported" gate](#the---v3-flag-and-the-v3-not-supported-gate)
 - [KAS ACP capability surface (vs v2)](#kas-acp-capability-surface-vs-v2) — `_kiro/*` namespace, `session/new` (7 modes, populated `configOptions`, working `set_config_option`)
 - [Subagent flows are changing](#subagent-flows-are-changing-under-kas) — InvokeSubAgent/OrchestrateSubAgent/subagent_response schemas; bundled agents (Explore/semantic_reviewer/fta) + enable path; user-agent file formats & the CLI-only **migration trap**; **how a crew executes** (one-shot fail-fast DAG, fan-out cap 5, inter-stage context, no-loop = design choice); LangGraph StateGraph; the gated DAG orchestrator
 - [Auth contract](#kas-auth-contract-the-host-must-supply-the-token-verified-live) · [Subagent wire format](#kas-subagent-wire-format-verified-live) · [`/goal` = autonomous mode](#goal-a-v2-command-with-no-kas-equivalent--autonomous-mode-instead)
 - [Filesystem callbacks](#kas-filesystem-callbacks-verified-live--capability-negotiated) · [Host-responsibility callback map](#kas-host-responsibility-callback-map-verified-live) (auth/shell_type/permission/fs/terminal)
-- [Session-management + account methods](#kas-session-management--account-methods-verified-live) · [Hooks (kas-unified-hooks)](#kas-hooks--the-kas-unified-hooks-engine-from-the-bundle) · [Steering `fileMatch`](#steering-inclusion-under-kas--filematch-now-works-against-openfiles)
+- [Session-management + account methods](#kas-session-management--account-methods-verified-live) · [Hooks (kas-unified-hooks)](#kas-hooks--the-kas-unified-hooks-engine-from-the-bundle) · [Steering `fileMatch`](#steering-inclusion-under-kas--filematch-matches-conversation-files-not-ide-open-tabs)
 - [KAS live wire captures (2026-06-16)](#kas-live-wire-captures-2026-06-16-tool-advertisement-session_info_update-usage) — tool advertisement (`_kiro/tools/didChange` = category tags), `session_info_update` `kind`-multiplexer (turn-end/metering/context-breakdown), `_kiro/account/getUsage` shape
 - [Cyril impact](#cyril-impact) · [cyril type-coverage gaps (Rust vs KAS `.d.ts`)](#cyril-type-coverage-gaps-rust-types-vs-kas-typescript-dts) · [Probe coverage: proven vs. not-yet-proven](#probe-coverage-proven-on-the-wire-vs-not-yet-proven) · [Reproduce](#reproduce)
 
@@ -215,6 +215,7 @@ Unlike v2 (which reads its own auth store), **KAS makes the ACP host provide the
   - **`profileArn` required in practice** — without it the backend 400s mid-turn: "profileArn is required for this request." (KAS logs "Hosts SHOULD include profileArn so KAS can route region.")
 - `kiro-cli-chat acp --agent-engine kas` does **not** self-answer this — it forwards to the topmost ACP client. There is no `--token-path` / fallback on the acp path in 2.7.1.
 - The token lives in kiro's own store: `~/.local/share/kiro-cli/data.sqlite3`, table `auth_kv`, key `kirocli:social:token` → `{access_token, expires_at, refresh_token, profile_arn, provider}`. It refreshes on use (an idle token expires; any authenticated `kiro-cli` op re-mints it).
+  - **Addendum (observed on 2.8.1, 2026-06-21):** the active store key depends on login type and is **not always `social`**. An IAM Identity Center / PKCE login stores under `kirocli:odic:token` (OIDC) `→ {access_token, expires_at, refresh_token, region, start_url, oauth_flow, scopes}` — note **no `profile_arn`**. For that case the matching `profileArn` lives in a separate row: `auth_kv`→`state` table, key `api.codewhisperer.profile`. Pitfall proven the hard way: pairing an OIDC accessToken with a *different* identity's profileArn (e.g. an expired `~/.aws/sso/cache/kiro-auth-token*.json`, different account/region) → backend "Access denied". accessToken and profileArn must be the same identity. So a robust responder resolves the profileArn per active token type (`social`/Builder-ID embed it in the token row; `odic` reads `state/api.codewhisperer.profile`).
 
 **Cyril impact:** to drive KAS, cyril must implement an `_kiro/auth/getAccessToken` responder and source a live kiro token (reading kiro's credential store, refreshing as needed). This is a real integration dependency, not a passive one — it activates the dormant `_kiro/auth/getAccessToken` first seen in 2.6.1.
 
@@ -437,21 +438,48 @@ There is **no** `Notification` / `PermissionRequest` / `WaitingForApproval` trig
 
 ---
 
-## Steering inclusion under KAS — `fileMatch` now works (against `openFiles`)
+## Steering inclusion under KAS — `fileMatch` matches conversation files, not IDE open-tabs
 
-A real CLI↔IDE gap-closure. The v1/v2 Rust engine parsed steering `inclusion` frontmatter but ignored `fileMatch` entirely (the string isn't even in the binary) — all steering loaded unconditionally. **KAS implements it:**
+> **CORRECTED 2026-06-21** (live A/B probes + `@kiro/agent` 0.3.257 source). An earlier version of this section claimed fileMatch matches an IDE-supplied `openFiles` set (editor tabs) via a host callback, and was therefore *dormant* for a bare ACP client. **That was wrong.** fileMatch matches against the files already present in the **conversation**, so it fires for any ACP client — including cyril — with no editor integration. Verified by `experiments/conductor-spike/probe-kas-filematch-steering{,-v2,-v3-persistence}.py` + `probe-kas-context-shows-steering.py`.
+
+The v1/v2 Rust engine parsed steering `inclusion` frontmatter but ignored `fileMatch` entirely (the string isn't even in the binary) — all steering loaded unconditionally. **KAS implements it:**
 
 - Frontmatter schema: `inclusion: enum["always", "fileMatch", "manual", "auto"]` + `fileMatchPattern: string | string[]`, validated ("fileMatchPattern required when inclusion is fileMatch").
 - `matchDocsForFiles` glob-matches each fileMatch doc via **`minimatch(filePath, pattern, {dot})`** — workspace-relative, single-or-array patterns. So `fileMatchPattern: "components/**/*.tsx"` is honored exactly like the IDE.
 
-**But it matches against `openFiles`.** The populate-steering node calls `getSteeringDocuments({ files: openFiles.length > 0 ? openFiles : undefined })`, and the fileMatch lookup runs only `hasFiles ? getMatchedDocuments(filePaths) : []`. So:
+**What it matches against — the conversation, not the editor.** The `populate-steering` node computes the candidate file set inside `populateMatchedSteering` (`@kiro/agent` `dist/server/acp-server.js`):
 
-- **IDE + KAS:** open editor tabs supply `openFiles`, so fileMatch steering triggers — the gap is closed in practice.
-- **Bare ACP CLI + KAS:** no open files → `hasFiles` is false → the fileMatch lookup is skipped → only `inclusion: always` docs load (effectively the v1/v2 behavior). The feature is *implemented but dormant* for lack of input, not unimplemented.
+```js
+const openFiles = state.context.getWorkspaceFiles()           // <- NOT the wire `openFiles` field
+  .map(f => execution.workspace.resolveRelativePath(f.path)).filter(Boolean);
+const { documents } = await execution.workspace.getSteeringDocuments({
+  files: openFiles.length > 0 ? openFiles : undefined          // fileMatch lookup only when files present
+});
+```
 
-(Same `openFiles`/`activeFile` session state also drives spec mode's `activeFile` logic via `minimatch`.)
+and `getWorkspaceFiles()` derives that set **from the conversation messages**:
 
-**Cyril impact / TODO:** cyril is a chat TUI with no editor "open files," so against KAS today fileMatch steering never fires. To light it up, cyril must **synthesize an `openFiles`/`activeFile` set** (from `@`-attached/referenced files, recently-touched files, or cwd) and feed it to KAS via the `_meta.kiro`/document channel. This is the smallest change that turns on a class of IDE-parity behavior (conditional steering, spec `activeFile`) without cyril reimplementing those features — the engine already does them; it just needs the input. Tracked as **ROADMAP KAS-6**.
+```js
+getWorkspaceFiles() {
+  for (const message of this.messages) for (const entry of message.entries) {
+    if (entry.type === "document" && entry.document.type === "file") files.push(entry.document);          // attached file blocks
+    if (entry.type === "toolUse" && entry.name === "read_file") files.push({type:"file", path: entry.args.path}); // files the agent read
+  }
+}
+```
+
+So the trigger is **"a matching file is in the conversation context"** — attached as a file content block, or touched by `read_file` — re-evaluated at tool boundaries by the `post-tool-steering` node. The wire `openFiles`/`activeFile` graph-state fields *do* exist, but a code comment ties them to **intent-detection weighting**, not steering; and in a bare-ACP session KAS **never invokes** the `_kiro/workspace/{currently_open_files,active_file}` callbacks (the only server→client requests on a plain turn are `auth/getAccessToken`, `hooks/{list,sessionStart}`, `terminal/shell_type`).
+
+**Lifecycle = sticky, not per-turn.** Matched docs are emitted into the conversation as `{type:"document",document:{type:"steering",…}}` entries and deduped against what's already resident (`netNewSteeringDocuments`); there is **no removal path**. Once a fileMatch doc triggers it stays resident for the whole session (re-serialized to the top of every prompt) — even in later turns that touch no matching file. `always` docs are additionally re-injected every 10 bot messages (`shouldRefreshSteering`, budget-gated) to fight drift. (v3 probe: turn 1 read `App.tsx` → injected; turn 2 with no file read → still active, no new injection event.)
+
+**Observable signals (and which is the right oracle):**
+- `session/update → session_info_update` `kind:"steering_inclusion"` → `{steeringDocuments:["file:///…/<doc>.md"]}` — **fires once on injection** (the edge); the authoritative "what got injected" signal. (This audit's "not observed" list previously included it; **now verified**.)
+- `_kiro/steering/documents_changed` → `{documents:[{name,type,scope,uri,inclusion}]}` — a **catalog of every discovered steering doc tagged with its mode**, *not* the in-context set. Don't use it as the "is it loaded?" oracle.
+- `/context` does **not** show steering at all: `_kiro/session/context {subcommand:show}` lists only user-attached files (`/context add`; returned `entries:[]`), and the context-usage breakdown's 5 buckets have no steering line item — the file the agent *read* shows up under `contextFiles`, but the steering it *pulled in* does not.
+
+(Same `getWorkspaceFiles()`/`activeFile` session state also drives spec mode's `activeFile` logic via `minimatch`.)
+
+**Cyril impact / TODO (reframed):** the earlier "synthesize an editor `openFiles` set" framing is **not** what's needed. fileMatch already works for cyril the moment a matching file enters the conversation — every file the agent reads via `read_file` triggers it for free. To let the *user* trigger it deliberately, map `@`-attached / referenced files to ACP **file content blocks** on `session/prompt` (KAS records those as `document.type:"file"` workspace files). To render an "active rules/steering" panel, build it from `steering_inclusion` (injected) cross-referenced with `documents_changed` (catalog + mode) — not from `/context`. Tracked as **ROADMAP KAS-6**.
 
 ---
 
@@ -526,7 +554,7 @@ This is the on-wire source for a cyril `/usage` panel under KAS (v2 has no equiv
 | `_kiro/mcp/status` (10×) | `{sessionId, servers:[{name, authType, status}]}` | Per-server MCP connection status; fires repeatedly as servers connect. The KAS analog of v2's `kiro.dev/mcp/*` one-offs. |
 | `_kiro/powers/items_changed` | `{sessionId, status, powers:[{name, description, keywords[]}]}` | The "powers" catalog (activatable tool bundles). |
 | `_kiro/progressive_context/items_changed` (2×) | `{sessionId, status, items:[{name, type, description, scope, uri}]}` | Available progressive-context items (steering/knowledge/etc.). |
-| `_kiro/steering/documents_changed` | `{sessionId, status, documents:[]}` | Active steering docs (empty here — temp cwd had none; see steering section). |
+| `_kiro/steering/documents_changed` | `{sessionId, status, documents:[{name,type,scope,uri,inclusion}]}` | **Catalog** of ALL discovered steering docs, each tagged `inclusion: always\|fileMatch\|manual` — NOT the in-context set (empty here only because temp cwd had none). The *injected* set is signaled by `session_info_update:steering_inclusion`. See steering section. |
 | `_kiro/tools/didChange` (7×) | `{sessionId, tags:[{source, tag, description}]}` | Tool advertisement (above). |
 
 Plus standard `session/update` variants on the KAS wire: `agent_message_chunk`, `tool_call`/`tool_call_update`, `available_commands_update` (KAS pushes the slash-command list), `config_option_update` (config options push, unlike v2), and the `session_info_update` `kind`s above. → all feed the KAS-2 converter arm.
@@ -640,7 +668,7 @@ This audit mixes two evidence levels. **Typed** = the shape is in the `@kiro/acp
 ### Typed but NOT fired (contract known, behavior unconfirmed) ⚠️
 
 - **Notifications (12 of 18), situational:** `code_references` (license-attributed output), `sandbox/status` (sandbox fallback), `mcp/governance_disabled`, `policy/changed` + `policy/error` (mid-session policy reload), `hooks/cancel` (on `session/cancel` with hooks on), `hooks/didChange` (`.kiro/hooks/` change mid-session), `spec/taskStatusChanged` (the *notification* — we read statuses via the `getTaskStatuses` request instead), `customAgent/{not_found,config_error}` (we only injected a *valid* agent), `error/rate_limit`, `system/notify`.
-- **`session_info_update` kinds (12 of 18) not observed:** `steering_inclusion`, `display_error`, `summarization_{started,completed,failed,separator}`, `summary_message`, `recap`, `queued` (concurrent sessions), `hook_update`, `pending_interaction` / `interaction_resolved` (only seen indirectly via `userInput`).
+- **`session_info_update` kinds (11 of 18) not observed:** `display_error`, `summarization_{started,completed,failed,separator}`, `summary_message`, `recap`, `queued` (concurrent sessions), `hook_update`, `pending_interaction` / `interaction_resolved` (only seen indirectly via `userInput`). (`steering_inclusion` **is now verified** — fires `{steeringDocuments:[uri]}` on fileMatch injection; see the steering section.)
 - **Host callbacks not triggered:** `secret/{get,store,delete}`, `openExternalUrl`, `mcp/elicitation`, `hooks/sessionStart` (no real session-start hook), `terminal/kill` (no cancellation path), and the **Kiro fs supersets** `_kiro/fs/{read_file,write_file,delete,stat,read_directory}` — KAS used the bare-ACP `fs/*` for basic ops, so these never fired.
 - **Client→agent requests not fired:** `session/{delete,rename,compact,export}`, `session/{fork,list}` (the non-empty `sessionCapabilities`), `checkpoint/{revert,revertMultiple}` (need a snapshot), `mcp/{resetServer,getPrompt,getResource}`, `hooks/triggerHook` (client-initiated), `spec/runAllTasks`, `spec/resolveSession` `strategy:"reuse"`, `spec/invoke` `documentType:"bugfix"` / `action:"update"`.
 - **Settings / modes not exercised:** KAS modes `autonomous` / `bug-fix` / `plan` / `quick-spec`; most `AgentSettings` flags (`_parallelTasks`, `_steeringReminders`, `_sessionRecap`, `_mergeVibeSpec`, `_delegate`, `_providerPowers`, `thinking`, `tangentMode`, `disableAutoCompaction`, `todoList`, `checkpoint`, `toolSearch`, `knowledge`, `compaction`); the `c2s_*` code-to-spec tools (gated `_c2s`); the knowledge base.

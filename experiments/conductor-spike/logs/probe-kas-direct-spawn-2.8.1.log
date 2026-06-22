@@ -1,5 +1,5 @@
 # spawn: node --experimental-wasm-modules /home/dwalleck/.local/share/kiro-cli/kas/node_modules/@kiro/agent/dist/server/acp-server.js --transport=stdio
-# cwd:   /home/dwalleck/.claude/tmp/kas-direct-um6idl1t
+# cwd:   /home/dwalleck/.claude/tmp/kas-direct-k5nvt2jo
 # auth: default (no --auth flag) -> ~/.aws/sso/cache/kiro-auth-token.json
 
 ==== initialize result ====
@@ -19,19 +19,19 @@
         "logging": {
           "channels": [
             {
-              "filePath": "/home/dwalleck/.kiro/logs/20260621T155750256/kiro.log",
+              "filePath": "/home/dwalleck/.kiro/logs/20260622T021321935/kiro.log",
               "name": "kiro"
             },
             {
-              "filePath": "/home/dwalleck/.kiro/logs/20260621T155750256/mcp.log",
+              "filePath": "/home/dwalleck/.kiro/logs/20260622T021321935/mcp.log",
               "name": "mcp"
             },
             {
-              "filePath": "/home/dwalleck/.kiro/logs/20260621T155750256/powers.log",
+              "filePath": "/home/dwalleck/.kiro/logs/20260622T021321935/powers.log",
               "name": "powers"
             }
           ],
-          "logDir": "/home/dwalleck/.kiro/logs/20260621T155750256"
+          "logDir": "/home/dwalleck/.kiro/logs/20260622T021321935"
         },
         "policyNotifications": true,
         "sessionList": true
@@ -74,15 +74,15 @@
 {
   "_meta": {
     "agentMode": "vibe",
-    "createdAt": "2026-06-21T15:57:50.549Z",
+    "createdAt": "2026-06-22T02:13:22.790Z",
     "ftaEnabled": false,
-    "id": "sess_5f406532-f293-4b5a-8e6e-675c4b03f8cd",
-    "lastModifiedAt": "2026-06-21T15:57:50.549Z",
+    "id": "sess_d308acd6-ab9d-49b2-9c79-5a082aab9126",
+    "lastModifiedAt": "2026-06-22T02:13:22.790Z",
     "schemaVersion": "1.0.0",
     "semanticReviewEnabled": true,
     "title": "New Session",
     "workspacePaths": [
-      "/home/dwalleck/.claude/tmp/kas-direct-um6idl1t"
+      "/home/dwalleck/.claude/tmp/kas-direct-k5nvt2jo"
     ]
   },
   "configOptions": [
@@ -237,10 +237,10 @@
     ],
     "currentModeId": "vibe"
   },
-  "sessionId": "sess_5f406532-f293-4b5a-8e6e-675c4b03f8cd"
+  "sessionId": "sess_d308acd6-ab9d-49b2-9c79-5a082aab9126"
 }
 
-sessionId: sess_5f406532-f293-4b5a-8e6e-675c4b03f8cd
+sessionId: sess_d308acd6-ab9d-49b2-9c79-5a082aab9126
 
 ==== running one tiny turn ====
 prompt response: {

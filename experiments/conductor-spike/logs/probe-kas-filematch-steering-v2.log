@@ -1,0 +1,27 @@
+# binary: /home/dwalleck/.local/bin/kiro-cli
+
+##### condition [match] read src/App.tsx #####
+  tool calls: ['Read File', 'tooluse_5g7rNDYcwxxGeZBVZtlDg4', 'tooluse_5g7rNDYcwxxGeZBVZtlDg4', 'Read File']
+  steering_inclusion updates: [['file:///home/dwalleck/.claude/tmp/kas-fm2-y1nxeeyn/.kiro/steering/tsx-canary.md']]
+  ALWAYS token in reply: True
+  TSX   token in reply: True
+  --- agent reply (first 600 chars) ---
+ALWAYS_CANARY_TOKEN_7K2
+TSX_FILEMATCH_CANARY_TOKEN_9F3
+
+##### condition [nomatch] read src/App.txt #####
+  tool calls: ['Read File', 'tooluse_SL2aUbuZABozcgUmUri8Qa', 'tooluse_SL2aUbuZABozcgUmUri8Qa', 'Read File']
+  steering_inclusion updates: []
+  ALWAYS token in reply: True
+  TSX   token in reply: False
+  --- agent reply (first 600 chars) ---
+ALWAYS_CANARY_TOKEN_7K2
+
+===== VERDICT =====
+  [match  ] ALWAYS=True  TSX_fileMatch=True
+  [nomatch] ALWAYS=True  TSX_fileMatch=False
+
+Expected: ALWAYS=True in both (positive control); TSX=True only in [match].
+If ALWAYS=False even in [match]: oracle failed (model didn't obey / pipeline issue), not a fileMatch result.
+
+# full log: /home/dwalleck/repos/cyril/experiments/conductor-spike/logs/probe-kas-filematch-steering-v2.log
