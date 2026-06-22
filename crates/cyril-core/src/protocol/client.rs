@@ -167,4 +167,38 @@ impl acp::Client for KiroClient {
         }
         Ok(())
     }
+
+    /// Handle incoming server→client ext REQUESTS. KAS-1 answers
+    /// `_kiro/auth/getAccessToken` (wrapper mode, `--auth=acp-callback`) from
+    /// kiro-cli's own token file; every other ext request gets the protocol
+    /// default. The v2 free path never sends this, and the cfg-split keeps the
+    /// credential code out of a default build (ADR-0002).
+    async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+        Self::handle_ext_request(args)
+    }
+}
+
+impl KiroClient {
+    /// Route an ext request: KAS-1 handles only `getAccessToken`.
+    #[cfg(feature = "kas")]
+    fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+        if args.method.as_ref() == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
+            return crate::protocol::kas::auth::respond_get_access_token();
+        }
+        // Other ext requests (fs/terminal host callbacks) are KAS-5 (cyril-7bdu).
+        default_ext_response()
+    }
+
+    /// Default build: no KAS ext requests are handled.
+    #[cfg(not(feature = "kas"))]
+    fn handle_ext_request(_args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+        default_ext_response()
+    }
+}
+
+/// The ACP protocol default for an unhandled ext request: a `null` result.
+fn default_ext_response() -> acp::Result<acp::ExtResponse> {
+    Ok(acp::ExtResponse::new(
+        serde_json::value::RawValue::NULL.to_owned().into(),
+    ))
 }

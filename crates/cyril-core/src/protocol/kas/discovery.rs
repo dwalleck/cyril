@@ -138,6 +138,13 @@ pub(crate) fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
     )
 }
 
+/// The tier-5 file-auth token path (`~/.aws/sso/cache/kiro-auth-token.json`), if
+/// a home directory is known. Shared with the Part B auth responder — the same
+/// file the free-path precheck verifies and that KAS/kiro-cli maintain.
+pub(crate) fn default_token_path() -> Option<std::path::PathBuf> {
+    crate::kiro_agent_config::home_dir().map(|h| h.join(TOKEN_FILE_REL))
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
