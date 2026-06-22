@@ -3,6 +3,7 @@ mod app;
 use std::path::PathBuf;
 
 use clap::Parser;
+use cyril_core::types::AgentEngine;
 
 #[derive(Parser)]
 #[command(
@@ -26,6 +27,11 @@ struct Cli {
         default_values_t = vec!["kiro-cli".to_string(), "acp".to_string()],
     )]
     agent_command: Vec<String>,
+
+    /// Which Kiro engine to drive: `v2` (default) or `kas`. Overrides
+    /// `[agent] engine` in config. KAS is not available until KAS-1.
+    #[arg(long = "agent-engine")]
+    agent_engine: Option<AgentEngine>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -42,7 +48,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawn bridge
     let agent_command = cyril_core::types::AgentCommand::try_from_argv(cli.agent_command)?;
-    let bridge = cyril_core::protocol::bridge::spawn_bridge(agent_command, cwd.clone())?;
+    // The `--agent-engine` flag overrides `[agent] engine` in config; config
+    // defaults to v2 (KAS-0, ADR-0002).
+    let agent_engine = cli.agent_engine.unwrap_or(config.agent.engine);
+    let bridge =
+        cyril_core::protocol::bridge::spawn_bridge(agent_command, agent_engine, cwd.clone())?;
 
     // Build and run TUI
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -123,5 +133,30 @@ fn config_dir() -> PathBuf {
         PathBuf::from(home).join(".config").join("cyril")
     } else {
         PathBuf::from(".cyril")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::expect_used)]
+
+    use super::*;
+
+    // Slice 5 (D7 parse table): no flag -> None (config supplies the default);
+    // `--agent-engine kas` -> Some(Kas); an unknown value is REJECTED at parse
+    // time, never silently defaulted.
+    #[test]
+    fn cli_agent_engine_flag() {
+        let none = Cli::try_parse_from(["cyril"]).expect("parses with no engine flag");
+        assert_eq!(none.agent_engine, None);
+
+        let kas = Cli::try_parse_from(["cyril", "--agent-engine", "kas"])
+            .expect("parses --agent-engine kas");
+        assert_eq!(kas.agent_engine, Some(AgentEngine::Kas));
+
+        assert!(
+            Cli::try_parse_from(["cyril", "--agent-engine", "bogus"]).is_err(),
+            "an unknown engine value is rejected, not silently defaulted"
+        );
     }
 }

@@ -1,4 +1,5 @@
 pub mod agent_command;
+pub mod agent_engine;
 pub mod code_panel;
 pub mod command;
 pub mod config;
@@ -14,6 +15,7 @@ pub mod voice;
 
 // Convenience re-exports
 pub use agent_command::AgentCommand;
+pub use agent_engine::AgentEngine;
 pub use code_panel::{CodeCommandResponse, CodePanelData, LspServerInfo, LspStatus};
 pub use command::{CommandInfo, CommandOption, ConfigOption};
 pub use event::{

@@ -1,0 +1,10 @@
+{
+  "sessionId": "sess_11ad73f9-b0d3-4ab9-9f95-ce8af4a1c166",
+  "update": {
+    "sessionUpdate": "agent_message_chunk",
+    "content": {
+      "type": "text",
+      "text": "The"
+    }
+  }
+}

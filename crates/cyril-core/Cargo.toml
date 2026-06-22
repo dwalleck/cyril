@@ -10,6 +10,12 @@ description = "Core protocol logic, types, and session management for the Cyril 
 [lints]
 workspace = true
 
+[features]
+# KAS engine support (ADR-0002). Default-off; EMPTY in KAS-0 — it only fixes the
+# gate so the credential-reading code KAS-1 (cyril-evwh) adds is compiled in only
+# under `--features kas`. A default build cannot read the kiro token.
+kas = []
+
 [dependencies]
 thiserror = { workspace = true }
 serde = { workspace = true }

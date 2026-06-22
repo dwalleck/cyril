@@ -121,12 +121,37 @@ jobs:
       - name: Build
         run: cargo build --release --all-features
 
+  kas-feature:
+    name: KAS Feature
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      # ADR-0002: the `kas` feature must build/lint/test in ISOLATION (not only via
+      # the --all-features lanes) so it cannot bitrot under "warnings are errors".
+      # Empty in KAS-0; this covers KAS-1's gated code from day one.
+      - name: Build (--features kas)
+        run: cargo build -p cyril --features kas
+
+      - name: Clippy (--features kas)
+        run: cargo clippy -p cyril --features kas --all-targets -- -D warnings
+
+      - name: Test (--features kas)
+        run: cargo nextest run -p cyril --features kas
+
   # Summary job that requires all other jobs to pass — use this as the single
   # required status check in branch protection.
   ci-success:
     name: CI Success
     if: always()
-    needs: [commitlint, format, lint, test, build]
+    needs: [commitlint, format, lint, test, build, kas-feature]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs
@@ -140,7 +165,8 @@ jobs:
           if [[ "${{ needs.format.result }}" != "success" ]] || \
              [[ "${{ needs.lint.result }}" != "success" ]] || \
              [[ "${{ needs.test.result }}" != "success" ]] || \
-             [[ "${{ needs.build.result }}" != "success" ]]; then
+             [[ "${{ needs.build.result }}" != "success" ]] || \
+             [[ "${{ needs.kas-feature.result }}" != "success" ]]; then
             echo "One or more CI jobs failed"
             exit 1
           fi
