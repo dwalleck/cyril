@@ -267,14 +267,18 @@ async fn notify_or_closed(
 }
 
 /// Select the engine impl for the bound [`AgentEngine`], or a user-facing reason
-/// it is unavailable. KAS-0 wires only v2; `Kas` reports "not available yet"
-/// (KAS-1/cyril-evwh makes the spawn real, behind the `kas` cargo feature). Pure
-/// — unit-testable without a subprocess, and the single place the
-/// engine-to-`AgentEngine` mapping lives.
+/// it is unavailable. v2 is always available; `Kas` resolves to
+/// [`crate::protocol::engine::KasEngine`] only under the `kas` cargo feature
+/// (ADR-0002) — a default build reports that the feature is required rather than
+/// linking any KAS code. Pure — unit-testable without a subprocess, and the
+/// single place the engine-to-`AgentEngine` mapping lives.
 fn engine_for(agent_engine: AgentEngine) -> Result<std::rc::Rc<dyn Engine>, String> {
     match agent_engine {
         AgentEngine::V2 => Ok(std::rc::Rc::new(V2Engine)),
-        AgentEngine::Kas => Err("KAS engine is not available yet".to_string()),
+        #[cfg(feature = "kas")]
+        AgentEngine::Kas => Ok(std::rc::Rc::new(crate::protocol::engine::KasEngine)),
+        #[cfg(not(feature = "kas"))]
+        AgentEngine::Kas => Err("KAS engine requires a build with --features kas".to_string()),
     }
 }
 
@@ -1355,17 +1359,33 @@ mod tests {
 
     use crate::protocol::client::KiroClient;
 
-    // Slice 4 (D7 gate): V2 selects an engine; Kas reports a clean "not available
-    // yet" reason — NO panic/unwrap. Designed to fail if Kas panics or V2 errors.
+    // V2 always selects an engine — NO panic/unwrap.
     #[test]
-    fn engine_for_v2_ok_kas_unavailable() {
+    fn engine_for_v2_ok() {
         assert!(engine_for(AgentEngine::V2).is_ok(), "v2 selects an engine");
+    }
+
+    // KAS-1 C4 (gate-on): under `--features kas`, Kas resolves to the KasEngine.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn engine_for_kas_ok_under_feature() {
+        assert!(
+            engine_for(AgentEngine::Kas).is_ok(),
+            "Kas selects the KasEngine when built with --features kas"
+        );
+    }
+
+    // KAS-1 C5 (gate-off): without the feature, Kas reports a clean reason naming
+    // the feature — NO panic/unwrap, and the KAS code is not compiled in.
+    #[cfg(not(feature = "kas"))]
+    #[test]
+    fn engine_for_kas_unavailable_without_feature() {
         match engine_for(AgentEngine::Kas) {
             Err(reason) => assert!(
-                reason.contains("not available yet"),
-                "Kas gives a clean reason, got {reason:?}"
+                reason.contains("--features kas"),
+                "Kas gives a clean reason naming the feature, got {reason:?}"
             ),
-            Ok(_) => panic!("Kas must not be wired in KAS-0"),
+            Ok(_) => panic!("Kas must error without --features kas"),
         }
     }
 
