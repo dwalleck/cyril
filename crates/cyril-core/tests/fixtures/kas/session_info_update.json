@@ -1,0 +1,12 @@
+{
+  "sessionId": "sess_11ad73f9-b0d3-4ab9-9f95-ce8af4a1c166",
+  "update": {
+    "sessionUpdate": "session_info_update",
+    "_meta": {
+      "kiro": {
+        "userMessageId": "76e0e50b-2fc4-4409-9e8e-e3d98b79beab",
+        "kind": "user_message_id_assigned"
+      }
+    }
+  }
+}

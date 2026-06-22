@@ -2119,4 +2119,47 @@ mod tests {
             other => panic!("expected SessionCreated, got {other:?}"),
         }
     }
+
+    // Slice 7 (cyril-atjw) — ACP-coverage verification spike (D9, NON-gating).
+    // Confirms schema 0.11.2 deserializes the typed `session/update` frames KAS
+    // emits live (captured under tests/fixtures/kas/). `SessionUpdate` is
+    // `#[serde(tag = "sessionUpdate")]` with NO `#[serde(other)]` catch-all, so an
+    // unknown KAS variant would hard-fail HERE — at the acp Client deser layer,
+    // before convert/Engine ever runs. A future Err is a documented upgrade-trigger
+    // for KAS-2a (cyril-j16p), not a code defense. The standard ACP variants
+    // (tool_call, available_commands_update, …) the probe logs truncated are
+    // already exercised by the v2 convert tests above via the same deser path;
+    // the KAS-distinctive `session_info_update` is the load-bearing capture here.
+    #[test]
+    fn schema_deserializes_captured_kas_session_updates() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/kas");
+        let mut checked = Vec::new();
+        for entry in std::fs::read_dir(&dir).expect("kas fixtures dir") {
+            let path = entry.expect("dir entry").path();
+            if path.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
+            let raw = std::fs::read_to_string(&path).expect("read fixture");
+            let value: serde_json::Value = serde_json::from_str(&raw).expect("fixture is JSON");
+            let variant = value["update"]["sessionUpdate"]
+                .as_str()
+                .unwrap_or("?")
+                .to_string();
+            // The exact layer the acp Client deserializes a `session/update` at.
+            let parsed: Result<acp::SessionNotification, _> = serde_json::from_value(value);
+            assert!(
+                parsed.is_ok(),
+                "schema 0.11.2 failed to deserialize captured KAS `{variant}` frame {}: {:?}\n\
+                 -> no-serde(other) upgrade-trigger; record for KAS-2a (cyril-j16p)",
+                path.display(),
+                parsed.err(),
+            );
+            checked.push(variant);
+        }
+        checked.sort();
+        assert!(
+            checked.contains(&"session_info_update".to_string()),
+            "the KAS-distinctive session_info_update variant must be covered; got {checked:?}"
+        );
+    }
 }
