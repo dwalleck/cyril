@@ -1369,9 +1369,23 @@ async fn run_loop(
             } // select! command branch
             Some(routed) = inbound_rx.recv() => {
                 // ADR-0004 single-mediator forward: observe TurnCompleted to clear
-                // the busy flag, then forward to the App. Both v2 and KAS emit the
-                // same marker, so the loop is the one place turn-end is observed.
+                // the busy flag, then forward to the App. The loop is the one place
+                // turn-end is observed.
+                //
+                // KAS-2a (cyril-j16p) Slice 2 — idempotent completion: a KAS turn
+                // emits BOTH a `session_info_update`->`turn_end` (converted to
+                // TurnCompleted by the engine) AND a prompt response (synthesized
+                // into TurnCompleted by the off-loop task), in either order; v2
+                // emits exactly one. Clear and forward only the FIRST per turn —
+                // drop a TurnCompleted that arrives when no turn is in flight, so
+                // the App commits streaming/metering once and a non-returning
+                // prompt response can't freeze the turn (turn_end completes it).
+                // (Residual: a stale duplicate arriving after a NEW same-session
+                // turn started would need per-turn identity — cyril-a71q.)
                 if matches!(routed.notification, Notification::TurnCompleted { .. }) {
+                    if turn_in_flight.is_none() {
+                        continue; // duplicate completion for an already-ended turn
+                    }
                     turn_in_flight = None;
                 }
                 if channels.notification_tx.send(routed).await.is_err() {
@@ -1458,6 +1472,10 @@ mod tests {
         /// blocks until the client answers) before completing — exercises Slice 3's
         /// loop request-forward path (ADR-0004).
         request_perm: bool,
+        /// When set, `prompt` emits a KAS `session_info_update`->`turn_end`
+        /// notification before its (possibly parked) response — modelling KAS's
+        /// dual completion signal so the loop's dedup (KAS-2a Slice 2) is exercised.
+        emit_turn_end: bool,
         /// Set by `cancel`; makes a woken `prompt` resolve as Cancelled (ACP semantics).
         cancelled: bool,
         /// Session ids the agent was asked to cancel, in order. Lets a test assert
@@ -1504,12 +1522,37 @@ mod tests {
         async fn prompt(&self, a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
             // Copy the flags out and DROP the borrow before any await — a RefCell
             // borrow held across `.await` would panic on re-entry.
-            let (block, err, want_perm) = {
+            let (block, err, want_perm, emit_turn_end) = {
                 let mut s = self.script.borrow_mut();
                 s.received.push("prompt".into());
                 s.prompt_count += 1;
-                (s.block_prompt, s.prompt_err, s.request_perm)
+                (
+                    s.block_prompt,
+                    s.prompt_err,
+                    s.request_perm,
+                    s.emit_turn_end,
+                )
             };
+            if emit_turn_end {
+                // KAS-shaped completion: emit the `turn_end` lifecycle frame
+                // BEFORE the response (and before any park) so it drives
+                // completion even when the prompt response is late or never comes.
+                use acp::Client as _;
+                // Drop the RefCell borrow before the await (mirrors the
+                // request_permission path) — a Ref held across .await is unsound.
+                let conn = self.agent_conn.borrow().clone();
+                if let Some(conn) = conn {
+                    let note: acp::SessionNotification = serde_json::from_value(serde_json::json!({
+                        "sessionId": a.session_id.to_string(),
+                        "update": {
+                            "sessionUpdate": "session_info_update",
+                            "_meta": { "kiro": { "kind": "turn_end", "stopReason": "end_turn" } }
+                        }
+                    }))
+                    .expect("turn_end notification");
+                    conn.session_notification(note).await?;
+                }
+            }
             if want_perm {
                 // Server->client permission request. KiroClient sends it to the loop,
                 // which FORWARDS it to the App (ADR-0004); this call BLOCKS until the
@@ -1572,9 +1615,28 @@ mod tests {
     }
 
     /// Wire a fake agent to `run_loop` over an in-process duplex and run `body`
-    /// against the live bridge.
+    /// against the live bridge, using the default v2 engine.
     async fn with_harness<F, Fut>(script: Rc<RefCell<Script>>, body: F)
     where
+        F: FnOnce(
+            BridgeSender,
+            mpsc::Receiver<RoutedNotification>,
+            mpsc::Receiver<PermissionRequest>,
+            Rc<tokio::sync::Notify>,
+            tokio::task::JoinHandle<crate::Result<()>>,
+        ) -> Fut,
+        Fut: std::future::Future<Output = ()>,
+    {
+        with_engine_harness(Rc::new(V2Engine), script, body).await;
+    }
+
+    /// Like [`with_harness`] but with a caller-chosen [`Engine`], so KAS-2a tests
+    /// can drive the loop with `KasEngine`.
+    async fn with_engine_harness<F, Fut>(
+        engine: Rc<dyn Engine>,
+        script: Rc<RefCell<Script>>,
+        body: F,
+    ) where
         F: FnOnce(
             BridgeSender,
             mpsc::Receiver<RoutedNotification>,
@@ -1589,7 +1651,6 @@ mod tests {
         local
             .run_until(async move {
                 let (handle, channels) = create_channel_pair();
-                let engine: Rc<dyn Engine> = Rc::new(V2Engine);
                 let (inbound_tx, inbound_rx) =
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
                 let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
@@ -1819,6 +1880,99 @@ mod tests {
                         Some(Notification::TurnCompleted { .. })
                     ),
                     "exactly one TurnCompleted (no second)"
+                );
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn kas_turn_end_and_prompt_response_dedupe_to_one() {
+        // KAS-2a (cyril-j16p) Slice 2 — double-fire dedup: a KAS turn emits BOTH a
+        // `turn_end` notification (-> TurnCompleted via KasEngine) AND a prompt
+        // response (-> TurnCompleted via the off-loop task). The loop must forward
+        // EXACTLY ONE and clear `turn_in_flight` once, so a follow-up SendPrompt is
+        // accepted (not rejected "a turn is already in progress"). Designed to FAIL
+        // if the duplicate is forwarded (double-commit) or the flag double-cleared.
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["one".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+                assert!(
+                    !matches!(
+                        recv_notif(&mut rx, 1).await,
+                        Some(Notification::TurnCompleted { .. })
+                    ),
+                    "exactly one TurnCompleted forwarded — the duplicate is dropped"
+                );
+                // turn_in_flight cleared once -> a fresh turn is accepted.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["two".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(
+                    drain_to_turn(&mut rx).await,
+                    StopReason::EndTurn,
+                    "second turn accepted after the first deduped to one completion"
+                );
+            },
+        )
+        .await;
+        assert_eq!(
+            probe.borrow().prompt_count,
+            2,
+            "both turns reached the agent (the second was not rejected)"
+        );
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn kas_turn_end_completes_without_prompt_response() {
+        // KAS-2a (cyril-j16p) Slice 2 — non-blocking: the prompt response never
+        // returns (gate held forever), but the `turn_end` notification still drives
+        // completion. Designed to FAIL if completion depended on the prompt response
+        // (the skeleton would freeze busy).
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            block_prompt: true,
+            ..Default::default()
+        }));
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                // The gate is NEVER released, so `prompt` parks indefinitely; only
+                // the turn_end frame can complete the turn.
+                assert_eq!(
+                    drain_to_turn(&mut rx).await,
+                    StopReason::EndTurn,
+                    "turn_end completes the turn with no prompt response"
                 );
             },
         )
