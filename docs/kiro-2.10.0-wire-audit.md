@@ -79,8 +79,18 @@ Embedded product-doc manifest **134 → 134 nodes, zero adds/removes, zero descr
 
 - **Safe to upgrade. No code change.**
 - **Subagent crew fail-fast (v2) is a free robustness win** for cyril's existing `SubagentTracker`/`crew_panel` (the `kiro.dev/subagent/list_update` path): a failed crew stage now reaches a terminal status promptly instead of leaving a perpetually-spinning row. Wire schema unchanged — worth a quick visual confirmation that cyril renders a failed/error stage gracefully, but no new field to handle.
-- **MCP hot-reload** and **`chat.disableInheritingDefaultResources`** are host/agent-config concerns, invisible on the ACP wire to cyril.
+- **MCP + agent-config hot-reload reflect in cyril for free** — and the re-advertisement *is* on the wire (corrected; see "Hot-reload — live-verified" below). `chat.disableInheritingDefaultResources` is a pure agent-config concern, off-wire.
 - **acp-schema dep churn** — the only forward-looking item; fold into cyril's `agent-client-protocol` upgrade tracking, not this release.
+
+## Hot-reload — live-verified (2026-06-29, `probe-hotreload-2.10.0.py`)
+
+The 2.10.0-new piece (`agent::agent::mcp::reconcile`) is a kiro-internal **file watcher**; it adds no ACP method but **re-fires existing notifications cyril already handles**, so cyril reflects both hot-reloads for free, in real time, **while idle (no turn needed)**:
+
+- **MCP:** rewriting `.kiro/settings/mcp.json` mid-session → ~3.5s later, idle, kiro fired `_kiro.dev/mcp/server_init_failure` **and** re-emitted `_kiro.dev/commands/available` carrying the **full updated `mcpServers` list** (replace semantics → removals propagate too). cyril maps both (`convert/kiro.rs` → `McpServerInitFailure`; `kiro.dev/commands/available` → `CommandsUpdated`, `app.rs:311`). (The docs' "next idle boundary between turns" undersells it — the watcher fires without a turn.)
+- **Agents:** adding `.kiro/agents/probe-agent-2.json` mid-session → it appears in the live `_kiro.dev/commands/options` query for `/agent`. cyril's picker is pull-on-demand (no cached agent list), so it's always fresh.
+- **Residual edge case (unreachable in practice):** `register_agent_commands` (`commands/mod.rs:200`) is insert-only and never prunes — but MCP servers contribute tools/prompts (not slash commands) and agent files are read live, so a hot-reload can't strand a removed slash command. Not worth changing.
+
+Net: nothing to implement — 2.10.0's change rides notifications cyril already routes.
 
 ## Reproduction / artifacts
 
@@ -89,5 +99,6 @@ Embedded product-doc manifest **134 → 134 nodes, zero adds/removes, zero descr
 - Module diff: `nm <bin> | awk '$2~/[tT]/{print $3}' | rustfilt | grep -oE '^[a-z_][a-z0-9_]*(::…){2,}' | sed 's/::[a-z_].*$//' | sort -u`, then `comm`.
 - KAS frozen proof: `strings -n8 <bin> | grep '@kiro/agent":"'` and `grep -c -a 81925c09…d4e90 <bin>` on both binaries.
 - Doc-manifest: `python3 experiments/conductor-spike/extract_doc_manifest.py <bin> <out-prefix>`.
+- Hot-reload wire proof: `python3 experiments/conductor-spike/probe-hotreload-2.10.0.py ~/.local/bin/kiro-cli-chat` (mutates `mcp.json` + adds an agent file mid-session, logs the inbound re-advertisement; does one trivial turn).
 
 Methodology: `reference_kiro_wire_audit_methodology` (wire = binary × backend). Prior: `docs/kiro-2.9.0-wire-audit.md`.
