@@ -1,0 +1,20 @@
+{
+  "sessionId": "sess_00bf2044-6c4e-45e0-894e-d5d57cb0488a",
+  "update": {
+    "sessionUpdate": "session_info_update",
+    "_meta": {
+      "kiro": {
+        "promptTurnSummaries": [
+          {
+            "unit": "credit",
+            "unitPlural": "credits",
+            "usage": 0.06012964975124377
+          }
+        ],
+        "elapsedTime": 2261,
+        "status": "success",
+        "kind": "turn_completion"
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "sessionId": "sess_00bf2044-6c4e-45e0-894e-d5d57cb0488a",
+  "update": {
+    "sessionUpdate": "session_info_update",
+    "_meta": {
+      "kiro": {
+        "turnEnd": {
+          "stopReason": "end_turn"
+        },
+        "kind": "turn_end",
+        "stopReason": "end_turn"
+      }
+    }
+  }
+}

@@ -15,8 +15,21 @@ longer ones (`tool_call`, `tool_call_update`, `available_commands_update`,
 v2 engine also emits and that the v2 `convert` tests already exercise via the
 same `acp::SessionNotification` deser path — so they are covered. The
 KAS-distinctive variant is **`session_info_update`** — the envelope that, via
-`_meta.kiro.kind`, carries KAS sub-kinds including `turn_end`. The instance
-captured here is a `user_message_id_assigned` sub-kind; the load-bearing
-`turn_end` sub-kind is **not yet captured** (no turn_end frame survived the log
-truncation) and is deferred to the KAS-2a live capture (cyril-j16p), where live
-KAS work happens anyway.
+`_meta.kiro.kind`, carries KAS sub-kinds including `turn_end`.
+
+**Captured sub-kinds (`_meta.kiro.kind`):**
+- `user_message_id_assigned` — `session_info_update.json` (a non-terminal sub-kind).
+- **`turn_end`** — `session_info_update_turn_end.json` — the **load-bearing**
+  terminal lifecycle signal; `_meta.kiro.stopReason` (mirrored at
+  `_meta.kiro.turnEnd.stopReason`). Captured live 2026-06-29 by
+  `experiments/conductor-spike/probe-kas-turnend-capture.py` (KAS-2a / cyril-j16p
+  cheapest-falsifier).
+- `turn_completion` — `session_info_update_turn_completion.json` — **metering
+  only** (`promptTurnSummaries`/`elapsedTime`/`status`), NOT the busy-clear
+  signal. Fires BEFORE `turn_end`. Kept as a negative fixture so the converter
+  can't confuse metering for completion.
+
+**Observed order in one turn** (falsifier finding): `… turn_completion → turn_end
+→ context_usage`. `turn_end` is the terminal *lifecycle* signal but is **not the
+last frame** (a `context_usage` trails it), so the converter must key on
+`kind == "turn_end"` specifically, never on "the last `session_info_update`".
