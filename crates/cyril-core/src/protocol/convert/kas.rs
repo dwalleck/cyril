@@ -157,4 +157,18 @@ mod tests {
             "agent_message_chunk must still render via the generic path, got {n:?}"
         );
     }
+
+    #[test]
+    fn kas_engine_drops_unknown_ext_frame() {
+        // KAS-2a (cyril-j16p) Slice 3 — unknown-variant tolerance: an
+        // unrecognised `_kiro/*` frame (arriving as `kiro/*` once the acp crate
+        // strips the leading underscore) drops to `Ok(None)` — no error, no hang.
+        // KasEngine delegates ext frames to the v2 `kiro::` handler, whose
+        // unknown-variant arm owns this; this fences the KAS engine path.
+        let r = KasEngine.convert_ext_notification("kiro/does/not/exist", &json!({}));
+        assert!(
+            matches!(r, Ok(None)),
+            "unknown _kiro/* frame must drop to Ok(None), got {r:?}"
+        );
+    }
 }
