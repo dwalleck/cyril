@@ -85,14 +85,21 @@ impl Engine for V2Engine {
 /// text, tool calls — to the generic `convert::` fns. `convert_ext_notification`
 /// still delegates to the v2 `kiro::` handler, so unrecognized `_kiro/*` frames
 /// fall to the existing unknown-variant drop (dormant until KAS-2b).
-/// Capabilities are empty (no fs callbacks — KAS-5, cyril-7bdu).
+/// Advertises `fs` read+write capabilities (KAS-5a, cyril-7bdu) so KAS delegates
+/// file I/O to cyril's host-io responders; `terminal` stays off until KAS-5b
+/// (cyril-ufie).
 #[cfg(feature = "kas")]
 pub(crate) struct KasEngine;
 
 #[cfg(feature = "kas")]
 impl Engine for KasEngine {
     fn client_capabilities(&self) -> acp::ClientCapabilities {
-        acp::ClientCapabilities::new()
+        // KAS-5a (cyril-7bdu): advertise fs read+write so KAS delegates file I/O
+        // to the host-io responders instead of running it in-process. `terminal`
+        // remains false until KAS-5b (cyril-ufie). v2 stays empty (V2Engine).
+        acp::ClientCapabilities::new().fs(acp::FileSystemCapabilities::default()
+            .read_text_file(true)
+            .write_text_file(true))
     }
 
     fn convert_session_update(
@@ -134,6 +141,32 @@ mod tests {
         assert_eq!(
             format!("{:?}", V2Engine.client_capabilities()),
             format!("{:?}", acp::ClientCapabilities::new()),
+        );
+    }
+
+    #[cfg(feature = "kas")]
+    #[test]
+    fn kas_advertises_fs_v2_empty() {
+        // KAS-5a / claim C1. KasEngine advertises fs read+write; terminal stays
+        // off (KAS-5b). Stress fixture: V2Engine must STILL be empty — designed to
+        // fail if the KAS caps body is copy-pasted into V2 (the parity-break bug).
+        let caps = KasEngine.client_capabilities();
+        assert!(
+            caps.fs.read_text_file,
+            "KAS must advertise fs.read_text_file"
+        );
+        assert!(
+            caps.fs.write_text_file,
+            "KAS must advertise fs.write_text_file"
+        );
+        assert!(
+            !caps.terminal,
+            "terminal stays off until KAS-5b (cyril-ufie)"
+        );
+        assert_eq!(
+            format!("{:?}", V2Engine.client_capabilities()),
+            format!("{:?}", acp::ClientCapabilities::new()),
+            "V2Engine must stay empty (no fs caps leaked from the KAS path)"
         );
     }
 
