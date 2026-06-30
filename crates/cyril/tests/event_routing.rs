@@ -129,6 +129,33 @@ fn context_usage_flows_to_both() {
 }
 
 #[test]
+fn kas_context_breakdown_usage_flows_to_both() {
+    // KAS delivers the context scalar via ContextBreakdownUpdated (it emits no
+    // kiro.dev/metadata), so the "flows to both state machines" invariant above
+    // must hold for the KAS path too — both must agree on the percentage.
+    let mut ui = UiState::new(500);
+    let mut session = SessionController::new();
+
+    let notification = Notification::ContextBreakdownUpdated {
+        usage_percentage: 85.0,
+        breakdown: None,
+    };
+    ui.apply_notification(&notification);
+    session.apply_notification(&notification);
+
+    assert!((ui.context_usage().unwrap_or(0.0) - 85.0).abs() < f64::EPSILON);
+    assert!(
+        (session
+            .context_usage()
+            .map(|u| u.percentage())
+            .unwrap_or(0.0)
+            - 85.0)
+            .abs()
+            < f64::EPSILON
+    );
+}
+
+#[test]
 fn bridge_disconnect_updates_both() {
     let mut ui = UiState::new(500);
     let mut session = SessionController::new();

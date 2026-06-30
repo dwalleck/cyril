@@ -43,9 +43,26 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
             let usage_percentage = kiro
                 .get("usagePercentage")
                 .and_then(serde_json::Value::as_f64)?;
+            // Distinguish "missing" from "corrupt" (CLAUDE.md "Log before
+            // returning None"): a frame with no `breakdown` key is the normal
+            // scalar-only case (silent), but a `breakdown` that IS present yet
+            // fails to parse (a bucket missing, or a `tokens`/`percent` field
+            // absent or wrong-typed — e.g. a float-encoded `tokens` that
+            // `as_u64` rejects) is wire drift that silently blanks the whole bar.
+            // Log it so it's diagnosable — the same discipline turn_end_stop_reason
+            // applies to `stopReason` below.
+            let raw_breakdown = kiro.get("breakdown");
+            let breakdown = parse_breakdown(raw_breakdown);
+            if raw_breakdown.is_some() && breakdown.is_none() {
+                tracing::warn!(
+                    "KAS context_usage `breakdown` present but unparseable (bucket \
+                     missing or a tokens/percent field absent/wrong-typed); \
+                     degrading to scalar-only this frame"
+                );
+            }
             Some(Notification::ContextBreakdownUpdated {
                 usage_percentage,
-                breakdown: parse_breakdown(kiro.get("breakdown")),
+                breakdown,
             })
         }
         _ => None,

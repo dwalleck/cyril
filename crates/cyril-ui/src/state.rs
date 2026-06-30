@@ -467,6 +467,11 @@ impl UiState {
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
+                // A dead connection has no live context — clear the scalar and the
+                // KAS breakdown bars so the toolbar stops showing a stale
+                // `Context: N%` and 5-label bar as if the session were alive.
+                self.context_usage = None;
+                self.context_breakdown = None;
                 self.set_activity(Activity::Idle);
                 true
             }
@@ -560,6 +565,13 @@ impl UiState {
                 // Effort is per-session and re-reported by the new session's
                 // metadata; reset so a prior session's level doesn't linger.
                 self.effort = None;
+                // Context usage + the KAS breakdown bars are likewise per-session
+                // and re-pushed by the new session. Reset both so a prior session's
+                // `Context: N%` and 5-label breakdown bar don't linger on the fresh
+                // session: retain-last governs only an *absent* frame WITHIN a
+                // session, never a session boundary (same discipline as `effort`).
+                self.context_usage = None;
+                self.context_breakdown = None;
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
@@ -3748,6 +3760,55 @@ mod tests {
         assert!(
             (pct - 42.0).abs() < f64::EPSILON,
             "expected 42.0, got {pct}"
+        );
+    }
+
+    #[test]
+    fn ui_state_context_breakdown_and_scalar_cleared_on_session_created() {
+        // A new session must not inherit the prior session's breakdown bars or
+        // `Context: N%`. Retain-last governs only an absent frame WITHIN a session,
+        // not the session boundary (mirrors the effort-reset discipline). Fails if
+        // SessionCreated forgets to reset context_breakdown/context_usage.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::ContextBreakdownUpdated {
+            usage_percentage: 45.0,
+            breakdown: Some(sample_breakdown()),
+        });
+        assert!(state.context_breakdown.is_some());
+        assert!(state.context_usage().is_some());
+
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        assert!(
+            state.context_breakdown.is_none(),
+            "new session must clear the prior session's breakdown bars"
+        );
+        assert!(
+            state.context_usage().is_none(),
+            "new session must clear the prior session's Context: N% scalar"
+        );
+    }
+
+    #[test]
+    fn ui_state_context_cleared_on_bridge_disconnect() {
+        // A dead connection has no live context — the toolbar must not keep
+        // rendering the last session's bars/scalar as if it were alive.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::ContextBreakdownUpdated {
+            usage_percentage: 55.0,
+            breakdown: Some(sample_breakdown()),
+        });
+        state.apply_notification(&Notification::BridgeDisconnected {
+            reason: "process exited".into(),
+        });
+        assert!(
+            state.context_breakdown.is_none() && state.context_usage().is_none(),
+            "a dead connection must clear context_breakdown and context_usage"
         );
     }
 
