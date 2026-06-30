@@ -33,6 +33,26 @@ pub(crate) async fn read_text_file(
     )))
 }
 
+/// Answer `fs/write_text_file`: write `content` to the (translated) path,
+/// creating any missing parent directories (`mkdir -p`). An empty `content`
+/// writes an empty file — not a no-op. A failed mkdir or write returns `Err`.
+pub(crate) async fn write_text_file(
+    req: &acp::WriteTextFileRequest,
+) -> acp::Result<acp::WriteTextFileResponse> {
+    let path = crate::platform::path::to_native(&req.path);
+    if let Some(parent) = path.parent() {
+        tokio::fs::create_dir_all(parent).await.map_err(|e| {
+            tracing::debug!(path = %path.display(), error = %e, "KAS fs/write_text_file mkdir failed");
+            acp::Error::new(-32603, format!("create parent dir for {}: {e}", path.display()))
+        })?;
+    }
+    tokio::fs::write(&path, &req.content).await.map_err(|e| {
+        tracing::debug!(path = %path.display(), error = %e, "KAS fs/write_text_file failed");
+        acp::Error::new(-32603, format!("write_text_file {}: {e}", path.display()))
+    })?;
+    Ok(acp::WriteTextFileResponse::new())
+}
+
 /// Select `[line, line+limit)` (1-based `line`) from `text`, preserving each
 /// line's trailing newline. `None`/`None` returns the whole text unchanged.
 ///
@@ -110,5 +130,24 @@ mod tests {
         let missing = dir.path().join("nope.txt");
         let result = read_text_file(&read_req(&missing, None, None)).await;
         assert!(result.is_err(), "missing path must error, got {result:?}");
+    }
+
+    #[tokio::test]
+    async fn write_creates_parents_and_exact_content() {
+        // Claim C8 / stress fixture: write EMPTY content into a path whose parent
+        // dir does NOT exist -> the dir is created and an empty file written. Fails
+        // under a missing `create_dir_all` (write errors) or an `if !is_empty`
+        // guard (empty content no-ops, file absent). Oracle: read back with std::fs.
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("a/b/c.txt"); // a/b does not exist yet
+        let req = acp::WriteTextFileRequest::new(acp::SessionId::new("s"), &target, "");
+        write_text_file(&req).await.unwrap();
+        assert!(target.exists(), "write must create parent dirs + the file");
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "");
+        // Non-empty Unicode round-trips byte-exact.
+        let req2 =
+            acp::WriteTextFileRequest::new(acp::SessionId::new("s"), &target, "héllo\n世界\n");
+        write_text_file(&req2).await.unwrap();
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "héllo\n世界\n");
     }
 }

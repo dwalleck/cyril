@@ -190,6 +190,18 @@ impl acp::Client for KiroClient {
     ) -> acp::Result<acp::ReadTextFileResponse> {
         crate::protocol::kas::host_io::read_text_file(&args).await
     }
+
+    /// KAS-5a (cyril-7bdu): answer `fs/write_text_file` via the async host-io
+    /// resolver (`mkdir -p` + write). KAS-only, same non-blocking rationale as
+    /// `read_text_file` above; KAS sends a separate `session/request_permission`
+    /// for the write, handled by the existing approval path.
+    #[cfg(feature = "kas")]
+    async fn write_text_file(
+        &self,
+        args: acp::WriteTextFileRequest,
+    ) -> acp::Result<acp::WriteTextFileResponse> {
+        crate::protocol::kas::host_io::write_text_file(&args).await
+    }
 }
 
 impl KiroClient {
@@ -250,5 +262,29 @@ mod tests {
             .await
             .expect("override resolves, not method_not_found");
         assert_eq!(resp.content, "hello");
+    }
+
+    #[tokio::test]
+    async fn write_text_file_override_writes_file() {
+        // KAS-5a / claim C2 fence (write): KAS `fs/write_text_file` reaches the
+        // typed override and writes to disk (not method_not_found).
+        let (ntx, _nrx) = mpsc::channel(1);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("out.txt");
+        client
+            .write_text_file(acp::WriteTextFileRequest::new(
+                acp::SessionId::new("s"),
+                &f,
+                "written",
+            ))
+            .await
+            .expect("write override resolves");
+        assert_eq!(std::fs::read_to_string(&f).unwrap(), "written");
     }
 }
