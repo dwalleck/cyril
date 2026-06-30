@@ -8,19 +8,21 @@
 
 use agent_client_protocol as acp;
 
-use crate::types::{Notification, StopReason};
+use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
 
 /// Convert a KAS `session_info_update` to an internal notification.
 ///
 /// KAS multiplexes turn lifecycle, metering, and context telemetry through one
-/// `session_info_update` envelope, discriminated by `_meta.kiro.kind`. KAS-2a
-/// surfaces exactly one sub-kind: **`turn_end`**, the terminal lifecycle signal,
-/// mapped to [`Notification::TurnCompleted`] with the stop reason from
-/// `_meta.kiro.stopReason`. Every other sub-kind (`turn_completion` metering,
-/// `user_message_id_assigned`, `context_usage`, …) returns `None` and stays
-/// dormant until KAS-2b — including frames that arrive *after* `turn_end` (a
-/// `context_usage` trails it on the wire), so completion keys on the
-/// `kind == "turn_end"` value, never on frame ordering.
+/// `session_info_update` envelope, discriminated by `_meta.kiro.kind`. Two
+/// sub-kinds surface today:
+/// - **`turn_end`** — the terminal lifecycle signal → [`Notification::TurnCompleted`]
+///   (KAS-2a), stop reason from `_meta.kiro.stopReason`.
+/// - **`context_usage`** — the proactively-pushed per-category breakdown
+///   (KAS-2b, cyril-5et2) → [`Notification::ContextBreakdownUpdated`].
+///
+/// Every other sub-kind (`turn_completion` metering, `user_message_id_assigned`,
+/// …) returns `None`. Completion keys on the `kind == "turn_end"` value, never on
+/// frame ordering — a `context_usage` frame trails `turn_end` on the wire.
 ///
 /// A `turn_end` whose `_meta.kiro.stopReason` is missing or unparseable still
 /// completes the turn (defaults [`StopReason::EndTurn`]): silently returning
@@ -28,11 +30,34 @@ use crate::types::{Notification, StopReason};
 /// fallback that survives release builds, not a `debug_assert!`.
 pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Option<Notification> {
     let kiro = siu.meta.as_ref()?.get("kiro")?;
-    if kiro.get("kind").and_then(serde_json::Value::as_str) != Some("turn_end") {
-        return None;
+    match kiro.get("kind").and_then(serde_json::Value::as_str) {
+        Some("turn_end") => Some(Notification::TurnCompleted {
+            stop_reason: turn_end_stop_reason(kiro),
+        }),
+        Some("context_usage") => {
+            // A context_usage frame missing its required `usagePercentage` carries
+            // nothing to show → drop (unlike turn_end, which must complete). When
+            // present, ALWAYS return Some even if the breakdown is absent/malformed
+            // — the scalar `Context: N%` must still update (the bars retain-last in
+            // UiState). No unwrap; a malformed breakdown degrades to `None`.
+            let usage_percentage = kiro
+                .get("usagePercentage")
+                .and_then(serde_json::Value::as_f64)?;
+            Some(Notification::ContextBreakdownUpdated {
+                usage_percentage,
+                breakdown: parse_breakdown(kiro.get("breakdown")),
+            })
+        }
+        _ => None,
     }
+}
+
+/// Stop reason for a `turn_end` frame, defaulting [`StopReason::EndTurn`] when
+/// `_meta.kiro.stopReason` is missing or unparseable (a dropped turn_end would
+/// strand the UI busy forever — a runtime fallback, not a `debug_assert!`).
+fn turn_end_stop_reason(kiro: &serde_json::Value) -> StopReason {
     let raw_stop_reason = kiro.get("stopReason");
-    let stop_reason = raw_stop_reason
+    raw_stop_reason
         .and_then(serde_json::Value::as_str)
         .and_then(|s| {
             serde_json::from_value::<acp::StopReason>(serde_json::Value::String(s.to_owned())).ok()
@@ -40,18 +65,39 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
         .map(super::to_stop_reason)
         .unwrap_or_else(|| {
             // Distinguish "missing" from "corrupt" (CLAUDE.md): log the offending
-            // value (`None` = absent, `Some(..)` = present-but-unparseable, e.g. a
-            // future KAS stopReason the acp deserializer doesn't know) so a wire
-            // drift is diagnosable, not hidden behind a generic message. Defaulting
-            // EndTurn is the right action either way — a dropped turn_end would
-            // strand the UI busy forever.
+            // value (`None` = absent, `Some(..)` = present-but-unparseable) so a
+            // wire drift is diagnosable, not hidden behind a generic message.
             tracing::warn!(
                 stop_reason = ?raw_stop_reason,
                 "KAS turn_end `_meta.kiro.stopReason` missing or unparseable; defaulting to EndTurn"
             );
             StopReason::EndTurn
-        });
-    Some(Notification::TurnCompleted { stop_reason })
+        })
+}
+
+/// Parse the `_meta.kiro.breakdown` object into a [`ContextBreakdown`]. Returns
+/// `None` (treated as "no breakdown this frame") if the object is absent or any
+/// of the five named buckets is missing/malformed — never an error, never a
+/// panic. O(1): five fixed buckets.
+fn parse_breakdown(breakdown: Option<&serde_json::Value>) -> Option<ContextBreakdown> {
+    let bd = breakdown?;
+    Some(ContextBreakdown::new(
+        parse_bucket(bd.get("contextFiles"))?,
+        parse_bucket(bd.get("sessionFiles"))?,
+        parse_bucket(bd.get("tools"))?,
+        parse_bucket(bd.get("yourPrompts"))?,
+        parse_bucket(bd.get("kiroResponses"))?,
+    ))
+}
+
+/// Parse one breakdown bucket `{tokens, percent}`. `None` if absent or either
+/// field is missing/the wrong type — so a malformed bucket degrades the whole
+/// breakdown to absent rather than fabricating a sentinel zero.
+fn parse_bucket(bucket: Option<&serde_json::Value>) -> Option<ContextBucket> {
+    let b = bucket?;
+    let tokens = b.get("tokens").and_then(serde_json::Value::as_u64)?;
+    let percent = b.get("percent").and_then(serde_json::Value::as_f64)?;
+    Some(ContextBucket::new(tokens, percent))
 }
 
 #[cfg(test)]
@@ -121,6 +167,110 @@ mod tests {
         // user_message_id_assigned — guards "every session_info_update is a turn end".
         let (_v, sn) = load("session_info_update.json");
         assert!(session_info_to_notification(info_update(&sn)).is_none());
+    }
+
+    fn context_usage_frame(kiro: serde_json::Value) -> acp::SessionNotification {
+        serde_json::from_value(json!({
+            "sessionId": "sess_x",
+            "update": { "sessionUpdate": "session_info_update", "_meta": { "kiro": kiro } }
+        }))
+        .expect("frame deserializes")
+    }
+
+    #[test]
+    fn context_usage_maps_breakdown() {
+        // Slice 3 / claim C1. The real 2.10.0 frame maps to ContextBreakdownUpdated
+        // with the 5 buckets' exact tokens/percent. Expected values are the
+        // independent jq oracle's (.cyril-5et2/oracle.sh on the same fixture).
+        let (_v, sn) = load("session_info_update_context_usage.json");
+        let result = session_info_to_notification(info_update(&sn));
+        let Some(Notification::ContextBreakdownUpdated {
+            usage_percentage,
+            breakdown,
+        }) = result
+        else {
+            panic!("expected ContextBreakdownUpdated, got {result:?}");
+        };
+        assert!((usage_percentage - 4.3).abs() < f64::EPSILON);
+        let bd = breakdown.expect("breakdown present");
+        for (bucket, tokens, percent) in [
+            (bd.context_files(), 0u64, 0.0),
+            (bd.tools(), 4662, 2.3),
+            (bd.your_prompts(), 4096, 2.0),
+            (bd.kiro_responses(), 0, 0.0),
+            (bd.session_files(), 0, 0.0),
+        ] {
+            assert_eq!(bucket.tokens(), tokens);
+            assert!((bucket.percent() - percent).abs() < f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn context_usage_reads_flat_usage_not_nested() {
+        // Slice 3 / claim C2. Flat `_meta.kiro.usagePercentage` (9.9) wins over the
+        // nested `contextUsage.usagePercentage` (1.1). Fails if the converter reads
+        // the nested wrapper.
+        let sn = context_usage_frame(json!({
+            "kind": "context_usage",
+            "usagePercentage": 9.9,
+            "contextUsage": { "usagePercentage": 1.1 }
+        }));
+        let result = session_info_to_notification(info_update(&sn));
+        let Some(Notification::ContextBreakdownUpdated {
+            usage_percentage, ..
+        }) = result
+        else {
+            panic!("expected ContextBreakdownUpdated, got {result:?}");
+        };
+        assert!(
+            (usage_percentage - 9.9).abs() < f64::EPSILON,
+            "got {usage_percentage}"
+        );
+    }
+
+    #[test]
+    fn context_usage_breakdown_absent_still_carries_scalar() {
+        // Slice 3 / claim C3. No `breakdown` key → Some with breakdown None, scalar
+        // intact. Fails under `breakdown.unwrap()` or returning None (which would
+        // drop the % update and freeze the toolbar).
+        let sn = context_usage_frame(json!({ "kind": "context_usage", "usagePercentage": 12.5 }));
+        let result = session_info_to_notification(info_update(&sn));
+        assert!(
+            matches!(
+                result,
+                Some(Notification::ContextBreakdownUpdated { usage_percentage, breakdown: None })
+                    if (usage_percentage - 12.5).abs() < f64::EPSILON
+            ),
+            "got {result:?}"
+        );
+    }
+
+    #[test]
+    fn context_usage_malformed_breakdown_degrades_to_none() {
+        // Slice 3 / claim C3. A breakdown missing a bucket (here `tools`) degrades
+        // the whole breakdown to None — never a fabricated sentinel-zero bucket —
+        // while the scalar still updates.
+        let sn = context_usage_frame(json!({
+            "kind": "context_usage", "usagePercentage": 3.0,
+            "breakdown": {
+                "contextFiles": { "tokens": 0, "percent": 0 },
+                "sessionFiles": { "tokens": 0, "percent": 0 },
+                "yourPrompts": { "tokens": 1, "percent": 1 },
+                "kiroResponses": { "tokens": 0, "percent": 0 }
+                // tools missing
+            }
+        }));
+        let result = session_info_to_notification(info_update(&sn));
+        assert!(
+            matches!(
+                result,
+                Some(Notification::ContextBreakdownUpdated {
+                    breakdown: None,
+                    ..
+                })
+            ),
+            "malformed breakdown must degrade to None, got {result:?}"
+        );
     }
 
     #[test]
