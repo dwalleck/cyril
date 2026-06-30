@@ -1,0 +1,4 @@
+{
+  "method": "_kiro/auth/getAccessToken",
+  "params": {}
+}

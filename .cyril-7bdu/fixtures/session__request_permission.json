@@ -1,0 +1,45 @@
+{
+  "method": "session/request_permission",
+  "params": {
+    "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+    "toolCall": {
+      "toolCallId": "tooluse_Mq0Y8IgVLtsqoYaWoJ3gov",
+      "status": "pending",
+      "title": "Write File"
+    },
+    "options": [
+      {
+        "optionId": "accept",
+        "name": "Allow",
+        "kind": "allow_once"
+      },
+      {
+        "optionId": "always-accept",
+        "name": "Always allow",
+        "kind": "allow_always"
+      },
+      {
+        "optionId": "reject",
+        "name": "Deny",
+        "kind": "reject_once"
+      },
+      {
+        "optionId": "always-reject",
+        "name": "Always deny",
+        "kind": "reject_always"
+      }
+    ],
+    "_meta": {
+      "kiro": {
+        "toolId": "fs_write",
+        "consent": {
+          "capability": "fs_write",
+          "resource": "summary.txt",
+          "askType": "implicit",
+          "workspaceRoot": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m"
+        },
+        "consentRound": 1
+      }
+    }
+  }
+}
