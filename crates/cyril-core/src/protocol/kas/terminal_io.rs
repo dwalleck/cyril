@@ -537,4 +537,29 @@ mod tests {
             .expect_err("unknown kill errs");
         assert!(ke.message.contains("unknown terminal"), "got {ke:?}");
     }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn slow_wait_does_not_starve_runtime() {
+        // Fixture P (C12 — the non-blocking invariant): on a SINGLE-THREADED runtime
+        // (mirrors the bridge), a slow `wait` must not starve a concurrent fast one.
+        // Start the clock BEFORE join! so a thread-pinning std::process wait shows up
+        // as the fast terminal taking ~2s. A RefCell borrow held across .await would
+        // instead panic BorrowMutError when the second wait re-borrows — also caught.
+        let reg = TerminalRegistry::new();
+        let slow = reg.create(&sh("sleep 2")).unwrap().terminal_id;
+        let fast = reg.create(&create_req("true")).unwrap().terminal_id;
+        let (slow_wr, fast_wr) = (wait_req(&slow), wait_req(&fast));
+        let t0 = std::time::Instant::now();
+        let fast_fut = async {
+            reg.wait(&fast_wr).await.unwrap();
+            t0.elapsed()
+        };
+        let slow_fut = reg.wait(&slow_wr);
+        let (slow_res, fast_elapsed) = tokio::join!(slow_fut, fast_fut);
+        slow_res.unwrap();
+        assert!(
+            fast_elapsed < std::time::Duration::from_millis(500),
+            "fast terminal blocked by the slow one ({fast_elapsed:?}) — runtime starved"
+        );
+    }
 }
