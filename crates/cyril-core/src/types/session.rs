@@ -258,6 +258,84 @@ impl ContextUsage {
     }
 }
 
+/// One category of the KAS context-usage breakdown (KAS-2b, cyril-5et2).
+///
+/// Aggregate-only — `tokens` + `percent`, with no per-item field. The KAS wire
+/// itemizes only the file buckets (`items[]` on contextFiles/sessionFiles), and
+/// cyril-5et2 renders the aggregate bar; per-file drill-in is a separate feature
+/// (cyril-1116). Omitting an `items` field makes the no-drill-in invariant
+/// unrepresentable rather than merely unenforced.
+#[derive(Debug, Clone)]
+pub struct ContextBucket {
+    tokens: u64,
+    percent: f64,
+}
+
+impl ContextBucket {
+    pub fn new(tokens: u64, percent: f64) -> Self {
+        Self { tokens, percent }
+    }
+
+    pub fn tokens(&self) -> u64 {
+        self.tokens
+    }
+
+    pub fn percent(&self) -> f64 {
+        self.percent
+    }
+}
+
+/// The KAS per-category context-usage breakdown (KAS-2b, cyril-5et2): the five
+/// `session_info_update` `context_usage` buckets KAS pushes proactively each
+/// turn. v2 has only the scalar [`ContextUsage`]; bucket names mirror the wire
+/// `_meta.kiro.breakdown.*`.
+#[derive(Debug, Clone)]
+pub struct ContextBreakdown {
+    context_files: ContextBucket,
+    session_files: ContextBucket,
+    tools: ContextBucket,
+    your_prompts: ContextBucket,
+    kiro_responses: ContextBucket,
+}
+
+impl ContextBreakdown {
+    pub fn new(
+        context_files: ContextBucket,
+        session_files: ContextBucket,
+        tools: ContextBucket,
+        your_prompts: ContextBucket,
+        kiro_responses: ContextBucket,
+    ) -> Self {
+        Self {
+            context_files,
+            session_files,
+            tools,
+            your_prompts,
+            kiro_responses,
+        }
+    }
+
+    pub fn context_files(&self) -> &ContextBucket {
+        &self.context_files
+    }
+
+    pub fn session_files(&self) -> &ContextBucket {
+        &self.session_files
+    }
+
+    pub fn tools(&self) -> &ContextBucket {
+        &self.tools
+    }
+
+    pub fn your_prompts(&self) -> &ContextBucket {
+        &self.your_prompts
+    }
+
+    pub fn kiro_responses(&self) -> &ContextBucket {
+        &self.kiro_responses
+    }
+}
+
 /// Credit usage tracking.
 #[derive(Debug, Clone)]
 pub struct CreditUsage {
@@ -526,6 +604,30 @@ mod tests {
     fn context_usage_clamps_low() {
         let usage = ContextUsage::new(-10.0);
         assert!((usage.percentage() - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn context_breakdown_round_trips_each_bucket() {
+        // Slice 1 oracle: construct with five distinct (tokens, percent) pairs and
+        // read each back through its named accessor — catches a constructor that
+        // wires a field to the wrong bucket (e.g. tools <-> your_prompts swapped).
+        let bd = ContextBreakdown::new(
+            ContextBucket::new(10, 1.1),
+            ContextBucket::new(20, 2.2),
+            ContextBucket::new(30, 3.3),
+            ContextBucket::new(40, 4.4),
+            ContextBucket::new(50, 5.5),
+        );
+        for (bucket, tokens, percent) in [
+            (bd.context_files(), 10u64, 1.1),
+            (bd.session_files(), 20, 2.2),
+            (bd.tools(), 30, 3.3),
+            (bd.your_prompts(), 40, 4.4),
+            (bd.kiro_responses(), 50, 5.5),
+        ] {
+            assert_eq!(bucket.tokens(), tokens);
+            assert!((bucket.percent() - percent).abs() < f64::EPSILON);
+        }
     }
 
     #[test]
