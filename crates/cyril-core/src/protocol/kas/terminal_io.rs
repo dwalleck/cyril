@@ -47,6 +47,17 @@ enum Entry {
     },
 }
 
+/// Outcome of taking a terminal's child out of the registry for an awaiting op.
+enum Taken {
+    /// The live child, removed from its `Running` slot — caller awaits + reaps it.
+    Child(Child),
+    /// The terminal already exited; carries its cached status (for `wait`).
+    AlreadyExited(acp::TerminalExitStatus),
+    /// Another op already took the child and is awaiting it (defensive — KAS is
+    /// sequential, so this is not reached in practice).
+    InFlight,
+}
+
 impl TerminalRegistry {
     pub(crate) fn new() -> Self {
         Self {
@@ -103,25 +114,18 @@ impl TerminalRegistry {
         &self,
         req: &acp::WaitForTerminalExitRequest,
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
-        // Scoped borrow: take the child out, then DROP the borrow before awaiting.
-        let child = {
-            let mut map = self.inner.borrow_mut();
-            match map.get_mut(&req.terminal_id) {
-                None => return Err(unknown_terminal(&req.terminal_id)),
-                Some(Entry::Exited { status, .. }) => {
-                    return Ok(acp::WaitForTerminalExitResponse::new(status.clone()));
-                }
-                Some(Entry::Running(slot)) => match slot.take() {
-                    Some(child) => child,
-                    // Another wait already took the child and is awaiting it. KAS is
-                    // sequential, so this is defensive; surface, don't fake a status.
-                    None => {
-                        return Err(acp::Error::new(
-                            -32603,
-                            format!("terminal {} wait already in progress", req.terminal_id),
-                        ));
-                    }
-                },
+        // take_child drops the RefCell borrow before we await (the no-borrow-across-
+        // await invariant). A sequential KAS never double-waits; InFlight is defensive.
+        let child = match self.take_child(&req.terminal_id)? {
+            Taken::Child(child) => child,
+            Taken::AlreadyExited(status) => {
+                return Ok(acp::WaitForTerminalExitResponse::new(status));
+            }
+            Taken::InFlight => {
+                return Err(acp::Error::new(
+                    -32603,
+                    format!("terminal {} wait already in progress", req.terminal_id),
+                ));
             }
         };
         let out = child
@@ -156,6 +160,62 @@ impl TerminalRegistry {
                     .exit_status(status.clone()))
             }
             Some(Entry::Running(_)) => Ok(acp::TerminalOutputResponse::new(String::new(), false)),
+        }
+    }
+
+    /// Answer `terminal/release`: kill a still-running child, reap it (await the
+    /// exit so no zombie/orphan is left), and **free the id** — subsequent ops on
+    /// it become unknown-id `-32602`. Unknown id → `-32602`. Awaits `tokio::process`.
+    pub(crate) async fn release(
+        &self,
+        req: &acp::ReleaseTerminalRequest,
+    ) -> acp::Result<acp::ReleaseTerminalResponse> {
+        if let Taken::Child(mut child) = self.take_child(&req.terminal_id)? {
+            // SIGKILL then reap. Without the wait the child is a zombie; tokio's
+            // Child does NOT kill/reap on drop. Output is discarded (id is freed).
+            let _ = child.start_kill();
+            let _ = child.wait().await;
+        }
+        self.inner.borrow_mut().remove(&req.terminal_id);
+        Ok(acp::ReleaseTerminalResponse::new())
+    }
+
+    /// Answer `terminal/kill`: terminate a running child but **keep the id valid** —
+    /// a later `terminal_output`/`wait_for_terminal_exit` still resolves (KAS's
+    /// command-timeout pattern: kill, then read the partial output). Reaps via
+    /// `wait_with_output`, caching the captured output + signal status. Unknown id →
+    /// `-32602`.
+    pub(crate) async fn kill(
+        &self,
+        req: &acp::KillTerminalRequest,
+    ) -> acp::Result<acp::KillTerminalResponse> {
+        if let Taken::Child(mut child) = self.take_child(&req.terminal_id)? {
+            let _ = child.start_kill();
+            let out = child
+                .wait_with_output()
+                .await
+                .map_err(|e| wait_err(&req.terminal_id, e))?;
+            self.inner.borrow_mut().insert(
+                req.terminal_id.clone(),
+                Entry::Exited {
+                    output: combine_output(&out),
+                    status: exit_status(&out.status),
+                },
+            );
+        }
+        Ok(acp::KillTerminalResponse::new())
+    }
+
+    /// Take a terminal's live child out of the registry in a scoped `RefCell`
+    /// borrow so the caller can `.await` its exit **without holding the borrow**
+    /// (the no-borrow-across-await invariant). `Running` leaves a `None` slot;
+    /// `Exited` returns the cached status; an unknown id is `-32602`.
+    fn take_child(&self, id: &acp::TerminalId) -> acp::Result<Taken> {
+        let mut map = self.inner.borrow_mut();
+        match map.get_mut(id) {
+            None => Err(unknown_terminal(id)),
+            Some(Entry::Exited { status, .. }) => Ok(Taken::AlreadyExited(status.clone())),
+            Some(Entry::Running(slot)) => Ok(slot.take().map_or(Taken::InFlight, Taken::Child)),
         }
     }
 }
@@ -371,5 +431,79 @@ mod tests {
             .output(&out_req(&ghost))
             .expect_err("unknown output errs");
         assert!(oe.message.contains("unknown terminal"), "got {oe:?}");
+    }
+
+    fn release_req(id: &acp::TerminalId) -> acp::ReleaseTerminalRequest {
+        acp::ReleaseTerminalRequest::new(acp::SessionId::new("s"), id.clone())
+    }
+    fn kill_req(id: &acp::TerminalId) -> acp::KillTerminalRequest {
+        acp::KillTerminalRequest::new(acp::SessionId::new("s"), id.clone())
+    }
+
+    #[tokio::test]
+    async fn release_kills_child_and_frees_id() {
+        // Fixture J: release must KILL a running child (not orphan it) AND free the
+        // id. `sh -c 'sleep 1; touch marker'` writes the marker only if it runs to
+        // completion; releasing kills `sh` before `touch`, so the marker stays
+        // ABSENT. A buggy release that drops the entry WITHOUT start_kill leaves sh
+        // running -> marker appears -> this fails. Also asserts the id is freed.
+        let dir = tempfile::tempdir().unwrap();
+        let marker = dir.path().join("marker.txt");
+        let req = sh("sleep 1; touch marker.txt").cwd(dir.path().to_path_buf());
+        let reg = TerminalRegistry::new();
+        let id = reg.create(&req).unwrap().terminal_id;
+        reg.release(&release_req(&id)).await.unwrap();
+        // Wait past the would-be touch time (sleep 1); if sh survived, it touches now.
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+        assert!(
+            !marker.exists(),
+            "release must kill sh before it touches the marker"
+        );
+        let e = reg
+            .output(&out_req(&id))
+            .expect_err("released id must be freed");
+        assert!(
+            e.message.contains("unknown terminal"),
+            "id freed, got {e:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn kill_terminates_but_keeps_id() {
+        // Fixture K: kill must terminate a running child but KEEP the id valid —
+        // a later wait resolves with a signal status (fast, not a 30s natural wait)
+        // and output still succeeds. A buggy kill==release would free the id ->
+        // wait/output -> -32602.
+        let reg = TerminalRegistry::new();
+        let id = reg
+            .create(&create_req("sleep").args(vec!["30".into()]))
+            .unwrap()
+            .terminal_id;
+        reg.kill(&kill_req(&id)).await.unwrap();
+        let resp = reg
+            .wait(&wait_req(&id))
+            .await
+            .expect("killed id still waits");
+        assert_eq!(resp.exit_status.exit_code, None, "killed => no exit code");
+        assert_eq!(resp.exit_status.signal.as_deref(), Some("9"), "SIGKILL=9");
+        reg.output(&out_req(&id))
+            .expect("killed id keeps a valid output");
+    }
+
+    #[tokio::test]
+    async fn release_kill_unknown_id_errors() {
+        // Fixture L: release/kill on a never-created id -> -32602, no panic.
+        let reg = TerminalRegistry::new();
+        let ghost = acp::TerminalId::new("term-999");
+        let re = reg
+            .release(&release_req(&ghost))
+            .await
+            .expect_err("unknown release errs");
+        assert!(re.message.contains("unknown terminal"), "got {re:?}");
+        let ke = reg
+            .kill(&kill_req(&ghost))
+            .await
+            .expect_err("unknown kill errs");
+        assert!(ke.message.contains("unknown terminal"), "got {ke:?}");
     }
 }

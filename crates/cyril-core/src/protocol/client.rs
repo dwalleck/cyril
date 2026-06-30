@@ -239,6 +239,24 @@ impl acp::Client for KiroClient {
     ) -> acp::Result<acp::TerminalOutputResponse> {
         self.terminals.output(&args)
     }
+
+    /// KAS-5b: answer `terminal/release` — kill + reap the child and free the id.
+    #[cfg(feature = "kas")]
+    async fn release_terminal(
+        &self,
+        args: acp::ReleaseTerminalRequest,
+    ) -> acp::Result<acp::ReleaseTerminalResponse> {
+        self.terminals.release(&args).await
+    }
+
+    /// KAS-5b: answer `terminal/kill` — terminate the child but keep the id valid.
+    #[cfg(feature = "kas")]
+    async fn kill_terminal(
+        &self,
+        args: acp::KillTerminalRequest,
+    ) -> acp::Result<acp::KillTerminalResponse> {
+        self.terminals.kill(&args).await
+    }
 }
 
 impl KiroClient {
