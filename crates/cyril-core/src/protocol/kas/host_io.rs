@@ -28,16 +28,12 @@ use agent_client_protocol as acp;
 pub(crate) async fn read_text_file(
     req: &acp::ReadTextFileRequest,
 ) -> acp::Result<acp::ReadTextFileResponse> {
-    require_absolute(&req.path)?;
-    let path = crate::platform::path::to_native(&req.path);
-    let text = tokio::fs::read_to_string(&path).await.map_err(|e| {
-        // Surface, don't swallow (CLAUDE.md): the io error (incl. NotFound vs
-        // PermissionDenied) rides the message so wire/FS drift is diagnosable.
-        tracing::debug!(path = %path.display(), error = %e, "KAS fs/read_text_file failed");
-        acp::Error::new(-32603, format!("read_text_file {}: {e}", path.display()))
-    })?;
+    let path = to_native_checked(&req.path)?;
+    let text = tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|e| io_err("read_text_file", &path, e))?;
     Ok(acp::ReadTextFileResponse::new(slice_lines(
-        &text, req.line, req.limit,
+        text, req.line, req.limit,
     )))
 }
 
@@ -47,46 +43,66 @@ pub(crate) async fn read_text_file(
 pub(crate) async fn write_text_file(
     req: &acp::WriteTextFileRequest,
 ) -> acp::Result<acp::WriteTextFileResponse> {
-    require_absolute(&req.path)?;
-    let path = crate::platform::path::to_native(&req.path);
+    let path = to_native_checked(&req.path)?;
     if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent).await.map_err(|e| {
-            tracing::debug!(path = %path.display(), error = %e, "KAS fs/write_text_file mkdir failed");
-            acp::Error::new(-32603, format!("create parent dir for {}: {e}", path.display()))
-        })?;
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| io_err("create parent dir for", &path, e))?;
     }
-    tokio::fs::write(&path, &req.content).await.map_err(|e| {
-        tracing::debug!(path = %path.display(), error = %e, "KAS fs/write_text_file failed");
-        acp::Error::new(-32603, format!("write_text_file {}: {e}", path.display()))
-    })?;
+    tokio::fs::write(&path, &req.content)
+        .await
+        .map_err(|e| io_err("write_text_file", &path, e))?;
     Ok(acp::WriteTextFileResponse::new())
 }
 
-/// Reject a non-absolute host-io path with a distinct error. ACP guarantees an
-/// absolute `path`; a relative one would otherwise resolve against the bridge's
-/// process cwd and silently read/write the WRONG file — load-bearing (CLAUDE.md),
-/// so a runtime check, not a `debug_assert!`. The `-32602` (invalid params) code +
-/// "must be absolute" message distinguish this from a missing-file `-32603`.
-fn require_absolute(path: &std::path::Path) -> acp::Result<()> {
-    if path.is_absolute() {
-        Ok(())
-    } else {
+/// Confirm the agent-provided `path` is absolute, then translate it to the native
+/// filesystem path. ACP guarantees an absolute `path`; a relative one would
+/// otherwise resolve against the bridge's process cwd and silently read/write the
+/// WRONG file — load-bearing (CLAUDE.md), so a runtime check, not a
+/// `debug_assert!`. The `-32602` (invalid params) code + "must be absolute"
+/// message distinguish this from a missing-file `-32603`.
+///
+/// Absoluteness is judged on the *agent* (POSIX) path with `has_root()`, NOT
+/// `is_absolute()`: KAS runs under Unix/WSL and sends `/`-rooted paths, but on
+/// Windows `Path::is_absolute()` is `false` for any path without a drive prefix
+/// (`/mnt/c/...`, `/home/...`), so an `is_absolute()` check — before *or* after
+/// translation — would reject every KAS callback on Windows. `has_root()` is
+/// `true` for a `/`-rooted path on both platforms and `false` for a relative one.
+/// Translation then maps `/mnt/<drive>` to `<DRIVE>:\` on Windows (no-op on
+/// Linux); a non-translatable-but-absolute path (e.g. a WSL-internal `/home/...`
+/// reached from a Windows host) is left to fail as a normal `-32603` NotFound
+/// rather than be misreported as non-absolute.
+fn to_native_checked(path: &std::path::Path) -> acp::Result<std::path::PathBuf> {
+    if !path.has_root() {
         tracing::warn!(path = %path.display(), "KAS host-io path is not absolute; rejecting");
-        Err(acp::Error::new(
+        return Err(acp::Error::new(
             -32602,
             format!("path must be absolute: {}", path.display()),
-        ))
+        ));
     }
+    Ok(crate::platform::path::to_native(path))
+}
+
+/// Build a `-32603` host-callback error for a failed fs op, logging the io error
+/// (incl. `NotFound` vs `PermissionDenied`) so wire/FS drift is diagnosable —
+/// surface, don't swallow (CLAUDE.md). `op` names the operation and leads both the
+/// structured log and the wire message.
+fn io_err(op: &str, path: &std::path::Path, e: std::io::Error) -> acp::Error {
+    tracing::debug!(op = %op, path = %path.display(), error = %e, "KAS fs host-io failed");
+    acp::Error::new(-32603, format!("{op} {}: {e}", path.display()))
 }
 
 /// Select `[line, line+limit)` (1-based `line`) from `text`, preserving each
 /// line's trailing newline. `None`/`None` returns the whole text unchanged.
 ///
+/// Takes `text` by value so the whole-file (`None`/`None`) path moves the buffer
+/// out with no copy; only a real slice allocates.
+///
 /// O(L) over the file's lines (single pass); L ≲ 10^5 for a large source file,
 /// well under the 10^6 loop budget.
-fn slice_lines(text: &str, line: Option<u32>, limit: Option<u32>) -> String {
+fn slice_lines(text: String, line: Option<u32>, limit: Option<u32>) -> String {
     if line.is_none() && limit.is_none() {
-        return text.to_string();
+        return text;
     }
     // `split_inclusive` keeps the `\n` on each piece, so a selected slice round-trips
     // byte-exact (unlike `.lines()`, which strips newlines).
@@ -117,7 +133,7 @@ mod tests {
     #[test]
     fn slice_lines_whole_file_when_no_line_limit() {
         let t = "l1\nl2\nl3\n";
-        assert_eq!(slice_lines(t, None, None), t);
+        assert_eq!(slice_lines(t.to_string(), None, None), t);
     }
 
     #[test]
@@ -125,11 +141,26 @@ mod tests {
         // Stress fixture (a): 5 distinct lines; line=2,limit=1 must yield exactly
         // "l2\n" — fails if the resolver ignores line/limit (returns whole file).
         let t = "l1\nl2\nl3\nl4\nl5\n";
-        assert_eq!(slice_lines(t, Some(2), Some(1)), "l2\n");
+        assert_eq!(slice_lines(t.to_string(), Some(2), Some(1)), "l2\n");
         // line only: from line 4 to end.
-        assert_eq!(slice_lines(t, Some(4), None), "l4\nl5\n");
+        assert_eq!(slice_lines(t.to_string(), Some(4), None), "l4\nl5\n");
         // limit only: first 2 lines.
-        assert_eq!(slice_lines(t, None, Some(2)), "l1\nl2\n");
+        assert_eq!(slice_lines(t.to_string(), None, Some(2)), "l1\nl2\n");
+    }
+
+    #[test]
+    fn slice_lines_line_zero_is_whole_file() {
+        // `line: 0` is the ONLY line value KAS is observed to send on the wire
+        // (.cyril-7bdu/fixtures/fs__read_text_file.json). `saturating_sub` floors
+        // 0 -> start 0, so it must return the whole file from the top — identical
+        // to `line: 1` and to `None`. Locks in the real wire value as a regression
+        // guard (a 0-based reinterpretation of `line` would break this).
+        let t = "l1\nl2\nl3\n";
+        assert_eq!(slice_lines(t.to_string(), Some(0), None), t);
+        assert_eq!(
+            slice_lines(t.to_string(), Some(0), None),
+            slice_lines(t.to_string(), Some(1), None)
+        );
     }
 
     #[tokio::test]

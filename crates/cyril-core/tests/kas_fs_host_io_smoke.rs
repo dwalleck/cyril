@@ -31,7 +31,10 @@ use tokio::sync::mpsc::Receiver;
 #[ignore = "live: needs --features kas, a fresh kiro-cli login (SSO token file), the KAS bundle, and node"]
 async fn fs_read_write_served_by_cyril() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("magic.txt"), "the magic number is 4242\n").unwrap();
+    // The read token (7777) is deliberately DIFFERENT from the write token
+    // (done-4242 below): if they shared a number, the read oracle could pass on the
+    // agent merely narrating the write, never proving the read resolver ran.
+    std::fs::write(dir.path().join("magic.txt"), "the magic number is 7777\n").unwrap();
     let outfile = dir.path().join("summary.txt");
 
     // Free path: the bridge resolves the bundled `node + acp-server.js` argv, so
@@ -56,7 +59,9 @@ async fn fs_read_write_served_by_cyril() {
                 .lock()
                 .unwrap()
                 .push(req.tool_call.title().to_string());
-            let _ = req.responder.send(PermissionResponse::AllowOnce);
+            if req.responder.send(PermissionResponse::AllowOnce).is_err() {
+                eprintln!("permission responder dropped before reply");
+            }
         }
     });
 
@@ -111,9 +116,11 @@ async fn fs_read_write_served_by_cyril() {
             .contains("done-4242"),
         "summary.txt must contain the written content"
     );
-    // Oracle: cyril's READ resolver served the callback -> content reached the agent.
+    // Oracle: cyril's READ resolver served the callback -> content reached the
+    // agent. 7777 is unique to magic.txt (the write token is done-4242), so this
+    // passes ONLY if the read resolver actually returned the file's content.
     assert!(
-        agent_text.contains("4242"),
+        agent_text.contains("7777"),
         "agent never reported the read content; got: {agent_text:?}"
     );
     // C9: the write traversed cyril's permission path; the read did not.
