@@ -176,6 +176,20 @@ impl acp::Client for KiroClient {
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         Self::handle_ext_request(args).await
     }
+
+    /// KAS-5a (cyril-7bdu): answer `fs/read_text_file` by reading the file via the
+    /// async host-io resolver. Only present under `kas` — v2 advertises no fs caps
+    /// (KasEngine, Slice 1), so a v2 agent never calls this. Resolution runs in the
+    /// acp connection's per-request `spawn_local` task (`rpc.rs:272`), off the
+    /// bridge loop and non-blocking via async `tokio::fs` (ADR-0004 invariant). The
+    /// loop-mediation gate seam is deferred to its first consumer (cyril-g9vt).
+    #[cfg(feature = "kas")]
+    async fn read_text_file(
+        &self,
+        args: acp::ReadTextFileRequest,
+    ) -> acp::Result<acp::ReadTextFileResponse> {
+        crate::protocol::kas::host_io::read_text_file(&args).await
+    }
 }
 
 impl KiroClient {
@@ -188,7 +202,10 @@ impl KiroClient {
         if args.method.as_ref() == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
-        // Other ext requests (fs/terminal host callbacks) are KAS-5 (cyril-7bdu).
+        // fs/terminal host callbacks are TYPED acp::Client methods, not ext
+        // requests: fs/read_text_file is the `read_text_file` override above
+        // (KAS-5a, cyril-7bdu); terminal/* is KAS-5b (cyril-ufie). This arm only
+        // answers `_kiro/*` ext requests.
         default_ext_response()
     }
 
@@ -204,4 +221,34 @@ fn default_ext_response() -> acp::Result<acp::ExtResponse> {
     Ok(acp::ExtResponse::new(
         serde_json::value::RawValue::NULL.to_owned().into(),
     ))
+}
+
+#[cfg(all(test, feature = "kas"))]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use agent_client_protocol::Client as _;
+
+    #[tokio::test]
+    async fn read_text_file_override_returns_content() {
+        // KAS-5a / claim C2 fence: a KAS `fs/read_text_file` reaches KiroClient's
+        // typed override (NOT the acp default `method_not_found`) and returns the
+        // file's content end-to-end. Fails if the override is missing/miswired.
+        let (ntx, _nrx) = mpsc::channel(1);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("x.txt");
+        std::fs::write(&f, "hello").unwrap();
+        let resp = client
+            .read_text_file(acp::ReadTextFileRequest::new(acp::SessionId::new("s"), &f))
+            .await
+            .expect("override resolves, not method_not_found");
+        assert_eq!(resp.content, "hello");
+    }
 }
