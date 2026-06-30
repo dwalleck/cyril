@@ -6,9 +6,16 @@
 //! (`.cyril-7bdu/host_callbacks_2.10.0.json`): bare ACP `fs/read_text_file` /
 //! `fs/write_text_file`, every call carries `sessionId`, paths absolute.
 //!
-//! These run **off the bridge loop** (spawned per request, Slice 5) and use async
-//! `tokio::fs` — a synchronous `std::fs` call here would pin the single-threaded
-//! bridge runtime and starve the loop (ADR-0004 non-blocking invariant).
+//! **Non-blocking invariant (ADR-0004 / claim C4) — satisfied architecturally.**
+//! The `KiroClient` fs overrides call these directly, and the acp connection
+//! spawns *each* inbound request as its own `spawn_local` task (`rpc.rs:272`,
+//! wired at `bridge.rs`), so requests never serialize. These resolvers' only
+//! obligation is to *yield*: they use async `tokio::fs`, which offloads the
+//! blocking read/write to tokio's blocking threadpool — so even a stuck file op
+//! cannot pin the single-threaded bridge runtime. **Never** call synchronous
+//! `std::fs` / `std::process` here: that would pin the bridge thread and starve
+//! the loop. (The central loop-mediation *gate* seam is deferred to its first
+//! consumer — cyril-g9vt.)
 
 use agent_client_protocol as acp;
 
