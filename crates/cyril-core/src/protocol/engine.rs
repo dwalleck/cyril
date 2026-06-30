@@ -78,12 +78,14 @@ impl Engine for V2Engine {
 /// free-path direct spawn (KAS-1, cyril-evwh). Gated behind the `kas` cargo
 /// feature (ADR-0002) so a default build links no KAS code.
 ///
-/// KAS-1 does **not** render the KAS dialect — that is KAS-2a (cyril-j16p). The
-/// converters delegate to the generic `convert::` fns so standard ACP
-/// `session/update` variants still surface and unrecognized `_kiro/*` frames
-/// fall to the existing unknown-variant drop; the probe confirmed a plain turn
-/// completes this way without hanging. Capabilities are empty (no fs callbacks —
-/// KAS-5, cyril-7bdu).
+/// KAS-2a (cyril-j16p) renders the KAS dialect incrementally. Slice 1:
+/// `convert_session_update` maps the `session_info_update` → `turn_end`
+/// lifecycle frame to `TurnCompleted` (the KAS turn-completion signal, in place
+/// of v2's prompt response) and delegates every other `session/update` — agent
+/// text, tool calls — to the generic `convert::` fns. `convert_ext_notification`
+/// still delegates to the v2 `kiro::` handler, so unrecognized `_kiro/*` frames
+/// fall to the existing unknown-variant drop (dormant until KAS-2b).
+/// Capabilities are empty (no fs callbacks — KAS-5, cyril-7bdu).
 #[cfg(feature = "kas")]
 pub(crate) struct KasEngine;
 
@@ -98,6 +100,14 @@ impl Engine for KasEngine {
         args: &acp::SessionNotification,
         cached_inputs: &HashMap<String, serde_json::Value>,
     ) -> Option<Notification> {
+        // KAS-2a (cyril-j16p) Slice 1: the `turn_end` lifecycle frame is a
+        // KAS-specific `session_info_update` sub-kind that drives turn
+        // completion (v2 derives it from the prompt response instead). All
+        // other updates — agent text, tool calls — delegate to the generic
+        // converter unchanged.
+        if let acp::SessionUpdate::SessionInfoUpdate(siu) = &args.update {
+            return convert::kas::session_info_to_notification(siu);
+        }
         convert::session_update_to_notification(args, cached_inputs)
     }
 
