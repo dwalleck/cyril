@@ -1,5 +1,24 @@
 # KAS-5a — budgeted plan (cyril-7bdu)
 
+> **Build revisions (checkpointed-build, 2026-06-30).** Two decisions taken when
+> reality contradicted the plan; the slice sections below predate them:
+> 1. **Vertical re-slice (Option B).** A resolver with no caller fails the crate's
+>    `-D warnings` dead-code gate (no `#[allow]` allowed). So slices land *vertically*
+>    (each resolver with its wiring), every commit green: **S2 = fs read end-to-end,
+>    S3 = fs write end-to-end, S4 = absolute-path guard, S5 = C4 concurrency test,
+>    S6 = C9 permission verify.** Claim coverage unchanged.
+> 2. **C3 dropped from KAS-5a → direct-resolve (tracked at cyril-g9vt).** ADR-0004's
+>    loop-mediation seam is a *consumer-less* seam (no stages gate exists yet;
+>    `engine.rs:12` says land sub-traits with their first consumer) and forces an
+>    un-`#[cfg]`-able `run_loop` param. KAS-5a instead resolves fs **directly in a
+>    `#[cfg(feature="kas")]` `KiroClient` override** (`kas::host_io::*`). C4
+>    (non-blocking) still holds — the acp connection spawns each request as its own
+>    `spawn_local` task (`rpc.rs:272`), so a direct async `tokio::fs` resolve is
+>    off-loop. The loop seam is deferred to its first consumer (**cyril-g9vt**).
+> Slices 5/6 below (channel + loop arm + observer) are superseded by the override;
+> S5/S6 are now the C4 + C9 tests.
+
+
 From `.cyril-7bdu/falsifiable-design.md` (gate-passed). 8 slices, each ≤2 files /
 ≤~50 lines / ≤30 min. Claim coverage: C1→S1, C5read+C6+C7→S2, C5write+C8→S3,
 C10→S4, C3→S5, C4→S5+S7, C2→S6, C9→S8.

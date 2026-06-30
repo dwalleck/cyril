@@ -80,7 +80,7 @@ reason). Permission-overlay reentrancy is safe — fs write reuses the existing
 
 1. `KasEngine::client_capabilities()` advertises `fs.read_text_file` + `fs.write_text_file` = true; `V2Engine::client_capabilities()` stays empty.
 2. **[cheapest]** KAS fs ops arrive as typed `acp::Client::{read_text_file, write_text_file}` calls (wire `fs/read_text_file`, `fs/write_text_file`); cyril overrides those trait methods, not `ext_method`/`_kiro/*` routing.
-3. Every fs request is forwarded through the bridge loop's host-io arm (observable seam) and the loop never awaits its resolution.
+3. ~~Every fs request is forwarded through the bridge loop's host-io arm (observable seam) and the loop never awaits its resolution.~~ **DEFERRED to cyril-g9vt** (checkpointed-build): the loop seam is consumer-less (no stages gate yet) and forces an un-`#[cfg]`-able `run_loop` param; KAS-5a resolves fs directly in a `#[cfg(feature="kas")]` `KiroClient` override. C4 (non-blocking) still holds via the acp connection's per-request `spawn_local` (`rpc.rs:272`) — the loop arm was never load-bearing for C4.
 4. A slow fs resolver does not starve the single-threaded bridge runtime: a concurrently-arriving cancel / notification / second fs request still makes progress (resolvers use async `tokio::fs`, never `std::fs` on the loop thread).
 5. A request `path` crosses `platform::path` translation at the responder boundary before any filesystem access (Linux no-op; Windows `C:\`↔`/mnt/c`).
 6. `read_text_file` returns the translated-path file's UTF-8 content; when the request carries `line`/`limit`, the returned content honors them (not the whole file).
