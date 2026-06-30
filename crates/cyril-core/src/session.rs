@@ -221,6 +221,21 @@ impl SessionController {
                 self.context_usage = Some(ContextUsage::new(pct));
                 true
             }
+            // Under KAS the context-usage scalar arrives via ContextBreakdownUpdated
+            // (KAS emits no kiro.dev/metadata), not MetadataUpdated/UsageUpdated.
+            // Keep SessionController.context_usage in sync so the documented
+            // "context usage flows to both state machines" invariant (the
+            // `context_usage_flows_to_both` routing test) holds for the KAS path
+            // too — otherwise a CommandContext reader of session.context_usage()
+            // sees None under KAS while the toolbar shows a live value. Clamp via
+            // ContextUsage::new like the sibling arms; the per-bucket breakdown is
+            // UI-only and stays in UiState.
+            Notification::ContextBreakdownUpdated {
+                usage_percentage, ..
+            } => {
+                self.context_usage = Some(ContextUsage::new(*usage_percentage));
+                true
+            }
             Notification::BridgeDisconnected { .. } => {
                 self.last_turn = None;
                 self.pending_tokens = None;
@@ -358,6 +373,25 @@ mod tests {
         assert!(
             (ctrl.context_usage().map(|u| u.percentage()).unwrap_or(0.0) - 75.0).abs()
                 < f64::EPSILON
+        );
+    }
+
+    #[test]
+    fn context_breakdown_updated_syncs_context_usage_under_kas() {
+        // Under KAS the context scalar arrives via ContextBreakdownUpdated, not
+        // MetadataUpdated/UsageUpdated, so SessionController must sync from it too
+        // (the "context usage flows to both state machines" invariant). 142.0 also
+        // exercises the ContextUsage::new clamp → 100.
+        let mut ctrl = SessionController::new();
+        let changed = ctrl.apply_notification(&Notification::ContextBreakdownUpdated {
+            usage_percentage: 142.0,
+            breakdown: None,
+        });
+        assert!(changed);
+        assert!(
+            (ctrl.context_usage().map(|u| u.percentage()).unwrap_or(-1.0) - 100.0).abs()
+                < f64::EPSILON,
+            "ContextBreakdownUpdated must update SessionController.context_usage, clamped to 100"
         );
     }
 

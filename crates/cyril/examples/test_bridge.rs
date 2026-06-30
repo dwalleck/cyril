@@ -578,6 +578,19 @@ fn print_notification(n: &Notification) {
             let pct = *used as f64 / (*size).max(1) as f64 * 100.0;
             println!("  [UsageUpdated] {used}/{size} tokens ({pct:.1}%)");
         }
+        Notification::ContextBreakdownUpdated {
+            usage_percentage,
+            breakdown,
+        } => {
+            println!(
+                "  [ContextBreakdownUpdated] ctx={usage_percentage:.1}% breakdown={}",
+                if breakdown.is_some() {
+                    "present"
+                } else {
+                    "absent"
+                }
+            );
+        }
         Notification::SteeringQueued { message } => {
             println!(
                 "  [SteeringQueued] {}",

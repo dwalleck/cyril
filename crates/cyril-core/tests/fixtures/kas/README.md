@@ -28,6 +28,12 @@ KAS-distinctive variant is **`session_info_update`** — the envelope that, via
   only** (`promptTurnSummaries`/`elapsedTime`/`status`), NOT the busy-clear
   signal. Fires BEFORE `turn_end`. Kept as a negative fixture so the converter
   can't confuse metering for completion.
+- **`context_usage`** — `session_info_update_context_usage.json` — the
+  proactively-pushed per-category breakdown (KAS-2b / cyril-5et2 →
+  `ContextBreakdownUpdated`). `_meta.kiro` carries flat `usagePercentage`, a
+  nested `contextUsage.usagePercentage` mirror, and `breakdown` (5 buckets;
+  `items[]` only on contextFiles/sessionFiles). Captured live from **2.10.0** by
+  `experiments/conductor-spike/probe-kas-context-breakdown-capture-2.10.0.py`.
 
 **Observed order in one turn** (falsifier finding): `… turn_completion → turn_end
 → context_usage`. `turn_end` is the terminal *lifecycle* signal but is **not the

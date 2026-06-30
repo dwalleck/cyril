@@ -130,6 +130,31 @@ pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         ));
     }
 
+    // KAS context breakdown bar (KAS-2b, cyril-5et2): one labeled category per
+    // wire bucket, aggregate-only — no per-item drill-in (cyril-1116). Fixed
+    // five buckets → O(1).
+    if let Some(bd) = state.context_breakdown() {
+        if !parts.is_empty() {
+            parts.push(Span::raw(" · "));
+        }
+        let cats = [
+            ("Context Files", bd.context_files().percent()),
+            ("Session Files", bd.session_files().percent()),
+            ("Tools", bd.tools().percent()),
+            ("Prompts", bd.your_prompts().percent()),
+            ("Responses", bd.kiro_responses().percent()),
+        ];
+        for (i, (label, pct)) in cats.iter().enumerate() {
+            if i > 0 {
+                parts.push(Span::raw("  "));
+            }
+            parts.push(Span::styled(
+                format!("{label} {pct:.0}%"),
+                Style::default().fg(Color::DarkGray),
+            ));
+        }
+    }
+
     // Stop reason warning (when last turn didn't end normally)
     if let Some(turn) = state.last_turn() {
         use cyril_core::types::StopReason;
@@ -372,6 +397,47 @@ mod tests {
                 render_status_bar(frame, frame.area(), &state);
             })
             .expect("draw");
+    }
+
+    #[test]
+    fn status_bar_renders_breakdown_bar() {
+        // Slice 4 / claim C7. Five DISTINCT percents so a label<->value
+        // transposition surfaces (the real frame's three 0%s would hide it). Each
+        // of the five labels must appear paired with its own percent; the type
+        // carries no items, so nothing itemized can render.
+        use cyril_core::types::{ContextBreakdown, ContextBucket};
+        let bd = ContextBreakdown::new(
+            ContextBucket::new(1, 11.0),
+            ContextBucket::new(2, 22.0),
+            ContextBucket::new(3, 33.0),
+            ContextBucket::new(4, 44.0),
+            ContextBucket::new(5, 55.0),
+        );
+        let state = MockTuiState {
+            context_breakdown: Some(bd),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(120, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render_status_bar(frame, frame.area(), &state))
+            .expect("draw");
+        let buffer = terminal.backend().buffer();
+        let text: String = (0..buffer.area.width)
+            .map(|x| buffer[(x, 0)].symbol())
+            .collect();
+        for expect in [
+            "Context Files 11%",
+            "Session Files 22%",
+            "Tools 33%",
+            "Prompts 44%",
+            "Responses 55%",
+        ] {
+            assert!(
+                text.contains(expect),
+                "status bar missing {expect:?}; got: {text:?}"
+            );
+        }
     }
 
     #[test]
