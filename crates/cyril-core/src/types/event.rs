@@ -2,8 +2,8 @@ use crate::types::command::{CommandInfo, ConfigOption};
 use crate::types::message::{AgentMessage, AgentThought, UserMessage};
 use crate::types::plan::Plan;
 use crate::types::session::{
-    CompactionPhase, ContextUsage, EffortLevel, ModeId, ModelInfo, SessionId, SessionMode,
-    StopReason, TokenCounts, TurnMetering,
+    CompactionPhase, ContextBreakdown, ContextUsage, EffortLevel, ModeId, ModelInfo, SessionId,
+    SessionMode, StopReason, TokenCounts, TurnMetering,
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 
@@ -72,6 +72,16 @@ pub enum Notification {
     UsageUpdated {
         used: u64,
         size: u64,
+    },
+    /// KAS `session_info_update` → `context_usage` (KAS-2b, cyril-5et2). KAS
+    /// pushes the categorized breakdown proactively each turn (v2 sends only the
+    /// scalar via `MetadataUpdated`). `usage_percentage` is the flat
+    /// `_meta.kiro.usagePercentage`; `breakdown` is `None` on frames that carry
+    /// only the scalar — consumers must treat absence as "no update", not
+    /// "cleared" (retain-last, same discipline as `MetadataUpdated.effort`).
+    ContextBreakdownUpdated {
+        usage_percentage: f64,
+        breakdown: Option<ContextBreakdown>,
     },
     AgentSwitched {
         name: String,
