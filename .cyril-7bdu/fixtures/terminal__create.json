@@ -1,0 +1,11 @@
+{
+  "method": "terminal/create",
+  "params": {
+    "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+    "command": "echo",
+    "args": [
+      "done-42"
+    ],
+    "cwd": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m"
+  }
+}

@@ -1,0 +1,297 @@
+[
+  {
+    "method": "_kiro/auth/getAccessToken",
+    "params": {}
+  },
+  {
+    "method": "_kiro/terminal/shell_type",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c"
+    }
+  },
+  {
+    "method": "fs/read_text_file",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "path": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m/README.md",
+      "line": 0
+    }
+  },
+  {
+    "method": "session/request_permission",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "toolCall": {
+        "toolCallId": "tooluse_Mq0Y8IgVLtsqoYaWoJ3gov",
+        "status": "pending",
+        "title": "Write File"
+      },
+      "options": [
+        {
+          "optionId": "accept",
+          "name": "Allow",
+          "kind": "allow_once"
+        },
+        {
+          "optionId": "always-accept",
+          "name": "Always allow",
+          "kind": "allow_always"
+        },
+        {
+          "optionId": "reject",
+          "name": "Deny",
+          "kind": "reject_once"
+        },
+        {
+          "optionId": "always-reject",
+          "name": "Always deny",
+          "kind": "reject_always"
+        }
+      ],
+      "_meta": {
+        "kiro": {
+          "toolId": "fs_write",
+          "consent": {
+            "capability": "fs_write",
+            "resource": "summary.txt",
+            "askType": "implicit",
+            "workspaceRoot": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m"
+          },
+          "consentRound": 1
+        }
+      }
+    }
+  },
+  {
+    "method": "fs/read_text_file",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "path": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m/summary.txt"
+    }
+  },
+  {
+    "method": "fs/write_text_file",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "path": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m/summary.txt",
+      "content": "magic=4242\n"
+    }
+  },
+  {
+    "method": "fs/read_text_file",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "path": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m/summary.txt"
+    }
+  },
+  {
+    "method": "session/request_permission",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "toolCall": {
+        "toolCallId": "tooluse_xegjMejpgPKpwl93oz9Agj",
+        "status": "pending",
+        "title": "Delete File"
+      },
+      "options": [
+        {
+          "optionId": "accept",
+          "name": "Allow",
+          "kind": "allow_once"
+        },
+        {
+          "optionId": "always-accept",
+          "name": "Always allow",
+          "kind": "allow_always"
+        },
+        {
+          "optionId": "reject",
+          "name": "Deny",
+          "kind": "reject_once"
+        },
+        {
+          "optionId": "always-reject",
+          "name": "Always deny",
+          "kind": "reject_always"
+        }
+      ],
+      "_meta": {
+        "kiro": {
+          "toolId": "delete_file",
+          "consent": {
+            "capability": "fs_write",
+            "resource": "scratch.txt",
+            "askType": "implicit",
+            "workspaceRoot": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m"
+          },
+          "consentRound": 1
+        }
+      }
+    }
+  },
+  {
+    "method": "fs/read_text_file",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "path": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m/scratch.txt"
+    }
+  },
+  {
+    "method": "session/request_permission",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "toolCall": {
+        "toolCallId": "run_command_tooluse_ysqhkeU25AsGewO8SJ5MZm",
+        "status": "pending",
+        "title": "echo done-42"
+      },
+      "options": [
+        {
+          "optionId": "accept",
+          "name": "Allow",
+          "kind": "allow_once"
+        },
+        {
+          "optionId": "always-accept",
+          "name": "Always allow",
+          "kind": "allow_always"
+        },
+        {
+          "optionId": "reject",
+          "name": "Deny",
+          "kind": "reject_once"
+        },
+        {
+          "optionId": "always-reject",
+          "name": "Always deny",
+          "kind": "reject_always"
+        }
+      ],
+      "_meta": {
+        "kiro": {
+          "toolId": "run_command",
+          "command": "echo done-42",
+          "consent": {
+            "capability": "shell",
+            "resource": "echo done-42",
+            "askType": "implicit",
+            "triggeringResource": "echo done-42",
+            "workspaceRoot": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m"
+          },
+          "consentRound": 1
+        }
+      }
+    }
+  },
+  {
+    "method": "terminal/create",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "command": "echo",
+      "args": [
+        "done-42"
+      ],
+      "cwd": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m"
+    }
+  },
+  {
+    "method": "terminal/wait_for_exit",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "terminalId": "term-1"
+    }
+  },
+  {
+    "method": "terminal/output",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "terminalId": "term-1"
+    }
+  },
+  {
+    "method": "terminal/release",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "terminalId": "term-1"
+    }
+  },
+  {
+    "method": "session/request_permission",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "toolCall": {
+        "toolCallId": "run_command_tooluse_EFVfz88tCVGP2nkq75Lkwg",
+        "status": "pending",
+        "title": "ls -la"
+      },
+      "options": [
+        {
+          "optionId": "accept",
+          "name": "Allow",
+          "kind": "allow_once"
+        },
+        {
+          "optionId": "always-accept",
+          "name": "Always allow",
+          "kind": "allow_always"
+        },
+        {
+          "optionId": "reject",
+          "name": "Deny",
+          "kind": "reject_once"
+        },
+        {
+          "optionId": "always-reject",
+          "name": "Always deny",
+          "kind": "reject_always"
+        }
+      ],
+      "_meta": {
+        "kiro": {
+          "toolId": "run_command",
+          "command": "ls -la",
+          "consent": {
+            "capability": "shell",
+            "resource": "ls -la",
+            "askType": "implicit",
+            "triggeringResource": "ls -la",
+            "workspaceRoot": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m"
+          },
+          "consentRound": 1
+        }
+      }
+    }
+  },
+  {
+    "method": "terminal/create",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "command": "ls",
+      "args": [
+        "-la"
+      ],
+      "cwd": "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m"
+    }
+  },
+  {
+    "method": "terminal/wait_for_exit",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "terminalId": "term-2"
+    }
+  },
+  {
+    "method": "terminal/output",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "terminalId": "term-2"
+    }
+  },
+  {
+    "method": "terminal/release",
+    "params": {
+      "sessionId": "sess_6caec820-ffd6-4179-b22a-44bd3c71634c",
+      "terminalId": "term-2"
+    }
+  }
+]
