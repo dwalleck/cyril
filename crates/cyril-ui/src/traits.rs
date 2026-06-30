@@ -53,6 +53,9 @@ pub trait TuiState {
         0.0
     }
     fn context_usage(&self) -> Option<f64>;
+    /// KAS categorized context breakdown for the toolbar bar (KAS-2b, cyril-5et2).
+    /// `None` on v2 (scalar only) and before the first KAS `context_usage` frame.
+    fn context_breakdown(&self) -> Option<&cyril_core::types::ContextBreakdown>;
     fn credit_usage(&self) -> Option<(f64, f64)>;
     fn last_turn(&self) -> Option<&cyril_core::types::TurnSummary>;
     fn session_cost(&self) -> &cyril_core::types::SessionCost;
@@ -429,6 +432,7 @@ pub mod test_support {
         pub effort: Option<EffortLevel>,
         pub steering_queued: usize,
         pub context_usage: Option<f64>,
+        pub context_breakdown: Option<cyril_core::types::ContextBreakdown>,
         pub credit_usage: Option<(f64, f64)>,
         pub last_turn: Option<cyril_core::types::TurnSummary>,
         pub session_cost: cyril_core::types::SessionCost,
@@ -466,6 +470,7 @@ pub mod test_support {
                 effort: None,
                 steering_queued: 0,
                 context_usage: None,
+                context_breakdown: None,
                 credit_usage: None,
                 last_turn: None,
                 session_cost: cyril_core::types::SessionCost::new(),
@@ -537,6 +542,9 @@ pub mod test_support {
         }
         fn context_usage(&self) -> Option<f64> {
             self.context_usage
+        }
+        fn context_breakdown(&self) -> Option<&cyril_core::types::ContextBreakdown> {
+            self.context_breakdown.as_ref()
         }
         fn credit_usage(&self) -> Option<(f64, f64)> {
             self.credit_usage

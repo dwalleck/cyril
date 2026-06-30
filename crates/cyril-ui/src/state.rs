@@ -176,6 +176,10 @@ impl TuiState for UiState {
         self.context_usage
     }
 
+    fn context_breakdown(&self) -> Option<&cyril_core::types::ContextBreakdown> {
+        self.context_breakdown.as_ref()
+    }
+
     fn credit_usage(&self) -> Option<(f64, f64)> {
         self.credit_usage
     }
