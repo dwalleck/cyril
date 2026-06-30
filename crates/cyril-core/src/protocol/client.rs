@@ -20,6 +20,10 @@ pub(crate) struct KiroClient {
     /// The bound engine (ADR-0001): all wire→internal conversion dispatches
     /// through it, so v2 and KAS share this client unchanged.
     engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
+    /// KAS-5b (cyril-ufie): live `terminal/*` host-callback registry. KAS-only —
+    /// v2 advertises no `terminal` capability, so the overrides never fire there.
+    #[cfg(feature = "kas")]
+    terminals: crate::protocol::kas::terminal_io::TerminalRegistry,
 }
 
 impl KiroClient {
@@ -33,6 +37,8 @@ impl KiroClient {
             permission_tx,
             tool_call_inputs: RefCell::new(HashMap::new()),
             engine,
+            #[cfg(feature = "kas")]
+            terminals: crate::protocol::kas::terminal_io::TerminalRegistry::new(),
         }
     }
 }
@@ -201,6 +207,37 @@ impl acp::Client for KiroClient {
         args: acp::WriteTextFileRequest,
     ) -> acp::Result<acp::WriteTextFileResponse> {
         crate::protocol::kas::host_io::write_text_file(&args).await
+    }
+
+    /// KAS-5b (cyril-ufie): answer `terminal/create` by spawning the command in the
+    /// terminal registry. Returns the id immediately (non-blocking). KAS-only.
+    #[cfg(feature = "kas")]
+    async fn create_terminal(
+        &self,
+        args: acp::CreateTerminalRequest,
+    ) -> acp::Result<acp::CreateTerminalResponse> {
+        self.terminals.create(&args)
+    }
+
+    /// KAS-5b: answer `terminal/wait_for_exit` by awaiting the command via
+    /// `tokio::process` (never `std::process` — single-threaded bridge). Reply is
+    /// flat `{exitCode, signal}` (the prove-it finding).
+    #[cfg(feature = "kas")]
+    async fn wait_for_terminal_exit(
+        &self,
+        args: acp::WaitForTerminalExitRequest,
+    ) -> acp::Result<acp::WaitForTerminalExitResponse> {
+        self.terminals.wait(&args).await
+    }
+
+    /// KAS-5b: answer `terminal/output` with a non-blocking snapshot of the
+    /// terminal's combined stdout+stderr and exit status.
+    #[cfg(feature = "kas")]
+    async fn terminal_output(
+        &self,
+        args: acp::TerminalOutputRequest,
+    ) -> acp::Result<acp::TerminalOutputResponse> {
+        self.terminals.output(&args)
     }
 }
 

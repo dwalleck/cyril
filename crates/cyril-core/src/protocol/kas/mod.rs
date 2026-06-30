@@ -4,8 +4,10 @@
 //! - [`auth`] — the `_kiro/auth/getAccessToken` custodian responder (Part B).
 //! - [`version`] — wrapper version→flag + the `kiro-cli acp` command (Part B).
 //! - [`host_io`] — the `fs/*` host-callback responders (KAS-5a, cyril-7bdu).
+//! - [`terminal_io`] — the `terminal/*` host-callback responders (KAS-5b, cyril-ufie).
 
 pub(crate) mod auth;
 pub(crate) mod discovery;
 pub(crate) mod host_io;
+pub(crate) mod terminal_io;
 pub(crate) mod version;

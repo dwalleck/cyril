@@ -62,6 +62,9 @@ pub(crate) async fn write_text_file(
 /// `debug_assert!`. The `-32602` (invalid params) code + "must be absolute"
 /// message distinguish this from a missing-file `-32603`.
 ///
+/// `pub(crate)`: KAS-5b's `terminal_io::create` reuses this for `terminal/create`'s
+/// `cwd` — same contract (absolute-or-reject, then translate), so it is not duplicated.
+///
 /// Absoluteness is judged on the *agent* (POSIX) path with `has_root()`, NOT
 /// `is_absolute()`: KAS runs under Unix/WSL and sends `/`-rooted paths, but on
 /// Windows `Path::is_absolute()` is `false` for any path without a drive prefix
@@ -72,7 +75,7 @@ pub(crate) async fn write_text_file(
 /// Linux); a non-translatable-but-absolute path (e.g. a WSL-internal `/home/...`
 /// reached from a Windows host) is left to fail as a normal `-32603` NotFound
 /// rather than be misreported as non-absolute.
-fn to_native_checked(path: &std::path::Path) -> acp::Result<std::path::PathBuf> {
+pub(crate) fn to_native_checked(path: &std::path::Path) -> acp::Result<std::path::PathBuf> {
     if !path.has_root() {
         tracing::warn!(path = %path.display(), "KAS host-io path is not absolute; rejecting");
         return Err(acp::Error::new(
