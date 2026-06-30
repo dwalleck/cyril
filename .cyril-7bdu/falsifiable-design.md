@@ -87,7 +87,7 @@ reason). Permission-overlay reentrancy is safe — fs write reuses the existing
 7. `read_text_file` on a missing / unreadable / directory path returns `Err` (ACP error) — never a panic, never empty-content-as-success.
 8. `write_text_file` writes the exact `content` (including empty string) to the translated path, creating missing parent directories, and returns success.
 9. fs READ resolves with no permission prompt; fs WRITE flows through cyril's existing approval overlay unchanged (the KAS `_meta.kiro.consent` block is tolerated/ignored, not required to parse).
-10. Each fs request carries `sessionId`; a relative `path` resolves against that session's cwd, not cyril's process cwd.
+10. fs paths are absolute per ACP (`ReadTextFileRequest` doc: "Absolute path"; capture confirms); a non-absolute path is **rejected with an error**, never silently read against cyril's process cwd. (Refined from "resolve against session cwd" during budgeted-plan: ACP guarantees absolute, so session-cwd threading is unjustified state for an input that never occurs; fail-loud is safer than silently-wrong-file.)
 
 ## Falsification
 
@@ -102,7 +102,7 @@ reason). Permission-overlay reentrancy is safe — fs write reuses the existing
 | 7 | read errors, no panic/empty-as-ok | `read_text_file` on a path that doesn't exist; if it returns `Ok("")` or panics the bridge → false | the test asserts `Err`; bridge stays alive | 20m | pending | unit `read_text_file_missing_path_errors` |
 | 8 | write exact content + mkdir -p | `write_text_file{path:"sub/dir/f.txt", content:""}` into a fresh tmp; if `sub/dir` not created, file absent, or content ≠ `""` → false | read the file back with `std::fs` in-test (not the SUT path) | 30m | pending | unit `write_text_file_creates_parents_exact_content` |
 | 9 | read no-prompt; write via approval | Run a KAS turn that reads then writes; if read raises a permission request, or write bypasses the approval overlay → false | the permission channel's observed events (the prove-it showed write→`request_permission`, read→none) | 1.5h (live) | pending (measurement) | integration `kas_fs_write_requires_approval_read_does_not` |
-| 10 | relative path vs session cwd | `read_text_file{path:"rel.txt"}` for a session whose cwd≠process cwd; if it reads process-cwd/rel.txt (or errors when session-cwd/rel.txt exists) → false | a file placed only under the session cwd; in-test path arithmetic | 40m | pending | unit `fs_relative_path_resolves_against_session_cwd` |
+| 10 | non-absolute path rejected, not process-cwd-read | Place `rel.txt` under cyril's process cwd; `read_text_file{path:"rel.txt"}`; if it returns that file's content (resolved against process cwd) instead of `Err` → false | a file placed only under the process cwd; the test asserts `Err` | 25m | pending | unit `fs_relative_path_rejected_not_process_cwd` |
 
 Cheapest (C2) is **passed** — design may proceed to planning per the gate.
 
@@ -116,7 +116,7 @@ Cheapest (C2) is **passed** — design may proceed to planning per the gate.
 - C7: `read.unwrap_or_default()` / `.ok().unwrap_or_default()` → returns `Ok("")` for a missing file.
 - C8: responder using `write` without `create_dir_all` → missing-parent write errors; or a `if !content.is_empty()` guard → empty content no-ops.
 - C9: advertising fs caps but routing write around the existing approval path → write executes unapproved.
-- C10: `tokio::fs` with the bare relative path → resolved against the bridge process cwd, reads the wrong file.
+- C10: `tokio::fs::read(req.path)` with no `is_absolute()` guard → a relative path resolves against the bridge process cwd and reads the wrong file instead of erroring.
 
 ### Per-claim distinctness
 Each claim has its own oracle output (distinct unit/integration test names above); a
