@@ -21,6 +21,7 @@ use agent_client_protocol as acp;
 pub(crate) async fn read_text_file(
     req: &acp::ReadTextFileRequest,
 ) -> acp::Result<acp::ReadTextFileResponse> {
+    require_absolute(&req.path)?;
     let path = crate::platform::path::to_native(&req.path);
     let text = tokio::fs::read_to_string(&path).await.map_err(|e| {
         // Surface, don't swallow (CLAUDE.md): the io error (incl. NotFound vs
@@ -39,6 +40,7 @@ pub(crate) async fn read_text_file(
 pub(crate) async fn write_text_file(
     req: &acp::WriteTextFileRequest,
 ) -> acp::Result<acp::WriteTextFileResponse> {
+    require_absolute(&req.path)?;
     let path = crate::platform::path::to_native(&req.path);
     if let Some(parent) = path.parent() {
         tokio::fs::create_dir_all(parent).await.map_err(|e| {
@@ -51,6 +53,23 @@ pub(crate) async fn write_text_file(
         acp::Error::new(-32603, format!("write_text_file {}: {e}", path.display()))
     })?;
     Ok(acp::WriteTextFileResponse::new())
+}
+
+/// Reject a non-absolute host-io path with a distinct error. ACP guarantees an
+/// absolute `path`; a relative one would otherwise resolve against the bridge's
+/// process cwd and silently read/write the WRONG file — load-bearing (CLAUDE.md),
+/// so a runtime check, not a `debug_assert!`. The `-32602` (invalid params) code +
+/// "must be absolute" message distinguish this from a missing-file `-32603`.
+fn require_absolute(path: &std::path::Path) -> acp::Result<()> {
+    if path.is_absolute() {
+        Ok(())
+    } else {
+        tracing::warn!(path = %path.display(), "KAS host-io path is not absolute; rejecting");
+        Err(acp::Error::new(
+            -32602,
+            format!("path must be absolute: {}", path.display()),
+        ))
+    }
 }
 
 /// Select `[line, line+limit)` (1-based `line`) from `text`, preserving each
@@ -149,5 +168,31 @@ mod tests {
             acp::WriteTextFileRequest::new(acp::SessionId::new("s"), &target, "héllo\n世界\n");
         write_text_file(&req2).await.unwrap();
         assert_eq!(std::fs::read_to_string(&target).unwrap(), "héllo\n世界\n");
+    }
+
+    #[tokio::test]
+    async fn relative_path_rejected_with_absolute_error() {
+        // Claim C10: a non-absolute path is rejected with the DISTINCT "must be
+        // absolute" error — never silently read/written against the bridge process
+        // cwd. The distinct error (vs a -32603 missing-file error) is what makes
+        // this non-vacuous: a no-guard impl would instead try to read/write
+        // "rel.txt" relative to the process cwd, yielding a different error (or, if
+        // such a file existed, Ok) — both fail these assertions.
+        let rel = std::path::Path::new("kas5a_relative_xyz.txt");
+        let rerr = read_text_file(&read_req(rel, None, None))
+            .await
+            .expect_err("relative read must be rejected");
+        assert!(
+            format!("{rerr:?}").contains("must be absolute"),
+            "expected absolute-path rejection, got {rerr:?}"
+        );
+        let wreq = acp::WriteTextFileRequest::new(acp::SessionId::new("s"), rel, "x");
+        let werr = write_text_file(&wreq)
+            .await
+            .expect_err("relative write must be rejected");
+        assert!(
+            format!("{werr:?}").contains("must be absolute"),
+            "expected absolute-path rejection, got {werr:?}"
+        );
     }
 }
