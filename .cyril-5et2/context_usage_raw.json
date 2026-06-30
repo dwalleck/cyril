@@ -1,0 +1,39 @@
+{
+  "sessionId": "sess_7ed5c130-06f9-43d4-8e69-5d060642b27e",
+  "update": {
+    "sessionUpdate": "session_info_update",
+    "_meta": {
+      "kiro": {
+        "contextUsage": {
+          "usagePercentage": 4.3
+        },
+        "breakdown": {
+          "contextFiles": {
+            "tokens": 0,
+            "percent": 0,
+            "items": []
+          },
+          "tools": {
+            "tokens": 4662,
+            "percent": 2.3
+          },
+          "kiroResponses": {
+            "tokens": 0,
+            "percent": 0
+          },
+          "yourPrompts": {
+            "tokens": 4096,
+            "percent": 2
+          },
+          "sessionFiles": {
+            "tokens": 0,
+            "percent": 0,
+            "items": []
+          }
+        },
+        "kind": "context_usage",
+        "usagePercentage": 4.3
+      }
+    }
+  }
+}
