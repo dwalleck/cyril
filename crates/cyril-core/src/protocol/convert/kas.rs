@@ -31,16 +31,23 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
     if kiro.get("kind").and_then(serde_json::Value::as_str) != Some("turn_end") {
         return None;
     }
-    let stop_reason = kiro
-        .get("stopReason")
+    let raw_stop_reason = kiro.get("stopReason");
+    let stop_reason = raw_stop_reason
         .and_then(serde_json::Value::as_str)
         .and_then(|s| {
             serde_json::from_value::<acp::StopReason>(serde_json::Value::String(s.to_owned())).ok()
         })
         .map(super::to_stop_reason)
         .unwrap_or_else(|| {
+            // Distinguish "missing" from "corrupt" (CLAUDE.md): log the offending
+            // value (`None` = absent, `Some(..)` = present-but-unparseable, e.g. a
+            // future KAS stopReason the acp deserializer doesn't know) so a wire
+            // drift is diagnosable, not hidden behind a generic message. Defaulting
+            // EndTurn is the right action either way — a dropped turn_end would
+            // strand the UI busy forever.
             tracing::warn!(
-                "KAS turn_end without a parseable `_meta.kiro.stopReason`; defaulting to EndTurn"
+                stop_reason = ?raw_stop_reason,
+                "KAS turn_end `_meta.kiro.stopReason` missing or unparseable; defaulting to EndTurn"
             );
             StopReason::EndTurn
         });
