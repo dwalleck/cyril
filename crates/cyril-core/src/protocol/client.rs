@@ -263,16 +263,20 @@ impl KiroClient {
     // `#[cfg]` blocks (not a `cfg!(...)` runtime branch) are required: the `kas`
     // module — and thus `kas::auth::respond_get_access_token` — does not exist in
     // a default build, so a single body referencing it would fail to compile.
-    /// Route an ext request: KAS-1 handles only `getAccessToken`.
+    /// Route an ext request (`_kiro/*`): KAS-1 `getAccessToken`, KAS-5b
+    /// `terminal/shell_type`.
     #[cfg(feature = "kas")]
     async fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         if args.method.as_ref() == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
-        // fs/terminal host callbacks are TYPED acp::Client methods, not ext
-        // requests: fs/read_text_file is the `read_text_file` override above
-        // (KAS-5a, cyril-7bdu); terminal/* is KAS-5b (cyril-ufie). This arm only
-        // answers `_kiro/*` ext requests.
+        if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
+            return crate::protocol::kas::terminal_io::respond_shell_type();
+        }
+        // The bare-ACP fs/terminal lifecycle host callbacks are TYPED acp::Client
+        // methods (the overrides above), not ext requests: fs/read_text_file (KAS-5a,
+        // cyril-7bdu) and terminal/{create,output,wait_for_exit,release,kill} (KAS-5b,
+        // cyril-ufie). This arm answers only the `_kiro/*`-prefixed ext requests.
         default_ext_response()
     }
 
@@ -341,5 +345,53 @@ mod tests {
             .await
             .expect("write override resolves");
         assert_eq!(std::fs::read_to_string(&f).unwrap(), "written");
+    }
+
+    fn kas_client() -> KiroClient {
+        let (ntx, _nrx) = mpsc::channel(1);
+        let (ptx, _prx) = mpsc::channel(1);
+        KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+        )
+    }
+
+    #[tokio::test]
+    async fn create_terminal_override_reaches_registry() {
+        // KAS-5b fixture M: a KAS `terminal/create` reaches KiroClient's typed
+        // override (NOT the acp default `method_not_found`) and returns an id.
+        // Fails if the override is missing/miswired.
+        let client = kas_client();
+        let resp = client
+            .create_terminal(acp::CreateTerminalRequest::new(
+                acp::SessionId::new("s"),
+                "true",
+            ))
+            .await
+            .expect("create_terminal override resolves, not method_not_found");
+        assert_eq!(resp.terminal_id.to_string(), "term-1");
+    }
+
+    #[tokio::test]
+    async fn shell_type_ext_request_routes() {
+        // KAS-5b fixture N: `_kiro/terminal/shell_type` (acp-stripped to
+        // `kiro/terminal/shell_type`) routes through ext_method to the responder,
+        // returning {shellType}. Fails if the arm matches the un-stripped name -> the
+        // default null response.
+        let client = kas_client();
+        let params: std::sync::Arc<serde_json::value::RawValue> =
+            serde_json::value::RawValue::from_string("{\"sessionId\":\"s\"}".to_string())
+                .unwrap()
+                .into();
+        let resp = client
+            .ext_method(acp::ExtRequest::new("kiro/terminal/shell_type", params))
+            .await
+            .expect("shell_type routes");
+        assert!(
+            resp.0.get().contains("shellType"),
+            "ext reply must carry shellType, got {}",
+            resp.0.get()
+        );
     }
 }

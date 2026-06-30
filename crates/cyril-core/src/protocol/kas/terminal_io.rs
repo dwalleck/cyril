@@ -220,6 +220,24 @@ impl TerminalRegistry {
     }
 }
 
+/// The (acp-stripped) method name for KAS's `_kiro/terminal/shell_type` host
+/// callback. The acp crate strips the leading `_` inbound, so cyril matches the
+/// `kiro/...` form — same convention as [`super::auth::GET_ACCESS_TOKEN_METHOD`].
+pub(crate) const SHELL_TYPE_METHOD: &str = "kiro/terminal/shell_type";
+
+/// Answer `_kiro/terminal/shell_type`: report the host shell so KAS parses and
+/// formats commands for it. Returns `bash` — the KAS host is Unix/WSL and
+/// bash-family semantics are near-universal there; this is the value the 2.10.0
+/// prove-it turn replied and KAS accepted. The precise per-user shell is a hint,
+/// not load-bearing (KAS sends commands pre-split into `{command, args}` that cyril
+/// runs directly), so it is a constant, not env-sniffed.
+pub(crate) fn respond_shell_type() -> acp::Result<acp::ExtResponse> {
+    let body = serde_json::json!({ "shellType": "bash" });
+    let raw = serde_json::value::RawValue::from_string(body.to_string())
+        .map_err(|e| acp::Error::new(-32603, format!("serialize shell_type reply: {e}")))?;
+    Ok(acp::ExtResponse::new(raw.into()))
+}
+
 /// Combine a finished command's stdout and stderr into one terminal stream,
 /// lossily decoding non-UTF-8 bytes (ACP `output` is a `String`). A real terminal
 /// interleaves both; capturing stdout-only would drop a command's error output.
@@ -431,6 +449,19 @@ mod tests {
             .output(&out_req(&ghost))
             .expect_err("unknown output errs");
         assert!(oe.message.contains("unknown terminal"), "got {oe:?}");
+    }
+
+    #[test]
+    fn shell_type_reply_carries_shelltype() {
+        // Fixture N (value half): the shell_type reply is `{shellType: "bash"}` —
+        // the value the prove-it turn used and KAS accepted.
+        let resp = respond_shell_type().unwrap();
+        let json = resp.0.get();
+        assert!(
+            json.contains("shellType"),
+            "reply must carry shellType: {json}"
+        );
+        assert!(json.contains("bash"), "shellType value is bash: {json}");
     }
 
     fn release_req(id: &acp::TerminalId) -> acp::ReleaseTerminalRequest {
