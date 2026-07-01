@@ -97,11 +97,14 @@ impl Engine for KasEngine {
         // KAS-5a (cyril-7bdu): advertise fs read+write; KAS-5b (cyril-ufie):
         // advertise terminal — so KAS routes file I/O and shell execution back to
         // cyril's host-io/terminal responders. v2 stays empty (V2Engine).
+        // cyril-nhzw: attach `_meta.kiro.settings` (AgentSettings marshaled from the
+        // user's kiro-cli cli.json) so KAS honors the same feature flags v2 would.
         acp::ClientCapabilities::new()
             .fs(acp::FileSystemCapabilities::default()
                 .read_text_file(true)
                 .write_text_file(true))
             .terminal(true)
+            .meta(super::kas::settings::kiro_settings_meta())
     }
 
     fn convert_session_update(
@@ -170,6 +173,34 @@ mod tests {
             format!("{:?}", V2Engine.client_capabilities()),
             format!("{:?}", acp::ClientCapabilities::new()),
             "V2Engine must stay empty (no fs/terminal caps leaked from the KAS path)"
+        );
+    }
+
+    #[cfg(feature = "kas")]
+    #[test]
+    fn kas_sets_kiro_settings_meta_v2_none() {
+        // cyril-nhzw claim 1: KasEngine attaches `_meta.kiro.settings` (an
+        // AgentSettings object); V2Engine attaches no `_meta`. Stress fixture: the
+        // parity-break bug (KAS meta leaking into V2) fails the v2 assertion.
+        let kas = KasEngine.client_capabilities();
+        let settings = kas
+            .meta
+            .as_ref()
+            .expect("KAS must set _meta")
+            .get("kiro")
+            .and_then(|k| k.get("settings"))
+            .and_then(|s| s.as_object())
+            .expect("_meta.kiro.settings must be an object");
+        // subagentOrchestration is default-on regardless of the user's cli.json, so
+        // this is hermetic; its presence is what flips KAS to orchestrate_subagent.
+        assert_eq!(
+            settings.get("subagentOrchestration"),
+            Some(&serde_json::json!({ "enabled": true })),
+            "KAS settings must carry subagentOrchestration"
+        );
+        assert!(
+            V2Engine.client_capabilities().meta.is_none(),
+            "V2Engine must attach no _meta"
         );
     }
 

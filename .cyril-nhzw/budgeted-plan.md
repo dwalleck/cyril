@@ -5,6 +5,8 @@ All slices land behind `#[cfg(feature = "kas")]`. No production-scale loops exis
 
 Slice order: reader → marshal(bool+defaults) → marshal(nested) → integration fixture → meta-wrapper+wiring → gated live smoke.
 
+> **Implementation reslice (checkpointed-build, reality-forced):** `read_cli_settings`/`marshal_agent_settings` are `pub(crate)` and would be **dead code (`-D warnings` fails)** until the wiring slice. So the original slices 1+2+5 merge into a **walking-skeleton slice A** (reader + full bool/defaults marshal + `_meta` wrapper + `KasEngine` wiring + V2 parity) — every commit stays live with zero `#[allow]`. Remaining: **B** = nested `toolSearch`/`compaction` (orig slice 3), **C** = integration fixture (orig slice 4), **D** = gated smoke (orig slice 6). Claim coverage is unchanged; only the commit granularity changed.
+
 ---
 
 ## Slice 1: `read_cli_settings()` — read the global cli.json, tolerate absent/corrupt
