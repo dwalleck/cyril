@@ -78,9 +78,15 @@ const DEFAULTS_ON: &[&str] = &[
     "subagentOrchestration",
 ];
 
+/// A numeric-but-not-boolean value, cloned. `serde_json`'s `is_number()` is already
+/// false for `Value::Bool`, so a JSON `true` in a numeric slot is dropped (matching
+/// zme's `typeof === "number"`), not coerced to 1.
+fn num(v: &Value) -> Option<Value> {
+    v.is_number().then(|| v.clone())
+}
+
 /// Marshal a kiro-cli settings map into an `AgentSettings` JSON object, replicating
-/// v2's `zme()`. Pure and total: any map in → a valid object out. Nested
-/// `toolSearch`/`compaction` are added in slice B.
+/// v2's `zme()`. Pure and total: any map in → a valid object out.
 pub(crate) fn marshal_agent_settings(e: &Map<String, Value>) -> Value {
     let mut n = Map::new();
     for (src, dst) in BOOL_MAP {
@@ -91,6 +97,34 @@ pub(crate) fn marshal_agent_settings(e: &Map<String, Value>) -> Value {
     for k in DEFAULTS_ON {
         n.entry((*k).to_string())
             .or_insert_with(|| serde_json::json!({ "enabled": true }));
+    }
+    // `toolSearch` — gated on a boolean `toolSearch.enabled`; numeric extras only.
+    if let Some(Value::Bool(enabled)) = e.get("toolSearch.enabled") {
+        let mut ts = Map::new();
+        ts.insert("enabled".to_string(), Value::Bool(*enabled));
+        if let Some(v) = e.get("toolSearch.minPct").and_then(num) {
+            ts.insert("minPct".to_string(), v);
+        }
+        if let Some(v) = e.get("toolSearch.minTokens").and_then(num) {
+            ts.insert("minTokens".to_string(), v);
+        }
+        n.insert("toolSearch".to_string(), Value::Object(ts));
+    }
+    // `compaction` — gated on at least one numeric exclude; each field only if numeric.
+    let pct = e
+        .get("compaction.excludeContextWindowPercent")
+        .and_then(num);
+    let msg = e.get("compaction.excludeMessages").and_then(num);
+    if pct.is_some() || msg.is_some() {
+        let mut c = Map::new();
+        c.insert("enabled".to_string(), Value::Bool(true));
+        if let Some(v) = pct {
+            c.insert("excludePercent".to_string(), v);
+        }
+        if let Some(v) = msg {
+            c.insert("excludeMessages".to_string(), v);
+        }
+        n.insert("compaction".to_string(), Value::Object(c));
     }
     Value::Object(n)
 }
@@ -213,6 +247,64 @@ mod tests {
             got.as_object().unwrap().get("thinking"),
             Some(&serde_json::json!({ "enabled": false })),
             "explicit false preserved, not defaulted-on: {got}"
+        );
+    }
+
+    #[test]
+    fn toolsearch_shapes() {
+        // Claim 5: toolSearch emitted with numeric minPct/minTokens when present;
+        // stress: a boolean in a numeric slot (minPct=true) is dropped, not coerced.
+        let full = marshal_agent_settings(&map(&[
+            ("toolSearch.enabled", Value::Bool(true)),
+            ("toolSearch.minPct", serde_json::json!(0)),
+            ("toolSearch.minTokens", serde_json::json!(500)),
+        ]));
+        assert_eq!(
+            full.as_object().unwrap().get("toolSearch"),
+            Some(&serde_json::json!({ "enabled": true, "minPct": 0, "minTokens": 500 })),
+            "full toolSearch: {full}"
+        );
+        let bool_pct = marshal_agent_settings(&map(&[
+            ("toolSearch.enabled", Value::Bool(true)),
+            ("toolSearch.minPct", Value::Bool(true)), // not a number → dropped
+        ]));
+        assert_eq!(
+            bool_pct.as_object().unwrap().get("toolSearch"),
+            Some(&serde_json::json!({ "enabled": true })),
+            "bool minPct dropped, not coerced: {bool_pct}"
+        );
+    }
+
+    #[test]
+    fn toolsearch_needs_enabled() {
+        // Claim 5b (stress): minPct present but no `enabled` → toolSearch OMITTED
+        // entirely. Fails if the object is built from a partial field.
+        let got = marshal_agent_settings(&map(&[("toolSearch.minPct", serde_json::json!(5))]));
+        assert_eq!(
+            got.as_object().unwrap().get("toolSearch"),
+            None,
+            "no enabled → omit: {got}"
+        );
+    }
+
+    #[test]
+    fn compaction_shapes() {
+        // Claim 6 (stress: one-sided): only excludeMessages present → compaction
+        // has enabled+excludeMessages, no excludePercent invented; neither → omitted.
+        let one = marshal_agent_settings(&map(&[(
+            "compaction.excludeMessages",
+            serde_json::json!(3),
+        )]));
+        assert_eq!(
+            one.as_object().unwrap().get("compaction"),
+            Some(&serde_json::json!({ "enabled": true, "excludeMessages": 3 })),
+            "one-sided compaction: {one}"
+        );
+        let none = marshal_agent_settings(&Map::new());
+        assert_eq!(
+            none.as_object().unwrap().get("compaction"),
+            None,
+            "no exclude → omit"
         );
     }
 }
