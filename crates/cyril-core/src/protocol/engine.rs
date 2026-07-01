@@ -85,21 +85,23 @@ impl Engine for V2Engine {
 /// text, tool calls — to the generic `convert::` fns. `convert_ext_notification`
 /// still delegates to the v2 `kiro::` handler, so unrecognized `_kiro/*` frames
 /// fall to the existing unknown-variant drop (dormant until KAS-2b).
-/// Advertises `fs` read+write capabilities (KAS-5a, cyril-7bdu) so KAS delegates
-/// file I/O to cyril's host-io responders; `terminal` stays off until KAS-5b
-/// (cyril-ufie).
+/// Advertises `fs` read+write (KAS-5a, cyril-7bdu) and `terminal` (KAS-5b,
+/// cyril-ufie) capabilities so KAS delegates file I/O and shell execution to
+/// cyril's host-io responders instead of running them in-process.
 #[cfg(feature = "kas")]
 pub(crate) struct KasEngine;
 
 #[cfg(feature = "kas")]
 impl Engine for KasEngine {
     fn client_capabilities(&self) -> acp::ClientCapabilities {
-        // KAS-5a (cyril-7bdu): advertise fs read+write so KAS delegates file I/O
-        // to the host-io responders instead of running it in-process. `terminal`
-        // remains false until KAS-5b (cyril-ufie). v2 stays empty (V2Engine).
-        acp::ClientCapabilities::new().fs(acp::FileSystemCapabilities::default()
-            .read_text_file(true)
-            .write_text_file(true))
+        // KAS-5a (cyril-7bdu): advertise fs read+write; KAS-5b (cyril-ufie):
+        // advertise terminal — so KAS routes file I/O and shell execution back to
+        // cyril's host-io/terminal responders. v2 stays empty (V2Engine).
+        acp::ClientCapabilities::new()
+            .fs(acp::FileSystemCapabilities::default()
+                .read_text_file(true)
+                .write_text_file(true))
+            .terminal(true)
     }
 
     fn convert_session_update(
@@ -146,10 +148,11 @@ mod tests {
 
     #[cfg(feature = "kas")]
     #[test]
-    fn kas_advertises_fs_v2_empty() {
-        // KAS-5a / claim C1. KasEngine advertises fs read+write; terminal stays
-        // off (KAS-5b). Stress fixture: V2Engine must STILL be empty — designed to
-        // fail if the KAS caps body is copy-pasted into V2 (the parity-break bug).
+    fn kas_advertises_fs_and_terminal_v2_empty() {
+        // KAS-5b / claim C1 (fixture Q). KasEngine advertises fs read+write AND
+        // terminal (go-live), so KAS delegates shell execution to cyril's terminal
+        // responders. Stress fixture: V2Engine must STILL be empty — designed to fail
+        // if the KAS caps body is copy-pasted into V2 (the parity-break bug).
         let caps = KasEngine.client_capabilities();
         assert!(
             caps.fs.read_text_file,
@@ -160,13 +163,13 @@ mod tests {
             "KAS must advertise fs.write_text_file"
         );
         assert!(
-            !caps.terminal,
-            "terminal stays off until KAS-5b (cyril-ufie)"
+            caps.terminal,
+            "KAS must advertise terminal (KAS-5b go-live, cyril-ufie)"
         );
         assert_eq!(
             format!("{:?}", V2Engine.client_capabilities()),
             format!("{:?}", acp::ClientCapabilities::new()),
-            "V2Engine must stay empty (no fs caps leaked from the KAS path)"
+            "V2Engine must stay empty (no fs/terminal caps leaked from the KAS path)"
         );
     }
 
