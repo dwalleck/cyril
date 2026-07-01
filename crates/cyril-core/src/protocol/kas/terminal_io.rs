@@ -323,6 +323,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_returns_before_command_exits() {
+        // Fixture (C3): create must return the id IMMEDIATELY, without awaiting the
+        // command's exit. Creating a `sleep 5` and returning in <500ms proves it;
+        // a refactor that made create await wait_with_output would take ~5s -> fail.
+        let reg = TerminalRegistry::new();
+        let t0 = std::time::Instant::now();
+        let id = reg.create(&sh("sleep 5")).unwrap().terminal_id;
+        let elapsed = t0.elapsed();
+        assert!(
+            elapsed < std::time::Duration::from_millis(500),
+            "create must not await the command's exit (took {elapsed:?})"
+        );
+        // Reap the sleeper so the test leaves no orphan.
+        reg.release(&release_req(&id)).await.unwrap();
+    }
+
+    #[tokio::test]
     async fn create_nonexistent_command_errors_not_panics() {
         // Fixture B: a command that does not exist must return Err (spawn failure),
         // never panic. Fails under `.spawn().unwrap()/.expect()`.
