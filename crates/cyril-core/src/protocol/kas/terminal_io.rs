@@ -84,6 +84,14 @@ impl TerminalRegistry {
         };
         let mut cmd = tokio::process::Command::new(&req.command);
         cmd.args(&req.args)
+            // stdin MUST be null, not the inherited default: the bridge's stdin is
+            // cyril's TUI terminal. A KAS command that reads stdin (`cat`, `grep`
+            // with no file, a REPL) would otherwise attach to that terminal —
+            // blocking `wait_for_exit` forever on the never-arriving input AND
+            // stealing the user's keystrokes. ACP `terminal/*` has no stdin-input
+            // method, so these terminals are provably non-interactive; null gives an
+            // immediate EOF.
+            .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped());
         if let Some(dir) = cwd {
@@ -128,10 +136,17 @@ impl TerminalRegistry {
                 ));
             }
         };
-        let out = child
-            .wait_with_output()
-            .await
-            .map_err(|e| wait_err(&req.terminal_id, e))?;
+        let out = match child.wait_with_output().await {
+            Ok(out) => out,
+            // take_child left a Running(None) slot; a reap error must free it (not
+            // leave the id wedged in a permanent InFlight state — a retried wait
+            // would otherwise get "wait already in progress" instead of a clean
+            // unknown-id) before surfacing the error to KAS.
+            Err(e) => {
+                self.inner.borrow_mut().remove(&req.terminal_id);
+                return Err(wait_err(&req.terminal_id, e));
+            }
+        };
         let status = exit_status(&out.status);
         self.inner.borrow_mut().insert(
             req.terminal_id.clone(),
@@ -173,8 +188,14 @@ impl TerminalRegistry {
         if let Taken::Child(mut child) = self.take_child(&req.terminal_id)? {
             // SIGKILL then reap. Without the wait the child is a zombie; tokio's
             // Child does NOT kill/reap on drop. Output is discarded (id is freed).
-            let _ = child.start_kill();
-            let _ = child.wait().await;
+            // Both ops are best-effort (the child may have already exited), but a
+            // failure is logged, not swallowed (CLAUDE.md: no discarded Results).
+            if let Err(e) = child.start_kill() {
+                tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: start_kill failed");
+            }
+            if let Err(e) = child.wait().await {
+                tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: reap failed (possible zombie)");
+            }
         }
         self.inner.borrow_mut().remove(&req.terminal_id);
         Ok(acp::ReleaseTerminalResponse::new())
@@ -190,11 +211,19 @@ impl TerminalRegistry {
         req: &acp::KillTerminalRequest,
     ) -> acp::Result<acp::KillTerminalResponse> {
         if let Taken::Child(mut child) = self.take_child(&req.terminal_id)? {
-            let _ = child.start_kill();
-            let out = child
-                .wait_with_output()
-                .await
-                .map_err(|e| wait_err(&req.terminal_id, e))?;
+            if let Err(e) = child.start_kill() {
+                tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal kill: start_kill failed");
+            }
+            let out = match child.wait_with_output().await {
+                Ok(out) => out,
+                // take_child left a Running(None) slot; a reap error must free it
+                // (not leave the id wedged in a permanent InFlight state) before
+                // surfacing the error to KAS.
+                Err(e) => {
+                    self.inner.borrow_mut().remove(&req.terminal_id);
+                    return Err(wait_err(&req.terminal_id, e));
+                }
+            };
             self.inner.borrow_mut().insert(
                 req.terminal_id.clone(),
                 Entry::Exited {
@@ -340,6 +369,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_closes_stdin_so_stdin_readers_dont_hang() {
+        // Fixture (stdin): a command that reads stdin (`cat` with no file arg) must
+        // get an immediate EOF, not attach to the bridge's inherited terminal stdin.
+        // With `.stdin(null())` cat exits promptly; a regression that dropped the
+        // null (inherit) or used `piped()` without a writer would block forever, so
+        // the 5s timeout guard fails. Guards the non-interactive-terminal invariant.
+        let reg = TerminalRegistry::new();
+        let id = reg.create(&create_req("cat")).unwrap().terminal_id;
+        let resp =
+            tokio::time::timeout(std::time::Duration::from_secs(5), reg.wait(&wait_req(&id)))
+                .await
+                .expect(
+                    "cat with closed stdin must exit promptly (stdin must not be inherited/piped)",
+                )
+                .unwrap();
+        assert_eq!(
+            resp.exit_status.exit_code,
+            Some(0),
+            "cat reads stdin to EOF and exits 0 when stdin is null"
+        );
+    }
+
+    #[tokio::test]
     async fn create_nonexistent_command_errors_not_panics() {
         // Fixture B: a command that does not exist must return Err (spawn failure),
         // never panic. Fails under `.spawn().unwrap()/.expect()`.
@@ -408,6 +460,11 @@ mod tests {
         assert_eq!(resp.exit_status.signal, None);
     }
 
+    // Unix-only: `kill -9 $$` and the signal/no-exit-code shape are POSIX-specific.
+    // Windows has no signals — a terminated process reports an exit code, not a
+    // signal — so `exit_status` never populates `signal` there (its arm is
+    // `#[cfg(unix)]`). This assertion set is meaningful only on Unix.
+    #[cfg(unix)]
     #[tokio::test]
     async fn wait_reports_signal_not_exit_zero() {
         // Fixture F2: a self-SIGKILLed command reports exitCode=None, signal=Some —
@@ -532,7 +589,17 @@ mod tests {
             .wait(&wait_req(&id))
             .await
             .expect("killed id still waits");
-        assert_eq!(resp.exit_status.exit_code, None, "killed => no exit code");
+        // The kill terminated `sleep` before its natural exit, so it must NOT report
+        // a clean exit — this holds on every platform. The precise shape differs:
+        // Unix reports the signal with no exit code; Windows (TerminateProcess)
+        // reports a nonzero exit code with no signal. Assert the cross-platform
+        // invariant unconditionally, and the SIGKILL signal only on Unix.
+        assert_ne!(
+            resp.exit_status.exit_code,
+            Some(0),
+            "killed => not a clean exit"
+        );
+        #[cfg(unix)]
         assert_eq!(resp.exit_status.signal.as_deref(), Some("9"), "SIGKILL=9");
         reg.output(&out_req(&id))
             .expect("killed id keeps a valid output");
