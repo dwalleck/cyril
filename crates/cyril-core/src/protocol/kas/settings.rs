@@ -307,4 +307,39 @@ mod tests {
             "no exclude → omit"
         );
     }
+
+    #[test]
+    fn marshal_live_fixture() {
+        // Claim 9 (integration / CI fence for behavioral claims 10-11): a realistic
+        // cli.json — flat dotted keys ALONGSIDE a nested `chat` object that must be
+        // IGNORED (zme reads flat keys only), absent mapped keys, and unmapped keys —
+        // must produce exactly the zme-derived AgentSettings. A key-name typo in the
+        // table passes the narrow unit fixtures but breaks here. Oracle: the expected
+        // object independently hand-derived in .cyril-nhzw/cheapest-falsifier.py.
+        let cli = r#"{
+            "chat": { "enableKnowledge": true, "showThinking": true, "agentEngine": "v3" },
+            "chat.defaultModel": "claude-opus-4.8",
+            "chat.disableMarkdownRendering": false,
+            "chat.enableThinking": true,
+            "chat.enableTodoList": true,
+            "introspect.progressiveMode": true,
+            "toolSearch.enabled": true,
+            "toolSearch.minPct": 0,
+            "toolSearch.minTokens": 0
+        }"#;
+        let e: Map<String, Value> = serde_json::from_str(cli).unwrap();
+        let got = marshal_agent_settings(&e);
+        // Nested `chat.enableKnowledge` is ignored (no FLAT key) → knowledge via
+        // default; codeIntelligence/subagentOrchestration via default; unmapped keys
+        // (defaultModel, disableMarkdownRendering, progressiveMode) dropped.
+        let expected = serde_json::json!({
+            "thinking": { "enabled": true },
+            "todoList": { "enabled": true },
+            "knowledge": { "enabled": true },
+            "codeIntelligence": { "enabled": true },
+            "subagentOrchestration": { "enabled": true },
+            "toolSearch": { "enabled": true, "minPct": 0, "minTokens": 0 }
+        });
+        assert_eq!(got, expected, "live fixture marshal mismatch");
+    }
 }
