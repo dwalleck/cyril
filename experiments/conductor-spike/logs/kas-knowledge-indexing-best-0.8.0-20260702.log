@@ -1,0 +1,8 @@
+sessionId: sess_d0682636-03b8-4753-b2a8-0ca75147883b
+mode option values: ["vibe", "spec", "quick-spec", "bug-fix", "plan", "autonomous", "semantic_reviewer", "kbtest"]
+set_config_option(mode=kbtest): {"configOptions": [{"type": "select", "id": "mode", "name": "Mode", "category": "mode", "currentValue": "kbtest", "options": [{"value": "vibe", "name": "Default", "description": "General coding assist
+
+KB NOTIFS (1):
+  {"method": "_kiro/knowledge/indexingStarted", "params": {"sessionId": "sess_d0682636-03b8-4753-b2a8-0ca75147883b", "name": "lighthouse-notes", "fileCount": 3}}
+
+VERDICT: indexingStarted seen: True | indexingCompleted seen: False

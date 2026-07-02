@@ -1,0 +1,9 @@
+sessionId: sess_2e22bd6d-7069-422e-a377-6144d3a18f18
+mode option values: ["vibe", "spec", "quick-spec", "bug-fix", "plan", "autonomous", "semantic_reviewer", "kbtest"]
+set_config_option(mode=kbtest): {"configOptions": [{"type": "select", "id": "mode", "name": "Mode", "category": "mode", "currentValue": "kbtest", "options": [{"value": "vibe", "name": "Default", "description": "General coding assist
+
+KB NOTIFS (2):
+  {"method": "_kiro/knowledge/indexingStarted", "params": {"sessionId": "sess_2e22bd6d-7069-422e-a377-6144d3a18f18", "name": "lighthouse-notes", "fileCount": 3}}
+  {"method": "_kiro/knowledge/indexingCompleted", "params": {"sessionId": "sess_2e22bd6d-7069-422e-a377-6144d3a18f18", "name": "lighthouse-notes", "status": "success", "itemCount": 3}}
+
+VERDICT: indexingStarted seen: True | indexingCompleted seen: True

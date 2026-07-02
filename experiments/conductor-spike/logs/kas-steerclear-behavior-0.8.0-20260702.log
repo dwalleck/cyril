@@ -1,0 +1,15 @@
+sessionId: sess_0bb6bbb2-1145-4d13-9315-39c3ced8cd30
+[A test steer+clear] steer resp: {"queued": true, "messageId": "steer-394e8ca9-2e40-4062-bd2e-706d2c44e371"}
+[A test steer+clear] clear resp: {"cleared": true, "messageIds": ["steer-394e8ca9-2e40-4062-bd2e-706d2c44e371"]}
+[A test steer+clear] turn: {"jsonrpc": "2.0", "id": 3, "error": {"code": -32000, "message": "Access denied. Please check your authentication. (Request ID: 5b92aa31-af29-43a2-9877-57a7ec789083)", "data": {"errorType": "AccessDen; textLen: 99; marker STEERMARK_ALPHA present: False
+[A test steer+clear] text: Access denied. Please check your authentication. (Request ID: 5b92aa31-af29-43a2-9877-57a7ec789083)
+[A test steer+clear] EVENT steer-related-update: {"sessionUpdate": "available_commands_update", "availableCommands": [{"name": "architecture-selection", "description": "Steering: architecture-selection", "input": {"hint": "optional context"}, "_meta": {"kiro": {"type": "steering", "contextQuery": "global:architecture-selection", "originalName": "a
+[A test steer+clear] EVENT steer-related-update: {"sessionUpdate": "session_info_update", "_meta": {"kiro": {"steeringDocuments": ["file:///home/dwalleck/.kiro/steering/rivets.md"], "kind": "steering_inclusion"}}}
+[A test steer+clear] EVENT steer-related-update: {"sessionUpdate": "session_info_update", "_meta": {"kiro": {"kind": "steering_queued", "messageId": "steer-394e8ca9-2e40-4062-bd2e-706d2c44e371", "content": "IMPORTANT CHANGE: end your reply with the single word STEERMARK_ALPHA"}}}
+[A test steer+clear] EVENT steer-related-update: {"sessionUpdate": "session_info_update", "_meta": {"kiro": {"kind": "steering_cleared", "messageIds": ["steer-394e8ca9-2e40-4062-bd2e-706d2c44e371"]}}}
+[B control steer only] steer resp: {"queued": true, "messageId": "steer-fb9b05a8-35ff-4d85-bc39-b89a9dc8b8c0"}
+[B control steer only] turn: {"jsonrpc": "2.0", "id": 6, "error": {"code": -32000, "message": "Access denied. Please check your authentication. (Request ID: e890cd03-e497-4db8-9225-77643c6d2b78)", "data": {"errorType": "AccessDen; textLen: 99; marker STEERMARK_BRAVO present: False
+[B control steer only] text: Access denied. Please check your authentication. (Request ID: e890cd03-e497-4db8-9225-77643c6d2b78)
+[B control steer only] EVENT steer-related-update: {"sessionUpdate": "session_info_update", "_meta": {"kiro": {"kind": "steering_queued", "messageId": "steer-fb9b05a8-35ff-4d85-bc39-b89a9dc8b8c0", "content": "IMPORTANT CHANGE: end your reply with the single word STEERMARK_BRAVO"}}}
+
+VERDICT: cleared steer suppressed: True | control steer landed: False
