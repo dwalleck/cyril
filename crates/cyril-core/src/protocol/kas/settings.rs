@@ -43,12 +43,25 @@ fn read_settings_at(path: &std::path::Path) -> Map<String, Value> {
     }
 }
 
-/// Read the global kiro-cli settings (`$HOME/.kiro/settings/cli.json`). Missing
-/// home or file → empty map (see [`read_settings_at`]). Workspace-scoped overlay is
-/// out of scope for v1 (tracked: cyril-sa39).
+/// The kiro-cli config base directory, mirroring the CLI's own resolution
+/// (`R4e()` in `kiro-tui-2.8.1.js`): `$KIRO_HOME` wins when set and non-empty
+/// (used verbatim, NOT joined with `.kiro`), otherwise `$HOME/.kiro`. Reading a
+/// different path would silently fall back to empty settings for users who set
+/// `$KIRO_HOME` — exactly the bare-fallback-flags bug this handshake fixes.
+fn kiro_home_dir() -> Option<std::path::PathBuf> {
+    match std::env::var_os("KIRO_HOME") {
+        Some(h) if !h.is_empty() => Some(std::path::PathBuf::from(h)),
+        _ => crate::kiro_agent_config::home_dir().map(|home| home.join(".kiro")),
+    }
+}
+
+/// Read the global kiro-cli settings (`<kiro-home>/settings/cli.json`, where
+/// `<kiro-home>` follows [`kiro_home_dir`]). Missing home or file → empty map (see
+/// [`read_settings_at`]). Workspace-scoped overlay is out of scope for v1
+/// (tracked: cyril-sa39).
 pub(crate) fn read_cli_settings() -> Map<String, Value> {
-    match crate::kiro_agent_config::home_dir() {
-        Some(home) => read_settings_at(&home.join(".kiro/settings/cli.json")),
+    match kiro_home_dir() {
+        Some(dir) => read_settings_at(&dir.join("settings/cli.json")),
         None => Map::new(),
     }
 }
@@ -125,6 +138,36 @@ pub(crate) fn marshal_agent_settings(e: &Map<String, Value>) -> Value {
             c.insert("excludeMessages".to_string(), v);
         }
         n.insert("compaction".to_string(), Value::Object(c));
+    }
+    // `knowledge` (extended) — when `chat.enableKnowledge` is a boolean, zme
+    // OVERWRITES the bool-map/default `knowledge` with the full tuning object.
+    // Arrays for patterns; numeric-only for maxFiles/chunkSize/chunkOverlap;
+    // indexType restricted to the two valid enum values. Absent → knowledge keeps
+    // its default-on `{enabled:true}`.
+    if let Some(Value::Bool(enabled)) = e.get("chat.enableKnowledge") {
+        let mut k = Map::new();
+        k.insert("enabled".to_string(), Value::Bool(*enabled));
+        if let Some(Value::Array(a)) = e.get("knowledge.defaultIncludePatterns") {
+            k.insert("includePatterns".to_string(), Value::Array(a.clone()));
+        }
+        if let Some(Value::Array(a)) = e.get("knowledge.defaultExcludePatterns") {
+            k.insert("excludePatterns".to_string(), Value::Array(a.clone()));
+        }
+        if let Some(v) = e.get("knowledge.maxFiles").and_then(num) {
+            k.insert("maxFiles".to_string(), v);
+        }
+        if let Some(v) = e.get("knowledge.chunkSize").and_then(num) {
+            k.insert("chunkSize".to_string(), v);
+        }
+        if let Some(v) = e.get("knowledge.chunkOverlap").and_then(num) {
+            k.insert("chunkOverlap".to_string(), v);
+        }
+        if let Some(Value::String(s)) = e.get("knowledge.indexType")
+            && (s == "fast" || s == "accurate")
+        {
+            k.insert("indexType".to_string(), Value::String(s.clone()));
+        }
+        n.insert("knowledge".to_string(), Value::Object(k));
     }
     Value::Object(n)
 }
@@ -284,6 +327,45 @@ mod tests {
             got.as_object().unwrap().get("toolSearch"),
             None,
             "no enabled → omit: {got}"
+        );
+    }
+
+    #[test]
+    fn knowledge_extended() {
+        // zme's `chat.enableKnowledge` block: a boolean source OVERWRITES the
+        // default `knowledge` with the full tuning object — arrays for patterns,
+        // numeric tuning kept, a bool in a numeric slot dropped (not coerced), and
+        // indexType only for the two valid enum values. Fails if the extended block
+        // is dropped (knowledge stays a bare `{enabled}` from the default/bool-map).
+        let got = marshal_agent_settings(&map(&[
+            ("chat.enableKnowledge", Value::Bool(true)),
+            ("knowledge.maxFiles", serde_json::json!(200)),
+            ("knowledge.chunkSize", Value::Bool(true)), // non-number → dropped
+            ("knowledge.indexType", Value::String("accurate".into())),
+            (
+                "knowledge.defaultIncludePatterns",
+                serde_json::json!(["*.rs"]),
+            ),
+        ]));
+        assert_eq!(
+            got.as_object().unwrap().get("knowledge"),
+            Some(&serde_json::json!({
+                "enabled": true,
+                "maxFiles": 200,
+                "indexType": "accurate",
+                "includePatterns": ["*.rs"]
+            })),
+            "knowledge extended block: {got}"
+        );
+        // Invalid indexType dropped; explicit `false` preserved (not defaulted-on).
+        let bad_idx = marshal_agent_settings(&map(&[
+            ("chat.enableKnowledge", Value::Bool(false)),
+            ("knowledge.indexType", Value::String("turbo".into())),
+        ]));
+        assert_eq!(
+            bad_idx.as_object().unwrap().get("knowledge"),
+            Some(&serde_json::json!({ "enabled": false })),
+            "invalid indexType dropped, false preserved: {bad_idx}"
         );
     }
 
