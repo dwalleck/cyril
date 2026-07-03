@@ -57,3 +57,31 @@ Every distinct message kind the agent sends, with cyril status. **cyril drops al
 **New cyril-relevant surface** (tracked → cyril-0o7e): `_kiro/governance/state` (feature gating), `turn_completion` (per-turn cost + usedTools + elapsedTime, richer than the flat metering), `focus_update` (status line). Per-file `context_usage` includes `progressivelyLoaded` (→ cyril-1116).
 
 **Structural note for the KAS converter:** several `session_info_update` kinds **double-encode** — a typed sub-object AND flattened fields (`pendingInteraction.{question,options}` + flat `question`/`options`; `turnEnd.stopReason` + flat `stopReason`; `focus.title` + flat `title`; `contextUsage.usagePercentage` + flat `usagePercentage`). Read the flat `_meta.kiro.X` consistently rather than mixing.
+
+---
+
+# v2 side-by-side (`v2-live-session-trace-2.11.0.jsonl`)
+
+A real tool-using **v2** (default `kiro-cli acp`) session, same capture method (`KIRO_ACP_RECORD_PATH`, `kiro-tui` 2.11.0), 391 frames / ~667s, 14 prompt turns. Dialect is `_kiro.dev/*` (dotted), vs KAS `_kiro/*`. This exercises the v2 tool/permission surface the earlier trivial proxy capture didn't.
+
+## v2 tool lifecycle (cyril handles all of it)
+- `session/update::tool_call` / `tool_call_update`: `rawInput` (`operations[]` for fs_read, `pattern`/`symbol_name`/`output_mode` for search), `_meta.kiro.toolName`, structured `rawOutput.items[].{Json:{numFiles,numMatches,results[].{file,count,matches[]},truncated}, Text}`, `content[]` diffs, `locations[].{path,line}`.
+- `session/request_permission` with **`_meta.trustOptions[].{display, label, patterns[], setting_key}`** — v2's command-pattern trust model. The response echoes the chosen `outcome._meta.trustOption.{patterns, setting_key}`. cyril handles trust options.
+- `_kiro.dev/metadata` (×16): `meteringUsage[].{unit,value}` + `turnDurationMs` — **cyril parses both** (`convert/kiro.rs` → `TurnMetering{credits, duration}`).
+- `_kiro.dev/settings/list`: full roster incl. `chat.modelDefaults.<model>.output_config.effort` (per-model effort default → cyril-lxuo) and `toolSearch.{enabled,minPct,minTokens}`.
+- `_kiro.dev/subagent/list_update` `{subagents, pendingStages}` — the `agent_crew` model cyril's `SubagentTracker` is built for (empty this session).
+
+## New observation: v2 client→agent telemetry channel
+The TUI emits **`_kiro.dev/telemetry/*` (dir out, client→agent)**: `processHealth` (×11 — `{cpuUserPct, eventLoopP99Ms, heapUsedMb, inputLatencyP95Ms, rendersPerMin, rssMb, yogaNodeCount, …}`), **`uiModeSessionStart` (UNDOCUMENTED — confirms the binary's `ui_mode_*` telemetry rides ACP)**, `chatSlashCommand`. cyril emits none — correctly; it's frontend self-telemetry to AWS, and omitting it is a privacy plus ([[reference_kiro_acp_telemetry]]).
+
+## v2 vs KAS — the shapes differ
+| | v2 (`_kiro.dev/*`) | KAS (`_kiro/*`) |
+|---|---|---|
+| tool metadata | `_meta.kiro.toolName`; `rawOutput.items[].{Json,Text}` | `_meta.kiro.{toolId, agentSubtaskId, preview, checkpoint, toolOrigin}` — subtask grouping + snapshot |
+| trust/consent | `trustOptions[].{patterns, setting_key}` (command-pattern) | `consent{capability, scope, resource}` (Cedar) — cyril-qo13 |
+| per-turn cost | `_kiro.dev/metadata{meteringUsage[], turnDurationMs}` — **cyril handles** | `turn_completion{promptTurnSummaries[usage, usedTools], elapsedTime}` — dropped (cyril-0o7e); `usedTools[]` is KAS-only |
+| subagents | `subagent/list_update` (SubagentTracker) | `agent-subtask` tool_calls, no list_update (KAS-3) |
+| client→agent telemetry | `_kiro.dev/telemetry/*` | none observed |
+| governance/checkpoint/interaction/focus | absent | present |
+
+Net: the v2 tool-turn surfaced no cyril bug — it confirmed the v2 tool/permission/trust surface is handled. KAS carries *more* per-tool metadata (subagent grouping + checkpoints); the two engines have genuinely different trust models (v2 command-pattern vs KAS Cedar consent), both of which cyril already represents.
