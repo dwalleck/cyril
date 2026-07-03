@@ -85,3 +85,13 @@ The TUI emits **`_kiro.dev/telemetry/*` (dir out, client→agent)**: `processHea
 | governance/checkpoint/interaction/focus | absent | present |
 
 Net: the v2 tool-turn surfaced no cyril bug — it confirmed the v2 tool/permission/trust surface is handled. KAS carries *more* per-tool metadata (subagent grouping + checkpoints); the two engines have genuinely different trust models (v2 command-pattern vs KAS Cedar consent), both of which cyril already represents.
+
+## Concrete tool-lifecycle field diff (both traces)
+
+The two engines **share only the ACP `tool_call` skeleton** (`toolCallId`, `title`, `status`, `locations[].path`, nested `content[].content.{text,type}`). Everything semantic is engine-specific — cyril needs a distinct converter path per engine (which the `convert/kiro.rs` vs `convert/kas.rs` split already anticipates):
+
+- **`rawInput` — different tools entirely:** KAS `{text, paths[], start_line, end_line, offset, query, includePattern, caseSensitive, depth}` + subagent `{name, preset, prompt, contextFiles}`; v2 `{operation, operations[].{path,mode,offset,limit}, output_mode, pattern, symbol_name, include_source}`. Concrete confirmation of [[reference_kiro_tool_input_schemas]] (silent-serde-fail risk). cyril survives it because `client.rs` caches `rawInput` as **raw JSON without typing it** — engine-agnostic by not deserializing.
+- **`rawOutput` — typed enum vs loose object:** KAS `{message, content, properties, requirementsPath}`; v2 `{items[].{Json:{numFiles,numMatches,results[].{file,count,matches[]},truncated}, Text}}` (a serde tagged enum — the Rust `ToolOutput`).
+- **Tool metadata:** KAS `_meta.kiro.{agentSubtaskId, preview{file,local,modified,originalContent,modifiedContent}, checkpoint{local,modified}, toolOrigin, toolId}`; v2 `_meta.kiro.toolName` only.
+- **Diff delivery:** KAS emits explicit `content[].{type:"diff", newText, oldText, path}`; v2 `tool_call_update` content was `content`-only (no `diff` type) this session.
+- **Trust model (no field overlap):** v2 permission `_meta.trustOptions[].{patterns[], setting_key, label, display}` → response `outcome._meta.trustOption.{patterns[], setting_key}` (command-pattern trust, persisted to a setting). KAS permission `_meta.kiro.consent{capability, resource, askType}` + `consentRound` → response `outcome._meta.kiro.consent{capability, scope, workspaceRoot}` (Cedar capability+scope grant). ⇒ cyril's trust UI/persistence is **engine-conditional**; KAS side = cyril-qo13.
