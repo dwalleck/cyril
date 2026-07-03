@@ -62,7 +62,7 @@ When reverse-engineering Kiro CLI or similar tools, follow this priority order:
 1. **Application logs first** — check `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` and `~/.kiro/` for structured logs and SQLite databases
 2. **Bundled source extraction** — Kiro ships a bundled `tui.js` (React/Ink TUI) that contains TypeScript interfaces and protocol handling; extract and read it
 3. **Binary string extraction** — `strings` / symbol analysis on unstripped binaries as a last resort
-4. **Protocol tracing** — use the logging proxy at `experiments/kiro-proxy-rs/` to capture live ACP traffic
+4. **Protocol tracing** — two ways to capture live ACP traffic: (a) Kiro-native — set `KIRO_ACP_RECORD_PATH=/path/trace.jsonl` and the TUI records every frame as `{ts, dir, msg}` JSONL (zero setup, captures a real session both directions); (b) the logging proxy at `experiments/kiro-proxy-rs/` (`KIRO_PROXY_LOG`) when you need to sit in cyril's own spawn path. Committed reference captures + inventory: `experiments/conductor-spike/{kas,v2}-live-session-trace-2.11.0.{jsonl,md}`; diff two captures with `diff-acp-wire.py`.
 5. **Embedded doc-manifest delta** — `kiro-cli-chat` embeds a build-time documentation index (`{generated_at, total_docs, documents[]}`, two manifests in 2.8.1) that is a *superset* of the public kiro.dev docs and leaks unannounced features (e.g. `voice-mode`/Whisper). Diff `documents[]` (by `path`+`title`+`validated`) against the prior release each audit; baseline + extractor output at `docs/kiro-docs-index-2.8.1*`. See the doc-manifest addendum in the wire-audit methodology.
 
 Check logs and databases before attempting binary analysis — they're more reliable and faster to work with.
@@ -86,12 +86,13 @@ Tooling references the archive via `$HOME/.local/share/kiro-research/binaries/<v
 
 ## Architecture
 
-### Three-Crate Workspace
+### Four-Crate Workspace
 
 ```
 crates/
   cyril-core/     # Library — protocol, types, commands, session, platform
   cyril-ui/       # Library — rendering, widgets, UI state (depends on cyril-core)
+  cyril-voice/    # Library — speech-to-text voice input engine; behind the default-off `voice` feature (ROADMAP CN2)
   cyril/          # Binary — wires everything together, owns the event loop
 ```
 
@@ -101,7 +102,7 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 
 **`cyril-core`** — Domain logic and protocol boundary.
 - **Owns:** Types (`types/`), ACP protocol bridge (`protocol/`), command registry (`commands/`), session state (`session.rs`), path translation (`platform/`), error types (`error.rs`)
-- **Responsibility:** Convert between ACP wire types and internal domain types. Generic ACP conversion lives in `convert/mod.rs`; Kiro-specific extensions live in `convert/kiro.rs`. The bridge runs on a dedicated `!Send` thread and communicates via typed channels.
+- **Responsibility:** Convert between ACP wire types and internal domain types. Generic ACP conversion lives in `convert/mod.rs`; v2 Kiro extensions (`kiro.dev/*`) in `convert/kiro.rs`; KAS extensions (`_kiro/*`, `session_info_update` kinds) in `convert/kas.rs`. The bridge runs on a dedicated `!Send` thread and communicates via typed channels.
 - **Must NOT:** Import any UI crate. Reference ratatui, crossterm, or any rendering concept. Know how content is displayed.
 - **Dependency rule:** Only crate that imports `agent-client-protocol`. No other crate may reference `acp::` types.
 
