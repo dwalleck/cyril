@@ -295,10 +295,32 @@ pub enum PermissionOptionKind {
     RejectAlways,
 }
 
+/// Unique identifier of a permission option within one request. Newtype
+/// preventing labels or other strings being passed where the wire optionId
+/// belongs.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PermissionOptionId(String);
+
+impl PermissionOptionId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for PermissionOptionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 /// An option in a permission request dialog.
 #[derive(Debug, Clone)]
 pub struct PermissionOption {
-    pub id: String,
+    pub id: PermissionOptionId,
     pub label: String,
     pub kind: PermissionOptionKind,
     pub is_destructive: bool,
@@ -506,12 +528,12 @@ mod tests {
     #[test]
     fn permission_option_fields() {
         let opt = PermissionOption {
-            id: "allow_once".into(),
+            id: PermissionOptionId::new("allow_once"),
             label: "Allow Once".into(),
             kind: PermissionOptionKind::AllowOnce,
             is_destructive: false,
         };
-        assert_eq!(opt.id, "allow_once");
+        assert_eq!(opt.id.as_str(), "allow_once");
         assert_eq!(opt.kind, PermissionOptionKind::AllowOnce);
         assert!(!opt.is_destructive);
     }

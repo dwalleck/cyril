@@ -54,7 +54,11 @@ fn probe_qo13_replay_trace_permissions() {
                 .as_str()
                 .unwrap_or("<none>")
                 .to_string();
-            let verdict = if sent == opt.id { "OK" } else { "WRONG" };
+            let verdict = if sent == opt.id.as_str() {
+                "OK"
+            } else {
+                "WRONG"
+            };
             println!(
                 "  pick k={k} picked_id={} cyril_sends={sent} meta={} {verdict}",
                 opt.id, wire_json["outcome"]["_meta"],

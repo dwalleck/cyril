@@ -3899,13 +3899,13 @@ mod tests {
 
         let (req, rx) = make_approval_request(vec![
             PermissionOption {
-                id: "opt_allow".into(),
+                id: cyril_core::types::PermissionOptionId::new("opt_allow"),
                 label: "Yes".into(),
                 kind: PermissionOptionKind::AllowOnce,
                 is_destructive: false,
             },
             PermissionOption {
-                id: "opt_reject_always".into(),
+                id: cyril_core::types::PermissionOptionId::new("opt_reject_always"),
                 label: "Never".into(),
                 kind: PermissionOptionKind::RejectAlways,
                 is_destructive: true,
@@ -3928,7 +3928,7 @@ mod tests {
         // Agent sends AllowAlways at index 0 — the old index-based dispatch
         // would have returned AllowOnce here. Kind-based dispatch returns AllowAlways.
         let (req, rx) = make_approval_request(vec![PermissionOption {
-            id: "opt_always".into(),
+            id: cyril_core::types::PermissionOptionId::new("opt_always"),
             label: "Always".into(),
             kind: PermissionOptionKind::AllowAlways,
             is_destructive: false,
@@ -3948,13 +3948,13 @@ mod tests {
 
         let (req, rx) = make_approval_request(vec![
             PermissionOption {
-                id: "allow".into(),
+                id: cyril_core::types::PermissionOptionId::new("allow"),
                 label: "Allow".into(),
                 kind: PermissionOptionKind::AllowOnce,
                 is_destructive: false,
             },
             PermissionOption {
-                id: "reject".into(),
+                id: cyril_core::types::PermissionOptionId::new("reject"),
                 label: "Reject".into(),
                 kind: PermissionOptionKind::RejectOnce,
                 is_destructive: true,
@@ -4004,7 +4004,7 @@ mod tests {
 
         let (req, _rx) = make_approval_request_with_trust(
             vec![PermissionOption {
-                id: "always".into(),
+                id: cyril_core::types::PermissionOptionId::new("always"),
                 label: "Always".into(),
                 kind: PermissionOptionKind::AllowAlways,
                 is_destructive: false,
@@ -4035,7 +4035,7 @@ mod tests {
 
         let (req, rx) = make_approval_request_with_trust(
             vec![PermissionOption {
-                id: "always".into(),
+                id: cyril_core::types::PermissionOptionId::new("always"),
                 label: "Always".into(),
                 kind: PermissionOptionKind::AllowAlways,
                 is_destructive: false,
@@ -4084,7 +4084,7 @@ mod tests {
 
         let (req, _rx) = make_approval_request_with_trust(
             vec![PermissionOption {
-                id: "always".into(),
+                id: cyril_core::types::PermissionOptionId::new("always"),
                 label: "Always".into(),
                 kind: PermissionOptionKind::AllowAlways,
                 is_destructive: false,
@@ -4122,13 +4122,13 @@ mod tests {
         let (req, _rx) = make_approval_request_with_trust(
             vec![
                 PermissionOption {
-                    id: "once".into(),
+                    id: cyril_core::types::PermissionOptionId::new("once"),
                     label: "Allow Once".into(),
                     kind: PermissionOptionKind::AllowOnce,
                     is_destructive: false,
                 },
                 PermissionOption {
-                    id: "always".into(),
+                    id: cyril_core::types::PermissionOptionId::new("always"),
                     label: "Always".into(),
                     kind: PermissionOptionKind::AllowAlways,
                     is_destructive: false,
@@ -4158,7 +4158,7 @@ mod tests {
         use cyril_core::types::{PermissionOption, PermissionOptionKind, PermissionResponse};
 
         let (req, rx) = make_approval_request(vec![PermissionOption {
-            id: "always".into(),
+            id: cyril_core::types::PermissionOptionId::new("always"),
             label: "Always".into(),
             kind: PermissionOptionKind::AllowAlways,
             is_destructive: false,

@@ -135,13 +135,13 @@ mod tests {
             message: "Allow execution?".into(),
             options: vec![
                 cyril_core::types::PermissionOption {
-                    id: "allow".into(),
+                    id: cyril_core::types::PermissionOptionId::new("allow"),
                     label: "Allow Once".into(),
                     kind: cyril_core::types::PermissionOptionKind::AllowOnce,
                     is_destructive: false,
                 },
                 cyril_core::types::PermissionOption {
-                    id: "reject".into(),
+                    id: cyril_core::types::PermissionOptionId::new("reject"),
                     label: "Reject".into(),
                     kind: cyril_core::types::PermissionOptionKind::RejectOnce,
                     is_destructive: true,
@@ -197,7 +197,7 @@ mod tests {
             ),
             message: "Allow execution?".into(),
             options: vec![cyril_core::types::PermissionOption {
-                id: "always".into(),
+                id: cyril_core::types::PermissionOptionId::new("always"),
                 label: "Always Allow".into(),
                 kind: cyril_core::types::PermissionOptionKind::AllowAlways,
                 is_destructive: false,

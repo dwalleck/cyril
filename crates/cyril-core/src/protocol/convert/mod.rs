@@ -230,7 +230,7 @@ pub(crate) fn to_permission_options(args: &acp::RequestPermissionRequest) -> Vec
                 PermissionOptionKind::RejectOnce | PermissionOptionKind::RejectAlways
             );
             PermissionOption {
-                id: opt.option_id.to_string(),
+                id: PermissionOptionId::new(opt.option_id.to_string()),
                 label: opt.name.clone(),
                 kind,
                 is_destructive,
