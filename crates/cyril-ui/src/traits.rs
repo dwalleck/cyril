@@ -363,12 +363,17 @@ pub struct Suggestion {
 }
 
 /// The current phase of the approval dialog.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApprovalPhase {
     /// Phase 1: Select allow/reject option.
     SelectOption,
-    /// Phase 2: Select trust tier (shown after AllowAlways when trust options exist).
-    SelectTrust,
+    /// Phase 2: Select trust tier (shown after AllowAlways when trust options
+    /// exist). Carries the id of the phase-1 AllowAlways pick — in this phase
+    /// `selected` re-indexes `trust_options`, so the eventual reply's option
+    /// id can only come from here.
+    SelectTrust {
+        chosen_option_id: cyril_core::types::PermissionOptionId,
+    },
 }
 
 /// Permission approval dialog state.

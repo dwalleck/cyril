@@ -7,7 +7,7 @@ use crate::traits::{ApprovalPhase, ApprovalState};
 pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
     match state.phase {
         ApprovalPhase::SelectOption => render_option_phase(frame, area, state),
-        ApprovalPhase::SelectTrust => render_trust_phase(frame, area, state),
+        ApprovalPhase::SelectTrust { .. } => render_trust_phase(frame, area, state),
     }
 }
 
@@ -207,7 +207,9 @@ mod tests {
                 trust_option("Base command", "echo *"),
             ],
             selected: 1,
-            phase: ApprovalPhase::SelectTrust,
+            phase: ApprovalPhase::SelectTrust {
+                chosen_option_id: cyril_core::types::PermissionOptionId::new("always"),
+            },
             responder: tokio::sync::oneshot::channel().0,
         };
 

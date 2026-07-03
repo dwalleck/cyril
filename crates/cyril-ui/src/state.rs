@@ -1316,7 +1316,7 @@ impl UiState {
         if let Some(ref mut approval) = self.approval {
             let max = match approval.phase {
                 ApprovalPhase::SelectOption => approval.options.len(),
-                ApprovalPhase::SelectTrust => approval.trust_options.len(),
+                ApprovalPhase::SelectTrust { .. } => approval.trust_options.len(),
             };
             if approval.selected + 1 < max {
                 approval.selected += 1;
@@ -1340,18 +1340,20 @@ impl UiState {
         // back; every other path consumes it to send a response.
         let mut approval = self.approval.take()?;
 
-        match approval.phase {
+        match approval.phase.clone() {
             ApprovalPhase::SelectOption => {
                 let picked = approval
                     .options
                     .get(approval.selected)
                     .map(|o| (o.kind, o.id.clone()));
                 match picked {
-                    Some((PermissionOptionKind::AllowAlways, _))
+                    Some((PermissionOptionKind::AllowAlways, chosen_option_id))
                         if !approval.trust_options.is_empty() =>
                     {
                         // Transition to phase 2 — restore the dialog, advanced.
-                        approval.phase = ApprovalPhase::SelectTrust;
+                        // The phase carries the picked id: `selected` will
+                        // re-index trust_options from here on.
+                        approval.phase = ApprovalPhase::SelectTrust { chosen_option_id };
                         approval.selected = 0;
                         self.approval = Some(approval);
                     }
@@ -1382,11 +1384,14 @@ impl UiState {
                 }
                 None
             }
-            ApprovalPhase::SelectTrust => {
+            ApprovalPhase::SelectTrust { chosen_option_id } => {
                 // Keep the full chosen option (setting_key + patterns) so the
                 // caller can persist it; the response only carries the label.
+                // The option id is the phase-1 AllowAlways pick carried by
+                // the phase itself.
                 let chosen = approval.trust_options.get(approval.selected).cloned();
-                let response = PermissionResponse::AllowAlways {
+                let response = PermissionResponse::Selected {
+                    option_id: chosen_option_id,
                     trust_option: chosen.as_ref().map(|t| t.label.clone()),
                 };
                 if approval.responder.send(response).is_err() {
@@ -1402,16 +1407,19 @@ impl UiState {
     /// Cancel the approval dialog or go back from phase 2 to phase 1.
     pub fn approval_cancel(&mut self) {
         if let Some(ref mut approval) = self.approval
-            && approval.phase == ApprovalPhase::SelectTrust
+            && let ApprovalPhase::SelectTrust { chosen_option_id } = &approval.phase
         {
-            // Go back to phase 1, restoring the cursor to the AllowAlways option
-            // the user picked to enter phase 2 rather than snapping to the first.
-            approval.phase = ApprovalPhase::SelectOption;
-            approval.selected = approval
+            // Go back to phase 1, restoring the cursor to the exact option the
+            // user picked to enter phase 2 rather than snapping to the first.
+            // Replacing the phase discards the carried id — a re-pick must
+            // send the newly picked option, never the stale carry.
+            let restored = approval
                 .options
                 .iter()
-                .position(|o| o.kind == PermissionOptionKind::AllowAlways)
+                .position(|o| o.id == *chosen_option_id)
                 .unwrap_or(0);
+            approval.phase = ApprovalPhase::SelectOption;
+            approval.selected = restored;
             return;
         }
         if let Some(approval) = self.approval.take() {
@@ -4094,15 +4102,17 @@ mod tests {
 
         assert!(state.has_approval());
         let approval = state.approval.as_ref().expect("still active");
-        assert_eq!(approval.phase, ApprovalPhase::SelectTrust);
+        assert!(
+            matches!(&approval.phase, ApprovalPhase::SelectTrust { chosen_option_id } if chosen_option_id.as_str() == "always"),
+            "phase 2 must carry the phase-1 pick, got {:?}",
+            approval.phase
+        );
         assert_eq!(approval.selected, 0);
     }
 
     #[test]
     fn approval_phase2_confirm_sends_allow_always_with_trust_label() {
-        use cyril_core::types::{
-            PermissionOption, PermissionOptionKind, PermissionResponse, TrustOption,
-        };
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, TrustOption};
 
         let (req, rx) = make_approval_request_with_trust(
             vec![PermissionOption {
@@ -4141,12 +4151,96 @@ mod tests {
         assert_eq!(persisted.patterns, vec!["echo( .*)?".to_string()]);
 
         let response = rx.blocking_recv().expect("responder fired");
-        match response {
-            PermissionResponse::AllowAlways { trust_option } => {
-                assert_eq!(trust_option.as_deref(), Some("Base command"));
-            }
-            other => panic!("expected AllowAlways, got {other:?}"),
-        }
+        let (option_id, trust_option) = expect_selected(response);
+        assert_eq!(option_id.as_str(), "always");
+        assert_eq!(trust_option.as_deref(), Some("Base command"));
+    }
+
+    #[test]
+    fn approval_phase2_confirm_sends_phase1_option_id_not_first_option() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, TrustOption};
+
+        // cyril-qo13 C4 provenance: AllowAlways is NOT options[0]. After the
+        // phase-2 trust confirm, the reply must carry the phase-1 pick
+        // ('always-accept'), not options[approval.selected] — in phase 2
+        // `selected` re-indexes trust_options and would point at 'accept'.
+        let (req, rx) = make_approval_request_with_trust(
+            vec![
+                PermissionOption {
+                    id: cyril_core::types::PermissionOptionId::new("accept"),
+                    label: "Allow".into(),
+                    kind: PermissionOptionKind::AllowOnce,
+                    is_destructive: false,
+                },
+                PermissionOption {
+                    id: cyril_core::types::PermissionOptionId::new("always-accept"),
+                    label: "Always allow".into(),
+                    kind: PermissionOptionKind::AllowAlways,
+                    is_destructive: false,
+                },
+            ],
+            vec![TrustOption {
+                label: "Full command".into(),
+                display: "echo hi".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec!["echo hi".into()],
+            }],
+        );
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_select_next(); // index 1: the AllowAlways option
+        state.approval_confirm(); // → phase 2 (selected resets to 0)
+        state.approval_confirm(); // confirm trust tier 0
+
+        let response = rx.blocking_recv().expect("responder fired");
+        let (option_id, trust_option) = expect_selected(response);
+        assert_eq!(option_id.as_str(), "always-accept");
+        assert_eq!(trust_option.as_deref(), Some("Full command"));
+    }
+
+    #[test]
+    fn approval_phase2_back_then_repick_does_not_leak_stale_id() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind, TrustOption};
+
+        // cyril-qo13 C4 staleness guard: entering phase 2 carries the
+        // AllowAlways id; going BACK must discard it, so re-picking a
+        // different option replies with that option's id, not the stale carry.
+        let (req, rx) = make_approval_request_with_trust(
+            vec![
+                PermissionOption {
+                    id: cyril_core::types::PermissionOptionId::new("accept"),
+                    label: "Allow".into(),
+                    kind: PermissionOptionKind::AllowOnce,
+                    is_destructive: false,
+                },
+                PermissionOption {
+                    id: cyril_core::types::PermissionOptionId::new("always-accept"),
+                    label: "Always allow".into(),
+                    kind: PermissionOptionKind::AllowAlways,
+                    is_destructive: false,
+                },
+            ],
+            vec![TrustOption {
+                label: "Full command".into(),
+                display: "echo hi".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec!["echo hi".into()],
+            }],
+        );
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_select_next(); // pick AllowAlways
+        state.approval_confirm(); // → phase 2
+        state.approval_cancel(); // back to phase 1 (cursor restored to AllowAlways)
+        state.approval_select_prev(); // move to 'accept'
+        state.approval_confirm();
+
+        let response = rx.blocking_recv().expect("responder fired");
+        let (option_id, trust_option) = expect_selected(response);
+        assert_eq!(option_id.as_str(), "accept");
+        assert!(trust_option.is_none());
     }
 
     #[test]
@@ -4171,10 +4265,10 @@ mod tests {
         let mut state = UiState::new(500);
         state.show_approval(req);
         state.approval_confirm(); // → phase 2
-        assert_eq!(
+        assert!(matches!(
             state.approval.as_ref().expect("active").phase,
-            ApprovalPhase::SelectTrust
-        );
+            ApprovalPhase::SelectTrust { .. }
+        ));
 
         state.approval_cancel(); // should go back, not dismiss
         assert!(state.has_approval());
