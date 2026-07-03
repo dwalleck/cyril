@@ -329,6 +329,16 @@ pub struct PermissionOption {
 /// The user's response to a permission request.
 #[derive(Debug, Clone)]
 pub enum PermissionResponse {
+    /// The user picked a specific option from the request's option list.
+    ///
+    /// `option_id` must name an option from the originating request; the
+    /// converter warns at runtime if it doesn't (a foreign id would silently
+    /// answer the agent with something it never offered).
+    Selected {
+        option_id: PermissionOptionId,
+        /// Trust tier label from phase-2 selection (v2 `AllowAlways` flow).
+        trust_option: Option<String>,
+    },
     AllowOnce,
     /// AllowAlways with an optional trust option label (from phase 2 selection).
     AllowAlways {

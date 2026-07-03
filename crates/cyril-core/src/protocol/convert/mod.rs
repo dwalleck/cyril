@@ -313,6 +313,36 @@ pub(crate) fn from_permission_response(
 ) -> acp::RequestPermissionResponse {
     let outcome = match &response {
         PermissionResponse::Cancel => acp::RequestPermissionOutcome::Cancelled,
+        PermissionResponse::Selected {
+            option_id,
+            trust_option,
+        } => {
+            // Runtime tripwire for the doc contract on `Selected`: a foreign
+            // id would silently answer the agent with an option it never
+            // offered, so this must survive release builds.
+            if !args
+                .options
+                .iter()
+                .any(|o| o.option_id.to_string() == option_id.as_str())
+            {
+                tracing::warn!(
+                    option_id = %option_id,
+                    "selected permission option not present in the originating request; sending as-is"
+                );
+            }
+            let mut selected = acp::SelectedPermissionOutcome::new(acp::PermissionOptionId::new(
+                option_id.as_str(),
+            ));
+            if let Some(label) = trust_option {
+                let mut meta = serde_json::Map::new();
+                meta.insert(
+                    "trustOption".to_string(),
+                    serde_json::Value::String(label.clone()),
+                );
+                selected = selected.meta(meta);
+            }
+            acp::RequestPermissionOutcome::Selected(selected)
+        }
         PermissionResponse::AllowOnce => {
             let option_id = find_option_id(args, acp::PermissionOptionKind::AllowOnce);
             acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
@@ -1163,6 +1193,113 @@ mod tests {
             resp.outcome,
             acp::RequestPermissionOutcome::Cancelled
         ));
+    }
+
+    #[test]
+    fn from_permission_response_selected_exact_id_without_meta() {
+        // cyril-qo13 C2: the reply carries the exact picked id, and when no
+        // trust label was chosen the serialized outcome has NO `_meta` key at
+        // all (a `"_meta": null` would differ from the reference client bytes).
+        let req = make_permission_request(vec![
+            ("q-option-0", "First", acp::PermissionOptionKind::AllowOnce),
+            ("q-option-1", "Second", acp::PermissionOptionKind::AllowOnce),
+            ("q-option-2", "Third", acp::PermissionOptionKind::AllowOnce),
+        ]);
+
+        let resp = from_permission_response(
+            PermissionResponse::Selected {
+                option_id: PermissionOptionId::new("q-option-1"),
+                trust_option: None,
+            },
+            &req,
+        );
+        let json = serde_json::to_value(&resp).expect("response serializes");
+        assert_eq!(json["outcome"]["optionId"], "q-option-1");
+        assert!(
+            json["outcome"].get("_meta").is_none(),
+            "no-trust reply must not carry a _meta key: {json}"
+        );
+    }
+
+    #[test]
+    fn from_permission_response_selected_trust_label_verbatim() {
+        // cyril-qo13 C2/C4: a phase-2 trust label — spaces, em-dash, parens —
+        // lands verbatim under `_meta.trustOption` (v2 echo, unchanged shape).
+        let req = make_permission_request(vec![
+            ("accept", "Allow", acp::PermissionOptionKind::AllowOnce),
+            (
+                "always-accept",
+                "Always",
+                acp::PermissionOptionKind::AllowAlways,
+            ),
+        ]);
+
+        let label = "Allow similar commands — ripgrep (rg …)";
+        let resp = from_permission_response(
+            PermissionResponse::Selected {
+                option_id: PermissionOptionId::new("always-accept"),
+                trust_option: Some(label.to_string()),
+            },
+            &req,
+        );
+        let json = serde_json::to_value(&resp).expect("response serializes");
+        assert_eq!(json["outcome"]["optionId"], "always-accept");
+        assert_eq!(json["outcome"]["_meta"]["trustOption"], label);
+    }
+
+    #[test]
+    fn from_permission_response_selected_foreign_id_warns_and_sends_as_is() {
+        // cyril-qo13 doc contract on `Selected.option_id` (load-bearing): a
+        // foreign id still converts — the UI can only pick real options, so
+        // this is state corruption — but the release-surviving warn must fire.
+        #[derive(Clone, Default)]
+        struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+        impl std::io::Write for CaptureWriter {
+            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                self.0.lock().expect("capture lock").extend_from_slice(buf);
+                Ok(buf.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+
+        impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
+            type Writer = CaptureWriter;
+            fn make_writer(&'a self) -> Self::Writer {
+                self.clone()
+            }
+        }
+
+        let req = make_permission_request(vec![(
+            "opt_allow",
+            "Yes",
+            acp::PermissionOptionKind::AllowOnce,
+        )]);
+
+        let capture = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_writer(capture.clone())
+            .finish();
+        let resp = tracing::subscriber::with_default(subscriber, || {
+            from_permission_response(
+                PermissionResponse::Selected {
+                    option_id: PermissionOptionId::new("not-an-offered-option"),
+                    trust_option: None,
+                },
+                &req,
+            )
+        });
+
+        let json = serde_json::to_value(&resp).expect("response serializes");
+        assert_eq!(json["outcome"]["optionId"], "not-an-offered-option");
+        let logs =
+            String::from_utf8(capture.0.lock().expect("capture lock").clone()).expect("utf8 logs");
+        assert!(
+            logs.contains("not present in the originating request"),
+            "foreign-id warn must fire; captured logs: {logs}"
+        );
     }
 
     #[test]
