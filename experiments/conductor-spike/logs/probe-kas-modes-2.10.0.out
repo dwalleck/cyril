@@ -1,0 +1,36 @@
+# binary=/home/dwalleck/.local/share/kiro-research/binaries/2.10.0/kiro-cli-chat
+
+===== mode=plan cwd=/home/dwalleck/.claude/tmp/kas-modes-ee_tvw5m =====
+  session=sess_ffeb1179-420e-4cad-9cb2-f11680438ed0  modes advertised: [None, None, None, None, None, None, None]
+  !! mode 'plan' not in advertised options — sending set anyway to record behavior
+  oracle: calc.py changed=False  git-porcelain=''
+  oracle: files now: ['README.md', 'calc.py']
+  tool_calls=2  userInputs=0  perms=[]
+  usedTools=[]  updateKinds=['agent_message_chunk', 'available_commands_update', 'config_option_update', 'session_info_update', 'tool_call', 'tool_call_update']
+  dump: /home/dwalleck/repos/cyril/experiments/conductor-spike/kas-modes-dumps/plan.json
+
+===== mode=bug-fix cwd=/home/dwalleck/.claude/tmp/kas-modes-_6u0t5c1 =====
+  session=sess_369e325f-61d9-47e7-8883-a0270462c72a  modes advertised: [None, None, None, None, None, None, None]
+  !! mode 'bug-fix' not in advertised options — sending set anyway to record behavior
+  oracle: calc.py changed=False  git-porcelain='?? .kiro/'
+  oracle: files now: ['.kiro/specs/add-function-wrong-operator/.config.kiro', '.kiro/specs/add-function-wrong-operator/bugfix.md', '.kiro/specs/add-function-wrong-operator/design.md', '.kiro/specs/add-function-wrong-operator/tasks.md', 'README.md', 'calc.py']
+  tool_calls=11  userInputs=0  perms=['mkdir -p /home/dwalleck/.claude/tmp/kas-modes-_6u0t5c1/.kiro/specs/add-function-wrong-operator', 'Write File', 'Write File', 'Write File', 'Write File']
+  usedTools=[]  updateKinds=['agent_message_chunk', 'available_commands_update', 'config_option_update', 'session_info_update', 'tool_call', 'tool_call_update']
+  dump: /home/dwalleck/repos/cyril/experiments/conductor-spike/kas-modes-dumps/bug-fix.json
+
+===== mode=quick-spec cwd=/home/dwalleck/.claude/tmp/kas-modes-81dlhgve =====
+  session=sess_ad58a15a-78c7-49db-86aa-b9b5aa0faab2  modes advertised: [None, None, None, None, None, None, None]
+  !! mode 'quick-spec' not in advertised options — sending set anyway to record behavior
+  -> userInput Q='**Should the test file use `pytest` or just the built-in `unittest` module?**' answering 'pytest'
+  -> userInput Q='**Should the test file also cover the existing `add()` function, or only the new `subtract()` function?**' answering 'Yes, test both functions'
+  -> userInput Q='**Does this plan look good, or would you like to adjust anything?** Once approved, you can run the tasks from tasks.md to implement.' answering "Looks good, let's go"
+  oracle: calc.py changed=False  git-porcelain='?? .kiro/'
+  oracle: files now: ['.kiro/specs/subtract-function/.config.kiro', '.kiro/specs/subtract-function/design.md', '.kiro/specs/subtract-function/requirements.md', '.kiro/specs/subtract-function/tasks.md', 'README.md', 'calc.py']
+  tool_calls=17  userInputs=3  perms=['mkdir -p /home/dwalleck/.claude/tmp/kas-modes-81dlhgve/.kiro/specs/subtract-function', 'Write File', 'Write File', 'Write File', 'Write File']
+  usedTools=[]  updateKinds=['agent_message_chunk', 'available_commands_update', 'config_option_update', 'session_info_update', 'tool_call', 'tool_call_update']
+  dump: /home/dwalleck/repos/cyril/experiments/conductor-spike/kas-modes-dumps/quick-spec.json
+
+===== SUMMARY =====
+  plan        timed_out=False calc_changed=False userInputs=0 usedTools=[] new_files=[]
+  bug-fix     timed_out=False calc_changed=False userInputs=0 usedTools=[] new_files=['.kiro/specs/add-function-wrong-operator/.config.kiro', '.kiro/specs/add-function-wrong-operator/bugfix.md', '.kiro/specs/add-function-wrong-operator/design.md', '.kiro/specs/add-function-wrong-operator/tasks.md']
+  quick-spec  timed_out=False calc_changed=False userInputs=3 usedTools=[] new_files=['.kiro/specs/subtract-function/.config.kiro', '.kiro/specs/subtract-function/design.md', '.kiro/specs/subtract-function/requirements.md', '.kiro/specs/subtract-function/tasks.md']

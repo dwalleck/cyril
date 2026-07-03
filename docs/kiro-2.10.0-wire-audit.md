@@ -102,3 +102,5 @@ Net: nothing to implement — 2.10.0's change rides notifications cyril already 
 - Hot-reload wire proof: `python3 experiments/conductor-spike/probe-hotreload-2.10.0.py ~/.local/bin/kiro-cli-chat` (mutates `mcp.json` + adds an agent file mid-session, logs the inbound re-advertisement; does one trivial turn).
 
 Methodology: `reference_kiro_wire_audit_methodology` (wire = binary × backend). Prior: `docs/kiro-2.9.0-wire-audit.md`.
+
+**Addendum 2026-07-02:** behavioral coverage of the byte-frozen KAS bundle — live probe of the `plan` / `bug-fix` / `quick-spec` modes (all drivable over ACP; six client-contract deltas incl. `options[].value` keying and the set→rebuild broadcast): [kiro-kas-modes-2.10.0.md](kiro-kas-modes-2.10.0.md).
