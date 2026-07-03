@@ -62,3 +62,73 @@ fn probe_qo13_replay_trace_permissions() {
         }
     }
 }
+
+/// Design-time falsifier for cyril-qo13 claim C2 (the cheapest in the
+/// falsification table of `.cyril-qo13/design.md`).
+///
+/// An acp `SelectedPermissionOutcome` built from the NON-FIRST option id of
+/// trace request 3 must serialize JSON-equal to the reference client's actual
+/// reply bytes. Falsified if the acp crate injects extra fields (e.g. a null
+/// `_meta`), renames `optionId`, or restricts what ids can be constructed.
+#[test]
+fn probe_qo13_reply_shape_matches_reference_bytes() {
+    let trace_path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../experiments/conductor-spike/kas-live-session-trace-2.11.0.jsonl"
+    );
+    let trace = std::fs::read_to_string(trace_path)
+        .unwrap_or_else(|e| panic!("trace file must exist at {trace_path}: {e}"));
+
+    // Oracle: the reference client's reply to request id=3 (picked k=1).
+    let mut reference_reply = None;
+    for line in trace.lines() {
+        let rec: serde_json::Value =
+            serde_json::from_str(line).unwrap_or_else(|e| panic!("trace line is JSON: {e}"));
+        if rec["dir"] == "out" && rec["msg"]["id"] == 3 && rec["msg"]["result"].is_object() {
+            reference_reply = Some(rec["msg"]["result"].clone());
+        }
+    }
+    let reference_reply =
+        reference_reply.unwrap_or_else(|| panic!("trace must contain the reply to id=3"));
+
+    // The proposed design's output for pick k=1 on request 3: the exact id,
+    // no kind lookup, no metadata.
+    let ours = acp::RequestPermissionResponse::new(acp::RequestPermissionOutcome::Selected(
+        acp::SelectedPermissionOutcome::new(acp::PermissionOptionId::new(
+            "toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-1",
+        )),
+    ));
+    let ours_json =
+        serde_json::to_value(&ours).unwrap_or_else(|e| panic!("response serializes: {e}"));
+
+    assert_eq!(
+        ours_json, reference_reply,
+        "C2 falsified: cyril's reply encoding differs from the reference client's bytes"
+    );
+}
+
+/// Design-time reachability probe for cyril-qo13 claim C7, now a sentinel:
+/// acp 0.10.2's `PermissionOptionKind` has no `#[serde(other)]` catch-all, so
+/// a request with an unknown option kind fails deserialization upstream of
+/// cyril's code — the unknown-kind input shape is unreachable today.
+///
+/// If this test ever starts seeing `Ok`, an acp upgrade made the shape
+/// reachable — revisit cyril-p7kp (release-audit watch item) and the dead
+/// `_ =>` arm in `to_permission_options`.
+#[test]
+fn probe_qo13_unknown_option_kind_parse() {
+    let params = serde_json::json!({
+        "sessionId": "sess_x",
+        "toolCall": { "toolCallId": "tc_x", "title": "Probe" },
+        "options": [
+            { "optionId": "opt-known", "name": "Known", "kind": "allow_once" },
+            { "optionId": "opt-mystery", "name": "Mystery", "kind": "definitely_not_a_kind" }
+        ]
+    });
+    let parsed = serde_json::from_value::<acp::RequestPermissionRequest>(params);
+    assert!(
+        parsed.is_err(),
+        "unknown option kinds became parseable — the unknown-kind input shape \
+         is now production-reachable; see cyril-p7kp: {parsed:?}"
+    );
+}
