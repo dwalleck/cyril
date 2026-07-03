@@ -1,0 +1,9 @@
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.92s
+     Running `target/debug/examples/test_bridge --agent-command kiro-cli acp`
+[2m2026-07-03T00:58:12.040017Z[0m [32m INFO[0m [2mcyril_core::protocol::bridge[0m[2m:[0m ACP bridge initialized
+[2m2026-07-03T00:58:37.702504Z[0m [33m WARN[0m [2mcyril_core::protocol::convert::kiro[0m[2m:[0m kiro.dev/metadata missing or non-numeric contextUsagePercentage
+[2m2026-07-03T00:58:40.706589Z[0m [33m WARN[0m [2mcyril_core::protocol::convert::kiro[0m[2m:[0m kiro.dev/metadata missing or non-numeric contextUsagePercentage
+[2m2026-07-03T00:58:43.856129Z[0m [33m WARN[0m [2mcyril_core::protocol::convert::kiro[0m[2m:[0m kiro.dev/metadata missing or non-numeric contextUsagePercentage
+[2m2026-07-03T00:58:46.710687Z[0m [33m WARN[0m [2mcyril_core::protocol::convert::kiro[0m[2m:[0m kiro.dev/metadata missing or non-numeric contextUsagePercentage
+[2m2026-07-03T00:59:16.712447Z[0m [32m INFO[0m [2mcyril_core::protocol::bridge[0m[2m:[0m bridge shutting down
