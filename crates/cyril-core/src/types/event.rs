@@ -340,27 +340,7 @@ pub enum PermissionResponse {
         /// Trust tier label from phase-2 selection (v2 `AllowAlways` flow).
         trust_option: Option<String>,
     },
-    AllowOnce,
-    /// AllowAlways with an optional trust option label (from phase 2 selection).
-    AllowAlways {
-        trust_option: Option<String>,
-    },
-    Reject,
-    RejectAlways,
     Cancel,
-}
-
-impl From<PermissionOptionKind> for PermissionResponse {
-    fn from(kind: PermissionOptionKind) -> Self {
-        match kind {
-            PermissionOptionKind::AllowOnce => PermissionResponse::AllowOnce,
-            PermissionOptionKind::AllowAlways => {
-                PermissionResponse::AllowAlways { trust_option: None }
-            }
-            PermissionOptionKind::RejectOnce => PermissionResponse::Reject,
-            PermissionOptionKind::RejectAlways => PermissionResponse::RejectAlways,
-        }
-    }
 }
 
 /// Commands sent from the App to the ACP bridge.
@@ -550,35 +530,15 @@ mod tests {
     }
 
     #[test]
-    fn permission_option_kind_maps_to_response() {
-        assert!(matches!(
-            PermissionResponse::from(PermissionOptionKind::AllowOnce),
-            PermissionResponse::AllowOnce
-        ));
-        assert!(matches!(
-            PermissionResponse::from(PermissionOptionKind::AllowAlways),
-            PermissionResponse::AllowAlways { .. }
-        ));
-        assert!(matches!(
-            PermissionResponse::from(PermissionOptionKind::RejectOnce),
-            PermissionResponse::Reject
-        ));
-        assert!(matches!(
-            PermissionResponse::from(PermissionOptionKind::RejectAlways),
-            PermissionResponse::RejectAlways
-        ));
-    }
-
-    #[test]
     fn permission_response_variants() {
         let responses = [
-            PermissionResponse::AllowOnce,
-            PermissionResponse::AllowAlways { trust_option: None },
-            PermissionResponse::Reject,
-            PermissionResponse::RejectAlways,
+            PermissionResponse::Selected {
+                option_id: PermissionOptionId::new("opt-1"),
+                trust_option: None,
+            },
             PermissionResponse::Cancel,
         ];
-        assert_eq!(responses.len(), 5);
+        assert_eq!(responses.len(), 2);
     }
 
     #[test]

@@ -300,11 +300,15 @@ async fn drain_notifications(
                     println!("    - {} (id={}, destructive={})", opt.label, opt.id, opt.is_destructive);
                 }
                 // Auto-approve with first non-destructive option
-                let response = if permission.options.iter().any(|o| !o.is_destructive) {
-                    PermissionResponse::AllowOnce
-                } else {
-                    PermissionResponse::Cancel
-                };
+                let response = permission
+                    .options
+                    .iter()
+                    .find(|o| !o.is_destructive)
+                    .map(|o| PermissionResponse::Selected {
+                        option_id: o.id.clone(),
+                        trust_option: None,
+                    })
+                    .unwrap_or(PermissionResponse::Cancel);
                 if permission.responder.send(response).is_err() {
                     eprintln!("  [WARN] permission response dropped (receiver closed)");
                 }

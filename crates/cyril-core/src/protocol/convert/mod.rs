@@ -306,7 +306,8 @@ fn parse_trust_option(v: &serde_json::Value) -> Option<TrustOption> {
 }
 
 /// Convert our `PermissionResponse` back into an ACP `RequestPermissionResponse`.
-/// Uses the option IDs from the original request to map our response variants.
+/// `Selected` carries the picked option's id verbatim; there is no kind-based
+/// re-derivation — the id IS the answer (cyril-qo13).
 pub(crate) fn from_permission_response(
     response: PermissionResponse,
     args: &acp::RequestPermissionRequest,
@@ -343,57 +344,8 @@ pub(crate) fn from_permission_response(
             }
             acp::RequestPermissionOutcome::Selected(selected)
         }
-        PermissionResponse::AllowOnce => {
-            let option_id = find_option_id(args, acp::PermissionOptionKind::AllowOnce);
-            acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
-        }
-        PermissionResponse::AllowAlways { trust_option } => {
-            let option_id = find_option_id(args, acp::PermissionOptionKind::AllowAlways);
-            let mut selected = acp::SelectedPermissionOutcome::new(option_id);
-            if let Some(label) = trust_option {
-                let mut meta = serde_json::Map::new();
-                meta.insert(
-                    "trustOption".to_string(),
-                    serde_json::Value::String(label.clone()),
-                );
-                selected = selected.meta(meta);
-            }
-            acp::RequestPermissionOutcome::Selected(selected)
-        }
-        PermissionResponse::Reject => {
-            let option_id = find_option_id(args, acp::PermissionOptionKind::RejectOnce);
-            acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
-        }
-        PermissionResponse::RejectAlways => {
-            let option_id = find_option_id(args, acp::PermissionOptionKind::RejectAlways);
-            acp::RequestPermissionOutcome::Selected(acp::SelectedPermissionOutcome::new(option_id))
-        }
     };
     acp::RequestPermissionResponse::new(outcome)
-}
-
-/// Find the option ID for a given permission kind in the request.
-/// Falls back to the first option ID if the exact kind isn't found.
-fn find_option_id(
-    args: &acp::RequestPermissionRequest,
-    target_kind: acp::PermissionOptionKind,
-) -> acp::PermissionOptionId {
-    if let Some(opt) = args.options.iter().find(|o| o.kind == target_kind) {
-        return opt.option_id.clone();
-    }
-
-    tracing::warn!(
-        ?target_kind,
-        "permission option kind not found, falling back to first available option"
-    );
-
-    args.options
-        .first()
-        .map(|o| o.option_id.clone())
-        .unwrap_or_else(|| {
-            tracing::error!("no permission options available, fabricating allow_once ID");
-            acp::PermissionOptionId::new("allow_once")
-        })
 }
 
 /// Cache `raw_input` from tool call and tool call update notifications,
@@ -1101,76 +1053,9 @@ mod tests {
         acp::RequestPermissionRequest::new("sess_1", tool_call_update, perm_options)
     }
 
-    #[test]
-    fn find_option_id_exact_match() {
-        let req = make_permission_request(vec![
-            ("opt_allow", "Yes", acp::PermissionOptionKind::AllowOnce),
-            (
-                "opt_always",
-                "Always",
-                acp::PermissionOptionKind::AllowAlways,
-            ),
-            ("opt_reject", "No", acp::PermissionOptionKind::RejectOnce),
-        ]);
 
-        let allow_id = find_option_id(&req, acp::PermissionOptionKind::AllowOnce);
-        assert_eq!(allow_id.to_string(), "opt_allow");
 
-        let reject_id = find_option_id(&req, acp::PermissionOptionKind::RejectOnce);
-        assert_eq!(reject_id.to_string(), "opt_reject");
-    }
 
-    #[test]
-    fn find_option_id_fallback_to_first() {
-        let req = make_permission_request(vec![(
-            "opt_allow",
-            "Yes",
-            acp::PermissionOptionKind::AllowOnce,
-        )]);
-
-        // RejectOnce doesn't exist, should fall back to first option (AllowOnce)
-        let id = find_option_id(&req, acp::PermissionOptionKind::RejectOnce);
-        assert_eq!(id.to_string(), "opt_allow");
-    }
-
-    #[test]
-    fn from_permission_response_allow_once() {
-        let req = make_permission_request(vec![
-            ("opt_allow", "Yes", acp::PermissionOptionKind::AllowOnce),
-            (
-                "opt_always",
-                "Always",
-                acp::PermissionOptionKind::AllowAlways,
-            ),
-            ("opt_reject", "No", acp::PermissionOptionKind::RejectOnce),
-        ]);
-
-        let resp = from_permission_response(PermissionResponse::AllowOnce, &req);
-        if let acp::RequestPermissionOutcome::Selected(selected) = resp.outcome {
-            assert_eq!(selected.option_id.to_string(), "opt_allow");
-        } else {
-            panic!("expected Selected outcome");
-        }
-    }
-
-    #[test]
-    fn from_permission_response_reject_always() {
-        let req = make_permission_request(vec![
-            ("opt_allow", "Yes", acp::PermissionOptionKind::AllowOnce),
-            (
-                "opt_reject_always",
-                "Never",
-                acp::PermissionOptionKind::RejectAlways,
-            ),
-        ]);
-
-        let resp = from_permission_response(PermissionResponse::RejectAlways, &req);
-        if let acp::RequestPermissionOutcome::Selected(selected) = resp.outcome {
-            assert_eq!(selected.option_id.to_string(), "opt_reject_always");
-        } else {
-            panic!("expected Selected outcome");
-        }
-    }
 
     #[test]
     fn to_tool_kind_switch_mode() {

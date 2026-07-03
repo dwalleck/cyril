@@ -47,7 +47,19 @@ async fn settings_handshake_turn_completes_and_orchestrates() {
     // Auto-approve any permission the delegation turn raises.
     let approver = tokio::spawn(async move {
         while let Some(req) = perm_rx.recv().await {
-            if req.responder.send(PermissionResponse::AllowOnce).is_err() {
+            // Auto-approve: pick the allow-once option (first option as a
+            // fallback), mirroring what a user hitting Enter would send.
+            let response = req
+                .options
+                .iter()
+                .find(|o| o.kind == PermissionOptionKind::AllowOnce)
+                .or_else(|| req.options.first())
+                .map(|o| PermissionResponse::Selected {
+                    option_id: o.id.clone(),
+                    trust_option: None,
+                })
+                .unwrap_or(PermissionResponse::Cancel);
+            if req.responder.send(response).is_err() {
                 eprintln!("permission responder dropped before reply");
             }
         }

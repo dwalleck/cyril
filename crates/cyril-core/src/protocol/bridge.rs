@@ -2022,8 +2022,16 @@ mod tests {
                 );
                 // Answer the permission -> the agent's request_permission returns ->
                 // the turn completes (the response round-tripped via the responder).
+                let option_id = req
+                    .options
+                    .first()
+                    .map(|o| o.id.clone())
+                    .expect("scripted request has options");
                 req.responder
-                    .send(crate::types::event::PermissionResponse::AllowOnce)
+                    .send(crate::types::event::PermissionResponse::Selected {
+                        option_id,
+                        trust_option: None,
+                    })
                     .unwrap();
                 assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
             },

@@ -59,7 +59,19 @@ async fn fs_read_write_served_by_cyril() {
                 .lock()
                 .unwrap()
                 .push(req.tool_call.title().to_string());
-            if req.responder.send(PermissionResponse::AllowOnce).is_err() {
+            // Auto-approve: pick the allow-once option (first option as a
+            // fallback), mirroring what a user hitting Enter would send.
+            let response = req
+                .options
+                .iter()
+                .find(|o| o.kind == PermissionOptionKind::AllowOnce)
+                .or_else(|| req.options.first())
+                .map(|o| PermissionResponse::Selected {
+                    option_id: o.id.clone(),
+                    trust_option: None,
+                })
+                .unwrap_or(PermissionResponse::Cancel);
+            if req.responder.send(response).is_err() {
                 eprintln!("permission responder dropped before reply");
             }
         }
