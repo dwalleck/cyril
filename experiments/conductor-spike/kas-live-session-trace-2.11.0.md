@@ -24,3 +24,36 @@ Kiro's built-in ACP recorder: `KIRO_ACP_RECORD_PATH=~/acp-trace.jsonl`. Each lin
 2. **Turn-boundary ordering (cyril-9akh evidence).** On BOTH turns, the only `session/update` trailing `turn_end` within 5s is a single `context_usage` (~10ms after the prompt response). **No `agent_message_chunk`/`tool_call` arrives after `turn_end`** on either turn. So in this KAS session the "streamed text after TurnCompleted" race did not manifest on the wire; only benign context telemetry trails. (Caveat: KAS/v3, 2 turns, one cancelled — one sample, not proof; cyril-9akh may also concern the v2 path.)
 3. **`pending_interaction`/`interaction_resolved` directly observed** (10 each) — the 2.7.1 audit could only see these indirectly. Good corpus if the KAS interaction/elicitation path is ever built.
 4. **Environment artifact (not a Kiro/cyril bug):** 8 `_kiro/customAgent/config_error` "No front matter found" for `~/repos/rivets/.kiro/agents/prompts/*.md` — frontmatter-less prompt files that KAS's recursive `.kiro/agents/**` scanner tries to load as agents. Env-specific; noted only because it's ~8 error notifications per session there.
+
+## Full agent→client message inventory (systematic pass 2026-07-02)
+
+Every distinct message kind the agent sends, with cyril status. **cyril drops all unknown `_kiro/*` + unknown `session_info_update` kinds to `Ok(None)`** (test `kas_engine_drops_unknown_ext_frame`), so "drops" = safe-but-unused, not a crash.
+
+| kind (×count) | carries | cyril status |
+|---|---|---|
+| `session/update::agent_message_chunk` (166) | `content.{type,text}` | **handled** |
+| `session/update::agent_thought_chunk` (55) | thinking text | **handled** |
+| `session/update::tool_call` (45) / `tool_call_update` (112) | `rawInput`, `content[]` (diff/text), `rawOutput`, `_meta.kiro.{agentSubtaskId, toolId, toolOrigin, preview, checkpoint}` | handled; **drops** agentSubtaskId (KAS-3/cyril-fjfu), checkpoint/preview (snapshot memory) |
+| `…::agent-subtask` (5 / 11) | `OrchestrateSubAgent` input `{name, preset, prompt, contextFiles}` | KAS-3 (cyril-fjfu) |
+| `su::context_usage` (21) | aggregate % + **per-file `items[].{name,uri,tokens,matched,percent,progressivelyLoaded}`** (47 files) | cyril-5et2 (aggregate) / **cyril-1116** (per-file) |
+| `su::pending_interaction` / `interaction_resolved` (10/10) | clarifying-question flow | **cyril-qo13** |
+| `su::turn_end` (2) | `stopReason` | **handled** (TurnCompleted) |
+| `su::turn_completion` (2) | **`{elapsedTime, status, promptTurnSummaries:[{usage, unit:"credit", usedTools[]}]}`** | **DROPS — richer than MetadataUpdated** |
+| `su::focus_update` (1) | `{focus.title}` = agent's current focus | **DROPS** |
+| `su::turn_start` (2), `user_message_id_assigned` (2) | lifecycle markers | drops |
+| `su::steering_inclusion` (9) | `{steeringDocuments[], agentSubtaskId}` | documented |
+| `su::available_commands_update` (3) / `config_option_update` (1) | commands + `_meta.kiro.{contextQuery,originalName,type}` | handled (drops typing) |
+| `req session/request_permission` (10) | tool-approval + `_meta.kiro.consent{capability,scope,resource,askType,consentRound}` | **cyril-qo13** |
+| `_kiro/governance/state` (1) | **`{isEnterprise, features:{mcpEnabled, webToolsEnabled, usageAnalytics, contentCollection, promptLogging, codeReferenceTracker, autonomousAgents}}`** | **DROPS — feature gating** |
+| `_kiro/sessions/changed` (6) | `{upserted[], deleted}` observer CDC | documented |
+| `_kiro/mcp/status` (4) | full MCP roster (per-server tool schemas) | richer than `McpServerInitialized`; drops |
+| `_kiro/progressive_context/items_changed` (2) | 45 skill/context items `{name,description,scope,type,uri}` | drops |
+| `_kiro/powers/items_changed` (1) | powers roster `{name,description,keywords[]}` | drops |
+| `_kiro/tools/didChange` (3) | tool-search tags `{tag,description,source}` | drops |
+| `_kiro/steering/documents_changed` (1) | steering docs (content inline) | documented |
+| `_kiro/policy/changed` (2), `_kiro/hooks/cancel` (1) | Cedar policy / hook-cancel | drops |
+| `_kiro/customAgent/config_error` (8) | `{path, error}` | env artifact (finding #4) |
+
+**New cyril-relevant surface** (tracked → cyril-0o7e): `_kiro/governance/state` (feature gating), `turn_completion` (per-turn cost + usedTools + elapsedTime, richer than the flat metering), `focus_update` (status line). Per-file `context_usage` includes `progressivelyLoaded` (→ cyril-1116).
+
+**Structural note for the KAS converter:** several `session_info_update` kinds **double-encode** — a typed sub-object AND flattened fields (`pendingInteraction.{question,options}` + flat `question`/`options`; `turnEnd.stopReason` + flat `stopReason`; `focus.title` + flat `title`; `contextUsage.usagePercentage` + flat `usagePercentage`). Read the flat `_meta.kiro.X` consistently rather than mixing.
