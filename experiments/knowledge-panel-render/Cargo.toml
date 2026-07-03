@@ -1,0 +1,21 @@
+[package]
+name = "knowledge-panel-render"
+version = "0.0.1"
+edition = "2024"
+publish = false
+description = "Design sketch: a ratatui TestBackend render + tests for the proposed cyril KAS knowledge-indexing progress panel. Standalone — NOT in cyril's workspace. See rivets cyril-45ld."
+
+# Declare ourselves a self-contained workspace so cargo doesn't try to join
+# cyril's root workspace (matches experiments/kiro-proxy-rs). Keeps target/
+# separate and builds independently of the pinned toolchain's lints.
+[workspace]
+
+[dependencies]
+ratatui = { version = "0.30", default-features = false }
+
+[[bin]]
+name = "knowledge-panel-render"
+path = "src/main.rs"
+
+[profile.dev]
+opt-level = 0
