@@ -23,8 +23,47 @@ use super::{from_permission_response, to_permission_options};
 use crate::types::PermissionResponse;
 
 /// Replay every permission request from a raw trace (or synthetic params)
-/// and assert the exact-choice property for every selectable index.
-fn assert_exact_choice_for_request(req_label: &str, params: serde_json::Value) {
+/// Parse the committed pre-fix recording (`.cyril-qo13/probe-output.txt`) —
+/// the independent C3 oracle: what the kind-keyed pipeline actually sent per
+/// (request id, pick k), with its OK/WRONG verdict against the picked id.
+fn recorded_prefix_behavior() -> std::collections::HashMap<(String, usize), (String, bool)> {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../.cyril-qo13/probe-output.txt"
+    );
+    let recording = std::fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("pre-fix recording must exist at {path}: {e}"));
+    let mut map = std::collections::HashMap::new();
+    let mut req_id = String::new();
+    for line in recording.lines() {
+        if let Some(rest) = line.strip_prefix("request id=") {
+            req_id = rest.split_whitespace().next().unwrap_or("").to_string();
+        } else if let Some(rest) = line.trim_start().strip_prefix("pick k=") {
+            let mut fields = rest.split_whitespace();
+            let k: usize = fields
+                .next()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or_else(|| panic!("recording row has no pick index: {line}"));
+            let sent = fields
+                .find_map(|f| f.strip_prefix("cyril_sends="))
+                .unwrap_or_else(|| panic!("recording row has no cyril_sends: {line}"))
+                .to_string();
+            let ok = line.trim_end().ends_with(" OK");
+            map.insert((req_id.clone(), k), (sent, ok));
+        }
+    }
+    assert!(!map.is_empty(), "pre-fix recording parsed to zero rows");
+    map
+}
+
+/// Replay one permission request through the Selected pipeline, asserting the
+/// exact-choice property for every selectable index. Returns the produced
+/// `(k, wire option id)` pairs so the caller can diff them against the
+/// pre-fix recording (the C3 oracle).
+fn assert_exact_choice_for_request(
+    req_label: &str,
+    params: serde_json::Value,
+) -> Vec<(usize, String)> {
     // Real parse path: the same deserialization the acp crate performs when
     // the bridge receives this request off the wire.
     let req: acp::RequestPermissionRequest = serde_json::from_value(params)
@@ -39,6 +78,7 @@ fn assert_exact_choice_for_request(req_label: &str, params: serde_json::Value) {
         "tool_approval/C3"
     };
 
+    let mut produced = Vec::new();
     for (k, opt) in options.iter().enumerate() {
         let wire = from_permission_response(
             PermissionResponse::Selected {
@@ -61,7 +101,9 @@ fn assert_exact_choice_for_request(req_label: &str, params: serde_json::Value) {
             wire_json["outcome"].get("_meta").is_none(),
             "[{class}] {req_label}: pick k={k} must not carry _meta"
         );
+        produced.push((k, sent.to_string()));
     }
+    produced
 }
 
 /// C1/C3 regression fence: exact-choice replies for every request in both
@@ -70,6 +112,11 @@ fn assert_exact_choice_for_request(req_label: &str, params: serde_json::Value) {
 /// index-as-id bug cannot accidentally pass.
 #[test]
 fn probe_qo13_replay_trace_permissions() {
+    // Independent C3 oracle: the pre-fix pipeline's recorded outputs. Rows the
+    // recording marked OK (distinct-kind picks + every k=0) must be unchanged;
+    // rows marked WRONG (the collapsed same-kind picks) must now differ.
+    let recorded = recorded_prefix_behavior();
+
     for trace_file in [
         "kas-live-session-trace-2.11.0.jsonl",
         "v2-live-session-trace-2.11.0.jsonl",
@@ -91,7 +138,29 @@ fn probe_qo13_replay_trace_permissions() {
             }
             seen += 1;
             let label = format!("{trace_file} id={}", msg["id"]);
-            assert_exact_choice_for_request(&label, msg["params"].clone());
+            let produced = assert_exact_choice_for_request(&label, msg["params"].clone());
+
+            // The recording covers the KAS trace only.
+            if trace_file != "kas-live-session-trace-2.11.0.jsonl" {
+                continue;
+            }
+            let rid = format!("{}", msg["id"]);
+            for (k, sent) in &produced {
+                let (old_sent, was_ok) = recorded
+                    .get(&(rid.clone(), *k))
+                    .unwrap_or_else(|| panic!("{label}: pick k={k} missing from recording"));
+                if *was_ok {
+                    assert_eq!(
+                        sent, old_sent,
+                        "[C3] {label}: pick k={k} was correct pre-fix and must be unchanged"
+                    );
+                } else {
+                    assert_ne!(
+                        sent, old_sent,
+                        "[C1] {label}: pick k={k} was collapsed to option-0 pre-fix and must now differ"
+                    );
+                }
+            }
         }
         assert!(
             seen > 0,

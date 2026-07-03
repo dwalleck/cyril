@@ -307,7 +307,7 @@ fn parse_trust_option(v: &serde_json::Value) -> Option<TrustOption> {
 
 /// Convert our `PermissionResponse` back into an ACP `RequestPermissionResponse`.
 /// `Selected` carries the picked option's id verbatim; there is no kind-based
-/// re-derivation — the id IS the answer (cyril-qo13).
+/// re-derivation — the id IS the answer.
 pub(crate) fn from_permission_response(
     response: PermissionResponse,
     args: &acp::RequestPermissionRequest,
@@ -1052,10 +1052,6 @@ mod tests {
             .collect();
         acp::RequestPermissionRequest::new("sess_1", tool_call_update, perm_options)
     }
-
-
-
-
 
     #[test]
     fn to_tool_kind_switch_mode() {
