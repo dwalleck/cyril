@@ -1,0 +1,53 @@
+request id=1 kinds=[allow_once,allow_once,allow_once]
+  correct reply for pick k=0: tooluse_9ifSemMWU0UgGeL1OAN8NP-option-0
+  correct reply for pick k=1: tooluse_9ifSemMWU0UgGeL1OAN8NP-option-1
+  correct reply for pick k=2: tooluse_9ifSemMWU0UgGeL1OAN8NP-option-2
+  reference client replied: None (=> picked k=None) outcome='cancelled' outcome_meta=no top_meta=no
+request id=2 kinds=[allow_once,allow_once,allow_once]
+  correct reply for pick k=0: toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-0
+  correct reply for pick k=1: toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-1
+  correct reply for pick k=2: toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-2
+  reference client replied: 'toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-2' (=> picked k=2) outcome='selected' outcome_meta=no top_meta=no
+request id=3 kinds=[allow_once,allow_once,allow_once]
+  correct reply for pick k=0: toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-0
+  correct reply for pick k=1: toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-1
+  correct reply for pick k=2: toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-2
+  reference client replied: 'toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-1' (=> picked k=1) outcome='selected' outcome_meta=no top_meta=no
+request id=4 kinds=[allow_once,allow_once,allow_once]
+  correct reply for pick k=0: toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-0
+  correct reply for pick k=1: toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-1
+  correct reply for pick k=2: toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-2
+  reference client replied: 'toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-0' (=> picked k=0) outcome='selected' outcome_meta=no top_meta=no
+request id=5 kinds=[allow_once,allow_once,allow_once]
+  correct reply for pick k=0: toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-0
+  correct reply for pick k=1: toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-1
+  correct reply for pick k=2: toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-2
+  reference client replied: 'toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-0' (=> picked k=0) outcome='selected' outcome_meta=no top_meta=no
+request id=6 kinds=[allow_once,allow_always,reject_once,reject_always]
+  correct reply for pick k=0: accept
+  correct reply for pick k=1: always-accept
+  correct reply for pick k=2: reject
+  correct reply for pick k=3: always-reject
+  reference client replied: 'accept' (=> picked k=0) outcome='selected' outcome_meta=yes top_meta=yes
+request id=7 kinds=[allow_once,allow_always,reject_once,reject_always]
+  correct reply for pick k=0: accept
+  correct reply for pick k=1: always-accept
+  correct reply for pick k=2: reject
+  correct reply for pick k=3: always-reject
+  reference client replied: 'accept' (=> picked k=0) outcome='selected' outcome_meta=yes top_meta=yes
+request id=8 kinds=[allow_once,allow_always,reject_once,reject_always]
+  correct reply for pick k=0: accept
+  correct reply for pick k=1: always-accept
+  correct reply for pick k=2: reject
+  correct reply for pick k=3: always-reject
+  reference client replied: 'accept' (=> picked k=0) outcome='selected' outcome_meta=no top_meta=no
+request id=9 kinds=[allow_once,allow_always,reject_once,reject_always]
+  correct reply for pick k=0: accept
+  correct reply for pick k=1: always-accept
+  correct reply for pick k=2: reject
+  correct reply for pick k=3: always-reject
+  reference client replied: 'accept' (=> picked k=0) outcome='selected' outcome_meta=no top_meta=no
+request id=10 kinds=[allow_once,allow_once]
+  correct reply for pick k=0: toolu_bdrk_01JDMAxXm4YRN7RmWy1C8mLL-option-0
+  correct reply for pick k=1: toolu_bdrk_01JDMAxXm4YRN7RmWy1C8mLL-option-1
+  reference client replied: 'toolu_bdrk_01JDMAxXm4YRN7RmWy1C8mLL-option-1' (=> picked k=1) outcome='selected' outcome_meta=no top_meta=no

@@ -1,0 +1,46 @@
+request id=1 (3 options)
+  pick k=0 picked_id=tooluse_9ifSemMWU0UgGeL1OAN8NP-option-0 cyril_sends=tooluse_9ifSemMWU0UgGeL1OAN8NP-option-0 meta=null OK
+  pick k=1 picked_id=tooluse_9ifSemMWU0UgGeL1OAN8NP-option-1 cyril_sends=tooluse_9ifSemMWU0UgGeL1OAN8NP-option-0 meta=null WRONG
+  pick k=2 picked_id=tooluse_9ifSemMWU0UgGeL1OAN8NP-option-2 cyril_sends=tooluse_9ifSemMWU0UgGeL1OAN8NP-option-0 meta=null WRONG
+request id=2 (3 options)
+  pick k=0 picked_id=toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-0 cyril_sends=toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-0 meta=null OK
+  pick k=1 picked_id=toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-1 cyril_sends=toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-0 meta=null WRONG
+  pick k=2 picked_id=toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-2 cyril_sends=toolu_bdrk_01HbWnYqUqJiezdN6fmkGyoN-option-0 meta=null WRONG
+request id=3 (3 options)
+  pick k=0 picked_id=toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-0 cyril_sends=toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-0 meta=null OK
+  pick k=1 picked_id=toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-1 cyril_sends=toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-0 meta=null WRONG
+  pick k=2 picked_id=toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-2 cyril_sends=toolu_bdrk_01MYUUB44DAAYDwVc8kBxmvk-option-0 meta=null WRONG
+request id=4 (3 options)
+  pick k=0 picked_id=toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-0 cyril_sends=toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-0 meta=null OK
+  pick k=1 picked_id=toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-1 cyril_sends=toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-0 meta=null WRONG
+  pick k=2 picked_id=toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-2 cyril_sends=toolu_bdrk_012U9eW9qNurr6gooVKtMTpg-option-0 meta=null WRONG
+request id=5 (3 options)
+  pick k=0 picked_id=toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-0 cyril_sends=toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-0 meta=null OK
+  pick k=1 picked_id=toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-1 cyril_sends=toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-0 meta=null WRONG
+  pick k=2 picked_id=toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-2 cyril_sends=toolu_bdrk_01WEUsTE7duq82N2oSYt99ra-option-0 meta=null WRONG
+request id=6 (4 options)
+  pick k=0 picked_id=accept cyril_sends=accept meta=null OK
+  pick k=1 picked_id=always-accept cyril_sends=always-accept meta=null OK
+  pick k=2 picked_id=reject cyril_sends=reject meta=null OK
+  pick k=3 picked_id=always-reject cyril_sends=always-reject meta=null OK
+request id=7 (4 options)
+  pick k=0 picked_id=accept cyril_sends=accept meta=null OK
+  pick k=1 picked_id=always-accept cyril_sends=always-accept meta=null OK
+  pick k=2 picked_id=reject cyril_sends=reject meta=null OK
+  pick k=3 picked_id=always-reject cyril_sends=always-reject meta=null OK
+request id=8 (4 options)
+  pick k=0 picked_id=accept cyril_sends=accept meta=null OK
+  pick k=1 picked_id=always-accept cyril_sends=always-accept meta=null OK
+  pick k=2 picked_id=reject cyril_sends=reject meta=null OK
+  pick k=3 picked_id=always-reject cyril_sends=always-reject meta=null OK
+request id=9 (4 options)
+  pick k=0 picked_id=accept cyril_sends=accept meta=null OK
+  pick k=1 picked_id=always-accept cyril_sends=always-accept meta=null OK
+  pick k=2 picked_id=reject cyril_sends=reject meta=null OK
+  pick k=3 picked_id=always-reject cyril_sends=always-reject meta=null OK
+request id=10 (2 options)
+  pick k=0 picked_id=toolu_bdrk_01JDMAxXm4YRN7RmWy1C8mLL-option-0 cyril_sends=toolu_bdrk_01JDMAxXm4YRN7RmWy1C8mLL-option-0 meta=null OK
+  pick k=1 picked_id=toolu_bdrk_01JDMAxXm4YRN7RmWy1C8mLL-option-1 cyril_sends=toolu_bdrk_01JDMAxXm4YRN7RmWy1C8mLL-option-0 meta=null WRONG
+test protocol::convert::probe_qo13::probe_qo13_replay_trace_permissions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 386 filtered out; finished in 0.01s

@@ -8,6 +8,8 @@ use crate::types::*;
 #[cfg(feature = "kas")]
 pub(crate) mod kas;
 pub(crate) mod kiro;
+#[cfg(test)]
+mod probe_qo13;
 
 pub(crate) fn to_tool_kind(kind: agent_client_protocol::ToolKind) -> ToolKind {
     match kind {
