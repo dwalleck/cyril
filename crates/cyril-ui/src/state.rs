@@ -1342,9 +1342,12 @@ impl UiState {
 
         match approval.phase {
             ApprovalPhase::SelectOption => {
-                let opt_kind = approval.options.get(approval.selected).map(|o| o.kind);
-                match opt_kind {
-                    Some(PermissionOptionKind::AllowAlways)
+                let picked = approval
+                    .options
+                    .get(approval.selected)
+                    .map(|o| (o.kind, o.id.clone()));
+                match picked {
+                    Some((PermissionOptionKind::AllowAlways, _))
                         if !approval.trust_options.is_empty() =>
                     {
                         // Transition to phase 2 — restore the dialog, advanced.
@@ -1352,8 +1355,14 @@ impl UiState {
                         approval.selected = 0;
                         self.approval = Some(approval);
                     }
-                    Some(kind) => {
-                        let response = PermissionResponse::from(kind);
+                    Some((_, option_id)) => {
+                        // The reply names the exact picked option — KAS
+                        // user_input questions share one kind across all
+                        // options, so the id is the only faithful answer.
+                        let response = PermissionResponse::Selected {
+                            option_id,
+                            trust_option: None,
+                        };
                         if approval.responder.send(response).is_err() {
                             tracing::debug!(
                                 "approval response dropped — agent receiver no longer listening"
@@ -3867,7 +3876,7 @@ mod tests {
         }
     }
 
-    // ---------- approval_confirm routes to kind-derived PermissionResponse ----------
+    // ---------- approval_confirm sends the picked option's id (cyril-qo13) ----------
 
     fn make_approval_request(
         options: Vec<cyril_core::types::PermissionOption>,
@@ -3893,9 +3902,22 @@ mod tests {
         (req, rx)
     }
 
+    /// Unwrap a `Selected` response or panic with context.
+    fn expect_selected(
+        response: cyril_core::types::PermissionResponse,
+    ) -> (cyril_core::types::PermissionOptionId, Option<String>) {
+        match response {
+            cyril_core::types::PermissionResponse::Selected {
+                option_id,
+                trust_option,
+            } => (option_id, trust_option),
+            other => panic!("expected Selected response, got {other:?}"),
+        }
+    }
+
     #[test]
-    fn approval_confirm_reject_always_sends_reject_always() {
-        use cyril_core::types::{PermissionOption, PermissionOptionKind, PermissionResponse};
+    fn approval_confirm_reject_always_sends_its_option_id() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind};
 
         let (req, rx) = make_approval_request(vec![
             PermissionOption {
@@ -3918,15 +3940,17 @@ mod tests {
         state.approval_confirm();
 
         let response = rx.blocking_recv().expect("responder fired");
-        assert!(matches!(response, PermissionResponse::RejectAlways));
+        let (option_id, trust_option) = expect_selected(response);
+        assert_eq!(option_id.as_str(), "opt_reject_always");
+        assert!(trust_option.is_none());
     }
 
     #[test]
-    fn approval_confirm_allow_always_routes_by_kind_not_index() {
-        use cyril_core::types::{PermissionOption, PermissionOptionKind, PermissionResponse};
+    fn approval_confirm_allow_always_without_trust_sends_its_option_id() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind};
 
-        // Agent sends AllowAlways at index 0 — the old index-based dispatch
-        // would have returned AllowOnce here. Kind-based dispatch returns AllowAlways.
+        // AllowAlways with NO trust options confirms immediately (no phase 2)
+        // and replies with the picked option's id.
         let (req, rx) = make_approval_request(vec![PermissionOption {
             id: cyril_core::types::PermissionOptionId::new("opt_always"),
             label: "Always".into(),
@@ -3939,7 +3963,54 @@ mod tests {
         state.approval_confirm();
 
         let response = rx.blocking_recv().expect("responder fired");
-        assert!(matches!(response, PermissionResponse::AllowAlways { .. }));
+        let (option_id, trust_option) = expect_selected(response);
+        assert_eq!(option_id.as_str(), "opt_always");
+        assert!(trust_option.is_none());
+    }
+
+    #[test]
+    fn approval_confirm_same_kind_options_sends_picked_id() {
+        use cyril_core::types::{PermissionOption, PermissionOptionKind};
+
+        // THE cyril-qo13 bug: KAS user_input questions carry N options all of
+        // kind allow_once. Picking the LAST must reply with ITS id — the old
+        // kind-keyed response always collapsed to option 0.
+        let options: Vec<PermissionOption> = (0..3)
+            .map(|i| PermissionOption {
+                id: cyril_core::types::PermissionOptionId::new(format!("q-option-{i}")),
+                label: format!("Answer {i}"),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            })
+            .collect();
+        let (req, rx) = make_approval_request(options);
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_select_next();
+        state.approval_select_next(); // index 2, the last option
+        state.approval_confirm();
+
+        let response = rx.blocking_recv().expect("responder fired");
+        let (option_id, trust_option) = expect_selected(response);
+        assert_eq!(option_id.as_str(), "q-option-2");
+        assert!(trust_option.is_none());
+    }
+
+    #[test]
+    fn approval_confirm_empty_options_sends_cancel() {
+        use cyril_core::types::PermissionResponse;
+
+        // No selectable options: confirm must resolve to Cancel — never a
+        // fabricated id (the deleted find_option_id fallback class).
+        let (req, rx) = make_approval_request(Vec::new());
+
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+        state.approval_confirm();
+
+        let response = rx.blocking_recv().expect("responder fired");
+        assert!(matches!(response, PermissionResponse::Cancel));
     }
 
     #[test]
@@ -4155,7 +4226,7 @@ mod tests {
 
     #[test]
     fn approval_allow_always_without_trust_options_sends_immediately() {
-        use cyril_core::types::{PermissionOption, PermissionOptionKind, PermissionResponse};
+        use cyril_core::types::{PermissionOption, PermissionOptionKind};
 
         let (req, rx) = make_approval_request(vec![PermissionOption {
             id: cyril_core::types::PermissionOptionId::new("always"),
@@ -4170,12 +4241,9 @@ mod tests {
 
         assert!(!state.has_approval());
         let response = rx.blocking_recv().expect("responder fired");
-        match response {
-            PermissionResponse::AllowAlways { trust_option } => {
-                assert_eq!(trust_option, None);
-            }
-            other => panic!("expected AllowAlways, got {other:?}"),
-        }
+        let (option_id, trust_option) = expect_selected(response);
+        assert_eq!(option_id.as_str(), "always");
+        assert!(trust_option.is_none());
     }
 
     // ---------- SessionCreated welcome-message injection ----------

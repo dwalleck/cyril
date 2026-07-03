@@ -284,9 +284,10 @@ pub struct PermissionRequest {
     pub responder: tokio::sync::oneshot::Sender<PermissionResponse>,
 }
 
-/// The semantic kind of a permission option. Mirrors `acp::PermissionOptionKind`
-/// so the UI can route a selection to the correct `PermissionResponse` without
-/// depending on the option's display order.
+/// The semantic kind of a permission option. Mirrors `acp::PermissionOptionKind`.
+/// Replies carry the picked option's id (`PermissionResponse::Selected`), not
+/// the kind; the kind drives UI concerns — the AllowAlways trust-phase
+/// transition and destructive-option styling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PermissionOptionKind {
     AllowOnce,
