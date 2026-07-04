@@ -1778,6 +1778,52 @@ mod tests {
         n
     }
 
+    // cyril-l7tw design falsifier (cheapest, run at design time): dropping the
+    // agent side of the connection mid-prompt must (a) resolve the pending
+    // `conn.prompt()` as `Err` and (b) complete the io task. This is the
+    // mechanism the io-watcher fix and every death fence rely on — if EOF hung
+    // the prompt or the io task, the design would be wrong. Kept as a permanent
+    // mechanism fence (independent of the fix: it tests the acp rpc layer).
+    #[tokio::test]
+    async fn l7tw_agent_drop_resolves_prompt_err_and_completes_io() {
+        let local = tokio::task::LocalSet::new();
+        local
+            .run_until(async {
+                let (notif_tx, _notif_rx) =
+                    mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
+                let (req_tx, _req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
+                let client = KiroClient::new(notif_tx, req_tx, Rc::new(V2Engine));
+                let (c_io, a_io) = tokio::io::duplex(64 * 1024);
+                let (cr, cw) = tokio::io::split(c_io);
+                let (conn, io_task) =
+                    acp::ClientSideConnection::new(client, cw.compat_write(), cr.compat(), |f| {
+                        tokio::task::spawn_local(f);
+                    });
+                let io_handle = tokio::task::spawn_local(io_task);
+                use acp::Agent;
+                let prompt_fut = conn.prompt(acp::PromptRequest::new(
+                    acp::SessionId::new("s1"),
+                    vec![acp::ContentBlock::from("hello".to_string())],
+                ));
+                let killer = async move {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    drop(a_io); // agent dies: clean EOF on the client's read side
+                };
+                let (prompt_result, ()) = tokio::join!(prompt_fut, killer);
+                assert!(
+                    prompt_result.is_err(),
+                    "pending prompt must resolve Err when the agent connection \
+                     drops, got {prompt_result:?}"
+                );
+                let io_result = tokio::time::timeout(Duration::from_secs(5), io_handle)
+                    .await
+                    .expect("io task must complete after agent drop");
+                // Audit trail: probe run2 says agent death is a CLEAN EOF.
+                println!("l7tw falsifier: io task completed with {io_result:?}");
+            })
+            .await;
+    }
+
     #[tokio::test]
     async fn harness_drives_one_turn() {
         // Slice 2 baseline: the harness runs NewSession -> SendPrompt against the
