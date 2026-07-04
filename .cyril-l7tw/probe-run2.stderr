@@ -1,0 +1,4 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
+     Running `target/debug/examples/l7tw_death_probe`
+2026-07-04T20:45:35.024231Z ERROR cyril_core::protocol::bridge: prompt failed error=Internal error: "server shut down unexpectedly"
+2026-07-04T20:45:54.986721Z ERROR cyril_core::protocol::bridge: prompt failed error=Internal error: "server shut down unexpectedly"

@@ -1,0 +1,7 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running `target/debug/examples/l7tw_death_probe`
+2026-07-04T20:42:37.002350Z ERROR cyril_core::protocol::bridge: bridge terminated with error error=protocol error: ACP initialization failed: Internal error: "server shut down unexpectedly"
+
+thread 'main' (2872656) panicked at crates/cyril/examples/l7tw_death_probe.rs:38:33:
+no SessionCreated — is kiro-cli logged in?
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
