@@ -278,12 +278,24 @@ impl KiroClient {
         // methods (the overrides above), not ext requests: fs/read_text_file (KAS-5a,
         // cyril-7bdu) and terminal/{create,output,wait_for_exit,release,kill} (KAS-5b,
         // cyril-ufie). This arm answers only the `_kiro/*`-prefixed ext requests.
+        // The breadcrumb below is load-bearing: if KAS renames a method (or the
+        // acp library's leading-underscore stripping changes), the caller gets a
+        // success-shaped null and fails opaquely on its side — this log line is
+        // the only cyril-side evidence (dcc6 review F15).
+        tracing::debug!(
+            method = args.method.as_ref(),
+            "unhandled ext request answered with protocol-default null"
+        );
         default_ext_response()
     }
 
     /// Default build: no KAS ext requests are handled.
     #[cfg(not(feature = "kas"))]
-    async fn handle_ext_request(_args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+    async fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+        tracing::debug!(
+            method = args.method.as_ref(),
+            "unhandled ext request answered with protocol-default null"
+        );
         default_ext_response()
     }
 }

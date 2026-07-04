@@ -125,7 +125,22 @@ fn select_server(entries: &[(String, bool)], cli_version: Option<(u32, u32, u32)
             newest = Some((v, name));
         }
     }
-    exact.or(newest.map(|(_, n)| n))
+    if exact.is_some() {
+        return exact;
+    }
+    let (_, name) = newest?;
+    if let Some((maj, min, pat)) = cli_version {
+        // An entry matching the CLI version would have set `exact`, so reaching
+        // here with a known version means a MISMATCHED bundle is about to spawn
+        // (fresh upgrade not yet self-extracted, or the matching extraction is
+        // partial) — leave a breadcrumb (dcc6 review F5).
+        tracing::warn!(
+            cli_version = format_args!("{maj}.{min}.{pat}"),
+            selected = name,
+            "no KAS extraction matches the installed kiro-cli; spawning the newest"
+        );
+    }
+    Some(name)
 }
 
 /// Treat an env value as "not provided" when unset or empty/whitespace-only —
@@ -201,21 +216,37 @@ fn resolve(
 /// List the kas extraction root: one `(dir_name, has_server_entry)` pair per
 /// directory entry. A missing root yields an empty list (normal on a machine
 /// where kiro-cli has never self-extracted — `resolve` then reports the
-/// actionable `Server` error); an unreadable root is logged at debug before
-/// the same fallback, so a permissions problem is distinguishable from
-/// "never extracted" in the log.
+/// actionable `Server` error); an unreadable root warns before the same
+/// fallback (dcc6 review F13 — the `Server` reason's "run kiro-cli acp to
+/// self-extract" remedy is wrong for a permissions problem, so the log line
+/// must carry the real cause). Individual entries that can't be read or hold
+/// non-UTF-8 names are skipped with a debug line (F12) — a skipped entry
+/// could otherwise silently cost the exact-match dir.
 fn list_kas_entries(root: &Path) -> Vec<(String, bool)> {
     let entries = match std::fs::read_dir(root) {
         Ok(e) => e,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Vec::new(),
         Err(e) => {
-            tracing::debug!(root = %root.display(), error = %e, "kas root unreadable");
+            tracing::warn!(root = %root.display(), error = %e, "kas root unreadable; treating as never extracted");
             return Vec::new();
         }
     };
     entries
         .filter_map(|entry| {
-            let name = entry.ok()?.file_name().into_string().ok()?;
+            let entry = match entry {
+                Ok(e) => e,
+                Err(e) => {
+                    tracing::debug!(root = %root.display(), error = %e, "unreadable kas dir entry skipped");
+                    return None;
+                }
+            };
+            let name = match entry.file_name().into_string() {
+                Ok(n) => n,
+                Err(raw) => {
+                    tracing::debug!(root = %root.display(), name = ?raw, "non-UTF-8 kas dir entry skipped");
+                    return None;
+                }
+            };
             let has_server = root.join(&name).join(SERVER_IN_ROOT_REL).is_file();
             Some((name, has_server))
         })
