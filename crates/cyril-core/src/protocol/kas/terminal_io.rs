@@ -858,20 +858,24 @@ mod tests {
     }
 
     /// Liveness probe for the drop-kill fixtures: `true` once the process is
-    /// gone from `/proc` OR is a zombie (SIGKILLed, awaiting reap — tokio reaps
-    /// dropped children asynchronously, so a brief zombie is "dead" for the
-    /// leaked-child criterion; a leaked `sleep 60` stays in state `S`).
+    /// gone OR is a zombie (SIGKILLed, awaiting reap — tokio reaps dropped
+    /// children asynchronously, so a brief zombie is "dead" for the
+    /// leaked-child criterion; a leaked `sleep 60` stays alive in state `S`).
+    /// Probes via `ps` — portable across Linux AND macOS; a `/proc/<pid>` read
+    /// misreports on macOS (no procfs), failing these fences before the fix is
+    /// even exercised.
     #[cfg(unix)]
     fn dead_or_zombie(pid: u32) -> bool {
-        match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
-            Err(_) => true, // no /proc entry: fully reaped
-            Ok(stat) => stat
-                // The state field follows the parenthesized comm, which can
-                // itself contain spaces/parens — split on the LAST ')'.
-                .rsplit_once(')')
-                .map(|(_, rest)| rest.trim_start().starts_with('Z'))
-                .unwrap_or(false),
+        let out = std::process::Command::new("ps")
+            .args(["-o", "stat=", "-p", &pid.to_string()])
+            .output()
+            .expect("spawn ps for the liveness probe");
+        if !out.status.success() {
+            return true; // ps knows no such pid: fully reaped
         }
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stat = stdout.trim();
+        stat.is_empty() || stat.starts_with('Z')
     }
 
     /// Poll [`dead_or_zombie`] up to 5s; panic if the child outlives the drop.
