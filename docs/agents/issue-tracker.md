@@ -82,7 +82,8 @@ rivets list -l ready-for-agent  # AFK-ready (see triage-labels.md)
 ## Triage and status transitions
 
 - Apply or change a triage role:
-  `rivets label add <issue-id> <label>` / `rivets label remove <issue-id> <label>`.
+  `rivets label add <label> <issue-id>` / `rivets label remove <label> <issue-id>`
+  (label first; multiple issues via `--ids <id> <id>...`).
 - Move status: `rivets update <issue-id> -s in_progress` (or `blocked`).
 - Close: `rivets close <issue-id> -r "<reason>"`. Reopen: `rivets reopen <issue-id>`.
 
