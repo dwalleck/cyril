@@ -936,8 +936,9 @@ fn steer_gate(unsupported: bool, has_session: bool) -> SteerGate {
 }
 
 /// Dispatch a queue-steer: the single path shared by Enter-while-busy and the
-/// `/steer` command (ROADMAP K1b, cyril-bm1j). Applies `steer_gate`, adds the
-/// optimistic echo, and emits `SteerSession` — or an advisory when it can't.
+/// `/steer` command (ROADMAP K1b, cyril-bm1j). Applies `steer_gate`, emits
+/// `SteerSession`, and adds the optimistic echo only once the send succeeds
+/// (cyril-7n1l) — or an advisory when it can't.
 /// Gating on `steering_unsupported()` is the keystone that keeps the optimistic
 /// echo reconcilable: the bridge drops a steer on a known-unsupported session
 /// silently (no notification), so we must not add a `Queued` echo that would
@@ -963,13 +964,17 @@ async fn dispatch_steer(
             let Some(session_id) = session.id().cloned() else {
                 return Ok(());
             };
-            ui.add_steer_echo(&text);
+            // Send BEFORE committing the optimistic echo (cyril-7n1l): a failed
+            // send means the steer never reached the backend, so no notification
+            // will ever drain the chip/echo — an echo added first would be a
+            // permanent phantom.
             bridge
                 .send(BridgeCommand::SteerSession {
                     session_id,
-                    message: text,
+                    message: text.clone(),
                 })
                 .await?;
+            ui.add_steer_echo(&text);
         }
         SteerGate::AdvisoryUnsupported => ui.add_system_message(
             "Steering isn't supported by this backend (needs kiro-cli 2.7.0+).".into(),
@@ -1555,6 +1560,41 @@ mod tests {
                 .iter()
                 .any(|m| matches!(m.kind(), cyril_ui::traits::ChatMessageKind::System(_))),
             "an advisory system message is shown instead"
+        );
+    }
+
+    // cyril-7n1l: a failed bridge send must leave NO phantom optimistic steer
+    // state — the steer never reached the backend, so no SteeringConsumed/
+    // Cleared/Unsupported notification will ever drain the chip or the echo.
+    #[tokio::test]
+    async fn failed_steer_send_leaves_no_phantom_chip() {
+        let (tx, rx) = mpsc::channel(8);
+        drop(rx); // Bridge thread gone — every send fails with BridgeClosed.
+        let bridge = BridgeSender::from_sender(tx);
+        let mut ui = UiState::new(500);
+        let mut session = SessionController::new();
+        session.set_session(SessionId::new("sess_1"), SessionStatus::Busy);
+
+        let result = dispatch_steer(&mut ui, &session, &bridge, "halt".into()).await;
+
+        assert!(
+            result.is_err(),
+            "a closed bridge channel must still propagate the error"
+        );
+        assert_eq!(
+            ui.steering_queued(),
+            0,
+            "failed send must not leave an optimistic steer chip"
+        );
+        assert!(
+            !ui.messages().iter().any(|m| matches!(
+                m.kind(),
+                cyril_ui::traits::ChatMessageKind::SteerEcho {
+                    status: cyril_ui::traits::SteerEchoStatus::Queued,
+                    ..
+                }
+            )),
+            "failed send must not leave an unresolved Queued echo"
         );
     }
 
