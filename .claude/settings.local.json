@@ -16,7 +16,15 @@
       "Bash(cargo test:*)",
       "Bash(npx:*)",
       "Bash(find:*)",
-      "Bash(cargo check:*)"
+      "Bash(cargo check:*)",
+      "Bash(kiro-cli --version)",
+      "Read(//home/dwalleck/.local/share/kiro-research/**)",
+      "Read(//home/dwalleck/.local/share/kiro-research/binaries/**)",
+      "Read(//home/dwalleck/.local/share/kiro-research/tui-bundles/**)",
+      "Bash(gh pr *)",
+      "Bash(echo \"---exit $?---\")",
+      "Bash(python3 -c ' *)",
+      "Bash(rivets show *)"
     ]
   }
 }
