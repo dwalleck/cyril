@@ -15,8 +15,10 @@ workspace = true
 # (KAS-1 cyril-evwh, auth-source swap cyril-dcc6) is compiled in only under
 # `--features kas`; a default build cannot read the kiro credential store.
 # Pulls in `tokio/fs` for non-blocking file I/O on the bridge's single-threaded
-# executor, and `rusqlite` for read-only access to kiro-cli's data.sqlite3.
-kas = ["tokio/fs", "dep:rusqlite"]
+# executor, `tokio/io-util` for draining terminal pipes while a kill signal is
+# watched (terminal_io, cyril-lw67), and `rusqlite` for read-only access to
+# kiro-cli's data.sqlite3.
+kas = ["tokio/fs", "tokio/io-util", "dep:rusqlite"]
 
 [dependencies]
 thiserror = { workspace = true }
