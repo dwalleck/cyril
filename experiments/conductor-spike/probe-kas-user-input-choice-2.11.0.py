@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
-"""C8 live check for cyril-qo13 (@kiro/agent 0.8.0, kiro-cli 2.11.0).
+"""C8 live check for cyril-qo13 (@kiro/agent 0.8.0, kiro-cli 2.11.0) — v2.
 
 Question: does KAS act on the SPECIFIC optionId in a user_input permission
 reply — the exact byte shape cyril's fixed converter emits
 ({"outcome": {"outcome": "selected", "optionId": <options[1].optionId>}},
 byte-equality fenced by probe_qo13_reply_shape_matches_reference_bytes)?
 
-Design: prompt the agent to ask a 3-option user_input question (Red/Green/
-Blue) and echo the answer back. The probe always picks options[1] (Green).
-  - Under the fixed behavior, the agent's echo names option 1 ("Green").
-  - Under the pre-fix bug (always option-0), the echo would name "Red".
-The agent's own echo is the behavioral oracle, mirroring the reference-trace
-evidence (kas-live-session-trace-2.11.0.jsonl ids 3/4/5).
+v1 lesson: a bare prompt in an empty tempdir never fires user_input — the
+clarify questions are a SPEC-MODE behavior. v2 reproduces the reference
+trace's recipe (kas-live-session-trace-2.11.0.jsonl): real workspace (a
+throwaway local clone of ~/repos/rivets), set_config_option autopilot=on +
+mode=spec, then the trace's own spec prompt. Every genuine user_input
+question is answered with options[1] (non-first); the spec artifacts the
+turn writes into the clone are the behavioral oracle.
 
-Direct-spawn free path (default file auth via ~/.aws/sso/cache/
-kiro-auth-token.json — run only while that token is fresh).
-Usage: <script> <path-to-acp-server.js>"""
+Permission classification: standard tool approvals (optionIds accept/
+always-accept/reject/always-reject) are auto-accepted; a request counts as
+user_input only when ALL options share kind 'allow_once' and optionIds are
+non-standard (trace shape: '<toolCallId>-option-N').
+
+Auth: standalone KAS is file-auth-only (~/.aws/sso/cache/kiro-auth-token.json)
+and never calls _kiro/auth/getAccessToken — see cyril-dcc6. Seed that file
+from the CLI sqlite IDC token first (WITHOUT the refresh token) and run while
+it is fresh. Usage: <script> <path-to-acp-server.js>"""
 import json
 import os
 import queue
@@ -33,19 +40,30 @@ PROFILE = json.loads(db.execute("SELECT value FROM state WHERE key='api.codewhis
 print("sqlite token expires_at:", TOK.get("expires_at"), "| profileArn:", PROFILE.get("arn"))
 
 SERVER = sys.argv[1]
+SRC_REPO = os.path.expanduser("~/repos/rivets")
 runtime = os.environ.get("KIRO_AGENT_PATH", "node")
-CWD = tempfile.mkdtemp(prefix="kas-userinput-")
-subprocess.run("git init -q -b main", cwd=CWD, shell=True)
+BASE = tempfile.mkdtemp(prefix="kas-userinput-")
+subprocess.run(["git", "clone", "-q", "--local", SRC_REPO, "repo"], cwd=BASE, check=True)
+CWD = os.path.join(BASE, "repo")
+print("workspace (throwaway clone):", CWD)
 proc = subprocess.Popen([runtime, "--experimental-wasm-modules", SERVER, "--transport=stdio"],
                         cwd=CWD, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                        stderr=open("/tmp/kas-probe-stderr.log", "w"), text=True, bufsize=1)
+                        stderr=open(os.path.join(BASE, "kas-stderr.log"), "w"), text=True, bufsize=1)
 q = queue.Queue()
 threading.Thread(target=lambda: [q.put(l.strip()) for l in proc.stdout if l.strip()], daemon=True).start()
 i = [0]
 PENDING = {}
 TEXT = []
-QUESTIONS = []  # (request_id, options, replied_option_id)
-FOLLOWUPS = []
+QUESTIONS = []   # (request_id, title, options, picked_optionId, picked_name)
+APPROVALS = []   # standard tool approvals auto-accepted
+
+STD_APPROVAL_IDS = {"accept", "always-accept", "reject", "always-reject"}
+
+
+def is_user_input(opts):
+    return (len(opts) > 1
+            and all(o.get("kind") == "allow_once" for o in opts)
+            and not any(o.get("optionId") in STD_APPROVAL_IDS for o in opts))
 
 
 def req(m, p):
@@ -80,25 +98,30 @@ def drain(deadline):
                                   "profileArn": PROFILE.get("arn")})
                     continue
                 if m == "session/request_permission":
-                    opts = (o.get("params") or {}).get("options") or []
-                    if QUESTIONS:  # follow-ups: evidence already gathered
-                        print(f"[permission id={o['id']}] follow-up arrived ({len(opts)} options) — cancelling")
-                        FOLLOWUPS.append(opts)
+                    p = o.get("params") or {}
+                    opts = p.get("options") or []
+                    title = (p.get("toolCall") or {}).get("title", "")
+                    if not opts:
                         rep(o["id"], {"outcome": {"outcome": "cancelled"}})
                         continue
-                    pick = opts[1] if len(opts) > 1 else (opts[0] if opts else None)
-                    if pick is None:
-                        rep(o["id"], {"outcome": {"outcome": "cancelled"}})
-                        continue
-                    # EXACTLY the bytes cyril's converter emits for a
-                    # non-first pick (C2 fence: byte-equal to reference).
-                    reply = {"outcome": {"outcome": "selected",
-                                         "optionId": pick["optionId"]}}
-                    QUESTIONS.append((o["id"], opts, pick["optionId"]))
-                    print(f"[permission id={o['id']}] options: "
-                          + json.dumps([(x.get('optionId'), x.get('name')) for x in opts]))
-                    print(f"[permission id={o['id']}] replying (cyril bytes): {json.dumps(reply)}")
-                    rep(o["id"], reply)
+                    if is_user_input(opts):
+                        pick = opts[1]
+                        # EXACTLY the bytes cyril's converter emits for a
+                        # non-first pick (C2 fence: byte-equal to reference).
+                        reply = {"outcome": {"outcome": "selected",
+                                             "optionId": pick["optionId"]}}
+                        QUESTIONS.append((o["id"], title, opts,
+                                          pick["optionId"], pick.get("name")))
+                        print(f"[user_input id={o['id']}] Q: {title}")
+                        print(f"[user_input id={o['id']}] options: "
+                              + json.dumps([x.get("name") for x in opts]))
+                        print(f"[user_input id={o['id']}] replying options[1] (cyril bytes): {json.dumps(reply)}")
+                        rep(o["id"], reply)
+                    else:
+                        APPROVALS.append((o["id"], title))
+                        print(f"[tool_approval id={o['id']}] {title[:80]} — accepting once")
+                        rep(o["id"], {"outcome": {"outcome": "selected",
+                                                  "optionId": "accept"}})
                 else:
                     rep(o["id"], {})
                 continue
@@ -126,24 +149,36 @@ nid = req("session/new", {"cwd": CWD, "mcpServers": []})
 SID = (wait_resp(nid, 40) or {}).get("result", {}).get("sessionId")
 print("sessionId:", SID)
 
+# Reference-trace recipe: autopilot on, spec mode, fast model.
+for cfg, val in (("autopilot", "on"), ("mode", "spec"), ("model", "claude-haiku-4.5")):
+    r = wait_resp(req("session/set_config_option",
+                      {"sessionId": SID, "configId": cfg, "value": val}), 30)
+    print(f"set_config_option {cfg}={val}:", "ok" if r and "result" in r else json.dumps(r)[:150])
+
 pid = req("session/prompt", {"sessionId": SID, "prompt": [{"type": "text", "text":
-    "I want to add support for multiple notes per issue in this project."}]})
-turn = wait_resp(pid, 300)
+    'Start a new spec called "multiple-notes". Create the .kiro/specs/multiple-notes/ '
+    'directory and draft the initial requirements document.'}]})
+turn = wait_resp(pid, 480)
 stop = (turn or {}).get("result", {}).get("stopReason") if turn and "result" in turn else turn
 text = "".join(TEXT)
 print("turn stopReason:", json.dumps(stop)[:200])
-print("agent text:", text[:400])
+print("agent text (tail):", text[-500:])
 
-picked = QUESTIONS[0][1][1].get("name") if QUESTIONS and len(QUESTIONS[0][1]) > 1 else None
-first = QUESTIONS[0][1][0].get("name") if QUESTIONS else None
-lower = text.lower()
-acted_on_pick = picked is not None and ("bug" in lower or (picked.lower() in lower))
-acted_on_first = first is not None and picked is not None and \
-    ("feature" in lower and "bug" not in lower)
-print("\nVERDICT: user_input fired:", bool(QUESTIONS),
-      "| picked (non-first):", picked,
-      "| continuation reflects the pick:", acted_on_pick,
-      "| continuation reflects option-0 instead (bug behavior):", acted_on_first,
-      "| follow-up questions:", len(FOLLOWUPS))
+print("\n--- questions answered (all with options[1]) ---")
+for rid, title, opts, oid, name in QUESTIONS:
+    print(f"  id={rid} pick={name!r} (of {[x.get('name') for x in opts]})  Q: {title[:100]}")
+
+req_md = os.path.join(CWD, ".kiro", "specs", "multiple-notes", "requirements.md")
+doc = open(req_md).read() if os.path.exists(req_md) else ""
+print("\n--- requirements.md", "(first 3500 chars) ---" if doc else "NOT WRITTEN ---")
+print(doc[:3500])
+
+hits = [(name, name and name.lower() in (doc + text).lower())
+        for _, _, _, _, name in QUESTIONS]
+print("\nVERDICT: user_input questions:", len(QUESTIONS),
+      "| tool approvals:", len(APPROVALS),
+      "| picked-name verbatim in output:", hits,
+      "\n(semantic steering: judge the doc above against each non-first pick)")
+print("workspace kept for inspection:", CWD)
 proc.stdin.close()
 proc.terminate()
