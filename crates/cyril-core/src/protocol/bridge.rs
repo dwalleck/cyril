@@ -567,6 +567,18 @@ async fn run_loop(
                         Ok(response) => crate::protocol::convert::to_stop_reason(response.stop_reason),
                         Err(e) => {
                             tracing::error!(error = %e, "prompt failed");
+                            // cyril-l7tw C1: surface the failure to the App BEFORE
+                            // the terminal marker (CLAUDE.md: bridge errors must
+                            // notify the App — logging alone is invisible). Same
+                            // task + channel as the TurnCompleted below, so the
+                            // error-before-completion order is deterministic.
+                            let err_note = Notification::BridgeError {
+                                operation: "prompt".into(),
+                                message: e.to_string(),
+                            };
+                            if let Err(send_err) = turn_tx.send(err_note.into()).await {
+                                tracing::debug!(error = %send_err, "BridgeError send failed (App gone)");
+                            }
                             // No PromptResponse on a failed turn; EndTurn frees the
                             // UI from "busy". App-gone is detected by the command
                             // loop's own recv() ending, so a failed send here only
@@ -1471,6 +1483,9 @@ mod tests {
         block_prompt: bool,
         /// When set, `prompt` returns an error (the transport/error turn path).
         prompt_err: bool,
+        /// Number of `agent_message_chunk` notifications `prompt` streams before
+        /// resolving (error or success) — models a turn that dies mid-stream.
+        emit_chunks: usize,
         /// When set, `prompt` issues a server->client `request_permission` (which
         /// blocks until the client answers) before completing — exercises Slice 3's
         /// loop request-forward path (ADR-0004).
@@ -1525,7 +1540,7 @@ mod tests {
         async fn prompt(&self, a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
             // Copy the flags out and DROP the borrow before any await — a RefCell
             // borrow held across `.await` would panic on re-entry.
-            let (block, err, want_perm, emit_turn_end) = {
+            let (block, err, want_perm, emit_turn_end, emit_chunks) = {
                 let mut s = self.script.borrow_mut();
                 s.received.push("prompt".into());
                 s.prompt_count += 1;
@@ -1534,8 +1549,27 @@ mod tests {
                     s.prompt_err,
                     s.request_perm,
                     s.emit_turn_end,
+                    s.emit_chunks,
                 )
             };
+            if emit_chunks > 0 {
+                use acp::Client as _;
+                let conn = self.agent_conn.borrow().clone();
+                if let Some(conn) = conn {
+                    for i in 0..emit_chunks {
+                        let note: acp::SessionNotification =
+                            serde_json::from_value(serde_json::json!({
+                                "sessionId": a.session_id.to_string(),
+                                "update": {
+                                    "sessionUpdate": "agent_message_chunk",
+                                    "content": { "type": "text", "text": format!("c{i}") }
+                                }
+                            }))
+                            .expect("chunk notification");
+                        conn.session_notification(note).await.expect("send chunk");
+                    }
+                }
+            }
             if emit_turn_end {
                 // KAS-shaped completion: emit the `turn_end` lifecycle frame
                 // BEFORE the response (and before any park) so it drives
@@ -1765,19 +1799,6 @@ mod tests {
         }
     }
 
-    /// Drain notifications until the first `TurnCompleted`; return how many were
-    /// seen (expected: exactly 1). Bounded so a hang fails the test instead of stalling.
-    async fn count_turn_completions(rx: &mut mpsc::Receiver<RoutedNotification>) -> usize {
-        let mut n = 0;
-        while let Ok(Some(r)) = tokio::time::timeout(Duration::from_secs(5), rx.recv()).await {
-            if matches!(r.notification, Notification::TurnCompleted { .. }) {
-                n += 1;
-                return n;
-            }
-        }
-        n
-    }
-
     // cyril-l7tw design falsifier (cheapest, run at design time): dropping the
     // agent side of the connection mid-prompt must (a) resolve the pending
     // `conn.prompt()` as `Err` and (b) complete the io task. This is the
@@ -1842,11 +1863,19 @@ mod tests {
                     })
                     .await
                     .unwrap();
-                assert_eq!(
-                    count_turn_completions(&mut rx).await,
-                    1,
-                    "exactly one TurnCompleted"
-                );
+                let mut completions = 0;
+                while let Some(n) = recv_notif(&mut rx, 5).await {
+                    // l7tw C12: a successful turn emits zero BridgeError noise.
+                    assert!(
+                        !matches!(n, Notification::BridgeError { .. }),
+                        "successful turn must not emit BridgeError"
+                    );
+                    if matches!(n, Notification::TurnCompleted { .. }) {
+                        completions += 1;
+                        break;
+                    }
+                }
+                assert_eq!(completions, 1, "exactly one TurnCompleted");
             },
         )
         .await;
@@ -1895,6 +1924,76 @@ mod tests {
             gate.notify_one();
             assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
         })
+        .await;
+    }
+
+    // l7tw C1/C2 fence + stress fixture: the agent streams 2 chunks then fails
+    // the prompt. The App must receive the streamed chunks, a
+    // BridgeError("prompt", <agent's error text>) and exactly ONE
+    // TurnCompleted(EndTurn), with the BridgeError strictly before the
+    // completion (both are sent sequentially by the prompt task on the same
+    // channel, so this order is deterministic). Chunk-vs-completion order is
+    // NOT asserted — that's the open notification-vs-response race
+    // (cyril-9akh), out of this fence's scope. Catches: silent Err arm
+    // (pre-l7tw behavior), error replacing the completion (busy sticks), and
+    // error-message loss.
+    #[tokio::test]
+    async fn prompt_error_emits_bridge_error_before_completion() {
+        let script = Rc::new(RefCell::new(Script {
+            prompt_err: true,
+            emit_chunks: 2,
+            ..Default::default()
+        }));
+        with_harness(
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                let mut chunks = 0;
+                let mut bridge_error_seen = false;
+                let mut completions = 0;
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::AgentMessage(_)) => chunks += 1,
+                        Some(Notification::BridgeError { operation, message }) => {
+                            assert_eq!(operation, "prompt", "operation names the failed command");
+                            assert!(
+                                message.contains("boom"),
+                                "agent's error text passes through, got: {message}"
+                            );
+                            assert_eq!(completions, 0, "BridgeError must precede TurnCompleted");
+                            bridge_error_seen = true;
+                        }
+                        Some(Notification::TurnCompleted { stop_reason }) => {
+                            assert_eq!(stop_reason, StopReason::EndTurn);
+                            completions += 1;
+                            break;
+                        }
+                        Some(_) => {}
+                        None => panic!("timed out before TurnCompleted"),
+                    }
+                }
+                // Chunks may trail the completion (cyril-9akh notification-vs-
+                // response race) — drain briefly and count them wherever they
+                // land; the claim is delivery, not ordering.
+                while let Some(n) = recv_notif(&mut rx, 1).await {
+                    match n {
+                        Notification::AgentMessage(_) => chunks += 1,
+                        Notification::TurnCompleted { .. } => completions += 1,
+                        _ => {}
+                    }
+                }
+                assert!(bridge_error_seen, "failed turn must surface a BridgeError");
+                assert_eq!(chunks, 2, "streamed chunks still reach the App");
+                assert_eq!(completions, 1, "exactly one TurnCompleted");
+            },
+        )
         .await;
     }
 
