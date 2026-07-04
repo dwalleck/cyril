@@ -3,13 +3,18 @@ use std::path::Path;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
 
 use crate::types::AgentCommand;
 
 /// How many trailing stderr lines [`StderrTail`] retains for diagnostics.
 const STDERR_TAIL_CAPACITY: usize = 50;
+
+/// Max bytes per `read_until` chunk — bounds drain memory if the agent emits
+/// huge newline-free output (e.g. binary garbage on stderr). Longer runs are
+/// split into multiple tail entries at this size.
+const MAX_LINE_LEN: u64 = 8192;
 
 /// Cloneable handle to the last [`STDERR_TAIL_CAPACITY`] stderr lines drained
 /// from the agent subprocess (cyril-0gke).
@@ -63,7 +68,14 @@ fn spawn_stderr_drain(stderr: ChildStderr, tail: StderrTail) {
             buf.clear();
             // Byte-level split (not `lines()`): a non-UTF-8 byte in a traceback
             // must not abort the drain, or the pipe-full wedge comes back.
-            match reader.read_until(b'\n', &mut buf).await {
+            // The fresh per-iteration `take` caps each chunk at MAX_LINE_LEN so
+            // a newline-free flood can't grow `buf` unboundedly; `Ok(0)` still
+            // uniquely means EOF because MAX_LINE_LEN > 0.
+            match (&mut reader)
+                .take(MAX_LINE_LEN)
+                .read_until(b'\n', &mut buf)
+                .await
+            {
                 // EOF — the child closed stderr (normally: it exited).
                 Ok(0) => break,
                 Ok(_) => {
@@ -198,6 +210,52 @@ mod tests {
         assert_eq!(snapshot.len(), STDERR_TAIL_CAPACITY);
         assert_eq!(snapshot.first().map(String::as_str), Some("line 5"));
         assert_eq!(snapshot.last().map(String::as_str), Some("line 54"));
+    }
+
+    /// Bounded-memory fence: a large newline-free stderr blob (past the 64KB
+    /// pipe buffer) drains without wedging, arriving as chunks each capped at
+    /// `MAX_LINE_LEN` — never one unbounded allocation.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn newline_free_stderr_flood_drains_in_bounded_chunks() {
+        const BLOB_BYTES: u64 = 100_000;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        // 100KB of 'x' with no newline at all, straight to stderr.
+        let script = format!("head -c {BLOB_BYTES} /dev/zero | tr '\\0' x 1>&2");
+        let cmd = AgentCommand::new("sh").with_args(vec!["-c".to_string(), script]);
+
+        let mut process = AgentProcess::spawn(&cmd, dir.path())
+            .await
+            .expect("spawn sh");
+        let tail = process.stderr_tail();
+
+        tokio::time::timeout(Duration::from_secs(5), process._child.wait())
+            .await
+            .expect("agent process wedged on newline-free stderr flood")
+            .expect("wait on child failed");
+
+        // The drain task races the child's exit; poll until every byte landed.
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            let snapshot = tail.snapshot();
+            let total: u64 = snapshot.iter().map(|chunk| chunk.len() as u64).sum();
+            if total == BLOB_BYTES {
+                assert!(!snapshot.is_empty());
+                assert!(
+                    snapshot
+                        .iter()
+                        .all(|chunk| (chunk.len() as u64) <= MAX_LINE_LEN),
+                    "a drained chunk exceeded MAX_LINE_LEN"
+                );
+                break;
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "stderr drain never caught up: {total} of {BLOB_BYTES} bytes"
+            );
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
     }
 
     /// The accessor hands the disconnect path a live view: after the child
