@@ -191,6 +191,46 @@ fn resolve(
     )
 }
 
+/// List the kas extraction root: one `(dir_name, has_server_entry)` pair per
+/// directory entry. A missing root yields an empty list (normal on a machine
+/// where kiro-cli has never self-extracted — `resolve` then reports the
+/// actionable `Server` error); an unreadable root is logged at debug before
+/// the same fallback, so a permissions problem is distinguishable from
+/// "never extracted" in the log.
+fn list_kas_entries(root: &Path) -> Vec<(String, bool)> {
+    let entries = match std::fs::read_dir(root) {
+        Ok(e) => e,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Vec::new(),
+        Err(e) => {
+            tracing::debug!(root = %root.display(), error = %e, "kas root unreadable");
+            return Vec::new();
+        }
+    };
+    entries
+        .filter_map(|entry| {
+            let name = entry.ok()?.file_name().into_string().ok()?;
+            let has_server = root.join(&name).join(SERVER_IN_ROOT_REL).is_file();
+            Some((name, has_server))
+        })
+        .collect()
+}
+
+/// The installed kiro-cli's semver tuple, from `kiro-cli --version` on PATH.
+/// `None` (binary absent, non-zero exit, unparseable output) is warn-logged —
+/// selection then prefers the newest extraction instead of an exact match,
+/// which is the best available guess when the CLI can't be asked.
+fn installed_cli_version() -> Option<(u32, u32, u32)> {
+    let step =
+        super::version::kiro_cli_version("kiro-cli").and_then(|v| super::version::parse_semver(&v));
+    match step {
+        Ok(v) => Some(v),
+        Err(e) => {
+            tracing::warn!(error = %e, "kiro-cli version unavailable; selecting newest KAS extraction");
+            None
+        }
+    }
+}
+
 /// Resolve the free-path KAS spawn from the real environment + filesystem.
 /// `KIRO_KAS_SERVER_PATH` / `KIRO_AGENT_PATH` override the defaults.
 pub(crate) fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
@@ -198,17 +238,24 @@ pub(crate) fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
     let server_override = nonempty(std::env::var("KIRO_KAS_SERVER_PATH").ok());
     let node_override = nonempty(std::env::var("KIRO_AGENT_PATH").ok());
     let path_var = std::env::var_os("PATH");
-    // Versioned-dir listing + installed-CLI version are inert here until the
-    // C5–C7 wiring lands (design .cyril-dcc6/design.md): an empty listing makes
-    // `select_server` decline and `resolve` use the legacy layout, exactly the
-    // pre-versioned-discovery behavior.
+    // Both inputs are skipped when an override names the server directly — the
+    // override must win without paying the subprocess + dir-scan cost.
+    let (kas_entries, cli_version) = if server_override.is_some() || home.is_none() {
+        (Vec::new(), None)
+    } else {
+        let root = home.as_deref().map(|h| h.join(KAS_ROOT_REL));
+        (
+            root.as_deref().map(list_kas_entries).unwrap_or_default(),
+            installed_cli_version(),
+        )
+    };
     resolve(
         home.as_deref(),
         server_override.as_deref(),
         node_override.as_deref(),
         path_var.as_deref(),
-        &[],
-        None,
+        &kas_entries,
+        cli_version,
         |p| p.is_file(),
     )
 }
@@ -485,6 +532,128 @@ mod tests {
     fn empty_listing_selects_nothing() {
         assert_eq!(select_server(&[], Some((2, 10, 0))), None);
         assert_eq!(select_server(&[], None), None);
+    }
+
+    // C5 fence: when BOTH the legacy layout and a versioned dir exist, the
+    // versioned dir wins (kills the legacy-checked-first implementation).
+    #[test]
+    fn versioned_beats_legacy() {
+        let dir = format!("2.10.0-{SHA_A}");
+        let versioned = format!("{HOME}/{KAS_ROOT_REL}/{dir}/{SERVER_IN_ROOT_REL}");
+        let path = OsString::from("/usr/bin");
+        let exists = exists_set(&[
+            &default_server(), // legacy present too
+            &versioned,
+            &default_token(),
+            &node("/usr/bin"),
+        ]);
+        let cmd = resolve(
+            Some(Path::new(HOME)),
+            None,
+            None,
+            Some(&path),
+            &[e(&dir, true)],
+            Some((2, 10, 0)),
+            exists,
+        )
+        .expect("all preconditions present");
+        assert_eq!(
+            Path::new(&cmd.args()[1]),
+            Path::new(&versioned),
+            "legacy-first bug: picked {}",
+            cmd.args()[1]
+        );
+    }
+
+    // C7 fence: KIRO_KAS_SERVER_PATH bypasses the glob — the override wins
+    // even when versioned candidates exist (kills the glob-anyway impl).
+    #[test]
+    fn override_beats_versioned() {
+        let dir = format!("2.11.0-{SHA_B}");
+        let versioned = format!("{HOME}/{KAS_ROOT_REL}/{dir}/{SERVER_IN_ROOT_REL}");
+        let override_path = "/opt/custom/acp-server.js";
+        let path = OsString::from("/usr/bin");
+        let exists = exists_set(&[
+            override_path,
+            &versioned,
+            &default_token(),
+            &node("/usr/bin"),
+        ]);
+        let cmd = resolve(
+            Some(Path::new(HOME)),
+            Some(override_path),
+            None,
+            Some(&path),
+            &[e(&dir, true)],
+            Some((2, 11, 0)),
+            exists,
+        )
+        .expect("override + token + node present");
+        assert_eq!(cmd.args()[1], override_path);
+    }
+
+    // C6 fence: nothing found anywhere → Server whose reason names the
+    // searched kas root (kills the wrong-variant / path-less-message impl).
+    #[test]
+    fn nothing_found_names_search_root() {
+        let path = OsString::from("/usr/bin");
+        let exists = exists_set(&[&default_token(), &node("/usr/bin")]);
+        let err = resolve(
+            Some(Path::new(HOME)),
+            None,
+            None,
+            Some(&path),
+            &[],
+            Some((2, 11, 0)),
+            exists,
+        )
+        .unwrap_err();
+        let KasMissing::Server(p) = &err else {
+            panic!("expected Server, got {err:?}");
+        };
+        assert!(
+            p.starts_with(format!("{HOME}/{KAS_ROOT_REL}")),
+            "got {}",
+            p.display()
+        );
+        assert!(err.reason().contains(KAS_ROOT_REL));
+    }
+
+    // Real-filesystem listing: complete extraction, partial extraction, and a
+    // `.lock` FILE sibling (as kiro-cli actually leaves them) pair correctly;
+    // a missing root lists empty.
+    #[test]
+    fn list_kas_entries_real_fs() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let root = tmp.path().join("kas");
+        let complete = format!("2.10.0-{SHA_A}");
+        let partial = format!("2.11.0-{SHA_B}");
+        let server_dir = root
+            .join(&complete)
+            .join("node_modules/@kiro/agent/dist/server");
+        std::fs::create_dir_all(&server_dir).expect("mkdir complete");
+        std::fs::write(server_dir.join("acp-server.js"), "//").expect("write entry");
+        std::fs::create_dir_all(root.join(&partial)).expect("mkdir partial");
+        std::fs::write(root.join(format!("{complete}.lock")), "").expect("write lock");
+
+        let mut entries = list_kas_entries(&root);
+        entries.sort();
+        assert_eq!(
+            entries,
+            vec![
+                (complete.clone(), true),
+                (format!("{complete}.lock"), false),
+                (partial.clone(), false),
+            ]
+        );
+        // The full pipeline over this real layout picks the complete dir.
+        assert_eq!(
+            select_server(&entries, Some((2, 11, 0))),
+            Some(complete.as_str()),
+            "partial/lock entries must not be candidates"
+        );
+        // Missing root → empty, not an error.
+        assert!(list_kas_entries(&root.join("nope")).is_empty());
     }
 
     // Each KasMissing variant yields a non-empty, actionable reason.
