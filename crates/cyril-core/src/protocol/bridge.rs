@@ -1651,8 +1651,26 @@ mod tests {
         }
     }
 
+    /// Kill lever for the fake agent (cyril-l7tw): aborting the agent's io
+    /// wrapper task drops the agent-side duplex halves, which the client
+    /// observes as a clean EOF — the same mechanism as a SIGKILL'd real agent
+    /// (probe finding: agent death is a clean EOF, not an io error).
+    struct AgentKill {
+        io_handle: tokio::task::JoinHandle<()>,
+        conn_cell: Rc<RefCell<Option<Rc<acp::AgentSideConnection>>>>,
+    }
+
+    impl AgentKill {
+        fn kill(self) {
+            *self.conn_cell.borrow_mut() = None;
+            self.io_handle.abort();
+        }
+    }
+
     /// Wire a fake agent to `run_loop` over an in-process duplex and run `body`
-    /// against the live bridge, using the default v2 engine.
+    /// against the live bridge, using the default v2 engine. Tests that need to
+    /// kill the agent mid-flight use [`with_engine_harness`] directly for the
+    /// [`AgentKill`] lever.
     async fn with_harness<F, Fut>(script: Rc<RefCell<Script>>, body: F)
     where
         F: FnOnce(
@@ -1664,7 +1682,10 @@ mod tests {
         ) -> Fut,
         Fut: std::future::Future<Output = ()>,
     {
-        with_engine_harness(Rc::new(V2Engine), script, body).await;
+        with_engine_harness(Rc::new(V2Engine), script, |s, n, p, g, l, _kill| {
+            body(s, n, p, g, l)
+        })
+        .await;
     }
 
     /// Like [`with_harness`] but with a caller-chosen [`Engine`], so KAS-2a tests
@@ -1680,6 +1701,7 @@ mod tests {
             mpsc::Receiver<PermissionRequest>,
             Rc<tokio::sync::Notify>,
             tokio::task::JoinHandle<crate::Result<()>>,
+            AgentKill,
         ) -> Fut,
         Fut: std::future::Future<Output = ()>,
     {
@@ -1718,9 +1740,13 @@ mod tests {
                 tokio::task::spawn_local(async move {
                     let _ = c_task.await;
                 });
-                tokio::task::spawn_local(async move {
+                let a_handle = tokio::task::spawn_local(async move {
                     let _ = a_task.await;
                 });
+                let kill = AgentKill {
+                    io_handle: a_handle,
+                    conn_cell: agent_conn_cell.clone(),
+                };
                 let loop_handle = tokio::task::spawn_local(run_loop(
                     Rc::new(conn),
                     channels,
@@ -1731,7 +1757,7 @@ mod tests {
                     req_rx,
                 ));
                 let (sender, notif_rx, perm_rx) = handle.split();
-                body(sender, notif_rx, perm_rx, gate, loop_handle).await;
+                body(sender, notif_rx, perm_rx, gate, loop_handle, kill).await;
             })
             .await;
     }
@@ -1997,6 +2023,100 @@ mod tests {
         .await;
     }
 
+    // l7tw C1/C5 via the REAL death mechanism (clean EOF — the probe-proven
+    // common mode), complementing the scripted-error fence above: the agent is
+    // killed while the prompt is PARKED, so the Err arm is reached via the rpc
+    // layer clearing its pending responses on connection end, never via an
+    // agent reply. Catches: "Err arm only fires when the agent responds",
+    // and a kill lever that doesn't actually close the stream (test times out).
+    #[tokio::test]
+    async fn death_mid_turn_emits_bridge_error_before_turn_completed() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+                kill.kill();
+                let mut saw_bridge_error = false;
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeError { operation, message }) => {
+                            assert_eq!(operation, "prompt");
+                            assert!(!message.is_empty(), "error message must not be empty");
+                            saw_bridge_error = true;
+                        }
+                        Some(Notification::TurnCompleted { stop_reason }) => {
+                            assert_eq!(stop_reason, StopReason::EndTurn);
+                            assert!(
+                                saw_bridge_error,
+                                "BridgeError must arrive before TurnCompleted on agent death"
+                            );
+                            break;
+                        }
+                        Some(_) => {}
+                        None => panic!("no TurnCompleted within 5s of agent death"),
+                    }
+                }
+            },
+        )
+        .await;
+    }
+
+    // l7tw C2 on the death path: the killed turn ends with exactly ONE
+    // TurnCompleted — the BridgeError adds visibility without disturbing the
+    // single-terminal-marker invariant (cyril-a71q adjacent).
+    #[tokio::test]
+    async fn death_mid_turn_single_turn_completed() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+                kill.kill();
+                let mut completions = 0;
+                while let Some(n) = recv_notif(&mut rx, 2).await {
+                    if matches!(n, Notification::TurnCompleted { .. }) {
+                        completions += 1;
+                    }
+                }
+                assert_eq!(completions, 1, "exactly one TurnCompleted after death");
+            },
+        )
+        .await;
+    }
+
     #[tokio::test]
     async fn turn_error_still_completes_once() {
         // C6: a turn whose prompt fails still emits exactly one TurnCompleted
@@ -2051,7 +2171,7 @@ mod tests {
         with_engine_harness(
             Rc::new(crate::protocol::engine::KasEngine),
             script,
-            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
                 sender
                     .send(BridgeCommand::SendPrompt {
@@ -2106,7 +2226,7 @@ mod tests {
         with_engine_harness(
             Rc::new(crate::protocol::engine::KasEngine),
             script,
-            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
                 sender
                     .send(BridgeCommand::SendPrompt {
