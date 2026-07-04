@@ -40,6 +40,9 @@ unicode-width = "0.2"
 rstest = "0.25"
 insta = "1.42"
 tempfile = "3"
+# KAS auth source (cyril-dcc6): read-only access to kiro-cli's data.sqlite3.
+# `bundled` compiles its own libsqlite3 — hermetic, no system-lib skew.
+rusqlite = { version = "0.39", default-features = false, features = ["bundled"] }
 
 [profile.dev]
 incremental = true

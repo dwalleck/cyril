@@ -11,12 +11,12 @@ description = "Core protocol logic, types, and session management for the Cyril 
 workspace = true
 
 [features]
-# KAS engine support (ADR-0002). Default-off; EMPTY in KAS-0 — it only fixes the
-# gate so the credential-reading code KAS-1 (cyril-evwh) adds is compiled in only
-# under `--features kas`. A default build cannot read the kiro token. Pulls in
-# `tokio/fs` so the auth responder reads the token file without blocking the
-# bridge's single-threaded executor; the default build keeps a minimal tokio.
-kas = ["tokio/fs"]
+# KAS engine support (ADR-0002). Default-off — the credential-reading code
+# (KAS-1 cyril-evwh, auth-source swap cyril-dcc6) is compiled in only under
+# `--features kas`; a default build cannot read the kiro credential store.
+# Pulls in `tokio/fs` for non-blocking file I/O on the bridge's single-threaded
+# executor, and `rusqlite` for read-only access to kiro-cli's data.sqlite3.
+kas = ["tokio/fs", "dep:rusqlite"]
 
 [dependencies]
 thiserror = { workspace = true }
@@ -29,6 +29,7 @@ agent-client-protocol = { workspace = true }
 async-trait = { workspace = true }
 tokio-util = { workspace = true }
 futures-util = { workspace = true }
+rusqlite = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
