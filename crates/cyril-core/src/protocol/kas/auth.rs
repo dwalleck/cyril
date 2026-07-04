@@ -363,6 +363,86 @@ mod tests {
         assert_eq!(read_sqlite_store(&db).unwrap().access_token.0, "AT-relogin");
     }
 
+    // dcc6 review F17a: a store that is garbage BYTES (not a sqlite file at
+    // all) errors at the query layer and is never misreported as logged out.
+    #[test]
+    fn corrupt_store_file_is_not_a_fake_logout() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("data.sqlite3");
+        std::fs::write(&db, b"definitely not sqlite").unwrap();
+        let err = read_sqlite_store(&db).unwrap_err();
+        assert!(
+            !err.contains("logged out"),
+            "corrupt file misdiagnosed as logout: {err}"
+        );
+        assert!(err.contains("kiro token"), "names the failing step: {err}");
+    }
+
+    // dcc6 review F17a: a valid but SCHEMALESS db (no auth_kv/state tables)
+    // errors at the query layer, distinct from the logged-out row shape.
+    #[test]
+    fn schemaless_store_errors_as_query() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("data.sqlite3");
+        drop(rusqlite::Connection::open(&db).unwrap()); // create empty db
+        let err = read_sqlite_store(&db).unwrap_err();
+        assert!(err.contains("query"), "wrong failure mode: {err}");
+        assert!(!err.contains("logged out"), "misdiagnosed: {err}");
+    }
+
+    // dcc6 review F17b: the token-row field guards — a row missing
+    // `access_token`, or holding an empty `expires_at`, errors naming the
+    // field (a partial write / schema drift shape).
+    #[test]
+    fn token_row_field_guards() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = fixture_store(dir.path());
+        let conn = rusqlite::Connection::open(&db).unwrap();
+        conn.execute(
+            "UPDATE auth_kv SET value = '{\"expires_at\":\"2027-01-01T00:00:00Z\"}' \
+             WHERE key = 'kirocli:odic:token'",
+            [],
+        )
+        .unwrap();
+        let err = read_sqlite_store(&db).unwrap_err();
+        assert!(err.contains("access_token"), "{err}");
+        conn.execute(
+            "UPDATE auth_kv SET value = '{\"access_token\":\"AT\",\"expires_at\":\"\"}' \
+             WHERE key = 'kirocli:odic:token'",
+            [],
+        )
+        .unwrap();
+        let err = read_sqlite_store(&db).unwrap_err();
+        assert!(err.contains("expires_at"), "{err}");
+    }
+
+    // Executable slice-7 fence (dcc6 review F7c): the retired SSO-cache token
+    // path must never be consulted again anywhere in the workspace's crates.
+    // The needle is assembled at compile time so this file's source never
+    // contains the joined form.
+    #[test]
+    fn sso_token_path_never_resurrected() {
+        fn scan(dir: &Path, needle: &str, hits: &mut Vec<std::path::PathBuf>) {
+            for entry in std::fs::read_dir(dir).expect("readable dir") {
+                let path = entry.expect("dir entry").path();
+                if path.is_dir() {
+                    scan(&path, needle, hits);
+                } else if path.extension().is_some_and(|e| e == "rs")
+                    && std::fs::read_to_string(&path).is_ok_and(|s| s.contains(needle))
+                {
+                    hits.push(path);
+                }
+            }
+        }
+        let needle = concat!("kiro-auth", "-token");
+        let crates_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("crates/ parent dir");
+        let mut hits = Vec::new();
+        scan(crates_root, needle, &mut hits);
+        assert!(hits.is_empty(), "SSO token path resurrected in: {hits:?}");
+    }
+
     // Corrupt (unparseable) token row is distinguished from absent — the
     // error names the parse, not a fake logout.
     #[test]

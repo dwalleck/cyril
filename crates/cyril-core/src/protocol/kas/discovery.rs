@@ -552,6 +552,9 @@ mod tests {
             format!("2.10-{SHA_A}"),
             format!("2.10.0.1-{SHA_A}"),
             format!("2.10.0-{SHA_A}.lock"),
+            // Pre-release names are rejected by the grammar itself, not just
+            // as a sha-length side effect (dcc6 review, test-analyzer).
+            format!("2.10.0-rc.1-{SHA_A}"),
         ];
         let entries: Vec<_> = bad.iter().map(|n| e(n, true)).collect();
         assert_eq!(select_server(&entries, Some((2, 10, 0))), None);
@@ -567,6 +570,10 @@ mod tests {
             assert_eq!(select_server(&entries, Some((2, 10, 0))), Some(b.as_str()));
             assert_eq!(select_server(&entries, None), Some(b.as_str()));
         }
+        // When the lexically-greater duplicate is a PARTIAL extraction, the
+        // complete lesser one wins (dcc6 review, test-analyzer).
+        let entries = [e(&a, true), e(&b, false)];
+        assert_eq!(select_server(&entries, Some((2, 10, 0))), Some(a.as_str()));
     }
 
     // Empty listing → None (the caller's legacy fallback path).
