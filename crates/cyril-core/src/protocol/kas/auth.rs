@@ -25,10 +25,14 @@ pub(crate) const GET_ACCESS_TOKEN_METHOD: &str = "kiro/auth/getAccessToken";
 /// `expiresAt > now + ~3min`), so cyril treats such a token as stale.
 const EXPIRY_BUFFER_SECS: i64 = 180;
 
+/// JSON-RPC error codes the responder replies with: internal (store, task, or
+/// serialize failures) and server-defined (stale token — the user must re-login).
+const JSONRPC_INTERNAL_ERROR: i32 = -32603;
+const JSONRPC_STALE_TOKEN: i32 = -32000;
+
 /// A redacted access-token wrapper: its `Debug` never prints the secret, so a
 /// stray `{:?}` or a tracing of any struct containing it cannot leak the
 /// credential (spec SC4 custodian).
-#[derive(Clone)]
 struct AccessToken(String);
 
 impl std::fmt::Debug for AccessToken {
@@ -194,32 +198,57 @@ pub(crate) fn store_has_login(db: &Path) -> bool {
     }
 }
 
+/// Answer `getAccessToken` from the store at `db` against clock `now`: the
+/// store is re-read on EVERY call, so a mid-session `kiro-cli login` is served
+/// on the next request without restarting cyril; a stale token gets an
+/// actionable error instead of a known-bad reply. Every failure is warn-logged
+/// locally before the JSON-RPC error travels to KAS — KAS surfaces a failed
+/// callback as a mute/opaque turn (cyril-l7tw), so the log line is the only
+/// cyril-side breadcrumb.
+fn get_access_token_from(db: &Path, now: Option<i64>) -> acp::Result<acp::ExtResponse> {
+    let reply = read_sqlite_store(db).map_err(|e| {
+        tracing::warn!(store = %db.display(), error = %e, "getAccessToken failed: store not servable");
+        acp::Error::new(JSONRPC_INTERNAL_ERROR, e)
+    })?;
+    if is_stale(&reply.expires_at, now) {
+        tracing::warn!(store = %db.display(), "getAccessToken refused: kiro token expired or expiring");
+        return Err(acp::Error::new(
+            JSONRPC_STALE_TOKEN,
+            "kiro token expired; run `kiro-cli login`",
+        ));
+    }
+    build_response(&reply).map_err(|e| {
+        tracing::warn!(error = %e, "getAccessToken reply serialization failed");
+        acp::Error::new(JSONRPC_INTERNAL_ERROR, e)
+    })
+}
+
 /// Answer `_kiro/auth/getAccessToken` from kiro-cli's sqlite credential store
-/// (cyril-dcc6): the store is re-read on EVERY callback, so a mid-session
-/// `kiro-cli login` is served on the next request without restarting cyril.
-/// On a stale token returns an actionable error instead of a known-bad reply;
-/// the stale-policy evolution (re-login affordance) is **cyril-taba**. cyril
-/// never reads or transmits the store's refresh token.
+/// (cyril-dcc6). The stale-policy evolution (a re-login affordance in the UI)
+/// is **cyril-taba**; surfacing callback failures as App notifications rather
+/// than log lines is **cyril-l7tw**. cyril never extracts or transmits the
+/// store's refresh token.
 pub(crate) async fn respond_get_access_token() -> acp::Result<acp::ExtResponse> {
     let db = crate::protocol::kas::discovery::default_store_path().ok_or_else(|| {
+        tracing::warn!(
+            "getAccessToken failed: no home directory to locate the kiro credential store"
+        );
         acp::Error::new(
-            -32603,
+            JSONRPC_INTERNAL_ERROR,
             "no home directory to locate the kiro credential store",
         )
     })?;
     // spawn_blocking: rusqlite is synchronous, and the bridge is a
     // single-threaded runtime whose executor must not stall on I/O.
-    let reply = tokio::task::spawn_blocking(move || read_sqlite_store(&db))
+    tokio::task::spawn_blocking(move || get_access_token_from(&db, now_epoch()))
         .await
-        .map_err(|e| acp::Error::new(-32603, format!("credential store read task: {e}")))?
-        .map_err(|e| acp::Error::new(-32603, e))?;
-    if is_stale(&reply.expires_at, now_epoch()) {
-        return Err(acp::Error::new(
-            -32000,
-            "kiro token expired; run `kiro-cli login` (re-login affordance: cyril-taba)",
-        ));
-    }
-    build_response(&reply).map_err(|e| acp::Error::new(-32603, e))
+        .map_err(|e| {
+            tracing::warn!(error = %e, "getAccessToken store-read task failed");
+            acp::Error::new(
+                JSONRPC_INTERNAL_ERROR,
+                format!("credential store read task: {e}"),
+            )
+        })?
 }
 
 #[cfg(test)]
@@ -426,6 +455,53 @@ mod tests {
         assert!(is_stale("garbage", Some(base)));
         // Unreadable clock -> stale (fail safe), never reported fresh.
         assert!(is_stale(exp, None));
+    }
+
+    /// Epoch of the fixture store's `expires_at` — the responder tests pin
+    /// `now` relative to this so they never race the real clock.
+    fn fixture_expiry_epoch() -> i64 {
+        rfc3339_to_epoch("2026-07-04T03:35:26.917713429Z").expect("fixture expiry parses")
+    }
+
+    // dcc6 review F2: the COMPOSED responder path — a fresh store serves the
+    // 3-key reply (the pieces were fenced; the glue was not).
+    #[test]
+    fn responder_serves_fresh_store() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = fixture_store(dir.path());
+        let now = fixture_expiry_epoch() - EXPIRY_BUFFER_SECS - 60;
+        let resp = get_access_token_from(&db, Some(now)).expect("fresh store serves");
+        let v: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        assert_eq!(v["accessToken"], "AT-sqlite");
+        assert_eq!(
+            v["profileArn"],
+            "arn:aws:codewhisperer:us-east-1:1:profile/X"
+        );
+    }
+
+    // dcc6 review F2: a stale token is REFUSED with the stale code and the
+    // actionable re-login hint — deleting/inverting the is_stale gate fails here.
+    #[test]
+    fn responder_refuses_stale_token() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = fixture_store(dir.path());
+        let err = get_access_token_from(&db, Some(fixture_expiry_epoch() + 1)).unwrap_err();
+        assert_eq!(err.code, acp::Error::new(JSONRPC_STALE_TOKEN, "").code);
+        assert!(
+            err.message.contains("kiro-cli login"),
+            "not actionable: {}",
+            err.message
+        );
+    }
+
+    // dcc6 review F2: a store failure maps to the INTERNAL code — distinct
+    // from the stale code, so KAS-side triage can tell the modes apart.
+    #[test]
+    fn responder_store_error_is_internal() {
+        let dir = tempfile::tempdir().unwrap();
+        let err = get_access_token_from(&dir.path().join("absent.sqlite3"), Some(0)).unwrap_err();
+        assert_eq!(err.code, acp::Error::new(JSONRPC_INTERNAL_ERROR, "").code);
+        assert!(err.message.contains("kiro-cli login"), "{}", err.message);
     }
 
     // build_response emits exactly the three camelCase keys KAS validates.
