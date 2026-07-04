@@ -553,8 +553,9 @@ mod tests {
             format!("2.10-{SHA_A}"),
             format!("2.10.0.1-{SHA_A}"),
             format!("2.10.0-{SHA_A}.lock"),
-            // Pre-release names are rejected by the grammar itself, not just
-            // as a sha-length side effect (dcc6 review, test-analyzer).
+            // Pre-release names are pinned as rejected. Mechanism: the split
+            // at the FIRST '-' leaves `rc.1-<sha>` (69 chars) as the sha
+            // segment, failing the 64-hex check (dcc6 review, test-analyzer).
             format!("2.10.0-rc.1-{SHA_A}"),
         ];
         let entries: Vec<_> = bad.iter().map(|n| e(n, true)).collect();
