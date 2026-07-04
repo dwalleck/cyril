@@ -174,11 +174,12 @@ impl acp::Client for KiroClient {
         Ok(())
     }
 
-    /// Handle incoming server→client ext REQUESTS. KAS-1 answers
-    /// `_kiro/auth/getAccessToken` (wrapper mode, `--auth=acp-callback`) from
-    /// kiro-cli's own token file; every other ext request gets the protocol
-    /// default. The v2 free path never sends this, and the cfg-split keeps the
-    /// credential code out of a default build (ADR-0002).
+    /// Handle incoming server→client ext REQUESTS. KAS-1/dcc6 answers
+    /// `_kiro/auth/getAccessToken` (both KAS spawn modes run
+    /// `--auth=acp-callback`) from kiro-cli's sqlite credential store; every
+    /// other ext request gets the protocol default. v2 never sends this, and
+    /// the cfg-split keeps the credential code out of a default build
+    /// (ADR-0002).
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         Self::handle_ext_request(args).await
     }
@@ -277,13 +278,13 @@ impl KiroClient {
         // methods (the overrides above), not ext requests: fs/read_text_file (KAS-5a,
         // cyril-7bdu) and terminal/{create,output,wait_for_exit,release,kill} (KAS-5b,
         // cyril-ufie). This arm answers only the `_kiro/*`-prefixed ext requests.
-        default_ext_response()
+        unhandled_ext_response(args.method.as_ref())
     }
 
     /// Default build: no KAS ext requests are handled.
     #[cfg(not(feature = "kas"))]
-    async fn handle_ext_request(_args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
-        default_ext_response()
+    async fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+        unhandled_ext_response(args.method.as_ref())
     }
 }
 
@@ -292,6 +293,19 @@ fn default_ext_response() -> acp::Result<acp::ExtResponse> {
     Ok(acp::ExtResponse::new(
         serde_json::value::RawValue::NULL.to_owned().into(),
     ))
+}
+
+/// Log an unhandled `_kiro/*` ext request, then answer with the protocol
+/// default ([`default_ext_response`]). The breadcrumb is load-bearing: if KAS
+/// renames a method (or the acp library's leading-underscore stripping
+/// changes), the caller gets a success-shaped null and fails opaquely on its
+/// side — this log line is the only cyril-side evidence (dcc6 review F15).
+fn unhandled_ext_response(method: &str) -> acp::Result<acp::ExtResponse> {
+    tracing::debug!(
+        method,
+        "unhandled ext request answered with protocol-default null"
+    );
+    default_ext_response()
 }
 
 #[cfg(all(test, feature = "kas"))]

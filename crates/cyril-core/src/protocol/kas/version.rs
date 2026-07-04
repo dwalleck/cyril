@@ -7,7 +7,7 @@ use crate::types::AgentCommand;
 /// ignoring any pre-release/build suffix on the patch (e.g. `2.8.1-beta` →
 /// `(2,8,1)`). Compared as a tuple so ordering is true semver, NOT lexical
 /// (`2.10.0` > `2.8.0`). Returns `Err` on a malformed string.
-fn parse_semver(s: &str) -> Result<(u32, u32, u32), String> {
+pub(crate) fn parse_semver(s: &str) -> Result<(u32, u32, u32), String> {
     let mut it = s.trim().split('.');
     // Pulls the next dotted component's leading digit-run. Captures `it` and the
     // outer `s` (for the error) — it takes no argument, so there is no shadowed
@@ -44,7 +44,7 @@ pub(crate) fn flag_for_version(version: &str) -> Result<&'static str, String> {
 
 /// Read the installed kiro-cli version by running `<program> --version` and
 /// pulling the first digit-leading token (`kiro-cli 2.8.1` → `2.8.1`).
-fn kiro_cli_version(program: &str) -> Result<String, String> {
+pub(crate) fn kiro_cli_version(program: &str) -> Result<String, String> {
     let out = std::process::Command::new(program)
         .arg("--version")
         .output()

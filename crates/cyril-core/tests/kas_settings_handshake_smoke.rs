@@ -30,7 +30,7 @@ use cyril_core::types::*;
 use tokio::sync::mpsc::Receiver;
 
 #[tokio::test]
-#[ignore = "live: needs --features kas, a fresh kiro-cli login (SSO token file), the KAS bundle, and node"]
+#[ignore = "live: needs --features kas, a fresh kiro-cli login (sqlite credential store), the KAS bundle, and node"]
 async fn settings_handshake_turn_completes_and_orchestrates() {
     let dir = tempfile::tempdir().unwrap();
 

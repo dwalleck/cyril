@@ -2,12 +2,13 @@
 //! completion THROUGH cyril's bridge — not the raw probe harness.
 //!
 //! Manual-gated (design caveat): needs `--features kas`, a prior `kiro-cli
-//! login` (populates the tier-5 token file), the self-extracted KAS bundle, and
-//! `node`. Oracle parity with prove-it-prototype: the bridge spawns the
-//! identical no-`--auth` argv the probe used (unit-fenced by
-//! `discovery::resolve_happy_path_builds_probe_argv`), which the probe proved
-//! completes with `_kiro/auth/getAccessToken` fired 0×. This smoke asserts the
-//! user-observable end of that: a `TurnCompleted` with no `BridgeDisconnected`.
+//! login` (populates the sqlite credential store), the self-extracted KAS
+//! bundle, and `node`. Oracle parity with prove-it-prototype (cyril-dcc6): the
+//! bridge spawns the identical `--auth=acp-callback` argv kiro-cli itself uses
+//! (unit-fenced by `discovery::argv_matches_kiro_cli_own_spawn`), and cyril's
+//! sqlite-backed `_kiro/auth/getAccessToken` responder authenticates the turn
+//! — the probe proved this end-to-end twice (C14b). This smoke asserts the
+//! user-observable end: a `TurnCompleted` with no `BridgeDisconnected`.
 //!
 //! Run: cargo test -p cyril-core --features kas --test kas_freepath_smoke \
 //!        -- --ignored --nocapture
@@ -41,7 +42,10 @@ async fn freepath_turn_completes_through_bridge() {
     sender
         .send(BridgeCommand::SendPrompt {
             session_id,
-            content_blocks: vec!["Reply with exactly: ok. Do not use any tools.".into()],
+            content_blocks: vec![
+                "Reply with exactly the text KAS_SMOKE_OK and nothing else. Do not use any tools."
+                    .into(),
+            ],
         })
         .await
         .expect("send SendPrompt");
@@ -49,13 +53,26 @@ async fn freepath_turn_completes_through_bridge() {
     // Drive to TurnCompleted; fail loudly on BridgeDisconnected (a missing
     // precondition or an auth failure) or a 180s timeout.
     let deadline = tokio::time::Instant::now() + Duration::from_secs(180);
+    // Accumulate agent text: TurnCompleted alone is NOT proof of an authenticated
+    // turn — a prompt-level error can collapse into TurnCompleted (cyril-l7tw) —
+    // so the fence also demands the echoed sentinel. (`KAS_SMOKE_OK`, not "ok":
+    // "ok" is a substring of "TokenInvalidError"'s "token".)
+    let mut text = String::new();
     loop {
         let routed = tokio::time::timeout_at(deadline, notif_rx.recv())
             .await
             .expect("a TurnCompleted within 180s")
             .expect("notification channel open");
         match routed.notification {
-            Notification::TurnCompleted { .. } => return, // C1 satisfied
+            Notification::AgentMessage(m) => text.push_str(&m.text),
+            Notification::TurnCompleted { .. } => {
+                assert!(
+                    text.contains("KAS_SMOKE_OK"),
+                    "turn completed WITHOUT the echoed sentinel — an error turn \
+                     collapsed into TurnCompleted (cyril-l7tw)? agent text: {text:?}"
+                );
+                return;
+            }
             Notification::BridgeDisconnected { reason } => {
                 panic!("free-path KAS turn disconnected: {reason}")
             }

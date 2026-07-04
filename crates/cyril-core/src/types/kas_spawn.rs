@@ -1,18 +1,19 @@
 //! Which KAS spawn shape the bridge uses when the engine is KAS (KAS-1, cyril-evwh).
 
 /// How to launch the KAS engine when [`crate::types::AgentEngine::Kas`] is
-/// selected: the zero-credential **free path** (a direct `acp-server.js` spawn,
-/// where KAS uses its own file-auth) or the **wrapper** (`kiro-cli acp
-/// --agent-engine <v3|kas>`, which delegates auth to cyril's
-/// `_kiro/auth/getAccessToken` responder).
+/// selected: the **free path** (a direct `acp-server.js` spawn) or the
+/// **wrapper** (`kiro-cli acp --agent-engine <v3|kas>`). Both run
+/// `--auth=acp-callback` and delegate auth to cyril's
+/// `_kiro/auth/getAccessToken` responder (cyril-dcc6).
 ///
 /// Configured via TOML `[agent] kas_spawn = "free" | "wrapper"`; defaults to
 /// `free`. Irrelevant when the engine is v2.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum KasSpawn {
-    /// Direct `node acp-server.js --transport=stdio` (no `--auth`); no cyril
-    /// credential code (KAS self-authenticates from the token file).
+    /// Direct `node acp-server.js --transport=stdio --auth=acp-callback`
+    /// (cyril-dcc6); cyril answers `_kiro/auth/getAccessToken` from kiro-cli's
+    /// sqlite credential store, same as wrapper mode.
     #[default]
     Free,
     /// `kiro-cli acp --agent-engine <flag>` (injects `--auth=acp-callback`);
