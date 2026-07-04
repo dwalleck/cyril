@@ -25,9 +25,16 @@ pub(crate) enum KasMissing {
     Server(PathBuf),
     /// No `node` runtime (`KIRO_AGENT_PATH` unset/missing and none on `PATH`).
     Node,
-    /// The credential store holds no servable login — the user has not run
-    /// `kiro-cli login` (or logged out, which deletes the token row).
-    NotLoggedIn(PathBuf),
+    /// No home directory to locate the credential store — distinct from
+    /// [`KasMissing::NoHome`] because it is reachable with the bundle already
+    /// resolved via `KIRO_KAS_SERVER_PATH` (dcc6 review F6), where "set the
+    /// override" would be misleading advice.
+    NoHomeForStore,
+    /// The credential store cannot serve a login right now; `why` carries the
+    /// precise diagnostic (absent/locked/corrupt store, logged out, or expired
+    /// token — dcc6 review F4), so a locked store is never misreported as
+    /// "run `kiro-cli login`".
+    StoreUnservable { store: PathBuf, why: String },
 }
 
 impl KasMissing {
@@ -45,10 +52,14 @@ impl KasMissing {
             KasMissing::Node => "node runtime not found. Install Node.js (on PATH) or set \
                  KIRO_AGENT_PATH to the node binary."
                 .to_string(),
-            KasMissing::NotLoggedIn(p) => format!(
-                "not authenticated for KAS: no servable login in {}. Run `kiro-cli login`.",
-                p.display()
-            ),
+            KasMissing::NoHomeForStore => {
+                "cannot locate the kiro credential store: no home directory (HOME unset). \
+                 KAS auth is served from kiro-cli's login store (`kiro-cli login`)."
+                    .to_string()
+            }
+            KasMissing::StoreUnservable { store, why } => {
+                format!("KAS auth not servable from {}: {why}", store.display())
+            }
         }
     }
 }
@@ -255,11 +266,12 @@ pub(crate) fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
         |p| p.is_file(),
     )?;
     // Login gate (C14a): with `--auth=acp-callback` the responder is
-    // load-bearing for every turn, so an unservable credential store fails the
-    // spawn here, actionably, instead of as a dead first turn.
-    let db = default_store_path().ok_or(KasMissing::NoHome)?;
-    if !super::auth::store_has_login(&db) {
-        return Err(KasMissing::NotLoggedIn(db));
+    // load-bearing for every turn, so an unservable credential store — absent,
+    // locked, corrupt, logged out, or holding an expired token — fails the
+    // spawn here with its precise diagnostic, instead of as a dead first turn.
+    let db = default_store_path().ok_or(KasMissing::NoHomeForStore)?;
+    if let Some(why) = super::auth::store_unservable_reason(&db, super::auth::now_epoch()) {
+        return Err(KasMissing::StoreUnservable { store: db, why });
     }
     Ok(cmd)
 }
@@ -679,10 +691,20 @@ mod tests {
                 .contains("kiro-cli acp")
         );
         assert!(KasMissing::Node.reason().contains("KIRO_AGENT_PATH"));
+        // F6: the store-side no-home reason must NOT point at the bundle
+        // override (the user may already have set it) — it names the store.
+        let store_reason = KasMissing::NoHomeForStore.reason();
+        assert!(store_reason.contains("credential store"), "{store_reason}");
         assert!(
-            KasMissing::NotLoggedIn(PathBuf::from("/x"))
-                .reason()
-                .contains("kiro-cli login")
+            !store_reason.contains("KIRO_KAS_SERVER_PATH"),
+            "misdirects to the bundle override: {store_reason}"
         );
+        // F4: the gate's reason carries the underlying diagnostic verbatim.
+        let unservable = KasMissing::StoreUnservable {
+            store: PathBuf::from("/x"),
+            why: "kiro token row absent — logged out; run `kiro-cli login`".to_string(),
+        };
+        assert!(unservable.reason().contains("kiro-cli login"));
+        assert!(unservable.reason().contains("/x"));
     }
 }

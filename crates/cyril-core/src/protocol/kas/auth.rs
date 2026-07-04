@@ -160,7 +160,7 @@ fn is_stale(expires_at: &str, now_epoch: Option<i64>) -> bool {
 /// rather than masking the error as epoch 0 — which would make every real,
 /// future-dated token look *fresh* and forward a credential cyril never
 /// validated against the real time.
-fn now_epoch() -> Option<i64> {
+pub(super) fn now_epoch() -> Option<i64> {
     match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(d) => Some(d.as_secs() as i64),
         Err(e) => {
@@ -182,19 +182,20 @@ fn build_response(reply: &AuthReply) -> Result<acp::ExtResponse, String> {
     Ok(acp::ExtResponse::new(raw.into()))
 }
 
-/// True when the credential store holds a servable login (both rows present
-/// and well-formed). The free-path spawn gate: with `--auth=acp-callback` the
+/// Why the credential store cannot serve `getAccessToken` right now — absent/
+/// locked/corrupt store, the logged-out row shape, or a token already expired
+/// or expiring (dcc6 review F3/F4) — or `None` when a callback made now would
+/// succeed. The free-path spawn gate (C14a): with `--auth=acp-callback` the
 /// responder is load-bearing for every turn, so an unservable store must fail
-/// the spawn up front with an actionable error instead of a dead first turn.
-/// Coarse by design — the underlying diagnostic is debug-logged here and
-/// re-surfaced precisely by the responder if a spawn proceeds anyway.
-pub(crate) fn store_has_login(db: &Path) -> bool {
+/// the spawn up front with the precise diagnostic instead of as a dead first
+/// turn. `now` is injected so gate tests never race the fixture's expiry.
+pub(crate) fn store_unservable_reason(db: &Path, now: Option<i64>) -> Option<String> {
     match read_sqlite_store(db) {
-        Ok(_) => true,
-        Err(e) => {
-            tracing::debug!(store = %db.display(), error = %e, "kiro credential store not servable");
-            false
+        Ok(reply) if is_stale(&reply.expires_at, now) => {
+            Some("kiro token expired; run `kiro-cli login`".to_string())
         }
+        Ok(_) => None,
+        Err(e) => Some(e),
     }
 }
 
@@ -383,25 +384,35 @@ mod tests {
     }
 
     // C14a fence: the spawn gate keys on the sqlite store — servable rows
-    // pass; the logout shape, a corrupt row, and a missing store all decline.
+    // pass; the logout shape, a corrupt row, a missing store, AND a stale
+    // token (dcc6 review F3) all decline, each with its own diagnostic (F4).
     // No file input exists in this path (the SSO-file gate is structurally
-    // gone; the slice-7 grep fence forbids its resurrection).
+    // gone; the sso_token_path_never_resurrected fence forbids it).
     #[test]
     fn gate_is_sqlite_not_file() {
         let dir = tempfile::tempdir().unwrap();
         let db = fixture_store(dir.path());
-        assert!(store_has_login(&db));
+        let fresh = Some(fixture_expiry_epoch() - EXPIRY_BUFFER_SECS - 60);
+        assert_eq!(store_unservable_reason(&db, fresh), None);
+        // Review F3: an EXPIRED login passes row checks but must not pass the
+        // gate — it would die on the first callback instead of at spawn.
+        let why = store_unservable_reason(&db, Some(fixture_expiry_epoch() + 1))
+            .expect("stale token must not pass the gate");
+        assert!(why.contains("expired"), "wrong diagnostic: {why}");
         let conn = rusqlite::Connection::open(&db).unwrap();
         conn.execute(
             "UPDATE auth_kv SET value = 'corrupt' WHERE key = 'kirocli:odic:token'",
             [],
         )
         .unwrap();
-        assert!(!store_has_login(&db), "corrupt row must not pass the gate");
+        // Review F4: corrupt is diagnosed as corrupt, not as a fake logout.
+        let why = store_unservable_reason(&db, fresh).expect("corrupt row must not pass the gate");
+        assert!(why.contains("parse"), "corrupt collapsed: {why}");
         conn.execute("DELETE FROM auth_kv WHERE key = 'kirocli:odic:token'", [])
             .unwrap();
-        assert!(!store_has_login(&db), "logout shape must not pass the gate");
-        assert!(!store_has_login(&dir.path().join("absent.sqlite3")));
+        let why = store_unservable_reason(&db, fresh).expect("logout shape must not pass");
+        assert!(why.contains("kiro-cli login"), "not actionable: {why}");
+        assert!(store_unservable_reason(&dir.path().join("absent.sqlite3"), fresh).is_some());
     }
 
     // C11 custodian: neither the AccessToken's nor the AuthReply's Debug leaks
