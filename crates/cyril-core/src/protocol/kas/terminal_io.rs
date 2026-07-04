@@ -11,9 +11,11 @@
 //!
 //! **Lifecycle ("Option B"):** `create` spawns a piped child and returns the id
 //! immediately; `wait` moves the child out of the registry (dropping the `RefCell`
-//! borrow) and `wait_with_output().await` drains both pipes *while* waiting — no
-//! pipe-buffer deadlock. The undrained-pipe window before `wait` is sub-ms (KAS
-//! calls `wait` immediately after `create`); the chatty-command risk if KAS ever
+//! borrow) and [`wait_with_output_killable`] drains both pipes *while* waiting —
+//! no pipe-buffer deadlock — while also watching the terminal's kill signal so a
+//! concurrent `kill`/`release` terminates the child through the task that owns it
+//! (cyril-lw67). The undrained-pipe window before `wait` is sub-ms (KAS calls
+//! `wait` immediately after `create`); the chatty-command risk if KAS ever
 //! delays `wait` is tracked **cyril-r3t6**.
 //!
 //! **Non-blocking invariant (ADR-0004): `wait`/`release`/`kill` MUST await
@@ -25,9 +27,12 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use agent_client_protocol as acp;
+use tokio::io::AsyncReadExt as _;
 use tokio::process::Child;
+use tokio::sync::Notify;
 
 /// A process-lifetime registry of live terminals, one per `KiroClient`
 /// (`!Send`, single bridge thread — no lock, mirroring `tool_call_inputs`).
@@ -40,7 +45,17 @@ pub(crate) struct TerminalRegistry {
 /// it out (`None` while a take is in flight); `Exited` caches the captured combined
 /// output + status so a later `output`/`wait` is a snapshot, not a re-run.
 enum Entry {
-    Running(Option<Child>),
+    Running {
+        /// The spawned child, `None` while an awaiting op has taken it out.
+        child: Option<Child>,
+        /// Kill signal for the in-flight owner. The rpc layer spawns every
+        /// inbound request as its own concurrent task, so `kill`/`release` land
+        /// WHILE a `wait` owns the child (KAS's command-timeout pattern does
+        /// this on every kill). They cannot `start_kill` a child they don't
+        /// hold, so they notify this and the owning task kills + reaps
+        /// (cyril-lw67).
+        kill_signal: Rc<Notify>,
+    },
     Exited {
         output: String,
         status: acp::TerminalExitStatus,
@@ -49,13 +64,16 @@ enum Entry {
 
 /// Outcome of taking a terminal's child out of the registry for an awaiting op.
 enum Taken {
-    /// The live child, removed from its `Running` slot — caller awaits + reaps it.
-    Child(Child),
+    /// The live child, removed from its `Running` slot — caller awaits + reaps
+    /// it, watching the kill signal for a concurrent `kill`/`release`.
+    Child(Child, Rc<Notify>),
     /// The terminal already exited; carries its cached status (for `wait`).
     AlreadyExited(acp::TerminalExitStatus),
-    /// Another op already took the child and is awaiting it (defensive — KAS is
-    /// sequential, so this is not reached in practice).
-    InFlight,
+    /// Another op already took the child and is awaiting it. Carries the kill
+    /// signal so `kill`/`release` can terminate the child through the in-flight
+    /// owner instead of silently falling through (cyril-lw67) — with KAS's
+    /// create→wait-immediately pattern, every kill arrives in this state.
+    InFlight(Rc<Notify>),
 }
 
 impl TerminalRegistry {
@@ -106,9 +124,13 @@ impl TerminalRegistry {
         let n = self.counter.get().saturating_add(1);
         self.counter.set(n);
         let id = acp::TerminalId::new(format!("term-{n}"));
-        self.inner
-            .borrow_mut()
-            .insert(id.clone(), Entry::Running(Some(child)));
+        self.inner.borrow_mut().insert(
+            id.clone(),
+            Entry::Running {
+                child: Some(child),
+                kill_signal: Rc::new(Notify::new()),
+            },
+        );
         Ok(acp::CreateTerminalResponse::new(id))
     }
 
@@ -124,19 +146,19 @@ impl TerminalRegistry {
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
         // take_child drops the RefCell borrow before we await (the no-borrow-across-
         // await invariant). A sequential KAS never double-waits; InFlight is defensive.
-        let child = match self.take_child(&req.terminal_id)? {
-            Taken::Child(child) => child,
+        let (child, kill_signal) = match self.take_child(&req.terminal_id)? {
+            Taken::Child(child, kill_signal) => (child, kill_signal),
             Taken::AlreadyExited(status) => {
                 return Ok(acp::WaitForTerminalExitResponse::new(status));
             }
-            Taken::InFlight => {
+            Taken::InFlight(_) => {
                 return Err(acp::Error::new(
                     -32603,
                     format!("terminal {} wait already in progress", req.terminal_id),
                 ));
             }
         };
-        let out = match child.wait_with_output().await {
+        let out = match wait_with_output_killable(child, &kill_signal).await {
             Ok(out) => out,
             // take_child left a Running(None) slot; a reap error must free it (not
             // leave the id wedged in a permanent InFlight state — a retried wait
@@ -148,13 +170,7 @@ impl TerminalRegistry {
             }
         };
         let status = exit_status(&out.status);
-        self.inner.borrow_mut().insert(
-            req.terminal_id.clone(),
-            Entry::Exited {
-                output: combine_output(&out),
-                status: status.clone(),
-            },
-        );
+        self.store_exited(&req.terminal_id, combine_output(&out), status.clone());
         Ok(acp::WaitForTerminalExitResponse::new(status))
     }
 
@@ -174,7 +190,9 @@ impl TerminalRegistry {
                 Ok(acp::TerminalOutputResponse::new(output.clone(), false)
                     .exit_status(status.clone()))
             }
-            Some(Entry::Running(_)) => Ok(acp::TerminalOutputResponse::new(String::new(), false)),
+            Some(Entry::Running { .. }) => {
+                Ok(acp::TerminalOutputResponse::new(String::new(), false))
+            }
         }
     }
 
@@ -185,17 +203,27 @@ impl TerminalRegistry {
         &self,
         req: &acp::ReleaseTerminalRequest,
     ) -> acp::Result<acp::ReleaseTerminalResponse> {
-        if let Taken::Child(mut child) = self.take_child(&req.terminal_id)? {
-            // SIGKILL then reap. Without the wait the child is a zombie; tokio's
-            // Child does NOT kill/reap on drop. Output is discarded (id is freed).
-            // Both ops are best-effort (the child may have already exited), but a
-            // failure is logged, not swallowed (CLAUDE.md: no discarded Results).
-            if let Err(e) = child.start_kill() {
-                tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: start_kill failed");
+        match self.take_child(&req.terminal_id)? {
+            Taken::Child(mut child, _) => {
+                // SIGKILL then reap. Without the wait the child is a zombie; tokio's
+                // Child does NOT kill/reap on drop. Output is discarded (id is freed).
+                // Both ops are best-effort (the child may have already exited), but a
+                // failure is logged, not swallowed (CLAUDE.md: no discarded Results).
+                if let Err(e) = child.start_kill() {
+                    tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: start_kill failed");
+                }
+                if let Err(e) = child.wait().await {
+                    tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: reap failed (possible zombie)");
+                }
             }
-            if let Err(e) = child.wait().await {
-                tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: reap failed (possible zombie)");
-            }
+            // A pending wait/kill owns the child; release can't SIGKILL a child it
+            // doesn't hold, so it signals the owner to start_kill + reap
+            // (cyril-lw67 — the old fall-through killed nothing). The remove below
+            // doubles as the released tombstone: the owner's completion path
+            // (store_exited) finds the id gone and discards the output instead of
+            // resurrecting the released id.
+            Taken::InFlight(kill_signal) => kill_signal.notify_one(),
+            Taken::AlreadyExited(_) => {}
         }
         self.inner.borrow_mut().remove(&req.terminal_id);
         Ok(acp::ReleaseTerminalResponse::new())
@@ -210,27 +238,35 @@ impl TerminalRegistry {
         &self,
         req: &acp::KillTerminalRequest,
     ) -> acp::Result<acp::KillTerminalResponse> {
-        if let Taken::Child(mut child) = self.take_child(&req.terminal_id)? {
-            if let Err(e) = child.start_kill() {
-                tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal kill: start_kill failed");
-            }
-            let out = match child.wait_with_output().await {
-                Ok(out) => out,
-                // take_child left a Running(None) slot; a reap error must free it
-                // (not leave the id wedged in a permanent InFlight state) before
-                // surfacing the error to KAS.
-                Err(e) => {
-                    self.inner.borrow_mut().remove(&req.terminal_id);
-                    return Err(wait_err(&req.terminal_id, e));
+        match self.take_child(&req.terminal_id)? {
+            Taken::Child(mut child, _) => {
+                if let Err(e) = child.start_kill() {
+                    tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal kill: start_kill failed");
                 }
-            };
-            self.inner.borrow_mut().insert(
-                req.terminal_id.clone(),
-                Entry::Exited {
-                    output: combine_output(&out),
-                    status: exit_status(&out.status),
-                },
-            );
+                let out = match child.wait_with_output().await {
+                    Ok(out) => out,
+                    // take_child left a Running(None) slot; a reap error must free it
+                    // (not leave the id wedged in a permanent InFlight state) before
+                    // surfacing the error to KAS.
+                    Err(e) => {
+                        self.inner.borrow_mut().remove(&req.terminal_id);
+                        return Err(wait_err(&req.terminal_id, e));
+                    }
+                };
+                self.store_exited(
+                    &req.terminal_id,
+                    combine_output(&out),
+                    exit_status(&out.status),
+                );
+            }
+            // With KAS's create→wait-immediately pattern, EVERY kill lands here: a
+            // pending wait owns the child. Signal it to start_kill from the task
+            // that holds the Child (cyril-lw67 — the old fall-through replied Ok
+            // having killed nothing, hanging the turn); the pending wait resolves
+            // with the killed status and caches it, keeping the id valid per the
+            // kill contract.
+            Taken::InFlight(kill_signal) => kill_signal.notify_one(),
+            Taken::AlreadyExited(_) => {}
         }
         Ok(acp::KillTerminalResponse::new())
     }
@@ -244,9 +280,74 @@ impl TerminalRegistry {
         match map.get_mut(id) {
             None => Err(unknown_terminal(id)),
             Some(Entry::Exited { status, .. }) => Ok(Taken::AlreadyExited(status.clone())),
-            Some(Entry::Running(slot)) => Ok(slot.take().map_or(Taken::InFlight, Taken::Child)),
+            Some(Entry::Running { child, kill_signal }) => Ok(match child.take() {
+                Some(child) => Taken::Child(child, Rc::clone(kill_signal)),
+                None => Taken::InFlight(Rc::clone(kill_signal)),
+            }),
         }
     }
+
+    /// Cache a reaped terminal's captured output + status — unless the id was
+    /// released while the reap was in flight. `release` removes the id as its
+    /// tombstone; blindly `insert`ing here would resurrect a released id
+    /// (violating the released-id → `-32602` contract) and leak the entry +
+    /// captured output for the life of the bridge (cyril-lw67). While an op owns
+    /// the child the only reachable states are `Running(None)` (overwrite with
+    /// the snapshot) and absent (released — discard).
+    fn store_exited(&self, id: &acp::TerminalId, output: String, status: acp::TerminalExitStatus) {
+        match self.inner.borrow_mut().get_mut(id) {
+            Some(entry) => *entry = Entry::Exited { output, status },
+            None => {
+                tracing::debug!(terminal_id = %id, "KAS terminal released during pending wait; discarding captured output");
+            }
+        }
+    }
+}
+
+/// Await a taken child's exit while draining both pipes (the `wait_with_output`
+/// contract — a chatty command can't pipe-buffer-deadlock) AND watching the
+/// terminal's kill signal. `kill`/`release` can land while a `wait` owns the
+/// child (the rpc layer spawns each inbound request as its own task); they
+/// can't `start_kill` a child they don't hold, so they notify the signal and
+/// THIS task — the owner — kills, then lets the wait resolve with the killed
+/// status (cyril-lw67). `wait_with_output` itself consumes the child, so it
+/// can't be combined with a kill hook; this reimplements its drain-while-wait
+/// shape with a `select!` on the exit. `tokio::process::Child::wait` is
+/// cancel-safe, so selecting over it is sound. A `notify_one` sent before this
+/// task polls `notified()` is not lost — `Notify` stores the permit.
+async fn wait_with_output_killable(
+    mut child: Child,
+    kill_signal: &Notify,
+) -> std::io::Result<std::process::Output> {
+    async fn drain(pipe: Option<impl tokio::io::AsyncRead + Unpin>) -> std::io::Result<Vec<u8>> {
+        let mut buf = Vec::new();
+        if let Some(mut pipe) = pipe {
+            pipe.read_to_end(&mut buf).await?;
+        }
+        Ok(buf)
+    }
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let exit = async {
+        tokio::select! {
+            res = child.wait() => return res,
+            _ = kill_signal.notified() => {}
+        }
+        // Signaled by a concurrent kill/release: SIGKILL from the task that owns
+        // the Child, then reap. start_kill on a child that already exited (but
+        // is not yet reaped) is best-effort — logged, never fatal; the wait
+        // below reaps either way.
+        if let Err(e) = child.start_kill() {
+            tracing::debug!(error = %e, "KAS terminal kill-signal: start_kill failed");
+        }
+        child.wait().await
+    };
+    let (status, stdout, stderr) = tokio::join!(exit, drain(stdout), drain(stderr));
+    Ok(std::process::Output {
+        status: status?,
+        stdout: stdout?,
+        stderr: stderr?,
+    })
 }
 
 /// The (acp-stripped) method name for KAS's `_kiro/terminal/shell_type` host
@@ -620,6 +721,95 @@ mod tests {
             .await
             .expect_err("unknown kill errs");
         assert!(ke.message.contains("unknown terminal"), "got {ke:?}");
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn kill_during_pending_wait_terminates_child() {
+        // Fixture (cyril-lw67, kill half): the acp rpc layer spawns every inbound
+        // request as its own concurrent task, so `terminal/kill` arrives WHILE a
+        // `wait_for_exit` owns the child — KAS's command-timeout pattern hits this
+        // EVERY time (create → wait → timeout → kill). A kill whose InFlight case
+        // falls through replies Ok having killed nothing: `sleep 30` keeps running
+        // and the pending wait never resolves — the 5s timeout catches that hang.
+        // The fix must actually terminate the child and let the pending wait
+        // resolve with the killed status, keeping the id valid for `output`.
+        let reg = TerminalRegistry::new();
+        let id = reg
+            .create(&create_req("sleep").args(vec!["30".into()]))
+            .unwrap()
+            .terminal_id;
+        let wr = wait_req(&id);
+        let wait_fut = reg.wait(&wr);
+        let kill_fut = async {
+            // Let the wait future take the child first — InFlight is only
+            // reachable while the wait owns it.
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            reg.kill(&kill_req(&id)).await
+        };
+        let (wait_res, kill_res) =
+            tokio::time::timeout(std::time::Duration::from_secs(5), async {
+                tokio::join!(wait_fut, kill_fut)
+            })
+            .await
+            .expect("kill during a pending wait must terminate the child (not fall through and leave the wait hanging)");
+        kill_res.expect("kill during a pending wait replies Ok");
+        let resp = wait_res.expect("pending wait resolves after the kill");
+        assert_ne!(
+            resp.exit_status.exit_code,
+            Some(0),
+            "killed => not a clean exit"
+        );
+        #[cfg(unix)]
+        assert_eq!(resp.exit_status.signal.as_deref(), Some("9"), "SIGKILL=9");
+        // kill keeps the id valid: output still resolves with the cached status.
+        reg.output(&out_req(&id))
+            .expect("killed id keeps a valid output");
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn release_during_pending_wait_frees_id() {
+        // Fixture (cyril-lw67, release half): release arriving while a wait owns
+        // the child must (1) still kill the child — the InFlight fall-through
+        // killed nothing, so `sleep 30` stays alive and the pending wait hangs
+        // (5s timeout catches it) — and (2) keep the id UNKNOWN (-32602) after
+        // the pending wait completes: the old completion path unconditionally
+        // re-inserted an Exited entry under the released id, resurrecting it and
+        // leaking the entry + captured output for the life of the bridge.
+        let reg = TerminalRegistry::new();
+        let id = reg
+            .create(&create_req("sleep").args(vec!["30".into()]))
+            .unwrap()
+            .terminal_id;
+        let wr = wait_req(&id);
+        let wait_fut = reg.wait(&wr);
+        let release_fut = async {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            reg.release(&release_req(&id)).await
+        };
+        let (wait_res, release_res) =
+            tokio::time::timeout(std::time::Duration::from_secs(5), async {
+                tokio::join!(wait_fut, release_fut)
+            })
+            .await
+            .expect("release during a pending wait must kill the child (not fall through and leave the wait hanging)");
+        release_res.expect("release during a pending wait replies Ok");
+        let resp = wait_res.expect("pending wait resolves after the release kills the child");
+        assert_ne!(
+            resp.exit_status.exit_code,
+            Some(0),
+            "killed => not a clean exit"
+        );
+        // No resurrection: the released id stays unknown even after the pending
+        // wait completed (the window where the old code re-inserted the entry).
+        let oe = reg
+            .output(&out_req(&id))
+            .expect_err("released id must stay unknown after the pending wait completes");
+        assert!(oe.message.contains("unknown terminal"), "got {oe:?}");
+        let we = reg
+            .wait(&wait_req(&id))
+            .await
+            .expect_err("released id must stay unknown to a later wait too");
+        assert!(we.message.contains("unknown terminal"), "got {we:?}");
     }
 
     #[tokio::test(flavor = "current_thread")]
