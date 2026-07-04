@@ -270,6 +270,27 @@ async fn notify_or_closed(
     tx.send(notification.into()).await.is_err()
 }
 
+/// Forward everything queued on the internal channel to the App, dropping
+/// `TurnCompleted`s (cyril-l7tw). Called only from the death paths, where no
+/// turn is in flight (idle death) or the turn's terminal marker was already
+/// forwarded (deferred disconnect) — so every queued completion is a
+/// duplicate, exactly as the live inbound arm would judge it. Calling this
+/// while a turn is genuinely in flight would eat its completion; both call
+/// sites structurally precede the loop's exit, where that can't hold.
+async fn drain_inbound_dropping_duplicates(
+    rx: &mut mpsc::Receiver<RoutedNotification>,
+    tx: &mpsc::Sender<RoutedNotification>,
+) {
+    while let Ok(routed) = rx.try_recv() {
+        if matches!(routed.notification, Notification::TurnCompleted { .. }) {
+            continue;
+        }
+        if tx.send(routed).await.is_err() {
+            break;
+        }
+    }
+}
+
 /// How many trailing agent-stderr lines a user-facing disconnect reason
 /// carries (cyril-l7tw). The full tail stays in the tracing log.
 const REASON_TAIL_LINES: usize = 5;
@@ -1457,14 +1478,30 @@ async fn run_loop(
                 // prompt response can't freeze the turn (turn_end completes it).
                 // (Residual: a stale duplicate arriving after a NEW same-session
                 // turn started would need per-turn identity — cyril-a71q.)
+                let mut completed_turn = false;
                 if matches!(routed.notification, Notification::TurnCompleted { .. }) {
                     if turn_in_flight.is_none() {
                         continue; // duplicate completion for an already-ended turn
                     }
                     turn_in_flight = None;
+                    completed_turn = true;
                 }
                 if channels.notification_tx.send(routed).await.is_err() {
                     break; // App dropped the notification channel.
+                }
+                // cyril-l7tw C4: the connection died mid-turn and the deferred
+                // disconnect waited for this turn's terminal marker. Forward
+                // any straggling inbound notifications, then say goodbye and
+                // exit — mirrors the idle-death path in the io_done arm.
+                if completed_turn && let Some(reason) = conn_dead.take() {
+                    drain_inbound_dropping_duplicates(&mut inbound_rx, &channels.notification_tx)
+                        .await;
+                    notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeDisconnected { reason },
+                    )
+                    .await;
+                    break;
                 }
             }
             res = &mut io_done, if conn_dead.is_none() => {
@@ -1483,15 +1520,13 @@ async fn run_loop(
                     // observing the completion.
                     conn_dead = Some(reason);
                 } else {
-                    // Idle death: forward anything already queued, then say
-                    // goodbye and exit. Send failures don't matter — we are
-                    // breaking either way, and notify_or_closed logs nothing
-                    // the exit path needs.
-                    while let Ok(routed) = inbound_rx.try_recv() {
-                        if channels.notification_tx.send(routed).await.is_err() {
-                            break;
-                        }
-                    }
+                    // Idle death: forward anything already queued (dropping
+                    // duplicate completions — a parked prompt's Err resolution
+                    // may have raced its TurnCompleted into the queue), then
+                    // say goodbye and exit. Send failures don't matter — we
+                    // are breaking either way.
+                    drain_inbound_dropping_duplicates(&mut inbound_rx, &channels.notification_tx)
+                        .await;
                     notify_or_closed(
                         &channels.notification_tx,
                         Notification::BridgeDisconnected { reason },
@@ -2232,6 +2267,135 @@ mod tests {
                         "normal shutdown must not report a disconnect"
                     );
                 }
+            },
+        )
+        .await;
+    }
+
+    // l7tw C4 fence: mid-turn death delivers the full explanation in order —
+    // BridgeError (why the turn died) → TurnCompleted (busy clears) →
+    // BridgeDisconnected (the bridge is gone) — and run_loop exits. Catches:
+    // disconnect emitted before the turn's terminal marker (order inverted)
+    // and a deferred disconnect that never fires (test times out).
+    #[tokio::test]
+    async fn death_mid_turn_disconnect_after_completion() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, loop_handle, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+                kill.kill();
+                let mut order = Vec::new();
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeError { .. }) => order.push("error"),
+                        Some(Notification::TurnCompleted { .. }) => order.push("completed"),
+                        Some(Notification::BridgeDisconnected { .. }) => {
+                            order.push("disconnected");
+                            break;
+                        }
+                        Some(_) => {}
+                        None => panic!(
+                            "no BridgeDisconnected within 5s of mid-turn death; saw {order:?}"
+                        ),
+                    }
+                }
+                assert_eq!(
+                    order,
+                    ["error", "completed", "disconnected"],
+                    "mid-turn death tells the whole story in order"
+                );
+                let loop_result = tokio::time::timeout(Duration::from_secs(5), loop_handle)
+                    .await
+                    .expect("run_loop must exit after mid-turn death");
+                assert!(loop_result.is_ok(), "run_loop task completed cleanly");
+                // l7tw C6: after the disconnect the bridge accepts nothing —
+                // a further SendPrompt errors at the sender instead of
+                // vanishing into a silent TurnCompleted (the pre-l7tw world).
+                let send_result = sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: crate::types::SessionId::new("s-dead"),
+                        content_blocks: vec!["hello?".into()],
+                    })
+                    .await;
+                assert!(
+                    send_result.is_err(),
+                    "sends after disconnect must error, not silently vanish"
+                );
+            },
+        )
+        .await;
+    }
+
+    // l7tw C4/C13 adversarial fixture (the design's KAS wrinkle): a KAS-style
+    // dual-completion turn whose `turn_end` lands BEFORE the agent dies. The
+    // io watcher then finds no turn in flight (already cleared) and takes the
+    // idle path; the prompt task's late duplicate TurnCompleted is dropped by
+    // the existing dedup or the closed channel. Expected: exactly one
+    // TurnCompleted, exactly one BridgeDisconnected — never two of either.
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn death_after_turn_end_single_disconnect() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            emit_turn_end: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+                // turn_end has been emitted by the fake agent before parking;
+                // wait for its TurnCompleted so the dual-completion race is
+                // settled before the kill.
+                assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+                kill.kill();
+                let mut completions = 0;
+                let mut disconnects = 0;
+                while let Some(n) = recv_notif(&mut rx, 2).await {
+                    match n {
+                        Notification::TurnCompleted { .. } => completions += 1,
+                        Notification::BridgeDisconnected { .. } => disconnects += 1,
+                        _ => {}
+                    }
+                }
+                assert_eq!(
+                    completions, 0,
+                    "the dual turn completed exactly once (pre-kill)"
+                );
+                assert_eq!(
+                    disconnects, 1,
+                    "death after turn end disconnects exactly once"
+                );
             },
         )
         .await;
