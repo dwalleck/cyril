@@ -50,11 +50,71 @@ impl KasMissing {
     }
 }
 
-/// `<home>`-relative path of the self-extracted KAS server bundle.
-const DEFAULT_SERVER_REL: &str =
-    ".local/share/kiro-cli/kas/node_modules/@kiro/agent/dist/server/acp-server.js";
+/// `<home>`-relative path of the KAS self-extraction root. kiro ≥2.10.0
+/// extracts into versioned `<semver>-<sha256>/` dirs under it; older releases
+/// extracted the bundle directly at the root (the legacy layout).
+const KAS_ROOT_REL: &str = ".local/share/kiro-cli/kas";
+/// Path of the ACP server entry inside one extraction (versioned dir or the
+/// legacy root itself).
+const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-server.js";
 /// `<home>`-relative path of the tier-5 file-auth token (login precheck).
 const TOKEN_FILE_REL: &str = ".aws/sso/cache/kiro-auth-token.json";
+
+/// Strictly parse a versioned-extraction dir name — `<MAJOR.MINOR.PATCH>-<sha>`
+/// with exactly 64 lowercase hex sha digits (e.g. `2.11.0-05e9…`) — into its
+/// semver tuple. Deliberately NOT [`super::version::parse_semver`]: that parser
+/// is lenient by design (it tolerates `kiro-cli 2.8.1-beta` CLI output), and
+/// leniency here would admit non-extraction dirs (`v2.10.0-…`, `2.10-…`) as
+/// spawn candidates.
+fn dir_version(name: &str) -> Option<(u32, u32, u32)> {
+    let (ver, sha) = name.split_once('-')?;
+    if sha.len() != 64
+        || !sha
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
+        return None;
+    }
+    let mut parts = ver.split('.');
+    let mut num = || -> Option<u32> {
+        let p = parts.next()?;
+        if p.is_empty() || !p.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        p.parse().ok()
+    };
+    let v = (num()?, num()?, num()?);
+    if parts.next().is_some() {
+        return None;
+    }
+    Some(v)
+}
+
+/// Pick the versioned-extraction dir to spawn from `entries`
+/// (`(dir_name, has_server_entry)` pairs listed from the kas root):
+/// a dir matching `cli_version` exactly beats the newest by semver-tuple
+/// order; dirs failing the name grammar or lacking the inner `acp-server.js`
+/// (partial extractions) are never candidates; version ties resolve to the
+/// greatest dir name, so duplicate re-extractions pick deterministically.
+/// `None` means no versioned candidate — the caller falls back to the legacy
+/// unversioned layout.
+fn select_server(entries: &[(String, bool)], cli_version: Option<(u32, u32, u32)>) -> Option<&str> {
+    let mut exact: Option<&str> = None;
+    let mut newest: Option<((u32, u32, u32), &str)> = None;
+    for (name, has_server) in entries {
+        if !has_server {
+            continue;
+        }
+        let Some(v) = dir_version(name) else { continue };
+        if Some(v) == cli_version && exact.is_none_or(|b| name.as_str() > b) {
+            exact = Some(name);
+        }
+        if newest.is_none_or(|(bv, bn)| (v, name.as_str()) > (bv, bn)) {
+            newest = Some((v, name));
+        }
+    }
+    exact.or(newest.map(|(_, n)| n))
+}
 
 /// Treat an env value as "not provided" when unset or empty/whitespace-only —
 /// so `KIRO_AGENT_PATH=""` falls back to PATH rather than spawning the empty
@@ -84,12 +144,21 @@ fn resolve(
     server_override: Option<&str>,
     node_override: Option<&str>,
     path_var: Option<&OsStr>,
+    kas_entries: &[(String, bool)],
+    cli_version: Option<(u32, u32, u32)>,
     exists: impl Fn(&Path) -> bool,
 ) -> Result<AgentCommand, KasMissing> {
-    // 1. server.js — override, else <home>/<default rel>; must exist.
+    // 1. server.js — override, else the selected versioned dir under
+    //    <home>/<kas root>, else the legacy unversioned layout; must exist.
     let server: PathBuf = match server_override {
         Some(s) => PathBuf::from(s),
-        None => home.ok_or(KasMissing::NoHome)?.join(DEFAULT_SERVER_REL),
+        None => {
+            let root = home.ok_or(KasMissing::NoHome)?.join(KAS_ROOT_REL);
+            match select_server(kas_entries, cli_version) {
+                Some(dir) => root.join(dir).join(SERVER_IN_ROOT_REL),
+                None => root.join(SERVER_IN_ROOT_REL),
+            }
+        }
     };
     if !exists(&server) {
         return Err(KasMissing::Server(server));
@@ -129,11 +198,17 @@ pub(crate) fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
     let server_override = nonempty(std::env::var("KIRO_KAS_SERVER_PATH").ok());
     let node_override = nonempty(std::env::var("KIRO_AGENT_PATH").ok());
     let path_var = std::env::var_os("PATH");
+    // Versioned-dir listing + installed-CLI version are inert here until the
+    // C5–C7 wiring lands (design .cyril-dcc6/design.md): an empty listing makes
+    // `select_server` decline and `resolve` use the legacy layout, exactly the
+    // pre-versioned-discovery behavior.
     resolve(
         home.as_deref(),
         server_override.as_deref(),
         node_override.as_deref(),
         path_var.as_deref(),
+        &[],
+        None,
         |p| p.is_file(),
     )
 }
@@ -163,7 +238,26 @@ mod tests {
 
     const HOME: &str = "/home/u";
     fn default_server() -> String {
-        format!("{HOME}/{DEFAULT_SERVER_REL}")
+        format!("{HOME}/{KAS_ROOT_REL}/{SERVER_IN_ROOT_REL}")
+    }
+    /// `resolve` with no versioned-dir candidates and no CLI version — the
+    /// legacy layout the pre-slice tests exercise.
+    fn resolve_legacy(
+        home: Option<&Path>,
+        server_override: Option<&str>,
+        node_override: Option<&str>,
+        path_var: Option<&OsStr>,
+        exists: impl Fn(&Path) -> bool,
+    ) -> Result<AgentCommand, KasMissing> {
+        resolve(
+            home,
+            server_override,
+            node_override,
+            path_var,
+            &[],
+            None,
+            exists,
+        )
     }
     fn default_token() -> String {
         format!("{HOME}/{TOKEN_FILE_REL}")
@@ -181,7 +275,7 @@ mod tests {
     fn resolve_happy_path_builds_probe_argv() {
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&default_server(), &default_token(), &node("/usr/bin")]);
-        let cmd = resolve(Some(Path::new(HOME)), None, None, Some(&path), exists)
+        let cmd = resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists)
             .expect("all preconditions present");
         // Compare as paths, not strings: on Windows `find_on_path`/`Path::join`
         // yield `\` separators and a `.exe` suffix that an exact string compare
@@ -190,10 +284,7 @@ mod tests {
         let args = cmd.args();
         assert_eq!(args.len(), 3);
         assert_eq!(args[0], "--experimental-wasm-modules");
-        assert_eq!(
-            Path::new(&args[1]),
-            Path::new(HOME).join(DEFAULT_SERVER_REL)
-        );
+        assert_eq!(Path::new(&args[1]), Path::new(&default_server()));
         assert_eq!(args[2], "--transport=stdio");
     }
 
@@ -203,7 +294,8 @@ mod tests {
     fn resolve_missing_server_reports_server_not_node() {
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&default_token(), &node("/usr/bin")]); // server absent
-        let err = resolve(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
+        let err =
+            resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
         assert_eq!(err, KasMissing::Server(PathBuf::from(default_server())));
     }
 
@@ -212,7 +304,8 @@ mod tests {
     fn resolve_missing_node() {
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&default_server(), &default_token()]); // no node on PATH
-        let err = resolve(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
+        let err =
+            resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
         assert_eq!(err, KasMissing::Node);
     }
 
@@ -221,7 +314,8 @@ mod tests {
     fn resolve_missing_token_is_not_logged_in() {
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&default_server(), &node("/usr/bin")]); // token absent
-        let err = resolve(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
+        let err =
+            resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
         assert_eq!(err, KasMissing::NotLoggedIn(PathBuf::from(default_token())));
     }
 
@@ -229,7 +323,7 @@ mod tests {
     #[test]
     fn resolve_node_override_missing_errors() {
         let exists = exists_set(&[&default_server(), &default_token()]);
-        let err = resolve(
+        let err = resolve_legacy(
             Some(Path::new(HOME)),
             None,
             Some("/no/such/node"),
@@ -246,7 +340,7 @@ mod tests {
         let spaced = "/opt/my kas/acp-server.js";
         let exists = exists_set(&[spaced, &default_token(), &node("/usr/bin")]);
         let path = OsString::from("/usr/bin");
-        let cmd = resolve(
+        let cmd = resolve_legacy(
             Some(Path::new(HOME)),
             Some(spaced),
             None,
@@ -264,7 +358,7 @@ mod tests {
     // Stress: no home and no override → NoHome (can't build the default path).
     #[test]
     fn resolve_no_home_no_override_errors() {
-        let err = resolve(None, None, None, None, |_| true).unwrap_err();
+        let err = resolve_legacy(None, None, None, None, |_| true).unwrap_err();
         assert_eq!(err, KasMissing::NoHome);
     }
 
@@ -286,6 +380,111 @@ mod tests {
             find_on_path(Some(&path), exists),
             Some(PathBuf::from(node("/b")))
         );
+    }
+
+    const SHA_A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const SHA_B: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    fn e(name: &str, has_server: bool) -> (String, bool) {
+        (name.to_string(), has_server)
+    }
+
+    // C1 fence: a dir matching the CLI version wins even when a NEWER dir
+    // exists (kills the always-pick-newest implementation).
+    #[test]
+    fn picks_exact_version_match() {
+        let entries = [
+            e(&format!("2.10.0-{SHA_A}"), true),
+            e(&format!("2.11.0-{SHA_B}"), true),
+        ];
+        let want = format!("2.10.0-{SHA_A}");
+        assert_eq!(
+            select_server(&entries, Some((2, 10, 0))),
+            Some(want.as_str())
+        );
+    }
+
+    // C2 fence: with no exact match, ordering is SEMVER-tuple, not lexical —
+    // 2.10.0 > 2.9.0 (a lexicographic max picks "2.9.0" and fails here).
+    #[test]
+    fn picks_newest_semver_not_lex() {
+        let entries = [
+            e(&format!("2.9.0-{SHA_A}"), true),
+            e(&format!("2.10.0-{SHA_B}"), true),
+        ];
+        let got = select_server(&entries, Some((2, 11, 0))).expect("candidates exist");
+        assert!(
+            got.starts_with("2.10.0-"),
+            "lexicographic-max bug: got {got}"
+        );
+    }
+
+    // C3 fence: CLI version unavailable → newest, not an error (kills the
+    // err-when-kiro-cli-missing implementation).
+    #[test]
+    fn no_cli_version_falls_back_newest() {
+        let entries = [
+            e(&format!("2.10.0-{SHA_A}"), true),
+            e(&format!("2.11.0-{SHA_B}"), true),
+        ];
+        let got = select_server(&entries, None).expect("candidates exist");
+        assert!(got.starts_with("2.11.0-"), "got {got}");
+    }
+
+    // C4 fence: a dir without the inner acp-server.js (partial extraction) is
+    // never a candidate (kills the name-glob-only implementation).
+    #[test]
+    fn partial_extraction_skipped() {
+        let entries = [
+            e(&format!("2.10.0-{SHA_A}"), true),
+            e(&format!("2.11.0-{SHA_B}"), false),
+        ];
+        let got = select_server(&entries, Some((2, 11, 0))).expect("complete candidate exists");
+        assert!(
+            got.starts_with("2.10.0-"),
+            "picked a partial extraction: {got}"
+        );
+        // All candidates partial → None (falls back to legacy at the caller).
+        assert_eq!(
+            select_server(&[e(&format!("2.11.0-{SHA_B}"), false)], None),
+            None
+        );
+    }
+
+    // C4 grammar fence: names outside `<semver>-<sha64 lowercase hex>` are
+    // ignored — 63-char sha, non-hex, uppercase hex, `v` prefix, two-part
+    // version, trailing component, lock-file suffix.
+    #[test]
+    fn malformed_dir_names_ignored() {
+        let bad = [
+            format!("2.10.0-{}", &SHA_A[..63]),
+            format!("2.10.0-{}", "z".repeat(64)),
+            format!("2.10.0-{}", SHA_A.to_uppercase()),
+            format!("v2.10.0-{SHA_A}"),
+            format!("2.10-{SHA_A}"),
+            format!("2.10.0.1-{SHA_A}"),
+            format!("2.10.0-{SHA_A}.lock"),
+        ];
+        let entries: Vec<_> = bad.iter().map(|n| e(n, true)).collect();
+        assert_eq!(select_server(&entries, Some((2, 10, 0))), None);
+    }
+
+    // Duplicate re-extractions of the SAME version pick deterministically
+    // (greatest dir name), independent of listing order.
+    #[test]
+    fn duplicate_same_version_is_deterministic() {
+        let a = format!("2.10.0-{SHA_A}");
+        let b = format!("2.10.0-{SHA_B}");
+        for entries in [[e(&a, true), e(&b, true)], [e(&b, true), e(&a, true)]] {
+            assert_eq!(select_server(&entries, Some((2, 10, 0))), Some(b.as_str()));
+            assert_eq!(select_server(&entries, None), Some(b.as_str()));
+        }
+    }
+
+    // Empty listing → None (the caller's legacy fallback path).
+    #[test]
+    fn empty_listing_selects_nothing() {
+        assert_eq!(select_server(&[], Some((2, 10, 0))), None);
+        assert_eq!(select_server(&[], None), None);
     }
 
     // Each KasMissing variant yields a non-empty, actionable reason.
