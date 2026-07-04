@@ -1,10 +1,10 @@
 //! Which KAS spawn shape the bridge uses when the engine is KAS (KAS-1, cyril-evwh).
 
 /// How to launch the KAS engine when [`crate::types::AgentEngine::Kas`] is
-/// selected: the zero-credential **free path** (a direct `acp-server.js` spawn,
-/// where KAS uses its own file-auth) or the **wrapper** (`kiro-cli acp
-/// --agent-engine <v3|kas>`, which delegates auth to cyril's
-/// `_kiro/auth/getAccessToken` responder).
+/// selected: the **free path** (a direct `acp-server.js` spawn) or the
+/// **wrapper** (`kiro-cli acp --agent-engine <v3|kas>`). Both run
+/// `--auth=acp-callback` and delegate auth to cyril's
+/// `_kiro/auth/getAccessToken` responder (cyril-dcc6).
 ///
 /// Configured via TOML `[agent] kas_spawn = "free" | "wrapper"`; defaults to
 /// `free`. Irrelevant when the engine is v2.

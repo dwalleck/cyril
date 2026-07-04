@@ -2,8 +2,9 @@
 //! callback auth, cyril-dcc6).
 //!
 //! Resolves the argv that spawns the bundled `@kiro/agent` ACP server directly
-//! over stdio with `--auth=acp-callback` — byte-identical to kiro-cli's own
-//! spawn (probe-verified against /proc). KAS then requests credentials via
+//! over stdio with `--auth=acp-callback` — the non-path flags are byte-equal
+//! to kiro-cli's own spawn (probe-verified against /proc; the node binary is
+//! whatever cyril resolves). KAS then requests credentials via
 //! `_kiro/auth/getAccessToken`, answered by [`super::auth`] from kiro-cli's
 //! sqlite store; the SSO-cache token file plays no role on any path. Reuses
 //! [`AgentCommand`] as the spawn description so `AgentProcess::spawn` consumes
@@ -436,7 +437,7 @@ mod tests {
             Some(&path),
             exists,
         )
-        .expect("override + token + node present");
+        .expect("override + node present");
         assert!(
             cmd.args().contains(&spaced.to_string()),
             "spaced server path must be one arg, got {:?}",
@@ -631,7 +632,7 @@ mod tests {
             Some((2, 11, 0)),
             exists,
         )
-        .expect("override + token + node present");
+        .expect("override + node present");
         assert_eq!(cmd.args()[1], override_path);
     }
 

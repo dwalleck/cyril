@@ -8,7 +8,9 @@
 //! SSO-cache token file is deliberately not consulted (it can hold a dead
 //! identity that self-refreshes — the cyril-dcc6 bug). cyril is a **custodian**
 //! of the credential: read-only, held for one reply, redacted in `Debug`,
-//! never logged, and the store's refresh token is never read or transmitted.
+//! never logged, and the store's refresh token is never extracted or
+//! transmitted (the row containing it is read whole; only the access fields
+//! are taken from it).
 
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -57,7 +59,9 @@ const TOKEN_ROW_SQL: &str = "SELECT value FROM auth_kv WHERE key = 'kirocli:odic
 const PROFILE_ROW_SQL: &str = "SELECT value FROM state WHERE key = 'api.codewhisperer.profile'";
 
 /// Read kiro-cli's sqlite credential store into a reply. Synchronous
-/// (rusqlite) — callers on the bridge executor wrap it in `spawn_blocking`.
+/// (rusqlite) — the live-callback path wraps it in `spawn_blocking`; the
+/// spawn-time gate ([`store_unservable_reason`]) calls it directly, which is
+/// safe only because that runs once at startup, before any session traffic.
 /// The store is opened READ_ONLY (never created, never written; kiro-cli
 /// writes it concurrently) with a short busy timeout. Every failure mode is
 /// distinguished: absent store / absent row (logged out — actionable), locked,
@@ -114,7 +118,6 @@ fn read_sqlite_store(db: &Path) -> Result<AuthReply, String> {
 /// stamp returns `None` (which [`is_stale`] treats as stale, fail safe). Strict
 /// on layout. Uses the canonical days-from-civil algorithm (Howard Hinnant).
 fn rfc3339_to_epoch(s: &str) -> Option<i64> {
-    // Require explicit UTC; a non-Z offset would be dropped and mis-dated.
     if !s.ends_with('Z') {
         return None;
     }
@@ -150,7 +153,6 @@ fn rfc3339_to_epoch(s: &str) -> Option<i64> {
 fn is_stale(expires_at: &str, now_epoch: Option<i64>) -> bool {
     match (now_epoch, rfc3339_to_epoch(expires_at)) {
         (Some(now), Some(exp)) => exp <= now + EXPIRY_BUFFER_SECS,
-        // Unreadable clock OR unparseable expiry → treat as stale.
         _ => true,
     }
 }
