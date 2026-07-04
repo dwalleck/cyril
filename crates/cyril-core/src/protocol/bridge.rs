@@ -337,15 +337,21 @@ async fn drain_inbound_dropping_duplicates(
 /// the error passes through untouched (no dangling "agent stderr:" stub —
 /// C8). The original error is kept as the source.
 fn append_stderr_reason(e: crate::Error, snapshot: &[String]) -> crate::Error {
-    match tail_excerpt(snapshot) {
-        Some(tail) => crate::Error::with_source(
-            crate::ErrorKind::Protocol {
-                message: format!("{e}\nagent stderr:\n{tail}"),
-            },
-            e,
-        ),
-        None => e,
-    }
+    let Some(tail) = tail_excerpt(snapshot) else {
+        return e;
+    };
+    // Reuse a Protocol error's inner message so re-wrapping doesn't stack a
+    // second "protocol error:" Display prefix (seen live in probe run 4).
+    let base = match e.kind() {
+        crate::ErrorKind::Protocol { message } => message.clone(),
+        _ => e.to_string(),
+    };
+    crate::Error::with_source(
+        crate::ErrorKind::Protocol {
+            message: format!("{base}\nagent stderr:\n{tail}"),
+        },
+        e,
+    )
 }
 
 /// How many trailing agent-stderr lines a user-facing disconnect reason
@@ -476,7 +482,8 @@ async fn run_bridge(
     //    ClientSideConnection::new returns (conn, io_task).
     //    The io_task must be spawned on the LocalSet so the RPC layer runs.
     //    Grab the stderr tail handle first — stdin/stdout are moved out of
-    //    `process` below (cyril-0gke; full UI surfacing is cyril-l7tw).
+    //    `process` below (cyril-0gke). The tail reaches the user via the io
+    //    watcher's disconnect reason and append_stderr_reason (cyril-l7tw).
     let stderr_tail = process.stderr_tail();
     // Second handle for the run_loop Err path below (the first moves into the
     // io watcher).
@@ -1665,6 +1672,10 @@ mod tests {
         assert!(
             !enriched.contains("line2"),
             "older lines beyond the excerpt are dropped, got: {enriched}"
+        );
+        assert!(
+            !enriched.contains("protocol error: protocol error"),
+            "re-wrapping must not stack Display prefixes (probe run 4), got: {enriched}"
         );
     }
 

@@ -1,0 +1,9 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril-ui)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.57s
+     Running `target/debug/examples/l7tw_death_probe`
+2026-07-04T21:49:54.489387Z ERROR cyril_core::protocol::bridge: ACP IO task ended (agent EOF) stderr_tail=[]
+2026-07-04T21:49:54.489564Z ERROR cyril_core::protocol::bridge: prompt failed error=Internal error: "server shut down unexpectedly"
+kill: sending signal to 2984900 failed: No such process
+Error: bridge channel closed

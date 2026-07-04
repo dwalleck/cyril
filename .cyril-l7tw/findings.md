@@ -1,5 +1,34 @@
 # cyril-l7tw — prove-it-prototype findings
 
+## POST-FIX LIVE VALIDATION (slice 8, 2026-07-04)
+
+**Run 3** (`probe-run3.{stdout,stderr}`, replay agent, verbatim 2.11.0
+frames): mid-turn SIGKILL now yields the full story, in order and fast —
+`BridgeError op=prompt msg=Internal error: "server shut down unexpectedly"`
+→ `TurnCompleted(EndTurn)` → `BridgeDisconnected("agent connection closed
+unexpectedly")`, all at t+0.34s. Oracle log agrees (`ACP IO task ended
+(agent EOF)` + one `prompt failed`). The old phase 2 (silent prompt at a
+dead loop) is structurally impossible: the probe's second SendPrompt fails
+loudly with `bridge channel closed` (exit 1).
+
+**Run 4** (`probe-run4.stdout`, REAL logged-out kiro-cli 2.11.0 — the
+logged-out state is the C7 fixture): the handshake-failure disconnect now
+carries the agent's own words:
+
+```
+BridgeDisconnected reason=protocol error: ACP initialization failed: … "server shut down unexpectedly"
+agent stderr:
+error: You are not logged in, please log in with kiro-cli login
+```
+
+Run 4 also caught a cosmetic defect the unit fence missed — re-wrapping a
+Protocol error stacked a second "protocol error:" prefix — fixed in
+`append_stderr_reason` (reuse the inner message) and fenced.
+
+Original pre-fix findings below.
+
+---
+
 ## Smallest question
 
 When the agent process dies mid-turn, what does the bridge's notification
