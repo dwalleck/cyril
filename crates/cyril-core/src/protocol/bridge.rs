@@ -291,6 +291,24 @@ async fn drain_inbound_dropping_duplicates(
     }
 }
 
+/// Enrich a bridge-fatal error with the agent's stderr tail (cyril-l7tw C7):
+/// the failure the user sees (e.g. "ACP initialization failed") is rarely the
+/// failure the agent reported (e.g. "You are not logged in, please log in
+/// with kiro-cli login" — which only ever reaches stderr). Empty snapshot ⇒
+/// the error passes through untouched (no dangling "agent stderr:" stub —
+/// C8). The original error is kept as the source.
+fn append_stderr_reason(e: crate::Error, snapshot: &[String]) -> crate::Error {
+    match tail_excerpt(snapshot) {
+        Some(tail) => crate::Error::with_source(
+            crate::ErrorKind::Protocol {
+                message: format!("{e}\nagent stderr:\n{tail}"),
+            },
+            e,
+        ),
+        None => e,
+    }
+}
+
 /// How many trailing agent-stderr lines a user-facing disconnect reason
 /// carries (cyril-l7tw). The full tail stays in the tracing log.
 const REASON_TAIL_LINES: usize = 5;
@@ -421,6 +439,9 @@ async fn run_bridge(
     //    Grab the stderr tail handle first — stdin/stdout are moved out of
     //    `process` below (cyril-0gke; full UI surfacing is cyril-l7tw).
     let stderr_tail = process.stderr_tail();
+    // Second handle for the run_loop Err path below (the first moves into the
+    // io watcher).
+    let stderr_tail_for_err = process.stderr_tail();
     let (conn, io_task) = acp::ClientSideConnection::new(
         client,
         process.stdin.compat_write(),
@@ -455,6 +476,11 @@ async fn run_bridge(
         }
     });
 
+    // cyril-l7tw C7: any error run_loop propagates (handshake failure being
+    // the archetype) is enriched with the agent's stderr tail before it
+    // becomes the fail-stop BridgeDisconnected reason — kiro-cli's actionable
+    // "not logged in" text lives only on stderr. Spawn failures above never
+    // reach here (no process ⇒ no tail to append — C8).
     run_loop(
         std::rc::Rc::new(conn),
         channels,
@@ -468,6 +494,7 @@ async fn run_bridge(
         },
     )
     .await
+    .map_err(|e| append_stderr_reason(e, &stderr_tail_for_err.snapshot()))
 }
 
 /// The loop-internal plumbing (ADR-0004), grouped so `run_loop`'s signature
@@ -1575,6 +1602,86 @@ mod tests {
     #[test]
     fn engine_for_v2_ok() {
         assert!(engine_for(AgentEngine::V2).is_ok(), "v2 selects an engine");
+    }
+
+    // l7tw C7 (unit form; the live form is the logged-out kiro-cli run in
+    // .cyril-l7tw/findings.md): the reason a user sees carries the LAST lines
+    // of agent stderr — where kiro-cli puts its actionable text. Stress: >5
+    // lines must keep the last 5, not the first 5.
+    #[test]
+    fn handshake_failure_reason_includes_stderr_tail() {
+        let snapshot: Vec<String> = (1..=7).map(|i| format!("line{i}")).collect();
+        let e = crate::Error::from_kind(crate::ErrorKind::Protocol {
+            message: "ACP initialization failed: boom".into(),
+        });
+        let enriched = append_stderr_reason(e, &snapshot).to_string();
+        assert!(
+            enriched.contains("ACP initialization failed: boom"),
+            "original error text preserved, got: {enriched}"
+        );
+        assert!(
+            enriched.contains("line7") && enriched.contains("line3"),
+            "last {REASON_TAIL_LINES} stderr lines included, got: {enriched}"
+        );
+        assert!(
+            !enriched.contains("line2"),
+            "older lines beyond the excerpt are dropped, got: {enriched}"
+        );
+    }
+
+    // l7tw C8 (unit half): an empty snapshot passes the error through
+    // byte-identical — no dangling "agent stderr:" stub.
+    #[test]
+    fn empty_stderr_tail_leaves_reason_untouched() {
+        let e = crate::Error::from_kind(crate::ErrorKind::Protocol {
+            message: "ACP initialization failed: boom".into(),
+        });
+        let before = e.to_string();
+        let after = append_stderr_reason(e, &[]).to_string();
+        assert_eq!(before, after);
+        assert!(!after.contains("agent stderr:"));
+    }
+
+    // tail_excerpt edge shapes (l7tw slice 5 stress fixture): empty lines are
+    // preserved verbatim (they are real stderr output), empty snapshot is None.
+    #[test]
+    fn tail_excerpt_shapes() {
+        assert_eq!(tail_excerpt(&[]), None);
+        let mixed = vec![String::new(), "x".into(), String::new()];
+        assert_eq!(tail_excerpt(&mixed).as_deref(), Some("\nx\n"));
+    }
+
+    // l7tw C8 (integration half): a spawn failure (missing binary) still
+    // yields a BridgeDisconnected through the REAL spawn_bridge fail-stop
+    // path, and the reason is well-formed (no tail stub — the agent never
+    // ran). Oracle: the OS refuses the exec; we only assert what the App
+    // receives.
+    #[tokio::test]
+    async fn spawn_failure_disconnect_reason_wellformed() {
+        let cmd = AgentCommand::try_from_argv(vec!["cyril-l7tw-no-such-binary".to_string()])
+            .expect("argv");
+        let handle = spawn_bridge(
+            cmd,
+            AgentEngine::default(),
+            KasSpawn::default(),
+            std::env::temp_dir(),
+        )
+        .expect("bridge thread spawns");
+        let (_sender, mut rx, _perm) = handle.split();
+        let routed = tokio::time::timeout(Duration::from_secs(10), rx.recv())
+            .await
+            .expect("notification within 10s of spawn failure")
+            .expect("channel open");
+        match routed.notification {
+            Notification::BridgeDisconnected { reason } => {
+                assert!(!reason.is_empty(), "reason must be actionable, not blank");
+                assert!(
+                    !reason.contains("agent stderr:"),
+                    "no tail stub when the agent never ran, got: {reason}"
+                );
+            }
+            other => panic!("expected BridgeDisconnected, got {other:?}"),
+        }
     }
 
     // KAS-1 C4 (gate-on): under `--features kas`, Kas resolves to the KasEngine.
