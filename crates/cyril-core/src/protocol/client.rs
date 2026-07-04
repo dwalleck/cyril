@@ -174,11 +174,12 @@ impl acp::Client for KiroClient {
         Ok(())
     }
 
-    /// Handle incoming server→client ext REQUESTS. KAS-1 answers
-    /// `_kiro/auth/getAccessToken` (wrapper mode, `--auth=acp-callback`) from
-    /// kiro-cli's own token file; every other ext request gets the protocol
-    /// default. The v2 free path never sends this, and the cfg-split keeps the
-    /// credential code out of a default build (ADR-0002).
+    /// Handle incoming server→client ext REQUESTS. KAS-1/dcc6 answers
+    /// `_kiro/auth/getAccessToken` (both KAS spawn modes run
+    /// `--auth=acp-callback`) from kiro-cli's sqlite credential store; every
+    /// other ext request gets the protocol default. v2 never sends this, and
+    /// the cfg-split keeps the credential code out of a default build
+    /// (ADR-0002).
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         Self::handle_ext_request(args).await
     }

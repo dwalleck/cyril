@@ -11,8 +11,9 @@
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum KasSpawn {
-    /// Direct `node acp-server.js --transport=stdio` (no `--auth`); no cyril
-    /// credential code (KAS self-authenticates from the token file).
+    /// Direct `node acp-server.js --transport=stdio --auth=acp-callback`
+    /// (cyril-dcc6); cyril answers `_kiro/auth/getAccessToken` from kiro-cli's
+    /// sqlite credential store, same as wrapper mode.
     #[default]
     Free,
     /// `kiro-cli acp --agent-engine <flag>` (injects `--auth=acp-callback`);

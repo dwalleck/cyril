@@ -1,11 +1,13 @@
-//! Free-path KAS spawn discovery (KAS-1 Part A, cyril-evwh).
+//! Free-path KAS spawn discovery (KAS-1 Part A, cyril-evwh; versioned dirs +
+//! callback auth, cyril-dcc6).
 //!
 //! Resolves the argv that spawns the bundled `@kiro/agent` ACP server directly
-//! over stdio with **no `--auth` flag** — KAS then uses its own tier-5 file-auth
-//! (reads `~/.aws/sso/cache/kiro-auth-token.json`, self-refreshing), so cyril
-//! needs zero credential code on this path (prove-it-prototype verified the turn
-//! completes with `_kiro/auth/getAccessToken` fired 0×). Reuses [`AgentCommand`]
-//! as the spawn description so `AgentProcess::spawn` consumes it unchanged.
+//! over stdio with `--auth=acp-callback` — byte-identical to kiro-cli's own
+//! spawn (probe-verified against /proc). KAS then requests credentials via
+//! `_kiro/auth/getAccessToken`, answered by [`super::auth`] from kiro-cli's
+//! sqlite store; the SSO-cache token file plays no role on any path. Reuses
+//! [`AgentCommand`] as the spawn description so `AgentProcess::spawn` consumes
+//! it unchanged.
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -23,7 +25,8 @@ pub(crate) enum KasMissing {
     Server(PathBuf),
     /// No `node` runtime (`KIRO_AGENT_PATH` unset/missing and none on `PATH`).
     Node,
-    /// The auth token file is absent — the user has not run `kiro-cli login`.
+    /// The credential store holds no servable login — the user has not run
+    /// `kiro-cli login` (or logged out, which deletes the token row).
     NotLoggedIn(PathBuf),
 }
 
@@ -43,7 +46,7 @@ impl KasMissing {
                  KIRO_AGENT_PATH to the node binary."
                 .to_string(),
             KasMissing::NotLoggedIn(p) => format!(
-                "not authenticated for KAS: token file {} is absent. Run `kiro-cli login`.",
+                "not authenticated for KAS: no servable login in {}. Run `kiro-cli login`.",
                 p.display()
             ),
         }
@@ -57,8 +60,6 @@ const KAS_ROOT_REL: &str = ".local/share/kiro-cli/kas";
 /// Path of the ACP server entry inside one extraction (versioned dir or the
 /// legacy root itself).
 const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-server.js";
-/// `<home>`-relative path of the tier-5 file-auth token (login precheck).
-const TOKEN_FILE_REL: &str = ".aws/sso/cache/kiro-auth-token.json";
 
 /// Strictly parse a versioned-extraction dir name — `<MAJOR.MINOR.PATCH>-<sha>`
 /// with exactly 64 lowercase hex sha digits (e.g. `2.11.0-05e9…`) — into its
@@ -176,17 +177,12 @@ fn resolve(
         None => find_on_path(path_var, &exists).ok_or(KasMissing::Node)?,
     };
 
-    // 3. login precheck — the tier-5 token file must exist (KAS reads+refreshes it).
-    let token = home.ok_or(KasMissing::NoHome)?.join(TOKEN_FILE_REL);
-    if !exists(&token) {
-        return Err(KasMissing::NotLoggedIn(token));
-    }
-
     Ok(
         AgentCommand::new(node.to_string_lossy().into_owned()).with_args(vec![
             "--experimental-wasm-modules".to_string(),
             server.to_string_lossy().into_owned(),
             "--transport=stdio".to_string(),
+            "--auth=acp-callback".to_string(),
         ]),
     )
 }
@@ -249,7 +245,7 @@ pub(crate) fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
             installed_cli_version(),
         )
     };
-    resolve(
+    let cmd = resolve(
         home.as_deref(),
         server_override.as_deref(),
         node_override.as_deref(),
@@ -257,7 +253,15 @@ pub(crate) fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
         &kas_entries,
         cli_version,
         |p| p.is_file(),
-    )
+    )?;
+    // Login gate (C14a): with `--auth=acp-callback` the responder is
+    // load-bearing for every turn, so an unservable credential store fails the
+    // spawn here, actionably, instead of as a dead first turn.
+    let db = default_store_path().ok_or(KasMissing::NoHome)?;
+    if !super::auth::store_has_login(&db) {
+        return Err(KasMissing::NotLoggedIn(db));
+    }
+    Ok(cmd)
 }
 
 /// kiro-cli's credential store (`~/.local/share/kiro-cli/data.sqlite3`) — the
@@ -307,9 +311,6 @@ mod tests {
             exists,
         )
     }
-    fn default_token() -> String {
-        format!("{HOME}/{TOKEN_FILE_REL}")
-    }
     /// A `<dir>/node` candidate carrying the platform exe suffix (`node.exe` on
     /// Windows), so the injected `exists` set matches what [`find_on_path`]
     /// actually looks for. `PathBuf` hashing/equality is separator-agnostic, so
@@ -322,7 +323,7 @@ mod tests {
     #[test]
     fn resolve_happy_path_builds_probe_argv() {
         let path = OsString::from("/usr/bin");
-        let exists = exists_set(&[&default_server(), &default_token(), &node("/usr/bin")]);
+        let exists = exists_set(&[&default_server(), &node("/usr/bin")]);
         let cmd = resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists)
             .expect("all preconditions present");
         // Compare as paths, not strings: on Windows `find_on_path`/`Path::join`
@@ -330,10 +331,11 @@ mod tests {
         // against a Unix literal would fail.
         assert_eq!(Path::new(cmd.program()), Path::new(&node("/usr/bin")));
         let args = cmd.args();
-        assert_eq!(args.len(), 3);
+        assert_eq!(args.len(), 4);
         assert_eq!(args[0], "--experimental-wasm-modules");
         assert_eq!(Path::new(&args[1]), Path::new(&default_server()));
         assert_eq!(args[2], "--transport=stdio");
+        assert_eq!(args[3], "--auth=acp-callback");
     }
 
     // C3a: server missing while node IS present → Server, NOT Node (the
@@ -341,7 +343,7 @@ mod tests {
     #[test]
     fn resolve_missing_server_reports_server_not_node() {
         let path = OsString::from("/usr/bin");
-        let exists = exists_set(&[&default_token(), &node("/usr/bin")]); // server absent
+        let exists = exists_set(&[&node("/usr/bin")]); // server absent
         let err =
             resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
         assert_eq!(err, KasMissing::Server(PathBuf::from(default_server())));
@@ -351,26 +353,16 @@ mod tests {
     #[test]
     fn resolve_missing_node() {
         let path = OsString::from("/usr/bin");
-        let exists = exists_set(&[&default_server(), &default_token()]); // no node on PATH
+        let exists = exists_set(&[&default_server()]); // no node on PATH
         let err =
             resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
         assert_eq!(err, KasMissing::Node);
     }
 
-    // C3c: server+node present, token absent → NotLoggedIn.
-    #[test]
-    fn resolve_missing_token_is_not_logged_in() {
-        let path = OsString::from("/usr/bin");
-        let exists = exists_set(&[&default_server(), &node("/usr/bin")]); // token absent
-        let err =
-            resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
-        assert_eq!(err, KasMissing::NotLoggedIn(PathBuf::from(default_token())));
-    }
-
     // Stress: a node override that does not exist → Node (not a silent spawn).
     #[test]
     fn resolve_node_override_missing_errors() {
-        let exists = exists_set(&[&default_server(), &default_token()]);
+        let exists = exists_set(&[&default_server()]);
         let err = resolve_legacy(
             Some(Path::new(HOME)),
             None,
@@ -386,7 +378,7 @@ mod tests {
     #[test]
     fn resolve_server_path_with_spaces_is_one_arg() {
         let spaced = "/opt/my kas/acp-server.js";
-        let exists = exists_set(&[spaced, &default_token(), &node("/usr/bin")]);
+        let exists = exists_set(&[spaced, &node("/usr/bin")]);
         let path = OsString::from("/usr/bin");
         let cmd = resolve_legacy(
             Some(Path::new(HOME)),
@@ -545,7 +537,6 @@ mod tests {
         let exists = exists_set(&[
             &default_server(), // legacy present too
             &versioned,
-            &default_token(),
             &node("/usr/bin"),
         ]);
         let cmd = resolve(
@@ -574,12 +565,7 @@ mod tests {
         let versioned = format!("{HOME}/{KAS_ROOT_REL}/{dir}/{SERVER_IN_ROOT_REL}");
         let override_path = "/opt/custom/acp-server.js";
         let path = OsString::from("/usr/bin");
-        let exists = exists_set(&[
-            override_path,
-            &versioned,
-            &default_token(),
-            &node("/usr/bin"),
-        ]);
+        let exists = exists_set(&[override_path, &versioned, &node("/usr/bin")]);
         let cmd = resolve(
             Some(Path::new(HOME)),
             Some(override_path),
@@ -598,7 +584,7 @@ mod tests {
     #[test]
     fn nothing_found_names_search_root() {
         let path = OsString::from("/usr/bin");
-        let exists = exists_set(&[&default_token(), &node("/usr/bin")]);
+        let exists = exists_set(&[&node("/usr/bin")]);
         let err = resolve(
             Some(Path::new(HOME)),
             None,
@@ -655,6 +641,32 @@ mod tests {
         );
         // Missing root → empty, not an error.
         assert!(list_kas_entries(&root.join("nope")).is_empty());
+    }
+
+    // C8 fence: the non-path flags are byte-equal to kiro-cli's own KAS
+    // spawn as captured from /proc (prove-it-prototype oracle) — a missing
+    // `--auth=acp-callback` (the pre-dcc6 argv) fails here by construction.
+    #[test]
+    fn argv_matches_kiro_cli_own_spawn() {
+        let path = OsString::from("/usr/bin");
+        let exists = exists_set(&[&default_server(), &node("/usr/bin")]);
+        let cmd = resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists)
+            .expect("all preconditions present");
+        let flags: Vec<&str> = cmd
+            .args()
+            .iter()
+            .map(String::as_str)
+            .filter(|a| a.starts_with("--"))
+            .collect();
+        assert_eq!(
+            flags,
+            [
+                "--experimental-wasm-modules",
+                "--transport=stdio",
+                "--auth=acp-callback"
+            ],
+            "flag drift vs the /proc-captured kiro-cli spawn"
+        );
     }
 
     // Each KasMissing variant yields a non-empty, actionable reason.

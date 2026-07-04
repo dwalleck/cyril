@@ -178,6 +178,22 @@ fn build_response(reply: &AuthReply) -> Result<acp::ExtResponse, String> {
     Ok(acp::ExtResponse::new(raw.into()))
 }
 
+/// True when the credential store holds a servable login (both rows present
+/// and well-formed). The free-path spawn gate: with `--auth=acp-callback` the
+/// responder is load-bearing for every turn, so an unservable store must fail
+/// the spawn up front with an actionable error instead of a dead first turn.
+/// Coarse by design — the underlying diagnostic is debug-logged here and
+/// re-surfaced precisely by the responder if a spawn proceeds anyway.
+pub(crate) fn store_has_login(db: &Path) -> bool {
+    match read_sqlite_store(db) {
+        Ok(_) => true,
+        Err(e) => {
+            tracing::debug!(store = %db.display(), error = %e, "kiro credential store not servable");
+            false
+        }
+    }
+}
+
 /// Answer `_kiro/auth/getAccessToken` from kiro-cli's sqlite credential store
 /// (cyril-dcc6): the store is re-read on EVERY callback, so a mid-session
 /// `kiro-cli login` is served on the next request without restarting cyril.
@@ -335,6 +351,28 @@ mod tests {
             err.contains("parse"),
             "corrupt collapsed into another mode: {err}"
         );
+    }
+
+    // C14a fence: the spawn gate keys on the sqlite store — servable rows
+    // pass; the logout shape, a corrupt row, and a missing store all decline.
+    // No file input exists in this path (the SSO-file gate is structurally
+    // gone; the slice-7 grep fence forbids its resurrection).
+    #[test]
+    fn gate_is_sqlite_not_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = fixture_store(dir.path());
+        assert!(store_has_login(&db));
+        let conn = rusqlite::Connection::open(&db).unwrap();
+        conn.execute(
+            "UPDATE auth_kv SET value = 'corrupt' WHERE key = 'kirocli:odic:token'",
+            [],
+        )
+        .unwrap();
+        assert!(!store_has_login(&db), "corrupt row must not pass the gate");
+        conn.execute("DELETE FROM auth_kv WHERE key = 'kirocli:odic:token'", [])
+            .unwrap();
+        assert!(!store_has_login(&db), "logout shape must not pass the gate");
+        assert!(!store_has_login(&dir.path().join("absent.sqlite3")));
     }
 
     // C11 custodian: neither the AccessToken's nor the AuthReply's Debug leaks
