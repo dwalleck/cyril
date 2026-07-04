@@ -95,6 +95,64 @@ fn spawn_stderr_drain(stderr: ChildStderr, tail: StderrTail) {
     });
 }
 
+/// Drop guard that SIGKILLs the agent's whole process group (cyril-0pms).
+///
+/// kiro-cli does not kill its KAS `acp-server.js` child on exit, so a dead
+/// pipe partner leaves the node server idling forever (~GBs of RAM across
+/// orphans). `kill_on_drop` only reaches the DIRECT child; in wrapper mode
+/// `acp-server.js` is a grandchild. The agent is therefore spawned as leader
+/// of a fresh process group (pgid == its pid), and this guard signals the
+/// group when the bridge drops its process handle.
+///
+/// Deliberately a separate struct, NOT `impl Drop for AgentProcess`: the
+/// bridge moves `stdin`/`stdout` out of `AgentProcess` by field access, and
+/// partial moves are illegal on types that implement `Drop`.
+#[cfg(unix)]
+struct ProcessGroupGuard {
+    /// Always positive when present — captured from the child's pid right
+    /// after spawn. `None` disables the group kill entirely: `killpg` with
+    /// pgid 0 would signal OUR OWN process group.
+    pgid: Option<std::num::NonZeroI32>,
+}
+
+#[cfg(unix)]
+impl ProcessGroupGuard {
+    /// Build from the freshly spawned child's pid. Right after spawn,
+    /// `Child::id()` is `None` only in pathological cases — warn and degrade
+    /// to the `kill_on_drop` backstop rather than risk a zero pgid.
+    fn new(child_pid: Option<u32>) -> Self {
+        let pgid = child_pid
+            .and_then(|pid| i32::try_from(pid).ok())
+            .and_then(std::num::NonZeroI32::new);
+        if pgid.is_none() {
+            tracing::warn!("agent child pid unavailable at spawn; process-group cleanup disabled");
+        }
+        Self { pgid }
+    }
+}
+
+#[cfg(unix)]
+impl Drop for ProcessGroupGuard {
+    fn drop(&mut self) {
+        let Some(pgid) = self.pgid else {
+            return;
+        };
+        // SIGKILL, not SIGTERM: the orphan class this defends against is an
+        // idle node server whose pipe partner is already dead — there is
+        // nothing left to shut down gracefully.
+        match nix::sys::signal::killpg(
+            nix::unistd::Pid::from_raw(pgid.get()),
+            nix::sys::signal::Signal::SIGKILL,
+        ) {
+            // ESRCH: the group is already gone — the normal exit path.
+            Ok(()) | Err(nix::errno::Errno::ESRCH) => {}
+            Err(e) => {
+                tracing::debug!(pgid = pgid.get(), error = %e, "killpg on agent process group failed");
+            }
+        }
+    }
+}
+
 pub(crate) struct AgentProcess {
     pub stdin: ChildStdin,
     pub stdout: ChildStdout,
@@ -102,6 +160,9 @@ pub(crate) struct AgentProcess {
     stderr_tail: StderrTail,
     /// Held to keep the child process alive; dropped when the bridge shuts down.
     pub _child: Child,
+    /// SIGKILLs the agent's process group when this handle drops (cyril-0pms).
+    #[cfg(unix)]
+    _group_guard: ProcessGroupGuard,
 }
 
 impl AgentProcess {
@@ -110,21 +171,33 @@ impl AgentProcess {
         let program = cmd.program();
         let args = cmd.args();
 
-        let mut child = Command::new(program)
+        let mut command = Command::new(program);
+        command
             .args(args)
             .current_dir(cwd)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| {
-                crate::Error::with_source(
-                    crate::ErrorKind::Transport {
-                        detail: format!("failed to spawn {program}"),
-                    },
-                    e,
-                )
-            })?;
+            // Direct-child backstop on every platform (Windows spawns
+            // `wsl kiro-cli acp` and has no Unix process groups).
+            .kill_on_drop(true);
+        // Fresh group with the agent as leader (pgid == child pid) so
+        // ProcessGroupGuard can reach grandchildren like KAS's acp-server.js
+        // that kill_on_drop cannot (cyril-0pms).
+        #[cfg(unix)]
+        command.process_group(0);
+
+        let mut child = command.spawn().map_err(|e| {
+            crate::Error::with_source(
+                crate::ErrorKind::Transport {
+                    detail: format!("failed to spawn {program}"),
+                },
+                e,
+            )
+        })?;
+
+        #[cfg(unix)]
+        let group_guard = ProcessGroupGuard::new(child.id());
 
         let stdin = child.stdin.take().ok_or_else(|| {
             crate::Error::from_kind(crate::ErrorKind::Transport {
@@ -152,6 +225,8 @@ impl AgentProcess {
             stdout,
             stderr_tail,
             _child: child,
+            #[cfg(unix)]
+            _group_guard: group_guard,
         })
     }
 
@@ -193,6 +268,90 @@ mod tests {
             .expect("agent process wedged: stderr pipe filled and nobody drained it")
             .expect("wait on child failed");
         assert!(status.success(), "child exited with failure: {status:?}");
+    }
+
+    /// True while `pid` is still running, probed via portable-unix `ps` —
+    /// NOT `/proc`, which does not exist on macOS and would leave the probe
+    /// blind there (reporting every pid dead, so the fence passes as a
+    /// silent no-op). A zombie counts as dead: it holds no memory or fds, it
+    /// is just an exit code waiting to be reaped. Same semantics as
+    /// `dead_or_zombie` in the kas terminal_io tests, duplicated locally on
+    /// purpose — test modules are per-file.
+    #[cfg(unix)]
+    fn pid_alive(pid: u32) -> bool {
+        let out = std::process::Command::new("ps")
+            .args(["-o", "stat=", "-p", &pid.to_string()])
+            .output()
+            .expect("spawn ps for the liveness probe");
+        if !out.status.success() {
+            return false; // ps knows no such pid: fully reaped
+        }
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stat = stdout.trim();
+        !stat.is_empty() && !stat.starts_with('Z')
+    }
+
+    /// Regression fence for orphaned agent trees (cyril-0pms bug class):
+    /// dropping the `AgentProcess` must take down the ENTIRE process group.
+    /// KAS's `acp-server.js` is kiro-cli's child — our GRANDCHILD — so
+    /// `kill_on_drop` alone can never reach it; only a group kill can. The
+    /// stub mirrors that shape: `sh` backgrounds a long sleep (the
+    /// grandchild), prints its pid, and waits.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn dropped_agent_process_kills_process_group() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let script = r#"sleep 30 & echo $!; wait"#;
+        let cmd = AgentCommand::new("sh").with_args(vec!["-c".to_string(), script.to_string()]);
+
+        let mut process = AgentProcess::spawn(&cmd, dir.path())
+            .await
+            .expect("spawn sh");
+        let child_pid = process
+            ._child
+            .id()
+            .expect("child pid available before drop");
+
+        // First stdout line is the grandchild's pid.
+        let mut reader = BufReader::new(&mut process.stdout);
+        let mut line = String::new();
+        tokio::time::timeout(Duration::from_secs(5), reader.read_line(&mut line))
+            .await
+            .expect("timed out waiting for grandchild pid on stdout")
+            .expect("read grandchild pid line");
+        let grandchild_pid: u32 = line.trim().parse().expect("grandchild pid parses");
+
+        // PRE-DROP sanity: the probe must SEE both processes alive. Without
+        // this, a probe that is blind on some platform (the /proc-based v1
+        // was blind on macOS) makes the post-drop assertions pass vacuously.
+        assert!(
+            pid_alive(child_pid),
+            "liveness probe blind: child {child_pid} not seen alive before drop"
+        );
+        assert!(
+            pid_alive(grandchild_pid),
+            "liveness probe blind: grandchild {grandchild_pid} not seen alive before drop"
+        );
+
+        drop(process);
+
+        // Both must vanish; poll with a bounded deadline (pid reuse within a
+        // 5s window is not a practical concern).
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            let child_alive = pid_alive(child_pid);
+            let grandchild_alive = pid_alive(grandchild_pid);
+            if !child_alive && !grandchild_alive {
+                break;
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "agent process group survived drop: \
+                 child({child_pid}) alive={child_alive}, \
+                 grandchild({grandchild_pid}) alive={grandchild_alive}"
+            );
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
     }
 
     /// Last-N semantics of the ring buffer: pushing past capacity evicts the

@@ -35,6 +35,13 @@ tokio-util = { workspace = true }
 futures-util = { workspace = true }
 rusqlite = { workspace = true, optional = true }
 
+# Unix-only: `nix` does not build on Windows, where cyril spawns
+# `wsl kiro-cli acp` and keeps only the `kill_on_drop` backstop.
+[target.'cfg(unix)'.dependencies]
+# Group-kill of the agent subprocess tree when the bridge drops its handle
+# (cyril-0pms) — `acp-server.js` is a grandchild, unreachable by kill_on_drop.
+nix = { workspace = true }
+
 [dev-dependencies]
 anyhow = { workspace = true }
 rstest = { workspace = true }

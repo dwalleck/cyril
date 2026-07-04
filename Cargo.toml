@@ -43,6 +43,9 @@ tempfile = "3"
 # KAS auth source (cyril-dcc6): read-only access to kiro-cli's data.sqlite3.
 # `bundled` compiles its own libsqlite3 — hermetic, no system-lib skew.
 rusqlite = { version = "0.39", default-features = false, features = ["bundled"] }
+# Process-group kill of the agent subprocess tree on drop (cyril-0pms). Safe
+# killpg wrapper — `unsafe_code = "forbid"` governs OUR code, not dependencies.
+nix = { version = "0.31", default-features = false, features = ["signal"] }
 
 [profile.dev]
 incremental = true
