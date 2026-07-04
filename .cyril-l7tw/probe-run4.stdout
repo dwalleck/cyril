@@ -1,0 +1,4 @@
+PROBE agent_command=["kiro-cli", "acp"]
+SETUP t=1.87s BridgeDisconnected reason=protocol error: ACP initialization failed: Internal error: "server shut down unexpectedly"
+agent stderr:
+error: You are not logged in, please log in with kiro-cli login

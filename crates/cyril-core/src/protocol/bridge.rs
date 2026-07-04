@@ -139,10 +139,10 @@ pub fn spawn_bridge(
                 .enable_all()
                 .build();
 
-            let exit_reason: Option<String> = match rt {
+            let (rt, exit_reason): (Option<tokio::runtime::Runtime>, Option<String>) = match rt {
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
-                    local.block_on(&rt, async move {
+                    let reason = local.block_on(&rt, async move {
                         match run_bridge(&agent_command, agent_engine, kas_spawn, &cwd, channels)
                             .await
                         {
@@ -152,25 +152,22 @@ pub fn spawn_bridge(
                                 Some(e.to_string())
                             }
                         }
-                    })
+                    });
+                    (Some(rt), reason)
                 }
                 Err(e) => {
                     tracing::error!(error = %e, "failed to create bridge runtime");
-                    Some(format!("failed to create bridge runtime: {e}"))
+                    (None, Some(format!("failed to create bridge runtime: {e}")))
                 }
             };
 
             if let Some(reason) = exit_reason {
-                // Best-effort; the App may already have dropped its receiver.
-                if let Err(send_err) = disconnect_tx.try_send(RoutedNotification {
-                    session_id: None,
-                    notification: Notification::BridgeDisconnected { reason },
-                }) {
-                    tracing::warn!(
-                        error = %send_err,
-                        "failed to deliver BridgeDisconnected notification on bridge exit"
-                    );
-                }
+                emit_failstop_disconnect(
+                    rt.as_ref(),
+                    &disconnect_tx,
+                    reason,
+                    FAILSTOP_SEND_TIMEOUT,
+                );
             }
         })
         .map_err(|e| {
@@ -183,6 +180,48 @@ pub fn spawn_bridge(
         })?;
 
     Ok(handle)
+}
+
+/// How long the fail-stop [`emit_failstop_disconnect`] waits for a slot on a
+/// full notification channel before giving up (cyril-l7tw C9/C10).
+const FAILSTOP_SEND_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Deliver the thread-exit `BridgeDisconnected` so it cannot be dropped by a
+/// full channel (cyril-l7tw C9) — the pre-l7tw `try_send` lost it exactly
+/// when a crash mid-streaming-backlog made it most likely. The send is
+/// BOUNDED by `timeout`: a full channel with a live App delivers once the
+/// App drains; a dropped receiver errors immediately; an App wedged past the
+/// bound is warned about and abandoned rather than hanging the exiting
+/// thread (C10). Without a runtime (its construction failed — nothing ever
+/// ran, channel empty) falls back to best-effort `try_send`.
+fn emit_failstop_disconnect(
+    rt: Option<&tokio::runtime::Runtime>,
+    tx: &mpsc::Sender<RoutedNotification>,
+    reason: String,
+    timeout: std::time::Duration,
+) {
+    let routed: RoutedNotification = Notification::BridgeDisconnected { reason }.into();
+    match rt {
+        Some(rt) => {
+            match rt.block_on(async { tokio::time::timeout(timeout, tx.send(routed)).await }) {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => {
+                    tracing::debug!(error = %e, "BridgeDisconnected receiver already gone on bridge exit");
+                }
+                Err(_) => {
+                    tracing::warn!(
+                        timeout_secs = timeout.as_secs_f32(),
+                        "BridgeDisconnected not delivered within the bound (App not draining)"
+                    );
+                }
+            }
+        }
+        None => {
+            if let Err(e) = tx.try_send(routed) {
+                tracing::warn!(error = %e, "failed to deliver BridgeDisconnected (no runtime)");
+            }
+        }
+    }
 }
 
 /// Outcome of an error from a `_session/steer[/clear]` request (ROADMAP K1a).
@@ -268,6 +307,74 @@ async fn notify_or_closed(
     notification: Notification,
 ) -> bool {
     tx.send(notification.into()).await.is_err()
+}
+
+/// Forward everything queued on the internal channel to the App, dropping
+/// `TurnCompleted`s (cyril-l7tw). Called only from the death paths, where no
+/// turn is in flight (idle death) or the turn's terminal marker was already
+/// forwarded (deferred disconnect) — so every queued completion is a
+/// duplicate, exactly as the live inbound arm would judge it. Calling this
+/// while a turn is genuinely in flight would eat its completion; both call
+/// sites structurally precede the loop's exit, where that can't hold.
+async fn drain_inbound_dropping_duplicates(
+    rx: &mut mpsc::Receiver<RoutedNotification>,
+    tx: &mpsc::Sender<RoutedNotification>,
+) {
+    while let Ok(routed) = rx.try_recv() {
+        if matches!(routed.notification, Notification::TurnCompleted { .. }) {
+            continue;
+        }
+        if tx.send(routed).await.is_err() {
+            break;
+        }
+    }
+}
+
+/// Enrich a bridge-fatal error with the agent's stderr tail (cyril-l7tw C7):
+/// the failure the user sees (e.g. "ACP initialization failed") is rarely the
+/// failure the agent reported (e.g. "You are not logged in, please log in
+/// with kiro-cli login" — which only ever reaches stderr). Empty snapshot ⇒
+/// the error passes through untouched (no dangling "agent stderr:" stub —
+/// C8). The original error is kept as the source.
+fn append_stderr_reason(e: crate::Error, snapshot: &[String]) -> crate::Error {
+    let Some(suffix) = stderr_tail_suffix(snapshot) else {
+        return e;
+    };
+    // Reuse a Protocol error's inner message so re-wrapping doesn't stack a
+    // second "protocol error:" Display prefix (seen live in probe run 4).
+    let base = match e.kind() {
+        crate::ErrorKind::Protocol { message } => message.clone(),
+        _ => e.to_string(),
+    };
+    crate::Error::with_source(
+        crate::ErrorKind::Protocol {
+            message: format!("{base}{suffix}"),
+        },
+        e,
+    )
+}
+
+/// The user-facing "agent stderr" block appended to disconnect reasons —
+/// single owner of the header literal so the io-watcher and
+/// [`append_stderr_reason`] can never drift apart. `None` when the agent
+/// wrote nothing.
+fn stderr_tail_suffix(snapshot: &[String]) -> Option<String> {
+    tail_excerpt(snapshot).map(|tail| format!("\nagent stderr:\n{tail}"))
+}
+
+/// How many trailing agent-stderr lines a user-facing disconnect reason
+/// carries (cyril-l7tw). The full tail stays in the tracing log.
+const REASON_TAIL_LINES: usize = 5;
+
+/// Format the LAST [`REASON_TAIL_LINES`] of an agent stderr snapshot for a
+/// user-facing disconnect reason; `None` when the agent wrote nothing (the
+/// reason must not grow a dangling "agent stderr:" stub — l7tw C8).
+fn tail_excerpt(snapshot: &[String]) -> Option<String> {
+    if snapshot.is_empty() {
+        return None;
+    }
+    let start = snapshot.len().saturating_sub(REASON_TAIL_LINES);
+    Some(snapshot[start..].join("\n"))
 }
 
 /// Select the engine impl for the bound [`AgentEngine`], or a user-facing reason
@@ -383,8 +490,12 @@ async fn run_bridge(
     //    ClientSideConnection::new returns (conn, io_task).
     //    The io_task must be spawned on the LocalSet so the RPC layer runs.
     //    Grab the stderr tail handle first — stdin/stdout are moved out of
-    //    `process` below (cyril-0gke; full UI surfacing is cyril-l7tw).
+    //    `process` below (cyril-0gke). The tail reaches the user via the io
+    //    watcher's disconnect reason and append_stderr_reason (cyril-l7tw).
     let stderr_tail = process.stderr_tail();
+    // Second handle for the run_loop Err path below (the first moves into the
+    // io watcher).
+    let stderr_tail_for_err = process.stderr_tail();
     let (conn, io_task) = acp::ClientSideConnection::new(
         client,
         process.stdin.compat_write(),
@@ -394,23 +505,67 @@ async fn run_bridge(
         },
     );
 
-    // Spawn the IO pump on the local task set
+    // Spawn the IO pump on the local task set, watched (cyril-l7tw C3/C4): the
+    // pump ending — Ok on clean EOF (the common death mode per the l7tw probe)
+    // or Err — means the agent connection is gone. The watcher tells run_loop
+    // via a oneshot carrying a user-facing reason with the stderr tail, so
+    // death while idle no longer needs a next command to become visible.
+    let (io_done_tx, io_done_rx) = tokio::sync::oneshot::channel::<String>();
     tokio::task::spawn_local(async move {
-        if let Err(e) = io_task.await {
-            tracing::error!(error = %e, stderr_tail = ?stderr_tail.snapshot(), "ACP IO task failed");
+        let io_result = io_task.await;
+        let snapshot = stderr_tail.snapshot();
+        let mut reason = String::from("agent connection closed unexpectedly");
+        if let Err(e) = io_result {
+            tracing::error!(error = %e, stderr_tail = ?snapshot, "ACP IO task failed");
+            reason.push_str(&format!(" ({e})"));
+        } else {
+            tracing::error!(stderr_tail = ?snapshot, "ACP IO task ended (agent EOF)");
+        }
+        if let Some(suffix) = stderr_tail_suffix(&snapshot) {
+            reason.push_str(&suffix);
+        }
+        if io_done_tx.send(reason).is_err() {
+            tracing::debug!("io-done signal dropped (run_loop already exited)");
         }
     });
 
+    // cyril-l7tw C7: any error run_loop propagates (handshake failure being
+    // the archetype) is enriched with the agent's stderr tail before it
+    // becomes the fail-stop BridgeDisconnected reason — kiro-cli's actionable
+    // "not logged in" text lives only on stderr. Spawn failures above never
+    // reach here (no process ⇒ no tail to append — C8).
     run_loop(
         std::rc::Rc::new(conn),
         channels,
         cwd.to_path_buf(),
         engine,
-        inbound_tx,
-        inbound_rx,
-        req_rx,
+        InternalChannels {
+            inbound_tx,
+            inbound_rx,
+            req_rx,
+            io_done: io_done_rx,
+        },
     )
     .await
+    .map_err(|e| append_stderr_reason(e, &stderr_tail_for_err.snapshot()))
+}
+
+/// The loop-internal plumbing (ADR-0004), grouped so `run_loop`'s signature
+/// stays at one argument per concern:
+/// - `inbound_tx`/`inbound_rx`: single-mediator notification channel — the
+///   KiroClient and the off-loop prompt task feed `inbound_tx`; the loop
+///   drains `inbound_rx`, observes `TurnCompleted` to clear the busy flag,
+///   and forwards to the App.
+/// - `req_rx`: server->client requests from the KiroClient; the loop forwards
+///   them to the App's `permission_tx` and never awaits their resolution.
+/// - `io_done`: fired by the io-pump watcher when the agent connection ends
+///   (clean EOF or io error), carrying the user-facing disconnect reason
+///   (cyril-l7tw).
+struct InternalChannels {
+    inbound_tx: mpsc::Sender<RoutedNotification>,
+    inbound_rx: mpsc::Receiver<RoutedNotification>,
+    req_rx: mpsc::Receiver<PermissionRequest>,
+    io_done: tokio::sync::oneshot::Receiver<String>,
 }
 
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
@@ -422,16 +577,14 @@ async fn run_loop(
     mut channels: BridgeChannels,
     cwd: std::path::PathBuf,
     engine: std::rc::Rc<dyn Engine>,
-    // Single-mediator internal channel (ADR-0004): the KiroClient and the
-    // off-loop prompt task feed `inbound_tx`; the loop drains `inbound_rx`,
-    // observes `TurnCompleted` to clear the busy flag, and forwards to the App.
-    inbound_tx: mpsc::Sender<RoutedNotification>,
-    mut inbound_rx: mpsc::Receiver<RoutedNotification>,
-    // Internal request channel (ADR-0004): the KiroClient sends server->client
-    // requests here; the loop forwards them to the App's `permission_tx` and
-    // never awaits their resolution.
-    mut req_rx: mpsc::Receiver<PermissionRequest>,
+    internal: InternalChannels,
 ) -> crate::Result<()> {
+    let InternalChannels {
+        inbound_tx,
+        mut inbound_rx,
+        mut req_rx,
+        mut io_done,
+    } = internal;
     use acp::Agent;
     use agent_client_protocol as acp;
 
@@ -473,6 +626,14 @@ async fn run_loop(
     // so this flag and `prompt_task` will intentionally diverge there; in v2 they
     // clear together (the prompt resolves AT turn-end). Do not re-merge them.
     let mut turn_in_flight: Option<acp::SessionId> = None;
+    // cyril-l7tw C4: set when the io watcher reports the connection dead while
+    // a turn is in flight. The disconnect is DEFERRED until the loop observes
+    // that turn's TurnCompleted (the prompt task's Err arm delivers a
+    // BridgeError + TurnCompleted once the rpc layer clears its pending
+    // responses), so the App sees BridgeError → TurnCompleted →
+    // BridgeDisconnected. Also the load-bearing guard that keeps the select
+    // arm from re-polling the completed oneshot (which would panic).
+    let mut deferred_disconnect: Option<String> = None;
 
     loop {
         // Single mediator (ADR-0004): one `select!` services commands AND the
@@ -567,6 +728,18 @@ async fn run_loop(
                         Ok(response) => crate::protocol::convert::to_stop_reason(response.stop_reason),
                         Err(e) => {
                             tracing::error!(error = %e, "prompt failed");
+                            // cyril-l7tw C1: surface the failure to the App BEFORE
+                            // the terminal marker (CLAUDE.md: bridge errors must
+                            // notify the App — logging alone is invisible). Same
+                            // task + channel as the TurnCompleted below, so the
+                            // error-before-completion order is deterministic.
+                            let err_note = Notification::BridgeError {
+                                operation: "prompt".into(),
+                                message: e.to_string(),
+                            };
+                            if let Err(send_err) = turn_tx.send(err_note.into()).await {
+                                tracing::debug!(error = %send_err, "BridgeError send failed (App gone)");
+                            }
                             // No PromptResponse on a failed turn; EndTurn frees the
                             // UI from "busy". App-gone is detected by the command
                             // loop's own recv() ending, so a failed send here only
@@ -1385,14 +1558,61 @@ async fn run_loop(
                 // prompt response can't freeze the turn (turn_end completes it).
                 // (Residual: a stale duplicate arriving after a NEW same-session
                 // turn started would need per-turn identity — cyril-a71q.)
+                let mut completed_turn = false;
                 if matches!(routed.notification, Notification::TurnCompleted { .. }) {
                     if turn_in_flight.is_none() {
                         continue; // duplicate completion for an already-ended turn
                     }
                     turn_in_flight = None;
+                    completed_turn = true;
                 }
                 if channels.notification_tx.send(routed).await.is_err() {
                     break; // App dropped the notification channel.
+                }
+                // cyril-l7tw C4: the connection died mid-turn and the deferred
+                // disconnect waited for this turn's terminal marker. Forward
+                // any straggling inbound notifications, then say goodbye and
+                // exit — mirrors the idle-death path in the io_done arm.
+                if completed_turn && let Some(reason) = deferred_disconnect.take() {
+                    drain_inbound_dropping_duplicates(&mut inbound_rx, &channels.notification_tx)
+                        .await;
+                    notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeDisconnected { reason },
+                    )
+                    .await;
+                    break;
+                }
+            }
+            res = &mut io_done, if deferred_disconnect.is_none() => {
+                // cyril-l7tw C3/C4: the agent connection is gone. RecvError can
+                // only mean the watcher was torn down abnormally (it always
+                // sends before exiting) — treat it as death with a generic
+                // reason rather than a silent arm.
+                let reason = res.unwrap_or_else(|_| {
+                    tracing::warn!("io watcher dropped without a reason");
+                    "agent connection closed unexpectedly".into()
+                });
+                if turn_in_flight.is_some() {
+                    // Defer: let the in-flight turn's BridgeError+TurnCompleted
+                    // (already en route via the inbound channel) reach the App
+                    // first; the inbound arm below emits the disconnect after
+                    // observing the completion.
+                    deferred_disconnect = Some(reason);
+                } else {
+                    // Idle death: forward anything already queued (dropping
+                    // duplicate completions — a parked prompt's Err resolution
+                    // may have raced its TurnCompleted into the queue), then
+                    // say goodbye and exit. Send failures don't matter — we
+                    // are breaking either way.
+                    drain_inbound_dropping_duplicates(&mut inbound_rx, &channels.notification_tx)
+                        .await;
+                    notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeDisconnected { reason },
+                    )
+                    .await;
+                    break;
                 }
             }
             Some(req) = req_rx.recv() => {
@@ -1437,6 +1657,214 @@ mod tests {
         assert!(engine_for(AgentEngine::V2).is_ok(), "v2 selects an engine");
     }
 
+    // l7tw C7 (unit form; the live form is the logged-out kiro-cli run in
+    // .cyril-l7tw/findings.md): the reason a user sees carries the LAST lines
+    // of agent stderr — where kiro-cli puts its actionable text. Stress: >5
+    // lines must keep the last 5, not the first 5.
+    #[test]
+    fn handshake_failure_reason_includes_stderr_tail() {
+        let snapshot: Vec<String> = (1..=7).map(|i| format!("line{i}")).collect();
+        let e = crate::Error::from_kind(crate::ErrorKind::Protocol {
+            message: "ACP initialization failed: boom".into(),
+        });
+        let enriched = append_stderr_reason(e, &snapshot).to_string();
+        assert!(
+            enriched.contains("ACP initialization failed: boom"),
+            "original error text preserved, got: {enriched}"
+        );
+        assert!(
+            enriched.contains("line7") && enriched.contains("line3"),
+            "last {REASON_TAIL_LINES} stderr lines included, got: {enriched}"
+        );
+        assert!(
+            !enriched.contains("line2"),
+            "older lines beyond the excerpt are dropped, got: {enriched}"
+        );
+        assert!(
+            !enriched.contains("protocol error: protocol error"),
+            "re-wrapping must not stack Display prefixes (probe run 4), got: {enriched}"
+        );
+    }
+
+    // l7tw C8 (unit half): an empty snapshot passes the error through
+    // byte-identical — no dangling "agent stderr:" stub.
+    #[test]
+    fn empty_stderr_tail_leaves_reason_untouched() {
+        let e = crate::Error::from_kind(crate::ErrorKind::Protocol {
+            message: "ACP initialization failed: boom".into(),
+        });
+        let before = e.to_string();
+        let after = append_stderr_reason(e, &[]).to_string();
+        assert_eq!(before, after);
+        assert!(!after.contains("agent stderr:"));
+    }
+
+    // tail_excerpt edge shapes (l7tw slice 5 stress fixture): empty lines are
+    // preserved verbatim (they are real stderr output), empty snapshot is None.
+    #[test]
+    fn tail_excerpt_shapes() {
+        assert_eq!(tail_excerpt(&[]), None);
+        let mixed = vec![String::new(), "x".into(), String::new()];
+        assert_eq!(tail_excerpt(&mixed).as_deref(), Some("\nx\n"));
+    }
+
+    // l7tw C9 fence — fails against the pre-l7tw `try_send` by construction
+    // (mutation-verified: substituting try_send back fails the "survived"
+    // assert): the channel is filled to capacity BEFORE the emission, and the
+    // consumer only starts draining afterwards. `try_send` returns Full and
+    // the disconnect vanishes; the bounded send waits for the drain and
+    // delivers it LAST (after the backlog, in channel order).
+    #[test]
+    fn failstop_disconnect_survives_full_channel() {
+        let (handle, channels) = create_channel_pair();
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        for _ in 0..NOTIFICATION_CAPACITY {
+            channels
+                .notification_tx
+                .try_send(
+                    Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    }
+                    .into(),
+                )
+                .unwrap();
+        }
+        assert!(
+            channels
+                .notification_tx
+                .try_send(
+                    Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    }
+                    .into(),
+                )
+                .is_err(),
+            "channel is verifiably full — the pre-l7tw try_send would drop here"
+        );
+        let (_sender, mut rx, _perm) = handle.split();
+        let drainer = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(300));
+            let mut total = 0usize;
+            let mut disconnects = 0usize;
+            let mut last_was_disconnect = false;
+            while let Some(r) = rx.blocking_recv() {
+                total += 1;
+                last_was_disconnect =
+                    matches!(r.notification, Notification::BridgeDisconnected { .. });
+                if last_was_disconnect {
+                    disconnects += 1;
+                }
+            }
+            (total, disconnects, last_was_disconnect)
+        });
+        emit_failstop_disconnect(
+            Some(&rt),
+            &channels.notification_tx,
+            "the end".into(),
+            Duration::from_secs(5),
+        );
+        drop(channels); // close the channel so the drainer's recv loop ends
+        let (total, disconnects, last_was_disconnect) = drainer.join().expect("drainer");
+        assert_eq!(disconnects, 1, "the disconnect survived the full channel");
+        assert_eq!(
+            total,
+            NOTIFICATION_CAPACITY + 1,
+            "backlog fully delivered too"
+        );
+        assert!(
+            last_was_disconnect,
+            "disconnect delivered after the backlog"
+        );
+    }
+
+    // l7tw C10 fence: with a full channel and an App that NEVER drains, the
+    // bounded send gives up at the timeout instead of hanging the exiting
+    // bridge thread forever (an unbounded send would hang this test); and a
+    // dropped receiver returns immediately.
+    #[test]
+    fn failstop_disconnect_no_hang_on_wedged_or_dropped_receiver() {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        // Wedged App: full channel, receiver alive, nobody draining.
+        let (handle, channels) = create_channel_pair();
+        for _ in 0..NOTIFICATION_CAPACITY {
+            channels
+                .notification_tx
+                .try_send(
+                    Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    }
+                    .into(),
+                )
+                .unwrap();
+        }
+        let start = std::time::Instant::now();
+        emit_failstop_disconnect(
+            Some(&rt),
+            &channels.notification_tx,
+            "wedged".into(),
+            Duration::from_millis(200),
+        );
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed >= Duration::from_millis(200) && elapsed < Duration::from_secs(3),
+            "gave up at the bound, got {elapsed:?}"
+        );
+        drop(handle);
+        // Dropped receiver: returns immediately.
+        let (handle2, channels2) = create_channel_pair();
+        drop(handle2);
+        let start = std::time::Instant::now();
+        emit_failstop_disconnect(
+            Some(&rt),
+            &channels2.notification_tx,
+            "gone".into(),
+            Duration::from_secs(5),
+        );
+        assert!(
+            start.elapsed() < Duration::from_secs(1),
+            "closed channel errors immediately"
+        );
+    }
+
+    // l7tw C8 (integration half): a spawn failure (missing binary) still
+    // yields a BridgeDisconnected through the REAL spawn_bridge fail-stop
+    // path, and the reason is well-formed (no tail stub — the agent never
+    // ran). Oracle: the OS refuses the exec; we only assert what the App
+    // receives.
+    #[tokio::test]
+    async fn spawn_failure_disconnect_reason_wellformed() {
+        let cmd = AgentCommand::try_from_argv(vec!["cyril-l7tw-no-such-binary".to_string()])
+            .expect("argv");
+        let handle = spawn_bridge(
+            cmd,
+            AgentEngine::default(),
+            KasSpawn::default(),
+            std::env::temp_dir(),
+        )
+        .expect("bridge thread spawns");
+        let (_sender, mut rx, _perm) = handle.split();
+        let routed = tokio::time::timeout(Duration::from_secs(10), rx.recv())
+            .await
+            .expect("notification within 10s of spawn failure")
+            .expect("channel open");
+        match routed.notification {
+            Notification::BridgeDisconnected { reason } => {
+                assert!(!reason.is_empty(), "reason must be actionable, not blank");
+                assert!(
+                    !reason.contains("agent stderr:"),
+                    "no tail stub when the agent never ran, got: {reason}"
+                );
+            }
+            other => panic!("expected BridgeDisconnected, got {other:?}"),
+        }
+    }
+
     // KAS-1 C4 (gate-on): under `--features kas`, Kas resolves to the KasEngine.
     #[cfg(feature = "kas")]
     #[test]
@@ -1471,6 +1899,9 @@ mod tests {
         block_prompt: bool,
         /// When set, `prompt` returns an error (the transport/error turn path).
         prompt_err: bool,
+        /// Number of `agent_message_chunk` notifications `prompt` streams before
+        /// resolving (error or success) — models a turn that dies mid-stream.
+        emit_chunks: usize,
         /// When set, `prompt` issues a server->client `request_permission` (which
         /// blocks until the client answers) before completing — exercises Slice 3's
         /// loop request-forward path (ADR-0004).
@@ -1525,7 +1956,7 @@ mod tests {
         async fn prompt(&self, a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
             // Copy the flags out and DROP the borrow before any await — a RefCell
             // borrow held across `.await` would panic on re-entry.
-            let (block, err, want_perm, emit_turn_end) = {
+            let (block, err, want_perm, emit_turn_end, emit_chunks) = {
                 let mut s = self.script.borrow_mut();
                 s.received.push("prompt".into());
                 s.prompt_count += 1;
@@ -1534,8 +1965,27 @@ mod tests {
                     s.prompt_err,
                     s.request_perm,
                     s.emit_turn_end,
+                    s.emit_chunks,
                 )
             };
+            if emit_chunks > 0 {
+                use acp::Client as _;
+                let conn = self.agent_conn.borrow().clone();
+                if let Some(conn) = conn {
+                    for i in 0..emit_chunks {
+                        let note: acp::SessionNotification =
+                            serde_json::from_value(serde_json::json!({
+                                "sessionId": a.session_id.to_string(),
+                                "update": {
+                                    "sessionUpdate": "agent_message_chunk",
+                                    "content": { "type": "text", "text": format!("c{i}") }
+                                }
+                            }))
+                            .expect("chunk notification");
+                        conn.session_notification(note).await.expect("send chunk");
+                    }
+                }
+            }
             if emit_turn_end {
                 // KAS-shaped completion: emit the `turn_end` lifecycle frame
                 // BEFORE the response (and before any park) so it drives
@@ -1617,8 +2067,26 @@ mod tests {
         }
     }
 
+    /// Kill lever for the fake agent (cyril-l7tw): aborting the agent's io
+    /// wrapper task drops the agent-side duplex halves, which the client
+    /// observes as a clean EOF — the same mechanism as a SIGKILL'd real agent
+    /// (probe finding: agent death is a clean EOF, not an io error).
+    struct AgentKill {
+        io_handle: tokio::task::JoinHandle<()>,
+        conn_cell: Rc<RefCell<Option<Rc<acp::AgentSideConnection>>>>,
+    }
+
+    impl AgentKill {
+        fn kill(self) {
+            *self.conn_cell.borrow_mut() = None;
+            self.io_handle.abort();
+        }
+    }
+
     /// Wire a fake agent to `run_loop` over an in-process duplex and run `body`
-    /// against the live bridge, using the default v2 engine.
+    /// against the live bridge, using the default v2 engine. Tests that need to
+    /// kill the agent mid-flight use [`with_engine_harness`] directly for the
+    /// [`AgentKill`] lever.
     async fn with_harness<F, Fut>(script: Rc<RefCell<Script>>, body: F)
     where
         F: FnOnce(
@@ -1630,7 +2098,10 @@ mod tests {
         ) -> Fut,
         Fut: std::future::Future<Output = ()>,
     {
-        with_engine_harness(Rc::new(V2Engine), script, body).await;
+        with_engine_harness(Rc::new(V2Engine), script, |s, n, p, g, l, _kill| {
+            body(s, n, p, g, l)
+        })
+        .await;
     }
 
     /// Like [`with_harness`] but with a caller-chosen [`Engine`], so KAS-2a tests
@@ -1646,6 +2117,7 @@ mod tests {
             mpsc::Receiver<PermissionRequest>,
             Rc<tokio::sync::Notify>,
             tokio::task::JoinHandle<crate::Result<()>>,
+            AgentKill,
         ) -> Fut,
         Fut: std::future::Future<Output = ()>,
     {
@@ -1681,23 +2153,35 @@ mod tests {
                         tokio::task::spawn_local(f);
                     });
                 *agent_conn_cell.borrow_mut() = Some(Rc::new(agent_conn));
+                // Mirror run_bridge's io watcher (cyril-l7tw): the client io
+                // task ending = agent connection gone. No real process here,
+                // so the reason carries no stderr tail.
+                let (io_done_tx, io_done_rx) = tokio::sync::oneshot::channel::<String>();
                 tokio::task::spawn_local(async move {
                     let _ = c_task.await;
+                    let _ = io_done_tx.send("agent connection closed unexpectedly".into());
                 });
-                tokio::task::spawn_local(async move {
+                let a_handle = tokio::task::spawn_local(async move {
                     let _ = a_task.await;
                 });
+                let kill = AgentKill {
+                    io_handle: a_handle,
+                    conn_cell: agent_conn_cell.clone(),
+                };
                 let loop_handle = tokio::task::spawn_local(run_loop(
                     Rc::new(conn),
                     channels,
                     std::env::temp_dir(),
                     engine,
-                    inbound_tx,
-                    inbound_rx,
-                    req_rx,
+                    InternalChannels {
+                        inbound_tx,
+                        inbound_rx,
+                        req_rx,
+                        io_done: io_done_rx,
+                    },
                 ));
                 let (sender, notif_rx, perm_rx) = handle.split();
-                body(sender, notif_rx, perm_rx, gate, loop_handle).await;
+                body(sender, notif_rx, perm_rx, gate, loop_handle, kill).await;
             })
             .await;
     }
@@ -1765,17 +2249,50 @@ mod tests {
         }
     }
 
-    /// Drain notifications until the first `TurnCompleted`; return how many were
-    /// seen (expected: exactly 1). Bounded so a hang fails the test instead of stalling.
-    async fn count_turn_completions(rx: &mut mpsc::Receiver<RoutedNotification>) -> usize {
-        let mut n = 0;
-        while let Ok(Some(r)) = tokio::time::timeout(Duration::from_secs(5), rx.recv()).await {
-            if matches!(r.notification, Notification::TurnCompleted { .. }) {
-                n += 1;
-                return n;
-            }
-        }
-        n
+    // cyril-l7tw design falsifier (cheapest, run at design time): dropping the
+    // agent side of the connection mid-prompt must (a) resolve the pending
+    // `conn.prompt()` as `Err` and (b) complete the io task. This is the
+    // mechanism the io-watcher fix and every death fence rely on — if EOF hung
+    // the prompt or the io task, the design would be wrong. Kept as a permanent
+    // mechanism fence (independent of the fix: it tests the acp rpc layer).
+    #[tokio::test]
+    async fn l7tw_agent_drop_resolves_prompt_err_and_completes_io() {
+        let local = tokio::task::LocalSet::new();
+        local
+            .run_until(async {
+                let (notif_tx, _notif_rx) =
+                    mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
+                let (req_tx, _req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
+                let client = KiroClient::new(notif_tx, req_tx, Rc::new(V2Engine));
+                let (c_io, a_io) = tokio::io::duplex(64 * 1024);
+                let (cr, cw) = tokio::io::split(c_io);
+                let (conn, io_task) =
+                    acp::ClientSideConnection::new(client, cw.compat_write(), cr.compat(), |f| {
+                        tokio::task::spawn_local(f);
+                    });
+                let io_handle = tokio::task::spawn_local(io_task);
+                use acp::Agent;
+                let prompt_fut = conn.prompt(acp::PromptRequest::new(
+                    acp::SessionId::new("s1"),
+                    vec![acp::ContentBlock::from("hello".to_string())],
+                ));
+                let killer = async move {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    drop(a_io); // agent dies: clean EOF on the client's read side
+                };
+                let (prompt_result, ()) = tokio::join!(prompt_fut, killer);
+                assert!(
+                    prompt_result.is_err(),
+                    "pending prompt must resolve Err when the agent connection \
+                     drops, got {prompt_result:?}"
+                );
+                let io_result = tokio::time::timeout(Duration::from_secs(5), io_handle)
+                    .await
+                    .expect("io task must complete after agent drop");
+                // Audit trail: probe run2 says agent death is a CLEAN EOF.
+                println!("l7tw falsifier: io task completed with {io_result:?}");
+            })
+            .await;
     }
 
     #[tokio::test]
@@ -1796,11 +2313,19 @@ mod tests {
                     })
                     .await
                     .unwrap();
-                assert_eq!(
-                    count_turn_completions(&mut rx).await,
-                    1,
-                    "exactly one TurnCompleted"
-                );
+                let mut completions = 0;
+                while let Some(n) = recv_notif(&mut rx, 5).await {
+                    // l7tw C12: a successful turn emits zero BridgeError noise.
+                    assert!(
+                        !matches!(n, Notification::BridgeError { .. }),
+                        "successful turn must not emit BridgeError"
+                    );
+                    if matches!(n, Notification::TurnCompleted { .. }) {
+                        completions += 1;
+                        break;
+                    }
+                }
+                assert_eq!(completions, 1, "exactly one TurnCompleted");
             },
         )
         .await;
@@ -1849,6 +2374,399 @@ mod tests {
             gate.notify_one();
             assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
         })
+        .await;
+    }
+
+    // l7tw C1/C2 fence + stress fixture: the agent streams 2 chunks then fails
+    // the prompt. The App must receive the streamed chunks, a
+    // BridgeError("prompt", <agent's error text>) and exactly ONE
+    // TurnCompleted(EndTurn), with the BridgeError strictly before the
+    // completion (both are sent sequentially by the prompt task on the same
+    // channel, so this order is deterministic). Chunk-vs-completion order is
+    // NOT asserted — that's the open notification-vs-response race
+    // (cyril-9akh), out of this fence's scope. Catches: silent Err arm
+    // (pre-l7tw behavior), error replacing the completion (busy sticks), and
+    // error-message loss.
+    #[tokio::test]
+    async fn prompt_error_emits_bridge_error_before_completion() {
+        let script = Rc::new(RefCell::new(Script {
+            prompt_err: true,
+            emit_chunks: 2,
+            ..Default::default()
+        }));
+        with_harness(
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                let mut chunks = 0;
+                let mut bridge_error_seen = false;
+                let mut completions = 0;
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::AgentMessage(_)) => chunks += 1,
+                        Some(Notification::BridgeError { operation, message }) => {
+                            assert_eq!(operation, "prompt", "operation names the failed command");
+                            assert!(
+                                message.contains("boom"),
+                                "agent's error text passes through, got: {message}"
+                            );
+                            assert_eq!(completions, 0, "BridgeError must precede TurnCompleted");
+                            bridge_error_seen = true;
+                        }
+                        Some(Notification::TurnCompleted { stop_reason }) => {
+                            assert_eq!(stop_reason, StopReason::EndTurn);
+                            completions += 1;
+                            break;
+                        }
+                        Some(_) => {}
+                        None => panic!("timed out before TurnCompleted"),
+                    }
+                }
+                // Chunks may trail the completion (cyril-9akh notification-vs-
+                // response race) — drain briefly and count them wherever they
+                // land; the claim is delivery, not ordering.
+                while let Some(n) = recv_notif(&mut rx, 1).await {
+                    match n {
+                        Notification::AgentMessage(_) => chunks += 1,
+                        Notification::TurnCompleted { .. } => completions += 1,
+                        _ => {}
+                    }
+                }
+                assert!(bridge_error_seen, "failed turn must surface a BridgeError");
+                assert_eq!(chunks, 2, "streamed chunks still reach the App");
+                assert_eq!(completions, 1, "exactly one TurnCompleted");
+            },
+        )
+        .await;
+    }
+
+    // l7tw C1/C5 via the REAL death mechanism (clean EOF — the probe-proven
+    // common mode), complementing the scripted-error fence above: the agent is
+    // killed while the prompt is PARKED, so the Err arm is reached via the rpc
+    // layer clearing its pending responses on connection end, never via an
+    // agent reply. Catches: "Err arm only fires when the agent responds",
+    // and a kill lever that doesn't actually close the stream (test times out).
+    #[tokio::test]
+    async fn death_mid_turn_emits_bridge_error_before_turn_completed() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+                kill.kill();
+                let mut saw_bridge_error = false;
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeError { operation, message }) => {
+                            assert_eq!(operation, "prompt");
+                            assert!(!message.is_empty(), "error message must not be empty");
+                            saw_bridge_error = true;
+                        }
+                        Some(Notification::TurnCompleted { stop_reason }) => {
+                            assert_eq!(stop_reason, StopReason::EndTurn);
+                            assert!(
+                                saw_bridge_error,
+                                "BridgeError must arrive before TurnCompleted on agent death"
+                            );
+                            break;
+                        }
+                        Some(_) => {}
+                        None => panic!("no TurnCompleted within 5s of agent death"),
+                    }
+                }
+            },
+        )
+        .await;
+    }
+
+    // l7tw C6 fence (named in the design's Falsification table): once the
+    // bridge has disconnected, a SendPrompt errors at the sender — the
+    // pre-l7tw silent-TurnCompleted path is structurally gone. The race
+    // window BEFORE the loop exits (conn dead, loop still alive) is fenced by
+    // prompt_error_emits_bridge_error_before_completion: any conn.prompt Err,
+    // whatever its cause, emits BridgeError + TurnCompleted.
+    #[tokio::test]
+    async fn dead_conn_prompt_errors_not_silent() {
+        let script = Rc::new(RefCell::new(Script::default()));
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, loop_handle, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                kill.kill();
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeDisconnected { .. }) => break,
+                        Some(_) => {}
+                        None => panic!("no BridgeDisconnected within 5s of agent death"),
+                    }
+                }
+                tokio::time::timeout(Duration::from_secs(5), loop_handle)
+                    .await
+                    .expect("run_loop exits after death")
+                    .expect("loop task completes")
+                    .expect("loop result ok");
+                let send_result = sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["anyone there?".into()],
+                    })
+                    .await;
+                assert!(
+                    send_result.is_err(),
+                    "a prompt at a dead bridge errors; it must never look sent"
+                );
+            },
+        )
+        .await;
+    }
+
+    // l7tw C3 fence: agent death while IDLE (no turn in flight) emits a
+    // BridgeDisconnected naming the closed connection, and run_loop exits.
+    // Fails pre-l7tw by construction: the detached io pump gave the loop no
+    // death signal, so this test would time out waiting for the notification.
+    #[tokio::test]
+    async fn death_while_idle_emits_disconnected_and_exits() {
+        let script = Rc::new(RefCell::new(Script::default()));
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, loop_handle, kill| async move {
+                let _sid = start_session(&sender, &mut rx).await;
+                kill.kill();
+                let reason = loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeDisconnected { reason }) => break reason,
+                        Some(_) => {}
+                        None => panic!("no BridgeDisconnected within 5s of idle agent death"),
+                    }
+                };
+                assert!(
+                    reason.contains("agent connection closed"),
+                    "reason names the dead connection, got: {reason}"
+                );
+                let loop_result = tokio::time::timeout(Duration::from_secs(5), loop_handle)
+                    .await
+                    .expect("run_loop must exit after idle death");
+                assert!(loop_result.is_ok(), "run_loop task completed cleanly");
+            },
+        )
+        .await;
+    }
+
+    // l7tw C3 counter-fixture: a NORMAL Shutdown must emit ZERO
+    // BridgeDisconnected — catches "the watcher fires on ordinary teardown
+    // too" (Shutdown breaks the loop first; the watcher's later send hits a
+    // dropped receiver and must stay silent).
+    #[tokio::test]
+    async fn shutdown_emits_no_disconnect() {
+        let script = Rc::new(RefCell::new(Script::default()));
+        with_harness(
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let _sid = start_session(&sender, &mut rx).await;
+                sender.send(BridgeCommand::Shutdown).await.unwrap();
+                // Drain to channel close (loop exit drops the sender); nothing on
+                // the way out may be a disconnect.
+                while let Some(n) = recv_notif(&mut rx, 2).await {
+                    assert!(
+                        !matches!(n, Notification::BridgeDisconnected { .. }),
+                        "normal shutdown must not report a disconnect"
+                    );
+                }
+            },
+        )
+        .await;
+    }
+
+    // l7tw C4 fence: mid-turn death delivers the full explanation in order —
+    // BridgeError (why the turn died) → TurnCompleted (busy clears) →
+    // BridgeDisconnected (the bridge is gone) — and run_loop exits. Catches:
+    // disconnect emitted before the turn's terminal marker (order inverted)
+    // and a deferred disconnect that never fires (test times out).
+    #[tokio::test]
+    async fn death_mid_turn_disconnect_after_completion() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, loop_handle, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+                kill.kill();
+                let mut order = Vec::new();
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeError { .. }) => order.push("error"),
+                        Some(Notification::TurnCompleted { .. }) => order.push("completed"),
+                        Some(Notification::BridgeDisconnected { .. }) => {
+                            order.push("disconnected");
+                            break;
+                        }
+                        Some(_) => {}
+                        None => panic!(
+                            "no BridgeDisconnected within 5s of mid-turn death; saw {order:?}"
+                        ),
+                    }
+                }
+                assert_eq!(
+                    order,
+                    ["error", "completed", "disconnected"],
+                    "mid-turn death tells the whole story in order"
+                );
+                let loop_result = tokio::time::timeout(Duration::from_secs(5), loop_handle)
+                    .await
+                    .expect("run_loop must exit after mid-turn death");
+                assert!(loop_result.is_ok(), "run_loop task completed cleanly");
+                // l7tw C6: after the disconnect the bridge accepts nothing —
+                // a further SendPrompt errors at the sender instead of
+                // vanishing into a silent TurnCompleted (the pre-l7tw world).
+                let send_result = sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: crate::types::SessionId::new("s-dead"),
+                        content_blocks: vec!["hello?".into()],
+                    })
+                    .await;
+                assert!(
+                    send_result.is_err(),
+                    "sends after disconnect must error, not silently vanish"
+                );
+            },
+        )
+        .await;
+    }
+
+    // l7tw C4/C13 adversarial fixture (the design's KAS wrinkle): a KAS-style
+    // dual-completion turn whose `turn_end` lands BEFORE the agent dies. The
+    // io watcher then finds no turn in flight (already cleared) and takes the
+    // idle path; the prompt task's late duplicate TurnCompleted is dropped by
+    // the existing dedup or the closed channel. Expected: exactly one
+    // TurnCompleted, exactly one BridgeDisconnected — never two of either.
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn death_after_turn_end_single_disconnect() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            emit_turn_end: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+                // turn_end has been emitted by the fake agent before parking;
+                // wait for its TurnCompleted so the dual-completion race is
+                // settled before the kill.
+                assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+                kill.kill();
+                let mut completions = 0;
+                let mut disconnects = 0;
+                while let Some(n) = recv_notif(&mut rx, 2).await {
+                    match n {
+                        Notification::TurnCompleted { .. } => completions += 1,
+                        Notification::BridgeDisconnected { .. } => disconnects += 1,
+                        _ => {}
+                    }
+                }
+                assert_eq!(
+                    completions, 0,
+                    "the dual turn completed exactly once (pre-kill)"
+                );
+                assert_eq!(
+                    disconnects, 1,
+                    "death after turn end disconnects exactly once"
+                );
+            },
+        )
+        .await;
+    }
+
+    // l7tw C2 on the death path: the killed turn ends with exactly ONE
+    // TurnCompleted — the BridgeError adds visibility without disturbing the
+    // single-terminal-marker invariant (cyril-a71q adjacent).
+    #[tokio::test]
+    async fn death_mid_turn_single_turn_completed() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+                kill.kill();
+                let mut completions = 0;
+                while let Some(n) = recv_notif(&mut rx, 2).await {
+                    if matches!(n, Notification::TurnCompleted { .. }) {
+                        completions += 1;
+                    }
+                }
+                assert_eq!(completions, 1, "exactly one TurnCompleted after death");
+            },
+        )
         .await;
     }
 
@@ -1906,7 +2824,7 @@ mod tests {
         with_engine_harness(
             Rc::new(crate::protocol::engine::KasEngine),
             script,
-            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
                 sender
                     .send(BridgeCommand::SendPrompt {
@@ -1961,7 +2879,7 @@ mod tests {
         with_engine_harness(
             Rc::new(crate::protocol::engine::KasEngine),
             script,
-            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
                 sender
                     .send(BridgeCommand::SendPrompt {

@@ -1,0 +1,8 @@
+PROBE agent_command=["python3", ".cyril-l7tw/kiro-replay-agent.py"]
+SETUP t=0.03s SessionCreated 
+PROBE session=786acc7e-e731-4bd1-84c9-fca7cd6b2bfc
+PHASE1-POSTKILL t=0.00s AgentMessage 
+KILL pid=2984900 kill9_ok=true still_alive=false
+PHASE1-POSTKILL t=0.34s BridgeError op=prompt msg=Internal error: "server shut down unexpectedly"
+PHASE1-POSTKILL t=0.34s TurnCompleted stop_reason=EndTurn
+PHASE1-POSTKILL t=0.34s BridgeDisconnected reason=agent connection closed unexpectedly

@@ -1,0 +1,7 @@
+PROBE agent_command=["python3", ".cyril-l7tw/kiro-replay-agent.py"]
+SETUP t=0.02s SessionCreated 
+PROBE session=786acc7e-e731-4bd1-84c9-fca7cd6b2bfc
+PHASE1-POSTKILL t=0.00s AgentMessage 
+KILL pid=2874594 kill9_ok=true still_alive=true
+PHASE1-POSTKILL t=0.34s TurnCompleted stop_reason=EndTurn
+PHASE2-DEADCONN t=0.00s TurnCompleted stop_reason=EndTurn

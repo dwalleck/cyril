@@ -1,0 +1,13 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril-ui)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.36s
+     Running `target/debug/examples/l7tw_death_probe`
+2026-07-04T21:52:03.056768Z ERROR cyril_core::protocol::bridge: ACP IO task ended (agent EOF) stderr_tail=["error: You are not logged in, please log in with kiro-cli login"]
+2026-07-04T21:52:03.057271Z ERROR cyril_core::protocol::bridge: bridge terminated with error error=protocol error: ACP initialization failed: Internal error: "server shut down unexpectedly"
+agent stderr:
+error: You are not logged in, please log in with kiro-cli login
+
+thread 'main' (2986389) panicked at crates/cyril/examples/l7tw_death_probe.rs:45:33:
+no SessionCreated — is kiro-cli logged in?
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
