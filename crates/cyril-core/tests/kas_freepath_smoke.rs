@@ -42,7 +42,7 @@ async fn freepath_turn_completes_through_bridge() {
     sender
         .send(BridgeCommand::SendPrompt {
             session_id,
-            content_blocks: vec!["Reply with exactly: ok. Do not use any tools.".into()],
+            content_blocks: vec!["Reply with exactly the text KAS_SMOKE_OK and nothing else. Do not use any tools.".into()],
         })
         .await
         .expect("send SendPrompt");
@@ -50,13 +50,26 @@ async fn freepath_turn_completes_through_bridge() {
     // Drive to TurnCompleted; fail loudly on BridgeDisconnected (a missing
     // precondition or an auth failure) or a 180s timeout.
     let deadline = tokio::time::Instant::now() + Duration::from_secs(180);
+    // Accumulate agent text: TurnCompleted alone is NOT proof of an authenticated
+    // turn — a prompt-level error can collapse into TurnCompleted (cyril-l7tw) —
+    // so the fence also demands the echoed sentinel. (`KAS_SMOKE_OK`, not "ok":
+    // "ok" is a substring of "TokenInvalidError"'s "token".)
+    let mut text = String::new();
     loop {
         let routed = tokio::time::timeout_at(deadline, notif_rx.recv())
             .await
             .expect("a TurnCompleted within 180s")
             .expect("notification channel open");
         match routed.notification {
-            Notification::TurnCompleted { .. } => return, // C1 satisfied
+            Notification::AgentMessage(m) => text.push_str(&m.text),
+            Notification::TurnCompleted { .. } => {
+                assert!(
+                    text.contains("KAS_SMOKE_OK"),
+                    "turn completed WITHOUT the echoed sentinel — an error turn \
+                     collapsed into TurnCompleted (cyril-l7tw)? agent text: {text:?}"
+                );
+                return;
+            }
             Notification::BridgeDisconnected { reason } => {
                 panic!("free-path KAS turn disconnected: {reason}")
             }

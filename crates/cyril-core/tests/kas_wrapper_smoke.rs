@@ -45,21 +45,32 @@ async fn wrapper_turn_completes_with_auth_responder() {
     sender
         .send(BridgeCommand::SendPrompt {
             session_id,
-            content_blocks: vec!["Reply with exactly: ok. Do not use any tools.".into()],
+            content_blocks: vec!["Reply with exactly the text KAS_SMOKE_OK and nothing else. Do not use any tools.".into()],
         })
         .await
         .expect("send SendPrompt");
 
     let deadline = tokio::time::Instant::now() + Duration::from_secs(180);
+    // Accumulate agent text: TurnCompleted alone is NOT proof of an authenticated
+    // turn — a prompt-level error can collapse into TurnCompleted (cyril-l7tw) —
+    // so the fence also demands the echoed sentinel. (`KAS_SMOKE_OK`, not "ok":
+    // "ok" is a substring of "TokenInvalidError"'s "token".)
+    let mut text = String::new();
     loop {
         let routed = tokio::time::timeout_at(deadline, notif_rx.recv())
             .await
             .expect("a TurnCompleted within 180s")
             .expect("notification channel open");
         match routed.notification {
-            // Reaching turn-end PROVES the getAccessToken responder authenticated
-            // the session (the wrapper cannot turn without a valid host token).
-            Notification::TurnCompleted { .. } => return,
+            Notification::AgentMessage(m) => text.push_str(&m.text),
+            Notification::TurnCompleted { .. } => {
+                assert!(
+                    text.contains("KAS_SMOKE_OK"),
+                    "turn completed WITHOUT the echoed sentinel — an error turn \
+                     collapsed into TurnCompleted (cyril-l7tw)? agent text: {text:?}"
+                );
+                return;
+            }
             Notification::BridgeDisconnected { reason } => {
                 panic!("wrapper KAS turn disconnected (auth responder?): {reason}")
             }
