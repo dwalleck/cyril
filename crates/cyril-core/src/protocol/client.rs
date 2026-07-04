@@ -179,9 +179,14 @@ impl acp::Client for KiroClient {
     /// `--auth=acp-callback`) from kiro-cli's sqlite credential store; every
     /// other ext request gets the protocol default. v2 never sends this, and
     /// the cfg-split keeps the credential code out of a default build
-    /// (ADR-0002).
+    /// (ADR-0002). cyril-l7tw C11: an auth-callback failure ALSO surfaces to
+    /// the App as a BridgeError — the JSON-RPC error alone travels to KAS,
+    /// which fails the turn while the user sees nothing actionable.
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
-        Self::handle_ext_request(args).await
+        let method = args.method.to_string();
+        let result = Self::handle_ext_request(args).await;
+        self.notify_if_auth_failure(&method, &result).await;
+        result
     }
 
     /// KAS-5a (cyril-7bdu): answer `fs/read_text_file` by reading the file via the
@@ -261,6 +266,36 @@ impl acp::Client for KiroClient {
 }
 
 impl KiroClient {
+    /// cyril-l7tw C11: when the `getAccessToken` responder fails, tell the App
+    /// (BridgeError, operation "auth") in addition to the JSON-RPC error that
+    /// travels back to KAS. The responder's messages already carry the
+    /// actionable `kiro-cli login` hint (kas/auth.rs); the hint is appended
+    /// only when absent so it is never doubled. Failures of OTHER ext methods
+    /// stay out of scope — their unhandled-default path is not an error.
+    #[cfg(feature = "kas")]
+    async fn notify_if_auth_failure(&self, method: &str, result: &acp::Result<acp::ExtResponse>) {
+        if method != crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
+            return;
+        }
+        let Err(e) = result else { return };
+        let mut message = e.message.clone();
+        if !message.contains("kiro-cli login") {
+            message.push_str(" — run `kiro-cli login` and retry");
+        }
+        let note = Notification::BridgeError {
+            operation: "auth".into(),
+            message,
+        };
+        if self.notification_tx.send(note.into()).await.is_err() {
+            tracing::debug!("auth BridgeError send failed (bridge closing)");
+        }
+    }
+
+    /// Default build: no KAS, no auth callback, nothing to surface.
+    #[cfg(not(feature = "kas"))]
+    async fn notify_if_auth_failure(&self, _method: &str, _result: &acp::Result<acp::ExtResponse>) {
+    }
+
     // `#[cfg]` blocks (not a `cfg!(...)` runtime branch) are required: the `kas`
     // module — and thus `kas::auth::respond_get_access_token` — does not exist in
     // a default build, so a single body referencing it would fail to compile.
@@ -314,6 +349,97 @@ mod tests {
 
     use super::*;
     use agent_client_protocol::Client as _;
+
+    // cyril-l7tw C11 fence: a failed getAccessToken callback emits
+    // BridgeError("auth", <responder message + login hint>) on the internal
+    // channel — deterministic (constructed Err, no sqlite store involved;
+    // injectable store wiring is cyril-5db7). Catches the pre-l7tw behavior:
+    // error swallowed into the JSON-RPC reply alone.
+    #[tokio::test]
+    async fn auth_callback_err_emits_bridge_error() {
+        let (ntx, mut nrx) = mpsc::channel(4);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+        );
+        let err: acp::Result<acp::ExtResponse> =
+            Err(acp::Error::new(-32603, "sqlite store locked"));
+        client
+            .notify_if_auth_failure(crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD, &err)
+            .await;
+        let routed = nrx.try_recv().expect("BridgeError emitted");
+        match routed.notification {
+            Notification::BridgeError { operation, message } => {
+                assert_eq!(operation, "auth");
+                assert!(message.contains("sqlite store locked"), "got: {message}");
+                assert!(
+                    message.contains("kiro-cli login"),
+                    "actionable hint present, got: {message}"
+                );
+            }
+            other => panic!("expected BridgeError, got {other:?}"),
+        }
+    }
+
+    // l7tw C11 stress: the responder's own messages already carry the login
+    // hint (kas/auth.rs) — it must not be doubled.
+    #[tokio::test]
+    async fn auth_hint_not_doubled() {
+        let (ntx, mut nrx) = mpsc::channel(4);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+        );
+        let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(
+            -32603,
+            "kiro token expired; run `kiro-cli login`",
+        ));
+        client
+            .notify_if_auth_failure(crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD, &err)
+            .await;
+        let routed = nrx.try_recv().expect("BridgeError emitted");
+        match routed.notification {
+            Notification::BridgeError { message, .. } => {
+                assert_eq!(
+                    message.matches("kiro-cli login").count(),
+                    1,
+                    "hint appears exactly once, got: {message}"
+                );
+            }
+            other => panic!("expected BridgeError, got {other:?}"),
+        }
+    }
+
+    // l7tw C11 scope check + C12-kas: a NON-auth ext failure emits nothing,
+    // and a SUCCESSFUL auth callback emits nothing.
+    #[tokio::test]
+    async fn non_auth_ext_err_emits_nothing() {
+        let (ntx, mut nrx) = mpsc::channel(4);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+        );
+        let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(-32603, "boom"));
+        client
+            .notify_if_auth_failure("kiro/some/other_method", &err)
+            .await;
+        client
+            .notify_if_auth_failure(
+                crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD,
+                &default_ext_response(),
+            )
+            .await;
+        assert!(
+            nrx.try_recv().is_err(),
+            "neither non-auth failures nor auth successes emit BridgeError"
+        );
+    }
 
     #[tokio::test]
     async fn read_text_file_override_returns_content() {
