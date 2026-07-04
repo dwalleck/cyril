@@ -23,6 +23,12 @@ use agent_client_protocol as acp;
 /// `kiro.dev/*`), so the `_kiro` namespace arrives as `kiro`.
 pub(crate) const GET_ACCESS_TOKEN_METHOD: &str = "kiro/auth/getAccessToken";
 
+/// The actionable remediation every logged-out/stale-credential diagnostic
+/// carries. Single owner of the wording: `KiroClient::notify_if_auth_failure`
+/// (cyril-l7tw C11) checks for this exact string to avoid doubling the hint,
+/// so reword it HERE and both sides stay in sync.
+pub(crate) const LOGIN_HINT: &str = "run `kiro-cli login`";
+
 /// KAS rejects a token within this pre-expiry window (it validates
 /// `expiresAt > now + ~3min`), so cyril treats such a token as stale.
 const EXPIRY_BUFFER_SECS: i64 = 180;
@@ -70,7 +76,7 @@ const PROFILE_ROW_SQL: &str = "SELECT value FROM state WHERE key = 'api.codewhis
 fn read_sqlite_store(db: &Path) -> Result<AuthReply, String> {
     if !db.is_file() {
         return Err(format!(
-            "kiro credential store {} is absent; run `kiro-cli login`",
+            "kiro credential store {} is absent; {LOGIN_HINT}",
             db.display()
         ));
     }
@@ -85,7 +91,7 @@ fn read_sqlite_store(db: &Path) -> Result<AuthReply, String> {
             .query_row(sql, [], |r| r.get::<_, String>(0))
             .optional()
             .map_err(|e| format!("query {what}: {e}"))?
-            .ok_or_else(|| format!("{what} row absent — logged out; run `kiro-cli login`"))?;
+            .ok_or_else(|| format!("{what} row absent — logged out; {LOGIN_HINT}"))?;
         serde_json::from_str(&raw).map_err(|e| format!("parse {what} row: {e}"))
     };
     let token = row(TOKEN_ROW_SQL, "kiro token")?;
@@ -204,7 +210,7 @@ fn build_response(reply: &AuthReply) -> Result<acp::ExtResponse, String> {
 pub(crate) fn store_unservable_reason(db: &Path, now: Option<i64>) -> Option<String> {
     match read_sqlite_store(db) {
         Ok(reply) if is_stale(&reply.expires_at, now) => {
-            Some("kiro token expired; run `kiro-cli login`".to_string())
+            Some(format!("kiro token expired; {LOGIN_HINT}"))
         }
         Ok(_) => None,
         Err(e) => Some(e),

@@ -141,6 +141,26 @@ fences are the CI-permanent form (dcc6 C14b pattern).
 7. **No injectable auth-store wiring** — the C11 fence works at the
    ext_method seam; store injectability is cyril-5db7.
 
+## Post-build addendum (pre-PR review, 2026-07-04)
+
+- **Slice-4 stress fixture (b) not built as specified** (duplicate
+  TurnCompleted injected via an `inbound_tx` clone): the state it guards —
+  deferred disconnect armed ∧ no turn in flight ∧ a completion arriving — is
+  unreachable by construction: the flag is only set while a turn is in
+  flight, and the first observed completion both clears the flag and fires
+  the disconnect+exit. The reachable adversarial neighbor (KAS dual
+  completion racing the death) is fenced by
+  `death_after_turn_end_single_disconnect`, which caught a real drain-dedup
+  bug during the build.
+- **C10's fence is named** `failstop_disconnect_no_hang_on_wedged_or_dropped_receiver`
+  (a superset of the design's dropped-receiver falsifier: it adds the
+  wedged-App bound).
+- **C9/C10 carve-out**: when the bridge *runtime itself* fails to construct,
+  the fail-stop emission falls back to `try_send` — nothing ever ran, so the
+  channel is empty; a bounded send is impossible without a runtime.
+- `conn_dead` was renamed `deferred_disconnect` during review (it holds the
+  deferred reason, not a boolean).
+
 ## Open decisions flagged for approval
 
 - **Loop exit on death** (vs staying alive against a dead conn): design says

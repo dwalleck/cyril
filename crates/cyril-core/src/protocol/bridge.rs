@@ -337,7 +337,7 @@ async fn drain_inbound_dropping_duplicates(
 /// the error passes through untouched (no dangling "agent stderr:" stub —
 /// C8). The original error is kept as the source.
 fn append_stderr_reason(e: crate::Error, snapshot: &[String]) -> crate::Error {
-    let Some(tail) = tail_excerpt(snapshot) else {
+    let Some(suffix) = stderr_tail_suffix(snapshot) else {
         return e;
     };
     // Reuse a Protocol error's inner message so re-wrapping doesn't stack a
@@ -348,10 +348,18 @@ fn append_stderr_reason(e: crate::Error, snapshot: &[String]) -> crate::Error {
     };
     crate::Error::with_source(
         crate::ErrorKind::Protocol {
-            message: format!("{base}\nagent stderr:\n{tail}"),
+            message: format!("{base}{suffix}"),
         },
         e,
     )
+}
+
+/// The user-facing "agent stderr" block appended to disconnect reasons —
+/// single owner of the header literal so the io-watcher and
+/// [`append_stderr_reason`] can never drift apart. `None` when the agent
+/// wrote nothing.
+fn stderr_tail_suffix(snapshot: &[String]) -> Option<String> {
+    tail_excerpt(snapshot).map(|tail| format!("\nagent stderr:\n{tail}"))
 }
 
 /// How many trailing agent-stderr lines a user-facing disconnect reason
@@ -513,9 +521,8 @@ async fn run_bridge(
         } else {
             tracing::error!(stderr_tail = ?snapshot, "ACP IO task ended (agent EOF)");
         }
-        if let Some(tail) = tail_excerpt(&snapshot) {
-            reason.push_str("\nagent stderr:\n");
-            reason.push_str(&tail);
+        if let Some(suffix) = stderr_tail_suffix(&snapshot) {
+            reason.push_str(&suffix);
         }
         if io_done_tx.send(reason).is_err() {
             tracing::debug!("io-done signal dropped (run_loop already exited)");
@@ -626,7 +633,7 @@ async fn run_loop(
     // responses), so the App sees BridgeError → TurnCompleted →
     // BridgeDisconnected. Also the load-bearing guard that keeps the select
     // arm from re-polling the completed oneshot (which would panic).
-    let mut conn_dead: Option<String> = None;
+    let mut deferred_disconnect: Option<String> = None;
 
     loop {
         // Single mediator (ADR-0004): one `select!` services commands AND the
@@ -1566,7 +1573,7 @@ async fn run_loop(
                 // disconnect waited for this turn's terminal marker. Forward
                 // any straggling inbound notifications, then say goodbye and
                 // exit — mirrors the idle-death path in the io_done arm.
-                if completed_turn && let Some(reason) = conn_dead.take() {
+                if completed_turn && let Some(reason) = deferred_disconnect.take() {
                     drain_inbound_dropping_duplicates(&mut inbound_rx, &channels.notification_tx)
                         .await;
                     notify_or_closed(
@@ -1577,7 +1584,7 @@ async fn run_loop(
                     break;
                 }
             }
-            res = &mut io_done, if conn_dead.is_none() => {
+            res = &mut io_done, if deferred_disconnect.is_none() => {
                 // cyril-l7tw C3/C4: the agent connection is gone. RecvError can
                 // only mean the watcher was torn down abnormally (it always
                 // sends before exiting) — treat it as death with a generic
@@ -1591,7 +1598,7 @@ async fn run_loop(
                     // (already en route via the inbound channel) reach the App
                     // first; the inbound arm below emits the disconnect after
                     // observing the completion.
-                    conn_dead = Some(reason);
+                    deferred_disconnect = Some(reason);
                 } else {
                     // Idle death: forward anything already queued (dropping
                     // duplicate completions — a parked prompt's Err resolution
@@ -2490,6 +2497,48 @@ mod tests {
                         None => panic!("no TurnCompleted within 5s of agent death"),
                     }
                 }
+            },
+        )
+        .await;
+    }
+
+    // l7tw C6 fence (named in the design's Falsification table): once the
+    // bridge has disconnected, a SendPrompt errors at the sender — the
+    // pre-l7tw silent-TurnCompleted path is structurally gone. The race
+    // window BEFORE the loop exits (conn dead, loop still alive) is fenced by
+    // prompt_error_emits_bridge_error_before_completion: any conn.prompt Err,
+    // whatever its cause, emits BridgeError + TurnCompleted.
+    #[tokio::test]
+    async fn dead_conn_prompt_errors_not_silent() {
+        let script = Rc::new(RefCell::new(Script::default()));
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, loop_handle, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                kill.kill();
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeDisconnected { .. }) => break,
+                        Some(_) => {}
+                        None => panic!("no BridgeDisconnected within 5s of agent death"),
+                    }
+                }
+                tokio::time::timeout(Duration::from_secs(5), loop_handle)
+                    .await
+                    .expect("run_loop exits after death")
+                    .expect("loop task completes")
+                    .expect("loop result ok");
+                let send_result = sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["anyone there?".into()],
+                    })
+                    .await;
+                assert!(
+                    send_result.is_err(),
+                    "a prompt at a dead bridge errors; it must never look sent"
+                );
             },
         )
         .await;

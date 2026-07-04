@@ -140,7 +140,9 @@ async fn record(
             Some(p) = permission_rx.recv() => {
                 let opt = p.options.iter().find(|o| !o.is_destructive).expect("no option");
                 println!("{phase} t={:.2}s PermissionRequest (auto-approving)", start.elapsed().as_secs_f32());
-                let _ = p.responder.send(PermissionResponse::Selected { option_id: opt.id.clone(), trust_option: None });
+                if p.responder.send(PermissionResponse::Selected { option_id: opt.id.clone(), trust_option: None }).is_err() {
+                    eprintln!("{phase} permission response dropped (receiver closed)");
+                }
             }
             _ = tokio::time::sleep_until(deadline) => break,
         }

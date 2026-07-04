@@ -279,8 +279,11 @@ impl KiroClient {
         }
         let Err(e) = result else { return };
         let mut message = e.message.clone();
-        if !message.contains("kiro-cli login") {
-            message.push_str(" — run `kiro-cli login` and retry");
+        // LOGIN_HINT is the single owner of the remediation wording — the
+        // responder's own diagnostics embed it, so this check can't drift.
+        let hint = crate::protocol::kas::auth::LOGIN_HINT;
+        if !message.contains(hint) {
+            message.push_str(&format!(" — {hint} and retry"));
         }
         let note = Notification::BridgeError {
             operation: "auth".into(),
