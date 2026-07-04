@@ -382,6 +382,9 @@ async fn run_bridge(
     // 3. Create the ACP connection.
     //    ClientSideConnection::new returns (conn, io_task).
     //    The io_task must be spawned on the LocalSet so the RPC layer runs.
+    //    Grab the stderr tail handle first — stdin/stdout are moved out of
+    //    `process` below (cyril-0gke; full UI surfacing is cyril-l7tw).
+    let stderr_tail = process.stderr_tail();
     let (conn, io_task) = acp::ClientSideConnection::new(
         client,
         process.stdin.compat_write(),
@@ -394,7 +397,7 @@ async fn run_bridge(
     // Spawn the IO pump on the local task set
     tokio::task::spawn_local(async move {
         if let Err(e) = io_task.await {
-            tracing::error!(error = %e, "ACP IO task failed");
+            tracing::error!(error = %e, stderr_tail = ?stderr_tail.snapshot(), "ACP IO task failed");
         }
     });
 
