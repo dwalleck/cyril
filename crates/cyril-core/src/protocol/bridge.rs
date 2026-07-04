@@ -139,10 +139,10 @@ pub fn spawn_bridge(
                 .enable_all()
                 .build();
 
-            let exit_reason: Option<String> = match rt {
+            let (rt, exit_reason): (Option<tokio::runtime::Runtime>, Option<String>) = match rt {
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
-                    local.block_on(&rt, async move {
+                    let reason = local.block_on(&rt, async move {
                         match run_bridge(&agent_command, agent_engine, kas_spawn, &cwd, channels)
                             .await
                         {
@@ -152,25 +152,22 @@ pub fn spawn_bridge(
                                 Some(e.to_string())
                             }
                         }
-                    })
+                    });
+                    (Some(rt), reason)
                 }
                 Err(e) => {
                     tracing::error!(error = %e, "failed to create bridge runtime");
-                    Some(format!("failed to create bridge runtime: {e}"))
+                    (None, Some(format!("failed to create bridge runtime: {e}")))
                 }
             };
 
             if let Some(reason) = exit_reason {
-                // Best-effort; the App may already have dropped its receiver.
-                if let Err(send_err) = disconnect_tx.try_send(RoutedNotification {
-                    session_id: None,
-                    notification: Notification::BridgeDisconnected { reason },
-                }) {
-                    tracing::warn!(
-                        error = %send_err,
-                        "failed to deliver BridgeDisconnected notification on bridge exit"
-                    );
-                }
+                emit_failstop_disconnect(
+                    rt.as_ref(),
+                    &disconnect_tx,
+                    reason,
+                    FAILSTOP_SEND_TIMEOUT,
+                );
             }
         })
         .map_err(|e| {
@@ -183,6 +180,48 @@ pub fn spawn_bridge(
         })?;
 
     Ok(handle)
+}
+
+/// How long the fail-stop [`emit_failstop_disconnect`] waits for a slot on a
+/// full notification channel before giving up (cyril-l7tw C9/C10).
+const FAILSTOP_SEND_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Deliver the thread-exit `BridgeDisconnected` so it cannot be dropped by a
+/// full channel (cyril-l7tw C9) — the pre-l7tw `try_send` lost it exactly
+/// when a crash mid-streaming-backlog made it most likely. The send is
+/// BOUNDED by `timeout`: a full channel with a live App delivers once the
+/// App drains; a dropped receiver errors immediately; an App wedged past the
+/// bound is warned about and abandoned rather than hanging the exiting
+/// thread (C10). Without a runtime (its construction failed — nothing ever
+/// ran, channel empty) falls back to best-effort `try_send`.
+fn emit_failstop_disconnect(
+    rt: Option<&tokio::runtime::Runtime>,
+    tx: &mpsc::Sender<RoutedNotification>,
+    reason: String,
+    timeout: std::time::Duration,
+) {
+    let routed: RoutedNotification = Notification::BridgeDisconnected { reason }.into();
+    match rt {
+        Some(rt) => {
+            match rt.block_on(async { tokio::time::timeout(timeout, tx.send(routed)).await }) {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => {
+                    tracing::debug!(error = %e, "BridgeDisconnected receiver already gone on bridge exit");
+                }
+                Err(_) => {
+                    tracing::warn!(
+                        timeout_secs = timeout.as_secs_f32(),
+                        "BridgeDisconnected not delivered within the bound (App not draining)"
+                    );
+                }
+            }
+        }
+        None => {
+            if let Err(e) = tx.try_send(routed) {
+                tracing::warn!(error = %e, "failed to deliver BridgeDisconnected (no runtime)");
+            }
+        }
+    }
 }
 
 /// Outcome of an error from a `_session/steer[/clear]` request (ROADMAP K1a).
@@ -1649,6 +1688,130 @@ mod tests {
         assert_eq!(tail_excerpt(&[]), None);
         let mixed = vec![String::new(), "x".into(), String::new()];
         assert_eq!(tail_excerpt(&mixed).as_deref(), Some("\nx\n"));
+    }
+
+    // l7tw C9 fence — fails against the pre-l7tw `try_send` by construction
+    // (mutation-verified: substituting try_send back fails the "survived"
+    // assert): the channel is filled to capacity BEFORE the emission, and the
+    // consumer only starts draining afterwards. `try_send` returns Full and
+    // the disconnect vanishes; the bounded send waits for the drain and
+    // delivers it LAST (after the backlog, in channel order).
+    #[test]
+    fn failstop_disconnect_survives_full_channel() {
+        let (handle, channels) = create_channel_pair();
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        for _ in 0..NOTIFICATION_CAPACITY {
+            channels
+                .notification_tx
+                .try_send(
+                    Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    }
+                    .into(),
+                )
+                .unwrap();
+        }
+        assert!(
+            channels
+                .notification_tx
+                .try_send(
+                    Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    }
+                    .into(),
+                )
+                .is_err(),
+            "channel is verifiably full — the pre-l7tw try_send would drop here"
+        );
+        let (_sender, mut rx, _perm) = handle.split();
+        let drainer = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(300));
+            let mut total = 0usize;
+            let mut disconnects = 0usize;
+            let mut last_was_disconnect = false;
+            while let Some(r) = rx.blocking_recv() {
+                total += 1;
+                last_was_disconnect =
+                    matches!(r.notification, Notification::BridgeDisconnected { .. });
+                if last_was_disconnect {
+                    disconnects += 1;
+                }
+            }
+            (total, disconnects, last_was_disconnect)
+        });
+        emit_failstop_disconnect(
+            Some(&rt),
+            &channels.notification_tx,
+            "the end".into(),
+            Duration::from_secs(5),
+        );
+        drop(channels); // close the channel so the drainer's recv loop ends
+        let (total, disconnects, last_was_disconnect) = drainer.join().expect("drainer");
+        assert_eq!(disconnects, 1, "the disconnect survived the full channel");
+        assert_eq!(
+            total,
+            NOTIFICATION_CAPACITY + 1,
+            "backlog fully delivered too"
+        );
+        assert!(
+            last_was_disconnect,
+            "disconnect delivered after the backlog"
+        );
+    }
+
+    // l7tw C10 fence: with a full channel and an App that NEVER drains, the
+    // bounded send gives up at the timeout instead of hanging the exiting
+    // bridge thread forever (an unbounded send would hang this test); and a
+    // dropped receiver returns immediately.
+    #[test]
+    fn failstop_disconnect_no_hang_on_wedged_or_dropped_receiver() {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        // Wedged App: full channel, receiver alive, nobody draining.
+        let (handle, channels) = create_channel_pair();
+        for _ in 0..NOTIFICATION_CAPACITY {
+            channels
+                .notification_tx
+                .try_send(
+                    Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    }
+                    .into(),
+                )
+                .unwrap();
+        }
+        let start = std::time::Instant::now();
+        emit_failstop_disconnect(
+            Some(&rt),
+            &channels.notification_tx,
+            "wedged".into(),
+            Duration::from_millis(200),
+        );
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed >= Duration::from_millis(200) && elapsed < Duration::from_secs(3),
+            "gave up at the bound, got {elapsed:?}"
+        );
+        drop(handle);
+        // Dropped receiver: returns immediately.
+        let (handle2, channels2) = create_channel_pair();
+        drop(handle2);
+        let start = std::time::Instant::now();
+        emit_failstop_disconnect(
+            Some(&rt),
+            &channels2.notification_tx,
+            "gone".into(),
+            Duration::from_secs(5),
+        );
+        assert!(
+            start.elapsed() < Duration::from_secs(1),
+            "closed channel errors immediately"
+        );
     }
 
     // l7tw C8 (integration half): a spawn failure (missing binary) still
