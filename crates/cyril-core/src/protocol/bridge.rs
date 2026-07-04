@@ -270,6 +270,21 @@ async fn notify_or_closed(
     tx.send(notification.into()).await.is_err()
 }
 
+/// How many trailing agent-stderr lines a user-facing disconnect reason
+/// carries (cyril-l7tw). The full tail stays in the tracing log.
+const REASON_TAIL_LINES: usize = 5;
+
+/// Format the LAST [`REASON_TAIL_LINES`] of an agent stderr snapshot for a
+/// user-facing disconnect reason; `None` when the agent wrote nothing (the
+/// reason must not grow a dangling "agent stderr:" stub — l7tw C8).
+fn tail_excerpt(snapshot: &[String]) -> Option<String> {
+    if snapshot.is_empty() {
+        return None;
+    }
+    let start = snapshot.len().saturating_sub(REASON_TAIL_LINES);
+    Some(snapshot[start..].join("\n"))
+}
+
 /// Select the engine impl for the bound [`AgentEngine`], or a user-facing reason
 /// it is unavailable. v2 is always available; `Kas` resolves to
 /// [`crate::protocol::engine::KasEngine`] only under the `kas` cargo feature
@@ -394,10 +409,28 @@ async fn run_bridge(
         },
     );
 
-    // Spawn the IO pump on the local task set
+    // Spawn the IO pump on the local task set, watched (cyril-l7tw C3/C4): the
+    // pump ending — Ok on clean EOF (the common death mode per the l7tw probe)
+    // or Err — means the agent connection is gone. The watcher tells run_loop
+    // via a oneshot carrying a user-facing reason with the stderr tail, so
+    // death while idle no longer needs a next command to become visible.
+    let (io_done_tx, io_done_rx) = tokio::sync::oneshot::channel::<String>();
     tokio::task::spawn_local(async move {
-        if let Err(e) = io_task.await {
-            tracing::error!(error = %e, stderr_tail = ?stderr_tail.snapshot(), "ACP IO task failed");
+        let io_result = io_task.await;
+        let snapshot = stderr_tail.snapshot();
+        let mut reason = String::from("agent connection closed unexpectedly");
+        if let Err(e) = io_result {
+            tracing::error!(error = %e, stderr_tail = ?snapshot, "ACP IO task failed");
+            reason.push_str(&format!(" ({e})"));
+        } else {
+            tracing::error!(stderr_tail = ?snapshot, "ACP IO task ended (agent EOF)");
+        }
+        if let Some(tail) = tail_excerpt(&snapshot) {
+            reason.push_str("\nagent stderr:\n");
+            reason.push_str(&tail);
+        }
+        if io_done_tx.send(reason).is_err() {
+            tracing::debug!("io-done signal dropped (run_loop already exited)");
         }
     });
 
@@ -406,11 +439,32 @@ async fn run_bridge(
         channels,
         cwd.to_path_buf(),
         engine,
-        inbound_tx,
-        inbound_rx,
-        req_rx,
+        InternalChannels {
+            inbound_tx,
+            inbound_rx,
+            req_rx,
+            io_done: io_done_rx,
+        },
     )
     .await
+}
+
+/// The loop-internal plumbing (ADR-0004), grouped so `run_loop`'s signature
+/// stays at one argument per concern:
+/// - `inbound_tx`/`inbound_rx`: single-mediator notification channel — the
+///   KiroClient and the off-loop prompt task feed `inbound_tx`; the loop
+///   drains `inbound_rx`, observes `TurnCompleted` to clear the busy flag,
+///   and forwards to the App.
+/// - `req_rx`: server->client requests from the KiroClient; the loop forwards
+///   them to the App's `permission_tx` and never awaits their resolution.
+/// - `io_done`: fired by the io-pump watcher when the agent connection ends
+///   (clean EOF or io error), carrying the user-facing disconnect reason
+///   (cyril-l7tw).
+struct InternalChannels {
+    inbound_tx: mpsc::Sender<RoutedNotification>,
+    inbound_rx: mpsc::Receiver<RoutedNotification>,
+    req_rx: mpsc::Receiver<PermissionRequest>,
+    io_done: tokio::sync::oneshot::Receiver<String>,
 }
 
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
@@ -422,16 +476,14 @@ async fn run_loop(
     mut channels: BridgeChannels,
     cwd: std::path::PathBuf,
     engine: std::rc::Rc<dyn Engine>,
-    // Single-mediator internal channel (ADR-0004): the KiroClient and the
-    // off-loop prompt task feed `inbound_tx`; the loop drains `inbound_rx`,
-    // observes `TurnCompleted` to clear the busy flag, and forwards to the App.
-    inbound_tx: mpsc::Sender<RoutedNotification>,
-    mut inbound_rx: mpsc::Receiver<RoutedNotification>,
-    // Internal request channel (ADR-0004): the KiroClient sends server->client
-    // requests here; the loop forwards them to the App's `permission_tx` and
-    // never awaits their resolution.
-    mut req_rx: mpsc::Receiver<PermissionRequest>,
+    internal: InternalChannels,
 ) -> crate::Result<()> {
+    let InternalChannels {
+        inbound_tx,
+        mut inbound_rx,
+        mut req_rx,
+        mut io_done,
+    } = internal;
     use acp::Agent;
     use agent_client_protocol as acp;
 
@@ -473,6 +525,14 @@ async fn run_loop(
     // so this flag and `prompt_task` will intentionally diverge there; in v2 they
     // clear together (the prompt resolves AT turn-end). Do not re-merge them.
     let mut turn_in_flight: Option<acp::SessionId> = None;
+    // cyril-l7tw C4: set when the io watcher reports the connection dead while
+    // a turn is in flight. The disconnect is DEFERRED until the loop observes
+    // that turn's TurnCompleted (the prompt task's Err arm delivers a
+    // BridgeError + TurnCompleted once the rpc layer clears its pending
+    // responses), so the App sees BridgeError → TurnCompleted →
+    // BridgeDisconnected. Also the load-bearing guard that keeps the select
+    // arm from re-polling the completed oneshot (which would panic).
+    let mut conn_dead: Option<String> = None;
 
     loop {
         // Single mediator (ADR-0004): one `select!` services commands AND the
@@ -1407,6 +1467,39 @@ async fn run_loop(
                     break; // App dropped the notification channel.
                 }
             }
+            res = &mut io_done, if conn_dead.is_none() => {
+                // cyril-l7tw C3/C4: the agent connection is gone. RecvError can
+                // only mean the watcher was torn down abnormally (it always
+                // sends before exiting) — treat it as death with a generic
+                // reason rather than a silent arm.
+                let reason = res.unwrap_or_else(|_| {
+                    tracing::warn!("io watcher dropped without a reason");
+                    "agent connection closed unexpectedly".into()
+                });
+                if turn_in_flight.is_some() {
+                    // Defer: let the in-flight turn's BridgeError+TurnCompleted
+                    // (already en route via the inbound channel) reach the App
+                    // first; the inbound arm below emits the disconnect after
+                    // observing the completion.
+                    conn_dead = Some(reason);
+                } else {
+                    // Idle death: forward anything already queued, then say
+                    // goodbye and exit. Send failures don't matter — we are
+                    // breaking either way, and notify_or_closed logs nothing
+                    // the exit path needs.
+                    while let Ok(routed) = inbound_rx.try_recv() {
+                        if channels.notification_tx.send(routed).await.is_err() {
+                            break;
+                        }
+                    }
+                    notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeDisconnected { reason },
+                    )
+                    .await;
+                    break;
+                }
+            }
             Some(req) = req_rx.recv() => {
                 // ADR-0004 non-blocking forward: hand the server->client request to
                 // the App and return immediately. The loop NEVER awaits the response
@@ -1737,8 +1830,13 @@ mod tests {
                         tokio::task::spawn_local(f);
                     });
                 *agent_conn_cell.borrow_mut() = Some(Rc::new(agent_conn));
+                // Mirror run_bridge's io watcher (cyril-l7tw): the client io
+                // task ending = agent connection gone. No real process here,
+                // so the reason carries no stderr tail.
+                let (io_done_tx, io_done_rx) = tokio::sync::oneshot::channel::<String>();
                 tokio::task::spawn_local(async move {
                     let _ = c_task.await;
+                    let _ = io_done_tx.send("agent connection closed unexpectedly".into());
                 });
                 let a_handle = tokio::task::spawn_local(async move {
                     let _ = a_task.await;
@@ -1752,9 +1850,12 @@ mod tests {
                     channels,
                     std::env::temp_dir(),
                     engine,
-                    inbound_tx,
-                    inbound_rx,
-                    req_rx,
+                    InternalChannels {
+                        inbound_tx,
+                        inbound_rx,
+                        req_rx,
+                        io_done: io_done_rx,
+                    },
                 ));
                 let (sender, notif_rx, perm_rx) = handle.split();
                 body(sender, notif_rx, perm_rx, gate, loop_handle, kill).await;
@@ -2072,6 +2173,64 @@ mod tests {
                         Some(_) => {}
                         None => panic!("no TurnCompleted within 5s of agent death"),
                     }
+                }
+            },
+        )
+        .await;
+    }
+
+    // l7tw C3 fence: agent death while IDLE (no turn in flight) emits a
+    // BridgeDisconnected naming the closed connection, and run_loop exits.
+    // Fails pre-l7tw by construction: the detached io pump gave the loop no
+    // death signal, so this test would time out waiting for the notification.
+    #[tokio::test]
+    async fn death_while_idle_emits_disconnected_and_exits() {
+        let script = Rc::new(RefCell::new(Script::default()));
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, loop_handle, kill| async move {
+                let _sid = start_session(&sender, &mut rx).await;
+                kill.kill();
+                let reason = loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeDisconnected { reason }) => break reason,
+                        Some(_) => {}
+                        None => panic!("no BridgeDisconnected within 5s of idle agent death"),
+                    }
+                };
+                assert!(
+                    reason.contains("agent connection closed"),
+                    "reason names the dead connection, got: {reason}"
+                );
+                let loop_result = tokio::time::timeout(Duration::from_secs(5), loop_handle)
+                    .await
+                    .expect("run_loop must exit after idle death");
+                assert!(loop_result.is_ok(), "run_loop task completed cleanly");
+            },
+        )
+        .await;
+    }
+
+    // l7tw C3 counter-fixture: a NORMAL Shutdown must emit ZERO
+    // BridgeDisconnected — catches "the watcher fires on ordinary teardown
+    // too" (Shutdown breaks the loop first; the watcher's later send hits a
+    // dropped receiver and must stay silent).
+    #[tokio::test]
+    async fn shutdown_emits_no_disconnect() {
+        let script = Rc::new(RefCell::new(Script::default()));
+        with_harness(
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let _sid = start_session(&sender, &mut rx).await;
+                sender.send(BridgeCommand::Shutdown).await.unwrap();
+                // Drain to channel close (loop exit drops the sender); nothing on
+                // the way out may be a disconnect.
+                while let Some(n) = recv_notif(&mut rx, 2).await {
+                    assert!(
+                        !matches!(n, Notification::BridgeDisconnected { .. }),
+                        "normal shutdown must not report a disconnect"
+                    );
                 }
             },
         )
