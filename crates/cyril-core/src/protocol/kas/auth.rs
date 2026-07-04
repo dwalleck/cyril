@@ -149,11 +149,21 @@ fn rfc3339_to_epoch(s: &str) -> Option<i64> {
 /// True when the token is expired or within the pre-expiry buffer (KAS would
 /// reject it), or when the expiry can't be parsed, or the clock is unreadable
 /// (all three fail safe → stale, so a token cyril cannot time-check is never
-/// forwarded). Pure.
+/// forwarded). An unparseable expiry is warn-logged (dcc6 re-review N2): the
+/// caller-facing outcome says "expired; re-login", which for a kiro-cli
+/// serialization drift would be a permanent loop re-login can't fix — the log
+/// line is the only clue the stamp, not the token, is the problem.
 fn is_stale(expires_at: &str, now_epoch: Option<i64>) -> bool {
     match (now_epoch, rfc3339_to_epoch(expires_at)) {
         (Some(now), Some(exp)) => exp <= now + EXPIRY_BUFFER_SECS,
-        _ => true,
+        (_, None) => {
+            tracing::warn!(
+                expires_at,
+                "unparseable kiro token expiry; treating as stale"
+            );
+            true
+        }
+        (None, Some(_)) => true, // broken clock — now_epoch already warned
     }
 }
 

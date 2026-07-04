@@ -52,6 +52,28 @@ Suite state after fixes: 484 lib tests green under `--features kas` (+8 new fenc
   free function — so one extraction bought observability, testability, and the
   error-code fence together.
 
+## Re-verification round (post-fix, 2026-07-04)
+
+Both targeted agents re-ran against the fix commits. **All prior findings verified
+CLOSED** — the test analyzer mutant-verified the Critical (inverted `is_stale`,
+swapped error codes, inverted gate guard, planted SSO path: each killed by a named
+test) and tripwire-verified the resurrection fence; the failure hunter confirmed
+all 9 silent-failure fixes plus clean secret-leak and suppressor audits. Three new
+findings from the re-run:
+
+| # | Finding (one line) | Category | Verified? | Decision | Note |
+|---|---|---|---|---|---|
+| N1 | One-time failure of `gate_is_sqlite_not_file`: fresh injected `now` reported "expired"; unreproducible over 25 runs | Bug claim | **Explained — not a code bug** | **Reject** | Agent collision: the test analyzer was running mutate-and-revert checks (including an inverted `is_stale`) in the same working tree during the hunter's first suite run — an inverted `is_stale` produces exactly this failure, and the timing windows match. Process lesson recorded below |
+| N2 | `is_stale` conflates unparseable expiry with expired, silently — a kiro-cli `expires_at` format drift would loop users through useless re-logins with no breadcrumb (Rule 35) | Bug (minor) | Yes — `(_, None)` arm was log-free | **Accept** | warn! naming the unparseable stamp (not secret); differentiated user-facing messaging belongs to the `StoreError` enum work at **cyril-5db7** |
+| N3 | Legacy-bundle fallback skips the F5 mismatch breadcrumb — a ≥2.10.0 CLI silently spawns a stale pre-2.10 legacy extraction | Bug (minor) | Yes — same class as accepted F5 | **Accept** | warn! in `resolve`'s legacy arm, gated on `cli_version >= (2,10,0)` (below that, legacy IS the current layout) |
+| — | Pre-release rejection comment overstated the mechanism (sha-length check, not version grammar) | Comment | Yes | **Accept** | Fixed in c3bc7e1 |
+| — | Error-code tests assert via the shared consts, so a changed const value moves prod+test together | Test nit | Yes | **Reject** | The pinned contract is mode-distinctness + the actionable hint; the wire literals aren't a KAS-validated contract |
+
+**Process lesson (N1):** don't let one subagent mutate-and-revert production code
+while another runs the suite in the same checkout — CLAUDE.md's non-overlapping
+file scopes rule applies to *temporal* overlap too. Future mutation-verification
+passes get an isolated worktree or exclusive tree access.
+
 ## Deferral ledger (hard-gate requirement)
 
 | Deferred | Tracker |

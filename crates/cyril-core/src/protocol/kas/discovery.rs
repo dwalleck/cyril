@@ -189,7 +189,22 @@ fn resolve(
             let root = home.ok_or(KasMissing::NoHome)?.join(KAS_ROOT_REL);
             match select_server(kas_entries, cli_version) {
                 Some(dir) => root.join(dir).join(SERVER_IN_ROOT_REL),
-                None => root.join(SERVER_IN_ROOT_REL),
+                None => {
+                    // dcc6 re-review N3: kiro ≥2.10.0 always extracts versioned
+                    // dirs, so a known modern CLI reaching the legacy fallback
+                    // is the same mismatch class as the F5 warn above (upgrade
+                    // not yet self-extracted; stale legacy bundle spawns).
+                    // Below 2.10.0 the legacy layout IS current — no warn.
+                    if let Some((maj, min, pat)) = cli_version
+                        && (maj, min, pat) >= (2, 10, 0)
+                    {
+                        tracing::warn!(
+                            cli_version = format_args!("{maj}.{min}.{pat}"),
+                            "no versioned KAS extraction found for a >=2.10.0 kiro-cli; spawning the legacy unversioned bundle"
+                        );
+                    }
+                    root.join(SERVER_IN_ROOT_REL)
+                }
             }
         }
     };
