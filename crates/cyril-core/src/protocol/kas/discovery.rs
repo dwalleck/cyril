@@ -64,6 +64,11 @@ impl KasMissing {
     }
 }
 
+/// `<home>`-relative kiro-cli data dir — the shared prefix of the KAS
+/// extraction root and the credential store ([`default_store_path`]); a unit
+/// test pins [`KAS_ROOT_REL`] to this prefix so the two cannot drift apart
+/// (dcc6 review F19b).
+const KIRO_DATA_DIR_REL: &str = ".local/share/kiro-cli";
 /// `<home>`-relative path of the KAS self-extraction root. kiro ≥2.10.0
 /// extracts into versioned `<semver>-<sha256>/` dirs under it; older releases
 /// extracted the bundle directly at the root (the legacy layout).
@@ -276,16 +281,17 @@ pub(crate) fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
     let server_override = nonempty(std::env::var("KIRO_KAS_SERVER_PATH").ok());
     let node_override = nonempty(std::env::var("KIRO_AGENT_PATH").ok());
     let path_var = std::env::var_os("PATH");
-    // Both inputs are skipped when an override names the server directly — the
-    // override must win without paying the subprocess + dir-scan cost.
-    let (kas_entries, cli_version) = if server_override.is_some() || home.is_none() {
-        (Vec::new(), None)
-    } else {
-        let root = home.as_deref().map(|h| h.join(KAS_ROOT_REL));
-        (
-            root.as_deref().map(list_kas_entries).unwrap_or_default(),
+    // The dir scan + `kiro-cli --version` subprocess only run when they can
+    // influence selection: an override names the server directly (and must win
+    // without paying that cost), and no home means no root to scan (`resolve`
+    // reports `NoHome`). The match makes the home-is-present invariant of the
+    // scanning arm structural (dcc6 review F14 — no dead unwrap_or_default).
+    let (kas_entries, cli_version) = match (server_override.as_deref(), home.as_deref()) {
+        (Some(_), _) | (None, None) => (Vec::new(), None),
+        (None, Some(h)) => (
+            list_kas_entries(&h.join(KAS_ROOT_REL)),
             installed_cli_version(),
-        )
+        ),
     };
     let cmd = resolve(
         home.as_deref(),
@@ -312,7 +318,7 @@ pub(crate) fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
 /// profile in `state`). The auth responder's source: unlike the SSO-cache
 /// token file, this is refreshed by every login and deleted-row on logout.
 pub(crate) fn default_store_path() -> Option<std::path::PathBuf> {
-    crate::kiro_agent_config::home_dir().map(|h| h.join(".local/share/kiro-cli/data.sqlite3"))
+    crate::kiro_agent_config::home_dir().map(|h| h.join(KIRO_DATA_DIR_REL).join("data.sqlite3"))
 }
 
 #[cfg(test)]
@@ -710,6 +716,14 @@ mod tests {
             ],
             "flag drift vs the /proc-captured kiro-cli spawn"
         );
+    }
+
+    // F19b drift fence: the extraction root and the credential store must
+    // share the kiro-cli data dir — a path change that touches only one of
+    // them fails here.
+    #[test]
+    fn kas_root_shares_kiro_data_dir() {
+        assert_eq!(KAS_ROOT_REL.strip_suffix("/kas"), Some(KIRO_DATA_DIR_REL));
     }
 
     // Each KasMissing variant yields a non-empty, actionable reason.
