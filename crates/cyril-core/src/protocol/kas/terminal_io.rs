@@ -111,7 +111,14 @@ impl TerminalRegistry {
             // immediate EOF.
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped());
+            .stderr(std::process::Stdio::piped())
+            // SIGKILL the child if its handle is dropped un-reaped (cyril-ba5x):
+            // on Shutdown / bridge-thread death / app exit the LocalSet drops,
+            // taking the registry (idle Child) and any pending wait future
+            // (in-flight Child) with it — without this, those children outlive
+            // cyril entirely. Normal paths (`wait`/`kill`/`release`) reap before
+            // dropping, so this changes nothing for a completed command.
+            .kill_on_drop(true);
         if let Some(dir) = cwd {
             cmd.current_dir(dir);
         }
@@ -835,5 +842,118 @@ mod tests {
             fast_elapsed < std::time::Duration::from_millis(500),
             "fast terminal blocked by the slow one ({fast_elapsed:?}) — runtime starved"
         );
+    }
+
+    /// Read a still-`Running` terminal's OS pid straight out of the registry
+    /// (tests live in the module, so `inner` is reachable). Must be called
+    /// before any `wait` takes the child out.
+    #[cfg(unix)]
+    fn pid_of(reg: &TerminalRegistry, id: &acp::TerminalId) -> u32 {
+        match reg.inner.borrow().get(id) {
+            Some(Entry::Running {
+                child: Some(child), ..
+            }) => child.id().expect("running child has an OS pid"),
+            _ => panic!("terminal is not in the Running(Some) state"),
+        }
+    }
+
+    /// Liveness probe for the drop-kill fixtures: `true` once the process is
+    /// gone from `/proc` OR is a zombie (SIGKILLed, awaiting reap — tokio reaps
+    /// dropped children asynchronously, so a brief zombie is "dead" for the
+    /// leaked-child criterion; a leaked `sleep 60` stays in state `S`).
+    #[cfg(unix)]
+    fn dead_or_zombie(pid: u32) -> bool {
+        match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
+            Err(_) => true, // no /proc entry: fully reaped
+            Ok(stat) => stat
+                // The state field follows the parenthesized comm, which can
+                // itself contain spaces/parens — split on the LAST ')'.
+                .rsplit_once(')')
+                .map(|(_, rest)| rest.trim_start().starts_with('Z'))
+                .unwrap_or(false),
+        }
+    }
+
+    /// Poll [`dead_or_zombie`] up to 5s; panic if the child outlives the drop.
+    #[cfg(unix)]
+    async fn assert_process_dies(pid: u32) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while std::time::Instant::now() < deadline {
+            if dead_or_zombie(pid) {
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        panic!(
+            "terminal child {pid} survived its owning structures being dropped (cyril-ba5x leak)"
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test(flavor = "current_thread")]
+    async fn dropped_registry_kills_running_terminal() {
+        // Fixture (cyril-ba5x, idle half): on Shutdown / bridge-thread death /
+        // app exit, the LocalSet drops -> KiroClient drops -> registry drops. A
+        // child spawned WITHOUT kill_on_drop survives that (tokio moves it to
+        // the orphan queue but never signals it), so a live `sleep 60` outlives
+        // cyril entirely. Dropping the registry while it holds the Child must
+        // kill the process.
+        let reg = TerminalRegistry::new();
+        let id = reg
+            .create(&create_req("sleep").args(vec!["60".into()]))
+            .unwrap()
+            .terminal_id;
+        let pid = pid_of(&reg, &id);
+        assert!(
+            !dead_or_zombie(pid),
+            "sleep 60 must be alive before the drop"
+        );
+        drop(reg);
+        assert_process_dies(pid).await;
+    }
+
+    #[cfg(unix)]
+    #[tokio::test(flavor = "current_thread")]
+    async fn dropped_inflight_wait_kills_terminal() {
+        // Fixture (cyril-ba5x, in-flight half): with KAS's create->wait pattern
+        // the Child usually lives inside a pending wait future, not the
+        // registry. When the bridge dies mid-command, the LocalSet drop cancels
+        // that task — dropping the future and the Child it owns. That drop must
+        // kill the process too, or the in-flight command leaks past exit.
+        let reg = Rc::new(TerminalRegistry::new());
+        let id = reg
+            .create(&create_req("sleep").args(vec!["60".into()]))
+            .unwrap()
+            .terminal_id;
+        let pid = pid_of(&reg, &id);
+        let local = tokio::task::LocalSet::new();
+        let task_reg = Rc::clone(&reg);
+        let wr = wait_req(&id);
+        let _wait_task = local.spawn_local(async move {
+            // This task is cancelled mid-await by the LocalSet drop below; a
+            // wait that RESOLVES here is itself a failure (sleep 60 must not
+            // exit inside the test window).
+            if task_reg.wait(&wr).await.is_ok() {
+                panic!("sleep 60 must not exit cleanly during the drop test");
+            }
+        });
+        // Drive the LocalSet long enough for the wait task to take the child.
+        local
+            .run_until(tokio::time::sleep(std::time::Duration::from_millis(100)))
+            .await;
+        match reg.inner.borrow().get(&id) {
+            Some(Entry::Running { child, .. }) => assert!(
+                child.is_none(),
+                "the spawned wait must have taken the child (in-flight state)"
+            ),
+            _ => panic!("terminal must still be Running while the wait is in flight"),
+        }
+        assert!(
+            !dead_or_zombie(pid),
+            "sleep 60 must be alive before the drop"
+        );
+        drop(local); // cancels the pending wait -> drops the future -> drops the Child
+        drop(reg);
+        assert_process_dies(pid).await;
     }
 }
