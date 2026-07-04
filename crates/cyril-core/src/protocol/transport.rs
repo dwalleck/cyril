@@ -270,19 +270,25 @@ mod tests {
         assert!(status.success(), "child exited with failure: {status:?}");
     }
 
-    /// True while `pid` is still running. A zombie counts as dead — it holds
-    /// no memory or fds, it is just an exit code waiting to be reaped.
+    /// True while `pid` is still running, probed via portable-unix `ps` —
+    /// NOT `/proc`, which does not exist on macOS and would leave the probe
+    /// blind there (reporting every pid dead, so the fence passes as a
+    /// silent no-op). A zombie counts as dead: it holds no memory or fds, it
+    /// is just an exit code waiting to be reaped. Same semantics as
+    /// `dead_or_zombie` in the kas terminal_io tests, duplicated locally on
+    /// purpose — test modules are per-file.
     #[cfg(unix)]
     fn pid_alive(pid: u32) -> bool {
-        let Ok(stat) = std::fs::read_to_string(format!("/proc/{pid}/stat")) else {
-            return false;
-        };
-        // The state field follows the parenthesized comm, which may itself
-        // contain ')' — split on the LAST ')' to be robust.
-        match stat.rsplit_once(')') {
-            Some((_, rest)) => !rest.trim_start().starts_with('Z'),
-            None => false,
+        let out = std::process::Command::new("ps")
+            .args(["-o", "stat=", "-p", &pid.to_string()])
+            .output()
+            .expect("spawn ps for the liveness probe");
+        if !out.status.success() {
+            return false; // ps knows no such pid: fully reaped
         }
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stat = stdout.trim();
+        !stat.is_empty() && !stat.starts_with('Z')
     }
 
     /// Regression fence for orphaned agent trees (cyril-0pms bug class):
@@ -314,6 +320,18 @@ mod tests {
             .expect("timed out waiting for grandchild pid on stdout")
             .expect("read grandchild pid line");
         let grandchild_pid: u32 = line.trim().parse().expect("grandchild pid parses");
+
+        // PRE-DROP sanity: the probe must SEE both processes alive. Without
+        // this, a probe that is blind on some platform (the /proc-based v1
+        // was blind on macOS) makes the post-drop assertions pass vacuously.
+        assert!(
+            pid_alive(child_pid),
+            "liveness probe blind: child {child_pid} not seen alive before drop"
+        );
+        assert!(
+            pid_alive(grandchild_pid),
+            "liveness probe blind: grandchild {grandchild_pid} not seen alive before drop"
+        );
 
         drop(process);
 
