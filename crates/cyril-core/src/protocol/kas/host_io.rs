@@ -494,6 +494,50 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn write_through_symlink_preserves_link() {
+        // C4 fence (cyril-0v42, probe S14) at the RESOLVER level: a symlink
+        // target keeps the link and the resolved destination receives the
+        // content. Fails under a naive persist-onto-the-link impl, which
+        // replaces the symlink with a regular file and leaves the destination
+        // stale (probe S4).
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("dest.txt");
+        std::fs::write(&dest, "OLD").unwrap();
+        let link = dir.path().join("link.txt");
+        std::os::unix::fs::symlink(&dest, &link).unwrap();
+        let req = acp::WriteTextFileRequest::new(acp::SessionId::new("s"), &link, "NEW");
+        write_text_file(&req).await.unwrap();
+        assert!(
+            std::fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "symlink must be preserved by the resolver write"
+        );
+        assert_eq!(std::fs::read_to_string(&dest).unwrap(), "NEW");
+    }
+
+    #[tokio::test]
+    async fn write_error_passthrough_names_refusal() {
+        // Slice-3 fence (cyril-0v42): the helper's distinct refusal reasons
+        // must survive the spawn_blocking hop and the -32603 wrapping — a
+        // wrapper that swallows or rewords the io error would leave KAS (and
+        // the user) with an undiagnosable failed write.
+        let dir = tempfile::tempdir().unwrap();
+        let sub = dir.path().join("d");
+        std::fs::create_dir(&sub).unwrap();
+        let req = acp::WriteTextFileRequest::new(acp::SessionId::new("s"), &sub, "x");
+        let err = write_text_file(&req)
+            .await
+            .expect_err("dir target must fail");
+        assert!(
+            format!("{err:?}").contains("directory"),
+            "refusal reason must cross the wire: {err:?}"
+        );
+    }
+
     #[tokio::test]
     async fn relative_path_rejected_with_absolute_error() {
         // Claim C10: a non-absolute path is rejected with the DISTINCT "must be
