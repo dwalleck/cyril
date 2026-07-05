@@ -112,7 +112,26 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 }
 
 /// Render the bottom status bar (context usage + credits).
+///
+/// The line does not wrap, so the KAS breakdown bar (~70 cols) is appended
+/// only when the whole line — including every segment after it (stop reason,
+/// tokens, credits, SCROLL hint) — fits within `area` (cyril-mdbp). When it
+/// does not fit, the bar is omitted entirely; the "Context: N%" scalar and
+/// the trailing affordances always stay.
 pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
+    let full = Line::from(status_bar_spans(state, true));
+    let line = if full.width() <= usize::from(area.width) {
+        full
+    } else {
+        Line::from(status_bar_spans(state, false))
+    };
+    let bar = Paragraph::new(line).style(Style::default().bg(Color::Rgb(30, 30, 46)));
+
+    frame.render_widget(bar, area);
+}
+
+/// Build the status-bar spans, with or without the KAS breakdown bar.
+fn status_bar_spans(state: &dyn TuiState, include_breakdown: bool) -> Vec<Span<'static>> {
     let mut parts: Vec<Span> = Vec::new();
 
     // Context usage gauge
@@ -133,7 +152,7 @@ pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     // KAS context breakdown bar (KAS-2b, cyril-5et2): one labeled category per
     // wire bucket, aggregate-only — no per-item drill-in (cyril-1116). Fixed
     // five buckets → O(1).
-    if let Some(bd) = state.context_breakdown() {
+    if include_breakdown && let Some(bd) = state.context_breakdown() {
         if !parts.is_empty() {
             parts.push(Span::raw(" · "));
         }
@@ -223,10 +242,7 @@ pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         parts.push(Span::styled("cyril", Style::default().fg(Color::DarkGray)));
     }
 
-    let line = Line::from(parts);
-    let bar = Paragraph::new(line).style(Style::default().bg(Color::Rgb(30, 30, 46)));
-
-    frame.render_widget(bar, area);
+    parts
 }
 
 fn format_token_count(count: u64) -> String {
@@ -544,6 +560,78 @@ mod tests {
             text.contains("800 out"),
             "should show output tokens: {text}"
         );
+    }
+
+    // cyril-mdbp: the KAS breakdown bar must never clip trailing affordances
+    // (credits, SCROLL hint) off a narrow status line.
+    fn status_bar_text(state: &MockTuiState, width: u16) -> String {
+        let backend = TestBackend::new(width, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render_status_bar(frame, frame.area(), state))
+            .expect("draw");
+        let buf = terminal.backend().buffer();
+        (0..width)
+            .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
+            .collect()
+    }
+
+    fn breakdown_browse_state() -> MockTuiState {
+        use cyril_core::types::{ContextBreakdown, ContextBucket};
+        MockTuiState {
+            context_usage: Some(75.0),
+            context_breakdown: Some(ContextBreakdown::new(
+                ContextBucket::new(1, 11.0),
+                ContextBucket::new(2, 22.0),
+                ContextBucket::new(3, 33.0),
+                ContextBucket::new(4, 44.0),
+                ContextBucket::new(5, 55.0),
+            )),
+            credit_usage: Some((5.25, 10.0)),
+            chat_scroll_back: Some(10),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn narrow_status_bar_keeps_scroll_hint_over_breakdown() {
+        let text = status_bar_text(&breakdown_browse_state(), 80);
+        assert!(
+            text.contains("SCROLL"),
+            "scroll hint must survive on a narrow terminal: {text:?}"
+        );
+        assert!(
+            text.contains("Credits: $5.25/$10.00"),
+            "credits must survive on a narrow terminal: {text:?}"
+        );
+        assert!(
+            !text.contains("Context Files"),
+            "breakdown bar must be omitted when it would clip trailing segments: {text:?}"
+        );
+        assert!(
+            text.contains("Context: 75%"),
+            "the scalar context gauge always stays: {text:?}"
+        );
+    }
+
+    #[test]
+    fn wide_status_bar_keeps_breakdown_bar() {
+        let text = status_bar_text(&breakdown_browse_state(), 200);
+        for expect in [
+            "Context: 75%",
+            "Context Files 11%",
+            "Session Files 22%",
+            "Tools 33%",
+            "Prompts 44%",
+            "Responses 55%",
+            "Credits: $5.25/$10.00",
+            "SCROLL",
+        ] {
+            assert!(
+                text.contains(expect),
+                "wide status bar missing {expect:?}: {text:?}"
+            );
+        }
     }
 
     #[test]
