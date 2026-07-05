@@ -16,9 +16,10 @@ workspace = true
 # `--features kas`; a default build cannot read the kiro credential store.
 # Pulls in `tokio/fs` for non-blocking file I/O on the bridge's single-threaded
 # executor, `tokio/io-util` for draining terminal pipes while a kill signal is
-# watched (terminal_io, cyril-lw67), and `rusqlite` for read-only access to
-# kiro-cli's data.sqlite3.
-kas = ["tokio/fs", "tokio/io-util", "dep:rusqlite"]
+# watched (terminal_io, cyril-lw67), `rusqlite` for read-only access to
+# kiro-cli's data.sqlite3, and `tempfile` for the atomic host-io write path
+# (temp + fsync + rename, cyril-0v42).
+kas = ["tokio/fs", "tokio/io-util", "dep:rusqlite", "dep:tempfile"]
 
 [dependencies]
 thiserror = { workspace = true }
@@ -34,6 +35,7 @@ async-trait = { workspace = true }
 tokio-util = { workspace = true }
 futures-util = { workspace = true }
 rusqlite = { workspace = true, optional = true }
+tempfile = { workspace = true, optional = true }
 
 # Unix-only: `nix` does not build on Windows, where cyril spawns
 # `wsl kiro-cli acp` and keeps only the `kill_on_drop` backstop.
