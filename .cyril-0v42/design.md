@@ -127,7 +127,7 @@ localize to a claim.
 **Cheapest falsifier status: the entire C1-C8 battery ran pre-approval — 42
 oracle checks, 0 fail.**
 
-## Open decisions (for the design pause)
+## Open decisions — RESOLVED at design pause 2026-07-05 (user approved: D1 refuse, D2 error, D3 error-no-fallback, all as recommended; design approved to build)
 
 - **D1 read-only target**: REFUSE with distinct Err (recommended; preserves
   today's EACCES protection — an agent cannot silently replace a file the
