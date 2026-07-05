@@ -53,7 +53,10 @@ pub(crate) async fn write_text_file(
     tokio::task::spawn_blocking(move || write_atomic(&target, &content))
         .await
         .map_err(|e| {
-            tracing::debug!(path = %path.display(), error = %e, "KAS fs write task failed");
+            // warn!, not debug!: a JoinError means the write TASK panicked or
+            // was cancelled — abnormal, unlike the ordinary io failures io_err
+            // logs at debug (CLAUDE.md: at minimum log a warning).
+            tracing::warn!(path = %path.display(), error = %e, "KAS fs write task failed");
             acp::Error::new(
                 -32603,
                 format!("write_text_file {}: task failed: {e}", path.display()),
@@ -100,9 +103,10 @@ fn write_atomic(path: &std::path::Path, content: &str) -> std::io::Result<()> {
     use std::io::{Error, ErrorKind, Write as _};
     let canonical = match std::fs::canonicalize(path) {
         Ok(p) => p,
-        // Missing target (or dangling link): canonicalize the parent instead,
-        // creating it mkdir-p style first — the existing resolver contract.
-        Err(_) => {
+        // Missing target (incl. a dangling link, which resolves NotFound):
+        // canonicalize the parent instead, creating it mkdir-p style first —
+        // the existing resolver contract.
+        Err(e) if e.kind() == ErrorKind::NotFound => {
             let parent = path.parent().ok_or_else(|| {
                 Error::new(ErrorKind::InvalidInput, "target has no parent directory")
             })?;
@@ -112,10 +116,14 @@ fn write_atomic(path: &std::path::Path, content: &str) -> std::io::Result<()> {
                 .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "target has no file name"))?;
             std::fs::canonicalize(parent)?.join(name)
         }
+        // Any other canonicalize failure (EACCES on an unsearchable component,
+        // ELOOP, ...) is corruption, not absence — the two are different
+        // failure modes (CLAUDE.md) and must not fall into the fresh-file path.
+        Err(e) => return Err(e),
     };
     let existing = match std::fs::metadata(&canonical) {
         Ok(m) if m.is_dir() => {
-            return Err(Error::new(ErrorKind::InvalidInput, "target is a directory"));
+            return Err(Error::new(ErrorKind::IsADirectory, "target is a directory"));
         }
         Ok(m) if m.permissions().readonly() => {
             return Err(Error::new(
@@ -395,9 +403,10 @@ mod tests {
         let target = dir.path().join("subdir");
         std::fs::create_dir(&target).unwrap();
         let err = write_atomic(&target, "NEW").expect_err("directory target must be refused");
-        assert!(
-            err.to_string().contains("directory"),
-            "error must name the directory refusal, got: {err}"
+        assert_eq!(
+            err.to_string(),
+            "target is a directory",
+            "exact refusal wording is user-facing contract (CLAUDE.md)"
         );
         assert!(target.is_dir(), "directory must survive the refused write");
     }
@@ -414,9 +423,10 @@ mod tests {
         let link = dir.path().join("link.txt");
         std::os::unix::fs::symlink(&dest, &link).unwrap();
         let err = write_atomic(&link, "NEW").expect_err("dangling symlink must be refused");
-        assert!(
-            err.to_string().contains("dangling"),
-            "error must name the dangling-symlink refusal, got: {err}"
+        assert_eq!(
+            err.to_string(),
+            "target is a dangling symlink",
+            "exact refusal wording is user-facing contract (CLAUDE.md)"
         );
         assert!(
             std::fs::symlink_metadata(&link)
@@ -444,9 +454,10 @@ mod tests {
         locked.set_readonly(true);
         std::fs::set_permissions(&f, locked).unwrap();
         let err = write_atomic(&f, "NEW").expect_err("read-only target must be refused");
-        assert!(
-            err.to_string().contains("read-only"),
-            "error must name the read-only refusal, got: {err}"
+        assert_eq!(
+            err.to_string(),
+            "target is read-only",
+            "exact refusal wording is user-facing contract (CLAUDE.md)"
         );
         assert_eq!(
             std::fs::read_to_string(&f).unwrap(),
@@ -479,6 +490,7 @@ mod tests {
         std::fs::create_dir(&parent).unwrap();
         let f = parent.join("f.txt");
         std::fs::write(&f, "OLD").unwrap();
+        let mode_before = std::fs::metadata(&f).unwrap().permissions().mode() & 0o7777;
         std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o555)).unwrap();
         let err = write_atomic(&f, "NEW").expect_err("unwritable parent must fail the write");
         // Teardown before asserts that could panic: restore so tempdir cleanup works.
@@ -491,6 +503,11 @@ mod tests {
             std::fs::read_to_string(&f).unwrap(),
             "OLD",
             "target must be byte-identical after the failed write (C1)"
+        );
+        assert_eq!(
+            std::fs::metadata(&f).unwrap().permissions().mode() & 0o7777,
+            mode_before,
+            "target mode must also survive the failed write (design C1 fence: content/mode intact)"
         );
     }
 

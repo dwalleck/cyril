@@ -206,5 +206,8 @@ check "S20 target content intact" "$(cat "$t")" "OLD"
 chmod 755 "$WORK/s20-dir"
 
 echo
-echo "════ ORACLE SUMMARY: $PASS pass, $FAIL fail (work dir kept at $WORK)"
+# Keep the work dir for inspection but drop the S11/S12 768MB kill-test
+# bodies — repeated runs would otherwise accumulate gigabytes in ~/.cache.
+find "$WORK" -type f -size +10M -delete
+echo "════ ORACLE SUMMARY: $PASS pass, $FAIL fail (work dir kept at $WORK, >10M files trimmed)"
 exit $(( FAIL > 0 ))

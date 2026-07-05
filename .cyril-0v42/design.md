@@ -106,14 +106,14 @@ the target's existing inode" and with it:
 
 | # | Claim | Falsifier | Oracle | Cost | Status | Regression fence |
 |---|-------|-----------|--------|------|--------|------------------|
-| C1 | atomicity | SIGKILL mid-768MB write over 25-byte target; sha ∉ {old, full-new} falsifies | sha256sum + stat (S12) | 1m | **passed** | unit `failed_write_leaves_target_intact` (r-x parent ⇒ Err + content/mode intact, cfg(unix)); S12 stays audit-trail |
-| C2 | mode kept | 0755 target; post-write mode ≠ 755 falsifies | stat (S13) | 10s | **passed** | unit `write_preserves_existing_mode` (0755 + 0600, cfg(unix)) |
-| C3 | fresh parity | fresh path a/b/f.txt; mode ≠ 0666&~umask falsifies | shell umask arithmetic (S15) | 10s | **passed** | unit `fresh_write_matches_plain_create_mode` — control file made by `std::fs::File::create` in the same dir (today's mechanism = independent in-test oracle), cfg(unix) |
+| C1 | atomicity | SIGKILL mid-768MB write over 25-byte target; sha ∉ {old, full-new} falsifies | sha256sum + stat (S12) | 1m | **passed** | unit `write_atomic_unwritable_parent_errs_target_intact` (r-x parent ⇒ Err + content/mode intact, cfg(unix)); S12 stays audit-trail |
+| C2 | mode kept | 0755 target; post-write mode ≠ 755 falsifies | stat (S13) | 10s | **passed** | unit `write_atomic_preserves_existing_mode` (0755 + 0600, cfg(unix)) |
+| C3 | fresh parity | fresh path a/b/f.txt; mode ≠ 0666&~umask falsifies | shell umask arithmetic (S15) | 10s | **passed** | unit `write_atomic_fresh_matches_plain_create_mode` — control file made by `std::fs::File::create` in the same dir (today's mechanism = independent in-test oracle), cfg(unix) |
 | C4 | symlink kept | link→dest; link no longer symlink OR dest lacks content falsifies | readlink + sha256sum (S14) | 10s | **passed** | unit `write_through_symlink_preserves_link` (cfg(unix)) |
 | C5 | byte-exact | empty + Unicode writes; any byte diff falsifies | stat size + read-back (S8) | 10s | **passed** | existing unit `write_creates_parents_and_exact_content` (cross-platform, unchanged) |
 | C6 | temp-in-parent | TMPDIR=/tmp (tmpfs), target on btrfs; EXDEV falsifies (S9 proved the boundary bites a TMPDIR impl) | rust persist + python rename EXDEV control (S18+S9) | 30s | **passed** | C1's fence asserts the Err names temp creation in the parent — a TMPDIR-placed temp yields a different failure point/message; S18 stays audit-trail |
-| C7 | inert failures | dir target / dangling link / r-x parent; any mutation or Ok falsifies | ls/stat/sha before-after (S16, S19, S20) | 30s | **passed** | units `write_to_directory_target_errs` (cross-platform), `dangling_symlink_target_errs` (cfg(unix)), + C1 fence |
-| C8 | readonly refused | 0444 target; Ok or content change falsifies (fixed2 shape FAILED this — S17 first run) | cat + stat (S17) | 10s | **passed** | unit `readonly_target_refused` (cross-platform via `set_readonly(true)`) |
+| C7 | inert failures | dir target / dangling link / r-x parent; any mutation or Ok falsifies | ls/stat/sha before-after (S16, S19, S20) | 30s | **passed** | units `write_atomic_directory_target_refused_inert` (cross-platform), `write_atomic_dangling_symlink_refused_inert` (cfg(unix)), + C1 fence |
+| C8 | readonly refused | 0444 target; Ok or content change falsifies (fixed2 shape FAILED this — S17 first run) | cat + stat (S17) | 10s | **passed** | unit `write_atomic_readonly_target_refused_inert` (cross-platform via `set_readonly(true)`) |
 | C9 | dep hygiene | `cargo tree` default graph contains tempfile ⇒ falsified; kas build red ⇒ falsified | cargo tree / CI | 3m | pending (build-time) | CI kas legs (build/clippy/nextest, ci.yml:140-147) + default-build legs |
 
 Non-vacuity (named buggy implementations): today's `tokio::fs::write` fails
