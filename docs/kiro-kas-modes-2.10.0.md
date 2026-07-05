@@ -133,9 +133,15 @@ turn starts.
 on `session/new`.** The audit's "newSession.customAgents parameter" as a
 TOP-LEVEL param is silently ignored (no error, agent absent from the mode
 list); nested under `_meta.kiro` the agent appears in the mode select
-(`impl-probe` alongside the built-ins). Composition plan→custom-agent via
-per-turn `modeId` is the one leg not yet end-to-end verified (the first
-attempt used the cosmetic setter).
+(`impl-probe` alongside the built-ins). **The full composition is now
+verified end-to-end** (`probe-kas-plan-to-custom-2.11.0.py`,
+`h-plan-to-custom.json`): plan turn (`modeId:"plan"`, clean porcelain) →
+implement turn (`modeId:"impl-probe"`, "implement the plan you just made",
+bug never restated) → `M calc.py`, `return a + b`, permissions fired for the
+write + verify-run, and the reply is in the custom agent's voice ("Fixed.
+The `add` function now correctly returns `a + b`…" — brief, per its
+definition). Context carries into client-injected agents; the per-turn
+switch works for them exactly as for built-ins.
 
 **4. A plan session does NOT offer a structured transition into
 implementation.** Across six captured plan sessions: zero `_kiro/userInput`
