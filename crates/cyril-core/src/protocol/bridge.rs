@@ -485,6 +485,10 @@ async fn run_bridge(
     // back on the request's embedded `responder` oneshot, bypassing the loop.
     let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
     let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone());
+    // cyril-3lh8: grab the shared terminal-registry handle BEFORE the connection
+    // takes ownership of the client — run_loop's CancelRequest arm reaps with it.
+    #[cfg(feature = "kas")]
+    let terminals = client.terminals();
 
     // 3. Create the ACP connection.
     //    ClientSideConnection::new returns (conn, io_task).
@@ -544,6 +548,8 @@ async fn run_bridge(
             inbound_rx,
             req_rx,
             io_done: io_done_rx,
+            #[cfg(feature = "kas")]
+            terminals,
         },
     )
     .await
@@ -561,11 +567,16 @@ async fn run_bridge(
 /// - `io_done`: fired by the io-pump watcher when the agent connection ends
 ///   (clean EOF or io error), carrying the user-facing disconnect reason
 ///   (cyril-l7tw).
+/// - `terminals` (kas): the KiroClient's terminal registry, shared (same
+///   `LocalSet` thread) so the CancelRequest arm can reap a cancelled
+///   session's live terminals (cyril-3lh8).
 struct InternalChannels {
     inbound_tx: mpsc::Sender<RoutedNotification>,
     inbound_rx: mpsc::Receiver<RoutedNotification>,
     req_rx: mpsc::Receiver<PermissionRequest>,
     io_done: tokio::sync::oneshot::Receiver<String>,
+    #[cfg(feature = "kas")]
+    terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
 
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
@@ -579,11 +590,17 @@ async fn run_loop(
     engine: std::rc::Rc<dyn Engine>,
     internal: InternalChannels,
 ) -> crate::Result<()> {
+    // cyril-3lh8: the shared terminal-registry handle for the CancelRequest
+    // arm's reap, cloned out before the destructure (a `#[cfg]`'d field can't
+    // appear in the struct pattern below without gating the whole binding).
+    #[cfg(feature = "kas")]
+    let terminals = std::rc::Rc::clone(&internal.terminals);
     let InternalChannels {
         inbound_tx,
         mut inbound_rx,
         mut req_rx,
         mut io_done,
+        ..
     } = internal;
     use acp::Agent;
     use agent_client_protocol as acp;
@@ -768,6 +785,15 @@ async fn run_loop(
                     {
                         tracing::warn!(error = %e, "failed to send cancel notification");
                     }
+                    // cyril-3lh8 (KAS-5b follow-up): a cancelled turn may end
+                    // without KAS ever sending `terminal/release`, orphaning the
+                    // session's live children (a 60s sleep = 60s orphan; a child
+                    // wedged on a full pipe never exits at all). Reap them with
+                    // KILL semantics — ids stay valid for KAS's late
+                    // `terminal/output`/`release`. Cancel-only: reaping at
+                    // turn-end could race an in-flight release.
+                    #[cfg(feature = "kas")]
+                    terminals.reap_session(session_id).await;
                 } else {
                     tracing::warn!("cancel requested but no active session");
                 }
@@ -1915,6 +1941,13 @@ mod tests {
         /// Session ids the agent was asked to cancel, in order. Lets a test assert
         /// WHICH session a CancelRequest targeted (cyril-84ca cancel-retarget fence).
         cancelled_sessions: Vec<String>,
+        /// When set, `prompt` issues a server->client `terminal/create` with this
+        /// `(command, args, cwd)` BEFORE parking — models a KAS turn mid-shell-
+        /// command so the cancel-orphan fence can observe the spawned child
+        /// (cyril-3lh8). The turn then ends via cancel WITHOUT `terminal/release`,
+        /// the orphan-on-cancel wire shape.
+        #[cfg(all(feature = "kas", unix))]
+        create_terminal_cmd: Option<(String, Vec<String>, std::path::PathBuf)>,
     }
 
     struct FakeAgent {
@@ -2004,6 +2037,25 @@ mod tests {
                     }))
                     .expect("turn_end notification");
                     conn.session_notification(note).await?;
+                }
+            }
+            #[cfg(all(feature = "kas", unix))]
+            {
+                // cyril-3lh8 fixture: model a KAS turn that delegated a shell
+                // command to the host — a server->client `terminal/create` that the
+                // KiroClient answers by spawning the child in its TerminalRegistry.
+                // Deliberately NO terminal/release follows: the cancel below ends
+                // the turn with the child still running (orphan-on-cancel).
+                let create = self.script.borrow().create_terminal_cmd.clone();
+                if let Some((command, args, cwd)) = create {
+                    use acp::Client as _;
+                    let conn = self.agent_conn.borrow().clone();
+                    if let Some(conn) = conn {
+                        let req = acp::CreateTerminalRequest::new(a.session_id.clone(), command)
+                            .args(args)
+                            .cwd(cwd);
+                        conn.create_terminal(req).await?;
+                    }
                 }
             }
             if want_perm {
@@ -2130,6 +2182,10 @@ mod tests {
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
                 let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
                 let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone());
+                // cyril-3lh8: mirror run_bridge — the loop shares the client's
+                // terminal registry so CancelRequest can reap.
+                #[cfg(feature = "kas")]
+                let terminals = client.terminals();
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);
                 let (cr, cw) = tokio::io::split(c_io);
                 let (ar, aw) = tokio::io::split(a_io);
@@ -2178,6 +2234,8 @@ mod tests {
                         inbound_rx,
                         req_rx,
                         io_done: io_done_rx,
+                        #[cfg(feature = "kas")]
+                        terminals,
                     },
                 ));
                 let (sender, notif_rx, perm_rx) = handle.split();
@@ -3175,6 +3233,79 @@ mod tests {
                     !cancelled.contains(&s2.as_str().to_string()),
                     "cancel did NOT target the mid-turn-created session S2; got {cancelled:?}"
                 );
+            },
+        )
+        .await;
+    }
+
+    /// Poll for the pidfile the terminal child writes (`echo $$ > pid`) and
+    /// parse it; panic after 5s (the child never spawned).
+    #[cfg(all(feature = "kas", unix))]
+    async fn read_pid_within(path: &std::path::Path, secs: u64) -> u32 {
+        let deadline = std::time::Instant::now() + Duration::from_secs(secs);
+        loop {
+            if let Ok(s) = std::fs::read_to_string(path)
+                && let Ok(pid) = s.trim().parse::<u32>()
+            {
+                return pid;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "terminal child never wrote its pidfile — terminal/create did not spawn"
+            );
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    }
+
+    #[cfg(all(feature = "kas", unix))]
+    #[tokio::test]
+    async fn cancel_reaps_sessions_running_terminals() {
+        // cyril-3lh8 (KAS-5b follow-up, orphan-on-cancel): a turn cancelled
+        // mid-command may end WITHOUT KAS ever sending `terminal/release` — the
+        // registry's child then runs to natural exit as an orphan (a 60s sleep =
+        // 60s orphan; a child wedged on a full pipe never exits at all). The
+        // loop's CancelRequest arm must reap the cancelled session's live
+        // terminals. The fixture: the agent answers the prompt by issuing
+        // `terminal/create` (the child writes its own pid, then sleeps) and
+        // parking; the test cancels and asserts the child dies. Alive is asserted
+        // BEFORE the cancel so the fence can't pass as a silent no-op.
+        use crate::protocol::kas::terminal_io::test_probe::{assert_process_dies, dead_or_zombie};
+        let dir = tempfile::tempdir().expect("tempdir");
+        let pidfile = dir.path().join("pid");
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            create_terminal_cmd: Some((
+                "sh".into(),
+                vec!["-c".into(), "echo $$ > pid && exec sleep 60".into()],
+                dir.path().to_path_buf(),
+            )),
+            ..Default::default()
+        }));
+        with_harness(
+            script,
+            move |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["run it".into()],
+                    })
+                    .await
+                    .unwrap();
+                // The prompt handler created the terminal and parked; learn the
+                // child's pid from the pidfile it writes.
+                let pid = read_pid_within(&pidfile, 5).await;
+                assert!(
+                    !dead_or_zombie(pid),
+                    "sleep 60 must be alive before the cancel"
+                );
+                sender.send(BridgeCommand::CancelRequest).await.unwrap();
+                assert_eq!(
+                    drain_to_turn(&mut rx).await,
+                    StopReason::Cancelled,
+                    "cancel resolved the parked turn as Cancelled"
+                );
+                assert_process_dies(pid).await;
             },
         )
         .await;

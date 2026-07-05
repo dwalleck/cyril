@@ -22,8 +22,11 @@ pub(crate) struct KiroClient {
     engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
     /// KAS-5b (cyril-ufie): live `terminal/*` host-callback registry. KAS-only —
     /// v2 advertises no `terminal` capability, so the overrides never fire there.
+    /// `Rc` so the bridge loop shares the SAME registry (same `LocalSet` thread)
+    /// and its CancelRequest arm can reap a cancelled session's live terminals
+    /// (cyril-3lh8); the registry stays the sole owner of process lifecycle.
     #[cfg(feature = "kas")]
-    terminals: crate::protocol::kas::terminal_io::TerminalRegistry,
+    terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
 
 impl KiroClient {
@@ -38,8 +41,19 @@ impl KiroClient {
             tool_call_inputs: RefCell::new(HashMap::new()),
             engine,
             #[cfg(feature = "kas")]
-            terminals: crate::protocol::kas::terminal_io::TerminalRegistry::new(),
+            terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new()),
         }
+    }
+
+    /// cyril-3lh8: hand the bridge loop a shared handle to the terminal
+    /// registry, grabbed BEFORE the ACP connection takes ownership of the
+    /// client. The loop only triggers `reap_session` from its CancelRequest
+    /// arm — the registry remains the sole owner of process lifecycle.
+    #[cfg(feature = "kas")]
+    pub(crate) fn terminals(
+        &self,
+    ) -> std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry> {
+        std::rc::Rc::clone(&self.terminals)
     }
 }
 

@@ -46,6 +46,11 @@ pub(crate) struct TerminalRegistry {
 /// output + status so a later `output`/`wait` is a snapshot, not a re-run.
 enum Entry {
     Running {
+        /// The session that created this terminal (`CreateTerminalRequest.
+        /// session_id`), so `reap_session` can find a cancelled session's live
+        /// children by linear scan — the terminal id stays the primary key
+        /// (cyril-3lh8).
+        session_id: acp::SessionId,
         /// The spawned child, `None` while an awaiting op has taken it out.
         child: Option<Child>,
         /// Kill signal for the in-flight owner. The rpc layer spawns every
@@ -134,6 +139,7 @@ impl TerminalRegistry {
         self.inner.borrow_mut().insert(
             id.clone(),
             Entry::Running {
+                session_id: req.session_id.clone(),
                 child: Some(child),
                 kill_signal: Rc::new(Notify::new()),
             },
@@ -278,6 +284,49 @@ impl TerminalRegistry {
         Ok(acp::KillTerminalResponse::new())
     }
 
+    /// Kill + reap every terminal a session still has **running** (cyril-3lh8,
+    /// KAS-5b follow-up). A CANCELLED turn may end without KAS ever sending
+    /// `terminal/release`, so its live children would run to natural exit as
+    /// orphans (a 60s sleep = 60s orphan; a child wedged writing to a full pipe
+    /// never exits at all — only a kill covers it). The bridge loop triggers
+    /// this from its CancelRequest arm ONLY — reaping at turn-end could race an
+    /// in-flight `release`.
+    ///
+    /// Applies the [`Self::kill`] contract, NOT release: ids stay valid with
+    /// partial output cached, so KAS's late `terminal/output`/`terminal/release`
+    /// for those ids still resolve instead of erroring `-32602`. The linear scan
+    /// collects matching ids in one scoped borrow (the terminal id stays the
+    /// primary key), then delegates each to `kill` — take-then-await, and
+    /// in-flight children are terminated through their owning `wait` via the
+    /// kill signal (cyril-lw67).
+    pub(crate) async fn reap_session(&self, session_id: &acp::SessionId) {
+        let running: Vec<acp::TerminalId> = self
+            .inner
+            .borrow()
+            .iter()
+            .filter_map(|(id, entry)| match entry {
+                Entry::Running {
+                    session_id: sid, ..
+                } if sid == session_id => Some(id.clone()),
+                _ => None,
+            })
+            .collect();
+        for id in running {
+            tracing::debug!(terminal_id = %id, session_id = %session_id, "reaping cancelled session's live terminal");
+            if let Err(e) = self
+                .kill(&acp::KillTerminalRequest::new(
+                    session_id.clone(),
+                    id.clone(),
+                ))
+                .await
+            {
+                // Best-effort per terminal: the id can vanish legitimately (a
+                // concurrent release raced the scan) — log and keep reaping.
+                tracing::debug!(terminal_id = %id, error = %e, "KAS terminal reap: kill failed");
+            }
+        }
+    }
+
     /// Take a terminal's live child out of the registry in a scoped `RefCell`
     /// borrow so the caller can `.await` its exit **without holding the borrow**
     /// (the no-borrow-across-await invariant). `Running` leaves a `None` slot;
@@ -287,7 +336,9 @@ impl TerminalRegistry {
         match map.get_mut(id) {
             None => Err(unknown_terminal(id)),
             Some(Entry::Exited { status, .. }) => Ok(Taken::AlreadyExited(status.clone())),
-            Some(Entry::Running { child, kill_signal }) => Ok(match child.take() {
+            Some(Entry::Running {
+                child, kill_signal, ..
+            }) => Ok(match child.take() {
                 Some(child) => Taken::Child(child, Rc::clone(kill_signal)),
                 None => Taken::InFlight(Rc::clone(kill_signal)),
             }),
@@ -428,10 +479,51 @@ fn wait_err(id: &acp::TerminalId, e: std::io::Error) -> acp::Error {
     acp::Error::new(-32603, format!("wait terminal {id}: {e}"))
 }
 
+/// Liveness probes for the orphan/reap fences, shared with the bridge's
+/// cancel-reap fence (cyril-3lh8). Probes via `ps` — portable across Linux AND
+/// macOS; a `/proc/<pid>` read misreports on macOS (no procfs), failing these
+/// fences before the code under test is even exercised.
+#[cfg(all(test, unix))]
+pub(crate) mod test_probe {
+    #![allow(clippy::expect_used)]
+
+    /// `true` once the process is gone OR is a zombie (SIGKILLed, awaiting
+    /// reap — tokio reaps dropped children asynchronously, so a brief zombie
+    /// is "dead" for the leaked-child criterion; a leaked `sleep 60` stays
+    /// alive in state `S`).
+    pub(crate) fn dead_or_zombie(pid: u32) -> bool {
+        let out = std::process::Command::new("ps")
+            .args(["-o", "stat=", "-p", &pid.to_string()])
+            .output()
+            .expect("spawn ps for the liveness probe");
+        if !out.status.success() {
+            return true; // ps knows no such pid: fully reaped
+        }
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stat = stdout.trim();
+        stat.is_empty() || stat.starts_with('Z')
+    }
+
+    /// Poll [`dead_or_zombie`] up to 5s; panic if the child outlives the
+    /// kill/reap/drop under test.
+    pub(crate) async fn assert_process_dies(pid: u32) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while std::time::Instant::now() < deadline {
+            if dead_or_zombie(pid) {
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        panic!("terminal child {pid} survived the kill/reap/drop under test (orphan leak)");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+    #[cfg(unix)]
+    use super::test_probe::{assert_process_dies, dead_or_zombie};
     use super::*;
 
     fn create_req(command: &str) -> acp::CreateTerminalRequest {
@@ -857,42 +949,6 @@ mod tests {
         }
     }
 
-    /// Liveness probe for the drop-kill fixtures: `true` once the process is
-    /// gone OR is a zombie (SIGKILLed, awaiting reap — tokio reaps dropped
-    /// children asynchronously, so a brief zombie is "dead" for the
-    /// leaked-child criterion; a leaked `sleep 60` stays alive in state `S`).
-    /// Probes via `ps` — portable across Linux AND macOS; a `/proc/<pid>` read
-    /// misreports on macOS (no procfs), failing these fences before the fix is
-    /// even exercised.
-    #[cfg(unix)]
-    fn dead_or_zombie(pid: u32) -> bool {
-        let out = std::process::Command::new("ps")
-            .args(["-o", "stat=", "-p", &pid.to_string()])
-            .output()
-            .expect("spawn ps for the liveness probe");
-        if !out.status.success() {
-            return true; // ps knows no such pid: fully reaped
-        }
-        let stdout = String::from_utf8_lossy(&out.stdout);
-        let stat = stdout.trim();
-        stat.is_empty() || stat.starts_with('Z')
-    }
-
-    /// Poll [`dead_or_zombie`] up to 5s; panic if the child outlives the drop.
-    #[cfg(unix)]
-    async fn assert_process_dies(pid: u32) {
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-        while std::time::Instant::now() < deadline {
-            if dead_or_zombie(pid) {
-                return;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        }
-        panic!(
-            "terminal child {pid} survived its owning structures being dropped (cyril-ba5x leak)"
-        );
-    }
-
     #[cfg(unix)]
     #[tokio::test(flavor = "current_thread")]
     async fn dropped_registry_kills_running_terminal() {
@@ -958,6 +1014,88 @@ mod tests {
         );
         drop(local); // cancels the pending wait -> drops the future -> drops the Child
         drop(reg);
+        assert_process_dies(pid).await;
+    }
+
+    /// A `sleep 60` create request under an arbitrary session (the reap fences
+    /// need two distinct sessions; the other helpers hardcode `"s"`).
+    #[cfg(unix)]
+    fn sleep_req(session: &str) -> acp::CreateTerminalRequest {
+        acp::CreateTerminalRequest::new(acp::SessionId::new(session), "sleep")
+            .args(vec!["60".to_string()])
+    }
+
+    #[cfg(unix)]
+    #[tokio::test(flavor = "current_thread")]
+    async fn reap_session_kills_only_that_sessions_children_and_keeps_ids() {
+        // Fixture (cyril-3lh8, idle half): reap_session must kill session A's
+        // still-registered child — alive-asserted FIRST so the fence can't pass
+        // as a silent no-op — while SPARING session B's (the linear scan filters
+        // by the entry's session_id). KILL semantics, not release: the reaped id
+        // stays valid — a later wait resolves with the signal status and output
+        // still succeeds instead of erroring -32602 (KAS sends those late).
+        let reg = TerminalRegistry::new();
+        let a = reg.create(&sleep_req("sess-a")).unwrap().terminal_id;
+        let b = reg.create(&sleep_req("sess-b")).unwrap().terminal_id;
+        let a_pid = pid_of(&reg, &a);
+        let b_pid = pid_of(&reg, &b);
+        assert!(!dead_or_zombie(a_pid), "A must be alive before the reap");
+        assert!(!dead_or_zombie(b_pid), "B must be alive before the reap");
+        reg.reap_session(&acp::SessionId::new("sess-a")).await;
+        assert_process_dies(a_pid).await;
+        assert!(
+            !dead_or_zombie(b_pid),
+            "reap must not touch another session's child"
+        );
+        let resp = reg
+            .wait(&wait_req(&a))
+            .await
+            .expect("reaped id still waits (kill semantics, not release)");
+        assert_ne!(
+            resp.exit_status.exit_code,
+            Some(0),
+            "reaped => not a clean exit"
+        );
+        assert_eq!(resp.exit_status.signal.as_deref(), Some("9"), "SIGKILL=9");
+        reg.output(&out_req(&a))
+            .expect("reaped id keeps a valid output");
+        // Reap B so the test leaves no orphan.
+        reg.release(&release_req(&b)).await.unwrap();
+    }
+
+    #[cfg(unix)]
+    #[tokio::test(flavor = "current_thread")]
+    async fn reap_session_kills_child_owned_by_pending_wait() {
+        // Fixture (cyril-3lh8, in-flight half): with KAS's create->wait-
+        // immediately pattern the child is usually owned by a pending `wait`,
+        // not the registry. reap_session can't start_kill a child it doesn't
+        // hold; it must terminate it through the owner via the kill signal
+        // (the cyril-lw67 seam) so the pending wait resolves with the killed
+        // status instead of hanging out the full sleep (5s timeout catches it).
+        let reg = TerminalRegistry::new();
+        let id = reg.create(&sleep_req("sess-a")).unwrap().terminal_id;
+        let pid = pid_of(&reg, &id);
+        assert!(!dead_or_zombie(pid), "child must be alive before the reap");
+        let wr = wait_req(&id);
+        let wait_fut = reg.wait(&wr);
+        let reap_fut = async {
+            // Let the wait future take the child first — the in-flight state is
+            // only reachable while the wait owns it.
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            reg.reap_session(&acp::SessionId::new("sess-a")).await;
+        };
+        let (wait_res, ()) = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            tokio::join!(wait_fut, reap_fut)
+        })
+        .await
+        .expect("reap must terminate the in-flight child (pending wait must not hang)");
+        let resp = wait_res.expect("pending wait resolves after the reap");
+        assert_ne!(
+            resp.exit_status.exit_code,
+            Some(0),
+            "reaped => not a clean exit"
+        );
+        assert_eq!(resp.exit_status.signal.as_deref(), Some("9"), "SIGKILL=9");
         assert_process_dies(pid).await;
     }
 }
