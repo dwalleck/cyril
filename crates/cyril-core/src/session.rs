@@ -184,6 +184,9 @@ impl SessionController {
                 self.modes = available_modes.clone();
                 self.models = available_models.clone();
                 self.session_cost = SessionCost::new();
+                // Context usage is per-session and re-pushed by the new session;
+                // reset so a prior session's value doesn't linger (mirrors UiState).
+                self.context_usage = None;
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
@@ -240,6 +243,9 @@ impl SessionController {
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
+                // A dead connection has no live context — clear it so a consumer
+                // doesn't read a stale value as current (mirrors UiState).
+                self.context_usage = None;
                 self.status = SessionStatus::Disconnected;
                 true
             }
@@ -687,6 +693,52 @@ mod tests {
 
         assert_eq!(ctrl.session_cost().total_credits(), 0.0);
         assert_eq!(ctrl.session_cost().turn_count(), 0);
+    }
+
+    #[test]
+    fn context_usage_resets_on_session_created() {
+        // Mirrors UiState (PR #33): context usage is per-session and re-pushed by
+        // the new session, so a prior session's value must not linger.
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::MetadataUpdated {
+            context_usage: ContextUsage::new(75.0),
+            metering: None,
+            tokens: None,
+            effort: None,
+        });
+        assert!(ctrl.context_usage().is_some());
+
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        assert!(
+            ctrl.context_usage().is_none(),
+            "context usage must reset on new session"
+        );
+    }
+
+    #[test]
+    fn context_usage_resets_on_disconnect() {
+        // Mirrors UiState (PR #33): a dead connection has no live context.
+        // Set via ContextBreakdownUpdated to also cover the KAS ingest path.
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::ContextBreakdownUpdated {
+            usage_percentage: 42.0,
+            breakdown: None,
+        });
+        assert!(ctrl.context_usage().is_some());
+
+        ctrl.apply_notification(&Notification::BridgeDisconnected {
+            reason: "process exited".into(),
+        });
+        assert!(
+            ctrl.context_usage().is_none(),
+            "context usage must reset on disconnect"
+        );
     }
 
     #[test]
