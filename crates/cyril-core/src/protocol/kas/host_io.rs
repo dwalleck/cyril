@@ -10,12 +10,14 @@
 //! The `KiroClient` fs overrides call these directly, and the acp connection
 //! spawns *each* inbound request as its own `spawn_local` task (`rpc.rs:272`,
 //! wired at `bridge.rs`), so requests never serialize. These resolvers' only
-//! obligation is to *yield*: they use async `tokio::fs`, which offloads the
-//! blocking read/write to tokio's blocking threadpool — so even a stuck file op
-//! cannot pin the single-threaded bridge runtime. **Never** call synchronous
-//! `std::fs` / `std::process` here: that would pin the bridge thread and starve
-//! the loop. (The central loop-mediation *gate* seam is deferred to its first
-//! consumer — cyril-g9vt.)
+//! obligation is to *yield*: reads use async `tokio::fs` (which offloads the
+//! blocking work to tokio's blocking threadpool), and the atomic write runs its
+//! whole sync sequence inside ONE `tokio::task::spawn_blocking` hop — the
+//! sanctioned form for sync `std::fs` in this module (cyril-0v42). Either way a
+//! stuck file op cannot pin the single-threaded bridge runtime. **Never** call
+//! synchronous `std::fs` / `std::process` directly on the bridge runtime: that
+//! would pin the bridge thread and starve the loop. (The central loop-mediation
+//! *gate* seam is deferred to its first consumer — cyril-g9vt.)
 
 use agent_client_protocol as acp;
 
@@ -37,22 +39,143 @@ pub(crate) async fn read_text_file(
     )))
 }
 
-/// Answer `fs/write_text_file`: write `content` to the (translated) path,
+/// Answer `fs/write_text_file`: atomically write `content` to the (translated)
+/// path via [`write_atomic`] (temp + fsync + rename — never truncate-in-place),
 /// creating any missing parent directories (`mkdir -p`). An empty `content`
-/// writes an empty file — not a no-op. A failed mkdir or write returns `Err`.
+/// writes an empty file — not a no-op. A failed mkdir, refused target
+/// (directory / read-only / dangling symlink), or failed write returns `Err`.
 pub(crate) async fn write_text_file(
     req: &acp::WriteTextFileRequest,
 ) -> acp::Result<acp::WriteTextFileResponse> {
     let path = to_native_checked(&req.path)?;
-    if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .map_err(|e| io_err("create parent dir for", &path, e))?;
-    }
-    tokio::fs::write(&path, &req.content)
+    let target = path.clone();
+    let content = req.content.clone();
+    tokio::task::spawn_blocking(move || write_atomic(&target, &content))
         .await
+        .map_err(|e| {
+            // warn!, not debug!: a JoinError means the write TASK panicked or
+            // was cancelled — abnormal, unlike the ordinary io failures io_err
+            // logs at debug (CLAUDE.md: at minimum log a warning).
+            tracing::warn!(path = %path.display(), error = %e, "KAS fs write task failed");
+            acp::Error::new(
+                -32603,
+                format!("write_text_file {}: task failed: {e}", path.display()),
+            )
+        })?
         .map_err(|e| io_err("write_text_file", &path, e))?;
     Ok(acp::WriteTextFileResponse::new())
+}
+
+/// Write `content` to `path` atomically: temp file in the target's own
+/// directory → write → fsync → clone target permissions → rename over the
+/// canonical target. An interrupted write can never leave a partial file —
+/// the target is byte-exactly old or byte-exactly new (cyril-0v42; probe
+/// evidence in `.cyril-0v42/`, where a SIGKILL'd `tokio::fs::write` left a
+/// 0-byte target).
+///
+/// Behavior gates (design decisions D1-D3, all probe-validated):
+/// - a directory, dangling-symlink, or read-only target is refused with a
+///   distinct error and nothing is mutated (rename would otherwise silently
+///   bypass a 0444 file's protection — probe S17);
+/// - a symlink target is written THROUGH via canonicalize (link preserved,
+///   destination replaced — matching today's behavior, probe S14);
+/// - a missing target gets the same `0o666 & !umask` mode a direct create
+///   yields (the mode passes through `open(2)`, where the process umask
+///   applies natively — probe S15) and missing parents are created;
+/// - an existing target keeps its permission bits (probe S13; naive
+///   temp+persist clobbers 0755 → 0600, probe S3).
+///
+/// The temp lives in the canonical target's parent, NEVER the default temp
+/// directory: `$TMPDIR` is environment-controlled and can sit on a different
+/// filesystem, where rename fails EXDEV (probe S9/S18). Sync `std::fs` is
+/// correct here — the caller runs this inside `spawn_blocking` (see module
+/// doc). On SIGKILL a hidden `.tmpXXXXXX` may be orphaned in the target's
+/// directory (`Drop` cleanup cannot run); every non-kill failure path cleans
+/// it via `Drop`.
+///
+/// Deliberately distinct from `crate::kiro_agent_config::write_atomic`
+/// (default-build, fixed temp name, no fsync/mode handling): that helper is
+/// a single-writer convenience for cyril's own config file, while this one
+/// guards arbitrary USER files, so it pays for durability (fsync),
+/// concurrency-safe random temp names, and permission fidelity — different
+/// tiers, not duplication.
+fn write_atomic(path: &std::path::Path, content: &str) -> std::io::Result<()> {
+    use std::io::{Error, ErrorKind, Write as _};
+    let canonical = match std::fs::canonicalize(path) {
+        Ok(p) => p,
+        // Missing target (incl. a dangling link, which resolves NotFound):
+        // canonicalize the parent instead, creating it mkdir-p style first —
+        // the existing resolver contract.
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            let parent = path.parent().ok_or_else(|| {
+                Error::new(ErrorKind::InvalidInput, "target has no parent directory")
+            })?;
+            std::fs::create_dir_all(parent)?;
+            let name = path
+                .file_name()
+                .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "target has no file name"))?;
+            std::fs::canonicalize(parent)?.join(name)
+        }
+        // Any other canonicalize failure (EACCES on an unsearchable component,
+        // ELOOP, ...) is corruption, not absence — the two are different
+        // failure modes (CLAUDE.md) and must not fall into the fresh-file path.
+        Err(e) => return Err(e),
+    };
+    let existing = match std::fs::metadata(&canonical) {
+        Ok(m) if m.is_dir() => {
+            return Err(Error::new(ErrorKind::IsADirectory, "target is a directory"));
+        }
+        Ok(m) if m.permissions().readonly() => {
+            return Err(Error::new(
+                ErrorKind::PermissionDenied,
+                "target is read-only",
+            ));
+        }
+        Ok(m) => Some(m.permissions()),
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            // create_new/O_EXCL semantics: a symlink whose destination is
+            // missing still EXISTS as a link — refuse rather than replace the
+            // user's link with a regular file (D2; rename would destroy it).
+            if std::fs::symlink_metadata(&canonical).is_ok() {
+                return Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    "target is a dangling symlink",
+                ));
+            }
+            None
+        }
+        Err(e) => return Err(e),
+    };
+    let dir = canonical.parent().ok_or_else(|| {
+        Error::new(
+            ErrorKind::InvalidInput,
+            "canonical target has no parent directory",
+        )
+    })?;
+    let mut builder = tempfile::Builder::new();
+    #[cfg(unix)]
+    if existing.is_none() {
+        use std::os::unix::fs::PermissionsExt as _;
+        builder.permissions(std::fs::Permissions::from_mode(0o666));
+    }
+    let mut tmp = builder.tempfile_in(dir).map_err(|e| {
+        Error::new(
+            e.kind(),
+            format!("create temp file in {}: {e}", dir.display()),
+        )
+    })?;
+    tmp.write_all(content.as_bytes())?;
+    tmp.as_file().sync_all()?;
+    if let Some(perms) = existing {
+        tmp.as_file().set_permissions(perms)?;
+    }
+    tmp.persist(&canonical).map_err(|e| {
+        Error::new(
+            e.error.kind(),
+            format!("persist temp over {}: {}", canonical.display(), e.error),
+        )
+    })?;
+    Ok(())
 }
 
 /// Confirm the agent-provided `path` is absolute, then translate it to the native
@@ -209,6 +332,227 @@ mod tests {
             acp::WriteTextFileRequest::new(acp::SessionId::new("s"), &target, "héllo\n世界\n");
         write_text_file(&req2).await.unwrap();
         assert_eq!(std::fs::read_to_string(&target).unwrap(), "héllo\n世界\n");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_atomic_preserves_existing_mode() {
+        // C2 fence (cyril-0v42, probe S13): 0755 stays 0755 — a naive
+        // NamedTempFile+persist clobbers it to 0600. The 0600 case guards the
+        // WIDENING direction S13 alone cannot catch: a bug that applies the
+        // fresh-file 0666&umask branch to existing targets would leak a
+        // secret's bits up to 0644.
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        for mode in [0o755_u32, 0o600] {
+            let f = dir.path().join(format!("m{mode:o}.txt"));
+            std::fs::write(&f, "OLD").unwrap();
+            std::fs::set_permissions(&f, std::fs::Permissions::from_mode(mode)).unwrap();
+            write_atomic(&f, "NEW").unwrap();
+            assert_eq!(std::fs::read_to_string(&f).unwrap(), "NEW");
+            assert_eq!(
+                std::fs::metadata(&f).unwrap().permissions().mode() & 0o7777,
+                mode,
+                "mode {mode:o} must survive the atomic write"
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_atomic_fresh_matches_plain_create_mode() {
+        // C3 fence (cyril-0v42, probe S15): a fresh target (missing parents
+        // included) must get the same umask-derived mode a direct create
+        // yields. The control file is made by std::fs::File::create — the
+        // very mechanism today's write path uses — so the expected mode is
+        // computed independently of the code under test. Fails if the temp
+        // file's restrictive default (0600) leaks through to the target.
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        let control = dir.path().join("control.txt");
+        drop(std::fs::File::create(&control).unwrap());
+        let fresh = dir.path().join("a/b/fresh.txt");
+        write_atomic(&fresh, "NEW").unwrap();
+        assert_eq!(
+            std::fs::metadata(&fresh).unwrap().permissions().mode() & 0o7777,
+            std::fs::metadata(&control).unwrap().permissions().mode() & 0o7777,
+            "fresh atomic write must match plain-create umask mode"
+        );
+    }
+
+    #[test]
+    fn write_atomic_empty_and_unicode_byte_exact() {
+        // C5 fence (cyril-0v42, probe S8): empty content REPLACES existing
+        // content with an empty file — fails under an `if !content.is_empty()`
+        // no-op guard. Unicode must round-trip byte-exact.
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("c.txt");
+        std::fs::write(&f, "OLD").unwrap();
+        write_atomic(&f, "").unwrap();
+        assert_eq!(std::fs::read(&f).unwrap(), b"");
+        write_atomic(&f, "héllo\n世界\n").unwrap();
+        assert_eq!(std::fs::read_to_string(&f).unwrap(), "héllo\n世界\n");
+    }
+
+    #[test]
+    fn write_atomic_directory_target_refused_inert() {
+        // C7 fence (cyril-0v42, probe S19): a directory target gets the
+        // DISTINCT "directory" error and the directory survives. Fails under
+        // an impl that renames over the dir or reports a generic io error.
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("subdir");
+        std::fs::create_dir(&target).unwrap();
+        let err = write_atomic(&target, "NEW").expect_err("directory target must be refused");
+        assert_eq!(
+            err.to_string(),
+            "target is a directory",
+            "exact refusal wording is user-facing contract (CLAUDE.md)"
+        );
+        assert!(target.is_dir(), "directory must survive the refused write");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_atomic_dangling_symlink_refused_inert() {
+        // C7 fence (cyril-0v42, probe S16): a dangling symlink is refused with
+        // the DISTINCT "dangling" error; the link survives and the missing
+        // destination is NOT created. Today's tokio::fs::write is the named
+        // buggy impl: it creates the destination through the link.
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("nowhere.txt");
+        let link = dir.path().join("link.txt");
+        std::os::unix::fs::symlink(&dest, &link).unwrap();
+        let err = write_atomic(&link, "NEW").expect_err("dangling symlink must be refused");
+        assert_eq!(
+            err.to_string(),
+            "target is a dangling symlink",
+            "exact refusal wording is user-facing contract (CLAUDE.md)"
+        );
+        assert!(
+            std::fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "link must survive"
+        );
+        assert!(!dest.exists(), "destination must NOT be silently created");
+    }
+
+    #[test]
+    fn write_atomic_readonly_target_refused_inert() {
+        // C8 fence (cyril-0v42, probe S17): rename needs only dir-write, so a
+        // temp+persist impl WITHOUT the readonly gate silently replaces a
+        // read-only file (the probed fixed2 shape did exactly that). The gate
+        // must refuse with the DISTINCT "read-only" error and touch nothing.
+        // Cross-platform: readonly() is mode-bits on unix, the readonly
+        // attribute on Windows.
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("locked.txt");
+        std::fs::write(&f, "OLD").unwrap();
+        let original = std::fs::metadata(&f).unwrap().permissions();
+        let mut locked = original.clone();
+        locked.set_readonly(true);
+        std::fs::set_permissions(&f, locked).unwrap();
+        let err = write_atomic(&f, "NEW").expect_err("read-only target must be refused");
+        assert_eq!(
+            err.to_string(),
+            "target is read-only",
+            "exact refusal wording is user-facing contract (CLAUDE.md)"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&f).unwrap(),
+            "OLD",
+            "content must be untouched"
+        );
+        assert!(
+            std::fs::metadata(&f).unwrap().permissions().readonly(),
+            "readonly bit must be untouched"
+        );
+        // Teardown: restore the EXACT original permissions (not
+        // set_readonly(false), which on unix would make the file
+        // world-writable — clippy::permissions_set_readonly_false) so tempdir
+        // cleanup can delete it on Windows, where a readonly file blocks unlink.
+        std::fs::set_permissions(&f, original).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_atomic_unwritable_parent_errs_target_intact() {
+        // C1 + C6 + C7 fence (cyril-0v42, probe S20): with an r-x parent the
+        // write must FAIL — no in-place fallback (D3) — leaving the existing
+        // target byte-identical, and the error must name temp creation in the
+        // parent. The message assert is C6's deterministic fence: an impl that
+        // places the temp in $TMPDIR (writable) would fail later at persist
+        // with a different message (probe S9 proved that boundary bites).
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        let parent = dir.path().join("locked-dir");
+        std::fs::create_dir(&parent).unwrap();
+        let f = parent.join("f.txt");
+        std::fs::write(&f, "OLD").unwrap();
+        let mode_before = std::fs::metadata(&f).unwrap().permissions().mode() & 0o7777;
+        std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o555)).unwrap();
+        let err = write_atomic(&f, "NEW").expect_err("unwritable parent must fail the write");
+        // Teardown before asserts that could panic: restore so tempdir cleanup works.
+        std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(
+            err.to_string().contains("create temp file in"),
+            "error must name temp creation in the parent (C6), got: {err}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&f).unwrap(),
+            "OLD",
+            "target must be byte-identical after the failed write (C1)"
+        );
+        assert_eq!(
+            std::fs::metadata(&f).unwrap().permissions().mode() & 0o7777,
+            mode_before,
+            "target mode must also survive the failed write (design C1 fence: content/mode intact)"
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn write_through_symlink_preserves_link() {
+        // C4 fence (cyril-0v42, probe S14) at the RESOLVER level: a symlink
+        // target keeps the link and the resolved destination receives the
+        // content. Fails under a naive persist-onto-the-link impl, which
+        // replaces the symlink with a regular file and leaves the destination
+        // stale (probe S4).
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("dest.txt");
+        std::fs::write(&dest, "OLD").unwrap();
+        let link = dir.path().join("link.txt");
+        std::os::unix::fs::symlink(&dest, &link).unwrap();
+        let req = acp::WriteTextFileRequest::new(acp::SessionId::new("s"), &link, "NEW");
+        write_text_file(&req).await.unwrap();
+        assert!(
+            std::fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "symlink must be preserved by the resolver write"
+        );
+        assert_eq!(std::fs::read_to_string(&dest).unwrap(), "NEW");
+    }
+
+    #[tokio::test]
+    async fn write_error_passthrough_names_refusal() {
+        // Slice-3 fence (cyril-0v42): the helper's distinct refusal reasons
+        // must survive the spawn_blocking hop and the -32603 wrapping — a
+        // wrapper that swallows or rewords the io error would leave KAS (and
+        // the user) with an undiagnosable failed write.
+        let dir = tempfile::tempdir().unwrap();
+        let sub = dir.path().join("d");
+        std::fs::create_dir(&sub).unwrap();
+        let req = acp::WriteTextFileRequest::new(acp::SessionId::new("s"), &sub, "x");
+        let err = write_text_file(&req)
+            .await
+            .expect_err("dir target must fail");
+        assert!(
+            format!("{err:?}").contains("directory"),
+            "refusal reason must cross the wire: {err:?}"
+        );
     }
 
     #[tokio::test]

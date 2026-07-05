@@ -1,0 +1,13 @@
+[package]
+name = "probe-0v42"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Pinned to the exact version the cyril workspace locks (Cargo.lock) — the
+# crate's persist/mode semantics are the thing under test.
+tempfile = "=3.27.0"
+tokio = { version = "1", features = ["fs", "rt", "macros"] }
+
+# Detach from the cyril workspace: this is a throwaway probe, not a member.
+[workspace]
