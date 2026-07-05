@@ -104,3 +104,53 @@ cyril implication: `mode=plan` can be treated as a genuine write-barrier in
 UI affordances (e.g. a future plan-mode indicator) — subject to the standing
 caveat that `autonomous` mode and `spec/runAllTasks` execution remain
 unexercised.
+
+## Addendum (2026-07-05): plan→implementation handoff — how mode switching ACTUALLY works (2.11.0)
+
+Probes: `probe-kas-plan-handoff-2.11.0.py` + `probe-kas-plan-handoff2-2.11.0.py`,
+dumps in `kas-plan-handoff-dumps/`. Question: how does a plan session
+transition into implementation?
+
+**1. Session-level mode setters are COSMETIC after the first prompt.** Both
+`session/set_config_option {configId:"mode"}` AND the ACP-standard
+`session/set_mode {modeId}` are accepted mid-session (currentValue echoes,
+rebuild broadcast fires, `{}` result, no error) — but the NEXT turn still
+runs as the previous agent ("I'm a planning agent…" after switching to
+vibe, zero write tools, clean porcelain). Schema-accepted ≠ functional, in
+its purest form yet: two independent accept-paths, neither rebinds. Setting
+a mode BEFORE the first prompt works (all 2.10.0 runs + these).
+
+**2. The functional per-turn switch is `_meta.kiro.modeId` on
+`session/prompt`.** plan turn (`modeId:"plan"`) → clean workspace; next
+turn (`modeId:"vibe"`, "implement the plan you just made" — bug never
+restated) → Replace-in-File + verify-run permissions, `M calc.py`,
+`return a + b`. Mode is effectively a PER-TURN property; the conversation
+context carries across the switch. This matches the 2.7.1 semantic-review
+probe's meta placement (session/new) — the meta is honored wherever the
+turn starts.
+
+**3. Client-injected custom agents register only via `_meta.kiro.customAgents`
+on `session/new`.** The audit's "newSession.customAgents parameter" as a
+TOP-LEVEL param is silently ignored (no error, agent absent from the mode
+list); nested under `_meta.kiro` the agent appears in the mode select
+(`impl-probe` alongside the built-ins). Composition plan→custom-agent via
+per-turn `modeId` is the one leg not yet end-to-end verified (the first
+attempt used the cosmetic setter).
+
+**4. A plan session does NOT offer a structured transition into
+implementation.** Across six captured plan sessions: zero `_kiro/userInput`
+requests, no mode-change proposal on the wire, no auto-transition — the
+plan agent ends in PLAIN CHAT ("Does this plan look good…? Once confirmed,
+switch out of Plan mode to execute it."). Contrast quick-spec, which gates
+plan approval through a structured `_kiro/userInput` — and still ends
+without implementing. The transition is entirely the client's job.
+
+**cyril implication:** a "plan → implement" affordance is cyril's to build:
+detect turn_end in a plan-mode session, offer the switch in the UI, and send
+the next prompt with `_meta.kiro.modeId` (built-in or custom agent). Do NOT
+rely on `set_config_option`/`set_mode` mid-session — they lie.
+
+**Bug-class note for probe authors:** the first handoff probe's oracle
+matched `"a + b"`, which appears verbatim in the buggy fixture's own
+comment — a false positive that briefly inverted the finding. Oracle
+strings must not occur in fixtures; `git status --porcelain` caught it.
