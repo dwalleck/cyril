@@ -71,3 +71,36 @@ python3 experiments/conductor-spike/probe-kas-modes-2.10.0.py
 ```
 
 Prior art: `docs/kiro-2.7.1-wire-audit.md` (KAS landing audit; "Settings / modes not exercised" list this closes), `docs/kiro-2.10.0-wire-audit.md` (KAS byte-frozen proof), `docs/kiro-kas-acp-covenant.md` (`_kiro/*` type contract). Methodology: `reference_kiro_wire_audit_methodology`.
+
+## Addendum (2026-07-05): plan mode × subagents, re-probed on 2.11.0 (@kiro/agent 0.8.0)
+
+The 2.10.0 runs above only exercised **direct** tools in plan mode; whether a
+plan session could route writes through a *subagent* was untested. Probe:
+`experiments/conductor-spike/probe-kas-plan-subagent-2.11.0.py`, dumps in
+`kas-plan-subagent-dumps/` (A/B/C: plan+delegate, vibe+delegate control,
+plan+direct baseline; oracle = git porcelain, `subagentOrchestration: true`
+in the handshake).
+
+**Result: no hole — plan's read-only binds the subagent layer structurally.**
+
+- **plan + "spawn a subagent and have IT edit calc.py"**: zero
+  `agent-subtask` tool_calls, zero permissions, workspace byte-identical.
+  The agent's own explanation names the mechanism: in plan mode the subagent
+  roster is scoped to read-only agents (`semantic_reviewer`,
+  `context-gatherer`) — the write-capable `general-task-execution` subagent
+  is not registered at all. Enforcement is roster-scoping, not a runtime
+  veto.
+- **vibe control (identical prompt, identical caps)**: 4 subtask calls
+  (`Sub-agent: general-task-execution` + its Replace/Read/Run children),
+  2 permissions, `M calc.py` — proving the harness can produce a writing
+  subagent when the mode allows, so the plan null is attributable to the
+  mode.
+- **plan + direct fix (0.8.0 re-baseline)**: read-only still enforced
+  (1 read tool, no writes, clean porcelain) — the 2.10.0 §plan result holds
+  across the 0.3.299→0.8.0 renumber, and the advertised mode list is
+  unchanged (same 7 values incl. `semantic_reviewer`).
+
+cyril implication: `mode=plan` can be treated as a genuine write-barrier in
+UI affordances (e.g. a future plan-mode indicator) — subject to the standing
+caveat that `autonomous` mode and `spec/runAllTasks` execution remain
+unexercised.
