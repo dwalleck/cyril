@@ -386,6 +386,114 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&f).unwrap(), "héllo\n世界\n");
     }
 
+    #[test]
+    fn write_atomic_directory_target_refused_inert() {
+        // C7 fence (cyril-0v42, probe S19): a directory target gets the
+        // DISTINCT "directory" error and the directory survives. Fails under
+        // an impl that renames over the dir or reports a generic io error.
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("subdir");
+        std::fs::create_dir(&target).unwrap();
+        let err = write_atomic(&target, "NEW").expect_err("directory target must be refused");
+        assert!(
+            err.to_string().contains("directory"),
+            "error must name the directory refusal, got: {err}"
+        );
+        assert!(target.is_dir(), "directory must survive the refused write");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_atomic_dangling_symlink_refused_inert() {
+        // C7 fence (cyril-0v42, probe S16): a dangling symlink is refused with
+        // the DISTINCT "dangling" error; the link survives and the missing
+        // destination is NOT created. Today's tokio::fs::write is the named
+        // buggy impl: it creates the destination through the link.
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("nowhere.txt");
+        let link = dir.path().join("link.txt");
+        std::os::unix::fs::symlink(&dest, &link).unwrap();
+        let err = write_atomic(&link, "NEW").expect_err("dangling symlink must be refused");
+        assert!(
+            err.to_string().contains("dangling"),
+            "error must name the dangling-symlink refusal, got: {err}"
+        );
+        assert!(
+            std::fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "link must survive"
+        );
+        assert!(!dest.exists(), "destination must NOT be silently created");
+    }
+
+    #[test]
+    fn write_atomic_readonly_target_refused_inert() {
+        // C8 fence (cyril-0v42, probe S17): rename needs only dir-write, so a
+        // temp+persist impl WITHOUT the readonly gate silently replaces a
+        // read-only file (the probed fixed2 shape did exactly that). The gate
+        // must refuse with the DISTINCT "read-only" error and touch nothing.
+        // Cross-platform: readonly() is mode-bits on unix, the readonly
+        // attribute on Windows.
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("locked.txt");
+        std::fs::write(&f, "OLD").unwrap();
+        let original = std::fs::metadata(&f).unwrap().permissions();
+        let mut locked = original.clone();
+        locked.set_readonly(true);
+        std::fs::set_permissions(&f, locked).unwrap();
+        let err = write_atomic(&f, "NEW").expect_err("read-only target must be refused");
+        assert!(
+            err.to_string().contains("read-only"),
+            "error must name the read-only refusal, got: {err}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&f).unwrap(),
+            "OLD",
+            "content must be untouched"
+        );
+        assert!(
+            std::fs::metadata(&f).unwrap().permissions().readonly(),
+            "readonly bit must be untouched"
+        );
+        // Teardown: restore the EXACT original permissions (not
+        // set_readonly(false), which on unix would make the file
+        // world-writable — clippy::permissions_set_readonly_false) so tempdir
+        // cleanup can delete it on Windows, where a readonly file blocks unlink.
+        std::fs::set_permissions(&f, original).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_atomic_unwritable_parent_errs_target_intact() {
+        // C1 + C6 + C7 fence (cyril-0v42, probe S20): with an r-x parent the
+        // write must FAIL — no in-place fallback (D3) — leaving the existing
+        // target byte-identical, and the error must name temp creation in the
+        // parent. The message assert is C6's deterministic fence: an impl that
+        // places the temp in $TMPDIR (writable) would fail later at persist
+        // with a different message (probe S9 proved that boundary bites).
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        let parent = dir.path().join("locked-dir");
+        std::fs::create_dir(&parent).unwrap();
+        let f = parent.join("f.txt");
+        std::fs::write(&f, "OLD").unwrap();
+        std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o555)).unwrap();
+        let err = write_atomic(&f, "NEW").expect_err("unwritable parent must fail the write");
+        // Teardown before asserts that could panic: restore so tempdir cleanup works.
+        std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(
+            err.to_string().contains("create temp file in"),
+            "error must name temp creation in the parent (C6), got: {err}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&f).unwrap(),
+            "OLD",
+            "target must be byte-identical after the failed write (C1)"
+        );
+    }
+
     #[tokio::test]
     async fn relative_path_rejected_with_absolute_error() {
         // Claim C10: a non-absolute path is rejected with the DISTINCT "must be
