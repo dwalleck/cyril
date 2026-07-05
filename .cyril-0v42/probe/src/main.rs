@@ -63,6 +63,94 @@ fn fixed_atomic(target: &Path, content: &[u8]) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Design-refined shape (falsifiable-design C-mechanics): CROSS-PLATFORM —
+/// no /proc umask read, no unix PermissionsExt in the write path. A fresh
+/// target is claimed with create_new (inherits umask mode via the same
+/// open(2) path today's tokio::fs::write uses); the target's opaque
+/// std::fs::Permissions is cloned onto the temp before persist. A dangling
+/// symlink falls out as Err at the metadata() step (create_new on a symlink
+/// is EEXIST even when dangling; metadata() then follows the link and fails).
+fn fixed2_atomic(target: &Path, content: &[u8]) -> std::io::Result<()> {
+    let canonical = match std::fs::canonicalize(target) {
+        Ok(p) => p,
+        Err(_) => {
+            let parent = target.parent().expect("has parent");
+            std::fs::create_dir_all(parent)?;
+            std::fs::canonicalize(parent)?.join(target.file_name().expect("has file name"))
+        }
+    };
+    match std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&canonical)
+    {
+        Ok(_) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
+        Err(e) => return Err(e),
+    }
+    let perms = std::fs::metadata(&canonical)?.permissions();
+    let dir = canonical.parent().expect("canonical parent");
+    let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
+    tmp.write_all(content)?;
+    tmp.as_file().sync_all()?;
+    tmp.as_file().set_permissions(perms)?;
+    tmp.persist(&canonical)?;
+    Ok(())
+}
+
+/// FINAL design shape (fixed3): like fixed2 but (a) fresh targets get their
+/// umask mode via tempfile::Builder::permissions(0o666) at temp creation —
+/// no create_new, so a failed write can never litter an empty target; (b) a
+/// read-only target is REFUSED (matches today's EACCES protection, which
+/// S17 showed rename would silently bypass); (c) directory targets and
+/// dangling symlinks get distinct errors before any temp work.
+fn fixed3_atomic(target: &Path, content: &[u8]) -> std::io::Result<()> {
+    use std::io::{Error, ErrorKind};
+    let canonical = match std::fs::canonicalize(target) {
+        Ok(p) => p,
+        Err(_) => {
+            let parent = target.parent().expect("has parent");
+            std::fs::create_dir_all(parent)?;
+            std::fs::canonicalize(parent)?.join(target.file_name().expect("has file name"))
+        }
+    };
+    let existing = match std::fs::metadata(&canonical) {
+        Ok(m) if m.is_dir() => {
+            return Err(Error::new(ErrorKind::Other, "target is a directory"));
+        }
+        Ok(m) if m.permissions().readonly() => {
+            return Err(Error::new(
+                ErrorKind::PermissionDenied,
+                "target is read-only",
+            ));
+        }
+        Ok(m) => Some(m.permissions()),
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            if std::fs::symlink_metadata(&canonical).is_ok() {
+                return Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    "target is a dangling symlink",
+                ));
+            }
+            None
+        }
+        Err(e) => return Err(e),
+    };
+    let dir = canonical.parent().expect("canonical parent");
+    let mut builder = tempfile::Builder::new();
+    if existing.is_none() {
+        builder.permissions(std::fs::Permissions::from_mode(0o666));
+    }
+    let mut tmp = builder.tempfile_in(dir)?;
+    tmp.write_all(content)?;
+    tmp.as_file().sync_all()?;
+    if let Some(perms) = existing {
+        tmp.as_file().set_permissions(perms)?;
+    }
+    tmp.persist(&canonical)?;
+    Ok(())
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -115,6 +203,16 @@ async fn main() {
             let mb: usize = args[3].parse().expect("mb");
             fixed_atomic(&target, &vec![b'N'; mb << 20]).expect("fixed_atomic");
         }
+        // Prints Ok/Err instead of panicking: the dangling-symlink scenario
+        // EXPECTS an Err and must be observable, not a crash.
+        "fixed2-atomic" => println!(
+            "fixed2: {:?}",
+            fixed2_atomic(&target, b"NEW-CONTENT-FROM-PROBE\n")
+        ),
+        "fixed3-atomic" => println!(
+            "fixed3: {:?}",
+            fixed3_atomic(&target, b"NEW-CONTENT-FROM-PROBE\n")
+        ),
         // What does canonicalize say about a missing file vs a dangling link?
         "canon" => println!("canon: {:?}", std::fs::canonicalize(&target)),
         other => panic!("unknown probe {other}"),

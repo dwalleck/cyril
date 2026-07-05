@@ -71,6 +71,21 @@ same-directory atomicity guarantees when they don't.
 6. `tempfile` is currently `[dev-dependencies]`-only in cyril-core — must be
    promoted (optional dep tied to the `kas` feature) for production use.
 
+## Design-stage addendum (falsifiable-design)
+
+The design refined the probe's v1 shape twice, each falsified by mechanics:
+v1 (`/proc/self/status` umask) is Linux-only (macOS CI leg has no /proc);
+v2 (`create_new` claims fresh targets) litters an empty target file on
+ENOSPC-after-claim. **v3 (final)**: `tempfile::Builder::permissions(0o666)`
+— umask applies inside `open(2)` regardless of caller, verified by tempfile
+3.27.0's own docs and probe S15. New scenarios S13-S20 validate the full
+final shape including three NEW behavior gates the input-shape enumeration
+surfaced: read-only targets are refused (S17 — naive rename silently
+bypasses 0444 protection!), directory targets and dangling symlinks get
+distinct errors (S16/S19), unwritable parent leaves the target intact
+(S20), and TMPDIR cannot affect placement (S18). **Final oracle: 42 pass,
+0 fail.**
+
 ## Hard-gate checklist
 
 - [x] Probe written, runs against the workspace-locked tempfile version and

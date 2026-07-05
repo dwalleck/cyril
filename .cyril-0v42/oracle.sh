@@ -145,6 +145,66 @@ fi
 leftover=$(find "$WORK" -maxdepth 1 -name '.tmp*' -o -maxdepth 1 -name 'tmp*' | wc -l)
 echo "  note: $leftover leftover temp file(s) after SIGKILL (Drop cleanup cannot run on kill -9)"
 
+echo "══ S13: fixed3-atomic (design shape) over 0755 — mode preserved, content new"
+t="$WORK/s13.txt"; printf 'OLD\n' > "$t"; chmod 755 "$t"
+"$PROBE" fixed3-atomic "$t" > "$WORK/s13.out"
+check "S13 mode preserved" "$(stat -c %a "$t")" "755"
+check "S13 content replaced" "$(sha256sum < "$t" | cut -d' ' -f1)" "$NEW_SHA"
+
+echo "══ S14: fixed3-atomic through a symlink — link preserved, destination written"
+dest="$WORK/s14-dest.txt"; link="$WORK/s14-link.txt"
+printf 'OLD\n' > "$dest"; ln -s "$dest" "$link"
+"$PROBE" fixed3-atomic "$link" > "$WORK/s14.out"
+[ -L "$link" ] && ok "S14 symlink still a symlink" || bad "S14 symlink replaced"
+check "S14 destination received content" "$(sha256sum < "$dest" | cut -d' ' -f1)" "$NEW_SHA"
+
+echo "══ S15: fixed3-atomic fresh file in missing parents — umask mode WITHOUT /proc read"
+t="$WORK/s15/a/b/fresh.txt"
+"$PROBE" fixed3-atomic "$t" > "$WORK/s15.out"
+want_mode=$(printf '%o' $(( 0666 & ~0$(umask) )))
+check "S15 fresh-file mode is umask-derived (via create_new)" "$(stat -c %a "$t")" "$want_mode"
+check "S15 content written" "$(sha256sum < "$t" | cut -d' ' -f1)" "$NEW_SHA"
+
+echo "══ S16: fixed3-atomic on a DANGLING symlink — Err, link intact, destination NOT created"
+ln -s "$WORK/s16-nowhere" "$WORK/s16-link"
+"$PROBE" fixed3-atomic "$WORK/s16-link" > "$WORK/s16.out"
+grep -q 'fixed3: Err' "$WORK/s16.out" && ok "S16 dangling symlink write errored" || bad "S16 dangling symlink write did not error: $(cat "$WORK/s16.out")"
+[ -L "$WORK/s16-link" ] && ok "S16 link still present" || bad "S16 link gone"
+[ ! -e "$WORK/s16-nowhere" ] && ok "S16 destination NOT silently created" || bad "S16 destination was created"
+
+echo "══ S17: fixed3-atomic on 0444 read-only target — REFUSED, content untouched"
+# fixed2 probing showed temp+rename silently bypasses read-only protection
+# (rename needs only dir write). fixed3 adds the readonly() gate to match
+# today's EACCES behavior: refuse and leave the file alone.
+t="$WORK/s17.txt"; printf 'OLD\n' > "$t"; chmod 444 "$t"
+"$PROBE" current-write "$t" > "$WORK/s17-current.out" 2>&1 || true
+grep -q 'panicked\|denied' "$WORK/s17-current.out" && echo "  current-write on 0444: EACCES (in-place needs file write perm)"
+"$PROBE" fixed3-atomic "$t" > "$WORK/s17.out"
+grep -q 'fixed3: Err.*read-only' "$WORK/s17.out" && ok "S17 read-only target refused" || bad "S17 not refused: $(grep fixed3 "$WORK/s17.out")"
+check "S17 content untouched" "$(cat "$t")" "OLD"
+check "S17 mode untouched" "$(stat -c %a "$t")" "444"
+
+echo "══ S18: fixed3-atomic with TMPDIR on a DIFFERENT filesystem — must still succeed"
+# A TMPDIR-honoring implementation would EXDEV here (S9 proved the boundary
+# is real); temp-in-target-parent is immune to TMPDIR entirely.
+t="$WORK/s18.txt"; printf 'OLD\n' > "$t"
+TMPDIR=/tmp "$PROBE" fixed3-atomic "$t" > "$WORK/s18.out"
+grep -q 'fixed3: Ok' "$WORK/s18.out" && ok "S18 write succeeded despite cross-fs TMPDIR" || bad "S18 failed: $(grep fixed3 "$WORK/s18.out")"
+check "S18 content replaced" "$(sha256sum < "$t" | cut -d' ' -f1)" "$NEW_SHA"
+
+echo "══ S19: fixed3-atomic on a DIRECTORY target — distinct Err, dir intact"
+mkdir -p "$WORK/s19-dir"
+"$PROBE" fixed3-atomic "$WORK/s19-dir" > "$WORK/s19.out"
+grep -q 'fixed3: Err.*directory' "$WORK/s19.out" && ok "S19 directory target refused with distinct error" || bad "S19: $(grep fixed3 "$WORK/s19.out")"
+[ -d "$WORK/s19-dir" ] && ok "S19 directory still present" || bad "S19 directory gone"
+
+echo "══ S20: fixed3-atomic with UNWRITABLE parent dir — Err, existing target intact"
+mkdir -p "$WORK/s20-dir"; t="$WORK/s20-dir/f.txt"; printf 'OLD\n' > "$t"; chmod 666 "$t"; chmod 555 "$WORK/s20-dir"
+"$PROBE" fixed3-atomic "$t" > "$WORK/s20.out"
+grep -q 'fixed3: Err' "$WORK/s20.out" && ok "S20 unwritable parent errors (no in-place fallback)" || bad "S20: $(grep fixed3 "$WORK/s20.out")"
+check "S20 target content intact" "$(cat "$t")" "OLD"
+chmod 755 "$WORK/s20-dir"
+
 echo
 echo "════ ORACLE SUMMARY: $PASS pass, $FAIL fail (work dir kept at $WORK)"
 exit $(( FAIL > 0 ))
