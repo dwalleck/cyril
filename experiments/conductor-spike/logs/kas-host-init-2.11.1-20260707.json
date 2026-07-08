@@ -1,0 +1,66 @@
+{
+ "agentCapabilities": {
+  "_meta": {
+   "kiro": {
+    "checkpoints": true,
+    "extensionMethods": [
+     "_kiro/knowledge",
+     "_kiro/codeIntelligence",
+     "_kiro/session/context",
+     "_kiro/session/compact",
+     "_kiro/session/export",
+     "_kiro/session/history"
+    ],
+    "logging": {
+     "channels": [
+      {
+       "filePath": "/home/dwalleck/.kiro/logs/TSTAMP/kiro.log",
+       "name": "kiro"
+      },
+      {
+       "filePath": "/home/dwalleck/.kiro/logs/TSTAMP/mcp.log",
+       "name": "mcp"
+      },
+      {
+       "filePath": "/home/dwalleck/.kiro/logs/TSTAMP/powers.log",
+       "name": "powers"
+      }
+     ],
+     "logDir": "/home/dwalleck/.kiro/logs/TSTAMP"
+    },
+    "policyNotifications": true,
+    "sessionList": true
+   }
+  },
+  "loadSession": true,
+  "mcpCapabilities": {
+   "http": true,
+   "sse": true
+  },
+  "promptCapabilities": {
+   "embeddedContext": true,
+   "image": true
+  },
+  "sessionCapabilities": {
+   "fork": {
+    "_meta": {
+     "kiro": {
+      "messageId": true
+     }
+    }
+   },
+   "list": {}
+  }
+ },
+ "authMethods": [
+  {
+   "id": "aws-builder-id",
+   "name": "AWS Builder ID"
+  },
+  {
+   "id": "aws-iam-identity-center",
+   "name": "AWS IAM Identity Center"
+  }
+ ],
+ "protocolVersion": 1
+}
