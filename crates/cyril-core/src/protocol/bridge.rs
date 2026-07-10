@@ -309,6 +309,21 @@ async fn notify_or_closed(
     tx.send(notification.into()).await.is_err()
 }
 
+/// Log and surface an engine-fingerprint contradiction (cyril-6iek) as the
+/// fail-stop `BridgeDisconnected`. Shared by the three verification points
+/// (initialize, session/new, session/load) so their behavior cannot drift;
+/// the caller owns the control flow (return from the handshake, break from
+/// the command loop) — the stop happens either way, so the channel-closed
+/// bool is irrelevant here.
+async fn notify_fingerprint_stop(
+    tx: &mpsc::Sender<RoutedNotification>,
+    at: &'static str,
+    reason: String,
+) {
+    tracing::error!(%reason, at, "engine fingerprint mismatch");
+    notify_or_closed(tx, Notification::BridgeDisconnected { reason }).await;
+}
+
 /// Forward everything queued on the internal channel to the App, dropping
 /// `TurnCompleted`s (cyril-l7tw). Called only from the death paths, where no
 /// turn is in flight (idle death) or the turn's terminal marker was already
@@ -629,12 +644,7 @@ async fn run_loop(
         &init_response,
         cfg!(feature = "kas"),
     ) {
-        tracing::error!(%reason, "engine fingerprint mismatch at initialize");
-        notify_or_closed(
-            &channels.notification_tx,
-            Notification::BridgeDisconnected { reason },
-        )
-        .await;
+        notify_fingerprint_stop(&channels.notification_tx, "initialize", reason).await;
         return Ok(());
     }
 
@@ -698,10 +708,10 @@ async fn run_loop(
                             &response.session_id.to_string(),
                             cfg!(feature = "kas"),
                         ) {
-                            tracing::error!(%reason, "engine fingerprint mismatch at session/new");
-                            notify_or_closed(
+                            notify_fingerprint_stop(
                                 &channels.notification_tx,
-                                Notification::BridgeDisconnected { reason },
+                                "session/new",
+                                reason,
                             )
                             .await;
                             break;
@@ -931,12 +941,8 @@ async fn run_loop(
                     session_id.as_str(),
                     cfg!(feature = "kas"),
                 ) {
-                    tracing::error!(%reason, "engine fingerprint mismatch at session/load");
-                    notify_or_closed(
-                        &channels.notification_tx,
-                        Notification::BridgeDisconnected { reason },
-                    )
-                    .await;
+                    notify_fingerprint_stop(&channels.notification_tx, "session/load", reason)
+                        .await;
                     break;
                 }
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
