@@ -1,6 +1,9 @@
 # cyril-6iek — Falsifiable design: engine-identity fingerprinting at handshake
 
-Status: DRAFT — pending user approval at the ship hard pause.
+Status: **APPROVED 2026-07-09** (ship hard pause). Decisions: v3 alias in both
+FromStr and serde (D7 reversal approved); mismatch policy = fail-stop
+(`BridgeDisconnected`); session-id second layer (C7/C8) included; C1/C2's
+long-term fence = per-release wire audit (explicitly accepted).
 Basis: `.cyril-6iek/findings.md` (probe + oracle agree on every discriminator).
 
 ## Purpose
