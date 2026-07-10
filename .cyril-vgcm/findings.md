@@ -19,10 +19,10 @@ acceptance is undetermined (untestable statically for the same reason) — the
 runtime -32601 gate already in bridge.rs remains the correct guard for older
 binaries.
 
-**F2 — v2 renamed ALL steering echoes at 2.9.0; cyril has been dropping them
-since.** The serde rename-table pooled string (`steering_queuedsteering_consumed…`)
-is present in the 2.8.1 binary, gone in 2.9.0. Live v2 2.12.0 emits (verbatim,
-`_kiro.dev/session/update` envelope):
+**F2 — v2 steering echoes were renamed by a BACKEND rollout between 2026-06-17
+and 2026-07-09; cyril drops them since.** (CORRECTED — the first draft dated
+this "binary 2.9.0" from the strings rename table; see F8.) Live v2 2.12.0
+emits (verbatim, `_kiro.dev/session/update` envelope):
 
 - `AgentExecutionUserMessageQueued` `{messageId, content}` (was `steering_queued` `{message}`)
 - `AgentExecutionSteeringInjected` `{messageId, content}` (was `steering_consumed` `{content}`)
@@ -76,6 +76,22 @@ pause decision).
 | clear resp | `{cleared:true}` (no ids) | `{cleared:true, messageIds:[…]}` |
 | clear on empty | `{cleared:true}` | `{cleared:true, messageIds:[]}`, **no broadcast** |
 | clear unknown session | (not probed on 2.12.0) | -32603 w/ details (7/02 probe) |
+
+**F8 — the rename is a backend rollout, not a binary change (wire = binary ×
+backend, again).** Two same-axis captures pin it: (a) the committed K1b wire
+log (`.k1b-steering/idle-steer-wire-capture.log`, 2026-06-17, binary 2.8.0,
+idle steer) shows the OLD family live: `steering_queued {message}` — no
+messageId. (b) Today (2026-07-09), the ARCHIVED 2.7.0 binary's idle steer
+emits the NEW family (`AgentExecutionUserMessageQueued {messageId, content}`).
+Same binary generation, different wire → backend axis moved. The strings
+rename-table dating (2.8.1→present, 2.9.0→absent) was a red herring for the
+wire — the binary literal families coexist in all versions. Consequences: the
+old family was live THREE WEEKS AGO, so the converter must handle BOTH
+families (staged/revertible rollouts); and `_session/steer/clear` is accepted
+by v2 today back to at least the archived 2.7.0 binary (probed idle: 2.7.0,
+2.8.1, 2.10.0, 2.11.0 all return `{cleared:true}` on the current backend), so
+the "-32601 clear on working-steer session" case (F5) is a robustness path,
+not a live population.
 
 ## Oracles and agreement
 
