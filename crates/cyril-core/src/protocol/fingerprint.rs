@@ -60,6 +60,32 @@ pub(crate) fn init_mismatch(
     }
 }
 
+/// Compare the bound engine against a session id's shape — the second
+/// fingerprint layer (cyril-6iek C7/C8), checked on the id entering the
+/// bridge's session registry: agent-minted at `session/new`, caller-supplied
+/// at `session/load`. KAS ids are `sess_`-prefixed; v2 ids are bare UUIDs.
+/// This is the only guard that fires if a future release moves the `_meta`
+/// advertisement while id shapes stay stable.
+pub(crate) fn session_id_mismatch(
+    bound: AgentEngine,
+    session_id: &str,
+    kas_available: bool,
+) -> Option<String> {
+    match (bound, session_id.starts_with("sess_")) {
+        (AgentEngine::V2, true) => Some(mismatch_reason(
+            bound,
+            "the session id is `sess_`-prefixed (a KAS signature)",
+            kas_available,
+        )),
+        (AgentEngine::Kas, false) => Some(mismatch_reason(
+            bound,
+            "the session id lacks the `sess_` prefix (a v2 signature)",
+            kas_available,
+        )),
+        _ => None,
+    }
+}
+
 /// The remedy message for a fingerprint contradiction. The `Kas`-bound arm
 /// ignores `kas_available` — a Kas binding implies the feature is compiled in
 /// (`engine_for` refuses it otherwise), so the only remedy is re-selection.
@@ -179,6 +205,44 @@ mod tests {
     #[test]
     fn kas_bound_on_kas_wire_proceeds() {
         assert_eq!(init_mismatch(AgentEngine::Kas, &kas_shaped(), true), None);
+    }
+
+    // C7/C8 fn-level: id shapes (verbatim from the committed traces) fingerprint
+    // both directions.
+    #[test]
+    fn session_id_shapes_fingerprint_both_directions() {
+        let kas_id = "sess_001d7a4c-d0e6-4966-a791-d470aa29d598";
+        let v2_id = "786acc7e-e731-4bd1-84c9-fca7cd6b2bfc";
+        let reason = session_id_mismatch(AgentEngine::V2, kas_id, false)
+            .expect("sess_ id under V2 binding is a contradiction");
+        assert!(
+            reason.contains("session id"),
+            "names the evidence: {reason}"
+        );
+        assert_eq!(session_id_mismatch(AgentEngine::V2, v2_id, false), None);
+        assert_eq!(session_id_mismatch(AgentEngine::Kas, kas_id, true), None);
+        assert!(
+            session_id_mismatch(AgentEngine::Kas, v2_id, true).is_some(),
+            "bare id under Kas binding is a contradiction"
+        );
+    }
+
+    // Stress fixtures: the prefix is anchored (`starts_with`, not `contains`),
+    // the bare prefix alone counts, and an empty id is v2-shaped (contradiction
+    // under Kas — a malformed id should be loud — none under V2).
+    #[test]
+    fn session_id_prefix_is_anchored_and_exact() {
+        assert_eq!(
+            session_id_mismatch(AgentEngine::V2, "xsess_abc", false),
+            None,
+            "`sess_` mid-string is not KAS evidence"
+        );
+        assert!(
+            session_id_mismatch(AgentEngine::V2, "sess_", false).is_some(),
+            "the bare prefix is KAS-shaped"
+        );
+        assert!(session_id_mismatch(AgentEngine::Kas, "", true).is_some());
+        assert_eq!(session_id_mismatch(AgentEngine::V2, "", false), None);
     }
 
     // C9: the remedy is keyed to the build — a default build points at the
