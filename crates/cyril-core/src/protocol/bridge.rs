@@ -309,6 +309,21 @@ async fn notify_or_closed(
     tx.send(notification.into()).await.is_err()
 }
 
+/// Log and surface an engine-fingerprint contradiction (cyril-6iek) as the
+/// fail-stop `BridgeDisconnected`. Shared by the three verification points
+/// (initialize, session/new, session/load) so their behavior cannot drift;
+/// the caller owns the control flow (return from the handshake, break from
+/// the command loop) — the stop happens either way, so the channel-closed
+/// bool is irrelevant here.
+async fn notify_fingerprint_stop(
+    tx: &mpsc::Sender<RoutedNotification>,
+    at: &'static str,
+    reason: String,
+) {
+    tracing::error!(%reason, at, "engine fingerprint mismatch");
+    notify_or_closed(tx, Notification::BridgeDisconnected { reason }).await;
+}
+
 /// Forward everything queued on the internal channel to the App, dropping
 /// `TurnCompleted`s (cyril-l7tw). Called only from the death paths, where no
 /// turn is in flight (idle death) or the turn's terminal marker was already
@@ -610,12 +625,28 @@ async fn run_loop(
         .client_info(acp::Implementation::new("cyril", env!("CARGO_PKG_VERSION")))
         .client_capabilities(engine.client_capabilities());
 
-    let _init_response: acp::InitializeResponse =
+    let init_response: acp::InitializeResponse =
         conn.initialize(init_request).await.map_err(|e| {
             crate::Error::from_kind(crate::ErrorKind::Protocol {
                 message: format!("ACP initialization failed: {e}"),
             })
         })?;
+
+    // cyril-6iek: verify the wire's engine signature against the bound engine
+    // BEFORE any session exists — an unverified mismatch surfaces only as
+    // cryptic mid-turn errors that never mention the engine (the F4 baseline
+    // in .cyril-6iek/findings.md). Verification only, never selection: the
+    // engine is not rebound (ADR-0001); fail-stop mirrors the engine gate
+    // above. Compiled in every build — the default build meeting a KAS wire
+    // is exactly the case that needs the diagnostic (ADR-0002's asymmetry).
+    if let Some(reason) = crate::protocol::fingerprint::init_mismatch(
+        engine.kind(),
+        &init_response,
+        cfg!(feature = "kas"),
+    ) {
+        notify_fingerprint_stop(&channels.notification_tx, "initialize", reason).await;
+        return Ok(());
+    }
 
     tracing::info!("ACP bridge initialized");
 
@@ -667,6 +698,24 @@ async fn run_loop(
                     .await
                 {
                     Ok(response) => {
+                        // cyril-6iek second fingerprint layer: the agent-minted
+                        // id's shape must match the bound engine — the only
+                        // guard that fires if the `_meta` advertisement moves
+                        // while id shapes stay stable. Fail-stop, mirroring the
+                        // initialize check above.
+                        if let Some(reason) = crate::protocol::fingerprint::session_id_mismatch(
+                            engine.kind(),
+                            &response.session_id.to_string(),
+                            cfg!(feature = "kas"),
+                        ) {
+                            notify_fingerprint_stop(
+                                &channels.notification_tx,
+                                "session/new",
+                                reason,
+                            )
+                            .await;
+                            break;
+                        }
                         active_session_id = Some(response.session_id.clone());
                         // A (re)entered session re-probes steering: drop any stale
                         // unsupported mark so it can't silently swallow steers.
@@ -883,6 +932,19 @@ async fn run_loop(
                 }
             }
             BridgeCommand::LoadSession { session_id } => {
+                // cyril-6iek second fingerprint layer, pre-flight: the
+                // caller-supplied id's shape must match the bound engine —
+                // a mixed-store load (e.g. a `sess_` KAS id under a v2
+                // binding) fails loud before it ever reaches the agent.
+                if let Some(reason) = crate::protocol::fingerprint::session_id_mismatch(
+                    engine.kind(),
+                    session_id.as_str(),
+                    cfg!(feature = "kas"),
+                ) {
+                    notify_fingerprint_stop(&channels.notification_tx, "session/load", reason)
+                        .await;
+                    break;
+                }
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 match conn
                     .load_session(acp::LoadSessionRequest::new(
@@ -1917,6 +1979,16 @@ mod tests {
 
     #[derive(Default)]
     struct Script {
+        /// The fake's wire personality (cyril-6iek): `Some(true)` = KAS-shaped
+        /// handshake (`_meta.kiro` on initialize, `sess_`-prefixed session ids),
+        /// `Some(false)` = v2-shaped. `None` = auto-match the harness engine, so
+        /// engine-parity tests never trip the fingerprint gate; mismatch tests
+        /// force the opposite personality.
+        wire_kas: Option<bool>,
+        /// Overrides `wire_kas` for the session-id shape only — the
+        /// evidence-drift fixture (cyril-6iek C7/C8): initialize passes the
+        /// fingerprint, then the minted id contradicts it.
+        sess_ids: Option<bool>,
         /// Method names the agent received, in order (e.g. "new_session", "prompt").
         received: Vec<String>,
         prompt_count: usize,
@@ -1967,7 +2039,16 @@ mod tests {
             &self,
             _a: acp::InitializeRequest,
         ) -> acp::Result<acp::InitializeResponse> {
-            Ok(acp::InitializeResponse::new(acp::ProtocolVersion::V1))
+            let mut response = acp::InitializeResponse::new(acp::ProtocolVersion::V1);
+            if self.script.borrow().wire_kas.unwrap_or(false) {
+                // The live KAS signature (cyril-6iek): a `kiro` object under
+                // `agentCapabilities._meta`, with sibling keys as on the wire.
+                response.agent_capabilities = serde_json::from_value(serde_json::json!({
+                    "_meta": { "kiro": { "checkpoints": true, "sessionList": true } }
+                }))
+                .expect("KAS-shaped agentCapabilities fixture");
+            }
+            Ok(response)
         }
         async fn authenticate(
             &self,
@@ -1979,12 +2060,21 @@ mod tests {
             &self,
             _a: acp::NewSessionRequest,
         ) -> acp::Result<acp::NewSessionResponse> {
-            self.script.borrow_mut().received.push("new_session".into());
+            let mint_sess_ids = {
+                let mut s = self.script.borrow_mut();
+                s.received.push("new_session".into());
+                s.sess_ids.or(s.wire_kas).unwrap_or(false)
+            };
             let n = self.next_session.get();
             self.next_session.set(n + 1);
-            Ok(acp::NewSessionResponse::new(acp::SessionId::new(format!(
-                "fake-{n}"
-            ))))
+            // KAS personality mints `sess_`-prefixed ids, matching the live wire
+            // (cyril-6iek fingerprint: v2 ids are bare).
+            let id = if mint_sess_ids {
+                format!("sess_fake-{n}")
+            } else {
+                format!("fake-{n}")
+            };
+            Ok(acp::NewSessionResponse::new(acp::SessionId::new(id)))
         }
         async fn prompt(&self, a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
             // Copy the flags out and DROP the borrow before any await — a RefCell
@@ -2174,6 +2264,15 @@ mod tests {
         Fut: std::future::Future<Output = ()>,
     {
         let gate = Rc::new(tokio::sync::Notify::new());
+        // Default the fake's wire personality to the bound engine (cyril-6iek)
+        // so engine-parity tests present a matching handshake; fingerprint
+        // tests override with `Some(..)` to force a mismatch.
+        {
+            let mut s = script.borrow_mut();
+            if s.wire_kas.is_none() {
+                s.wire_kas = Some(engine.kind() == AgentEngine::Kas);
+            }
+        }
         let local = tokio::task::LocalSet::new();
         local
             .run_until(async move {
@@ -2305,6 +2404,179 @@ mod tests {
                 return session_id;
             }
         }
+    }
+
+    // cyril-6iek C3 (bridge-level regression fence): a V2-bound loop meeting a
+    // KAS-signature initialize fails loud BEFORE any session exists — exactly
+    // one BridgeDisconnected naming the evidence, the detected engine, and the
+    // build-appropriate remedy (C9 wired) — and the command loop never runs.
+    // Stress: the fake's `_meta.kiro` object carries sibling keys like the live
+    // wire. The no-false-positive counterpart is every other harness test in
+    // this module (all run v2-shaped handshakes under the V2 binding).
+    #[tokio::test]
+    async fn fingerprint_stops_v2_bound_on_kas_wire() {
+        let script = Rc::new(RefCell::new(Script {
+            wire_kas: Some(true), // force the KAS wire under the default V2 binding
+            ..Script::default()
+        }));
+        let probe = script.clone();
+        with_harness(
+            script,
+            |_sender, mut rx, _perm, _gate, loop_handle| async move {
+                // The disconnect must be the FIRST notification — anything
+                // else before it is itself a bug (the loop must not have run).
+                let r = tokio::time::timeout(Duration::from_secs(5), rx.recv())
+                    .await
+                    .expect("disconnect within 5s")
+                    .expect("notification channel open");
+                let reason = match r.notification {
+                    Notification::BridgeDisconnected { reason } => reason,
+                    other => panic!("unexpected notification before disconnect: {other:?}"),
+                };
+                assert!(
+                    reason.contains("_meta.kiro"),
+                    "reason names the evidence: {reason}"
+                );
+                assert!(
+                    reason.contains("KAS"),
+                    "reason names the detected engine: {reason}"
+                );
+                #[cfg(not(feature = "kas"))]
+                assert!(
+                    reason.contains("--features kas"),
+                    "default build points at the rebuild: {reason}"
+                );
+                #[cfg(feature = "kas")]
+                assert!(
+                    reason.contains("--agent-engine kas"),
+                    "kas build points at the flag: {reason}"
+                );
+                loop_handle
+                    .await
+                    .expect("run_loop task joins")
+                    .expect("fingerprint stop is a clean return, not an error");
+                assert!(
+                    probe.borrow().received.is_empty(),
+                    "the command loop must never run after a fingerprint stop"
+                );
+            },
+        )
+        .await;
+    }
+
+    // cyril-6iek C7 (bridge-level, evidence-drift stress): initialize passes the
+    // fingerprint (v2-shaped) but session/new mints a `sess_` id — the second
+    // layer must stop the session from ever being announced. This is the case
+    // the initialize check alone cannot catch.
+    #[tokio::test]
+    async fn fingerprint_stops_on_sess_id_v2_bound() {
+        let script = Rc::new(RefCell::new(Script {
+            wire_kas: Some(false), // initialize looks v2 …
+            sess_ids: Some(true),  // … but the minted ids are KAS-shaped
+            ..Script::default()
+        }));
+        with_harness(
+            script,
+            |sender, mut rx, _perm, _gate, _loop_handle| async move {
+                sender
+                    .send(BridgeCommand::NewSession {
+                        cwd: std::env::temp_dir(),
+                    })
+                    .await
+                    .expect("send NewSession");
+                let n = recv_notif(&mut rx, 5)
+                    .await
+                    .expect("notification within 5s");
+                match n {
+                    Notification::BridgeDisconnected { reason } => {
+                        assert!(
+                            reason.contains("session id"),
+                            "reason names the id evidence: {reason}"
+                        );
+                    }
+                    Notification::SessionCreated { session_id, .. } => {
+                        panic!("session {session_id:?} announced despite a sess_-id contradiction")
+                    }
+                    other => panic!("unexpected notification: {other:?}"),
+                }
+            },
+        )
+        .await;
+    }
+
+    // cyril-6iek C7 (load path, pre-flight): a caller-supplied KAS-shaped id
+    // under the V2 binding is refused BEFORE the RPC — the agent never sees
+    // load_session.
+    #[tokio::test]
+    async fn fingerprint_stops_on_sess_id_load_v2_bound() {
+        let script = Rc::new(RefCell::new(Script::default()));
+        let probe = script.clone();
+        with_harness(
+            script,
+            |sender, mut rx, _perm, _gate, _loop_handle| async move {
+                sender
+                    .send(BridgeCommand::LoadSession {
+                        session_id: crate::types::SessionId::new("sess_0123-reloaded"),
+                    })
+                    .await
+                    .expect("send LoadSession");
+                let n = recv_notif(&mut rx, 5)
+                    .await
+                    .expect("notification within 5s");
+                match n {
+                    Notification::BridgeDisconnected { reason } => {
+                        assert!(
+                            reason.contains("session id"),
+                            "reason names the id evidence: {reason}"
+                        );
+                    }
+                    other => panic!("unexpected notification: {other:?}"),
+                }
+                assert!(
+                    probe.borrow().received.is_empty(),
+                    "pre-flight refusal: the agent must never receive the load"
+                );
+            },
+        )
+        .await;
+    }
+
+    // cyril-6iek C8 (bridge-level, kas lane): a Kas-bound loop whose agent
+    // passes the initialize fingerprint but mints bare (v2-shaped) ids is
+    // stopped by the second layer.
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn fingerprint_stops_kas_bound_on_uuid_id() {
+        let script = Rc::new(RefCell::new(Script {
+            wire_kas: Some(true),  // initialize looks KAS …
+            sess_ids: Some(false), // … but the minted ids are bare
+            ..Script::default()
+        }));
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine),
+            script,
+            |sender, mut rx, _perm, _gate, _loop_handle, _kill| async move {
+                sender
+                    .send(BridgeCommand::NewSession {
+                        cwd: std::env::temp_dir(),
+                    })
+                    .await
+                    .expect("send NewSession");
+                let n = recv_notif(&mut rx, 5)
+                    .await
+                    .expect("notification within 5s");
+                match n {
+                    Notification::BridgeDisconnected { reason } => {
+                        assert!(
+                            reason.contains("--agent-engine v2"),
+                            "reason names the v2 remedy: {reason}"
+                        );
+                    }
+                    other => panic!("unexpected notification: {other:?}"),
+                }
+            },
+        )
+        .await;
     }
 
     // cyril-l7tw design falsifier (cheapest, run at design time): dropping the

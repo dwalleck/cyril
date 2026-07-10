@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use agent_client_protocol as acp;
 
 use crate::protocol::convert;
-use crate::types::Notification;
+use crate::types::{AgentEngine, Notification};
 
 /// A Kiro agent engine — **v2** (Rust, `kiro.dev/*` dialect) or **KAS**
 /// (`_kiro/*`). The core surface is small (ADR-0001): convert the two wire
@@ -26,6 +26,11 @@ use crate::types::Notification;
 /// sub-traits arrive as defaulted `as_*` accessors with their first consumer
 /// (KAS-1, cyril-evwh) — not stubbed empty in KAS-0.
 pub(crate) trait Engine {
+    /// Which [`AgentEngine`] this impl embodies — the bound identity the
+    /// handshake fingerprint verifies the wire against (cyril-6iek,
+    /// `protocol::fingerprint`).
+    fn kind(&self) -> AgentEngine;
+
     /// Client capabilities advertised at the ACP `initialize` handshake.
     fn client_capabilities(&self) -> acp::ClientCapabilities;
 
@@ -53,6 +58,10 @@ pub(crate) trait Engine {
 pub(crate) struct V2Engine;
 
 impl Engine for V2Engine {
+    fn kind(&self) -> AgentEngine {
+        AgentEngine::V2
+    }
+
     fn client_capabilities(&self) -> acp::ClientCapabilities {
         acp::ClientCapabilities::new()
     }
@@ -93,6 +102,10 @@ pub(crate) struct KasEngine;
 
 #[cfg(feature = "kas")]
 impl Engine for KasEngine {
+    fn kind(&self) -> AgentEngine {
+        AgentEngine::Kas
+    }
+
     fn client_capabilities(&self) -> acp::ClientCapabilities {
         // KAS-5a (cyril-7bdu): advertise fs read+write; KAS-5b (cyril-ufie):
         // advertise terminal — so KAS routes file I/O and shell execution back to

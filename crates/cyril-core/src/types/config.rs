@@ -43,7 +43,8 @@ pub struct AgentConfig {
     /// Extra args for agent subprocess.
     pub extra_args: Vec<String>,
     /// Which Kiro engine to drive (KAS-0, ADR-0001). TOML `engine = "v2"` or
-    /// `"kas"`; the `--agent-engine` flag overrides this. Defaults to v2.
+    /// `"kas"` (`"v3"` is accepted as an alias for `"kas"`, cyril-6iek); the
+    /// `--agent-engine` flag overrides this. Defaults to v2.
     pub engine: AgentEngine,
     /// For the KAS engine: which spawn shape (KAS-1, cyril-evwh). TOML `kas_spawn
     /// = "free"` (default, zero-credential direct spawn) or `"wrapper"`

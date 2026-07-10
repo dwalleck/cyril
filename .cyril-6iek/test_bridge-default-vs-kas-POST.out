@@ -1,0 +1,18 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril-ui)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.97s
+     Running `target/debug/examples/test_bridge --agent-command /home/dwalleck/repos/cyril/.cyril-6iek/kas-wrapper.sh`
+=== Cyril v2 Bridge Test Harness ===
+
+Agent: /home/dwalleck/repos/cyril/.cyril-6iek/kas-wrapper.sh
+CWD: /home/dwalleck/repos/cyril
+
+[OK] Bridge spawned
+
+--- [1] Creating session ---
+[2m2026-07-10T03:28:37.453436Z[0m [31mERROR[0m [2mcyril_core::protocol::bridge[0m[2m:[0m engine fingerprint mismatch at initialize [3mreason[0m[2m=[0mengine mismatch: cyril is driving the v2 engine but the agent advertised `_meta.kiro` capabilities at initialize (a KAS signature); this build has no KAS support — rebuild with `--features kas` and run with `--agent-engine kas`, or spawn a v2 agent (`kiro-cli acp`)
+  [BridgeDisconnected] engine mismatch: cyril is driving the v2 engine but the agent advertised `_meta.kiro` capabilities at initialize (a KAS signature); this build has no KAS support — rebuild with `--features kas` and run with `--agent-engine kas`, or spawn a v2 agent (`kiro-cli acp`)
+
+[FAIL] No SessionCreated notification received
+
