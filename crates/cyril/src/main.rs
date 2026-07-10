@@ -28,8 +28,8 @@ struct Cli {
     )]
     agent_command: Vec<String>,
 
-    /// Which Kiro engine to drive: `v2` (default) or `kas`. Overrides
-    /// `[agent] engine` in config. KAS is not available until KAS-1.
+    /// Which Kiro engine to drive: `v2` (default) or `kas` (`v3` is accepted
+    /// as an alias for `kas`). Overrides `[agent] engine` in config.
     #[arg(long = "agent-engine")]
     agent_engine: Option<AgentEngine>,
 }

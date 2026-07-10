@@ -17,7 +17,10 @@ pub enum AgentEngine {
     V2,
     /// The TypeScript/LangGraph engine (`_kiro/*` dialect), reached via
     /// `kiro-cli acp --agent-engine <v3|kas>` (version-dependent flag, resolved
-    /// in KAS-1). Not wired in KAS-0.
+    /// in KAS-1). `v3` — kiro-cli's own name for this engine since 2.8.0 — is
+    /// accepted as an input alias (cyril-6iek); the canonical spelling stays
+    /// `kas` (serialization always emits `"kas"`).
+    #[serde(alias = "v3")]
     Kas,
 }
 
@@ -25,19 +28,20 @@ pub enum AgentEngine {
 /// bare `String`) so clap can use [`AgentEngine`]'s `FromStr` directly as a
 /// value parser.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("unknown engine {0:?} (expected `v2` or `kas`)")]
+#[error("unknown engine {0:?} (expected `v2`, `kas`, or `v3`)")]
 pub struct ParseAgentEngineError(pub String);
 
 impl std::str::FromStr for AgentEngine {
     type Err = ParseAgentEngineError;
 
-    /// Parse cyril's own `--agent-engine <v2|kas>` selector (case-insensitive).
-    /// This is cyril's vocabulary; the version-dependent kiro-cli flag (`kas`
-    /// vs `v3`) is resolved separately in KAS-1.
+    /// Parse cyril's own `--agent-engine <v2|kas|v3>` selector
+    /// (case-insensitive). `v3` is kiro-cli's flag vocabulary for the same
+    /// engine (its wrapper spawn takes `--agent-engine v3` since 2.8.0), so it
+    /// is accepted as an alias for [`AgentEngine::Kas`] (cyril-6iek).
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_ascii_lowercase().as_str() {
             "v2" => Ok(Self::V2),
-            "kas" => Ok(Self::Kas),
+            "kas" | "v3" => Ok(Self::Kas),
             other => Err(ParseAgentEngineError(other.to_string())),
         }
     }
@@ -57,14 +61,26 @@ mod tests {
 
     // Slice 5 (D7 parse table): FromStr maps cyril's selector values, is
     // case/whitespace-tolerant, and REJECTS the unknown rather than defaulting.
+    // cyril-6iek (design-pause decision) reversed D7's v3 rejection: v3 is
+    // kiro-cli's own flag vocabulary since 2.8.0, so it now aliases Kas.
     #[test]
     fn from_str_parses_known_and_rejects_unknown() {
         assert_eq!("v2".parse::<AgentEngine>(), Ok(AgentEngine::V2));
         assert_eq!("kas".parse::<AgentEngine>(), Ok(AgentEngine::Kas));
         assert_eq!(" KAS ".parse::<AgentEngine>(), Ok(AgentEngine::Kas));
+        assert_eq!(
+            "v3".parse::<AgentEngine>(),
+            Ok(AgentEngine::Kas),
+            "v3 is kiro-cli's name for the KAS engine — accepted as an alias"
+        );
+        assert_eq!(
+            " V3 ".parse::<AgentEngine>(),
+            Ok(AgentEngine::Kas),
+            "the alias goes through the same trim/lowercase normalization"
+        );
         assert!(
-            "v3".parse::<AgentEngine>().is_err(),
-            "v3 is the kiro-cli flag, not cyril's selector value"
+            "v3x".parse::<AgentEngine>().is_err(),
+            "the alias is an exact token, not a prefix"
         );
         assert!("".parse::<AgentEngine>().is_err());
         assert!("bogus".parse::<AgentEngine>().is_err());
@@ -72,11 +88,17 @@ mod tests {
 
     #[test]
     fn config_roundtrips_lowercase() {
-        // TOML `engine = "v2"` / `"kas"` (serde rename_all = lowercase).
+        // TOML `engine = "v2"` / `"kas"` (serde rename_all = lowercase);
+        // `"v3"` deserializes as an alias for Kas (cyril-6iek) but
+        // serialization always emits the canonical `"kas"`.
         assert_eq!(serde_json::to_string(&AgentEngine::Kas).unwrap(), "\"kas\"");
         assert_eq!(
             serde_json::from_str::<AgentEngine>("\"v2\"").unwrap(),
             AgentEngine::V2
+        );
+        assert_eq!(
+            serde_json::from_str::<AgentEngine>("\"v3\"").unwrap(),
+            AgentEngine::Kas
         );
     }
 }
