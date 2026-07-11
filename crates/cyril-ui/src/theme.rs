@@ -152,6 +152,13 @@ impl SourceColor {
             Self::Reset => Color::Reset,
         }
     }
+
+    fn ansi16(self) -> Color {
+        match self {
+            Self::Rgb(r, g, b) => ANSI16_COLORS[usize::from(nearest_ansi16((r, g, b)))],
+            Self::Reset => Color::Reset,
+        }
+    }
 }
 
 fn resolve_with(id: ThemeId, project: fn(SourceColor) -> Color) -> Theme {
@@ -180,10 +187,56 @@ fn resolve_with(id: ThemeId, project: fn(SourceColor) -> Color) -> Theme {
     }
 }
 
+const ANSI16_RGB: [(u8, u8, u8); 16] = [
+    (0, 0, 0),
+    (128, 0, 0),
+    (0, 128, 0),
+    (128, 128, 0),
+    (0, 0, 128),
+    (128, 0, 128),
+    (0, 128, 128),
+    (192, 192, 192),
+    (128, 128, 128),
+    (255, 0, 0),
+    (0, 255, 0),
+    (255, 255, 0),
+    (0, 0, 255),
+    (255, 0, 255),
+    (0, 255, 255),
+    (255, 255, 255),
+];
+
+const ANSI16_COLORS: [Color; 16] = [
+    Color::Black,
+    Color::Red,
+    Color::Green,
+    Color::Yellow,
+    Color::Blue,
+    Color::Magenta,
+    Color::Cyan,
+    Color::Gray,
+    Color::DarkGray,
+    Color::LightRed,
+    Color::LightGreen,
+    Color::LightYellow,
+    Color::LightBlue,
+    Color::LightMagenta,
+    Color::LightCyan,
+    Color::White,
+];
+
 fn nearest_ansi256(rgb: (u8, u8, u8)) -> u8 {
     (16..=255)
         .min_by_key(|&index| (rgb_distance(rgb, xterm_rgb(index)), index))
         .unwrap_or(16)
+}
+
+fn nearest_ansi16(rgb: (u8, u8, u8)) -> u8 {
+    ANSI16_RGB
+        .into_iter()
+        .enumerate()
+        .min_by_key(|&(index, candidate)| (rgb_distance(rgb, candidate), index))
+        .map_or(0, |(index, _)| index as u8)
 }
 
 fn xterm_rgb(index: u8) -> (u8, u8, u8) {
@@ -217,6 +270,11 @@ pub fn resolve_truecolor(id: ThemeId) -> Theme {
 /// Resolve the built-in theme against the fixed xterm 256-color palette.
 pub fn resolve_ansi256(id: ThemeId) -> Theme {
     resolve_with(id, SourceColor::ansi256)
+}
+
+/// Resolve the built-in theme against the canonical ANSI-16 palette.
+pub fn resolve_ansi16(id: ThemeId) -> Theme {
+    resolve_with(id, SourceColor::ansi16)
 }
 
 #[cfg(test)]
@@ -288,6 +346,28 @@ mod tests {
             ("diff_delete", theme.diff_delete),
             ("diff_context", theme.diff_context),
         ]
+    }
+
+    fn ansi16_index(color: Color) -> Option<u8> {
+        match color {
+            Color::Black => Some(0),
+            Color::Red => Some(1),
+            Color::Green => Some(2),
+            Color::Yellow => Some(3),
+            Color::Blue => Some(4),
+            Color::Magenta => Some(5),
+            Color::Cyan => Some(6),
+            Color::Gray => Some(7),
+            Color::DarkGray => Some(8),
+            Color::LightRed => Some(9),
+            Color::LightGreen => Some(10),
+            Color::LightYellow => Some(11),
+            Color::LightBlue => Some(12),
+            Color::LightMagenta => Some(13),
+            Color::LightCyan => Some(14),
+            Color::White => Some(15),
+            _ => None,
+        }
     }
 
     fn synthetic_source() -> SourceTheme {
@@ -377,14 +457,35 @@ mod tests {
     }
 
     #[test]
+    fn ansi16_uses_nearest_canonical_entry_and_named_color() {
+        let theme = resolve_ansi16(ThemeId::CyrilDark);
+        assert_eq!(theme.canvas, Color::Reset);
+        assert_eq!(theme.chrome, Color::Black);
+        assert_eq!(theme.selection, Color::Blue);
+        assert_eq!(theme.muted, Color::DarkGray);
+        assert_eq!(theme.accent, Color::LightCyan);
+        assert_eq!(theme.user, Color::Gray);
+        assert_eq!(theme.agent, Color::DarkGray);
+        assert_eq!(theme.success, Color::LightGreen);
+        assert_eq!(theme.warning, Color::LightYellow);
+        assert_eq!(theme.danger, Color::LightRed);
+        assert_eq!(theme.syntax, Some(SyntaxTheme::Base16EightiesDark));
+    }
+
+    #[test]
     fn emit_source_probe() {
         println!("BEGIN_THEME_PROBE");
-        println!("role\trgb\tansi256");
+        println!("role\trgb\tansi256\tansi16");
         let truecolor = resolved_roles(resolve_truecolor(ThemeId::CyrilDark));
         let ansi256 = resolved_roles(resolve_ansi256(ThemeId::CyrilDark));
-        for ((name, source), (_, projected)) in truecolor.into_iter().zip(ansi256) {
-            if let (Color::Rgb(r, g, b), Color::Indexed(index)) = (source, projected) {
-                println!("{name}\t{r:02x}{g:02x}{b:02x}\t{index}");
+        let ansi16 = resolved_roles(resolve_ansi16(ThemeId::CyrilDark));
+        for (((name, source), (_, projected256)), (_, projected16)) in
+            truecolor.into_iter().zip(ansi256).zip(ansi16)
+        {
+            if let (Color::Rgb(r, g, b), Color::Indexed(index256), Some(index16)) =
+                (source, projected256, ansi16_index(projected16))
+            {
+                println!("{name}\t{r:02x}{g:02x}{b:02x}\t{index256}\t{index16}");
             }
         }
         println!("END_THEME_PROBE");
