@@ -4,6 +4,30 @@ Cyril is a polished terminal interface for the Agent Client Protocol (ACP) ecosy
 
 ## Language
 
+### Interface status
+
+**Context usage**:
+The percentage of an agent session's available context window that has been consumed. Higher values mean less context remains.
+_Avoid_: context remaining, context left
+
+### Agent orchestration
+
+**Subagent**:
+A child agent session that performs delegated work and has its own activity stream.
+_Avoid_: worker, child process
+
+**Crew**:
+A named orchestration group containing subagents and pending stages.
+_Avoid_: subagent list, team
+
+**Crew member**:
+A subagent assigned to a crew. A pending stage is not yet a crew member.
+_Avoid_: pending stage
+
+**Pending stage**:
+Planned crew work that has not yet started a subagent session.
+_Avoid_: waiting member, queued subagent
+
 ### Agents & engines
 
 **Vendor**:

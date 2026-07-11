@@ -1,0 +1,4 @@
+AGREE role-names 18/18
+AGREE role-values 18/18
+AGREE ansi256 18/18
+AGREE ansi16 18/18
