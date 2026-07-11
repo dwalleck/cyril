@@ -242,6 +242,7 @@ impl AgentProcess {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+    #[cfg(unix)]
     use std::time::Duration;
 
     use super::*;
