@@ -1,7 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::Paragraph;
 
-use crate::palette;
+use crate::theme::Theme;
 use crate::traits::TuiState;
 
 const MAX_VISIBLE: usize = 10;
@@ -18,7 +18,7 @@ pub fn height_for(state: &dyn TuiState) -> u16 {
 }
 
 /// Render the inline suggestions panel.
-pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
     let suggestions = state.autocomplete_suggestions();
     let selected = state.autocomplete_selected();
     if suggestions.is_empty() {
@@ -48,16 +48,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
             let (prefix, name_style, desc_style) = if is_selected {
                 (
                     "▸ ",
-                    Style::default()
-                        .fg(Color::White)
-                        .add_modifier(Modifier::BOLD),
-                    Style::default().fg(palette::MUTED_GRAY),
+                    Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+                    Style::default().fg(theme.muted),
                 )
             } else {
                 (
                     "  ",
-                    Style::default().fg(palette::USER_BLUE),
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(theme.soft_accent),
+                    Style::default().fg(theme.subdued),
                 )
             };
 
@@ -68,7 +66,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 
             let mut line = Line::from(spans);
             if is_selected {
-                line.style = Style::default().bg(palette::CODE_BLOCK_BG);
+                line.style = Style::default().bg(theme.inset_background);
             }
             line
         })
@@ -100,6 +98,207 @@ mod tests {
                 })
             })
             .collect()
+    }
+
+    #[test]
+    fn selected_and_unselected_rows_use_marker_theme_roles() {
+        let state = MockTuiState {
+            autocomplete_suggestions: vec![
+                Suggestion {
+                    text: "plain".into(),
+                    description: Some("description".into()),
+                },
+                Suggestion {
+                    text: "selected".into(),
+                    description: Some("detail".into()),
+                },
+            ],
+            autocomplete_selected: Some(1),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(40, 2);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+            .expect("draw");
+        let buffer = terminal.backend().buffer();
+
+        assert_eq!(
+            buffer.cell((2, 0)).map(|cell| cell.fg),
+            Some(state.theme.soft_accent)
+        );
+        assert_eq!(
+            buffer.cell((9, 0)).map(|cell| cell.fg),
+            Some(state.theme.subdued)
+        );
+        assert_eq!(
+            buffer.cell((2, 1)).map(|cell| cell.fg),
+            Some(state.theme.text)
+        );
+        assert_eq!(
+            buffer.cell((12, 1)).map(|cell| cell.fg),
+            Some(state.theme.muted)
+        );
+        assert_eq!(
+            buffer.cell((2, 1)).map(|cell| cell.bg),
+            Some(state.theme.inset_background)
+        );
+    }
+
+    fn baseline_suggestions() -> Vec<Suggestion> {
+        (0..21)
+            .map(|index| {
+                let text = match index {
+                    7 | 8 => "duplicate".to_string(),
+                    10 => "選択".to_string(),
+                    11 => "with spaces".to_string(),
+                    _ => format!("item-{index}"),
+                };
+                Suggestion {
+                    text,
+                    description: (index % 2 == 0).then(|| format!("description-{index}")),
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn suggestion_shape_matches_pinned_baseline() -> anyhow::Result<()> {
+        let state = MockTuiState {
+            autocomplete_suggestions: baseline_suggestions(),
+            autocomplete_selected: Some(10),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 10);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|frame| render(frame, frame.area(), &state, &state.theme))?;
+
+        let expected = include_str!("../fixtures/conversation-theme-baseline.tsv")
+            .lines()
+            .skip(2)
+            .filter_map(|line| {
+                let fields: Vec<_> = line.split('\t').collect();
+                let y = fields.get(2)?.parse::<u16>().ok()?;
+                (fields.first() == Some(&"input") && (5..15).contains(&y)).then_some(fields)
+            })
+            .map(|fields| {
+                Ok((
+                    fields
+                        .get(3)
+                        .ok_or_else(|| anyhow::anyhow!("missing suggestion symbol"))?
+                        .to_string(),
+                    fields
+                        .get(6)
+                        .ok_or_else(|| anyhow::anyhow!("missing suggestion modifier"))?
+                        .parse::<u16>()?,
+                ))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let actual = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| {
+                let mut symbol = String::with_capacity(cell.symbol().len() * 2);
+                for byte in cell.symbol().as_bytes() {
+                    symbol.push(HEX[(byte >> 4) as usize] as char);
+                    symbol.push(HEX[(byte & 0x0f) as usize] as char);
+                }
+                (symbol, cell.modifier.bits())
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(actual.len(), 800);
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn center_window_handles_boundary_and_out_of_range_selections() {
+        for (selected, first, last, marker) in [
+            (None, "item-0", "item-9", None),
+            (Some(0), "item-0", "item-9", Some("item-0")),
+            (Some(10), "item-5", "item-14", Some("選択")),
+            (Some(20), "with spaces", "item-20", Some("item-20")),
+            (Some(999), "with spaces", "item-20", None),
+        ] {
+            let state = MockTuiState {
+                autocomplete_suggestions: baseline_suggestions(),
+                autocomplete_selected: selected,
+                ..Default::default()
+            };
+            let backend = TestBackend::new(80, 10);
+            let mut terminal = Terminal::new(backend).expect("test terminal");
+            terminal
+                .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+                .expect("draw");
+            let buffer = terminal.backend().buffer();
+            let rows = (0..10)
+                .map(|y| {
+                    (0..80)
+                        .filter_map(|x| buffer.cell((x, y)))
+                        .map(|cell| cell.symbol())
+                        .collect::<String>()
+                        .trim()
+                        .to_string()
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(rows.len(), 10);
+            assert!(
+                rows[0].contains(first),
+                "wrong first row for {selected:?}: {rows:?}"
+            );
+            assert!(
+                rows[9].contains(last),
+                "wrong last row for {selected:?}: {rows:?}"
+            );
+            let selected_rows = rows.iter().filter(|row| row.starts_with('▸')).count();
+            assert_eq!(selected_rows, usize::from(marker.is_some()));
+            if let Some(label) = marker {
+                let selected_row = rows
+                    .iter()
+                    .find(|row| row.starts_with('▸'))
+                    .expect("selected row");
+                if label.is_ascii() {
+                    assert!(selected_row.contains(label));
+                } else {
+                    assert!(
+                        label
+                            .chars()
+                            .all(|character| selected_row.contains(character))
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn ten_thousand_suggestions_still_render_only_ten_rows() {
+        let state = MockTuiState {
+            autocomplete_suggestions: (0..10_000)
+                .map(|index| Suggestion {
+                    text: format!("item-{index}"),
+                    description: None,
+                })
+                .collect(),
+            autocomplete_selected: Some(5_000),
+            ..Default::default()
+        };
+        assert_eq!(height_for(&state), 10);
+        let backend = TestBackend::new(80, 10);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+            .expect("draw");
+        let text = buffer_text(&terminal, 10);
+        assert!(text.contains("item-4995"));
+        assert!(text.contains("▸ item-5000"));
+        assert!(text.contains("item-5004"));
+        assert!(!text.contains("item-4994"));
+        assert!(!text.contains("item-5005"));
     }
 
     #[test]
@@ -165,7 +364,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -191,7 +390,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -215,7 +414,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -251,7 +450,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -266,7 +465,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, Rect::new(0, 0, 80, 0), &state);
+                render(frame, Rect::new(0, 0, 80, 0), &state, &state.theme);
             })
             .expect("draw should not panic with no suggestions");
     }
@@ -291,7 +490,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -319,7 +518,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -350,7 +549,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 

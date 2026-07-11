@@ -53,7 +53,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     }
     crate::widgets::input::render(frame, input_area, state, &theme);
     if suggestions_height > 0 {
-        crate::widgets::suggestions::render(frame, suggestions_area, state);
+        crate::widgets::suggestions::render(frame, suggestions_area, state, &theme);
     }
     crate::widgets::toolbar::render_status_bar(frame, status_area, state);
 
