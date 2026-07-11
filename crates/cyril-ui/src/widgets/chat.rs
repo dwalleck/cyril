@@ -1,10 +1,12 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
 
-use crate::palette;
 use crate::theme::Theme;
 use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus, TrackedToolCall, TuiState};
 use crate::widgets::markdown;
+
+const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+const SPINNER_FRAME_MS: u128 = 80;
 
 /// Render the chat area. If a subagent is focused, renders the focused
 /// subagent's stream instead of the main chat.
@@ -275,14 +277,12 @@ fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState, theme:
     let elapsed_dur = state.activity_elapsed();
     let elapsed_secs = elapsed_dur.map(|d| d.as_secs()).unwrap_or(0);
     let spinner_idx = elapsed_dur
-        .map(|d| {
-            (d.as_millis() / palette::SPINNER_FRAME_MS) as usize % palette::SPINNER_CHARS.len()
-        })
+        .map(|d| (d.as_millis() / SPINNER_FRAME_MS) as usize % SPINNER_CHARS.len())
         .unwrap_or(0);
 
     lines.push(Line::from(vec![
         Span::styled(
-            format!("{} ", palette::SPINNER_CHARS[spinner_idx]),
+            format!("{} ", SPINNER_CHARS[spinner_idx]),
             Style::default().fg(color),
         ),
         Span::styled(

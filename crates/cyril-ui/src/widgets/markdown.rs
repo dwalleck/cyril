@@ -11,9 +11,10 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::cache::HashCache;
 use crate::highlight;
-use crate::palette;
 use crate::text;
 use crate::theme::Theme;
+
+const MAX_BORDER_WIDTH: usize = 120;
 
 static MARKDOWN_CACHE: LazyLock<Mutex<HashCache<Vec<Line<'static>>>>> =
     LazyLock::new(|| Mutex::new(HashCache::new(256)));
@@ -140,7 +141,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                         let bg = theme.code;
                         let mut header_spans: Vec<Span<'static>> = Vec::new();
                         // Border fills to available width (capped at 120).
-                        let border_width = width.min(palette::MAX_BORDER_WIDTH);
+                        let border_width = width.min(MAX_BORDER_WIDTH);
                         match &code_block_lang {
                             Some(lang) => {
                                 // Truncate language tag if it would overflow the
@@ -244,7 +245,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                         lines.push(line);
                     }
 
-                    let border_width = width.min(palette::MAX_BORDER_WIDTH);
+                    let border_width = width.min(MAX_BORDER_WIDTH);
                     let mut footer_line = Line::from(Span::styled(
                         "╰".to_string() + &"─".repeat(border_width.saturating_sub(1)),
                         Style::default().fg(theme.subdued),
@@ -386,7 +387,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
             }
             Event::Rule => {
                 flush_line(&mut lines, &mut current_spans);
-                let rule_width = width.min(palette::MAX_BORDER_WIDTH);
+                let rule_width = width.min(MAX_BORDER_WIDTH);
                 lines.push(Line::from(Span::styled(
                     "─".repeat(rule_width),
                     Style::default().fg(theme.subdued),
