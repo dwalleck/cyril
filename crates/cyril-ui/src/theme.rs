@@ -262,6 +262,16 @@ fn rgb_distance(left: (u8, u8, u8), right: (u8, u8, u8)) -> u32 {
     square(left.0, right.0) + square(left.1, right.1) + square(left.2, right.2)
 }
 
+/// Resolve a built-in theme for an explicit terminal color capability.
+pub fn resolve(id: ThemeId, mode: ColorMode) -> Theme {
+    match mode {
+        ColorMode::TrueColor => resolve_truecolor(id),
+        ColorMode::Ansi256 => resolve_ansi256(id),
+        ColorMode::Ansi16 => resolve_ansi16(id),
+        ColorMode::None => resolve_no_color(id),
+    }
+}
+
 /// Resolve the built-in theme without reducing terminal color depth.
 pub fn resolve_truecolor(id: ThemeId) -> Theme {
     resolve_with(id, SourceColor::truecolor)
@@ -439,6 +449,15 @@ mod tests {
         assert_eq!(actual, EXPECTED_RGB);
         assert_eq!(source.canvas, SourceColor::Reset);
         assert_eq!(source.syntax.name(), "base16-eighties.dark");
+    }
+
+    #[test]
+    fn explicit_color_mode_dispatches_to_each_projection() {
+        let id = ThemeId::CyrilDark;
+        assert_eq!(resolve(id, ColorMode::TrueColor), resolve_truecolor(id));
+        assert_eq!(resolve(id, ColorMode::Ansi256), resolve_ansi256(id));
+        assert_eq!(resolve(id, ColorMode::Ansi16), resolve_ansi16(id));
+        assert_eq!(resolve(id, ColorMode::None), resolve_no_color(id));
     }
 
     #[test]
