@@ -7,8 +7,7 @@ use syntect::highlighting::{Style as SynStyle, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::cache::HashCache;
-
-const THEME_NAME: &str = "base16-eighties.dark";
+use crate::theme::{ColorMode, Theme, ThemeId};
 
 static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_newlines);
 static THEME_SET: LazyLock<ThemeSet> = LazyLock::new(ThemeSet::load_defaults);
@@ -22,14 +21,22 @@ type HighlightedBlock = Vec<HighlightedLine>;
 static HIGHLIGHT_CACHE: LazyLock<Mutex<HashCache<HighlightedBlock>>> =
     LazyLock::new(|| Mutex::new(HashCache::new(256)));
 
-/// Highlight a full code block. Cached by hash(content, lang).
+/// Highlight a full code block with Cyril Dark true-color compatibility.
+///
+/// Kept temporarily for callers that have not yet been migrated to the frame
+/// theme. New rendering code should call [`highlight_block_with_theme`].
 pub fn highlight_block(code: &str, lang: Option<&str>) -> HighlightedBlock {
-    let hash = {
-        let mut h = DefaultHasher::new();
-        code.hash(&mut h);
-        lang.hash(&mut h);
-        h.finish()
-    };
+    let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+    highlight_block_with_theme(code, lang, &theme)
+}
+
+/// Highlight a full code block. Cached by hash(content, language, complete theme).
+pub fn highlight_block_with_theme(
+    code: &str,
+    lang: Option<&str>,
+    theme: &Theme,
+) -> HighlightedBlock {
+    let hash = highlight_cache_key(code, lang, theme);
 
     if let Ok(cache) = HIGHLIGHT_CACHE.lock()
         && let Some(cached) = cache.get(hash)
@@ -37,7 +44,10 @@ pub fn highlight_block(code: &str, lang: Option<&str>) -> HighlightedBlock {
         return cached.clone();
     }
 
-    let result = do_highlight_block(code, lang);
+    let syntax_theme = theme
+        .syntax
+        .and_then(|syntax_theme| THEME_SET.themes.get(syntax_theme.name()));
+    let result = do_highlight_block(code, lang, theme, syntax_theme);
 
     if let Ok(mut cache) = HIGHLIGHT_CACHE.lock() {
         cache.insert(hash, result.clone());
@@ -46,65 +56,111 @@ pub fn highlight_block(code: &str, lang: Option<&str>) -> HighlightedBlock {
     result
 }
 
-fn do_highlight_block(code: &str, lang: Option<&str>) -> HighlightedBlock {
-    let syntax = lang
-        .and_then(|l| SYNTAX_SET.find_syntax_by_token(l))
-        .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+fn highlight_cache_key(code: &str, lang: Option<&str>, theme: &Theme) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    code.hash(&mut hasher);
+    lang.hash(&mut hasher);
+    theme.syntax.map(|syntax| syntax.name()).hash(&mut hasher);
+    for color in [
+        theme.canvas,
+        theme.chrome,
+        theme.code,
+        theme.selection,
+        theme.text,
+        theme.muted,
+        theme.border,
+        theme.accent,
+        theme.accent_alt,
+        theme.user,
+        theme.agent,
+        theme.system,
+        theme.info,
+        theme.success,
+        theme.warning,
+        theme.danger,
+        theme.diff_add,
+        theme.diff_delete,
+        theme.diff_context,
+        theme.emphasis,
+        theme.accent_tertiary,
+        theme.accent_quaternary,
+        theme.accent_quinary,
+        theme.subdued,
+        theme.subdued_positive,
+        theme.subdued_negative,
+        theme.soft_accent,
+        theme.positive_accent,
+        theme.inset_background,
+    ] {
+        color.hash(&mut hasher);
+    }
+    hasher.finish()
+}
 
-    let theme = match THEME_SET.themes.get(THEME_NAME) {
-        Some(t) => t,
-        None => return plain_fallback(code),
+fn do_highlight_block(
+    code: &str,
+    lang: Option<&str>,
+    theme: &Theme,
+    syntax_theme: Option<&syntect::highlighting::Theme>,
+) -> HighlightedBlock {
+    if theme.text == Color::Reset {
+        return plain_fallback(code, theme.text);
+    }
+    let Some(syntax_theme) = syntax_theme else {
+        return plain_fallback(code, theme.text);
     };
-    let mut highlighter = HighlightLines::new(syntax, theme);
+    let syntax = lang
+        .and_then(|language| SYNTAX_SET.find_syntax_by_token(language))
+        .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+    let mut highlighter = HighlightLines::new(syntax, syntax_theme);
 
     code.lines()
         .map(|line| {
             let line_with_newline = format!("{line}\n");
-            match highlighter.highlight_line(&line_with_newline, &SYNTAX_SET) {
-                Ok(ranges) => ranges
-                    .into_iter()
-                    .map(|(style, text)| {
-                        (
-                            syntect_to_ratatui(style),
-                            text.trim_end_matches('\n').to_string(),
-                        )
-                    })
-                    .collect(),
-                Err(_) => vec![(Style::default().fg(Color::White), line.to_string())],
-            }
+            normalize_highlight_result(
+                highlighter.highlight_line(&line_with_newline, &SYNTAX_SET),
+                line,
+                theme.text,
+            )
         })
         .collect()
 }
 
-/// Highlight a single line (for diffs). Uncached.
+/// Highlight a single line with Cyril Dark true-color compatibility.
+///
+/// Kept temporarily for callers that have not yet been migrated to the frame
+/// theme. New rendering code should call [`highlight_line_with_theme`].
 pub fn highlight_line(code: &str, ext: Option<&str>) -> HighlightedLine {
+    let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+    highlight_line_with_theme(code, ext, &theme)
+}
+
+/// Highlight a single line (for diffs). Uncached.
+pub fn highlight_line_with_theme(code: &str, ext: Option<&str>, theme: &Theme) -> HighlightedLine {
+    if theme.text == Color::Reset {
+        return fallback_line(code, theme.text);
+    }
+    let Some(syntax_theme) = theme
+        .syntax
+        .and_then(|syntax_theme| THEME_SET.themes.get(syntax_theme.name()))
+    else {
+        return fallback_line(code, theme.text);
+    };
     let syntax = ext
-        .and_then(|e| {
+        .and_then(|extension| {
             SYNTAX_SET
-                .find_syntax_by_extension(e)
-                .or_else(|| SYNTAX_SET.find_syntax_by_token(e))
+                .find_syntax_by_extension(extension)
+                .or_else(|| SYNTAX_SET.find_syntax_by_token(extension))
         })
         .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
-
-    let theme = match THEME_SET.themes.get(THEME_NAME) {
-        Some(t) => t,
-        None => return vec![(Style::default().fg(Color::White), code.to_string())],
-    };
-    let mut highlighter = HighlightLines::new(syntax, theme);
+    let mut highlighter = HighlightLines::new(syntax, syntax_theme);
 
     let line_with_newline = format!("{code}\n");
-    match highlighter.highlight_line(&line_with_newline, &SYNTAX_SET) {
-        Ok(ranges) => ranges
-            .into_iter()
-            .map(|(style, text)| {
-                (
-                    syntect_to_ratatui(style),
-                    text.trim_end_matches('\n').to_string(),
-                )
-            })
-            .collect(),
-        Err(_) => vec![(Style::default().fg(Color::White), code.to_string())],
-    }
+    normalize_highlight_result(
+        highlighter.highlight_line(&line_with_newline, &SYNTAX_SET),
+        code,
+        theme.text,
+    )
 }
 
 /// Blend syntax fg with diff color: 70% syntax + 30% diff tint.
@@ -119,10 +175,33 @@ pub fn tint_with_diff_color(fg: Color, diff_color: Color) -> Color {
     )
 }
 
-/// Produce plain white-on-default fallback for every line.
-fn plain_fallback(code: &str) -> HighlightedBlock {
+fn normalize_highlight_result<E>(
+    result: Result<Vec<(SynStyle, &str)>, E>,
+    original: &str,
+    fallback_color: Color,
+) -> HighlightedLine {
+    match result {
+        Ok(ranges) => ranges
+            .into_iter()
+            .map(|(style, text)| {
+                (
+                    syntect_to_ratatui(style),
+                    text.trim_end_matches('\n').to_string(),
+                )
+            })
+            .collect(),
+        Err(_) => fallback_line(original, fallback_color),
+    }
+}
+
+fn fallback_line(text: &str, fallback_color: Color) -> HighlightedLine {
+    vec![(Style::default().fg(fallback_color), text.to_string())]
+}
+
+/// Produce primary-text-on-default fallback for every line.
+fn plain_fallback(code: &str, fallback_color: Color) -> HighlightedBlock {
     code.lines()
-        .map(|line| vec![(Style::default().fg(Color::White), line.to_string())])
+        .map(|line| fallback_line(line, fallback_color))
         .collect()
 }
 
@@ -145,6 +224,130 @@ fn syntect_to_ratatui(style: SynStyle) -> Style {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn themed_fallback_uses_primary_text_role() {
+        let mut theme = crate::traits::test_support::marker_theme();
+        theme.syntax = None;
+        let result = highlight_block_with_theme("plain fallback", None, &theme);
+
+        assert_eq!(result.len(), 1);
+        assert!(
+            result[0]
+                .iter()
+                .all(|(style, _)| style.fg == Some(theme.text))
+        );
+    }
+
+    #[test]
+    fn complete_theme_participates_in_cache_identity() {
+        let base = crate::traits::test_support::marker_theme();
+        let baseline = highlight_cache_key("cache-key", Some("rs"), &base);
+        macro_rules! assert_role_changes_key {
+            ($field:ident) => {{
+                let mut changed = base;
+                changed.$field = Color::Indexed(255);
+                assert_ne!(
+                    highlight_cache_key("cache-key", Some("rs"), &changed),
+                    baseline,
+                    "{} missing from cache key",
+                    stringify!($field)
+                );
+            }};
+        }
+        let mut changed_syntax = base;
+        changed_syntax.syntax = Some(crate::theme::SyntaxTheme::Base16EightiesDark);
+        assert_ne!(
+            highlight_cache_key("cache-key", Some("rs"), &changed_syntax),
+            baseline
+        );
+        assert_role_changes_key!(canvas);
+        assert_role_changes_key!(chrome);
+        assert_role_changes_key!(code);
+        assert_role_changes_key!(selection);
+        assert_role_changes_key!(text);
+        assert_role_changes_key!(muted);
+        assert_role_changes_key!(border);
+        assert_role_changes_key!(accent);
+        assert_role_changes_key!(accent_alt);
+        assert_role_changes_key!(user);
+        assert_role_changes_key!(agent);
+        assert_role_changes_key!(system);
+        assert_role_changes_key!(info);
+        assert_role_changes_key!(success);
+        assert_role_changes_key!(warning);
+        assert_role_changes_key!(danger);
+        assert_role_changes_key!(diff_add);
+        assert_role_changes_key!(diff_delete);
+        assert_role_changes_key!(diff_context);
+        assert_role_changes_key!(emphasis);
+        assert_role_changes_key!(accent_tertiary);
+        assert_role_changes_key!(accent_quaternary);
+        assert_role_changes_key!(accent_quinary);
+        assert_role_changes_key!(subdued);
+        assert_role_changes_key!(subdued_positive);
+        assert_role_changes_key!(subdued_negative);
+        assert_role_changes_key!(soft_accent);
+        assert_role_changes_key!(positive_accent);
+        assert_role_changes_key!(inset_background);
+    }
+
+    #[test]
+    fn cache_never_leaks_truecolor_into_no_color_in_either_order() {
+        let truecolor = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+        let no_color = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None);
+        for (code, first, second) in [
+            ("fn forward_cache() -> u8 { 1 }", &truecolor, &no_color),
+            ("fn reverse_cache() -> u8 { 2 }", &no_color, &truecolor),
+        ] {
+            let first_result = highlight_block_with_theme(code, Some("rs"), first);
+            let second_result = highlight_block_with_theme(code, Some("rs"), second);
+            let (colored, plain) = if first.text == Color::Reset {
+                (&second_result, &first_result)
+            } else {
+                (&first_result, &second_result)
+            };
+            assert!(
+                colored
+                    .iter()
+                    .flatten()
+                    .any(|(style, _)| { matches!(style.fg, Some(Color::Rgb(_, _, _))) })
+            );
+            assert!(
+                plain
+                    .iter()
+                    .flatten()
+                    .all(|(style, _)| style.fg == Some(Color::Reset))
+            );
+        }
+    }
+
+    #[test]
+    fn catalog_and_highlighter_failures_use_primary_text() {
+        let theme = crate::traits::test_support::marker_theme();
+        let missing_catalog = do_highlight_block("catalog", Some("rs"), &theme, None);
+        assert!(
+            missing_catalog[0]
+                .iter()
+                .all(|(style, _)| style.fg == Some(theme.text))
+        );
+
+        let failed = normalize_highlight_result(
+            Err::<Vec<(SynStyle, &str)>, ()>(()),
+            "highlighter",
+            theme.text,
+        );
+        assert_eq!(failed, fallback_line("highlighter", theme.text));
+    }
+
+    #[test]
+    fn five_hundred_cached_blocks_keep_themed_output() {
+        let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+        for _ in 0..500 {
+            let result = highlight_block_with_theme("fn cached() {}", Some("rs"), &theme);
+            assert!(!result.is_empty());
+        }
+    }
 
     #[test]
     fn highlight_block_returns_lines() {
