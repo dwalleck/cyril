@@ -767,7 +767,7 @@ mod tests {
     }
 
     #[test]
-    fn widgets_do_not_resolve_their_own_theme() {
+    fn widgets_only_use_the_explicit_theme_or_transitional_markdown_default() {
         let widget_sources = [
             include_str!("widgets/approval.rs"),
             include_str!("widgets/chat.rs"),
@@ -782,17 +782,32 @@ mod tests {
             include_str!("widgets/toolbar.rs"),
             include_str!("widgets/voice.rs"),
         ];
-        let scanned_bytes: usize = widget_sources.iter().map(|source| source.len()).sum();
+        let production_sources = widget_sources.map(|source| {
+            source
+                .split_once("#[cfg(test)]")
+                .map_or(source, |(production, _)| production)
+        });
+        let scanned_bytes: usize = production_sources.iter().map(|source| source.len()).sum();
+        let transitional_resolver =
+            "let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);";
+        let transitional_count = production_sources
+            .iter()
+            .map(|source| source.matches(transitional_resolver).count())
+            .sum::<usize>();
 
-        assert!(widget_sources.len() <= 16);
+        assert!(production_sources.len() <= 16);
         assert!(scanned_bytes <= 300_000);
-        for source in widget_sources {
-            let source_without_type_import = source.replace("use crate::theme::Theme;", "");
-            assert!(!source_without_type_import.contains("crate::theme"));
-            assert!(!source_without_type_import.contains("theme::"));
-            assert!(!source.contains("ThemeId"));
-            assert!(!source.contains("ColorMode"));
-            assert!(!source.contains("resolve("));
+        assert!(transitional_count <= 1);
+        for source in production_sources {
+            let source_without_allowed_seams = source
+                .replace("use crate::theme::Theme;", "")
+                .replace("use crate::theme::{ColorMode, Theme, ThemeId};", "")
+                .replace(transitional_resolver, "");
+            assert!(!source_without_allowed_seams.contains("crate::theme"));
+            assert!(!source_without_allowed_seams.contains("theme::"));
+            assert!(!source_without_allowed_seams.contains("ThemeId"));
+            assert!(!source_without_allowed_seams.contains("ColorMode"));
+            assert!(!source_without_allowed_seams.contains("resolve("));
         }
     }
 

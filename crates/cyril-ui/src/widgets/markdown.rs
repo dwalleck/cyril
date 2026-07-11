@@ -13,21 +13,26 @@ use crate::cache::HashCache;
 use crate::highlight;
 use crate::palette;
 use crate::text;
+use crate::theme::{ColorMode, Theme, ThemeId};
 
 static MARKDOWN_CACHE: LazyLock<Mutex<HashCache<Vec<Line<'static>>>>> =
     LazyLock::new(|| Mutex::new(HashCache::new(256)));
 
-/// Convert a markdown string into styled ratatui Lines.
-/// `width` controls layout decisions: table column sizing, code block
-/// padding, horizontal rules, and border lengths. Cached by
-/// `(content_hash, width)`.
+/// Convert Markdown using Cyril Dark true-color compatibility.
+///
+/// Kept temporarily for chat callers that have not yet been migrated to the
+/// frame theme. New rendering code should call [`render_with_theme`].
 pub fn render(markdown: &str, width: usize) -> Vec<Line<'static>> {
-    let hash = {
-        let mut h = DefaultHasher::new();
-        markdown.hash(&mut h);
-        width.hash(&mut h);
-        h.finish()
-    };
+    let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+    render_with_theme(markdown, width, &theme)
+}
+
+/// Convert a Markdown string into styled ratatui lines.
+///
+/// `width` controls table sizing, code padding, rules, and borders. Results are
+/// cached by content, width, syntax component, and all 29 semantic colors.
+pub fn render_with_theme(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> {
+    let hash = markdown_cache_key(markdown, width, theme);
 
     if let Ok(cache) = MARKDOWN_CACHE.lock()
         && let Some(cached) = cache.get(hash)
@@ -35,7 +40,7 @@ pub fn render(markdown: &str, width: usize) -> Vec<Line<'static>> {
         return cached.clone();
     }
 
-    let result = do_render(markdown, width);
+    let result = do_render(markdown, width, theme);
 
     if let Ok(mut cache) = MARKDOWN_CACHE.lock() {
         cache.insert(hash, result.clone());
@@ -44,7 +49,48 @@ pub fn render(markdown: &str, width: usize) -> Vec<Line<'static>> {
     result
 }
 
-fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
+fn markdown_cache_key(markdown: &str, width: usize, theme: &Theme) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    markdown.hash(&mut hasher);
+    width.hash(&mut hasher);
+    theme.syntax.map(|syntax| syntax.name()).hash(&mut hasher);
+    for color in [
+        theme.canvas,
+        theme.chrome,
+        theme.code,
+        theme.selection,
+        theme.text,
+        theme.muted,
+        theme.border,
+        theme.accent,
+        theme.accent_alt,
+        theme.user,
+        theme.agent,
+        theme.system,
+        theme.info,
+        theme.success,
+        theme.warning,
+        theme.danger,
+        theme.diff_add,
+        theme.diff_delete,
+        theme.diff_context,
+        theme.emphasis,
+        theme.accent_tertiary,
+        theme.accent_quaternary,
+        theme.accent_quinary,
+        theme.subdued,
+        theme.subdued_positive,
+        theme.subdued_negative,
+        theme.soft_accent,
+        theme.positive_accent,
+        theme.inset_background,
+    ] {
+        color.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
+fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> {
     let options = Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES;
     let parser = Parser::new_ext(markdown, options);
 
@@ -72,11 +118,11 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                         flush_line(&mut lines, &mut current_spans);
                         let heading_style = match level as u8 {
                             1 => base
-                                .fg(Color::Cyan)
+                                .fg(theme.accent_quinary)
                                 .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
-                            2 => base.fg(Color::Cyan).add_modifier(Modifier::BOLD),
-                            3 => base.fg(Color::White).add_modifier(Modifier::BOLD),
-                            _ => base.fg(Color::White).add_modifier(Modifier::BOLD),
+                            2 => base.fg(theme.accent_quinary).add_modifier(Modifier::BOLD),
+                            3 => base.fg(theme.text).add_modifier(Modifier::BOLD),
+                            _ => base.fg(theme.text).add_modifier(Modifier::BOLD),
                         };
                         style_stack.push(heading_style);
                     }
@@ -145,7 +191,7 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                         let indent = "  ".repeat(list_depth.saturating_sub(1));
                         current_spans.push(Span::styled(
                             format!("{indent}• "),
-                            Style::default().fg(Color::Cyan),
+                            Style::default().fg(theme.accent_quinary),
                         ));
                     }
                     Tag::Table(_) => {
@@ -164,10 +210,13 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                     }
                     Tag::BlockQuote(_) => {
                         in_blockquote = true;
-                        style_stack.push(base.fg(Color::DarkGray).add_modifier(Modifier::ITALIC));
+                        style_stack.push(base.fg(theme.subdued).add_modifier(Modifier::ITALIC));
                     }
                     Tag::Link { .. } => {
-                        style_stack.push(base.fg(Color::Blue).add_modifier(Modifier::UNDERLINED));
+                        style_stack.push(
+                            base.fg(theme.accent_tertiary)
+                                .add_modifier(Modifier::UNDERLINED),
+                        );
                     }
                     _ => {}
                 }
@@ -260,19 +309,16 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                         let mut spans: Vec<Span<'static>> = Vec::new();
                         for (i, cell) in row.iter().enumerate() {
                             if i > 0 {
-                                spans.push(Span::styled(
-                                    " │ ",
-                                    Style::default().fg(Color::DarkGray),
-                                ));
+                                spans.push(Span::styled(" │ ", Style::default().fg(theme.subdued)));
                             }
                             let max_w = col_widths.get(i).copied().unwrap_or(0);
                             let padded = text::truncate_and_pad(cell, max_w);
                             let style = if *is_header {
                                 Style::default()
-                                    .fg(Color::Cyan)
+                                    .fg(theme.accent_quinary)
                                     .add_modifier(Modifier::BOLD)
                             } else {
-                                Style::default().fg(Color::White)
+                                Style::default().fg(theme.text)
                             };
                             spans.push(Span::styled(padded, style));
                         }
@@ -282,7 +328,7 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                                 col_widths.iter().sum::<usize>() + separator_space;
                             lines.push(Line::from(Span::styled(
                                 "─".repeat(sep_width),
-                                Style::default().fg(Color::DarkGray),
+                                Style::default().fg(theme.subdued),
                             )));
                         }
                     }
@@ -324,7 +370,7 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                         }
                         if current_spans.is_empty() {
                             current_spans
-                                .push(Span::styled("│ ", Style::default().fg(Color::DarkGray)));
+                                .push(Span::styled("│ ", Style::default().fg(theme.subdued)));
                         }
                         current_spans.push(Span::styled(bq_line.to_string(), style));
                     }
@@ -335,7 +381,7 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
             Event::Code(code) => {
                 current_spans.push(Span::styled(
                     format!("`{code}`"),
-                    current_style(&style_stack).fg(Color::Yellow),
+                    current_style(&style_stack).fg(theme.emphasis),
                 ));
             }
             Event::SoftBreak => {
@@ -349,7 +395,7 @@ fn do_render(markdown: &str, width: usize) -> Vec<Line<'static>> {
                 let rule_width = width.min(palette::MAX_BORDER_WIDTH);
                 lines.push(Line::from(Span::styled(
                     "─".repeat(rule_width),
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(theme.subdued),
                 )));
             }
             _ => {}
@@ -389,7 +435,6 @@ fn flush_line(lines: &mut Vec<Line<'static>>, spans: &mut Vec<Span<'static>>) {
 }
 
 #[cfg(test)]
-#[expect(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use rstest::rstest;
@@ -409,7 +454,234 @@ mod tests {
     }
 
     fn render_md(md: &str) -> Vec<Line<'static>> {
-        do_render(md, 200)
+        render(md, 200)
+    }
+
+    #[test]
+    fn prose_constructs_use_marker_theme_roles() {
+        let theme = crate::traits::test_support::marker_theme();
+        let markdown = "# H1\n### H3\n\n- item\n\n> quote\n\n[link](https://example.com)\n\n| A | B |\n|---|---|\n| x | y |\n\ninline `code`\n\n---";
+        let lines = render_with_theme(markdown, 80, &theme);
+        let style_for = |needle: &str| {
+            lines
+                .iter()
+                .flat_map(|line| line.spans.iter())
+                .find(|span| span.content == needle)
+                .map(|span| span.style)
+        };
+
+        assert_eq!(
+            style_for("H1").and_then(|style| style.fg),
+            Some(theme.accent_quinary)
+        );
+        assert_eq!(style_for("H3").and_then(|style| style.fg), Some(theme.text));
+        assert_eq!(
+            style_for("• ").and_then(|style| style.fg),
+            Some(theme.accent_quinary)
+        );
+        assert_eq!(
+            style_for("│ ").and_then(|style| style.fg),
+            Some(theme.subdued)
+        );
+        assert_eq!(
+            style_for("quote").and_then(|style| style.fg),
+            Some(theme.subdued)
+        );
+        assert_eq!(
+            style_for("link").and_then(|style| style.fg),
+            Some(theme.accent_tertiary)
+        );
+        assert_eq!(
+            style_for("A").and_then(|style| style.fg),
+            Some(theme.accent_quinary)
+        );
+        assert_eq!(style_for("x").and_then(|style| style.fg), Some(theme.text));
+        assert_eq!(
+            style_for("`code`").and_then(|style| style.fg),
+            Some(theme.emphasis)
+        );
+        assert!(lines.iter().flat_map(|line| line.spans.iter()).any(|span| {
+            span.content.chars().all(|character| character == '─')
+                && span.style.fg == Some(theme.subdued)
+        }));
+    }
+
+    #[test]
+    fn markdown_cache_identity_contains_the_complete_theme() {
+        let base = crate::traits::test_support::marker_theme();
+        let baseline = markdown_cache_key("cache", 80, &base);
+        macro_rules! assert_role_changes_key {
+            ($field:ident) => {{
+                let mut changed = base;
+                changed.$field = Color::Indexed(255);
+                assert_ne!(
+                    markdown_cache_key("cache", 80, &changed),
+                    baseline,
+                    "{} missing from cache key",
+                    stringify!($field)
+                );
+            }};
+        }
+        let mut changed_syntax = base;
+        changed_syntax.syntax = Some(crate::theme::SyntaxTheme::Base16EightiesDark);
+        assert_ne!(markdown_cache_key("cache", 80, &changed_syntax), baseline);
+        assert_role_changes_key!(canvas);
+        assert_role_changes_key!(chrome);
+        assert_role_changes_key!(code);
+        assert_role_changes_key!(selection);
+        assert_role_changes_key!(text);
+        assert_role_changes_key!(muted);
+        assert_role_changes_key!(border);
+        assert_role_changes_key!(accent);
+        assert_role_changes_key!(accent_alt);
+        assert_role_changes_key!(user);
+        assert_role_changes_key!(agent);
+        assert_role_changes_key!(system);
+        assert_role_changes_key!(info);
+        assert_role_changes_key!(success);
+        assert_role_changes_key!(warning);
+        assert_role_changes_key!(danger);
+        assert_role_changes_key!(diff_add);
+        assert_role_changes_key!(diff_delete);
+        assert_role_changes_key!(diff_context);
+        assert_role_changes_key!(emphasis);
+        assert_role_changes_key!(accent_tertiary);
+        assert_role_changes_key!(accent_quaternary);
+        assert_role_changes_key!(accent_quinary);
+        assert_role_changes_key!(subdued);
+        assert_role_changes_key!(subdued_positive);
+        assert_role_changes_key!(subdued_negative);
+        assert_role_changes_key!(soft_accent);
+        assert_role_changes_key!(positive_accent);
+        assert_role_changes_key!(inset_background);
+    }
+
+    #[test]
+    fn prose_geometry_is_theme_independent_at_boundary_widths() {
+        let first = crate::traits::test_support::marker_theme();
+        let mut second = first;
+        second.text = Color::Indexed(101);
+        second.subdued = Color::Indexed(102);
+        second.emphasis = Color::Indexed(103);
+        second.accent_tertiary = Color::Indexed(104);
+        second.accent_quinary = Color::Indexed(105);
+        let markdown = "# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6\n\n- outer\n  - nested\n\n> quote 世界\n\n[repeat](https://example.com) [repeat](https://example.com)\n\n| A | B |\n|---|---|\n| same | same |\n\ninline `code` and **bold** *italic* ~~strike~~\n\n---";
+
+        let shape = |lines: &[Line<'static>]| {
+            lines
+                .iter()
+                .map(|line| {
+                    (
+                        line.spans
+                            .iter()
+                            .map(|span| span.content.as_ref())
+                            .collect::<String>(),
+                        line.spans
+                            .iter()
+                            .map(|span| span.style.add_modifier)
+                            .collect::<Vec<_>>(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        for width in [0, 1, 79, 80, 120, 121] {
+            let first_lines = render_with_theme(markdown, width, &first);
+            let second_lines = render_with_theme(markdown, width, &second);
+            assert_eq!(shape(&first_lines), shape(&second_lines));
+            assert_ne!(first_lines, second_lines);
+        }
+    }
+
+    #[test]
+    fn markdown_scene_shape_matches_pinned_baseline() -> anyhow::Result<()> {
+        use ratatui::Terminal;
+        use ratatui::backend::TestBackend;
+        use ratatui::layout::{Constraint, Layout};
+        use ratatui::widgets::Paragraph;
+
+        const HEADINGS: &str = "# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6";
+        const STRUCTURE: &str = "- outer\n  - nested\n\n> quote 世界\n\n[repeat](https://example.com) [repeat](https://example.com)";
+        const FORMATTING: &str = "| A | B |\n|---|---|\n| same | same |\n\ninline `code` and **bold** *italic* ~~strike~~\n\n---";
+        const CODE: &str = "```rust\nfn syntax_rgb() -> u8 { 42 }\n```\n\n```mystery\nunknown_fallback 世界\n```\n\n```\nlanguage_absent\n```";
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|frame| {
+            let [left, right] =
+                Layout::horizontal([Constraint::Length(40), Constraint::Length(40)])
+                    .areas(frame.area());
+            let [heading_area, structure_area, formatting_area] = Layout::vertical([
+                Constraint::Length(7),
+                Constraint::Length(7),
+                Constraint::Min(1),
+            ])
+            .areas(left);
+            frame.render_widget(Paragraph::new(render(HEADINGS, 40)), heading_area);
+            frame.render_widget(Paragraph::new(render(STRUCTURE, 40)), structure_area);
+            frame.render_widget(Paragraph::new(render(FORMATTING, 40)), formatting_area);
+            frame.render_widget(Paragraph::new(render(CODE, 40)), right);
+        })?;
+
+        let expected = include_str!("../fixtures/conversation-theme-baseline.tsv")
+            .lines()
+            .skip(2)
+            .filter_map(|line| {
+                let fields: Vec<_> = line.split('\t').collect();
+                (fields.first() == Some(&"markdown")).then_some(fields)
+            })
+            .map(|fields| {
+                Ok((
+                    fields
+                        .get(3)
+                        .ok_or_else(|| anyhow::anyhow!("missing Markdown symbol"))?
+                        .to_string(),
+                    fields
+                        .get(6)
+                        .ok_or_else(|| anyhow::anyhow!("missing Markdown modifier"))?
+                        .parse::<u16>()?,
+                ))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let actual = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| {
+                let mut symbol = String::with_capacity(cell.symbol().len() * 2);
+                for byte in cell.symbol().as_bytes() {
+                    symbol.push(HEX[(byte >> 4) as usize] as char);
+                    symbol.push(HEX[(byte & 0x0f) as usize] as char);
+                }
+                (symbol, cell.modifier.bits())
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(actual.len(), 1_920);
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn thousand_by_twenty_table_stays_within_operation_fixture() {
+        let header = (0..20)
+            .map(|column| format!("H{column}"))
+            .collect::<Vec<_>>()
+            .join(" | ");
+        let separator = (0..20).map(|_| "---").collect::<Vec<_>>().join(" | ");
+        let row = (0..20)
+            .map(|column| format!("same-{column}"))
+            .collect::<Vec<_>>()
+            .join(" | ");
+        let mut markdown = format!("| {header} |\n| {separator} |\n");
+        for _ in 0..1_000 {
+            markdown.push_str("| ");
+            markdown.push_str(&row);
+            markdown.push_str(" |\n");
+        }
+
+        let lines = render_with_theme(&markdown, 120, &crate::traits::test_support::marker_theme());
+        assert!(lines.len() >= 1_002);
     }
 
     #[test]
@@ -419,15 +691,31 @@ mod tests {
     }
 
     #[rstest]
-    #[case("# H1", Color::Cyan)]
-    #[case("## H2", Color::Cyan)]
-    #[case("### H3", Color::White)]
-    fn render_headings(#[case] input: &str, #[case] expected_color: Color) {
+    #[case("# H1", true)]
+    #[case("## H2", true)]
+    #[case("### H3", false)]
+    fn render_headings(
+        #[case] input: &str,
+        #[case] uses_quinary_accent: bool,
+    ) -> anyhow::Result<()> {
         let lines = render_md(input);
         assert!(!lines.is_empty());
-        let first_styled = lines.iter().find(|l| !l.spans.is_empty()).unwrap();
-        let fg = first_styled.spans[0].style.fg.unwrap();
-        assert_eq!(fg, expected_color);
+        let first_styled = lines
+            .iter()
+            .find(|line| !line.spans.is_empty())
+            .ok_or_else(|| anyhow::anyhow!("missing styled heading"))?;
+        let fg = first_styled.spans[0]
+            .style
+            .fg
+            .ok_or_else(|| anyhow::anyhow!("missing heading foreground"))?;
+        let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+        let expected = if uses_quinary_accent {
+            theme.accent_quinary
+        } else {
+            theme.text
+        };
+        assert_eq!(fg, expected);
+        Ok(())
     }
 
     #[test]
@@ -453,14 +741,15 @@ mod tests {
     }
 
     #[test]
-    fn render_inline_code_has_yellow() {
+    fn render_inline_code_uses_emphasis() {
         let lines = render_md("use `code` here");
-        let has_yellow = lines.iter().any(|l| {
-            l.spans
+        let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+        let has_emphasis = lines.iter().any(|line| {
+            line.spans
                 .iter()
-                .any(|s| s.style.fg == Some(Color::Yellow) && s.content.contains("code"))
+                .any(|span| span.style.fg == Some(theme.emphasis) && span.content.contains("code"))
         });
-        assert!(has_yellow);
+        assert!(has_emphasis);
     }
 
     #[test]
@@ -502,7 +791,7 @@ mod tests {
 
     #[test]
     fn code_block_lines_padded_to_width() {
-        let lines = do_render("```\nhi\n```", 40);
+        let lines = render("```\nhi\n```", 40);
         let bg = palette::CODE_BLOCK_BG;
         for line in &lines {
             if line.style.bg != Some(bg) {
@@ -528,7 +817,7 @@ mod tests {
             .collect::<Vec<_>>()
             .join(" | ");
         let md = format!("| {header} |\n|{sep}\n| {row} |");
-        let lines = do_render(&md, 30);
+        let lines = render(&md, 30);
         for (i, line) in lines.iter().enumerate() {
             let lw: usize = line.spans.iter().map(|s| s.content.width()).sum();
             assert!(lw <= 30, "line {i} exceeds width 30: {lw}");
@@ -602,19 +891,19 @@ mod tests {
         // the width (it wraps via the Paragraph), but tables, borders,
         // rules, and padding should all respect the width.
         let md = "# Hello\n\n```rust\nhi\n```\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n---";
-        let _ = do_render(md, 20);
+        let _ = render(md, 20);
     }
 
     #[test]
     fn render_at_zero_width_does_not_panic() {
-        let _ = do_render("hello\n\n| A |\n|---|\n| 1 |", 0);
+        let _ = render("hello\n\n| A |\n|---|\n| 1 |", 0);
     }
 
     #[test]
     fn table_truncated_shows_ellipsis() {
         let md =
             "| Very long header name here | Another very long header |\n|---|---|\n| cell | data |";
-        let lines = do_render(md, 30);
+        let lines = render(md, 30);
         let t = text(&lines);
         assert!(t.contains("…"), "truncated table should show …: {t}");
     }
@@ -622,7 +911,7 @@ mod tests {
     #[test]
     fn table_not_truncated_when_fits() {
         let md = "| A | B |\n|---|---|\n| 1 | 2 |";
-        let lines = do_render(md, 80);
+        let lines = render(md, 80);
         let t = text(&lines);
         assert!(!t.contains("…"), "small table should not truncate: {t}");
     }
@@ -630,7 +919,7 @@ mod tests {
     #[test]
     fn table_single_column() {
         let md = "| Solo |\n|---|\n| val |";
-        let lines = do_render(md, 80);
+        let lines = render(md, 80);
         let t = text(&lines);
         assert!(t.contains("Solo"));
         assert!(t.contains("val"));
@@ -640,7 +929,7 @@ mod tests {
     fn code_block_wide_line_not_over_padded() {
         let long_code = "x".repeat(100);
         let md = format!("```\n{long_code}\n```");
-        let lines = do_render(&md, 80);
+        let lines = render(&md, 80);
         let bg = palette::CODE_BLOCK_BG;
         for line in &lines {
             if line.style.bg != Some(bg) {
@@ -661,8 +950,8 @@ mod tests {
 
     #[test]
     fn code_block_border_adapts_to_width() {
-        let lines_narrow = do_render("```rust\nhi\n```", 40);
-        let lines_wide = do_render("```rust\nhi\n```", 100);
+        let lines_narrow = render("```rust\nhi\n```", 40);
+        let lines_wide = render("```rust\nhi\n```", 100);
         let narrow_width: usize = lines_narrow[0]
             .spans
             .iter()
@@ -700,7 +989,7 @@ mod tests {
         let md =
             "| Col A | Col B | Col C |\n|---|---|---|\n| data | more data | even more |\n\n---";
         for w in [30, 60, 80, 120] {
-            let lines = do_render(md, w);
+            let lines = render(md, w);
             for (i, line) in lines.iter().enumerate() {
                 let lw: usize = line.spans.iter().map(|s| s.content.width()).sum();
                 assert!(lw <= w, "width={w}, line {i} exceeds limit: {lw} cols");
@@ -710,8 +999,8 @@ mod tests {
 
     #[test]
     fn horizontal_rule_adapts_to_width() {
-        let lines_40 = do_render("---", 40);
-        let lines_80 = do_render("---", 80);
+        let lines_40 = render("---", 40);
+        let lines_80 = render("---", 80);
         let rule_40: usize = lines_40
             .iter()
             .flat_map(|l| l.spans.iter())
