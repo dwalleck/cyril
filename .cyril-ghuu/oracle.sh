@@ -13,7 +13,7 @@ pattern='Color::[A-Za-z0-9_]+|palette::(USER_BLUE|AGENT_GREEN|SYSTEM_MAUVE|MUTED
 
 for file in "${files[@]}"; do
   awk '/#\[cfg\(test\)\]/{exit} {print}' "$file" |
-    grep -nEo "$pattern" |
+    { grep -nEo "$pattern" || true; } |
     while IFS=: read -r line token; do
       printf '%s\t%s\t%s\n' "$file" "$line" "$token"
     done

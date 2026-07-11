@@ -198,7 +198,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme:
             push_thought_lines(lines, text, theme);
         }
         ChatMessageKind::ToolCall(tc) => {
-            render_tool_call(lines, tc);
+            render_tool_call(lines, tc, theme);
         }
         ChatMessageKind::Plan(plan) => {
             lines.push(Line::styled(
@@ -292,7 +292,7 @@ fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState, theme:
     ]));
 }
 
-fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
     use cyril_core::types::{ToolCallStatus, ToolKind};
 
     let status_icon = match tc.status() {
@@ -337,20 +337,19 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     };
 
     let color = match tc.status() {
-        ToolCallStatus::Completed => Color::Green,
-        ToolCallStatus::Failed => Color::Red,
-        _ => Color::Yellow,
+        ToolCallStatus::Completed => theme.subdued_positive,
+        ToolCallStatus::Failed => theme.subdued_negative,
+        ToolCallStatus::InProgress | ToolCallStatus::Pending => theme.emphasis,
     };
 
     let kind_color = match tc.kind() {
-        ToolKind::Read => Color::Blue,
-        ToolKind::Write => Color::Magenta,
-        ToolKind::Execute => Color::Yellow,
-        ToolKind::Search => Color::Cyan,
-        ToolKind::Think => Color::DarkGray,
-        ToolKind::Fetch => Color::Cyan,
-        ToolKind::SwitchMode => Color::Magenta,
-        ToolKind::Other => Color::White,
+        ToolKind::Read => theme.accent_tertiary,
+        ToolKind::Write => theme.accent_quaternary,
+        ToolKind::Execute => theme.emphasis,
+        ToolKind::Search | ToolKind::Fetch => theme.accent_quinary,
+        ToolKind::Think => theme.subdued,
+        ToolKind::SwitchMode => theme.accent_quaternary,
+        ToolKind::Other => theme.text,
     };
 
     let mut header_spans = vec![
@@ -361,17 +360,17 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     if let Some((added, removed)) = compute_diff_summary(tc) {
         header_spans.push(Span::styled(
             format!("  +{added} -{removed}"),
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.subdued),
         ));
     }
 
     lines.push(Line::from(header_spans));
 
     if tc.status() == ToolCallStatus::Completed && tc.kind() == ToolKind::Write {
-        render_diff_lines(lines, tc);
+        render_diff_lines(lines, tc, theme);
     }
 
-    render_tool_output(lines, tc);
+    render_tool_output(lines, tc, theme);
 }
 
 /// Compute (added, removed) line counts from diff content using `similar`.
@@ -404,7 +403,7 @@ fn compute_diff_summary(tc: &TrackedToolCall) -> Option<(usize, usize)> {
 
 /// Render actual diff lines with line numbers for edit operations.
 /// Uses the `similar` crate for proper diff computation with context lines.
-fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
     use similar::{ChangeTag, TextDiff};
 
     const MAX_DIFF_LINES: usize = 20;
@@ -424,7 +423,7 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
                         if count >= MAX_DIFF_LINES {
                             lines.push(Line::styled(
                                 "      ...".to_string(),
-                                Style::default().fg(Color::DarkGray),
+                                Style::default().fg(theme.subdued),
                             ));
                             return;
                         }
@@ -434,15 +433,15 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
                         let (prefix, color) = match change.tag() {
                             ChangeTag::Delete => {
                                 let line_no = change.old_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │- "), Color::Red)
+                                (format!("    {line_no:>4} │- "), theme.subdued_negative)
                             }
                             ChangeTag::Insert => {
                                 let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │+ "), Color::Green)
+                                (format!("    {line_no:>4} │+ "), theme.subdued_positive)
                             }
                             ChangeTag::Equal => {
                                 let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │  "), Color::DarkGray)
+                                (format!("    {line_no:>4} │  "), theme.subdued)
                             }
                         };
 
@@ -451,7 +450,7 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
                             Span::styled(
                                 line_text.to_string(),
                                 if change.tag() == ChangeTag::Equal {
-                                    Style::default().fg(Color::DarkGray)
+                                    Style::default().fg(theme.subdued)
                                 } else {
                                     Style::default().fg(color)
                                 },
@@ -473,7 +472,7 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
 ///
 /// Called after the header and diff rendering in `render_tool_call`. Skips
 /// Write-kind tools since they already display diff content.
-fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
     use cyril_core::types::{ToolCallStatus, ToolKind};
 
     const MAX_OUTPUT_LINES: usize = 5;
@@ -484,7 +483,7 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
         if let Some(err) = tc.error_message() {
             lines.push(Line::styled(
                 format!("{INDENT}Error: {err}"),
-                Style::default().fg(Color::Red),
+                Style::default().fg(theme.subdued_negative),
             ));
         }
         return;
@@ -506,7 +505,7 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     {
         lines.push(Line::styled(
             format!("{INDENT}Exit: {code}"),
-            Style::default().fg(Color::Yellow),
+            Style::default().fg(theme.emphasis),
         ));
     }
 
@@ -521,7 +520,7 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
             };
             lines.push(Line::styled(
                 format!("{INDENT}{summary}"),
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.subdued),
             ));
         }
         return;
@@ -539,13 +538,13 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
         for line_text in &output_lines[..show] {
             lines.push(Line::styled(
                 format!("{INDENT}| {line_text}"),
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.subdued),
             ));
         }
         if total > show {
             lines.push(Line::styled(
                 format!("{INDENT}...{} more lines", total - show),
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.subdued),
             ));
         }
     }
@@ -680,6 +679,242 @@ mod tests {
     }
 
     #[test]
+    fn tool_header_uses_marker_status_and_kind_roles() {
+        use cyril_core::types::{ToolCall, ToolCallId, ToolCallStatus, ToolKind};
+
+        let theme = crate::traits::test_support::marker_theme();
+        let tool = TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("marker-tool"),
+            "Read fixture".into(),
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        ));
+        let mut lines = Vec::new();
+        render_tool_call(&mut lines, &tool, &theme);
+
+        assert_eq!(lines[0].spans[0].style.fg, Some(theme.subdued_positive));
+        assert_eq!(lines[0].spans[1].style.fg, Some(theme.accent_tertiary));
+    }
+
+    #[test]
+    fn every_tool_status_and_kind_uses_its_marker_role() {
+        use cyril_core::types::{ToolCall, ToolCallId, ToolCallStatus, ToolKind};
+
+        let theme = crate::traits::test_support::marker_theme();
+        for (status, expected) in [
+            (ToolCallStatus::InProgress, theme.emphasis),
+            (ToolCallStatus::Pending, theme.emphasis),
+            (ToolCallStatus::Completed, theme.subdued_positive),
+            (ToolCallStatus::Failed, theme.subdued_negative),
+        ] {
+            let tool = TrackedToolCall::new(ToolCall::new(
+                ToolCallId::new("status"),
+                "status".into(),
+                ToolKind::Other,
+                status,
+                None,
+            ));
+            let mut lines = Vec::new();
+            render_tool_call(&mut lines, &tool, &theme);
+            assert_eq!(lines[0].spans[0].style.fg, Some(expected));
+        }
+
+        for (kind, expected) in [
+            (ToolKind::Read, theme.accent_tertiary),
+            (ToolKind::Write, theme.accent_quaternary),
+            (ToolKind::Execute, theme.emphasis),
+            (ToolKind::Search, theme.accent_quinary),
+            (ToolKind::Think, theme.subdued),
+            (ToolKind::Fetch, theme.accent_quinary),
+            (ToolKind::SwitchMode, theme.accent_quaternary),
+            (ToolKind::Other, theme.text),
+        ] {
+            let tool = TrackedToolCall::new(ToolCall::new(
+                ToolCallId::new("kind"),
+                "kind".into(),
+                kind,
+                ToolCallStatus::Completed,
+                None,
+            ));
+            let mut lines = Vec::new();
+            render_tool_call(&mut lines, &tool, &theme);
+            assert_eq!(lines[0].spans[1].style.fg, Some(expected));
+        }
+    }
+
+    #[test]
+    fn tool_scene_shape_matches_pinned_baseline() -> anyhow::Result<()> {
+        use cyril_core::types::{
+            ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
+        };
+
+        let make_tool = |id, title: &str, kind, status| {
+            TrackedToolCall::new(ToolCall::new(
+                ToolCallId::new(id),
+                title.to_string(),
+                kind,
+                status,
+                None,
+            ))
+        };
+        let old_text = (0..21)
+            .map(|index| {
+                if index % 2 == 0 {
+                    format!("same-{index}")
+                } else {
+                    format!("old-{index}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let new_text = (0..21)
+            .map(|index| {
+                if index % 2 == 0 {
+                    format!("same-{index}")
+                } else {
+                    format!("new-{index}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let write = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("write"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "diff.rs".into(),
+                old_text: Some(old_text),
+                new_text,
+            }])
+            .with_locations(vec![ToolCallLocation {
+                path: "diff.rs".into(),
+                line: Some(1),
+            }]),
+        );
+        let read = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("read"),
+                "read".into(),
+                ToolKind::Read,
+                ToolCallStatus::Pending,
+                None,
+            )
+            .with_locations(vec![ToolCallLocation {
+                path: "read.rs".into(),
+                line: None,
+            }]),
+        );
+        let execute = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("execute"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                Some(serde_json::json!({"command": "cargo test"})),
+            )
+            .with_raw_output(Some(serde_json::json!({
+                "stdout": "line-1\nline-2\nline-3\nline-4\nline-5\nline-6",
+                "exit_status": 1
+            }))),
+        );
+        let left_state = MockTuiState {
+            messages: vec![ChatMessage::tool_call(write)],
+            ..Default::default()
+        };
+        let right_state = MockTuiState {
+            messages: vec![
+                ChatMessage::tool_call(read),
+                ChatMessage::tool_call(execute),
+                ChatMessage::tool_call(make_tool(
+                    "search",
+                    "Search(marker)",
+                    ToolKind::Search,
+                    ToolCallStatus::InProgress,
+                )),
+                ChatMessage::tool_call(make_tool(
+                    "think",
+                    "think",
+                    ToolKind::Think,
+                    ToolCallStatus::Failed,
+                )),
+                ChatMessage::tool_call(make_tool(
+                    "fetch",
+                    "Fetch(url)",
+                    ToolKind::Fetch,
+                    ToolCallStatus::Pending,
+                )),
+                ChatMessage::tool_call(make_tool(
+                    "switch",
+                    "Switch(mode)",
+                    ToolKind::SwitchMode,
+                    ToolCallStatus::Completed,
+                )),
+                ChatMessage::tool_call(make_tool(
+                    "other",
+                    "Other(custom)",
+                    ToolKind::Other,
+                    ToolCallStatus::Failed,
+                )),
+            ],
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|frame| {
+            let [left, right] =
+                Layout::horizontal([Constraint::Length(40), Constraint::Length(40)])
+                    .areas(frame.area());
+            render(frame, left, &left_state, &left_state.theme);
+            render(frame, right, &right_state, &right_state.theme);
+        })?;
+
+        let expected = include_str!("../fixtures/conversation-theme-baseline.tsv")
+            .lines()
+            .skip(2)
+            .filter_map(|line| {
+                let fields: Vec<_> = line.split('\t').collect();
+                (fields.first() == Some(&"tools")).then_some(fields)
+            })
+            .map(|fields| {
+                Ok((
+                    fields
+                        .get(3)
+                        .ok_or_else(|| anyhow::anyhow!("missing tool symbol"))?
+                        .to_string(),
+                    fields
+                        .get(6)
+                        .ok_or_else(|| anyhow::anyhow!("missing tool modifier"))?
+                        .parse::<u16>()?,
+                ))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let actual = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| {
+                let mut symbol = String::with_capacity(cell.symbol().len() * 2);
+                for byte in cell.symbol().as_bytes() {
+                    symbol.push(HEX[(byte >> 4) as usize] as char);
+                    symbol.push(HEX[(byte & 0x0f) as usize] as char);
+                }
+                (symbol, cell.modifier.bits())
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(actual.len(), 1_920);
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
     fn push_thought_lines_renders_multiline_with_marker_and_indent() {
         // A multi-line thought block: 💭 on the first row, continuation rows
         // indented under it (a single Line would not break on the \n).
@@ -728,8 +963,9 @@ mod tests {
             }]),
         );
 
+        let theme = crate::traits::test_support::marker_theme();
         let mut lines: Vec<Line> = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(&mut lines, &tc, &theme);
 
         // Header should have label and diff summary
         let header = lines[0].to_string();
@@ -754,6 +990,24 @@ mod tests {
         let has_del = diff_lines.iter().any(|l| l.contains("│-"));
         assert!(has_add, "should have added lines: {diff_lines:?}");
         assert!(has_del, "should have removed lines: {diff_lines:?}");
+        assert_eq!(lines[0].spans[0].style.fg, Some(theme.subdued_positive));
+        assert_eq!(lines[0].spans[1].style.fg, Some(theme.accent_quaternary));
+        assert_eq!(lines[0].spans[2].style.fg, Some(theme.subdued));
+        assert!(lines[1..].iter().any(|line| {
+            line.spans.iter().any(|span| {
+                span.content.contains("│-") && span.style.fg == Some(theme.subdued_negative)
+            })
+        }));
+        assert!(lines[1..].iter().any(|line| {
+            line.spans.iter().any(|span| {
+                span.content.contains("│+") && span.style.fg == Some(theme.subdued_positive)
+            })
+        }));
+        assert!(lines[1..].iter().any(|line| {
+            line.spans
+                .iter()
+                .any(|span| span.content.contains("│  ") && span.style.fg == Some(theme.subdued))
+        }));
     }
 
     #[test]
@@ -776,7 +1030,11 @@ mod tests {
         );
 
         let mut lines: Vec<Line> = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
 
         // Header should show +2 -1 (one changed + one added = 2 inserts, 1 delete)
         let header = lines[0].to_string();
@@ -797,7 +1055,11 @@ mod tests {
         ));
 
         let mut lines: Vec<Line> = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
 
         // Read tool calls should only have a header, no diff lines
         assert_eq!(
@@ -830,8 +1092,9 @@ mod tests {
             }]),
         );
 
+        let theme = crate::traits::test_support::marker_theme();
         let mut lines: Vec<Line> = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(&mut lines, &tc, &theme);
 
         // Should have header + at most 20 diff lines + "..." overflow
         let last_line = lines.last().map(|l| l.to_string()).unwrap_or_default();
@@ -844,6 +1107,10 @@ mod tests {
             lines.len() <= 23,
             "should be capped, got {} lines",
             lines.len()
+        );
+        assert_eq!(
+            lines.last().and_then(|line| line.style.fg),
+            Some(theme.subdued)
         );
     }
 
@@ -866,7 +1133,11 @@ mod tests {
             }]),
         );
         let mut lines = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let header = lines[0].to_string();
         assert!(
             header.contains("Read(src/main.rs)"),
@@ -882,7 +1153,11 @@ mod tests {
             Some(serde_json::json!({"command": "cargo test"})),
         ));
         let mut lines = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let header = lines[0].to_string();
         assert!(
             header.contains("Run(cargo test)"),
@@ -1260,7 +1535,11 @@ mod tests {
             }))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1268,6 +1547,13 @@ mod tests {
             .join("\n");
         assert!(text.contains("Exit: 1"), "should show non-zero exit code");
         assert!(text.contains("test result: FAILED"), "should show stdout");
+        let theme = crate::traits::test_support::marker_theme();
+        assert_eq!(lines[0].style.fg, Some(theme.emphasis));
+        assert!(
+            lines[1..]
+                .iter()
+                .all(|line| line.style.fg == Some(theme.subdued))
+        );
     }
 
     #[test]
@@ -1288,7 +1574,11 @@ mod tests {
             }))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1313,7 +1603,11 @@ mod tests {
             .with_raw_output(Some(serde_json::json!("Command timed out"))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1322,6 +1616,10 @@ mod tests {
         assert!(
             text.contains("Error: Command timed out"),
             "should show error"
+        );
+        assert_eq!(
+            lines[0].style.fg,
+            Some(crate::traits::test_support::marker_theme().subdued_negative)
         );
     }
 
@@ -1341,7 +1639,11 @@ mod tests {
             .with_raw_output(Some(serde_json::json!({"items": [{"Text": content}]}))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1350,6 +1652,10 @@ mod tests {
         assert!(
             text.contains("2.5k chars"),
             "should show char count: got {text}"
+        );
+        assert_eq!(
+            lines[0].style.fg,
+            Some(crate::traits::test_support::marker_theme().subdued)
         );
     }
 
@@ -1370,7 +1676,11 @@ mod tests {
             )),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1397,7 +1707,11 @@ mod tests {
             .with_raw_output(Some(serde_json::json!("written ok"))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         assert!(
             lines.is_empty(),
             "Write tools should not render output (diff is shown instead)"
@@ -1426,7 +1740,11 @@ mod tests {
             }))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1438,6 +1756,9 @@ mod tests {
         );
         // 5 visible lines + 1 overflow indicator = 6 total
         assert_eq!(lines.len(), 6, "should show 5 lines + overflow");
+        assert!(lines.iter().all(|line| {
+            line.style.fg == Some(crate::traits::test_support::marker_theme().subdued)
+        }));
     }
 
     #[test]
@@ -1452,7 +1773,11 @@ mod tests {
             None,
         ));
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         assert!(
             lines.is_empty(),
             "in-progress tools should not render output"
