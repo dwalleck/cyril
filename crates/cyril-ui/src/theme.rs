@@ -288,6 +288,7 @@ pub fn resolve_no_color(id: ThemeId) -> Theme {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use syntect::highlighting::ThemeSet;
 
     const EXPECTED_ROLES: [&str; 19] = [
         "canvas",
@@ -507,6 +508,17 @@ mod tests {
         assert_eq!(theme.warning, Color::LightYellow);
         assert_eq!(theme.danger, Color::LightRed);
         assert_eq!(theme.syntax, Some(SyntaxTheme::Base16EightiesDark));
+    }
+
+    #[test]
+    fn cyril_dark_syntax_theme_exists() {
+        let themes = ThemeSet::load_defaults();
+        assert!(
+            themes
+                .themes
+                .contains_key(SyntaxTheme::Base16EightiesDark.name())
+        );
+        assert!(!themes.themes.contains_key("base16-eighties.drak"));
     }
 
     #[test]
