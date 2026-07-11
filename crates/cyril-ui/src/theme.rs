@@ -225,18 +225,42 @@ const ANSI16_COLORS: [Color; 16] = [
     Color::White,
 ];
 
+fn nearest_palette<I>(rgb: (u8, u8, u8), first: (u8, (u8, u8, u8)), candidates: I) -> u8
+where
+    I: IntoIterator<Item = (u8, (u8, u8, u8))>,
+{
+    let initial = (first.0, rgb_distance(rgb, first.1));
+    candidates
+        .into_iter()
+        .fold(initial, |best, (index, candidate)| {
+            let distance = rgb_distance(rgb, candidate);
+            if (distance, index) < (best.1, best.0) {
+                (index, distance)
+            } else {
+                best
+            }
+        })
+        .0
+}
+
 fn nearest_ansi256(rgb: (u8, u8, u8)) -> u8 {
-    (16..=255)
-        .min_by_key(|&index| (rgb_distance(rgb, xterm_rgb(index)), index))
-        .unwrap_or(16)
+    nearest_palette(
+        rgb,
+        (16, xterm_rgb(16)),
+        (17..=255).map(|index| (index, xterm_rgb(index))),
+    )
 }
 
 fn nearest_ansi16(rgb: (u8, u8, u8)) -> u8 {
-    ANSI16_RGB
-        .into_iter()
-        .enumerate()
-        .min_by_key(|&(index, candidate)| (rgb_distance(rgb, candidate), index))
-        .map_or(0, |(index, _)| index as u8)
+    nearest_palette(
+        rgb,
+        (0, ANSI16_RGB[0]),
+        ANSI16_RGB
+            .into_iter()
+            .enumerate()
+            .skip(1)
+            .map(|(index, candidate)| (index as u8, candidate)),
+    )
 }
 
 fn xterm_rgb(index: u8) -> (u8, u8, u8) {
@@ -497,19 +521,21 @@ mod tests {
     #[test]
     fn tie_break_is_candidate_order_independent() {
         let ansi256_rgb = (13, 13, 13);
-        let reversed_ansi256 = (16..=255)
-            .rev()
-            .min_by_key(|&index| (rgb_distance(ansi256_rgb, xterm_rgb(index)), index))
-            .unwrap_or(16);
+        let reversed_ansi256 = nearest_palette(
+            ansi256_rgb,
+            (255, xterm_rgb(255)),
+            (16u8..255).rev().map(|index| (index, xterm_rgb(index))),
+        );
         assert_eq!(reversed_ansi256, nearest_ansi256(ansi256_rgb));
 
         let ansi16_rgb = (64, 0, 0);
-        let reversed_ansi16 = ANSI16_RGB
-            .into_iter()
-            .enumerate()
-            .rev()
-            .min_by_key(|&(index, candidate)| (rgb_distance(ansi16_rgb, candidate), index))
-            .map_or(0, |(index, _)| index as u8);
+        let reversed_ansi16 = nearest_palette(
+            ansi16_rgb,
+            (15, ANSI16_RGB[15]),
+            (0u8..15)
+                .rev()
+                .map(|index| (index, ANSI16_RGB[usize::from(index)])),
+        );
         assert_eq!(reversed_ansi16, nearest_ansi16(ansi16_rgb));
     }
 
