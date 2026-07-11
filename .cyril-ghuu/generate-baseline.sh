@@ -21,14 +21,19 @@ mod cyril_ghuu_baseline {
     use std::fmt::Write as _;
     use std::time::Duration;
 
-    use cyril_core::types::Plan;
+    use cyril_core::types::{
+        Plan, ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
+    };
     use ratatui::backend::TestBackend;
     use ratatui::buffer::Buffer;
+    use ratatui::layout::{Constraint, Layout};
     use ratatui::style::Color;
     use ratatui::Terminal;
 
     use crate::traits::test_support::MockTuiState;
-    use crate::traits::{Activity, ChatMessage, ChatMessageKind, SteerEchoStatus};
+    use crate::traits::{
+        Activity, ChatMessage, ChatMessageKind, SteerEchoStatus, TrackedToolCall,
+    };
 
     fn steer(text: &str, status: SteerEchoStatus) -> ChatMessage {
         ChatMessage {
@@ -65,6 +70,148 @@ mod cyril_ghuu_baseline {
         let mut terminal = Terminal::new(backend)?;
         let state = message_state();
         terminal.draw(|frame| crate::widgets::chat::render(frame, frame.area(), &state))?;
+        Ok(terminal.backend().buffer().clone())
+    }
+
+    fn tool_call(
+        id: &str,
+        title: &str,
+        kind: ToolKind,
+        status: ToolCallStatus,
+    ) -> TrackedToolCall {
+        TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new(id),
+            title.to_string(),
+            kind,
+            status,
+            None,
+        ))
+    }
+
+    fn tool_states() -> (MockTuiState, MockTuiState) {
+        let old_text = (0..21)
+            .map(|index| {
+                if index % 2 == 0 {
+                    format!("same-{index}")
+                } else {
+                    format!("old-{index}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let new_text = (0..21)
+            .map(|index| {
+                if index % 2 == 0 {
+                    format!("same-{index}")
+                } else {
+                    format!("new-{index}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let write = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("write"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "diff.rs".into(),
+                old_text: Some(old_text),
+                new_text,
+            }])
+            .with_locations(vec![ToolCallLocation {
+                path: "diff.rs".into(),
+                line: Some(1),
+            }]),
+        );
+        let read = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("read"),
+                "read".into(),
+                ToolKind::Read,
+                ToolCallStatus::Pending,
+                None,
+            )
+            .with_locations(vec![ToolCallLocation {
+                path: "read.rs".into(),
+                line: None,
+            }]),
+        );
+        let execute = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("execute"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                Some(serde_json::json!({"command": "cargo test"})),
+            )
+            .with_raw_output(Some(serde_json::json!({
+                "stdout": "line-1\nline-2\nline-3\nline-4\nline-5\nline-6",
+                "exit_status": 1
+            }))),
+        );
+        let right_messages = vec![
+            ChatMessage::tool_call(read),
+            ChatMessage::tool_call(execute),
+            ChatMessage::tool_call(tool_call(
+                "search",
+                "Search(marker)",
+                ToolKind::Search,
+                ToolCallStatus::InProgress,
+            )),
+            ChatMessage::tool_call(tool_call(
+                "think",
+                "think",
+                ToolKind::Think,
+                ToolCallStatus::Failed,
+            )),
+            ChatMessage::tool_call(tool_call(
+                "fetch",
+                "Fetch(url)",
+                ToolKind::Fetch,
+                ToolCallStatus::Pending,
+            )),
+            ChatMessage::tool_call(tool_call(
+                "switch",
+                "Switch(mode)",
+                ToolKind::SwitchMode,
+                ToolCallStatus::Completed,
+            )),
+            ChatMessage::tool_call(tool_call(
+                "other",
+                "Other(custom)",
+                ToolKind::Other,
+                ToolCallStatus::Failed,
+            )),
+        ];
+        (
+            MockTuiState {
+                messages: vec![ChatMessage::tool_call(write)],
+                ..MockTuiState::default()
+            },
+            MockTuiState {
+                messages: right_messages,
+                ..MockTuiState::default()
+            },
+        )
+    }
+
+    fn render_tool_scene() -> anyhow::Result<Buffer> {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend)?;
+        let (left_state, right_state) = tool_states();
+        terminal.draw(|frame| {
+            let [left, right] = Layout::horizontal([
+                Constraint::Length(40),
+                Constraint::Length(40),
+            ])
+            .areas(frame.area());
+            crate::widgets::chat::render(frame, left, &left_state);
+            crate::widgets::chat::render(frame, right, &right_state);
+        })?;
         Ok(terminal.backend().buffer().clone())
     }
 
@@ -121,7 +268,7 @@ mod cyril_ghuu_baseline {
     }
 
     #[test]
-    fn emit_message_scene() -> anyhow::Result<()> {
+    fn emit_baseline_scenes() -> anyhow::Result<()> {
         let first = render_message_scene()?;
         let second = render_message_scene()?;
         let first_rows = normalized_rows("messages", &first);
@@ -155,8 +302,40 @@ mod cyril_ghuu_baseline {
         assert_eq!(normalize_color(Color::Rgb(1, 2, 3)), "RGB:010203");
         assert_eq!(normalize_color(Color::Indexed(42)), "INDEX:42");
 
+        let first_tools = render_tool_scene()?;
+        let second_tools = render_tool_scene()?;
+        let tool_rows = normalized_rows("tools", &first_tools);
+        assert_eq!(tool_rows, normalized_rows("tools", &second_tools));
+        assert_eq!(tool_rows.lines().count(), 1_920);
+        let tool_symbols = first_tools
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect::<String>();
+        for label in [
+            "Edit(diff.rs)",
+            "│-",
+            "│+",
+            "│  ",
+            "...",
+            "Read(read.rs)",
+            "Run(cargo test)",
+            "Search(marker)",
+            "Thinking...",
+            "Fetch(url)",
+            "Switch(mode)",
+            "Other(custom)",
+            "Exit: 1",
+            "line-1",
+            "line-5",
+            "...1 more lines",
+        ] {
+            assert!(tool_symbols.contains(label), "missing tool-scene label {label:?}");
+        }
+        assert!(!tool_symbols.contains("line-6"));
+
         println!("BEGIN_CYRIL_GHUU_BASELINE");
-        print!("{first_rows}");
+        print!("{first_rows}{tool_rows}");
         println!("END_CYRIL_GHUU_BASELINE");
         Ok(())
     }
@@ -166,7 +345,7 @@ RUST
 mkdir -p "$(dirname "$OUTPUT")" "$(dirname "$RAW_OUTPUT")"
 CARGO_TARGET_DIR="$ROOT/target/cyril-ghuu-baseline" \
   cargo test --manifest-path "$WORKTREE/Cargo.toml" -p cyril-ui \
-  render::cyril_ghuu_baseline::emit_message_scene -- --exact --nocapture > "$RAW_OUTPUT"
+  render::cyril_ghuu_baseline::emit_baseline_scenes -- --exact --nocapture > "$RAW_OUTPUT"
 
 {
   printf 'commit\t%s\n' "$PINNED_COMMIT"
@@ -175,8 +354,8 @@ CARGO_TARGET_DIR="$ROOT/target/cyril-ghuu-baseline" \
 } > "$OUTPUT"
 
 data_rows=$(awk 'NR > 2 {count++} END {print count + 0}' "$OUTPUT")
-if [[ "$data_rows" -ne 1920 ]]; then
-  printf 'expected 1920 baseline cells, found %s\n' "$data_rows" >&2
+if [[ "$data_rows" -ne 3840 ]]; then
+  printf 'expected 3840 baseline cells, found %s\n' "$data_rows" >&2
   exit 1
 fi
 if [[ "$(head -n 1 "$OUTPUT")" != $'commit\t'"$PINNED_COMMIT" ]]; then
