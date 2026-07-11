@@ -13,19 +13,10 @@ use crate::cache::HashCache;
 use crate::highlight;
 use crate::palette;
 use crate::text;
-use crate::theme::{ColorMode, Theme, ThemeId};
+use crate::theme::Theme;
 
 static MARKDOWN_CACHE: LazyLock<Mutex<HashCache<Vec<Line<'static>>>>> =
     LazyLock::new(|| Mutex::new(HashCache::new(256)));
-
-/// Convert Markdown using Cyril Dark true-color compatibility.
-///
-/// Kept temporarily for chat callers that have not yet been migrated to the
-/// frame theme. New rendering code should call [`render_with_theme`].
-pub fn render(markdown: &str, width: usize) -> Vec<Line<'static>> {
-    let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
-    render_with_theme(markdown, width, &theme)
-}
 
 /// Convert a Markdown string into styled ratatui lines.
 ///
@@ -440,8 +431,27 @@ fn flush_line(lines: &mut Vec<Line<'static>>, spans: &mut Vec<Span<'static>>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::theme::{ColorMode, ThemeId};
     use ratatui::style::Color;
     use rstest::rstest;
+
+    fn cyril_dark() -> Theme {
+        crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor)
+    }
+
+    fn render(markdown: &str, width: usize) -> Vec<Line<'static>> {
+        render_with_theme(markdown, width, &cyril_dark())
+    }
+
+    #[test]
+    fn production_exposes_only_the_explicit_theme_entry_point() {
+        let production = include_str!("markdown.rs")
+            .split_once("#[cfg(test)]")
+            .map_or(include_str!("markdown.rs"), |(production, _)| production);
+        assert!(!production.contains("pub fn render("));
+        assert!(!production.contains("crate::theme::resolve"));
+        assert!(production.contains("pub fn render_with_theme("));
+    }
 
     /// Extract plain text from rendered lines (ignoring styles).
     fn text(lines: &[Line]) -> String {

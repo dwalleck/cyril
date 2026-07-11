@@ -32,7 +32,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
                 .fg(theme.agent)
                 .add_modifier(Modifier::BOLD),
         ));
-        let md_lines = markdown::render(streaming, area.width as usize);
+        let md_lines = markdown::render_with_theme(streaming, area.width as usize, theme);
         lines.extend(md_lines);
     }
 
@@ -121,7 +121,7 @@ fn render_subagent_drill_in(
                 .fg(theme.agent)
                 .add_modifier(Modifier::BOLD),
         ));
-        let md_lines = markdown::render(streaming, area.width as usize);
+        let md_lines = markdown::render_with_theme(streaming, area.width as usize, theme);
         lines.extend(md_lines);
     }
 
@@ -191,7 +191,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme:
                     .fg(theme.agent)
                     .add_modifier(Modifier::BOLD),
             ));
-            let md_lines = markdown::render(text, width);
+            let md_lines = markdown::render_with_theme(text, width, theme);
             lines.extend(md_lines);
         }
         ChatMessageKind::Thought(text) => {
@@ -590,6 +590,60 @@ mod tests {
                 render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
+    }
+
+    fn render_markdown_case(committed: bool, theme: &Theme) -> (String, Color) {
+        let state = if committed {
+            MockTuiState {
+                theme: *theme,
+                messages: vec![ChatMessage::agent_text("# THEMED".into())],
+                ..Default::default()
+            }
+        } else {
+            MockTuiState {
+                theme: *theme,
+                streaming_text: "# THEMED".into(),
+                ..Default::default()
+            }
+        };
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, theme))
+            .expect("draw");
+        let buffer = terminal.backend().buffer();
+        let symbols = buffer
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect::<String>();
+        let foreground = buffer
+            .content()
+            .iter()
+            .find(|cell| cell.symbol() == "T")
+            .map(|cell| cell.fg)
+            .expect("Markdown heading cell");
+        (symbols, foreground)
+    }
+
+    #[test]
+    fn committed_and_streaming_markdown_use_frame_theme_without_cache_leaks() {
+        let marker = crate::traits::test_support::marker_theme();
+        let no_color = crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::None,
+        );
+
+        for (committed, label) in [(true, "committed"), (false, "streaming")] {
+            let (marker_symbols, marker_fg) = render_markdown_case(committed, &marker);
+            let (plain_symbols, plain_fg) = render_markdown_case(committed, &no_color);
+            let (warm_symbols, warm_fg) = render_markdown_case(committed, &marker);
+            assert_eq!(marker_symbols, plain_symbols, "{label} symbols changed");
+            assert_eq!(marker_symbols, warm_symbols, "{label} warm-cache symbols");
+            assert_eq!(marker_fg, marker.accent_quinary, "{label} marker role");
+            assert_eq!(plain_fg, Color::Reset, "{label} no-color role");
+            assert_eq!(warm_fg, marker.accent_quinary, "{label} warm-cache role");
+        }
     }
 
     #[test]
