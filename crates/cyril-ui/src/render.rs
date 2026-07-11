@@ -364,3 +364,546 @@ mod tests {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod conversation_baseline_compatibility {
+    use std::time::{Duration, Instant};
+
+    use cyril_core::types::{
+        Plan, ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
+    };
+    use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
+    use ratatui::buffer::Buffer;
+    use ratatui::layout::{Constraint, Layout};
+    use ratatui::style::Color;
+    use ratatui::widgets::Paragraph;
+
+    use crate::theme::{ColorMode, Theme, ThemeId};
+    use crate::traits::test_support::MockTuiState;
+    use crate::traits::{
+        Activity, ChatMessage, ChatMessageKind, SteerEchoStatus, Suggestion, TrackedToolCall,
+    };
+
+    const PINNED_COMMIT: &str = "80f3ffa5a7ced20e33c9b98c782c08af704407d5";
+    const FIXTURE: &str = include_str!("fixtures/conversation-theme-baseline.tsv");
+
+    fn truecolor_theme() -> Theme {
+        crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor)
+    }
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct NormalizedCell {
+        scene: &'static str,
+        x: u16,
+        y: u16,
+        symbol: String,
+        foreground: String,
+        background: String,
+        modifiers: u16,
+    }
+
+    fn differences(expected: &[NormalizedCell], actual: &[NormalizedCell]) -> Vec<String> {
+        let mut failures = Vec::new();
+        if expected.len() != actual.len() {
+            failures.push(format!(
+                "cell count: expected {}, actual {}",
+                expected.len(),
+                actual.len()
+            ));
+        }
+        for (expected, actual) in expected.iter().zip(actual) {
+            let location = format!("{}[{},{}]", expected.scene, expected.x, expected.y);
+            for (field, expected, actual) in [
+                ("scene", expected.scene, actual.scene),
+                ("symbol", expected.symbol.as_str(), actual.symbol.as_str()),
+                (
+                    "foreground",
+                    expected.foreground.as_str(),
+                    actual.foreground.as_str(),
+                ),
+                (
+                    "background",
+                    expected.background.as_str(),
+                    actual.background.as_str(),
+                ),
+            ] {
+                if expected != actual {
+                    failures.push(format!(
+                        "{location} {field}: expected {expected:?}, actual {actual:?}"
+                    ));
+                }
+            }
+            if expected.x != actual.x || expected.y != actual.y {
+                failures.push(format!(
+                    "{location} coordinates: expected ({},{}), actual ({},{})",
+                    expected.x, expected.y, actual.x, actual.y
+                ));
+            }
+            if expected.modifiers != actual.modifiers {
+                failures.push(format!(
+                    "{location} modifiers: expected {}, actual {}",
+                    expected.modifiers, actual.modifiers
+                ));
+            }
+        }
+        failures
+    }
+
+    fn steer(text: &str, status: SteerEchoStatus) -> ChatMessage {
+        ChatMessage {
+            kind: ChatMessageKind::SteerEcho {
+                text: text.into(),
+                status,
+            },
+            timestamp: std::time::Instant::now(),
+        }
+    }
+
+    fn message_state() -> MockTuiState {
+        MockTuiState {
+            messages: vec![
+                ChatMessage::user_text("user".into()),
+                ChatMessage::agent_text(String::new()),
+                ChatMessage::thought("thought".into()),
+                ChatMessage::plan(Plan::new(Vec::new())),
+                ChatMessage::system("system".into()),
+                ChatMessage::command_output("context".into(), String::new()),
+                steer("queued", SteerEchoStatus::Queued),
+                steer("applied", SteerEchoStatus::Applied),
+                steer("cleared", SteerEchoStatus::Cleared),
+                steer("unsupported", SteerEchoStatus::Unsupported),
+            ],
+            activity: Activity::ToolRunning,
+            activity_elapsed: Some(Duration::from_secs(1)),
+            theme: truecolor_theme(),
+            ..Default::default()
+        }
+    }
+
+    fn render_message_scene() -> anyhow::Result<Buffer> {
+        let state = message_state();
+        let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
+        terminal.draw(|frame| {
+            crate::widgets::chat::render(frame, frame.area(), &state, &state.theme);
+        })?;
+        Ok(terminal.backend().buffer().clone())
+    }
+
+    fn tool_call(id: &str, title: &str, kind: ToolKind, status: ToolCallStatus) -> TrackedToolCall {
+        TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new(id),
+            title.into(),
+            kind,
+            status,
+            None,
+        ))
+    }
+
+    fn tool_states() -> (MockTuiState, MockTuiState) {
+        let old_text = (0..21)
+            .map(|index| {
+                if index % 2 == 0 {
+                    format!("same-{index}")
+                } else {
+                    format!("old-{index}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let new_text = (0..21)
+            .map(|index| {
+                if index % 2 == 0 {
+                    format!("same-{index}")
+                } else {
+                    format!("new-{index}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let write = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("write"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "diff.rs".into(),
+                old_text: Some(old_text),
+                new_text,
+            }])
+            .with_locations(vec![ToolCallLocation {
+                path: "diff.rs".into(),
+                line: Some(1),
+            }]),
+        );
+        let read = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("read"),
+                "read".into(),
+                ToolKind::Read,
+                ToolCallStatus::Pending,
+                None,
+            )
+            .with_locations(vec![ToolCallLocation {
+                path: "read.rs".into(),
+                line: None,
+            }]),
+        );
+        let execute = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("execute"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                Some(serde_json::json!({"command": "cargo test"})),
+            )
+            .with_raw_output(Some(serde_json::json!({
+                "stdout": "line-1\nline-2\nline-3\nline-4\nline-5\nline-6",
+                "exit_status": 1
+            }))),
+        );
+        let right = vec![
+            ChatMessage::tool_call(read),
+            ChatMessage::tool_call(execute),
+            ChatMessage::tool_call(tool_call(
+                "search",
+                "Search(marker)",
+                ToolKind::Search,
+                ToolCallStatus::InProgress,
+            )),
+            ChatMessage::tool_call(tool_call(
+                "think",
+                "think",
+                ToolKind::Think,
+                ToolCallStatus::Failed,
+            )),
+            ChatMessage::tool_call(tool_call(
+                "fetch",
+                "Fetch(url)",
+                ToolKind::Fetch,
+                ToolCallStatus::Pending,
+            )),
+            ChatMessage::tool_call(tool_call(
+                "switch",
+                "Switch(mode)",
+                ToolKind::SwitchMode,
+                ToolCallStatus::Completed,
+            )),
+            ChatMessage::tool_call(tool_call(
+                "other",
+                "Other(custom)",
+                ToolKind::Other,
+                ToolCallStatus::Failed,
+            )),
+        ];
+        (
+            MockTuiState {
+                theme: truecolor_theme(),
+                messages: vec![ChatMessage::tool_call(write)],
+                ..Default::default()
+            },
+            MockTuiState {
+                theme: truecolor_theme(),
+                messages: right,
+                ..Default::default()
+            },
+        )
+    }
+
+    fn render_tool_scene() -> anyhow::Result<Buffer> {
+        let (left_state, right_state) = tool_states();
+        let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
+        terminal.draw(|frame| {
+            let [left, right] =
+                Layout::horizontal([Constraint::Length(40), Constraint::Length(40)])
+                    .areas(frame.area());
+            crate::widgets::chat::render(frame, left, &left_state, &left_state.theme);
+            crate::widgets::chat::render(frame, right, &right_state, &right_state.theme);
+        })?;
+        Ok(terminal.backend().buffer().clone())
+    }
+
+    fn render_markdown_scene() -> anyhow::Result<Buffer> {
+        const HEADINGS: &str = "# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6";
+        const STRUCTURE: &str = "- outer\n  - nested\n\n> quote 世界\n\n[repeat](https://example.com) [repeat](https://example.com)";
+        const FORMATTING: &str = "| A | B |\n|---|---|\n| same | same |\n\ninline `code` and **bold** *italic* ~~strike~~\n\n---";
+        const CODE: &str = "```rust\nfn syntax_rgb() -> u8 { 42 }\n```\n\n```mystery\nunknown_fallback 世界\n```\n\n```\nlanguage_absent\n```";
+        let state = MockTuiState {
+            theme: truecolor_theme(),
+            ..Default::default()
+        };
+        let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
+        terminal.draw(|frame| {
+            let [left, right] =
+                Layout::horizontal([Constraint::Length(40), Constraint::Length(40)])
+                    .areas(frame.area());
+            let [headings, structure, formatting] = Layout::vertical([
+                Constraint::Length(7),
+                Constraint::Length(7),
+                Constraint::Min(1),
+            ])
+            .areas(left);
+            frame.render_widget(
+                Paragraph::new(crate::widgets::markdown::render_with_theme(
+                    HEADINGS,
+                    40,
+                    &state.theme,
+                )),
+                headings,
+            );
+            frame.render_widget(
+                Paragraph::new(crate::widgets::markdown::render_with_theme(
+                    STRUCTURE,
+                    40,
+                    &state.theme,
+                )),
+                structure,
+            );
+            frame.render_widget(
+                Paragraph::new(crate::widgets::markdown::render_with_theme(
+                    FORMATTING,
+                    40,
+                    &state.theme,
+                )),
+                formatting,
+            );
+            frame.render_widget(
+                Paragraph::new(crate::widgets::markdown::render_with_theme(
+                    CODE,
+                    40,
+                    &state.theme,
+                )),
+                right,
+            );
+        })?;
+        Ok(terminal.backend().buffer().clone())
+    }
+
+    fn input_state() -> MockTuiState {
+        let suggestions = (0..21)
+            .map(|index| {
+                let text = match index {
+                    7 | 8 => "duplicate".into(),
+                    10 => "選択".into(),
+                    11 => "with spaces".into(),
+                    _ => format!("item-{index}"),
+                };
+                Suggestion {
+                    text,
+                    description: (index % 2 == 0).then(|| format!("description-{index}")),
+                }
+            })
+            .collect();
+        MockTuiState {
+            theme: truecolor_theme(),
+            input_text: "first\nUnicode 世界\nthird".into(),
+            input_cursor: "first\nUnicode ".len(),
+            autocomplete_suggestions: suggestions,
+            autocomplete_selected: Some(10),
+            ..Default::default()
+        }
+    }
+
+    fn render_input_scene() -> anyhow::Result<Buffer> {
+        let state = input_state();
+        let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
+        terminal.draw(|frame| {
+            let [input, suggestions, _] = Layout::vertical([
+                Constraint::Length(5),
+                Constraint::Length(10),
+                Constraint::Min(0),
+            ])
+            .areas(frame.area());
+            crate::widgets::input::render(frame, input, &state, &state.theme);
+            crate::widgets::suggestions::render(frame, suggestions, &state, &state.theme);
+        })?;
+        Ok(terminal.backend().buffer().clone())
+    }
+
+    fn normalized_color(color: Color) -> String {
+        let rgb = match color {
+            Color::Reset => return "DEFAULT".into(),
+            Color::Black => (0x00, 0x00, 0x00),
+            Color::Red => (0x80, 0x00, 0x00),
+            Color::Green => (0x00, 0x80, 0x00),
+            Color::Yellow => (0x80, 0x80, 0x00),
+            Color::Blue => (0x00, 0x00, 0x80),
+            Color::Magenta => (0x80, 0x00, 0x80),
+            Color::Cyan => (0x00, 0x80, 0x80),
+            Color::Gray => (0xc0, 0xc0, 0xc0),
+            Color::DarkGray => (0x80, 0x80, 0x80),
+            Color::LightRed => (0xff, 0x00, 0x00),
+            Color::LightGreen => (0x00, 0xff, 0x00),
+            Color::LightYellow => (0xff, 0xff, 0x00),
+            Color::LightBlue => (0x00, 0x00, 0xff),
+            Color::LightMagenta => (0xff, 0x00, 0xff),
+            Color::LightCyan => (0x00, 0xff, 0xff),
+            Color::White => (0xff, 0xff, 0xff),
+            Color::Rgb(red, green, blue) => (red, green, blue),
+            Color::Indexed(index) => return format!("INDEX:{index}"),
+        };
+        format!("RGB:{:02x}{:02x}{:02x}", rgb.0, rgb.1, rgb.2)
+    }
+
+    fn symbol_hex(symbol: &str) -> String {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let mut encoded = String::with_capacity(symbol.len() * 2);
+        for byte in symbol.bytes() {
+            encoded.push(HEX[(byte >> 4) as usize] as char);
+            encoded.push(HEX[(byte & 0x0f) as usize] as char);
+        }
+        encoded
+    }
+
+    fn normalized_scene(
+        scene: &'static str,
+        buffer: &Buffer,
+    ) -> anyhow::Result<Vec<NormalizedCell>> {
+        let mut cells = Vec::with_capacity(1_920);
+        for y in 0..24 {
+            for x in 0..80 {
+                let cell = buffer
+                    .cell((x, y))
+                    .ok_or_else(|| anyhow::anyhow!("missing {scene}[{x},{y}]"))?;
+                cells.push(NormalizedCell {
+                    scene,
+                    x,
+                    y,
+                    symbol: symbol_hex(cell.symbol()),
+                    foreground: normalized_color(cell.fg),
+                    background: normalized_color(cell.bg),
+                    modifiers: cell.modifier.bits(),
+                });
+            }
+        }
+        Ok(cells)
+    }
+
+    fn expected_cells() -> anyhow::Result<Vec<NormalizedCell>> {
+        let mut lines = FIXTURE.lines();
+        let expected_header = format!("commit\t{PINNED_COMMIT}");
+        assert_eq!(
+            lines.next(),
+            Some(expected_header.as_str()),
+            "baseline commit header must remain pinned"
+        );
+        assert_eq!(
+            lines.next(),
+            Some("scene\tx\ty\tsymbol_hex\tforeground\tbackground\tmodifier_bits")
+        );
+        lines
+            .map(|line| {
+                let fields = line.split('\t').collect::<Vec<_>>();
+                Ok(NormalizedCell {
+                    scene: match fields.first().copied() {
+                        Some("messages") => "messages",
+                        Some("tools") => "tools",
+                        Some("markdown") => "markdown",
+                        Some("input") => "input",
+                        Some(scene) => {
+                            return Err(anyhow::anyhow!("unknown fixture scene {scene}"));
+                        }
+                        None => return Err(anyhow::anyhow!("missing fixture scene")),
+                    },
+                    x: fields
+                        .get(1)
+                        .ok_or_else(|| anyhow::anyhow!("missing fixture x"))?
+                        .parse()?,
+                    y: fields
+                        .get(2)
+                        .ok_or_else(|| anyhow::anyhow!("missing fixture y"))?
+                        .parse()?,
+                    symbol: fields
+                        .get(3)
+                        .ok_or_else(|| anyhow::anyhow!("missing fixture symbol"))?
+                        .to_string(),
+                    foreground: fields
+                        .get(4)
+                        .ok_or_else(|| anyhow::anyhow!("missing fixture foreground"))?
+                        .to_string(),
+                    background: fields
+                        .get(5)
+                        .ok_or_else(|| anyhow::anyhow!("missing fixture background"))?
+                        .to_string(),
+                    modifiers: fields
+                        .get(6)
+                        .ok_or_else(|| anyhow::anyhow!("missing fixture modifiers"))?
+                        .parse()?,
+                })
+            })
+            .collect()
+    }
+
+    fn actual_cells() -> anyhow::Result<Vec<NormalizedCell>> {
+        let mut cells = Vec::with_capacity(7_680);
+        for (scene, buffer) in [
+            ("messages", render_message_scene()?),
+            ("tools", render_tool_scene()?),
+            ("markdown", render_markdown_scene()?),
+            ("input", render_input_scene()?),
+        ] {
+            cells.extend(normalized_scene(scene, &buffer)?);
+        }
+        Ok(cells)
+    }
+
+    fn fixture_cell() -> NormalizedCell {
+        NormalizedCell {
+            scene: "messages",
+            x: 0,
+            y: 0,
+            symbol: "59".into(),
+            foreground: "RGB:8ab4f8".into(),
+            background: "DEFAULT".into(),
+            modifiers: 1,
+        }
+    }
+
+    #[test]
+    fn compatibility_reports_foreground_mutation() {
+        let expected = fixture_cell();
+        let mut actual = expected.clone();
+        actual.foreground = "RGB:00ffff".into();
+        let failures = differences(&[expected], &[actual]);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("foreground"));
+        assert!(failures[0].contains("messages[0,0]"));
+    }
+
+    #[test]
+    fn compatibility_reports_modifier_mutation() {
+        let expected = fixture_cell();
+        let mut actual = expected.clone();
+        actual.modifiers = 0;
+        let failures = differences(&[expected], &[actual]);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("modifiers"));
+        assert!(failures[0].contains("messages[0,0]"));
+    }
+
+    #[test]
+    fn migrated_scenes_match_all_pinned_cells() -> anyhow::Result<()> {
+        let expected = expected_cells()?;
+        let actual = actual_cells()?;
+        assert_eq!(expected.len(), 7_680);
+        assert_eq!(actual.len(), 7_680);
+
+        let started = Instant::now();
+        let failures = differences(&expected, &actual);
+        let elapsed = started.elapsed();
+        assert!(
+            failures.is_empty(),
+            "expected 0/7,680 differences, found {}:\n{}",
+            failures.len(),
+            failures.join("\n")
+        );
+        assert!(
+            elapsed <= Duration::from_secs(1),
+            "7,680-cell comparison exceeded 1 second: {elapsed:?}"
+        );
+        Ok(())
+    }
+}
