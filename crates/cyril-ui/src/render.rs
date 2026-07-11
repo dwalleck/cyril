@@ -78,8 +78,17 @@ fn draw_fallback(frame: &mut Frame) {
 
 #[cfg(test)]
 mod tests {
+    use crate::traits::test_support::MockTuiState;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+    use ratatui::buffer::Buffer;
+
+    fn render_buffer(state: &MockTuiState) -> anyhow::Result<Buffer> {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|frame| super::draw(frame, state))?;
+        Ok(terminal.backend().buffer().clone())
+    }
 
     #[test]
     fn draw_fallback_does_not_panic() {
@@ -94,8 +103,6 @@ mod tests {
 
     #[test]
     fn draw_with_mock_state_does_not_panic() {
-        use crate::traits::test_support::MockTuiState;
-
         let state = MockTuiState::default();
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
@@ -104,5 +111,12 @@ mod tests {
                 super::draw(frame, &state);
             })
             .expect("draw should succeed");
+    }
+
+    #[test]
+    fn theme_seam_idle() -> anyhow::Result<()> {
+        let buffer = render_buffer(&MockTuiState::default())?;
+        insta::assert_debug_snapshot!("theme_seam_idle", buffer);
+        Ok(())
     }
 }
