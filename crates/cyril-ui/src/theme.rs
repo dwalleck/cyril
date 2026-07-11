@@ -57,11 +57,16 @@ struct SourceTheme {
     diff_add: SourceColor,
     diff_delete: SourceColor,
     diff_context: SourceColor,
+    emphasis: SourceColor,
+    accent_tertiary: SourceColor,
+    accent_quaternary: SourceColor,
+    accent_quinary: SourceColor,
+    subdued: SourceColor,
 }
 
 #[cfg(test)]
 impl SourceTheme {
-    fn roles(self) -> [(&'static str, SourceColor); 19] {
+    fn roles(self) -> [(&'static str, SourceColor); 24] {
         [
             ("canvas", self.canvas),
             ("chrome", self.chrome),
@@ -82,6 +87,11 @@ impl SourceTheme {
             ("diff_add", self.diff_add),
             ("diff_delete", self.diff_delete),
             ("diff_context", self.diff_context),
+            ("emphasis", self.emphasis),
+            ("accent_tertiary", self.accent_tertiary),
+            ("accent_quaternary", self.accent_quaternary),
+            ("accent_quinary", self.accent_quinary),
+            ("subdued", self.subdued),
         ]
     }
 }
@@ -109,6 +119,11 @@ fn cyril_dark_source(id: ThemeId) -> SourceTheme {
             diff_add: SourceColor::Rgb(0x00, 0xff, 0x00),
             diff_delete: SourceColor::Rgb(0xff, 0x00, 0x00),
             diff_context: SourceColor::Rgb(0x8c, 0x8c, 0x8c),
+            emphasis: SourceColor::Rgb(0x80, 0x80, 0x00),
+            accent_tertiary: SourceColor::Rgb(0x00, 0x00, 0x80),
+            accent_quaternary: SourceColor::Rgb(0x80, 0x00, 0x80),
+            accent_quinary: SourceColor::Rgb(0x00, 0x80, 0x80),
+            subdued: SourceColor::Rgb(0x80, 0x80, 0x80),
         },
     }
 }
@@ -136,6 +151,11 @@ pub struct Theme {
     pub diff_add: Color,
     pub diff_delete: Color,
     pub diff_context: Color,
+    pub emphasis: Color,
+    pub accent_tertiary: Color,
+    pub accent_quaternary: Color,
+    pub accent_quinary: Color,
+    pub subdued: Color,
 }
 
 impl SourceColor {
@@ -184,6 +204,11 @@ fn resolve_with(id: ThemeId, project: fn(SourceColor) -> Color) -> Theme {
         diff_add: project(source.diff_add),
         diff_delete: project(source.diff_delete),
         diff_context: project(source.diff_context),
+        emphasis: project(source.emphasis),
+        accent_tertiary: project(source.accent_tertiary),
+        accent_quaternary: project(source.accent_quaternary),
+        accent_quinary: project(source.accent_quinary),
+        subdued: project(source.subdued),
     }
 }
 
@@ -324,7 +349,7 @@ mod tests {
     use super::*;
     use syntect::highlighting::ThemeSet;
 
-    const EXPECTED_ROLES: [&str; 19] = [
+    const EXPECTED_ROLES: [&str; 24] = [
         "canvas",
         "chrome",
         "code",
@@ -344,9 +369,14 @@ mod tests {
         "diff_add",
         "diff_delete",
         "diff_context",
+        "emphasis",
+        "accent_tertiary",
+        "accent_quaternary",
+        "accent_quinary",
+        "subdued",
     ];
 
-    const EXPECTED_RGB: [(&str, SourceColor); 18] = [
+    const EXPECTED_RGB: [(&str, SourceColor); 23] = [
         ("chrome", SourceColor::Rgb(0x1e, 0x1e, 0x2e)),
         ("code", SourceColor::Rgb(0x28, 0x2c, 0x34)),
         ("selection", SourceColor::Rgb(0x32, 0x32, 0x46)),
@@ -365,9 +395,14 @@ mod tests {
         ("diff_add", SourceColor::Rgb(0x00, 0xff, 0x00)),
         ("diff_delete", SourceColor::Rgb(0xff, 0x00, 0x00)),
         ("diff_context", SourceColor::Rgb(0x8c, 0x8c, 0x8c)),
+        ("emphasis", SourceColor::Rgb(0x80, 0x80, 0x00)),
+        ("accent_tertiary", SourceColor::Rgb(0x00, 0x00, 0x80)),
+        ("accent_quaternary", SourceColor::Rgb(0x80, 0x00, 0x80)),
+        ("accent_quinary", SourceColor::Rgb(0x00, 0x80, 0x80)),
+        ("subdued", SourceColor::Rgb(0x80, 0x80, 0x80)),
     ];
 
-    fn resolved_roles(theme: Theme) -> [(&'static str, Color); 19] {
+    fn resolved_roles(theme: Theme) -> [(&'static str, Color); 24] {
         [
             ("canvas", theme.canvas),
             ("chrome", theme.chrome),
@@ -388,6 +423,11 @@ mod tests {
             ("diff_add", theme.diff_add),
             ("diff_delete", theme.diff_delete),
             ("diff_context", theme.diff_context),
+            ("emphasis", theme.emphasis),
+            ("accent_tertiary", theme.accent_tertiary),
+            ("accent_quaternary", theme.accent_quaternary),
+            ("accent_quinary", theme.accent_quinary),
+            ("subdued", theme.subdued),
         ]
     }
 
@@ -435,6 +475,11 @@ mod tests {
             diff_add: SourceColor::Rgb(16, 0, 0),
             diff_delete: SourceColor::Rgb(17, 0, 0),
             diff_context: SourceColor::Rgb(18, 0, 0),
+            emphasis: SourceColor::Rgb(19, 0, 0),
+            accent_tertiary: SourceColor::Rgb(20, 0, 0),
+            accent_quaternary: SourceColor::Rgb(21, 0, 0),
+            accent_quinary: SourceColor::Rgb(22, 0, 0),
+            subdued: SourceColor::Rgb(23, 0, 0),
         }
     }
 
@@ -449,7 +494,7 @@ mod tests {
     }
 
     #[test]
-    fn source_shape_has_one_reset_and_eighteen_rgb_roles() {
+    fn source_shape_has_one_reset_and_twenty_three_rgb_roles() {
         let roles = synthetic_source().roles();
         let reset_count = roles
             .iter()
@@ -459,7 +504,7 @@ mod tests {
             .iter()
             .filter(|(_, color)| matches!(color, SourceColor::Rgb(_, _, _)))
             .count();
-        assert_eq!((reset_count, rgb_count), (1, 18));
+        assert_eq!((reset_count, rgb_count), (1, 23));
     }
 
     #[test]
@@ -473,6 +518,26 @@ mod tests {
         assert_eq!(actual, EXPECTED_RGB);
         assert_eq!(source.canvas, SourceColor::Reset);
         assert_eq!(source.syntax.name(), "base16-eighties.dark");
+    }
+
+    #[test]
+    fn first_five_compatibility_roles_match_signed_values() {
+        let actual = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let expected = [
+            ("emphasis", SourceColor::Rgb(0x80, 0x80, 0x00)),
+            ("accent_tertiary", SourceColor::Rgb(0x00, 0x00, 0x80)),
+            ("accent_quaternary", SourceColor::Rgb(0x80, 0x00, 0x80)),
+            ("accent_quinary", SourceColor::Rgb(0x00, 0x80, 0x80)),
+            ("subdued", SourceColor::Rgb(0x80, 0x80, 0x80)),
+        ];
+
+        assert_eq!(actual.len(), 24);
+        for role in expected {
+            assert!(
+                actual.contains(&role),
+                "missing compatibility role {role:?}"
+            );
+        }
     }
 
     #[test]
@@ -493,6 +558,11 @@ mod tests {
         assert_eq!(theme.muted, Color::Rgb(0x8c, 0x8c, 0x8c));
         assert_eq!(theme.accent, Color::Rgb(0x00, 0xff, 0xff));
         assert_eq!(theme.user, Color::Rgb(0x8a, 0xb4, 0xf8));
+        assert_eq!(theme.emphasis, Color::Rgb(0x80, 0x80, 0x00));
+        assert_eq!(theme.accent_tertiary, Color::Rgb(0x00, 0x00, 0x80));
+        assert_eq!(theme.accent_quaternary, Color::Rgb(0x80, 0x00, 0x80));
+        assert_eq!(theme.accent_quinary, Color::Rgb(0x00, 0x80, 0x80));
+        assert_eq!(theme.subdued, Color::Rgb(0x80, 0x80, 0x80));
         assert_eq!(theme.syntax, Some(SyntaxTheme::Base16EightiesDark));
     }
 
