@@ -2,6 +2,8 @@ use std::time::Duration;
 
 use cyril_core::types::{CommandOption, EffortLevel, HookInfo, Plan, VoiceStatus};
 
+use crate::theme::Theme;
+
 /// Activity state derived from UiState — used for adaptive frame rate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Activity {
@@ -17,6 +19,9 @@ pub enum Activity {
 /// Read-only trait for the renderer. The renderer receives `&dyn TuiState`
 /// and cannot mutate application state.
 pub trait TuiState {
+    /// Complete resolved appearance for this frame.
+    fn theme(&self) -> Theme;
+
     // Chat content
     fn messages(&self) -> &[ChatMessage];
     fn streaming_text(&self) -> &str;
@@ -418,9 +423,46 @@ pub struct HooksPanelState {
 #[cfg(test)]
 pub mod test_support {
     use super::*;
+    use ratatui::style::Color;
+
+    pub fn marker_theme() -> Theme {
+        Theme {
+            syntax: None,
+            canvas: Color::Indexed(1),
+            chrome: Color::Indexed(2),
+            code: Color::Indexed(3),
+            selection: Color::Indexed(4),
+            text: Color::Indexed(5),
+            muted: Color::Indexed(6),
+            border: Color::Indexed(7),
+            accent: Color::Indexed(8),
+            accent_alt: Color::Indexed(9),
+            user: Color::Indexed(10),
+            agent: Color::Indexed(11),
+            system: Color::Indexed(12),
+            info: Color::Indexed(13),
+            success: Color::Indexed(14),
+            warning: Color::Indexed(15),
+            danger: Color::Indexed(16),
+            diff_add: Color::Indexed(17),
+            diff_delete: Color::Indexed(18),
+            diff_context: Color::Indexed(19),
+            emphasis: Color::Indexed(20),
+            accent_tertiary: Color::Indexed(21),
+            accent_quaternary: Color::Indexed(22),
+            accent_quinary: Color::Indexed(23),
+            subdued: Color::Indexed(24),
+            subdued_positive: Color::Indexed(25),
+            subdued_negative: Color::Indexed(26),
+            soft_accent: Color::Indexed(27),
+            positive_accent: Color::Indexed(28),
+            inset_background: Color::Indexed(29),
+        }
+    }
 
     /// Mock for rendering tests. Has public fields matching every TuiState method.
     pub struct MockTuiState {
+        pub theme: Theme,
         pub messages: Vec<ChatMessage>,
         pub streaming_text: String,
         pub streaming_thought: Option<String>,
@@ -459,6 +501,7 @@ pub mod test_support {
     impl Default for MockTuiState {
         fn default() -> Self {
             Self {
+                theme: marker_theme(),
                 messages: Vec::new(),
                 streaming_text: String::new(),
                 streaming_thought: None,
@@ -497,6 +540,9 @@ pub mod test_support {
     }
 
     impl TuiState for MockTuiState {
+        fn theme(&self) -> Theme {
+            self.theme
+        }
         fn messages(&self) -> &[ChatMessage] {
             &self.messages
         }
@@ -612,6 +658,48 @@ mod tests {
     #[test]
     fn tui_state_is_object_safe() {
         fn _assert_object_safe(_: &dyn TuiState) {}
+    }
+
+    #[test]
+    fn mock_tui_state_observes_every_marker_theme_field() {
+        let state = test_support::MockTuiState::default();
+        assert_eq!(state.theme(), test_support::marker_theme());
+
+        let theme = state.theme();
+        let colors = [
+            theme.canvas,
+            theme.chrome,
+            theme.code,
+            theme.selection,
+            theme.text,
+            theme.muted,
+            theme.border,
+            theme.accent,
+            theme.accent_alt,
+            theme.user,
+            theme.agent,
+            theme.system,
+            theme.info,
+            theme.success,
+            theme.warning,
+            theme.danger,
+            theme.diff_add,
+            theme.diff_delete,
+            theme.diff_context,
+            theme.emphasis,
+            theme.accent_tertiary,
+            theme.accent_quaternary,
+            theme.accent_quinary,
+            theme.subdued,
+            theme.subdued_positive,
+            theme.subdued_negative,
+            theme.soft_accent,
+            theme.positive_accent,
+            theme.inset_background,
+        ];
+        for (index, color) in colors.iter().enumerate() {
+            assert!(!colors[index + 1..].contains(color));
+        }
     }
 
     #[test]
