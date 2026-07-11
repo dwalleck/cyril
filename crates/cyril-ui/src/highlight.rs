@@ -7,7 +7,7 @@ use syntect::highlighting::{Style as SynStyle, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::cache::HashCache;
-use crate::theme::{ColorMode, Theme, ThemeId};
+use crate::theme::Theme;
 
 static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_newlines);
 static THEME_SET: LazyLock<ThemeSet> = LazyLock::new(ThemeSet::load_defaults);
@@ -20,15 +20,6 @@ type HighlightedBlock = Vec<HighlightedLine>;
 
 static HIGHLIGHT_CACHE: LazyLock<Mutex<HashCache<HighlightedBlock>>> =
     LazyLock::new(|| Mutex::new(HashCache::new(256)));
-
-/// Highlight a full code block with Cyril Dark true-color compatibility.
-///
-/// Kept temporarily for callers that have not yet been migrated to the frame
-/// theme. New rendering code should call [`highlight_block_with_theme`].
-pub fn highlight_block(code: &str, lang: Option<&str>) -> HighlightedBlock {
-    let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
-    highlight_block_with_theme(code, lang, &theme)
-}
 
 /// Highlight a full code block. Cached by hash(content, language, complete theme).
 pub fn highlight_block_with_theme(
@@ -126,15 +117,6 @@ fn do_highlight_block(
         .collect()
 }
 
-/// Highlight a single line with Cyril Dark true-color compatibility.
-///
-/// Kept temporarily for callers that have not yet been migrated to the frame
-/// theme. New rendering code should call [`highlight_line_with_theme`].
-pub fn highlight_line(code: &str, ext: Option<&str>) -> HighlightedLine {
-    let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
-    highlight_line_with_theme(code, ext, &theme)
-}
-
 /// Highlight a single line (for diffs). Uncached.
 pub fn highlight_line_with_theme(code: &str, ext: Option<&str>, theme: &Theme) -> HighlightedLine {
     if theme.text == Color::Reset {
@@ -224,6 +206,23 @@ fn syntect_to_ratatui(style: SynStyle) -> Style {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::theme::{ColorMode, ThemeId};
+
+    fn cyril_dark() -> Theme {
+        crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor)
+    }
+
+    #[test]
+    fn production_exposes_only_explicit_theme_entry_points() {
+        let production = include_str!("highlight.rs")
+            .split_once("#[cfg(test)]")
+            .map_or(include_str!("highlight.rs"), |(production, _)| production);
+        assert!(!production.contains("pub fn highlight_block("));
+        assert!(!production.contains("pub fn highlight_line("));
+        assert!(!production.contains("crate::theme::resolve"));
+        assert!(production.contains("pub fn highlight_block_with_theme("));
+        assert!(production.contains("pub fn highlight_line_with_theme("));
+    }
 
     #[test]
     fn themed_fallback_uses_primary_text_role() {
@@ -352,7 +351,7 @@ mod tests {
     #[test]
     fn highlight_block_returns_lines() {
         let code = "let x = 1;\nlet y = 2;";
-        let result = highlight_block(code, Some("rs"));
+        let result = highlight_block_with_theme(code, Some("rs"), &cyril_dark());
         assert_eq!(result.len(), 2);
         // Each line should have at least one styled span
         assert!(!result[0].is_empty());
@@ -362,7 +361,7 @@ mod tests {
     #[test]
     fn highlight_block_plain_text_fallback() {
         let code = "just some text";
-        let result = highlight_block(code, None);
+        let result = highlight_block_with_theme(code, None, &cyril_dark());
         assert_eq!(result.len(), 1);
         // The text content should be preserved
         let full_text: String = result[0].iter().map(|(_, t)| t.as_str()).collect();
@@ -372,14 +371,15 @@ mod tests {
     #[test]
     fn highlight_block_caches_results() {
         let code = "fn main() {}";
-        let first = highlight_block(code, Some("rs"));
-        let second = highlight_block(code, Some("rs"));
+        let theme = cyril_dark();
+        let first = highlight_block_with_theme(code, Some("rs"), &theme);
+        let second = highlight_block_with_theme(code, Some("rs"), &theme);
         assert_eq!(first, second);
     }
 
     #[test]
     fn highlight_line_returns_spans() {
-        let result = highlight_line("let x = 42;", Some("rs"));
+        let result = highlight_line_with_theme("let x = 42;", Some("rs"), &cyril_dark());
         assert!(!result.is_empty());
         let full_text: String = result.iter().map(|(_, t)| t.as_str()).collect();
         assert!(full_text.contains("let"));
@@ -387,7 +387,8 @@ mod tests {
 
     #[test]
     fn highlight_line_unknown_ext() {
-        let result = highlight_line("hello world", Some("zzz_nonexistent"));
+        let result =
+            highlight_line_with_theme("hello world", Some("zzz_nonexistent"), &cyril_dark());
         assert!(!result.is_empty());
     }
 
