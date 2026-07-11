@@ -444,6 +444,270 @@ mod tests {
         render_with_theme(markdown, width, &cyril_dark())
     }
 
+    const EXPECTED_MARKDOWN_SHAPE_LABELS: [&str; 32] = [
+        "construct/heading-1",
+        "construct/heading-2",
+        "construct/heading-3",
+        "construct/heading-4",
+        "construct/heading-5",
+        "construct/heading-6",
+        "construct/strong",
+        "construct/emphasis",
+        "construct/strikethrough",
+        "construct/inline-code",
+        "construct/fenced-known",
+        "construct/fenced-unknown",
+        "construct/code-unfenced",
+        "construct/code-absent-language",
+        "construct/list",
+        "construct/blockquote",
+        "construct/link",
+        "construct/rule",
+        "construct/table",
+        "width/0",
+        "width/1",
+        "width/7",
+        "width/79",
+        "width/80",
+        "width/120",
+        "width/121",
+        "width/200",
+        "stress/unicode",
+        "stress/empty",
+        "stress/100-kib-code",
+        "stress/duplicate-table-widths",
+        "stress/raw-style-presence",
+    ];
+
+    fn markdown_shape(lines: &[Line<'static>]) -> Vec<(Modifier, Vec<(String, Modifier)>)> {
+        lines
+            .iter()
+            .map(|line| {
+                (
+                    line.style.add_modifier,
+                    line.spans
+                        .iter()
+                        .map(|span| (span.content.to_string(), span.style.add_modifier))
+                        .collect(),
+                )
+            })
+            .collect()
+    }
+
+    fn markdown_shape_matrix() -> anyhow::Result<Vec<&'static str>> {
+        macro_rules! record {
+            ($passes:ident, $label:expr, $condition:expr) => {{
+                anyhow::ensure!($condition, "Markdown shape {} failed", $label);
+                $passes.push($label);
+            }};
+        }
+
+        let theme = cyril_dark();
+        let mut passes = Vec::with_capacity(EXPECTED_MARKDOWN_SHAPE_LABELS.len());
+
+        for (level, label) in EXPECTED_MARKDOWN_SHAPE_LABELS[..6].iter().enumerate() {
+            let heading = format!("{} H{}", "#".repeat(level + 1), level + 1);
+            let lines = render_with_theme(&heading, 80, &theme);
+            let span = lines
+                .iter()
+                .flat_map(|line| &line.spans)
+                .find(|span| span.content == format!("H{}", level + 1))
+                .ok_or_else(|| anyhow::anyhow!("missing {label}"))?;
+            let modifiers = span.style.add_modifier;
+            anyhow::ensure!(modifiers.contains(Modifier::BOLD), "{label} is not bold");
+            if level == 0 {
+                anyhow::ensure!(
+                    modifiers.contains(Modifier::UNDERLINED),
+                    "{label} is not underlined"
+                );
+            }
+            passes.push(*label);
+        }
+
+        for (markdown, needle, modifier, label) in [
+            ("**strong**", "strong", Modifier::BOLD, "construct/strong"),
+            (
+                "*emphasis*",
+                "emphasis",
+                Modifier::ITALIC,
+                "construct/emphasis",
+            ),
+            (
+                "~~strike~~",
+                "strike",
+                Modifier::CROSSED_OUT,
+                "construct/strikethrough",
+            ),
+        ] {
+            let lines = render_with_theme(markdown, 80, &theme);
+            let span = lines
+                .iter()
+                .flat_map(|line| &line.spans)
+                .find(|span| span.content == needle)
+                .ok_or_else(|| anyhow::anyhow!("missing {label}"))?;
+            record!(passes, label, span.style.add_modifier.contains(modifier));
+        }
+
+        let inline = render_with_theme("inline `code`", 80, &theme);
+        record!(
+            passes,
+            "construct/inline-code",
+            text(&inline).contains("`code`")
+        );
+
+        let known = render_with_theme("```rust\nfn known() {}\n```", 80, &theme);
+        record!(
+            passes,
+            "construct/fenced-known",
+            text(&known).contains("known")
+                && known
+                    .iter()
+                    .flat_map(|line| &line.spans)
+                    .any(|span| { matches!(span.style.fg, Some(Color::Rgb(_, _, _))) })
+        );
+        let unknown = render_with_theme("```unknown_language\nunknown_code\n```", 80, &theme);
+        record!(
+            passes,
+            "construct/fenced-unknown",
+            text(&unknown).contains("unknown_code")
+        );
+        let unfenced = render_with_theme("    indented_code\n", 80, &theme);
+        record!(
+            passes,
+            "construct/code-unfenced",
+            text(&unfenced).contains("indented_code")
+        );
+        let absent = render_with_theme("```\nabsent_language\n```", 80, &theme);
+        record!(
+            passes,
+            "construct/code-absent-language",
+            text(&absent).contains("absent_language")
+        );
+
+        let list = render_with_theme("- item", 80, &theme);
+        record!(passes, "construct/list", text(&list).contains("• item"));
+        let quote = render_with_theme("> quote", 80, &theme);
+        record!(
+            passes,
+            "construct/blockquote",
+            text(&quote).contains("│ quote")
+        );
+        let link = render_with_theme("[link](https://example.com)", 80, &theme);
+        let link_span = link
+            .iter()
+            .flat_map(|line| &line.spans)
+            .find(|span| span.content == "link")
+            .ok_or_else(|| anyhow::anyhow!("missing construct/link"))?;
+        record!(
+            passes,
+            "construct/link",
+            link_span.style.add_modifier.contains(Modifier::UNDERLINED)
+        );
+        let rule = render_with_theme("---", 80, &theme);
+        record!(
+            passes,
+            "construct/rule",
+            text(&rule).chars().all(|character| character == '─')
+        );
+        let table = render_with_theme("| A | B |\n|---|---|\n| x | y |", 80, &theme);
+        record!(
+            passes,
+            "construct/table",
+            text(&table).contains('│') && text(&table).contains('x')
+        );
+
+        let combined = "# H1\n\n- item\n\n> quote 世界\n\n[link](https://example.com)\n\n| A | A |\n|---|---|\n| same | same |\n\ninline `code` **bold** *italic* ~~strike~~\n\n---\n\n```rust\nfn width() {}\n```";
+        let mut alternate = theme;
+        alternate.text = Color::Indexed(101);
+        alternate.subdued = Color::Indexed(102);
+        alternate.emphasis = Color::Indexed(103);
+        alternate.accent_tertiary = Color::Indexed(104);
+        alternate.accent_quinary = Color::Indexed(105);
+        alternate.code = Color::Indexed(106);
+        for (width, label) in [
+            (0, "width/0"),
+            (1, "width/1"),
+            (7, "width/7"),
+            (79, "width/79"),
+            (80, "width/80"),
+            (120, "width/120"),
+            (121, "width/121"),
+            (200, "width/200"),
+        ] {
+            let original = render_with_theme(combined, width, &theme);
+            let recolored = render_with_theme(combined, width, &alternate);
+            record!(
+                passes,
+                label,
+                markdown_shape(&original) == markdown_shape(&recolored)
+            );
+        }
+
+        let unicode = render_with_theme("Unicode 世界 🦀", 80, &theme);
+        record!(passes, "stress/unicode", text(&unicode).contains("世界 🦀"));
+        record!(
+            passes,
+            "stress/empty",
+            render_with_theme("", 80, &theme).is_empty()
+        );
+
+        let large_code = "x".repeat(100 * 1024);
+        let large_markdown = format!("```missing_lang\n{large_code}\n```");
+        let large = render_with_theme(&large_markdown, 200, &theme);
+        let rendered_x = large
+            .iter()
+            .flat_map(|line| &line.spans)
+            .map(|span| {
+                span.content
+                    .chars()
+                    .filter(|character| *character == 'x')
+                    .count()
+            })
+            .sum::<usize>();
+        record!(passes, "stress/100-kib-code", rendered_x == 100 * 1024);
+
+        let duplicate_table = "| duplicate | duplicate |\n|---|---|\n| same | same |";
+        let duplicate_79 = render_with_theme(duplicate_table, 79, &theme);
+        let duplicate_80 = render_with_theme(duplicate_table, 80, &theme);
+        record!(
+            passes,
+            "stress/duplicate-table-widths",
+            text(&duplicate_79).matches("duplicate").count() == 2
+                && text(&duplicate_80).matches("duplicate").count() == 2
+                && duplicate_79.iter().all(|line| line.width() <= 79)
+                && duplicate_80.iter().all(|line| line.width() <= 80)
+        );
+
+        let raw = render_with_theme("raw text", 80, &theme);
+        let raw_style = raw
+            .first()
+            .and_then(|line| line.spans.first())
+            .ok_or_else(|| anyhow::anyhow!("missing raw text span"))?
+            .style;
+        record!(
+            passes,
+            "stress/raw-style-presence",
+            raw_style.fg.is_none()
+                && raw_style.bg.is_none()
+                && raw_style.add_modifier.is_empty()
+                && raw_style.sub_modifier.is_empty()
+        );
+
+        Ok(passes)
+    }
+
+    #[test]
+    fn every_markdown_construct_and_width_is_fenced() -> anyhow::Result<()> {
+        let started = std::time::Instant::now();
+        let passes = markdown_shape_matrix()?;
+        assert_eq!(passes, EXPECTED_MARKDOWN_SHAPE_LABELS);
+        assert!(
+            started.elapsed() <= std::time::Duration::from_secs(3),
+            "Markdown shape matrix exceeded 3 seconds"
+        );
+        Ok(())
+    }
+
     #[test]
     fn production_exposes_only_the_explicit_theme_entry_point() {
         let production = include_str!("markdown.rs")
