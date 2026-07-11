@@ -101,6 +101,42 @@ mod tests {
     }
 
     #[test]
+    fn default_ui_config_schema_is_exactly_four_fields() {
+        let Ok(config): Result<Config, _> = toml::from_str(
+            r#"
+[ui]
+max_messages = 1000
+mouse_capture = false
+"#,
+        ) else {
+            panic!("fixture config should deserialize");
+        };
+        let Ok(encoded) = toml::to_string(&config.ui) else {
+            panic!("UI config should serialize");
+        };
+        let Ok(value): Result<toml::Value, _> = toml::from_str(&encoded) else {
+            panic!("serialized UI config should parse");
+        };
+        let Some(table) = value.as_table() else {
+            panic!("serialized UI config should be a table");
+        };
+        let mut keys: Vec<_> = table.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+
+        assert_eq!(config.ui.max_messages, 1000);
+        assert!(!config.ui.mouse_capture);
+        assert_eq!(
+            keys,
+            [
+                "highlight_cache_size",
+                "max_messages",
+                "mouse_capture",
+                "stream_buffer_timeout_ms",
+            ]
+        );
+    }
+
+    #[test]
     fn default_agent_config() {
         let config = AgentConfig::default();
         assert_eq!(config.agent_name, "kiro-cli");

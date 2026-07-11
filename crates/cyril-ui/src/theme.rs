@@ -533,6 +533,34 @@ mod tests {
     }
 
     #[test]
+    fn seam_has_no_widget_references() {
+        let widget_sources = [
+            include_str!("widgets/approval.rs"),
+            include_str!("widgets/chat.rs"),
+            include_str!("widgets/code_panel.rs"),
+            include_str!("widgets/crew_panel.rs"),
+            include_str!("widgets/hooks_panel.rs"),
+            include_str!("widgets/input.rs"),
+            include_str!("widgets/markdown.rs"),
+            include_str!("widgets/mod.rs"),
+            include_str!("widgets/picker.rs"),
+            include_str!("widgets/suggestions.rs"),
+            include_str!("widgets/toolbar.rs"),
+            include_str!("widgets/voice.rs"),
+        ];
+        let scanned_bytes: usize = widget_sources.iter().map(|source| source.len()).sum();
+
+        assert!(widget_sources.len() <= 16);
+        assert!(scanned_bytes <= 300_000);
+        for source in widget_sources {
+            assert!(!source.contains("crate::theme"));
+            assert!(!source.contains("theme::"));
+            assert!(!source.contains("ThemeId"));
+            assert!(!source.contains("ColorMode"));
+        }
+    }
+
+    #[test]
     fn emit_source_probe() {
         println!("BEGIN_THEME_PROBE");
         println!("role\trgb\tansi256\tansi16");
