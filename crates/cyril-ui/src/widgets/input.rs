@@ -79,6 +79,134 @@ mod tests {
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
 
+    const EXPECTED_INPUT_SHAPE_LABELS: [&str; 9] = [
+        "input/empty",
+        "input/spaces",
+        "input/multiline",
+        "input/unicode",
+        "cursor/start",
+        "cursor/middle",
+        "cursor/end",
+        "cursor/beyond",
+        "stress/100-kib-unicode-multiline",
+    ];
+
+    fn render_input_buffer(
+        text: &str,
+        cursor: usize,
+        width: u16,
+        height: u16,
+    ) -> anyhow::Result<ratatui::buffer::Buffer> {
+        let state = MockTuiState {
+            input_text: text.into(),
+            input_cursor: cursor,
+            ..Default::default()
+        };
+        let mut terminal = Terminal::new(TestBackend::new(width, height))?;
+        terminal.draw(|frame| render(frame, frame.area(), &state, &state.theme))?;
+        Ok(terminal.backend().buffer().clone())
+    }
+
+    fn expected_row_symbols(text: &str, cursor: usize) -> Vec<Vec<String>> {
+        use unicode_width::UnicodeWidthChar;
+
+        let cursor = cursor.min(text.len());
+        let (before, after) = text.split_at(cursor);
+        let decorated = format!("{before}█{after}");
+        decorated
+            .split('\n')
+            .map(|line| {
+                line.chars()
+                    .flat_map(|character| {
+                        let mut cells = vec![character.to_string()];
+                        cells.extend(std::iter::repeat_n(
+                            " ".to_string(),
+                            character.width().unwrap_or(0).saturating_sub(1),
+                        ));
+                        cells
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn small_input_matches_oracle(text: &str, cursor: usize) -> anyhow::Result<bool> {
+        let buffer = render_input_buffer(text, cursor, 40, 8)?;
+        let expected = expected_row_symbols(text, cursor);
+        for (row, symbols) in expected.iter().enumerate() {
+            for x in 0..38usize {
+                let expected_symbol = symbols.get(x).map_or(" ", String::as_str);
+                let actual = buffer
+                    .cell(((x + 1) as u16, (row + 1) as u16))
+                    .ok_or_else(|| anyhow::anyhow!("missing input cell ({x},{row})"))?;
+                if actual.symbol() != expected_symbol {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
+    }
+
+    fn input_shape_matrix() -> anyhow::Result<Vec<&'static str>> {
+        let mut passes = Vec::with_capacity(EXPECTED_INPUT_SHAPE_LABELS.len());
+        for (text, cursor, label) in [
+            ("", 0, "input/empty"),
+            ("   ", 1, "input/spaces"),
+            ("one\ntwo", "one\n".len(), "input/multiline"),
+            ("A世界B", "A世".len(), "input/unicode"),
+            ("abc", 0, "cursor/start"),
+            ("abc", 1, "cursor/middle"),
+            ("abc", 3, "cursor/end"),
+            ("abc", usize::MAX, "cursor/beyond"),
+        ] {
+            anyhow::ensure!(
+                small_input_matches_oracle(text, cursor)?,
+                "shape {label} failed"
+            );
+            passes.push(label);
+        }
+
+        let mut large = "世界\n".repeat((100 * 1024) / "世界\n".len());
+        large.push_str("世a");
+        anyhow::ensure!(large.len() == 100 * 1024, "100 KiB fixture size drifted");
+        let mut middle = large.len() / 2;
+        while !large.is_char_boundary(middle) {
+            middle -= 1;
+        }
+        let start = render_input_buffer(&large, 0, 80, 10)?;
+        let _middle = render_input_buffer(&large, middle, 80, 10)?;
+        let end = render_input_buffer(&large, large.len(), 80, 10)?;
+        let beyond = render_input_buffer(&large, usize::MAX, 80, 10)?;
+        anyhow::ensure!(
+            start
+                .content()
+                .iter()
+                .filter(|cell| cell.symbol() == "█")
+                .count()
+                == 1,
+            "100 KiB start cursor was not visible"
+        );
+        anyhow::ensure!(end == beyond, "cursor beyond length did not clamp to end");
+        anyhow::ensure!(
+            large.lines().count() > 10_000,
+            "100 KiB multiline fixture lost rows"
+        );
+        passes.push("stress/100-kib-unicode-multiline");
+        Ok(passes)
+    }
+
+    #[test]
+    fn every_message_input_shape_is_fenced() -> anyhow::Result<()> {
+        let started = std::time::Instant::now();
+        let passes = input_shape_matrix()?;
+        assert_eq!(passes, EXPECTED_INPUT_SHAPE_LABELS);
+        assert!(
+            started.elapsed() <= std::time::Duration::from_secs(1),
+            "100 KiB input matrix exceeded 1 second"
+        );
+        Ok(())
+    }
+
     #[test]
     fn input_renders_empty() {
         let state = MockTuiState::default();
