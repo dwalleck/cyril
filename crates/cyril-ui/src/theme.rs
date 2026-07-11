@@ -145,33 +145,78 @@ impl SourceColor {
             Self::Reset => Color::Reset,
         }
     }
+
+    fn ansi256(self) -> Color {
+        match self {
+            Self::Rgb(r, g, b) => Color::Indexed(nearest_ansi256((r, g, b))),
+            Self::Reset => Color::Reset,
+        }
+    }
+}
+
+fn resolve_with(id: ThemeId, project: fn(SourceColor) -> Color) -> Theme {
+    let source = cyril_dark_source(id);
+    Theme {
+        syntax: Some(source.syntax),
+        canvas: project(source.canvas),
+        chrome: project(source.chrome),
+        code: project(source.code),
+        selection: project(source.selection),
+        text: project(source.text),
+        muted: project(source.muted),
+        border: project(source.border),
+        accent: project(source.accent),
+        accent_alt: project(source.accent_alt),
+        user: project(source.user),
+        agent: project(source.agent),
+        system: project(source.system),
+        info: project(source.info),
+        success: project(source.success),
+        warning: project(source.warning),
+        danger: project(source.danger),
+        diff_add: project(source.diff_add),
+        diff_delete: project(source.diff_delete),
+        diff_context: project(source.diff_context),
+    }
+}
+
+fn nearest_ansi256(rgb: (u8, u8, u8)) -> u8 {
+    (16..=255)
+        .min_by_key(|&index| (rgb_distance(rgb, xterm_rgb(index)), index))
+        .unwrap_or(16)
+}
+
+fn xterm_rgb(index: u8) -> (u8, u8, u8) {
+    if index < 232 {
+        let offset = index - 16;
+        let level = |value: u8| if value == 0 { 0 } else { 55 + 40 * value };
+        (
+            level(offset / 36),
+            level((offset / 6) % 6),
+            level(offset % 6),
+        )
+    } else {
+        let gray = 8 + 10 * (index - 232);
+        (gray, gray, gray)
+    }
+}
+
+fn rgb_distance(left: (u8, u8, u8), right: (u8, u8, u8)) -> u32 {
+    let square = |a: u8, b: u8| {
+        let delta = i32::from(a) - i32::from(b);
+        (delta * delta) as u32
+    };
+    square(left.0, right.0) + square(left.1, right.1) + square(left.2, right.2)
 }
 
 /// Resolve the built-in theme without reducing terminal color depth.
 pub fn resolve_truecolor(id: ThemeId) -> Theme {
-    let source = cyril_dark_source(id);
-    Theme {
-        syntax: Some(source.syntax),
-        canvas: source.canvas.truecolor(),
-        chrome: source.chrome.truecolor(),
-        code: source.code.truecolor(),
-        selection: source.selection.truecolor(),
-        text: source.text.truecolor(),
-        muted: source.muted.truecolor(),
-        border: source.border.truecolor(),
-        accent: source.accent.truecolor(),
-        accent_alt: source.accent_alt.truecolor(),
-        user: source.user.truecolor(),
-        agent: source.agent.truecolor(),
-        system: source.system.truecolor(),
-        info: source.info.truecolor(),
-        success: source.success.truecolor(),
-        warning: source.warning.truecolor(),
-        danger: source.danger.truecolor(),
-        diff_add: source.diff_add.truecolor(),
-        diff_delete: source.diff_delete.truecolor(),
-        diff_context: source.diff_context.truecolor(),
-    }
+    resolve_with(id, SourceColor::truecolor)
+}
+
+/// Resolve the built-in theme against the fixed xterm 256-color palette.
+pub fn resolve_ansi256(id: ThemeId) -> Theme {
+    resolve_with(id, SourceColor::ansi256)
 }
 
 #[cfg(test)]
@@ -320,12 +365,26 @@ mod tests {
     }
 
     #[test]
+    fn ansi256_uses_nearest_fixed_xterm_entry() {
+        let theme = resolve_ansi256(ThemeId::CyrilDark);
+        assert_eq!(theme.canvas, Color::Reset);
+        assert_eq!(theme.chrome, Color::Indexed(235));
+        assert_eq!(theme.code, Color::Indexed(236));
+        assert_eq!(theme.selection, Color::Indexed(237));
+        assert_eq!(theme.muted, Color::Indexed(245));
+        assert_eq!(theme.user, Color::Indexed(111));
+        assert_eq!(theme.syntax, Some(SyntaxTheme::Base16EightiesDark));
+    }
+
+    #[test]
     fn emit_source_probe() {
         println!("BEGIN_THEME_PROBE");
-        println!("role\trgb");
-        for (name, color) in resolved_roles(resolve_truecolor(ThemeId::CyrilDark)) {
-            if let Color::Rgb(r, g, b) = color {
-                println!("{name}\t{r:02x}{g:02x}{b:02x}");
+        println!("role\trgb\tansi256");
+        let truecolor = resolved_roles(resolve_truecolor(ThemeId::CyrilDark));
+        let ansi256 = resolved_roles(resolve_ansi256(ThemeId::CyrilDark));
+        for ((name, source), (_, projected)) in truecolor.into_iter().zip(ansi256) {
+            if let (Color::Rgb(r, g, b), Color::Indexed(index)) = (source, projected) {
+                println!("{name}\t{r:02x}{g:02x}{b:02x}\t{index}");
             }
         }
         println!("END_THEME_PROBE");
