@@ -1,6 +1,6 @@
 # Budgeted plan: Semantic theme seam for Cyril Dark
 
-Status: approved; amended to 12 slices (2026-07-10)
+Status: approved; corrected to 11 atomic slices after checkpoint evidence (2026-07-10)
 
 ## Basis and checkpoint protocol
 
@@ -42,77 +42,43 @@ cannot silently alter the agreed 18-role projection target.
 
 | Design claim | Plan slices |
 | ---: | --- |
-| 1. Exact 19-role Cyril Dark contract | 2–3 |
-| 2. RGB/reset-only source, canvas sole reset | 1–2 |
-| 3. True-color identity | 3 |
-| 4. Nearest ANSI-256 projection | 4 |
-| 5. Nearest ANSI-16 projection and named output | 5 |
-| 6. Lower-index tie-breaking | 6 |
-| 7. Complete no-color projection | 7 |
-| 8. Valid Syntect component | 8 |
-| 9. Three unchanged render buffers | 10–12 |
-| 10. Unchanged configuration and no widget consumer | 9 |
+| 1. Exact 19-role Cyril Dark contract | 1–2 |
+| 2. RGB/reset-only source, canvas sole reset | 1 |
+| 3. True-color identity | 2 |
+| 4. Nearest ANSI-256 projection | 3 |
+| 5. Nearest ANSI-16 projection and named output | 4 |
+| 6. Lower-index tie-breaking | 5 |
+| 7. Complete no-color projection | 6 |
+| 8. Valid Syntect component | 7 |
+| 9. Three unchanged render buffers | 9–11 |
+| 10. Unchanged configuration and no widget consumer | 8 |
 
 <!-- markdownlint-enable MD013 -->
 
-## Slice 1: Define the fixed semantic role shapes
+## Slice 1: Establish the fixed Cyril Dark source contract
 
-**Claim:** The theme source and resolved output each have exactly the 19 signed
-semantic roles, and source colors can represent only explicit RGB or reset.
+**Claim:** The source and resolved shapes contain all 19 semantic roles, Cyril
+Dark contains the 19 pinned values and syntax identifier, every source color is
+RGB or reset, and canvas is the sole reset.
 
-**Oracle:** Parse the 19 role names from the signed specification and compare
-them in order with role-name rows emitted by the compiled test binary.
-
-**Stress fixture:** Construct a test-only source value whose canvas is reset and
-whose other 18 fields use distinct sentinel RGB triples. Expected: the oracle
-reports `AGREE role-names 19/19`; every field is present exactly once, and a
-named Ratatui ANSI color is unrepresentable. This fails if a field is omitted,
-renamed, duplicated, or typed directly as Ratatui `Color`.
-
-**Smallest change:** Replace the unverified draft with local explicit-mode and
-single-theme identifiers, private RGB/reset source color, fixed source/resolved
-role containers, and a test-only role-name emitter; export the unused module.
-Do not add Cyril Dark values or projection logic in this slice.
-
-**Loop budget:** Production type construction adds no loop. Test emission is
-`O(R) = 19` field visits, below 10^6 operations with zero syscalls.
-
-**Wall budget:** Not applicable; the module has no always-on caller.
-
-**Files:**
-
-- `crates/cyril-ui/src/theme.rs`
-- `crates/cyril-ui/src/lib.rs`
-
-**Code (advisory):** No code is pre-typed; fixed fields and the source-color sum
-type are the structural contract.
-
-**Verification:**
-
-- [ ] Unit tests pass.
-- [ ] Stress fixture emits each of the 19 signed role names exactly once.
-- [ ] Structural oracle reports `AGREE role-names 19/19`, and the standalone
-      prove-it projection probe remains 18/18.
-- [ ] Loop and wall budgets hold at `R = 19`.
-
-## Slice 2: Populate the Cyril Dark source contract
-
-**Claim:** Cyril Dark contains the 19 pinned semantic values and the one pinned
-syntax identifier; canvas is the sole reset and all other roles are explicit
-RGB.
-
-**Oracle:** Parse the signed compatibility table independently and compare its
-18 RGB role/value pairs with rows emitted by the compiled test binary; compare
-role/reset/syntax counts with literal expectations 19/1/1.
+**Oracle:** Parse the signed role list and compatibility table independently,
+then compare them with role/value rows emitted by the compiled test binary;
+compare role/reset/syntax counts with literal expectations 19/1/1.
 
 **Stress fixture:** Populate semantically distinct roles that deliberately share
-values, plus the reset canvas. Expected: 19 distinct role names, 18 RGB rows
-accepted by the oracle, exactly one reset role named canvas, and syntax
-identifier `base16-eighties.dark`. This fails if fields are deduplicated by
-color, a value drifts, a named ANSI color enters the source, or syntax is absent.
+values, plus the reset canvas. Expected: all 19 role names are present, 18 RGB
+rows pass the oracle, exactly one reset role is canvas, and the syntax identifier
+is `base16-eighties.dark`. This fails if a field is omitted, roles are
+collapsed by equal color, a value drifts, a named ANSI source color enters, or
+syntax is absent.
 
-**Smallest change:** Add only the pinned Cyril Dark source values, typed syntax
-identifier, and test-binary source-row emitter to the fixed shapes from Slice 1.
+**Smallest change:** Atomically replace the unverified draft with local
+explicit-mode and single-theme identifiers, private RGB/reset source color,
+fixed source/resolved role containers, the pinned Cyril Dark source, typed
+syntax identifier, test-binary source-row emitter, and unused module export.
+The atomic scope is required because the private source types are correctly
+reported as dead code until the production Cyril Dark constructor consumes
+them.
 
 **Loop budget:** Production construction is explicit field assignment with no
 loop. Test emission is `O(R) = 19` visits, below 10^6 operations with zero
@@ -123,20 +89,21 @@ syscalls.
 **Files:**
 
 - `crates/cyril-ui/src/theme.rs`
+- `crates/cyril-ui/src/lib.rs`
 
-**Code (advisory):** No code is pre-typed; the signed value table and source
-shape govern implementation.
+**Code (advisory):** No code is pre-typed; the fixed fields, signed value table,
+and source-color sum type are the contract.
 
 **Verification:**
 
-- [ ] Unit tests pass.
-- [ ] Stress fixture emits 19 roles, 18 oracle-approved RGB rows, one reset
+- [ ] Unit tests pass with no dead-code warning.
+- [ ] Stress fixture emits all 19 roles, 18 oracle-approved RGB rows, one reset
       canvas, and one syntax identifier.
 - [ ] Prove-it oracle reports `AGREE role-names 18/18` and
       `AGREE role-values 18/18` against compiled source rows.
 - [ ] Loop and wall budgets hold at `R = 19`.
 
-## Slice 3: Resolve true-color without transforming the source
+## Slice 2: Resolve true-color without transforming the source
 
 **Claim:** True-color resolution preserves every pinned RGB value exactly and
 preserves the reset canvas.
@@ -175,7 +142,7 @@ preserves the signed source values.
       true-color rows.
 - [ ] Loop and wall budgets hold at `R = 19`.
 
-## Slice 4: Project onto the fixed ANSI-256 palette
+## Slice 3: Project onto the fixed ANSI-256 palette
 
 **Claim:** Every RGB role maps to the minimum-distance fixed xterm entry in
 indices 16–255.
@@ -214,7 +181,7 @@ the behavioral constraint.
 - [ ] Prove-it oracle reports `AGREE ansi256 18/18` against compiled output.
 - [ ] Loop and wall budgets hold at 4,320 distance evaluations.
 
-## Slice 5: Project onto canonical ANSI-16 named colors
+## Slice 4: Project onto canonical ANSI-16 named colors
 
 **Claim:** Every RGB role maps to the minimum-distance canonical ANSI-16 entry
 and then to the corresponding Ratatui named color.
@@ -251,7 +218,7 @@ behavior govern implementation.
 - [ ] Prove-it oracle reports `AGREE ansi16 18/18` against compiled output.
 - [ ] Loop and wall budgets hold at 288 distance evaluations.
 
-## Slice 6: Lock deterministic lower-index tie-breaking
+## Slice 5: Lock deterministic lower-index tie-breaking
 
 **Claim:** Equal-distance palette candidates choose the lower index in both
 ANSI modes.
@@ -270,7 +237,7 @@ the two adversarial regression cases; no new public API.
 
 **Loop budget:** The fixture performs one 240-entry and one 16-entry search:
 `O(P256 + P16) = 256` evaluations. Production asymptotics remain those of
-Slices 4–5.
+Slices 3–4.
 
 **Wall budget:** Not applicable; no always-on phase is introduced.
 
@@ -288,7 +255,7 @@ ties explicit rather than relying on traversal order.
 - [ ] Prove-it oracle still agrees with all compiled role projections.
 - [ ] Loop and wall budgets hold at 256 fixture evaluations.
 
-## Slice 7: Remove every color in explicit no-color mode
+## Slice 6: Remove every color in explicit no-color mode
 
 **Claim:** No-color resets all 19 UI roles and removes the syntax component.
 
@@ -321,7 +288,7 @@ required behavior.
 - [ ] Prove-it oracle still agrees with the compiled true-color and ANSI rows.
 - [ ] Loop and wall budgets hold at `R = 19`.
 
-## Slice 8: Validate the typed Syntect component
+## Slice 7: Validate the typed Syntect component
 
 **Claim:** Cyril Dark's typed syntax identifier resolves in Syntect's loaded
 default theme set.
@@ -358,7 +325,7 @@ single name projection over arbitrary strings.
 - [ ] Prove-it oracle still agrees with all compiled projection rows.
 - [ ] Loop and wall budgets hold; production adds zero catalog scans.
 
-## Slice 9: Enforce the ticket's configuration and consumption boundary
+## Slice 8: Enforce the ticket's configuration and consumption boundary
 
 **Claim:** Public UI configuration remains its existing four fields and no
 production widget consumes the new seam.
@@ -399,7 +366,7 @@ keep all architecture enforcement test-only.
 - [ ] Prove-it oracle still agrees with all compiled projection rows.
 - [ ] Loop budget holds at `B ≤ 300,000` bytes and at most 16 file reads.
 
-## Slice 10: Fence the default-idle render buffer
+## Slice 9: Fence the default-idle render buffer
 
 **Claim:** Adding and exporting the unused seam changes zero symbols and zero
 styles in the default-idle 80×24 frame.
@@ -437,7 +404,7 @@ full-buffer snapshot fixture that preserves symbols and styles.
 - [ ] Prove-it oracle still agrees with all compiled projection rows.
 - [ ] Loop budget holds at 1,920 test cells.
 
-## Slice 11: Fence the active tool-diff render buffer
+## Slice 10: Fence the active tool-diff render buffer
 
 **Claim:** Adding and exporting the unused seam changes zero symbols and zero
 styles in the active-conversation-with-tool-diff 80×24 frame.
@@ -475,7 +442,7 @@ may reuse existing domain constructors.
 - [ ] Prove-it oracle still agrees with all compiled projection rows.
 - [ ] Loop budget holds below 2,000 test visits.
 
-## Slice 12: Fence the open-picker render buffer
+## Slice 11: Fence the open-picker render buffer
 
 **Claim:** Adding and exporting the unused seam changes zero symbols and zero
 styles in the open-picker 80×24 frame.
@@ -569,5 +536,5 @@ precondition remains.
 
 ## Approval
 
-The requester approved this budgeted plan and its preflight amendment to 12
-slices on 2026-07-10.
+The requester approved this plan and the evidence-driven correction back to 11
+atomic slices on 2026-07-10.
