@@ -545,10 +545,12 @@ ticket-start commit with canonical named-ANSI normalization.
 harness, and runs the baseline crate; the current renderer cannot produce
 expected cells.
 
-**Stress fixture:** Normalize base/bright named colors, RGB, indexed, reset, and
-absent values, then generate the message scene twice. Expected: canonical table
-rows pass, both 1,920-cell outputs are byte-identical, and the header contains
-the pinned commit. Treating base cyan as bright cyan must fail distinctly.
+**Stress fixture:** Normalize base/bright named colors, RGB, indexed, and the
+rendered default; absent style colors and explicit reset both become `DEFAULT`
+because Ratatui has collapsed them to `Color::Reset` in `Buffer::Cell`. Generate
+the message scene twice. Expected: canonical table rows pass, both 1,920-cell
+outputs are byte-identical, and the header contains the pinned commit. Treating
+base cyan as bright cyan must fail distinctly.
 
 **Loop budget:** O(W×H)=1,920 cell visits. One temporary worktree lifecycle, one
 Cargo invocation, and one streamed write use fewer than 20 orchestration

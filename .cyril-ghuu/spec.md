@@ -181,6 +181,7 @@ No new latency target is introduced by this ticket.
 | Edge | Decision | Rationale |
 | --- | --- | --- |
 | Named ANSI colors vary by terminal | Normalize the baseline through the canonical upstream ANSI-16 RGB table | Compatibility needs deterministic ground truth. |
+| Rendered absent color versus explicit reset | Normalize both to `DEFAULT` | Ratatui `Buffer::Cell` irreversibly stores both forms as `Color::Reset`; rendered-cell compatibility cannot distinguish them. |
 | One color serves unrelated meanings | Use generic roles rather than one role per meaning | Prevents role proliferation while avoiding identity/status misuse. |
 | Existing 19 roles cannot preserve all legacy colors semantically | Add exactly ten roles, for 29 total | Preserves canonical RGB output and the chosen generic-role policy. |
 | Existing specific and new generic roles share RGB values | Keep both roles | Identity/status meanings stay separate from generic presentation. |
@@ -256,6 +257,7 @@ This change does **not** include:
 | 21 | May no-color styles contain reset? | Yes; reset is not a concrete color. | Matches the upstream resolved theme API. |
 | 22 | What did the first design falsifier reveal? | Named ANSI red, green, yellow, and cyan use canonical base values absent from the 26-role draft. | The contract must cover actual Ratatui named-color values, not assumed bright RGB values. |
 | 23 | How is the failed coverage falsifier resolved? | Correct emphasis and add subdued-positive, subdued-negative, and quinary-accent roles, producing 29 roles. | Covers all fixed legacy values while retaining the generic-role policy. |
+| 24 | How do baseline cells distinguish absent color from explicit reset? | They do not; both normalize to `DEFAULT`. | Ratatui has already collapsed both to `Color::Reset` by the time a `Buffer::Cell` is observable. |
 
 <!-- markdownlint-disable MD013 -->
 

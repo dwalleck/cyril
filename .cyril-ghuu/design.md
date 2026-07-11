@@ -1,6 +1,6 @@
 # Design: Semantic conversation colors
 
-Status: approved (2026-07-11)
+Status: approved with rendered-cell normalization amendment (2026-07-11)
 
 ## Purpose
 
@@ -166,8 +166,12 @@ does not panic. Highlighted single lines remain uncached.
 
 A test-only normalized-cell representation stores symbol, modifiers,
 foreground, and background. Named ANSI colors from the baseline are converted
-through the canonical table before comparison; RGB, indexed, reset, and absent
-colors retain distinct normalized forms.
+through the canonical table before comparison; RGB and indexed colors retain
+distinct normalized forms. Ratatui `Buffer::Cell` irreversibly represents both
+an absent style color and explicit `Color::Reset` as `Color::Reset`, so both
+normalize to one `DEFAULT` rendered-cell value. The requester approved this
+reality-driven amendment on 2026-07-11 after the Slice 15A preflight falsified
+the earlier distinction.
 
 A test-only scoped scene renderer composes only the five conversation modules
 into each 80×24 buffer; it excludes chrome and modal surfaces owned by verified
