@@ -3,7 +3,7 @@ use std::sync::{LazyLock, Mutex};
 
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use ratatui::{
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
 };
 
@@ -145,8 +145,8 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                             _ => None,
                         };
                         flush_line(&mut lines, &mut current_spans);
-                        let border_style = Style::default().fg(Color::DarkGray);
-                        let bg = palette::CODE_BLOCK_BG;
+                        let border_style = Style::default().fg(theme.subdued);
+                        let bg = theme.code;
                         let mut header_spans: Vec<Span<'static>> = Vec::new();
                         // Border fills to available width (capped at 120).
                         let border_width = width.min(palette::MAX_BORDER_WIDTH);
@@ -160,7 +160,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                                 header_spans.push(Span::styled(
                                     display_lang.clone(),
                                     Style::default()
-                                        .fg(Color::Cyan)
+                                        .fg(theme.accent_quinary)
                                         .add_modifier(Modifier::BOLD),
                                 ));
                                 let lang_cols = display_lang.width();
@@ -180,8 +180,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                         let mut header_line = Line::from(header_spans);
                         header_line.style = Style::default().bg(bg);
                         lines.push(header_line);
-                        style_stack
-                            .push(Style::default().fg(Color::White).bg(palette::CODE_BLOCK_BG));
+                        style_stack.push(Style::default().fg(theme.text).bg(theme.code));
                     }
                     Tag::List(_) => {
                         list_depth += 1;
@@ -234,13 +233,17 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                     style_stack.pop();
 
                     let code = code_block_content.trim_end_matches('\n');
-                    let highlighted = highlight::highlight_block(code, code_block_lang.as_deref());
-                    let bg = palette::CODE_BLOCK_BG;
+                    let highlighted = highlight::highlight_block_with_theme(
+                        code,
+                        code_block_lang.as_deref(),
+                        theme,
+                    );
+                    let bg = theme.code;
 
                     for spans in highlighted {
                         let mut line_spans = vec![Span::styled(
                             "│ ".to_string(),
-                            Style::default().fg(Color::DarkGray),
+                            Style::default().fg(theme.subdued),
                         )];
                         for (style, text) in spans {
                             line_spans.push(Span::styled(text, style));
@@ -253,9 +256,9 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                     let border_width = width.min(palette::MAX_BORDER_WIDTH);
                     let mut footer_line = Line::from(Span::styled(
                         "╰".to_string() + &"─".repeat(border_width.saturating_sub(1)),
-                        Style::default().fg(Color::DarkGray),
+                        Style::default().fg(theme.subdued),
                     ));
-                    footer_line.style = Style::default().bg(palette::CODE_BLOCK_BG);
+                    footer_line.style = Style::default().bg(theme.code);
                     lines.push(footer_line);
                 }
                 TagEnd::Paragraph => {
@@ -407,7 +410,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
     // Pad code-block lines so the dark background fills the full terminal width.
     // Intentionally uses `width` (not MAX_BORDER_WIDTH) — borders are decorative
     // and capped, but the background fill should reach the terminal edge.
-    let bg = palette::CODE_BLOCK_BG;
+    let bg = theme.code;
     for line in &mut lines {
         if line.style.bg != Some(bg) {
             continue;
@@ -437,6 +440,7 @@ fn flush_line(lines: &mut Vec<Line<'static>>, spans: &mut Vec<Span<'static>>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ratatui::style::Color;
     use rstest::rstest;
 
     /// Extract plain text from rendered lines (ignoring styles).
@@ -504,6 +508,123 @@ mod tests {
             span.content.chars().all(|character| character == '─')
                 && span.style.fg == Some(theme.subdued)
         }));
+    }
+
+    #[test]
+    fn code_block_uses_marker_theme_and_missing_syntax_fallback() -> anyhow::Result<()> {
+        let theme = crate::traits::test_support::marker_theme();
+        let lines = render_with_theme("```rust\nlet value = 42;\n```", 80, &theme);
+        let header = &lines[0];
+        assert_eq!(header.spans[0].style.fg, Some(theme.subdued));
+        assert_eq!(header.spans[1].style.fg, Some(theme.accent_quinary));
+        assert_eq!(header.style.bg, Some(theme.code));
+
+        let body = lines
+            .iter()
+            .find(|line| line.spans.first().is_some_and(|span| span.content == "│ "))
+            .ok_or_else(|| anyhow::anyhow!("missing code body"))?;
+        assert_eq!(body.spans[0].style.fg, Some(theme.subdued));
+        assert_eq!(body.style.bg, Some(theme.code));
+        assert!(
+            body.spans[1..]
+                .iter()
+                .filter(|span| !span.content.trim().is_empty())
+                .all(|span| span.style.fg == Some(theme.text))
+        );
+
+        let footer = lines
+            .last()
+            .ok_or_else(|| anyhow::anyhow!("missing code footer"))?;
+        assert_eq!(footer.spans[0].style.fg, Some(theme.subdued));
+        assert_eq!(footer.style.bg, Some(theme.code));
+        Ok(())
+    }
+
+    #[test]
+    fn code_shapes_render_at_boundary_widths() {
+        let theme = crate::traits::test_support::marker_theme();
+        let wide = "x".repeat(500);
+        let cases = [
+            "```rust\nfn known() {}\n```".to_string(),
+            "```mystery\nunknown language\n```".to_string(),
+            "```\nabsent language\n```".to_string(),
+            "```rust\n```".to_string(),
+            format!("```text\n{wide}\n```"),
+            "```text\nUnicode 世界\n```".to_string(),
+        ];
+
+        for width in [0, 7, 80, 120, 200] {
+            for markdown in &cases {
+                let lines = render_with_theme(markdown, width, &theme);
+                assert!(lines.len() >= 2);
+                assert_eq!(
+                    lines.first().and_then(|line| line.style.bg),
+                    Some(theme.code)
+                );
+                assert_eq!(
+                    lines.last().and_then(|line| line.style.bg),
+                    Some(theme.code)
+                );
+                let border_width = lines[0]
+                    .spans
+                    .iter()
+                    .filter(|span| !span.content.trim().is_empty())
+                    .map(|span| span.content.width())
+                    .sum::<usize>();
+                assert!(border_width <= 120);
+            }
+        }
+    }
+
+    #[test]
+    fn syntax_and_markdown_caches_isolate_truecolor_and_no_color_in_both_orders() {
+        let truecolor = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+        let no_color = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None);
+        for (markdown, first, second) in [
+            (
+                "```rust\nfn forward() -> u8 { 1 }\n```",
+                &truecolor,
+                &no_color,
+            ),
+            (
+                "```rust\nfn reverse() -> u8 { 2 }\n```",
+                &no_color,
+                &truecolor,
+            ),
+        ] {
+            let first_lines = render_with_theme(markdown, 80, first);
+            let second_lines = render_with_theme(markdown, 80, second);
+            let (colored, plain) = if first.text == Color::Reset {
+                (&second_lines, &first_lines)
+            } else {
+                (&first_lines, &second_lines)
+            };
+            assert!(
+                colored
+                    .iter()
+                    .flat_map(|line| line.spans.iter())
+                    .any(|span| { matches!(span.style.fg, Some(Color::Rgb(_, _, _))) })
+            );
+            assert!(plain.iter().all(|line| {
+                [line.style.fg, line.style.bg]
+                    .into_iter()
+                    .chain(
+                        line.spans
+                            .iter()
+                            .flat_map(|span| [span.style.fg, span.style.bg]),
+                    )
+                    .flatten()
+                    .all(|color| color == Color::Reset)
+            }));
+        }
+    }
+
+    #[test]
+    fn hundred_kib_code_fallback_stays_linear_fixture() {
+        let code = "x".repeat(100 * 1_024);
+        let markdown = format!("```text\n{code}\n```");
+        let lines = render_with_theme(&markdown, 200, &crate::traits::test_support::marker_theme());
+        assert!(text(&lines).contains(&code));
     }
 
     #[test]
@@ -764,22 +885,26 @@ mod tests {
     }
 
     #[test]
-    fn render_code_block_language_badge_is_cyan_bold() {
+    fn render_code_block_language_badge_uses_quinary_accent() {
         let lines = render_md("```rust\nfn main() {}\n```");
-        let has_cyan_bold = lines.iter().any(|l| {
-            l.spans.iter().any(|s| {
-                s.style.fg == Some(Color::Cyan)
-                    && s.style.add_modifier.contains(Modifier::BOLD)
-                    && s.content.contains("rust")
+        let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+        let has_accent = lines.iter().any(|line| {
+            line.spans.iter().any(|span| {
+                span.style.fg == Some(theme.accent_quinary)
+                    && span.style.add_modifier.contains(Modifier::BOLD)
+                    && span.content.contains("rust")
             })
         });
-        assert!(has_cyan_bold, "language badge should be Cyan + Bold");
+        assert!(
+            has_accent,
+            "language badge should use quinary accent + Bold"
+        );
     }
 
     #[test]
     fn render_code_block_lines_have_background() {
         let lines = render_md("```\ncode\n```");
-        let bg = palette::CODE_BLOCK_BG;
+        let bg = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor).code;
         let code_lines: Vec<_> = lines.iter().filter(|l| l.style.bg == Some(bg)).collect();
         // Header + 1 content line + footer = 3 lines with bg
         assert!(
@@ -792,7 +917,7 @@ mod tests {
     #[test]
     fn code_block_lines_padded_to_width() {
         let lines = render("```\nhi\n```", 40);
-        let bg = palette::CODE_BLOCK_BG;
+        let bg = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor).code;
         for line in &lines {
             if line.style.bg != Some(bg) {
                 continue;
@@ -930,7 +1055,7 @@ mod tests {
         let long_code = "x".repeat(100);
         let md = format!("```\n{long_code}\n```");
         let lines = render(&md, 80);
-        let bg = palette::CODE_BLOCK_BG;
+        let bg = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor).code;
         for line in &lines {
             if line.style.bg != Some(bg) {
                 continue;
