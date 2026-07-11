@@ -101,25 +101,21 @@ mod tests {
     }
 
     #[test]
-    fn default_ui_config_schema_is_exactly_four_fields() {
-        let Ok(config): Result<Config, _> = toml::from_str(
+    fn default_ui_config_schema_is_exactly_four_fields() -> anyhow::Result<()> {
+        use anyhow::Context;
+
+        let config: Config = toml::from_str(
             r#"
 [ui]
 max_messages = 1000
 mouse_capture = false
 "#,
-        ) else {
-            panic!("fixture config should deserialize");
-        };
-        let Ok(encoded) = toml::to_string(&config.ui) else {
-            panic!("UI config should serialize");
-        };
-        let Ok(value): Result<toml::Value, _> = toml::from_str(&encoded) else {
-            panic!("serialized UI config should parse");
-        };
-        let Some(table) = value.as_table() else {
-            panic!("serialized UI config should be a table");
-        };
+        )?;
+        let encoded = toml::to_string(&config.ui)?;
+        let value: toml::Value = toml::from_str(&encoded)?;
+        let table = value
+            .as_table()
+            .context("serialized UI config should be a table")?;
         let mut keys: Vec<_> = table.keys().map(String::as_str).collect();
         keys.sort_unstable();
 
@@ -134,6 +130,7 @@ mouse_capture = false
                 "stream_buffer_timeout_ms",
             ]
         );
+        Ok(())
     }
 
     #[test]
