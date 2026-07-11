@@ -277,6 +277,14 @@ pub fn resolve_ansi16(id: ThemeId) -> Theme {
     resolve_with(id, SourceColor::ansi16)
 }
 
+/// Resolve the built-in theme without emitting color or syntax-color metadata.
+pub fn resolve_no_color(id: ThemeId) -> Theme {
+    Theme {
+        syntax: None,
+        ..resolve_with(id, |_| Color::Reset)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -499,6 +507,17 @@ mod tests {
         assert_eq!(theme.warning, Color::LightYellow);
         assert_eq!(theme.danger, Color::LightRed);
         assert_eq!(theme.syntax, Some(SyntaxTheme::Base16EightiesDark));
+    }
+
+    #[test]
+    fn no_color_resets_every_role_and_disables_syntax_color() {
+        let theme = resolve_no_color(ThemeId::CyrilDark);
+        assert!(
+            resolved_roles(theme)
+                .into_iter()
+                .all(|(_, color)| color == Color::Reset)
+        );
+        assert_eq!(theme.syntax, None);
     }
 
     #[test]
