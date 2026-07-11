@@ -8,6 +8,7 @@ pub mod state;
 pub mod stream_buffer;
 pub mod subagent_ui;
 pub mod text;
+pub mod theme;
 pub mod traits;
 pub mod widgets;
 
