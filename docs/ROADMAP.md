@@ -15,7 +15,7 @@ The original mission ("cross-platform TUI client for Kiro CLI, with WSL bridging
 The competitive landscape has a real gap to fill:
 
 | Tool | Vendor strategy | Agentic features | Composability |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | aider, cline, opencode | OpenAI-API-compat across providers | Reimplements its own tool-call/file-edit | None |
 | Claude Code, Kiro CLI native, Cursor | Vendor-locked | Native | Vendor-controlled plugins only |
 | `acpr` (registry runner) | Vendor-neutral | Native via ACP | None — just a process spawner |
@@ -67,6 +67,8 @@ Build `transcript-recorder` as cyril's first proxy stage in a new workspace crat
 **Depends on:** Phase 3 (or Phase 2 if you prefer to validate vendor-neutrality with hardcoded invocation first).
 
 Pick `claude-acp` as the first non-Kiro target (largest user base, well-supported, ~1,800 stars on the wrapper). Verify cyril's TUI works end-to-end. Generalize Kiro-specific UI affordances (mode picker, `_meta.welcomeMessage` rendering, `kiro.dev/*` commands) as capability-gated rather than always-on. This is the moment "vendor-neutral cyril" becomes demonstrable rather than aspirational.
+
+The presentation side of that generalization starts with the semantic-theme track: `cyril-ixua` (complete) defines Cyril Dark's 19-role contract and explicit true-color, ANSI-256, ANSI-16, and no-color projections. Widget migrations (`cyril-ghuu`, `cyril-nrnq`, `cyril-dij8`), additional palettes (`cyril-fkke`), and configuration/selection (`cyril-qaq0`) activate the seam without coupling visual policy to an agent vendor.
 
 ### Phase 5+ — Stages catalog growth
 
@@ -131,6 +133,7 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 **Framing — KAS turns cyril from a *client* into a *host*.** v2 is receive-and-render: cyril parses ~15 `kiro.dev/*` notifications and implements **zero** host callbacks (empty `clientCapabilities`). KAS expands the surface ~3–4× in notifications *and* adds a categorically new dimension — **server→client requests cyril must answer** (`auth/getAccessToken`, `fs/*`, `terminal/*`, `hooks/*`, `shell_type`). So the back half of this track (KAS-5 fs/terminal, KAS-7 hooks) is **host-responsibility work that converges with the stages layer (`crates/cyril-stages/`, Phase 2/5), not dialect parsing** — size and test it as such. In particular it makes `platform/path.rs` load-bearing and demands **cross-platform Windows/Linux testing** (path translation `C:\`↔`/mnt/c`, native-vs-WSL command execution) that the receive-only v2 path never required.
 
 > **Update 2026-07-02 — 2.11.0 audit + first live-session evidence base.** The 2.11.0 audit + reading two real captured sessions (KAS and v2, `KIRO_ACP_RECORD_PATH`) sharpen this track. See the committed **reference corpora**: `experiments/conductor-spike/{kas,v2}-live-session-trace-2.11.0.jsonl` + the shared `kas-live-session-trace-2.11.0.md` (full agent→client inventory, v2/KAS side-by-side, concrete tool-lifecycle field diff). Wire status: **`@kiro/agent` jumped 0.3.299→0.8.0 in 2.11.0 but is wire-stable** (a version renumber; covenant package still ships) — the only additive surface is 4 methods: `_kiro/knowledge/indexing{Started,Completed}`, `_kiro/sandbox/applyConfig`, `_session/steer/clear`. Milestone-mapped findings (all live-probed):
+>
 > - **Permission is ENGINE-CONDITIONAL — sharpens KAS-2a's tool-approval path (rivets cyril-qo13).** (a) KAS `user_input` clarifying questions carry N options **all `kind: allow_once`**; cyril's kind-keyed `PermissionResponse` + `find_option_id(kind)` can only return the *first* option → it silently answers every spec/quick-spec question with choice 0. (b) The trust models have **zero field overlap**: v2 `_meta.trustOptions[].{patterns,setting_key}` (command-pattern, persisted to a setting) vs KAS `_meta.kiro.consent{capability,scope}` (Cedar grant). So `PermissionResponse` must become engine-conditional: carry the selected `optionId` **and** a KAS `consent{capability,scope}` passthrough, while keeping the v2 `trustOption` path.
 > - **KAS-2b — three dropped `session_info_update` kinds worth consuming (rivets cyril-0o7e):** `turn_completion {elapsedTime, status, promptTurnSummaries:[{usage, usedTools[]}]}` (per-turn cost + duration + tool list — richer than the flat metering; `usedTools[]` is KAS-only, cost+duration also on v2 `metadata`), and `focus_update {focus.title}` (status line). Per-file `context_usage.items[]` carries **`progressivelyLoaded`** (rivets cyril-1116).
 > - **KAS-2c — `_kiro/governance/state` live-confirmed** `{isEnterprise, features:{mcpEnabled, webToolsEnabled, usageAnalytics, contentCollection, promptLogging, codeReferenceTracker, autonomousAgents}}` — the `GovernanceSource` feed exists exactly as scoped.
@@ -155,7 +158,7 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 *Agent→client requests (host callbacks — cyril answers these only when it advertises the gating `_meta.kiro` flag):*
 
 | Surface | Coverage |
-|---|---|
+| --- | --- |
 | `auth/getAccessToken` | ✅ KAS-1 |
 | `fs/*` · `_kiro/fs/*` | ✅ KAS-5a |
 | `terminal/*` · `_kiro/terminal/shell_type` | ✅ KAS-5b / 2a |
@@ -166,7 +169,7 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 *Client→agent requests (optional — cyril chooses to call these):*
 
 | Surface | Coverage |
-|---|---|
+| --- | --- |
 | `permissions/{list,explain}` · `policy/check` | ✅ KAS-7 |
 | `account/getUsage` · `codeIntelligence` | ✅ KAS-4 |
 | `session/{compact,export,history,context,delete,rename}` · `spec/*` | ⚠ KAS-7 non-goals |
@@ -175,7 +178,7 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 *Agent→client notifications (the converter receives all; unhandled = invisible, not protocol-breaking):*
 
 | Surface | Coverage |
-|---|---|
+| --- | --- |
 | `session_info_update` (18-kind union) | ✅ KAS-2a (turn_end) + KAS-2b |
 | `governance/state` | ✅ KAS-2c |
 | `hooks/{cancel,didChange}` | ✅ KAS-7 |
