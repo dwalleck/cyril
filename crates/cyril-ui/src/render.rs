@@ -90,6 +90,49 @@ mod tests {
         Ok(terminal.backend().buffer().clone())
     }
 
+    fn tool_diff_state() -> MockTuiState {
+        use crate::traits::{Activity, ChatMessage, TrackedToolCall};
+        use cyril_core::types::{
+            ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
+        };
+
+        let tool_call = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("theme-seam-diff"),
+                "Editing src/greeting.rs".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "src/greeting.rs".into(),
+                old_text: Some(
+                    "fn greet() {\n    println!(\"Hello, 世界\");\n    let status = \"old\";\n}\n"
+                        .into(),
+                ),
+                new_text: "fn greet() {\n    println!(\"Hello, Cyril 🚀\");\n    let status = \"ready\";\n}\n"
+                    .into(),
+            }])
+            .with_locations(vec![ToolCallLocation {
+                path: "src/greeting.rs".into(),
+                line: Some(1),
+            }]),
+        );
+
+        MockTuiState {
+            messages: vec![
+                ChatMessage::user_text("Update the greeting without losing Unicode.".into()),
+                ChatMessage::agent_text("I updated the Rust greeting and status.".into()),
+                ChatMessage::tool_call(tool_call),
+            ],
+            activity: Activity::Ready,
+            session_label: Some("theme-contract".into()),
+            current_mode: Some("code".into()),
+            current_model: Some("claude-sonnet".into()),
+            ..MockTuiState::default()
+        }
+    }
+
     #[test]
     fn draw_fallback_does_not_panic() {
         let backend = TestBackend::new(80, 24);
@@ -117,6 +160,13 @@ mod tests {
     fn theme_seam_idle() -> anyhow::Result<()> {
         let buffer = render_buffer(&MockTuiState::default())?;
         insta::assert_debug_snapshot!("theme_seam_idle", buffer);
+        Ok(())
+    }
+
+    #[test]
+    fn theme_seam_tool_diff() -> anyhow::Result<()> {
+        let buffer = render_buffer(&tool_diff_state())?;
+        insta::assert_debug_snapshot!("theme_seam_tool_diff", buffer);
         Ok(())
     }
 }
