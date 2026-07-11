@@ -1,6 +1,6 @@
 # Budgeted plan: Semantic theme seam for Cyril Dark
 
-Status: approved; corrected to 11 atomic slices after checkpoint evidence (2026-07-10)
+Status: approved; 11 slices with bounded Slice 1 dead-code debt (2026-07-10)
 
 ## Basis and checkpoint protocol
 
@@ -25,7 +25,12 @@ source and true-color values; ANSI columns are added only when their projection
 exists. Agreement lines are data on stdout. Oracle disagreements are
 diagnostics on stderr and return nonzero.
 
-Every slice ends with the repository gate:
+Every slice runs formatting, workspace tests, and workspace Clippy. Slice 1 may
+finish with `dead_code` warnings only for the private source-theme path that has
+no production consumer until Slice 2. Those warnings are recorded, not
+suppressed, and no other warning is accepted. Slice 2 must remove the entire
+warning ledger. Slice 2 and every subsequent slice run the strict repository
+gate:
 
 ```text
 cargo fmt --all
@@ -76,9 +81,9 @@ syntax is absent.
 explicit-mode and single-theme identifiers, private RGB/reset source color,
 fixed source/resolved role containers, the pinned Cyril Dark source, typed
 syntax identifier, test-binary source-row emitter, and unused module export.
-The atomic scope is required because the private source types are correctly
-reported as dead code until the production Cyril Dark constructor consumes
-them.
+The private source path remains intentionally unreachable until the true-color
+resolver in Slice 2 consumes it; its bounded `dead_code` warnings are carried in
+the Slice 1 ledger without lint suppression or widened visibility.
 
 **Loop budget:** Production construction is explicit field assignment with no
 loop. Test emission is `O(R) = 19` visits, below 10^6 operations with zero
@@ -96,7 +101,8 @@ and source-color sum type are the contract.
 
 **Verification:**
 
-- [ ] Unit tests pass with no dead-code warning.
+- [ ] Unit tests pass; Clippy reports only the recorded private source-theme
+      `dead_code` ledger and no other warning.
 - [ ] Stress fixture emits all 19 roles, 18 oracle-approved RGB rows, one reset
       canvas, and one syntax identifier.
 - [ ] Prove-it oracle reports `AGREE role-names 18/18` and
@@ -536,5 +542,5 @@ precondition remains.
 
 ## Approval
 
-The requester approved this plan and the evidence-driven correction back to 11
-atomic slices on 2026-07-10.
+The requester approved this 11-slice plan and the bounded Slice 1 dead-code
+ledger on 2026-07-10. Strict warning-free enforcement resumes in Slice 2.
