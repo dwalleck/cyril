@@ -62,11 +62,16 @@ struct SourceTheme {
     accent_quaternary: SourceColor,
     accent_quinary: SourceColor,
     subdued: SourceColor,
+    subdued_positive: SourceColor,
+    subdued_negative: SourceColor,
+    soft_accent: SourceColor,
+    positive_accent: SourceColor,
+    inset_background: SourceColor,
 }
 
 #[cfg(test)]
 impl SourceTheme {
-    fn roles(self) -> [(&'static str, SourceColor); 24] {
+    fn roles(self) -> [(&'static str, SourceColor); 29] {
         [
             ("canvas", self.canvas),
             ("chrome", self.chrome),
@@ -92,6 +97,11 @@ impl SourceTheme {
             ("accent_quaternary", self.accent_quaternary),
             ("accent_quinary", self.accent_quinary),
             ("subdued", self.subdued),
+            ("subdued_positive", self.subdued_positive),
+            ("subdued_negative", self.subdued_negative),
+            ("soft_accent", self.soft_accent),
+            ("positive_accent", self.positive_accent),
+            ("inset_background", self.inset_background),
         ]
     }
 }
@@ -124,6 +134,11 @@ fn cyril_dark_source(id: ThemeId) -> SourceTheme {
             accent_quaternary: SourceColor::Rgb(0x80, 0x00, 0x80),
             accent_quinary: SourceColor::Rgb(0x00, 0x80, 0x80),
             subdued: SourceColor::Rgb(0x80, 0x80, 0x80),
+            subdued_positive: SourceColor::Rgb(0x00, 0x80, 0x00),
+            subdued_negative: SourceColor::Rgb(0x80, 0x00, 0x00),
+            soft_accent: SourceColor::Rgb(0x8a, 0xb4, 0xf8),
+            positive_accent: SourceColor::Rgb(0x81, 0xc7, 0x84),
+            inset_background: SourceColor::Rgb(0x28, 0x2c, 0x34),
         },
     }
 }
@@ -156,6 +171,11 @@ pub struct Theme {
     pub accent_quaternary: Color,
     pub accent_quinary: Color,
     pub subdued: Color,
+    pub subdued_positive: Color,
+    pub subdued_negative: Color,
+    pub soft_accent: Color,
+    pub positive_accent: Color,
+    pub inset_background: Color,
 }
 
 impl SourceColor {
@@ -209,6 +229,11 @@ fn resolve_with(id: ThemeId, project: fn(SourceColor) -> Color) -> Theme {
         accent_quaternary: project(source.accent_quaternary),
         accent_quinary: project(source.accent_quinary),
         subdued: project(source.subdued),
+        subdued_positive: project(source.subdued_positive),
+        subdued_negative: project(source.subdued_negative),
+        soft_accent: project(source.soft_accent),
+        positive_accent: project(source.positive_accent),
+        inset_background: project(source.inset_background),
     }
 }
 
@@ -349,7 +374,7 @@ mod tests {
     use super::*;
     use syntect::highlighting::ThemeSet;
 
-    const EXPECTED_ROLES: [&str; 24] = [
+    const EXPECTED_ROLES: [&str; 29] = [
         "canvas",
         "chrome",
         "code",
@@ -374,9 +399,14 @@ mod tests {
         "accent_quaternary",
         "accent_quinary",
         "subdued",
+        "subdued_positive",
+        "subdued_negative",
+        "soft_accent",
+        "positive_accent",
+        "inset_background",
     ];
 
-    const EXPECTED_RGB: [(&str, SourceColor); 23] = [
+    const EXPECTED_RGB: [(&str, SourceColor); 28] = [
         ("chrome", SourceColor::Rgb(0x1e, 0x1e, 0x2e)),
         ("code", SourceColor::Rgb(0x28, 0x2c, 0x34)),
         ("selection", SourceColor::Rgb(0x32, 0x32, 0x46)),
@@ -400,9 +430,14 @@ mod tests {
         ("accent_quaternary", SourceColor::Rgb(0x80, 0x00, 0x80)),
         ("accent_quinary", SourceColor::Rgb(0x00, 0x80, 0x80)),
         ("subdued", SourceColor::Rgb(0x80, 0x80, 0x80)),
+        ("subdued_positive", SourceColor::Rgb(0x00, 0x80, 0x00)),
+        ("subdued_negative", SourceColor::Rgb(0x80, 0x00, 0x00)),
+        ("soft_accent", SourceColor::Rgb(0x8a, 0xb4, 0xf8)),
+        ("positive_accent", SourceColor::Rgb(0x81, 0xc7, 0x84)),
+        ("inset_background", SourceColor::Rgb(0x28, 0x2c, 0x34)),
     ];
 
-    fn resolved_roles(theme: Theme) -> [(&'static str, Color); 24] {
+    fn resolved_roles(theme: Theme) -> [(&'static str, Color); 29] {
         [
             ("canvas", theme.canvas),
             ("chrome", theme.chrome),
@@ -428,6 +463,11 @@ mod tests {
             ("accent_quaternary", theme.accent_quaternary),
             ("accent_quinary", theme.accent_quinary),
             ("subdued", theme.subdued),
+            ("subdued_positive", theme.subdued_positive),
+            ("subdued_negative", theme.subdued_negative),
+            ("soft_accent", theme.soft_accent),
+            ("positive_accent", theme.positive_accent),
+            ("inset_background", theme.inset_background),
         ]
     }
 
@@ -480,6 +520,11 @@ mod tests {
             accent_quaternary: SourceColor::Rgb(21, 0, 0),
             accent_quinary: SourceColor::Rgb(22, 0, 0),
             subdued: SourceColor::Rgb(23, 0, 0),
+            subdued_positive: SourceColor::Rgb(24, 0, 0),
+            subdued_negative: SourceColor::Rgb(25, 0, 0),
+            soft_accent: SourceColor::Rgb(26, 0, 0),
+            positive_accent: SourceColor::Rgb(27, 0, 0),
+            inset_background: SourceColor::Rgb(28, 0, 0),
         }
     }
 
@@ -494,7 +539,7 @@ mod tests {
     }
 
     #[test]
-    fn source_shape_has_one_reset_and_twenty_three_rgb_roles() {
+    fn source_shape_has_one_reset_and_twenty_eight_rgb_roles() {
         let roles = synthetic_source().roles();
         let reset_count = roles
             .iter()
@@ -504,7 +549,7 @@ mod tests {
             .iter()
             .filter(|(_, color)| matches!(color, SourceColor::Rgb(_, _, _)))
             .count();
-        assert_eq!((reset_count, rgb_count), (1, 23));
+        assert_eq!((reset_count, rgb_count), (1, 28));
     }
 
     #[test]
@@ -521,6 +566,33 @@ mod tests {
     }
 
     #[test]
+    fn conversation_legacy_colors_are_representable() {
+        let available = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let required = [
+            SourceColor::Rgb(0x8a, 0xb4, 0xf8),
+            SourceColor::Rgb(0x81, 0xc7, 0x84),
+            SourceColor::Rgb(0xb4, 0x8e, 0xad),
+            SourceColor::Rgb(0x8c, 0x8c, 0x8c),
+            SourceColor::Rgb(0x28, 0x2c, 0x34),
+            SourceColor::Rgb(0x80, 0x00, 0x00),
+            SourceColor::Rgb(0x00, 0x80, 0x00),
+            SourceColor::Rgb(0x80, 0x80, 0x00),
+            SourceColor::Rgb(0x00, 0x00, 0x80),
+            SourceColor::Rgb(0x80, 0x00, 0x80),
+            SourceColor::Rgb(0x00, 0x80, 0x80),
+            SourceColor::Rgb(0x80, 0x80, 0x80),
+            SourceColor::Rgb(0xff, 0xff, 0xff),
+        ];
+
+        for color in required {
+            assert!(
+                available.iter().any(|(_, candidate)| *candidate == color),
+                "legacy color {color:?} is not represented"
+            );
+        }
+    }
+
+    #[test]
     fn first_five_compatibility_roles_match_signed_values() {
         let actual = cyril_dark_source(ThemeId::CyrilDark).roles();
         let expected = [
@@ -531,7 +603,27 @@ mod tests {
             ("subdued", SourceColor::Rgb(0x80, 0x80, 0x80)),
         ];
 
-        assert_eq!(actual.len(), 24);
+        assert_eq!(actual.len(), 29);
+        for role in expected {
+            assert!(
+                actual.contains(&role),
+                "missing compatibility role {role:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn complete_compatibility_contract_has_twenty_nine_roles() {
+        let actual = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let expected = [
+            ("subdued_positive", SourceColor::Rgb(0x00, 0x80, 0x00)),
+            ("subdued_negative", SourceColor::Rgb(0x80, 0x00, 0x00)),
+            ("soft_accent", SourceColor::Rgb(0x8a, 0xb4, 0xf8)),
+            ("positive_accent", SourceColor::Rgb(0x81, 0xc7, 0x84)),
+            ("inset_background", SourceColor::Rgb(0x28, 0x2c, 0x34)),
+        ];
+
+        assert_eq!(actual.len(), 29);
         for role in expected {
             assert!(
                 actual.contains(&role),
@@ -563,6 +655,11 @@ mod tests {
         assert_eq!(theme.accent_quaternary, Color::Rgb(0x80, 0x00, 0x80));
         assert_eq!(theme.accent_quinary, Color::Rgb(0x00, 0x80, 0x80));
         assert_eq!(theme.subdued, Color::Rgb(0x80, 0x80, 0x80));
+        assert_eq!(theme.subdued_positive, Color::Rgb(0x00, 0x80, 0x00));
+        assert_eq!(theme.subdued_negative, Color::Rgb(0x80, 0x00, 0x00));
+        assert_eq!(theme.soft_accent, Color::Rgb(0x8a, 0xb4, 0xf8));
+        assert_eq!(theme.positive_accent, Color::Rgb(0x81, 0xc7, 0x84));
+        assert_eq!(theme.inset_background, Color::Rgb(0x28, 0x2c, 0x34));
         assert_eq!(theme.syntax, Some(SyntaxTheme::Base16EightiesDark));
     }
 

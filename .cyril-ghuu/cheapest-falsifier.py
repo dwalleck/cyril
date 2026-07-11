@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Falsify whether the signed role set covers every fixed legacy color."""
+import argparse
 import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser()
+parser.add_argument("--negative-control-26", action="store_true")
+args = parser.parse_args()
 NAMED = {
     "Color::Red": "#800000",
     "Color::Green": "#008000",
@@ -62,8 +66,13 @@ available = section_hex(
     "## Expanded semantic contract",
     "### Legacy-to-semantic mapping rules",
 )
+if args.negative_control_26:
+    available -= {"#008000", "#008080", "#800000", "#808000"}
 missing = sorted(required - available)
-print(f"required={len(required)} available={len(available)} missing={len(missing)}")
+control = " control=26" if args.negative_control_26 else ""
+print(
+    f"required={len(required)} available={len(available)} missing={len(missing)}{control}"
+)
 for color in missing:
     sources = sorted(token for token in tokens if NAMED.get(token) == color)
     print(f"MISSING\t{color}\t{','.join(sources)}")
