@@ -460,7 +460,7 @@ mod conversation_baseline_compatibility {
         }
     }
 
-    fn message_state() -> MockTuiState {
+    fn message_state(theme: Theme) -> MockTuiState {
         MockTuiState {
             messages: vec![
                 ChatMessage::user_text("user".into()),
@@ -476,13 +476,13 @@ mod conversation_baseline_compatibility {
             ],
             activity: Activity::ToolRunning,
             activity_elapsed: Some(Duration::from_secs(1)),
-            theme: truecolor_theme(),
+            theme,
             ..Default::default()
         }
     }
 
-    fn render_message_scene() -> anyhow::Result<Buffer> {
-        let state = message_state();
+    fn render_message_scene(theme: Theme) -> anyhow::Result<Buffer> {
+        let state = message_state(theme);
         let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
         terminal.draw(|frame| {
             crate::widgets::chat::render(frame, frame.area(), &state, &state.theme);
@@ -500,7 +500,7 @@ mod conversation_baseline_compatibility {
         ))
     }
 
-    fn tool_states() -> (MockTuiState, MockTuiState) {
+    fn tool_states(theme: Theme) -> (MockTuiState, MockTuiState) {
         let old_text = (0..21)
             .map(|index| {
                 if index % 2 == 0 {
@@ -601,20 +601,20 @@ mod conversation_baseline_compatibility {
         ];
         (
             MockTuiState {
-                theme: truecolor_theme(),
+                theme,
                 messages: vec![ChatMessage::tool_call(write)],
                 ..Default::default()
             },
             MockTuiState {
-                theme: truecolor_theme(),
+                theme,
                 messages: right,
                 ..Default::default()
             },
         )
     }
 
-    fn render_tool_scene() -> anyhow::Result<Buffer> {
-        let (left_state, right_state) = tool_states();
+    fn render_tool_scene(theme: Theme) -> anyhow::Result<Buffer> {
+        let (left_state, right_state) = tool_states(theme);
         let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
         terminal.draw(|frame| {
             let [left, right] =
@@ -626,13 +626,13 @@ mod conversation_baseline_compatibility {
         Ok(terminal.backend().buffer().clone())
     }
 
-    fn render_markdown_scene() -> anyhow::Result<Buffer> {
+    fn render_markdown_scene(theme: Theme) -> anyhow::Result<Buffer> {
         const HEADINGS: &str = "# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6";
         const STRUCTURE: &str = "- outer\n  - nested\n\n> quote 世界\n\n[repeat](https://example.com) [repeat](https://example.com)";
         const FORMATTING: &str = "| A | B |\n|---|---|\n| same | same |\n\ninline `code` and **bold** *italic* ~~strike~~\n\n---";
         const CODE: &str = "```rust\nfn syntax_rgb() -> u8 { 42 }\n```\n\n```mystery\nunknown_fallback 世界\n```\n\n```\nlanguage_absent\n```";
         let state = MockTuiState {
-            theme: truecolor_theme(),
+            theme,
             ..Default::default()
         };
         let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
@@ -682,7 +682,7 @@ mod conversation_baseline_compatibility {
         Ok(terminal.backend().buffer().clone())
     }
 
-    fn input_state() -> MockTuiState {
+    fn input_state(theme: Theme) -> MockTuiState {
         let suggestions = (0..21)
             .map(|index| {
                 let text = match index {
@@ -698,7 +698,7 @@ mod conversation_baseline_compatibility {
             })
             .collect();
         MockTuiState {
-            theme: truecolor_theme(),
+            theme,
             input_text: "first\nUnicode 世界\nthird".into(),
             input_cursor: "first\nUnicode ".len(),
             autocomplete_suggestions: suggestions,
@@ -707,8 +707,8 @@ mod conversation_baseline_compatibility {
         }
     }
 
-    fn render_input_scene() -> anyhow::Result<Buffer> {
-        let state = input_state();
+    fn render_input_scene(theme: Theme) -> anyhow::Result<Buffer> {
+        let state = input_state(theme);
         let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
         terminal.draw(|frame| {
             let [input, suggestions, _] = Layout::vertical([
@@ -837,17 +837,160 @@ mod conversation_baseline_compatibility {
             .collect()
     }
 
+    fn scene_buffers(theme: Theme) -> anyhow::Result<[(&'static str, Buffer); 4]> {
+        Ok([
+            ("messages", render_message_scene(theme)?),
+            ("tools", render_tool_scene(theme)?),
+            ("markdown", render_markdown_scene(theme)?),
+            ("input", render_input_scene(theme)?),
+        ])
+    }
+
     fn actual_cells() -> anyhow::Result<Vec<NormalizedCell>> {
         let mut cells = Vec::with_capacity(7_680);
-        for (scene, buffer) in [
-            ("messages", render_message_scene()?),
-            ("tools", render_tool_scene()?),
-            ("markdown", render_markdown_scene()?),
-            ("input", render_input_scene()?),
-        ] {
+        for (scene, buffer) in scene_buffers(truecolor_theme())? {
             cells.extend(normalized_scene(scene, &buffer)?);
         }
         Ok(cells)
+    }
+
+    fn theme_colors(theme: &Theme) -> [Color; 29] {
+        [
+            theme.canvas,
+            theme.chrome,
+            theme.code,
+            theme.selection,
+            theme.text,
+            theme.muted,
+            theme.border,
+            theme.accent,
+            theme.accent_alt,
+            theme.user,
+            theme.agent,
+            theme.system,
+            theme.info,
+            theme.success,
+            theme.warning,
+            theme.danger,
+            theme.diff_add,
+            theme.diff_delete,
+            theme.diff_context,
+            theme.emphasis,
+            theme.accent_tertiary,
+            theme.accent_quaternary,
+            theme.accent_quinary,
+            theme.subdued,
+            theme.subdued_positive,
+            theme.subdued_negative,
+            theme.soft_accent,
+            theme.positive_accent,
+            theme.inset_background,
+        ]
+    }
+
+    fn validate_projected_color(
+        marker_color: Color,
+        actual_color: Color,
+        marker_theme: &Theme,
+        projected_theme: &Theme,
+    ) -> Result<(), String> {
+        if marker_color == Color::Reset {
+            return (actual_color == Color::Reset)
+                .then_some(())
+                .ok_or_else(|| format!("default projected as {actual_color:?}"));
+        }
+
+        let marker_roles = theme_colors(marker_theme);
+        if let Some(role_index) = marker_roles.iter().position(|color| *color == marker_color) {
+            let expected = theme_colors(projected_theme)[role_index];
+            return (actual_color == expected).then_some(()).ok_or_else(|| {
+                format!("role {role_index} expected {expected:?}, actual {actual_color:?}")
+            });
+        }
+
+        if !matches!(marker_color, Color::Rgb(_, _, _)) {
+            return Err(format!("unknown marker color {marker_color:?}"));
+        }
+        let expected = if projected_theme.syntax.is_some() {
+            marker_color
+        } else {
+            Color::Reset
+        };
+        (actual_color == expected)
+            .then_some(())
+            .ok_or_else(|| format!("syntax expected {expected:?}, actual {actual_color:?}"))
+    }
+
+    #[derive(Debug)]
+    struct ModePass {
+        label: String,
+        no_color_non_reset: Option<usize>,
+    }
+
+    fn mode_matrix() -> anyhow::Result<Vec<ModePass>> {
+        let mut marker_theme = crate::traits::test_support::marker_theme();
+        marker_theme.syntax = truecolor_theme().syntax;
+        let marker_scenes = scene_buffers(marker_theme)?;
+        let modes = [
+            ("truecolor", ColorMode::TrueColor),
+            ("ansi256", ColorMode::Ansi256),
+            ("ansi16", ColorMode::Ansi16),
+            ("no-color", ColorMode::None),
+        ];
+        let mut passes = Vec::with_capacity(16);
+
+        for (mode_label, mode) in modes {
+            let projected_theme = crate::theme::resolve(ThemeId::CyrilDark, mode);
+            let projected_scenes = scene_buffers(projected_theme)?;
+            for ((marker_label, marker), (projected_label, projected)) in
+                marker_scenes.iter().zip(&projected_scenes)
+            {
+                assert_eq!(marker_label, projected_label);
+                let mut no_color_non_reset = 0usize;
+                for (index, (marker_cell, projected_cell)) in
+                    marker.content().iter().zip(projected.content()).enumerate()
+                {
+                    if marker_cell.symbol() != projected_cell.symbol()
+                        || marker_cell.modifier != projected_cell.modifier
+                    {
+                        return Err(anyhow::anyhow!(
+                            "{mode_label}/{marker_label} geometry drift at cell {index}"
+                        ));
+                    }
+                    validate_projected_color(
+                        marker_cell.fg,
+                        projected_cell.fg,
+                        &marker_theme,
+                        &projected_theme,
+                    )
+                    .map_err(|reason| {
+                        anyhow::anyhow!(
+                            "{mode_label}/{marker_label} foreground cell {index}: {reason}"
+                        )
+                    })?;
+                    validate_projected_color(
+                        marker_cell.bg,
+                        projected_cell.bg,
+                        &marker_theme,
+                        &projected_theme,
+                    )
+                    .map_err(|reason| {
+                        anyhow::anyhow!(
+                            "{mode_label}/{marker_label} background cell {index}: {reason}"
+                        )
+                    })?;
+                    if mode == ColorMode::None {
+                        no_color_non_reset += usize::from(projected_cell.fg != Color::Reset);
+                        no_color_non_reset += usize::from(projected_cell.bg != Color::Reset);
+                    }
+                }
+                passes.push(ModePass {
+                    label: format!("{mode_label}/{marker_label}"),
+                    no_color_non_reset: (mode == ColorMode::None).then_some(no_color_non_reset),
+                });
+            }
+        }
+        Ok(passes)
     }
 
     fn fixture_cell() -> NormalizedCell {
@@ -882,6 +1025,69 @@ mod conversation_baseline_compatibility {
         assert_eq!(failures.len(), 1);
         assert!(failures[0].contains("modifiers"));
         assert!(failures[0].contains("messages[0,0]"));
+    }
+
+    #[test]
+    fn mode_classifier_rejects_hardcoded_cyan_in_every_mode() {
+        let marker = crate::traits::test_support::marker_theme();
+        for mode in [
+            ColorMode::TrueColor,
+            ColorMode::Ansi256,
+            ColorMode::Ansi16,
+            ColorMode::None,
+        ] {
+            let projected = crate::theme::resolve(ThemeId::CyrilDark, mode);
+            assert!(
+                validate_projected_color(marker.text, Color::Cyan, &marker, &projected).is_err(),
+                "hardcoded cyan accepted in {mode:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn mode_classifier_accepts_syntax_rgb_in_colored_modes() {
+        let marker = crate::traits::test_support::marker_theme();
+        let syntax = Color::Rgb(1, 2, 3);
+        for mode in [ColorMode::TrueColor, ColorMode::Ansi256, ColorMode::Ansi16] {
+            let projected = crate::theme::resolve(ThemeId::CyrilDark, mode);
+            assert!(
+                validate_projected_color(syntax, syntax, &marker, &projected).is_ok(),
+                "syntax RGB rejected in {mode:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn mode_classifier_rejects_syntax_rgb_in_no_color() {
+        let marker = crate::traits::test_support::marker_theme();
+        let no_color = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None);
+        assert!(
+            validate_projected_color(Color::Rgb(1, 2, 3), Color::Rgb(1, 2, 3), &marker, &no_color,)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn all_sixteen_scene_mode_combinations_pass() -> anyhow::Result<()> {
+        let started = Instant::now();
+        let passes = mode_matrix()?;
+        let elapsed = started.elapsed();
+        assert_eq!(passes.len(), 16);
+        let labels = passes
+            .iter()
+            .map(|pass| pass.label.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(labels.len(), 16);
+        let no_color_counts = passes
+            .iter()
+            .filter_map(|pass| pass.no_color_non_reset)
+            .collect::<Vec<_>>();
+        assert_eq!(no_color_counts, vec![0, 0, 0, 0]);
+        assert!(
+            elapsed <= Duration::from_secs(2),
+            "30,720-cell mode matrix exceeded 2 seconds: {elapsed:?}"
+        );
+        Ok(())
     }
 
     #[test]
