@@ -16,10 +16,13 @@ design claim, stress expectation, or regression fence.
    not begin before all four baseline scenes exist.
 2. **Compiled oracle:** every checkpoint extracts `BEGIN_THEME_PROBE` through
    `END_THEME_PROBE` from the compiled `cyril-ui` test binary and compares its
-   rows with `.cyril-ghuu/projection-oracle.py`. The lexical probe/oracle remains
-   a separate source-migration oracle; it does not substitute for compiled
-   evidence. Renderer slices additionally run their compiled Ratatui buffer
-   fixture against the pinned baseline or marker oracle named by that slice.
+   rows with `.cyril-ghuu/projection-oracle.py`. Theme and no-color emitters run
+   in separate `cargo test ... --exact --nocapture` invocations; combining them
+   permits Rust's parallel test runner to interleave marker-delimited stdout.
+   The lexical probe/oracle remains a separate source-migration oracle; it does
+   not substitute for compiled evidence. Renderer slices additionally run their
+   compiled Ratatui buffer fixture against the pinned baseline or marker oracle
+   named by that slice.
 3. **Budgets:** the approved specification explicitly introduces no latency
    target. Therefore the sub-millisecond wall figures below are observational,
    not release gates. Checkpoints enforce the stated operation, candidate,

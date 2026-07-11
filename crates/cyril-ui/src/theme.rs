@@ -723,6 +723,28 @@ mod tests {
     }
 
     #[test]
+    fn all_roles_project() {
+        let truecolor = resolved_roles(resolve_truecolor(ThemeId::CyrilDark));
+        let ansi256 = resolved_roles(resolve_ansi256(ThemeId::CyrilDark));
+        let ansi16 = resolved_roles(resolve_ansi16(ThemeId::CyrilDark));
+        let mut projected = 0;
+
+        for (((source_name, source), (ansi256_name, projected256)), (ansi16_name, projected16)) in
+            truecolor.into_iter().zip(ansi256).zip(ansi16)
+        {
+            assert_eq!(source_name, ansi256_name);
+            assert_eq!(source_name, ansi16_name);
+            if matches!(source, Color::Rgb(_, _, _)) {
+                assert!(matches!(projected256, Color::Indexed(16..=255)));
+                assert!(ansi16_index(projected16).is_some());
+                projected += 1;
+            }
+        }
+
+        assert_eq!(projected, 28);
+    }
+
+    #[test]
     fn cyril_dark_syntax_theme_exists() {
         let themes = ThemeSet::load_defaults();
         assert!(
@@ -734,7 +756,7 @@ mod tests {
     }
 
     #[test]
-    fn no_color_resets_every_role_and_disables_syntax_color() {
+    fn no_color_resets_all_29_roles() {
         let theme = resolve_no_color(ThemeId::CyrilDark);
         assert!(
             resolved_roles(theme)
@@ -789,5 +811,21 @@ mod tests {
             }
         }
         println!("END_THEME_PROBE");
+    }
+
+    #[test]
+    fn emit_no_color_probe() {
+        println!("BEGIN_NO_COLOR_PROBE");
+        println!("role\tcolor");
+        for (name, color) in resolved_roles(resolve_no_color(ThemeId::CyrilDark)) {
+            let value = if color == Color::Reset {
+                "reset"
+            } else {
+                "concrete"
+            };
+            println!("{name}\t{value}");
+        }
+        println!("syntax\tnone");
+        println!("END_NO_COLOR_PROBE");
     }
 }

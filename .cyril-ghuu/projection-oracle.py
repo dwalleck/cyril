@@ -55,6 +55,7 @@ def table(path: Path, names: dict[str, str]) -> list[tuple[str, tuple[int, int, 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--input", required=True, type=Path)
+parser.add_argument("--no-color-input", type=Path)
 parser.add_argument("--role-count", required=True, type=int, choices=(19, 24, 29))
 args = parser.parse_args()
 expected = (
@@ -93,6 +94,8 @@ def integer_field(row: dict[str, str], field: str, role: str, errors: list[str])
 
 
 errors = []
+ansi256_count = 0
+ansi16_count = 0
 actual_names = [row["role"] for row in rows]
 expected_names = [name for name, _ in expected_rgb]
 if actual_names != expected_names:
@@ -102,16 +105,46 @@ for row, (name, rgb) in zip(rows, expected_rgb, strict=False):
     if row["role"] != name or actual_rgb != rgb:
         errors.append(f"{name} rgb expected={rgb!r} actual={actual_rgb!r}")
     if "ansi256" in row:
+        ansi256_count += 1
         wanted = min(xterm, key=lambda item: (distance(actual_rgb, item[1]), item[0]))[0]
         actual = integer_field(row, "ansi256", name, errors)
         if actual is not None and actual != wanted:
             errors.append(f"{name} ansi256 expected={wanted} actual={actual}")
     if "ansi16" in row:
+        ansi16_count += 1
         wanted = min(range(16), key=lambda index: (distance(actual_rgb, ansi16[index]), index))
         actual = integer_field(row, "ansi16", name, errors)
         if actual is not None and actual != wanted:
             errors.append(f"{name} ansi16 expected={wanted} actual={actual}")
+no_color_count = 0
+if args.no_color_input is not None:
+    no_color_lines = args.no_color_input.read_text(encoding="utf-8").splitlines()
+    if not no_color_lines:
+        errors.append("empty no-color probe")
+    else:
+        no_color_header = no_color_lines[0].split("\t")
+        no_color_rows = [
+            dict(zip(no_color_header, line.split("\t"), strict=True))
+            for line in no_color_lines[1:]
+        ]
+        expected_no_color = [name for name, _ in expected] + ["syntax"]
+        actual_no_color = [row["role"] for row in no_color_rows]
+        if actual_no_color != expected_no_color:
+            errors.append(
+                f"no-color roles expected={expected_no_color!r} actual={actual_no_color!r}"
+            )
+        for row in no_color_rows:
+            wanted = "none" if row["role"] == "syntax" else "reset"
+            if row["color"] != wanted:
+                errors.append(
+                    f"{row['role']} no-color expected={wanted} actual={row['color']}"
+                )
+            elif row["role"] != "syntax":
+                no_color_count += 1
 if errors:
     sys.stderr.write("DISAGREE compiled-theme\n" + "\n".join(errors) + "\n")
     raise SystemExit(1)
-print(f"AGREE compiled-theme roles={args.role_count} rgb={len(expected_rgb)}")
+print(
+    f"AGREE compiled-theme roles={args.role_count} rgb={len(expected_rgb)} "
+    f"ansi256={ansi256_count} ansi16={ansi16_count} no-color={no_color_count}"
+)
