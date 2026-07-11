@@ -28,6 +28,7 @@ mod cyril_ghuu_baseline {
     use ratatui::buffer::Buffer;
     use ratatui::layout::{Constraint, Layout};
     use ratatui::style::Color;
+    use ratatui::widgets::Paragraph;
     use ratatui::Terminal;
 
     use crate::traits::test_support::MockTuiState;
@@ -215,6 +216,45 @@ mod cyril_ghuu_baseline {
         Ok(terminal.backend().buffer().clone())
     }
 
+    fn render_markdown_scene() -> anyhow::Result<Buffer> {
+        const HEADINGS: &str = "# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6";
+        const STRUCTURE: &str = "- outer\n  - nested\n\n> quote 世界\n\n[repeat](https://example.com) [repeat](https://example.com)";
+        const FORMATTING: &str = "| A | B |\n|---|---|\n| same | same |\n\ninline `code` and **bold** *italic* ~~strike~~\n\n---";
+        const CODE: &str = "```rust\nfn syntax_rgb() -> u8 { 42 }\n```\n\n```mystery\nunknown_fallback 世界\n```\n\n```\nlanguage_absent\n```";
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|frame| {
+            let [left, right] = Layout::horizontal([
+                Constraint::Length(40),
+                Constraint::Length(40),
+            ])
+            .areas(frame.area());
+            let [heading_area, structure_area, formatting_area] = Layout::vertical([
+                Constraint::Length(7),
+                Constraint::Length(7),
+                Constraint::Min(1),
+            ])
+            .areas(left);
+            frame.render_widget(
+                Paragraph::new(crate::widgets::markdown::render(HEADINGS, 40)),
+                heading_area,
+            );
+            frame.render_widget(
+                Paragraph::new(crate::widgets::markdown::render(STRUCTURE, 40)),
+                structure_area,
+            );
+            frame.render_widget(
+                Paragraph::new(crate::widgets::markdown::render(FORMATTING, 40)),
+                formatting_area,
+            );
+            frame.render_widget(
+                Paragraph::new(crate::widgets::markdown::render(CODE, 40)),
+                right,
+            );
+        })?;
+        Ok(terminal.backend().buffer().clone())
+    }
+
     fn normalize_color(color: Color) -> String {
         let rgb = match color {
             Color::Reset => return "DEFAULT".to_string(),
@@ -334,8 +374,59 @@ mod cyril_ghuu_baseline {
         }
         assert!(!tool_symbols.contains("line-6"));
 
+        let first_markdown = render_markdown_scene()?;
+        let second_markdown = render_markdown_scene()?;
+        let markdown_rows = normalized_rows("markdown", &first_markdown);
+        assert_eq!(
+            markdown_rows,
+            normalized_rows("markdown", &second_markdown)
+        );
+        assert_eq!(markdown_rows.lines().count(), 1_920);
+        let markdown_symbols = first_markdown
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect::<String>();
+        for label in [
+            "H1",
+            "H2",
+            "H3",
+            "H4",
+            "H5",
+            "H6",
+            "outer",
+            "nested",
+            "quote",
+            "世",
+            "界",
+            "repeat",
+            "same",
+            "inline",
+            "`code`",
+            "bold",
+            "italic",
+            "strike",
+            "rust",
+            "syntax_rgb",
+            "mystery",
+            "unknown_fallback",
+            "language_absent",
+        ] {
+            assert!(
+                markdown_symbols.contains(label),
+                "missing markdown-scene label {label:?}"
+            );
+        }
+        assert!(
+            first_markdown
+                .content()
+                .iter()
+                .any(|cell| matches!(cell.fg, Color::Rgb(_, _, _))),
+            "known Rust syntax did not produce Syntect RGB"
+        );
+
         println!("BEGIN_CYRIL_GHUU_BASELINE");
-        print!("{first_rows}{tool_rows}");
+        print!("{first_rows}{tool_rows}{markdown_rows}");
         println!("END_CYRIL_GHUU_BASELINE");
         Ok(())
     }
@@ -354,8 +445,8 @@ CARGO_TARGET_DIR="$ROOT/target/cyril-ghuu-baseline" \
 } > "$OUTPUT"
 
 data_rows=$(awk 'NR > 2 {count++} END {print count + 0}' "$OUTPUT")
-if [[ "$data_rows" -ne 3840 ]]; then
-  printf 'expected 3840 baseline cells, found %s\n' "$data_rows" >&2
+if [[ "$data_rows" -ne 5760 ]]; then
+  printf 'expected 5760 baseline cells, found %s\n' "$data_rows" >&2
   exit 1
 fi
 if [[ "$(head -n 1 "$OUTPUT")" != $'commit\t'"$PINNED_COMMIT" ]]; then
