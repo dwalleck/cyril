@@ -33,7 +33,7 @@ mod cyril_ghuu_baseline {
 
     use crate::traits::test_support::MockTuiState;
     use crate::traits::{
-        Activity, ChatMessage, ChatMessageKind, SteerEchoStatus, TrackedToolCall,
+        Activity, ChatMessage, ChatMessageKind, SteerEchoStatus, Suggestion, TrackedToolCall,
     };
 
     fn steer(text: &str, status: SteerEchoStatus) -> ChatMessage {
@@ -255,6 +255,49 @@ mod cyril_ghuu_baseline {
         Ok(terminal.backend().buffer().clone())
     }
 
+    fn input_state() -> MockTuiState {
+        let suggestions = (0..21)
+            .map(|index| {
+                let text = match index {
+                    7 | 8 => "duplicate".to_string(),
+                    10 => "選択".to_string(),
+                    11 => "with spaces".to_string(),
+                    _ => format!("item-{index}"),
+                };
+                Suggestion {
+                    text,
+                    description: (index % 2 == 0).then(|| format!("description-{index}")),
+                }
+            })
+            .collect();
+        MockTuiState {
+            input_text: "first\nUnicode 世界\nthird".into(),
+            input_cursor: "first\nUnicode ".len(),
+            autocomplete_suggestions: suggestions,
+            autocomplete_selected: Some(10),
+            ..MockTuiState::default()
+        }
+    }
+
+    fn render_input_scene() -> anyhow::Result<Buffer> {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend)?;
+        let state = input_state();
+        assert_eq!(crate::widgets::input::height_for(&state), 5);
+        assert_eq!(crate::widgets::suggestions::height_for(&state), 10);
+        terminal.draw(|frame| {
+            let [input_area, suggestions_area, _] = Layout::vertical([
+                Constraint::Length(5),
+                Constraint::Length(10),
+                Constraint::Min(0),
+            ])
+            .areas(frame.area());
+            crate::widgets::input::render(frame, input_area, &state);
+            crate::widgets::suggestions::render(frame, suggestions_area, &state);
+        })?;
+        Ok(terminal.backend().buffer().clone())
+    }
+
     fn normalize_color(color: Color) -> String {
         let rgb = match color {
             Color::Reset => return "DEFAULT".to_string(),
@@ -425,8 +468,40 @@ mod cyril_ghuu_baseline {
             "known Rust syntax did not produce Syntect RGB"
         );
 
+        let first_input = render_input_scene()?;
+        let second_input = render_input_scene()?;
+        let input_rows = normalized_rows("input", &first_input);
+        assert_eq!(input_rows, normalized_rows("input", &second_input));
+        assert_eq!(input_rows.lines().count(), 1_920);
+        let input_symbols = first_input
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect::<String>();
+        for label in [
+            "first",
+            "Unicode",
+            "世",
+            "界",
+            "third",
+            "█",
+            "duplicate",
+            "選",
+            "択",
+            "with spaces",
+            "description-10",
+            "▸",
+        ] {
+            assert!(
+                input_symbols.contains(label),
+                "missing input-scene label {label:?}"
+            );
+        }
+        assert!(!input_symbols.contains("item-0"));
+        assert!(!input_symbols.contains("item-20"));
+
         println!("BEGIN_CYRIL_GHUU_BASELINE");
-        print!("{first_rows}{tool_rows}{markdown_rows}");
+        print!("{first_rows}{tool_rows}{markdown_rows}{input_rows}");
         println!("END_CYRIL_GHUU_BASELINE");
         Ok(())
     }
@@ -445,8 +520,8 @@ CARGO_TARGET_DIR="$ROOT/target/cyril-ghuu-baseline" \
 } > "$OUTPUT"
 
 data_rows=$(awk 'NR > 2 {count++} END {print count + 0}' "$OUTPUT")
-if [[ "$data_rows" -ne 5760 ]]; then
-  printf 'expected 5760 baseline cells, found %s\n' "$data_rows" >&2
+if [[ "$data_rows" -ne 7680 ]]; then
+  printf 'expected 7680 baseline cells, found %s\n' "$data_rows" >&2
   exit 1
 fi
 if [[ "$(head -n 1 "$OUTPUT")" != $'commit\t'"$PINNED_COMMIT" ]]; then
