@@ -457,6 +457,35 @@ mod tests {
     }
 
     #[test]
+    fn ansi256_ties_choose_the_lower_palette_index() {
+        assert_eq!(nearest_ansi256((13, 13, 13)), 232);
+    }
+
+    #[test]
+    fn ansi16_ties_choose_the_lower_palette_index() {
+        assert_eq!(nearest_ansi16((64, 0, 0)), 0);
+    }
+
+    #[test]
+    fn tie_break_is_candidate_order_independent() {
+        let ansi256_rgb = (13, 13, 13);
+        let reversed_ansi256 = (16..=255)
+            .rev()
+            .min_by_key(|&index| (rgb_distance(ansi256_rgb, xterm_rgb(index)), index))
+            .unwrap_or(16);
+        assert_eq!(reversed_ansi256, nearest_ansi256(ansi256_rgb));
+
+        let ansi16_rgb = (64, 0, 0);
+        let reversed_ansi16 = ANSI16_RGB
+            .into_iter()
+            .enumerate()
+            .rev()
+            .min_by_key(|&(index, candidate)| (rgb_distance(ansi16_rgb, candidate), index))
+            .map_or(0, |(index, _)| index as u8);
+        assert_eq!(reversed_ansi16, nearest_ansi16(ansi16_rgb));
+    }
+
+    #[test]
     fn ansi16_uses_nearest_canonical_entry_and_named_color() {
         let theme = resolve_ansi16(ThemeId::CyrilDark);
         assert_eq!(theme.canvas, Color::Reset);
