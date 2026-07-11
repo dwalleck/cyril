@@ -21,13 +21,14 @@ enum SourceColor {
     Reset,
 }
 
+/// Syntax-highlighting component selected by a visual theme.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SyntaxThemeId {
+pub enum SyntaxTheme {
     Base16EightiesDark,
 }
 
-impl SyntaxThemeId {
-    const fn name(self) -> &'static str {
+impl SyntaxTheme {
+    pub const fn name(self) -> &'static str {
         match self {
             Self::Base16EightiesDark => "base16-eighties.dark",
         }
@@ -36,7 +37,7 @@ impl SyntaxThemeId {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct SourceTheme {
-    syntax: SyntaxThemeId,
+    syntax: SyntaxTheme,
     canvas: SourceColor,
     chrome: SourceColor,
     code: SourceColor,
@@ -58,6 +59,7 @@ struct SourceTheme {
     diff_context: SourceColor,
 }
 
+#[cfg(test)]
 impl SourceTheme {
     fn roles(self) -> [(&'static str, SourceColor); 19] {
         [
@@ -87,7 +89,7 @@ impl SourceTheme {
 fn cyril_dark_source(id: ThemeId) -> SourceTheme {
     match id {
         ThemeId::CyrilDark => SourceTheme {
-            syntax: SyntaxThemeId::Base16EightiesDark,
+            syntax: SyntaxTheme::Base16EightiesDark,
             canvas: SourceColor::Reset,
             chrome: SourceColor::Rgb(0x1e, 0x1e, 0x2e),
             code: SourceColor::Rgb(0x28, 0x2c, 0x34),
@@ -114,6 +116,7 @@ fn cyril_dark_source(id: ThemeId) -> SourceTheme {
 /// Resolved semantic colors consumed by renderers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Theme {
+    pub syntax: Option<SyntaxTheme>,
     pub canvas: Color,
     pub chrome: Color,
     pub code: Color,
@@ -133,6 +136,42 @@ pub struct Theme {
     pub diff_add: Color,
     pub diff_delete: Color,
     pub diff_context: Color,
+}
+
+impl SourceColor {
+    const fn truecolor(self) -> Color {
+        match self {
+            Self::Rgb(r, g, b) => Color::Rgb(r, g, b),
+            Self::Reset => Color::Reset,
+        }
+    }
+}
+
+/// Resolve the built-in theme without reducing terminal color depth.
+pub fn resolve_truecolor(id: ThemeId) -> Theme {
+    let source = cyril_dark_source(id);
+    Theme {
+        syntax: Some(source.syntax),
+        canvas: source.canvas.truecolor(),
+        chrome: source.chrome.truecolor(),
+        code: source.code.truecolor(),
+        selection: source.selection.truecolor(),
+        text: source.text.truecolor(),
+        muted: source.muted.truecolor(),
+        border: source.border.truecolor(),
+        accent: source.accent.truecolor(),
+        accent_alt: source.accent_alt.truecolor(),
+        user: source.user.truecolor(),
+        agent: source.agent.truecolor(),
+        system: source.system.truecolor(),
+        info: source.info.truecolor(),
+        success: source.success.truecolor(),
+        warning: source.warning.truecolor(),
+        danger: source.danger.truecolor(),
+        diff_add: source.diff_add.truecolor(),
+        diff_delete: source.diff_delete.truecolor(),
+        diff_context: source.diff_context.truecolor(),
+    }
 }
 
 #[cfg(test)]
@@ -182,9 +221,33 @@ mod tests {
         ("diff_context", SourceColor::Rgb(0x8c, 0x8c, 0x8c)),
     ];
 
+    fn resolved_roles(theme: Theme) -> [(&'static str, Color); 19] {
+        [
+            ("canvas", theme.canvas),
+            ("chrome", theme.chrome),
+            ("code", theme.code),
+            ("selection", theme.selection),
+            ("text", theme.text),
+            ("muted", theme.muted),
+            ("border", theme.border),
+            ("accent", theme.accent),
+            ("accent_alt", theme.accent_alt),
+            ("user", theme.user),
+            ("agent", theme.agent),
+            ("system", theme.system),
+            ("info", theme.info),
+            ("success", theme.success),
+            ("warning", theme.warning),
+            ("danger", theme.danger),
+            ("diff_add", theme.diff_add),
+            ("diff_delete", theme.diff_delete),
+            ("diff_context", theme.diff_context),
+        ]
+    }
+
     fn synthetic_source() -> SourceTheme {
         SourceTheme {
-            syntax: SyntaxThemeId::Base16EightiesDark,
+            syntax: SyntaxTheme::Base16EightiesDark,
             canvas: SourceColor::Reset,
             chrome: SourceColor::Rgb(1, 0, 0),
             code: SourceColor::Rgb(2, 0, 0),
@@ -245,11 +308,23 @@ mod tests {
     }
 
     #[test]
+    fn truecolor_preserves_rgb_values_and_reset() {
+        let theme = resolve_truecolor(ThemeId::CyrilDark);
+        assert_eq!(theme.canvas, Color::Reset);
+        assert_eq!(theme.chrome, Color::Rgb(0x1e, 0x1e, 0x2e));
+        assert_eq!(theme.text, Color::Rgb(0xff, 0xff, 0xff));
+        assert_eq!(theme.muted, Color::Rgb(0x8c, 0x8c, 0x8c));
+        assert_eq!(theme.accent, Color::Rgb(0x00, 0xff, 0xff));
+        assert_eq!(theme.user, Color::Rgb(0x8a, 0xb4, 0xf8));
+        assert_eq!(theme.syntax, Some(SyntaxTheme::Base16EightiesDark));
+    }
+
+    #[test]
     fn emit_source_probe() {
         println!("BEGIN_THEME_PROBE");
         println!("role\trgb");
-        for (name, color) in cyril_dark_source(ThemeId::CyrilDark).roles() {
-            if let SourceColor::Rgb(r, g, b) = color {
+        for (name, color) in resolved_roles(resolve_truecolor(ThemeId::CyrilDark)) {
+            if let Color::Rgb(r, g, b) = color {
                 println!("{name}\t{r:02x}{g:02x}{b:02x}");
             }
         }
