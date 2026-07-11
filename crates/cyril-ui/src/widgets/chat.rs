@@ -555,10 +555,470 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use std::time::Duration;
+
     use crate::traits::test_support::MockTuiState;
     use crate::traits::{Activity, ChatMessage};
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+
+    const EXPECTED_SHAPE_LABELS: [&str; 44] = [
+        "message/user",
+        "message/agent",
+        "message/thought",
+        "message/tool",
+        "message/plan",
+        "message/system",
+        "message/command",
+        "message/steer",
+        "steer/queued",
+        "steer/applied",
+        "steer/cleared",
+        "steer/unsupported",
+        "activity/sending",
+        "activity/waiting",
+        "activity/tool-running",
+        "activity/streaming",
+        "activity/idle",
+        "activity/ready",
+        "tool-kind/read",
+        "tool-kind/write",
+        "tool-kind/execute",
+        "tool-kind/search",
+        "tool-kind/think",
+        "tool-kind/fetch",
+        "tool-kind/switch-mode",
+        "tool-kind/other",
+        "tool-status/in-progress",
+        "tool-status/pending",
+        "tool-status/completed",
+        "tool-status/failed",
+        "optional/location-present",
+        "optional/location-absent",
+        "optional/raw-input-present",
+        "optional/raw-input-absent",
+        "optional/content-present",
+        "optional/content-absent",
+        "optional/raw-output-present",
+        "optional/raw-output-absent",
+        "optional/old-text-present",
+        "optional/old-text-absent",
+        "optional/error-present",
+        "optional/error-absent",
+        "truncation/diff-20",
+        "truncation/output-5",
+    ];
+
+    fn matrix_tool(
+        id: &str,
+        title: &str,
+        kind: cyril_core::types::ToolKind,
+        status: cyril_core::types::ToolCallStatus,
+    ) -> TrackedToolCall {
+        use cyril_core::types::{ToolCall, ToolCallId};
+
+        TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new(id),
+            title.into(),
+            kind,
+            status,
+            None,
+        ))
+    }
+
+    fn rendered_message_text(message: &ChatMessage, theme: &Theme) -> String {
+        let mut lines = Vec::new();
+        render_message(&mut lines, message, 80, theme);
+        lines
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn rendered_tool_lines(tool: &TrackedToolCall, theme: &Theme) -> Vec<Line<'static>> {
+        let mut lines = Vec::new();
+        render_tool_call(&mut lines, tool, theme);
+        lines
+    }
+
+    fn chat_shape_matrix() -> anyhow::Result<Vec<&'static str>> {
+        use cyril_core::types::{
+            Plan, ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
+        };
+
+        macro_rules! record {
+            ($passes:ident, $label:literal, $condition:expr) => {{
+                anyhow::ensure!($condition, "shape {} failed", $label);
+                $passes.push($label);
+            }};
+        }
+
+        let theme = crate::traits::test_support::marker_theme();
+        let mut passes = Vec::with_capacity(EXPECTED_SHAPE_LABELS.len());
+        let basic_tool = matrix_tool(
+            "message-tool",
+            "tool",
+            ToolKind::Other,
+            ToolCallStatus::Pending,
+        );
+        let steer = |status| ChatMessage {
+            kind: ChatMessageKind::SteerEcho {
+                text: "steer".into(),
+                status,
+            },
+            timestamp: std::time::Instant::now(),
+        };
+        let messages = [
+            (ChatMessage::user_text("user".into()), "You:"),
+            (ChatMessage::agent_text("agent".into()), "Kiro:"),
+            (ChatMessage::thought("thought".into()), "thought"),
+            (ChatMessage::tool_call(basic_tool), "tool"),
+            (ChatMessage::plan(Plan::new(Vec::new())), "Plan:"),
+            (ChatMessage::system("system".into()), "system"),
+            (
+                ChatMessage::command_output("command".into(), "output".into()),
+                "/command:",
+            ),
+            (steer(SteerEchoStatus::Queued), "steer"),
+        ];
+        for ((message, expected), label) in messages.into_iter().zip(&EXPECTED_SHAPE_LABELS[..8]) {
+            let text = rendered_message_text(&message, &theme);
+            anyhow::ensure!(text.contains(expected), "shape {label} failed: {text}");
+            passes.push(*label);
+        }
+
+        for (status, suffix, label) in [
+            (SteerEchoStatus::Queued, "queued", "steer/queued"),
+            (SteerEchoStatus::Applied, "applied", "steer/applied"),
+            (SteerEchoStatus::Cleared, "cleared", "steer/cleared"),
+            (
+                SteerEchoStatus::Unsupported,
+                "not supported",
+                "steer/unsupported",
+            ),
+        ] {
+            let text = rendered_message_text(&steer(status), &theme);
+            anyhow::ensure!(text.contains(suffix), "shape {label} failed: {text}");
+            passes.push(label);
+        }
+
+        for (activity, visible, label) in [
+            (Activity::Sending, true, "activity/sending"),
+            (Activity::Waiting, true, "activity/waiting"),
+            (Activity::ToolRunning, true, "activity/tool-running"),
+            (Activity::Streaming, false, "activity/streaming"),
+            (Activity::Idle, false, "activity/idle"),
+            (Activity::Ready, false, "activity/ready"),
+        ] {
+            let state = MockTuiState {
+                activity,
+                activity_elapsed: Some(Duration::from_secs(1)),
+                ..Default::default()
+            };
+            let mut lines = Vec::new();
+            render_activity_indicator(&mut lines, &state, &theme);
+            anyhow::ensure!(
+                lines.is_empty() != visible,
+                "shape {label} visibility failed"
+            );
+            passes.push(label);
+        }
+
+        for (kind, expected, label) in [
+            (ToolKind::Read, "shape", "tool-kind/read"),
+            (ToolKind::Write, "shape", "tool-kind/write"),
+            (ToolKind::Execute, "shape", "tool-kind/execute"),
+            (ToolKind::Search, "shape", "tool-kind/search"),
+            (ToolKind::Think, "Thinking...", "tool-kind/think"),
+            (ToolKind::Fetch, "shape", "tool-kind/fetch"),
+            (ToolKind::SwitchMode, "shape", "tool-kind/switch-mode"),
+            (ToolKind::Other, "shape", "tool-kind/other"),
+        ] {
+            let lines = rendered_tool_lines(
+                &matrix_tool("kind", "shape", kind, ToolCallStatus::Pending),
+                &theme,
+            );
+            let label_text = lines[0].spans[1].content.as_ref();
+            anyhow::ensure!(
+                label_text == expected,
+                "shape {label} expected {expected:?}, got {label_text:?}"
+            );
+            passes.push(label);
+        }
+
+        for (status, icon, label) in [
+            (ToolCallStatus::InProgress, "⟳ ", "tool-status/in-progress"),
+            (ToolCallStatus::Pending, "⏳ ", "tool-status/pending"),
+            (ToolCallStatus::Completed, "✓ ", "tool-status/completed"),
+            (ToolCallStatus::Failed, "✗ ", "tool-status/failed"),
+        ] {
+            let lines = rendered_tool_lines(
+                &matrix_tool("status", "status", ToolKind::Other, status),
+                &theme,
+            );
+            let actual = lines[0].spans[0].content.as_ref();
+            anyhow::ensure!(
+                actual == icon,
+                "shape {label} expected {icon:?}, got {actual:?}"
+            );
+            passes.push(label);
+        }
+
+        let location_present = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("location-present"),
+                "read".into(),
+                ToolKind::Read,
+                ToolCallStatus::Pending,
+                None,
+            )
+            .with_locations(vec![ToolCallLocation {
+                path: "file.rs".into(),
+                line: Some(7),
+            }]),
+        );
+        let location_absent = matrix_tool(
+            "location-absent",
+            "read",
+            ToolKind::Read,
+            ToolCallStatus::Pending,
+        );
+        record!(
+            passes,
+            "optional/location-present",
+            rendered_tool_lines(&location_present, &theme)[0].spans[1].content == "Read(file.rs)"
+        );
+        record!(
+            passes,
+            "optional/location-absent",
+            rendered_tool_lines(&location_absent, &theme)[0].spans[1].content == "read"
+        );
+
+        let raw_input_present = TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("input-present"),
+            "execute".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"command": "cargo test"})),
+        ));
+        let raw_input_absent = matrix_tool(
+            "input-absent",
+            "execute",
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+        );
+        record!(
+            passes,
+            "optional/raw-input-present",
+            rendered_tool_lines(&raw_input_present, &theme)[0].spans[1].content
+                == "Run(cargo test)"
+        );
+        record!(
+            passes,
+            "optional/raw-input-absent",
+            rendered_tool_lines(&raw_input_absent, &theme)[0].spans[1].content == "execute"
+        );
+
+        let content_present = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("content-present"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "file.rs".into(),
+                old_text: Some("old\n".into()),
+                new_text: "new\n".into(),
+            }]),
+        );
+        let content_absent = matrix_tool(
+            "content-absent",
+            "write",
+            ToolKind::Write,
+            ToolCallStatus::Completed,
+        );
+        record!(
+            passes,
+            "optional/content-present",
+            rendered_tool_lines(&content_present, &theme).len() > 1
+        );
+        record!(
+            passes,
+            "optional/content-absent",
+            rendered_tool_lines(&content_absent, &theme).len() == 1
+        );
+
+        let raw_output_present = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("output-present"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!({"stdout": "output"}))),
+        );
+        let raw_output_absent = matrix_tool(
+            "output-absent",
+            "execute",
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+        );
+        record!(
+            passes,
+            "optional/raw-output-present",
+            rendered_tool_lines(&raw_output_present, &theme)
+                .iter()
+                .any(|line| line.to_string().contains("output"))
+        );
+        record!(
+            passes,
+            "optional/raw-output-absent",
+            rendered_tool_lines(&raw_output_absent, &theme).len() == 1
+        );
+
+        let diff_with_old = content_present;
+        let diff_without_old = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("old-absent"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "file.rs".into(),
+                old_text: None,
+                new_text: "new\n".into(),
+            }]),
+        );
+        let with_old_text = rendered_tool_lines(&diff_with_old, &theme)
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        let without_old_text = rendered_tool_lines(&diff_without_old, &theme)
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        record!(
+            passes,
+            "optional/old-text-present",
+            with_old_text.contains("│- old")
+        );
+        record!(
+            passes,
+            "optional/old-text-absent",
+            !without_old_text.contains("│-") && without_old_text.contains("│+ new")
+        );
+
+        let error_present = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("error-present"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Failed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!({"message": "boom"}))),
+        );
+        let error_absent = matrix_tool(
+            "error-absent",
+            "execute",
+            ToolKind::Execute,
+            ToolCallStatus::Failed,
+        );
+        record!(
+            passes,
+            "optional/error-present",
+            rendered_tool_lines(&error_present, &theme)
+                .iter()
+                .any(|line| line.to_string().contains("boom"))
+        );
+        record!(
+            passes,
+            "optional/error-absent",
+            rendered_tool_lines(&error_absent, &theme).len() == 1
+        );
+
+        let old_text = (0..21)
+            .map(|index| format!("old-{index}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let new_text = (0..21)
+            .map(|index| format!("new-{index}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let large_diff = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("diff-limit"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "large.rs".into(),
+                old_text: Some(old_text),
+                new_text,
+            }]),
+        );
+        let diff_lines = rendered_tool_lines(&large_diff, &theme);
+        record!(
+            passes,
+            "truncation/diff-20",
+            diff_lines.len() == 22
+                && diff_lines
+                    .last()
+                    .is_some_and(|line| line.to_string().contains("..."))
+        );
+
+        let output_six = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("output-limit"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!({
+                "stdout": "line-1\nline-2\nline-3\nline-4\nline-5\nline-6",
+                "exit_status": 0
+            }))),
+        );
+        let output_lines = rendered_tool_lines(&output_six, &theme);
+        let output_text = output_lines
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        record!(
+            passes,
+            "truncation/output-5",
+            output_lines.len() == 7
+                && output_text.contains("line-5")
+                && !output_text.contains("line-6")
+                && output_text.contains("...1 more lines")
+        );
+
+        Ok(passes)
+    }
+
+    #[test]
+    fn every_chat_and_tool_input_shape_is_fenced() -> anyhow::Result<()> {
+        let started = std::time::Instant::now();
+        let passes = chat_shape_matrix()?;
+        assert_eq!(passes, EXPECTED_SHAPE_LABELS);
+        assert!(
+            started.elapsed() <= Duration::from_secs(2),
+            "chat shape matrix exceeded 2 seconds"
+        );
+        Ok(())
+    }
 
     #[test]
     fn chat_renders_empty() {
