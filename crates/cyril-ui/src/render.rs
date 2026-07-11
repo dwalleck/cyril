@@ -90,6 +90,63 @@ mod tests {
         Ok(terminal.backend().buffer().clone())
     }
 
+    fn picker_state() -> MockTuiState {
+        use crate::traits::PickerState;
+        use cyril_core::types::CommandOption;
+
+        let option =
+            |label: &str, value: &str, description: &str, group: &str, is_current: bool| {
+                CommandOption {
+                    label: label.into(),
+                    value: value.into(),
+                    description: Some(description.into()),
+                    group: Some(group.into()),
+                    is_current,
+                }
+            };
+
+        MockTuiState {
+            picker: Some(PickerState {
+                title: "Select model".into(),
+                options: vec![
+                    option(
+                        "Claude Sonnet",
+                        "claude-sonnet",
+                        "Balanced speed and reasoning",
+                        "Anthropic",
+                        true,
+                    ),
+                    option(
+                        "Claude Opus",
+                        "claude-opus",
+                        "Deep reasoning for complex changes",
+                        "Anthropic",
+                        false,
+                    ),
+                    option(
+                        "GPT-5",
+                        "gpt-5",
+                        "General-purpose coding model",
+                        "OpenAI",
+                        false,
+                    ),
+                    option(
+                        "GPT-5 Mini",
+                        "gpt-5-mini",
+                        "Fast, economical edits",
+                        "OpenAI",
+                        false,
+                    ),
+                ],
+                filter: String::new(),
+                filtered_indices: vec![0, 1, 2, 3],
+                selected: 1,
+            }),
+            session_label: Some("theme-contract".into()),
+            ..MockTuiState::default()
+        }
+    }
+
     fn tool_diff_state() -> MockTuiState {
         use crate::traits::{Activity, ChatMessage, TrackedToolCall};
         use cyril_core::types::{
@@ -167,6 +224,13 @@ mod tests {
     fn theme_seam_tool_diff() -> anyhow::Result<()> {
         let buffer = render_buffer(&tool_diff_state())?;
         insta::assert_debug_snapshot!("theme_seam_tool_diff", buffer);
+        Ok(())
+    }
+
+    #[test]
+    fn theme_seam_picker() -> anyhow::Result<()> {
+        let buffer = render_buffer(&picker_state())?;
+        insta::assert_debug_snapshot!("theme_seam_picker", buffer);
         Ok(())
     }
 }
