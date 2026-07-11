@@ -1,6 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 
+use crate::theme::Theme;
 use crate::traits::TuiState;
 
 /// Minimum input height (3 content rows + 2 borders) — preserves the prior look
@@ -26,7 +27,7 @@ pub fn height_for(state: &dyn TuiState) -> u16 {
 
 /// Render the input area, displaying newlines as real rows and placing the
 /// cursor block at the byte cursor.
-pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
     let text = state.input_text();
     let cursor = state.input_cursor().min(text.len());
     let (before, after) = text.split_at(cursor);
@@ -49,7 +50,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     let after_head = after_segments[0];
     lines.push(Line::from(vec![
         Span::raw(before_tail),
-        Span::styled("\u{2588}", Style::default().fg(Color::White)),
+        Span::styled("\u{2588}", Style::default().fg(theme.text)),
         Span::raw(after_head),
     ]));
 
@@ -61,8 +62,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     let input_widget = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
         Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::DarkGray))
-            .title(Span::styled(" > ", Style::default().fg(Color::Cyan))),
+            .border_style(Style::default().fg(theme.subdued))
+            .title(Span::styled(
+                " > ",
+                Style::default().fg(theme.accent_quinary),
+            )),
     );
 
     frame.render_widget(input_widget, area);
@@ -82,7 +86,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
     }
@@ -99,7 +103,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
     }
@@ -124,7 +128,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
     }
@@ -142,6 +146,128 @@ mod tests {
                     .to_string()
             })
             .collect()
+    }
+
+    #[test]
+    fn input_chrome_uses_marker_theme_roles() {
+        let state = MockTuiState {
+            input_text: "marker".into(),
+            input_cursor: 3,
+            ..Default::default()
+        };
+        let backend = TestBackend::new(40, 5);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+            .expect("draw");
+        let cells = terminal.backend().buffer().content();
+        let color_of = |symbol: &str| {
+            cells
+                .iter()
+                .find(|cell| cell.symbol() == symbol)
+                .map(|cell| cell.fg)
+        };
+
+        assert_eq!(color_of("█"), Some(state.theme.text));
+        assert_eq!(color_of(">"), Some(state.theme.accent_quinary));
+        assert_eq!(color_of("┌"), Some(state.theme.subdued));
+    }
+
+    #[test]
+    fn input_shape_matches_pinned_baseline() -> anyhow::Result<()> {
+        let state = MockTuiState {
+            input_text: "first\nUnicode 世界\nthird".into(),
+            input_cursor: "first\nUnicode ".len(),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 5);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|frame| render(frame, frame.area(), &state, &state.theme))?;
+
+        let expected = include_str!("../fixtures/conversation-theme-baseline.tsv")
+            .lines()
+            .skip(2)
+            .filter_map(|line| {
+                let fields: Vec<_> = line.split('\t').collect();
+                let y = fields.get(2)?.parse::<u16>().ok()?;
+                (fields.first() == Some(&"input") && y < 5).then_some(fields)
+            })
+            .map(|fields| {
+                Ok((
+                    fields
+                        .get(3)
+                        .ok_or_else(|| anyhow::anyhow!("missing input symbol"))?
+                        .to_string(),
+                    fields
+                        .get(6)
+                        .ok_or_else(|| anyhow::anyhow!("missing input modifier"))?
+                        .parse::<u16>()?,
+                ))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let actual = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| {
+                let mut symbol = String::with_capacity(cell.symbol().len() * 2);
+                for byte in cell.symbol().as_bytes() {
+                    symbol.push(HEX[(byte >> 4) as usize] as char);
+                    symbol.push(HEX[(byte & 0x0f) as usize] as char);
+                }
+                (symbol, cell.modifier.bits())
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(actual.len(), 400);
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn cursor_boundaries_preserve_ascii_unicode_and_multiline_rows() {
+        for (text, cursor) in [
+            ("", 0),
+            ("ascii", 0),
+            ("ascii", 2),
+            ("ascii", 5),
+            ("ascii", usize::MAX),
+            ("世界", 0),
+            ("世界", "世".len()),
+            ("世界", "世界".len()),
+            ("first\n世界\nthird", "first\n世".len()),
+        ] {
+            let state = MockTuiState {
+                input_text: text.into(),
+                input_cursor: cursor,
+                ..Default::default()
+            };
+            let backend = TestBackend::new(40, 8);
+            let mut terminal = Terminal::new(backend).expect("test terminal");
+            terminal
+                .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+                .expect("draw");
+            let buffer = terminal.backend().buffer();
+            assert_eq!(
+                buffer
+                    .content()
+                    .iter()
+                    .filter(|cell| cell.symbol() == "█")
+                    .count(),
+                1
+            );
+            for character in text.chars().filter(|character| *character != '\n') {
+                assert!(
+                    buffer
+                        .content()
+                        .iter()
+                        .any(|cell| cell.symbol() == character.to_string()),
+                    "missing {character:?} for cursor {cursor}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -176,7 +302,7 @@ mod tests {
         let backend = TestBackend::new(40, 8);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
             .expect("draw");
 
         let rows = buffer_rows(&terminal);

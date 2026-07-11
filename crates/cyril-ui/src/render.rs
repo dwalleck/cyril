@@ -51,7 +51,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     if voice_height > 0 {
         crate::widgets::voice::render(frame, voice_area, state);
     }
-    crate::widgets::input::render(frame, input_area, state);
+    crate::widgets::input::render(frame, input_area, state, &theme);
     if suggestions_height > 0 {
         crate::widgets::suggestions::render(frame, suggestions_area, state);
     }
@@ -165,6 +165,10 @@ mod tests {
             };
 
         MockTuiState {
+            theme: crate::theme::resolve(
+                crate::theme::ThemeId::CyrilDark,
+                crate::theme::ColorMode::TrueColor,
+            ),
             picker: Some(PickerState {
                 title: "Select model".into(),
                 options: vec![
@@ -334,7 +338,14 @@ mod tests {
 
     #[test]
     fn theme_seam_idle() -> anyhow::Result<()> {
-        let buffer = render_buffer(&MockTuiState::default())?;
+        let state = MockTuiState {
+            theme: crate::theme::resolve(
+                crate::theme::ThemeId::CyrilDark,
+                crate::theme::ColorMode::TrueColor,
+            ),
+            ..MockTuiState::default()
+        };
+        let buffer = render_buffer(&state)?;
         insta::assert_debug_snapshot!("theme_seam_idle", buffer);
         Ok(())
     }

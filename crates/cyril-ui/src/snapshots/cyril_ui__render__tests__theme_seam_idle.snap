@@ -1,6 +1,5 @@
 ---
 source: crates/cyril-ui/src/render.rs
-assertion_line: 119
 expression: buffer
 ---
 Buffer {
@@ -35,16 +34,16 @@ Buffer {
         x: 0, y: 0, fg: DarkGray, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 10, y: 0, fg: Reset, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 0, y: 1, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
-        x: 0, y: 18, fg: DarkGray, bg: Reset, underline: Reset, modifier: NONE,
-        x: 1, y: 18, fg: Cyan, bg: Reset, underline: Reset, modifier: NONE,
-        x: 4, y: 18, fg: DarkGray, bg: Reset, underline: Reset, modifier: NONE,
-        x: 1, y: 19, fg: White, bg: Reset, underline: Reset, modifier: NONE,
+        x: 0, y: 18, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
+        x: 1, y: 18, fg: Rgb(0, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
+        x: 4, y: 18, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
+        x: 1, y: 19, fg: Rgb(255, 255, 255), bg: Reset, underline: Reset, modifier: NONE,
         x: 2, y: 19, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
-        x: 79, y: 19, fg: DarkGray, bg: Reset, underline: Reset, modifier: NONE,
+        x: 79, y: 19, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 1, y: 20, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
-        x: 79, y: 20, fg: DarkGray, bg: Reset, underline: Reset, modifier: NONE,
+        x: 79, y: 20, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 1, y: 21, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
-        x: 79, y: 21, fg: DarkGray, bg: Reset, underline: Reset, modifier: NONE,
+        x: 79, y: 21, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 0, y: 23, fg: DarkGray, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 5, y: 23, fg: Reset, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
     ]
