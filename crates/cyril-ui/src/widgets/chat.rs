@@ -2,15 +2,16 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
 
 use crate::palette;
+use crate::theme::Theme;
 use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus, TrackedToolCall, TuiState};
 use crate::widgets::markdown;
 
 /// Render the chat area. If a subagent is focused, renders the focused
 /// subagent's stream instead of the main chat.
-pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
     // Drill-in: if a subagent is focused, render its stream instead.
     if let Some(focused) = state.subagent_ui().focused_stream() {
-        render_subagent_drill_in(frame, area, state, focused);
+        render_subagent_drill_in(frame, area, state, focused, theme);
         return;
     }
 
@@ -18,7 +19,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 
     // Render committed messages (includes tool calls in chronological position)
     for msg in state.messages() {
-        render_message(&mut lines, msg, area.width as usize);
+        render_message(&mut lines, msg, area.width as usize, theme);
         lines.push(Line::default()); // spacing between messages
     }
 
@@ -28,7 +29,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         lines.push(Line::styled(
             "Kiro:",
             Style::default()
-                .fg(palette::AGENT_GREEN)
+                .fg(theme.agent)
                 .add_modifier(Modifier::BOLD),
         ));
         let md_lines = markdown::render(streaming, area.width as usize);
@@ -37,12 +38,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 
     // Render streaming thought
     if let Some(thought) = state.streaming_thought() {
-        push_thought_lines(&mut lines, thought);
+        push_thought_lines(&mut lines, thought, theme);
     }
 
     // Activity indicator — visible in the chat area when the agent is busy
     // but not actively streaming text.
-    render_activity_indicator(&mut lines, state);
+    render_activity_indicator(&mut lines, state, theme);
 
     let visible_height = area.height as usize;
 
@@ -82,6 +83,7 @@ fn render_subagent_drill_in(
     area: Rect,
     state: &dyn TuiState,
     stream: &crate::subagent_ui::SubagentStream,
+    theme: &Theme,
 ) {
     let mut lines: Vec<Line> = Vec::new();
 
@@ -97,16 +99,16 @@ fn render_subagent_drill_in(
         Span::styled(
             format!("─── {name} "),
             Style::default()
-                .fg(palette::USER_BLUE)
+                .fg(theme.soft_accent)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled("[Esc] Back", Style::default().fg(palette::MUTED_GRAY)),
+        Span::styled("[Esc] Back", Style::default().fg(theme.muted)),
     ]));
     lines.push(Line::default());
 
     // Render committed messages
     for msg in stream.messages() {
-        render_message(&mut lines, msg, area.width as usize);
+        render_message(&mut lines, msg, area.width as usize, theme);
         lines.push(Line::default());
     }
 
@@ -116,7 +118,7 @@ fn render_subagent_drill_in(
         lines.push(Line::styled(
             format!("{name}:"),
             Style::default()
-                .fg(palette::AGENT_GREEN)
+                .fg(theme.agent)
                 .add_modifier(Modifier::BOLD),
         ));
         let md_lines = markdown::render(streaming, area.width as usize);
@@ -151,9 +153,9 @@ fn render_subagent_drill_in(
 /// The 💭 marker prefixes the first line; continuation lines are indented to
 /// align under it, because accumulated thoughts span multiple physical lines
 /// and a single `Line` would not break on embedded newlines.
-fn push_thought_lines(lines: &mut Vec<Line>, text: &str) {
+fn push_thought_lines(lines: &mut Vec<Line>, text: &str, theme: &Theme) {
     let style = Style::default()
-        .fg(palette::MUTED_GRAY)
+        .fg(theme.muted)
         .add_modifier(Modifier::ITALIC);
     if text.is_empty() {
         // Live preview before the first thought token: keep the 💭 placeholder
@@ -171,14 +173,12 @@ fn push_thought_lines(lines: &mut Vec<Line>, text: &str) {
     }
 }
 
-fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
+fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme: &Theme) {
     match msg.kind() {
         ChatMessageKind::UserText(text) => {
             lines.push(Line::styled(
                 "You:",
-                Style::default()
-                    .fg(palette::USER_BLUE)
-                    .add_modifier(Modifier::BOLD),
+                Style::default().fg(theme.user).add_modifier(Modifier::BOLD),
             ));
             for line in text.lines() {
                 lines.push(Line::raw(format!("  {line}")));
@@ -188,14 +188,14 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
             lines.push(Line::styled(
                 "Kiro:",
                 Style::default()
-                    .fg(palette::AGENT_GREEN)
+                    .fg(theme.agent)
                     .add_modifier(Modifier::BOLD),
             ));
             let md_lines = markdown::render(text, width);
             lines.extend(md_lines);
         }
         ChatMessageKind::Thought(text) => {
-            push_thought_lines(lines, text);
+            push_thought_lines(lines, text, theme);
         }
         ChatMessageKind::ToolCall(tc) => {
             render_tool_call(lines, tc);
@@ -204,7 +204,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
             lines.push(Line::styled(
                 "Plan:",
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.emphasis)
                     .add_modifier(Modifier::BOLD),
             ));
             for entry in plan.entries() {
@@ -219,7 +219,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
         }
         ChatMessageKind::System(text) => {
             let style = Style::default()
-                .fg(palette::SYSTEM_MAUVE)
+                .fg(theme.system)
                 .add_modifier(Modifier::ITALIC);
             for line in text.lines() {
                 lines.push(Line::styled(line.to_string(), style));
@@ -229,7 +229,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
             lines.push(Line::styled(
                 format!("/{command}:"),
                 Style::default()
-                    .fg(palette::USER_BLUE)
+                    .fg(theme.soft_accent)
                     .add_modifier(Modifier::BOLD),
             ));
             for line in text.lines() {
@@ -238,10 +238,10 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
         }
         ChatMessageKind::SteerEcho { text, status } => {
             let (suffix, color) = match status {
-                SteerEchoStatus::Queued => ("queued", Color::Yellow),
-                SteerEchoStatus::Applied => ("applied", palette::AGENT_GREEN),
-                SteerEchoStatus::Cleared => ("cleared", Color::DarkGray),
-                SteerEchoStatus::Unsupported => ("not supported", Color::Red),
+                SteerEchoStatus::Queued => ("queued", theme.emphasis),
+                SteerEchoStatus::Applied => ("applied", theme.positive_accent),
+                SteerEchoStatus::Cleared => ("cleared", theme.subdued),
+                SteerEchoStatus::Unsupported => ("not supported", theme.subdued_negative),
             };
             let style = Style::default().fg(color).add_modifier(Modifier::ITALIC);
             // Steers are short; render the first line with the status suffix and
@@ -262,12 +262,12 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
 /// Render a live activity indicator at the bottom of chat content.
 /// Shows a spinner + label + elapsed time when the agent is busy but not
 /// actively streaming text (which is already visible).
-fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState) {
+fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState, theme: &Theme) {
     use crate::traits::Activity;
 
     let (label, color) = match state.activity() {
-        Activity::Sending | Activity::Waiting => ("Thinking...", palette::MUTED_GRAY),
-        Activity::ToolRunning => ("Running...", Color::Cyan),
+        Activity::Sending | Activity::Waiting => ("Thinking...", theme.muted),
+        Activity::ToolRunning => ("Running...", theme.accent_quinary),
         // Streaming text is already visible — no indicator needed.
         Activity::Streaming | Activity::Idle | Activity::Ready => return,
     };
@@ -568,7 +568,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
     }
@@ -588,9 +588,95 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
+    }
+
+    #[test]
+    fn user_identity_uses_frame_theme() {
+        let state = MockTuiState {
+            messages: vec![ChatMessage::user_text("hello".into())],
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+            .expect("draw");
+
+        let cell = terminal
+            .backend()
+            .buffer()
+            .cell((0, 0))
+            .expect("user label cell");
+        assert_eq!(cell.symbol(), "Y");
+        assert_eq!(cell.fg, state.theme.user);
+    }
+
+    #[test]
+    fn every_non_tool_message_uses_its_marker_role() {
+        use cyril_core::types::Plan;
+
+        let theme = crate::traits::test_support::marker_theme();
+        let steer = |status| ChatMessage {
+            kind: ChatMessageKind::SteerEcho {
+                text: "steer".into(),
+                status,
+            },
+            timestamp: std::time::Instant::now(),
+        };
+        let cases = [
+            (ChatMessage::user_text("user".into()), theme.user),
+            (ChatMessage::agent_text(String::new()), theme.agent),
+            (ChatMessage::thought("thought".into()), theme.muted),
+            (ChatMessage::plan(Plan::new(Vec::new())), theme.emphasis),
+            (ChatMessage::system("system".into()), theme.system),
+            (
+                ChatMessage::command_output("command".into(), String::new()),
+                theme.soft_accent,
+            ),
+            (steer(SteerEchoStatus::Queued), theme.emphasis),
+            (steer(SteerEchoStatus::Applied), theme.positive_accent),
+            (steer(SteerEchoStatus::Cleared), theme.subdued),
+            (steer(SteerEchoStatus::Unsupported), theme.subdued_negative),
+        ];
+
+        for (message, expected) in cases {
+            let mut lines = Vec::new();
+            render_message(&mut lines, &message, 80, &theme);
+            assert_eq!(
+                lines.first().and_then(|line| line.style.fg),
+                Some(expected),
+                "wrong role for {:?}",
+                message.kind()
+            );
+        }
+    }
+
+    #[test]
+    fn every_activity_uses_its_marker_role_or_stays_hidden() {
+        let theme = crate::traits::test_support::marker_theme();
+        for (activity, expected) in [
+            (Activity::Sending, Some(theme.muted)),
+            (Activity::Waiting, Some(theme.muted)),
+            (Activity::ToolRunning, Some(theme.accent_quinary)),
+            (Activity::Streaming, None),
+            (Activity::Idle, None),
+            (Activity::Ready, None),
+        ] {
+            let state = MockTuiState {
+                activity,
+                ..Default::default()
+            };
+            let mut lines = Vec::new();
+            render_activity_indicator(&mut lines, &state, &theme);
+            let actual = lines
+                .first()
+                .and_then(|line| line.spans.first())
+                .and_then(|span| span.style.fg);
+            assert_eq!(actual, expected, "wrong activity role for {activity:?}");
+        }
     }
 
     #[test]
@@ -598,7 +684,11 @@ mod tests {
         // A multi-line thought block: 💭 on the first row, continuation rows
         // indented under it (a single Line would not break on the \n).
         let mut lines: Vec<Line> = Vec::new();
-        push_thought_lines(&mut lines, "first line\nsecond line");
+        push_thought_lines(
+            &mut lines,
+            "first line\nsecond line",
+            &crate::traits::test_support::marker_theme(),
+        );
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0].to_string(), "💭 first line");
         assert_eq!(lines[1].to_string(), "   second line");
@@ -609,7 +699,7 @@ mod tests {
         // Empty live preview (thinking started, no token yet) must still show the
         // 💭 placeholder rather than nothing.
         let mut lines: Vec<Line> = Vec::new();
-        push_thought_lines(&mut lines, "");
+        push_thought_lines(&mut lines, "", &crate::traits::test_support::marker_theme());
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].to_string(), "💭 ");
     }
@@ -823,7 +913,12 @@ mod tests {
                 timestamp: std::time::Instant::now(),
             };
             let mut lines = Vec::new();
-            render_message(&mut lines, &msg, 80);
+            render_message(
+                &mut lines,
+                &msg,
+                80,
+                &crate::traits::test_support::marker_theme(),
+            );
             let text = lines[0].to_string();
             assert!(
                 text.contains("steer: café→ stop"),
@@ -878,7 +973,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -926,7 +1021,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
     }
@@ -973,7 +1068,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -1032,13 +1127,13 @@ mod tests {
         let backend_follow = TestBackend::new(80, 10);
         let mut term_follow = Terminal::new(backend_follow).expect("test terminal");
         term_follow
-            .draw(|frame| render(frame, frame.area(), &state_follow))
+            .draw(|frame| render(frame, frame.area(), &state_follow, &state_follow.theme))
             .expect("draw");
 
         let backend_browse = TestBackend::new(80, 10);
         let mut term_browse = Terminal::new(backend_browse).expect("test terminal");
         term_browse
-            .draw(|frame| render(frame, frame.area(), &state_browse))
+            .draw(|frame| render(frame, frame.area(), &state_browse, &state_browse.theme))
             .expect("draw");
 
         // Extract first line of each render to verify different content
@@ -1081,7 +1176,7 @@ mod tests {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
             .expect("draw should not panic with scroll_back exceeding content");
     }
 
@@ -1097,7 +1192,7 @@ mod tests {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
             .expect("draw");
 
         let buffer = terminal.backend().buffer();
@@ -1127,7 +1222,7 @@ mod tests {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
             .expect("draw");
 
         let buffer = terminal.backend().buffer();

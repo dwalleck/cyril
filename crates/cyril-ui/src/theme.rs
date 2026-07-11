@@ -767,7 +767,7 @@ mod tests {
     }
 
     #[test]
-    fn seam_has_no_widget_references() {
+    fn widgets_do_not_resolve_their_own_theme() {
         let widget_sources = [
             include_str!("widgets/approval.rs"),
             include_str!("widgets/chat.rs"),
@@ -787,10 +787,12 @@ mod tests {
         assert!(widget_sources.len() <= 16);
         assert!(scanned_bytes <= 300_000);
         for source in widget_sources {
-            assert!(!source.contains("crate::theme"));
-            assert!(!source.contains("theme::"));
+            let source_without_type_import = source.replace("use crate::theme::Theme;", "");
+            assert!(!source_without_type_import.contains("crate::theme"));
+            assert!(!source_without_type_import.contains("theme::"));
             assert!(!source.contains("ThemeId"));
             assert!(!source.contains("ColorMode"));
+            assert!(!source.contains("resolve("));
         }
     }
 

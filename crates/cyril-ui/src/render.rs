@@ -16,6 +16,7 @@ pub fn draw(frame: &mut Frame, state: &dyn TuiState) {
 
 fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     let area = frame.area();
+    let theme = state.theme();
 
     // Runtime-variable panel heights are owned by their widget's height_for().
     let crew_height = crate::widgets::crew_panel::height_for(state);
@@ -43,7 +44,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     .areas(area);
 
     crate::widgets::toolbar::render(frame, toolbar_area, state);
-    crate::widgets::chat::render(frame, chat_area, state);
+    crate::widgets::chat::render(frame, chat_area, state, &theme);
     if crew_height > 0 {
         crate::widgets::crew_panel::render(frame, crew_area, state);
     }
@@ -78,7 +79,10 @@ fn draw_fallback(frame: &mut Frame) {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use crate::traits::test_support::MockTuiState;
+    use crate::traits::{Activity, ChatMessage, ChatMessageKind, SteerEchoStatus};
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
     use ratatui::buffer::Buffer;
@@ -88,6 +92,61 @@ mod tests {
         let mut terminal = Terminal::new(backend)?;
         terminal.draw(|frame| super::draw(frame, state))?;
         Ok(terminal.backend().buffer().clone())
+    }
+
+    fn baseline_steer(text: &str, status: SteerEchoStatus) -> ChatMessage {
+        ChatMessage {
+            kind: ChatMessageKind::SteerEcho {
+                text: text.to_string(),
+                status,
+            },
+            timestamp: std::time::Instant::now(),
+        }
+    }
+
+    fn baseline_message_state() -> MockTuiState {
+        MockTuiState {
+            theme: crate::theme::resolve(
+                crate::theme::ThemeId::CyrilDark,
+                crate::theme::ColorMode::TrueColor,
+            ),
+            messages: vec![
+                ChatMessage::user_text("user".into()),
+                ChatMessage::agent_text(String::new()),
+                ChatMessage::thought("thought".into()),
+                ChatMessage::plan(cyril_core::types::Plan::new(Vec::new())),
+                ChatMessage::system("system".into()),
+                ChatMessage::command_output("context".into(), String::new()),
+                baseline_steer("queued", SteerEchoStatus::Queued),
+                baseline_steer("applied", SteerEchoStatus::Applied),
+                baseline_steer("cleared", SteerEchoStatus::Cleared),
+                baseline_steer("unsupported", SteerEchoStatus::Unsupported),
+            ],
+            activity: Activity::ToolRunning,
+            activity_elapsed: Some(Duration::from_secs(1)),
+            ..MockTuiState::default()
+        }
+    }
+
+    fn render_baseline_message_buffer() -> anyhow::Result<Buffer> {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend)?;
+        let state = baseline_message_state();
+        terminal.draw(|frame| {
+            crate::widgets::chat::render(frame, frame.area(), &state, &state.theme);
+        })?;
+        Ok(terminal.backend().buffer().clone())
+    }
+
+    fn symbol_hex(symbol: &str) -> String {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+
+        let mut encoded = String::with_capacity(symbol.len() * 2);
+        for byte in symbol.as_bytes() {
+            encoded.push(HEX[(byte >> 4) as usize] as char);
+            encoded.push(HEX[(byte & 0x0f) as usize] as char);
+        }
+        encoded
     }
 
     fn picker_state() -> MockTuiState {
@@ -177,6 +236,10 @@ mod tests {
         );
 
         MockTuiState {
+            theme: crate::theme::resolve(
+                crate::theme::ThemeId::CyrilDark,
+                crate::theme::ColorMode::TrueColor,
+            ),
             messages: vec![
                 ChatMessage::user_text("Update the greeting without losing Unicode.".into()),
                 ChatMessage::agent_text("I updated the Rust greeting and status.".into()),
@@ -211,6 +274,62 @@ mod tests {
                 super::draw(frame, &state);
             })
             .expect("draw should succeed");
+    }
+
+    #[test]
+    fn conversation_message_shape_matches_pinned_baseline() -> anyhow::Result<()> {
+        let expected = include_str!("fixtures/conversation-theme-baseline.tsv")
+            .lines()
+            .skip(2)
+            .filter_map(|line| {
+                let fields: Vec<_> = line.split('\t').collect();
+                (fields.first() == Some(&"messages")).then_some(fields)
+            })
+            .map(|fields| {
+                Ok((
+                    fields
+                        .get(3)
+                        .ok_or_else(|| anyhow::anyhow!("missing symbol field"))?
+                        .to_string(),
+                    fields
+                        .get(6)
+                        .ok_or_else(|| anyhow::anyhow!("missing modifier field"))?
+                        .parse::<u16>()?,
+                ))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        let buffer = render_baseline_message_buffer()?;
+        let actual = buffer
+            .content()
+            .iter()
+            .map(|cell| (symbol_hex(cell.symbol()), cell.modifier.bits()))
+            .collect::<Vec<_>>();
+
+        assert_eq!(actual.len(), 1_920);
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn conversation_frame_uses_state_theme_once() -> anyhow::Result<()> {
+        use crate::traits::ChatMessage;
+
+        let state = MockTuiState {
+            messages: vec![ChatMessage::user_text("marker".into())],
+            ..Default::default()
+        };
+        let buffer = render_buffer(&state)?;
+        let user_label = buffer
+            .cell((0, 1))
+            .ok_or_else(|| anyhow::anyhow!("missing first chat cell"))?;
+        assert_eq!(user_label.symbol(), "Y");
+        assert_eq!(user_label.fg, state.theme.user);
+
+        let (production, _) = include_str!("render.rs")
+            .split_once("#[cfg(test)]")
+            .ok_or_else(|| anyhow::anyhow!("missing test module boundary"))?;
+        assert_eq!(production.matches("state.theme()").count(), 1);
+        Ok(())
     }
 
     #[test]
