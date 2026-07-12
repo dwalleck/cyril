@@ -849,14 +849,29 @@ mod tests {
                 geometric.into_iter().zip(semantic)
             {
                 assert_eq!(source_name, semantic_name);
-                if matches!(source_name, "user" | "agent" | "system") {
-                    assert_ne!(source, projected, "{source_name}");
-                    changed += 1;
-                } else {
-                    assert_eq!(source, projected, "{source_name}");
+                let semantic_slot = match source_name {
+                    "user" => Some(Color::LightBlue),
+                    "agent" => Some(Color::LightGreen),
+                    "system" => Some(Color::LightMagenta),
+                    _ => None,
+                };
+                match semantic_slot {
+                    Some(slot) => {
+                        assert_eq!(projected, slot, "{source_name}");
+                        if source != projected {
+                            changed += 1;
+                        }
+                    }
+                    None => assert_eq!(source, projected, "{source_name}"),
                 }
             }
-            assert_eq!(changed, 3);
+            // Signed claim C3 pins the changed-row count for CyrilDark only.
+            // A future bundled theme whose speaker source already projects
+            // geometrically onto its semantic slot is contract-valid, so its
+            // count may be below 3 (mirrors acceptance-oracle.py scoping).
+            if theme_id == ThemeId::CyrilDark {
+                assert_eq!(changed, 3);
+            }
         }
     }
 
@@ -1030,7 +1045,13 @@ mod tests {
     }
 
     fn probe_ansi16(color: Color) -> String {
-        ansi16_index(color).map_or_else(|| "reset".into(), |index| index.to_string())
+        match color {
+            Color::Reset => "reset".into(),
+            other => ansi16_index(other).map_or_else(
+                || format!("unexpected:{other:?}"),
+                |index| index.to_string(),
+            ),
+        }
     }
 
     #[test]
