@@ -27,9 +27,18 @@ pub fn highlight_block_with_theme(
     lang: Option<&str>,
     theme: &Theme,
 ) -> HighlightedBlock {
+    highlight_block_with_cache(&HIGHLIGHT_CACHE, code, lang, theme)
+}
+
+fn highlight_block_with_cache(
+    cache: &Mutex<HashCache<HighlightedBlock>>,
+    code: &str,
+    lang: Option<&str>,
+    theme: &Theme,
+) -> HighlightedBlock {
     let hash = highlight_cache_key(code, lang, theme);
 
-    if let Ok(cache) = HIGHLIGHT_CACHE.lock()
+    if let Ok(cache) = cache.lock()
         && let Some(cached) = cache.get(hash)
     {
         return cached.clone();
@@ -40,7 +49,7 @@ pub fn highlight_block_with_theme(
         .and_then(|syntax_theme| THEME_SET.themes.get(syntax_theme.name()));
     let result = do_highlight_block(code, lang, theme, syntax_theme);
 
-    if let Ok(mut cache) = HIGHLIGHT_CACHE.lock() {
+    if let Ok(mut cache) = cache.lock() {
         cache.insert(hash, result.clone());
     }
 
@@ -235,6 +244,154 @@ mod tests {
             result[0]
                 .iter()
                 .all(|(style, _)| style.fg == Some(theme.text))
+        );
+    }
+
+    #[test]
+    fn local_highlight_cache_records_rendered_entry() {
+        let cache = Mutex::new(HashCache::new(256));
+        let theme = cyril_dark();
+        let code = "fn cached() {}";
+        let highlighted = highlight_block_with_cache(&cache, code, Some("rs"), &theme);
+        let key = highlight_cache_key(code, Some("rs"), &theme);
+        assert_eq!(
+            cache.lock().ok().and_then(|cache| cache.get(key).cloned()),
+            Some(highlighted)
+        );
+    }
+
+    fn uncached_block(code: &str, lang: Option<&str>, theme: &Theme) -> HighlightedBlock {
+        let syntax_theme = theme
+            .syntax
+            .and_then(|syntax| THEME_SET.themes.get(syntax.name()));
+        do_highlight_block(code, lang, theme, syntax_theme)
+    }
+
+    #[test]
+    fn highlight_cache_eviction_matches_oldest_half_ledger() {
+        let cache = Mutex::new(HashCache::new(256));
+        let mut keys = Vec::with_capacity(257);
+        let base = crate::traits::test_support::marker_theme();
+
+        for index in 0..256usize {
+            let mut theme = base;
+            theme.text = Color::Indexed(index as u8);
+            highlight_block_with_cache(&cache, "x", Some("rs"), &theme);
+            keys.push(highlight_cache_key("x", Some("rs"), &theme));
+        }
+        highlight_block_with_cache(&cache, "y", Some("rs"), &base);
+        keys.push(highlight_cache_key("y", Some("rs"), &base));
+        assert_eq!(
+            keys.iter()
+                .copied()
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            257,
+            "fixture keys must be unique"
+        );
+
+        let ledger = match cache.lock() {
+            Ok(ledger) => ledger,
+            Err(error) => panic!("EVICTION local highlight lock failed: {error}"),
+        };
+        for key in &keys[..128] {
+            assert!(ledger.get(*key).is_none(), "EVICTION retained oldest key");
+        }
+        for key in &keys[128..] {
+            assert!(ledger.get(*key).is_some(), "EVICTION lost newer key");
+        }
+        drop(ledger);
+
+        let mut repeated_theme = base;
+        repeated_theme.text = Color::Indexed(200);
+        assert_eq!(
+            highlight_block_with_cache(&cache, "x", Some("rs"), &repeated_theme),
+            uncached_block("x", Some("rs"), &repeated_theme),
+            "EVICTION repeat changed output"
+        );
+    }
+
+    #[test]
+    fn highlight_cache_concurrent_alternating_modes_never_leak() {
+        use std::sync::{Arc, Barrier};
+
+        let cache = Arc::new(Mutex::new(HashCache::new(256)));
+        let barrier = Arc::new(Barrier::new(8));
+        let colored = cyril_dark();
+        let plain = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None);
+        let colored_expected = uncached_block("x", Some("rs"), &colored);
+        let plain_expected = uncached_block("x", Some("rs"), &plain);
+        let mut workers = Vec::new();
+
+        for worker in 0usize..8 {
+            let cache = Arc::clone(&cache);
+            let barrier = Arc::clone(&barrier);
+            let colored_expected = colored_expected.clone();
+            let plain_expected = plain_expected.clone();
+            workers.push(std::thread::spawn(move || {
+                barrier.wait();
+                for query in 0usize..100 {
+                    let (theme, expected) = if (worker + query).is_multiple_of(2) {
+                        (&colored, &colored_expected)
+                    } else {
+                        (&plain, &plain_expected)
+                    };
+                    assert_eq!(
+                        highlight_block_with_cache(&cache, "x", Some("rs"), theme),
+                        *expected,
+                        "CONCURRENT worker {worker} query {query}"
+                    );
+                }
+                100usize
+            }));
+        }
+
+        let completed = workers
+            .into_iter()
+            .map(|worker| match worker.join() {
+                Ok(completed) => completed,
+                Err(_) => panic!("CONCURRENT highlight worker panicked"),
+            })
+            .sum::<usize>();
+        assert_eq!(completed, 800, "CONCURRENT highlight query count");
+    }
+
+    #[test]
+    fn highlight_cache_poison_computes_uncached_without_panic() {
+        let cache = Mutex::new(HashCache::new(256));
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = match cache.lock() {
+                Ok(guard) => guard,
+                Err(error) => panic!("POISON initial highlight lock failed: {error}"),
+            };
+            panic!("POISON highlight fixture");
+        }));
+        assert!(cache.is_poisoned());
+
+        let theme = cyril_dark();
+        assert_eq!(
+            highlight_block_with_cache(&cache, "x", Some("rs"), &theme),
+            uncached_block("x", Some("rs"), &theme),
+            "POISON highlight fallback drifted"
+        );
+    }
+
+    #[test]
+    fn five_hundred_highlight_cache_hits_fit_half_millisecond_budget() {
+        let cache = Mutex::new(HashCache::new(256));
+        let theme = cyril_dark();
+        let expected = highlight_block_with_cache(&cache, "x", Some("rs"), &theme);
+        let started = std::time::Instant::now();
+        for _ in 0..500 {
+            assert_eq!(
+                std::hint::black_box(highlight_block_with_cache(&cache, "x", Some("rs"), &theme,)),
+                expected
+            );
+        }
+        assert!(
+            started.elapsed() <= std::time::Duration::from_micros(500),
+            "500 highlight cache hits exceeded 0.5 ms: {:?}",
+            started.elapsed()
         );
     }
 
