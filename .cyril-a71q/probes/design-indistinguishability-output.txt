@@ -1,0 +1,10 @@
+C1-OBSERVATION-EQUALITY: True
+C1-WORLD late_A_turn_end: visible=Visible(active_owner=2, active_session='sess_main', completed_sources=((1, 'prompt_response'),), event_scope='sess_main', event_source='kas_turn_end', event_reason='end_turn') hidden_owner=1 required=DROP_STALE
+C1-WORLD B_turn_end_old_source_absent: visible=Visible(active_owner=2, active_session='sess_main', completed_sources=((1, 'prompt_response'),), event_scope='sess_main', event_source='kas_turn_end', event_reason='end_turn') hidden_owner=2 required=COMPLETE_B
+C1-REQUIRED-DISPOSITIONS: COMPLETE_B,DROP_STALE
+C1-DETERMINISTIC-OBSERVER-OUTPUTS: 1
+C1-POLICY DROP_STALE: FAILS=B turn_end liveness when both old turn_end and B response are absent
+C1-POLICY COMPLETE_B: FAILS=late_A_turn_end safety
+C1-POLICY WAIT: FAILS=late_A_turn_end safety + B turn_end liveness when both old turn_end and B response are absent
+C1-PASSED: identical production-visible input requires opposite outputs
+DESIGN-GATE-FAILED: correlation or a contract relaxation is required

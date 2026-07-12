@@ -11,3 +11,7 @@ docs/kiro-tui-*.js.sha256
 
 # prove-it probe build output (cyril-84ca)
 .cyril-84ca/probe/target/
+
+# cyril-a71q artifact-only runtime probe scratch
+.cyril-a71q/probes/runtime/target/
+.cyril-a71q/probes/.tmp-fake-home/

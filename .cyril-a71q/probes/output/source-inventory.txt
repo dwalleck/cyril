@@ -1,0 +1,10 @@
+notification_capacity_256=True
+turn_guard_session_only=True
+completion_checks_only_some=True
+synthesized_global=True
+kas_scoped_at_client=True
+global_has_none=True
+app_foreign_early_return=True
+shutdown_aborts_task=True
+deferred_disconnect=True
+ownership_counter_absent=False

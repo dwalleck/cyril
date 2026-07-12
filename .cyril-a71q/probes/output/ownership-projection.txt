@@ -1,0 +1,4 @@
+same_session_stale: oracle=['complete-active', 'drop-stale', 'complete-active'] current=['complete-active', 'complete-active', 'drop'] agree=False
+cross_session: oracle=['forward-foreign', 'complete-active'] current=['complete-active', 'drop'] agree=False
+global_v2: oracle=['complete-active'] current=['complete-active'] agree=True
+kas_dual: oracle=['complete-active', 'drop-stale'] current=['complete-active', 'drop'] agree=False

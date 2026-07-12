@@ -1,0 +1,6 @@
+scenario=same
+new scope=global kind=session-created
+terminal-1 scope=sess_main kind=turn-completed:EndTurn
+terminal-2 scope=global kind=turn-completed:EndTurn
+guard-probe-sent
+after scope=sess_main kind=turn-completed:EndTurn

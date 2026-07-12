@@ -1,0 +1,14 @@
+same/A scoped terminal: hidden_expected=complete-active comparison=expected
+same/A late response: hidden_expected=drop-stale comparison=CURRENT-DEFECT
+same/C before B terminal: hidden_expected=reject-busy comparison=CURRENT-DEFECT
+cross/X foreign terminal: hidden_expected=forward-foreign comparison=expected
+cross/C before B terminal: hidden_expected=reject-busy comparison=CURRENT-DEFECT
+cross/B owned terminal: hidden_expected=complete-active comparison=expected
+response/R1 prompt response: hidden_expected=secondary-nonterminal comparison=CURRENT-DEFECT
+response/R2 prompt accepted: hidden_expected=reject-busy comparison=CURRENT-DEFECT
+response/R2 prompt response: hidden_expected=secondary-nonterminal comparison=CURRENT-DEFECT
+item_agreement=3/9
+defect_items=same/A late response, same/C before B terminal, cross/C before B terminal, response/R1 prompt response, response/R2 prompt accepted, response/R2 prompt response
+existing_defect_set_preserved=True
+revised_spec_defect_reproduced=True
+model_defect_reproduced=True

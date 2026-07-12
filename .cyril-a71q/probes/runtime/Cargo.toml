@@ -1,0 +1,10 @@
+[package]
+name = "ownership-runtime-probe"
+version = "0.0.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+cyril-core = { path = "../../../crates/cyril-core", features = ["kas"] }
+tokio = { version = "1.50", features = ["full"] }

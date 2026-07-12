@@ -1,0 +1,19 @@
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_<sanitized>",
+    "update": {
+      "sessionUpdate": "session_info_update",
+      "_meta": {
+        "kiro": {
+          "turnEnd": {
+            "stopReason": "cancelled"
+          },
+          "kind": "turn_end",
+          "stopReason": "cancelled"
+        }
+      }
+    }
+  }
+}
