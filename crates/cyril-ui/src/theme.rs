@@ -1,9 +1,37 @@
 use ratatui::style::Color;
 
-/// Bundled visual theme identifier.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ThemeId {
-    CyrilDark,
+macro_rules! bundled_theme_ids {
+    (
+        $(#[$meta:meta])*
+        $visibility:vis enum $name:ident {
+            $($variant:ident),+ $(,)?
+        }
+    ) => {
+        $(#[$meta])*
+        $visibility enum $name {
+            $($variant),+
+        }
+
+        impl $name {
+            /// Every bundled theme, in declaration order.
+            pub const ALL: &'static [Self] = &[$(Self::$variant),+];
+
+            /// Stable identifier used by exhaustive contract probes.
+            pub const fn name(self) -> &'static str {
+                match self {
+                    $(Self::$variant => stringify!($variant)),+
+                }
+            }
+        }
+    };
+}
+
+bundled_theme_ids! {
+    /// Bundled visual theme identifier.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum ThemeId {
+        CyrilDark,
+    }
 }
 
 /// Explicit terminal color capability.
@@ -373,6 +401,34 @@ pub fn resolve_no_color(id: ThemeId) -> Theme {
 mod tests {
     use super::*;
     use syntect::highlighting::ThemeSet;
+
+    bundled_theme_ids! {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        enum RegistryStressTheme {
+            Alpha,
+            Beta,
+            Gamma,
+        }
+    }
+
+    #[test]
+    fn bundled_theme_registry_is_complete_and_unique() {
+        assert_eq!(ThemeId::ALL, &[ThemeId::CyrilDark]);
+        assert_eq!(ThemeId::CyrilDark.name(), "CyrilDark");
+    }
+
+    #[test]
+    fn bundled_theme_registry_keeps_middle_variants() {
+        assert_eq!(
+            RegistryStressTheme::ALL,
+            &[
+                RegistryStressTheme::Alpha,
+                RegistryStressTheme::Beta,
+                RegistryStressTheme::Gamma,
+            ]
+        );
+        assert_eq!(RegistryStressTheme::Beta.name(), "Beta");
+    }
 
     const EXPECTED_ROLES: [&str; 29] = [
         "canvas",
@@ -803,19 +859,34 @@ mod tests {
     }
 
     #[test]
+    fn emit_theme_registry_probe() {
+        println!("BEGIN_THEME_REGISTRY");
+        println!("index\ttheme");
+        for (index, theme_id) in ThemeId::ALL.iter().copied().enumerate() {
+            println!("{index}\t{}", theme_id.name());
+        }
+        println!("END_THEME_REGISTRY");
+    }
+
+    #[test]
     fn emit_source_probe() {
         println!("BEGIN_THEME_PROBE");
-        println!("role\trgb\tansi256\tansi16");
-        let truecolor = resolved_roles(resolve_truecolor(ThemeId::CyrilDark));
-        let ansi256 = resolved_roles(resolve_ansi256(ThemeId::CyrilDark));
-        let ansi16 = resolved_roles(resolve_ansi16(ThemeId::CyrilDark));
-        for (((name, source), (_, projected256)), (_, projected16)) in
-            truecolor.into_iter().zip(ansi256).zip(ansi16)
-        {
-            if let (Color::Rgb(r, g, b), Color::Indexed(index256), Some(index16)) =
-                (source, projected256, ansi16_index(projected16))
+        println!("theme\trole\trgb\tansi256\tansi16");
+        for theme_id in ThemeId::ALL.iter().copied() {
+            let truecolor = resolved_roles(resolve_truecolor(theme_id));
+            let ansi256 = resolved_roles(resolve_ansi256(theme_id));
+            let ansi16 = resolved_roles(resolve_ansi16(theme_id));
+            for (((name, source), (_, projected256)), (_, projected16)) in
+                truecolor.into_iter().zip(ansi256).zip(ansi16)
             {
-                println!("{name}\t{r:02x}{g:02x}{b:02x}\t{index256}\t{index16}");
+                if let (Color::Rgb(r, g, b), Color::Indexed(index256), Some(index16)) =
+                    (source, projected256, ansi16_index(projected16))
+                {
+                    println!(
+                        "{}\t{name}\t{r:02x}{g:02x}{b:02x}\t{index256}\t{index16}",
+                        theme_id.name()
+                    );
+                }
             }
         }
         println!("END_THEME_PROBE");
@@ -824,16 +895,18 @@ mod tests {
     #[test]
     fn emit_no_color_probe() {
         println!("BEGIN_NO_COLOR_PROBE");
-        println!("role\tcolor");
-        for (name, color) in resolved_roles(resolve_no_color(ThemeId::CyrilDark)) {
-            let value = if color == Color::Reset {
-                "reset"
-            } else {
-                "concrete"
-            };
-            println!("{name}\t{value}");
+        println!("theme\trole\tcolor");
+        for theme_id in ThemeId::ALL.iter().copied() {
+            for (name, color) in resolved_roles(resolve_no_color(theme_id)) {
+                let value = if color == Color::Reset {
+                    "reset"
+                } else {
+                    "concrete"
+                };
+                println!("{}\t{name}\t{value}", theme_id.name());
+            }
+            println!("{}\tsyntax\tnone", theme_id.name());
         }
-        println!("syntax\tnone");
         println!("END_NO_COLOR_PROBE");
     }
 }

@@ -176,8 +176,9 @@ is added.
 **Verification:**
 
 - [ ] Unit/stress command passes:
-      `cargo test -p cyril-ui theme::tests::bundled_theme_registry_is_complete_and_unique -- --exact`
-      and reports the three-variant fixture as `Alpha,Beta,Gamma`.
+      `cargo test -p cyril-ui theme::tests::bundled_theme_registry -- --test-threads=1`
+      and runs both the production registry check and the three-variant
+      `Alpha,Beta,Gamma` stress fixture.
 - [ ] Registry oracle passes:
       `python .cyril-q9dx/registry-oracle.py` with
       `C0 PASS themes=1 unique=1`.
