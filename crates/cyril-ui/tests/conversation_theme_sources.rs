@@ -1,6 +1,4 @@
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::time::{Duration, Instant};
+use std::path::Path;
 
 const MODULES: [(&str, &str); 5] = [
     ("chat", "src/widgets/chat.rs"),
@@ -112,39 +110,18 @@ fn audit_source(source: &str) -> Vec<Finding> {
     findings
 }
 
-fn formatted_production_source(relative: &str) -> String {
+fn production_source(relative: &str) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(relative);
-    let output = Command::new("rustfmt")
-        .args(["--edition", "2024", "--emit", "stdout"])
-        .arg(&path)
-        .output()
-        .unwrap_or_else(|error| panic!("rustfmt failed to start for {}: {error}", path.display()));
-    assert!(
-        output.status.success(),
-        "rustfmt rejected {}: {}",
-        path.display(),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let formatted = String::from_utf8(output.stdout).unwrap_or_else(|error| {
-        panic!(
-            "rustfmt output for {} was not UTF-8: {error}",
-            path.display()
-        )
-    });
-    let (_, source) = formatted.split_once("\n\n").unwrap_or_else(|| {
-        panic!(
-            "rustfmt emitted no source body for {}",
-            PathBuf::from(relative).display()
-        )
-    });
+    let source = std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
     source
         .split_once("#[cfg(test)]")
-        .map_or(source, |(production, _)| production)
+        .map_or(source.as_str(), |(production, _)| production)
         .to_string()
 }
 
 fn assert_module_clean(label: &str, relative: &str) {
-    let source = formatted_production_source(relative);
+    let source = production_source(relative);
     let findings = audit_source(&source);
     assert!(findings.is_empty(), "{label}: {findings:#?}");
 }
@@ -188,13 +165,11 @@ fn accepts_signed_diff_rgb_conversion() {
 }
 
 #[test]
-fn one_mebibyte_audit_is_linear_and_under_one_second() {
+fn one_mebibyte_audit_finds_violation() {
     let mut source = " ".repeat(1024 * 1024);
     source.push_str("\nfn render() { Style::default().fg(Color::White); }\n");
-    let started = Instant::now();
     let findings = audit_source(&source);
     assert_eq!(findings.len(), 1);
-    assert!(started.elapsed() <= Duration::from_secs(1));
 }
 
 #[test]

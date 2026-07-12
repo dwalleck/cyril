@@ -767,7 +767,7 @@ mod tests {
     }
 
     #[test]
-    fn widgets_only_use_the_explicit_theme_or_transitional_markdown_default() {
+    fn widgets_only_use_the_explicit_theme() {
         let widget_sources = [
             include_str!("widgets/approval.rs"),
             include_str!("widgets/chat.rs"),
@@ -788,21 +788,12 @@ mod tests {
                 .map_or(source, |(production, _)| production)
         });
         let scanned_bytes: usize = production_sources.iter().map(|source| source.len()).sum();
-        let transitional_resolver =
-            "let theme = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);";
-        let transitional_count = production_sources
-            .iter()
-            .map(|source| source.matches(transitional_resolver).count())
-            .sum::<usize>();
-
         assert!(production_sources.len() <= 16);
         assert!(scanned_bytes <= 300_000);
-        assert!(transitional_count <= 1);
         for source in production_sources {
             let source_without_allowed_seams = source
                 .replace("use crate::theme::Theme;", "")
-                .replace("use crate::theme::{ColorMode, Theme, ThemeId};", "")
-                .replace(transitional_resolver, "");
+                .replace("use crate::theme::{ColorMode, Theme, ThemeId};", "");
             assert!(!source_without_allowed_seams.contains("crate::theme"));
             assert!(!source_without_allowed_seams.contains("theme::"));
             assert!(!source_without_allowed_seams.contains("ThemeId"));

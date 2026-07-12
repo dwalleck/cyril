@@ -56,11 +56,7 @@ fn distance(a: (u8, u8, u8), b: (u8, u8, u8)) -> u32 {
     d(a.0, b.0) + d(a.1, b.1) + d(a.2, b.2)
 }
 
-fn nearest<I>(
-    rgb: (u8, u8, u8),
-    first: (u8, (u8, u8, u8)),
-    candidates: I,
-) -> u8
+fn nearest<I>(rgb: (u8, u8, u8), first: (u8, (u8, u8, u8)), candidates: I) -> u8
 where
     I: IntoIterator<Item = (u8, (u8, u8, u8))>,
 {
@@ -81,11 +77,7 @@ where
 fn main() {
     let mut output = String::from("role\trgb\tansi256\tansi16\n");
     for (role, rgb) in ROLES {
-        let a256 = nearest(
-            rgb,
-            (16, xterm(16)),
-            (17u8..=255).map(|i| (i, xterm(i))),
-        );
+        let a256 = nearest(rgb, (16, xterm(16)), (17u8..=255).map(|i| (i, xterm(i))));
         let a16 = nearest(
             rgb,
             (0, ANSI16[0]),
