@@ -1,0 +1,11 @@
+start scenario=response_only argv=--transport=stdio|--auth=acp-callback
+recv method=initialize id=0
+recv method=session/new id=1
+recv method=session/prompt id=2
+recv prompt name=R1 id=2
+respond prompt owner=R1
+recv method=session/prompt id=3
+recv prompt name=R2 id=3
+respond prompt owner=R2
+recv method=session/prompt id=4
+recv prompt name=R3 id=4

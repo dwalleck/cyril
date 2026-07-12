@@ -1,0 +1,13 @@
+CHOICE-A response_releases_A=False
+CHOICE-A response_evidence=[('A', 'cancelled')]
+CHOICE-A B_rejected_before_turn_end=True
+CHOICE-A turn_end_completions=['A']
+CHOICE-A active_task_after_turn_end=None
+CHOICE-A B_active_after_turn_end=True
+CHOICE-A abort_record=['abort:A']
+CHOICE-A late_A_entered_B_lifetime=False
+CHOICE-A discarded_after_abort=[('A', 'cancelled')]
+CHOICE-A failure_order=['BridgeError', 'TurnCompleted', 'BridgeDisconnected']
+CHOICE-A B_rejected_after_failstop=True
+REVISED-CHEAPEST-PASSED
+REVISED-DESIGN-GATE-PASSED
