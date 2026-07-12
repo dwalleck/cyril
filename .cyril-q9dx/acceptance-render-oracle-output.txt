@@ -1,0 +1,6 @@
+C4 PASS path=committed_user role=user marker=You: foreground=LightBlue cells=80
+C4 PASS path=committed_agent role=agent marker=Kiro: foreground=LightGreen cells=80
+C4 PASS path=system_unicode role=system marker=系统 status foreground=LightMagenta cells=80
+C4 PASS path=main_streaming_agent role=agent marker=Kiro: foreground=LightGreen cells=80
+C4 PASS path=subagent_streaming_agent role=agent marker=reviewer: foreground=LightGreen cells=240
+C4 PASS paths=5 cells_visited=560 budget=9600

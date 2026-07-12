@@ -562,6 +562,7 @@ mod tests {
     use crate::traits::{Activity, ChatMessage};
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+    use unicode_width::UnicodeWidthChar;
 
     const EXPECTED_SHAPE_LABELS: [&str; 44] = [
         "message/user",
@@ -1080,6 +1081,162 @@ mod tests {
             .map(|cell| cell.fg)
             .expect("Markdown heading cell");
         (symbols, foreground)
+    }
+
+    #[derive(Debug)]
+    struct IdentityProbeRow {
+        path: &'static str,
+        marker: &'static str,
+        foreground: Color,
+        cells_visited: usize,
+    }
+
+    fn locate_identity_marker(buffer: &Buffer, marker: &str) -> Option<(Color, usize)> {
+        let mut terminal_marker = String::new();
+        for character in marker.chars() {
+            terminal_marker.push(character);
+            let continuation_cells = character.width().unwrap_or(0).saturating_sub(1);
+            terminal_marker.extend(std::iter::repeat_n(' ', continuation_cells));
+        }
+
+        let mut cells_visited = 0;
+        for y in 0..24 {
+            let mut row = String::new();
+            let mut offsets = Vec::with_capacity(80);
+            for x in 0..80 {
+                offsets.push((row.len(), x));
+                let cell = buffer.cell((x, y))?;
+                row.push_str(cell.symbol());
+                cells_visited += 1;
+            }
+            if let Some(byte_offset) = row.find(&terminal_marker) {
+                let x = offsets
+                    .into_iter()
+                    .find_map(|(offset, x)| (offset == byte_offset).then_some(x))?;
+                return buffer.cell((x, y)).map(|cell| (cell.fg, cells_visited));
+            }
+        }
+        None
+    }
+
+    fn render_identity_probe(
+        state: &MockTuiState,
+        marker: &'static str,
+        path: &'static str,
+    ) -> IdentityProbeRow {
+        let mut terminal = Terminal::new(TestBackend::new(80, 24)).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), state, &state.theme))
+            .expect("draw identity probe");
+        let (foreground, cells_visited) =
+            locate_identity_marker(terminal.backend().buffer(), marker)
+                .unwrap_or_else(|| panic!("identity marker not visible: {path}/{marker}"));
+        IdentityProbeRow {
+            path,
+            marker,
+            foreground,
+            cells_visited,
+        }
+    }
+
+    #[test]
+    fn ansi16_identity_consumers_use_speaker_roles() {
+        use cyril_core::types::{AgentMessage, Notification, SessionId};
+
+        let theme = crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::Ansi16,
+        );
+
+        let mut rows = vec![
+            render_identity_probe(
+                &MockTuiState {
+                    theme,
+                    messages: vec![ChatMessage::user_text(String::new())],
+                    ..Default::default()
+                },
+                "You:",
+                "committed_user",
+            ),
+            render_identity_probe(
+                &MockTuiState {
+                    theme,
+                    messages: vec![ChatMessage::agent_text(String::new())],
+                    ..Default::default()
+                },
+                "Kiro:",
+                "committed_agent",
+            ),
+            render_identity_probe(
+                &MockTuiState {
+                    theme,
+                    messages: vec![ChatMessage::system("系统 status".into())],
+                    ..Default::default()
+                },
+                "系统 status",
+                "system_unicode",
+            ),
+            render_identity_probe(
+                &MockTuiState {
+                    theme,
+                    streaming_text: "streaming".into(),
+                    ..Default::default()
+                },
+                "Kiro:",
+                "main_streaming_agent",
+            ),
+        ];
+
+        let mut subagent_state = MockTuiState {
+            theme,
+            ..Default::default()
+        };
+        let session_id = SessionId::new("q9dx-subagent");
+        subagent_state
+            .subagent_tracker
+            .apply_notification(&Notification::SubagentListUpdated {
+                subagents: vec![cyril_core::types::SubagentInfo::new(
+                    SessionId::new("q9dx-subagent"),
+                    "reviewer",
+                    "code-reviewer",
+                    "query",
+                    cyril_core::types::SubagentStatus::Working { message: None },
+                )],
+                pending_stages: vec![],
+            });
+        subagent_state.subagent_ui.apply_notification(
+            &session_id,
+            &Notification::AgentMessage(AgentMessage {
+                text: "streaming".into(),
+                is_streaming: true,
+            }),
+        );
+        subagent_state.subagent_ui.focus(session_id);
+        rows.push(render_identity_probe(
+            &subagent_state,
+            "reviewer:",
+            "subagent_streaming_agent",
+        ));
+
+        let expected = [
+            ("committed_user", Color::LightBlue),
+            ("committed_agent", Color::LightGreen),
+            ("system_unicode", Color::LightMagenta),
+            ("main_streaming_agent", Color::LightGreen),
+            ("subagent_streaming_agent", Color::LightGreen),
+        ];
+        println!("BEGIN_ANSI16_IDENTITY_PROBE");
+        println!("path\tmarker\tforeground\tcells_visited");
+        for (row, (expected_path, expected_color)) in rows.iter().zip(expected) {
+            assert_eq!(row.path, expected_path);
+            assert_eq!(row.foreground, expected_color, "{}", row.path);
+            println!(
+                "{}\t{}\t{:?}\t{}",
+                row.path, row.marker, row.foreground, row.cells_visited
+            );
+        }
+        println!("END_ANSI16_IDENTITY_PROBE");
+        assert!(rows.iter().map(|row| row.cells_visited).sum::<usize>() <= 9_600);
     }
 
     #[test]
@@ -1701,7 +1858,7 @@ mod tests {
     fn steer_echo_renders_distinct_suffix_per_status() {
         use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus};
 
-        // Stress fixture (Slice 1): one render per status, Unicode + arrow text.
+        // Stress fixture: one render per status, Unicode + arrow text.
         // Bug classes: ASCII assumption (Unicode must not panic/mangle) and a
         // tie-break that never fires (Applied suffix must differ from Queued).
         let statuses = [
