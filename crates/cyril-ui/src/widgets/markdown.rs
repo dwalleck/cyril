@@ -24,9 +24,18 @@ static MARKDOWN_CACHE: LazyLock<Mutex<HashCache<Vec<Line<'static>>>>> =
 /// `width` controls table sizing, code padding, rules, and borders. Results are
 /// cached by content, width, syntax component, and all 29 semantic colors.
 pub fn render_with_theme(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> {
+    render_with_cache(&MARKDOWN_CACHE, markdown, width, theme)
+}
+
+fn render_with_cache(
+    cache: &Mutex<HashCache<Vec<Line<'static>>>>,
+    markdown: &str,
+    width: usize,
+    theme: &Theme,
+) -> Vec<Line<'static>> {
     let hash = markdown_cache_key(markdown, width, theme);
 
-    if let Ok(cache) = MARKDOWN_CACHE.lock()
+    if let Ok(cache) = cache.lock()
         && let Some(cached) = cache.get(hash)
     {
         return cached.clone();
@@ -34,7 +43,7 @@ pub fn render_with_theme(markdown: &str, width: usize, theme: &Theme) -> Vec<Lin
 
     let result = do_render(markdown, width, theme);
 
-    if let Ok(mut cache) = MARKDOWN_CACHE.lock() {
+    if let Ok(mut cache) = cache.lock() {
         cache.insert(hash, result.clone());
     }
 
@@ -900,6 +909,148 @@ mod tests {
         let markdown = format!("```text\n{code}\n```");
         let lines = render_with_theme(&markdown, 200, &crate::traits::test_support::marker_theme());
         assert!(text(&lines).contains(&code));
+    }
+
+    #[test]
+    fn local_cache_records_rendered_entry() {
+        let cache = Mutex::new(HashCache::new(256));
+        let theme = cyril_dark();
+        let markdown = "# cached entry";
+        let rendered = render_with_cache(&cache, markdown, 80, &theme);
+        let key = markdown_cache_key(markdown, 80, &theme);
+        assert_eq!(
+            cache.lock().ok().and_then(|cache| cache.get(key).cloned()),
+            Some(rendered)
+        );
+    }
+
+    #[test]
+    fn markdown_cache_eviction_matches_oldest_half_ledger() {
+        let cache = Mutex::new(HashCache::new(256));
+        let mut keys = Vec::with_capacity(257);
+        let base = crate::traits::test_support::marker_theme();
+
+        for index in 0..256usize {
+            let mut theme = base;
+            theme.text = Color::Indexed(index as u8);
+            let markdown = format!("# eviction-{index}");
+            render_with_cache(&cache, &markdown, 80, &theme);
+            keys.push(markdown_cache_key(&markdown, 80, &theme));
+        }
+        let overflow = "# eviction-overflow";
+        render_with_cache(&cache, overflow, 80, &base);
+        keys.push(markdown_cache_key(overflow, 80, &base));
+        assert_eq!(
+            keys.iter()
+                .copied()
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            257,
+            "fixture keys must be unique"
+        );
+
+        let ledger = match cache.lock() {
+            Ok(ledger) => ledger,
+            Err(error) => panic!("EVICTION local cache lock failed: {error}"),
+        };
+        for key in &keys[..128] {
+            assert!(ledger.get(*key).is_none(), "EVICTION retained oldest key");
+        }
+        for key in &keys[128..] {
+            assert!(ledger.get(*key).is_some(), "EVICTION lost newer key");
+        }
+        drop(ledger);
+
+        let mut repeated_theme = base;
+        repeated_theme.text = Color::Indexed(200);
+        let repeated = render_with_cache(&cache, "# eviction-200", 80, &repeated_theme);
+        assert_eq!(
+            repeated,
+            do_render("# eviction-200", 80, &repeated_theme),
+            "EVICTION repeat changed output"
+        );
+    }
+
+    #[test]
+    fn markdown_cache_concurrent_alternating_themes_never_leak() {
+        use std::sync::{Arc, Barrier};
+
+        let cache = Arc::new(Mutex::new(HashCache::new(256)));
+        let barrier = Arc::new(Barrier::new(8));
+        let colored = cyril_dark();
+        let plain = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None);
+        let colored_expected = do_render("# concurrent", 80, &colored);
+        let plain_expected = do_render("# concurrent", 80, &plain);
+        let mut workers = Vec::new();
+
+        for worker in 0usize..8 {
+            let cache = Arc::clone(&cache);
+            let barrier = Arc::clone(&barrier);
+            let colored_expected = colored_expected.clone();
+            let plain_expected = plain_expected.clone();
+            workers.push(std::thread::spawn(move || {
+                barrier.wait();
+                for query in 0usize..100 {
+                    let (theme, expected) = if (worker + query).is_multiple_of(2) {
+                        (&colored, &colored_expected)
+                    } else {
+                        (&plain, &plain_expected)
+                    };
+                    assert_eq!(
+                        render_with_cache(&cache, "# concurrent", 80, theme),
+                        *expected,
+                        "CONCURRENT worker {worker} query {query}"
+                    );
+                }
+                100usize
+            }));
+        }
+
+        let completed = workers
+            .into_iter()
+            .map(|worker| match worker.join() {
+                Ok(completed) => completed,
+                Err(_) => panic!("CONCURRENT worker panicked"),
+            })
+            .sum::<usize>();
+        assert_eq!(completed, 800, "CONCURRENT query count");
+    }
+
+    #[test]
+    fn markdown_cache_poison_computes_uncached_without_panic() {
+        let cache = Mutex::new(HashCache::new(256));
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = match cache.lock() {
+                Ok(guard) => guard,
+                Err(error) => panic!("POISON initial lock failed: {error}"),
+            };
+            panic!("POISON fixture");
+        }));
+        assert!(cache.is_poisoned());
+
+        let theme = crate::traits::test_support::marker_theme();
+        let expected = do_render("# poison", 80, &theme);
+        let actual = render_with_cache(&cache, "# poison", 80, &theme);
+        assert_eq!(actual, expected, "POISON uncached fallback drifted");
+    }
+
+    #[test]
+    fn five_hundred_markdown_cache_hits_fit_half_millisecond_budget() {
+        let cache = Mutex::new(HashCache::new(256));
+        let theme = cyril_dark();
+        let expected = render_with_cache(&cache, "cached", 80, &theme);
+        let started = std::time::Instant::now();
+        for _ in 0..500 {
+            assert_eq!(
+                std::hint::black_box(render_with_cache(&cache, "cached", 80, &theme)),
+                expected
+            );
+        }
+        assert!(
+            started.elapsed() <= std::time::Duration::from_micros(500),
+            "500 Markdown cache hits exceeded 0.5 ms: {:?}",
+            started.elapsed()
+        );
     }
 
     #[test]
