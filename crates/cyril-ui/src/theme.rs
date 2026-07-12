@@ -384,9 +384,49 @@ pub fn resolve_ansi256(id: ThemeId) -> Theme {
     resolve_with(id, SourceColor::ansi256)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Ansi16ContractViolation {
+    role: &'static str,
+    color: Color,
+}
+
+fn apply_ansi16_semantics(mut theme: Theme) -> Result<Theme, Ansi16ContractViolation> {
+    for (role, color) in [
+        ("muted", theme.muted),
+        ("border", theme.border),
+        ("subdued", theme.subdued),
+        ("diff_context", theme.diff_context),
+    ] {
+        if matches!(
+            color,
+            Color::LightBlue | Color::LightGreen | Color::LightMagenta
+        ) {
+            return Err(Ansi16ContractViolation { role, color });
+        }
+    }
+
+    theme.user = Color::LightBlue;
+    theme.agent = Color::LightGreen;
+    theme.system = Color::LightMagenta;
+    Ok(theme)
+}
+
 /// Resolve the built-in theme against the canonical ANSI-16 palette.
+///
+/// # Panics
+///
+/// Panics when a bundled theme projects a muted-family role into one of the
+/// three protected speaker slots. Bundled themes are compile-time project data,
+/// so this indicates a violated theme contract rather than invalid operator
+/// input.
 pub fn resolve_ansi16(id: ThemeId) -> Theme {
-    resolve_with(id, SourceColor::ansi16)
+    match apply_ansi16_semantics(resolve_with(id, SourceColor::ansi16)) {
+        Ok(theme) => theme,
+        Err(error) => panic!(
+            "bundled theme ANSI-16 contract violation: {} projects to protected speaker slot {:?}",
+            error.role, error.color
+        ),
+    }
 }
 
 /// Resolve the built-in theme without emitting color or syntax-color metadata.
@@ -762,16 +802,121 @@ mod tests {
         assert_eq!(reversed_ansi16, nearest_ansi16(ansi16_rgb));
     }
 
+    fn set_muted_family_role(theme: &mut Theme, role: &str, color: Color) {
+        match role {
+            "muted" => theme.muted = color,
+            "border" => theme.border = color,
+            "subdued" => theme.subdued = color,
+            "diff_context" => theme.diff_context = color,
+            _ => panic!("unknown muted-family role: {role}"),
+        }
+    }
+
     #[test]
-    fn ansi16_uses_nearest_canonical_entry_and_named_color() {
+    fn ansi16_speaker_roles_use_semantic_slots() {
+        for theme_id in ThemeId::ALL.iter().copied() {
+            let theme = resolve_ansi16(theme_id);
+            assert_eq!(theme.user, Color::LightBlue);
+            assert_eq!(theme.agent, Color::LightGreen);
+            assert_eq!(theme.system, Color::LightMagenta);
+        }
+    }
+
+    #[test]
+    fn ansi16_rejects_all_muted_speaker_slot_collisions() {
+        let geometric = resolve_with(ThemeId::CyrilDark, SourceColor::ansi16);
+        for role in ["muted", "border", "subdued", "diff_context"] {
+            for color in [Color::LightBlue, Color::LightGreen, Color::LightMagenta] {
+                let mut candidate = geometric;
+                set_muted_family_role(&mut candidate, role, color);
+                let error = match apply_ansi16_semantics(candidate) {
+                    Err(error) => error,
+                    Ok(_) => panic!("protected muted-family collision must fail"),
+                };
+                assert_eq!(error.role, role);
+                assert_eq!(error.color, color);
+            }
+        }
+    }
+
+    #[test]
+    fn ansi16_semantics_change_only_speaker_roles() {
+        for theme_id in ThemeId::ALL.iter().copied() {
+            let geometric = resolved_roles(resolve_with(theme_id, SourceColor::ansi16));
+            let semantic = resolved_roles(resolve_ansi16(theme_id));
+            let mut changed = 0;
+            for ((source_name, source), (semantic_name, projected)) in
+                geometric.into_iter().zip(semantic)
+            {
+                assert_eq!(source_name, semantic_name);
+                if matches!(source_name, "user" | "agent" | "system") {
+                    assert_ne!(source, projected, "{source_name}");
+                    changed += 1;
+                } else {
+                    assert_eq!(source, projected, "{source_name}");
+                }
+            }
+            assert_eq!(changed, 3);
+        }
+    }
+
+    #[test]
+    fn non_speaker_ansi16_remains_nearest() {
+        for theme_id in ThemeId::ALL.iter().copied() {
+            let source = resolved_roles(resolve_truecolor(theme_id));
+            let projected = resolved_roles(resolve_ansi16(theme_id));
+            let mut checked = 0;
+            for ((source_name, source_color), (projected_name, projected_color)) in
+                source.into_iter().zip(projected)
+            {
+                assert_eq!(source_name, projected_name);
+                if matches!(source_name, "user" | "agent" | "system") {
+                    continue;
+                }
+                if let Color::Rgb(r, g, b) = source_color {
+                    let expected = ANSI16_COLORS[usize::from(nearest_ansi16((r, g, b)))];
+                    assert_eq!(projected_color, expected, "{source_name}");
+                    checked += 1;
+                }
+            }
+            assert_eq!(checked, 25);
+        }
+    }
+
+    #[test]
+    fn resolution_is_deterministic_in_every_mode() {
+        for theme_id in ThemeId::ALL.iter().copied() {
+            for mode in [
+                ColorMode::TrueColor,
+                ColorMode::Ansi256,
+                ColorMode::Ansi16,
+                ColorMode::None,
+            ] {
+                assert_eq!(resolve(theme_id, mode), resolve(theme_id, mode));
+            }
+        }
+    }
+
+    #[test]
+    fn ansi16_semantics_preserve_syntax_component() {
+        for theme_id in ThemeId::ALL.iter().copied() {
+            let geometric = resolve_with(theme_id, SourceColor::ansi16);
+            assert_eq!(resolve_ansi16(theme_id).syntax, geometric.syntax);
+            assert_eq!(resolve_no_color(theme_id).syntax, None);
+        }
+    }
+
+    #[test]
+    fn ansi16_uses_canonical_palette_and_semantic_speaker_slots() {
         let theme = resolve_ansi16(ThemeId::CyrilDark);
         assert_eq!(theme.canvas, Color::Reset);
         assert_eq!(theme.chrome, Color::Black);
         assert_eq!(theme.selection, Color::Blue);
         assert_eq!(theme.muted, Color::DarkGray);
         assert_eq!(theme.accent, Color::LightCyan);
-        assert_eq!(theme.user, Color::Gray);
-        assert_eq!(theme.agent, Color::DarkGray);
+        assert_eq!(theme.user, Color::LightBlue);
+        assert_eq!(theme.agent, Color::LightGreen);
+        assert_eq!(theme.system, Color::LightMagenta);
         assert_eq!(theme.success, Color::LightGreen);
         assert_eq!(theme.warning, Color::LightYellow);
         assert_eq!(theme.danger, Color::LightRed);
@@ -868,28 +1013,86 @@ mod tests {
         println!("END_THEME_REGISTRY");
     }
 
+    fn probe_source(color: Color) -> String {
+        match color {
+            Color::Rgb(r, g, b) => format!("{r:02x}{g:02x}{b:02x}"),
+            Color::Reset => "reset".into(),
+            other => format!("unexpected:{other:?}"),
+        }
+    }
+
+    fn probe_ansi256(color: Color) -> String {
+        match color {
+            Color::Indexed(index) => index.to_string(),
+            Color::Reset => "reset".into(),
+            other => format!("unexpected:{other:?}"),
+        }
+    }
+
+    fn probe_ansi16(color: Color) -> String {
+        ansi16_index(color).map_or_else(|| "reset".into(), |index| index.to_string())
+    }
+
     #[test]
     fn emit_source_probe() {
         println!("BEGIN_THEME_PROBE");
-        println!("theme\trole\trgb\tansi256\tansi16");
+        println!("theme\trole\tsource\tansi256\tansi16\tno_color\tcolor_syntax\tno_color_syntax");
         for theme_id in ThemeId::ALL.iter().copied() {
-            let truecolor = resolved_roles(resolve_truecolor(theme_id));
-            let ansi256 = resolved_roles(resolve_ansi256(theme_id));
-            let ansi16 = resolved_roles(resolve_ansi16(theme_id));
-            for (((name, source), (_, projected256)), (_, projected16)) in
-                truecolor.into_iter().zip(ansi256).zip(ansi16)
+            let truecolor_theme = resolve_truecolor(theme_id);
+            let ansi256_theme = resolve_ansi256(theme_id);
+            let ansi16_theme = resolve_ansi16(theme_id);
+            let no_color_theme = resolve_no_color(theme_id);
+            let color_syntax = ansi16_theme.syntax.map_or("none", SyntaxTheme::name);
+            let no_color_syntax = no_color_theme.syntax.map_or("none", SyntaxTheme::name);
+            for ((((name, source), (_, projected256)), (_, projected16)), (_, no_color)) in
+                resolved_roles(truecolor_theme)
+                    .into_iter()
+                    .zip(resolved_roles(ansi256_theme))
+                    .zip(resolved_roles(ansi16_theme))
+                    .zip(resolved_roles(no_color_theme))
             {
-                if let (Color::Rgb(r, g, b), Color::Indexed(index256), Some(index16)) =
-                    (source, projected256, ansi16_index(projected16))
-                {
-                    println!(
-                        "{}\t{name}\t{r:02x}{g:02x}{b:02x}\t{index256}\t{index16}",
-                        theme_id.name()
-                    );
-                }
+                println!(
+                    "{}\t{name}\t{}\t{}\t{}\t{}\t{color_syntax}\t{no_color_syntax}",
+                    theme_id.name(),
+                    probe_source(source),
+                    probe_ansi256(projected256),
+                    probe_ansi16(projected16),
+                    probe_source(no_color)
+                );
             }
         }
         println!("END_THEME_PROBE");
+    }
+
+    #[test]
+    fn emit_ansi16_collision_probe() {
+        println!("BEGIN_ANSI16_COLLISION_PROBE");
+        println!("input_role\tinput_color\tresult_role\tresult_color");
+        let geometric = resolve_with(ThemeId::CyrilDark, SourceColor::ansi16);
+        for role in ["muted", "border", "subdued", "diff_context"] {
+            for color in [Color::LightBlue, Color::LightGreen, Color::LightMagenta] {
+                let mut candidate = geometric;
+                set_muted_family_role(&mut candidate, role, color);
+                match apply_ansi16_semantics(candidate) {
+                    Ok(_) => println!("{role}\t{}\taccepted\taccepted", probe_ansi16(color)),
+                    Err(error) => println!(
+                        "{role}\t{}\t{}\t{}",
+                        probe_ansi16(color),
+                        error.role,
+                        probe_ansi16(error.color)
+                    ),
+                }
+            }
+        }
+        println!("END_ANSI16_COLLISION_PROBE");
+    }
+
+    #[test]
+    fn emit_ansi16_tie_probe() {
+        println!("BEGIN_ANSI16_TIE_PROBE");
+        println!("rgb\tindex");
+        println!("400000\t{}", nearest_ansi16((64, 0, 0)));
+        println!("END_ANSI16_TIE_PROBE");
     }
 
     #[test]

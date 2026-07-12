@@ -12,6 +12,10 @@ path = "probe.rs"
 name = "q9dx-render-probe"
 path = "render-probe.rs"
 
+[[bin]]
+name = "q9dx-resolution-budget"
+path = "resolution-budget.rs"
+
 [workspace]
 
 [dependencies]
