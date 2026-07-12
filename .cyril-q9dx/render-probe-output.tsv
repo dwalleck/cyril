@@ -1,0 +1,4 @@
+role	marker	x	y	foreground
+user	You:	0	0	LightBlue
+agent	Kiro:	0	3	LightGreen
+system	Q9DX-SYSTEM	0	7	LightMagenta

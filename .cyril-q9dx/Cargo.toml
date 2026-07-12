@@ -1,0 +1,20 @@
+[package]
+name = "cyril-q9dx-probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "q9dx-probe"
+path = "probe.rs"
+
+[[bin]]
+name = "q9dx-render-probe"
+path = "render-probe.rs"
+
+[workspace]
+
+[dependencies]
+cyril-core = { path = "../crates/cyril-core" }
+cyril-ui = { path = "../crates/cyril-ui" }
+ratatui = "0.30"

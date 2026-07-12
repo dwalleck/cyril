@@ -1,0 +1,117 @@
+mode	role	before	after
+truecolor	canvas	Reset	Reset
+truecolor	chrome	Rgb(30, 30, 46)	Rgb(30, 30, 46)
+truecolor	code	Rgb(40, 44, 52)	Rgb(40, 44, 52)
+truecolor	selection	Rgb(50, 50, 70)	Rgb(50, 50, 70)
+truecolor	text	Rgb(255, 255, 255)	Rgb(255, 255, 255)
+truecolor	muted	Rgb(140, 140, 140)	Rgb(140, 140, 140)
+truecolor	border	Rgb(140, 140, 140)	Rgb(140, 140, 140)
+truecolor	accent	Rgb(0, 255, 255)	Rgb(0, 255, 255)
+truecolor	accent_alt	Rgb(180, 142, 173)	Rgb(180, 142, 173)
+truecolor	user	Rgb(138, 180, 248)	Rgb(138, 180, 248)
+truecolor	agent	Rgb(129, 199, 132)	Rgb(129, 199, 132)
+truecolor	system	Rgb(180, 142, 173)	Rgb(180, 142, 173)
+truecolor	info	Rgb(0, 255, 255)	Rgb(0, 255, 255)
+truecolor	success	Rgb(0, 255, 0)	Rgb(0, 255, 0)
+truecolor	warning	Rgb(255, 255, 0)	Rgb(255, 255, 0)
+truecolor	danger	Rgb(255, 0, 0)	Rgb(255, 0, 0)
+truecolor	diff_add	Rgb(0, 255, 0)	Rgb(0, 255, 0)
+truecolor	diff_delete	Rgb(255, 0, 0)	Rgb(255, 0, 0)
+truecolor	diff_context	Rgb(140, 140, 140)	Rgb(140, 140, 140)
+truecolor	emphasis	Rgb(128, 128, 0)	Rgb(128, 128, 0)
+truecolor	accent_tertiary	Rgb(0, 0, 128)	Rgb(0, 0, 128)
+truecolor	accent_quaternary	Rgb(128, 0, 128)	Rgb(128, 0, 128)
+truecolor	accent_quinary	Rgb(0, 128, 128)	Rgb(0, 128, 128)
+truecolor	subdued	Rgb(128, 128, 128)	Rgb(128, 128, 128)
+truecolor	subdued_positive	Rgb(0, 128, 0)	Rgb(0, 128, 0)
+truecolor	subdued_negative	Rgb(128, 0, 0)	Rgb(128, 0, 0)
+truecolor	soft_accent	Rgb(138, 180, 248)	Rgb(138, 180, 248)
+truecolor	positive_accent	Rgb(129, 199, 132)	Rgb(129, 199, 132)
+truecolor	inset_background	Rgb(40, 44, 52)	Rgb(40, 44, 52)
+ansi256	canvas	Reset	Reset
+ansi256	chrome	Indexed(235)	Indexed(235)
+ansi256	code	Indexed(236)	Indexed(236)
+ansi256	selection	Indexed(237)	Indexed(237)
+ansi256	text	Indexed(231)	Indexed(231)
+ansi256	muted	Indexed(245)	Indexed(245)
+ansi256	border	Indexed(245)	Indexed(245)
+ansi256	accent	Indexed(51)	Indexed(51)
+ansi256	accent_alt	Indexed(139)	Indexed(139)
+ansi256	user	Indexed(111)	Indexed(111)
+ansi256	agent	Indexed(114)	Indexed(114)
+ansi256	system	Indexed(139)	Indexed(139)
+ansi256	info	Indexed(51)	Indexed(51)
+ansi256	success	Indexed(46)	Indexed(46)
+ansi256	warning	Indexed(226)	Indexed(226)
+ansi256	danger	Indexed(196)	Indexed(196)
+ansi256	diff_add	Indexed(46)	Indexed(46)
+ansi256	diff_delete	Indexed(196)	Indexed(196)
+ansi256	diff_context	Indexed(245)	Indexed(245)
+ansi256	emphasis	Indexed(100)	Indexed(100)
+ansi256	accent_tertiary	Indexed(18)	Indexed(18)
+ansi256	accent_quaternary	Indexed(90)	Indexed(90)
+ansi256	accent_quinary	Indexed(30)	Indexed(30)
+ansi256	subdued	Indexed(244)	Indexed(244)
+ansi256	subdued_positive	Indexed(28)	Indexed(28)
+ansi256	subdued_negative	Indexed(88)	Indexed(88)
+ansi256	soft_accent	Indexed(111)	Indexed(111)
+ansi256	positive_accent	Indexed(114)	Indexed(114)
+ansi256	inset_background	Indexed(236)	Indexed(236)
+ansi16	canvas	Reset	Reset
+ansi16	chrome	Black	Black
+ansi16	code	Black	Black
+ansi16	selection	Blue	Blue
+ansi16	text	White	White
+ansi16	muted	DarkGray	DarkGray
+ansi16	border	DarkGray	DarkGray
+ansi16	accent	LightCyan	LightCyan
+ansi16	accent_alt	Gray	Gray
+ansi16	user	Gray	LightBlue
+ansi16	agent	DarkGray	LightGreen
+ansi16	system	Gray	LightMagenta
+ansi16	info	LightCyan	LightCyan
+ansi16	success	LightGreen	LightGreen
+ansi16	warning	LightYellow	LightYellow
+ansi16	danger	LightRed	LightRed
+ansi16	diff_add	LightGreen	LightGreen
+ansi16	diff_delete	LightRed	LightRed
+ansi16	diff_context	DarkGray	DarkGray
+ansi16	emphasis	Yellow	Yellow
+ansi16	accent_tertiary	Blue	Blue
+ansi16	accent_quaternary	Magenta	Magenta
+ansi16	accent_quinary	Cyan	Cyan
+ansi16	subdued	DarkGray	DarkGray
+ansi16	subdued_positive	Green	Green
+ansi16	subdued_negative	Red	Red
+ansi16	soft_accent	Gray	Gray
+ansi16	positive_accent	DarkGray	DarkGray
+ansi16	inset_background	Black	Black
+none	canvas	Reset	Reset
+none	chrome	Reset	Reset
+none	code	Reset	Reset
+none	selection	Reset	Reset
+none	text	Reset	Reset
+none	muted	Reset	Reset
+none	border	Reset	Reset
+none	accent	Reset	Reset
+none	accent_alt	Reset	Reset
+none	user	Reset	Reset
+none	agent	Reset	Reset
+none	system	Reset	Reset
+none	info	Reset	Reset
+none	success	Reset	Reset
+none	warning	Reset	Reset
+none	danger	Reset	Reset
+none	diff_add	Reset	Reset
+none	diff_delete	Reset	Reset
+none	diff_context	Reset	Reset
+none	emphasis	Reset	Reset
+none	accent_tertiary	Reset	Reset
+none	accent_quaternary	Reset	Reset
+none	accent_quinary	Reset	Reset
+none	subdued	Reset	Reset
+none	subdued_positive	Reset	Reset
+none	subdued_negative	Reset	Reset
+none	soft_accent	Reset	Reset
+none	positive_accent	Reset	Reset
+none	inset_background	Reset	Reset
