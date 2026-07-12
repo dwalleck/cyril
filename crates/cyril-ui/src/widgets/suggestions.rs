@@ -85,6 +85,203 @@ mod tests {
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
 
+    const EXPECTED_SUGGESTION_SHAPE_LABELS: [&str; 13] = [
+        "suggestions/empty",
+        "cardinality/one",
+        "cardinality/ten",
+        "cardinality/10000",
+        "content/duplicate",
+        "content/unicode",
+        "content/spaces",
+        "content/mixed-descriptions",
+        "selection/none",
+        "selection/first",
+        "selection/middle",
+        "selection/last",
+        "selection/999",
+    ];
+
+    fn matrix_suggestion(index: usize) -> Suggestion {
+        let text = match index {
+            7 | 8 => "duplicate".into(),
+            10 => "選択".into(),
+            11 => "with spaces".into(),
+            _ => format!("item-{index}"),
+        };
+        Suggestion {
+            text,
+            description: index
+                .is_multiple_of(2)
+                .then(|| format!("description-{index}")),
+        }
+    }
+
+    fn rendered_suggestion_rows(state: &MockTuiState) -> anyhow::Result<Vec<String>> {
+        let mut terminal = Terminal::new(TestBackend::new(80, 10))?;
+        terminal.draw(|frame| render(frame, frame.area(), state, &state.theme))?;
+        let buffer = terminal.backend().buffer();
+        Ok((0..10)
+            .map(|y| {
+                (0..80)
+                    .map(|x| {
+                        buffer
+                            .cell((x, y))
+                            .map_or("", ratatui::buffer::Cell::symbol)
+                    })
+                    .collect::<String>()
+                    .trim_end()
+                    .to_string()
+            })
+            .collect())
+    }
+
+    fn expected_window(selected: Option<usize>, total: usize) -> (usize, usize) {
+        let visible = total.min(MAX_VISIBLE);
+        let start = match selected {
+            Some(selected) if total > visible => {
+                selected.saturating_sub(visible / 2).min(total - visible)
+            }
+            _ => 0,
+        };
+        (start, visible)
+    }
+
+    fn suggestion_shape_matrix() -> anyhow::Result<Vec<&'static str>> {
+        macro_rules! record {
+            ($passes:ident, $label:literal, $condition:expr) => {{
+                anyhow::ensure!($condition, "suggestion shape {} failed", $label);
+                $passes.push($label);
+            }};
+        }
+
+        let mut passes = Vec::with_capacity(EXPECTED_SUGGESTION_SHAPE_LABELS.len());
+        let empty = MockTuiState::default();
+        let empty_rows = rendered_suggestion_rows(&empty)?;
+        record!(
+            passes,
+            "suggestions/empty",
+            height_for(&empty) == 0 && empty_rows.iter().all(String::is_empty)
+        );
+
+        let one = MockTuiState {
+            autocomplete_suggestions: vec![matrix_suggestion(0)],
+            autocomplete_selected: Some(0),
+            ..Default::default()
+        };
+        let one_rows = rendered_suggestion_rows(&one)?;
+        record!(
+            passes,
+            "cardinality/one",
+            height_for(&one) == 1 && one_rows.iter().filter(|row| !row.is_empty()).count() == 1
+        );
+
+        let ten = MockTuiState {
+            autocomplete_suggestions: (0..10).map(matrix_suggestion).collect(),
+            autocomplete_selected: Some(9),
+            ..Default::default()
+        };
+        let ten_rows = rendered_suggestion_rows(&ten)?;
+        record!(
+            passes,
+            "cardinality/ten",
+            height_for(&ten) == 10 && ten_rows.iter().filter(|row| !row.is_empty()).count() == 10
+        );
+
+        let mut large = MockTuiState {
+            autocomplete_suggestions: (0..10_000).map(matrix_suggestion).collect(),
+            autocomplete_selected: None,
+            ..Default::default()
+        };
+        let initial_rows = rendered_suggestion_rows(&large)?;
+        record!(
+            passes,
+            "cardinality/10000",
+            height_for(&large) == 10
+                && initial_rows.iter().filter(|row| !row.is_empty()).count() == 10
+        );
+
+        large.autocomplete_selected = Some(10);
+        let content_rows = rendered_suggestion_rows(&large)?;
+        record!(
+            passes,
+            "content/duplicate",
+            content_rows
+                .iter()
+                .filter(|row| row.contains("duplicate"))
+                .count()
+                == 2
+        );
+        record!(
+            passes,
+            "content/unicode",
+            content_rows.iter().any(|row| row.contains('選'))
+                && content_rows.iter().any(|row| row.contains('択'))
+        );
+        record!(
+            passes,
+            "content/spaces",
+            content_rows.iter().any(|row| row.contains("with spaces"))
+        );
+        record!(
+            passes,
+            "content/mixed-descriptions",
+            content_rows
+                .iter()
+                .any(|row| row.contains("description-10"))
+                && content_rows
+                    .iter()
+                    .any(|row| row.contains("with spaces") && !row.contains("description"))
+        );
+
+        for (selected, label) in [
+            (None, "selection/none"),
+            (Some(0), "selection/first"),
+            (Some(5_000), "selection/middle"),
+            (Some(9_999), "selection/last"),
+            (Some(999), "selection/999"),
+        ] {
+            large.autocomplete_selected = selected;
+            let rows = rendered_suggestion_rows(&large)?;
+            let (start, visible) = expected_window(selected, 10_000);
+            anyhow::ensure!(visible == 10, "{label} visible count drifted");
+            let expected_first = matrix_suggestion(start).text;
+            let expected_last = matrix_suggestion(start + visible - 1).text;
+            anyhow::ensure!(
+                rows[0].contains(&expected_first) && rows[9].contains(&expected_last),
+                "{label} window expected {expected_first:?}..{expected_last:?}"
+            );
+            match selected {
+                Some(selected) => {
+                    let selected_row = selected - start;
+                    anyhow::ensure!(
+                        rows[selected_row].starts_with("▸ ")
+                            && rows.iter().filter(|row| row.starts_with("▸ ")).count() == 1,
+                        "{label} selected row drifted"
+                    );
+                }
+                None => anyhow::ensure!(
+                    rows.iter().all(|row| !row.starts_with("▸ ")),
+                    "{label} unexpectedly selected a row"
+                ),
+            }
+            passes.push(label);
+        }
+
+        Ok(passes)
+    }
+
+    #[test]
+    fn every_autocomplete_shape_is_fenced() -> anyhow::Result<()> {
+        let started = std::time::Instant::now();
+        let passes = suggestion_shape_matrix()?;
+        assert_eq!(passes, EXPECTED_SUGGESTION_SHAPE_LABELS);
+        assert!(
+            started.elapsed() <= std::time::Duration::from_secs(1),
+            "10,000-suggestion matrix exceeded 1 second"
+        );
+        Ok(())
+    }
+
     fn buffer_text(terminal: &Terminal<TestBackend>, rows: u16) -> String {
         let buffer = terminal.backend().buffer();
         (0..rows)
