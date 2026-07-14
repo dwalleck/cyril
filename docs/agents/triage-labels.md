@@ -37,3 +37,34 @@ rivets label add    <issue-id> ready-for-agent
 
 Edit the right-hand column of the table above to match whatever vocabulary you
 actually use.
+
+## Area / milestone labels
+
+Rivets has no milestone field, so work groupings are also labels, applied
+alongside the triage role. A triaged issue normally carries **one role label
+plus one or more area labels**. Labels are sets, not partitions — an issue may
+sit in several areas (e.g. `kas` + `bridge`).
+
+| Label           | Grouping                                                                  |
+| --------------- | ------------------------------------------------------------------------- |
+| `kas`           | KAS engine integration track (ROADMAP KAS-1…8)                            |
+| `usability`     | Theme + responsive-layout milestone; capstone is the visual-regression contract (cyril-8r3u) |
+| `code-health`   | Cleanup / hygiene batches (review findings, dead API, cache correctness)  |
+| `steering`      | Queue-steering subsystem (K1 track: chip, echoes, clear)                  |
+| `bridge`        | Bridge lifecycle, notification ordering, turn-completion races            |
+| `acp`           | ACP rpc-layer concerns (often paired with `bridge`)                       |
+| `docs`          | Documentation sync work                                                   |
+| `dev-workflow`  | Local gates, CI, audit tooling                                            |
+| `release-watch` | Audit tripwires — no role label; re-checked during each kiro-cli release audit, actioned only when the watched signal fires |
+
+Conventions:
+
+- `release-watch` is a **disposition**, not an area: those issues deliberately
+  carry no role label because there is nothing to do until the watched
+  behavior appears on the wire.
+- ROADMAP milestone ids do NOT go in labels — they live in `external-ref` as
+  `ROADMAP:<id>` (see `issue-tracker.md`).
+- Query a milestone with `rivets list -l usability`; combine with a role to
+  find work, e.g. `rivets list -l kas -l ready-for-agent`.
+- New areas are cheap: keep names lowercase-kebab, add a row here so future
+  triage passes reuse the same buckets instead of minting synonyms.
