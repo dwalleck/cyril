@@ -709,6 +709,17 @@ impl App {
                     )
                     .await;
                 }
+                // /steer clear needs the async bridge path too (cyril-vgcm C11).
+                Ok(CommandResult {
+                    kind: CommandResultKind::ClearSteer,
+                }) => {
+                    return dispatch_clear_steer(
+                        &mut self.ui_state,
+                        &self.session,
+                        &self.bridge_sender,
+                    )
+                    .await;
+                }
                 Ok(result) => self.handle_command_result(result),
                 Err(e) => {
                     tracing::error!(
@@ -986,6 +997,40 @@ async fn dispatch_steer(
         ),
         SteerGate::AdvisoryNoSession => {
             ui.add_system_message("No active session — nothing to steer.".into())
+        }
+    }
+    Ok(())
+}
+
+/// Dispatch a queue-clear: the `/steer clear` path (cyril-vgcm C11). Reuses
+/// `steer_gate` — clear's gating is definitionally identical (a session that
+/// can't steer has nothing queued to clear; the pre-send skip in the bridge
+/// mirrors this). Emits `ClearSteering` with ZERO optimistic mutation (D4):
+/// chips flip only when the `SteeringCleared` broadcast lands — the broadcast
+/// is the truth, and a local pre-drain would desync from an id-scoped or
+/// failed clear. Advisory system messages only for the no-session /
+/// steer-unsupported gates; success is silent (matches steer's echo-driven
+/// philosophy). No text precondition — there is no payload.
+async fn dispatch_clear_steer(
+    ui: &mut UiState,
+    session: &SessionController,
+    bridge: &BridgeSender,
+) -> cyril_core::Result<()> {
+    match steer_gate(session.steering_unsupported(), session.id().is_some()) {
+        SteerGate::Send => {
+            // id() is Some — steer_gate just checked has_session.
+            let Some(session_id) = session.id().cloned() else {
+                return Ok(());
+            };
+            bridge
+                .send(BridgeCommand::ClearSteering { session_id })
+                .await?;
+        }
+        SteerGate::AdvisoryUnsupported => ui.add_system_message(
+            "Steering isn't supported by this backend (needs kiro-cli 2.7.0+).".into(),
+        ),
+        SteerGate::AdvisoryNoSession => {
+            ui.add_system_message("No active session — no queued steers to clear.".into())
         }
     }
     Ok(())
@@ -1566,6 +1611,86 @@ mod tests {
                 .iter()
                 .any(|m| matches!(m.kind(), cyril_ui::traits::ChatMessageKind::System(_))),
             "an advisory system message is shown instead"
+        );
+    }
+
+    // cyril-vgcm C11: dispatch_clear_steer gate matrix + zero optimistic
+    // mutation (D4). Bug classes: optimistic pre-drain (chips flipped before
+    // the broadcast — desyncs from an id-scoped or failed clear), success
+    // chatter (a system message on the silent-success path), and a divergent
+    // gate (clear gating must equal steer_gate's for all cells).
+    #[tokio::test]
+    async fn dispatch_clear_steer_gates_and_never_mutates() {
+        use cyril_ui::traits::{ChatMessageKind, SteerEchoStatus};
+
+        // Cell 1: no session -> advisory, nothing sent.
+        let (tx, mut rx) = mpsc::channel(8);
+        let bridge = BridgeSender::from_sender(tx);
+        let mut ui = UiState::new(500);
+        let session = SessionController::new();
+        dispatch_clear_steer(&mut ui, &session, &bridge)
+            .await
+            .unwrap();
+        assert!(rx.try_recv().is_err(), "no session: nothing on the bridge");
+        assert!(
+            ui.messages()
+                .iter()
+                .any(|m| matches!(m.kind(), ChatMessageKind::System(s) if s.contains("No active session"))),
+            "no-session advisory shown"
+        );
+
+        // Cell 2: steering-unsupported session -> advisory, nothing sent.
+        let (tx, mut rx) = mpsc::channel(8);
+        let bridge = BridgeSender::from_sender(tx);
+        let mut ui = UiState::new(500);
+        let mut session = SessionController::new();
+        session.set_session(SessionId::new("sess_1"), SessionStatus::Busy);
+        session.apply_notification(&Notification::SteeringUnsupported {
+            message: "steering requires kiro-cli 2.7.0+".into(),
+        });
+        dispatch_clear_steer(&mut ui, &session, &bridge)
+            .await
+            .unwrap();
+        assert!(rx.try_recv().is_err(), "unsupported: nothing on the bridge");
+
+        // Cell 3: healthy session with queued chips -> ClearSteering sent,
+        // chips AND counter untouched, NO system message (silent success).
+        let (tx, mut rx) = mpsc::channel(8);
+        let bridge = BridgeSender::from_sender(tx);
+        let mut ui = UiState::new(500);
+        let mut session = SessionController::new();
+        session.set_session(SessionId::new("sess_1"), SessionStatus::Busy);
+        ui.add_steer_echo("queued one");
+        ui.add_steer_echo("queued two");
+        let msgs_before = ui.messages().len();
+        dispatch_clear_steer(&mut ui, &session, &bridge)
+            .await
+            .unwrap();
+        match rx.try_recv() {
+            Ok(BridgeCommand::ClearSteering { session_id }) => {
+                assert_eq!(session_id.as_str(), "sess_1");
+            }
+            other => panic!("expected ClearSteering, got {other:?}"),
+        }
+        assert_eq!(ui.steering_queued(), 2, "no optimistic counter drain");
+        assert_eq!(
+            ui.messages()
+                .iter()
+                .filter(|m| matches!(
+                    m.kind(),
+                    ChatMessageKind::SteerEcho {
+                        status: SteerEchoStatus::Queued,
+                        ..
+                    }
+                ))
+                .count(),
+            2,
+            "no optimistic chip flip — the broadcast is the truth (D4)"
+        );
+        assert_eq!(
+            ui.messages().len(),
+            msgs_before,
+            "silent success: no message added on dispatch"
         );
     }
 
