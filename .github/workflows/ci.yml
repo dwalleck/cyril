@@ -136,15 +136,18 @@ jobs:
 
       # ADR-0002: the `kas` feature must build/lint/test in ISOLATION (not only via
       # the --all-features lanes) so it cannot bitrot under "warnings are errors".
-      # Empty in KAS-0; this covers KAS-1's gated code from day one.
+      # `-p cyril-core` matters: the gated code (convert::kas, kas auth/host-io)
+      # and its fences live there, and clippy/nextest only target the SELECTED
+      # packages — `-p cyril` alone compiles cyril-core's kas code but never
+      # lints it or runs its tests (cyril-vgcm review, PR #51).
       - name: Build (--features kas)
-        run: cargo build -p cyril --features kas
+        run: cargo build -p cyril -p cyril-core --features kas
 
       - name: Clippy (--features kas)
-        run: cargo clippy -p cyril --features kas --all-targets -- -D warnings
+        run: cargo clippy -p cyril -p cyril-core --features kas --all-targets -- -D warnings
 
       - name: Test (--features kas)
-        run: cargo nextest run -p cyril --features kas
+        run: cargo nextest run -p cyril -p cyril-core --features kas
 
   # Summary job that requires all other jobs to pass — use this as the single
   # required status check in branch protection.
