@@ -39,3 +39,16 @@ KAS-distinctive variant is **`session_info_update`** — the envelope that, via
 → context_usage`. `turn_end` is the terminal *lifecycle* signal but is **not the
 last frame** (a `context_usage` trails it), so the converter must key on
 `kind == "turn_end"` specifically, never on "the last `session_info_update`".
+
+**Steering echoes (cyril-vgcm C5):** `steering_queued` / `steering_injected` /
+`steering_cleared` — `session_info_update_steering_{queued,injected,cleared}.json`,
+plus `session_info_update_steering_inclusion.json` (the fileMatch steering
+*catalog* kind, kept as a negative fixture: kind matching must be exact, a
+`steering_inclusion` frame is NOT a queue echo). All four captured live
+2026-07-14 by `.cyril-vgcm/probe-steer-clear-behavior-2.12.0.py` (kas mode) on
+kiro-cli **2.12.1** (KAS bundle byte-identical across 2.11.0–2.12.1). Payload
+rides `_meta.kiro` beside `kind`: `{messageId, content}` on queued/injected,
+`{messageIds}` on cleared. Note **injected**, not v2's `steering_consumed`; and
+`steering_cleared` fires BOTH on explicit `_session/steer/clear` AND routinely
+post-injection with the injected id (same turn — findings F4), which is why
+`Notification::SteeringCleared` is id-scoped.

@@ -12,17 +12,27 @@ use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
 
 /// Convert a KAS `session_info_update` to an internal notification.
 ///
-/// KAS multiplexes turn lifecycle, metering, and context telemetry through one
-/// `session_info_update` envelope, discriminated by `_meta.kiro.kind`. Two
-/// sub-kinds surface today:
+/// KAS multiplexes turn lifecycle, metering, context telemetry, and steering
+/// echoes through one `session_info_update` envelope, discriminated by
+/// `_meta.kiro.kind`. Sub-kinds surfaced today:
 /// - **`turn_end`** — the terminal lifecycle signal → [`Notification::TurnCompleted`]
 ///   (KAS-2a), stop reason from `_meta.kiro.stopReason`.
 /// - **`context_usage`** — the proactively-pushed per-category breakdown
 ///   (KAS-2b, cyril-5et2) → [`Notification::ContextBreakdownUpdated`].
+/// - **`steering_queued` / `steering_injected` / `steering_cleared`** — the
+///   steering-echo lifecycle (cyril-vgcm C5; fixtures captured live on
+///   kiro-cli 2.12.1, KAS bundle byte-identical to 2.11.0/2.12.0). KAS keeps
+///   the old-family kind names but carries ids like v2's new family; note
+///   *injected*, not v2's `steering_consumed`, and Cleared fires BOTH on
+///   explicit `_session/steer/clear` and routinely post-injection (findings
+///   F4) — which is why [`Notification::SteeringCleared`] must stay id-scoped.
 ///
 /// Every other sub-kind (`turn_completion` metering, `user_message_id_assigned`,
-/// …) returns `None`. Completion keys on the `kind == "turn_end"` value, never on
-/// frame ordering — a `context_usage` frame trails `turn_end` on the wire.
+/// `steering_inclusion` fileMatch catalog, …) returns `None` — matching is
+/// exact on the `kind` value, never prefix/substring (a `steering_inclusion`
+/// frame must NOT be mistaken for a queue echo). Completion keys on the
+/// `kind == "turn_end"` value, never on frame ordering — a `context_usage`
+/// frame trails `turn_end` on the wire.
 ///
 /// A `turn_end` whose `_meta.kiro.stopReason` is missing or unparseable still
 /// completes the turn (defaults [`StopReason::EndTurn`]): silently returning
@@ -65,8 +75,77 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
                 breakdown,
             })
         }
+        // Steering-echo lifecycle (cyril-vgcm C5). Old-family kind names,
+        // new-family payloads: `{messageId, content}` beside `kind` in
+        // `_meta.kiro`. Same never-drop degrade discipline as convert::kiro's
+        // arms (a dropped frame would desync the UI chip): missing text ->
+        // None + warn, empty-string id -> None (ids are correlation keys, no
+        // sentinels). Field reads are deliberately local — kiro.rs reads the
+        // same field names off a different envelope (`update` vs `_meta.kiro`).
+        Some("steering_queued") => Some(Notification::SteeringQueued {
+            message: steering_text(kiro, "steering_queued"),
+            message_id: steering_message_id(kiro),
+        }),
+        Some("steering_injected") => Some(Notification::SteeringConsumed {
+            content: steering_text(kiro, "steering_injected"),
+            message_id: steering_message_id(kiro),
+        }),
+        Some("steering_cleared") => Some(Notification::SteeringCleared {
+            message_ids: steering_message_ids(kiro),
+        }),
         _ => None,
     }
+}
+
+/// Steer text off a KAS steering echo's `_meta.kiro.content`. Missing/non-string
+/// degrades to `None` with a warn — the frame still converts (dropping it would
+/// permanently desync the optimistic chip count).
+fn steering_text(kiro: &serde_json::Value, kind: &str) -> Option<String> {
+    let text = kiro.get("content").and_then(serde_json::Value::as_str);
+    if text.is_none() {
+        tracing::warn!(kind, "KAS steering echo missing content; no display text");
+    }
+    text.map(str::to_string)
+}
+
+/// Queue id off `_meta.kiro.messageId`. Empty string -> `None` (a `Some("")`
+/// sentinel would be a correlation key that matches nothing).
+fn steering_message_id(kiro: &serde_json::Value) -> Option<String> {
+    kiro.get("messageId")
+        .and_then(serde_json::Value::as_str)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+}
+
+/// Cleared ids off `_meta.kiro.messageIds` (cyril-vgcm C6: id-scoped drain).
+/// Absent is wire drift on KAS (warn; captured frames always carry it) and
+/// degrades to empty = the UI's drain-all — safe over-approximation, never a
+/// dropped frame. Non-string/empty entries are dropped with a warn
+/// (distinguish "absent" from "corrupt").
+fn steering_message_ids(kiro: &serde_json::Value) -> Vec<String> {
+    let raw = kiro.get("messageIds");
+    if raw.is_none() {
+        tracing::warn!("KAS steering_cleared missing messageIds; treating as drain-all");
+    }
+    let arr = raw.and_then(serde_json::Value::as_array);
+    let ids: Vec<String> = arr
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    if let Some(a) = arr
+        && ids.len() != a.len()
+    {
+        tracing::warn!(
+            dropped = a.len() - ids.len(),
+            "KAS steering_cleared had non-string/empty ids; kept the rest"
+        );
+    }
+    ids
 }
 
 /// Stop reason for a `turn_end` frame, defaulting [`StopReason::EndTurn`] when
@@ -186,12 +265,125 @@ mod tests {
         assert!(session_info_to_notification(info_update(&sn)).is_none());
     }
 
-    fn context_usage_frame(kiro: serde_json::Value) -> acp::SessionNotification {
+    /// Synthetic `session_info_update` frame around an arbitrary `_meta.kiro`
+    /// payload (renamed from `context_usage_frame` when steering tests started
+    /// using it too — it was never context-specific).
+    fn kiro_frame(kiro: serde_json::Value) -> acp::SessionNotification {
         serde_json::from_value(json!({
             "sessionId": "sess_x",
             "update": { "sessionUpdate": "session_info_update", "_meta": { "kiro": kiro } }
         }))
         .expect("frame deserializes")
+    }
+
+    // cyril-vgcm C5: the three steering kinds map to the same notifications the
+    // v2 families produce, off verbatim captured frames (2026-07-14, kiro-cli
+    // 2.12.1 KAS — bundle byte-identical across 2.11.0–2.12.1). The expected
+    // ids/text below are the capture's own values, not invented ones.
+    #[test]
+    fn steering_kind_queued_converts() {
+        let (_v, sn) = load("session_info_update_steering_queued.json");
+        let result = session_info_to_notification(info_update(&sn));
+        assert!(
+            matches!(
+                &result,
+                Some(Notification::SteeringQueued { message, message_id })
+                    if message.as_deref()
+                        == Some("IMPORTANT: end your reply with the single word STEERMARK_KILO")
+                        && message_id.as_deref()
+                            == Some("steer-8307ad8f-6404-40c3-a730-f7a1bfff4f60")
+            ),
+            "got {result:?}"
+        );
+    }
+
+    #[test]
+    fn steering_kind_injected_converts() {
+        // KAS says `steering_injected` where v2's old family said consumed —
+        // both mean "one queued steer drained into the turn".
+        let (_v, sn) = load("session_info_update_steering_injected.json");
+        let result = session_info_to_notification(info_update(&sn));
+        assert!(
+            matches!(
+                &result,
+                Some(Notification::SteeringConsumed { content, message_id })
+                    if content.as_deref()
+                        == Some("IMPORTANT: end your reply with the single word STEERMARK_LIMA")
+                        && message_id.as_deref()
+                            == Some("steer-6c7728c1-8eb8-4f99-8bdf-71d3c5a3bc26")
+            ),
+            "got {result:?}"
+        );
+    }
+
+    #[test]
+    fn steering_kind_cleared_converts() {
+        let (_v, sn) = load("session_info_update_steering_cleared.json");
+        let result = session_info_to_notification(info_update(&sn));
+        assert!(
+            matches!(
+                &result,
+                Some(Notification::SteeringCleared { message_ids })
+                    if message_ids
+                        == &vec!["steer-8307ad8f-6404-40c3-a730-f7a1bfff4f60".to_string()]
+            ),
+            "got {result:?}"
+        );
+    }
+
+    #[test]
+    fn steering_inclusion_is_not_a_queue_echo() {
+        // The fileMatch steering *catalog* kind (captured same run) must stay
+        // ignored — kind matching is exact, never prefix/substring: the probe
+        // itself had to filter this noise, so the bug class is live.
+        let (_v, sn) = load("session_info_update_steering_inclusion.json");
+        assert!(session_info_to_notification(info_update(&sn)).is_none());
+    }
+
+    // cyril-vgcm C5 stress: degrade discipline (mirrors convert::kiro's).
+    // Bug classes: drop-on-missing-field (chip desync), empty-string id
+    // sentinel, absent-vs-empty messageIds divergence, corrupt id entries.
+    #[test]
+    fn steering_kinds_degrade_never_drop() {
+        // Queued with id but no content -> emitted, text None.
+        let sn = kiro_frame(json!({ "kind": "steering_queued", "messageId": "steer-x" }));
+        assert!(matches!(
+            session_info_to_notification(info_update(&sn)),
+            Some(Notification::SteeringQueued { message: None, message_id })
+                if message_id.as_deref() == Some("steer-x")
+        ));
+        // Empty-string id -> None; text still carried.
+        let sn = kiro_frame(json!({
+            "kind": "steering_injected", "messageId": "", "content": "still counted"
+        }));
+        assert!(matches!(
+            session_info_to_notification(info_update(&sn)),
+            Some(Notification::SteeringConsumed {
+                content: Some(_),
+                message_id: None
+            })
+        ));
+        // Cleared: absent messageIds AND present-but-empty -> both empty
+        // (UI drain-all semantics, C7).
+        for kiro in [
+            json!({ "kind": "steering_cleared" }),
+            json!({ "kind": "steering_cleared", "messageIds": [] }),
+        ] {
+            let sn = kiro_frame(kiro);
+            assert!(matches!(
+                session_info_to_notification(info_update(&sn)),
+                Some(Notification::SteeringCleared { message_ids }) if message_ids.is_empty()
+            ));
+        }
+        // Corrupt entries dropped with the valid one kept.
+        let sn = kiro_frame(json!({
+            "kind": "steering_cleared", "messageIds": ["steer-ok", 7, ""]
+        }));
+        assert!(matches!(
+            session_info_to_notification(info_update(&sn)),
+            Some(Notification::SteeringCleared { message_ids })
+                if message_ids == vec!["steer-ok".to_string()]
+        ));
     }
 
     #[test]
@@ -227,7 +419,7 @@ mod tests {
         // Slice 3 / claim C2. Flat `_meta.kiro.usagePercentage` (9.9) wins over the
         // nested `contextUsage.usagePercentage` (1.1). Fails if the converter reads
         // the nested wrapper.
-        let sn = context_usage_frame(json!({
+        let sn = kiro_frame(json!({
             "kind": "context_usage",
             "usagePercentage": 9.9,
             "contextUsage": { "usagePercentage": 1.1 }
@@ -250,7 +442,7 @@ mod tests {
         // Slice 3 / claim C3. No `breakdown` key → Some with breakdown None, scalar
         // intact. Fails under `breakdown.unwrap()` or returning None (which would
         // drop the % update and freeze the toolbar).
-        let sn = context_usage_frame(json!({ "kind": "context_usage", "usagePercentage": 12.5 }));
+        let sn = kiro_frame(json!({ "kind": "context_usage", "usagePercentage": 12.5 }));
         let result = session_info_to_notification(info_update(&sn));
         assert!(
             matches!(
@@ -267,7 +459,7 @@ mod tests {
         // Slice 3 / claim C3. A breakdown missing a bucket (here `tools`) degrades
         // the whole breakdown to None — never a fabricated sentinel-zero bucket —
         // while the scalar still updates.
-        let sn = context_usage_frame(json!({
+        let sn = kiro_frame(json!({
             "kind": "context_usage", "usagePercentage": 3.0,
             "breakdown": {
                 "contextFiles": { "tokens": 0, "percent": 0 },

@@ -1,0 +1,13 @@
+{
+  "sessionId": "sess_f0ee94f3-cfb2-4e20-8452-555eeeb59e38",
+  "update": {
+    "sessionUpdate": "session_info_update",
+    "_meta": {
+      "kiro": {
+        "kind": "steering_injected",
+        "messageId": "steer-6c7728c1-8eb8-4f99-8bdf-71d3c5a3bc26",
+        "content": "IMPORTANT: end your reply with the single word STEERMARK_LIMA"
+      }
+    }
+  }
+}
