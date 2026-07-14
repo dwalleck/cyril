@@ -8,6 +8,7 @@
 
 use agent_client_protocol as acp;
 
+use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
 
 /// Convert a KAS `session_info_update` to an internal notification.
@@ -77,75 +78,27 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
         }
         // Steering-echo lifecycle (cyril-vgcm C5). Old-family kind names,
         // new-family payloads: `{messageId, content}` beside `kind` in
-        // `_meta.kiro`. Same never-drop degrade discipline as convert::kiro's
-        // arms (a dropped frame would desync the UI chip): missing text ->
-        // None + warn, empty-string id -> None (ids are correlation keys, no
-        // sentinels). Field reads are deliberately local — kiro.rs reads the
-        // same field names off a different envelope (`update` vs `_meta.kiro`).
+        // `_meta.kiro`. Field reads and their never-drop degrade discipline
+        // are shared with convert::kiro (`steering_text` /
+        // `steering_message_id` / `steering_message_ids`) — only envelope
+        // navigation differs (`_meta.kiro` here vs `update` there), so each
+        // arm passes the already-navigated value. The "KAS " echo labels keep
+        // the degrade warns distinguishable from the v2 old family's
+        // identical kind names; a KAS `session_info_update` carries no
+        // session id, hence `None`.
         Some("steering_queued") => Some(Notification::SteeringQueued {
-            message: steering_text(kiro, "steering_queued"),
-            message_id: steering_message_id(kiro),
+            message: steering_text(Some(kiro), "content", "KAS steering_queued", None),
+            message_id: steering_message_id(Some(kiro)),
         }),
         Some("steering_injected") => Some(Notification::SteeringConsumed {
-            content: steering_text(kiro, "steering_injected"),
-            message_id: steering_message_id(kiro),
+            content: steering_text(Some(kiro), "content", "KAS steering_injected", None),
+            message_id: steering_message_id(Some(kiro)),
         }),
         Some("steering_cleared") => Some(Notification::SteeringCleared {
-            message_ids: steering_message_ids(kiro),
+            message_ids: steering_message_ids(Some(kiro), "KAS steering_cleared", None),
         }),
         _ => None,
     }
-}
-
-/// Steer text off a KAS steering echo's `_meta.kiro.content`. Missing/non-string
-/// degrades to `None` with a warn — the frame still converts (dropping it would
-/// permanently desync the optimistic chip count).
-fn steering_text(kiro: &serde_json::Value, kind: &str) -> Option<String> {
-    let text = kiro.get("content").and_then(serde_json::Value::as_str);
-    if text.is_none() {
-        tracing::warn!(kind, "KAS steering echo missing content; no display text");
-    }
-    text.map(str::to_string)
-}
-
-/// Queue id off `_meta.kiro.messageId`. Empty string -> `None` (a `Some("")`
-/// sentinel would be a correlation key that matches nothing).
-fn steering_message_id(kiro: &serde_json::Value) -> Option<String> {
-    kiro.get("messageId")
-        .and_then(serde_json::Value::as_str)
-        .filter(|s| !s.is_empty())
-        .map(str::to_string)
-}
-
-/// Cleared ids off `_meta.kiro.messageIds` (cyril-vgcm C6: id-scoped drain).
-/// Absent is wire drift on KAS (warn; captured frames always carry it) and
-/// degrades to empty = the UI's drain-all — safe over-approximation, never a
-/// dropped frame. Non-string/empty entries are dropped with a warn
-/// (distinguish "absent" from "corrupt").
-fn steering_message_ids(kiro: &serde_json::Value) -> Vec<String> {
-    let raw = kiro.get("messageIds");
-    if raw.is_none() {
-        tracing::warn!("KAS steering_cleared missing messageIds; treating as drain-all");
-    }
-    let arr = raw.and_then(serde_json::Value::as_array);
-    let ids: Vec<String> = arr
-        .map(|a| {
-            a.iter()
-                .filter_map(|v| v.as_str())
-                .filter(|s| !s.is_empty())
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default();
-    if let Some(a) = arr
-        && ids.len() != a.len()
-    {
-        tracing::warn!(
-            dropped = a.len() - ids.len(),
-            "KAS steering_cleared had non-string/empty ids; kept the rest"
-        );
-    }
-    ids
 }
 
 /// Stop reason for a `turn_end` frame, defaulting [`StopReason::EndTurn`] when

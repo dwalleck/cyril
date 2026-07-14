@@ -170,15 +170,90 @@ fn parse_string_array(v: &serde_json::Value, key: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// Read the `messageId` of a new-family v2 steering echo (cyril-vgcm C3).
+// Steering-echo field readers, shared by every steering dialect (cyril-vgcm):
+// the v2 families below ride the `update` object, the KAS kinds
+// (`convert::kas`) ride `_meta.kiro`. Navigation to that envelope is the ONLY
+// thing the dialects don't share, so each caller passes its already-navigated
+// envelope plus an `echo` label (and session id where its envelope carries
+// one) for the degrade warns. Degrade discipline: a dropped frame would
+// permanently desync the optimistic chip count, so a malformed field degrades
+// that field to `None`/empty — never the frame.
+
+/// Steer display text off a steering echo's `field` (`message` on the old v2
+/// family, `content` everywhere else). Missing/non-string degrades to `None`
+/// with a warn — the notification still fires so the queue counter transitions.
+pub(super) fn steering_text(
+    envelope: Option<&serde_json::Value>,
+    field: &'static str,
+    echo: &'static str,
+    session_id: Option<&str>,
+) -> Option<String> {
+    let text = envelope
+        .and_then(|e| e.get(field))
+        .and_then(serde_json::Value::as_str);
+    if text.is_none() {
+        tracing::warn!(
+            echo,
+            field,
+            session_id = ?session_id,
+            "steering echo missing display text; converting with none"
+        );
+    }
+    text.map(str::to_string)
+}
+
+/// Read the `messageId` of an id-carrying steering echo (cyril-vgcm C3).
 /// Empty string degrades to `None` — ids are correlation keys and `Some("")`
 /// would be a sentinel that matches nothing (CLAUDE.md "no sentinel values").
-fn steering_message_id(update: Option<&serde_json::Value>) -> Option<String> {
-    update
-        .and_then(|u| u.get("messageId"))
+pub(super) fn steering_message_id(envelope: Option<&serde_json::Value>) -> Option<String> {
+    envelope
+        .and_then(|e| e.get("messageId"))
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
         .map(str::to_string)
+}
+
+/// Cleared ids off a steering-cleared echo's `messageIds` (cyril-vgcm C6:
+/// id-scoped drain). Absent is wire drift on the id-carrying dialects — warn
+/// and degrade to empty, the UI's drain-all: a safe over-approximation, never
+/// a dropped frame. Non-string/empty entries are dropped with a warn
+/// (distinguish "absent" from "corrupt"). `parse_string_array` is close but
+/// silently drops non-strings and keeps empty ids; steering wants the drift
+/// warns — deliberate divergence.
+pub(super) fn steering_message_ids(
+    envelope: Option<&serde_json::Value>,
+    echo: &'static str,
+    session_id: Option<&str>,
+) -> Vec<String> {
+    let raw = envelope.and_then(|e| e.get("messageIds"));
+    if raw.is_none() {
+        tracing::warn!(
+            echo,
+            session_id = ?session_id,
+            "steering echo missing messageIds; treating as drain-all"
+        );
+    }
+    let arr = raw.and_then(serde_json::Value::as_array);
+    let ids: Vec<String> = arr
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    if let Some(a) = arr
+        && ids.len() != a.len()
+    {
+        tracing::warn!(
+            echo,
+            session_id = ?session_id,
+            dropped = a.len() - ids.len(),
+            "steering echo had non-string/empty ids; kept the rest"
+        );
+    }
+    ids
 }
 
 pub(crate) fn to_ext_notification(
@@ -437,11 +512,8 @@ pub(crate) fn to_ext_notification(
             let session_update = update
                 .and_then(|u| u.get("sessionUpdate"))
                 .and_then(|s| s.as_str());
-            // For steering-echo logs only ("<unknown>" if the envelope omits it).
-            let session_id = params
-                .get("sessionId")
-                .and_then(|v| v.as_str())
-                .unwrap_or("<unknown>");
+            // For steering-echo logs only (`None` if the envelope omits it).
+            let session_id = params.get("sessionId").and_then(|v| v.as_str());
             match session_update {
                 Some("tool_call_chunk") => {
                     let tool_call_id = match update
@@ -486,36 +558,14 @@ pub(crate) fn to_ext_notification(
                 // transitions; a missing payload field degrades only the (K1b)
                 // display text and becomes `None`, never a `Some("")` sentinel.
                 // This dialect carries no message ids.
-                Some("steering_queued") => {
-                    let message = update
-                        .and_then(|u| u.get("message"))
-                        .and_then(|v| v.as_str());
-                    if message.is_none() {
-                        tracing::warn!(
-                            session_id,
-                            "steering_queued missing message field; counting with no text"
-                        );
-                    }
-                    Ok(Some(Notification::SteeringQueued {
-                        message: message.map(str::to_string),
-                        message_id: None,
-                    }))
-                }
-                Some("steering_consumed") => {
-                    let content = update
-                        .and_then(|u| u.get("content"))
-                        .and_then(|v| v.as_str());
-                    if content.is_none() {
-                        tracing::warn!(
-                            session_id,
-                            "steering_consumed missing content field; decrementing with no text"
-                        );
-                    }
-                    Ok(Some(Notification::SteeringConsumed {
-                        content: content.map(str::to_string),
-                        message_id: None,
-                    }))
-                }
+                Some("steering_queued") => Ok(Some(Notification::SteeringQueued {
+                    message: steering_text(update, "message", "steering_queued", session_id),
+                    message_id: None,
+                })),
+                Some("steering_consumed") => Ok(Some(Notification::SteeringConsumed {
+                    content: steering_text(update, "content", "steering_consumed", session_id),
+                    message_id: None,
+                })),
                 Some("steering_cleared") => Ok(Some(Notification::SteeringCleared {
                     message_ids: Vec::new(),
                 })),
@@ -524,74 +574,38 @@ pub(crate) fn to_ext_notification(
                 // and added queue ids (cyril-vgcm findings F2/F8): the steer
                 // text now rides `content` and the id `messageId`, camelCase.
                 // Same envelope + degrade discipline as the old family above.
-                Some("AgentExecutionUserMessageQueued") => {
-                    let message = update
-                        .and_then(|u| u.get("content"))
-                        .and_then(|v| v.as_str());
-                    if message.is_none() {
-                        tracing::warn!(
-                            session_id,
-                            "AgentExecutionUserMessageQueued missing content; counting with no text"
-                        );
-                    }
-                    Ok(Some(Notification::SteeringQueued {
-                        message: message.map(str::to_string),
-                        message_id: steering_message_id(update),
-                    }))
-                }
+                Some("AgentExecutionUserMessageQueued") => Ok(Some(Notification::SteeringQueued {
+                    message: steering_text(
+                        update,
+                        "content",
+                        "AgentExecutionUserMessageQueued",
+                        session_id,
+                    ),
+                    message_id: steering_message_id(update),
+                })),
                 Some("AgentExecutionSteeringInjected") => {
-                    let content = update
-                        .and_then(|u| u.get("content"))
-                        .and_then(|v| v.as_str());
-                    if content.is_none() {
-                        tracing::warn!(
-                            session_id,
-                            "AgentExecutionSteeringInjected missing content; decrementing with no text"
-                        );
-                    }
                     Ok(Some(Notification::SteeringConsumed {
-                        content: content.map(str::to_string),
+                        content: steering_text(
+                            update,
+                            "content",
+                            "AgentExecutionSteeringInjected",
+                            session_id,
+                        ),
                         message_id: steering_message_id(update),
                     }))
                 }
+                // `messageIds` names exactly which queued steers dropped
+                // (id-scoped drain, cyril-vgcm C6). Absent degrades to empty,
+                // which the UI treats as the old dialect's drain-all (C7) —
+                // see `steering_message_ids` for the degrade/warn contract.
                 Some("AgentExecutionUserMessageCleared") => {
-                    // `messageIds` names exactly which queued steers dropped
-                    // (id-scoped drain, cyril-vgcm C6). Absent on this family is
-                    // wire drift — warn and degrade to empty, which the UI treats
-                    // as the old dialect's "everything still queued" (C7): the
-                    // safe over-approximation, never a panic or a dropped frame.
-                    // (`parse_string_array` is close but silently drops
-                    // non-strings and keeps empty ids; steering wants the
-                    // drift warns below — deliberate divergence.)
-                    let raw_ids = update.and_then(|u| u.get("messageIds"));
-                    if raw_ids.is_none() {
-                        tracing::warn!(
+                    Ok(Some(Notification::SteeringCleared {
+                        message_ids: steering_message_ids(
+                            update,
+                            "AgentExecutionUserMessageCleared",
                             session_id,
-                            "AgentExecutionUserMessageCleared missing messageIds; treating as drain-all"
-                        );
-                    }
-                    let ids = raw_ids.and_then(|v| v.as_array());
-                    let message_ids: Vec<String> = ids
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str())
-                                .filter(|s| !s.is_empty())
-                                .map(str::to_string)
-                                .collect()
-                        })
-                        .unwrap_or_default();
-                    if let Some(arr) = ids
-                        && message_ids.len() != arr.len()
-                    {
-                        // Distinguish "absent" from "corrupt": a non-string or
-                        // empty id is drift worth a diagnosable trace.
-                        tracing::warn!(
-                            session_id,
-                            dropped = arr.len() - message_ids.len(),
-                            "AgentExecutionUserMessageCleared had non-string/empty ids; kept the rest"
-                        );
-                    }
-                    Ok(Some(Notification::SteeringCleared { message_ids }))
+                        ),
+                    }))
                 }
                 Some(other) => {
                     tracing::debug!(variant = other, "unhandled kiro.dev/session/update variant");
