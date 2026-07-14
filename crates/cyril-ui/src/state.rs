@@ -532,15 +532,20 @@ impl UiState {
                 Some(id) => self.bind_steer_echo_id(id),
                 None => false,
             },
-            Notification::SteeringConsumed { .. } => {
-                self.steering_queued = self.steering_queued.saturating_sub(1);
-                // Reconcile the optimistic echo (K1b, cyril-bm1j): one steer was
-                // injected at this tool boundary, so flip the OLDEST still-Queued
-                // echo to Applied. FIFO — `content` is advisory, never a match key.
-                if self.flip_queued_steer_echoes(SteerEchoStatus::Applied, true) {
+            Notification::SteeringConsumed { message_id, .. } => {
+                // One queued steer drained into the turn. Id-match preferred,
+                // FIFO fallback (cyril-vgcm C9); `content` is advisory, never a
+                // match key. The counter tracks ACTUAL flips — a duplicate
+                // injected echo (id already terminal) must not decrement, or the
+                // count drifts below the Queued-chip total (cyril-7z7u:
+                // counter == #Queued chips).
+                if self.flip_consumed_steer_echo(message_id.as_deref()) {
+                    self.steering_queued = self.steering_queued.saturating_sub(1);
                     self.messages_version += 1;
+                    true
+                } else {
+                    false
                 }
-                true
             }
             // id-scoped drain lands with the C6 slice (cyril-vgcm); until then the
             // ids are ignored and every Cleared drains everything — the correct
@@ -886,6 +891,34 @@ impl UiState {
             }
         }
         false
+    }
+
+    /// Flip the Queued echo a Consumed echo names (cyril-vgcm C9): the chip
+    /// bound to `message_id` when one is, else the OLDEST Queued chip (FIFO —
+    /// covers the id-less old dialect and a dropped/deferred Queued echo). An
+    /// id bound to a TERMINAL chip is a duplicate injected echo: flips nothing
+    /// and does NOT fall back — FIFO there would drain a second, wrong chip.
+    /// Returns whether a chip flipped (the caller decrements the counter by
+    /// exactly that).
+    fn flip_consumed_steer_echo(&mut self, message_id: Option<&str>) -> bool {
+        if let Some(id) = message_id {
+            for msg in self.messages.iter_mut() {
+                if let ChatMessageKind::SteerEcho {
+                    status,
+                    message_id: Some(existing),
+                    ..
+                } = &mut msg.kind
+                    && existing == id
+                {
+                    if *status == SteerEchoStatus::Queued {
+                        *status = SteerEchoStatus::Applied;
+                        return true;
+                    }
+                    return false;
+                }
+            }
+        }
+        self.flip_queued_steer_echoes(SteerEchoStatus::Applied, true)
     }
 
     /// Reconcile optimistic steer echoes in place (ROADMAP K1b, cyril-bm1j).
@@ -1818,6 +1851,104 @@ mod tests {
         }));
         assert_eq!(state.steering_queued(), 2);
         assert_eq!(state.steering_queued(), queued_count(&state), "7z7u oracle");
+    }
+
+    // cyril-vgcm C9: Consumed prefers the id-matched chip, falls back FIFO,
+    // and decrements by ACTUAL flips. Bug classes: FIFO-always (id ignored —
+    // flips the wrong chip), unconditional decrement (duplicate injected echo
+    // drifts the counter below the chip count), underflow on a ghost id.
+    // Oracle: counter == #Queued chips after every step (7z7u contract).
+    #[test]
+    fn steering_consumed_id_match_then_fifo() {
+        fn chips(s: &UiState) -> Vec<(SteerEchoStatus, Option<String>)> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho {
+                        status, message_id, ..
+                    } => Some((*status, message_id.clone())),
+                    _ => None,
+                })
+                .collect()
+        }
+        fn assert_oracle(s: &UiState) {
+            let queued = chips(s)
+                .iter()
+                .filter(|(st, _)| *st == SteerEchoStatus::Queued)
+                .count();
+            assert_eq!(
+                s.steering_queued(),
+                queued,
+                "7z7u: counter == #Queued chips"
+            );
+        }
+
+        let mut state = UiState::new(500);
+        state.add_steer_echo("A");
+        state.add_steer_echo("B");
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("A".into()),
+            message_id: Some("id1".into()),
+        });
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("B".into()),
+            message_id: Some("id2".into()),
+        });
+        assert_eq!(state.steering_queued(), 2);
+        assert_oracle(&state);
+
+        // Id-match: id2 flips B (the NEWER chip) — FIFO would wrongly flip A.
+        assert!(state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: Some("id2".into()),
+        }));
+        assert_eq!(
+            chips(&state),
+            vec![
+                (SteerEchoStatus::Queued, Some("id1".into())),
+                (SteerEchoStatus::Applied, Some("id2".into())),
+            ],
+            "id-match must beat FIFO"
+        );
+        assert_eq!(state.steering_queued(), 1);
+        assert_oracle(&state);
+
+        // Duplicate injected echo (id2 already Applied): nothing flips, no
+        // decrement, and NO FIFO fallback onto A.
+        assert!(!state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: Some("id2".into()),
+        }));
+        assert_eq!(
+            chips(&state)[0],
+            (SteerEchoStatus::Queued, Some("id1".into()))
+        );
+        assert_eq!(
+            state.steering_queued(),
+            1,
+            "duplicate echo must not decrement"
+        );
+        assert_oracle(&state);
+
+        // Id-less echo (old dialect): FIFO fallback drains A.
+        assert!(state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        }));
+        assert_eq!(
+            chips(&state)[0],
+            (SteerEchoStatus::Applied, Some("id1".into()))
+        );
+        assert_eq!(state.steering_queued(), 0);
+        assert_oracle(&state);
+
+        // Ghost id with zero Queued chips: no flip, no underflow.
+        assert!(!state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: Some("ghost".into()),
+        }));
+        assert_eq!(state.steering_queued(), 0);
+        assert_oracle(&state);
     }
 
     // cyril-vgcm Slice 1 / claim C12 (UI side): SteeringClearUnsupported is
