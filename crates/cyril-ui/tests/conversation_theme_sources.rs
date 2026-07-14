@@ -114,6 +114,13 @@ fn production_source(relative: &str) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(relative);
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
+    // Normalize CRLF (cyril-xi4a): `audit_source` advances its running offset
+    // by `line.len() + 1` per line, but `signed_ranges` come from true byte
+    // offsets — on a CRLF checkout (Windows runners; no .gitattributes) every
+    // token drifts one byte per preceding line and deep tokens fall out of
+    // their signed exemption. Auditing an LF-normalized copy keeps offsets
+    // and ranges in the same coordinate space on every platform.
+    let source = source.replace("\r\n", "\n");
     source
         .split_once("#[cfg(test)]")
         .map_or(source.as_str(), |(production, _)| production)
@@ -162,6 +169,42 @@ fn accepts_signed_syntect_rgb_conversion() {
 fn accepts_signed_diff_rgb_conversion() {
     let source = "fn tint_with_diff_color(fg: Color, diff: Color) -> Color {\n    Color::Rgb(fg.r + diff.r, fg.g + diff.g, fg.b + diff.b)\n}\n";
     assert!(audit_source(source).is_empty());
+}
+
+// cyril-xi4a: the offset arithmetic (`line.len() + 1`) and the signed ranges
+// (true byte offsets) must share a coordinate space. On raw CRLF input they
+// don't — every token drifts one byte per preceding line, and tokens deep in
+// a file escape their signed exemption (main's Windows CI red, 2026-07-12).
+// `production_source` normalizes to LF; this pins the failure shape so the
+// normalization can't be dropped: the same source must stay clean when
+// CRLF-encoded AND still flag a genuine violation outside the signed fn.
+#[test]
+fn crlf_source_keeps_signed_exemption_aligned() {
+    // Padding lines push the signed fn deep enough that one-byte-per-line
+    // drift exceeds the token's depth into the fn body (~76 bytes) and expels
+    // it from the exemption range — highlight.rs hit this at ~line 197.
+    let mut source = "// pad\n".repeat(128);
+    source.push_str(
+        "fn syntect_to_ratatui(style: SynStyle) -> Style {\n    Style::default().fg(Color::Rgb(style.r, style.g, style.b))\n}\n",
+    );
+    let crlf = source.replace('\n', "\r\n");
+    let normalized = crlf.replace("\r\n", "\n");
+    assert!(
+        audit_source(&normalized).is_empty(),
+        "signed conversion must stay exempt after LF normalization"
+    );
+    // Un-normalized CRLF is exactly the drift bug — keep the failure shape
+    // documented: the exemption misses and the token is (wrongly) flagged.
+    assert!(
+        !audit_source(&crlf).is_empty(),
+        "raw CRLF drifts offsets; if this starts passing, audit_source went \
+         byte-offset-consistent and the normalization in production_source \
+         can be retired"
+    );
+    // A genuine violation outside the signed fn is still caught post-normalization.
+    let mut bad = normalized;
+    bad.push_str("fn render() { Style::default().fg(Color::White); }\n");
+    assert_eq!(audit_source(&bad).len(), 1, "real violations still flagged");
 }
 
 #[test]
