@@ -525,7 +525,13 @@ impl UiState {
             // own steer — that would double-count. A steer originated by ANOTHER
             // observer (wire echo with no local optimistic echo) is not counted
             // today; that's the single-client model — see cyril-8lfs.
-            Notification::SteeringQueued { .. } => false,
+            // cyril-vgcm C8: the echo's one job here is to BIND its queue id to
+            // the oldest id-less Queued chip, so the id-scoped Consumed/Cleared
+            // echoes can reconcile the right chip. Never a counter mutation.
+            Notification::SteeringQueued { message_id, .. } => match message_id {
+                Some(id) => self.bind_steer_echo_id(id),
+                None => false,
+            },
             Notification::SteeringConsumed { .. } => {
                 self.steering_queued = self.steering_queued.saturating_sub(1);
                 // Reconcile the optimistic echo (K1b, cyril-bm1j): one steer was
@@ -845,6 +851,41 @@ impl UiState {
         self.steering_queued = self.steering_queued.saturating_add(1);
         self.messages_version += 1;
         self.enforce_message_limit();
+    }
+
+    /// Bind a wire-assigned steer queue id to the OLDEST id-less `Queued` echo
+    /// (cyril-vgcm C8). No-op when the id is already bound to any echo (a
+    /// duplicate wire echo must not claim a second chip) or when no id-less
+    /// Queued chip exists (a foreign/multi-client steer — display of those is
+    /// cyril-8lfs territory, out of scope). NEVER touches `steering_queued`:
+    /// the optimistic count was taken at `add_steer_echo` (cyril-7z7u) and
+    /// re-counting the wire echo is the double-count bug. `messages_version`
+    /// is not bumped — the id is reconciliation plumbing, not rendered.
+    fn bind_steer_echo_id(&mut self, id: &str) -> bool {
+        let already_bound = self.messages.iter().any(|m| {
+            matches!(
+                m.kind(),
+                ChatMessageKind::SteerEcho {
+                    message_id: Some(existing),
+                    ..
+                } if existing == id
+            )
+        });
+        if already_bound {
+            return false;
+        }
+        for msg in self.messages.iter_mut() {
+            if let ChatMessageKind::SteerEcho {
+                status: SteerEchoStatus::Queued,
+                message_id: message_id @ None,
+                ..
+            } = &mut msg.kind
+            {
+                *message_id = Some(id.to_string());
+                return true;
+            }
+        }
+        false
     }
 
     /// Reconcile optimistic steer echoes in place (ROADMAP K1b, cyril-bm1j).
@@ -1699,6 +1740,84 @@ mod tests {
             "expected a system message containing the steering text, got {:?}",
             last.kind()
         );
+    }
+
+    // cyril-vgcm C8: a wire SteeringQueued{Some(id)} binds the id to the OLDEST
+    // id-less Queued chip and never re-counts. Bug classes this fixture fails
+    // under: newest-first binding, double-bind on a duplicate echo, wire-echo
+    // re-count (the 7z7u double-count), and chip creation for foreign steers.
+    // Oracle: counter == #Queued chips after every step (7z7u contract).
+    #[test]
+    fn steering_queued_binds_id_no_count() {
+        fn chips(s: &UiState) -> Vec<(SteerEchoStatus, Option<String>)> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho {
+                        status, message_id, ..
+                    } => Some((*status, message_id.clone())),
+                    _ => None,
+                })
+                .collect()
+        }
+        fn queued_count(s: &UiState) -> usize {
+            chips(s)
+                .iter()
+                .filter(|(st, _)| *st == SteerEchoStatus::Queued)
+                .count()
+        }
+
+        let mut state = UiState::new(500);
+        // Foreign steer (id, zero local chips) -> no-op: no chip, no count.
+        assert!(!state.apply_notification(&Notification::SteeringQueued {
+            message: Some("foreign".into()),
+            message_id: Some("steer-foreign".into()),
+        }));
+        assert_eq!(state.steering_queued(), 0);
+        assert!(
+            chips(&state).is_empty(),
+            "no chip invented for a foreign steer"
+        );
+
+        state.add_steer_echo("first");
+        state.add_steer_echo("second");
+        assert_eq!(state.steering_queued(), 2);
+
+        // Bind: OLDEST id-less chip gets the id; counter untouched.
+        let changed = state.apply_notification(&Notification::SteeringQueued {
+            message: Some("first".into()),
+            message_id: Some("steer-1".into()),
+        });
+        assert!(changed, "a successful bind is a state change");
+        assert_eq!(
+            chips(&state),
+            vec![
+                (SteerEchoStatus::Queued, Some("steer-1".into())),
+                (SteerEchoStatus::Queued, None),
+            ],
+            "oldest id-less chip binds first"
+        );
+        assert_eq!(state.steering_queued(), 2, "bind must not re-count");
+        assert_eq!(state.steering_queued(), queued_count(&state), "7z7u oracle");
+
+        // Duplicate wire echo with the SAME id -> second chip must NOT bind.
+        assert!(!state.apply_notification(&Notification::SteeringQueued {
+            message: Some("first".into()),
+            message_id: Some("steer-1".into()),
+        }));
+        assert_eq!(
+            chips(&state)[1],
+            (SteerEchoStatus::Queued, None),
+            "duplicate echo must not claim a second chip"
+        );
+
+        // Old-dialect echo (no id) -> no bind, no count (unchanged behavior).
+        assert!(!state.apply_notification(&Notification::SteeringQueued {
+            message: Some("second".into()),
+            message_id: None,
+        }));
+        assert_eq!(state.steering_queued(), 2);
+        assert_eq!(state.steering_queued(), queued_count(&state), "7z7u oracle");
     }
 
     // cyril-vgcm Slice 1 / claim C12 (UI side): SteeringClearUnsupported is
