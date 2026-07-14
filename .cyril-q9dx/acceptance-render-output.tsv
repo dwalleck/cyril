@@ -1,0 +1,6 @@
+path	marker	foreground	cells_visited
+committed_user	You:	LightBlue	80
+committed_agent	Kiro:	LightGreen	80
+system_unicode	系统 status	LightMagenta	80
+main_streaming_agent	Kiro:	LightGreen	80
+subagent_streaming_agent	reviewer:	LightGreen	240

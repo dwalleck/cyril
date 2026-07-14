@@ -1,0 +1,7 @@
+C0 PASS themes=1 unique=1 visits=1
+C1 PASS speaker_rows=3
+C2 PASS collisions=12
+C3 PASS non_speaker_ansi16=26 other_mode_rows=87
+C5 PASS ansi16_nearest=25 ansi256_nearest=28 tie_index=0
+C6 PASS deterministic_runs=2 bytes=1960
+C7 PASS syntax_themes=1

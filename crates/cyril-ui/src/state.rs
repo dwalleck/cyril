@@ -5,6 +5,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use cyril_core::types::*;
 
 use crate::file_completer::FileCompleter;
+use crate::theme::{ColorMode, Theme, ThemeId, resolve};
 use crate::traits::*;
 
 /// Result of handling a key event when autocomplete is active.
@@ -21,6 +22,8 @@ pub enum AutocompleteAction {
 }
 
 pub struct UiState {
+    theme: Theme,
+
     // Chat
     messages: Vec<ChatMessage>,
     messages_version: u64,
@@ -100,6 +103,10 @@ pub struct UiState {
 }
 
 impl TuiState for UiState {
+    fn theme(&self) -> Theme {
+        self.theme
+    }
+
     fn messages(&self) -> &[ChatMessage] {
         &self.messages
     }
@@ -248,6 +255,7 @@ impl TuiState for UiState {
 impl UiState {
     pub fn new(max_messages: usize) -> Self {
         Self {
+            theme: resolve(ThemeId::CyrilDark, ColorMode::TrueColor),
             messages: Vec::new(),
             messages_version: 0,
             streaming_text: String::new(),
@@ -1661,6 +1669,18 @@ mod tests {
         assert_eq!(state.activity(), Activity::Idle);
         assert!(!state.should_quit());
         assert_eq!(state.steering_queued(), 0);
+    }
+
+    #[test]
+    fn new_state_uses_cyril_dark_truecolor() {
+        let state = UiState::new(500);
+        assert_eq!(
+            TuiState::theme(&state),
+            crate::theme::resolve(
+                crate::theme::ThemeId::CyrilDark,
+                crate::theme::ColorMode::TrueColor,
+            )
+        );
     }
 
     // Slice A / design claim 12: SteeringUnsupported -> exactly one system message.

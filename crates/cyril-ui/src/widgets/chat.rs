@@ -1,16 +1,19 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
 
-use crate::palette;
+use crate::theme::Theme;
 use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus, TrackedToolCall, TuiState};
 use crate::widgets::markdown;
 
+const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+const SPINNER_FRAME_MS: u128 = 80;
+
 /// Render the chat area. If a subagent is focused, renders the focused
 /// subagent's stream instead of the main chat.
-pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
     // Drill-in: if a subagent is focused, render its stream instead.
     if let Some(focused) = state.subagent_ui().focused_stream() {
-        render_subagent_drill_in(frame, area, state, focused);
+        render_subagent_drill_in(frame, area, state, focused, theme);
         return;
     }
 
@@ -18,7 +21,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 
     // Render committed messages (includes tool calls in chronological position)
     for msg in state.messages() {
-        render_message(&mut lines, msg, area.width as usize);
+        render_message(&mut lines, msg, area.width as usize, theme);
         lines.push(Line::default()); // spacing between messages
     }
 
@@ -28,21 +31,21 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         lines.push(Line::styled(
             "Kiro:",
             Style::default()
-                .fg(palette::AGENT_GREEN)
+                .fg(theme.agent)
                 .add_modifier(Modifier::BOLD),
         ));
-        let md_lines = markdown::render(streaming, area.width as usize);
+        let md_lines = markdown::render_with_theme(streaming, area.width as usize, theme);
         lines.extend(md_lines);
     }
 
     // Render streaming thought
     if let Some(thought) = state.streaming_thought() {
-        push_thought_lines(&mut lines, thought);
+        push_thought_lines(&mut lines, thought, theme);
     }
 
     // Activity indicator — visible in the chat area when the agent is busy
     // but not actively streaming text.
-    render_activity_indicator(&mut lines, state);
+    render_activity_indicator(&mut lines, state, theme);
 
     let visible_height = area.height as usize;
 
@@ -82,6 +85,7 @@ fn render_subagent_drill_in(
     area: Rect,
     state: &dyn TuiState,
     stream: &crate::subagent_ui::SubagentStream,
+    theme: &Theme,
 ) {
     let mut lines: Vec<Line> = Vec::new();
 
@@ -97,16 +101,16 @@ fn render_subagent_drill_in(
         Span::styled(
             format!("─── {name} "),
             Style::default()
-                .fg(palette::USER_BLUE)
+                .fg(theme.soft_accent)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled("[Esc] Back", Style::default().fg(palette::MUTED_GRAY)),
+        Span::styled("[Esc] Back", Style::default().fg(theme.muted)),
     ]));
     lines.push(Line::default());
 
     // Render committed messages
     for msg in stream.messages() {
-        render_message(&mut lines, msg, area.width as usize);
+        render_message(&mut lines, msg, area.width as usize, theme);
         lines.push(Line::default());
     }
 
@@ -116,10 +120,10 @@ fn render_subagent_drill_in(
         lines.push(Line::styled(
             format!("{name}:"),
             Style::default()
-                .fg(palette::AGENT_GREEN)
+                .fg(theme.agent)
                 .add_modifier(Modifier::BOLD),
         ));
-        let md_lines = markdown::render(streaming, area.width as usize);
+        let md_lines = markdown::render_with_theme(streaming, area.width as usize, theme);
         lines.extend(md_lines);
     }
 
@@ -151,9 +155,9 @@ fn render_subagent_drill_in(
 /// The 💭 marker prefixes the first line; continuation lines are indented to
 /// align under it, because accumulated thoughts span multiple physical lines
 /// and a single `Line` would not break on embedded newlines.
-fn push_thought_lines(lines: &mut Vec<Line>, text: &str) {
+fn push_thought_lines(lines: &mut Vec<Line>, text: &str, theme: &Theme) {
     let style = Style::default()
-        .fg(palette::MUTED_GRAY)
+        .fg(theme.muted)
         .add_modifier(Modifier::ITALIC);
     if text.is_empty() {
         // Live preview before the first thought token: keep the 💭 placeholder
@@ -171,14 +175,12 @@ fn push_thought_lines(lines: &mut Vec<Line>, text: &str) {
     }
 }
 
-fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
+fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme: &Theme) {
     match msg.kind() {
         ChatMessageKind::UserText(text) => {
             lines.push(Line::styled(
                 "You:",
-                Style::default()
-                    .fg(palette::USER_BLUE)
-                    .add_modifier(Modifier::BOLD),
+                Style::default().fg(theme.user).add_modifier(Modifier::BOLD),
             ));
             for line in text.lines() {
                 lines.push(Line::raw(format!("  {line}")));
@@ -188,23 +190,23 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
             lines.push(Line::styled(
                 "Kiro:",
                 Style::default()
-                    .fg(palette::AGENT_GREEN)
+                    .fg(theme.agent)
                     .add_modifier(Modifier::BOLD),
             ));
-            let md_lines = markdown::render(text, width);
+            let md_lines = markdown::render_with_theme(text, width, theme);
             lines.extend(md_lines);
         }
         ChatMessageKind::Thought(text) => {
-            push_thought_lines(lines, text);
+            push_thought_lines(lines, text, theme);
         }
         ChatMessageKind::ToolCall(tc) => {
-            render_tool_call(lines, tc);
+            render_tool_call(lines, tc, theme);
         }
         ChatMessageKind::Plan(plan) => {
             lines.push(Line::styled(
                 "Plan:",
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.emphasis)
                     .add_modifier(Modifier::BOLD),
             ));
             for entry in plan.entries() {
@@ -219,7 +221,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
         }
         ChatMessageKind::System(text) => {
             let style = Style::default()
-                .fg(palette::SYSTEM_MAUVE)
+                .fg(theme.system)
                 .add_modifier(Modifier::ITALIC);
             for line in text.lines() {
                 lines.push(Line::styled(line.to_string(), style));
@@ -229,7 +231,7 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
             lines.push(Line::styled(
                 format!("/{command}:"),
                 Style::default()
-                    .fg(palette::USER_BLUE)
+                    .fg(theme.soft_accent)
                     .add_modifier(Modifier::BOLD),
             ));
             for line in text.lines() {
@@ -239,10 +241,10 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
         // `message_id` is reconciliation plumbing, not a display concern.
         ChatMessageKind::SteerEcho { text, status, .. } => {
             let (suffix, color) = match status {
-                SteerEchoStatus::Queued => ("queued", Color::Yellow),
-                SteerEchoStatus::Applied => ("applied", palette::AGENT_GREEN),
-                SteerEchoStatus::Cleared => ("cleared", Color::DarkGray),
-                SteerEchoStatus::Unsupported => ("not supported", Color::Red),
+                SteerEchoStatus::Queued => ("queued", theme.emphasis),
+                SteerEchoStatus::Applied => ("applied", theme.positive_accent),
+                SteerEchoStatus::Cleared => ("cleared", theme.subdued),
+                SteerEchoStatus::Unsupported => ("not supported", theme.subdued_negative),
             };
             let style = Style::default().fg(color).add_modifier(Modifier::ITALIC);
             // Steers are short; render the first line with the status suffix and
@@ -263,12 +265,12 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize) {
 /// Render a live activity indicator at the bottom of chat content.
 /// Shows a spinner + label + elapsed time when the agent is busy but not
 /// actively streaming text (which is already visible).
-fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState) {
+fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState, theme: &Theme) {
     use crate::traits::Activity;
 
     let (label, color) = match state.activity() {
-        Activity::Sending | Activity::Waiting => ("Thinking...", palette::MUTED_GRAY),
-        Activity::ToolRunning => ("Running...", Color::Cyan),
+        Activity::Sending | Activity::Waiting => ("Thinking...", theme.muted),
+        Activity::ToolRunning => ("Running...", theme.accent_quinary),
         // Streaming text is already visible — no indicator needed.
         Activity::Streaming | Activity::Idle | Activity::Ready => return,
     };
@@ -276,14 +278,12 @@ fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState) {
     let elapsed_dur = state.activity_elapsed();
     let elapsed_secs = elapsed_dur.map(|d| d.as_secs()).unwrap_or(0);
     let spinner_idx = elapsed_dur
-        .map(|d| {
-            (d.as_millis() / palette::SPINNER_FRAME_MS) as usize % palette::SPINNER_CHARS.len()
-        })
+        .map(|d| (d.as_millis() / SPINNER_FRAME_MS) as usize % SPINNER_CHARS.len())
         .unwrap_or(0);
 
     lines.push(Line::from(vec![
         Span::styled(
-            format!("{} ", palette::SPINNER_CHARS[spinner_idx]),
+            format!("{} ", SPINNER_CHARS[spinner_idx]),
             Style::default().fg(color),
         ),
         Span::styled(
@@ -293,7 +293,7 @@ fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState) {
     ]));
 }
 
-fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
     use cyril_core::types::{ToolCallStatus, ToolKind};
 
     let status_icon = match tc.status() {
@@ -320,8 +320,9 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
         }
         ToolKind::Execute => {
             if let Some(cmd) = tc.command_text() {
-                let display: String = cmd.chars().take(50).collect();
-                if cmd.len() > 50 {
+                let mut chars = cmd.chars();
+                let display: String = chars.by_ref().take(50).collect();
+                if chars.next().is_some() {
                     format!("Run({display}...)")
                 } else {
                     format!("Run({display})")
@@ -338,20 +339,19 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     };
 
     let color = match tc.status() {
-        ToolCallStatus::Completed => Color::Green,
-        ToolCallStatus::Failed => Color::Red,
-        _ => Color::Yellow,
+        ToolCallStatus::Completed => theme.subdued_positive,
+        ToolCallStatus::Failed => theme.subdued_negative,
+        ToolCallStatus::InProgress | ToolCallStatus::Pending => theme.emphasis,
     };
 
     let kind_color = match tc.kind() {
-        ToolKind::Read => Color::Blue,
-        ToolKind::Write => Color::Magenta,
-        ToolKind::Execute => Color::Yellow,
-        ToolKind::Search => Color::Cyan,
-        ToolKind::Think => Color::DarkGray,
-        ToolKind::Fetch => Color::Cyan,
-        ToolKind::SwitchMode => Color::Magenta,
-        ToolKind::Other => Color::White,
+        ToolKind::Read => theme.accent_tertiary,
+        ToolKind::Write => theme.accent_quaternary,
+        ToolKind::Execute => theme.emphasis,
+        ToolKind::Search | ToolKind::Fetch => theme.accent_quinary,
+        ToolKind::Think => theme.subdued,
+        ToolKind::SwitchMode => theme.accent_quaternary,
+        ToolKind::Other => theme.text,
     };
 
     let mut header_spans = vec![
@@ -362,17 +362,17 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     if let Some((added, removed)) = compute_diff_summary(tc) {
         header_spans.push(Span::styled(
             format!("  +{added} -{removed}"),
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.subdued),
         ));
     }
 
     lines.push(Line::from(header_spans));
 
     if tc.status() == ToolCallStatus::Completed && tc.kind() == ToolKind::Write {
-        render_diff_lines(lines, tc);
+        render_diff_lines(lines, tc, theme);
     }
 
-    render_tool_output(lines, tc);
+    render_tool_output(lines, tc, theme);
 }
 
 /// Compute (added, removed) line counts from diff content using `similar`.
@@ -405,7 +405,7 @@ fn compute_diff_summary(tc: &TrackedToolCall) -> Option<(usize, usize)> {
 
 /// Render actual diff lines with line numbers for edit operations.
 /// Uses the `similar` crate for proper diff computation with context lines.
-fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
     use similar::{ChangeTag, TextDiff};
 
     const MAX_DIFF_LINES: usize = 20;
@@ -425,7 +425,7 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
                         if count >= MAX_DIFF_LINES {
                             lines.push(Line::styled(
                                 "      ...".to_string(),
-                                Style::default().fg(Color::DarkGray),
+                                Style::default().fg(theme.subdued),
                             ));
                             return;
                         }
@@ -435,15 +435,15 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
                         let (prefix, color) = match change.tag() {
                             ChangeTag::Delete => {
                                 let line_no = change.old_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │- "), Color::Red)
+                                (format!("    {line_no:>4} │- "), theme.subdued_negative)
                             }
                             ChangeTag::Insert => {
                                 let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │+ "), Color::Green)
+                                (format!("    {line_no:>4} │+ "), theme.subdued_positive)
                             }
                             ChangeTag::Equal => {
                                 let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │  "), Color::DarkGray)
+                                (format!("    {line_no:>4} │  "), theme.subdued)
                             }
                         };
 
@@ -452,7 +452,7 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
                             Span::styled(
                                 line_text.to_string(),
                                 if change.tag() == ChangeTag::Equal {
-                                    Style::default().fg(Color::DarkGray)
+                                    Style::default().fg(theme.subdued)
                                 } else {
                                     Style::default().fg(color)
                                 },
@@ -474,7 +474,7 @@ fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
 ///
 /// Called after the header and diff rendering in `render_tool_call`. Skips
 /// Write-kind tools since they already display diff content.
-fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
+fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
     use cyril_core::types::{ToolCallStatus, ToolKind};
 
     const MAX_OUTPUT_LINES: usize = 5;
@@ -485,7 +485,7 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
         if let Some(err) = tc.error_message() {
             lines.push(Line::styled(
                 format!("{INDENT}Error: {err}"),
-                Style::default().fg(Color::Red),
+                Style::default().fg(theme.subdued_negative),
             ));
         }
         return;
@@ -507,14 +507,14 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
     {
         lines.push(Line::styled(
             format!("{INDENT}Exit: {code}"),
-            Style::default().fg(Color::Yellow),
+            Style::default().fg(theme.emphasis),
         ));
     }
 
     // Read: show char count summary instead of full output
     if tc.kind() == ToolKind::Read {
         if let Some(text) = tc.output_text() {
-            let chars = text.len();
+            let chars = text.chars().count();
             let summary = if chars < 1000 {
                 format!("{chars} chars")
             } else {
@@ -522,7 +522,7 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
             };
             lines.push(Line::styled(
                 format!("{INDENT}{summary}"),
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.subdued),
             ));
         }
         return;
@@ -540,13 +540,13 @@ fn render_tool_output(lines: &mut Vec<Line>, tc: &TrackedToolCall) {
         for line_text in &output_lines[..show] {
             lines.push(Line::styled(
                 format!("{INDENT}| {line_text}"),
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.subdued),
             ));
         }
         if total > show {
             lines.push(Line::styled(
                 format!("{INDENT}...{} more lines", total - show),
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.subdued),
             ));
         }
     }
@@ -557,10 +557,467 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use std::time::Duration;
+
     use crate::traits::test_support::MockTuiState;
     use crate::traits::{Activity, ChatMessage};
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+    use unicode_width::UnicodeWidthChar;
+
+    const EXPECTED_SHAPE_LABELS: [&str; 44] = [
+        "message/user",
+        "message/agent",
+        "message/thought",
+        "message/tool",
+        "message/plan",
+        "message/system",
+        "message/command",
+        "message/steer",
+        "steer/queued",
+        "steer/applied",
+        "steer/cleared",
+        "steer/unsupported",
+        "activity/sending",
+        "activity/waiting",
+        "activity/tool-running",
+        "activity/streaming",
+        "activity/idle",
+        "activity/ready",
+        "tool-kind/read",
+        "tool-kind/write",
+        "tool-kind/execute",
+        "tool-kind/search",
+        "tool-kind/think",
+        "tool-kind/fetch",
+        "tool-kind/switch-mode",
+        "tool-kind/other",
+        "tool-status/in-progress",
+        "tool-status/pending",
+        "tool-status/completed",
+        "tool-status/failed",
+        "optional/location-present",
+        "optional/location-absent",
+        "optional/raw-input-present",
+        "optional/raw-input-absent",
+        "optional/content-present",
+        "optional/content-absent",
+        "optional/raw-output-present",
+        "optional/raw-output-absent",
+        "optional/old-text-present",
+        "optional/old-text-absent",
+        "optional/error-present",
+        "optional/error-absent",
+        "truncation/diff-20",
+        "truncation/output-5",
+    ];
+
+    fn matrix_tool(
+        id: &str,
+        title: &str,
+        kind: cyril_core::types::ToolKind,
+        status: cyril_core::types::ToolCallStatus,
+    ) -> TrackedToolCall {
+        use cyril_core::types::{ToolCall, ToolCallId};
+
+        TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new(id),
+            title.into(),
+            kind,
+            status,
+            None,
+        ))
+    }
+
+    fn rendered_message_text(message: &ChatMessage, theme: &Theme) -> String {
+        let mut lines = Vec::new();
+        render_message(&mut lines, message, 80, theme);
+        lines
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn rendered_tool_lines(tool: &TrackedToolCall, theme: &Theme) -> Vec<Line<'static>> {
+        let mut lines = Vec::new();
+        render_tool_call(&mut lines, tool, theme);
+        lines
+    }
+
+    fn chat_shape_matrix() -> anyhow::Result<Vec<&'static str>> {
+        use cyril_core::types::{
+            Plan, ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
+        };
+
+        macro_rules! record {
+            ($passes:ident, $label:literal, $condition:expr) => {{
+                anyhow::ensure!($condition, "shape {} failed", $label);
+                $passes.push($label);
+            }};
+        }
+
+        let theme = crate::traits::test_support::marker_theme();
+        let mut passes = Vec::with_capacity(EXPECTED_SHAPE_LABELS.len());
+        let basic_tool = matrix_tool(
+            "message-tool",
+            "tool",
+            ToolKind::Other,
+            ToolCallStatus::Pending,
+        );
+        let steer = |status| ChatMessage {
+            kind: ChatMessageKind::SteerEcho {
+                text: "steer".into(),
+                status,
+                message_id: None,
+            },
+            timestamp: std::time::Instant::now(),
+        };
+        let messages = [
+            (ChatMessage::user_text("user".into()), "You:"),
+            (ChatMessage::agent_text("agent".into()), "Kiro:"),
+            (ChatMessage::thought("thought".into()), "thought"),
+            (ChatMessage::tool_call(basic_tool), "tool"),
+            (ChatMessage::plan(Plan::new(Vec::new())), "Plan:"),
+            (ChatMessage::system("system".into()), "system"),
+            (
+                ChatMessage::command_output("command".into(), "output".into()),
+                "/command:",
+            ),
+            (steer(SteerEchoStatus::Queued), "steer"),
+        ];
+        for ((message, expected), label) in messages.into_iter().zip(&EXPECTED_SHAPE_LABELS[..8]) {
+            let text = rendered_message_text(&message, &theme);
+            anyhow::ensure!(text.contains(expected), "shape {label} failed: {text}");
+            passes.push(*label);
+        }
+
+        for (status, suffix, label) in [
+            (SteerEchoStatus::Queued, "queued", "steer/queued"),
+            (SteerEchoStatus::Applied, "applied", "steer/applied"),
+            (SteerEchoStatus::Cleared, "cleared", "steer/cleared"),
+            (
+                SteerEchoStatus::Unsupported,
+                "not supported",
+                "steer/unsupported",
+            ),
+        ] {
+            let text = rendered_message_text(&steer(status), &theme);
+            anyhow::ensure!(text.contains(suffix), "shape {label} failed: {text}");
+            passes.push(label);
+        }
+
+        for (activity, visible, label) in [
+            (Activity::Sending, true, "activity/sending"),
+            (Activity::Waiting, true, "activity/waiting"),
+            (Activity::ToolRunning, true, "activity/tool-running"),
+            (Activity::Streaming, false, "activity/streaming"),
+            (Activity::Idle, false, "activity/idle"),
+            (Activity::Ready, false, "activity/ready"),
+        ] {
+            let state = MockTuiState {
+                activity,
+                activity_elapsed: Some(Duration::from_secs(1)),
+                ..Default::default()
+            };
+            let mut lines = Vec::new();
+            render_activity_indicator(&mut lines, &state, &theme);
+            anyhow::ensure!(
+                lines.is_empty() != visible,
+                "shape {label} visibility failed"
+            );
+            passes.push(label);
+        }
+
+        for (kind, expected, label) in [
+            (ToolKind::Read, "shape", "tool-kind/read"),
+            (ToolKind::Write, "shape", "tool-kind/write"),
+            (ToolKind::Execute, "shape", "tool-kind/execute"),
+            (ToolKind::Search, "shape", "tool-kind/search"),
+            (ToolKind::Think, "Thinking...", "tool-kind/think"),
+            (ToolKind::Fetch, "shape", "tool-kind/fetch"),
+            (ToolKind::SwitchMode, "shape", "tool-kind/switch-mode"),
+            (ToolKind::Other, "shape", "tool-kind/other"),
+        ] {
+            let lines = rendered_tool_lines(
+                &matrix_tool("kind", "shape", kind, ToolCallStatus::Pending),
+                &theme,
+            );
+            let label_text = lines[0].spans[1].content.as_ref();
+            anyhow::ensure!(
+                label_text == expected,
+                "shape {label} expected {expected:?}, got {label_text:?}"
+            );
+            passes.push(label);
+        }
+
+        for (status, icon, label) in [
+            (ToolCallStatus::InProgress, "⟳ ", "tool-status/in-progress"),
+            (ToolCallStatus::Pending, "⏳ ", "tool-status/pending"),
+            (ToolCallStatus::Completed, "✓ ", "tool-status/completed"),
+            (ToolCallStatus::Failed, "✗ ", "tool-status/failed"),
+        ] {
+            let lines = rendered_tool_lines(
+                &matrix_tool("status", "status", ToolKind::Other, status),
+                &theme,
+            );
+            let actual = lines[0].spans[0].content.as_ref();
+            anyhow::ensure!(
+                actual == icon,
+                "shape {label} expected {icon:?}, got {actual:?}"
+            );
+            passes.push(label);
+        }
+
+        let location_present = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("location-present"),
+                "read".into(),
+                ToolKind::Read,
+                ToolCallStatus::Pending,
+                None,
+            )
+            .with_locations(vec![ToolCallLocation {
+                path: "file.rs".into(),
+                line: Some(7),
+            }]),
+        );
+        let location_absent = matrix_tool(
+            "location-absent",
+            "read",
+            ToolKind::Read,
+            ToolCallStatus::Pending,
+        );
+        record!(
+            passes,
+            "optional/location-present",
+            rendered_tool_lines(&location_present, &theme)[0].spans[1].content == "Read(file.rs)"
+        );
+        record!(
+            passes,
+            "optional/location-absent",
+            rendered_tool_lines(&location_absent, &theme)[0].spans[1].content == "read"
+        );
+
+        let raw_input_present = TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("input-present"),
+            "execute".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"command": "cargo test"})),
+        ));
+        let raw_input_absent = matrix_tool(
+            "input-absent",
+            "execute",
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+        );
+        record!(
+            passes,
+            "optional/raw-input-present",
+            rendered_tool_lines(&raw_input_present, &theme)[0].spans[1].content
+                == "Run(cargo test)"
+        );
+        record!(
+            passes,
+            "optional/raw-input-absent",
+            rendered_tool_lines(&raw_input_absent, &theme)[0].spans[1].content == "execute"
+        );
+
+        let content_present = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("content-present"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "file.rs".into(),
+                old_text: Some("old\n".into()),
+                new_text: "new\n".into(),
+            }]),
+        );
+        let content_absent = matrix_tool(
+            "content-absent",
+            "write",
+            ToolKind::Write,
+            ToolCallStatus::Completed,
+        );
+        record!(
+            passes,
+            "optional/content-present",
+            rendered_tool_lines(&content_present, &theme).len() > 1
+        );
+        record!(
+            passes,
+            "optional/content-absent",
+            rendered_tool_lines(&content_absent, &theme).len() == 1
+        );
+
+        let raw_output_present = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("output-present"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!({"stdout": "output"}))),
+        );
+        let raw_output_absent = matrix_tool(
+            "output-absent",
+            "execute",
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+        );
+        record!(
+            passes,
+            "optional/raw-output-present",
+            rendered_tool_lines(&raw_output_present, &theme)
+                .iter()
+                .any(|line| line.to_string().contains("output"))
+        );
+        record!(
+            passes,
+            "optional/raw-output-absent",
+            rendered_tool_lines(&raw_output_absent, &theme).len() == 1
+        );
+
+        let diff_with_old = content_present;
+        let diff_without_old = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("old-absent"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "file.rs".into(),
+                old_text: None,
+                new_text: "new\n".into(),
+            }]),
+        );
+        let with_old_text = rendered_tool_lines(&diff_with_old, &theme)
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        let without_old_text = rendered_tool_lines(&diff_without_old, &theme)
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        record!(
+            passes,
+            "optional/old-text-present",
+            with_old_text.contains("│- old")
+        );
+        record!(
+            passes,
+            "optional/old-text-absent",
+            !without_old_text.contains("│-") && without_old_text.contains("│+ new")
+        );
+
+        let error_present = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("error-present"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Failed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!({"message": "boom"}))),
+        );
+        let error_absent = matrix_tool(
+            "error-absent",
+            "execute",
+            ToolKind::Execute,
+            ToolCallStatus::Failed,
+        );
+        record!(
+            passes,
+            "optional/error-present",
+            rendered_tool_lines(&error_present, &theme)
+                .iter()
+                .any(|line| line.to_string().contains("boom"))
+        );
+        record!(
+            passes,
+            "optional/error-absent",
+            rendered_tool_lines(&error_absent, &theme).len() == 1
+        );
+
+        let old_text = (0..21)
+            .map(|index| format!("old-{index}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let new_text = (0..21)
+            .map(|index| format!("new-{index}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let large_diff = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("diff-limit"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "large.rs".into(),
+                old_text: Some(old_text),
+                new_text,
+            }]),
+        );
+        let diff_lines = rendered_tool_lines(&large_diff, &theme);
+        record!(
+            passes,
+            "truncation/diff-20",
+            diff_lines.len() == 22
+                && diff_lines
+                    .last()
+                    .is_some_and(|line| line.to_string().contains("..."))
+        );
+
+        let output_six = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("output-limit"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!({
+                "stdout": "line-1\nline-2\nline-3\nline-4\nline-5\nline-6",
+                "exit_status": 0
+            }))),
+        );
+        let output_lines = rendered_tool_lines(&output_six, &theme);
+        let output_text = output_lines
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        record!(
+            passes,
+            "truncation/output-5",
+            output_lines.len() == 7
+                && output_text.contains("line-5")
+                && !output_text.contains("line-6")
+                && output_text.contains("...1 more lines")
+        );
+
+        Ok(passes)
+    }
+
+    #[test]
+    fn every_chat_and_tool_input_shape_is_fenced() -> anyhow::Result<()> {
+        let passes = chat_shape_matrix()?;
+        assert_eq!(passes, EXPECTED_SHAPE_LABELS);
+        Ok(())
+    }
 
     #[test]
     fn chat_renders_empty() {
@@ -569,7 +1026,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
     }
@@ -589,9 +1046,542 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
+    }
+
+    fn render_markdown_case(committed: bool, theme: &Theme) -> (String, Color) {
+        let state = if committed {
+            MockTuiState {
+                theme: *theme,
+                messages: vec![ChatMessage::agent_text("# THEMED".into())],
+                ..Default::default()
+            }
+        } else {
+            MockTuiState {
+                theme: *theme,
+                streaming_text: "# THEMED".into(),
+                ..Default::default()
+            }
+        };
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, theme))
+            .expect("draw");
+        let buffer = terminal.backend().buffer();
+        let symbols = buffer
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect::<String>();
+        let foreground = buffer
+            .content()
+            .iter()
+            .find(|cell| cell.symbol() == "T")
+            .map(|cell| cell.fg)
+            .expect("Markdown heading cell");
+        (symbols, foreground)
+    }
+
+    #[derive(Debug)]
+    struct IdentityProbeRow {
+        path: &'static str,
+        marker: &'static str,
+        foreground: Color,
+        cells_visited: usize,
+    }
+
+    fn locate_identity_marker(buffer: &Buffer, marker: &str) -> Option<(Color, usize)> {
+        let mut terminal_marker = String::new();
+        for character in marker.chars() {
+            terminal_marker.push(character);
+            let continuation_cells = character.width().unwrap_or(0).saturating_sub(1);
+            terminal_marker.extend(std::iter::repeat_n(' ', continuation_cells));
+        }
+
+        let mut cells_visited = 0;
+        for y in 0..24 {
+            let mut row = String::new();
+            let mut offsets = Vec::with_capacity(80);
+            for x in 0..80 {
+                offsets.push((row.len(), x));
+                let cell = buffer.cell((x, y))?;
+                row.push_str(cell.symbol());
+                cells_visited += 1;
+            }
+            if let Some(byte_offset) = row.find(&terminal_marker) {
+                let x = offsets
+                    .into_iter()
+                    .find_map(|(offset, x)| (offset == byte_offset).then_some(x))?;
+                return buffer.cell((x, y)).map(|cell| (cell.fg, cells_visited));
+            }
+        }
+        None
+    }
+
+    fn render_identity_probe(
+        state: &MockTuiState,
+        marker: &'static str,
+        path: &'static str,
+    ) -> IdentityProbeRow {
+        let mut terminal = Terminal::new(TestBackend::new(80, 24)).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), state, &state.theme))
+            .expect("draw identity probe");
+        let (foreground, cells_visited) =
+            locate_identity_marker(terminal.backend().buffer(), marker)
+                .unwrap_or_else(|| panic!("identity marker not visible: {path}/{marker}"));
+        IdentityProbeRow {
+            path,
+            marker,
+            foreground,
+            cells_visited,
+        }
+    }
+
+    #[test]
+    fn ansi16_identity_consumers_use_speaker_roles() {
+        use cyril_core::types::{AgentMessage, Notification, SessionId};
+
+        let theme = crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::Ansi16,
+        );
+
+        let mut rows = vec![
+            render_identity_probe(
+                &MockTuiState {
+                    theme,
+                    messages: vec![ChatMessage::user_text(String::new())],
+                    ..Default::default()
+                },
+                "You:",
+                "committed_user",
+            ),
+            render_identity_probe(
+                &MockTuiState {
+                    theme,
+                    messages: vec![ChatMessage::agent_text(String::new())],
+                    ..Default::default()
+                },
+                "Kiro:",
+                "committed_agent",
+            ),
+            render_identity_probe(
+                &MockTuiState {
+                    theme,
+                    messages: vec![ChatMessage::system("系统 status".into())],
+                    ..Default::default()
+                },
+                "系统 status",
+                "system_unicode",
+            ),
+            render_identity_probe(
+                &MockTuiState {
+                    theme,
+                    streaming_text: "streaming".into(),
+                    ..Default::default()
+                },
+                "Kiro:",
+                "main_streaming_agent",
+            ),
+        ];
+
+        let mut subagent_state = MockTuiState {
+            theme,
+            ..Default::default()
+        };
+        let session_id = SessionId::new("q9dx-subagent");
+        subagent_state
+            .subagent_tracker
+            .apply_notification(&Notification::SubagentListUpdated {
+                subagents: vec![cyril_core::types::SubagentInfo::new(
+                    SessionId::new("q9dx-subagent"),
+                    "reviewer",
+                    "code-reviewer",
+                    "query",
+                    cyril_core::types::SubagentStatus::Working { message: None },
+                )],
+                pending_stages: vec![],
+            });
+        subagent_state.subagent_ui.apply_notification(
+            &session_id,
+            &Notification::AgentMessage(AgentMessage {
+                text: "streaming".into(),
+                is_streaming: true,
+            }),
+        );
+        subagent_state.subagent_ui.focus(session_id);
+        rows.push(render_identity_probe(
+            &subagent_state,
+            "reviewer:",
+            "subagent_streaming_agent",
+        ));
+
+        let expected = [
+            ("committed_user", Color::LightBlue),
+            ("committed_agent", Color::LightGreen),
+            ("system_unicode", Color::LightMagenta),
+            ("main_streaming_agent", Color::LightGreen),
+            ("subagent_streaming_agent", Color::LightGreen),
+        ];
+        println!("BEGIN_ANSI16_IDENTITY_PROBE");
+        println!("path\tmarker\tforeground\tcells_visited");
+        for (row, (expected_path, expected_color)) in rows.iter().zip(expected) {
+            assert_eq!(row.path, expected_path);
+            assert_eq!(row.foreground, expected_color, "{}", row.path);
+            println!(
+                "{}\t{}\t{:?}\t{}",
+                row.path, row.marker, row.foreground, row.cells_visited
+            );
+        }
+        println!("END_ANSI16_IDENTITY_PROBE");
+        assert!(rows.iter().map(|row| row.cells_visited).sum::<usize>() <= 9_600);
+    }
+
+    #[test]
+    fn committed_and_streaming_markdown_use_frame_theme_without_cache_leaks() {
+        let marker = crate::traits::test_support::marker_theme();
+        let no_color = crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::None,
+        );
+
+        for (committed, label) in [(true, "committed"), (false, "streaming")] {
+            let (marker_symbols, marker_fg) = render_markdown_case(committed, &marker);
+            let (plain_symbols, plain_fg) = render_markdown_case(committed, &no_color);
+            let (warm_symbols, warm_fg) = render_markdown_case(committed, &marker);
+            assert_eq!(marker_symbols, plain_symbols, "{label} symbols changed");
+            assert_eq!(marker_symbols, warm_symbols, "{label} warm-cache symbols");
+            assert_eq!(marker_fg, marker.accent_quinary, "{label} marker role");
+            assert_eq!(plain_fg, Color::Reset, "{label} no-color role");
+            assert_eq!(warm_fg, marker.accent_quinary, "{label} warm-cache role");
+        }
+    }
+
+    #[test]
+    fn user_identity_uses_frame_theme() {
+        let state = MockTuiState {
+            messages: vec![ChatMessage::user_text("hello".into())],
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+            .expect("draw");
+
+        let cell = terminal
+            .backend()
+            .buffer()
+            .cell((0, 0))
+            .expect("user label cell");
+        assert_eq!(cell.symbol(), "Y");
+        assert_eq!(cell.fg, state.theme.user);
+    }
+
+    #[test]
+    fn every_non_tool_message_uses_its_marker_role() {
+        use cyril_core::types::Plan;
+
+        let theme = crate::traits::test_support::marker_theme();
+        let steer = |status| ChatMessage {
+            kind: ChatMessageKind::SteerEcho {
+                text: "steer".into(),
+                status,
+                message_id: None,
+            },
+            timestamp: std::time::Instant::now(),
+        };
+        let cases = [
+            (ChatMessage::user_text("user".into()), theme.user),
+            (ChatMessage::agent_text(String::new()), theme.agent),
+            (ChatMessage::thought("thought".into()), theme.muted),
+            (ChatMessage::plan(Plan::new(Vec::new())), theme.emphasis),
+            (ChatMessage::system("system".into()), theme.system),
+            (
+                ChatMessage::command_output("command".into(), String::new()),
+                theme.soft_accent,
+            ),
+            (steer(SteerEchoStatus::Queued), theme.emphasis),
+            (steer(SteerEchoStatus::Applied), theme.positive_accent),
+            (steer(SteerEchoStatus::Cleared), theme.subdued),
+            (steer(SteerEchoStatus::Unsupported), theme.subdued_negative),
+        ];
+
+        for (message, expected) in cases {
+            let mut lines = Vec::new();
+            render_message(&mut lines, &message, 80, &theme);
+            assert_eq!(
+                lines.first().and_then(|line| line.style.fg),
+                Some(expected),
+                "wrong role for {:?}",
+                message.kind()
+            );
+        }
+    }
+
+    #[test]
+    fn every_activity_uses_its_marker_role_or_stays_hidden() {
+        let theme = crate::traits::test_support::marker_theme();
+        for (activity, expected) in [
+            (Activity::Sending, Some(theme.muted)),
+            (Activity::Waiting, Some(theme.muted)),
+            (Activity::ToolRunning, Some(theme.accent_quinary)),
+            (Activity::Streaming, None),
+            (Activity::Idle, None),
+            (Activity::Ready, None),
+        ] {
+            let state = MockTuiState {
+                activity,
+                ..Default::default()
+            };
+            let mut lines = Vec::new();
+            render_activity_indicator(&mut lines, &state, &theme);
+            let actual = lines
+                .first()
+                .and_then(|line| line.spans.first())
+                .and_then(|span| span.style.fg);
+            assert_eq!(actual, expected, "wrong activity role for {activity:?}");
+        }
+    }
+
+    #[test]
+    fn tool_header_uses_marker_status_and_kind_roles() {
+        use cyril_core::types::{ToolCall, ToolCallId, ToolCallStatus, ToolKind};
+
+        let theme = crate::traits::test_support::marker_theme();
+        let tool = TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("marker-tool"),
+            "Read fixture".into(),
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        ));
+        let mut lines = Vec::new();
+        render_tool_call(&mut lines, &tool, &theme);
+
+        assert_eq!(lines[0].spans[0].style.fg, Some(theme.subdued_positive));
+        assert_eq!(lines[0].spans[1].style.fg, Some(theme.accent_tertiary));
+    }
+
+    #[test]
+    fn every_tool_status_and_kind_uses_its_marker_role() {
+        use cyril_core::types::{ToolCall, ToolCallId, ToolCallStatus, ToolKind};
+
+        let theme = crate::traits::test_support::marker_theme();
+        for (status, expected) in [
+            (ToolCallStatus::InProgress, theme.emphasis),
+            (ToolCallStatus::Pending, theme.emphasis),
+            (ToolCallStatus::Completed, theme.subdued_positive),
+            (ToolCallStatus::Failed, theme.subdued_negative),
+        ] {
+            let tool = TrackedToolCall::new(ToolCall::new(
+                ToolCallId::new("status"),
+                "status".into(),
+                ToolKind::Other,
+                status,
+                None,
+            ));
+            let mut lines = Vec::new();
+            render_tool_call(&mut lines, &tool, &theme);
+            assert_eq!(lines[0].spans[0].style.fg, Some(expected));
+        }
+
+        for (kind, expected) in [
+            (ToolKind::Read, theme.accent_tertiary),
+            (ToolKind::Write, theme.accent_quaternary),
+            (ToolKind::Execute, theme.emphasis),
+            (ToolKind::Search, theme.accent_quinary),
+            (ToolKind::Think, theme.subdued),
+            (ToolKind::Fetch, theme.accent_quinary),
+            (ToolKind::SwitchMode, theme.accent_quaternary),
+            (ToolKind::Other, theme.text),
+        ] {
+            let tool = TrackedToolCall::new(ToolCall::new(
+                ToolCallId::new("kind"),
+                "kind".into(),
+                kind,
+                ToolCallStatus::Completed,
+                None,
+            ));
+            let mut lines = Vec::new();
+            render_tool_call(&mut lines, &tool, &theme);
+            assert_eq!(lines[0].spans[1].style.fg, Some(expected));
+        }
+    }
+
+    #[test]
+    fn tool_scene_shape_matches_pinned_baseline() -> anyhow::Result<()> {
+        use cyril_core::types::{
+            ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
+        };
+
+        let make_tool = |id, title: &str, kind, status| {
+            TrackedToolCall::new(ToolCall::new(
+                ToolCallId::new(id),
+                title.to_string(),
+                kind,
+                status,
+                None,
+            ))
+        };
+        let old_text = (0..21)
+            .map(|index| {
+                if index % 2 == 0 {
+                    format!("same-{index}")
+                } else {
+                    format!("old-{index}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let new_text = (0..21)
+            .map(|index| {
+                if index % 2 == 0 {
+                    format!("same-{index}")
+                } else {
+                    format!("new-{index}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let write = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("write"),
+                "write".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_content(vec![ToolCallContent::Diff {
+                path: "diff.rs".into(),
+                old_text: Some(old_text),
+                new_text,
+            }])
+            .with_locations(vec![ToolCallLocation {
+                path: "diff.rs".into(),
+                line: Some(1),
+            }]),
+        );
+        let read = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("read"),
+                "read".into(),
+                ToolKind::Read,
+                ToolCallStatus::Pending,
+                None,
+            )
+            .with_locations(vec![ToolCallLocation {
+                path: "read.rs".into(),
+                line: None,
+            }]),
+        );
+        let execute = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("execute"),
+                "execute".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Completed,
+                Some(serde_json::json!({"command": "cargo test"})),
+            )
+            .with_raw_output(Some(serde_json::json!({
+                "stdout": "line-1\nline-2\nline-3\nline-4\nline-5\nline-6",
+                "exit_status": 1
+            }))),
+        );
+        let left_state = MockTuiState {
+            messages: vec![ChatMessage::tool_call(write)],
+            ..Default::default()
+        };
+        let right_state = MockTuiState {
+            messages: vec![
+                ChatMessage::tool_call(read),
+                ChatMessage::tool_call(execute),
+                ChatMessage::tool_call(make_tool(
+                    "search",
+                    "Search(marker)",
+                    ToolKind::Search,
+                    ToolCallStatus::InProgress,
+                )),
+                ChatMessage::tool_call(make_tool(
+                    "think",
+                    "think",
+                    ToolKind::Think,
+                    ToolCallStatus::Failed,
+                )),
+                ChatMessage::tool_call(make_tool(
+                    "fetch",
+                    "Fetch(url)",
+                    ToolKind::Fetch,
+                    ToolCallStatus::Pending,
+                )),
+                ChatMessage::tool_call(make_tool(
+                    "switch",
+                    "Switch(mode)",
+                    ToolKind::SwitchMode,
+                    ToolCallStatus::Completed,
+                )),
+                ChatMessage::tool_call(make_tool(
+                    "other",
+                    "Other(custom)",
+                    ToolKind::Other,
+                    ToolCallStatus::Failed,
+                )),
+            ],
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.draw(|frame| {
+            let [left, right] =
+                Layout::horizontal([Constraint::Length(40), Constraint::Length(40)])
+                    .areas(frame.area());
+            render(frame, left, &left_state, &left_state.theme);
+            render(frame, right, &right_state, &right_state.theme);
+        })?;
+
+        let expected = include_str!("../../tests/fixtures/conversation-theme-baseline.tsv")
+            .lines()
+            .skip(2)
+            .filter_map(|line| {
+                let fields: Vec<_> = line.split('\t').collect();
+                (fields.first() == Some(&"tools")).then_some(fields)
+            })
+            .map(|fields| {
+                Ok((
+                    fields
+                        .get(3)
+                        .ok_or_else(|| anyhow::anyhow!("missing tool symbol"))?
+                        .to_string(),
+                    fields
+                        .get(6)
+                        .ok_or_else(|| anyhow::anyhow!("missing tool modifier"))?
+                        .parse::<u16>()?,
+                ))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+        let actual = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| {
+                let mut symbol = String::with_capacity(cell.symbol().len() * 2);
+                for byte in cell.symbol().as_bytes() {
+                    symbol.push(HEX[(byte >> 4) as usize] as char);
+                    symbol.push(HEX[(byte & 0x0f) as usize] as char);
+                }
+                (symbol, cell.modifier.bits())
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(actual.len(), 1_920);
+        assert_eq!(actual, expected);
+        Ok(())
     }
 
     #[test]
@@ -599,7 +1589,11 @@ mod tests {
         // A multi-line thought block: 💭 on the first row, continuation rows
         // indented under it (a single Line would not break on the \n).
         let mut lines: Vec<Line> = Vec::new();
-        push_thought_lines(&mut lines, "first line\nsecond line");
+        push_thought_lines(
+            &mut lines,
+            "first line\nsecond line",
+            &crate::traits::test_support::marker_theme(),
+        );
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0].to_string(), "💭 first line");
         assert_eq!(lines[1].to_string(), "   second line");
@@ -610,7 +1604,7 @@ mod tests {
         // Empty live preview (thinking started, no token yet) must still show the
         // 💭 placeholder rather than nothing.
         let mut lines: Vec<Line> = Vec::new();
-        push_thought_lines(&mut lines, "");
+        push_thought_lines(&mut lines, "", &crate::traits::test_support::marker_theme());
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].to_string(), "💭 ");
     }
@@ -639,8 +1633,9 @@ mod tests {
             }]),
         );
 
+        let theme = crate::traits::test_support::marker_theme();
         let mut lines: Vec<Line> = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(&mut lines, &tc, &theme);
 
         // Header should have label and diff summary
         let header = lines[0].to_string();
@@ -665,6 +1660,24 @@ mod tests {
         let has_del = diff_lines.iter().any(|l| l.contains("│-"));
         assert!(has_add, "should have added lines: {diff_lines:?}");
         assert!(has_del, "should have removed lines: {diff_lines:?}");
+        assert_eq!(lines[0].spans[0].style.fg, Some(theme.subdued_positive));
+        assert_eq!(lines[0].spans[1].style.fg, Some(theme.accent_quaternary));
+        assert_eq!(lines[0].spans[2].style.fg, Some(theme.subdued));
+        assert!(lines[1..].iter().any(|line| {
+            line.spans.iter().any(|span| {
+                span.content.contains("│-") && span.style.fg == Some(theme.subdued_negative)
+            })
+        }));
+        assert!(lines[1..].iter().any(|line| {
+            line.spans.iter().any(|span| {
+                span.content.contains("│+") && span.style.fg == Some(theme.subdued_positive)
+            })
+        }));
+        assert!(lines[1..].iter().any(|line| {
+            line.spans
+                .iter()
+                .any(|span| span.content.contains("│  ") && span.style.fg == Some(theme.subdued))
+        }));
     }
 
     #[test]
@@ -687,7 +1700,11 @@ mod tests {
         );
 
         let mut lines: Vec<Line> = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
 
         // Header should show +2 -1 (one changed + one added = 2 inserts, 1 delete)
         let header = lines[0].to_string();
@@ -708,7 +1725,11 @@ mod tests {
         ));
 
         let mut lines: Vec<Line> = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
 
         // Read tool calls should only have a header, no diff lines
         assert_eq!(
@@ -741,8 +1762,9 @@ mod tests {
             }]),
         );
 
+        let theme = crate::traits::test_support::marker_theme();
         let mut lines: Vec<Line> = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(&mut lines, &tc, &theme);
 
         // Should have header + at most 20 diff lines + "..." overflow
         let last_line = lines.last().map(|l| l.to_string()).unwrap_or_default();
@@ -755,6 +1777,10 @@ mod tests {
             lines.len() <= 23,
             "should be capped, got {} lines",
             lines.len()
+        );
+        assert_eq!(
+            lines.last().and_then(|line| line.style.fg),
+            Some(theme.subdued)
         );
     }
 
@@ -777,7 +1803,11 @@ mod tests {
             }]),
         );
         let mut lines = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let header = lines[0].to_string();
         assert!(
             header.contains("Read(src/main.rs)"),
@@ -793,7 +1823,11 @@ mod tests {
             Some(serde_json::json!({"command": "cargo test"})),
         ));
         let mut lines = Vec::new();
-        render_tool_call(&mut lines, &tc);
+        render_tool_call(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let header = lines[0].to_string();
         assert!(
             header.contains("Run(cargo test)"),
@@ -802,10 +1836,32 @@ mod tests {
     }
 
     #[test]
+    fn execute_label_does_not_ellipsize_fewer_than_fifty_unicode_characters() {
+        use cyril_core::types::*;
+
+        let command = "界".repeat(20);
+        let tc = TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("tc_unicode"),
+            "shell".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Completed,
+            Some(serde_json::json!({"command": command})),
+        ));
+        let mut lines = Vec::new();
+        render_tool_call(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
+
+        assert_eq!(lines[0].spans[1].content, format!("Run({command})"));
+    }
+
+    #[test]
     fn steer_echo_renders_distinct_suffix_per_status() {
         use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus};
 
-        // Stress fixture (Slice 1): one render per status, Unicode + arrow text.
+        // Stress fixture: one render per status, Unicode + arrow text.
         // Bug classes: ASCII assumption (Unicode must not panic/mangle) and a
         // tie-break that never fires (Applied suffix must differ from Queued).
         let statuses = [
@@ -825,7 +1881,12 @@ mod tests {
                 timestamp: std::time::Instant::now(),
             };
             let mut lines = Vec::new();
-            render_message(&mut lines, &msg, 80);
+            render_message(
+                &mut lines,
+                &msg,
+                80,
+                &crate::traits::test_support::marker_theme(),
+            );
             let text = lines[0].to_string();
             assert!(
                 text.contains("steer: café→ stop"),
@@ -880,7 +1941,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -928,7 +1989,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
     }
@@ -975,7 +2036,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &state.theme);
             })
             .expect("draw");
 
@@ -1034,13 +2095,13 @@ mod tests {
         let backend_follow = TestBackend::new(80, 10);
         let mut term_follow = Terminal::new(backend_follow).expect("test terminal");
         term_follow
-            .draw(|frame| render(frame, frame.area(), &state_follow))
+            .draw(|frame| render(frame, frame.area(), &state_follow, &state_follow.theme))
             .expect("draw");
 
         let backend_browse = TestBackend::new(80, 10);
         let mut term_browse = Terminal::new(backend_browse).expect("test terminal");
         term_browse
-            .draw(|frame| render(frame, frame.area(), &state_browse))
+            .draw(|frame| render(frame, frame.area(), &state_browse, &state_browse.theme))
             .expect("draw");
 
         // Extract first line of each render to verify different content
@@ -1083,7 +2144,7 @@ mod tests {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
             .expect("draw should not panic with scroll_back exceeding content");
     }
 
@@ -1099,7 +2160,7 @@ mod tests {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
             .expect("draw");
 
         let buffer = terminal.backend().buffer();
@@ -1129,7 +2190,7 @@ mod tests {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
             .expect("draw");
 
         let buffer = terminal.backend().buffer();
@@ -1167,7 +2228,11 @@ mod tests {
             }))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1175,6 +2240,13 @@ mod tests {
             .join("\n");
         assert!(text.contains("Exit: 1"), "should show non-zero exit code");
         assert!(text.contains("test result: FAILED"), "should show stdout");
+        let theme = crate::traits::test_support::marker_theme();
+        assert_eq!(lines[0].style.fg, Some(theme.emphasis));
+        assert!(
+            lines[1..]
+                .iter()
+                .all(|line| line.style.fg == Some(theme.subdued))
+        );
     }
 
     #[test]
@@ -1195,7 +2267,11 @@ mod tests {
             }))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1220,7 +2296,11 @@ mod tests {
             .with_raw_output(Some(serde_json::json!("Command timed out"))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1229,6 +2309,10 @@ mod tests {
         assert!(
             text.contains("Error: Command timed out"),
             "should show error"
+        );
+        assert_eq!(
+            lines[0].style.fg,
+            Some(crate::traits::test_support::marker_theme().subdued_negative)
         );
     }
 
@@ -1248,7 +2332,11 @@ mod tests {
             .with_raw_output(Some(serde_json::json!({"items": [{"Text": content}]}))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1258,6 +2346,35 @@ mod tests {
             text.contains("2.5k chars"),
             "should show char count: got {text}"
         );
+        assert_eq!(
+            lines[0].style.fg,
+            Some(crate::traits::test_support::marker_theme().subdued)
+        );
+    }
+
+    #[test]
+    fn render_tool_output_read_counts_unicode_characters() {
+        use cyril_core::types::*;
+
+        let content = "界".repeat(800);
+        let tc = TrackedToolCall::new(
+            ToolCall::new(
+                ToolCallId::new("tc_unicode"),
+                "Read(unicode.txt)".into(),
+                ToolKind::Read,
+                ToolCallStatus::Completed,
+                None,
+            )
+            .with_raw_output(Some(serde_json::json!({"items": [{"Text": content}]}))),
+        );
+        let mut lines = Vec::new();
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
+
+        assert_eq!(lines[0].to_string().trim(), "800 chars");
     }
 
     #[test]
@@ -1277,7 +2394,11 @@ mod tests {
             )),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1304,7 +2425,11 @@ mod tests {
             .with_raw_output(Some(serde_json::json!("written ok"))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         assert!(
             lines.is_empty(),
             "Write tools should not render output (diff is shown instead)"
@@ -1333,7 +2458,11 @@ mod tests {
             }))),
         );
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         let text: String = lines
             .iter()
             .map(|l| l.to_string())
@@ -1345,6 +2474,9 @@ mod tests {
         );
         // 5 visible lines + 1 overflow indicator = 6 total
         assert_eq!(lines.len(), 6, "should show 5 lines + overflow");
+        assert!(lines.iter().all(|line| {
+            line.style.fg == Some(crate::traits::test_support::marker_theme().subdued)
+        }));
     }
 
     #[test]
@@ -1359,7 +2491,11 @@ mod tests {
             None,
         ));
         let mut lines = Vec::new();
-        render_tool_output(&mut lines, &tc);
+        render_tool_output(
+            &mut lines,
+            &tc,
+            &crate::traits::test_support::marker_theme(),
+        );
         assert!(
             lines.is_empty(),
             "in-progress tools should not render output"

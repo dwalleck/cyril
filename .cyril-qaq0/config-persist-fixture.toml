@@ -1,0 +1,10 @@
+# Cyril operator configuration — comments and spacing are intentional.
+[ui]
+max_messages = 750
+theme = "cyril-dark"                  # keep this inline comment
+color_mode = "automatic"
+window = { width = 100, height = 30 }
+
+[agent]
+agent_name = "kiro-cli"
+extra_args = ["--verbose"]

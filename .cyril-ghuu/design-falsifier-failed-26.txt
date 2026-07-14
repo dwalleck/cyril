@@ -1,0 +1,6 @@
+required=13 available=15 missing=4
+MISSING	#008000	Color::Green
+MISSING	#008080	Color::Cyan
+MISSING	#800000	Color::Red
+MISSING	#808000	Color::Yellow
+exit=1

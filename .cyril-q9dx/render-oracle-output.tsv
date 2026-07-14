@@ -1,0 +1,4 @@
+role	source_binding	marker	x	y	expected	observed
+user	user	You:	0	0	LightBlue	LightBlue
+agent	agent	Kiro:	0	3	LightGreen	LightGreen
+system	system	Q9DX-SYSTEM	0	7	LightMagenta	LightMagenta
