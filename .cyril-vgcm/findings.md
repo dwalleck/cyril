@@ -93,6 +93,30 @@ by v2 today back to at least the archived 2.7.0 binary (probed idle: 2.7.0,
 the "-32601 clear on working-steer session" case (F5) is a robustness path,
 not a live population.
 
+## Post-build v2 live smoke (2026-07-14, kiro-cli 2.12.1) — blocked leg closed
+
+The final-gate v2 leg that was BLOCKED on an expired SSO token (plan.md
+post-build verification; PR #51 reviewer note) — re-run after re-login via
+`probe-steer-clear-behavior-2.12.0.py v2`:
+
+- **Clear leg:** steer → `{queued:true}`, clear → `{cleared:true}`; the
+  cleared marker (KILO) suppressed in all three turns. Echo frames verbatim:
+  `AgentExecutionUserMessageQueued {messageId, content}` then
+  `AgentExecutionUserMessageCleared {messageIds:[<that exact id>]}` — the
+  new-family shapes the re-based converters fence (F2), reproduced on the
+  post-re-login backend. Note v2 Cleared DID name the exact id this run
+  (F7 recorded the 07-09 clear *response* as id-less; the *broadcast* is
+  id-scoped on both engines, which the id-scoped drain (C6) already handles).
+- **Control leg (steer, no clear):** `AgentExecutionSteeringInjected` fired
+  mid-turn with the steer's id+text — the injection pipeline is live — but the
+  LIMA marker did not land in the reply text this run (unlike 07-09's
+  control). Model non-compliance with the injected instruction, not a wire
+  difference: the injected frame carries the instruction verbatim. The
+  behavioral half of F1's control is therefore weaker on this run; the wire
+  contract the fences rest on is fully reproduced.
+- **Net:** loop closed. Clear functional live on v2 2.12.1; F2/F7/F8 shapes
+  confirmed unchanged.
+
 ## Oracles and agreement
 
 - **KAS bundle byte-identity**: sha256(acp-server.js) 2.11.0 == 2.12.0
