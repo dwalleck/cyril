@@ -16,9 +16,15 @@ const COMMAND_CAPACITY: usize = 32;
 const NOTIFICATION_CAPACITY: usize = 256;
 const PERMISSION_CAPACITY: usize = 16;
 
-/// User-facing notice when the backend lacks `_session/steer` (-32601). One copy
-/// so the SteerSession and ClearSteering arms can't drift (ROADMAP K1a).
+/// User-facing notice when the backend lacks `_session/steer` (-32601).
 const STEERING_UNSUPPORTED_MSG: &str = "steering requires kiro-cli 2.7.0+";
+
+/// User-facing notice when the backend lacks `_session/steer/clear` (-32601).
+/// A DIFFERENT message from `STEERING_UNSUPPORTED_MSG` on purpose (cyril-vgcm
+/// C12): steer still works on such a session — reusing the steer text would
+/// tell the user steering is dead when only bulk-clear is.
+const STEER_CLEAR_UNSUPPORTED_MSG: &str =
+    "steer/clear isn't supported by this backend — queued steers still apply";
 
 /// Handle held by the App (Send side) to communicate with the ACP bridge.
 pub struct BridgeHandle {
@@ -224,7 +230,11 @@ fn emit_failstop_disconnect(
     }
 }
 
-/// Outcome of an error from a `_session/steer[/clear]` request (ROADMAP K1a).
+/// Outcome of an error from a `_session/steer` request (ROADMAP K1a).
+/// Steer-ONLY: `_session/steer/clear` errors classify via
+/// [`clear_steer_error_action`], which by construction cannot mark the
+/// session (cyril-vgcm C12 — a clear -32601 poisoning the shared
+/// `steering_unsupported` set would silently kill working steer, findings F5).
 #[derive(Debug, PartialEq, Eq)]
 enum SteerErrorAction {
     /// First `-32601` for this session: mark unsupported and notify the user once.
@@ -255,6 +265,31 @@ fn steer_error_action(
         (true, false) => SteerErrorAction::MarkAndNotify,
         (true, true) => SteerErrorAction::AlreadyUnsupported,
         (false, _) => SteerErrorAction::BridgeError,
+    }
+}
+
+/// Outcome of an error from a `_session/steer/clear` request (cyril-vgcm C12).
+/// Deliberately has NO mark variant — the type makes "clear -32601 disables
+/// steer" unrepresentable. Steer itself still works on such a session; the
+/// user just can't bulk-clear (older binaries; robustness path, findings F8).
+#[derive(Debug, PartialEq, Eq)]
+enum ClearSteerErrorAction {
+    /// `-32601`: advise once via `SteeringClearUnsupported` (advisory-only in
+    /// the UI — chips and counter stay untouched, steer stays enabled).
+    NotifyClearUnsupported,
+    /// Any other error: surface as a generic bridge error.
+    BridgeError,
+}
+
+/// Pure classifier for `_session/steer/clear` errors (unit-testable without a
+/// live backend). Counterpart to [`steer_error_action`], from which it
+/// intentionally DIVERGES on -32601: steer marks the session unsupported,
+/// clear only advises (cyril-vgcm C12; the fence pins the divergence pair).
+fn clear_steer_error_action(code: agent_client_protocol::ErrorCode) -> ClearSteerErrorAction {
+    if code == agent_client_protocol::ErrorCode::MethodNotFound {
+        ClearSteerErrorAction::NotifyClearUnsupported
+    } else {
+        ClearSteerErrorAction::BridgeError
     }
 }
 
@@ -1585,15 +1620,16 @@ async fn run_loop(
                     .ext_method(acp::ExtRequest::new(STEER_CLEAR_EXT_METHOD, raw_arc))
                     .await
                 {
-                    // Real lookup, not a literal `false` — see the SteerSession
-                    // arm above: keeps emit-once correct if the pre-send gate changes.
-                    match steer_error_action(e.code, steering_unsupported.contains(&session_id)) {
-                        SteerErrorAction::MarkAndNotify => {
-                            steering_unsupported.insert(session_id.clone());
+                    // cyril-vgcm C12: clear errors classify via the clear-only
+                    // classifier, which cannot mark the session — a clear -32601
+                    // must NEVER poison the shared `steering_unsupported` set
+                    // (that silently killed all subsequent steers, findings F5).
+                    match clear_steer_error_action(e.code) {
+                        ClearSteerErrorAction::NotifyClearUnsupported => {
                             if notify_or_closed(
                                 &channels.notification_tx,
-                                Notification::SteeringUnsupported {
-                                    message: STEERING_UNSUPPORTED_MSG.to_string(),
+                                Notification::SteeringClearUnsupported {
+                                    message: STEER_CLEAR_UNSUPPORTED_MSG.to_string(),
                                 },
                             )
                             .await
@@ -1601,8 +1637,7 @@ async fn run_loop(
                                 break;
                             }
                         }
-                        SteerErrorAction::AlreadyUnsupported => {}
-                        SteerErrorAction::BridgeError => {
+                        ClearSteerErrorAction::BridgeError => {
                             tracing::error!(error = %e, session_id = session_id.as_str(), "steer/clear failed");
                             if notify_or_closed(
                                 &channels.notification_tx,
@@ -3608,6 +3643,35 @@ mod tests {
         assert_eq!(
             steer_error_action(ErrorCode::InternalError, true),
             SteerErrorAction::BridgeError
+        );
+    }
+
+    // cyril-vgcm C12: a `_session/steer/clear` -32601 must NOT poison steer.
+    // ClearSteerErrorAction has no mark variant BY TYPE, so the buggy path
+    // ("clear -32601 inserts into steering_unsupported", findings F5 — the
+    // pre-fix behavior, which classified clear errors through
+    // steer_error_action and got MarkAndNotify) is unrepresentable. The
+    // divergence pair below is the non-vacuity check: the same error code
+    // classifies differently per method, ON PURPOSE.
+    #[test]
+    fn clear_32601_does_not_poison_steer() {
+        use agent_client_protocol::ErrorCode;
+        // Clear -32601 -> advisory only.
+        assert_eq!(
+            clear_steer_error_action(ErrorCode::MethodNotFound),
+            ClearSteerErrorAction::NotifyClearUnsupported
+        );
+        // Divergence pair: steer's classifier WOULD mark for the same code —
+        // the two must not be re-unified (that re-introduces the F5 bug).
+        assert_eq!(
+            steer_error_action(ErrorCode::MethodNotFound, false),
+            SteerErrorAction::MarkAndNotify,
+            "steer and clear intentionally diverge on -32601"
+        );
+        // Any other clear error -> BridgeError (e.g. KAS -32603 unknown session).
+        assert_eq!(
+            clear_steer_error_action(ErrorCode::InternalError),
+            ClearSteerErrorAction::BridgeError
         );
     }
 

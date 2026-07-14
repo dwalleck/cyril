@@ -525,24 +525,57 @@ impl UiState {
             // own steer — that would double-count. A steer originated by ANOTHER
             // observer (wire echo with no local optimistic echo) is not counted
             // today; that's the single-client model — see cyril-8lfs.
-            Notification::SteeringQueued { .. } => false,
-            Notification::SteeringConsumed { .. } => {
-                self.steering_queued = self.steering_queued.saturating_sub(1);
-                // Reconcile the optimistic echo (K1b, cyril-bm1j): one steer was
-                // injected at this tool boundary, so flip the OLDEST still-Queued
-                // echo to Applied. FIFO — `content` is advisory, never a match key.
-                if self.flip_queued_steer_echoes(SteerEchoStatus::Applied, true) {
+            // cyril-vgcm C8: the echo's one job here is to BIND its queue id to
+            // the oldest id-less Queued chip, so the id-scoped Consumed/Cleared
+            // echoes can reconcile the right chip. Never a counter mutation.
+            Notification::SteeringQueued { message_id, .. } => match message_id {
+                Some(id) => self.bind_steer_echo_id(id),
+                None => false,
+            },
+            Notification::SteeringConsumed { message_id, .. } => {
+                // One queued steer drained into the turn. Id-match preferred,
+                // FIFO fallback (cyril-vgcm C9); `content` is advisory, never a
+                // match key. The counter tracks ACTUAL flips — a duplicate
+                // injected echo (id already terminal) must not decrement, or the
+                // count drifts below the Queued-chip total (cyril-7z7u:
+                // counter == #Queued chips).
+                if self.flip_consumed_steer_echo(message_id.as_deref()) {
+                    self.steering_queued = self.steering_queued.saturating_sub(1);
                     self.messages_version += 1;
+                    true
+                } else {
+                    false
                 }
-                true
             }
-            Notification::SteeringCleared => {
-                self.steering_queued = 0;
-                // Reconcile (K1b): every still-Queued steer was dropped before
-                // pickup. Flip all Queued -> Cleared; terminal states are untouched.
-                if self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false) {
-                    self.messages_version += 1;
+            // Id-scoped queue drain (cyril-vgcm C6). KAS routinely broadcasts a
+            // post-injection Cleared naming the just-injected id (findings F4),
+            // so an id-blind flip-all would wrongly kill later still-queued
+            // steers. EMPTY ids is the old v2 dialect's shape and means
+            // "everything still queued" (C7) — flip ALL Queued, zero the count.
+            Notification::SteeringCleared { message_ids } => {
+                if message_ids.is_empty() {
+                    self.steering_queued = 0;
+                    if self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false) {
+                        self.messages_version += 1;
+                    }
+                    true
+                } else {
+                    let flips = self.flip_cleared_steer_echoes(message_ids);
+                    if flips > 0 {
+                        self.steering_queued = self.steering_queued.saturating_sub(flips);
+                        self.messages_version += 1;
+                        true
+                    } else {
+                        false
+                    }
                 }
+            }
+            // Advisory ONLY (cyril-vgcm C12): `_session/steer/clear` returned
+            // -32601 but steer itself still works — the queued chips are real
+            // and will drain normally, so unlike SteeringUnsupported this must
+            // NOT flip echoes or zero the counter.
+            Notification::SteeringClearUnsupported { message } => {
+                self.add_system_message(message.clone());
                 true
             }
             Notification::SteeringUnsupported { message } => {
@@ -586,9 +619,9 @@ impl UiState {
                 self.session_cost = cyril_core::types::SessionCost::new();
                 // The chip is per-session; reset it so a prior session's pending
                 // steers don't leak a phantom count onto the fresh session.
-                // (cyril-7z7u: the chip is now optimistic — driven by add_steer_echo,
-                // not the wire — so it no longer mirrors SessionController.steering_depth,
-                // which is an unread parallel counter slated for removal: cyril-85py.)
+                // (cyril-7z7u: the chip is optimistic — driven by add_steer_echo,
+                // not the wire. It is the ONLY steer-queue counter; the old
+                // SessionController.steering_depth mirror was deleted — cyril-85py.)
                 self.steering_queued = 0;
                 // Finalize any leftover Queued steer echoes from the old session.
                 // The new session is a different session_id; its SteeringConsumed
@@ -834,6 +867,115 @@ impl UiState {
         self.steering_queued = self.steering_queued.saturating_add(1);
         self.messages_version += 1;
         self.enforce_message_limit();
+    }
+
+    /// Bind a wire-assigned steer queue id to the OLDEST id-less `Queued` echo
+    /// (cyril-vgcm C8). No-op when the id is already bound to any echo (a
+    /// duplicate wire echo must not claim a second chip) or when no id-less
+    /// Queued chip exists (a foreign/multi-client steer — display of those is
+    /// cyril-8lfs territory, out of scope). NEVER touches `steering_queued`:
+    /// the optimistic count was taken at `add_steer_echo` (cyril-7z7u) and
+    /// re-counting the wire echo is the double-count bug. `messages_version`
+    /// is not bumped — the id is reconciliation plumbing, not rendered.
+    fn bind_steer_echo_id(&mut self, id: &str) -> bool {
+        let already_bound = self.messages.iter().any(|m| {
+            matches!(
+                m.kind(),
+                ChatMessageKind::SteerEcho {
+                    message_id: Some(existing),
+                    ..
+                } if existing == id
+            )
+        });
+        if already_bound {
+            return false;
+        }
+        for msg in self.messages.iter_mut() {
+            if let ChatMessageKind::SteerEcho {
+                status: SteerEchoStatus::Queued,
+                message_id: message_id @ None,
+                ..
+            } = &mut msg.kind
+            {
+                *message_id = Some(id.to_string());
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Flip the Queued echo a Consumed echo names (cyril-vgcm C9): the chip
+    /// bound to `message_id` when one is, else the OLDEST Queued chip (FIFO —
+    /// covers the id-less old dialect and a dropped/deferred Queued echo). An
+    /// id bound to a TERMINAL chip is a duplicate injected echo: flips nothing
+    /// and does NOT fall back — FIFO there would drain a second, wrong chip.
+    /// Returns whether a chip flipped (the caller decrements the counter by
+    /// exactly that).
+    fn flip_consumed_steer_echo(&mut self, message_id: Option<&str>) -> bool {
+        if let Some(id) = message_id {
+            for msg in self.messages.iter_mut() {
+                if let ChatMessageKind::SteerEcho {
+                    status,
+                    message_id: Some(existing),
+                    ..
+                } = &mut msg.kind
+                    && existing == id
+                {
+                    if *status == SteerEchoStatus::Queued {
+                        *status = SteerEchoStatus::Applied;
+                        return true;
+                    }
+                    return false;
+                }
+            }
+        }
+        self.flip_queued_steer_echoes(SteerEchoStatus::Applied, true)
+    }
+
+    /// Flip the Queued chips an id-scoped Cleared names (cyril-vgcm C6).
+    /// Per id: a Queued chip bound to it flips to Cleared; a TERMINAL chip
+    /// bound to it is consumed with no flip and no fallback (KAS's
+    /// post-injection Cleared names the already-Applied id — findings F4);
+    /// an unknown id falls back to the OLDEST id-less Queued chip, one per
+    /// id (pre-rollout dialect / deferred Queued echo). Returns the flip
+    /// count — the caller decrements the counter by exactly that, keeping
+    /// the cyril-7z7u invariant (counter == #Queued chips).
+    fn flip_cleared_steer_echoes(&mut self, message_ids: &[String]) -> usize {
+        let mut flips = 0;
+        for id in message_ids {
+            let mut matched = false;
+            for msg in self.messages.iter_mut() {
+                if let ChatMessageKind::SteerEcho {
+                    status,
+                    message_id: Some(existing),
+                    ..
+                } = &mut msg.kind
+                    && existing == id
+                {
+                    if *status == SteerEchoStatus::Queued {
+                        *status = SteerEchoStatus::Cleared;
+                        flips += 1;
+                    }
+                    matched = true;
+                    break;
+                }
+            }
+            if !matched {
+                for msg in self.messages.iter_mut() {
+                    if let ChatMessageKind::SteerEcho {
+                        status: status @ SteerEchoStatus::Queued,
+                        message_id: None,
+                        ..
+                    } = &mut msg.kind
+                    {
+                        *status = SteerEchoStatus::Cleared;
+                        flips += 1;
+                        break;
+                    }
+                }
+            }
+        }
+        flips
     }
 
     /// Reconcile optimistic steer echoes in place (ROADMAP K1b, cyril-bm1j).
@@ -1690,6 +1832,315 @@ mod tests {
         );
     }
 
+    // cyril-vgcm C8: a wire SteeringQueued{Some(id)} binds the id to the OLDEST
+    // id-less Queued chip and never re-counts. Bug classes this fixture fails
+    // under: newest-first binding, double-bind on a duplicate echo, wire-echo
+    // re-count (the 7z7u double-count), and chip creation for foreign steers.
+    // Oracle: counter == #Queued chips after every step (7z7u contract).
+    #[test]
+    fn steering_queued_binds_id_no_count() {
+        fn chips(s: &UiState) -> Vec<(SteerEchoStatus, Option<String>)> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho {
+                        status, message_id, ..
+                    } => Some((*status, message_id.clone())),
+                    _ => None,
+                })
+                .collect()
+        }
+        fn queued_count(s: &UiState) -> usize {
+            chips(s)
+                .iter()
+                .filter(|(st, _)| *st == SteerEchoStatus::Queued)
+                .count()
+        }
+
+        let mut state = UiState::new(500);
+        // Foreign steer (id, zero local chips) -> no-op: no chip, no count.
+        assert!(!state.apply_notification(&Notification::SteeringQueued {
+            message: Some("foreign".into()),
+            message_id: Some("steer-foreign".into()),
+        }));
+        assert_eq!(state.steering_queued(), 0);
+        assert!(
+            chips(&state).is_empty(),
+            "no chip invented for a foreign steer"
+        );
+
+        state.add_steer_echo("first");
+        state.add_steer_echo("second");
+        assert_eq!(state.steering_queued(), 2);
+
+        // Bind: OLDEST id-less chip gets the id; counter untouched.
+        let changed = state.apply_notification(&Notification::SteeringQueued {
+            message: Some("first".into()),
+            message_id: Some("steer-1".into()),
+        });
+        assert!(changed, "a successful bind is a state change");
+        assert_eq!(
+            chips(&state),
+            vec![
+                (SteerEchoStatus::Queued, Some("steer-1".into())),
+                (SteerEchoStatus::Queued, None),
+            ],
+            "oldest id-less chip binds first"
+        );
+        assert_eq!(state.steering_queued(), 2, "bind must not re-count");
+        assert_eq!(state.steering_queued(), queued_count(&state), "7z7u oracle");
+
+        // Duplicate wire echo with the SAME id -> second chip must NOT bind.
+        assert!(!state.apply_notification(&Notification::SteeringQueued {
+            message: Some("first".into()),
+            message_id: Some("steer-1".into()),
+        }));
+        assert_eq!(
+            chips(&state)[1],
+            (SteerEchoStatus::Queued, None),
+            "duplicate echo must not claim a second chip"
+        );
+
+        // Old-dialect echo (no id) -> no bind, no count (unchanged behavior).
+        assert!(!state.apply_notification(&Notification::SteeringQueued {
+            message: Some("second".into()),
+            message_id: None,
+        }));
+        assert_eq!(state.steering_queued(), 2);
+        assert_eq!(state.steering_queued(), queued_count(&state), "7z7u oracle");
+    }
+
+    // cyril-vgcm C9: Consumed prefers the id-matched chip, falls back FIFO,
+    // and decrements by ACTUAL flips. Bug classes: FIFO-always (id ignored —
+    // flips the wrong chip), unconditional decrement (duplicate injected echo
+    // drifts the counter below the chip count), underflow on a ghost id.
+    // Oracle: counter == #Queued chips after every step (7z7u contract).
+    #[test]
+    fn steering_consumed_id_match_then_fifo() {
+        fn chips(s: &UiState) -> Vec<(SteerEchoStatus, Option<String>)> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho {
+                        status, message_id, ..
+                    } => Some((*status, message_id.clone())),
+                    _ => None,
+                })
+                .collect()
+        }
+        fn assert_oracle(s: &UiState) {
+            let queued = chips(s)
+                .iter()
+                .filter(|(st, _)| *st == SteerEchoStatus::Queued)
+                .count();
+            assert_eq!(
+                s.steering_queued(),
+                queued,
+                "7z7u: counter == #Queued chips"
+            );
+        }
+
+        let mut state = UiState::new(500);
+        state.add_steer_echo("A");
+        state.add_steer_echo("B");
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("A".into()),
+            message_id: Some("id1".into()),
+        });
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("B".into()),
+            message_id: Some("id2".into()),
+        });
+        assert_eq!(state.steering_queued(), 2);
+        assert_oracle(&state);
+
+        // Id-match: id2 flips B (the NEWER chip) — FIFO would wrongly flip A.
+        assert!(state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: Some("id2".into()),
+        }));
+        assert_eq!(
+            chips(&state),
+            vec![
+                (SteerEchoStatus::Queued, Some("id1".into())),
+                (SteerEchoStatus::Applied, Some("id2".into())),
+            ],
+            "id-match must beat FIFO"
+        );
+        assert_eq!(state.steering_queued(), 1);
+        assert_oracle(&state);
+
+        // Duplicate injected echo (id2 already Applied): nothing flips, no
+        // decrement, and NO FIFO fallback onto A.
+        assert!(!state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: Some("id2".into()),
+        }));
+        assert_eq!(
+            chips(&state)[0],
+            (SteerEchoStatus::Queued, Some("id1".into()))
+        );
+        assert_eq!(
+            state.steering_queued(),
+            1,
+            "duplicate echo must not decrement"
+        );
+        assert_oracle(&state);
+
+        // Id-less echo (old dialect): FIFO fallback drains A.
+        assert!(state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        }));
+        assert_eq!(
+            chips(&state)[0],
+            (SteerEchoStatus::Applied, Some("id1".into()))
+        );
+        assert_eq!(state.steering_queued(), 0);
+        assert_oracle(&state);
+
+        // Ghost id with zero Queued chips: no flip, no underflow.
+        assert!(!state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: Some("ghost".into()),
+        }));
+        assert_eq!(state.steering_queued(), 0);
+        assert_oracle(&state);
+    }
+
+    // cyril-vgcm C6 — THE design's canonical fixture. Chips [A(id1, Applied),
+    // B(id2, Queued), C(no-id, Queued)]; Cleared{[id1, id3]} must leave A
+    // untouched (id1 matched a terminal chip — consumed, no fallback), leave
+    // B untouched (id2 not named), flip C (id3 unknown -> oldest id-less
+    // fallback), and decrement by 1. Kills flip-all (would flip B too),
+    // len-based id-blind math (counter -2), and positional matching.
+    #[test]
+    fn steering_cleared_id_scoped_drain() {
+        fn chips(s: &UiState) -> Vec<(SteerEchoStatus, Option<String>)> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho {
+                        status, message_id, ..
+                    } => Some((*status, message_id.clone())),
+                    _ => None,
+                })
+                .collect()
+        }
+        fn assert_oracle(s: &UiState) {
+            let queued = chips(s)
+                .iter()
+                .filter(|(st, _)| *st == SteerEchoStatus::Queued)
+                .count();
+            assert_eq!(
+                s.steering_queued(),
+                queued,
+                "7z7u: counter == #Queued chips"
+            );
+        }
+
+        let mut state = UiState::new(500);
+        state.add_steer_echo("A");
+        state.add_steer_echo("B");
+        state.add_steer_echo("C");
+        // Bind A->id1, B->id2 (oldest id-less binds first); C stays id-less.
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("A".into()),
+            message_id: Some("id1".into()),
+        });
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("B".into()),
+            message_id: Some("id2".into()),
+        });
+        // Drain A (id1 -> Applied) — the KAS healthy-turn shape.
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: Some("id1".into()),
+        });
+        assert_eq!(state.steering_queued(), 2);
+        assert_oracle(&state);
+
+        // The canonical Cleared: names the Applied id + a ghost id.
+        assert!(state.apply_notification(&Notification::SteeringCleared {
+            message_ids: vec!["id1".into(), "id3".into()],
+        }));
+        assert_eq!(
+            chips(&state),
+            vec![
+                (SteerEchoStatus::Applied, Some("id1".into())), // NOT re-flipped
+                (SteerEchoStatus::Queued, Some("id2".into())),  // not named: survives
+                (SteerEchoStatus::Cleared, None),               // ghost-id fallback
+            ]
+        );
+        assert_eq!(state.steering_queued(), 1, "counter -= actual flips (1)");
+        assert_oracle(&state);
+
+        // Ghost id with NO id-less Queued chip left: zero flips, no change.
+        assert!(!state.apply_notification(&Notification::SteeringCleared {
+            message_ids: vec!["id9".into()],
+        }));
+        assert_eq!(state.steering_queued(), 1, "no underflow, no drift");
+        assert_oracle(&state);
+
+        // C7: empty ids = the old dialect's drain-all. B finally flips.
+        assert!(state.apply_notification(&Notification::SteeringCleared {
+            message_ids: Vec::new(),
+        }));
+        assert_eq!(
+            chips(&state)
+                .iter()
+                .filter(|(st, _)| *st == SteerEchoStatus::Queued)
+                .count(),
+            0,
+            "empty ids flips every Queued chip"
+        );
+        assert_eq!(state.steering_queued(), 0);
+        assert_oracle(&state);
+    }
+
+    // cyril-vgcm Slice 1 / claim C12 (UI side): SteeringClearUnsupported is
+    // advisory-ONLY. The plausible copy-paste bug is wiring it to
+    // SteeringUnsupported's arm, which zeroes the chip and flips every Queued
+    // echo — this fixture fails under that wiring.
+    #[test]
+    fn steering_clear_unsupported_is_advisory_only() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("still alive");
+        state.add_steer_echo("also alive");
+        assert_eq!(state.steering_queued(), 2);
+        let before = state.messages().len();
+
+        let changed = state.apply_notification(&Notification::SteeringClearUnsupported {
+            message: "steer/clear not supported by this agent".into(),
+        });
+        assert!(changed);
+        assert_eq!(
+            state.messages().len(),
+            before + 1,
+            "exactly one system message"
+        );
+        assert!(matches!(
+            state.messages().last().unwrap().kind(),
+            ChatMessageKind::System(s) if s.contains("steer/clear not supported")
+        ));
+        // The queued steers are real and will still drain — untouched.
+        assert_eq!(state.steering_queued(), 2, "counter must NOT be zeroed");
+        let queued = state
+            .messages()
+            .iter()
+            .filter(|m| {
+                matches!(
+                    m.kind(),
+                    ChatMessageKind::SteerEcho {
+                        status: SteerEchoStatus::Queued,
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert_eq!(queued, 2, "no echo may be flipped by the advisory");
+    }
+
     // cyril-bm1j Slice 2 / claim C3: optimistic steer echo appended on send.
     #[test]
     fn add_steer_echo_appends_queued() {
@@ -1702,7 +2153,7 @@ mod tests {
         let last = state.messages().last().expect("one message");
         assert!(
             matches!(last.kind(),
-                ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued } if text == "fix tests"),
+                ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued, .. } if text == "fix tests"),
             "expected SteerEcho{{Queued,\"fix tests\"}}, got {:?}",
             last.kind()
         );
@@ -1718,7 +2169,7 @@ mod tests {
         // (c) empty text still appends a Queued echo (degenerate-but-valid; no silent drop).
         state.add_steer_echo("");
         assert!(matches!(state.messages().last().unwrap().kind(),
-            ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued } if text.is_empty()));
+            ChatMessageKind::SteerEcho { text, status: SteerEchoStatus::Queued, .. } if text.is_empty()));
         // cyril-7z7u claim 1: three sends -> chip 3 (incl. the empty one).
         assert_eq!(state.steering_queued(), 3, "chip == #Queued echoes (3)");
     }
@@ -1770,6 +2221,7 @@ mod tests {
         assert_eq!(state.steering_queued(), 2);
         state.apply_notification(&Notification::SteeringConsumed {
             content: Some("same".into()),
+            message_id: None,
         });
         assert_eq!(
             statuses(&state),
@@ -1778,6 +2230,7 @@ mod tests {
         );
         state.apply_notification(&Notification::SteeringConsumed {
             content: Some("same".into()),
+            message_id: None,
         });
         assert_eq!(
             statuses(&state),
@@ -1807,7 +2260,10 @@ mod tests {
         state.add_steer_echo("E3");
 
         // First consume (content None) flips E1 only — not E2/E3.
-        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        });
         assert_eq!(
             steer_statuses(&state),
             vec![
@@ -1822,6 +2278,7 @@ mod tests {
         // — proving `content` is not used as a correlation key.
         state.apply_notification(&Notification::SteeringConsumed {
             content: Some("unrelated text".into()),
+            message_id: None,
         });
         assert_eq!(
             steer_statuses(&state),
@@ -1835,8 +2292,14 @@ mod tests {
 
         // Adversarial: consume with NO Queued echo left after E3 flips -> the 4th
         // consume finds nothing, no panic, chip saturating_sub floors at 0.
-        state.apply_notification(&Notification::SteeringConsumed { content: None }); // flips E3
-        state.apply_notification(&Notification::SteeringConsumed { content: None }); // nothing to flip
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        }); // flips E3
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        }); // nothing to flip
         assert_eq!(
             steer_statuses(&state),
             vec![
@@ -1867,9 +2330,14 @@ mod tests {
         state.add_steer_echo("E2");
         state.add_steer_echo("E3");
         // Flip E1 -> Applied so we can prove Cleared does NOT clobber a terminal state.
-        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        });
 
-        state.apply_notification(&Notification::SteeringCleared);
+        state.apply_notification(&Notification::SteeringCleared {
+            message_ids: Vec::new(),
+        });
         assert_eq!(
             steer_statuses(&state),
             vec![
@@ -1883,7 +2351,9 @@ mod tests {
 
         // Adversarial: empty transcript + Cleared -> no panic, chip stays 0.
         let mut empty = UiState::new(500);
-        empty.apply_notification(&Notification::SteeringCleared);
+        empty.apply_notification(&Notification::SteeringCleared {
+            message_ids: Vec::new(),
+        });
         assert_eq!(empty.steering_queued(), 0);
     }
 
@@ -1910,7 +2380,10 @@ mod tests {
         state.add_steer_echo("E1");
         state.add_steer_echo("E2");
         // Flip E1 -> Applied: an already-terminal echo must NOT be re-flipped.
-        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        });
         // Now add two more Queued (burst still in flight when the notice lands).
         state.add_steer_echo("E3");
         state.add_steer_echo("E4");
@@ -1970,7 +2443,10 @@ mod tests {
         );
 
         // Next turn consumes the deferred steer -> chip drains, echo flips.
-        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        });
         assert_eq!(state.steering_queued(), 0, "consumed drains the chip");
         assert!(
             state.messages().iter().any(|m| matches!(
@@ -2000,7 +2476,10 @@ mod tests {
         state.add_steer_echo("b");
         assert_eq!((&state as &dyn TuiState).steering_queued(), 2);
         // Live, not a stale snapshot: a consume is reflected through the trait.
-        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        });
         assert_eq!((&state as &dyn TuiState).steering_queued(), 1);
     }
 
@@ -2010,7 +2489,9 @@ mod tests {
     fn session_created_finalizes_prior_session_steer_echoes() {
         fn status_of(state: &UiState, text: &str) -> Option<SteerEchoStatus> {
             state.messages().iter().find_map(|m| match m.kind() {
-                ChatMessageKind::SteerEcho { text: t, status } if t == text => Some(*status),
+                ChatMessageKind::SteerEcho {
+                    text: t, status, ..
+                } if t == text => Some(*status),
                 _ => None,
             })
         }
@@ -2034,7 +2515,10 @@ mod tests {
 
         // New session steer + consume must flip the NEW echo, not the old orphan.
         state.add_steer_echo("new-session steer");
-        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        });
         assert_eq!(
             status_of(&state, "new-session steer"),
             Some(SteerEchoStatus::Applied),
@@ -2058,6 +2542,7 @@ mod tests {
         let before = state.messages().len();
         let changed = state.apply_notification(&Notification::SteeringQueued {
             message: Some("from another observer".into()),
+            message_id: None,
         });
         assert!(
             !changed,
@@ -2094,6 +2579,7 @@ mod tests {
         // claim 4: a wire SteeringQueued must NOT change the count (no double-count).
         state.apply_notification(&Notification::SteeringQueued {
             message: Some("a".into()),
+            message_id: None,
         });
         assert_eq!(
             state.steering_queued(),
@@ -2104,15 +2590,21 @@ mod tests {
         // claim 2 (count): consumed decrements.
         state.apply_notification(&Notification::SteeringConsumed {
             content: Some("a".into()),
+            message_id: None,
         });
         assert_eq!(state.steering_queued(), 1);
 
         // claim 6: cleared zeroes the count.
-        state.apply_notification(&Notification::SteeringCleared);
+        state.apply_notification(&Notification::SteeringCleared {
+            message_ids: Vec::new(),
+        });
         assert_eq!(state.steering_queued(), 0);
 
         // claim 9: consumed at 0 floors at 0 (saturating, no underflow panic).
-        state.apply_notification(&Notification::SteeringConsumed { content: None });
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        });
         assert_eq!(state.steering_queued(), 0);
 
         // claim 7: a new session zeroes the count — a pending optimistic steer must

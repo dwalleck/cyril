@@ -238,7 +238,8 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme:
                 lines.push(Line::raw(format!("  {line}")));
             }
         }
-        ChatMessageKind::SteerEcho { text, status } => {
+        // `message_id` is reconciliation plumbing, not a display concern.
+        ChatMessageKind::SteerEcho { text, status, .. } => {
             let (suffix, color) = match status {
                 SteerEchoStatus::Queued => ("queued", theme.emphasis),
                 SteerEchoStatus::Applied => ("applied", theme.positive_accent),
@@ -668,6 +669,7 @@ mod tests {
             kind: ChatMessageKind::SteerEcho {
                 text: "steer".into(),
                 status,
+                message_id: None,
             },
             timestamp: std::time::Instant::now(),
         };
@@ -1289,6 +1291,7 @@ mod tests {
             kind: ChatMessageKind::SteerEcho {
                 text: "steer".into(),
                 status,
+                message_id: None,
             },
             timestamp: std::time::Instant::now(),
         };
@@ -1873,6 +1876,7 @@ mod tests {
                 kind: ChatMessageKind::SteerEcho {
                     text: "café→ stop".into(),
                     status,
+                    message_id: None,
                 },
                 timestamp: std::time::Instant::now(),
             };

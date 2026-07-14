@@ -99,6 +99,7 @@ mod tests {
             kind: ChatMessageKind::SteerEcho {
                 text: text.to_string(),
                 status,
+                message_id: None,
             },
             timestamp: std::time::Instant::now(),
         }
@@ -455,6 +456,7 @@ mod conversation_baseline_compatibility {
             kind: ChatMessageKind::SteerEcho {
                 text: text.into(),
                 status,
+                message_id: None,
             },
             timestamp: std::time::Instant::now(),
         }

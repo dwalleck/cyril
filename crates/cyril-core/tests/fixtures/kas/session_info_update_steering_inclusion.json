@@ -1,0 +1,12 @@
+{
+  "sessionId": "sess_f0ee94f3-cfb2-4e20-8452-555eeeb59e38",
+  "update": {
+    "sessionUpdate": "session_info_update",
+    "_meta": {
+      "kiro": {
+        "steeringDocuments": ["file:///home/dwalleck/.kiro/steering/rivets.md"],
+        "kind": "steering_inclusion"
+      }
+    }
+  }
+}

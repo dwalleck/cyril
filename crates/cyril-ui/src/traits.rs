@@ -122,10 +122,15 @@ pub enum ChatMessageKind {
         text: String,
     },
     /// A queue-steer the user sent, with its reconciled lifecycle status
-    /// (ROADMAP K1b). `text` is the user's own steer message.
+    /// (ROADMAP K1b). `text` is the user's own steer message. `message_id` is
+    /// the backend queue id, bound in place when the wire `SteeringQueued`
+    /// echo arrives (new-family v2 / KAS carry ids; `None` until then and
+    /// forever on the old id-less dialect — cyril-vgcm C8). Not rendered;
+    /// used only to reconcile id-scoped Consumed/Cleared echoes.
     SteerEcho {
         text: String,
         status: SteerEchoStatus,
+        message_id: Option<String>,
     },
 }
 
@@ -180,11 +185,14 @@ impl ChatMessage {
     }
 
     /// A queue-steer echo, optimistically `Queued` (ROADMAP K1b, cyril-bm1j).
+    /// `message_id` starts `None` — the wire `SteeringQueued` echo binds it
+    /// later (cyril-vgcm C8).
     pub fn steer_echo(text: String) -> Self {
         Self {
             kind: ChatMessageKind::SteerEcho {
                 text,
                 status: SteerEchoStatus::Queued,
+                message_id: None,
             },
             timestamp: std::time::Instant::now(),
         }

@@ -64,6 +64,11 @@ pub enum CommandResultKind {
     /// because the command layer has no UI access and must not touch the bridge
     /// directly — same split as `ShowPicker`.
     Steer { text: String },
+    /// Drop every queued steer (`/steer clear` → `_session/steer/clear`;
+    /// cyril-vgcm C10). The App routes this through `dispatch_clear_steer` —
+    /// same command-layer split as `Steer`. No payload: the wire method clears
+    /// the whole queue; no per-id clear exists on either engine.
+    ClearSteer,
     /// Toggle voice input on/off (ROADMAP CN2 / V1a). The command layer has no
     /// access to the voice engine handle (which the App owns), so it returns
     /// this and the App flips capture state — same split as `Steer`/`ShowPicker`.
@@ -100,6 +105,12 @@ impl CommandResult {
     pub fn steer(text: String) -> Self {
         Self {
             kind: CommandResultKind::Steer { text },
+        }
+    }
+
+    pub fn clear_steer() -> Self {
+        Self {
+            kind: CommandResultKind::ClearSteer,
         }
     }
 
@@ -493,6 +504,50 @@ mod tests {
                 r.kind
             );
         }
+    }
+
+    // cyril-vgcm C10: `/steer clear` — trimmed EXACT case-sensitive match only.
+    // One assert per design input shape. Bug classes: starts_with("clear")
+    // (would eat "clear the tests"), case-folding (would eat "Clear"),
+    // missing trim (would miss "clear ").
+    #[tokio::test]
+    async fn steer_clear_subcommand_parses() {
+        let cmd = crate::commands::builtin::SteerCommand;
+        let session = crate::session::SessionController::new();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+        };
+
+        // Exact word, with and without surrounding whitespace -> ClearSteer.
+        for arg in ["clear", " clear ", "clear "] {
+            let r = cmd.execute(&ctx, arg).await.unwrap();
+            assert!(
+                matches!(r.kind, CommandResultKind::ClearSteer),
+                "{arg:?} must be ClearSteer, got {:?}",
+                r.kind
+            );
+        }
+        // Case variation and multi-word args stay steerable TEXT (D2).
+        for arg in ["Clear", "CLEAR", "clear the tests", "clear now"] {
+            let r = cmd.execute(&ctx, arg).await.unwrap();
+            assert!(
+                matches!(r.kind, CommandResultKind::Steer { ref text } if text == arg.trim()),
+                "{arg:?} must steer as text, got {:?}",
+                r.kind
+            );
+        }
+        // Empty still returns usage (unchanged fence, now naming both forms).
+        let r = cmd.execute(&ctx, "").await.unwrap();
+        assert!(
+            matches!(r.kind, CommandResultKind::SystemMessage(ref s)
+                if s.contains("Usage") && s.contains("clear")),
+            "usage must mention the clear form, got {:?}",
+            r.kind
+        );
     }
 
     // cyril-bm1j Slice 12: /steer is registered and routes its args through parse().

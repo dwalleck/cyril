@@ -170,6 +170,92 @@ fn parse_string_array(v: &serde_json::Value, key: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
+// Steering-echo field readers, shared by every steering dialect (cyril-vgcm):
+// the v2 families below ride the `update` object, the KAS kinds
+// (`convert::kas`) ride `_meta.kiro`. Navigation to that envelope is the ONLY
+// thing the dialects don't share, so each caller passes its already-navigated
+// envelope plus an `echo` label (and session id where its envelope carries
+// one) for the degrade warns. Degrade discipline: a dropped frame would
+// permanently desync the optimistic chip count, so a malformed field degrades
+// that field to `None`/empty — never the frame.
+
+/// Steer display text off a steering echo's `field` (`message` on the old v2
+/// family, `content` everywhere else). Missing/non-string degrades to `None`
+/// with a warn — the notification still fires so the queue counter transitions.
+pub(super) fn steering_text(
+    envelope: Option<&serde_json::Value>,
+    field: &'static str,
+    echo: &'static str,
+    session_id: Option<&str>,
+) -> Option<String> {
+    let text = envelope
+        .and_then(|e| e.get(field))
+        .and_then(serde_json::Value::as_str);
+    if text.is_none() {
+        tracing::warn!(
+            echo,
+            field,
+            session_id = ?session_id,
+            "steering echo missing display text; converting with none"
+        );
+    }
+    text.map(str::to_string)
+}
+
+/// Read the `messageId` of an id-carrying steering echo (cyril-vgcm C3).
+/// Empty string degrades to `None` — ids are correlation keys and `Some("")`
+/// would be a sentinel that matches nothing (CLAUDE.md "no sentinel values").
+pub(super) fn steering_message_id(envelope: Option<&serde_json::Value>) -> Option<String> {
+    envelope
+        .and_then(|e| e.get("messageId"))
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+}
+
+/// Cleared ids off a steering-cleared echo's `messageIds` (cyril-vgcm C6:
+/// id-scoped drain). Absent is wire drift on the id-carrying dialects — warn
+/// and degrade to empty, the UI's drain-all: a safe over-approximation, never
+/// a dropped frame. Non-string/empty entries are dropped with a warn
+/// (distinguish "absent" from "corrupt"). `parse_string_array` is close but
+/// silently drops non-strings and keeps empty ids; steering wants the drift
+/// warns — deliberate divergence.
+pub(super) fn steering_message_ids(
+    envelope: Option<&serde_json::Value>,
+    echo: &'static str,
+    session_id: Option<&str>,
+) -> Vec<String> {
+    let raw = envelope.and_then(|e| e.get("messageIds"));
+    if raw.is_none() {
+        tracing::warn!(
+            echo,
+            session_id = ?session_id,
+            "steering echo missing messageIds; treating as drain-all"
+        );
+    }
+    let arr = raw.and_then(serde_json::Value::as_array);
+    let ids: Vec<String> = arr
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    if let Some(a) = arr
+        && ids.len() != a.len()
+    {
+        tracing::warn!(
+            echo,
+            session_id = ?session_id,
+            dropped = a.len() - ids.len(),
+            "steering echo had non-string/empty ids; kept the rest"
+        );
+    }
+    ids
+}
+
 pub(crate) fn to_ext_notification(
     method: &str,
     params: &serde_json::Value,
@@ -426,11 +512,8 @@ pub(crate) fn to_ext_notification(
             let session_update = update
                 .and_then(|u| u.get("sessionUpdate"))
                 .and_then(|s| s.as_str());
-            // For steering-echo logs only ("<unknown>" if the envelope omits it).
-            let session_id = params
-                .get("sessionId")
-                .and_then(|v| v.as_str())
-                .unwrap_or("<unknown>");
+            // For steering-echo logs only (`None` if the envelope omits it).
+            let session_id = params.get("sessionId").and_then(|v| v.as_str());
             match session_update {
                 Some("tool_call_chunk") => {
                     let tool_call_id = match update
@@ -466,41 +549,64 @@ pub(crate) fn to_ext_notification(
                         session_id: ext_session_id,
                     }))
                 }
-                // Queue-steering echoes (Kiro 2.7.0+; ROADMAP K1a). They ride the
-                // SAME wire method as tool_call_chunk — `_kiro.dev/session/update`,
-                // delivered here as `kiro.dev/session/update` after the ACP library
-                // strips the single leading `_` ext-prefix. Always emit so the depth
-                // counter transitions; a missing payload field degrades only the
-                // (K1b) display text and becomes `None`, never a `Some("")` sentinel.
-                Some("steering_queued") => {
-                    let message = update
-                        .and_then(|u| u.get("message"))
-                        .and_then(|v| v.as_str());
-                    if message.is_none() {
-                        tracing::warn!(
-                            session_id,
-                            "steering_queued missing message field; counting with no text"
-                        );
-                    }
-                    Ok(Some(Notification::SteeringQueued {
-                        message: message.map(str::to_string),
-                    }))
-                }
-                Some("steering_consumed") => {
-                    let content = update
-                        .and_then(|u| u.get("content"))
-                        .and_then(|v| v.as_str());
-                    if content.is_none() {
-                        tracing::warn!(
-                            session_id,
-                            "steering_consumed missing content field; decrementing with no text"
-                        );
-                    }
+                // Queue-steering echoes, OLD v2 dialect (Kiro 2.7.0+; ROADMAP K1a;
+                // live until the 2026-06/07 backend rollout, kept as rollback
+                // insurance — cyril-vgcm D1). They ride the SAME wire method as
+                // tool_call_chunk — `_kiro.dev/session/update`, delivered here as
+                // `kiro.dev/session/update` after the ACP library strips the single
+                // leading `_` ext-prefix. Always emit so the queue counter
+                // transitions; a missing payload field degrades only the (K1b)
+                // display text and becomes `None`, never a `Some("")` sentinel.
+                // This dialect carries no message ids.
+                Some("steering_queued") => Ok(Some(Notification::SteeringQueued {
+                    message: steering_text(update, "message", "steering_queued", session_id),
+                    message_id: None,
+                })),
+                Some("steering_consumed") => Ok(Some(Notification::SteeringConsumed {
+                    content: steering_text(update, "content", "steering_consumed", session_id),
+                    message_id: None,
+                })),
+                Some("steering_cleared") => Ok(Some(Notification::SteeringCleared {
+                    message_ids: Vec::new(),
+                })),
+                // Queue-steering echoes, NEW v2 family. A backend rollout
+                // (2026-06-17 → 2026-07-09 window) renamed every steering echo
+                // and added queue ids (cyril-vgcm findings F2/F8): the steer
+                // text now rides `content` and the id `messageId`, camelCase.
+                // Same envelope + degrade discipline as the old family above.
+                Some("AgentExecutionUserMessageQueued") => Ok(Some(Notification::SteeringQueued {
+                    message: steering_text(
+                        update,
+                        "content",
+                        "AgentExecutionUserMessageQueued",
+                        session_id,
+                    ),
+                    message_id: steering_message_id(update),
+                })),
+                Some("AgentExecutionSteeringInjected") => {
                     Ok(Some(Notification::SteeringConsumed {
-                        content: content.map(str::to_string),
+                        content: steering_text(
+                            update,
+                            "content",
+                            "AgentExecutionSteeringInjected",
+                            session_id,
+                        ),
+                        message_id: steering_message_id(update),
                     }))
                 }
-                Some("steering_cleared") => Ok(Some(Notification::SteeringCleared)),
+                // `messageIds` names exactly which queued steers dropped
+                // (id-scoped drain, cyril-vgcm C6). Absent degrades to empty,
+                // which the UI treats as the old dialect's drain-all (C7) —
+                // see `steering_message_ids` for the degrade/warn contract.
+                Some("AgentExecutionUserMessageCleared") => {
+                    Ok(Some(Notification::SteeringCleared {
+                        message_ids: steering_message_ids(
+                            update,
+                            "AgentExecutionUserMessageCleared",
+                            session_id,
+                        ),
+                    }))
+                }
                 Some(other) => {
                     tracing::debug!(variant = other, "unhandled kiro.dev/session/update variant");
                     Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
@@ -740,7 +846,8 @@ mod tests {
         });
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &params),
-            Ok(Some(Notification::SteeringQueued { message })) if message.as_deref() == Some("stop now")
+            Ok(Some(Notification::SteeringQueued { message, message_id: None }))
+                if message.as_deref() == Some("stop now")
         ));
     }
 
@@ -752,20 +859,23 @@ mod tests {
         });
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &params),
-            Ok(Some(Notification::SteeringConsumed { content })) if content.as_deref() == Some("stop now")
+            Ok(Some(Notification::SteeringConsumed { content, message_id: None }))
+                if content.as_deref() == Some("stop now")
         ));
     }
 
     #[test]
     fn steering_cleared_converts() {
-        // L120: payload-free frame must still produce the notification.
+        // L120: payload-free frame must still produce the notification. The old
+        // dialect carries no ids — empty `message_ids` means "everything queued"
+        // (cyril-vgcm C4/C7 contract).
         let params = json!({
             "sessionId": "2dc3c608",
             "update": {"sessionUpdate": "steering_cleared", "foo": 1}
         });
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &params),
-            Ok(Some(Notification::SteeringCleared))
+            Ok(Some(Notification::SteeringCleared { message_ids })) if message_ids.is_empty()
         ));
     }
 
@@ -778,12 +888,139 @@ mod tests {
         let q = json!({"update": {"sessionUpdate": "steering_queued"}});
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &q),
-            Ok(Some(Notification::SteeringQueued { message: None }))
+            Ok(Some(Notification::SteeringQueued {
+                message: None,
+                message_id: None,
+            }))
         ));
         let c = json!({"update": {"sessionUpdate": "steering_consumed"}});
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &c),
-            Ok(Some(Notification::SteeringConsumed { content: None }))
+            Ok(Some(Notification::SteeringConsumed {
+                content: None,
+                message_id: None,
+            }))
+        ));
+    }
+
+    // cyril-vgcm C3: the NEW v2 echo family (post-rollout wire, live-captured
+    // 2026-07-09 — findings F2). Field shapes are verbatim from the capture:
+    // camelCase, text in `content`, id in `messageId`/`messageIds`.
+    #[test]
+    fn steering_new_family_queued_converts() {
+        // Stray `message` field proves the new arm reads `content`, not the
+        // old family's field (mirror of steering_queued_converts's trap).
+        let params = json!({
+            "sessionId": "2dc3c608",
+            "update": {
+                "sessionUpdate": "AgentExecutionUserMessageQueued",
+                "messageId": "steer-4f9a01",
+                "content": "stop now",
+                "message": "WRONG"
+            }
+        });
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &params),
+            Ok(Some(Notification::SteeringQueued { message, message_id }))
+                if message.as_deref() == Some("stop now")
+                    && message_id.as_deref() == Some("steer-4f9a01")
+        ));
+    }
+
+    #[test]
+    fn steering_new_family_injected_converts() {
+        let params = json!({
+            "sessionId": "2dc3c608",
+            "update": {
+                "sessionUpdate": "AgentExecutionSteeringInjected",
+                "messageId": "steer-4f9a01",
+                "content": "stop now"
+            }
+        });
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &params),
+            Ok(Some(Notification::SteeringConsumed { content, message_id }))
+                if content.as_deref() == Some("stop now")
+                    && message_id.as_deref() == Some("steer-4f9a01")
+        ));
+    }
+
+    #[test]
+    fn steering_new_family_cleared_converts() {
+        let params = json!({
+            "sessionId": "2dc3c608",
+            "update": {
+                "sessionUpdate": "AgentExecutionUserMessageCleared",
+                "messageIds": ["steer-a", "steer-b"]
+            }
+        });
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &params),
+            Ok(Some(Notification::SteeringCleared { message_ids }))
+                if message_ids == vec!["steer-a".to_string(), "steer-b".to_string()]
+        ));
+    }
+
+    // cyril-vgcm C3 stress: degrade discipline on the new family. Bug classes:
+    // drop-on-missing-field (would desync the queue counter), empty-string id
+    // as sentinel, absent-vs-empty messageIds divergence, non-string ids.
+    #[test]
+    fn steering_new_family_degrades_never_drops() {
+        // Queued with id but no content -> emitted, text None, id kept.
+        let q = json!({"update": {
+            "sessionUpdate": "AgentExecutionUserMessageQueued",
+            "messageId": "steer-x"
+        }});
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &q),
+            Ok(Some(Notification::SteeringQueued { message: None, message_id }))
+                if message_id.as_deref() == Some("steer-x")
+        ));
+        // Empty-string messageId -> None (no sentinel that matches nothing).
+        let q_empty_id = json!({"update": {
+            "sessionUpdate": "AgentExecutionUserMessageQueued",
+            "messageId": "",
+            "content": "still counted"
+        }});
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &q_empty_id),
+            Ok(Some(Notification::SteeringQueued {
+                message: Some(_),
+                message_id: None
+            }))
+        ));
+        // Injected with no fields at all -> still emitted (counter must transition).
+        let i = json!({"update": {"sessionUpdate": "AgentExecutionSteeringInjected"}});
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &i),
+            Ok(Some(Notification::SteeringConsumed {
+                content: None,
+                message_id: None
+            }))
+        ));
+        // Cleared: absent messageIds AND present-but-empty both -> empty vec
+        // (drain-all, the old dialect's semantics — C7).
+        for update in [
+            json!({"update": {"sessionUpdate": "AgentExecutionUserMessageCleared"}}),
+            json!({"update": {
+                "sessionUpdate": "AgentExecutionUserMessageCleared", "messageIds": []
+            }}),
+        ] {
+            assert!(matches!(
+                to_ext_notification(STEER_METHOD, &update),
+                Ok(Some(Notification::SteeringCleared { message_ids })) if message_ids.is_empty()
+            ));
+        }
+        // Cleared with corrupt entries: non-string and empty ids are dropped
+        // (with a warn), the valid one survives — never a panic, never a drop.
+        let c_mixed = json!({"update": {
+            "sessionUpdate": "AgentExecutionUserMessageCleared",
+            "messageIds": ["steer-ok", 42, ""]
+        }});
+        assert!(matches!(
+            to_ext_notification(STEER_METHOD, &c_mixed),
+            Ok(Some(Notification::SteeringCleared { message_ids }))
+                if message_ids == vec!["steer-ok".to_string()]
         ));
     }
 

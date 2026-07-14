@@ -1,0 +1,12 @@
+{
+  "sessionId": "sess_f0ee94f3-cfb2-4e20-8452-555eeeb59e38",
+  "update": {
+    "sessionUpdate": "session_info_update",
+    "_meta": {
+      "kiro": {
+        "kind": "steering_cleared",
+        "messageIds": ["steer-8307ad8f-6404-40c3-a730-f7a1bfff4f60"]
+      }
+    }
+  }
+}

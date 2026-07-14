@@ -150,23 +150,42 @@ pub enum Notification {
     /// A steer was accepted and queued for injection at the next tool boundary.
     /// `message` is the steer text, or `None` when the echo omitted it — the frame
     /// is still counted; only the (K1b) display text degrades. Never `Some("")`.
+    /// `message_id` is the queue id (`messageId` on the new-family v2 echoes and
+    /// KAS; absent on the pre-rollout v2 dialect). Never `Some("")`.
     SteeringQueued {
         message: Option<String>,
+        message_id: Option<String>,
     },
     /// A queued steer was injected into the turn at a tool boundary. `content` is
     /// the injected text, or `None` when the echo omitted it. The variant is emitted
-    /// (and depth decremented) regardless of whether `content` parsed — dropping it
-    /// on a missing field would permanently inflate the queue counter.
+    /// regardless of whether `content` parsed — dropping it on a missing field
+    /// would permanently inflate the queue counter. `message_id` identifies which
+    /// queued steer drained (new-family v2 / KAS; `None` on the old dialect).
     SteeringConsumed {
         content: Option<String>,
+        message_id: Option<String>,
     },
-    /// The queued steer was dropped before pickup (via `_session/steer/clear`).
-    SteeringCleared,
+    /// Queued steers were dropped before pickup (via `_session/steer/clear`, or
+    /// KAS's routine post-injection cleanup). `message_ids` names which queue
+    /// entries were dropped; EMPTY means "everything still queued" — the old
+    /// v2 dialect's id-less shape (a semantic convention, fenced by the
+    /// id-scoped UiState tests rather than a runtime check).
+    SteeringCleared {
+        message_ids: Vec<String>,
+    },
     /// The agent does not implement `_session/steer` (`-32601`); bridge-synthesized,
     /// not a wire echo. Surfaced once per session as a system message. The
     /// once-per-session dedup lives in the bridge (its `steering_unsupported` set),
     /// NOT in `UiState`, which adds a system message for every one it receives.
     SteeringUnsupported {
+        message: String,
+    },
+    /// The agent does not implement `_session/steer/clear` (`-32601`);
+    /// bridge-synthesized, not a wire echo. Advisory ONLY: unlike
+    /// `SteeringUnsupported` it must NOT drain chips, zero the queue counter,
+    /// or mark the session steering-unsupported — steer itself still works
+    /// (cyril-vgcm C12; the shared-set poisoning was findings F5).
+    SteeringClearUnsupported {
         message: String,
     },
 

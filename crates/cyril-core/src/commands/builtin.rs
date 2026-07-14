@@ -83,8 +83,14 @@ impl Command for SteerCommand {
         let msg = args.trim();
         if msg.is_empty() {
             Ok(CommandResult::system_message(
-                "Usage: /steer <message>".to_string(),
+                "Usage: /steer <message> | /steer clear".to_string(),
             ))
+        } else if msg == "clear" {
+            // `/steer clear` drops the queued steers (cyril-vgcm C10, D2).
+            // EXACT trimmed match only, case-sensitive: "Clear" and
+            // "clear the tests" stay steerable text — the carve-out is the
+            // single bare lowercase word (a vanishingly rare steer).
+            Ok(CommandResult::clear_steer())
         } else {
             Ok(CommandResult::steer(msg.to_string()))
         }
