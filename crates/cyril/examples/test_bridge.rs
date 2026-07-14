@@ -595,23 +595,34 @@ fn print_notification(n: &Notification) {
                 }
             );
         }
-        Notification::SteeringQueued { message } => {
+        Notification::SteeringQueued {
+            message,
+            message_id,
+        } => {
             println!(
-                "  [SteeringQueued] {}",
-                message.as_deref().unwrap_or("<no text>")
+                "  [SteeringQueued] {} (id={})",
+                message.as_deref().unwrap_or("<no text>"),
+                message_id.as_deref().unwrap_or("<none>")
             );
         }
-        Notification::SteeringConsumed { content } => {
+        Notification::SteeringConsumed {
+            content,
+            message_id,
+        } => {
             println!(
-                "  [SteeringConsumed] {}",
-                content.as_deref().unwrap_or("<no text>")
+                "  [SteeringConsumed] {} (id={})",
+                content.as_deref().unwrap_or("<no text>"),
+                message_id.as_deref().unwrap_or("<none>")
             );
         }
-        Notification::SteeringCleared => {
-            println!("  [SteeringCleared]");
+        Notification::SteeringCleared { message_ids } => {
+            println!("  [SteeringCleared] ids={message_ids:?}");
         }
         Notification::SteeringUnsupported { message } => {
             println!("  [SteeringUnsupported] {message}");
+        }
+        Notification::SteeringClearUnsupported { message } => {
+            println!("  [SteeringClearUnsupported] {message}");
         }
     }
 }

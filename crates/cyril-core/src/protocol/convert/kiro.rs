@@ -466,12 +466,15 @@ pub(crate) fn to_ext_notification(
                         session_id: ext_session_id,
                     }))
                 }
-                // Queue-steering echoes (Kiro 2.7.0+; ROADMAP K1a). They ride the
-                // SAME wire method as tool_call_chunk — `_kiro.dev/session/update`,
-                // delivered here as `kiro.dev/session/update` after the ACP library
-                // strips the single leading `_` ext-prefix. Always emit so the depth
-                // counter transitions; a missing payload field degrades only the
-                // (K1b) display text and becomes `None`, never a `Some("")` sentinel.
+                // Queue-steering echoes, OLD v2 dialect (Kiro 2.7.0+; ROADMAP K1a;
+                // live until the 2026-06/07 backend rollout, kept as rollback
+                // insurance — cyril-vgcm D1). They ride the SAME wire method as
+                // tool_call_chunk — `_kiro.dev/session/update`, delivered here as
+                // `kiro.dev/session/update` after the ACP library strips the single
+                // leading `_` ext-prefix. Always emit so the queue counter
+                // transitions; a missing payload field degrades only the (K1b)
+                // display text and becomes `None`, never a `Some("")` sentinel.
+                // This dialect carries no message ids.
                 Some("steering_queued") => {
                     let message = update
                         .and_then(|u| u.get("message"))
@@ -484,6 +487,7 @@ pub(crate) fn to_ext_notification(
                     }
                     Ok(Some(Notification::SteeringQueued {
                         message: message.map(str::to_string),
+                        message_id: None,
                     }))
                 }
                 Some("steering_consumed") => {
@@ -498,9 +502,12 @@ pub(crate) fn to_ext_notification(
                     }
                     Ok(Some(Notification::SteeringConsumed {
                         content: content.map(str::to_string),
+                        message_id: None,
                     }))
                 }
-                Some("steering_cleared") => Ok(Some(Notification::SteeringCleared)),
+                Some("steering_cleared") => Ok(Some(Notification::SteeringCleared {
+                    message_ids: Vec::new(),
+                })),
                 Some(other) => {
                     tracing::debug!(variant = other, "unhandled kiro.dev/session/update variant");
                     Err(crate::Error::from_kind(crate::ErrorKind::Protocol {
@@ -740,7 +747,8 @@ mod tests {
         });
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &params),
-            Ok(Some(Notification::SteeringQueued { message })) if message.as_deref() == Some("stop now")
+            Ok(Some(Notification::SteeringQueued { message, message_id: None }))
+                if message.as_deref() == Some("stop now")
         ));
     }
 
@@ -752,20 +760,23 @@ mod tests {
         });
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &params),
-            Ok(Some(Notification::SteeringConsumed { content })) if content.as_deref() == Some("stop now")
+            Ok(Some(Notification::SteeringConsumed { content, message_id: None }))
+                if content.as_deref() == Some("stop now")
         ));
     }
 
     #[test]
     fn steering_cleared_converts() {
-        // L120: payload-free frame must still produce the notification.
+        // L120: payload-free frame must still produce the notification. The old
+        // dialect carries no ids — empty `message_ids` means "everything queued"
+        // (cyril-vgcm C4/C7 contract).
         let params = json!({
             "sessionId": "2dc3c608",
             "update": {"sessionUpdate": "steering_cleared", "foo": 1}
         });
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &params),
-            Ok(Some(Notification::SteeringCleared))
+            Ok(Some(Notification::SteeringCleared { message_ids })) if message_ids.is_empty()
         ));
     }
 
@@ -778,12 +789,18 @@ mod tests {
         let q = json!({"update": {"sessionUpdate": "steering_queued"}});
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &q),
-            Ok(Some(Notification::SteeringQueued { message: None }))
+            Ok(Some(Notification::SteeringQueued {
+                message: None,
+                message_id: None,
+            }))
         ));
         let c = json!({"update": {"sessionUpdate": "steering_consumed"}});
         assert!(matches!(
             to_ext_notification(STEER_METHOD, &c),
-            Ok(Some(Notification::SteeringConsumed { content: None }))
+            Ok(Some(Notification::SteeringConsumed {
+                content: None,
+                message_id: None,
+            }))
         ));
     }
 

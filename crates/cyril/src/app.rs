@@ -1517,6 +1517,7 @@ mod tests {
                 cyril_ui::traits::ChatMessageKind::SteerEcho {
                     text,
                     status: cyril_ui::traits::SteerEchoStatus::Queued,
+                    ..
                 } if text == "halt"
             )),
             "expected a Queued steer echo for 'halt'"

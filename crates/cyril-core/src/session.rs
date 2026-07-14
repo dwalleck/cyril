@@ -14,10 +14,12 @@ pub struct SessionController {
     pending_tokens: Option<TokenCounts>,
     pending_metering: Option<TurnMetering>,
     last_turn: Option<TurnSummary>,
-    // Queue steering (Kiro 2.7.0+; ROADMAP K1a). `steering_depth` = count of
-    // un-consumed steers; `steering_unsupported` is set on a -32601 from
-    // `_session/steer` and remembered for the session. Both reset on a new session.
-    steering_depth: usize,
+    // Queue steering (Kiro 2.7.0+; ROADMAP K1a). Set on a -32601 from
+    // `_session/steer` and remembered for the session; reset on a new session.
+    // Steer-only: a `_session/steer/clear` -32601 must NOT set it (cyril-vgcm
+    // C12). Queue depth is NOT mirrored here — the optimistic chip count lives
+    // in UiState (cyril-7z7u); a session-side mirror was write-only and would
+    // drift under id-scoped clears, so it was deleted (cyril-vgcm C13/D5).
     steering_unsupported: bool,
 }
 
@@ -37,7 +39,6 @@ impl SessionController {
             pending_tokens: None,
             pending_metering: None,
             last_turn: None,
-            steering_depth: 0,
             steering_unsupported: false,
         }
     }
@@ -85,11 +86,6 @@ impl SessionController {
 
     pub fn last_turn(&self) -> Option<&TurnSummary> {
         self.last_turn.as_ref()
-    }
-
-    /// Count of un-consumed queued steers (K1a state; K1b renders it).
-    pub fn steering_depth(&self) -> usize {
-        self.steering_depth
     }
 
     /// Whether `_session/steer` is known-unsupported for this session (set on -32601).
@@ -190,25 +186,18 @@ impl SessionController {
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
-                self.steering_depth = 0;
                 self.steering_unsupported = false;
                 self.status = SessionStatus::Active;
                 true
             }
-            // Queue steering (K1a). Depth tracks un-consumed steers; the flag
-            // remembers a -32601 for the session.
-            Notification::SteeringQueued { .. } => {
-                self.steering_depth = self.steering_depth.saturating_add(1);
-                true
-            }
-            Notification::SteeringConsumed { .. } => {
-                self.steering_depth = self.steering_depth.saturating_sub(1);
-                true
-            }
-            Notification::SteeringCleared => {
-                self.steering_depth = 0;
-                true
-            }
+            // Queue steering (K1a). The flag remembers a `_session/steer` -32601
+            // for the session. The queued/consumed/cleared echoes carry no
+            // session-side state (the chip count is UiState's, cyril-7z7u) and
+            // a clear--32601 is advisory-only (cyril-vgcm C12) — all no-ops here.
+            Notification::SteeringQueued { .. }
+            | Notification::SteeringConsumed { .. }
+            | Notification::SteeringCleared { .. }
+            | Notification::SteeringClearUnsupported { .. } => false,
             Notification::SteeringUnsupported { .. } => {
                 self.steering_unsupported = true;
                 true
@@ -274,44 +263,44 @@ mod tests {
         assert!(ctrl.current_model().is_none());
         assert!(ctrl.current_mode_id().is_none());
         assert!(ctrl.context_usage().is_none());
-        assert_eq!(ctrl.steering_depth(), 0);
         assert!(!ctrl.steering_unsupported());
     }
 
-    // Slice C / design claim 11: depth transitions, floor, flag, reset on new session.
+    // K1a flag lifecycle + cyril-vgcm C13: the steering echoes carry no
+    // session-side state (steering_depth was deleted — write-only mirror of
+    // UiState's optimistic chip count, D5), so queued/consumed/cleared and the
+    // advisory clear-unsupported must all be no-ops here; only the steer
+    // -32601 flag transitions, and a NEW session resets it.
     #[test]
     fn steering_state_transitions_and_reset() {
         let mut ctrl = SessionController::new();
-        // Depth sequence across queued,queued,consumed,cleared = 1,2,1,0.
-        assert!(ctrl.apply_notification(&Notification::SteeringQueued {
-            message: Some("a".into())
+        // Echo notifications are session-side no-ops: no state change reported.
+        assert!(!ctrl.apply_notification(&Notification::SteeringQueued {
+            message: Some("a".into()),
+            message_id: None,
         }));
-        assert_eq!(ctrl.steering_depth(), 1);
-        ctrl.apply_notification(&Notification::SteeringQueued {
-            message: Some("b".into()),
-        });
-        assert_eq!(ctrl.steering_depth(), 2);
-        ctrl.apply_notification(&Notification::SteeringConsumed {
+        assert!(!ctrl.apply_notification(&Notification::SteeringConsumed {
             content: Some("a".into()),
-        });
-        assert_eq!(ctrl.steering_depth(), 1);
-        ctrl.apply_notification(&Notification::SteeringCleared);
-        assert_eq!(ctrl.steering_depth(), 0);
-        // Floor: consumed at 0 stays 0 (no underflow). Also exercises the C1 path:
-        // a `content: None` consumed echo still decrements (here, floored at 0).
-        ctrl.apply_notification(&Notification::SteeringConsumed { content: None });
-        assert_eq!(ctrl.steering_depth(), 0);
+            message_id: Some("steer-1".into()),
+        }));
+        assert!(!ctrl.apply_notification(&Notification::SteeringCleared {
+            message_ids: vec!["steer-1".into()]
+        }));
+        // A clear--32601 advisory must NOT set the steer-unsupported flag
+        // (cyril-vgcm C12 — the shared-set poisoning was findings F5).
+        assert!(
+            !ctrl.apply_notification(&Notification::SteeringClearUnsupported {
+                message: "steer/clear not supported".into()
+            })
+        );
+        assert!(!ctrl.steering_unsupported());
 
-        // Unsupported flag set, then a NEW session must reset flag AND depth
-        // (a 2.6.1 session's "unsupported" must not leak onto a fresh 2.7.0 one).
-        ctrl.apply_notification(&Notification::SteeringQueued {
-            message: Some("c".into()),
-        });
+        // Steer -32601 sets the flag; a NEW session must reset it (a 2.6.1
+        // session's "unsupported" must not leak onto a fresh 2.7.0 one).
         assert!(ctrl.apply_notification(&Notification::SteeringUnsupported {
             message: "steering requires kiro-cli 2.7.0+".into()
         }));
         assert!(ctrl.steering_unsupported());
-        assert_eq!(ctrl.steering_depth(), 1);
         ctrl.apply_notification(&Notification::SessionCreated {
             session_id: SessionId::new("fresh"),
             current_mode: None,
@@ -323,7 +312,6 @@ mod tests {
             !ctrl.steering_unsupported(),
             "unsupported flag must reset on new session"
         );
-        assert_eq!(ctrl.steering_depth(), 0, "depth must reset on new session");
     }
 
     #[test]
