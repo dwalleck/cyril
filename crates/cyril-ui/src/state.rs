@@ -547,17 +547,28 @@ impl UiState {
                     false
                 }
             }
-            // id-scoped drain lands with the C6 slice (cyril-vgcm); until then the
-            // ids are ignored and every Cleared drains everything — the correct
-            // semantics for the only shape the converters produce today (empty).
-            Notification::SteeringCleared { .. } => {
-                self.steering_queued = 0;
-                // Reconcile (K1b): every still-Queued steer was dropped before
-                // pickup. Flip all Queued -> Cleared; terminal states are untouched.
-                if self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false) {
-                    self.messages_version += 1;
+            // Id-scoped queue drain (cyril-vgcm C6). KAS routinely broadcasts a
+            // post-injection Cleared naming the just-injected id (findings F4),
+            // so an id-blind flip-all would wrongly kill later still-queued
+            // steers. EMPTY ids is the old v2 dialect's shape and means
+            // "everything still queued" (C7) — flip ALL Queued, zero the count.
+            Notification::SteeringCleared { message_ids } => {
+                if message_ids.is_empty() {
+                    self.steering_queued = 0;
+                    if self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false) {
+                        self.messages_version += 1;
+                    }
+                    true
+                } else {
+                    let flips = self.flip_cleared_steer_echoes(message_ids);
+                    if flips > 0 {
+                        self.steering_queued = self.steering_queued.saturating_sub(flips);
+                        self.messages_version += 1;
+                        true
+                    } else {
+                        false
+                    }
                 }
-                true
             }
             // Advisory ONLY (cyril-vgcm C12): `_session/steer/clear` returned
             // -32601 but steer itself still works — the queued chips are real
@@ -919,6 +930,52 @@ impl UiState {
             }
         }
         self.flip_queued_steer_echoes(SteerEchoStatus::Applied, true)
+    }
+
+    /// Flip the Queued chips an id-scoped Cleared names (cyril-vgcm C6).
+    /// Per id: a Queued chip bound to it flips to Cleared; a TERMINAL chip
+    /// bound to it is consumed with no flip and no fallback (KAS's
+    /// post-injection Cleared names the already-Applied id — findings F4);
+    /// an unknown id falls back to the OLDEST id-less Queued chip, one per
+    /// id (pre-rollout dialect / deferred Queued echo). Returns the flip
+    /// count — the caller decrements the counter by exactly that, keeping
+    /// the cyril-7z7u invariant (counter == #Queued chips).
+    fn flip_cleared_steer_echoes(&mut self, message_ids: &[String]) -> usize {
+        let mut flips = 0;
+        for id in message_ids {
+            let mut matched = false;
+            for msg in self.messages.iter_mut() {
+                if let ChatMessageKind::SteerEcho {
+                    status,
+                    message_id: Some(existing),
+                    ..
+                } = &mut msg.kind
+                    && existing == id
+                {
+                    if *status == SteerEchoStatus::Queued {
+                        *status = SteerEchoStatus::Cleared;
+                        flips += 1;
+                    }
+                    matched = true;
+                    break;
+                }
+            }
+            if !matched {
+                for msg in self.messages.iter_mut() {
+                    if let ChatMessageKind::SteerEcho {
+                        status: status @ SteerEchoStatus::Queued,
+                        message_id: None,
+                        ..
+                    } = &mut msg.kind
+                    {
+                        *status = SteerEchoStatus::Cleared;
+                        flips += 1;
+                        break;
+                    }
+                }
+            }
+        }
+        flips
     }
 
     /// Reconcile optimistic steer echoes in place (ROADMAP K1b, cyril-bm1j).
@@ -1947,6 +2004,96 @@ mod tests {
             content: None,
             message_id: Some("ghost".into()),
         }));
+        assert_eq!(state.steering_queued(), 0);
+        assert_oracle(&state);
+    }
+
+    // cyril-vgcm C6 — THE design's canonical fixture. Chips [A(id1, Applied),
+    // B(id2, Queued), C(no-id, Queued)]; Cleared{[id1, id3]} must leave A
+    // untouched (id1 matched a terminal chip — consumed, no fallback), leave
+    // B untouched (id2 not named), flip C (id3 unknown -> oldest id-less
+    // fallback), and decrement by 1. Kills flip-all (would flip B too),
+    // len-based id-blind math (counter -2), and positional matching.
+    #[test]
+    fn steering_cleared_id_scoped_drain() {
+        fn chips(s: &UiState) -> Vec<(SteerEchoStatus, Option<String>)> {
+            s.messages()
+                .iter()
+                .filter_map(|m| match m.kind() {
+                    ChatMessageKind::SteerEcho {
+                        status, message_id, ..
+                    } => Some((*status, message_id.clone())),
+                    _ => None,
+                })
+                .collect()
+        }
+        fn assert_oracle(s: &UiState) {
+            let queued = chips(s)
+                .iter()
+                .filter(|(st, _)| *st == SteerEchoStatus::Queued)
+                .count();
+            assert_eq!(
+                s.steering_queued(),
+                queued,
+                "7z7u: counter == #Queued chips"
+            );
+        }
+
+        let mut state = UiState::new(500);
+        state.add_steer_echo("A");
+        state.add_steer_echo("B");
+        state.add_steer_echo("C");
+        // Bind A->id1, B->id2 (oldest id-less binds first); C stays id-less.
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("A".into()),
+            message_id: Some("id1".into()),
+        });
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("B".into()),
+            message_id: Some("id2".into()),
+        });
+        // Drain A (id1 -> Applied) — the KAS healthy-turn shape.
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: Some("id1".into()),
+        });
+        assert_eq!(state.steering_queued(), 2);
+        assert_oracle(&state);
+
+        // The canonical Cleared: names the Applied id + a ghost id.
+        assert!(state.apply_notification(&Notification::SteeringCleared {
+            message_ids: vec!["id1".into(), "id3".into()],
+        }));
+        assert_eq!(
+            chips(&state),
+            vec![
+                (SteerEchoStatus::Applied, Some("id1".into())), // NOT re-flipped
+                (SteerEchoStatus::Queued, Some("id2".into())),  // not named: survives
+                (SteerEchoStatus::Cleared, None),               // ghost-id fallback
+            ]
+        );
+        assert_eq!(state.steering_queued(), 1, "counter -= actual flips (1)");
+        assert_oracle(&state);
+
+        // Ghost id with NO id-less Queued chip left: zero flips, no change.
+        assert!(!state.apply_notification(&Notification::SteeringCleared {
+            message_ids: vec!["id9".into()],
+        }));
+        assert_eq!(state.steering_queued(), 1, "no underflow, no drift");
+        assert_oracle(&state);
+
+        // C7: empty ids = the old dialect's drain-all. B finally flips.
+        assert!(state.apply_notification(&Notification::SteeringCleared {
+            message_ids: Vec::new(),
+        }));
+        assert_eq!(
+            chips(&state)
+                .iter()
+                .filter(|(st, _)| *st == SteerEchoStatus::Queued)
+                .count(),
+            0,
+            "empty ids flips every Queued chip"
+        );
         assert_eq!(state.steering_queued(), 0);
         assert_oracle(&state);
     }
