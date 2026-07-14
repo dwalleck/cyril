@@ -800,6 +800,11 @@ impl App {
                 // dispatch_steer). Reaching this arm is a routing bug.
                 tracing::error!("Steer result reached handle_command_result — routing bug");
             }
+            CommandResultKind::ClearSteer => {
+                // Routed in submit_input before reaching here (needs async
+                // dispatch_clear_steer) — same split as Steer above.
+                tracing::error!("ClearSteer result reached handle_command_result — routing bug");
+            }
             CommandResultKind::ToggleVoice => {
                 self.toggle_voice();
             }
