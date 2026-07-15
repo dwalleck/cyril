@@ -1,0 +1,352 @@
+//! cyril-dij8 chrome theme fences: frozen-baseline equivalence, marker-role
+//! wiring, and no-color guarantees for the application chrome (toolbar,
+//! status bar, crew panel, voice indicator).
+//!
+//! The 18 scenes reproduce the prove-it probe's 13 branch-maximal scenarios
+//! (.cyril-dij8/probe-styles.txt) plus 5 edge scenes. Normalization helpers
+//! mirror the conversation fences in `render.rs`; consolidating that test
+//! plumbing is cyril-xv3e.
+
+use ratatui::Terminal;
+use ratatui::backend::TestBackend;
+use ratatui::buffer::Buffer;
+use ratatui::prelude::*;
+
+use cyril_core::types::{
+    ContextBreakdown, ContextBucket, LoopState, Notification, PendingStage, SessionId, StopReason,
+    SubagentInfo, SubagentStatus, TokenCounts, TurnSummary, VoiceStatus,
+};
+
+use crate::traits::Activity;
+use crate::traits::test_support::MockTuiState;
+
+/// Commit whose widget sources rendered the frozen baseline (pre-migration).
+const PINNED_COMMIT: &str = "44bd61c7064e20031e9a9c4514ed4965e6400068";
+
+/// One rendered chrome scene: a stable name plus its raw buffer.
+struct Scene {
+    name: &'static str,
+    buffer: Buffer,
+}
+
+fn draw(width: u16, height: u16, render: impl Fn(&mut Frame)) -> Buffer {
+    let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("test terminal");
+    terminal.draw(|frame| render(frame)).expect("draw");
+    terminal.backend().buffer().clone()
+}
+
+fn toolbar_scene(name: &'static str, width: u16, state: MockTuiState) -> Scene {
+    Scene {
+        name,
+        buffer: draw(width, 1, |frame| {
+            crate::widgets::toolbar::render(frame, frame.area(), &state);
+        }),
+    }
+}
+
+fn status_scene(name: &'static str, width: u16, state: MockTuiState) -> Scene {
+    Scene {
+        name,
+        buffer: draw(width, 1, |frame| {
+            crate::widgets::toolbar::render_status_bar(frame, frame.area(), &state);
+        }),
+    }
+}
+
+fn crew_scene(name: &'static str, height: u16, state: MockTuiState) -> Scene {
+    Scene {
+        name,
+        buffer: draw(80, height, |frame| {
+            crate::widgets::crew_panel::render(frame, frame.area(), &state);
+        }),
+    }
+}
+
+fn voice_scene(name: &'static str, status: VoiceStatus) -> Scene {
+    let mut state = crate::state::UiState::new(100);
+    state.set_voice_status(status);
+    state.set_voice_level(0.5);
+    Scene {
+        name,
+        buffer: draw(60, 1, |frame| {
+            crate::widgets::voice::render(frame, frame.area(), &state);
+        }),
+    }
+}
+
+fn working(id: &str, name: &str, group: Option<&str>) -> SubagentInfo {
+    SubagentInfo::new(
+        SessionId::new(id),
+        name,
+        name,
+        "q",
+        SubagentStatus::Working {
+            message: Some("Running".into()),
+        },
+    )
+    .with_group(group.map(String::from))
+}
+
+fn crew_state(subagents: Vec<SubagentInfo>, pending_stages: Vec<PendingStage>) -> MockTuiState {
+    let mut state = MockTuiState::default();
+    state
+        .subagent_tracker
+        .apply_notification(&Notification::SubagentListUpdated {
+            subagents,
+            pending_stages,
+        });
+    state
+}
+
+/// All 18 chrome scenes, deterministic order and content.
+fn scenes() -> Vec<Scene> {
+    let mut scenes = vec![
+        toolbar_scene(
+            "toolbar_sending_full",
+            120,
+            MockTuiState {
+                activity: Activity::Sending,
+                activity_elapsed: Some(std::time::Duration::from_secs(5)),
+                session_label: Some("main".into()),
+                current_mode: Some("code".into()),
+                current_model: Some("claude-opus-4.8".into()),
+                effort: Some(cyril_core::types::EffortLevel::High),
+                steering_queued: 2,
+                code_intelligence_active: true,
+                ..Default::default()
+            },
+        ),
+        toolbar_scene(
+            "toolbar_streaming_nosession",
+            80,
+            MockTuiState {
+                activity: Activity::Streaming,
+                activity_elapsed: Some(std::time::Duration::from_secs(5)),
+                ..Default::default()
+            },
+        ),
+        toolbar_scene(
+            "toolbar_toolrunning_nosession",
+            80,
+            MockTuiState {
+                activity: Activity::ToolRunning,
+                activity_elapsed: Some(std::time::Duration::from_secs(5)),
+                ..Default::default()
+            },
+        ),
+        toolbar_scene("toolbar_idle", 80, MockTuiState::default()),
+        status_scene(
+            "status_ok_tokens_credits",
+            120,
+            MockTuiState {
+                context_usage: Some(50.0),
+                last_turn: Some(TurnSummary::new(
+                    StopReason::EndTurn,
+                    Some(TokenCounts::new(1500, 800, Some(300))),
+                    None,
+                )),
+                credit_usage: Some((5.25, 10.0)),
+                ..Default::default()
+            },
+        ),
+        status_scene(
+            "status_warn_breakdown_scroll",
+            200,
+            MockTuiState {
+                context_usage: Some(75.0),
+                context_breakdown: Some(ContextBreakdown::new(
+                    ContextBucket::new(1, 11.0),
+                    ContextBucket::new(2, 22.0),
+                    ContextBucket::new(3, 33.0),
+                    ContextBucket::new(4, 44.0),
+                    ContextBucket::new(5, 55.0),
+                )),
+                last_turn: Some(TurnSummary::new(StopReason::MaxTokens, None, None)),
+                chat_scroll_back: Some(10),
+                ..Default::default()
+            },
+        ),
+        status_scene(
+            "status_crit_refused",
+            80,
+            MockTuiState {
+                context_usage: Some(95.0),
+                last_turn: Some(TurnSummary::new(StopReason::Refusal, None, None)),
+                ..Default::default()
+            },
+        ),
+        status_scene(
+            "status_cancelled",
+            80,
+            MockTuiState {
+                last_turn: Some(TurnSummary::new(StopReason::Cancelled, None, None)),
+                ..Default::default()
+            },
+        ),
+        status_scene(
+            "status_turnlimit",
+            80,
+            MockTuiState {
+                last_turn: Some(TurnSummary::new(StopReason::MaxTurnRequests, None, None)),
+                ..Default::default()
+            },
+        ),
+        status_scene("status_empty_fallback", 80, MockTuiState::default()),
+        status_scene(
+            "status_boundary_70",
+            80,
+            MockTuiState {
+                context_usage: Some(70.0),
+                ..Default::default()
+            },
+        ),
+        status_scene(
+            "status_boundary_90",
+            80,
+            MockTuiState {
+                context_usage: Some(90.0),
+                ..Default::default()
+            },
+        ),
+    ];
+
+    let mut overflow = vec![
+        working("s0", "a-looper", Some("crew-a")).with_loop_state(LoopState::new(1, 2)),
+        SubagentInfo::new(
+            SessionId::new("s1"),
+            "b-done",
+            "b-done",
+            "q",
+            SubagentStatus::Terminated,
+        ),
+    ];
+    overflow.extend((0..6).map(|i| working(&format!("w{i}"), &format!("w-{i}"), Some("crew-a"))));
+    scenes.push(crew_scene(
+        "crew_overflow",
+        10,
+        crew_state(overflow, vec![]),
+    ));
+    scenes.push(crew_scene(
+        "crew_small_pending",
+        6,
+        crew_state(
+            vec![working("s0", "writer", Some("crew-a"))],
+            vec![PendingStage::new(
+                "summary",
+                None,
+                Some("crew-a".into()),
+                None,
+                vec!["writer".into()],
+            )],
+        ),
+    ));
+    scenes.push(crew_scene(
+        "crew_no_group",
+        5,
+        crew_state(
+            vec![SubagentInfo::new(
+                SessionId::new("s0"),
+                "solo",
+                "solo",
+                "q",
+                SubagentStatus::Working { message: None },
+            )],
+            vec![],
+        ),
+    ));
+    scenes.push(crew_scene(
+        "crew_multi_group",
+        6,
+        crew_state(
+            vec![
+                working("s0", "alpha", Some("crew-a")),
+                working("s1", "beta", Some("crew-b")),
+            ],
+            vec![],
+        ),
+    ));
+    scenes.push(voice_scene("voice_listening", VoiceStatus::Listening));
+    scenes.push(voice_scene("voice_transcribing", VoiceStatus::Transcribing));
+    scenes
+}
+
+/// Collapse a rendered color to its canonical comparison form (the ghuu
+/// scheme: named ANSI -> the VGA RGB value the NAMED table assigns it).
+fn normalized_color(color: Color) -> String {
+    let rgb = match color {
+        Color::Reset => return "DEFAULT".into(),
+        Color::Black => (0x00, 0x00, 0x00),
+        Color::Red => (0x80, 0x00, 0x00),
+        Color::Green => (0x00, 0x80, 0x00),
+        Color::Yellow => (0x80, 0x80, 0x00),
+        Color::Blue => (0x00, 0x00, 0x80),
+        Color::Magenta => (0x80, 0x00, 0x80),
+        Color::Cyan => (0x00, 0x80, 0x80),
+        Color::Gray => (0xc0, 0xc0, 0xc0),
+        Color::DarkGray => (0x80, 0x80, 0x80),
+        Color::LightRed => (0xff, 0x00, 0x00),
+        Color::LightGreen => (0x00, 0xff, 0x00),
+        Color::LightYellow => (0xff, 0xff, 0x00),
+        Color::LightBlue => (0x00, 0x00, 0xff),
+        Color::LightMagenta => (0xff, 0x00, 0xff),
+        Color::LightCyan => (0x00, 0xff, 0xff),
+        Color::White => (0xff, 0xff, 0xff),
+        Color::Rgb(red, green, blue) => (red, green, blue),
+        Color::Indexed(index) => return format!("INDEX:{index}"),
+    };
+    format!("RGB:{:02x}{:02x}{:02x}", rgb.0, rgb.1, rgb.2)
+}
+
+fn symbol_hex(symbol: &str) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut encoded = String::with_capacity(symbol.len() * 2);
+    for byte in symbol.bytes() {
+        encoded.push(HEX[(byte >> 4) as usize] as char);
+        encoded.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    encoded
+}
+
+/// Every scene flattened to normalized TSV rows (the baseline's row shape).
+fn scene_rows() -> Vec<String> {
+    let mut rows = Vec::with_capacity(4_096);
+    for scene in scenes() {
+        let area = scene.buffer.area;
+        for y in 0..area.height {
+            for x in 0..area.width {
+                let cell = &scene.buffer[(x, y)];
+                rows.push(format!(
+                    "{}\t{x}\t{y}\t{}\t{}\t{}\t{}",
+                    scene.name,
+                    symbol_hex(cell.symbol()),
+                    normalized_color(cell.fg),
+                    normalized_color(cell.bg),
+                    cell.modifier.bits(),
+                ));
+            }
+        }
+    }
+    rows
+}
+
+/// Generator for tests/fixtures/chrome-theme-baseline.tsv. Data goes to
+/// stdout inside BEGIN/END fences (extract with `--nocapture`, same
+/// convention as the ghuu generator and the dij8 probe).
+#[test]
+fn emit_chrome_baseline() {
+    println!("BEGIN_CHROME_BASELINE");
+    println!("commit\t{PINNED_COMMIT}");
+    println!("scene\tx\ty\tsymbol_hex\tforeground\tbackground\tmodifier_bits");
+    for row in scene_rows() {
+        println!("{row}");
+    }
+    println!("END_CHROME_BASELINE");
+}
+
+/// Slice-2 stress: scene production is deterministic. Two in-process runs
+/// build distinct `HashMap` instances inside the trackers, so iteration-
+/// order nondeterminism in a scene builder would flap this assert.
+#[test]
+fn baseline_generation_is_deterministic() {
+    assert_eq!(scene_rows(), scene_rows());
+}
