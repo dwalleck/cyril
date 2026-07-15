@@ -749,9 +749,9 @@ mod tests {
             SourceColor::Rgb(0x80, 0x00, 0x00), // Color::Red
             SourceColor::Rgb(0x00, 0x80, 0x80), // Color::Cyan
             SourceColor::Rgb(0x80, 0x00, 0x80), // Color::Magenta
-            SourceColor::Rgb(0x8a, 0xb4, 0xf8), // palette::USER_BLUE
-            SourceColor::Rgb(0x8c, 0x8c, 0x8c), // palette::MUTED_GRAY
-            SourceColor::Rgb(0xb4, 0x8e, 0xad), // palette::SYSTEM_MAUVE
+            SourceColor::Rgb(0x8a, 0xb4, 0xf8), // was palette::USER_BLUE (module removed, cyril-6r3a)
+            SourceColor::Rgb(0x8c, 0x8c, 0x8c), // was palette::MUTED_GRAY (module removed, cyril-6r3a)
+            SourceColor::Rgb(0xb4, 0x8e, 0xad), // was palette::SYSTEM_MAUVE (module removed, cyril-6r3a)
         ];
 
         for (i, color_a) in required.iter().enumerate() {
