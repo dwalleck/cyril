@@ -39,3 +39,18 @@
 - `accent_violet` ansi16-projects to Gray (Euclidean nearest for a
   desaturated light purple) — verified with an independent brute-force
   oracle before pinning; surprising but correct under the signed rules.
+
+## Pre-PR review (two-axis, 2026-07-15)
+
+Standards: 2 documented-standard findings + 5 judgement calls. Spec: CONFORMING
+(no missing requirements, no scope creep), 3 low-severity notes. Dispositions:
+- ACCEPTED+FIXED: baseline TSV moved to crates/cyril-ui/tests/fixtures/ (an
+  always-run suite must not depend on the .cyril-nrnq audit dir); row_parts
+  sentinel parses -> loud panics (malformed rows can no longer false-pass the
+  marker-row filters); shared production_source() carve extracted for both
+  theme.rs source fences; C6 signature literals -> marker_theme() field reads.
+- REJECTED (settled rationale): marker-theme mirror in modal_theme.rs
+  (cfg(test) visibility boundary; documented, distinctness-fenced both sides,
+  structural drift compile-enforced); theme_roles! macro (the manual count
+  pins ARE the contract fence); test_theme() dedup (one-expression sites);
+  C5 alias-evasion hardening (documented tripwire, C4/C6 backstop).

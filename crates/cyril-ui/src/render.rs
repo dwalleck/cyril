@@ -433,11 +433,12 @@ mod tests {
         // still paint hardcoded colors — scope the Rgb ban to cells the
         // OVERLAY itself changed vs a no-overlay frame.
         let base = render_buffer(&MockTuiState::default())?;
+        let marker = crate::traits::test_support::marker_theme();
         for (name, state, signature) in [
-            ("approval", &approval_state, Color::Indexed(20)),
-            ("picker", &picker_state, Color::Indexed(23)),
-            ("hooks", &hooks_state, Color::Indexed(31)),
-            ("code", &code_state, Color::Indexed(23)),
+            ("approval", &approval_state, marker.emphasis),
+            ("picker", &picker_state, marker.accent_quinary),
+            ("hooks", &hooks_state, marker.accent_violet),
+            ("code", &code_state, marker.accent_quinary),
         ] {
             let buffer = render_buffer(state)?;
             let mut saw_signature = false;

@@ -1,6 +1,6 @@
 //! cyril-nrnq fences: modal semantic-color migration.
 //!
-//! Ground truth is `.cyril-nrnq/modal-baseline.tsv` — a cell dump of the five
+//! Ground truth is `tests/fixtures/modal-baseline.tsv` — a cell dump of the five
 //! modal scenes rendered by the PRE-migration widgets (frozen before any
 //! migration commit; regenerate only via the `#[ignore]`d `generate_baseline`
 //! test, and never after the migration slices land).
@@ -21,7 +21,7 @@ use ratatui::style::Style;
 
 const BASELINE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../.cyril-nrnq/modal-baseline.tsv"
+    "/tests/fixtures/modal-baseline.tsv"
 );
 const SCENE_W: u16 = 80;
 const SCENE_H: u16 = 24;
@@ -481,7 +481,10 @@ fn hooks_empty_list_renders_themed() {
     });
     let fgs: std::collections::BTreeSet<String> = rows
         .iter()
-        .map(|r| r.split('\t').nth(4).unwrap_or("").to_string())
+        .map(|r| {
+            let (_, _, _, _, fg, _, _) = row_parts(r);
+            fg
+        })
         .filter(|c| c != "Reset")
         .collect();
     assert_eq!(
@@ -548,10 +551,15 @@ fn code_edge_shapes_render_themed() {
 
 fn row_parts(row: &str) -> (String, u16, u16, String, String, String, String) {
     let p: Vec<&str> = row.split('\t').collect();
+    assert_eq!(p.len(), 7, "malformed cell row: {row}");
+    let coord = |s: &str| -> u16 {
+        s.parse()
+            .unwrap_or_else(|e| panic!("malformed coordinate {s:?} in row {row:?}: {e}"))
+    };
     (
         p[0].to_string(),
-        p[1].parse().unwrap_or(0),
-        p[2].parse().unwrap_or(0),
+        coord(p[1]),
+        coord(p[2]),
         p[3].to_string(),
         p[4].to_string(),
         p[5].to_string(),

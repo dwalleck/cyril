@@ -732,6 +732,14 @@ mod tests {
         }
     }
 
+    /// Production section of a widget source file (everything above the
+    /// first `#[cfg(test)]`), shared by the source-fence tests.
+    fn production_source(source: &str) -> &str {
+        source
+            .split_once("#[cfg(test)]")
+            .map_or(source, |(production, _)| production)
+    }
+
     /// cyril-nrnq C5: the four migrated modal widgets carry zero hardcoded
     /// color literals in production code (allowlist: empty).
     #[test]
@@ -743,11 +751,8 @@ mod tests {
             ("code_panel", include_str!("widgets/code_panel.rs")),
         ];
         for (name, source) in sources {
-            let production = source
-                .split_once("#[cfg(test)]")
-                .map_or(source, |(production, _)| production);
             assert!(
-                !production.contains("Color::"),
+                !production_source(source).contains("Color::"),
                 "{name} still hardcodes a Color:: literal"
             );
         }
@@ -1084,11 +1089,7 @@ mod tests {
             include_str!("widgets/toolbar.rs"),
             include_str!("widgets/voice.rs"),
         ];
-        let production_sources = widget_sources.map(|source| {
-            source
-                .split_once("#[cfg(test)]")
-                .map_or(source, |(production, _)| production)
-        });
+        let production_sources = widget_sources.map(production_source);
         let scanned_bytes: usize = production_sources.iter().map(|source| source.len()).sum();
         assert!(production_sources.len() <= 16);
         assert!(scanned_bytes <= 300_000);
