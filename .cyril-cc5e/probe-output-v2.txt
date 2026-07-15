@@ -1,0 +1,5 @@
+SCENARIO A-control-80x24 w=80 h=24 n=30 sel=5 marker=true drawn=opt-00,opt-01,opt-02,opt-03,opt-04,opt-05,opt-06,opt-07,opt-08,opt-09,opt-10,opt-11,opt-12,opt-13,opt-14
+SCENARIO B-deep-sel-80x24 w=80 h=24 n=30 sel=20 marker=true drawn=opt-13,opt-14,opt-15,opt-16,opt-17,opt-18,opt-19,opt-20,opt-21,opt-22,opt-23,opt-24,opt-25,opt-26,opt-27
+SCENARIO C-floor-60x16 w=60 h=16 n=15 sel=14 marker=true drawn=opt-08,opt-09,opt-10,opt-11,opt-12,opt-13,opt-14
+SCENARIO D-floor-top-60x16 w=60 h=16 n=15 sel=0 marker=true drawn=opt-00,opt-01,opt-02,opt-03,opt-04,opt-05,opt-06
+STATE reachable-selected=20 (20 presses, 30 options)
