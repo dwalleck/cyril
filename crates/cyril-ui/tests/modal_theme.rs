@@ -545,3 +545,87 @@ fn code_edge_shapes_render_themed() {
         );
     }
 }
+
+fn row_parts(row: &str) -> (String, u16, u16, String, String, String, String) {
+    let p: Vec<&str> = row.split('\t').collect();
+    (
+        p[0].to_string(),
+        p[1].parse().unwrap_or(0),
+        p[2].parse().unwrap_or(0),
+        p[3].to_string(),
+        p[4].to_string(),
+        p[5].to_string(),
+        p[6].to_string(),
+    )
+}
+
+/// C7: under the NoColor projection every modal cell is color-free, and the
+/// visible symbols are identical to the truecolor render.
+#[test]
+fn no_color_scenes_reset() {
+    let truecolor = truecolor_theme();
+    let no_color = resolve(ThemeId::CyrilDark, ColorMode::None);
+    for name in ALL_SCENES {
+        let nc_rows = scene(name, &no_color);
+        for row in &nc_rows {
+            let (_, x, y, _, fg, bg, _) = row_parts(row);
+            assert_eq!(fg, "Reset", "{name}: colored fg at ({x},{y})");
+            assert_eq!(bg, "Reset", "{name}: colored bg at ({x},{y})");
+        }
+        let symbols = |rows: &[String]| -> std::collections::BTreeSet<(u16, u16, String)> {
+            rows.iter()
+                .map(|r| row_parts(r))
+                .filter(|(_, _, _, sym, ..)| sym != " ")
+                .map(|(_, x, y, sym, ..)| (x, y, sym))
+                .collect()
+        };
+        let tc_rows = scene(name, &truecolor);
+        assert_eq!(
+            symbols(&nc_rows),
+            symbols(&tc_rows),
+            "{name}: symbols drifted between color modes"
+        );
+    }
+}
+
+/// C8 (AC2): with every color stripped, the selected row is still
+/// identifiable — exactly one ▸ marker, whose row carries the selected
+/// option's label (and BOLD in approval).
+#[test]
+fn no_color_selection_distinguishable() {
+    let no_color = resolve(ThemeId::CyrilDark, ColorMode::None);
+    for (name, label, expect_bold) in [
+        ("approval-option", "Allow Once", true),
+        ("picker", "opt-1", false),
+    ] {
+        let rows = scene(name, &no_color);
+        let markers: Vec<_> = rows
+            .iter()
+            .map(|r| row_parts(r))
+            .filter(|(_, _, _, sym, ..)| sym == "▸")
+            .collect();
+        assert_eq!(markers.len(), 1, "{name}: expected exactly one ▸");
+        let marker_y = markers[0].2;
+        let mut row_text: Vec<(u16, String)> = rows
+            .iter()
+            .map(|r| row_parts(r))
+            .filter(|(_, _, y, ..)| *y == marker_y)
+            .map(|(_, x, _, sym, ..)| (x, sym))
+            .collect();
+        row_text.sort_by_key(|(x, _)| *x);
+        let text: String = row_text.into_iter().map(|(_, s)| s).collect();
+        assert!(
+            text.contains(label),
+            "{name}: selected label not on the ▸ row: {text}"
+        );
+        if expect_bold {
+            assert!(
+                rows.iter()
+                    .map(|r| row_parts(r))
+                    .filter(|(_, _, y, ..)| *y == marker_y)
+                    .any(|(.., mods)| mods.contains("BOLD")),
+                "{name}: selected row lost its BOLD signal"
+            );
+        }
+    }
+}
