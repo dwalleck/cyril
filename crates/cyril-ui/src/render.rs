@@ -59,16 +59,16 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
 
     // Overlays (rendered on top)
     if let Some(approval) = state.approval() {
-        crate::widgets::approval::render(frame, area, approval);
+        crate::widgets::approval::render(frame, area, approval, &theme);
     }
     if let Some(picker) = state.picker() {
-        crate::widgets::picker::render(frame, area, picker);
+        crate::widgets::picker::render(frame, area, picker, &theme);
     }
     if let Some(hooks) = state.hooks_panel() {
-        crate::widgets::hooks_panel::render(frame, area, hooks);
+        crate::widgets::hooks_panel::render(frame, area, hooks, &theme);
     }
     if let Some(code_panel) = state.code_panel() {
-        crate::widgets::code_panel::render(frame, area, code_panel);
+        crate::widgets::code_panel::render(frame, area, code_panel, &theme);
     }
 }
 

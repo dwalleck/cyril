@@ -3,6 +3,7 @@ use ratatui::widgets::{
     Block, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
 };
 
+use crate::theme::Theme;
 use crate::traits::PickerState;
 use crate::widgets::modal;
 
@@ -35,7 +36,7 @@ fn option_window(n: usize, selected: usize, option_rows: usize) -> (usize, usize
 }
 
 /// Render the picker overlay (centered popup).
-pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &PickerState, _theme: &Theme) {
     let n = state.filtered_indices.len();
     let desired_rows = n.min(MAX_VISIBLE_OPTIONS);
     // Reserved whenever ANY option has a description (not just the selected
@@ -181,7 +182,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(
+                    frame,
+                    frame.area(),
+                    &state,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }

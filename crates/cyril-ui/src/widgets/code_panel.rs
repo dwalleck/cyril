@@ -1,10 +1,11 @@
+use crate::theme::Theme;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use cyril_core::types::{CodePanelData, LspStatus};
 
 /// Render the code intelligence panel as a centered overlay.
-pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData) {
+pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData, _theme: &Theme) {
     let mut lines: Vec<Line> = Vec::new();
 
     // Status line
@@ -206,7 +207,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &data);
+                render(
+                    frame,
+                    frame.area(),
+                    &data,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }
@@ -219,7 +228,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &data);
+                render(
+                    frame,
+                    frame.area(),
+                    &data,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }
@@ -241,7 +258,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &data);
+                render(
+                    frame,
+                    frame.area(),
+                    &data,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }
@@ -253,7 +278,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &data);
+                render(
+                    frame,
+                    frame.area(),
+                    &data,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }

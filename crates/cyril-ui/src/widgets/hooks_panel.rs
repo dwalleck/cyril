@@ -2,6 +2,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use crate::text::{pad_right, truncate_and_pad};
+use crate::theme::Theme;
 use crate::traits::HooksPanelState;
 
 const TRIGGER_COL: usize = 18;
@@ -15,7 +16,7 @@ const PADDING: usize = 6;
 /// Response shape: `/hooks` command returns `{data: {hooks: HookInfo[]}}`.
 /// Each `HookInfo` has `trigger`, `command`, and optional `matcher`.
 /// The panel displays them as a three-column table sorted by trigger.
-pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState, _theme: &Theme) {
     let width = 96.min(area.width.saturating_sub(4));
     // +4 = top border + bottom border + header row + 1 row of margin for
     // the title span (the title sits on the top border row in ratatui, so
@@ -123,7 +124,17 @@ mod tests {
         let backend = TestBackend::new(width, height);
         let mut terminal = Terminal::new(backend).unwrap();
         terminal
-            .draw(|frame| render(frame, frame.area(), state))
+            .draw(|frame| {
+                render(
+                    frame,
+                    frame.area(),
+                    state,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                )
+            })
             .unwrap();
         terminal
     }

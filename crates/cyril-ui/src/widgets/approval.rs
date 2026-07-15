@@ -1,10 +1,11 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
 
+use crate::theme::Theme;
 use crate::traits::{ApprovalPhase, ApprovalState};
 
 /// Render the permission approval overlay (centered popup).
-pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState, _theme: &Theme) {
     match state.phase {
         ApprovalPhase::SelectOption => render_option_phase(frame, area, state),
         ApprovalPhase::SelectTrust { .. } => render_trust_phase(frame, area, state),
@@ -157,7 +158,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(
+                    frame,
+                    frame.area(),
+                    &state,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }
@@ -216,7 +225,17 @@ mod tests {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| {
+                render(
+                    frame,
+                    frame.area(),
+                    &state,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                )
+            })
             .expect("draw");
 
         let text = buffer_text(&terminal);

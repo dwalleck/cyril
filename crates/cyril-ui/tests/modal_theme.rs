@@ -12,6 +12,7 @@ use cyril_core::types::{
     PermissionOptionId, PermissionOptionKind, ToolCall, ToolCallId, ToolCallStatus, ToolKind,
     TrustOption,
 };
+use cyril_ui::theme::{ColorMode, Theme, ThemeId, resolve};
 use cyril_ui::traits::{ApprovalPhase, ApprovalState, HooksPanelState, PickerState};
 use cyril_ui::widgets::{approval, code_panel, hooks_panel, picker};
 use ratatui::Terminal;
@@ -182,25 +183,32 @@ fn scene_rows(scene: &str, draw: impl Fn(&mut ratatui::Frame)) -> Vec<String> {
     rows
 }
 
+fn truecolor_theme() -> Theme {
+    resolve(ThemeId::CyrilDark, ColorMode::TrueColor)
+}
+
 fn all_scene_rows() -> Vec<String> {
+    let theme = truecolor_theme();
     let mut rows = Vec::new();
     let opt = approval_state(false);
     rows.extend(scene_rows("approval-option", |f| {
-        approval::render(f, f.area(), &opt);
+        approval::render(f, f.area(), &opt, &theme);
     }));
     let trust = approval_state(true);
     rows.extend(scene_rows("approval-trust", |f| {
-        approval::render(f, f.area(), &trust);
+        approval::render(f, f.area(), &trust, &theme);
     }));
     let pick = picker_scene_state();
-    rows.extend(scene_rows("picker", |f| picker::render(f, f.area(), &pick)));
+    rows.extend(scene_rows("picker", |f| {
+        picker::render(f, f.area(), &pick, &theme)
+    }));
     let hooks = hooks_scene_state();
     rows.extend(scene_rows("hooks", |f| {
-        hooks_panel::render(f, f.area(), &hooks);
+        hooks_panel::render(f, f.area(), &hooks, &theme);
     }));
     let code = code_scene_state();
     rows.extend(scene_rows("code", |f| {
-        code_panel::render(f, f.area(), &code);
+        code_panel::render(f, f.area(), &code, &theme);
     }));
     rows
 }
