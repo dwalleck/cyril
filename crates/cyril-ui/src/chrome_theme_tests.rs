@@ -23,6 +23,15 @@ use crate::traits::test_support::MockTuiState;
 /// Commit whose widget sources rendered the frozen baseline (pre-migration).
 const PINNED_COMMIT: &str = "44bd61c7064e20031e9a9c4514ed4965e6400068";
 
+/// The production theme the baseline equivalence contract is defined
+/// against (render.rs resolves the same identity).
+fn cyril_dark() -> crate::theme::Theme {
+    crate::theme::resolve(
+        crate::theme::ThemeId::CyrilDark,
+        crate::theme::ColorMode::TrueColor,
+    )
+}
+
 /// One rendered chrome scene: a stable name plus its raw buffer.
 struct Scene {
     name: &'static str,
@@ -39,7 +48,7 @@ fn toolbar_scene(name: &'static str, width: u16, state: MockTuiState) -> Scene {
     Scene {
         name,
         buffer: draw(width, 1, |frame| {
-            crate::widgets::toolbar::render(frame, frame.area(), &state);
+            crate::widgets::toolbar::render(frame, frame.area(), &state, &cyril_dark());
         }),
     }
 }
@@ -48,7 +57,7 @@ fn status_scene(name: &'static str, width: u16, state: MockTuiState) -> Scene {
     Scene {
         name,
         buffer: draw(width, 1, |frame| {
-            crate::widgets::toolbar::render_status_bar(frame, frame.area(), &state);
+            crate::widgets::toolbar::render_status_bar(frame, frame.area(), &state, &cyril_dark());
         }),
     }
 }

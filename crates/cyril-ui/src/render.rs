@@ -43,7 +43,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     ])
     .areas(area);
 
-    crate::widgets::toolbar::render(frame, toolbar_area, state);
+    crate::widgets::toolbar::render(frame, toolbar_area, state, &theme);
     crate::widgets::chat::render(frame, chat_area, state, &theme);
     if crew_height > 0 {
         crate::widgets::crew_panel::render(frame, crew_area, state);
@@ -55,7 +55,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     if suggestions_height > 0 {
         crate::widgets::suggestions::render(frame, suggestions_area, state, &theme);
     }
-    crate::widgets::toolbar::render_status_bar(frame, status_area, state);
+    crate::widgets::toolbar::render_status_bar(frame, status_area, state, &theme);
 
     // Overlays (rendered on top)
     if let Some(approval) = state.approval() {
