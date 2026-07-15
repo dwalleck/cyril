@@ -502,7 +502,7 @@ fn baseline_covers_probe_inventory() {
 fn edge_toolbar_idle_has_no_spinner() {
     let buffer = scene_buffer("toolbar_idle");
     let text = buffer_text(&buffer);
-    for spinner in crate::palette::SPINNER_CHARS {
+    for spinner in crate::spinner::SPINNER_CHARS {
         assert!(!text.contains(*spinner), "idle toolbar rendered a spinner");
     }
     let styled: std::collections::BTreeSet<String> = (0..buffer.area.width)
