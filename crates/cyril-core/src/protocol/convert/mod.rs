@@ -674,7 +674,8 @@ mod tests {
             session_id,
         })) = result
         {
-            assert!((context_usage.percentage() - 75.0).abs() < f64::EPSILON);
+            let ctx = context_usage.expect("context_usage should be present");
+            assert!((ctx.percentage() - 75.0).abs() < f64::EPSILON);
             assert!(metering.is_none());
             assert!(tokens.is_none());
             assert!(effort.is_none(), "no effort field => None");
@@ -749,7 +750,8 @@ mod tests {
             ..
         })) = result
         {
-            assert!((context_usage.percentage() - 7.11).abs() < 0.01);
+            let ctx = context_usage.expect("context_usage should be present");
+            assert!((ctx.percentage() - 7.11).abs() < 0.01);
             let m = metering.unwrap();
             assert!((m.credits() - 0.018).abs() < 0.001);
             assert_eq!(m.duration_ms(), Some(1948));
@@ -838,6 +840,68 @@ mod tests {
             assert!(tokens.is_none(), "partial tokens should produce None");
         } else {
             panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn metadata_without_context_retains_last_context() {
+        // Replays the captured 2.4.1 wire shape (trace-2.4.1-multi-subagent.jsonl):
+        // mid-turn frames like {"sessionId": …, "turnDurationMs": 2281, "effort": "high"}
+        // omit contextUsagePercentage entirely. Such a frame must leave the
+        // last known context usage unchanged — not stamp it to 0.0.
+        let mut ctrl = crate::session::SessionController::new();
+
+        let with_context = serde_json::json!({"contextUsagePercentage": 42.0});
+        let n = to_ext_notification("kiro.dev/metadata", &with_context)
+            .expect("conversion should succeed")
+            .expect("metadata frame should convert");
+        ctrl.apply_notification(&n);
+        assert!(
+            (ctrl.context_usage().map(|u| u.percentage()).unwrap_or(-1.0) - 42.0).abs()
+                < f64::EPSILON,
+            "frame WITH contextUsagePercentage must update context usage"
+        );
+
+        let without_context = serde_json::json!({
+            "sessionId": "03ddba37-dc26-48fc-acad-0c35e4b2597b",
+            "turnDurationMs": 2281,
+            "effort": "high"
+        });
+        let n = to_ext_notification("kiro.dev/metadata", &without_context)
+            .expect("conversion should succeed")
+            .expect("metadata frame should convert");
+        ctrl.apply_notification(&n);
+        assert!(
+            (ctrl.context_usage().map(|u| u.percentage()).unwrap_or(-1.0) - 42.0).abs()
+                < f64::EPSILON,
+            "frame WITHOUT contextUsagePercentage must retain the last context usage, got {:?}",
+            ctrl.context_usage()
+        );
+    }
+
+    #[test]
+    fn metadata_without_context_still_applies_metering_and_effort() {
+        // A context-less frame is not an empty frame: metering, duration, and
+        // effort it carries must still flow through unchanged.
+        let params = serde_json::json!({
+            "sessionId": "s1",
+            "meteringUsage": [
+                {"unit": "credit", "unitPlural": "credits", "value": 0.018}
+            ],
+            "turnDurationMs": 2281,
+            "effort": "high"
+        });
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated {
+            metering, effort, ..
+        })) = result
+        {
+            let m = metering.expect("metering on a context-less frame must be preserved");
+            assert!((m.credits() - 0.018).abs() < 0.001);
+            assert_eq!(m.duration_ms(), Some(2281));
+            assert_eq!(effort, Some(EffortLevel::High));
+        } else {
+            panic!("expected MetadataUpdated, got {:?}", result);
         }
     }
 

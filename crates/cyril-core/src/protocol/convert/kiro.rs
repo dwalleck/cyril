@@ -262,17 +262,24 @@ pub(crate) fn to_ext_notification(
 ) -> crate::Result<Option<Notification>> {
     match method {
         "kiro.dev/metadata" => {
-            let pct = match params
-                .get("contextUsagePercentage")
-                .and_then(|v| v.as_f64())
-            {
-                Some(v) => v,
-                None => {
-                    tracing::warn!(
-                        "kiro.dev/metadata missing or non-numeric contextUsagePercentage"
-                    );
-                    0.0
-                }
+            // An absent contextUsagePercentage is a real wire shape — 2.4.1
+            // captures contain duration/effort-only frames like
+            // {"sessionId": …, "turnDurationMs": 2281, "effort": "high"} —
+            // so it maps to None (consumers retain the last value). A
+            // present-but-non-numeric field is corrupt, so warn rather than
+            // silently degrading to None (distinguish missing from corrupt).
+            let context_usage = match params.get("contextUsagePercentage") {
+                None => None,
+                Some(v) => match v.as_f64() {
+                    Some(pct) => Some(ContextUsage::new(pct)),
+                    None => {
+                        tracing::warn!(
+                            value = ?v,
+                            "kiro.dev/metadata `contextUsagePercentage` present but not numeric, ignoring"
+                        );
+                        None
+                    }
+                },
             };
 
             // Preserve zero-credit turns rather than filtering them out — a
@@ -335,7 +342,7 @@ pub(crate) fn to_ext_notification(
                 .map(SessionId::new);
 
             Ok(Some(Notification::MetadataUpdated {
-                context_usage: ContextUsage::new(pct),
+                context_usage,
                 metering,
                 tokens,
                 effort,
