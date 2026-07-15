@@ -16,7 +16,7 @@ const PADDING: usize = 6;
 /// Response shape: `/hooks` command returns `{data: {hooks: HookInfo[]}}`.
 /// Each `HookInfo` has `trigger`, `command`, and optional `matcher`.
 /// The panel displays them as a three-column table sorted by trigger.
-pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState, _theme: &Theme) {
+pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState, theme: &Theme) {
     let width = 96.min(area.width.saturating_sub(4));
     // +4 = top border + bottom border + header row + 1 row of margin for
     // the title span (the title sits on the top border row in ratatui, so
@@ -39,16 +39,16 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState, _theme: &T
         .title(Span::styled(
             title,
             Style::default()
-                .fg(Color::Cyan)
+                .fg(theme.accent_quinary)
                 .add_modifier(Modifier::BOLD),
         ))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
+        .border_style(Style::default().fg(theme.accent_quinary));
 
     if state.hooks.is_empty() {
         let empty = Paragraph::new(Line::styled(
             "  No hooks configured",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.subdued),
         ))
         .block(block);
         frame.render_widget(empty, popup_area);
@@ -63,7 +63,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState, _theme: &T
         .max(MIN_COMMAND_COL);
 
     let header_style = Style::default()
-        .fg(Color::DarkGray)
+        .fg(theme.subdued)
         .add_modifier(Modifier::BOLD);
     let mut lines: Vec<Line> = Vec::new();
     lines.push(Line::from(vec![
@@ -90,18 +90,18 @@ pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState, _theme: &T
             None => pad_right("—", MATCHER_COL),
         };
         let matcher_style = if hook.matcher.is_some() {
-            Style::default().fg(Color::Cyan)
+            Style::default().fg(theme.accent_quinary)
         } else {
-            Style::default().fg(Color::DarkGray)
+            Style::default().fg(theme.subdued)
         };
         lines.push(Line::from(vec![
             Span::styled(
                 format!("  {trigger_cell}  "),
-                Style::default().fg(Color::Rgb(176, 141, 255)),
+                Style::default().fg(theme.accent_violet),
             ),
             Span::styled(
                 format!("{command_cell}  "),
-                Style::default().fg(Color::Gray),
+                Style::default().fg(theme.text_secondary),
             ),
             Span::styled(matcher_cell, matcher_style),
         ]));

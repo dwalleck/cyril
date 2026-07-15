@@ -447,3 +447,46 @@ fn marker_wiring_picker() {
         "no subdued+ITALIC description cell — modifier lost in the swap"
     );
 }
+
+#[test]
+fn baseline_equivalence_hooks() {
+    assert_scene_equivalent("hooks");
+}
+
+/// C4: hooks consumes accent_quinary (23: title/border/matcher-present),
+/// subdued (24: header/matcher-absent), accent_violet (31: trigger — the
+/// new role's FIRST consumer), text_secondary (30: command). No backgrounds.
+#[test]
+fn marker_wiring_hooks() {
+    let (fgs, bgs) = marker_footprint("hooks");
+    assert_eq!(
+        fgs,
+        vec!["Indexed(23)", "Indexed(24)", "Indexed(30)", "Indexed(31)"],
+        "hooks fg roles"
+    );
+    assert!(bgs.is_empty(), "hooks should paint no backgrounds: {bgs:?}");
+}
+
+/// C10: the empty hooks list renders themed without panicking, consuming
+/// only the frame roles (accent_quinary title/border + subdued notice).
+#[test]
+fn hooks_empty_list_renders_themed() {
+    let marker = marker_theme();
+    let empty = HooksPanelState {
+        hooks: vec![],
+        scroll_offset: 0,
+    };
+    let rows = scene_rows("hooks-empty", |f| {
+        hooks_panel::render(f, f.area(), &empty, &marker)
+    });
+    let fgs: std::collections::BTreeSet<String> = rows
+        .iter()
+        .map(|r| r.split('\t').nth(4).unwrap_or("").to_string())
+        .filter(|c| c != "Reset")
+        .collect();
+    assert_eq!(
+        fgs.into_iter().collect::<Vec<_>>(),
+        vec!["Indexed(23)", "Indexed(24)"],
+        "empty hooks role set"
+    );
+}
