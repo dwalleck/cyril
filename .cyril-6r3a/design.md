@@ -146,4 +146,8 @@ or a distinct compile/grep invocation.
 
 ## Approval
 
-Pending.
+Approved by dwalleck 2026-07-15 (in-session): spinner home = shared
+`spinner.rs` module (chat's private duplicate deleted); fence shape =
+extend + rename the scanner to `widget_theme_sources.rs` (13 modules)
+and delete the two subsumed in-crate batch fences. Cheapest falsifier
+passed (6 dead items delete-compile clean). Proceed to budgeted-plan.
