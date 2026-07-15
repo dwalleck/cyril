@@ -465,6 +465,8 @@ pub mod test_support {
             soft_accent: Color::Indexed(27),
             positive_accent: Color::Indexed(28),
             inset_background: Color::Indexed(29),
+            text_secondary: Color::Indexed(30),
+            accent_violet: Color::Indexed(31),
         }
     }
 

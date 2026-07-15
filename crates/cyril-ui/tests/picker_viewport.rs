@@ -36,7 +36,13 @@ fn render_text(w: u16, h: u16, state: &PickerState) -> String {
     let backend = TestBackend::new(w, h);
     let mut terminal = Terminal::new(backend).expect("terminal");
     terminal
-        .draw(|frame| picker::render(frame, frame.area(), state))
+        .draw(|frame| {
+            let theme = cyril_ui::theme::resolve(
+                cyril_ui::theme::ThemeId::CyrilDark,
+                cyril_ui::theme::ColorMode::TrueColor,
+            );
+            picker::render(frame, frame.area(), state, &theme);
+        })
         .expect("draw");
     let buffer = terminal.backend().buffer();
     (0..h)

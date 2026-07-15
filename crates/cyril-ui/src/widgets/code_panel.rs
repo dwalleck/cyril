@@ -1,14 +1,15 @@
+use crate::theme::Theme;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use cyril_core::types::{CodePanelData, LspStatus};
 
 /// Render the code intelligence panel as a centered overlay.
-pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData) {
+pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData, theme: &Theme) {
     let mut lines: Vec<Line> = Vec::new();
 
     // Status line
-    let (icon, color) = status_style(&data.status);
+    let (icon, color) = status_style(&data.status, theme);
     let mut status_spans = vec![Span::styled(
         format!("{icon} {}", status_label(&data.status)),
         Style::default().fg(color),
@@ -16,7 +17,7 @@ pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData) {
     if let Some(ref msg) = data.message {
         status_spans.push(Span::styled(
             format!(" — {msg}"),
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.subdued),
         ));
     }
     lines.push(Line::from(status_spans));
@@ -26,7 +27,7 @@ pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData) {
         lines.push(Line::default());
         lines.push(Line::styled(
             format!("⚠ {warning}"),
-            Style::default().fg(Color::Yellow),
+            Style::default().fg(theme.emphasis),
         ));
     }
 
@@ -39,25 +40,25 @@ pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData) {
 
         if let Some(ref root) = data.root_path {
             lines.push(Line::from(vec![
-                Span::styled("Workspace: ", Style::default().fg(Color::Cyan)),
-                Span::styled(root.as_str(), Style::default().fg(Color::DarkGray)),
+                Span::styled("Workspace: ", Style::default().fg(theme.accent_quinary)),
+                Span::styled(root.as_str(), Style::default().fg(theme.subdued)),
             ]));
         }
         if !data.detected_languages.is_empty() {
             lines.push(Line::from(vec![
-                Span::styled("Languages: ", Style::default().fg(Color::Cyan)),
+                Span::styled("Languages: ", Style::default().fg(theme.accent_quinary)),
                 Span::styled(
                     data.detected_languages.join(", "),
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(theme.subdued),
                 ),
             ]));
         }
         if !data.project_markers.is_empty() {
             lines.push(Line::from(vec![
-                Span::styled("Markers:   ", Style::default().fg(Color::Cyan)),
+                Span::styled("Markers:   ", Style::default().fg(theme.accent_quinary)),
                 Span::styled(
                     data.project_markers.join(", "),
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(theme.subdued),
                 ),
             ]));
         }
@@ -68,15 +69,15 @@ pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData) {
         lines.push(Line::default());
         lines.push(Line::styled(
             "LSP Servers:",
-            Style::default().fg(Color::Cyan),
+            Style::default().fg(theme.accent_quinary),
         ));
 
         let max_name_len = data.lsps.iter().map(|l| l.name.len()).max().unwrap_or(8);
 
         for lsp in &data.lsps {
             let (lsp_icon, lsp_color) = match &lsp.status {
-                Some(s) => status_style(s),
-                None => ("○", Color::DarkGray),
+                Some(s) => status_style(s, theme),
+                None => ("○", theme.subdued),
             };
             let label = match &lsp.status {
                 Some(s) => status_label(s),
@@ -93,10 +94,7 @@ pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData) {
                     format!("{lsp_icon} {:width$}", lsp.name, width = max_name_len),
                     Style::default().fg(lsp_color),
                 ),
-                Span::styled(
-                    format!("  {langs:16}"),
-                    Style::default().fg(Color::DarkGray),
-                ),
+                Span::styled(format!("  {langs:16}"), Style::default().fg(theme.subdued)),
                 Span::styled(format!("{label}{duration}"), Style::default().fg(lsp_color)),
             ]));
         }
@@ -106,18 +104,18 @@ pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData) {
     if let Some(ref config) = data.config_path {
         lines.push(Line::default());
         lines.push(Line::from(vec![
-            Span::styled("Config: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(config.as_str(), Style::default().fg(Color::Cyan)),
+            Span::styled("Config: ", Style::default().fg(theme.subdued)),
+            Span::styled(config.as_str(), Style::default().fg(theme.accent_quinary)),
         ]));
     }
 
     // Footer
     lines.push(Line::default());
     lines.push(Line::from(vec![
-        Span::styled("[r]", Style::default().fg(Color::Cyan)),
-        Span::styled(" refresh  ", Style::default().fg(Color::DarkGray)),
-        Span::styled("[Esc]", Style::default().fg(Color::Cyan)),
-        Span::styled(" close", Style::default().fg(Color::DarkGray)),
+        Span::styled("[r]", Style::default().fg(theme.accent_quinary)),
+        Span::styled(" refresh  ", Style::default().fg(theme.subdued)),
+        Span::styled("[Esc]", Style::default().fg(theme.accent_quinary)),
+        Span::styled(" close", Style::default().fg(theme.subdued)),
     ]));
 
     // Size and position
@@ -137,22 +135,22 @@ pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData) {
             .title(Span::styled(
                 " /code ",
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(theme.accent_quinary)
                     .add_modifier(Modifier::BOLD),
             ))
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Cyan)),
+            .border_style(Style::default().fg(theme.accent_quinary)),
     );
 
     frame.render_widget(popup, popup_area);
 }
 
-fn status_style(status: &LspStatus) -> (&'static str, Color) {
+fn status_style(status: &LspStatus, theme: &Theme) -> (&'static str, Color) {
     match status {
-        LspStatus::Initialized => ("✓", Color::Green),
-        LspStatus::Initializing => ("◐", Color::Yellow),
-        LspStatus::Failed => ("✗", Color::Red),
-        LspStatus::Unknown(_) => ("○", Color::DarkGray),
+        LspStatus::Initialized => ("✓", theme.subdued_positive),
+        LspStatus::Initializing => ("◐", theme.emphasis),
+        LspStatus::Failed => ("✗", theme.subdued_negative),
+        LspStatus::Unknown(_) => ("○", theme.subdued),
     }
 }
 
@@ -206,7 +204,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &data);
+                render(
+                    frame,
+                    frame.area(),
+                    &data,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }
@@ -219,7 +225,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &data);
+                render(
+                    frame,
+                    frame.area(),
+                    &data,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }
@@ -241,7 +255,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &data);
+                render(
+                    frame,
+                    frame.area(),
+                    &data,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }
@@ -253,7 +275,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &data);
+                render(
+                    frame,
+                    frame.area(),
+                    &data,
+                    &crate::theme::resolve(
+                        crate::theme::ThemeId::CyrilDark,
+                        crate::theme::ColorMode::TrueColor,
+                    ),
+                );
             })
             .expect("draw");
     }

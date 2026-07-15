@@ -1,0 +1,35 @@
+approval-option|fg=Gray|bg=Reset|mods=NONE
+approval-option|fg=Reset|bg=Reset|mods=NONE
+approval-option|fg=White|bg=Rgb(50, 50, 70)|mods=BOLD
+approval-option|fg=Yellow|bg=Reset|mods=BOLD
+approval-option|fg=Yellow|bg=Reset|mods=NONE
+approval-trust|fg=Cyan|bg=Reset|mods=BOLD
+approval-trust|fg=Cyan|bg=Reset|mods=NONE
+approval-trust|fg=DarkGray|bg=Reset|mods=NONE
+approval-trust|fg=DarkGray|bg=Rgb(50, 50, 70)|mods=NONE
+approval-trust|fg=Gray|bg=Reset|mods=NONE
+approval-trust|fg=Reset|bg=Reset|mods=NONE
+approval-trust|fg=White|bg=Rgb(50, 50, 70)|mods=BOLD
+picker|fg=Cyan|bg=Reset|mods=BOLD
+picker|fg=Cyan|bg=Reset|mods=NONE
+picker|fg=DarkGray|bg=Reset|mods=ITALIC
+picker|fg=DarkGray|bg=Reset|mods=NONE
+picker|fg=DarkGray|bg=Rgb(50, 50, 70)|mods=NONE
+picker|fg=Gray|bg=Reset|mods=NONE
+picker|fg=Reset|bg=Reset|mods=NONE
+picker|fg=White|bg=Reset|mods=NONE
+picker|fg=White|bg=Rgb(50, 50, 70)|mods=NONE
+hooks|fg=Cyan|bg=Reset|mods=BOLD
+hooks|fg=Cyan|bg=Reset|mods=NONE
+hooks|fg=DarkGray|bg=Reset|mods=BOLD
+hooks|fg=DarkGray|bg=Reset|mods=NONE
+hooks|fg=Gray|bg=Reset|mods=NONE
+hooks|fg=Reset|bg=Reset|mods=NONE
+hooks|fg=Rgb(176, 141, 255)|bg=Reset|mods=NONE
+code|fg=Cyan|bg=Reset|mods=BOLD
+code|fg=Cyan|bg=Reset|mods=NONE
+code|fg=DarkGray|bg=Reset|mods=NONE
+code|fg=Green|bg=Reset|mods=NONE
+code|fg=Red|bg=Reset|mods=NONE
+code|fg=Reset|bg=Reset|mods=NONE
+code|fg=Yellow|bg=Reset|mods=NONE
