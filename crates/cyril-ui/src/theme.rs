@@ -95,11 +95,13 @@ struct SourceTheme {
     soft_accent: SourceColor,
     positive_accent: SourceColor,
     inset_background: SourceColor,
+    text_secondary: SourceColor,
+    accent_violet: SourceColor,
 }
 
 #[cfg(test)]
 impl SourceTheme {
-    fn roles(self) -> [(&'static str, SourceColor); 29] {
+    fn roles(self) -> [(&'static str, SourceColor); 31] {
         [
             ("canvas", self.canvas),
             ("chrome", self.chrome),
@@ -130,6 +132,8 @@ impl SourceTheme {
             ("soft_accent", self.soft_accent),
             ("positive_accent", self.positive_accent),
             ("inset_background", self.inset_background),
+            ("text_secondary", self.text_secondary),
+            ("accent_violet", self.accent_violet),
         ]
     }
 }
@@ -167,6 +171,8 @@ fn cyril_dark_source(id: ThemeId) -> SourceTheme {
             soft_accent: SourceColor::Rgb(0x8a, 0xb4, 0xf8),
             positive_accent: SourceColor::Rgb(0x81, 0xc7, 0x84),
             inset_background: SourceColor::Rgb(0x28, 0x2c, 0x34),
+            text_secondary: SourceColor::Rgb(0xc0, 0xc0, 0xc0),
+            accent_violet: SourceColor::Rgb(0xb0, 0x8d, 0xff),
         },
     }
 }
@@ -204,6 +210,8 @@ pub struct Theme {
     pub soft_accent: Color,
     pub positive_accent: Color,
     pub inset_background: Color,
+    pub text_secondary: Color,
+    pub accent_violet: Color,
 }
 
 impl SourceColor {
@@ -262,6 +270,8 @@ fn resolve_with(id: ThemeId, project: fn(SourceColor) -> Color) -> Theme {
         soft_accent: project(source.soft_accent),
         positive_accent: project(source.positive_accent),
         inset_background: project(source.inset_background),
+        text_secondary: project(source.text_secondary),
+        accent_violet: project(source.accent_violet),
     }
 }
 
@@ -470,7 +480,7 @@ mod tests {
         assert_eq!(RegistryStressTheme::Beta.name(), "Beta");
     }
 
-    const EXPECTED_ROLES: [&str; 29] = [
+    const EXPECTED_ROLES: [&str; 31] = [
         "canvas",
         "chrome",
         "code",
@@ -500,9 +510,11 @@ mod tests {
         "soft_accent",
         "positive_accent",
         "inset_background",
+        "text_secondary",
+        "accent_violet",
     ];
 
-    const EXPECTED_RGB: [(&str, SourceColor); 28] = [
+    const EXPECTED_RGB: [(&str, SourceColor); 30] = [
         ("chrome", SourceColor::Rgb(0x1e, 0x1e, 0x2e)),
         ("code", SourceColor::Rgb(0x28, 0x2c, 0x34)),
         ("selection", SourceColor::Rgb(0x32, 0x32, 0x46)),
@@ -531,9 +543,11 @@ mod tests {
         ("soft_accent", SourceColor::Rgb(0x8a, 0xb4, 0xf8)),
         ("positive_accent", SourceColor::Rgb(0x81, 0xc7, 0x84)),
         ("inset_background", SourceColor::Rgb(0x28, 0x2c, 0x34)),
+        ("text_secondary", SourceColor::Rgb(0xc0, 0xc0, 0xc0)),
+        ("accent_violet", SourceColor::Rgb(0xb0, 0x8d, 0xff)),
     ];
 
-    fn resolved_roles(theme: Theme) -> [(&'static str, Color); 29] {
+    fn resolved_roles(theme: Theme) -> [(&'static str, Color); 31] {
         [
             ("canvas", theme.canvas),
             ("chrome", theme.chrome),
@@ -564,6 +578,8 @@ mod tests {
             ("soft_accent", theme.soft_accent),
             ("positive_accent", theme.positive_accent),
             ("inset_background", theme.inset_background),
+            ("text_secondary", theme.text_secondary),
+            ("accent_violet", theme.accent_violet),
         ]
     }
 
@@ -621,6 +637,8 @@ mod tests {
             soft_accent: SourceColor::Rgb(26, 0, 0),
             positive_accent: SourceColor::Rgb(27, 0, 0),
             inset_background: SourceColor::Rgb(28, 0, 0),
+            text_secondary: SourceColor::Rgb(29, 0, 0),
+            accent_violet: SourceColor::Rgb(30, 0, 0),
         }
     }
 
@@ -635,7 +653,7 @@ mod tests {
     }
 
     #[test]
-    fn source_shape_has_one_reset_and_twenty_eight_rgb_roles() {
+    fn source_shape_has_one_reset_and_thirty_rgb_roles() {
         let roles = synthetic_source().roles();
         let reset_count = roles
             .iter()
@@ -645,7 +663,7 @@ mod tests {
             .iter()
             .filter(|(_, color)| matches!(color, SourceColor::Rgb(_, _, _)))
             .count();
-        assert_eq!((reset_count, rgb_count), (1, 28));
+        assert_eq!((reset_count, rgb_count), (1, 30));
     }
 
     #[test]
@@ -688,6 +706,47 @@ mod tests {
         }
     }
 
+    /// cyril-nrnq C1: every canonical RGB value in the modal legacy
+    /// inventory (.cyril-nrnq/probe-styles.txt via the ghuu NAMED canon)
+    /// is representable in the expanded contract.
+    #[test]
+    fn modal_legacy_colors_are_representable() {
+        let available = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let required = [
+            SourceColor::Rgb(0x32, 0x32, 0x46), // Rgb(50,50,70) selection bg
+            SourceColor::Rgb(0xff, 0xff, 0xff), // Color::White
+            SourceColor::Rgb(0x00, 0x80, 0x80), // Color::Cyan
+            SourceColor::Rgb(0x80, 0x80, 0x80), // Color::DarkGray
+            SourceColor::Rgb(0x80, 0x80, 0x00), // Color::Yellow
+            SourceColor::Rgb(0x00, 0x80, 0x00), // Color::Green
+            SourceColor::Rgb(0x80, 0x00, 0x00), // Color::Red
+            SourceColor::Rgb(0xc0, 0xc0, 0xc0), // Color::Gray -> text_secondary
+            SourceColor::Rgb(0xb0, 0x8d, 0xff), // matcher purple -> accent_violet
+        ];
+
+        for color in required {
+            assert!(
+                available.iter().any(|(_, candidate)| *candidate == color),
+                "modal legacy color {color:?} is not represented"
+            );
+        }
+    }
+
+    /// cyril-nrnq slice-2 stress: a duplicated marker value would blind the
+    /// C4 wiring fences — all 31 marker roles must be pairwise distinct.
+    #[test]
+    fn marker_theme_roles_are_pairwise_distinct() {
+        let roles = resolved_roles(crate::traits::test_support::marker_theme());
+        for (i, (name_a, color_a)) in roles.iter().enumerate() {
+            for (name_b, color_b) in roles.iter().skip(i + 1) {
+                assert_ne!(
+                    color_a, color_b,
+                    "marker theme roles {name_a} and {name_b} share a value"
+                );
+            }
+        }
+    }
+
     #[test]
     fn first_five_compatibility_roles_match_signed_values() {
         let actual = cyril_dark_source(ThemeId::CyrilDark).roles();
@@ -699,7 +758,7 @@ mod tests {
             ("subdued", SourceColor::Rgb(0x80, 0x80, 0x80)),
         ];
 
-        assert_eq!(actual.len(), 29);
+        assert_eq!(actual.len(), 31);
         for role in expected {
             assert!(
                 actual.contains(&role),
@@ -709,7 +768,7 @@ mod tests {
     }
 
     #[test]
-    fn complete_compatibility_contract_has_twenty_nine_roles() {
+    fn complete_compatibility_contract_has_thirty_one_roles() {
         let actual = cyril_dark_source(ThemeId::CyrilDark).roles();
         let expected = [
             ("subdued_positive", SourceColor::Rgb(0x00, 0x80, 0x00)),
@@ -719,7 +778,7 @@ mod tests {
             ("inset_background", SourceColor::Rgb(0x28, 0x2c, 0x34)),
         ];
 
-        assert_eq!(actual.len(), 29);
+        assert_eq!(actual.len(), 31);
         for role in expected {
             assert!(
                 actual.contains(&role),
@@ -894,7 +953,7 @@ mod tests {
                     checked += 1;
                 }
             }
-            assert_eq!(checked, 25);
+            assert_eq!(checked, 27);
         }
     }
 
@@ -935,6 +994,12 @@ mod tests {
         assert_eq!(theme.success, Color::LightGreen);
         assert_eq!(theme.warning, Color::LightYellow);
         assert_eq!(theme.danger, Color::LightRed);
+        // cyril-nrnq: #c0c0c0 IS ANSI16_RGB[7] — distance-0 must hit index 7
+        // (off-by-one stress); #b08dff's Euclidean nearest is also Gray
+        // (desaturated light purple; pinned by the independent brute-force
+        // oracle in .cyril-nrnq/build-audit.md, not by intuition).
+        assert_eq!(theme.text_secondary, Color::Gray);
+        assert_eq!(theme.accent_violet, Color::Gray);
         assert_eq!(theme.syntax, Some(SyntaxTheme::Base16EightiesDark));
     }
 
@@ -957,7 +1022,7 @@ mod tests {
             }
         }
 
-        assert_eq!(projected, 28);
+        assert_eq!(projected, 30);
     }
 
     #[test]
