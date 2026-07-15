@@ -10,7 +10,7 @@ use ratatui::widgets::Paragraph;
 
 use cyril_core::types::VoiceStatus;
 
-use crate::palette;
+use crate::theme::Theme;
 use crate::traits::TuiState;
 
 /// Number of cells in the level meter bar.
@@ -26,17 +26,21 @@ pub fn height_for(state: &dyn TuiState) -> u16 {
 }
 
 /// Render the voice indicator. Draws nothing when idle.
-pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
+///
+/// Roles follow the ghuu non-speaker convention (cyril-dij8 approved
+/// decision #1): chrome indicators take the value-twin roles, keeping the
+/// `user`/`system` speaker roles reserved for chat speaker labels.
+pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
     let spans: Vec<Span> = match state.voice_status() {
         VoiceStatus::Idle => return,
         VoiceStatus::Listening => vec![
-            Span::styled("🎙 listening ", Style::default().fg(palette::USER_BLUE)),
+            Span::styled("🎙 listening ", Style::default().fg(theme.soft_accent)),
             Span::styled(meter_bar(state.voice_level()), Style::default()),
-            Span::styled("  /voice to stop", Style::default().fg(palette::MUTED_GRAY)),
+            Span::styled("  /voice to stop", Style::default().fg(theme.muted)),
         ],
         VoiceStatus::Transcribing => vec![Span::styled(
             "⏳ transcribing…",
-            Style::default().fg(palette::SYSTEM_MAUVE),
+            Style::default().fg(theme.accent_alt),
         )],
     };
 

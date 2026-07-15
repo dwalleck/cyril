@@ -78,7 +78,7 @@ fn voice_scene(name: &'static str, status: VoiceStatus) -> Scene {
     Scene {
         name,
         buffer: draw(60, 1, |frame| {
-            crate::widgets::voice::render(frame, frame.area(), &state);
+            crate::widgets::voice::render(frame, frame.area(), &state, &cyril_dark());
         }),
     }
 }
@@ -518,7 +518,7 @@ fn edge_voice_idle_renders_nothing() {
     let state = crate::state::UiState::new(100);
     assert_eq!(crate::widgets::voice::height_for(&state), 0);
     let buffer = draw(60, 1, |frame| {
-        crate::widgets::voice::render(frame, frame.area(), &state);
+        crate::widgets::voice::render(frame, frame.area(), &state, &cyril_dark());
     });
     for x in 0..60 {
         let cell = &buffer[(x, 0)];

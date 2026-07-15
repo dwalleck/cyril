@@ -49,7 +49,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         crate::widgets::crew_panel::render(frame, crew_area, state, &theme);
     }
     if voice_height > 0 {
-        crate::widgets::voice::render(frame, voice_area, state);
+        crate::widgets::voice::render(frame, voice_area, state, &theme);
     }
     crate::widgets::input::render(frame, input_area, state, &theme);
     if suggestions_height > 0 {
