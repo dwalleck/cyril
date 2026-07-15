@@ -6,6 +6,7 @@ pub mod file_completer;
 pub mod highlight;
 pub mod palette;
 pub mod render;
+pub mod spinner;
 pub mod state;
 pub mod stream_buffer;
 pub mod subagent_ui;
