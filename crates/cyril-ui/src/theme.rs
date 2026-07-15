@@ -1104,11 +1104,26 @@ mod tests {
             include_str!("widgets/input.rs"),
             include_str!("widgets/markdown.rs"),
             include_str!("widgets/mod.rs"),
+            include_str!("widgets/modal.rs"),
             include_str!("widgets/picker.rs"),
             include_str!("widgets/suggestions.rs"),
             include_str!("widgets/toolbar.rs"),
             include_str!("widgets/voice.rs"),
         ];
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/widgets");
+        let on_disk = std::fs::read_dir(&manifest_dir)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", manifest_dir.display()))
+            .filter(|entry| {
+                entry
+                    .as_ref()
+                    .is_ok_and(|e| e.file_name().to_string_lossy().ends_with(".rs"))
+            })
+            .count();
+        assert_eq!(
+            widget_sources.len(),
+            on_disk,
+            "widgets/ gained or lost a file — update this fence's include_str list"
+        );
         let production_sources = widget_sources.map(production_source);
         let scanned_bytes: usize = production_sources.iter().map(|source| source.len()).sum();
         assert!(production_sources.len() <= 16);

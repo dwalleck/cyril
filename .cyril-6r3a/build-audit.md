@@ -38,6 +38,19 @@ groups ok, `cargo clippy --all-targets -- -D warnings` clean,
 2. Slice 6 rewords three theme.rs comments (stale dead-module names) —
    within C7's scope, not planned as a code change.
 
+3. Pre-PR review fixes: the theme-seam fence
+   (`widgets_only_use_the_explicit_theme`) was missing `modal.rs` from
+   its hand-maintained list (pre-existing gap the review caught) — added,
+   plus a dir-parity anti-rot assert mirroring the scanner's; the
+   scanner's loop test now collects ALL dirty modules before asserting
+   (restores per-module signal the consolidation had traded away);
+   redundant len assert dropped from the spinner pin. Design prose
+   undercounted the widgets dir (said "12 widgets/*.rs", disk has 13 —
+   implementation fences all 13 + highlight = 14). Rejected findings:
+   import-style qualified-vs-unqualified between toolbar and chat
+   (deliberate minimal-diff choices), C7 provenance comments naming the
+   dead constants in past tense (accurate history, declared deviation).
+
 ## Discovered issues to file at close-out
 
 None — `.cyril-6r3a/to-file.md` never accumulated entries.

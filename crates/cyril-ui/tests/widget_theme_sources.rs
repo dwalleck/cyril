@@ -136,12 +136,6 @@ fn production_source(relative: &str) -> String {
         .to_string()
 }
 
-fn assert_module_clean(label: &str, relative: &str) {
-    let source = production_source(relative);
-    let findings = audit_source(&source);
-    assert!(findings.is_empty(), "{label}: {findings:#?}");
-}
-
 #[test]
 fn rejects_palette_import() {
     let findings = audit_source("use crate::palette;\nfn render() {}\n");
@@ -226,9 +220,18 @@ fn one_mebibyte_audit_finds_violation() {
 
 #[test]
 fn all_widget_modules_are_clean() {
+    let mut dirty = Vec::new();
     for (label, relative) in MODULES {
-        assert_module_clean(label, relative);
+        let findings = audit_source(&production_source(relative));
+        if !findings.is_empty() {
+            dirty.push(format!("{label}: {findings:#?}"));
+        }
     }
+    assert!(
+        dirty.is_empty(),
+        "widget modules with direct color sources:\n{}",
+        dirty.join("\n")
+    );
 }
 
 /// cyril-6r3a C5 anti-rot: every file in src/widgets/ must be covered by

@@ -21,7 +21,6 @@ mod tests {
             SPINNER_CHARS,
             &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
         );
-        assert_eq!(SPINNER_CHARS.len(), 10);
         assert_eq!(SPINNER_FRAME_MS, 80);
     }
 }
