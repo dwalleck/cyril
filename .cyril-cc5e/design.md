@@ -82,8 +82,11 @@ untouched (C9 fences that).
    stepping k = 0→14 through real `UiState` key methods keeps the selection
    visible at every step, and each step changes the highlighted label.
 6. **C6 — no-overflow stability.** When all options fit, the window starts at
-   0, no scrollbar renders, and the popup shrinks to content height (today's
-   look preserved).
+   0, no scrollbar renders, and the popup shrinks to content height (drawn
+   set preserved; the popup is one row tighter than legacy — the dead slack
+   row in the old `visible + 6` height is gone, `theme_seam_picker` snapshot
+   re-baselined accordingly. Wording amended post-review: the original
+   "today's look preserved" overstated).
 7. **C7 — empty result.** n = 0 renders filter line + frame with no marker
    and no panic.
 8. **C8 — geometry parity.** `modal::centered` returns byte-identical `Rect`s

@@ -19,6 +19,13 @@ const MAX_VISIBLE_OPTIONS: usize = 15;
 /// `selected < filtered_indices.len()`, so this is a sanity fallback, not
 /// a contract callers may lean on.
 fn option_window(n: usize, selected: usize, option_rows: usize) -> (usize, usize) {
+    if n > 0 && selected >= n {
+        tracing::debug!(
+            selected,
+            n,
+            "picker selection out of range; window has no marked row"
+        );
+    }
     let rows = n.min(option_rows);
     if rows == 0 {
         return (0, 0);
@@ -34,11 +41,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
     // Reserved whenever ANY option has a description (not just the selected
     // one) so popup height stays constant while navigating.
     let desc_reserve = usize::from(state.options.iter().any(|o| o.description.is_some()));
-    // 4 = top/bottom border + filter line + blank line.
+    // 4 = top/bottom border + filter line + blank line. The sum is at most
+    // MAX_VISIBLE_OPTIONS + 1 + 4 = 20, so try_from is infallible; the
+    // saturation is defensive, not an error default.
     let desired_height = u16::try_from(desired_rows + desc_reserve + 4).unwrap_or(u16::MAX);
     let popup_area = modal::centered(area, 80, desired_height);
 
     let inner_height = popup_area.height.saturating_sub(2) as usize;
+    // 2 = filter line + blank spacer line.
     let option_rows = inner_height.saturating_sub(2 + desc_reserve);
     let (start, rows) = option_window(n, state.selected, option_rows);
 
@@ -117,11 +127,22 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
     frame.render_widget(popup, popup_area);
 
     // Display-only overflow indicator (cyril-cc5e C4): key handling is
-    // untouched — the scrollbar mirrors the option window, nothing more.
+    // untouched — the scrollbar mirrors the selection, nothing more.
+    // Position tracks `selected` (not the window start) so the thumb spans
+    // the full track: window start maxes out at n - rows, which would leave
+    // the thumb stranded a viewport short of the bottom. The Margin inset
+    // keeps the ▲/▼ caps inside the border corners.
     if n > rows {
-        let mut scrollbar_state = ScrollbarState::new(n).position(start);
+        let mut scrollbar_state = ScrollbarState::new(n).position(state.selected.min(n - 1));
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
-        frame.render_stateful_widget(scrollbar, popup_area, &mut scrollbar_state);
+        frame.render_stateful_widget(
+            scrollbar,
+            popup_area.inner(Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
+            &mut scrollbar_state,
+        );
     }
 }
 

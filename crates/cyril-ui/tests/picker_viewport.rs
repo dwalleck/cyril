@@ -76,13 +76,12 @@ fn selection_always_visible() {
             for k in [0, n / 2, n - 1] {
                 let state = picker_state(opts(n), k);
                 let text = render_text(w, h, &state);
+                let Some(marker_line) = text.lines().find(|l| l.contains('▸')) else {
+                    panic!("no marker at {w}x{h} n={n} k={k}\n{text}");
+                };
                 assert!(
-                    text.contains('▸'),
-                    "no marker at {w}x{h} n={n} k={k}\n{text}"
-                );
-                assert!(
-                    text.contains(&format!("opt-{k:02}")),
-                    "selected label invisible at {w}x{h} n={n} k={k}\n{text}"
+                    marker_line.contains(&format!("opt-{k:02}")),
+                    "marker row is not the selected option at {w}x{h} n={n} k={k}\n{text}"
                 );
             }
         }
@@ -199,6 +198,60 @@ fn scrollbar_iff_overflow() {
         overflows.contains('▲') && overflows.contains('▼'),
         "scrollbar missing on overflow\n{overflows}"
     );
+    // Caps are inset inside the border: corners survive.
+    assert!(
+        overflows.contains('┐') && overflows.contains('┘'),
+        "scrollbar overdraws border corners\n{overflows}"
+    );
+}
+
+/// The thumb spans the full track: selecting the last option puts it at
+/// the bottom (a window-start-positioned thumb strands at (n-rows)/n).
+#[test]
+fn scrollbar_thumb_reaches_bottom_at_list_end() {
+    let text = render_text(80, 24, &picker_state(opts(16), 15));
+    let grid: Vec<Vec<char>> = text.lines().map(|l| l.chars().collect()).collect();
+    let Some((y, x)) = grid
+        .iter()
+        .enumerate()
+        .find_map(|(y, row)| row.iter().position(|&c| c == '▼').map(|x| (y, x)))
+    else {
+        panic!("no ▼ cap in overflow render\n{text}");
+    };
+    assert_eq!(
+        grid[y - 1].get(x),
+        Some(&'█'),
+        "thumb not at track bottom with last option selected\n{text}"
+    );
+}
+
+/// AC(a) "long *filtered* option list": a non-contiguous filtered subset
+/// (every third option) windows in filtered space — the selection stays
+/// visible and non-matching options never render.
+#[test]
+fn filtered_subset_keeps_selection_visible() {
+    let filtered: Vec<usize> = (0..30).filter(|i| i % 3 == 0).collect(); // 10 entries
+    let state = PickerState {
+        title: "Fence".into(),
+        options: opts(30),
+        filter: "x".into(),
+        filtered_indices: filtered,
+        selected: 9, // deep in the filtered list -> option 27
+    };
+    let text = render_text(60, 16, &state); // floor: 7 rows, window [3,10)
+    let Some(marker_line) = text.lines().find(|l| l.contains('▸')) else {
+        panic!("selection invisible on filtered subset\n{text}");
+    };
+    assert!(
+        marker_line.contains("opt-27"),
+        "marker not on opt-27\n{text}"
+    );
+    let drawn = drawn_labels(&text, 30);
+    let want: Vec<String> = [9, 12, 15, 18, 21, 24, 27]
+        .iter()
+        .map(|i| format!("opt-{i:02}"))
+        .collect();
+    assert_eq!(drawn, want, "filtered window mismatch\n{text}");
 }
 
 /// C5: at the 60x16 support floor with 15 described options, walking the

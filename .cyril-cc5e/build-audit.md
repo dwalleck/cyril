@@ -35,3 +35,18 @@ scrollbar_iff_overflow, floor_60x16_full_walk, degenerate_sizes_no_panic.
 `crates/cyril-ui/src/widgets/modal.rs`: centered_parity_sweep,
 degenerate_areas_yield_empty_rects, clamps_desired_size_to_area_margin,
 odd_remainder_lands_on_trailing_margin.
+
+## Pre-PR review (two-axis, 2026-07-14)
+
+Standards: 0 hard violations, 5 judgement calls. Spec: negative space holds,
+window math verified; 5 findings. Dispositions:
+- ACCEPTED+FIXED: scrollbar thumb positioned by window start never reached
+  track bottom -> now tracks `selected` (fence: scrollbar_thumb_reaches_bottom_at_list_end);
+  caps overdrew border corners -> Margin inset (fence asserts corners survive);
+  C1 fence asserted marker/label presence separately -> now co-located on one row;
+  AC(a) "filtered" untested -> filtered_subset_keeps_selection_visible (non-contiguous
+  subset, windows in filtered space); missing debug! on out-of-range selection ->
+  added (n>0 guard so empty lists stay quiet); unwrap_or bound + magic-2 comments;
+  design C6 "today's look preserved" wording overstated -> amended.
+- REJECTED: Range<usize> return for option_window (single private caller, churn);
+  tautological parity oracle (settled rationale, documented at C8).
