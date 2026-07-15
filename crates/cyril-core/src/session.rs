@@ -126,7 +126,12 @@ impl SessionController {
                 // not in session command-context. Intentionally ignored here.
                 ..
             } => {
-                self.context_usage = Some(context_usage.clone());
+                // Retain-last: a frame that omits contextUsagePercentage
+                // (real 2.4.1 wire shape) means "no update", not "context
+                // dropped to zero" — same discipline as UiState's `effort`.
+                if let Some(u) = context_usage {
+                    self.context_usage = Some(u.clone());
+                }
                 if let Some(m) = metering {
                     self.pending_metering = Some(m.clone());
                 }
@@ -358,7 +363,7 @@ mod tests {
     fn metadata_updated_stores_context_usage() {
         let mut ctrl = SessionController::new();
         let changed = ctrl.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(75.0),
+            context_usage: Some(ContextUsage::new(75.0)),
             metering: None,
             tokens: None,
             effort: None,
@@ -396,7 +401,7 @@ mod tests {
 
         // Turn 1: MetadataUpdated + TurnCompleted
         ctrl.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(5.0),
+            context_usage: Some(ContextUsage::new(5.0)),
             metering: Some(TurnMetering::new(0.018, Some(1948))),
             tokens: None,
             effort: None,
@@ -408,7 +413,7 @@ mod tests {
 
         // Turn 2: MetadataUpdated + TurnCompleted
         ctrl.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(6.0),
+            context_usage: Some(ContextUsage::new(6.0)),
             metering: Some(TurnMetering::new(0.042, Some(5200))),
             tokens: None,
             effort: None,
@@ -458,7 +463,7 @@ mod tests {
         ctrl.set_status(SessionStatus::Busy);
 
         ctrl.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(50.0),
+            context_usage: Some(ContextUsage::new(50.0)),
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
             effort: None,
@@ -485,7 +490,7 @@ mod tests {
     fn turn_summary_cleared_on_new_session() {
         let mut ctrl = SessionController::new();
         ctrl.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(10.0),
+            context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(0.01, None)),
             tokens: None,
             effort: None,
@@ -546,7 +551,7 @@ mod tests {
 
         // Turn 1
         ctrl.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(10.0),
+            context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(0.01, None)),
             tokens: Some(TokenCounts::new(100, 50, None)),
             effort: None,
@@ -562,7 +567,7 @@ mod tests {
 
         // Turn 2
         ctrl.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(20.0),
+            context_usage: Some(ContextUsage::new(20.0)),
             metering: Some(TurnMetering::new(0.05, Some(5000))),
             tokens: Some(TokenCounts::new(800, 400, Some(200))),
             effort: None,
@@ -668,7 +673,7 @@ mod tests {
     fn session_created_resets_cost() {
         let mut ctrl = SessionController::new();
         ctrl.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(10.0),
+            context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(0.05, Some(2000))),
             tokens: None,
             effort: None,
@@ -697,7 +702,7 @@ mod tests {
         // the new session, so a prior session's value must not linger.
         let mut ctrl = SessionController::new();
         ctrl.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(75.0),
+            context_usage: Some(ContextUsage::new(75.0)),
             metering: None,
             tokens: None,
             effort: None,

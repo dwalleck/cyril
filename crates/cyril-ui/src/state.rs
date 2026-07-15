@@ -407,7 +407,14 @@ impl UiState {
                 // subagent-scoped frames before this state machine sees one.
                 session_id: _,
             } => {
-                self.context_usage = Some(context_usage.percentage());
+                // Retain-last: a frame that omits contextUsagePercentage
+                // (real 2.4.1 wire shape: duration/effort-only frames) means
+                // "no update", not "context dropped to zero" — overwriting
+                // would stamp the toolbar to 0.0%. Same discipline as the
+                // sticky `effort` below.
+                if let Some(u) = context_usage {
+                    self.context_usage = Some(u.percentage());
+                }
                 self.pending_tokens = tokens.clone();
                 if let Some(m) = metering {
                     self.pending_metering = Some(m.clone());
@@ -3996,7 +4003,7 @@ mod tests {
 
         // A thinking turn reports effort.
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(7.5),
+            context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::High),
@@ -4006,7 +4013,7 @@ mod tests {
 
         // A context-only frame mid-turn omits effort — must NOT clear it.
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(8.0),
+            context_usage: Some(ContextUsage::new(8.0)),
             metering: None,
             tokens: None,
             effort: None,
@@ -4030,11 +4037,54 @@ mod tests {
     }
 
     #[test]
+    fn metadata_without_context_retains_last_context() {
+        // Replays the captured 2.4.1 wire shape: duration/effort-only frames
+        // omit contextUsagePercentage. Such a frame must not stamp the
+        // toolbar context to 0.0%, while its metering/effort still apply.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: Some(ContextUsage::new(42.0)),
+            metering: None,
+            tokens: None,
+            effort: None,
+            session_id: None,
+        });
+        assert!((state.context_usage().unwrap_or(-1.0) - 42.0).abs() < f64::EPSILON);
+
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: Some(TurnMetering::new(0.018, Some(2281))),
+            tokens: None,
+            effort: Some(EffortLevel::High),
+            session_id: None,
+        });
+        assert!(
+            (state.context_usage().unwrap_or(-1.0) - 42.0).abs() < f64::EPSILON,
+            "context-less frame must retain the last context usage"
+        );
+        assert_eq!(
+            state.effort(),
+            Some(EffortLevel::High),
+            "effort from a context-less frame must still apply"
+        );
+
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+        let summary = state.last_turn().expect("TurnSummary after TurnCompleted");
+        let m = summary
+            .metering()
+            .expect("metering from a context-less frame must still apply");
+        assert!((m.credits() - 0.018).abs() < 0.001);
+        assert_eq!(m.duration_ms(), Some(2281));
+    }
+
+    #[test]
     fn effort_clears_on_model_change_within_a_session() {
         let mut state = UiState::new(500);
         state.set_current_model(Some("opus".into()));
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(7.5),
+            context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::High),
@@ -4054,7 +4104,7 @@ mod tests {
 
         // Re-reporting the *same* model must not disturb a freshly-set level.
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(8.0),
+            context_usage: Some(ContextUsage::new(8.0)),
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::Medium),
@@ -4076,7 +4126,7 @@ mod tests {
         let mut state = UiState::new(500);
         state.set_current_model(Some("opus".into()));
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(7.5),
+            context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::High),
@@ -4099,7 +4149,7 @@ mod tests {
         let mut state = UiState::new(500);
 
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(50.0),
+            context_usage: Some(ContextUsage::new(50.0)),
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
             effort: None,
@@ -4131,7 +4181,7 @@ mod tests {
         let mut state = UiState::new(500);
 
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(10.0),
+            context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(0.01, None)),
             tokens: None,
             effort: None,
@@ -4161,7 +4211,7 @@ mod tests {
 
         // Turn 1
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(10.0),
+            context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(0.02, Some(1000))),
             tokens: None,
             effort: None,
@@ -4173,7 +4223,7 @@ mod tests {
 
         // Turn 2
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(20.0),
+            context_usage: Some(ContextUsage::new(20.0)),
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: None,
             effort: None,
@@ -4192,7 +4242,7 @@ mod tests {
         let mut state = UiState::new(500);
 
         state.apply_notification(&Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(10.0),
+            context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(0.05, Some(2000))),
             tokens: None,
             effort: None,

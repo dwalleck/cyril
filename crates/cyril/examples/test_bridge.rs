@@ -432,8 +432,8 @@ fn print_notification(n: &Notification) {
             session_id,
         } => {
             println!(
-                "  [MetadataUpdated] ctx={:.1}% metering={:?} tokens={:?} effort={effort:?} session={session_id:?}",
-                context_usage.percentage(),
+                "  [MetadataUpdated] ctx={:?} metering={:?} tokens={:?} effort={effort:?} session={session_id:?}",
+                context_usage.as_ref().map(|u| u.percentage()),
                 metering.as_ref().map(|m| m.credits()),
                 tokens.as_ref().map(|t| (t.input(), t.output(), t.cached()))
             );

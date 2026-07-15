@@ -56,7 +56,12 @@ pub enum Notification {
 
     // Kiro extensions
     MetadataUpdated {
-        context_usage: ContextUsage,
+        /// Context-window usage percentage. `None` when the metadata frame
+        /// omits `contextUsagePercentage` — a real wire shape (observed in
+        /// 2.4.1 multi-subagent captures: duration/effort-only frames), so
+        /// consumers must treat absence as "no update", not "dropped to
+        /// zero" (retain-last, same discipline as `effort` below).
+        context_usage: Option<ContextUsage>,
         metering: Option<TurnMetering>,
         tokens: Option<TokenCounts>,
         /// Thinking-effort level reported under thinking models (Kiro 2.5.0+).
@@ -497,7 +502,7 @@ mod tests {
     #[test]
     fn notification_metadata_updated() {
         let n = Notification::MetadataUpdated {
-            context_usage: ContextUsage::new(75.0),
+            context_usage: Some(ContextUsage::new(75.0)),
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::High),
@@ -511,7 +516,10 @@ mod tests {
             session_id,
         } = n
         {
-            assert!((context_usage.percentage() - 75.0).abs() < f64::EPSILON);
+            match context_usage {
+                Some(ctx) => assert!((ctx.percentage() - 75.0).abs() < f64::EPSILON),
+                None => panic!("context_usage should be present"),
+            }
             assert!(metering.is_none());
             assert!(tokens.is_none());
             assert_eq!(effort, Some(EffortLevel::High));
