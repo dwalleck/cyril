@@ -201,6 +201,53 @@ fn scrollbar_iff_overflow() {
     );
 }
 
+/// C5: at the 60x16 support floor with 15 described options, walking the
+/// selection through every index via the REAL state machine keeps the
+/// marker and the selected label on screen at every step, and the drawn
+/// window matches the oracle literals (oracle-v2.py --walk).
+#[test]
+fn floor_60x16_full_walk() {
+    // WALK literals from .cyril-cc5e/oracle-v2.py --walk (window starts).
+    let expected_starts = [0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 8, 8];
+    let mut ui = cyril_ui::state::UiState::new(1000);
+    ui.show_picker("Fence".into(), opts(15));
+    for (k, &want_start) in expected_starts.iter().enumerate() {
+        if k > 0 {
+            ui.picker_select_next();
+        }
+        let Some(picker) = cyril_ui::traits::TuiState::picker(&ui) else {
+            panic!("picker vanished at k={k}");
+        };
+        let text = render_text(60, 16, picker);
+        let marker_line = text.lines().find(|l| l.contains('▸'));
+        let Some(marker_line) = marker_line else {
+            panic!("selection invisible at walk step k={k}\n{text}");
+        };
+        assert!(
+            marker_line.contains(&format!("opt-{k:02}")),
+            "marker not on opt-{k:02} at step {k}\n{text}"
+        );
+        let drawn = drawn_labels(&text, 15);
+        let want: Vec<String> = (want_start..want_start + 7)
+            .map(|i| format!("opt-{i:02}"))
+            .collect();
+        assert_eq!(drawn, want, "window mismatch at walk step k={k}\n{text}");
+    }
+}
+
+/// C10: below-floor terminals render without panicking (content may clip).
+#[test]
+fn degenerate_sizes_no_panic() {
+    for &(w, h) in &[(20u16, 8u16), (5, 5), (0, 0), (60, 5)] {
+        let state = picker_state(opts(15), 14);
+        let _ = render_text(w.max(1), h.max(1), &state);
+    }
+    // TestBackend cannot be 0x0, but the popup area can: prove the
+    // arithmetic path directly at a 1x1 terminal (popup clamps to empty).
+    let state = picker_state(opts(3), 2);
+    let _ = render_text(1, 1, &state);
+}
+
 /// Stress: two options share a label — exactly one ▸ row, and it marks the
 /// second occurrence (selection is positional, not label-matched).
 #[test]
