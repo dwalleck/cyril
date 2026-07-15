@@ -358,6 +358,106 @@ mod tests {
         Ok(())
     }
 
+    /// cyril-nrnq C6: each modal overlay in a full frame renders from the
+    /// state's ONE resolved theme — under the marker theme every modal cell
+    /// carries marker Indexed values; any Rgb cell would betray an internal
+    /// CyrilDark resolve inside a widget.
+    #[test]
+    fn modal_frame_uses_state_theme() -> anyhow::Result<()> {
+        use ratatui::style::Color;
+
+        use crate::traits::{ApprovalPhase, ApprovalState, HooksPanelState};
+        use cyril_core::types::{
+            CodePanelData, LspStatus, PermissionOption, PermissionOptionId, PermissionOptionKind,
+            ToolCall, ToolCallId, ToolCallStatus, ToolKind,
+        };
+
+        let approval = ApprovalState {
+            tool_call: ToolCall::new(
+                ToolCallId::new("tc"),
+                "cmd".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Pending,
+                None,
+            ),
+            message: "Allow?".into(),
+            options: vec![PermissionOption {
+                id: PermissionOptionId::new("a"),
+                label: "Allow".into(),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            }],
+            trust_options: vec![],
+            selected: 0,
+            phase: ApprovalPhase::SelectOption,
+            responder: tokio::sync::oneshot::channel().0,
+        };
+        let hooks = HooksPanelState {
+            hooks: vec![cyril_core::types::HookInfo {
+                trigger: "t".into(),
+                command: "c".into(),
+                matcher: Some("m".into()),
+            }],
+            scroll_offset: 0,
+        };
+        let code = CodePanelData {
+            status: LspStatus::Initialized,
+            message: None,
+            warning: None,
+            root_path: None,
+            detected_languages: vec![],
+            project_markers: vec![],
+            config_path: None,
+            doc_url: None,
+            lsps: vec![],
+        };
+
+        let approval_state = MockTuiState {
+            approval: Some(approval),
+            ..MockTuiState::default()
+        };
+        let hooks_state = MockTuiState {
+            hooks_panel: Some(hooks),
+            ..MockTuiState::default()
+        };
+        let code_state = MockTuiState {
+            code_panel: Some(code),
+            ..MockTuiState::default()
+        };
+        let picker_state = MockTuiState {
+            picker: picker_state().picker,
+            ..MockTuiState::default()
+        };
+
+        // Chrome widgets (toolbar, status bar) are cyril-dij8's batch and may
+        // still paint hardcoded colors — scope the Rgb ban to cells the
+        // OVERLAY itself changed vs a no-overlay frame.
+        let base = render_buffer(&MockTuiState::default())?;
+        for (name, state, signature) in [
+            ("approval", &approval_state, Color::Indexed(20)),
+            ("picker", &picker_state, Color::Indexed(23)),
+            ("hooks", &hooks_state, Color::Indexed(31)),
+            ("code", &code_state, Color::Indexed(23)),
+        ] {
+            let buffer = render_buffer(state)?;
+            let mut saw_signature = false;
+            for (cell, base_cell) in buffer.content().iter().zip(base.content()) {
+                if cell == base_cell {
+                    continue; // untouched by the overlay
+                }
+                assert!(
+                    !matches!(cell.fg, Color::Rgb(..)) && !matches!(cell.bg, Color::Rgb(..)),
+                    "{name}: overlay painted an Rgb cell — a widget resolved its own theme"
+                );
+                if cell.fg == signature {
+                    saw_signature = true;
+                }
+            }
+            assert!(saw_signature, "{name}: signature marker role never painted");
+        }
+        Ok(())
+    }
+
     #[test]
     fn theme_seam_picker() -> anyhow::Result<()> {
         let buffer = render_buffer(&picker_state())?;

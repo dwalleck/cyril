@@ -732,6 +732,27 @@ mod tests {
         }
     }
 
+    /// cyril-nrnq C5: the four migrated modal widgets carry zero hardcoded
+    /// color literals in production code (allowlist: empty).
+    #[test]
+    fn modal_widgets_have_no_legacy_color_sources() {
+        let sources = [
+            ("approval", include_str!("widgets/approval.rs")),
+            ("picker", include_str!("widgets/picker.rs")),
+            ("hooks_panel", include_str!("widgets/hooks_panel.rs")),
+            ("code_panel", include_str!("widgets/code_panel.rs")),
+        ];
+        for (name, source) in sources {
+            let production = source
+                .split_once("#[cfg(test)]")
+                .map_or(source, |(production, _)| production);
+            assert!(
+                !production.contains("Color::"),
+                "{name} still hardcodes a Color:: literal"
+            );
+        }
+    }
+
     /// cyril-nrnq slice-2 stress: a duplicated marker value would blind the
     /// C4 wiring fences — all 31 marker roles must be pairwise distinct.
     #[test]
