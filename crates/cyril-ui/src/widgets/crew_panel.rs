@@ -3,6 +3,7 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 
 use cyril_core::types::SubagentStatus;
 
+use crate::theme::Theme;
 use crate::traits::TuiState;
 
 /// Maximum number of row lines visible in the crew panel (excluding borders).
@@ -32,7 +33,7 @@ pub fn height_for(state: &dyn TuiState) -> u16 {
 /// Render the crew panel (subagent status bar).
 /// Renders nothing if there are no subagents and no pending stages.
 /// Returns the number of lines rendered (0 if nothing was drawn).
-pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
+pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) -> u16 {
     let tracker = state.subagent_tracker();
     let subagents = tracker.subagents();
     let pending = tracker.pending_stages();
@@ -77,21 +78,19 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
         let (icon, icon_color, status_text) = match info.status() {
             SubagentStatus::Working { message } => (
                 "●",
-                Color::Green,
+                theme.subdued_positive,
                 message.as_deref().unwrap_or("Working").to_string(),
             ),
-            SubagentStatus::Terminated => ("◆", Color::DarkGray, "Terminated".to_string()),
+            SubagentStatus::Terminated => ("◆", theme.subdued, "Terminated".to_string()),
         };
 
         let mut spans = vec![
             Span::styled(format!("{icon} "), Style::default().fg(icon_color)),
             Span::styled(
                 format!("{:<20} ", info.session_name()),
-                Style::default()
-                    .fg(Color::White)
-                    .add_modifier(Modifier::BOLD),
+                Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
             ),
-            Span::styled(status_text, Style::default().fg(Color::DarkGray)),
+            Span::styled(status_text, Style::default().fg(theme.subdued)),
         ];
         // Review-loop badge (Kiro 2.5.0+): "↻ 1/2" on the first pass, "↻ 2/2"
         // after a loop-back. `display_iteration` owns the 0-based-wire →
@@ -103,7 +102,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
                     loop_state.display_iteration(),
                     loop_state.max_iterations()
                 ),
-                Style::default().fg(Color::Magenta),
+                Style::default().fg(theme.accent_quaternary),
             ));
         }
         lines.push(Line::from(spans));
@@ -121,12 +120,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
             format!("Waiting (depends: {})", stage.depends_on().join(", "))
         };
         lines.push(Line::from(vec![
-            Span::styled("○ ", Style::default().fg(Color::DarkGray)),
+            Span::styled("○ ", Style::default().fg(theme.subdued)),
             Span::styled(
                 format!("{:<20} ", stage.name()),
-                Style::default().fg(Color::Gray),
+                Style::default().fg(theme.text_secondary),
             ),
-            Span::styled(deps, Style::default().fg(Color::DarkGray)),
+            Span::styled(deps, Style::default().fg(theme.subdued)),
         ]));
         emitted += 1;
     }
@@ -139,7 +138,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
             Span::styled(
                 format!("+{hidden} more"),
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.emphasis)
                     .add_modifier(Modifier::ITALIC),
             ),
         ]));
@@ -156,9 +155,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) -> u16 {
         height: actual_height,
     };
 
+    // The block border itself stays default-styled — the dij8 probe pinned
+    // border cells as Reset, and styling them would break the frozen
+    // equivalence contract (design negative-space #3).
     let block = Block::default().borders(Borders::ALL).title(Span::styled(
         format!(" {header} "),
-        Style::default().fg(Color::Cyan),
+        Style::default().fg(theme.accent_quinary),
     ));
 
     let paragraph = Paragraph::new(lines).block(block);
@@ -176,6 +178,13 @@ mod tests {
     use cyril_core::types::{PendingStage, SessionId, SubagentInfo, SubagentStatus};
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+
+    fn cyril_dark() -> Theme {
+        crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::TrueColor,
+        )
+    }
 
     fn make_working(id: &str, name: &str, group: Option<&str>) -> SubagentInfo {
         SubagentInfo::new(
@@ -218,7 +227,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
 
@@ -244,7 +253,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
 
@@ -272,7 +281,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
 
@@ -300,7 +309,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
 
@@ -319,7 +328,7 @@ mod tests {
         let mut height = 0;
         terminal
             .draw(|frame| {
-                height = render(frame, frame.area(), &state);
+                height = render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
         assert_eq!(height, 0);
@@ -339,7 +348,7 @@ mod tests {
         let mut height = 0;
         terminal
             .draw(|frame| {
-                height = render(frame, frame.area(), &state);
+                height = render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
         // 1 subagent line + 2 border lines = 3
@@ -366,7 +375,7 @@ mod tests {
         let mut height = 0;
         terminal
             .draw(|frame| {
-                height = render(frame, frame.area(), &state);
+                height = render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
         // 1 subagent + 1 pending + 2 borders = 4
@@ -389,7 +398,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
 
@@ -471,7 +480,7 @@ mod tests {
         let mut height = 0;
         terminal
             .draw(|frame| {
-                height = render(frame, frame.area(), &state);
+                height = render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
 
@@ -508,7 +517,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
 
@@ -555,7 +564,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw should succeed");
 

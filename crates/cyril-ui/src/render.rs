@@ -46,7 +46,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     crate::widgets::toolbar::render(frame, toolbar_area, state, &theme);
     crate::widgets::chat::render(frame, chat_area, state, &theme);
     if crew_height > 0 {
-        crate::widgets::crew_panel::render(frame, crew_area, state);
+        crate::widgets::crew_panel::render(frame, crew_area, state, &theme);
     }
     if voice_height > 0 {
         crate::widgets::voice::render(frame, voice_area, state);

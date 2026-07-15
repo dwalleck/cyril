@@ -66,7 +66,7 @@ fn crew_scene(name: &'static str, height: u16, state: MockTuiState) -> Scene {
     Scene {
         name,
         buffer: draw(80, height, |frame| {
-            crate::widgets::crew_panel::render(frame, frame.area(), &state);
+            crate::widgets::crew_panel::render(frame, frame.area(), &state, &cyril_dark());
         }),
     }
 }
