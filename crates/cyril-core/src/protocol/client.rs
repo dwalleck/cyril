@@ -159,10 +159,17 @@ impl acp::Client for KiroClient {
         {
             Ok(Some(notification)) => {
                 // ToolCallChunk carries an inline session_id from the outer
-                // kiro.dev/session/update envelope. Promote it to the
-                // channel-level RoutedNotification routing.
+                // kiro.dev/session/update envelope, MetadataUpdated from the
+                // params-level sessionId on kiro.dev/metadata (cyril-fh06).
+                // Promote both to channel-level RoutedNotification routing so
+                // the App can divert subagent-session frames away from the
+                // main pipeline.
                 let routed = match &notification {
                     Notification::ToolCallChunk {
+                        session_id: Some(sid),
+                        ..
+                    }
+                    | Notification::MetadataUpdated {
                         session_id: Some(sid),
                         ..
                     } => RoutedNotification::scoped(sid.clone(), notification),
@@ -549,6 +556,183 @@ mod tests {
             resp.0.get().contains("shellType"),
             "ext reply must carry shellType, got {}",
             resp.0.get()
+        );
+    }
+}
+
+#[cfg(test)]
+mod metadata_routing_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use agent_client_protocol::Client as _;
+
+    fn ext_frame(method: &str, params: serde_json::Value) -> acp::ExtNotification {
+        let raw: std::sync::Arc<serde_json::value::RawValue> =
+            serde_json::value::RawValue::from_string(params.to_string())
+                .expect("valid JSON")
+                .into();
+        acp::ExtNotification::new(method, raw)
+    }
+
+    fn v2_client(
+        ntx: mpsc::Sender<RoutedNotification>,
+        ptx: mpsc::Sender<PermissionRequest>,
+    ) -> KiroClient {
+        KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::V2Engine),
+        )
+    }
+
+    /// Drain every routed notification currently buffered on the channel.
+    fn drain(nrx: &mut mpsc::Receiver<RoutedNotification>) -> Vec<RoutedNotification> {
+        let mut out = Vec::new();
+        while let Ok(routed) = nrx.try_recv() {
+            out.push(routed);
+        }
+        out
+    }
+
+    /// Replay routed notifications into a main `SessionController` following the
+    /// App's routing contract (`app.rs::handle_notification`): the main state
+    /// machines receive a notification only when the routed `session_id` is
+    /// `None` or equals the main session's id.
+    fn replay_to_main(
+        routed_frames: &[RoutedNotification],
+        main_id: &SessionId,
+    ) -> crate::session::SessionController {
+        let mut session = crate::session::SessionController::new();
+        session.apply_notification(&Notification::SessionCreated {
+            session_id: main_id.clone(),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        for routed in routed_frames {
+            let to_main = routed.session_id.as_ref().is_none_or(|sid| sid == main_id);
+            if to_main {
+                session.apply_notification(&routed.notification);
+            }
+        }
+        session
+    }
+
+    // cyril-fh06 fence: during a multi-subagent v2 turn, every session emits its
+    // OWN `_kiro.dev/metadata` frame with a params-level `sessionId` (committed
+    // capture: experiments/conductor-spike/trace-2.4.1-multi-subagent.jsonl has
+    // metadata frames for 5 distinct sessionIds). Kiro's own TUI drops frames
+    // whose sessionId differs from the current session; cyril must route them
+    // scoped so main-toolbar context/credits/duration/effort come only from
+    // main-session frames.
+    #[tokio::test]
+    async fn subagent_metadata_does_not_stamp_main_session() {
+        let (ntx, mut nrx) = mpsc::channel(8);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = v2_client(ntx, ptx);
+
+        // Frame shapes mirror the committed 2.4.1 capture (meteringUsage entries
+        // carry `unit`/`unitPlural`, which cyril deliberately ignores).
+        let main_frame = ext_frame(
+            "kiro.dev/metadata",
+            serde_json::json!({
+                "sessionId": "main-sess",
+                "contextUsagePercentage": 42.0,
+                "meteringUsage": [
+                    {"value": 0.25, "unit": "credit", "unitPlural": "credits"}
+                ],
+                "turnDurationMs": 5000,
+                "effort": "high",
+            }),
+        );
+        let sub_frame = ext_frame(
+            "kiro.dev/metadata",
+            serde_json::json!({
+                "sessionId": "sub-sess",
+                "contextUsagePercentage": 77.7,
+                "meteringUsage": [
+                    {"value": 9.9, "unit": "credit", "unitPlural": "credits"}
+                ],
+                "turnDurationMs": 157_152,
+                "effort": "low",
+            }),
+        );
+        client.ext_notification(main_frame).await.unwrap();
+        client.ext_notification(sub_frame).await.unwrap();
+
+        let routed_frames = drain(&mut nrx);
+        assert_eq!(routed_frames.len(), 2, "both frames must be forwarded");
+
+        // Channel-level scoping: the subagent frame must arrive scoped to its
+        // own session (mirroring the ToolCallChunk promotion), so App routing
+        // can divert it away from the main pipeline.
+        assert_eq!(
+            routed_frames[1].session_id,
+            Some(SessionId::new("sub-sess")),
+            "subagent metadata frame must be scoped to its sessionId, not global"
+        );
+
+        // Replay through the App routing contract: main values must come only
+        // from the main-session frame.
+        let main_id = SessionId::new("main-sess");
+        let mut session = replay_to_main(&routed_frames, &main_id);
+        let usage = session
+            .context_usage()
+            .expect("main-session metadata frame applied")
+            .percentage();
+        assert!(
+            (usage - 42.0).abs() < f64::EPSILON,
+            "main context usage must come only from the main frame, got {usage}"
+        );
+
+        // Metering: buffered per-turn, surfaced on TurnCompleted.
+        session.apply_notification(&Notification::TurnCompleted {
+            stop_reason: crate::types::StopReason::EndTurn,
+        });
+        let metering = session
+            .last_turn()
+            .and_then(|t| t.metering())
+            .expect("main frame carried metering");
+        assert!(
+            (metering.credits() - 0.25).abs() < f64::EPSILON,
+            "main turn credits must come only from the main frame, got {}",
+            metering.credits()
+        );
+    }
+
+    // cyril-fh06 acceptance: a metadata frame WITHOUT a sessionId stays global
+    // and still applies to the main session (byte-identical single-session
+    // behavior).
+    #[tokio::test]
+    async fn metadata_without_session_id_still_applies_to_main() {
+        let (ntx, mut nrx) = mpsc::channel(8);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = v2_client(ntx, ptx);
+
+        let frame = ext_frame(
+            "kiro.dev/metadata",
+            serde_json::json!({ "contextUsagePercentage": 13.5 }),
+        );
+        client.ext_notification(frame).await.unwrap();
+
+        let routed_frames = drain(&mut nrx);
+        assert_eq!(routed_frames.len(), 1);
+        assert_eq!(
+            routed_frames[0].session_id, None,
+            "sessionId-less metadata must stay global"
+        );
+
+        let main_id = SessionId::new("main-sess");
+        let session = replay_to_main(&routed_frames, &main_id);
+        let usage = session
+            .context_usage()
+            .expect("global metadata frame applies to main")
+            .percentage();
+        assert!(
+            (usage - 13.5).abs() < f64::EPSILON,
+            "global metadata frame must apply to main, got {usage}"
         );
     }
 }

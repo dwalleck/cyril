@@ -64,6 +64,15 @@ pub enum Notification {
         /// non-thinking models and (observed) mid-turn on context-only frames,
         /// so consumers must treat absence as "no update", not "cleared".
         effort: Option<EffortLevel>,
+        /// Session ID from the params-level `sessionId` on `kiro.dev/metadata`
+        /// (cyril-fh06). During agent_crew runs every subagent session emits
+        /// its own metadata frame; the bridge → client pathway promotes this
+        /// to a scoped `RoutedNotification` (same idiom as `ToolCallChunk`)
+        /// so subagent frames never stamp the main toolbar. `None` when the
+        /// frame omits the field — routed global, applies to main. By the
+        /// time this notification reaches state machines, routing has already
+        /// happened and this field is effectively just a tag.
+        session_id: Option<SessionId>,
     },
     /// ACP `usage_update` session notification (unstable_session_usage).
     /// Carries absolute token counts rather than the percentage from
@@ -492,18 +501,21 @@ mod tests {
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::High),
+            session_id: Some(SessionId::new("sess_1")),
         };
         if let Notification::MetadataUpdated {
             context_usage,
             metering,
             tokens,
             effort,
+            session_id,
         } = n
         {
             assert!((context_usage.percentage() - 75.0).abs() < f64::EPSILON);
             assert!(metering.is_none());
             assert!(tokens.is_none());
             assert_eq!(effort, Some(EffortLevel::High));
+            assert_eq!(session_id, Some(SessionId::new("sess_1")));
         } else {
             panic!("wrong variant");
         }

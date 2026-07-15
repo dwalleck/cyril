@@ -322,11 +322,24 @@ pub(crate) fn to_ext_notification(
                 },
             };
 
+            // Params-level session scope (cyril-fh06). During agent_crew runs
+            // every subagent session emits its own metadata frame; carrying
+            // the sessionId lets the bridge promote it to scoped routing so
+            // subagent frames never stamp the main toolbar (Kiro's own TUI
+            // drops non-matching frames the same way). Absent/empty → None,
+            // which routes global (applies to main).
+            let session_id = params
+                .get("sessionId")
+                .and_then(|s| s.as_str())
+                .filter(|s| !s.is_empty())
+                .map(SessionId::new);
+
             Ok(Some(Notification::MetadataUpdated {
                 context_usage: ContextUsage::new(pct),
                 metering,
                 tokens,
                 effort,
+                session_id,
             }))
         }
         "kiro.dev/compaction/status" => {
