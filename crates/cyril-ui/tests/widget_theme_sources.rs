@@ -1,10 +1,19 @@
 use std::path::Path;
 
-const MODULES: [(&str, &str); 5] = [
+const MODULES: [(&str, &str); 14] = [
     ("chat", "src/widgets/chat.rs"),
     ("markdown", "src/widgets/markdown.rs"),
     ("input", "src/widgets/input.rs"),
     ("suggestions", "src/widgets/suggestions.rs"),
+    ("approval", "src/widgets/approval.rs"),
+    ("code_panel", "src/widgets/code_panel.rs"),
+    ("crew_panel", "src/widgets/crew_panel.rs"),
+    ("hooks_panel", "src/widgets/hooks_panel.rs"),
+    ("modal", "src/widgets/modal.rs"),
+    ("picker", "src/widgets/picker.rs"),
+    ("toolbar", "src/widgets/toolbar.rs"),
+    ("voice", "src/widgets/voice.rs"),
+    ("widgets_mod", "src/widgets/mod.rs"),
     ("highlight", "src/highlight.rs"),
 ];
 
@@ -216,26 +225,41 @@ fn one_mebibyte_audit_finds_violation() {
 }
 
 #[test]
-fn production_chat_is_clean() {
-    assert_module_clean(MODULES[0].0, MODULES[0].1);
+fn all_widget_modules_are_clean() {
+    for (label, relative) in MODULES {
+        assert_module_clean(label, relative);
+    }
 }
 
+/// cyril-6r3a C5 anti-rot: every file in src/widgets/ must be covered by
+/// MODULES — a widget added later cannot silently dodge the fence.
 #[test]
-fn production_markdown_is_clean() {
-    assert_module_clean(MODULES[1].0, MODULES[1].1);
-}
-
-#[test]
-fn production_input_is_clean() {
-    assert_module_clean(MODULES[2].0, MODULES[2].1);
-}
-
-#[test]
-fn production_suggestions_is_clean() {
-    assert_module_clean(MODULES[3].0, MODULES[3].1);
-}
-
-#[test]
-fn production_highlight_is_clean() {
-    assert_module_clean(MODULES[4].0, MODULES[4].1);
+fn modules_list_covers_the_widgets_directory() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/widgets");
+    let mut on_disk: Vec<String> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|error| panic!("failed to read {}: {error}", dir.display()))
+        .map(|entry| {
+            let entry = entry.unwrap_or_else(|error| {
+                panic!("failed to read entry in {}: {error}", dir.display())
+            });
+            entry.file_name().to_string_lossy().into_owned()
+        })
+        .filter(|name| name.ends_with(".rs"))
+        .map(|name| format!("src/widgets/{name}"))
+        .collect();
+    on_disk.sort();
+    let mut fenced: Vec<String> = MODULES
+        .iter()
+        .map(|(_, relative)| (*relative).to_string())
+        .filter(|relative| relative.starts_with("src/widgets/"))
+        .collect();
+    fenced.sort();
+    assert_eq!(
+        fenced, on_disk,
+        "MODULES must fence exactly the widget files on disk"
+    );
+    assert!(
+        MODULES.iter().any(|(_, r)| *r == "src/highlight.rs"),
+        "highlight.rs (syntax component host) must stay fenced"
+    );
 }

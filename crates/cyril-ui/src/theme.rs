@@ -778,58 +778,6 @@ mod tests {
             .map_or(source, |(production, _)| production)
     }
 
-    /// cyril-nrnq C5: the four migrated modal widgets carry zero hardcoded
-    /// color literals in production code (allowlist: empty).
-    #[test]
-    fn modal_widgets_have_no_legacy_color_sources() {
-        let sources = [
-            ("approval", include_str!("widgets/approval.rs")),
-            ("picker", include_str!("widgets/picker.rs")),
-            ("hooks_panel", include_str!("widgets/hooks_panel.rs")),
-            ("code_panel", include_str!("widgets/code_panel.rs")),
-        ];
-        for (name, source) in sources {
-            assert!(
-                !production_source(source).contains("Color::"),
-                "{name} still hardcodes a Color:: literal"
-            );
-        }
-    }
-
-    /// cyril-dij8 C4: the three migrated chrome widget files carry zero
-    /// hardcoded color literals AND zero palette color-constant references
-    /// in production code (the spinner constants are not colors and stay).
-    /// One-shot non-vacuity control: this predicate FAILS against the
-    /// pre-migration toolbar.rs at d4f105f (26 Color:: literals).
-    #[test]
-    fn chrome_widgets_have_no_legacy_color_sources() {
-        let sources = [
-            ("toolbar", include_str!("widgets/toolbar.rs")),
-            ("crew_panel", include_str!("widgets/crew_panel.rs")),
-            ("voice", include_str!("widgets/voice.rs")),
-        ];
-        let palette_colors = [
-            "USER_BLUE",
-            "AGENT_GREEN",
-            "SYSTEM_MAUVE",
-            "MUTED_GRAY",
-            "CODE_BLOCK_BG",
-        ];
-        for (name, source) in sources {
-            let production = production_source(source);
-            assert!(
-                !production.contains("Color::"),
-                "{name} still hardcodes a Color:: literal"
-            );
-            for constant in palette_colors {
-                assert!(
-                    !production.contains(constant),
-                    "{name} still references palette::{constant}"
-                );
-            }
-        }
-    }
-
     /// cyril-nrnq slice-2 stress: a duplicated marker value would blind the
     /// C4 wiring fences — all 31 marker roles must be pairwise distinct.
     #[test]
