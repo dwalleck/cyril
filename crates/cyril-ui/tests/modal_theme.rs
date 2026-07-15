@@ -490,3 +490,58 @@ fn hooks_empty_list_renders_themed() {
         "empty hooks role set"
     );
 }
+
+#[test]
+fn baseline_equivalence_code() {
+    assert_scene_equivalent("code");
+}
+
+/// C4: code panel consumes accent_quinary (23: labels/keys/title/border),
+/// subdued (24: values, absent-status ○), emphasis (20: warning + ◐),
+/// subdued_positive (25: ✓), subdued_negative (26: ✗). No backgrounds.
+#[test]
+fn marker_wiring_code() {
+    let (fgs, bgs) = marker_footprint("code");
+    assert_eq!(
+        fgs,
+        vec![
+            "Indexed(20)",
+            "Indexed(23)",
+            "Indexed(24)",
+            "Indexed(25)",
+            "Indexed(26)"
+        ],
+        "code panel fg roles"
+    );
+    assert!(bgs.is_empty(), "code panel paints no backgrounds: {bgs:?}");
+}
+
+/// C10: Unknown status + all-None optionals + empty lsps renders themed
+/// without panicking.
+#[test]
+fn code_edge_shapes_render_themed() {
+    let marker = marker_theme();
+    let edge = CodePanelData {
+        status: LspStatus::Unknown("weird-state".into()),
+        message: None,
+        warning: None,
+        root_path: None,
+        detected_languages: vec![],
+        project_markers: vec![],
+        config_path: None,
+        doc_url: None,
+        lsps: vec![],
+    };
+    let rows = scene_rows("code-edge", |f| {
+        code_panel::render(f, f.area(), &edge, &marker)
+    });
+    assert!(!rows.is_empty(), "edge scene rendered nothing");
+    let allowed = ["Indexed(20)", "Indexed(23)", "Indexed(24)", "Reset"];
+    for row in &rows {
+        let fg = row.split('\t').nth(4).unwrap_or("");
+        assert!(
+            allowed.contains(&fg),
+            "unexpected role {fg} in edge scene: {row}"
+        );
+    }
+}
