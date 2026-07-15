@@ -44,41 +44,56 @@ fn draw(width: u16, height: u16, render: impl Fn(&mut Frame)) -> Buffer {
     terminal.backend().buffer().clone()
 }
 
-fn toolbar_scene(name: &'static str, width: u16, state: MockTuiState) -> Scene {
+fn toolbar_scene(
+    theme: &crate::theme::Theme,
+    name: &'static str,
+    width: u16,
+    state: MockTuiState,
+) -> Scene {
     Scene {
         name,
         buffer: draw(width, 1, |frame| {
-            crate::widgets::toolbar::render(frame, frame.area(), &state, &cyril_dark());
+            crate::widgets::toolbar::render(frame, frame.area(), &state, theme);
         }),
     }
 }
 
-fn status_scene(name: &'static str, width: u16, state: MockTuiState) -> Scene {
+fn status_scene(
+    theme: &crate::theme::Theme,
+    name: &'static str,
+    width: u16,
+    state: MockTuiState,
+) -> Scene {
     Scene {
         name,
         buffer: draw(width, 1, |frame| {
-            crate::widgets::toolbar::render_status_bar(frame, frame.area(), &state, &cyril_dark());
+            crate::widgets::toolbar::render_status_bar(frame, frame.area(), &state, theme);
         }),
     }
 }
 
-fn crew_scene(name: &'static str, height: u16, state: MockTuiState) -> Scene {
+fn crew_scene(
+    theme: &crate::theme::Theme,
+    name: &'static str,
+    height: u16,
+    state: MockTuiState,
+) -> Scene {
     Scene {
         name,
         buffer: draw(80, height, |frame| {
-            crate::widgets::crew_panel::render(frame, frame.area(), &state, &cyril_dark());
+            crate::widgets::crew_panel::render(frame, frame.area(), &state, theme);
         }),
     }
 }
 
-fn voice_scene(name: &'static str, status: VoiceStatus) -> Scene {
+fn voice_scene(theme: &crate::theme::Theme, name: &'static str, status: VoiceStatus) -> Scene {
     let mut state = crate::state::UiState::new(100);
     state.set_voice_status(status);
     state.set_voice_level(0.5);
     Scene {
         name,
         buffer: draw(60, 1, |frame| {
-            crate::widgets::voice::render(frame, frame.area(), &state, &cyril_dark());
+            crate::widgets::voice::render(frame, frame.area(), &state, theme);
         }),
     }
 }
@@ -108,9 +123,10 @@ fn crew_state(subagents: Vec<SubagentInfo>, pending_stages: Vec<PendingStage>) -
 }
 
 /// All 18 chrome scenes, deterministic order and content.
-fn scenes() -> Vec<Scene> {
+fn scenes(theme: &crate::theme::Theme) -> Vec<Scene> {
     let mut scenes = vec![
         toolbar_scene(
+            theme,
             "toolbar_sending_full",
             120,
             MockTuiState {
@@ -126,6 +142,7 @@ fn scenes() -> Vec<Scene> {
             },
         ),
         toolbar_scene(
+            theme,
             "toolbar_streaming_nosession",
             80,
             MockTuiState {
@@ -135,6 +152,7 @@ fn scenes() -> Vec<Scene> {
             },
         ),
         toolbar_scene(
+            theme,
             "toolbar_toolrunning_nosession",
             80,
             MockTuiState {
@@ -143,8 +161,9 @@ fn scenes() -> Vec<Scene> {
                 ..Default::default()
             },
         ),
-        toolbar_scene("toolbar_idle", 80, MockTuiState::default()),
+        toolbar_scene(theme, "toolbar_idle", 80, MockTuiState::default()),
         status_scene(
+            theme,
             "status_ok_tokens_credits",
             120,
             MockTuiState {
@@ -159,6 +178,7 @@ fn scenes() -> Vec<Scene> {
             },
         ),
         status_scene(
+            theme,
             "status_warn_breakdown_scroll",
             200,
             MockTuiState {
@@ -176,6 +196,7 @@ fn scenes() -> Vec<Scene> {
             },
         ),
         status_scene(
+            theme,
             "status_crit_refused",
             80,
             MockTuiState {
@@ -185,6 +206,7 @@ fn scenes() -> Vec<Scene> {
             },
         ),
         status_scene(
+            theme,
             "status_cancelled",
             80,
             MockTuiState {
@@ -193,6 +215,7 @@ fn scenes() -> Vec<Scene> {
             },
         ),
         status_scene(
+            theme,
             "status_turnlimit",
             80,
             MockTuiState {
@@ -200,8 +223,9 @@ fn scenes() -> Vec<Scene> {
                 ..Default::default()
             },
         ),
-        status_scene("status_empty_fallback", 80, MockTuiState::default()),
+        status_scene(theme, "status_empty_fallback", 80, MockTuiState::default()),
         status_scene(
+            theme,
             "status_boundary_70",
             80,
             MockTuiState {
@@ -210,6 +234,7 @@ fn scenes() -> Vec<Scene> {
             },
         ),
         status_scene(
+            theme,
             "status_boundary_90",
             80,
             MockTuiState {
@@ -231,11 +256,13 @@ fn scenes() -> Vec<Scene> {
     ];
     overflow.extend((0..6).map(|i| working(&format!("w{i}"), &format!("w-{i}"), Some("crew-a"))));
     scenes.push(crew_scene(
+        theme,
         "crew_overflow",
         10,
         crew_state(overflow, vec![]),
     ));
     scenes.push(crew_scene(
+        theme,
         "crew_small_pending",
         6,
         crew_state(
@@ -250,6 +277,7 @@ fn scenes() -> Vec<Scene> {
         ),
     ));
     scenes.push(crew_scene(
+        theme,
         "crew_no_group",
         5,
         crew_state(
@@ -264,6 +292,7 @@ fn scenes() -> Vec<Scene> {
         ),
     ));
     scenes.push(crew_scene(
+        theme,
         "crew_multi_group",
         6,
         crew_state(
@@ -274,8 +303,16 @@ fn scenes() -> Vec<Scene> {
             vec![],
         ),
     ));
-    scenes.push(voice_scene("voice_listening", VoiceStatus::Listening));
-    scenes.push(voice_scene("voice_transcribing", VoiceStatus::Transcribing));
+    scenes.push(voice_scene(
+        theme,
+        "voice_listening",
+        VoiceStatus::Listening,
+    ));
+    scenes.push(voice_scene(
+        theme,
+        "voice_transcribing",
+        VoiceStatus::Transcribing,
+    ));
     scenes
 }
 
@@ -319,7 +356,7 @@ fn symbol_hex(symbol: &str) -> String {
 /// Every scene flattened to normalized TSV rows (the baseline's row shape).
 fn scene_rows() -> Vec<String> {
     let mut rows = Vec::with_capacity(4_096);
-    for scene in scenes() {
+    for scene in scenes(&cyril_dark()) {
         let area = scene.buffer.area;
         for y in 0..area.height {
             for x in 0..area.width {
@@ -379,7 +416,7 @@ fn fixture_rows() -> Vec<&'static str> {
 }
 
 fn scene_buffer(name: &str) -> Buffer {
-    scenes()
+    scenes(&cyril_dark())
         .into_iter()
         .find(|scene| scene.name == name)
         .unwrap_or_else(|| panic!("unknown chrome scene {name}"))
@@ -726,5 +763,88 @@ fn edge_voice_idle_renders_nothing() {
         assert_eq!(cell.symbol(), " ", "idle voice painted a symbol");
         assert_eq!(normalized_color(cell.fg), "DEFAULT");
         assert_eq!(normalized_color(cell.bg), "DEFAULT");
+    }
+}
+
+/// cyril-dij8 C6: under the NoColor projection every chrome cell carries
+/// zero color, and the glyphs are identical to the truecolor scenes — the
+/// no-color mode drops style, never content.
+#[test]
+fn no_color_scenarios_reset() {
+    let no_color = crate::theme::resolve(
+        crate::theme::ThemeId::CyrilDark,
+        crate::theme::ColorMode::None,
+    );
+    for (colored, plain) in scenes(&cyril_dark()).iter().zip(&scenes(&no_color)) {
+        assert_eq!(colored.name, plain.name);
+        let area = plain.buffer.area;
+        for y in 0..area.height {
+            for x in 0..area.width {
+                let cell = &plain.buffer[(x, y)];
+                assert_eq!(
+                    cell.fg,
+                    Color::Reset,
+                    "{}[{x},{y}] carries a fg under no-color",
+                    plain.name
+                );
+                assert_eq!(
+                    cell.bg,
+                    Color::Reset,
+                    "{}[{x},{y}] carries a bg under no-color",
+                    plain.name
+                );
+                assert_eq!(
+                    cell.symbol(),
+                    colored.buffer[(x, y)].symbol(),
+                    "{}[{x},{y}] glyph drifted between color modes",
+                    plain.name
+                );
+            }
+        }
+    }
+}
+
+/// cyril-dij8 C7 (issue AC2): status meaning survives with color stripped —
+/// every state the chrome signals by color is also carried by a label or
+/// symbol. A migration that dropped the "Cancelled" label and signaled by
+/// gray alone would fail exactly here.
+#[test]
+fn no_color_status_distinguishable() {
+    let no_color = crate::theme::resolve(
+        crate::theme::ThemeId::CyrilDark,
+        crate::theme::ColorMode::None,
+    );
+    let required: &[(&str, &[&str])] = &[
+        (
+            "toolbar_sending_full",
+            &["⇄ 2 steers", "◇ high", "✦ code intel"],
+        ),
+        ("toolbar_streaming_nosession", &["No session"]),
+        (
+            "status_warn_breakdown_scroll",
+            &["Token limit", "SCROLL", "Context: 75%"],
+        ),
+        ("status_crit_refused", &["Refused", "Context: 95%"]),
+        ("status_cancelled", &["Cancelled"]),
+        ("status_turnlimit", &["Turn limit"]),
+        ("status_empty_fallback", &["cyril"]),
+        ("crew_overflow", &["●", "◆", "+3 more", "Terminated"]),
+        ("crew_small_pending", &["○", "Waiting"]),
+        ("voice_listening", &["🎙", "listening", "/voice to stop"]),
+        ("voice_transcribing", &["⏳", "transcribing"]),
+    ];
+    let rendered = scenes(&no_color);
+    for (name, needles) in required {
+        let scene = rendered
+            .iter()
+            .find(|scene| scene.name == *name)
+            .unwrap_or_else(|| panic!("missing scene {name}"));
+        let text = buffer_text(&scene.buffer);
+        for needle in *needles {
+            assert!(
+                text.contains(needle),
+                "{name}: status meaning lost without color — missing {needle:?}"
+            );
+        }
     }
 }
