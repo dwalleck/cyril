@@ -209,4 +209,10 @@ surface; the falsifier script prints labeled counts.
 
 ## Approval
 
-Pending.
+Approved by dwalleck 2026-07-14 (in-session): voice twin-roles =
+`soft_accent` (listening) / `muted` (hint) / `accent_alt` (transcribing);
+mapping posture = VGA-exact roles (reconfirmed from nrnq); mode coverage =
+TrueColor + NoColor scenarios with the existing projection unit suite
+covering ANSI modes (inherited from nrnq approval). Cheapest falsifier
+passed (12 values, 0 missing; phantom control fires). Proceed to
+budgeted-plan.
