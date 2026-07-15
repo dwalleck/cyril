@@ -156,3 +156,7 @@ V1/V2/V3 per violation with full parameters.
    description. Alternative: fixed footer line at the popup bottom.
 3. **Helper location/name: `cyril-ui/src/widgets/modal.rs`,
    `modal::centered(area, w, h) -> Rect` (recommended).**
+
+## Approval
+
+Approved by dwalleck 2026-07-14 (in-session): scroll posture = centered-follow, description = inline under selection, helper = widgets/modal.rs. Cheapest falsifier passed (57,400 cases). Proceed to budgeted-plan.
