@@ -5,14 +5,14 @@ use crate::theme::Theme;
 use crate::traits::{ApprovalPhase, ApprovalState};
 
 /// Render the permission approval overlay (centered popup).
-pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState, _theme: &Theme) {
+pub fn render(frame: &mut Frame, area: Rect, state: &ApprovalState, theme: &Theme) {
     match state.phase {
-        ApprovalPhase::SelectOption => render_option_phase(frame, area, state),
-        ApprovalPhase::SelectTrust { .. } => render_trust_phase(frame, area, state),
+        ApprovalPhase::SelectOption => render_option_phase(frame, area, state, theme),
+        ApprovalPhase::SelectTrust { .. } => render_trust_phase(frame, area, state, theme),
     }
 }
 
-fn render_option_phase(frame: &mut Frame, area: Rect, state: &ApprovalState) {
+fn render_option_phase(frame: &mut Frame, area: Rect, state: &ApprovalState, theme: &Theme) {
     let width = 60.min(area.width.saturating_sub(4));
     let height = (state.options.len() as u16 + 6).min(area.height.saturating_sub(4));
     let x = area.x + (area.width.saturating_sub(width)) / 2;
@@ -24,18 +24,18 @@ fn render_option_phase(frame: &mut Frame, area: Rect, state: &ApprovalState) {
     let mut lines: Vec<Line> = Vec::new();
     lines.push(Line::styled(
         &state.message,
-        Style::default().fg(Color::Yellow),
+        Style::default().fg(theme.emphasis),
     ));
     lines.push(Line::default());
 
     for (i, opt) in state.options.iter().enumerate() {
         let style = if i == state.selected {
             Style::default()
-                .bg(Color::Rgb(50, 50, 70))
-                .fg(Color::White)
+                .bg(theme.selection)
+                .fg(theme.text)
                 .add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(Color::Gray)
+            Style::default().fg(theme.text_secondary)
         };
         let prefix = if i == state.selected { "▸ " } else { "  " };
         lines.push(Line::styled(format!("{prefix}{}", opt.label), style));
@@ -46,17 +46,17 @@ fn render_option_phase(frame: &mut Frame, area: Rect, state: &ApprovalState) {
             .title(Span::styled(
                 " Permission Required ",
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.emphasis)
                     .add_modifier(Modifier::BOLD),
             ))
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Yellow)),
+            .border_style(Style::default().fg(theme.emphasis)),
     );
 
     frame.render_widget(popup, popup_area);
 }
 
-fn render_trust_phase(frame: &mut Frame, area: Rect, state: &ApprovalState) {
+fn render_trust_phase(frame: &mut Frame, area: Rect, state: &ApprovalState, theme: &Theme) {
     let width = 64.min(area.width.saturating_sub(4));
     // Each trust option: label line + display line + blank = 3 lines, plus header
     let content_lines = (state.trust_options.len() as u16 * 3) + 4;
@@ -70,28 +70,26 @@ fn render_trust_phase(frame: &mut Frame, area: Rect, state: &ApprovalState) {
     let mut lines: Vec<Line> = Vec::new();
     lines.push(Line::styled(
         "Select trust level:",
-        Style::default().fg(Color::Cyan),
+        Style::default().fg(theme.accent_quinary),
     ));
     lines.push(Line::default());
 
     for (i, trust) in state.trust_options.iter().enumerate() {
         let style = if i == state.selected {
             Style::default()
-                .bg(Color::Rgb(50, 50, 70))
-                .fg(Color::White)
+                .bg(theme.selection)
+                .fg(theme.text)
                 .add_modifier(Modifier::BOLD)
         } else {
-            Style::default().fg(Color::Gray)
+            Style::default().fg(theme.text_secondary)
         };
         let prefix = if i == state.selected { "▸ " } else { "  " };
         lines.push(Line::styled(format!("{prefix}{}", trust.label), style));
         // Show the display string (pattern preview) dimmed below the label
         let display_style = if i == state.selected {
-            Style::default()
-                .bg(Color::Rgb(50, 50, 70))
-                .fg(Color::DarkGray)
+            Style::default().bg(theme.selection).fg(theme.subdued)
         } else {
-            Style::default().fg(Color::DarkGray)
+            Style::default().fg(theme.subdued)
         };
         lines.push(Line::styled(
             format!("    {}", trust.display),
@@ -107,11 +105,11 @@ fn render_trust_phase(frame: &mut Frame, area: Rect, state: &ApprovalState) {
             .title(Span::styled(
                 " Always Allow — Choose Scope ",
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(theme.accent_quinary)
                     .add_modifier(Modifier::BOLD),
             ))
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Cyan)),
+            .border_style(Style::default().fg(theme.accent_quinary)),
     );
 
     frame.render_widget(popup, popup_area);

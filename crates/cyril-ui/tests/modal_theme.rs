@@ -187,30 +187,157 @@ fn truecolor_theme() -> Theme {
     resolve(ThemeId::CyrilDark, ColorMode::TrueColor)
 }
 
+fn scene(name: &str, theme: &Theme) -> Vec<String> {
+    match name {
+        "approval-option" => {
+            let st = approval_state(false);
+            scene_rows(name, |f| approval::render(f, f.area(), &st, theme))
+        }
+        "approval-trust" => {
+            let st = approval_state(true);
+            scene_rows(name, |f| approval::render(f, f.area(), &st, theme))
+        }
+        "picker" => {
+            let st = picker_scene_state();
+            scene_rows(name, |f| picker::render(f, f.area(), &st, theme))
+        }
+        "hooks" => {
+            let st = hooks_scene_state();
+            scene_rows(name, |f| hooks_panel::render(f, f.area(), &st, theme))
+        }
+        "code" => {
+            let st = code_scene_state();
+            scene_rows(name, |f| code_panel::render(f, f.area(), &st, theme))
+        }
+        other => panic!("unknown scene {other}"),
+    }
+}
+
+const ALL_SCENES: [&str; 5] = [
+    "approval-option",
+    "approval-trust",
+    "picker",
+    "hooks",
+    "code",
+];
+
 fn all_scene_rows() -> Vec<String> {
     let theme = truecolor_theme();
-    let mut rows = Vec::new();
-    let opt = approval_state(false);
-    rows.extend(scene_rows("approval-option", |f| {
-        approval::render(f, f.area(), &opt, &theme);
-    }));
-    let trust = approval_state(true);
-    rows.extend(scene_rows("approval-trust", |f| {
-        approval::render(f, f.area(), &trust, &theme);
-    }));
-    let pick = picker_scene_state();
-    rows.extend(scene_rows("picker", |f| {
-        picker::render(f, f.area(), &pick, &theme)
-    }));
-    let hooks = hooks_scene_state();
-    rows.extend(scene_rows("hooks", |f| {
-        hooks_panel::render(f, f.area(), &hooks, &theme);
-    }));
-    let code = code_scene_state();
-    rows.extend(scene_rows("code", |f| {
-        code_panel::render(f, f.area(), &code, &theme);
-    }));
-    rows
+    ALL_SCENES.iter().flat_map(|s| scene(s, &theme)).collect()
+}
+
+/// ghuu-canon normalization (named ANSI -> canonical RGB), Debug-string space.
+fn canonical_color(c: &str) -> String {
+    match c {
+        "Red" => "Rgb(128, 0, 0)".into(),
+        "Green" => "Rgb(0, 128, 0)".into(),
+        "Yellow" => "Rgb(128, 128, 0)".into(),
+        "Cyan" => "Rgb(0, 128, 128)".into(),
+        "DarkGray" => "Rgb(128, 128, 128)".into(),
+        "Gray" => "Rgb(192, 192, 192)".into(),
+        "White" => "Rgb(255, 255, 255)".into(),
+        other => other.to_string(),
+    }
+}
+
+fn normalize_row(row: &str) -> String {
+    let parts: Vec<&str> = row.split('\t').collect();
+    assert_eq!(parts.len(), 7, "malformed baseline row: {row}");
+    format!(
+        "{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        parts[0],
+        parts[1],
+        parts[2],
+        parts[3],
+        canonical_color(parts[4]),
+        canonical_color(parts[5]),
+        parts[6]
+    )
+}
+
+fn baseline_rows(scene_name: &str) -> Vec<String> {
+    let text =
+        std::fs::read_to_string(BASELINE).unwrap_or_else(|e| panic!("read baseline TSV: {e}"));
+    let prefix = format!("{scene_name}\t");
+    text.lines()
+        .filter(|l| l.starts_with(&prefix))
+        .map(normalize_row)
+        .collect()
+}
+
+/// C3: the migrated widget renders zero normalized-cell drift vs the frozen
+/// pre-migration baseline.
+fn assert_scene_equivalent(scene_name: &str) {
+    let theme = truecolor_theme();
+    let current = scene(scene_name, &theme);
+    let baseline = baseline_rows(scene_name);
+    assert_eq!(
+        current.len(),
+        baseline.len(),
+        "{scene_name}: cell count drifted"
+    );
+    for (c, b) in current.iter().zip(&baseline) {
+        assert_eq!(c, b, "{scene_name}: normalized cell drift");
+    }
+}
+
+/// Local mirror of traits::test_support::marker_theme (cfg(test)-private to
+/// the lib). Pairwise distinctness is asserted below AND fenced lib-side by
+/// theme::tests::marker_theme_roles_are_pairwise_distinct.
+fn marker_theme() -> Theme {
+    Theme {
+        syntax: None,
+        canvas: ratatui::style::Color::Indexed(1),
+        chrome: ratatui::style::Color::Indexed(2),
+        code: ratatui::style::Color::Indexed(3),
+        selection: ratatui::style::Color::Indexed(4),
+        text: ratatui::style::Color::Indexed(5),
+        muted: ratatui::style::Color::Indexed(6),
+        border: ratatui::style::Color::Indexed(7),
+        accent: ratatui::style::Color::Indexed(8),
+        accent_alt: ratatui::style::Color::Indexed(9),
+        user: ratatui::style::Color::Indexed(10),
+        agent: ratatui::style::Color::Indexed(11),
+        system: ratatui::style::Color::Indexed(12),
+        info: ratatui::style::Color::Indexed(13),
+        success: ratatui::style::Color::Indexed(14),
+        warning: ratatui::style::Color::Indexed(15),
+        danger: ratatui::style::Color::Indexed(16),
+        diff_add: ratatui::style::Color::Indexed(17),
+        diff_delete: ratatui::style::Color::Indexed(18),
+        diff_context: ratatui::style::Color::Indexed(19),
+        emphasis: ratatui::style::Color::Indexed(20),
+        accent_tertiary: ratatui::style::Color::Indexed(21),
+        accent_quaternary: ratatui::style::Color::Indexed(22),
+        accent_quinary: ratatui::style::Color::Indexed(23),
+        subdued: ratatui::style::Color::Indexed(24),
+        subdued_positive: ratatui::style::Color::Indexed(25),
+        subdued_negative: ratatui::style::Color::Indexed(26),
+        soft_accent: ratatui::style::Color::Indexed(27),
+        positive_accent: ratatui::style::Color::Indexed(28),
+        inset_background: ratatui::style::Color::Indexed(29),
+        text_secondary: ratatui::style::Color::Indexed(30),
+        accent_violet: ratatui::style::Color::Indexed(31),
+    }
+}
+
+/// Distinct non-Reset fg / bg sets of a scene rendered under the marker
+/// theme — the observable footprint of which roles a widget consumes.
+fn marker_footprint(scene_name: &str) -> (Vec<String>, Vec<String>) {
+    let marker = marker_theme();
+    let rows = scene(scene_name, &marker);
+    let mut fgs = std::collections::BTreeSet::new();
+    let mut bgs = std::collections::BTreeSet::new();
+    for row in rows {
+        let parts: Vec<&str> = row.split('\t').collect();
+        if parts[4] != "Reset" {
+            fgs.insert(parts[4].to_string());
+        }
+        if parts[5] != "Reset" {
+            bgs.insert(parts[5].to_string());
+        }
+    }
+    (fgs.into_iter().collect(), bgs.into_iter().collect())
 }
 
 fn distinct_styled_tuples(rows: &[String]) -> std::collections::BTreeSet<String> {
@@ -260,4 +387,36 @@ fn baseline_covers_inventory() {
         30,
         "committed baseline no longer covers the 30-tuple legacy inventory"
     );
+}
+
+#[test]
+fn baseline_equivalence_approval_option() {
+    assert_scene_equivalent("approval-option");
+}
+
+#[test]
+fn baseline_equivalence_approval_trust() {
+    assert_scene_equivalent("approval-trust");
+}
+
+/// C4: approval consumes exactly its mapped roles — option phase: emphasis
+/// (20) + text (5) + text_secondary (30) on selection bg (4); trust phase
+/// adds accent_quinary (23) and subdued (24).
+#[test]
+fn marker_wiring_approval() {
+    let (fgs, bgs) = marker_footprint("approval-option");
+    assert_eq!(
+        fgs,
+        vec!["Indexed(20)", "Indexed(30)", "Indexed(5)"],
+        "approval-option fg roles"
+    );
+    assert_eq!(bgs, vec!["Indexed(4)"], "approval-option bg roles");
+
+    let (fgs, bgs) = marker_footprint("approval-trust");
+    assert_eq!(
+        fgs,
+        vec!["Indexed(23)", "Indexed(24)", "Indexed(30)", "Indexed(5)"],
+        "approval-trust fg roles"
+    );
+    assert_eq!(bgs, vec!["Indexed(4)"], "approval-trust bg roles");
 }
