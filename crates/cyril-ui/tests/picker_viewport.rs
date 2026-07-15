@@ -56,6 +56,17 @@ fn drawn_labels(text: &str, n: usize) -> Vec<String> {
         .collect()
 }
 
+fn popup_height(text: &str) -> usize {
+    let rows: Vec<&str> = text.lines().collect();
+    let Some(top) = rows.iter().position(|r| r.contains('┌')) else {
+        panic!("top border missing\n{text}");
+    };
+    let Some(bottom) = rows.iter().rposition(|r| r.contains('└')) else {
+        panic!("bottom border missing\n{text}");
+    };
+    bottom - top + 1
+}
+
 /// C1: for every size/count/selection combination at or above the 60x16
 /// floor, the selected option's label and the ▸ marker are on screen.
 #[test]
@@ -113,15 +124,8 @@ fn small_list_layout_unchanged() {
         text.contains("desc-02"),
         "selected description missing\n{text}"
     );
-    let rows: Vec<&str> = text.lines().collect();
-    let Some(top) = rows.iter().position(|r| r.contains('┌')) else {
-        panic!("top border missing\n{text}");
-    };
-    let Some(bottom) = rows.iter().rposition(|r| r.contains('└')) else {
-        panic!("bottom border missing\n{text}");
-    };
     assert_eq!(
-        bottom - top + 1,
+        popup_height(&text),
         10,
         "popup height != oracle literal 10\n{text}"
     );
@@ -138,6 +142,62 @@ fn empty_filter_no_panic() {
     assert!(
         !text.contains('▸'),
         "marker drawn with zero options\n{text}"
+    );
+}
+
+/// C3: the selected option's description renders inside the popup on the
+/// reserved row, and popup height is constant across every selection —
+/// including when the selected option has NO description while others do
+/// (the reserve keys off "any option has one", not "selected has one").
+#[test]
+fn description_contained_height_stable() {
+    // All-desc list overflowing at 80x24: height literal 20 (oracle-v2).
+    let heights: Vec<usize> = (0..20)
+        .map(|k| {
+            let state = picker_state(opts(20), k);
+            let text = render_text(80, 24, &state);
+            assert!(
+                text.contains(&format!("desc-{k:02}")),
+                "selected description missing at k={k}\n{text}"
+            );
+            popup_height(&text)
+        })
+        .collect();
+    assert!(
+        heights.iter().all(|&h| h == 20),
+        "popup height jitters across selection: {heights:?}"
+    );
+
+    // Mixed: only opt-00 has a description. Height must not depend on
+    // whether the SELECTED option has one.
+    let mut mixed = opts(5);
+    for opt in mixed.iter_mut().skip(1) {
+        opt.description = None;
+    }
+    let h_desc_selected = popup_height(&render_text(80, 24, &picker_state(mixed.clone(), 0)));
+    let h_plain_selected = popup_height(&render_text(80, 24, &picker_state(mixed, 4)));
+    assert_eq!(
+        h_desc_selected, h_plain_selected,
+        "reserve-if-selected jitter bug: {h_desc_selected} vs {h_plain_selected}"
+    );
+}
+
+/// C4: the scrollbar renders iff the list overflows the window — exact-fit
+/// boundary included. (Display-only: no key-handling code changes; the
+/// cyril binary crate is untouched by this feature.)
+#[test]
+fn scrollbar_iff_overflow() {
+    // 80x24 gives 15 option rows (oracle-v2): n=15 fits exactly, n=16
+    // overflows. ratatui 0.30's default vertical scrollbar caps are ▲/▼.
+    let fits = render_text(80, 24, &picker_state(opts(15), 0));
+    assert!(
+        !fits.contains('▲') && !fits.contains('▼'),
+        "scrollbar drawn on exact fit\n{fits}"
+    );
+    let overflows = render_text(80, 24, &picker_state(opts(16), 0));
+    assert!(
+        overflows.contains('▲') && overflows.contains('▼'),
+        "scrollbar missing on overflow\n{overflows}"
     );
 }
 

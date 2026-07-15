@@ -1,5 +1,7 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use ratatui::widgets::{
+    Block, Borders, Clear, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
+};
 
 use crate::traits::PickerState;
 use crate::widgets::modal;
@@ -113,6 +115,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
     );
 
     frame.render_widget(popup, popup_area);
+
+    // Display-only overflow indicator (cyril-cc5e C4): key handling is
+    // untouched — the scrollbar mirrors the option window, nothing more.
+    if n > rows {
+        let mut scrollbar_state = ScrollbarState::new(n).position(start);
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+        frame.render_stateful_widget(scrollbar, popup_area, &mut scrollbar_state);
+    }
 }
 
 #[cfg(test)]
