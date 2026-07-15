@@ -2,16 +2,43 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use crate::traits::PickerState;
+use crate::widgets::modal;
+
+/// Maximum option rows the popup shows at once, regardless of terminal size.
+const MAX_VISIBLE_OPTIONS: usize = 15;
+
+/// The option window: which contiguous slice of `filtered_indices` is drawn.
+///
+/// Selection-centered and clamped (`start = clamp(selected - rows/2, 0,
+/// n - rows)`), so the selected row is always inside the window
+/// (cyril-cc5e claims C1/C2; formula model-checked over 57k cases in
+/// `.cyril-cc5e/window-model-check.py`). An out-of-range `selected` yields
+/// a valid window with no marked row — the state machine maintains
+/// `selected < filtered_indices.len()`, so this is a sanity fallback, not
+/// a contract callers may lean on.
+fn option_window(n: usize, selected: usize, option_rows: usize) -> (usize, usize) {
+    let rows = n.min(option_rows);
+    if rows == 0 {
+        return (0, 0);
+    }
+    let start = selected.saturating_sub(rows / 2).min(n - rows);
+    (start, rows)
+}
 
 /// Render the picker overlay (centered popup).
 pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
-    let width = 80.min(area.width.saturating_sub(4));
-    let visible = state.filtered_indices.len().min(15);
-    // +1 for the description line of the selected item
-    let height = (visible as u16 + 6).min(area.height.saturating_sub(4));
-    let x = area.x + (area.width.saturating_sub(width)) / 2;
-    let y = area.y + (area.height.saturating_sub(height)) / 2;
-    let popup_area = Rect::new(x, y, width, height);
+    let n = state.filtered_indices.len();
+    let desired_rows = n.min(MAX_VISIBLE_OPTIONS);
+    // Reserved whenever ANY option has a description (not just the selected
+    // one) so popup height stays constant while navigating.
+    let desc_reserve = usize::from(state.options.iter().any(|o| o.description.is_some()));
+    // 4 = top/bottom border + filter line + blank line.
+    let desired_height = u16::try_from(desired_rows + desc_reserve + 4).unwrap_or(u16::MAX);
+    let popup_area = modal::centered(area, 80, desired_height);
+
+    let inner_height = popup_area.height.saturating_sub(2) as usize;
+    let option_rows = inner_height.saturating_sub(2 + desc_reserve);
+    let (start, rows) = option_window(n, state.selected, option_rows);
 
     frame.render_widget(Clear, popup_area);
 
@@ -25,8 +52,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState) {
     ]));
     lines.push(Line::default());
 
-    // Options
-    for (display_idx, &option_idx) in state.filtered_indices.iter().enumerate().take(visible) {
+    // Options within the selection-centered window
+    for (offset, &option_idx) in state.filtered_indices[start..start + rows]
+        .iter()
+        .enumerate()
+    {
+        let display_idx = start + offset;
         if let Some(opt) = state.options.get(option_idx) {
             let is_selected = display_idx == state.selected;
             let prefix = if is_selected { "▸ " } else { "  " };

@@ -1,5 +1,6 @@
 ---
 source: crates/cyril-ui/src/render.rs
+assertion_line: 364
 expression: buffer
 ---
 Buffer {
@@ -20,8 +21,8 @@ Buffer {
         "  │    Deep reasoning for complex changes                                    │  ",
         "  │  GPT-5  OpenAI                                                           │  ",
         "  │  GPT-5 Mini  OpenAI                                                      │  ",
-        "  │                                                                          │  ",
         "  └──────────────────────────────────────────────────────────────────────────┘  ",
+        "                                                                                ",
         "                                                                                ",
         "┌ > ───────────────────────────────────────────────────────────────────────────┐",
         "│█                                                                             │",
@@ -78,11 +79,7 @@ Buffer {
         x: 77, y: 14, fg: Cyan, bg: Reset, underline: Reset, modifier: NONE,
         x: 78, y: 14, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
         x: 2, y: 15, fg: Cyan, bg: Reset, underline: Reset, modifier: NONE,
-        x: 3, y: 15, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
-        x: 77, y: 15, fg: Cyan, bg: Reset, underline: Reset, modifier: NONE,
         x: 78, y: 15, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
-        x: 2, y: 16, fg: Cyan, bg: Reset, underline: Reset, modifier: NONE,
-        x: 78, y: 16, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
         x: 0, y: 18, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 1, y: 18, fg: Rgb(0, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 4, y: 18, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
