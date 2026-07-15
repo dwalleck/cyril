@@ -41,8 +41,10 @@ untouched on this branch (parallel-session discipline). Artifacts under
   zero literals); status families map VGA-exact per approved posture —
   success-family=`subdued_positive`, warning-family=`emphasis`,
   danger-family=`subdued_negative`, accent=`accent_quinary`/`_quaternary`,
-  muted=`subdued`/`muted`, normal=`text`. Chrome has no selection state
-  (probe-verified; noted N/A in design).
+  muted=`subdued`/`muted`, normal=`text`. Chrome has no selection state —
+  this audit's own probe-verified conclusion (no selectable rows in any of
+  the four surfaces; selection UI lives in the pickers/approval overlays
+  migrated by cyril-nrnq). The design does not carry an explicit N/A note.
 - AC2 (meaning not by color alone): C7 fence.
 - AC3 (Cyril Dark visually equivalent): C2 zero-normalized-diff fence over
   18 scenes; snapshot re-baselines named→RGB only.
@@ -56,6 +58,11 @@ untouched on this branch (parallel-session discipline). Artifacts under
    ripple, compile-enforced; anticipated at plan critique).
 3. Slice 8 parameterized scene builders by theme (needed for NoColor
    scenes; theme moved to first param for uniform call sites).
+4. Design step 2b sanctioned re-baselining "the two full-frame insta
+   snapshots"; three exist — `theme_seam_picker` also contains toolbar/
+   status cells, so it re-baselined too. Sanctioned at plan slice 4;
+   inspected delta is named→canonical RGB at y:0/y:23 only, same as the
+   other two.
 
 ## Discovered issues to file at close-out
 

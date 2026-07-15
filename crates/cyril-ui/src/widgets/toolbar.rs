@@ -270,6 +270,8 @@ fn spinner_index(state: &dyn TuiState) -> usize {
 mod tests {
     use super::*;
     use crate::traits::test_support::MockTuiState;
+    use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
 
     fn cyril_dark() -> Theme {
         crate::theme::resolve(
@@ -277,8 +279,6 @@ mod tests {
             crate::theme::ColorMode::TrueColor,
         )
     }
-    use ratatui::Terminal;
-    use ratatui::backend::TestBackend;
 
     #[test]
     fn toolbar_renders_no_session() {
