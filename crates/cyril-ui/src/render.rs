@@ -358,6 +358,56 @@ mod tests {
         Ok(())
     }
 
+    /// cyril-dij8 C5: chrome surfaces in a full frame render from the
+    /// state's ONE resolved theme — under the marker theme the toolbar and
+    /// status-bar backgrounds carry marker `chrome` (Indexed 2) and the crew
+    /// working icon carries marker `subdued_positive` (Indexed 25); an
+    /// internal CyrilDark resolve inside a widget would surface Rgb values.
+    /// (The single-resolve source count is pinned by
+    /// `conversation_frame_uses_state_theme_once`.)
+    #[test]
+    fn chrome_frame_uses_state_theme() -> anyhow::Result<()> {
+        use cyril_core::types::{Notification, SessionId, SubagentInfo, SubagentStatus};
+
+        let mut state = MockTuiState::default();
+        state
+            .subagent_tracker
+            .apply_notification(&Notification::SubagentListUpdated {
+                subagents: vec![SubagentInfo::new(
+                    SessionId::new("s0"),
+                    "writer",
+                    "writer",
+                    "q",
+                    SubagentStatus::Working { message: None },
+                )],
+                pending_stages: vec![],
+            });
+        let buffer = render_buffer(&state)?;
+
+        let toolbar = buffer
+            .cell((79, 0))
+            .ok_or_else(|| anyhow::anyhow!("missing toolbar cell"))?;
+        assert_eq!(toolbar.bg, ratatui::style::Color::Indexed(2));
+        let status = buffer
+            .cell((79, 23))
+            .ok_or_else(|| anyhow::anyhow!("missing status cell"))?;
+        assert_eq!(status.bg, ratatui::style::Color::Indexed(2));
+
+        let mut crew_icon = None;
+        for y in 0..24 {
+            for x in 0..80 {
+                if let Some(cell) = buffer.cell((x, y))
+                    && cell.symbol() == "●"
+                {
+                    crew_icon = Some(cell);
+                }
+            }
+        }
+        let crew_icon = crew_icon.ok_or_else(|| anyhow::anyhow!("crew icon not rendered"))?;
+        assert_eq!(crew_icon.fg, ratatui::style::Color::Indexed(25));
+        Ok(())
+    }
+
     /// cyril-nrnq C6: each modal overlay in a full frame renders from the
     /// state's ONE resolved theme — under the marker theme every modal cell
     /// carries marker Indexed values; any Rgb cell would betray an internal

@@ -512,6 +512,207 @@ fn edge_crew_headers_and_plain_working() {
     assert!(multi.contains("2 crews"), "multi-group header missing");
 }
 
+/// Column of `needle`'s first char on row `y` (ASCII needles only: one
+/// char per cell, so symbol windows map 1:1 to columns).
+fn find_text_x(buffer: &Buffer, y: u16, needle: &str) -> u16 {
+    let symbols: Vec<&str> = (0..buffer.area.width)
+        .map(|x| buffer[(x, y)].symbol())
+        .collect();
+    let needle_syms: Vec<String> = needle.chars().map(String::from).collect();
+    for x in 0..=(symbols.len() - needle_syms.len()) {
+        if symbols[x..x + needle_syms.len()]
+            .iter()
+            .zip(&needle_syms)
+            .all(|(a, b)| a == b)
+        {
+            return x as u16;
+        }
+    }
+    panic!("needle {needle:?} not found on row {y}");
+}
+
+fn marker() -> crate::theme::Theme {
+    crate::traits::test_support::marker_theme()
+}
+
+/// cyril-dij8 C3: under the pairwise-distinct marker theme every toolbar
+/// element renders its MAPPED role's marker color. The element→role table
+/// is hand-pinned from the design mapping, not read from render output.
+#[test]
+fn marker_wiring_toolbar() {
+    let state = MockTuiState {
+        activity: Activity::Sending,
+        activity_elapsed: Some(std::time::Duration::from_secs(5)),
+        session_label: Some("main".into()),
+        current_mode: Some("code".into()),
+        current_model: Some("claude-opus-4.8".into()),
+        ..Default::default()
+    };
+    let buffer = draw(120, 1, |frame| {
+        crate::widgets::toolbar::render(frame, frame.area(), &state, &marker());
+    });
+    // chrome bg blankets the paragraph area (trailing blank cell included).
+    assert_eq!(buffer[(119, 0)].bg, Color::Indexed(2), "bg -> chrome");
+    assert_eq!(buffer[(0, 0)].fg, Color::Indexed(20), "spinner -> emphasis");
+    let session = find_text_x(&buffer, 0, "main");
+    assert_eq!(
+        buffer[(session, 0)].fg,
+        Color::Indexed(5),
+        "session -> text"
+    );
+    let mode = find_text_x(&buffer, 0, "code");
+    assert_eq!(
+        buffer[(mode, 0)].fg,
+        Color::Indexed(23),
+        "mode -> accent_quinary"
+    );
+    let model = find_text_x(&buffer, 0, "claude");
+    assert_eq!(
+        buffer[(model, 0)].fg,
+        Color::Indexed(22),
+        "model -> accent_quaternary"
+    );
+}
+
+/// cyril-dij8 C3: status-bar element→role marker wiring.
+#[test]
+fn marker_wiring_status() {
+    let warn = MockTuiState {
+        context_usage: Some(75.0),
+        last_turn: Some(TurnSummary::new(StopReason::MaxTokens, None, None)),
+        credit_usage: Some((5.25, 10.0)),
+        chat_scroll_back: Some(10),
+        ..Default::default()
+    };
+    let buffer = draw(120, 1, |frame| {
+        crate::widgets::toolbar::render_status_bar(frame, frame.area(), &warn, &marker());
+    });
+    assert_eq!(buffer[(119, 0)].bg, Color::Indexed(2), "bg -> chrome");
+    let gauge = find_text_x(&buffer, 0, "Context:");
+    assert_eq!(
+        buffer[(gauge, 0)].fg,
+        Color::Indexed(20),
+        "warn -> emphasis"
+    );
+    let label = find_text_x(&buffer, 0, "Token limit");
+    assert_eq!(buffer[(label, 0)].fg, Color::Indexed(20));
+    let credits = find_text_x(&buffer, 0, "Credits:");
+    assert_eq!(
+        buffer[(credits, 0)].fg,
+        Color::Indexed(24),
+        "credits -> subdued"
+    );
+    let scroll = find_text_x(&buffer, 0, "SCROLL");
+    assert_eq!(buffer[(scroll, 0)].fg, Color::Indexed(20));
+
+    let refused = MockTuiState {
+        context_usage: Some(95.0),
+        last_turn: Some(TurnSummary::new(StopReason::Refusal, None, None)),
+        ..Default::default()
+    };
+    let buffer = draw(80, 1, |frame| {
+        crate::widgets::toolbar::render_status_bar(frame, frame.area(), &refused, &marker());
+    });
+    let gauge = find_text_x(&buffer, 0, "Context:");
+    assert_eq!(
+        buffer[(gauge, 0)].fg,
+        Color::Indexed(26),
+        "critical -> subdued_negative"
+    );
+    let label = find_text_x(&buffer, 0, "Refused");
+    assert_eq!(buffer[(label, 0)].fg, Color::Indexed(26));
+}
+
+/// cyril-dij8 C3: crew element→role marker wiring, including the roles that
+/// share a Cyril Dark value with a twin (`subdued` vs `muted`,
+/// `text_secondary`) — the cross-wiring class equivalence cannot see.
+#[test]
+fn marker_wiring_crew() {
+    let state = crew_state(
+        vec![working("s0", "writer", Some("crew-a")).with_loop_state(LoopState::new(0, 2))],
+        vec![PendingStage::new(
+            "summary",
+            None,
+            Some("crew-a".into()),
+            None,
+            vec![],
+        )],
+    );
+    let buffer = draw(80, 6, |frame| {
+        crate::widgets::crew_panel::render(frame, frame.area(), &state, &marker());
+    });
+    let title = find_text_x(&buffer, 0, "crew: crew-a");
+    assert_eq!(
+        buffer[(title, 0)].fg,
+        Color::Indexed(23),
+        "title -> accent_quinary"
+    );
+    let icon = find_text_x(&buffer, 1, "●");
+    assert_eq!(
+        buffer[(icon, 1)].fg,
+        Color::Indexed(25),
+        "working icon -> subdued_positive"
+    );
+    let name = find_text_x(&buffer, 1, "writer");
+    assert_eq!(buffer[(name, 1)].fg, Color::Indexed(5), "name -> text");
+    let status = find_text_x(&buffer, 1, "Running");
+    assert_eq!(
+        buffer[(status, 1)].fg,
+        Color::Indexed(24),
+        "status -> subdued, NOT muted (6): twin pair"
+    );
+    let badge = find_text_x(&buffer, 1, "↻");
+    assert_eq!(
+        buffer[(badge, 1)].fg,
+        Color::Indexed(22),
+        "loop badge -> accent_quaternary"
+    );
+    let stage = find_text_x(&buffer, 2, "summary");
+    assert_eq!(
+        buffer[(stage, 2)].fg,
+        Color::Indexed(30),
+        "pending name -> text_secondary"
+    );
+    // Border stays default-styled (negative-space #3).
+    assert_eq!(buffer[(0, 0)].fg, Color::Reset, "border unstyled");
+}
+
+/// cyril-dij8 C3: voice twin wiring — the three chrome/speaker twin pairs
+/// coincide under Cyril Dark, so ONLY this marker fence can catch a
+/// speaker-role cross-wire (soft_accent 27 vs user 10, muted 6 vs
+/// border 7, accent_alt 9 vs system 12).
+#[test]
+fn marker_wiring_voice() {
+    let mut state = crate::state::UiState::new(100);
+    state.set_voice_status(VoiceStatus::Listening);
+    state.set_voice_level(0.5);
+    let buffer = draw(60, 1, |frame| {
+        crate::widgets::voice::render(frame, frame.area(), &state, &marker());
+    });
+    let mic = buffer[(0, 0)].fg;
+    assert_eq!(mic, Color::Indexed(27), "listening -> soft_accent");
+    assert_ne!(mic, Color::Indexed(10), "listening must NOT wire to user");
+    let hint = find_text_x(&buffer, 0, "/voice");
+    assert_eq!(buffer[(hint, 0)].fg, Color::Indexed(6), "hint -> muted");
+    assert_ne!(
+        buffer[(hint, 0)].fg,
+        Color::Indexed(7),
+        "hint must NOT wire to border"
+    );
+
+    state.set_voice_status(VoiceStatus::Transcribing);
+    let buffer = draw(60, 1, |frame| {
+        crate::widgets::voice::render(frame, frame.area(), &state, &marker());
+    });
+    let hourglass = buffer[(0, 0)].fg;
+    assert_eq!(hourglass, Color::Indexed(9), "transcribing -> accent_alt");
+    assert_ne!(
+        hourglass,
+        Color::Indexed(12),
+        "transcribing must NOT wire to system"
+    );
+}
+
 /// cyril-dij8 C10: idle voice occupies no height and paints no cell.
 #[test]
 fn edge_voice_idle_renders_nothing() {
