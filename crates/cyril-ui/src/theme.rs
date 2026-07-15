@@ -1114,9 +1114,13 @@ mod tests {
         let on_disk = std::fs::read_dir(&manifest_dir)
             .unwrap_or_else(|error| panic!("failed to read {}: {error}", manifest_dir.display()))
             .filter(|entry| {
-                entry
-                    .as_ref()
-                    .is_ok_and(|e| e.file_name().to_string_lossy().ends_with(".rs"))
+                let entry = entry.as_ref().unwrap_or_else(|error| {
+                    panic!(
+                        "failed to read entry in {}: {error}",
+                        manifest_dir.display()
+                    )
+                });
+                entry.file_name().to_string_lossy().ends_with(".rs")
             })
             .count();
         assert_eq!(
