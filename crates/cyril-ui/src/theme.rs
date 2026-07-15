@@ -732,6 +732,44 @@ mod tests {
         }
     }
 
+    /// cyril-dij8 C1: every canonical RGB value in the chrome legacy
+    /// inventory (.cyril-dij8/probe-styles.txt via the ghuu NAMED canon)
+    /// is representable in the 31-role contract — the first pure
+    /// re-mapping batch (no expansion).
+    #[test]
+    fn chrome_legacy_colors_are_representable() {
+        let available = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let required = [
+            SourceColor::Rgb(0x1e, 0x1e, 0x2e), // Rgb(30,30,46) chrome bg
+            SourceColor::Rgb(0xff, 0xff, 0xff), // Color::White
+            SourceColor::Rgb(0x80, 0x80, 0x80), // Color::DarkGray
+            SourceColor::Rgb(0xc0, 0xc0, 0xc0), // Color::Gray
+            SourceColor::Rgb(0x80, 0x80, 0x00), // Color::Yellow
+            SourceColor::Rgb(0x00, 0x80, 0x00), // Color::Green
+            SourceColor::Rgb(0x80, 0x00, 0x00), // Color::Red
+            SourceColor::Rgb(0x00, 0x80, 0x80), // Color::Cyan
+            SourceColor::Rgb(0x80, 0x00, 0x80), // Color::Magenta
+            SourceColor::Rgb(0x8a, 0xb4, 0xf8), // palette::USER_BLUE
+            SourceColor::Rgb(0x8c, 0x8c, 0x8c), // palette::MUTED_GRAY
+            SourceColor::Rgb(0xb4, 0x8e, 0xad), // palette::SYSTEM_MAUVE
+        ];
+
+        for (i, color_a) in required.iter().enumerate() {
+            for color_b in required.iter().skip(i + 1) {
+                assert_ne!(
+                    color_a, color_b,
+                    "chrome inventory transcription duplicates {color_a:?}"
+                );
+            }
+        }
+        for color in required {
+            assert!(
+                available.iter().any(|(_, candidate)| *candidate == color),
+                "chrome legacy color {color:?} is not represented"
+            );
+        }
+    }
+
     /// Production section of a widget source file (everything above the
     /// first `#[cfg(test)]`), shared by the source-fence tests.
     fn production_source(source: &str) -> &str {
@@ -755,6 +793,40 @@ mod tests {
                 !production_source(source).contains("Color::"),
                 "{name} still hardcodes a Color:: literal"
             );
+        }
+    }
+
+    /// cyril-dij8 C4: the three migrated chrome widget files carry zero
+    /// hardcoded color literals AND zero palette color-constant references
+    /// in production code (the spinner constants are not colors and stay).
+    /// One-shot non-vacuity control: this predicate FAILS against the
+    /// pre-migration toolbar.rs at d4f105f (26 Color:: literals).
+    #[test]
+    fn chrome_widgets_have_no_legacy_color_sources() {
+        let sources = [
+            ("toolbar", include_str!("widgets/toolbar.rs")),
+            ("crew_panel", include_str!("widgets/crew_panel.rs")),
+            ("voice", include_str!("widgets/voice.rs")),
+        ];
+        let palette_colors = [
+            "USER_BLUE",
+            "AGENT_GREEN",
+            "SYSTEM_MAUVE",
+            "MUTED_GRAY",
+            "CODE_BLOCK_BG",
+        ];
+        for (name, source) in sources {
+            let production = production_source(source);
+            assert!(
+                !production.contains("Color::"),
+                "{name} still hardcodes a Color:: literal"
+            );
+            for constant in palette_colors {
+                assert!(
+                    !production.contains(constant),
+                    "{name} still references palette::{constant}"
+                );
+            }
         }
     }
 

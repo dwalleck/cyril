@@ -31,7 +31,7 @@ Buffer {
         "cyril                                                                           ",
     ],
     styles: [
-        x: 0, y: 0, fg: DarkGray, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
+        x: 0, y: 0, fg: Rgb(128, 128, 128), bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 10, y: 0, fg: Reset, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 0, y: 1, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
         x: 0, y: 18, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
@@ -44,7 +44,7 @@ Buffer {
         x: 79, y: 20, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 1, y: 21, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
         x: 79, y: 21, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
-        x: 0, y: 23, fg: DarkGray, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
+        x: 0, y: 23, fg: Rgb(128, 128, 128), bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 5, y: 23, fg: Reset, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
     ]
 }

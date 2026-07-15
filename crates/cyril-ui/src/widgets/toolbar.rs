@@ -2,10 +2,11 @@ use ratatui::prelude::*;
 use ratatui::widgets::Paragraph;
 
 use crate::palette;
+use crate::theme::Theme;
 use crate::traits::{Activity, TuiState};
 
 /// Render the toolbar (top line).
-pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
+pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
     let mut parts: Vec<Span> = Vec::new();
 
     // Activity indicator
@@ -15,21 +16,21 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
             let idx = spinner_index(state);
             parts.push(Span::styled(
                 format!("{} ", palette::SPINNER_CHARS[idx]),
-                Style::default().fg(Color::Yellow),
+                Style::default().fg(theme.emphasis),
             ));
         }
         Activity::Streaming => {
             let idx = spinner_index(state);
             parts.push(Span::styled(
                 format!("{} ", palette::SPINNER_CHARS[idx]),
-                Style::default().fg(Color::Green),
+                Style::default().fg(theme.subdued_positive),
             ));
         }
         Activity::ToolRunning => {
             let idx = spinner_index(state);
             parts.push(Span::styled(
                 format!("{} ", palette::SPINNER_CHARS[idx]),
-                Style::default().fg(Color::Cyan),
+                Style::default().fg(theme.accent_quinary),
             ));
         }
     }
@@ -38,14 +39,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
     if let Some(label) = state.session_label() {
         parts.push(Span::styled(
             label.to_string(),
-            Style::default()
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
         ));
     } else {
         parts.push(Span::styled(
             "No session",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.subdued),
         ));
     }
 
@@ -54,7 +53,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         parts.push(Span::raw(" · "));
         parts.push(Span::styled(
             mode.to_string(),
-            Style::default().fg(Color::Cyan),
+            Style::default().fg(theme.accent_quinary),
         ));
     }
 
@@ -63,7 +62,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         parts.push(Span::raw(" · "));
         parts.push(Span::styled(
             model.to_string(),
-            Style::default().fg(Color::Magenta),
+            Style::default().fg(theme.accent_quaternary),
         ));
     }
 
@@ -72,7 +71,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         parts.push(Span::raw(" "));
         parts.push(Span::styled(
             format!("◇ {effort}"),
-            Style::default().fg(Color::Yellow),
+            Style::default().fg(theme.emphasis),
         ));
     }
 
@@ -82,7 +81,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         parts.push(Span::raw(" · "));
         parts.push(Span::styled(
             format!("⇄ {steers} steer{}", if steers == 1 { "" } else { "s" }),
-            Style::default().fg(Color::Yellow),
+            Style::default().fg(theme.emphasis),
         ));
     }
 
@@ -91,7 +90,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         parts.push(Span::raw(" · "));
         parts.push(Span::styled(
             "✦ code intel",
-            Style::default().fg(Color::Cyan),
+            Style::default().fg(theme.accent_quinary),
         ));
     }
 
@@ -101,12 +100,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
         parts.push(Span::raw(" · "));
         parts.push(Span::styled(
             format!("{secs}s"),
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.subdued),
         ));
     }
 
     let line = Line::from(parts);
-    let toolbar = Paragraph::new(line).style(Style::default().bg(Color::Rgb(30, 30, 46)));
+    let toolbar = Paragraph::new(line).style(Style::default().bg(theme.chrome));
 
     frame.render_widget(toolbar, area);
 }
@@ -118,30 +117,34 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
 /// tokens, credits, SCROLL hint) — fits within `area` (cyril-mdbp). When it
 /// does not fit, the bar is omitted entirely; the "Context: N%" scalar and
 /// the trailing affordances always stay.
-pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState) {
-    let full = Line::from(status_bar_spans(state, true));
+pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
+    let full = Line::from(status_bar_spans(state, theme, true));
     let line = if full.width() <= usize::from(area.width) {
         full
     } else {
-        Line::from(status_bar_spans(state, false))
+        Line::from(status_bar_spans(state, theme, false))
     };
-    let bar = Paragraph::new(line).style(Style::default().bg(Color::Rgb(30, 30, 46)));
+    let bar = Paragraph::new(line).style(Style::default().bg(theme.chrome));
 
     frame.render_widget(bar, area);
 }
 
 /// Build the status-bar spans, with or without the KAS breakdown bar.
-fn status_bar_spans(state: &dyn TuiState, include_breakdown: bool) -> Vec<Span<'static>> {
+fn status_bar_spans(
+    state: &dyn TuiState,
+    theme: &Theme,
+    include_breakdown: bool,
+) -> Vec<Span<'static>> {
     let mut parts: Vec<Span> = Vec::new();
 
     // Context usage gauge
     if let Some(pct) = state.context_usage() {
         let color = if pct > 90.0 {
-            Color::Red
+            theme.subdued_negative
         } else if pct > 70.0 {
-            Color::Yellow
+            theme.emphasis
         } else {
-            Color::Green
+            theme.subdued_positive
         };
         parts.push(Span::styled(
             format!("Context: {pct:.0}%"),
@@ -169,7 +172,7 @@ fn status_bar_spans(state: &dyn TuiState, include_breakdown: bool) -> Vec<Span<'
             }
             parts.push(Span::styled(
                 format!("{label} {pct:.0}%"),
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.subdued),
             ));
         }
     }
@@ -178,11 +181,13 @@ fn status_bar_spans(state: &dyn TuiState, include_breakdown: bool) -> Vec<Span<'
     if let Some(turn) = state.last_turn() {
         use cyril_core::types::StopReason;
         let (label, color) = match turn.stop_reason() {
-            StopReason::EndTurn => ("", Color::White),
-            StopReason::MaxTokens => ("Token limit", Color::Yellow),
-            StopReason::MaxTurnRequests => ("Turn limit", Color::Yellow),
-            StopReason::Refusal => ("Refused", Color::Red),
-            StopReason::Cancelled => ("Cancelled", Color::DarkGray),
+            // EndTurn's empty label is never pushed, so its color is inert
+            // (pinned by the dij8 probe: no White cell in any status scene).
+            StopReason::EndTurn => ("", theme.text),
+            StopReason::MaxTokens => ("Token limit", theme.emphasis),
+            StopReason::MaxTurnRequests => ("Turn limit", theme.emphasis),
+            StopReason::Refusal => ("Refused", theme.subdued_negative),
+            StopReason::Cancelled => ("Cancelled", theme.subdued),
         };
         if !label.is_empty() {
             if !parts.is_empty() {
@@ -207,10 +212,7 @@ fn status_bar_spans(state: &dyn TuiState, include_breakdown: bool) -> Vec<Span<'
             {
                 token_text.push_str(&format!(" / {} cached", format_token_count(cached)));
             }
-            parts.push(Span::styled(
-                token_text,
-                Style::default().fg(Color::DarkGray),
-            ));
+            parts.push(Span::styled(token_text, Style::default().fg(theme.subdued)));
         }
     }
 
@@ -221,7 +223,7 @@ fn status_bar_spans(state: &dyn TuiState, include_breakdown: bool) -> Vec<Span<'
         }
         parts.push(Span::styled(
             format!("Credits: ${used:.2}/${limit:.2}"),
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.subdued),
         ));
     }
 
@@ -233,13 +235,13 @@ fn status_bar_spans(state: &dyn TuiState, include_breakdown: bool) -> Vec<Span<'
         parts.push(Span::styled(
             "SCROLL \u{2193} PgDn",
             Style::default()
-                .fg(Color::Yellow)
+                .fg(theme.emphasis)
                 .add_modifier(Modifier::BOLD),
         ));
     }
 
     if parts.is_empty() {
-        parts.push(Span::styled("cyril", Style::default().fg(Color::DarkGray)));
+        parts.push(Span::styled("cyril", Style::default().fg(theme.subdued)));
     }
 
     parts
@@ -271,6 +273,13 @@ mod tests {
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
 
+    fn cyril_dark() -> Theme {
+        crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::TrueColor,
+        )
+    }
+
     #[test]
     fn toolbar_renders_no_session() {
         let state = MockTuiState::default();
@@ -278,7 +287,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw");
         // If we get here, rendering succeeded
@@ -297,7 +306,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render(frame, frame.area(), &state);
+                render(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw");
     }
@@ -312,7 +321,7 @@ mod tests {
         let backend = TestBackend::new(80, 1);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| render(frame, frame.area(), &state, &cyril_dark()))
             .expect("draw");
         let buf = terminal.backend().buffer();
         let text: String = (0..80)
@@ -331,7 +340,7 @@ mod tests {
         let backend = TestBackend::new(80, 1);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), &state))
+            .draw(|frame| render(frame, frame.area(), &state, &cyril_dark()))
             .expect("draw");
         let buf = terminal.backend().buffer();
         let text: String = (0..80)
@@ -348,7 +357,7 @@ mod tests {
         let backend = TestBackend::new(80, 1);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), state))
+            .draw(|frame| render(frame, frame.area(), state, &cyril_dark()))
             .expect("draw");
         let buf = terminal.backend().buffer();
         (0..80)
@@ -410,7 +419,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render_status_bar(frame, frame.area(), &state);
+                render_status_bar(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw");
     }
@@ -436,7 +445,7 @@ mod tests {
         let backend = TestBackend::new(120, 1);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render_status_bar(frame, frame.area(), &state))
+            .draw(|frame| render_status_bar(frame, frame.area(), &state, &cyril_dark()))
             .expect("draw");
         let buffer = terminal.backend().buffer();
         let text: String = (0..buffer.area.width)
@@ -463,7 +472,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render_status_bar(frame, frame.area(), &state);
+                render_status_bar(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw");
     }
@@ -478,7 +487,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render_status_bar(frame, frame.area(), &state);
+                render_status_bar(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw");
 
@@ -511,7 +520,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render_status_bar(frame, frame.area(), &state);
+                render_status_bar(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw");
         let buffer = terminal.backend().buffer();
@@ -543,7 +552,7 @@ mod tests {
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
             .draw(|frame| {
-                render_status_bar(frame, frame.area(), &state);
+                render_status_bar(frame, frame.area(), &state, &cyril_dark());
             })
             .expect("draw");
         let buffer = terminal.backend().buffer();
@@ -568,7 +577,7 @@ mod tests {
         let backend = TestBackend::new(width, 1);
         let mut terminal = Terminal::new(backend).expect("test terminal");
         terminal
-            .draw(|frame| render_status_bar(frame, frame.area(), state))
+            .draw(|frame| render_status_bar(frame, frame.area(), state, &cyril_dark()))
             .expect("draw");
         let buf = terminal.backend().buffer();
         (0..width)

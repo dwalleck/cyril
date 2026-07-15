@@ -1,4 +1,6 @@
 pub mod cache;
+#[cfg(test)]
+mod chrome_theme_tests;
 pub mod error;
 pub mod file_completer;
 pub mod highlight;

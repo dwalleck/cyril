@@ -1,0 +1,59 @@
+SCENARIO toolbar_sending_full
+  Cyan|Rgb(30, 30, 46)|NONE|code✦codeintel
+  DarkGray|Rgb(30, 30, 46)|NONE|5s
+  Magenta|Rgb(30, 30, 46)|NONE|claude-opus-4.8
+  Reset|Rgb(30, 30, 46)|NONE|·····
+  White|Rgb(30, 30, 46)|BOLD|main
+  Yellow|Rgb(30, 30, 46)|NONE|⠹◇high⇄2steers
+SCENARIO toolbar_streaming_nosession
+  DarkGray|Rgb(30, 30, 46)|NONE|Nosession5s
+  Green|Rgb(30, 30, 46)|NONE|⠹
+  Reset|Rgb(30, 30, 46)|NONE|·
+SCENARIO toolbar_toolrunning_nosession
+  Cyan|Rgb(30, 30, 46)|NONE|⠹
+  DarkGray|Rgb(30, 30, 46)|NONE|Nosession5s
+  Reset|Rgb(30, 30, 46)|NONE|·
+SCENARIO status_ok_tokens_credits
+  DarkGray|Rgb(30, 30, 46)|NONE|1.5kin/800out/300cachedC
+  Green|Rgb(30, 30, 46)|NONE|Context:50%
+  Reset|Rgb(30, 30, 46)|NONE|··
+SCENARIO status_warn_breakdown_scroll
+  DarkGray|Rgb(30, 30, 46)|NONE|ContextFiles11%SessionFi
+  Reset|Rgb(30, 30, 46)|NONE|···
+  Yellow|Rgb(30, 30, 46)|BOLD|TokenlimitSCROLL↓PgDn
+  Yellow|Rgb(30, 30, 46)|NONE|Context:75%
+SCENARIO status_crit_refused
+  Red|Rgb(30, 30, 46)|BOLD|Refused
+  Red|Rgb(30, 30, 46)|NONE|Context:95%
+  Reset|Rgb(30, 30, 46)|NONE|·
+SCENARIO status_cancelled
+  DarkGray|Rgb(30, 30, 46)|BOLD|Cancelled
+  Reset|Rgb(30, 30, 46)|NONE|
+SCENARIO status_turnlimit
+  Reset|Rgb(30, 30, 46)|NONE|
+  Yellow|Rgb(30, 30, 46)|BOLD|Turnlimit
+SCENARIO status_empty_fallback
+  DarkGray|Rgb(30, 30, 46)|NONE|cyril
+  Reset|Rgb(30, 30, 46)|NONE|
+SCENARIO crew_overflow
+  Cyan|Reset|NONE|crew:crew-a
+  DarkGray|Reset|NONE|Running◆TerminatedRunnin
+  Green|Reset|NONE|●●●●
+  Magenta|Reset|NONE|↻2/2
+  Reset|Reset|NONE|┌───────────────────────
+  White|Reset|BOLD|a-looperb-donew-0w-1w-2
+  Yellow|Reset|ITALIC|+3more
+SCENARIO crew_small_pending
+  Cyan|Reset|NONE|crew:crew-a
+  DarkGray|Reset|NONE|Running○Waiting(depends:
+  Gray|Reset|NONE|summary
+  Green|Reset|NONE|●
+  Reset|Reset|NONE|┌───────────────────────
+  White|Reset|BOLD|writer
+SCENARIO voice_listening
+  Reset|Reset|NONE|[██████░░░░░░]
+  Rgb(138, 180, 248)|Reset|NONE|🎙listening
+  Rgb(140, 140, 140)|Reset|NONE|/voicetostop
+SCENARIO voice_transcribing
+  Reset|Reset|NONE|
+  Rgb(180, 142, 173)|Reset|NONE|⏳transcribing…

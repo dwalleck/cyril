@@ -31,11 +31,11 @@ Buffer {
         "cyril                                                                           ",
     ],
     styles: [
-        x: 0, y: 0, fg: White, bg: Rgb(30, 30, 46), underline: Reset, modifier: BOLD,
+        x: 0, y: 0, fg: Rgb(255, 255, 255), bg: Rgb(30, 30, 46), underline: Reset, modifier: BOLD,
         x: 14, y: 0, fg: Reset, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
-        x: 17, y: 0, fg: Cyan, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
+        x: 17, y: 0, fg: Rgb(0, 128, 128), bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 21, y: 0, fg: Reset, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
-        x: 24, y: 0, fg: Magenta, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
+        x: 24, y: 0, fg: Rgb(128, 0, 128), bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 37, y: 0, fg: Reset, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 0, y: 1, fg: Rgb(138, 180, 248), bg: Reset, underline: Reset, modifier: BOLD,
         x: 4, y: 1, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
@@ -73,7 +73,7 @@ Buffer {
         x: 79, y: 20, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
         x: 1, y: 21, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
         x: 79, y: 21, fg: Rgb(128, 128, 128), bg: Reset, underline: Reset, modifier: NONE,
-        x: 0, y: 23, fg: DarkGray, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
+        x: 0, y: 23, fg: Rgb(128, 128, 128), bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
         x: 5, y: 23, fg: Reset, bg: Rgb(30, 30, 46), underline: Reset, modifier: NONE,
     ]
 }
