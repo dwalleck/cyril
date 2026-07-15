@@ -172,3 +172,7 @@ where applicable); the two falsifier scripts print labeled counts.
    NoColor with projection rules covering ansi modes via C2 (ghuu ran all
    16 scene-mode combos; modals get 5 scenes × 2 modes + projection unit
    coverage — cheaper, same failure surface).
+
+## Approval
+
+Approved by dwalleck 2026-07-14 (in-session): role names = text_secondary (#c0c0c0) + accent_violet (#b08dff); mapping = VGA-exact roles (emphasis/subdued_positive/subdued_negative/accent_quinary); mode coverage = TrueColor + NoColor scenes with projection unit tests for ANSI modes. Cheapest falsifier passed (9 values, 0 missing; negative control fires). Proceed to budgeted-plan.
