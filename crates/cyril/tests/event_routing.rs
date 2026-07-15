@@ -112,6 +112,7 @@ fn context_usage_flows_to_both() {
         metering: None,
         tokens: None,
         effort: None,
+        session_id: None,
     };
     ui.apply_notification(&notification);
     session.apply_notification(&notification);

@@ -403,6 +403,9 @@ impl UiState {
                 metering,
                 tokens,
                 effort,
+                // Routing tag (cyril-fh06): the App has already diverted
+                // subagent-scoped frames before this state machine sees one.
+                session_id: _,
             } => {
                 self.context_usage = Some(context_usage.percentage());
                 self.pending_tokens = tokens.clone();
@@ -3997,6 +4000,7 @@ mod tests {
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::High),
+            session_id: None,
         });
         assert_eq!(state.effort(), Some(EffortLevel::High));
 
@@ -4006,6 +4010,7 @@ mod tests {
             metering: None,
             tokens: None,
             effort: None,
+            session_id: None,
         });
         assert_eq!(
             state.effort(),
@@ -4033,6 +4038,7 @@ mod tests {
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::High),
+            session_id: None,
         });
         assert_eq!(state.effort(), Some(EffortLevel::High));
 
@@ -4052,6 +4058,7 @@ mod tests {
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::Medium),
+            session_id: None,
         });
         state.set_current_model(Some("haiku".into()));
         assert_eq!(
@@ -4073,6 +4080,7 @@ mod tests {
             metering: None,
             tokens: None,
             effort: Some(EffortLevel::High),
+            session_id: None,
         });
         assert_eq!(state.effort(), Some(EffortLevel::High));
 
@@ -4095,6 +4103,7 @@ mod tests {
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
             effort: None,
+            session_id: None,
         });
         assert!(
             state.last_turn().is_none(),
@@ -4126,6 +4135,7 @@ mod tests {
             metering: Some(TurnMetering::new(0.01, None)),
             tokens: None,
             effort: None,
+            session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
@@ -4155,6 +4165,7 @@ mod tests {
             metering: Some(TurnMetering::new(0.02, Some(1000))),
             tokens: None,
             effort: None,
+            session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
@@ -4166,6 +4177,7 @@ mod tests {
             metering: Some(TurnMetering::new(0.03, Some(2000))),
             tokens: None,
             effort: None,
+            session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,
@@ -4184,6 +4196,7 @@ mod tests {
             metering: Some(TurnMetering::new(0.05, Some(2000))),
             tokens: None,
             effort: None,
+            session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: cyril_core::types::StopReason::EndTurn,

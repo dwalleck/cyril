@@ -671,12 +671,14 @@ mod tests {
             metering,
             tokens,
             effort,
+            session_id,
         })) = result
         {
             assert!((context_usage.percentage() - 75.0).abs() < f64::EPSILON);
             assert!(metering.is_none());
             assert!(tokens.is_none());
             assert!(effort.is_none(), "no effort field => None");
+            assert!(session_id.is_none(), "no sessionId field => None (global)");
         } else {
             panic!("expected MetadataUpdated");
         }
@@ -764,11 +766,19 @@ mod tests {
         });
         let result = to_ext_notification("kiro.dev/metadata", &params);
         if let Ok(Some(Notification::MetadataUpdated {
-            metering, tokens, ..
+            metering,
+            tokens,
+            session_id,
+            ..
         })) = result
         {
             assert!(metering.is_none());
             assert!(tokens.is_none());
+            assert_eq!(
+                session_id,
+                Some(SessionId::new("s1")),
+                "params-level sessionId must be extracted (cyril-fh06)"
+            );
         } else {
             panic!("expected MetadataUpdated");
         }
