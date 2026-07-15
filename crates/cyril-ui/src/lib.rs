@@ -4,7 +4,6 @@ mod chrome_theme_tests;
 pub mod error;
 pub mod file_completer;
 pub mod highlight;
-pub mod palette;
 pub mod render;
 pub mod spinner;
 pub mod state;

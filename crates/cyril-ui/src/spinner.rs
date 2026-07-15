@@ -13,14 +13,6 @@ pub const SPINNER_FRAME_MS: u128 = 80;
 mod tests {
     use super::*;
 
-    /// cyril-6r3a C2 bridge (TEMPORARY — dies with palette.rs in slice 4):
-    /// the consolidated constants are byte-identical to the legacy module's.
-    #[test]
-    fn values_match_legacy_palette() {
-        assert_eq!(SPINNER_CHARS, crate::palette::SPINNER_CHARS);
-        assert_eq!(SPINNER_FRAME_MS, crate::palette::SPINNER_FRAME_MS);
-    }
-
     /// cyril-6r3a C2 pin (permanent): the frozen glyph sequence and frame
     /// interval. A single-glyph transcription typo fails here.
     #[test]
