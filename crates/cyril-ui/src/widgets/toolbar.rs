@@ -1,7 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::Paragraph;
 
-use crate::palette;
+use crate::spinner;
 use crate::theme::Theme;
 use crate::traits::{Activity, TuiState};
 
@@ -15,21 +15,21 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
         Activity::Sending | Activity::Waiting => {
             let idx = spinner_index(state);
             parts.push(Span::styled(
-                format!("{} ", palette::SPINNER_CHARS[idx]),
+                format!("{} ", spinner::SPINNER_CHARS[idx]),
                 Style::default().fg(theme.emphasis),
             ));
         }
         Activity::Streaming => {
             let idx = spinner_index(state);
             parts.push(Span::styled(
-                format!("{} ", palette::SPINNER_CHARS[idx]),
+                format!("{} ", spinner::SPINNER_CHARS[idx]),
                 Style::default().fg(theme.subdued_positive),
             ));
         }
         Activity::ToolRunning => {
             let idx = spinner_index(state);
             parts.push(Span::styled(
-                format!("{} ", palette::SPINNER_CHARS[idx]),
+                format!("{} ", spinner::SPINNER_CHARS[idx]),
                 Style::default().fg(theme.accent_quinary),
             ));
         }
@@ -261,7 +261,7 @@ fn spinner_index(state: &dyn TuiState) -> usize {
     state
         .activity_elapsed()
         .map(|d| {
-            (d.as_millis() / palette::SPINNER_FRAME_MS) as usize % palette::SPINNER_CHARS.len()
+            (d.as_millis() / spinner::SPINNER_FRAME_MS) as usize % spinner::SPINNER_CHARS.len()
         })
         .unwrap_or(0)
 }

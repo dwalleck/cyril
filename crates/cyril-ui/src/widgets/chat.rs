@@ -5,8 +5,7 @@ use crate::theme::Theme;
 use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus, TrackedToolCall, TuiState};
 use crate::widgets::markdown;
 
-const SPINNER_CHARS: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-const SPINNER_FRAME_MS: u128 = 80;
+use crate::spinner::{SPINNER_CHARS, SPINNER_FRAME_MS};
 
 /// Render the chat area. If a subagent is focused, renders the focused
 /// subagent's stream instead of the main chat.

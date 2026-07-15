@@ -749,9 +749,9 @@ mod tests {
             SourceColor::Rgb(0x80, 0x00, 0x00), // Color::Red
             SourceColor::Rgb(0x00, 0x80, 0x80), // Color::Cyan
             SourceColor::Rgb(0x80, 0x00, 0x80), // Color::Magenta
-            SourceColor::Rgb(0x8a, 0xb4, 0xf8), // palette::USER_BLUE
-            SourceColor::Rgb(0x8c, 0x8c, 0x8c), // palette::MUTED_GRAY
-            SourceColor::Rgb(0xb4, 0x8e, 0xad), // palette::SYSTEM_MAUVE
+            SourceColor::Rgb(0x8a, 0xb4, 0xf8), // was palette::USER_BLUE (module removed, cyril-6r3a)
+            SourceColor::Rgb(0x8c, 0x8c, 0x8c), // was palette::MUTED_GRAY (module removed, cyril-6r3a)
+            SourceColor::Rgb(0xb4, 0x8e, 0xad), // was palette::SYSTEM_MAUVE (module removed, cyril-6r3a)
         ];
 
         for (i, color_a) in required.iter().enumerate() {
@@ -776,58 +776,6 @@ mod tests {
         source
             .split_once("#[cfg(test)]")
             .map_or(source, |(production, _)| production)
-    }
-
-    /// cyril-nrnq C5: the four migrated modal widgets carry zero hardcoded
-    /// color literals in production code (allowlist: empty).
-    #[test]
-    fn modal_widgets_have_no_legacy_color_sources() {
-        let sources = [
-            ("approval", include_str!("widgets/approval.rs")),
-            ("picker", include_str!("widgets/picker.rs")),
-            ("hooks_panel", include_str!("widgets/hooks_panel.rs")),
-            ("code_panel", include_str!("widgets/code_panel.rs")),
-        ];
-        for (name, source) in sources {
-            assert!(
-                !production_source(source).contains("Color::"),
-                "{name} still hardcodes a Color:: literal"
-            );
-        }
-    }
-
-    /// cyril-dij8 C4: the three migrated chrome widget files carry zero
-    /// hardcoded color literals AND zero palette color-constant references
-    /// in production code (the spinner constants are not colors and stay).
-    /// One-shot non-vacuity control: this predicate FAILS against the
-    /// pre-migration toolbar.rs at d4f105f (26 Color:: literals).
-    #[test]
-    fn chrome_widgets_have_no_legacy_color_sources() {
-        let sources = [
-            ("toolbar", include_str!("widgets/toolbar.rs")),
-            ("crew_panel", include_str!("widgets/crew_panel.rs")),
-            ("voice", include_str!("widgets/voice.rs")),
-        ];
-        let palette_colors = [
-            "USER_BLUE",
-            "AGENT_GREEN",
-            "SYSTEM_MAUVE",
-            "MUTED_GRAY",
-            "CODE_BLOCK_BG",
-        ];
-        for (name, source) in sources {
-            let production = production_source(source);
-            assert!(
-                !production.contains("Color::"),
-                "{name} still hardcodes a Color:: literal"
-            );
-            for constant in palette_colors {
-                assert!(
-                    !production.contains(constant),
-                    "{name} still references palette::{constant}"
-                );
-            }
-        }
     }
 
     /// cyril-nrnq slice-2 stress: a duplicated marker value would blind the
@@ -1156,11 +1104,30 @@ mod tests {
             include_str!("widgets/input.rs"),
             include_str!("widgets/markdown.rs"),
             include_str!("widgets/mod.rs"),
+            include_str!("widgets/modal.rs"),
             include_str!("widgets/picker.rs"),
             include_str!("widgets/suggestions.rs"),
             include_str!("widgets/toolbar.rs"),
             include_str!("widgets/voice.rs"),
         ];
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/widgets");
+        let on_disk = std::fs::read_dir(&manifest_dir)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", manifest_dir.display()))
+            .filter(|entry| {
+                let entry = entry.as_ref().unwrap_or_else(|error| {
+                    panic!(
+                        "failed to read entry in {}: {error}",
+                        manifest_dir.display()
+                    )
+                });
+                entry.file_name().to_string_lossy().ends_with(".rs")
+            })
+            .count();
+        assert_eq!(
+            widget_sources.len(),
+            on_disk,
+            "widgets/ gained or lost a file — update this fence's include_str list"
+        );
         let production_sources = widget_sources.map(production_source);
         let scanned_bytes: usize = production_sources.iter().map(|source| source.len()).sum();
         assert!(production_sources.len() <= 16);
