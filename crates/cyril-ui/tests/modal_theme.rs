@@ -420,3 +420,30 @@ fn marker_wiring_approval() {
     );
     assert_eq!(bgs, vec!["Indexed(4)"], "approval-trust bg roles");
 }
+
+#[test]
+fn baseline_equivalence_picker() {
+    assert_scene_equivalent("picker");
+}
+
+/// C4: picker consumes exactly subdued (24), text (5), text_secondary (30),
+/// accent_quinary (23) on selection bg (4) — and, unlike approval, the
+/// selected row carries NO BOLD (existing asymmetry preserved; the
+/// description's ITALIC survives the swap).
+#[test]
+fn marker_wiring_picker() {
+    let (fgs, bgs) = marker_footprint("picker");
+    assert_eq!(
+        fgs,
+        vec!["Indexed(23)", "Indexed(24)", "Indexed(30)", "Indexed(5)"],
+        "picker fg roles"
+    );
+    assert_eq!(bgs, vec!["Indexed(4)"], "picker bg roles");
+    let marker = marker_theme();
+    let rows = scene("picker", &marker);
+    assert!(
+        rows.iter()
+            .any(|r| r.ends_with("ITALIC") && r.contains("Indexed(24)")),
+        "no subdued+ITALIC description cell — modifier lost in the swap"
+    );
+}

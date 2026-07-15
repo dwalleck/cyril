@@ -36,7 +36,7 @@ fn option_window(n: usize, selected: usize, option_rows: usize) -> (usize, usize
 }
 
 /// Render the picker overlay (centered popup).
-pub fn render(frame: &mut Frame, area: Rect, state: &PickerState, _theme: &Theme) {
+pub fn render(frame: &mut Frame, area: Rect, state: &PickerState, theme: &Theme) {
     let n = state.filtered_indices.len();
     let desired_rows = n.min(MAX_VISIBLE_OPTIONS);
     // Reserved whenever ANY option has a description (not just the selected
@@ -59,9 +59,9 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState, _theme: &Theme
 
     // Filter input
     lines.push(Line::from(vec![
-        Span::styled("Filter: ", Style::default().fg(Color::DarkGray)),
-        Span::styled(&state.filter, Style::default().fg(Color::White)),
-        Span::styled("█", Style::default().fg(Color::White)),
+        Span::styled("Filter: ", Style::default().fg(theme.subdued)),
+        Span::styled(&state.filter, Style::default().fg(theme.text)),
+        Span::styled("█", Style::default().fg(theme.text)),
     ]));
     lines.push(Line::default());
 
@@ -77,16 +77,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState, _theme: &Theme
             let current_marker = if opt.is_current { " ✓" } else { "" };
 
             let label_style = if is_selected {
-                Style::default().bg(Color::Rgb(50, 50, 70)).fg(Color::White)
+                Style::default().bg(theme.selection).fg(theme.text)
             } else {
-                Style::default().fg(Color::Gray)
+                Style::default().fg(theme.text_secondary)
             };
             let detail_style = if is_selected {
-                Style::default()
-                    .bg(Color::Rgb(50, 50, 70))
-                    .fg(Color::DarkGray)
+                Style::default().bg(theme.selection).fg(theme.subdued)
             } else {
-                Style::default().fg(Color::DarkGray)
+                Style::default().fg(theme.subdued)
             };
 
             let mut spans = vec![Span::styled(
@@ -106,7 +104,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState, _theme: &Theme
                 lines.push(Line::styled(
                     format!("    {desc}"),
                     Style::default()
-                        .fg(Color::DarkGray)
+                        .fg(theme.subdued)
                         .add_modifier(Modifier::ITALIC),
                 ));
             }
@@ -118,11 +116,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState, _theme: &Theme
             .title(Span::styled(
                 format!(" {} ", state.title),
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(theme.accent_quinary)
                     .add_modifier(Modifier::BOLD),
             ))
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Cyan)),
+            .border_style(Style::default().fg(theme.accent_quinary)),
     );
 
     frame.render_widget(popup, popup_area);
