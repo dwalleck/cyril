@@ -350,3 +350,171 @@ fn emit_chrome_baseline() {
 fn baseline_generation_is_deterministic() {
     assert_eq!(scene_rows(), scene_rows());
 }
+
+const FIXTURE: &str = include_str!("../tests/fixtures/chrome-theme-baseline.tsv");
+
+/// Fixture body rows (headers validated and stripped).
+fn fixture_rows() -> Vec<&'static str> {
+    let mut lines = FIXTURE.lines();
+    let commit_header = format!("commit\t{PINNED_COMMIT}");
+    assert_eq!(
+        lines.next(),
+        Some(commit_header.as_str()),
+        "baseline commit header must remain pinned"
+    );
+    assert_eq!(
+        lines.next(),
+        Some("scene\tx\ty\tsymbol_hex\tforeground\tbackground\tmodifier_bits")
+    );
+    lines.collect()
+}
+
+fn scene_buffer(name: &str) -> Buffer {
+    scenes()
+        .into_iter()
+        .find(|scene| scene.name == name)
+        .unwrap_or_else(|| panic!("unknown chrome scene {name}"))
+        .buffer
+}
+
+fn buffer_text(buffer: &Buffer) -> String {
+    let area = buffer.area;
+    let mut text = String::new();
+    for y in 0..area.height {
+        for x in 0..area.width {
+            text.push_str(buffer[(x, y)].symbol());
+        }
+    }
+    text
+}
+
+/// cyril-dij8 C2: chrome renders are cell-for-cell equivalent to the frozen
+/// pre-migration baseline under canonical normalization. Trivially green
+/// until migration starts; from then on it guards every migration slice.
+/// A failing row names its scene and cell (rows lead with `scene\tx\ty`).
+#[test]
+fn chrome_baseline_equivalence() {
+    let expected = fixture_rows();
+    let actual = scene_rows();
+    assert_eq!(
+        expected.len(),
+        actual.len(),
+        "chrome cell count diverged from the frozen baseline"
+    );
+    for (expected_row, actual_row) in expected.iter().zip(&actual) {
+        assert_eq!(
+            *expected_row, actual_row,
+            "chrome cell diverged from the frozen baseline"
+        );
+    }
+}
+
+/// cyril-dij8 C8: the scene set jointly reaches the complete normalized
+/// tuple inventory — the probe's 23 raw styled tuples minus the 3 named
+/// collapses (Yellow/Green/DarkGray on the chrome bg each occur in both
+/// toolbar and status bar), transcribed from .cyril-dij8/probe-styles.txt.
+/// Without this, equivalence is vacuous for unreached tuples.
+#[test]
+fn baseline_covers_probe_inventory() {
+    const EXPECTED: [&str; 20] = [
+        "RGB:008000|DEFAULT|0",
+        "RGB:008000|RGB:1e1e2e|0",
+        "RGB:008080|DEFAULT|0",
+        "RGB:008080|RGB:1e1e2e|0",
+        "RGB:800000|RGB:1e1e2e|0",
+        "RGB:800000|RGB:1e1e2e|1",
+        "RGB:800080|DEFAULT|0",
+        "RGB:800080|RGB:1e1e2e|0",
+        "RGB:808000|DEFAULT|4",
+        "RGB:808000|RGB:1e1e2e|0",
+        "RGB:808000|RGB:1e1e2e|1",
+        "RGB:808080|DEFAULT|0",
+        "RGB:808080|RGB:1e1e2e|0",
+        "RGB:808080|RGB:1e1e2e|1",
+        "RGB:8ab4f8|DEFAULT|0",
+        "RGB:8c8c8c|DEFAULT|0",
+        "RGB:b48ead|DEFAULT|0",
+        "RGB:c0c0c0|DEFAULT|0",
+        "RGB:ffffff|DEFAULT|1",
+        "RGB:ffffff|RGB:1e1e2e|1",
+    ];
+    let found: std::collections::BTreeSet<String> = fixture_rows()
+        .iter()
+        .filter_map(|row| {
+            let fields: Vec<&str> = row.split('\t').collect();
+            (fields[4] != "DEFAULT").then(|| format!("{}|{}|{}", fields[4], fields[5], fields[6]))
+        })
+        .collect();
+    let expected: std::collections::BTreeSet<String> =
+        EXPECTED.iter().map(ToString::to_string).collect();
+    assert_eq!(found, expected, "baseline styled-tuple inventory drifted");
+}
+
+/// cyril-dij8 C10: idle toolbar shows no spinner and styles nothing but
+/// the "No session" label (subdued family).
+#[test]
+fn edge_toolbar_idle_has_no_spinner() {
+    let buffer = scene_buffer("toolbar_idle");
+    let text = buffer_text(&buffer);
+    for spinner in crate::palette::SPINNER_CHARS {
+        assert!(!text.contains(*spinner), "idle toolbar rendered a spinner");
+    }
+    let styled: std::collections::BTreeSet<String> = (0..buffer.area.width)
+        .map(|x| normalized_color(buffer[(x, 0)].fg))
+        .filter(|fg| fg != "DEFAULT")
+        .collect();
+    assert_eq!(
+        styled,
+        std::collections::BTreeSet::from(["RGB:808080".to_string()]),
+        "idle toolbar styled something beyond the No-session label"
+    );
+}
+
+/// cyril-dij8 C10: the context gauge thresholds are STRICT — exactly 70
+/// stays in the OK band, exactly 90 stays in the warn band. Expected
+/// values pre-written in the plan (slice 3): 70 -> RGB:008000,
+/// 90 -> RGB:808000. A migration flipping `>` to `>=` fails here.
+#[test]
+fn edge_status_boundaries_pin_strict_thresholds() {
+    for (scene, expected) in [
+        ("status_boundary_70", "RGB:008000"),
+        ("status_boundary_90", "RGB:808000"),
+    ] {
+        let buffer = scene_buffer(scene);
+        let styled: std::collections::BTreeSet<String> = (0..buffer.area.width)
+            .map(|x| normalized_color(buffer[(x, 0)].fg))
+            .filter(|fg| fg != "DEFAULT")
+            .collect();
+        assert_eq!(
+            styled,
+            std::collections::BTreeSet::from([expected.to_string()]),
+            "{scene}: gauge band drifted"
+        );
+    }
+}
+
+/// cyril-dij8 C10: crew header variants and message-less Working status.
+#[test]
+fn edge_crew_headers_and_plain_working() {
+    let no_group = buffer_text(&scene_buffer("crew_no_group"));
+    assert!(no_group.contains("subagents"), "groupless header missing");
+    assert!(no_group.contains("Working"), "message-less status missing");
+    let multi = buffer_text(&scene_buffer("crew_multi_group"));
+    assert!(multi.contains("2 crews"), "multi-group header missing");
+}
+
+/// cyril-dij8 C10: idle voice occupies no height and paints no cell.
+#[test]
+fn edge_voice_idle_renders_nothing() {
+    let state = crate::state::UiState::new(100);
+    assert_eq!(crate::widgets::voice::height_for(&state), 0);
+    let buffer = draw(60, 1, |frame| {
+        crate::widgets::voice::render(frame, frame.area(), &state);
+    });
+    for x in 0..60 {
+        let cell = &buffer[(x, 0)];
+        assert_eq!(cell.symbol(), " ", "idle voice painted a symbol");
+        assert_eq!(normalized_color(cell.fg), "DEFAULT");
+        assert_eq!(normalized_color(cell.bg), "DEFAULT");
+    }
+}
