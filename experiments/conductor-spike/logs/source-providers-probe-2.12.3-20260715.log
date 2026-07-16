@@ -1,0 +1,14 @@
+
+########## LEG: baseline (no endpoint)
+  caps: sourceProviders = False | sessionSources = ['local'] | sessionListScopes = ['workspace'] | executionTargets = ['local']
+  advertised sourceProviders methods: []
+  _kiro/sourceProviders/list: ERROR {"code": -32000, "message": "Source provider catalog error: no source provider catalog is configured"}
+  _kiro/sourceProviders/listResources: ERROR {"code": -32000, "message": "Source provider catalog error: no source provider catalog is configured"}
+
+########## LEG: forced endpoint (local mock)
+  caps: sourceProviders = True | sessionSources = ['local', 'remote'] | sessionListScopes = ['workspace', 'user'] | executionTargets = ['local', 'cloud-sandbox']
+  advertised sourceProviders methods: ['_kiro/sourceProviders/list', '_kiro/sourceProviders/listResources']
+  _kiro/sourceProviders/list: ERROR {"code": -32000, "message": "Source provider catalog error: listProviders: Authentication token is invalid: Host refresh callback returned no access token"}
+  _kiro/sourceProviders/listResources: ERROR {"code": -32000, "message": "Source provider catalog error: listResources: Authentication token is invalid: Host refresh callback returned no access token"}
+
+########## HTTP requests captured by mock (0):

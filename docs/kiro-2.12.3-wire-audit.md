@@ -41,6 +41,34 @@ side-by-side; 24 changed / 3 added / 0 removed files; acp-server.js +676 KB):
 Both sourceProviders methods are advertised **only when a catalog is wired**
 (`providersConfigured`) — "a client never sees a method the agent would refuse."
 
+### Reachability probe — forced `providersConfigured` (2026-07-15)
+
+`probe-source-providers-2.12.3.py` (log `logs/source-providers-probe-2.12.3-20260715.log`):
+
+- **The dispatch is unconditional** — even unadvertised, calling either method hits the
+  handler; the catalog guard returns a *typed* refusal, not method-not-found. Baseline
+  (no endpoint): `_kiro/sourceProviders/list` → `-32000 "Source provider catalog error:
+  no source provider catalog is configured"`.
+- **The lever is `KIRO_REMOTE_SESSIONS_ENDPOINT`** (or `--remote-sessions-endpoint`).
+  Setting it constructs `buildRemoteSessionAdapters()` → `BffSourceProviderCatalog` +
+  `BffRemoteSessionSource` + `BffRemoteAgentLink` over a `KiroWebPortalServiceClient`, and
+  **flips all four dormant caps at once**: `sourceProviders true`, `sessionSources
+  ["local","remote"]`, `sessionListScopes ["workspace","user"]`, `executionTargets
+  ["local","cloud-sandbox"]`. Both methods then advertise. So the whole cloud surface is
+  gated behind one endpoint value — no per-cap flags.
+- **But the call stops at KAS host auth, before any HTTP leaves.** With a bogus endpoint
+  the catalog op fails at `AcpCallbackAuthProvider`: `-32000 "…listProviders:
+  Authentication token is invalid: Host refresh callback returned no access token"`. The
+  local mock captured **0 HTTP requests** — `auth.resolveRequestCredential()` (the
+  `_kiro/auth/getAccessToken` host callback needing a `profileArn`-bearing token, per the
+  launch contract) resolves *before* the `kiro-web-portal-service` request is built. No
+  token reached the mock.
+- **Upshot:** the sourceProviders methods are real and reachable, and the cloud surface can
+  be switched on locally with one env var — but capturing the actual web-portal HTTP
+  contract needs a satisfied `getAccessToken` (a valid bearer + profileArn), which the host
+  path did not supply in this probe. The auth wall, not the endpoint, is what stands
+  between a client and Kiro's cloud backend today.
+
 ### Provider types = GITHUB, GITLAB, MIDWAY
 
 `recognizeRepository()`: `gitlab:` scheme → GITLAB, bare name → **MIDWAY** (Amazon-internal
