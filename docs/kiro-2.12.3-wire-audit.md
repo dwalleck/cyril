@@ -10,6 +10,22 @@ the KAS side: `@kiro/agent` jumps **0.8.0 → 0.17.2** after three byte-frozen r
 the drop is the client-side plumbing for **Kiro cloud/remote agents** — dormant, but
 complete and visible in the handshake.
 
+## Wire-impact verdicts for the KAS changes (does cyril's parser need to care?)
+
+Deeper read of the two flagged areas (bundle, both versions). "Wire change" = a shape a
+KAS-speaking cyril would send or receive; everything here is KAS-only (v2 is frozen).
+
+| KAS change | Wire change? | Cyril impact | Issue |
+|---|---|---|---|
+| `session/list` **request** `_meta.kiro.{sessionSource, listScope, executionTarget}` | Additive, **gated** | None — all optional-with-defaults; non-default → InvalidParams unless `remoteConfigured`. Send nothing → old behavior. | cyril-nn85 |
+| `_kiro/session/list` **response** shape | **Yes, changed** | Future only — cyril doesn't call `session/list` today. 2.12.1 returned bare summaries; 2.12.3 returns `{sessions:[{sessionId,cwd,title,updatedAt,_meta.kiro:{source,executionTarget,status,agentMode,createdAt,parentSessionId?,description?}}], _meta?.kiro.warnings}`. Model when KAS session-listing lands. | cyril-nn85 |
+| `_kiro/system/notify {level,message}` | **Yes, new notification** | **Real** — agent→client, fires on ordinary model-request backoff (`QClientRetryStrategy`, levels `info`/`warning`), so a KAS turn hits it in normal use. Cyril drops it today. | cyril-08eh |
+| `RequestCredentialResolver` auth refactor | **No** | None — internal atomicity fix (one ensure-then-read snapshot so a refreshed token can't pair with a stale profileArn). The `_kiro/auth/getAccessToken` reply fields cyril must supply are **identical** across versions (`accessToken`/`expiresAt`/`profileArn`, `provider`/`authMethod` read both). cyril-evwh / cyril-taba contract unchanged. | — |
+| `sessionSubscriberCount` | **No** | None — internal `SessionOutbound` port method (relayed session checks if a client is attached); never a JSON-RPC method. | — |
+| `tree-sitter-powershell` (+`node-addon-api`/`node-gyp-build`) | **No** | None on the wire — native PowerShell AST parser for **command-safety classification** (permission detector). Changes *when* the agent emits `session/request_permission`, not its shape. Signal: Windows shell-support maturing (relevant to cyril's WSL story, not its parser). | — |
+
+Bottom line: **one genuinely new notification cyril will see in normal KAS use** (`_kiro/system/notify` → cyril-08eh), **one future-modeling response-shape change** (`_kiro/session/list` → cyril-nn85), and **three non-wire internals** (auth refactor, subscriber count, PowerShell parser) that need no issue. The auth-reply contract — the one that could have broken cyril's KAS-1 responder — is unchanged.
+
 ## Changelogs (embedded feed)
 
 - **2.12.2** (fixes only): ACP `--agent` flag now applied to *every* new session (was
