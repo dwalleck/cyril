@@ -1,0 +1,33 @@
+== settings BEFORE:
+  chat.defaultModel = gpt-5.6-terra (global)
+  chat.modelDefaults = {
+  "claude-opus-4.8": {
+    "output_config": {
+      "effort": "high"
+    }
+  },
+  "claude-sonnet-4.6": {
+    "output_config": {
+      "effort": "high"
+    }
+  }
+} (global)
+== session A: currentModelId = gpt-5.6-terra sid = b1052016-18d9-4385-bcd4-79c630574125
+== model select via kiro.dev/commands/execute failed: {"code": -32601, "message": "Method not found", "data": "kiro.dev/commands/execute"}
+== model select via _kiro.dev/commands/execute -> {"success": true, "message": "Model changed to claude-opus-4.8 (saved as default)", "data": {"model": {"id": "claude-opus-4.8", "name": "claude-opus-4.8"}}}
+== effort select -> {"success": true, "message": "Effort set to high (saved for claude-opus-4.8)"}
+== settings AFTER select:
+  chat.defaultModel = claude-opus-4.8 (global)
+  chat.modelDefaults = {
+  "claude-opus-4.8": {
+    "output_config": {
+      "effort": "high"
+    }
+  },
+  "claude-sonnet-4.6": {
+    "output_config": {
+      "effort": "high"
+    }
+  }
+} (global)
+== FRESH process session B: currentModelId = claude-opus-4.8
