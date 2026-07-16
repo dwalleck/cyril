@@ -123,7 +123,12 @@ fences: pre-change code fails them, post-change code must pass.
 5. No mouse interaction with overlays, no layout persistence, no config
    surface for floors.
 
-## Open decisions for approval
+## Open decisions — RESOLVED (user approval 2026-07-15)
+
+All five decided as recommended: D1 char-wrap, D2 all four overlays through
+the shared helper, D3 clamp+window the modal (input never covered), D4
+overlay predicate at chat<5, D5 chat floor 3 under pressure. Design approved
+verbatim ("Approve, proceed").
 
 - **D1 (input wrap):** switch input to char-wrap (recommended; exact cursor
   math, no fixture pins word-wrap) vs re-derive word-wrap (rejected:
