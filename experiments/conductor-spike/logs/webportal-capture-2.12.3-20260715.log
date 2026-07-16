@@ -1,0 +1,48 @@
+# synthesized SSO file: expiresAt=2026-07-16T01:00:49.520255255Z profileArn=…profile/UV4C4VUDDGRU
+# caps: sourceProviders = True | sessionSources = ['local', 'remote']
+# _kiro/sourceProviders/list: ERROR {"code": -32000, "message": "Source provider catalog error: listProviders: length 2476803273935316500 greater than remaining buf len.\n  Deserialization error: to see the raw response, inspect the hidden field {error}.$r
+# _kiro/sourceProviders/listResources: ERROR {"code": -32000, "message": "Source provider catalog error: listResources: length 2476803273935316500 greater than remaining buf len.\n  Deserialization error: to see the raw response, inspect the hidden field {error}.$r
+# _kiro/auth/getAccessToken host callbacks: 0
+# restored original SSO file
+
+########## web-portal HTTP requests captured (2):
+{
+ "method": "POST",
+ "path": "/service/KiroWebPortalService/operation/ListAvailableProviders",
+ "headers": {
+  "content-type": "application/cbor",
+  "smithy-protocol": "rpc-v2-cbor",
+  "accept": "application/cbor",
+  "content-length": "1",
+  "Authorization": "Bearer a\u2026[REDACTED 239c]",
+  "X-Kiro-Idp": "BuilderId",
+  "X-Kiro-Profile-Arn": "arn:aws:\u2026[REDACTED 65c]",
+  "x-amz-user-agent": "aws-sdk-js/1.0.0",
+  "user-agent": "aws-sdk-js/1.0.0 ua/2.1 os/linux#7.1.3-2-cachyos lang/js md/nodejs#22.22.2 m/N,M,E",
+  "host": "127.0.0.1:44491",
+  "amz-sdk-invocation-id": "3466f5a7-cd6a-4ed0-bf56-35c717c3cdb1",
+  "amz-sdk-request": "attempt=1; max=3",
+  "Connection": "keep-alive"
+ },
+ "body": "\ufffd"
+}
+{
+ "method": "POST",
+ "path": "/service/KiroWebPortalService/operation/ListProviderResources",
+ "headers": {
+  "content-type": "application/cbor",
+  "smithy-protocol": "rpc-v2-cbor",
+  "accept": "application/cbor",
+  "content-length": "21",
+  "Authorization": "Bearer a\u2026[REDACTED 239c]",
+  "X-Kiro-Idp": "BuilderId",
+  "X-Kiro-Profile-Arn": "arn:aws:\u2026[REDACTED 65c]",
+  "x-amz-user-agent": "aws-sdk-js/1.0.0",
+  "user-agent": "aws-sdk-js/1.0.0 ua/2.1 os/linux#7.1.3-2-cachyos lang/js md/nodejs#22.22.2 m/N,M,E",
+  "host": "127.0.0.1:44491",
+  "amz-sdk-invocation-id": "4f11ddc2-5402-4628-b1c5-ad36aced240f",
+  "amz-sdk-request": "attempt=1; max=3",
+  "Connection": "keep-alive"
+ },
+ "body": "\ufffdlproviderTypefGITHUB"
+}

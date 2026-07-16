@@ -69,6 +69,38 @@ Both sourceProviders methods are advertised **only when a catalog is wired**
   path did not supply in this probe. The auth wall, not the endpoint, is what stands
   between a client and Kiro's cloud backend today.
 
+### Web-portal HTTP contract captured (2026-07-15)
+
+`probe-webportal-capture-2.12.3.py` (log `logs/webportal-capture-2.12.3-20260715.log`)
+takes the **free path** to get past the auth wall: spawn the KAS server standalone
+(`~/.local/share/kiro-cli/node --experimental-wasm-modules <2.12.3>/acp-server.js
+--transport=stdio`, **no `--auth`** → default FileAuthProvider), synthesize a fresh 3-key
+SSO file (`accessToken`/`expiresAt`/`profileArn`, no refreshToken) from the live sqlite
+IdC token because the on-disk file is the stale dead-social-identity trap, point
+`KIRO_REMOTE_SESSIONS_ENDPOINT` at a logging mock, and restore the SSO file after. Result:
+`_kiro/auth/getAccessToken` host callbacks = **0** (file auth resolved the bearer itself),
+both catalog ops fired their real request at the mock. The **`@amzn/kiro-web-portal-service`
+wire contract**:
+
+- **Transport**: Smithy **RPC v2 CBOR** (`smithy-protocol: rpc-v2-cbor`, request +
+  `accept` = `application/cbor`), AWS-SDK-JS v3 client (`aws-sdk-js/1.0.0`).
+- **Endpoint shape**: `POST /service/KiroWebPortalService/operation/<Op>`.
+- **Operations don't match the ACP method names**:
+  - `_kiro/sourceProviders/list` → **`ListAvailableProviders`**, body `{}` (CBOR `0xa0`).
+  - `_kiro/sourceProviders/listResources` → **`ListProviderResources`**, body
+    `{"providerType":"GITHUB"}` (CBOR `a1 6c…providerType 66…GITHUB`).
+- **Three Kiro auth headers** (this is the credential contract cyril would need to speak to
+  reach the cloud backend directly):
+  - `Authorization: Bearer <accessToken>`
+  - `X-Kiro-Idp: <BuilderId|Google|Github|AWSIdC>` (from `toKiroIdp(provider)`; the probe's
+    3-key file omits `provider` so it sent `BuilderId` — a real IdC identity sends `AWSIdC`)
+  - `X-Kiro-Profile-Arn: <profileArn>`
+- Standard AWS-SDK retry envelope (`amz-sdk-request: attempt=1; max=3`). This is a distinct
+  backend service from the CodeWhisperer streaming endpoint used for turns.
+
+No token was exposed off-host (mock is localhost; auth header values redacted in the log).
+The stale on-disk SSO file was backed up and restored (left as found).
+
 ### Provider types = GITHUB, GITLAB, MIDWAY
 
 `recognizeRepository()`: `gitlab:` scheme → GITLAB, bare name → **MIDWAY** (Amazon-internal
