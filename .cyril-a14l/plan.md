@@ -137,8 +137,16 @@ passes (no wrap in its scene); gates pass.
 input_h/chat_min) derived from the R1 arithmetic written in the design —
 compared against `┌`/`└`-parsed geometry, not against the code's variables.
 **Stress fixture:** adversarial matrix at {60×16, 60×17, 61×20, 80×24} ×
-{max draft, draft+10 suggestions, crew=3 rows + draft, voice+crew+draft}.
-Bug-class: budget that forgets crew/voice over-allocates input → chat <3.
+{max draft, draft+10 suggestions, crew=3 rows + draft}. (Voice row dropped:
+MockTuiState carries no voice activation surface; the crew case covers the
+extra-panel bug class.)
+Bug-class (CORRECTED during slice 7): removing/weakening the chat floor
+(`Min(CHAT_FLOOR)` → `Length(0)`) — verified to fail the fence at "0 chat
+rows". The originally named exemplar (budget forgets crew) is
+solver-rescued: `Min` still protects chat even when the input is
+over-budgeted, so that mutation cannot fire this fence. The budget's real
+value is determinism — the input widget's cursor-follow window always
+receives its true height.
 **Loop budget:** no new production loop — arithmetic only. Matrix test
 ≈ 16 renders × O(cells). Trivial. Degradation path logs via
 `tracing::debug!` (diagnostic, stderr-file sink) when floors force input

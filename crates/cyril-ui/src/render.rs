@@ -14,6 +14,14 @@ pub fn draw(frame: &mut Frame, state: &dyn TuiState) {
     }
 }
 
+/// Rows the chat viewport keeps under height pressure (cyril-a14l C1).
+/// With surplus space `Min(CHAT_FLOOR)` grows exactly like the previous
+/// `Min(5)` did, so roomy frames are unchanged (pinned by the slice-0
+/// snapshots in `floor_tests`).
+const CHAT_FLOOR: u16 = 3;
+/// Minimum input box height under pressure: one content row plus borders.
+const INPUT_FLOOR: u16 = 3;
+
 fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     let area = frame.area();
     let theme = state.theme();
@@ -22,7 +30,28 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     let crew_height = crate::widgets::crew_panel::height_for(state);
     let voice_height = crate::widgets::voice::height_for(state);
     let suggestions_height = crate::widgets::suggestions::height_for(state);
-    let input_height = crate::widgets::input::height_for(state);
+    let input_demand = crate::widgets::input::height_for(state);
+
+    // Explicit vertical budget (cyril-a14l R1): the input may grow with its
+    // draft only until chat would drop below its floor — its allocation is
+    // decided here, not by the constraint solver, so the widget's
+    // cursor-follow window always sees its real height.
+    let avail = area
+        .height
+        .saturating_sub(2)
+        .saturating_sub(crew_height)
+        .saturating_sub(voice_height);
+    let input_height = input_demand
+        .min(avail.saturating_sub(CHAT_FLOOR))
+        .max(INPUT_FLOOR.min(avail));
+    if input_height < input_demand {
+        tracing::trace!(
+            input_demand,
+            input_height,
+            frame_height = area.height,
+            "input height clamped by the vertical budget"
+        );
+    }
 
     let [
         toolbar_area,
@@ -34,7 +63,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         status_area,
     ] = Layout::vertical([
         Constraint::Length(1),
-        Constraint::Min(5),
+        Constraint::Min(CHAT_FLOOR),
         Constraint::Length(crew_height),
         Constraint::Length(voice_height),
         Constraint::Length(input_height),

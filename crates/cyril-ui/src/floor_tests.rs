@@ -456,6 +456,100 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// cyril-a14l C1 fence (slice 7): at every size ≥60×16, for adversarial
+/// state shapes (max draft, draft+suggestions, crew panel present), the
+/// frame keeps the toolbar, the status row, ≥3 chat rows, and an input of
+/// ≥3 rows with both borders. A budget that forgets the crew rows in its
+/// arithmetic over-allocates the input and fails the chat-floor half.
+#[test]
+fn layout_floors_hold_across_adversarial_matrix() -> anyhow::Result<()> {
+    use cyril_core::types::{Notification, SessionId, SubagentInfo, SubagentStatus};
+
+    let draft = (1..=10)
+        .map(|index| format!("draft-{index}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let mut crew_state = MockTuiState {
+        messages: chat_messages(6),
+        input_text: draft.clone(),
+        input_cursor: draft.len(),
+        ..Default::default()
+    };
+    crew_state
+        .subagent_tracker
+        .apply_notification(&Notification::SubagentListUpdated {
+            subagents: vec![SubagentInfo::new(
+                SessionId::new("s0"),
+                "writer",
+                "writer",
+                "q",
+                SubagentStatus::Working { message: None },
+            )],
+            pending_stages: vec![],
+        });
+
+    let states = [
+        (
+            "max-draft",
+            MockTuiState {
+                messages: chat_messages(6),
+                input_text: draft.clone(),
+                input_cursor: draft.len(),
+                ..Default::default()
+            },
+        ),
+        (
+            "draft+suggestions",
+            MockTuiState {
+                messages: chat_messages(6),
+                input_text: draft.clone(),
+                input_cursor: draft.len(),
+                autocomplete_suggestions: suggestions(10),
+                autocomplete_selected: Some(7),
+                ..Default::default()
+            },
+        ),
+        ("crew+draft", crew_state),
+    ];
+
+    for (label, state) in &states {
+        let crew = crate::widgets::crew_panel::height_for(state);
+        let voice = crate::widgets::voice::height_for(state);
+        for (width, height) in [(60u16, 16u16), (60, 17), (61, 20), (80, 24)] {
+            let buffer = render_frame(state, width, height)?;
+            let (input_top, input_bottom) = input_rect_rows(&buffer)
+                .ok_or_else(|| anyhow::anyhow!("{label} {width}x{height}: input box not found"))?;
+            anyhow::ensure!(
+                input_bottom - input_top + 1 >= 3,
+                "{label} {width}x{height}: input shrank below its floor \
+                 (rows {input_top}..={input_bottom})"
+            );
+            let chat_rows = input_top
+                .saturating_sub(1)
+                .saturating_sub(crew)
+                .saturating_sub(voice);
+            anyhow::ensure!(
+                chat_rows >= 3,
+                "{label} {width}x{height}: chat floor broken ({chat_rows} rows, \
+                 input_top={input_top}, crew={crew}, voice={voice})"
+            );
+            let status_row: String = (0..width)
+                .map(|x| {
+                    buffer
+                        .cell((x, height - 1))
+                        .map_or(" ", ratatui::buffer::Cell::symbol)
+                })
+                .collect();
+            anyhow::ensure!(
+                !status_row.trim().is_empty(),
+                "{label} {width}x{height}: status row missing"
+            );
+        }
+    }
+    Ok(())
+}
+
 /// C6 (slice 0): the roomy 80×24 frame is pinned BEFORE any layout change
 /// on this branch — later slices must keep all three scenes byte-identical.
 #[test]
