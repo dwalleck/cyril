@@ -167,6 +167,158 @@ fn input_top_row(buffer: &Buffer) -> Option<u16> {
     })
 }
 
+/// The input box rect parsed from a frame: (top row, bottom row). Bottom is
+/// the matching `└` row below the top border.
+fn input_rect_rows(buffer: &Buffer) -> Option<(u16, u16)> {
+    let top = input_top_row(buffer)?;
+    let area = *buffer.area();
+    let bottom = (top + 1..area.height)
+        .find(|&y| buffer.cell((0, y)).is_some_and(|cell| cell.symbol() == "└"))?;
+    Some((top, bottom))
+}
+
+/// Cell coordinates of a `█` found inside the input content rect.
+type CursorCells = Vec<(u16, u16)>;
+
+/// Input content rows (between the borders), trimmed, plus the cell
+/// coordinates of every `█` inside the content rect.
+fn input_content(buffer: &Buffer) -> Option<(Vec<String>, CursorCells)> {
+    let (top, bottom) = input_rect_rows(buffer)?;
+    let area = *buffer.area();
+    let mut rows = Vec::new();
+    let mut cursors = Vec::new();
+    for y in top + 1..bottom {
+        let row: String = (1..area.width - 1)
+            .map(|x| {
+                let symbol = buffer
+                    .cell((x, y))
+                    .map_or(" ", ratatui::buffer::Cell::symbol);
+                if symbol == "\u{2588}" {
+                    cursors.push((x, y));
+                }
+                symbol
+            })
+            .collect();
+        rows.push(row.trim_end().to_string());
+    }
+    Some((rows, cursors))
+}
+
+/// cyril-a14l C2 fence (slice 6): a 10-line draft with the cursor at the
+/// end keeps exactly one cursor block visible inside the input content
+/// rect at 60×16, at the position the char-wrap oracle + follow-window
+/// formula predict. Pre-a14l code showed ZERO cursor cells here (probe S1).
+#[test]
+fn input_cursor_always_visible() -> anyhow::Result<()> {
+    let draft = (1..=10)
+        .map(|index| format!("draft-{index}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let state = MockTuiState {
+        messages: chat_messages(6),
+        input_text: draft.clone(),
+        input_cursor: draft.len(),
+        ..Default::default()
+    };
+    let buffer = render_frame(&state, 60, 16)?;
+    let (rows, cursors) = input_content(&buffer)
+        .ok_or_else(|| anyhow::anyhow!("input box not found in 60x16 frame"))?;
+
+    // Independent expectation: 10 visual rows (no line wraps at width 58,
+    // per the committed python-oracle fixture draft-10/58 case), cursor on
+    // visual row 9 at char col 8; window start = 9 - (content_rows - 1).
+    let content_rows = rows.len();
+    anyhow::ensure!(content_rows >= 1, "input has no content rows");
+    let start = 9usize.saturating_sub(content_rows - 1);
+    anyhow::ensure!(
+        rows[0].starts_with(&format!("draft-{}", start + 1)),
+        "window start drifted: first visible row {:?}, expected draft-{}",
+        rows[0],
+        start + 1
+    );
+    anyhow::ensure!(
+        rows[content_rows - 1].starts_with("draft-10\u{2588}"),
+        "cursor row not visible: last row {:?}",
+        rows[content_rows - 1]
+    );
+    anyhow::ensure!(
+        cursors.len() == 1,
+        "expected exactly one cursor cell in the input rect, found {cursors:?}"
+    );
+    Ok(())
+}
+
+/// cyril-a14l C3 fence (slice 6): the visible input window is exactly the
+/// slice of logical lines containing the cursor, in order, for cursor at
+/// start / middle / end of a 30-line unicode draft. Expected windows are
+/// computed here from pure line arithmetic — independent of wrapped_rows.
+#[test]
+fn input_scroll_window_matches_oracle() -> anyhow::Result<()> {
+    let lines: Vec<String> = (1..=30).map(|index| format!("世界-{index}")).collect();
+    let text = lines.join("\n");
+    let middle_cursor: usize = lines[..14].iter().map(|line| line.len() + 1).sum();
+
+    for (label, cursor, cursor_line) in [
+        ("start", 0usize, 0usize),
+        ("middle", middle_cursor, 14),
+        ("end", text.len(), 29),
+    ] {
+        let state = MockTuiState {
+            messages: chat_messages(6),
+            input_text: text.clone(),
+            input_cursor: cursor,
+            ..Default::default()
+        };
+        let buffer = render_frame(&state, 60, 16)?;
+        let (rows, cursors) = input_content(&buffer)
+            .ok_or_else(|| anyhow::anyhow!("{label}: input box not found"))?;
+        let content_rows = rows.len();
+        let start = cursor_line.saturating_sub(content_rows - 1);
+
+        let expected: Vec<String> = (start..(start + content_rows).min(30))
+            .map(|index| {
+                if index == cursor_line {
+                    // The three fixtures put the cursor at a line start
+                    // (start/middle) or at the very end of the text.
+                    let line = &lines[index];
+                    if cursor == text.len() {
+                        format!("{line}\u{2588}")
+                    } else {
+                        format!("\u{2588}{line}")
+                    }
+                } else {
+                    lines[index].clone()
+                }
+            })
+            .collect();
+        // Buffer cells: a wide char renders as its symbol plus a blank
+        // continuation cell — expand expectations to cell space.
+        let expected: Vec<String> = expected
+            .iter()
+            .map(|line| {
+                use unicode_width::UnicodeWidthChar;
+                line.chars()
+                    .flat_map(|character| {
+                        std::iter::once(character.to_string()).chain(std::iter::repeat_n(
+                            " ".to_string(),
+                            character.width().unwrap_or(0).saturating_sub(1),
+                        ))
+                    })
+                    .collect::<String>()
+            })
+            .collect();
+        anyhow::ensure!(
+            rows[..expected.len()] == expected[..],
+            "{label}: window mismatch\n got: {rows:?}\n want: {expected:?}"
+        );
+        anyhow::ensure!(
+            cursors.len() == 1,
+            "{label}: expected one cursor cell, found {cursors:?}"
+        );
+    }
+    Ok(())
+}
+
 /// cyril-a14l C7 fence (slice 4): for every overlay kind × frame size ×
 /// input shape, every cell the overlay changes sits strictly between the
 /// toolbar and the input's top border. Probe S4/S5 showed the pre-a14l

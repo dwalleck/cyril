@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, Paragraph};
 
 use crate::theme::Theme;
 use crate::traits::TuiState;
@@ -34,11 +34,11 @@ pub fn height_for(state: &dyn TuiState) -> u16 {
 /// cells (`width` is clamped to ≥ 1). East-Asian wide chars take 2 cells
 /// and move whole to the next row rather than straddling the boundary;
 /// combining marks take 0 cells and never force a wrap. Returns the visual
-/// rows plus the index of the row carrying the cursor block — tracked
+/// rows plus the (row, char-column) of the cursor block — tracked
 /// structurally during the wrap, so text that itself contains `█` cannot
 /// confuse it. Independently oracled by `.cyril-a14l/oracle-input-wrap.py`
 /// via `tests/fixtures/input-wrap-oracle.tsv`.
-pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, usize) {
+pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, usize, usize) {
     use unicode_width::UnicodeWidthChar;
 
     let width = width.max(1);
@@ -53,6 +53,7 @@ pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, us
     let mut current = String::new();
     let mut used = 0usize;
     let mut cursor_row = 0usize;
+    let mut cursor_col = 0usize;
     for (index, character) in decorated.chars().enumerate() {
         if character == '\n' {
             rows.push(std::mem::take(&mut current));
@@ -66,49 +67,63 @@ pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, us
         }
         if index == block_index {
             cursor_row = rows.len();
+            cursor_col = current.chars().count();
         }
         current.push(character);
         used += cells;
     }
     rows.push(current);
-    (rows, cursor_row)
+    (rows, cursor_row, cursor_col)
 }
 
-/// Render the input area, displaying newlines as real rows and placing the
-/// cursor block at the byte cursor.
+/// First visible row of the cursor-follow window: as high as possible while
+/// keeping the cursor row inside `visible_rows` rows.
+fn window_start(cursor_row: usize, visible_rows: usize) -> usize {
+    cursor_row.saturating_sub(visible_rows.saturating_sub(1))
+}
+
+/// Render the input area: char-wrapped visual rows with a cursor-follow
+/// window, so the cursor block is visible at every allocated height
+/// (cyril-a14l C2/C3 — this replaces the never-implemented Paragraph
+/// scrolling the previous version's comment promised).
 pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
-    let text = state.input_text();
-    let cursor = state.input_cursor().min(text.len());
-    let (before, after) = text.split_at(cursor);
+    let content_width = usize::from(area.width.saturating_sub(2));
+    let content_height = usize::from(area.height.saturating_sub(2));
+    let (rows, cursor_row, cursor_col) =
+        wrapped_rows(state.input_text(), state.input_cursor(), content_width);
 
-    // `split('\n')` yields at least one segment for any string (including ""),
-    // so the last()/[0] accesses below never panic.
-    let before_segments: Vec<&str> = before.split('\n').collect();
-    let after_segments: Vec<&str> = after.split('\n').collect();
+    let start = window_start(cursor_row, content_height);
+    let end = rows.len().min(start.saturating_add(content_height));
+    let lines: Vec<Line> = rows[start..end]
+        .iter()
+        .enumerate()
+        .map(|(offset, row)| {
+            if start + offset == cursor_row {
+                // Split around the structural cursor column so a literal █
+                // in the draft is never mistaken for the cursor.
+                let byte = row
+                    .char_indices()
+                    .nth(cursor_col)
+                    .map_or(row.len(), |(byte, _)| byte);
+                let after_byte = row[byte..]
+                    .char_indices()
+                    .nth(1)
+                    .map_or(row.len(), |(offset_bytes, _)| byte + offset_bytes);
+                Line::from(vec![
+                    Span::raw(row[..byte].to_string()),
+                    Span::styled(
+                        row[byte..after_byte].to_string(),
+                        Style::default().fg(theme.text),
+                    ),
+                    Span::raw(row[after_byte..].to_string()),
+                ])
+            } else {
+                Line::from(Span::raw(row.clone()))
+            }
+        })
+        .collect();
 
-    let mut lines: Vec<Line> = Vec::new();
-
-    // Whole lines entirely above the cursor's row.
-    for seg in &before_segments[..before_segments.len() - 1] {
-        lines.push(Line::from(Span::raw(*seg)));
-    }
-
-    // The cursor's row: text before the cursor on this line, the cursor block,
-    // then text after the cursor up to the next newline.
-    let before_tail = before_segments[before_segments.len() - 1];
-    let after_head = after_segments[0];
-    lines.push(Line::from(vec![
-        Span::raw(before_tail),
-        Span::styled("\u{2588}", Style::default().fg(theme.text)),
-        Span::raw(after_head),
-    ]));
-
-    // Whole lines entirely below the cursor's row.
-    for seg in &after_segments[1..] {
-        lines.push(Line::from(Span::raw(*seg)));
-    }
-
-    let input_widget = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
+    let input_widget = Paragraph::new(lines).block(
         Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.subdued))
@@ -468,18 +483,21 @@ mod tests {
         let mut checked = 0usize;
         for line in fixture.lines().skip(1) {
             let fields: Vec<&str> = line.split('\t').collect();
-            anyhow::ensure!(fields.len() == 5, "malformed fixture line: {line:?}");
+            anyhow::ensure!(fields.len() == 6, "malformed fixture line: {line:?}");
             let text = oracle_case_text(fields[0])?;
             let width: usize = fields[1].parse()?;
             let cursor: usize = fields[2].parse()?;
             let expected_cursor_row: usize = fields[3].parse()?;
-            let expected_rows: Vec<&str> = fields[4].split('\u{1f}').collect();
+            let expected_cursor_col: usize = fields[4].parse()?;
+            let expected_rows: Vec<&str> = fields[5].split('\u{1f}').collect();
 
-            let (rows, cursor_row) = wrapped_rows(&text, cursor, width);
+            let (rows, cursor_row, cursor_col) = wrapped_rows(&text, cursor, width);
             anyhow::ensure!(
-                rows == expected_rows && cursor_row == expected_cursor_row,
-                "case {}/{width}/{cursor}: got ({rows:?}, {cursor_row}), oracle says \
-                 ({expected_rows:?}, {expected_cursor_row})",
+                rows == expected_rows
+                    && cursor_row == expected_cursor_row
+                    && cursor_col == expected_cursor_col,
+                "case {}/{width}/{cursor}: got ({rows:?}, {cursor_row}, {cursor_col}), oracle \
+                 says ({expected_rows:?}, {expected_cursor_row}, {expected_cursor_col})",
                 fields[0]
             );
             checked += 1;
@@ -494,21 +512,22 @@ mod tests {
     #[test]
     fn literal_block_char_does_not_hijack_cursor_row() {
         let text = "\u{2588}x\ny";
-        let (rows, cursor_row) = wrapped_rows(text, text.len(), 10);
+        let (rows, cursor_row, cursor_col) = wrapped_rows(text, text.len(), 10);
         assert_eq!(rows, vec!["\u{2588}x", "y\u{2588}"]);
-        assert_eq!(cursor_row, 1);
+        assert_eq!((cursor_row, cursor_col), (1, 1));
     }
 
     /// Out-of-range and mid-char cursors are defined behavior: clamp to the
     /// end, floor to a char boundary.
     #[test]
     fn cursor_clamps_and_floors_to_char_boundary() {
-        let (rows_max, row_max) = wrapped_rows("ab", usize::MAX, 10);
+        let (rows_max, row_max, col_max) = wrapped_rows("ab", usize::MAX, 10);
         assert_eq!(rows_max, vec!["ab\u{2588}"]);
-        assert_eq!(row_max, 0);
+        assert_eq!((row_max, col_max), (0, 2));
         // "世" is 3 bytes; byte 1 floors to 0 → block precedes it.
-        let (rows_mid, _) = wrapped_rows("世", 1, 10);
+        let (rows_mid, _, col_mid) = wrapped_rows("世", 1, 10);
         assert_eq!(rows_mid, vec!["\u{2588}世"]);
+        assert_eq!(col_mid, 0);
     }
 
     #[test]

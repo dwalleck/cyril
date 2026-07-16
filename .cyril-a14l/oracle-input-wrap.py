@@ -68,7 +68,7 @@ WIDTHS = [1, 2, 3, 10, 58]
 
 
 def main() -> None:
-    print("case\twidth\tcursor_byte\tcursor_row\trows_0x1f_joined")
+    print("case\twidth\tcursor_byte\tcursor_row\tcursor_col\trows_0x1f_joined")
     for name, text, cursors in CASES:
         for cursor in cursors:
             decorated = layout(text, cursor)
@@ -77,7 +77,10 @@ def main() -> None:
                 for line in decorated.split("\n"):
                     rows.extend(wrap_line(line, width))
                 cursor_row = next(i for i, r in enumerate(rows) if BLOCK in r)
-                print(f"{name}\t{width}\t{cursor}\t{cursor_row}\t{SEP.join(rows)}")
+                cursor_col = rows[cursor_row].index(BLOCK)
+                print(
+                    f"{name}\t{width}\t{cursor}\t{cursor_row}\t{cursor_col}\t{SEP.join(rows)}"
+                )
 
 
 if __name__ == "__main__":
