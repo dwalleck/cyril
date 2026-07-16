@@ -21,6 +21,10 @@ pub fn draw(frame: &mut Frame, state: &dyn TuiState) {
 const CHAT_FLOOR: u16 = 3;
 /// Minimum input box height under pressure: one content row plus borders.
 const INPUT_FLOOR: u16 = 3;
+/// Chat rows that must survive for autocomplete to keep its in-flow row
+/// below the input (today's pre-a14l chat minimum); anything less flips the
+/// suggestion list to the floating overlay (D4).
+const CHAT_COMFORT: u16 = 5;
 
 fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     let area = frame.area();
@@ -61,7 +65,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         && avail
             < input_height
                 .saturating_add(suggestions_demand)
-                .saturating_add(5);
+                .saturating_add(CHAT_COMFORT);
     let suggestions_height = if suggestions_overlay {
         0
     } else {

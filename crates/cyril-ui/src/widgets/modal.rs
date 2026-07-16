@@ -29,30 +29,30 @@ pub fn centered(area: Rect, desired_width: u16, desired_height: u16) -> Rect {
 /// `input_top` (claim C9 parity). Otherwise the popup shrinks to the region
 /// height and anchors directly above the input.
 ///
-/// Returns an empty rect when the region has no rows or the area has no
-/// clampable width; callers must skip rendering (including `Clear`) when
-/// `rect.area() == 0` — rendering a popup frame into a zero rect would
-/// paint nothing meaningful but still wipe cells.
-pub fn place(area: Rect, input_top: u16, desired_width: u16, desired_height: u16) -> Rect {
+/// Returns `None` when the region has no rows or the area has no clampable
+/// width — there is nowhere to draw, and callers must render nothing
+/// (including `Clear`). `Option` instead of an empty-rect sentinel per the
+/// workspace rule "use `Option` for absent values, not sentinels".
+pub fn place(area: Rect, input_top: u16, desired_width: u16, desired_height: u16) -> Option<Rect> {
     let legacy = centered(area, desired_width, desired_height);
     if legacy.area() == 0 {
-        return Rect::default();
+        return None;
     }
     if legacy.bottom() <= input_top {
-        return legacy;
+        return Some(legacy);
     }
     let region_top = area.y.saturating_add(1);
     let region_height = input_top.saturating_sub(region_top);
     if region_height == 0 {
-        return Rect::default();
+        return None;
     }
     let height = legacy.height.min(region_height);
-    Rect::new(
+    Some(Rect::new(
         legacy.x,
         input_top.saturating_sub(height),
         legacy.width,
         height,
-    )
+    ))
 }
 
 #[cfg(test)]
@@ -130,10 +130,11 @@ mod tests {
                             let placed = place(area, input_top, dw, dh);
                             if legacy.area() > 0 && legacy.bottom() <= input_top {
                                 assert_eq!(
-                                    placed, legacy,
+                                    placed,
+                                    Some(legacy),
                                     "parity broke: area={area:?} desired={dw}x{dh} input_top={input_top}"
                                 );
-                            } else if placed.area() > 0 {
+                            } else if let Some(placed) = placed {
                                 assert!(
                                     placed.y >= 1 && placed.bottom() <= input_top,
                                     "containment broke: {placed:?} input_top={input_top}"
@@ -147,24 +148,24 @@ mod tests {
         }
     }
 
-    /// cyril-a14l C9 stress: regions that cannot hold content yield the
-    /// empty rect (callers skip rendering), never a panic or a popup that
-    /// bleeds into the toolbar or input rows.
+    /// cyril-a14l C9 stress: regions that cannot hold content yield `None`
+    /// (callers render nothing), never a panic or a popup that bleeds into
+    /// the toolbar or input rows.
     #[test]
-    fn place_degenerate_regions_yield_empty_rects() {
+    fn place_degenerate_regions_yield_none() {
         // input_top at/above the region start: no rows available.
         for input_top in [0u16, 1] {
             let placed = place(Rect::new(0, 0, 60, 16), input_top, 56, 9);
-            assert_eq!(placed.area(), 0, "input_top={input_top}");
+            assert_eq!(placed, None, "input_top={input_top}");
         }
         // Unclampable width.
-        assert_eq!(place(Rect::new(0, 0, 3, 16), 10, 56, 9).area(), 0);
+        assert_eq!(place(Rect::new(0, 0, 3, 16), 10, 56, 9), None);
         // Region of exactly one row: popup shrinks to it, anchored above input.
         let one_row = place(Rect::new(0, 0, 60, 16), 2, 56, 9);
-        assert_eq!(one_row, Rect::new(2, 1, 56, 1));
+        assert_eq!(one_row, Some(Rect::new(2, 1, 56, 1)));
         // Max-draft corner from the probe: input_top=4 leaves rows 1-3.
         let tight = place(Rect::new(0, 0, 60, 16), 4, 56, 9);
-        assert_eq!(tight, Rect::new(2, 1, 56, 3));
+        assert_eq!(tight, Some(Rect::new(2, 1, 56, 3)));
     }
 
     #[test]

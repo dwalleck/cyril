@@ -36,14 +36,13 @@ fn render_option_phase(
     state: &ApprovalState,
     theme: &Theme,
 ) {
-    let desired_height = state.options.len() as u16 + 6;
-    let popup_area = super::modal::place(area, input_top, 60, desired_height);
-    if popup_area.area() == 0 {
-        // place() empty-rect contract: no region above the input can hold
-        // the popup — skip rendering entirely (Clear on a bogus rect wipes
-        // cells for nothing).
-        return;
-    }
+    // options.len() is a handful of user-facing choices; the sum stays far
+    // below u16::MAX, so try_from is infallible and the saturation is
+    // defensive, not an error default (same pattern as the picker).
+    let desired_height = u16::try_from(state.options.len().saturating_add(6)).unwrap_or(u16::MAX);
+    let Some(popup_area) = super::modal::place(area, input_top, 60, desired_height) else {
+        return; // no rows above the input can hold the popup
+    };
 
     frame.render_widget(Clear, popup_area);
 
@@ -106,12 +105,20 @@ fn render_trust_phase(
     state: &ApprovalState,
     theme: &Theme,
 ) {
-    // Each trust option: label line + display line + blank = 3 lines, plus header
-    let desired_height = (state.trust_options.len() as u16 * 3) + 4;
-    let popup_area = super::modal::place(area, input_top, 64, desired_height);
-    if popup_area.area() == 0 {
-        return; // place() empty-rect contract — same as the option phase.
-    }
+    // Each trust option: label line + display line + blank = 3 lines, plus
+    // header. Trust tiers are a handful, so try_from is infallible; the
+    // saturation is defensive, not an error default.
+    let desired_height = u16::try_from(
+        state
+            .trust_options
+            .len()
+            .saturating_mul(3)
+            .saturating_add(4),
+    )
+    .unwrap_or(u16::MAX);
+    let Some(popup_area) = super::modal::place(area, input_top, 64, desired_height) else {
+        return; // no rows above the input can hold the popup
+    };
 
     frame.render_widget(Clear, popup_area);
 

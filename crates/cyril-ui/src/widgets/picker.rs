@@ -51,11 +51,9 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, state: &PickerState
     // MAX_VISIBLE_OPTIONS + 1 + 4 = 20, so try_from is infallible; the
     // saturation is defensive, not an error default.
     let desired_height = u16::try_from(desired_rows + desc_reserve + 4).unwrap_or(u16::MAX);
-    let popup_area = modal::place(area, input_top, 80, desired_height);
-    if popup_area.area() == 0 {
-        // place() empty-rect contract: no rows above the input — skip.
-        return;
-    }
+    let Some(popup_area) = modal::place(area, input_top, 80, desired_height) else {
+        return; // no rows above the input can hold the popup
+    };
 
     let inner_height = popup_area.height.saturating_sub(2) as usize;
     // 2 = filter line + blank spacer line.

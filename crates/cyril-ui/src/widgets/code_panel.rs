@@ -124,16 +124,14 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, data: &CodePanelDat
 
     // Size and position: input-protected placement (cyril-a14l C7).
     let content_width = lines.iter().map(|l| l.width()).max().unwrap_or(30) as u16 + 4;
-    let popup_area = crate::widgets::modal::place(
+    let Some(popup_area) = crate::widgets::modal::place(
         area,
         input_top,
         content_width.clamp(40, 80),
         (lines.len() as u16).saturating_add(2),
-    );
-    if popup_area.area() == 0 {
-        // place() empty-rect contract: no rows above the input — skip.
-        return;
-    }
+    ) else {
+        return; // no rows above the input can hold the popup
+    };
 
     frame.render_widget(Clear, popup_area);
 

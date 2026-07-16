@@ -32,11 +32,11 @@ pub fn render(
     // the "margin" is what keeps the header from sitting directly under it).
     // Cap at 15 data rows before the content starts scrolling.
     let data_rows = state.hooks.len().clamp(1, 15) as u16;
-    let popup_area = crate::widgets::modal::place(area, input_top, 96, data_rows.saturating_add(4));
-    if popup_area.area() == 0 {
-        // place() empty-rect contract: no rows above the input — skip.
-        return;
-    }
+    let Some(popup_area) =
+        crate::widgets::modal::place(area, input_top, 96, data_rows.saturating_add(4))
+    else {
+        return; // no rows above the input can hold the popup
+    };
     let width = popup_area.width;
     let height = popup_area.height;
 
