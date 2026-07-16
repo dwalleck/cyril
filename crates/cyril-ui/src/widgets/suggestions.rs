@@ -26,7 +26,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
     }
 
     let total = suggestions.len();
-    let visible = total.min(MAX_VISIBLE);
+    // The window is bounded by the rows this widget actually received, not
+    // just MAX_VISIBLE — under height pressure the layout may hand us fewer
+    // rows, and rendering a MAX_VISIBLE-item window into them scrolled the
+    // selection off-screen (cyril-a14l C4, probe S2b).
+    let visible = total.min(MAX_VISIBLE).min(usize::from(area.height));
+    if visible == 0 {
+        return;
+    }
 
     // Center-scroll: keep the selected item near the middle of the viewport.
     // Clamped so the window never starts before 0 or extends past the end.
@@ -268,6 +275,89 @@ mod tests {
         }
 
         Ok(passes)
+    }
+
+    /// cyril-a14l C4 fence (slice 8): the selected `▸` row stays inside the
+    /// rendered area for every (total, selected, area_height) shape —
+    /// including areas smaller than MAX_VISIBLE. Expected window start is
+    /// recomputed here from first principles over the EFFECTIVE visible
+    /// count. Pre-a14l code windowed over MAX_VISIBLE regardless of area
+    /// and fails the (10, 7, 4) probe-S2b case with no ▸ on screen.
+    #[test]
+    fn suggestion_selection_always_visible() -> anyhow::Result<()> {
+        for (total, selected, height) in [
+            (10usize, Some(7usize), 4u16),
+            (10, Some(0), 4),
+            (10, Some(9), 4),
+            (11, Some(0), 1),
+            (11, Some(10), 1),
+            (3, Some(1), 10),
+            (10, None, 4),
+            (10, Some(5), 0),
+        ] {
+            let state = MockTuiState {
+                autocomplete_suggestions: (0..total).map(matrix_suggestion).collect(),
+                autocomplete_selected: selected,
+                ..Default::default()
+            };
+            let mut terminal = Terminal::new(TestBackend::new(80, height.max(1)))?;
+            terminal.draw(|frame| {
+                render(
+                    frame,
+                    ratatui::layout::Rect::new(0, 0, 80, height),
+                    &state,
+                    &state.theme,
+                );
+            })?;
+            let buffer = terminal.backend().buffer();
+            let rows: Vec<String> = (0..height.max(1))
+                .map(|y| {
+                    (0..80)
+                        .map(|x| {
+                            buffer
+                                .cell((x, y))
+                                .map_or("", ratatui::buffer::Cell::symbol)
+                        })
+                        .collect::<String>()
+                        .trim_end()
+                        .to_string()
+                })
+                .collect();
+
+            // Independent expectation from first principles.
+            let effective = total.min(MAX_VISIBLE).min(usize::from(height));
+            match (selected, effective) {
+                (Some(sel), effective) if effective > 0 => {
+                    let start = if total > effective {
+                        sel.saturating_sub(effective / 2).min(total - effective)
+                    } else {
+                        0
+                    };
+                    let marker_row = sel - start;
+                    anyhow::ensure!(
+                        marker_row < effective,
+                        "({total},{sel},{height}): selection outside window by construction"
+                    );
+                    // Wide chars occupy two buffer cells (symbol + blank
+                    // continuation), so check chars individually.
+                    let text = matrix_suggestion(sel).text;
+                    anyhow::ensure!(
+                        rows[marker_row].starts_with('▸')
+                            && text
+                                .chars()
+                                .all(|character| rows[marker_row].contains(character)),
+                        "({total},{sel},{height}): ▸ not on expected row {marker_row}: {rows:?}"
+                    );
+                }
+                _ => {
+                    anyhow::ensure!(
+                        rows.iter().all(|row| !row.starts_with('▸')),
+                        "({total},{selected:?},{height}): unexpected marker: {rows:?}"
+                    );
+                }
+            }
+        }
+        Ok(())
     }
 
     #[test]

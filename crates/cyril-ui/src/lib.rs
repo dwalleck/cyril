@@ -3,6 +3,8 @@ pub mod cache;
 mod chrome_theme_tests;
 pub mod error;
 pub mod file_completer;
+#[cfg(test)]
+mod floor_tests;
 pub mod highlight;
 pub mod render;
 pub mod spinner;
