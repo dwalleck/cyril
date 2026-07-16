@@ -245,6 +245,33 @@ fn input_cursor_always_visible() -> anyhow::Result<()> {
         cursors.len() == 1,
         "expected exactly one cursor cell in the input rect, found {cursors:?}"
     );
+
+    // Design C2 also claims 80×24 (review finding): a 15-line draft exceeds
+    // the input's 10-content-row growth cap even when roomy — the window
+    // must slide there too.
+    let tall_draft = (1..=15)
+        .map(|index| format!("draft-{index}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let tall_state = MockTuiState {
+        messages: chat_messages(6),
+        input_text: tall_draft.clone(),
+        input_cursor: tall_draft.len(),
+        ..Default::default()
+    };
+    let tall_buffer = render_frame(&tall_state, 80, 24)?;
+    let (tall_rows, tall_cursors) = input_content(&tall_buffer)
+        .ok_or_else(|| anyhow::anyhow!("input box not found in 80x24 frame"))?;
+    anyhow::ensure!(
+        tall_cursors.len() == 1,
+        "80x24: expected exactly one cursor cell, found {tall_cursors:?}"
+    );
+    anyhow::ensure!(
+        tall_rows
+            .last()
+            .is_some_and(|row| row.starts_with("draft-15\u{2588}")),
+        "80x24: cursor row not visible: {tall_rows:?}"
+    );
     Ok(())
 }
 
@@ -623,6 +650,72 @@ fn suggestions_overlay_under_pressure() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// cyril-a14l AC-2 fence (review follow-up): the floated autocomplete is
+/// keyboard operable END TO END — real `UiState` (not a mock), a real
+/// `FileCompleter`, real key events. Typing `@probe` opens suggestions;
+/// each Down keystroke is consumed and the rendered 60×16 overlay shows
+/// the `▸` on the newly selected item, above an input that never moves.
+#[test]
+fn floated_autocomplete_is_keyboard_operable() -> anyhow::Result<()> {
+    use crossterm::event::{KeyCode, KeyEvent};
+
+    use crate::file_completer::FileCompleter;
+    use crate::state::{AutocompleteAction, UiState};
+
+    let mut ui = UiState::new(100);
+    ui.set_file_completer(FileCompleter::from_files(
+        (1..=10)
+            .map(|index| format!("probe-file-{index}.rs"))
+            .collect(),
+    ));
+    ui.insert_text("@probe");
+
+    let render = |ui: &UiState| -> anyhow::Result<Buffer> {
+        let mut terminal = Terminal::new(TestBackend::new(60, 16))?;
+        terminal.draw(|frame| crate::render::draw(frame, ui))?;
+        Ok(terminal.backend().buffer().clone())
+    };
+    let marked_row = |buffer: &Buffer| -> Option<String> {
+        let area = *buffer.area();
+        (0..area.height).find_map(|y| {
+            let row: String = (0..area.width)
+                .map(|x| {
+                    buffer
+                        .cell((x, y))
+                        .map_or(" ", ratatui::buffer::Cell::symbol)
+                })
+                .collect();
+            row.trim_start()
+                .starts_with('▸')
+                .then(|| row.trim().to_string())
+        })
+    };
+
+    let first = render(&ui)?;
+    let input_top_before = input_top_row(&first)
+        .ok_or_else(|| anyhow::anyhow!("input box missing with autocomplete open"))?;
+    let initial = marked_row(&first).ok_or_else(|| anyhow::anyhow!("no ▸ after typing @probe"))?;
+
+    for _ in 0..2 {
+        let action = ui.handle_autocomplete_key(KeyEvent::from(KeyCode::Down));
+        anyhow::ensure!(
+            matches!(action, AutocompleteAction::Consumed),
+            "Down not consumed by autocomplete"
+        );
+    }
+    let after = render(&ui)?;
+    let moved = marked_row(&after).ok_or_else(|| anyhow::anyhow!("▸ lost after Down keys"))?;
+    anyhow::ensure!(
+        moved != initial,
+        "selection marker did not move after two Down keys (still {initial:?})"
+    );
+    anyhow::ensure!(
+        input_top_row(&after) == Some(input_top_before),
+        "input moved while navigating the floated autocomplete"
+    );
+    Ok(())
+}
+
 /// cyril-a14l C10 fence (slice 10): browse mode at the floor — a huge
 /// scroll-back clamps to the OLDEST message (expected top line computed
 /// from the message list, independent of chat.rs's scroll math), the
@@ -643,9 +736,10 @@ fn browse_mode_usable_at_floor() -> anyhow::Result<()> {
 
     // Chat renders "You:" then "  chat-1" for the oldest message — clamped
     // scroll-back must surface it on the first chat rows.
+    // Column 59 carries the scrollbar — exclude it so rows compare on text.
     let chat_rows: Vec<String> = (1..input_top)
         .map(|y| {
-            (0..60)
+            (0..59)
                 .map(|x| {
                     buffer
                         .cell((x, y))
@@ -656,8 +750,10 @@ fn browse_mode_usable_at_floor() -> anyhow::Result<()> {
                 .to_string()
         })
         .collect();
+    // Exact row match — `contains("chat-1")` would also accept chat-10..19,
+    // letting a mis-clamped scroll pass (review finding).
     anyhow::ensure!(
-        chat_rows.iter().any(|row| row.contains("chat-1")),
+        chat_rows.iter().any(|row| row == "  chat-1"),
         "oldest message not reachable at max scroll-back: {chat_rows:?}"
     );
     // Scrollbar renders on the right edge of the chat viewport.
