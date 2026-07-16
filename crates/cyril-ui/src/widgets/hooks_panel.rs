@@ -11,22 +11,34 @@ const MIN_COMMAND_COL: usize = 20;
 // Two inner columns of padding (2 + 2) + one trailing gap (2)
 const PADDING: usize = 6;
 
-/// Render the hooks panel overlay (centered popup).
+/// Render the hooks panel overlay (input-protected popup).
 ///
 /// Response shape: `/hooks` command returns `{data: {hooks: HookInfo[]}}`.
 /// Each `HookInfo` has `trigger`, `command`, and optional `matcher`.
 /// The panel displays them as a three-column table sorted by trigger.
-pub fn render(frame: &mut Frame, area: Rect, state: &HooksPanelState, theme: &Theme) {
-    let width = 96.min(area.width.saturating_sub(4));
+/// `input_top` is the absolute row of the input box's top border; placement
+/// goes through [`crate::widgets::modal::place`] so the popup never covers
+/// the input (cyril-a14l C7); the row window below already derives from the
+/// popup's actual height.
+pub fn render(
+    frame: &mut Frame,
+    area: Rect,
+    input_top: u16,
+    state: &HooksPanelState,
+    theme: &Theme,
+) {
     // +4 = top border + bottom border + header row + 1 row of margin for
     // the title span (the title sits on the top border row in ratatui, so
     // the "margin" is what keeps the header from sitting directly under it).
     // Cap at 15 data rows before the content starts scrolling.
     let data_rows = state.hooks.len().clamp(1, 15) as u16;
-    let height = (data_rows + 4).min(area.height.saturating_sub(4));
-    let x = area.x + (area.width.saturating_sub(width)) / 2;
-    let y = area.y + (area.height.saturating_sub(height)) / 2;
-    let popup_area = Rect::new(x, y, width, height);
+    let popup_area = crate::widgets::modal::place(area, input_top, 96, data_rows.saturating_add(4));
+    if popup_area.area() == 0 {
+        // place() empty-rect contract: no rows above the input — skip.
+        return;
+    }
+    let width = popup_area.width;
+    let height = popup_area.height;
 
     frame.render_widget(Clear, popup_area);
 
@@ -128,6 +140,7 @@ mod tests {
                 render(
                     frame,
                     frame.area(),
+                    frame.area().height,
                     state,
                     &crate::theme::resolve(
                         crate::theme::ThemeId::CyrilDark,

@@ -59,6 +59,97 @@ fn approval_state(option_count: usize) -> ApprovalState {
     }
 }
 
+fn buffer_rows(buffer: &Buffer) -> Vec<String> {
+    let area = *buffer.area();
+    (0..area.height)
+        .map(|y| {
+            (0..area.width)
+                .map(|x| {
+                    buffer
+                        .cell((x, y))
+                        .map_or(" ", ratatui::buffer::Cell::symbol)
+                })
+                .collect::<String>()
+                .trim_end()
+                .to_string()
+        })
+        .collect()
+}
+
+/// cyril-a14l C7 (slice 3): a picker clamped above the input keeps the
+/// selected `▸` row visible (cc5e's height-adaptive window at the new,
+/// smaller popup height) and paints nothing at or below `input_top`.
+#[test]
+fn picker_clamped_above_input_keeps_selection_visible() -> anyhow::Result<()> {
+    use crate::traits::PickerState;
+    use cyril_core::types::CommandOption;
+
+    let options: Vec<CommandOption> = (0..4)
+        .map(|index| CommandOption {
+            label: format!("model-{index}"),
+            value: format!("model-{index}"),
+            description: Some(format!("description-{index}")),
+            group: None,
+            is_current: index == 0,
+        })
+        .collect();
+    let picker = PickerState {
+        title: "Select model".into(),
+        options,
+        filter: String::new(),
+        filtered_indices: vec![0, 1, 2, 3],
+        selected: 3,
+    };
+    let state = MockTuiState::default();
+    let mut terminal = Terminal::new(TestBackend::new(60, 16))?;
+    terminal.draw(|frame| {
+        crate::widgets::picker::render(frame, frame.area(), 8, &picker, &state.theme);
+    })?;
+    let rows = buffer_rows(terminal.backend().buffer());
+    assert!(
+        rows.iter().any(|row| row.contains("▸ model-3")),
+        "selected picker row missing: {rows:?}"
+    );
+    for (index, row) in rows.iter().enumerate().skip(8) {
+        assert_eq!(row, "", "picker bled into row {index}: {rows:?}");
+    }
+    Ok(())
+}
+
+/// cyril-a14l C7 (slice 3): a hooks panel clamped above the input windows
+/// its scrolled rows within the smaller popup and paints nothing at or
+/// below `input_top`.
+#[test]
+fn hooks_clamped_above_input_windows_scrolled_rows() -> anyhow::Result<()> {
+    use crate::traits::HooksPanelState;
+    use cyril_core::types::HookInfo;
+
+    let hooks = HooksPanelState {
+        hooks: (0..12)
+            .map(|index| HookInfo {
+                trigger: format!("trigger-{index}"),
+                command: format!("command-{index}"),
+                matcher: None,
+            })
+            .collect(),
+        scroll_offset: 8,
+    };
+    let state = MockTuiState::default();
+    let mut terminal = Terminal::new(TestBackend::new(60, 16))?;
+    terminal.draw(|frame| {
+        crate::widgets::hooks_panel::render(frame, frame.area(), 8, &hooks, &state.theme);
+    })?;
+    let rows = buffer_rows(terminal.backend().buffer());
+    assert!(
+        rows.iter().any(|row| row.contains("trigger-8")),
+        "scrolled hook row missing: {rows:?}"
+    );
+    for (index, row) in rows.iter().enumerate().skip(8) {
+        assert_eq!(row, "", "hooks panel bled into row {index}: {rows:?}");
+    }
+    Ok(())
+}
+
 /// C6 (slice 0): the roomy 80×24 frame is pinned BEFORE any layout change
 /// on this branch — later slices must keep all three scenes byte-identical.
 #[test]

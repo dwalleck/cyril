@@ -203,11 +203,15 @@ fn scene(name: &str, theme: &Theme) -> Vec<String> {
         }
         "picker" => {
             let st = picker_scene_state();
-            scene_rows(name, |f| picker::render(f, f.area(), &st, theme))
+            scene_rows(name, |f| {
+                picker::render(f, f.area(), f.area().height, &st, theme)
+            })
         }
         "hooks" => {
             let st = hooks_scene_state();
-            scene_rows(name, |f| hooks_panel::render(f, f.area(), &st, theme))
+            scene_rows(name, |f| {
+                hooks_panel::render(f, f.area(), f.area().height, &st, theme)
+            })
         }
         "code" => {
             let st = code_scene_state();
@@ -481,7 +485,7 @@ fn hooks_empty_list_renders_themed() {
         scroll_offset: 0,
     };
     let rows = scene_rows("hooks-empty", |f| {
-        hooks_panel::render(f, f.area(), &empty, &marker)
+        hooks_panel::render(f, f.area(), f.area().height, &empty, &marker)
     });
     let fgs: std::collections::BTreeSet<String> = rows
         .iter()

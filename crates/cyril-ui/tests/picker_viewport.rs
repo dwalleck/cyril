@@ -41,7 +41,7 @@ fn render_text(w: u16, h: u16, state: &PickerState) -> String {
                 cyril_ui::theme::ThemeId::CyrilDark,
                 cyril_ui::theme::ColorMode::TrueColor,
             );
-            picker::render(frame, frame.area(), state, &theme);
+            picker::render(frame, frame.area(), frame.area().height, state, &theme);
         })
         .expect("draw");
     let buffer = terminal.backend().buffer();

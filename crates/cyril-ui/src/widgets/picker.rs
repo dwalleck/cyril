@@ -35,8 +35,13 @@ fn option_window(n: usize, selected: usize, option_rows: usize) -> (usize, usize
     (start, rows)
 }
 
-/// Render the picker overlay (centered popup).
-pub fn render(frame: &mut Frame, area: Rect, state: &PickerState, theme: &Theme) {
+/// Render the picker overlay.
+///
+/// `input_top` is the absolute row of the input box's top border; placement
+/// goes through [`modal::place`] so the popup never covers the input
+/// (cyril-a14l C7). The option window already adapts to the popup's actual
+/// height (cyril-cc5e), so clamped popups keep the selection visible.
+pub fn render(frame: &mut Frame, area: Rect, input_top: u16, state: &PickerState, theme: &Theme) {
     let n = state.filtered_indices.len();
     let desired_rows = n.min(MAX_VISIBLE_OPTIONS);
     // Reserved whenever ANY option has a description (not just the selected
@@ -46,7 +51,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &PickerState, theme: &Theme)
     // MAX_VISIBLE_OPTIONS + 1 + 4 = 20, so try_from is infallible; the
     // saturation is defensive, not an error default.
     let desired_height = u16::try_from(desired_rows + desc_reserve + 4).unwrap_or(u16::MAX);
-    let popup_area = modal::centered(area, 80, desired_height);
+    let popup_area = modal::place(area, input_top, 80, desired_height);
+    if popup_area.area() == 0 {
+        // place() empty-rect contract: no rows above the input — skip.
+        return;
+    }
 
     let inner_height = popup_area.height.saturating_sub(2) as usize;
     // 2 = filter line + blank spacer line.
@@ -183,6 +192,7 @@ mod tests {
                 render(
                     frame,
                     frame.area(),
+                    frame.area().height,
                     &state,
                     &crate::theme::resolve(
                         crate::theme::ThemeId::CyrilDark,
