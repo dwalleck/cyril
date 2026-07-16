@@ -149,9 +149,11 @@ value is determinism — the input widget's cursor-follow window always
 receives its true height.
 **Loop budget:** no new production loop — arithmetic only. Matrix test
 ≈ 16 renders × O(cells). Trivial. Degradation path logs via
-`tracing::debug!` (diagnostic, stderr-file sink) when floors force input
+`tracing::trace!` (diagnostic, stderr-file sink) when floors force input
 below its demand — satisfies "log before degrading" (CLAUDE.md silent-
-failure rule).
+failure rule). DEVIATION (recorded post-review): the plan originally said
+`debug!`; the clamp fires on every rendered frame while constrained, which
+is per-frame-hot — trace! is the correct severity for that cadence.
 **Files:** `crates/cyril-ui/src/render.rs`,
 `crates/cyril-ui/src/floor_tests.rs` (fence
 `layout_floors_hold_across_adversarial_matrix`).
