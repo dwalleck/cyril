@@ -550,6 +550,79 @@ fn layout_floors_hold_across_adversarial_matrix() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// cyril-a14l C5 fence (slice 9): opening autocomplete under height
+/// pressure must NOT move the input box (pre-a14l it reflowed from row 10
+/// to row 6 at 60×16); suggestions float above the input with the
+/// selection visible, and every in-flow row (input, status) stays
+/// byte-identical to the closed frame.
+#[test]
+fn suggestions_overlay_under_pressure() -> anyhow::Result<()> {
+    let big_draft = (1..=10)
+        .map(|index| format!("draft-{index}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // (width, height, draft, selected) — the last case pins the accepted
+    // above-floor behavior change (D4): max draft + 10 suggestions at 80×24
+    // also floats, where the old solver crushed both surfaces.
+    for (width, height, draft, selected) in [
+        (60u16, 16u16, "@probe", Some(7usize)),
+        (60, 16, big_draft.as_str(), Some(7)),
+        (80, 24, big_draft.as_str(), Some(0)),
+    ] {
+        let closed = MockTuiState {
+            messages: chat_messages(6),
+            input_text: draft.into(),
+            input_cursor: draft.len(),
+            ..Default::default()
+        };
+        let open = MockTuiState {
+            messages: chat_messages(6),
+            input_text: draft.into(),
+            input_cursor: draft.len(),
+            autocomplete_suggestions: suggestions(10),
+            autocomplete_selected: selected,
+            ..Default::default()
+        };
+        let closed_frame = render_frame(&closed, width, height)?;
+        let open_frame = render_frame(&open, width, height)?;
+
+        let closed_top = input_top_row(&closed_frame)
+            .ok_or_else(|| anyhow::anyhow!("{width}x{height}: closed frame lost its input"))?;
+        let open_top = input_top_row(&open_frame)
+            .ok_or_else(|| anyhow::anyhow!("{width}x{height}: open frame lost its input"))?;
+        anyhow::ensure!(
+            closed_top == open_top,
+            "{width}x{height}: input moved when autocomplete opened \
+             ({closed_top} -> {open_top})"
+        );
+
+        // Input rows and everything below must be untouched by the overlay.
+        for y in open_top..height {
+            for x in 0..width {
+                anyhow::ensure!(
+                    open_frame.cell((x, y)) == closed_frame.cell((x, y)),
+                    "{width}x{height}: overlay touched cell ({x},{y}) at/below the input"
+                );
+            }
+        }
+
+        // The selected suggestion is visible above the input.
+        let marker = (0..open_top).any(|y| {
+            (0..width).any(|x| {
+                open_frame
+                    .cell((x, y))
+                    .is_some_and(|cell| cell.symbol() == "▸")
+            })
+        });
+        anyhow::ensure!(
+            marker,
+            "{width}x{height}: selection marker not visible above the input"
+        );
+    }
+    Ok(())
+}
+
 /// C6 (slice 0): the roomy 80×24 frame is pinned BEFORE any layout change
 /// on this branch — later slices must keep all three scenes byte-identical.
 #[test]

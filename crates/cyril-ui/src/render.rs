@@ -29,7 +29,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     // Runtime-variable panel heights are owned by their widget's height_for().
     let crew_height = crate::widgets::crew_panel::height_for(state);
     let voice_height = crate::widgets::voice::height_for(state);
-    let suggestions_height = crate::widgets::suggestions::height_for(state);
+    let suggestions_demand = crate::widgets::suggestions::height_for(state);
     let input_demand = crate::widgets::input::height_for(state);
 
     // Explicit vertical budget (cyril-a14l R1): the input may grow with its
@@ -52,6 +52,21 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
             "input height clamped by the vertical budget"
         );
     }
+
+    // Suggestions keep today's in-flow row below the input only while chat
+    // retains its comfortable 5 rows (cyril-a14l R3/D4); under pressure the
+    // list floats above the input instead, so opening autocomplete never
+    // reflows the frame (C5).
+    let suggestions_overlay = suggestions_demand > 0
+        && avail
+            < input_height
+                .saturating_add(suggestions_demand)
+                .saturating_add(5);
+    let suggestions_height = if suggestions_overlay {
+        0
+    } else {
+        suggestions_demand
+    };
 
     let [
         toolbar_area,
@@ -85,6 +100,23 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         crate::widgets::suggestions::render(frame, suggestions_area, state, &theme);
     }
     crate::widgets::toolbar::render_status_bar(frame, status_area, state, &theme);
+
+    // Constrained-mode autocomplete: float directly above the input without
+    // moving any in-flow row (cyril-a14l C5). Modals render after and may
+    // paint over it — they also own the keyboard while open.
+    if suggestions_overlay {
+        let overlay_height = suggestions_demand.min(input_area.y.saturating_sub(1));
+        if overlay_height > 0 {
+            let overlay_area = ratatui::layout::Rect::new(
+                area.x,
+                input_area.y - overlay_height,
+                area.width,
+                overlay_height,
+            );
+            frame.render_widget(ratatui::widgets::Clear, overlay_area);
+            crate::widgets::suggestions::render(frame, overlay_area, state, &theme);
+        }
+    }
 
     // Overlays (rendered on top)
     if let Some(approval) = state.approval() {
