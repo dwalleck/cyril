@@ -6,8 +6,6 @@ pub mod file_completer;
 #[cfg(test)]
 mod floor_tests;
 pub mod highlight;
-#[cfg(test)]
-mod probe_a14l;
 pub mod render;
 pub mod spinner;
 pub mod state;

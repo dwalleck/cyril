@@ -623,6 +623,128 @@ fn suggestions_overlay_under_pressure() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// cyril-a14l C10 fence (slice 10): browse mode at the floor — a huge
+/// scroll-back clamps to the OLDEST message (expected top line computed
+/// from the message list, independent of chat.rs's scroll math), the
+/// scrollbar renders, and chat keeps ≥3 rows.
+#[test]
+fn browse_mode_usable_at_floor() -> anyhow::Result<()> {
+    let state = MockTuiState {
+        messages: chat_messages(30),
+        chat_scroll_back: Some(10_000),
+        input_text: "reply".into(),
+        input_cursor: "reply".len(),
+        ..Default::default()
+    };
+    let buffer = render_frame(&state, 60, 16)?;
+    let (input_top, _) = input_rect_rows(&buffer)
+        .ok_or_else(|| anyhow::anyhow!("input box not found in browse frame"))?;
+    anyhow::ensure!(input_top >= 4, "chat floor broken in browse mode");
+
+    // Chat renders "You:" then "  chat-1" for the oldest message — clamped
+    // scroll-back must surface it on the first chat rows.
+    let chat_rows: Vec<String> = (1..input_top)
+        .map(|y| {
+            (0..60)
+                .map(|x| {
+                    buffer
+                        .cell((x, y))
+                        .map_or(" ", ratatui::buffer::Cell::symbol)
+                })
+                .collect::<String>()
+                .trim_end()
+                .to_string()
+        })
+        .collect();
+    anyhow::ensure!(
+        chat_rows.iter().any(|row| row.contains("chat-1")),
+        "oldest message not reachable at max scroll-back: {chat_rows:?}"
+    );
+    // Scrollbar renders on the right edge of the chat viewport.
+    let scrollbar = (1..input_top).any(|y| {
+        buffer
+            .cell((59, y))
+            .is_some_and(|cell| matches!(cell.symbol(), "▲" | "▼" | "║" | "█"))
+    });
+    anyhow::ensure!(scrollbar, "scrollbar missing in browse mode");
+
+    // Follow mode (None) pins the NEWEST message instead — the two modes
+    // must disagree on content for scroll-back to mean anything.
+    let follow = MockTuiState {
+        messages: chat_messages(30),
+        chat_scroll_back: None,
+        input_text: "reply".into(),
+        input_cursor: "reply".len(),
+        ..Default::default()
+    };
+    let follow_buffer = render_frame(&follow, 60, 16)?;
+    let follow_ref = &follow_buffer;
+    let follow_rows: String = (1..input_top)
+        .flat_map(|y| {
+            (0..60).map(move |x| {
+                follow_ref
+                    .cell((x, y))
+                    .map_or(" ", ratatui::buffer::Cell::symbol)
+            })
+        })
+        .collect();
+    anyhow::ensure!(
+        follow_rows.contains("chat-30"),
+        "follow mode should pin the newest message"
+    );
+    Ok(())
+}
+
+/// cyril-a14l C11 fence (slice 10, promoted from probe falsifier F-B): no
+/// state × size combination down to 1×1 reaches the panic fallback.
+#[test]
+fn no_fallback_size_sweep() -> anyhow::Result<()> {
+    let draft = (1..=10)
+        .map(|index| format!("draft-{index}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut states = vec![
+        MockTuiState::default(),
+        MockTuiState {
+            messages: chat_messages(6),
+            input_text: draft.clone(),
+            input_cursor: draft.len(),
+            autocomplete_suggestions: suggestions(10),
+            autocomplete_selected: Some(7),
+            ..Default::default()
+        },
+        MockTuiState {
+            messages: chat_messages(6),
+            input_text: "reply".into(),
+            input_cursor: 5,
+            approval: Some(approval_state(3)),
+            ..Default::default()
+        },
+    ];
+    states.push(MockTuiState {
+        messages: chat_messages(6),
+        chat_scroll_back: Some(10_000),
+        ..Default::default()
+    });
+    for (index, state) in states.iter().enumerate() {
+        for width in [1u16, 2, 5, 10, 20, 59, 60, 61, 80, 200] {
+            for height in [1u16, 2, 3, 5, 8, 15, 16, 17, 24, 100] {
+                let buffer = render_frame(state, width, height)?;
+                let text: String = buffer
+                    .content()
+                    .iter()
+                    .map(ratatui::buffer::Cell::symbol)
+                    .collect();
+                anyhow::ensure!(
+                    !text.contains("Render error"),
+                    "panic fallback reached: state {index} at {width}x{height}"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
 /// C6 (slice 0): the roomy 80×24 frame is pinned BEFORE any layout change
 /// on this branch — later slices must keep all three scenes byte-identical.
 #[test]
