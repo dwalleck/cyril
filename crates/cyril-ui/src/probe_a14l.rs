@@ -195,7 +195,11 @@ fn falsifier_paragraph_scroll_semantics() -> anyhow::Result<()> {
     terminal.draw(|frame| frame.render_widget(paragraph, frame.area()))?;
     let buffer = terminal.backend().buffer().clone();
     let row0: String = (0..10)
-        .map(|x| buffer.cell((x, 0)).map_or(" ", ratatui::buffer::Cell::symbol))
+        .map(|x| {
+            buffer
+                .cell((x, 0))
+                .map_or(" ", ratatui::buffer::Cell::symbol)
+        })
         .collect();
     println!("scroll(1) row0 = {row0:?}");
     println!(
