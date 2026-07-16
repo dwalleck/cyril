@@ -176,3 +176,82 @@ fn probe_60x16_dump() -> anyhow::Result<()> {
     dump("S5 picker-overlay", &render_at(&s5, 60, 16)?);
     Ok(())
 }
+
+/// Design falsifier (cyril-a14l design.md claim C2 mechanism): determine
+/// whether `Paragraph::scroll((y, 0))` with `Wrap { trim: false }` offsets by
+/// post-wrap VISUAL rows or pre-wrap LOGICAL lines. The cursor-follow design
+/// is only correct under one of the two.
+#[test]
+fn falsifier_paragraph_scroll_semantics() -> anyhow::Result<()> {
+    use ratatui::text::Line;
+    use ratatui::widgets::{Paragraph, Wrap};
+
+    // One 30-char logical line (wraps to 3 visual rows at width 10), then END.
+    let long: String = "abcdefghij0123456789ABCDEFGHIJ".into();
+    let paragraph = Paragraph::new(vec![Line::from(long), Line::from("END")])
+        .wrap(Wrap { trim: false })
+        .scroll((1, 0));
+    let mut terminal = Terminal::new(TestBackend::new(10, 2))?;
+    terminal.draw(|frame| frame.render_widget(paragraph, frame.area()))?;
+    let buffer = terminal.backend().buffer().clone();
+    let row0: String = (0..10)
+        .map(|x| buffer.cell((x, 0)).map_or(" ", ratatui::buffer::Cell::symbol))
+        .collect();
+    println!("scroll(1) row0 = {row0:?}");
+    println!(
+        "verdict: {}",
+        if row0.starts_with("0123456789") {
+            "VISUAL rows (post-wrap)"
+        } else if row0.starts_with("END") {
+            "LOGICAL lines (pre-wrap)"
+        } else {
+            "NEITHER — investigate"
+        }
+    );
+    Ok(())
+}
+
+/// Design falsifier (cyril-a14l claim C11): no state × size combination in the
+/// adversarial matrix reaches the panic fallback ("Render error" banner) today.
+#[test]
+fn falsifier_no_fallback_size_sweep() -> anyhow::Result<()> {
+    let draft = big_draft();
+    let states = [
+        MockTuiState::default(),
+        MockTuiState {
+            messages: messages(),
+            input_text: draft.clone(),
+            input_cursor: draft.len(),
+            autocomplete_suggestions: file_suggestions(),
+            autocomplete_selected: Some(7),
+            ..Default::default()
+        },
+        MockTuiState {
+            messages: messages(),
+            input_text: "reply".into(),
+            input_cursor: 5,
+            approval: Some(approval()),
+            ..Default::default()
+        },
+        MockTuiState {
+            messages: messages(),
+            picker: Some(picker()),
+            ..Default::default()
+        },
+    ];
+    let mut fallbacks = 0u32;
+    for (index, state) in states.iter().enumerate() {
+        for width in [1u16, 2, 5, 10, 20, 59, 60, 61, 80, 200] {
+            for height in [1u16, 2, 3, 5, 8, 15, 16, 17, 24, 100] {
+                let buffer = render_at(state, width, height)?;
+                let text: String = buffer.content().iter().map(|c| c.symbol()).collect();
+                if text.contains("Render error") {
+                    println!("FALLBACK at state{index} {width}x{height}");
+                    fallbacks += 1;
+                }
+            }
+        }
+    }
+    println!("fallbacks: {fallbacks} / 400 renders");
+    Ok(())
+}
