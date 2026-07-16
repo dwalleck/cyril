@@ -191,11 +191,15 @@ fn scene(name: &str, theme: &Theme) -> Vec<String> {
     match name {
         "approval-option" => {
             let st = approval_state(false);
-            scene_rows(name, |f| approval::render(f, f.area(), &st, theme))
+            scene_rows(name, |f| {
+                approval::render(f, f.area(), f.area().height, &st, theme)
+            })
         }
         "approval-trust" => {
             let st = approval_state(true);
-            scene_rows(name, |f| approval::render(f, f.area(), &st, theme))
+            scene_rows(name, |f| {
+                approval::render(f, f.area(), f.area().height, &st, theme)
+            })
         }
         "picker" => {
             let st = picker_scene_state();
