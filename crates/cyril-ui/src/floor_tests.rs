@@ -150,6 +150,160 @@ fn hooks_clamped_above_input_windows_scrolled_rows() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Absolute row of the input box's top border, parsed from the rendered
+/// frame (the input block is the only bordered widget whose top border
+/// carries the " > " title) — independent of the layout arithmetic.
+fn input_top_row(buffer: &Buffer) -> Option<u16> {
+    let area = *buffer.area();
+    (0..area.height).find(|&y| {
+        let row: String = (0..area.width)
+            .map(|x| {
+                buffer
+                    .cell((x, y))
+                    .map_or(" ", ratatui::buffer::Cell::symbol)
+            })
+            .collect();
+        row.contains("┌ > ")
+    })
+}
+
+/// cyril-a14l C7 fence (slice 4): for every overlay kind × frame size ×
+/// input shape, every cell the overlay changes sits strictly between the
+/// toolbar and the input's top border. Probe S4/S5 showed the pre-a14l
+/// popups covering input rows 10–11 at 60×16 — this fence fails on that
+/// geometry.
+#[test]
+fn modals_never_cover_input() -> anyhow::Result<()> {
+    use crate::traits::{HooksPanelState, PickerState};
+    use cyril_core::types::{CodePanelData, HookInfo, LspStatus};
+
+    let big_draft = (1..=10)
+        .map(|index| format!("draft-{index}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    type OverlayMutator = Box<dyn Fn(&mut MockTuiState)>;
+    let overlay_variants: Vec<(&str, OverlayMutator)> = vec![
+        (
+            "approval-select",
+            Box::new(|state: &mut MockTuiState| state.approval = Some(approval_state(3))),
+        ),
+        (
+            "approval-trust",
+            Box::new(|state: &mut MockTuiState| {
+                use cyril_core::types::{PermissionOptionId, TrustOption};
+                let mut approval = approval_state(1);
+                approval.trust_options = (0..3)
+                    .map(|index| TrustOption {
+                        label: format!("Tier {index}"),
+                        display: format!("pattern-{index}"),
+                        setting_key: "allowedCommands".into(),
+                        patterns: vec![format!("pattern-{index}")],
+                    })
+                    .collect();
+                approval.selected = 2;
+                approval.phase = crate::traits::ApprovalPhase::SelectTrust {
+                    chosen_option_id: PermissionOptionId::new("opt-0"),
+                };
+                state.approval = Some(approval);
+            }),
+        ),
+        (
+            "picker",
+            Box::new(|state: &mut MockTuiState| {
+                use cyril_core::types::CommandOption;
+                state.picker = Some(PickerState {
+                    title: "Select model".into(),
+                    options: (0..4)
+                        .map(|index| CommandOption {
+                            label: format!("model-{index}"),
+                            value: format!("model-{index}"),
+                            description: Some("description".into()),
+                            group: None,
+                            is_current: false,
+                        })
+                        .collect(),
+                    filter: String::new(),
+                    filtered_indices: vec![0, 1, 2, 3],
+                    selected: 3,
+                });
+            }),
+        ),
+        (
+            "hooks",
+            Box::new(|state: &mut MockTuiState| {
+                state.hooks_panel = Some(HooksPanelState {
+                    hooks: (0..12)
+                        .map(|index| HookInfo {
+                            trigger: format!("trigger-{index}"),
+                            command: format!("command-{index}"),
+                            matcher: None,
+                        })
+                        .collect(),
+                    scroll_offset: 0,
+                });
+            }),
+        ),
+        (
+            "code",
+            Box::new(|state: &mut MockTuiState| {
+                state.code_panel = Some(CodePanelData {
+                    status: LspStatus::Initialized,
+                    message: Some("ready".into()),
+                    warning: None,
+                    root_path: Some("/repo".into()),
+                    detected_languages: vec!["rust".into()],
+                    project_markers: vec!["Cargo.toml".into()],
+                    config_path: None,
+                    doc_url: None,
+                    lsps: vec![],
+                });
+            }),
+        ),
+    ];
+
+    for (width, height) in [(60u16, 16u16), (80, 24)] {
+        for (input_label, input_text) in [("one-line", "reply"), ("max-draft", big_draft.as_str())]
+        {
+            let base_state = MockTuiState {
+                messages: chat_messages(6),
+                input_text: input_text.into(),
+                input_cursor: input_text.len(),
+                ..Default::default()
+            };
+            let base = render_frame(&base_state, width, height)?;
+            let input_top = input_top_row(&base).ok_or_else(|| {
+                anyhow::anyhow!("no input border in base frame {width}x{height} {input_label}")
+            })?;
+
+            for (overlay_label, mutate) in &overlay_variants {
+                let mut state = MockTuiState {
+                    messages: chat_messages(6),
+                    input_text: input_text.into(),
+                    input_cursor: input_text.len(),
+                    ..Default::default()
+                };
+                mutate(&mut state);
+                let overlaid = render_frame(&state, width, height)?;
+                for (index, (cell, base_cell)) in
+                    overlaid.content().iter().zip(base.content()).enumerate()
+                {
+                    if cell == base_cell {
+                        continue;
+                    }
+                    let y = u16::try_from(index / usize::from(width))?;
+                    anyhow::ensure!(
+                        y >= 1 && y < input_top,
+                        "{overlay_label} at {width}x{height}/{input_label}: changed cell on \
+                         row {y} (input_top={input_top})"
+                    );
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 /// C6 (slice 0): the roomy 80×24 frame is pinned BEFORE any layout change
 /// on this branch — later slices must keep all three scenes byte-identical.
 #[test]

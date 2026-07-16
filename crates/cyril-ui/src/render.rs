@@ -68,7 +68,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         crate::widgets::hooks_panel::render(frame, area, input_area.y, hooks, &theme);
     }
     if let Some(code_panel) = state.code_panel() {
-        crate::widgets::code_panel::render(frame, area, code_panel, &theme);
+        crate::widgets::code_panel::render(frame, area, input_area.y, code_panel, &theme);
     }
 }
 

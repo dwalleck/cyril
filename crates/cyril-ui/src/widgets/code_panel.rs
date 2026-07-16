@@ -4,8 +4,12 @@ use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use cyril_core::types::{CodePanelData, LspStatus};
 
-/// Render the code intelligence panel as a centered overlay.
-pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData, theme: &Theme) {
+/// Render the code intelligence panel as an input-protected overlay.
+///
+/// `input_top` is the absolute row of the input box's top border; placement
+/// goes through [`crate::widgets::modal::place`] so the popup never covers
+/// the input (cyril-a14l C7).
+pub fn render(frame: &mut Frame, area: Rect, input_top: u16, data: &CodePanelData, theme: &Theme) {
     let mut lines: Vec<Line> = Vec::new();
 
     // Status line
@@ -118,15 +122,18 @@ pub fn render(frame: &mut Frame, area: Rect, data: &CodePanelData, theme: &Theme
         Span::styled(" close", Style::default().fg(theme.subdued)),
     ]));
 
-    // Size and position
+    // Size and position: input-protected placement (cyril-a14l C7).
     let content_width = lines.iter().map(|l| l.width()).max().unwrap_or(30) as u16 + 4;
-    let width = content_width
-        .clamp(40, 80)
-        .min(area.width.saturating_sub(4));
-    let height = (lines.len() as u16 + 2).min(area.height.saturating_sub(4));
-    let x = area.x + (area.width.saturating_sub(width)) / 2;
-    let y = area.y + (area.height.saturating_sub(height)) / 2;
-    let popup_area = Rect::new(x, y, width, height);
+    let popup_area = crate::widgets::modal::place(
+        area,
+        input_top,
+        content_width.clamp(40, 80),
+        (lines.len() as u16).saturating_add(2),
+    );
+    if popup_area.area() == 0 {
+        // place() empty-rect contract: no rows above the input — skip.
+        return;
+    }
 
     frame.render_widget(Clear, popup_area);
 
@@ -207,6 +214,7 @@ mod tests {
                 render(
                     frame,
                     frame.area(),
+                    frame.area().height,
                     &data,
                     &crate::theme::resolve(
                         crate::theme::ThemeId::CyrilDark,
@@ -228,6 +236,7 @@ mod tests {
                 render(
                     frame,
                     frame.area(),
+                    frame.area().height,
                     &data,
                     &crate::theme::resolve(
                         crate::theme::ThemeId::CyrilDark,
@@ -258,6 +267,7 @@ mod tests {
                 render(
                     frame,
                     frame.area(),
+                    frame.area().height,
                     &data,
                     &crate::theme::resolve(
                         crate::theme::ThemeId::CyrilDark,
@@ -278,6 +288,7 @@ mod tests {
                 render(
                     frame,
                     frame.area(),
+                    frame.area().height,
                     &data,
                     &crate::theme::resolve(
                         crate::theme::ThemeId::CyrilDark,

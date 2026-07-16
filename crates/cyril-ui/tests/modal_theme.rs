@@ -215,7 +215,9 @@ fn scene(name: &str, theme: &Theme) -> Vec<String> {
         }
         "code" => {
             let st = code_scene_state();
-            scene_rows(name, |f| code_panel::render(f, f.area(), &st, theme))
+            scene_rows(name, |f| {
+                code_panel::render(f, f.area(), f.area().height, &st, theme)
+            })
         }
         other => panic!("unknown scene {other}"),
     }
@@ -544,7 +546,7 @@ fn code_edge_shapes_render_themed() {
         lsps: vec![],
     };
     let rows = scene_rows("code-edge", |f| {
-        code_panel::render(f, f.area(), &edge, &marker)
+        code_panel::render(f, f.area(), f.area().height, &edge, &marker)
     });
     assert!(!rows.is_empty(), "edge scene rendered nothing");
     let allowed = ["Indexed(20)", "Indexed(23)", "Indexed(24)", "Reset"];
