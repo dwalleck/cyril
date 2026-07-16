@@ -25,6 +25,55 @@ pub fn height_for(state: &dyn TuiState) -> u16 {
     (lines + 2).clamp(MIN_HEIGHT, MAX_HEIGHT)
 }
 
+/// Char-wrapped visual layout of the input text (cyril-a14l C2/C3).
+///
+/// Inserts the cursor block at `cursor` (a byte offset; clamped to the text
+/// length and floored to a char boundary — flooring is defined behavior,
+/// not an error path, so out-of-range cursors from a stale state still
+/// render), splits on `'\n'`, and char-wraps each logical line at `width`
+/// cells (`width` is clamped to ≥ 1). East-Asian wide chars take 2 cells
+/// and move whole to the next row rather than straddling the boundary;
+/// combining marks take 0 cells and never force a wrap. Returns the visual
+/// rows plus the index of the row carrying the cursor block — tracked
+/// structurally during the wrap, so text that itself contains `█` cannot
+/// confuse it. Independently oracled by `.cyril-a14l/oracle-input-wrap.py`
+/// via `tests/fixtures/input-wrap-oracle.tsv`.
+pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, usize) {
+    use unicode_width::UnicodeWidthChar;
+
+    let width = width.max(1);
+    let mut cursor = cursor.min(text.len());
+    while cursor > 0 && !text.is_char_boundary(cursor) {
+        cursor -= 1;
+    }
+    let block_index = text[..cursor].chars().count();
+    let decorated = format!("{}\u{2588}{}", &text[..cursor], &text[cursor..]);
+
+    let mut rows: Vec<String> = Vec::new();
+    let mut current = String::new();
+    let mut used = 0usize;
+    let mut cursor_row = 0usize;
+    for (index, character) in decorated.chars().enumerate() {
+        if character == '\n' {
+            rows.push(std::mem::take(&mut current));
+            used = 0;
+            continue;
+        }
+        let cells = character.width().unwrap_or(0);
+        if cells > 0 && used + cells > width && !current.is_empty() {
+            rows.push(std::mem::take(&mut current));
+            used = 0;
+        }
+        if index == block_index {
+            cursor_row = rows.len();
+        }
+        current.push(character);
+        used += cells;
+    }
+    rows.push(current);
+    (rows, cursor_row)
+}
+
 /// Render the input area, displaying newlines as real rows and placing the
 /// cursor block at the byte cursor.
 pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
@@ -391,6 +440,75 @@ mod tests {
                 );
             }
         }
+    }
+
+    fn oracle_case_text(case: &str) -> anyhow::Result<String> {
+        Ok(match case {
+            "empty" => String::new(),
+            "ascii" => "ascii".into(),
+            "long-line" => "ab ".repeat(100),
+            "draft-10" => (1..=10)
+                .map(|index| format!("draft-{index}"))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            "wide" => "世界".repeat(40),
+            "wide-straddle" => "ab世cd".into(),
+            "combining" => "a\u{0301}bc".into(),
+            other => anyhow::bail!("unknown oracle case {other}"),
+        })
+    }
+
+    /// cyril-a14l C2/C3 (slice 5): every (case, width, cursor) row of the
+    /// committed Python-oracle fixture matches `wrapped_rows` exactly —
+    /// rows AND cursor row. The fixture was generated before this function
+    /// was written (`.cyril-a14l/oracle-input-wrap.py`).
+    #[test]
+    fn wrap_rows_match_python_oracle() -> anyhow::Result<()> {
+        let fixture = include_str!("../../tests/fixtures/input-wrap-oracle.tsv");
+        let mut checked = 0usize;
+        for line in fixture.lines().skip(1) {
+            let fields: Vec<&str> = line.split('\t').collect();
+            anyhow::ensure!(fields.len() == 5, "malformed fixture line: {line:?}");
+            let text = oracle_case_text(fields[0])?;
+            let width: usize = fields[1].parse()?;
+            let cursor: usize = fields[2].parse()?;
+            let expected_cursor_row: usize = fields[3].parse()?;
+            let expected_rows: Vec<&str> = fields[4].split('\u{1f}').collect();
+
+            let (rows, cursor_row) = wrapped_rows(&text, cursor, width);
+            anyhow::ensure!(
+                rows == expected_rows && cursor_row == expected_cursor_row,
+                "case {}/{width}/{cursor}: got ({rows:?}, {cursor_row}), oracle says \
+                 ({expected_rows:?}, {expected_cursor_row})",
+                fields[0]
+            );
+            checked += 1;
+        }
+        assert_eq!(checked, 95, "oracle fixture row count drifted");
+        Ok(())
+    }
+
+    /// A draft that itself contains `█` must not confuse cursor tracking —
+    /// the cursor row is structural, not glyph-searched. Cursor at the end
+    /// of "█x\ny": inserted block lands on row 1, not the literal █ on row 0.
+    #[test]
+    fn literal_block_char_does_not_hijack_cursor_row() {
+        let text = "\u{2588}x\ny";
+        let (rows, cursor_row) = wrapped_rows(text, text.len(), 10);
+        assert_eq!(rows, vec!["\u{2588}x", "y\u{2588}"]);
+        assert_eq!(cursor_row, 1);
+    }
+
+    /// Out-of-range and mid-char cursors are defined behavior: clamp to the
+    /// end, floor to a char boundary.
+    #[test]
+    fn cursor_clamps_and_floors_to_char_boundary() {
+        let (rows_max, row_max) = wrapped_rows("ab", usize::MAX, 10);
+        assert_eq!(rows_max, vec!["ab\u{2588}"]);
+        assert_eq!(row_max, 0);
+        // "世" is 3 bytes; byte 1 floors to 0 → block precedes it.
+        let (rows_mid, _) = wrapped_rows("世", 1, 10);
+        assert_eq!(rows_mid, vec!["\u{2588}世"]);
     }
 
     #[test]
