@@ -1,0 +1,14 @@
+{
+  "name": "kas-agent-schema-export",
+  "private": true,
+  "description": "Regenerates docs/kiro-kas-agent-*-schema-<ver>.{json,yaml} from zod definitions carved out of the @kiro/agent (KAS) bundle, and validates them against fixture agents.",
+  "scripts": {
+    "generate": "node generate.js ../../docs/kiro-kas-agent-file-schema-2.13.0.json ../../docs/kiro-kas-agent-frontmatter-schema-2.13.0.yaml",
+    "validate": "node validate.js ../../docs/kiro-kas-agent-file-schema-2.13.0.json ../../docs/kiro-kas-agent-frontmatter-schema-2.13.0.yaml"
+  },
+  "dependencies": {
+    "ajv": "^8",
+    "js-yaml": "^4",
+    "zod": "^4"
+  }
+}
