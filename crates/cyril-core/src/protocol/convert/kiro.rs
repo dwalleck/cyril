@@ -641,7 +641,10 @@ pub(crate) fn to_ext_notification(
                 }
             }
         }
-        "kiro.dev/error/rate_limit" => {
+        // Both dialects: v2 wire `_kiro.dev/error/rate_limit` and KAS wire
+        // `_kiro/error/rate_limit` arrive (post `_`-strip) as below. Identical
+        // `{message}` payload (cyril-3zy4) — one conversion body.
+        "kiro.dev/error/rate_limit" | "kiro/error/rate_limit" => {
             let message = params
                 .get("message")
                 .and_then(|v| v.as_str())
