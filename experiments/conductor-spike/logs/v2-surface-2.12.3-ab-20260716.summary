@@ -1,0 +1,2 @@
+COMMANDS(24): agent chat clear code compact context effort feedback goal guide help hooks knowledge mcp model paste plan prompts quit reply rewind stats tools usage
+TOOLS(14): code glob goal grep introspect knowledge read shell subagent todo_list use_aws web_fetch web_search write
