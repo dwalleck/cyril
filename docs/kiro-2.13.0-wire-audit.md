@@ -115,9 +115,40 @@ Content deltas:
   symbols) — **tangent/branch sessions are coming to KAS**. Relevant to cyril-nn85 metadata
   modeling.
 - **Memory gate** — `resolveRemoteToolAllowlist(client, channel, {memoryEnabled})`: for client
-  `"kiro-cli"`, remote (backend-executed) tools = `[web_search]` + **`search_memories`** when
-  `isFeatureEnabled("memoryEnable")`. Tool constant existed in 0.17.2; the gate wiring is new.
-  Dormant until the flag flips.
+  `"kiro-cli"`, remote (backend-executed) tools = `[web_search]` + **`searchMemories`** when
+  `isFeatureEnabled("memoryEnable")`. Detail from token-level diff (old→new counts):
+  - `searchMemories` the tool-id string, `REMOTE_TOOL_SEARCH_MEMORIES` constant, and the whole
+    `get_learnings`/`create_feedback_learning`/`get_learnings_for_prompt` **learnings family
+    all pre-existed** in 0.17.2 (unchanged counts). `searchMemories` is tagged
+    `ToolTags.CONTEXT` — the same bucket as the existing learnings tools.
+  - **What 2.13.0 actually adds is `memoryEnable`** (0→5 occurrences): the feature-flag key
+    (`isFeatureEnabled("memoryEnable")`, read from `modelConfigProvider`), the client-cap
+    injection in tui.js, and the one new `kiro-cli`-branch `push(REMOTE_TOOL_SEARCH_MEMORIES)`.
+    So this is a **gate flip that opts an existing backend capability into the CLI's model
+    toolset**, not a new memory subsystem. "Memory" here = a **backend-hosted** personalization/
+    learnings store retrieved via a remote MCP tool — not a local persistent-memory file.
+  - `searchMemories` is discovered, not bundled: `createACPRemoteMCPClient(authProvider,
+    {endpoint, region})` → `RemoteToolsDiscovery.discoverTools()` → wrapped as `remote_*`
+    `RemoteWrapper`. Live-probed 2026-07-16 with `KIRO_LOAD_ALL_REMOTE_TOOLS=true` (the `"*"`
+    bypass): discovery fires a real backend call that returned `-32000 TokenExpiredError`
+    (standalone file-auth token stale) — confirming the tool list comes from the CW/Q backend,
+    gated behind live auth, and the local allowlist only filters what the backend offers.
+  - **`KIRO_LOAD_ALL_REMOTE_TOOLS=true`** env forces `"*"` (all discovered remote tools),
+    bypassing both the channel and `memoryEnable` gates — a debug/escape hatch.
+
+- **Client identity drives the allowlist branch (cyril-load-bearing, not 2.13.0-specific).**
+  KAS resolves its `client` from the ACP `initialize` **`clientInfo.name`**
+  (`resolveAgentContext(env, clientInfo.name, caps)`). Only `"kiro-web"|"kiro-ide"|"kiro-cli"`
+  are recognized; **anything else logs `Unrecognized clientInfo.name: '<x>', falling back to
+  inferred client type` and becomes `kiro-ide`** (local). Consequences for a cyril→KAS
+  connection: (a) cyril's `clientInfo.name` (currently its own product name) lands in the
+  **`kiro-ide` branch**, whose memory gate is *channel*-based (`stable → [web_search]`,
+  `insider → [web_search, searchMemories]`) — the `memoryEnabled` path is **only** on the
+  `kiro-cli` branch and is unreachable unless cyril presents `clientInfo.name = "kiro-cli"`;
+  (b) the **system-prompt persona** differs by client (`getIdentity`: "You are Kiro CLI…" vs
+  "You are Kiro…"), and the **hooks block is injected only for `kiro-ide`**
+  (`client === "kiro-ide" ? hooksBlock : ""`). So which persona/toolset/hook-context cyril
+  gets from KAS is decided by the name it puts in `clientInfo` — a KAS-1 integration knob.
 - **Infra-safety workspace scoping** — `resolveSafetyScopeKey(sessionId)`: deterministic
   workspace-folder-set hash scoping "formalized properties" so they persist/enforce across
   sessions in one workspace (undefined for relayed/empty-workspace sessions → single-session
