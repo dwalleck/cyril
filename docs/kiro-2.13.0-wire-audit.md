@@ -81,9 +81,20 @@ Settings keys identical; command registry identical; stop-reason literals identi
 
 ## KAS: @kiro/agent 0.17.2 → 0.18.2 (bundle carved from binary — see methodology note)
 
-**Zero file adds/removes** (identical 2,628-file tree), **zero `_kiro/*`, `_session/*`,
+**Zero file adds/removes** (identical 2,680-file tree), **zero `_kiro/*`, `_session/*`,
 `_message/*` method-string delta**. acp-server.js +13 KB; full line diff is only ~1,360
-changed lines (bundle is unminified). Content deltas:
+changed lines (bundle is unminified).
+
+**Live KAS host-init leg (2026-07-16): zero delta.** `probe-kas-host-init-2.12.0.py` against
+the archived 2.13.0 binary — the normalized initialize response is byte-identical to the
+2.12.3 capture (`logs/kas-host-init-{2.12.3-20260715,2.13.0-20260716}.json`): same
+`_meta.kiro` cap set, cloud caps still at dormant local values (`executionTargets ["local"]`,
+`sessionSources ["local"]`, `sessionListScopes ["workspace"]`, `sourceProviders false`), no
+`memoryEnable` (it's a *client*-side cap and feature-gated). The run also triggered real KAS
+self-extraction (`kas/2.13.0-6b915aea…`), whose tree matches the carved bundle exactly
+(identical acp-server.js sha, identical 2,680-file set) — validating the login-free carve.
+
+Content deltas:
 
 - **Introspect subagent (the changelog headline)** — new `INTROSPECT_DEFINITION`
   (`id:"introspect"`, "Answers questions about Kiro itself… using official kiro.dev
