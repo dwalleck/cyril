@@ -450,6 +450,9 @@ fn print_notification(n: &Notification) {
         Notification::RateLimited { message } => {
             println!("  [RateLimited] {message}");
         }
+        Notification::SystemNotify { level, message } => {
+            println!("  [SystemNotify] level={level:?}: {message}");
+        }
         Notification::ToolCallChunk {
             tool_call_id,
             title,

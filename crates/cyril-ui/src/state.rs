@@ -530,6 +530,24 @@ impl UiState {
                 self.add_system_message(format!("Rate limited: {message}"));
                 true
             }
+            // KAS-8 `_kiro/system/notify` (cyril-08eh) — level-prefixed system
+            // message. Same non-terminal contract as RateLimited: does not clear
+            // busy guard.
+            Notification::SystemNotify { level, message } => {
+                use cyril_core::types::event::SystemNotifyLevel;
+                let prefix = match level {
+                    SystemNotifyLevel::Info => "[info]",
+                    SystemNotifyLevel::Warning => "[warning]",
+                    SystemNotifyLevel::Unknown(l) => {
+                        return {
+                            self.add_system_message(format!("[{l}] {message}"));
+                            true
+                        };
+                    }
+                };
+                self.add_system_message(format!("{prefix} {message}"));
+                true
+            }
             // cyril-7z7u: the chip count is optimistic (incremented at
             // `add_steer_echo`), so the wire confirmation must NOT re-count cyril's
             // own steer — that would double-count. A steer originated by ANOTHER
@@ -3397,6 +3415,40 @@ mod tests {
             state.activity(),
             Activity::Streaming,
             "rate_limit must not clear the busy guard (turn still retrying)"
+        );
+    }
+
+    // cyril-08eh claim 8: SystemNotify adds a level-prefixed system message
+    // and preserves busy guard (non-terminal, same contract as RateLimited).
+    #[test]
+    fn system_notify_adds_level_prefixed_message() {
+        let mut state = UiState::new(500);
+        use cyril_core::types::event::{Notification, SystemNotifyLevel};
+        let changed = state.apply_notification(&Notification::SystemNotify {
+            level: SystemNotifyLevel::Warning,
+            message: "model is taking longer than usual".into(),
+        });
+        assert!(changed);
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t)
+                if t.contains("[warning]") && t.contains("model is taking longer than usual")),
+            "system message must carry [warning] prefix"
+        );
+    }
+
+    #[test]
+    fn system_notify_preserves_busy_activity() {
+        let mut state = UiState::new(500);
+        state.set_activity(Activity::Streaming);
+        use cyril_core::types::event::{Notification, SystemNotifyLevel};
+        state.apply_notification(&Notification::SystemNotify {
+            level: SystemNotifyLevel::Info,
+            message: "delay".into(),
+        });
+        assert_eq!(
+            state.activity(),
+            Activity::Streaming,
+            "system_notify must not clear the busy guard"
         );
     }
 

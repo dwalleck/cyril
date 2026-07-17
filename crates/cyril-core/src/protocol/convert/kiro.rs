@@ -652,6 +652,27 @@ pub(crate) fn to_ext_notification(
                 .to_string();
             Ok(Some(Notification::RateLimited { message }))
         }
+        // KAS `_kiro/system/notify {level, message}` — connection-scoped
+        // notification (KAS 0.17.2+, kiro-cli 2.12.3+). Fires on model-request
+        // backoff during ordinary local KAS turns (cyril-08eh).
+        "kiro/system/notify" => {
+            use crate::types::event::SystemNotifyLevel;
+            let level = params
+                .get("level")
+                .and_then(|v| v.as_str())
+                .map(|s| match s {
+                    "info" => SystemNotifyLevel::Info,
+                    "warning" => SystemNotifyLevel::Warning,
+                    other => SystemNotifyLevel::Unknown(other.to_string()),
+                })
+                .unwrap_or(SystemNotifyLevel::Info);
+            let message = params
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("system notification")
+                .to_string();
+            Ok(Some(Notification::SystemNotify { level, message }))
+        }
         "kiro.dev/mcp/server_init_failure" => {
             let server_name = params
                 .get("serverName")
@@ -852,8 +873,8 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use serde_json::json;
     use crate::types::event::SystemNotifyLevel;
+    use serde_json::json;
 
     // ---- Probe (cyril-3zy4): KAS-dialect `_kiro/error/rate_limit` ----
     // Wire naming (source-verified): the ACP crate strips the single leading
@@ -950,6 +971,19 @@ mod tests {
             matches!(r, Ok(Some(Notification::SystemNotify { ref message, .. }))
                 if !message.is_empty()),
             "missing message must default non-empty, got {r:?}"
+        );
+    }
+
+    // cyril-08eh claim 6: completely empty payload `{}` must NOT reject —
+    // both level and message get defaults.
+    #[test]
+    fn probe_kas_system_notify_empty_payload_defaults() {
+        let params = json!({});
+        let r = to_ext_notification("kiro/system/notify", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::SystemNotify { ref level, ref message }))
+                if matches!(level, SystemNotifyLevel::Info) && !message.is_empty()),
+            "empty payload must default both level and message, got {r:?}"
         );
     }
 
