@@ -535,17 +535,15 @@ impl UiState {
             // busy guard.
             Notification::SystemNotify { level, message } => {
                 use cyril_core::types::event::SystemNotifyLevel;
-                let prefix = match level {
-                    SystemNotifyLevel::Info => "[info]",
-                    SystemNotifyLevel::Warning => "[warning]",
+                let prefix = match &level {
+                    SystemNotifyLevel::Info => "info",
+                    SystemNotifyLevel::Warning => "warning",
                     SystemNotifyLevel::Unknown(l) => {
-                        return {
-                            self.add_system_message(format!("[{l}] {message}"));
-                            true
-                        };
+                        tracing::debug!(level = %l, "unknown _kiro/system/notify level");
+                        l.as_str()
                     }
                 };
-                self.add_system_message(format!("{prefix} {message}"));
+                self.add_system_message(format!("[{prefix}] {message}"));
                 true
             }
             // cyril-7z7u: the chip count is optimistic (incremented at
