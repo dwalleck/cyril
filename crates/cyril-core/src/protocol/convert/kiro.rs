@@ -652,6 +652,27 @@ pub(crate) fn to_ext_notification(
                 .to_string();
             Ok(Some(Notification::RateLimited { message }))
         }
+        // KAS `_kiro/system/notify {level, message}` — connection-scoped
+        // notification (KAS 0.17.2+, kiro-cli 2.12.3+). Fires on model-request
+        // backoff during ordinary local KAS turns (cyril-08eh).
+        "kiro/system/notify" => {
+            use crate::types::event::SystemNotifyLevel;
+            let level = params
+                .get("level")
+                .and_then(|v| v.as_str())
+                .map(|s| match s {
+                    "info" => SystemNotifyLevel::Info,
+                    "warning" => SystemNotifyLevel::Warning,
+                    other => SystemNotifyLevel::Unknown(other.to_string()),
+                })
+                .unwrap_or(SystemNotifyLevel::Info);
+            let message = params
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("system notification")
+                .to_string();
+            Ok(Some(Notification::SystemNotify { level, message }))
+        }
         "kiro.dev/mcp/server_init_failure" => {
             let server_name = params
                 .get("serverName")
@@ -852,6 +873,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::types::event::SystemNotifyLevel;
     use serde_json::json;
 
     // ---- Probe (cyril-3zy4): KAS-dialect `_kiro/error/rate_limit` ----
@@ -890,6 +912,90 @@ mod tests {
         assert!(
             matches!(r, Ok(Some(Notification::RateLimited { ref message })) if message == RATE_LIMIT_PAYLOAD),
             "v2-dialect rate_limit must keep converting, got {r:?}"
+        );
+    }
+
+    // ---- Probe (cyril-08eh): KAS-dialect `_kiro/system/notify` ----
+    // Wire: `_kiro/system/notify` -> `kiro/system/notify` (post `_`-strip).
+    // Payload: `{level: "info"|"warning", message}`. Currently dropped (no
+    // converter arm). These probes assert desired behavior — they FAIL pre-fix.
+
+    #[test]
+    fn probe_kas_system_notify_info_converts() {
+        let params = json!({ "level": "info", "message": "model is taking longer than usual" });
+        let r = to_ext_notification("kiro/system/notify", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::SystemNotify { ref level, ref message }))
+                if message == "model is taking longer than usual" && matches!(level, SystemNotifyLevel::Info)),
+            "KAS system/notify info must convert to SystemNotify, got {r:?}"
+        );
+    }
+
+    #[test]
+    fn probe_kas_system_notify_warning_converts() {
+        let params = json!({ "level": "warning", "message": "model is taking longer than usual" });
+        let r = to_ext_notification("kiro/system/notify", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::SystemNotify { ref level, .. }))
+                if matches!(level, SystemNotifyLevel::Warning)),
+            "KAS system/notify warning must convert, got {r:?}"
+        );
+    }
+
+    #[test]
+    fn probe_kas_system_notify_unknown_level_converts() {
+        let params = json!({ "level": "error", "message": "critical" });
+        let r = to_ext_notification("kiro/system/notify", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::SystemNotify { ref level, .. }))
+                if matches!(level, SystemNotifyLevel::Unknown(s) if s == "error")),
+            "future level must convert to Unknown, got {r:?}"
+        );
+    }
+
+    #[test]
+    fn probe_kas_system_notify_missing_level_defaults() {
+        let params = json!({ "message": "delay" });
+        let r = to_ext_notification("kiro/system/notify", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::SystemNotify { .. }))),
+            "missing level must not reject the notification, got {r:?}"
+        );
+    }
+
+    #[test]
+    fn probe_kas_system_notify_missing_message_defaults() {
+        let params = json!({ "level": "info" });
+        let r = to_ext_notification("kiro/system/notify", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::SystemNotify { ref message, .. }))
+                if !message.is_empty()),
+            "missing message must default non-empty, got {r:?}"
+        );
+    }
+
+    // cyril-08eh claim 6: completely empty payload `{}` must NOT reject —
+    // both level and message get defaults.
+    #[test]
+    fn probe_kas_system_notify_empty_payload_defaults() {
+        let params = json!({});
+        let r = to_ext_notification("kiro/system/notify", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::SystemNotify { ref level, ref message }))
+                if matches!(level, SystemNotifyLevel::Info) && !message.is_empty()),
+            "empty payload must default both level and message, got {r:?}"
+        );
+    }
+
+    /// The `_kiro/system/` namespace is a PREFIX — unknown sub-methods must
+    /// still drop to Ok(None), not over-match into the notify arm.
+    #[test]
+    fn probe_unknown_kiro_system_still_dropped() {
+        let params = json!({ "level": "info", "message": "x" });
+        let r = to_ext_notification("kiro/system/unknown_method", &params);
+        assert!(
+            matches!(r, Ok(None)),
+            "unknown _kiro/system/* must still drop, got {r:?}"
         );
     }
 

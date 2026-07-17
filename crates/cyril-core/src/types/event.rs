@@ -7,6 +7,17 @@ use crate::types::session::{
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 
+/// KAS `_kiro/system/notify` severity level (KAS 0.17.2+).
+/// Currently `info` and `warning`; the `Unknown` arm captures future levels
+/// without a parse failure so cyril doesn't reject a notification it can still
+/// render.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SystemNotifyLevel {
+    Info,
+    Warning,
+    Unknown(String),
+}
+
 /// Notifications emitted by the ACP bridge. All variants are Send + Sync + Clone.
 /// This is the primary channel for agent state updates crossing from the bridge thread into the App.
 #[derive(Debug, Clone)]
@@ -114,6 +125,13 @@ pub enum Notification {
         message: String,
     },
     RateLimited {
+        message: String,
+    },
+    /// KAS `_kiro/system/notify {level, message}` — connection-scoped
+    /// notification (KAS 0.17.2+, kiro-cli 2.12.3+). Fires on model-request
+    /// backoff during ordinary KAS turns (not remote-only).
+    SystemNotify {
+        level: SystemNotifyLevel,
         message: String,
     },
     ToolCallChunk {
