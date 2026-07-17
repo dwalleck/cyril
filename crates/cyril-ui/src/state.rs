@@ -3383,6 +3383,23 @@ mod tests {
         );
     }
 
+    // cyril-3zy4 claim 5: a rate-limit notice is non-terminal — the backend
+    // retries — so it must NOT clear a busy turn. Applying RateLimited mid-turn
+    // leaves Activity untouched and emits no TurnCompleted.
+    #[test]
+    fn rate_limited_preserves_busy_activity() {
+        let mut state = UiState::new(500);
+        state.set_activity(Activity::Streaming);
+        state.apply_notification(&Notification::RateLimited {
+            message: "Rate limit exceeded".into(),
+        });
+        assert_eq!(
+            state.activity(),
+            Activity::Streaming,
+            "rate_limit must not clear the busy guard (turn still retrying)"
+        );
+    }
+
     #[test]
     fn mcp_server_init_failure_with_error() {
         let mut state = UiState::new(500);

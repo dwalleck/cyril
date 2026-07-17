@@ -641,7 +641,10 @@ pub(crate) fn to_ext_notification(
                 }
             }
         }
-        "kiro.dev/error/rate_limit" => {
+        // Both dialects: v2 wire `_kiro.dev/error/rate_limit` and KAS wire
+        // `_kiro/error/rate_limit` arrive (post `_`-strip) as below. Identical
+        // `{message}` payload (cyril-3zy4) — one conversion body.
+        "kiro.dev/error/rate_limit" | "kiro/error/rate_limit" => {
             let message = params
                 .get("message")
                 .and_then(|v| v.as_str())
@@ -850,6 +853,45 @@ mod tests {
 
     use super::*;
     use serde_json::json;
+
+    // ---- Probe (cyril-3zy4): KAS-dialect `_kiro/error/rate_limit` ----
+    // Wire naming (source-verified): the ACP crate strips the single leading
+    // `_` inbound, so `_kiro/error/rate_limit` arrives as `kiro/error/rate_limit`
+    // and `_kiro.dev/error/rate_limit` arrives as `kiro.dev/error/rate_limit`.
+    // These are the probe fences: KAS dialect must convert (currently drops),
+    // v2 dialect must keep converting (regression control).
+    const RATE_LIMIT_PAYLOAD: &str =
+        "Rate limit exceeded. Please wait a moment before trying again.";
+
+    #[test]
+    fn probe_kas_dialect_rate_limit_converts() {
+        let params = json!({ "message": RATE_LIMIT_PAYLOAD });
+        let r = to_ext_notification("kiro/error/rate_limit", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::RateLimited { ref message })) if message == RATE_LIMIT_PAYLOAD),
+            "KAS-dialect rate_limit must convert to RateLimited, got {r:?}"
+        );
+    }
+
+    #[test]
+    fn probe_kas_dialect_rate_limit_missing_message_defaults() {
+        let params = json!({});
+        let r = to_ext_notification("kiro/error/rate_limit", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::RateLimited { ref message })) if !message.is_empty()),
+            "KAS-dialect rate_limit missing message must default non-empty, got {r:?}"
+        );
+    }
+
+    #[test]
+    fn probe_v2_dialect_rate_limit_still_converts() {
+        let params = json!({ "message": RATE_LIMIT_PAYLOAD });
+        let r = to_ext_notification("kiro.dev/error/rate_limit", &params);
+        assert!(
+            matches!(r, Ok(Some(Notification::RateLimited { ref message })) if message == RATE_LIMIT_PAYLOAD),
+            "v2-dialect rate_limit must keep converting, got {r:?}"
+        );
+    }
 
     // Slice B / design claims 1-6 + cyril-c1qe. Steering rides wire method
     // `_kiro.dev/session/update`; the ACP library strips the single leading `_`

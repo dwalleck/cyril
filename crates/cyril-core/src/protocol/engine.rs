@@ -259,4 +259,18 @@ mod tests {
             "ext frame must NOT be dropped — V2Engine wires the _kiro.dev path"
         );
     }
+
+    // Probe (cyril-3zy4): KasEngine must route `_kiro/error/rate_limit` to
+    // RateLimited, not delegate-drop it. engine.rs:143 delegates to
+    // kiro::to_ext_notification, so this fences the KAS engine path end-to-end.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn probe_kas_engine_routes_rate_limit() {
+        let params = json!({ "message": "Rate limit exceeded" });
+        let r = KasEngine.convert_ext_notification("kiro/error/rate_limit", &params);
+        assert!(
+            matches!(r, Ok(Some(crate::types::Notification::RateLimited { .. }))),
+            "KasEngine must route rate_limit to RateLimited, got {r:?}"
+        );
+    }
 }
