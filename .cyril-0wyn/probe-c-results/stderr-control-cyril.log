@@ -1,0 +1,5 @@
+[INFO] Auth: default token file
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck for /home/dwalleck/AGENTS.md
+[DEBUG] [ConfigFileWatcher] Watching paths: /home/dwalleck/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Watching paths: /home/dwalleck/.kiro/agents
+[INFO] [KiroAgent] MCP subsystem initialized

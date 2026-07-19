@@ -69,3 +69,18 @@ selecting the kiro-cli branch) does not exist — the fallback is inferred from
 execution environment only, and the resulting misclassification is invisible
 on the wire, so cyril must either accept the kiro-ide identity knowingly,
 impersonate kiro-cli, or change KAS upstream.
+
+## Probe C addendum (claim 8, slice 6 — 2026-07-19)
+
+**INCONCLUSIVE by the anticipated path.** Standalone-spawn discovery fails
+`TokenExpired` (-32000) before `[RemoteToolsDiscovery] Allowlist resolved`
+(debug) ever fires, in BOTH arms (`probe-c-results/`). The settings key was
+pinned from the bundle first: `memoryEnabled: isFeatureEnabled("memoryEnable")`
+— the AgentSettings key is `memoryEnable`; the 2.13.0 "search_memories"
+rename was the TOOL id, not the key. Verifying the searchMemories outcome
+needs an auth-serviceable session; cyril-jrl1 narrows to exactly that
+residue. One trap for future readers: `remote-tools-discovery.create
+{"client":"kiro-ide"}` appears even in the name=kiro-cli treatment — that
+line fires at STARTUP with the default client (findings fact 5); the
+resolved allowlist reads `agentContext.client` lazily at discovery time, so
+only `Allowlist resolved` is evidential, never the create line.
