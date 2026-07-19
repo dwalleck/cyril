@@ -403,6 +403,9 @@ impl KiroClient {
             )
             .await;
         }
+        if args.method.as_ref() == crate::protocol::kas::hooks::SESSION_START_METHOD {
+            return crate::protocol::kas::hooks::respond_session_start();
+        }
         // The bare-ACP fs/terminal lifecycle host callbacks are TYPED acp::Client
         // methods (the overrides above), not ext requests: fs/read_text_file (KAS-5a,
         // cyril-7bdu) and terminal/{create,output,wait_for_exit,release,kill} (KAS-5b,

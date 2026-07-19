@@ -26,6 +26,21 @@ pub(crate) const CANCEL_METHOD: &str = "kiro/hooks/cancel";
 /// (on-disk hook edits; v1 logs it — hot-reload is cyril-2adk).
 pub(crate) const DID_CHANGE_METHOD: &str = "kiro/hooks/didChange";
 
+/// The acp-stripped method name for `_kiro/hooks/sessionStart`.
+pub(crate) const SESSION_START_METHOD: &str = "kiro/hooks/sessionStart";
+
+/// Answer `_kiro/hooks/sessionStart` with the wire-safe acknowledgment
+/// `{results: []}` (verified against the 2.7.1 host probe — the turn proceeds).
+/// Actually executing SessionStart hooks and packaging their output into
+/// `AcpPrecomputedHookResult[]` for context injection is deferred to
+/// cyril-tpfd: that element shape is not verifiable from the standalone
+/// bundle, and guessing a wire shape is the schema-vs-runtime trap.
+pub(crate) fn respond_session_start() -> acp::Result<acp::ExtResponse> {
+    let raw = serde_json::value::RawValue::from_string("{\"results\":[]}".to_string())
+        .map_err(|e| acp::Error::new(-32603, format!("sessionStart raw value: {e}")))?;
+    Ok(acp::ExtResponse::new(raw.into()))
+}
+
 /// In-flight hook executions, keyed by `operationId`, each holding a
 /// cancel trigger. Shared (single `LocalSet` thread, so `RefCell`, mirroring
 /// the terminal registry) between the executeHook responder and the cancel
@@ -636,5 +651,15 @@ mod tests {
         );
         let reply: serde_json::Value = serde_json::from_str(resp.unwrap().0.get()).unwrap();
         assert_eq!(reply["cancelled"], true);
+    }
+
+    // cyril-jiyn: sessionStart is acknowledged with the wire-safe empty
+    // results (precomputed execution is cyril-tpfd). A non-array or an error
+    // reply would break the turn's sessionStart phase.
+    #[test]
+    fn session_start_acknowledges_empty_results() {
+        let resp = respond_session_start().unwrap();
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        assert_eq!(reply["results"], serde_json::json!([]));
     }
 }
