@@ -29,8 +29,14 @@ async fn freepath_turn_completes_through_bridge() {
     // placeholder is fine here.
     let placeholder = AgentCommand::new("unused-for-kas-free-path");
     let cwd = std::env::temp_dir();
-    let bridge = spawn_bridge(placeholder, AgentEngine::Kas, KasSpawn::Free, cwd.clone())
-        .expect("spawn_bridge");
+    let bridge = spawn_bridge(
+        placeholder,
+        AgentEngine::Kas,
+        KasSpawn::Free,
+        PresentAs::default(),
+        cwd.clone(),
+    )
+    .expect("spawn_bridge");
     let (sender, mut notif_rx, _perm_rx) = bridge.split();
 
     sender

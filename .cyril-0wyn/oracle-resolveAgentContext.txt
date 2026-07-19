@@ -1,0 +1,24 @@
+# Carved from /home/dwalleck/.local/share/kiro-cli/kas/2.13.0-6b915aea9d06da0c64b46da6eb0e2cf40bfe1db59d01ddb8d701ecdbdc874f39/node_modules/@kiro/agent/dist/server/acp-server.js
+# offset 3908764
+
+function resolveAgentContext(executionEnvironment2, clientName, capabilities) {
+  let client2;
+  if (clientName === "kiro-web" || clientName === "kiro-ide" || clientName === "kiro-cli") {
+    client2 = clientName;
+  } else if (executionEnvironment2 === "sandbox") {
+    client2 = "kiro-web";
+  } else {
+    client2 = "kiro-ide";
+  }
+  return {
+    client: client2,
+    environment: executionEnvironment2,
+    specLinks: capabilities?.specLinks,
+    requirementsAnalysis: capabilities?.requirementsAnalysis,
+    userInput: capabilities?.userInput
+  };
+}
+function honorsRepositories(context3) {
+  return context3.client === "kiro-web" || context3.environment === "sandbox";
+}
+var EXECUTION_ENVIRONMENTS

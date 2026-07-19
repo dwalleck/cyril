@@ -43,6 +43,7 @@ async fn fs_read_write_served_by_cyril() {
         placeholder,
         AgentEngine::Kas,
         KasSpawn::Free,
+        PresentAs::default(),
         dir.path().to_path_buf(),
     )
     .expect("spawn_bridge");

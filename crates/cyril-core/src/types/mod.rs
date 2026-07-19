@@ -8,6 +8,7 @@ pub mod hook;
 pub mod kas_spawn;
 pub mod message;
 pub mod plan;
+pub mod present_as;
 pub mod prompt;
 pub mod session;
 pub mod subagent;
@@ -27,6 +28,7 @@ pub use hook::HookInfo;
 pub use kas_spawn::KasSpawn;
 pub use message::{AgentMessage, AgentThought, UserMessage};
 pub use plan::{Plan, PlanEntry, PlanEntryPriority, PlanEntryStatus};
+pub use present_as::PresentAs;
 pub use prompt::{PromptArgument, PromptInfo};
 pub use session::{
     CompactionPhase, ContextBreakdown, ContextBucket, ContextUsage, CreditUsage, EffortLevel,

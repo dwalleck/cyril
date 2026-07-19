@@ -56,6 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         agent_command,
         agent_engine,
         config.agent.kas_spawn,
+        config.agent.present_as,
         cwd.clone(),
     )?;
 

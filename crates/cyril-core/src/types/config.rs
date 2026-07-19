@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::agent_engine::AgentEngine;
 use super::kas_spawn::KasSpawn;
+use super::present_as::PresentAs;
 
 /// Application configuration, loaded from a TOML file.
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -50,6 +51,11 @@ pub struct AgentConfig {
     /// = "free"` (default, zero-credential direct spawn) or `"wrapper"`
     /// (`kiro-cli acp --agent-engine v3` + the auth responder). Ignored for v2.
     pub kas_spawn: KasSpawn,
+    /// What identity cyril presents as `clientInfo.name` (cyril-0wyn,
+    /// ADR-0006). TOML `present_as = "cyril"` (default, honest) or
+    /// `"kiro-cli"` (opt-in impersonation, KAS engine only — inert with a
+    /// warning on v2).
+    pub present_as: PresentAs,
 }
 
 impl Default for AgentConfig {
@@ -59,6 +65,7 @@ impl Default for AgentConfig {
             extra_args: Vec::new(),
             engine: AgentEngine::default(),
             kas_spawn: KasSpawn::default(),
+            present_as: PresentAs::default(),
         }
     }
 }
@@ -190,5 +197,51 @@ agent_name = "opencode"
         let config = Config::load_from_path(&path);
         // Should return defaults, not error
         assert_eq!(config.ui.max_messages, 500);
+    }
+
+    #[test]
+    fn present_as_absent_defaults_to_cyril() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "[agent]\nengine = \"kas\"\n").unwrap();
+
+        let config = Config::load_from_path(&path);
+        assert_eq!(config.agent.present_as, PresentAs::Cyril);
+    }
+
+    #[test]
+    fn present_as_kiro_cli_parses() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "[agent]\npresent_as = \"kiro-cli\"\n").unwrap();
+
+        let config = Config::load_from_path(&path);
+        assert_eq!(config.agent.present_as, PresentAs::KiroCli);
+    }
+
+    // cyril-0wyn claim 6 fence: an invalid present_as value follows the
+    // house config posture — the whole file is rejected (warn + defaults),
+    // so the identity stays honest. "kiro-web" is a REAL KAS client name
+    // that must never be expressible; the case variant guards serde
+    // laxness; a config carrying other valid keys proves the rejection is
+    // whole-file, not field-skipping.
+    #[test]
+    fn invalid_present_as_falls_back_to_default_config() {
+        for bad in ["kiro-web", "KiroCli"] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("config.toml");
+            std::fs::write(
+                &path,
+                format!("[ui]\nmax_messages = 1000\n\n[agent]\npresent_as = \"{bad}\"\n"),
+            )
+            .unwrap();
+
+            let config = Config::load_from_path(&path);
+            assert_eq!(config.agent.present_as, PresentAs::Cyril, "{bad}");
+            assert_eq!(
+                config.ui.max_messages, 500,
+                "rejection must be whole-file (house posture), not field-skipping"
+            );
+        }
     }
 }

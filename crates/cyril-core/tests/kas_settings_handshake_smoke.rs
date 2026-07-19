@@ -39,6 +39,7 @@ async fn settings_handshake_turn_completes_and_orchestrates() {
         placeholder,
         AgentEngine::Kas,
         KasSpawn::Free,
+        PresentAs::default(),
         dir.path().to_path_buf(),
     )
     .expect("spawn_bridge");

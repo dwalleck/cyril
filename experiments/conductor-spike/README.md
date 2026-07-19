@@ -46,3 +46,14 @@ python3 experiments/conductor-spike/diff_fields.py \
 ## Why this matters for cyril
 
 The conductor passthrough result unblocks the integration plan in `project_cyril_conductor_integration.md`: cyril's bridge can swap `kiro-cli acp` for `sacp-conductor agent "kiro-cli acp"` with zero protocol changes, opening the door to pluggable proxy stages (skill resolver, transcript recorder, auto-approval, etc.) without rewriting cyril as a proxy.
+
+## Per-release audit checklist additions
+
+- **clientInfo recognition set (cyril-0wyn / ADR-0006):** each kiro-cli
+  release, re-carve `resolveAgentContext` + `resolveRemoteToolAllowlist` from
+  the new KAS bundle and re-run `.cyril-0wyn/probe-b-name-ab.py` (update its
+  glob to the new version). This is the approved manual regression fence for
+  the claim that unrecognized names (cyril's honest identity) fall back to
+  kiro-ide silently and `kiro-cli` is accepted. If the recognition set, the
+  fallback target, the warn text, or the allowlist branches move, update
+  ADR-0006 and re-triage cyril-jrl1/cyril-ctnv.

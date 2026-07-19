@@ -1,0 +1,16 @@
+{"timestamp":"2026-07-19T01:46:09.369Z","level":"info","message":"File logging initialized at /home/dwalleck/.kiro/logs/20260719T014609359"}
+{"timestamp":"2026-07-19T01:46:09.369Z","level":"info","message":"Initializing persistence at /home/dwalleck/.kiro/sessions"}
+{"timestamp":"2026-07-19T01:46:09.374Z","level":"info","message":"[SessionPersistence] Initialized persistence at /home/dwalleck/.kiro/sessions"}
+{"timestamp":"2026-07-19T01:46:09.374Z","level":"info","message":"Persistence initialized"}
+{"timestamp":"2026-07-19T01:46:09.396Z","level":"info","message":"[AgentTelemetry] Initialized {\"endpoint\":\"https://prod.us-east-1.telemetry.desktop.kiro.dev\",\"serviceName\":\"kiroAgent\"}"}
+{"timestamp":"2026-07-19T01:46:09.397Z","level":"info","message":"[KiroAgent] Remote MCP client initialized"}
+{"timestamp":"2026-07-19T01:46:09.397Z","level":"info","message":"[KiroAgent] remote-tools-discovery.create {\"client\":\"kiro-ide\"}"}
+{"timestamp":"2026-07-19T01:46:09.406Z","level":"info","message":"[KiroAgent] Cleared stale task execution statuses"}
+{"timestamp":"2026-07-19T01:46:09.407Z","level":"info","message":"[KiroAgent] Platform initialized"}
+{"timestamp":"2026-07-19T01:46:09.407Z","level":"info","message":"[KiroAgent] Resolved capabilities: {\"fsReadTextFile\":false,\"fsWriteTextFile\":false,\"kiroFsReadFile\":false,\"kiroFsWriteFile\":false,\"kiroFsStat\":false,\"kiroFsReadDirectory\":false,\"kiroFsDelete\":false,\"terminal\":false,\"secretStorage\":false,\"openExternalUrl\":false,\"knowledge\":false,\"infrastructureSafety\":false}"}
+{"timestamp":"2026-07-19T01:46:09.407Z","level":"info","message":"[RemoteToolsDiscovery] Fetching available Remote tools"}
+{"timestamp":"2026-07-19T01:46:09.411Z","level":"warn","message":"[KiroAgent] Unrecognized clientInfo.name: 'cyril', falling back to inferred client type"}
+{"timestamp":"2026-07-19T01:46:09.412Z","level":"info","message":"[KiroAgent] Stored clientInfo.name: cyril"}
+{"timestamp":"2026-07-19T01:46:09.412Z","level":"info","message":"Handshake: returning logging config with 3 channels at /home/dwalleck/.kiro/logs/20260719T014609359"}
+{"timestamp":"2026-07-19T01:46:09.662Z","level":"error","message":"[RemoteToolsDiscovery] Failed to discover tools {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
+{"timestamp":"2026-07-19T01:46:09.663Z","level":"warn","message":"[KiroAgent] Remote tools discovery failed on startup: {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}

@@ -1,0 +1,29 @@
+# Carved from /home/dwalleck/.local/share/kiro-cli/kas/2.13.0-6b915aea9d06da0c64b46da6eb0e2cf40bfe1db59d01ddb8d701ecdbdc874f39/node_modules/@kiro/agent/dist/server/acp-server.js
+# offset 19848064 (initialize handler: warn + resolveAgentContext + setClientType)
+
+Id" in telemetryIdentity) {
+      setAgentTelemetryIdentity(telemetryIdentity);
+    }
+    this.clientMeta = kiroMeta ?? void 0;
+    this.clientInfo = params.clientInfo ?? void 0;
+    if (this.clientInfo?.name && !CLIENT_TYPES.includes(this.clientInfo.name)) {
+      logger.warn(
+        `[KiroAgent] Unrecognized clientInfo.name: '${this.clientInfo.name}', falling back to inferred client type`
+      );
+    }
+    this.agentContext = resolveAgentContext(this.executionEnvironment, this.clientInfo?.name, {
+      specLinks: kiroMeta?.specLinks,
+      requirementsAnalysis: kiroMeta?.requirementsAnalysis,
+      userInput: kiroMeta?.userInput
+    });
+    setClientType(this.agentContext.client);
+    logger.info(`[KiroAgent] Stored clientInfo.name: ${this.clientInfo?.name ?? "undefined"}`);
+    if (this.activityPublisher) {
+      this.activityPublisher.setClientType(this.agentContext.client);
+    }
+    this.getExperimentConfigService();
+    const rawDocs = Array.isArray(kiroMeta?.helpDocs) ? kiroMeta.helpDocs : [];
+    const helpDocs = rawDocs.filter((d5) => {
+      if (typeof d5 !== "object" || d5 === null) return false;
+      const rec = d5;
+      return typeof rec.name === "string" && typeo
