@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 """cyril-0wyn Probe B: live A/B of KAS clientInfo.name recognition (2.13.0).
 
-Spawns the extracted KAS acp-server.js directly (standalone stdio, no auth
-needed for initialize), sends one initialize per candidate name, and captures
-stderr + the initialize response.
+Spawns the extracted KAS acp-server.js directly (standalone stdio; no
+ACP-level auth exchange is needed before the initialize response — note the
+process may still find ambient token material under $HOME), sends one
+initialize per candidate name, and captures the arm's own log file.
 
 Claim under test (from static carve, .cyril-0wyn/oracle-resolveAgentContext.txt):
   - name in {kiro-web, kiro-ide, kiro-cli} -> accepted silently
   - any other name -> logs "Unrecognized clientInfo.name: '<x>', falling back
     to inferred client type" and resolves to kiro-ide (local env)
 Oracle = that carved source. Probe = the running server's observable output.
+
+Review hardening (2026-07-19): select-based reads so the deadline actually
+fires on a silent server; log capture bound to the exact logDir returned in
+THAT arm's initialize response (no cross-process contamination); an arm only
+passes with a successful initialize result AND its handler's own
+"Stored clientInfo.name" line present.
 """
-import glob, json, subprocess, sys, time
+import glob, json, select, subprocess, sys, time
 from pathlib import Path
 
 SERVER = glob.glob(str(Path.home() / ".local/share/kiro-cli/kas/2.13.0-*"
@@ -21,10 +28,44 @@ OUTDIR.mkdir(exist_ok=True)
 
 NAMES = ["cyril", "kiro-cli", "kiro-ide"]
 
-LOGROOT = Path.home() / ".kiro/logs"
+def read_response(p, want_id: int, deadline_s: float):
+    """Line-read stdout with a real deadline (select before every read)."""
+    buf = ""
+    deadline = time.time() + deadline_s
+    while time.time() < deadline:
+        ready, _, _ = select.select([p.stdout], [], [], 0.25)
+        if not ready:
+            continue
+        chunk = p.stdout.readline()
+        if not chunk:
+            time.sleep(0.05)
+            continue
+        buf += chunk
+        try:
+            msg = json.loads(chunk)
+        except json.JSONDecodeError:
+            continue
+        if msg.get("id") == want_id:
+            return msg
+    return None
+
+def find_log_dir(obj):
+    """Walk the response for a 'logDir' value (initialize exposes it under _meta)."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if k == "logDir" and isinstance(v, str):
+                return v
+            found = find_log_dir(v)
+            if found:
+                return found
+    elif isinstance(obj, list):
+        for v in obj:
+            found = find_log_dir(v)
+            if found:
+                return found
+    return None
 
 def run_one(name: str) -> dict:
-    dirs_before = set(LOGROOT.glob("*")) if LOGROOT.exists() else set()
     p = subprocess.Popen(
         ["node", "--experimental-wasm-modules", SERVER],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -43,22 +84,12 @@ def run_one(name: str) -> dict:
         p.stdin.flush()
     except BrokenPipeError:
         pass
-    deadline = time.time() + 12
-    response = None
-    while time.time() < deadline and response is None:
-        line = p.stdout.readline()
-        if not line:
-            time.sleep(0.1)
-            continue
-        try:
-            msg = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if msg.get("id") == 0:
-            response = msg
-    # The KAS logger writes ~/.kiro/logs/<ts>/kiro.log through an async
-    # transport; killing immediately after the stdout response loses the
-    # initialize-handler lines (observed: log ends at "Platform initialized").
+    response = read_response(p, 0, 12.0)
+    ok_response = bool(response and "result" in response)
+    log_dir = find_log_dir(response) if response else None
+    # The KAS logger writes its file through an async transport; killing
+    # immediately after the stdout response loses the initialize-handler
+    # lines (observed: log ends at "Platform initialized").
     time.sleep(3.0)
     p.terminate()
     try:
@@ -66,18 +97,20 @@ def run_one(name: str) -> dict:
     except subprocess.TimeoutExpired:
         p.kill()
         _, stderr = p.communicate()
-    new_dirs = (set(LOGROOT.glob("*")) - dirs_before) if LOGROOT.exists() else set()
-    logtext = "\n".join((d / "kiro.log").read_text(errors="replace")
-                        for d in sorted(new_dirs) if (d / "kiro.log").exists())
+    # Log capture is bound to THIS arm's own logDir from its initialize
+    # response — a glob over ~/.kiro/logs could pick up a concurrent Kiro
+    # process's lines (review finding 8).
+    logtext = ""
+    if log_dir and (Path(log_dir) / "kiro.log").exists():
+        logtext = (Path(log_dir) / "kiro.log").read_text(errors="replace")
     haystack = stderr + "\n" + logtext
     unrecognized = [l for l in haystack.splitlines() if "Unrecognized clientInfo.name" in l]
-    stored = [l for l in haystack.splitlines()
-              if "Stored clientInfo.name" in l or "remote-tools-discovery.create" in l]
+    stored = [l for l in haystack.splitlines() if "Stored clientInfo.name" in l]
     (OUTDIR / f"stderr-{name}.log").write_text(stderr)
     (OUTDIR / f"kiro-log-{name}.log").write_text(logtext)
     (OUTDIR / f"init-response-{name}.json").write_text(
         json.dumps(response, indent=2) if response else "NO RESPONSE")
-    return {"name": name, "got_response": response is not None,
+    return {"name": name, "ok_response": ok_response, "log_dir": log_dir,
             "unrecognized_warn": unrecognized, "stored_line": stored}
 
 def main() -> int:
@@ -85,9 +118,15 @@ def main() -> int:
     verdicts = []
     for r in results:
         expect_warn = r["name"] not in ("kiro-web", "kiro-ide", "kiro-cli")
-        ok = bool(r["unrecognized_warn"]) == expect_warn
+        # An arm passes only when the handshake demonstrably ran: successful
+        # initialize result + the handler's own Stored line + the expected
+        # warn presence/absence (review finding 9 — no vacuous passes).
+        ok = (r["ok_response"] and bool(r["stored_line"])
+              and bool(r["unrecognized_warn"]) == expect_warn)
         verdicts.append(ok)
-        print(f"{r['name']:>10}: response={r['got_response']} "
+        print(f"{r['name']:>10}: response={r['ok_response']} "
+              f"stored={'yes' if r['stored_line'] else 'NO'} "
+              f"logDir={'bound' if r['log_dir'] else 'MISSING'} "
               f"warn={'YES' if r['unrecognized_warn'] else 'no'} "
               f"(expected {'YES' if expect_warn else 'no'}) "
               f"{'PASS' if ok else 'FAIL'}")

@@ -47,19 +47,19 @@
           ],
           "sourceProviders": false,
           "logging": {
-            "logDir": "/home/dwalleck/.kiro/logs/20260719T005016943",
+            "logDir": "/home/dwalleck/.kiro/logs/20260719T014612848",
             "channels": [
               {
                 "name": "kiro",
-                "filePath": "/home/dwalleck/.kiro/logs/20260719T005016943/kiro.log"
+                "filePath": "/home/dwalleck/.kiro/logs/20260719T014612848/kiro.log"
               },
               {
                 "name": "mcp",
-                "filePath": "/home/dwalleck/.kiro/logs/20260719T005016943/mcp.log"
+                "filePath": "/home/dwalleck/.kiro/logs/20260719T014612848/mcp.log"
               },
               {
                 "name": "powers",
-                "filePath": "/home/dwalleck/.kiro/logs/20260719T005016943/powers.log"
+                "filePath": "/home/dwalleck/.kiro/logs/20260719T014612848/powers.log"
               }
             ]
           }
