@@ -54,9 +54,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // KAS spawn shape (KAS-1): `[agent] kas_spawn` (free | wrapper); free default.
     let bridge = cyril_core::protocol::bridge::spawn_bridge(
         agent_command,
-        agent_engine,
-        config.agent.kas_spawn,
-        config.agent.present_as,
+        cyril_core::protocol::bridge::SpawnConfig {
+            engine: agent_engine,
+            kas_spawn: config.agent.kas_spawn,
+            present_as: config.agent.present_as,
+        },
         cwd.clone(),
     )?;
 

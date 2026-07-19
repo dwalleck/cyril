@@ -121,6 +121,21 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     (handle, channels)
 }
 
+/// The spawn-time knob bundle for a bridge (cyril-jmjb): which engine, how
+/// KAS is launched, and what identity is presented. These travel together
+/// from `[agent]` config through `spawn_bridge` — bundling them means the
+/// next knob is one field, not another signature ripple across every
+/// caller.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SpawnConfig {
+    /// Which Kiro engine to drive (ADR-0001; bound for the bridge's life).
+    pub engine: AgentEngine,
+    /// KAS launch shape (free | wrapper); ignored for v2 (cyril-evwh).
+    pub kas_spawn: KasSpawn,
+    /// The `clientInfo` identity presented at initialize (ADR-0006).
+    pub present_as: PresentAs,
+}
+
 /// Spawn the ACP bridge on a dedicated thread.
 /// Returns a BridgeHandle for the Send world to communicate through.
 ///
@@ -130,9 +145,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
 /// close.
 pub fn spawn_bridge(
     agent_command: AgentCommand,
-    agent_engine: AgentEngine,
-    kas_spawn: KasSpawn,
-    present_as: PresentAs,
+    config: SpawnConfig,
     cwd: PathBuf,
 ) -> crate::Result<BridgeHandle> {
     let (handle, channels) = create_channel_pair();
@@ -151,16 +164,7 @@ pub fn spawn_bridge(
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
                     let reason = local.block_on(&rt, async move {
-                        match run_bridge(
-                            &agent_command,
-                            agent_engine,
-                            kas_spawn,
-                            present_as,
-                            &cwd,
-                            channels,
-                        )
-                        .await
-                        {
+                        match run_bridge(&agent_command, config, &cwd, channels).await {
                             Ok(()) => None,
                             Err(e) => {
                                 tracing::error!(error = %e, "bridge terminated with error");
@@ -489,9 +493,7 @@ fn resolve_spawn_command(
 
 async fn run_bridge(
     agent_command: &AgentCommand,
-    agent_engine: AgentEngine,
-    kas_spawn: KasSpawn,
-    present_as: PresentAs,
+    config: SpawnConfig,
     cwd: &std::path::Path,
     channels: BridgeChannels,
 ) -> crate::Result<()> {
@@ -504,7 +506,7 @@ async fn run_bridge(
     // 0. Engine gate (KAS-0, ADR-0001): bind the one engine the bridge uses for
     //    its life BEFORE spawning the subprocess, so an unavailable engine
     //    refuses cleanly (a disconnect notice, no panic) without spawning anything.
-    let engine = match engine_for(agent_engine) {
+    let engine = match engine_for(config.engine) {
         Ok(engine) => engine,
         Err(reason) => {
             notify_or_closed(
@@ -521,7 +523,8 @@ async fn run_bridge(
     //    precondition becomes a specific, actionable BridgeDisconnected reason
     //    (spec B6 — no auto-recover, no v2 fallback). v2 (and any default build)
     //    spawns the CLI `agent_command` unchanged. The clone is startup-only.
-    let spawn_command = match resolve_spawn_command(agent_command, agent_engine, kas_spawn) {
+    let spawn_command = match resolve_spawn_command(agent_command, config.engine, config.kas_spawn)
+    {
         Ok(cmd) => cmd,
         Err(reason) => {
             notify_or_closed(
@@ -603,7 +606,7 @@ async fn run_bridge(
         channels,
         cwd.to_path_buf(),
         engine,
-        present_as,
+        config.present_as,
         InternalChannels {
             inbound_tx,
             inbound_rx,
@@ -2040,14 +2043,8 @@ mod tests {
     async fn spawn_failure_disconnect_reason_wellformed() {
         let cmd = AgentCommand::try_from_argv(vec!["cyril-l7tw-no-such-binary".to_string()])
             .expect("argv");
-        let handle = spawn_bridge(
-            cmd,
-            AgentEngine::default(),
-            KasSpawn::default(),
-            PresentAs::default(),
-            std::env::temp_dir(),
-        )
-        .expect("bridge thread spawns");
+        let handle = spawn_bridge(cmd, SpawnConfig::default(), std::env::temp_dir())
+            .expect("bridge thread spawns");
         let (_sender, mut rx, _perm) = handle.split();
         let routed = tokio::time::timeout(Duration::from_secs(10), rx.recv())
             .await

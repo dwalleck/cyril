@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use cyril_core::protocol::bridge::spawn_bridge;
+use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
 use cyril_core::types::*;
 use tokio::sync::mpsc::Receiver;
 
@@ -29,9 +29,11 @@ async fn wrapper_turn_completes_with_auth_responder() {
     let cwd = std::env::temp_dir();
     let bridge = spawn_bridge(
         agent_command,
-        AgentEngine::Kas,
-        KasSpawn::Wrapper,
-        PresentAs::default(),
+        SpawnConfig {
+            engine: AgentEngine::Kas,
+            kas_spawn: KasSpawn::Wrapper,
+            ..SpawnConfig::default()
+        },
         cwd.clone(),
     )
     .expect("spawn_bridge");
