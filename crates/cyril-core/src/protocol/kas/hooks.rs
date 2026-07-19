@@ -5,7 +5,10 @@
 //! queries. Execution lives in the executor half of this module (slices
 //! 5a/5b); wire dispatch in `client.rs` (slice 7).
 
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::Path;
+use std::rc::Rc;
 
 use agent_client_protocol as acp;
 
@@ -15,6 +18,48 @@ pub(crate) const LIST_METHOD: &str = "kiro/hooks/list";
 
 /// The acp-stripped method name for `_kiro/hooks/executeHook`.
 pub(crate) const EXECUTE_METHOD: &str = "kiro/hooks/executeHook";
+
+/// The acp-stripped method name for the `_kiro/hooks/cancel` notification.
+pub(crate) const CANCEL_METHOD: &str = "kiro/hooks/cancel";
+
+/// The acp-stripped method name for the `_kiro/hooks/didChange` notification
+/// (on-disk hook edits; v1 logs it — hot-reload is cyril-2adk).
+pub(crate) const DID_CHANGE_METHOD: &str = "kiro/hooks/didChange";
+
+/// In-flight hook executions, keyed by `operationId`, each holding a
+/// cancel trigger. Shared (single `LocalSet` thread, so `RefCell`, mirroring
+/// the terminal registry) between the executeHook responder and the cancel
+/// notification handler.
+#[derive(Debug, Default, Clone)]
+pub(crate) struct HookOps {
+    inner: Rc<RefCell<HashMap<String, tokio::sync::oneshot::Sender<()>>>>,
+}
+
+impl HookOps {
+    fn register(&self, op_id: String) -> tokio::sync::oneshot::Receiver<()> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        self.inner.borrow_mut().insert(op_id, tx);
+        rx
+    }
+
+    fn finish(&self, op_id: &str) {
+        self.inner.borrow_mut().remove(op_id);
+    }
+
+    /// Trigger cancellation of the named operation. A no-op `warn` if the id
+    /// is unknown (already finished, or a stale cancel — the lw67 class:
+    /// never a silent nothing, never a panic).
+    pub(crate) fn cancel(&self, op_id: &str) {
+        match self.inner.borrow_mut().remove(op_id) {
+            Some(tx) => {
+                if tx.send(()).is_err() {
+                    tracing::debug!(op_id, "hook operation finished before cancel landed");
+                }
+            }
+            None => tracing::warn!(op_id, "cancel for an unknown hook operation; ignored"),
+        }
+    }
+}
 
 /// Default per-hook execution timeout when the agent sends no `timeout`
 /// (covenant `HookExecuteParams.timeout?`). Bounds a runaway user command.
@@ -276,6 +321,7 @@ impl HookRegistry {
 pub(crate) async fn respond_execute(
     params: &serde_json::Value,
     cwd: &Path,
+    ops: &HookOps,
 ) -> acp::Result<acp::ExtResponse> {
     let command = params.get("command").and_then(|c| c.as_str());
     let user_prompt = params
@@ -291,9 +337,28 @@ pub(crate) async fn respond_execute(
         .get("timeout")
         .and_then(serde_json::Value::as_u64)
         .map_or(DEFAULT_TIMEOUT, std::time::Duration::from_secs);
+    let op_id = params
+        .get("operationId")
+        .and_then(|o| o.as_str())
+        .map(str::to_owned);
 
     let reply = match command {
-        Some(cmd) => execute_hook(cmd, user_prompt, cwd, timeout).await,
+        Some(cmd) => match &op_id {
+            // Cancellable: race the command against the cancel trigger. If
+            // cancel wins, the `execute_hook` future is dropped mid-await and
+            // `kill_on_drop` reaps the child (the lw67 no-orphan invariant).
+            Some(id) => {
+                let cancel = ops.register(id.clone());
+                let result = tokio::select! {
+                    biased;
+                    out = execute_hook(cmd, user_prompt, cwd, timeout) => out,
+                    _ = cancel => serde_json::json!({"cancelled": true, "exitCode": 130}),
+                };
+                ops.finish(id);
+                result
+            }
+            None => execute_hook(cmd, user_prompt, cwd, timeout).await,
+        },
         None => {
             tracing::warn!("executeHook without a command; not executed");
             serde_json::json!({"output": "no command", "exitCode": 127, "cancelled": false})
@@ -511,10 +576,65 @@ mod tests {
             "hookId": "h", "hookName": "policy", "command": "echo blocked; exit 2",
             "sessionId": "s", "userPrompt": "{}"
         });
-        let resp = respond_execute(&params, dir.path()).await.unwrap();
+        let resp = respond_execute(&params, dir.path(), &HookOps::default())
+            .await
+            .unwrap();
         let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
         assert_eq!(reply["exitCode"], 2);
         assert_eq!(reply["cancelled"], false);
         assert_eq!(reply["output"], "blocked\n");
+    }
+
+    // cyril-jiyn claim 9 fence: a hook exceeding its timeout is killed and the
+    // reply says cancelled — a timer-without-kill leaves the child alive and
+    // the reply would (wrongly) carry command output. 300ms timeout on a
+    // 30s sleep; must return in ~timeout, not ~30s.
+    #[tokio::test]
+    async fn execute_hook_timeout_kills() {
+        let dir = tempfile::tempdir().unwrap();
+        let start = std::time::Instant::now();
+        let out = execute_hook(
+            "sleep 30",
+            "",
+            dir.path(),
+            std::time::Duration::from_millis(300),
+        )
+        .await;
+        assert!(
+            start.elapsed() < std::time::Duration::from_secs(5),
+            "returned on timeout, not after the full sleep"
+        );
+        assert_eq!(out["cancelled"], true);
+        assert!(out.get("output").is_none(), "no command output on timeout");
+    }
+
+    // cyril-jiyn claim 10 fence: cancel by operationId aborts a running hook —
+    // reply cancelled, and the select-drop reaps the child (lw67 class: cancel
+    // during a pending execution is never a silent no-op). Also: an unknown
+    // operationId cancel is a warn no-op that does not disturb the running op.
+    #[tokio::test]
+    async fn execute_hook_cancel_reaps() {
+        let dir = tempfile::tempdir().unwrap();
+        let ops = HookOps::default();
+        let params = serde_json::json!({
+            "hookId": "h", "hookName": "slow", "command": "sleep 30",
+            "sessionId": "s", "userPrompt": "", "operationId": "op-1"
+        });
+        // Both futures run on this one task via join! (no LocalSet needed):
+        // the canceller sleeps past the child spawn, fires an unknown cancel
+        // (warn no-op), then the real one; respond_execute's internal select
+        // wakes on the oneshot and drops the child (kill_on_drop reaps).
+        let start = std::time::Instant::now();
+        let (resp, ()) = tokio::join!(respond_execute(&params, dir.path(), &ops), async {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            ops.cancel("does-not-exist");
+            ops.cancel("op-1");
+        });
+        assert!(
+            start.elapsed() < std::time::Duration::from_secs(5),
+            "cancel returns promptly, not after the 30s sleep"
+        );
+        let reply: serde_json::Value = serde_json::from_str(resp.unwrap().0.get()).unwrap();
+        assert_eq!(reply["cancelled"], true);
     }
 }

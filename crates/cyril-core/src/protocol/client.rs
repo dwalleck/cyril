@@ -36,6 +36,10 @@ pub(crate) struct KiroClient {
     /// Session workspace, the cwd for hook command execution (cyril-jiyn).
     #[cfg(feature = "kas")]
     cwd: std::path::PathBuf,
+    /// In-flight hook operations, so `_kiro/hooks/cancel` can abort one
+    /// (cyril-jiyn).
+    #[cfg(feature = "kas")]
+    hook_ops: crate::protocol::kas::hooks::HookOps,
 }
 
 impl KiroClient {
@@ -73,6 +77,8 @@ impl KiroClient {
             hooks,
             #[cfg(feature = "kas")]
             cwd: cwd.to_path_buf(),
+            #[cfg(feature = "kas")]
+            hook_ops: crate::protocol::kas::hooks::HookOps::default(),
         }
     }
 
@@ -183,6 +189,24 @@ impl acp::Client for KiroClient {
                 serde_json::Value::Null
             }
         };
+
+        // KAS-7 hooks host notifications (cyril-jiyn), handled cyril-side rather
+        // than converted to a UI notification: `cancel` aborts an in-flight
+        // hook by operationId; `didChange` announces on-disk hook edits (no
+        // hot-reload in v1 — cyril-2adk — so it is logged, not acted on).
+        #[cfg(feature = "kas")]
+        {
+            if args.method.as_ref() == crate::protocol::kas::hooks::CANCEL_METHOD {
+                if let Some(op_id) = params.get("operationId").and_then(|o| o.as_str()) {
+                    self.hook_ops.cancel(op_id);
+                }
+                return Ok(());
+            }
+            if args.method.as_ref() == crate::protocol::kas::hooks::DID_CHANGE_METHOD {
+                tracing::info!("KAS hooks changed on disk; reload deferred (cyril-2adk)");
+                return Ok(());
+            }
+        }
 
         match self
             .engine
@@ -372,7 +396,12 @@ impl KiroClient {
         if args.method.as_ref() == crate::protocol::kas::hooks::EXECUTE_METHOD {
             let params: serde_json::Value =
                 serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
-            return crate::protocol::kas::hooks::respond_execute(&params, &self.cwd).await;
+            return crate::protocol::kas::hooks::respond_execute(
+                &params,
+                &self.cwd,
+                &self.hook_ops,
+            )
+            .await;
         }
         // The bare-ACP fs/terminal lifecycle host callbacks are TYPED acp::Client
         // methods (the overrides above), not ext requests: fs/read_text_file (KAS-5a,
