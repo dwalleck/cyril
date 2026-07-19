@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false},"clientInfo":{"name":"cyril","title":"Cyril","version":"0.2.0-alpha.1"}}}

@@ -10,6 +10,7 @@ use crate::types::agent_command::AgentCommand;
 use crate::types::agent_engine::AgentEngine;
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
 use crate::types::kas_spawn::KasSpawn;
+use crate::types::present_as::PresentAs;
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -131,6 +132,7 @@ pub fn spawn_bridge(
     agent_command: AgentCommand,
     agent_engine: AgentEngine,
     kas_spawn: KasSpawn,
+    present_as: PresentAs,
     cwd: PathBuf,
 ) -> crate::Result<BridgeHandle> {
     let (handle, channels) = create_channel_pair();
@@ -149,8 +151,15 @@ pub fn spawn_bridge(
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
                     let reason = local.block_on(&rt, async move {
-                        match run_bridge(&agent_command, agent_engine, kas_spawn, &cwd, channels)
-                            .await
+                        match run_bridge(
+                            &agent_command,
+                            agent_engine,
+                            kas_spawn,
+                            present_as,
+                            &cwd,
+                            channels,
+                        )
+                        .await
                         {
                             Ok(()) => None,
                             Err(e) => {
@@ -482,6 +491,7 @@ async fn run_bridge(
     agent_command: &AgentCommand,
     agent_engine: AgentEngine,
     kas_spawn: KasSpawn,
+    present_as: PresentAs,
     cwd: &std::path::Path,
     channels: BridgeChannels,
 ) -> crate::Result<()> {
@@ -593,6 +603,7 @@ async fn run_bridge(
         channels,
         cwd.to_path_buf(),
         engine,
+        present_as,
         InternalChannels {
             inbound_tx,
             inbound_rx,
@@ -653,6 +664,7 @@ async fn run_loop(
     mut channels: BridgeChannels,
     cwd: std::path::PathBuf,
     engine: std::rc::Rc<dyn Engine>,
+    present_as: PresentAs,
     internal: InternalChannels,
 ) -> crate::Result<()> {
     // cyril-3lh8: the shared terminal-registry handle for the CancelRequest
@@ -670,9 +682,22 @@ async fn run_loop(
     use acp::Agent;
     use agent_client_protocol as acp;
 
-    // 4. ACP handshake
+    // 4. ACP handshake. Identity is resolved against the bound engine
+    //    (cyril-0wyn, ADR-0006): the `present_as` knob is KAS-only, and the
+    //    resolved standing is stated in the log because KAS's own
+    //    classification is invisible on the wire (.cyril-0wyn/findings.md Q3).
+    let effective = crate::protocol::identity::effective_present_as(engine.kind(), present_as);
+    if effective != present_as {
+        tracing::warn!(
+            configured = present_as.wire_name(),
+            "[agent] present_as has no effect on the v2 engine — presenting the honest identity"
+        );
+    }
+    if let Some(advisory) = crate::protocol::identity::identity_advisory(engine.kind(), effective) {
+        tracing::info!("{advisory}");
+    }
     let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::V1)
-        .client_info(acp::Implementation::new("cyril", env!("CARGO_PKG_VERSION")))
+        .client_info(client_info(effective))
         .client_capabilities(engine.client_capabilities());
 
     let init_response: acp::InitializeResponse =
@@ -2019,6 +2044,7 @@ mod tests {
             cmd,
             AgentEngine::default(),
             KasSpawn::default(),
+            PresentAs::default(),
             std::env::temp_dir(),
         )
         .expect("bridge thread spawns");
@@ -2414,6 +2440,7 @@ mod tests {
                     channels,
                     std::env::temp_dir(),
                     engine,
+                    PresentAs::default(),
                     InternalChannels {
                         inbound_tx,
                         inbound_rx,

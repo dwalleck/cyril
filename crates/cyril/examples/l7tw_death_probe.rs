@@ -36,6 +36,7 @@ async fn main() -> anyhow::Result<()> {
         agent_command,
         AgentEngine::default(),
         KasSpawn::default(),
+        PresentAs::default(),
         cwd.clone(),
     )?;
     let (sender, mut notification_rx, mut permission_rx) = bridge.split();

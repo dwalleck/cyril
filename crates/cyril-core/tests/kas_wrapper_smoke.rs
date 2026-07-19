@@ -31,6 +31,7 @@ async fn wrapper_turn_completes_with_auth_responder() {
         agent_command,
         AgentEngine::Kas,
         KasSpawn::Wrapper,
+        PresentAs::default(),
         cwd.clone(),
     )
     .expect("spawn_bridge");
