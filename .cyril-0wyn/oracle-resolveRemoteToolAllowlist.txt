@@ -1,0 +1,27 @@
+# Carved from /home/dwalleck/.local/share/kiro-cli/kas/2.13.0-6b915aea9d06da0c64b46da6eb0e2cf40bfe1db59d01ddb8d701ecdbdc874f39/node_modules/@kiro/agent/dist/server/acp-server.js
+# offset 19573911
+
+function resolveRemoteToolAllowlist(client2, channel, options2) {
+  if (process.env[KIRO_LOAD_ALL_REMOTE_TOOLS_ENV] === "true") return "*";
+  const memoryEnabled = options2?.memoryEnabled ?? false;
+  switch (client2) {
+    case "kiro-web":
+      return "*";
+    case "kiro-ide": {
+      if (channel === "stable") return [REMOTE_TOOL_WEB_SEARCH];
+      if (channel === "insider") return [REMOTE_TOOL_WEB_SEARCH, REMOTE_TOOL_SEARCH_MEMORIES];
+      return [REMOTE_TOOL_WEB_SEARCH];
+    }
+    case "kiro-cli": {
+      const tools = [REMOTE_TOOL_WEB_SEARCH];
+      if (memoryEnabled) tools.push(REMOTE_TOOL_SEARCH_MEMORIES);
+      return tools;
+    }
+    default:
+      return [REMOTE_TOOL_WEB_SEARCH];
+  }
+}
+
+// src/agent-context/context-resolvers/file-tree.ts
+init_serialize_file_tree();
+init_utils13()

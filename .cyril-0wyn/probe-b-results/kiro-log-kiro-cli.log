@@ -1,0 +1,15 @@
+{"timestamp":"2026-07-19T00:50:16.951Z","level":"info","message":"File logging initialized at /home/dwalleck/.kiro/logs/20260719T005016943"}
+{"timestamp":"2026-07-19T00:50:16.951Z","level":"info","message":"Initializing persistence at /home/dwalleck/.kiro/sessions"}
+{"timestamp":"2026-07-19T00:50:16.956Z","level":"info","message":"[SessionPersistence] Initialized persistence at /home/dwalleck/.kiro/sessions"}
+{"timestamp":"2026-07-19T00:50:16.956Z","level":"info","message":"Persistence initialized"}
+{"timestamp":"2026-07-19T00:50:16.978Z","level":"info","message":"[AgentTelemetry] Initialized {\"endpoint\":\"https://prod.us-east-1.telemetry.desktop.kiro.dev\",\"serviceName\":\"kiroAgent\"}"}
+{"timestamp":"2026-07-19T00:50:16.979Z","level":"info","message":"[KiroAgent] Remote MCP client initialized"}
+{"timestamp":"2026-07-19T00:50:16.979Z","level":"info","message":"[KiroAgent] remote-tools-discovery.create {\"client\":\"kiro-ide\"}"}
+{"timestamp":"2026-07-19T00:50:16.990Z","level":"info","message":"[KiroAgent] Cleared stale task execution statuses"}
+{"timestamp":"2026-07-19T00:50:16.990Z","level":"info","message":"[KiroAgent] Platform initialized"}
+{"timestamp":"2026-07-19T00:50:16.990Z","level":"info","message":"[KiroAgent] Resolved capabilities: {\"fsReadTextFile\":false,\"fsWriteTextFile\":false,\"kiroFsReadFile\":false,\"kiroFsWriteFile\":false,\"kiroFsStat\":false,\"kiroFsReadDirectory\":false,\"kiroFsDelete\":false,\"terminal\":false,\"secretStorage\":false,\"openExternalUrl\":false,\"knowledge\":false,\"infrastructureSafety\":false}"}
+{"timestamp":"2026-07-19T00:50:16.990Z","level":"info","message":"[RemoteToolsDiscovery] Fetching available Remote tools"}
+{"timestamp":"2026-07-19T00:50:16.994Z","level":"info","message":"[KiroAgent] Stored clientInfo.name: kiro-cli"}
+{"timestamp":"2026-07-19T00:50:16.994Z","level":"info","message":"Handshake: returning logging config with 3 channels at /home/dwalleck/.kiro/logs/20260719T005016943"}
+{"timestamp":"2026-07-19T00:50:17.225Z","level":"error","message":"[RemoteToolsDiscovery] Failed to discover tools {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
+{"timestamp":"2026-07-19T00:50:17.226Z","level":"warn","message":"[KiroAgent] Remote tools discovery failed on startup: {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}

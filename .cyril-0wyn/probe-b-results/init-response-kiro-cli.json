@@ -1,0 +1,80 @@
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "loadSession": true,
+      "promptCapabilities": {
+        "image": true,
+        "embeddedContext": true
+      },
+      "mcpCapabilities": {
+        "http": true,
+        "sse": true
+      },
+      "sessionCapabilities": {
+        "list": {},
+        "fork": {
+          "_meta": {
+            "kiro": {
+              "messageId": true
+            }
+          }
+        }
+      },
+      "_meta": {
+        "kiro": {
+          "checkpoints": true,
+          "sessionList": true,
+          "policyNotifications": true,
+          "extensionMethods": [
+            "_kiro/knowledge",
+            "_kiro/codeIntelligence",
+            "_kiro/session/context",
+            "_kiro/session/compact",
+            "_kiro/session/export",
+            "_kiro/session/history"
+          ],
+          "sessionSources": [
+            "local"
+          ],
+          "sessionListScopes": [
+            "workspace"
+          ],
+          "executionTargets": [
+            "local"
+          ],
+          "sourceProviders": false,
+          "logging": {
+            "logDir": "/home/dwalleck/.kiro/logs/20260719T005016943",
+            "channels": [
+              {
+                "name": "kiro",
+                "filePath": "/home/dwalleck/.kiro/logs/20260719T005016943/kiro.log"
+              },
+              {
+                "name": "mcp",
+                "filePath": "/home/dwalleck/.kiro/logs/20260719T005016943/mcp.log"
+              },
+              {
+                "name": "powers",
+                "filePath": "/home/dwalleck/.kiro/logs/20260719T005016943/powers.log"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "authMethods": [
+      {
+        "id": "aws-builder-id",
+        "name": "AWS Builder ID"
+      },
+      {
+        "id": "aws-iam-identity-center",
+        "name": "AWS IAM Identity Center"
+      }
+    ]
+  }
+}
