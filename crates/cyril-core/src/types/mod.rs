@@ -8,6 +8,7 @@ pub mod hook;
 pub mod kas_spawn;
 pub mod message;
 pub mod plan;
+pub mod present_as;
 pub mod prompt;
 pub mod session;
 pub mod subagent;
