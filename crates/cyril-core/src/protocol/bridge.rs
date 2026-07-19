@@ -629,6 +629,21 @@ struct InternalChannels {
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
 
+/// The `clientInfo` cyril presents at `initialize` (cyril-0wyn, ADR-0006).
+///
+/// Single source of identity: `name` follows [`PresentAs`] (honest `"cyril"`
+/// default, opt-in `"kiro-cli"`); `title` is **always** `"Cyril"` — the
+/// impersonation is deliberately never total, so Kiro-side logs and telemetry
+/// can identify cyril sessions in every mode; `version` is the workspace
+/// version.
+#[must_use]
+pub fn client_info(
+    present_as: crate::types::present_as::PresentAs,
+) -> agent_client_protocol::Implementation {
+    agent_client_protocol::Implementation::new(present_as.wire_name(), env!("CARGO_PKG_VERSION"))
+        .title("Cyril".to_string())
+}
+
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
 /// tests can drive it against an in-process fake agent (no `kiro-cli`
 /// subprocess). `conn` is `Rc` so a prompt future can be driven off this loop
@@ -1759,6 +1774,42 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    // ── cyril-0wyn identity fences (claims 1 and 5) ──────────────────────────
+
+    /// The workspace version read from the root manifest — a different path
+    /// than `env!("CARGO_PKG_VERSION")`'s compile-time injection, so a
+    /// hardcoded version string in `client_info` drifts loudly on the next
+    /// version bump instead of silently.
+    fn workspace_manifest_version() -> String {
+        let manifest = include_str!("../../../../Cargo.toml");
+        manifest
+            .lines()
+            .find_map(|l| l.trim().strip_prefix("version = \""))
+            .and_then(|rest| rest.strip_suffix('"'))
+            .expect("workspace Cargo.toml carries a version line")
+            .to_string()
+    }
+
+    #[test]
+    fn client_info_default_is_cyril_identity() {
+        let info = client_info(crate::types::present_as::PresentAs::Cyril);
+        assert_eq!(info.name, "cyril");
+        assert_eq!(info.title.as_deref(), Some("Cyril"));
+        assert_eq!(info.version, workspace_manifest_version());
+        assert!(!info.version.is_empty());
+    }
+
+    #[test]
+    fn client_info_present_as_kiro_cli() {
+        let info = client_info(crate::types::present_as::PresentAs::KiroCli);
+        assert_eq!(info.name, "kiro-cli");
+        // The impersonation is never total: title stays honest in every mode
+        // (ADR-0006 negative space; catches an implementation that swaps the
+        // whole identity rather than only the name).
+        assert_eq!(info.title.as_deref(), Some("Cyril"));
+        assert_eq!(info.version, workspace_manifest_version());
+    }
 
     // ── cyril-84ca mid-turn harness (Slices 2-7) ──────────────────────────────
     // In-process fake agent so the command loop is exercised with no kiro-cli
