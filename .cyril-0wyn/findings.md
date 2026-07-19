@@ -8,6 +8,9 @@ bundle at `~/.local/share/kiro-cli/kas/2.13.0-*`. cyril @ main (0.2.0-alpha.1).
 - **Probe**: `probe-a-dump-agent.sh` as the agent command under
   `cargo run --example test_bridge`; captured the live initialize frame.
 - **Result**: `"clientInfo":{"name":"cyril","title":null,"version":"0.2.0-alpha.1"}`
+  (pre-change baselines committed: `probe-a-baseline-capture.jsonl` default
+  build, `probe-a-baseline-kas-build.jsonl` kas build; post-implementation
+  capture with `title:"Cyril"` is `probe-a-post-impl-capture.jsonl`)
 - **Oracle**: source text — `bridge.rs:660`
   `Implementation::new("cyril", env!("CARGO_PKG_VERSION"))` + workspace
   `version = "0.2.0-alpha.1"` (Cargo.toml:6). **AGREE.** No layer rewrites
@@ -34,9 +37,13 @@ bundle at `~/.local/share/kiro-cli/kas/2.13.0-*`. cyril @ main (0.2.0-alpha.1).
 
 - **Probe**: byte-diff of the three initialize responses.
 - **Result**: identical except `logDir`/`filePath` values. **The resolved
-  client type is NOT observable over ACP** — misclassification is silent on
-  the wire (warn goes only to the server-side log file, whose path the
-  initialize response happens to expose under `_meta`).
+  client type is not exposed by the initialize response** — the
+  classification warn goes only to the server-side log file, whose path the
+  initialize response happens to expose under `_meta`. Scope caveat
+  (review 2026-07-19): only initialize was diffed; later session/tool/prompt
+  traffic was NOT tested, and the allowlist difference plausibly surfaces
+  downstream as available-tool differences. Do not cite this as a
+  protocol-wide invisibility claim.
 
 ## New facts (not known before probing)
 
@@ -54,13 +61,21 @@ bundle at `~/.local/share/kiro-cli/kas/2.13.0-*`. cyril @ main (0.2.0-alpha.1).
    (`oracle-resolveRemoteToolAllowlist.txt`): kiro-web → `*`; kiro-ide →
    channel-gated; kiro-cli → `[web_search] + searchMemories if memoryEnabled`;
    env bypass first.
-4. **Standalone KAS accepts initialize with no auth** ("Auth: default token
-   file" on stderr) — cheap harness for future handshake probes.
+4. **Standalone KAS completes initialize without any ACP-level auth
+   exchange.** Narrowed (review 2026-07-19): the probe inherited `HOME`, and
+   stderr shows `Auth: default token file` — ambient credential material was
+   present, so this does NOT establish that a credential-less environment
+   initializes; only that no ACP auth request/callback was needed before the
+   initialize response.
 5. `remote-tools-discovery.create {"client":"kiro-ide"}` fires at *startup*
    in all three runs — the discovery object is instantiated eagerly with the
-   default before initialize; `setClientType` re-points it afterward. Any
-   future "allowlist actually applied" probe must measure at request time,
-   not at create time.
+   default before initialize. Corrected mechanism (review 2026-07-19,
+   matching the Probe C addendum): the discovery's `getAllowedTools` closure
+   reads `this.agentContext.client` **lazily at resolution time**, and
+   initialize reassigns `this.agentContext`; `setClientType(...)` is the
+   telemetry/activity-publisher side, not the discovery seam. Any future
+   "allowlist actually applied" probe must instrument the lazy read
+   (`Allowlist resolved`), not creation or setClientType.
 
 ## What I learned (gate sentence)
 

@@ -7,9 +7,10 @@ Status: accepted (2026-07-18, cyril-0wyn)
 KAS derives its entire client identity from ACP `clientInfo.name` via
 `resolveAgentContext` — only `kiro-web` / `kiro-ide` / `kiro-cli` are
 recognized; any other name logs `Unrecognized clientInfo.name` server-side
-and silently becomes `kiro-ide` (local). The classification is **invisible on
-the wire**: initialize responses are byte-identical across names
-(`.cyril-0wyn/findings.md` Q3). At least **four behaviors** key off the
+and silently becomes `kiro-ide` (local). The classification is **not exposed
+by the initialize response** — byte-identical across names
+(`.cyril-0wyn/findings.md` Q3; later session/tool traffic untested, and the
+allowlist difference plausibly surfaces downstream as available tools). At least **four behaviors** key off the
 resolved client (probe-verified against the shipped 2.13.0 bundle,
 `.cyril-0wyn/oracle-*.txt`):
 
@@ -65,8 +66,11 @@ available option.
   channel-gated remote tools, and the IDE hooks briefing — each divergence
   is named in the startup advisory and lives in this ADR rather than in
   anyone's head.
-- The `searchMemories` outcome under the knob is verified by
-  `.cyril-0wyn/probe-c` (claim 8); residue tracked in cyril-jrl1.
+- The `searchMemories` outcome under the knob is **not yet verified**:
+  `.cyril-0wyn/probe-c-memory-tools.py` (claim 8) was INCONCLUSIVE — both
+  arms failed discovery on `TokenExpired` before any allowlist resolved.
+  The live verification under an auth-serviceable session is deferred to
+  cyril-jrl1.
 - Per release, the wire audit re-carves `resolveAgentContext` and re-runs
   `.cyril-0wyn/probe-b-name-ab.py` (the approved manual regression fence for
   upstream's recognition set — see the checklist in

@@ -27,9 +27,10 @@ pub fn effective_present_as(engine: AgentEngine, configured: PresentAs) -> Prese
 /// The one-line startup advisory for the resolved identity, or `None` when
 /// there is nothing worth saying (v2: the name has no behavioral effect).
 ///
-/// KAS classifies clients by `clientInfo.name` and the classification is
-/// invisible on the wire (`.cyril-0wyn/findings.md` Q3), so cyril states its
-/// own standing in `cyril.log` at `info` — the fail-loud half of ADR-0006.
+/// KAS classifies clients by `clientInfo.name` and does not surface the
+/// resolved classification in the initialize response
+/// (`.cyril-0wyn/findings.md` Q3), so cyril states its own standing in
+/// `cyril.log` at `info` — the fail-loud half of ADR-0006.
 #[must_use]
 pub fn identity_advisory(engine: AgentEngine, effective: PresentAs) -> Option<&'static str> {
     match (engine, effective) {

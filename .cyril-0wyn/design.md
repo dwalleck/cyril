@@ -3,7 +3,8 @@
 Status: **APPROVED 2026-07-18** (pause decisions: honest default RATIFIED;
 `present_as` knob pulled into scope from cyril-jrl1; claim-2 manual
 release-audit fence APPROVED; title="Cyril" YES; advisory level `info`).
-Probes: `findings.md` (all pass).
+Probes: `findings.md` — A (both builds) and B all pass; C (claim 8)
+INCONCLUSIVE, residue in cyril-jrl1.
 
 ## Purpose
 
@@ -43,7 +44,9 @@ close-out depending on that probe's outcome.
    follow the existing config posture: whole-file warn + defaults (the
    `engine = "bogus"` precedent, config.rs:78-84).
 2. **Single-source identity**: extract clientInfo construction from
-   `run_loop` (bridge.rs:660) into a pure `client_info(present_as)` fn.
+   `run_loop` (bridge.rs:660) into a pure `client_info(present_as)` fn
+   (probes proved the classification is not exposed by the initialize
+   response — findings.md Q3, scope-narrowed at review).
    `name` = `present_as` wire name; **`title` = `"Cyril"` always** (the
    impersonation is deliberately never total — Kiro-side logs/telemetry can
    always identify cyril via title); `version` = `CARGO_PKG_VERSION`.
