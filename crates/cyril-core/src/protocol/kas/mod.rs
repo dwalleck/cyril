@@ -9,6 +9,7 @@
 
 pub(crate) mod auth;
 pub(crate) mod discovery;
+pub(crate) mod hooks;
 pub(crate) mod host_io;
 pub(crate) mod settings;
 pub(crate) mod terminal_io;

@@ -27,6 +27,12 @@ pub(crate) struct KiroClient {
     /// (cyril-3lh8); the registry stays the sole owner of process lifecycle.
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
+    /// KAS-7 (cyril-jiyn): the hook registry serving `_kiro/hooks/*`, loaded
+    /// once at construction from the workspace + global `.kiro/hooks` when the
+    /// bound engine's hooks mode is `Host`. Empty otherwise (Kas mode runs
+    /// hooks agent-side; v2/Off advertise none).
+    #[cfg(feature = "kas")]
+    hooks: std::rc::Rc<crate::protocol::kas::hooks::HookRegistry>,
 }
 
 impl KiroClient {
@@ -34,7 +40,25 @@ impl KiroClient {
         notification_tx: mpsc::Sender<RoutedNotification>,
         permission_tx: mpsc::Sender<PermissionRequest>,
         engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
+        cwd: &std::path::Path,
     ) -> Self {
+        #[cfg(not(feature = "kas"))]
+        let _ = cwd; // hooks registry (the only cwd consumer) is kas-only
+        #[cfg(feature = "kas")]
+        let hooks = {
+            use crate::types::kas_hooks::KasHooksMode;
+            let registry = if engine.hooks_mode() == KasHooksMode::Host {
+                crate::protocol::kas::hooks::HookRegistry::load(
+                    cwd,
+                    crate::kiro_agent_config::home_dir()
+                        .map(|h| h.join(".kiro"))
+                        .as_deref(),
+                )
+            } else {
+                crate::protocol::kas::hooks::HookRegistry::default()
+            };
+            std::rc::Rc::new(registry)
+        };
         Self {
             notification_tx,
             permission_tx,
@@ -42,6 +66,8 @@ impl KiroClient {
             engine,
             #[cfg(feature = "kas")]
             terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new()),
+            #[cfg(feature = "kas")]
+            hooks,
         }
     }
 
@@ -205,7 +231,7 @@ impl acp::Client for KiroClient {
     /// which fails the turn while the user sees nothing actionable.
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         let method = args.method.to_string();
-        let result = Self::handle_ext_request(args).await;
+        let result = self.handle_ext_request(args).await;
         self.notify_if_auth_failure(&method, &result).await;
         result
     }
@@ -326,12 +352,17 @@ impl KiroClient {
     /// Route an ext request (`_kiro/*`): KAS-1 `getAccessToken`, KAS-5b
     /// `terminal/shell_type`.
     #[cfg(feature = "kas")]
-    async fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+    async fn handle_ext_request(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         if args.method.as_ref() == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
             return crate::protocol::kas::terminal_io::respond_shell_type();
+        }
+        if args.method.as_ref() == crate::protocol::kas::hooks::LIST_METHOD {
+            let params: serde_json::Value =
+                serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
+            return self.hooks.respond_list(&params);
         }
         // The bare-ACP fs/terminal lifecycle host callbacks are TYPED acp::Client
         // methods (the overrides above), not ext requests: fs/read_text_file (KAS-5a,
@@ -342,7 +373,7 @@ impl KiroClient {
 
     /// Default build: no KAS ext requests are handled.
     #[cfg(not(feature = "kas"))]
-    async fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+    async fn handle_ext_request(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         unhandled_ext_response(args.method.as_ref())
     }
 }
@@ -387,6 +418,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let err: acp::Result<acp::ExtResponse> =
             Err(acp::Error::new(-32603, "sqlite store locked"));
@@ -417,6 +449,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(
             -32603,
@@ -448,6 +481,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(-32603, "boom"));
         client
@@ -476,6 +510,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
         let f = dir.path().join("x.txt");
@@ -497,6 +532,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
         let f = dir.path().join("out.txt");
@@ -518,7 +554,57 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         )
+    }
+
+    // cyril-jiyn slice 3v: the `_kiro/hooks/list` ext request routes through
+    // handle_ext_request to the client's registry and replies with the
+    // matching hooks. A Host-mode KasEngine client loads a real registry from
+    // a tempdir. Fails if the method arm is missing (falls to the null
+    // default) or the registry isn't wired to the dispatch.
+    #[tokio::test]
+    async fn hooks_list_ext_request_routes_to_registry() {
+        use agent_client_protocol::Client as _;
+
+        let dir = tempfile::tempdir().unwrap();
+        let hooks_dir = dir.path().join(".kiro/hooks");
+        std::fs::create_dir_all(&hooks_dir).unwrap();
+        std::fs::write(
+            hooks_dir.join("h.json"),
+            r#"{"version":"v1","hooks":[
+                {"name":"greet","trigger":"UserPromptSubmit",
+                 "action":{"type":"command","command":"echo hi"}}
+            ]}"#,
+        )
+        .unwrap();
+
+        let (ntx, _nrx) = mpsc::channel(1);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            dir.path(),
+        );
+
+        let params = serde_json::value::RawValue::from_string(
+            serde_json::json!({"trigger": "promptSubmit"}).to_string(),
+        )
+        .unwrap();
+        let resp = client
+            .ext_method(acp::ExtRequest::new(
+                crate::protocol::kas::hooks::LIST_METHOD,
+                params.into(),
+            ))
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        let hooks = body["hooks"].as_array().expect("hooks array");
+        assert_eq!(hooks.len(), 1, "the promptSubmit hook is served");
+        assert_eq!(hooks[0]["id"], "h:greet");
     }
 
     #[tokio::test]
@@ -583,6 +669,7 @@ mod metadata_routing_tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
+            std::path::Path::new("/tmp"),
         )
     }
 

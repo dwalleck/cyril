@@ -553,7 +553,7 @@ async fn run_bridge(
     // FORWARDS them to the App without awaiting resolution — the response flows
     // back on the request's embedded `responder` oneshot, bypassing the loop.
     let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone());
+    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone(), cwd);
     // cyril-3lh8: grab the shared terminal-registry handle BEFORE the connection
     // takes ownership of the client — run_loop's CancelRequest arm reaps with it.
     #[cfg(feature = "kas")]
@@ -2405,7 +2405,12 @@ mod tests {
                 let (inbound_tx, inbound_rx) =
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
                 let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-                let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone());
+                let client = KiroClient::new(
+                    inbound_tx.clone(),
+                    req_tx,
+                    engine.clone(),
+                    &std::env::temp_dir(),
+                );
                 // cyril-3lh8: mirror run_bridge — the loop shares the client's
                 // terminal registry so CancelRequest can reap.
                 #[cfg(feature = "kas")]
@@ -2719,7 +2724,8 @@ mod tests {
                 let (notif_tx, _notif_rx) =
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
                 let (req_tx, _req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-                let client = KiroClient::new(notif_tx, req_tx, Rc::new(V2Engine));
+                let client =
+                    KiroClient::new(notif_tx, req_tx, Rc::new(V2Engine), &std::env::temp_dir());
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);
                 let (cr, cw) = tokio::io::split(c_io);
                 let (conn, io_task) =
