@@ -648,7 +648,7 @@ struct InternalChannels {
 /// can identify cyril sessions in every mode; `version` is the workspace
 /// version.
 #[must_use]
-pub fn client_info(
+pub(crate) fn client_info(
     present_as: crate::types::present_as::PresentAs,
 ) -> agent_client_protocol::Implementation {
     agent_client_protocol::Implementation::new(present_as.wire_name(), env!("CARGO_PKG_VERSION"))
