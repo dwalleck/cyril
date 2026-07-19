@@ -9,6 +9,7 @@ use crate::types::StopReason;
 use crate::types::agent_command::AgentCommand;
 use crate::types::agent_engine::AgentEngine;
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
+use crate::types::kas_hooks::KasHooksMode;
 use crate::types::kas_spawn::KasSpawn;
 use crate::types::present_as::PresentAs;
 
@@ -134,6 +135,9 @@ pub struct SpawnConfig {
     pub kas_spawn: KasSpawn,
     /// The `clientInfo` identity presented at initialize (ADR-0006).
     pub present_as: PresentAs,
+    /// Which hook model runs on the KAS engine (cyril-jiyn, KAS-7); ignored
+    /// for v2.
+    pub kas_hooks: KasHooksMode,
 }
 
 /// Spawn the ACP bridge on a dedicated thread.

@@ -58,6 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             engine: agent_engine,
             kas_spawn: config.agent.kas_spawn,
             present_as: config.agent.present_as,
+            kas_hooks: config.agent.kas_hooks,
         },
         cwd.clone(),
     )?;
