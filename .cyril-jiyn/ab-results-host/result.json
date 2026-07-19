@@ -1,0 +1,29 @@
+{
+  "arm": "host",
+  "meta": {
+    "enabled": true
+  },
+  "prompt_completed": false,
+  "list_calls": [
+    [
+      "promptSubmit",
+      null
+    ]
+  ],
+  "exec_calls": [
+    [
+      "probe-promptSubmit",
+      "echo HOSTHOOKFIRED trigger=promptSubmit",
+      0
+    ]
+  ],
+  "other_hook": [
+    [
+      "_kiro/hooks/sessionStart",
+      "{\"trigger\": \"sessionStart\", \"sessionId\": \"sess_bf486770-f11a-4635-a50c-0be61abd053c\"}"
+    ]
+  ],
+  "marker_file_created": false,
+  "agent_saw_HOOKV2FIRED": false,
+  "agent_saw_HOSTHOOKFIRED": false
+}
