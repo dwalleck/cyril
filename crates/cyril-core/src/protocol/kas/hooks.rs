@@ -36,8 +36,17 @@ pub(crate) const SESSION_START_METHOD: &str = "kiro/hooks/sessionStart";
 /// cyril-tpfd: that element shape is not verifiable from the standalone
 /// bundle, and guessing a wire shape is the schema-vs-runtime trap.
 pub(crate) fn respond_session_start() -> acp::Result<acp::ExtResponse> {
-    let raw = serde_json::value::RawValue::from_string("{\"results\":[]}".to_string())
-        .map_err(|e| acp::Error::new(-32603, format!("sessionStart raw value: {e}")))?;
+    json_ext_response(&serde_json::json!({ "results": [] }))
+}
+
+/// Wrap a JSON value as an ACP ext response (shared by the three hook
+/// responders, which otherwise repeat the serialize → RawValue → ExtResponse
+/// dance verbatim).
+fn json_ext_response(value: &serde_json::Value) -> acp::Result<acp::ExtResponse> {
+    let body = serde_json::to_string(value)
+        .map_err(|e| acp::Error::new(-32603, format!("serialize hook reply: {e}")))?;
+    let raw = serde_json::value::RawValue::from_string(body)
+        .map_err(|e| acp::Error::new(-32603, format!("hook reply raw value: {e}")))?;
     Ok(acp::ExtResponse::new(raw.into()))
 }
 
@@ -296,11 +305,7 @@ impl HookRegistry {
         let trigger = params.get("trigger").and_then(|t| t.as_str()).unwrap_or("");
         let tool_id = params.get("toolId").and_then(|t| t.as_str());
         let hooks = self.list(trigger, tool_id);
-        let body = serde_json::to_string(&serde_json::json!({ "hooks": hooks }))
-            .map_err(|e| acp::Error::new(-32603, format!("serialize hooks/list reply: {e}")))?;
-        let raw = serde_json::value::RawValue::from_string(body)
-            .map_err(|e| acp::Error::new(-32603, format!("hooks/list raw value: {e}")))?;
-        Ok(acp::ExtResponse::new(raw.into()))
+        json_ext_response(&serde_json::json!({ "hooks": hooks }))
     }
 
     /// Answer `_kiro/hooks/list {trigger, toolId?}`: the hooks whose wire
@@ -379,11 +384,7 @@ pub(crate) async fn respond_execute(
             serde_json::json!({"output": "no command", "exitCode": 127, "cancelled": false})
         }
     };
-    let body = serde_json::to_string(&reply)
-        .map_err(|e| acp::Error::new(-32603, format!("serialize executeHook reply: {e}")))?;
-    let raw = serde_json::value::RawValue::from_string(body)
-        .map_err(|e| acp::Error::new(-32603, format!("executeHook raw value: {e}")))?;
-    Ok(acp::ExtResponse::new(raw.into()))
+    json_ext_response(&reply)
 }
 
 #[cfg(test)]

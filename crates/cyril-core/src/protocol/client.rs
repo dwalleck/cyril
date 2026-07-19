@@ -389,13 +389,11 @@ impl KiroClient {
             return crate::protocol::kas::terminal_io::respond_shell_type();
         }
         if args.method.as_ref() == crate::protocol::kas::hooks::LIST_METHOD {
-            let params: serde_json::Value =
-                serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
+            let params = parse_ext_params(&args);
             return self.hooks.respond_list(&params);
         }
         if args.method.as_ref() == crate::protocol::kas::hooks::EXECUTE_METHOD {
-            let params: serde_json::Value =
-                serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
+            let params = parse_ext_params(&args);
             return crate::protocol::kas::hooks::respond_execute(
                 &params,
                 &self.cwd,
@@ -417,6 +415,21 @@ impl KiroClient {
     #[cfg(not(feature = "kas"))]
     async fn handle_ext_request(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         unhandled_ext_response(args.method.as_ref())
+    }
+}
+
+/// Parse an ext request's params to JSON, logging (not swallowing) a parse
+/// failure. `RawValue` is pre-validated JSON so this is practically
+/// unreachable, but a `Null` fallback with no breadcrumb is the one spot that
+/// would diverge from the module's log-before-fallback posture.
+#[cfg(feature = "kas")]
+fn parse_ext_params(args: &acp::ExtRequest) -> serde_json::Value {
+    match serde_json::from_str(args.params.get()) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::debug!(method = %args.method, error = %e, "ext request params not JSON; using null");
+            serde_json::Value::Null
+        }
     }
 }
 
@@ -647,6 +660,79 @@ mod tests {
         let hooks = body["hooks"].as_array().expect("hooks array");
         assert_eq!(hooks.len(), 1, "the promptSubmit hook is served");
         assert_eq!(hooks[0]["id"], "h:greet");
+    }
+
+    // cyril-jiyn claim 12 fence: the _kiro/hooks/didChange notification is
+    // consumed without error (and without reaching the converter's
+    // unknown-variant path). Fails if the arm is missing.
+    #[tokio::test]
+    async fn hooks_did_change_consumed() {
+        let client = kas_client();
+        let params = serde_json::value::RawValue::from_string("{}".to_string()).unwrap();
+        let res = client
+            .ext_notification(acp::ExtNotification::new(
+                crate::protocol::kas::hooks::DID_CHANGE_METHOD,
+                params.into(),
+            ))
+            .await;
+        assert!(res.is_ok(), "didChange is consumed cleanly");
+    }
+
+    // cyril-jiyn claim 13 fence: a slow executeHook does not serialize the
+    // client — an independent shell_type ext request completes long before the
+    // slow hook finishes. A synchronous (blocking) executor would make the
+    // shell_type reply wait for the whole hook. Uses join! on one task; the
+    // async executor + per-request handling let both progress.
+    #[tokio::test]
+    async fn slow_hook_does_not_block_loop() {
+        use agent_client_protocol::Client as _;
+
+        let dir = tempfile::tempdir().unwrap();
+        let (ntx, _nrx) = mpsc::channel(1);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            dir.path(),
+        );
+
+        let exec_params = serde_json::value::RawValue::from_string(
+            serde_json::json!({
+                "hookId": "h", "hookName": "slow", "command": "sleep 3",
+                "sessionId": "s", "userPrompt": ""
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let slow = client.ext_method(acp::ExtRequest::new(
+            crate::protocol::kas::hooks::EXECUTE_METHOD,
+            exec_params.into(),
+        ));
+
+        let shell_start = std::time::Instant::now();
+        // Capture when shell_type RESOLVES inside the block — measuring after
+        // join! would always include the 3s (join! awaits both). A blocking
+        // executor would starve this future until the hook finished.
+        let (_slow_res, (shell_res, shell_elapsed)) = tokio::join!(slow, async {
+            let params =
+                serde_json::value::RawValue::from_string("{\"sessionId\":\"s\"}".to_string())
+                    .unwrap();
+            let r = client
+                .ext_method(acp::ExtRequest::new(
+                    crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD,
+                    params.into(),
+                ))
+                .await;
+            (r, shell_start.elapsed())
+        });
+        assert!(shell_res.is_ok());
+        assert!(
+            shell_elapsed < std::time::Duration::from_secs(2),
+            "shell_type resolved while the 3s hook was still running (not serialized): {shell_elapsed:?}"
+        );
     }
 
     #[tokio::test]
