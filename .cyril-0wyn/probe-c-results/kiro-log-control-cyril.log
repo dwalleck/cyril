@@ -1,81 +1,82 @@
-{"timestamp":"2026-07-19T01:17:56.410Z","level":"info","message":"File logging initialized at /home/dwalleck/.kiro/logs/20260719T011756399"}
-{"timestamp":"2026-07-19T01:17:56.410Z","level":"info","message":"Initializing persistence at /home/dwalleck/.kiro/sessions"}
-{"timestamp":"2026-07-19T01:17:56.416Z","level":"info","message":"[SessionPersistence] Initialized persistence at /home/dwalleck/.kiro/sessions"}
-{"timestamp":"2026-07-19T01:17:56.416Z","level":"info","message":"Persistence initialized"}
-{"timestamp":"2026-07-19T01:17:56.435Z","level":"info","message":"[AgentTelemetry] Initialized {\"endpoint\":\"https://prod.us-east-1.telemetry.desktop.kiro.dev\",\"serviceName\":\"kiroAgent\"}"}
-{"timestamp":"2026-07-19T01:17:56.437Z","level":"info","message":"[KiroAgent] Remote MCP client initialized"}
-{"timestamp":"2026-07-19T01:17:56.437Z","level":"info","message":"[KiroAgent] remote-tools-discovery.create {\"client\":\"kiro-ide\"}"}
-{"timestamp":"2026-07-19T01:17:56.447Z","level":"info","message":"[KiroAgent] Cleared stale task execution statuses"}
-{"timestamp":"2026-07-19T01:17:56.447Z","level":"info","message":"[KiroAgent] Platform initialized"}
-{"timestamp":"2026-07-19T01:17:56.448Z","level":"info","message":"[KiroAgent] Resolved capabilities: {\"fsReadTextFile\":false,\"fsWriteTextFile\":false,\"kiroFsReadFile\":false,\"kiroFsWriteFile\":false,\"kiroFsStat\":false,\"kiroFsReadDirectory\":false,\"kiroFsDelete\":false,\"terminal\":false,\"secretStorage\":false,\"openExternalUrl\":false,\"knowledge\":false,\"infrastructureSafety\":false}"}
-{"timestamp":"2026-07-19T01:17:56.448Z","level":"info","message":"[RemoteToolsDiscovery] Fetching available Remote tools"}
-{"timestamp":"2026-07-19T01:17:56.452Z","level":"warn","message":"[KiroAgent] Unrecognized clientInfo.name: 'cyril', falling back to inferred client type"}
-{"timestamp":"2026-07-19T01:17:56.452Z","level":"info","message":"[KiroAgent] Stored clientInfo.name: cyril"}
-{"timestamp":"2026-07-19T01:17:56.452Z","level":"info","message":"Handshake: returning logging config with 3 channels at /home/dwalleck/.kiro/logs/20260719T011756399"}
-{"timestamp":"2026-07-19T01:17:56.463Z","level":"info","message":"[KiroAgent] ACP session/new sessionId=sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67 modeId=vibe idempotent=false"}
-{"timestamp":"2026-07-19T01:17:56.611Z","level":"debug","message":"[ExperimentConfigService] disabled; skipping resolve"}
-{"timestamp":"2026-07-19T01:17:56.611Z","level":"error","message":"[RemoteToolsDiscovery] Failed to discover tools {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
-{"timestamp":"2026-07-19T01:17:56.611Z","level":"warn","message":"[ACPModelConfigProvider] Failed to refresh models: Social refresh failed: 401"}
-{"timestamp":"2026-07-19T01:17:56.612Z","level":"warn","message":"[KiroAgent] Remote tools discovery failed on startup: {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
-{"timestamp":"2026-07-19T01:17:56.622Z","level":"debug","message":"fs.loadAgentProfiles.start {\"system\":\"fs\",\"scope\":\"user\"}"}
-{"timestamp":"2026-07-19T01:17:56.631Z","level":"debug","message":"[ProfileLoader] Ignoring CLI-only agent profile {\"filePath\":\"/home/dwalleck/.kiro/agents/dg-dinesh.json\",\"cliOnlyFields\":[\"allowedTools\"]}"}
-{"timestamp":"2026-07-19T01:17:56.631Z","level":"debug","message":"[ProfileLoader] Ignoring CLI-only agent profile {\"filePath\":\"/home/dwalleck/.kiro/agents/dg-gilfoyle.json\",\"cliOnlyFields\":[\"allowedTools\"]}"}
-{"timestamp":"2026-07-19T01:17:56.632Z","level":"info","message":"fs.loadAgentProfiles.ok {\"system\":\"fs\",\"scope\":\"user\",\"durationMs\":10}"}
-{"timestamp":"2026-07-19T01:17:56.632Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/agents"}
-{"timestamp":"2026-07-19T01:17:56.633Z","level":"debug","message":"fs.loadAgentProfiles.start {\"system\":\"fs\",\"scope\":\"workspace\"}"}
-{"timestamp":"2026-07-19T01:17:56.633Z","level":"info","message":"fs.loadAgentProfiles.ok {\"system\":\"fs\",\"scope\":\"workspace\",\"durationMs\":1}"}
-{"timestamp":"2026-07-19T01:17:56.729Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro/settings for /home/dwalleck/.kiro/settings/permissions.yaml"}
-{"timestamp":"2026-07-19T01:17:56.729Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro/settings for /home/dwalleck/.kiro/settings/permissions.json"}
-{"timestamp":"2026-07-19T01:17:56.729Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro for /home/dwalleck/.kiro/workspace-roots/bae2672cdf14903a/permissions.yaml"}
-{"timestamp":"2026-07-19T01:17:56.729Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro for /home/dwalleck/.kiro/workspace-roots/bae2672cdf14903a/permissions.json"}
-{"timestamp":"2026-07-19T01:17:56.729Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro/settings for /home/dwalleck/.kiro/settings/kiroignore"}
-{"timestamp":"2026-07-19T01:17:56.729Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/steering"}
-{"timestamp":"2026-07-19T01:17:56.729Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/AGENTS.md"}
-{"timestamp":"2026-07-19T01:17:56.729Z","level":"debug","message":"[SteeringManager] Session created: sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67"}
-{"timestamp":"2026-07-19T01:17:56.730Z","level":"info","message":"[AdapterFactory] read=Node, write=Node, stat=Node, readDir=Node, delete=Node, terminal=Node"}
-{"timestamp":"2026-07-19T01:17:56.731Z","level":"info","message":"[WorkspaceConnection] clientTools=0, hasClientIOTools=false, injectedFs=false, injectedTerminal=false"}
-{"timestamp":"2026-07-19T01:17:56.731Z","level":"debug","message":"session.new.phase {\"phase\":\"createACPWorkspaceConnection\",\"sessionId\":\"sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67\",\"durationMs\":1}"}
-{"timestamp":"2026-07-19T01:17:56.731Z","level":"debug","message":"[ProgressiveContextManager] Session created: sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67"}
-{"timestamp":"2026-07-19T01:17:56.732Z","level":"debug","message":"[ConfigFileWatcher] Watching paths: /home/dwalleck/.kiro/skills, /home/dwalleck/.kiro/steering"}
-{"timestamp":"2026-07-19T01:17:56.732Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/skills"}
-{"timestamp":"2026-07-19T01:17:56.732Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/steering"}
-{"timestamp":"2026-07-19T01:17:56.732Z","level":"debug","message":"[ConfigFileWatcher] Watching paths: /home/dwalleck/.kiro/powers/installed"}
-{"timestamp":"2026-07-19T01:17:56.732Z","level":"debug","message":"[SlashCommandManager] Session created: sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67"}
-{"timestamp":"2026-07-19T01:17:56.732Z","level":"debug","message":"models.registry.session_created {\"sessionId\":\"sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67\"}"}
-{"timestamp":"2026-07-19T01:17:56.732Z","level":"debug","message":"[ConfigFileWatcher] Watching paths: /home/dwalleck/.kiro/settings/mcp.json"}
-{"timestamp":"2026-07-19T01:17:56.732Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/settings/mcp.json"}
-{"timestamp":"2026-07-19T01:17:56.735Z","level":"debug","message":"session.new.phase {\"phase\":\"createSessionState\",\"sessionId\":\"sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67\",\"durationMs\":123}"}
-{"timestamp":"2026-07-19T01:17:56.735Z","level":"debug","message":"[KiroAgent] newSession: execEnv=local, repos=undefined, authMethod=social"}
-{"timestamp":"2026-07-19T01:17:56.736Z","level":"info","message":"[KiroAgent] Skipping global context fetch (remoteMCPClient=true, executionEnvironment=local)"}
-{"timestamp":"2026-07-19T01:17:56.737Z","level":"info","message":"[KiroAgent] Saving session sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67 to /home/dwalleck/.kiro/sessions"}
-{"timestamp":"2026-07-19T01:17:56.737Z","level":"debug","message":"fs.saveSession.start {\"system\":\"fs\"}"}
-{"timestamp":"2026-07-19T01:17:56.741Z","level":"info","message":"[RemoteToolsDiscovery] Fetching available Remote tools"}
-{"timestamp":"2026-07-19T01:17:56.744Z","level":"debug","message":"session.tools.list {\"sessionId\":\"sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67\",\"tagCount\":4,\"path\":\"broadcast\"}"}
-{"timestamp":"2026-07-19T01:17:56.759Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
-{"timestamp":"2026-07-19T01:17:56.760Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
-{"timestamp":"2026-07-19T01:17:56.760Z","level":"info","message":"[SessionPersistence] Saved session sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67 (0 messages) to /home/dwalleck/.kiro/sessions/bae2672cdf14903a/sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67"}
-{"timestamp":"2026-07-19T01:17:56.761Z","level":"info","message":"fs.saveSession.ok {\"system\":\"fs\",\"durationMs\":23}"}
-{"timestamp":"2026-07-19T01:17:56.761Z","level":"info","message":"[KiroAgent] Session sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67 saved successfully"}
-{"timestamp":"2026-07-19T01:17:56.762Z","level":"debug","message":"session.tools.list {\"sessionId\":\"sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67\",\"tagCount\":4,\"path\":\"caller\"}"}
-{"timestamp":"2026-07-19T01:17:56.763Z","level":"info","message":"session.new.total {\"sessionId\":\"sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67\",\"outcome\":\"resolved\",\"durationMs\":301}"}
-{"timestamp":"2026-07-19T01:17:56.765Z","level":"debug","message":"[SteeringManager] Pushed 5 docs to session sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67"}
-{"timestamp":"2026-07-19T01:17:56.766Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
-{"timestamp":"2026-07-19T01:17:56.766Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
-{"timestamp":"2026-07-19T01:17:56.766Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
-{"timestamp":"2026-07-19T01:17:56.766Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
-{"timestamp":"2026-07-19T01:17:56.767Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
-{"timestamp":"2026-07-19T01:17:56.768Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
-{"timestamp":"2026-07-19T01:17:56.769Z","level":"debug","message":"slash-commands.list {\"sessionId\":\"sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67\",\"commandCount\":5,\"path\":\"caller\"}"}
-{"timestamp":"2026-07-19T01:17:56.800Z","level":"debug","message":"[ProgressiveContextManager] Scanned 39 items, 39 unique, for 1 sessions"}
-{"timestamp":"2026-07-19T01:17:56.831Z","level":"error","message":"[RemoteToolsDiscovery] Failed to discover tools {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
-{"timestamp":"2026-07-19T01:17:56.832Z","level":"warn","message":"[ACPModelConfigProvider] Failed to refresh models: Social refresh failed: 401"}
-{"timestamp":"2026-07-19T01:17:56.832Z","level":"warn","message":"[RemoteToolsDiscovery] Lazy discovery failed {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
-{"timestamp":"2026-07-19T01:17:57.036Z","level":"debug","message":"[ProgressiveContextManager] Scanned 39 items, 39 unique, for 1 sessions"}
-{"timestamp":"2026-07-19T01:17:57.037Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
-{"timestamp":"2026-07-19T01:17:57.037Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
-{"timestamp":"2026-07-19T01:17:57.038Z","level":"debug","message":"slash-commands.list {\"sessionId\":\"sess_362babd1-e4c6-4003-bc3f-5d191dfe7b67\",\"commandCount\":44,\"path\":\"broadcast\"}"}
-{"timestamp":"2026-07-19T01:17:58.428Z","level":"info","message":"[RemoteToolsDiscovery] Fetching available Remote tools"}
-{"timestamp":"2026-07-19T01:17:58.449Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
-{"timestamp":"2026-07-19T01:17:58.449Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
-{"timestamp":"2026-07-19T01:17:58.525Z","level":"error","message":"[RemoteToolsDiscovery] Failed to discover tools {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
-{"timestamp":"2026-07-19T01:17:58.526Z","level":"warn","message":"[RemoteToolsDiscovery] Lazy discovery failed {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
+{"timestamp":"2026-07-19T01:47:16.684Z","level":"info","message":"File logging initialized at /home/dwalleck/.kiro/logs/20260719T014716674"}
+{"timestamp":"2026-07-19T01:47:16.684Z","level":"info","message":"Initializing persistence at /home/dwalleck/.kiro/sessions"}
+{"timestamp":"2026-07-19T01:47:16.689Z","level":"info","message":"[SessionPersistence] Initialized persistence at /home/dwalleck/.kiro/sessions"}
+{"timestamp":"2026-07-19T01:47:16.689Z","level":"info","message":"Persistence initialized"}
+{"timestamp":"2026-07-19T01:47:16.709Z","level":"info","message":"[AgentTelemetry] Initialized {\"endpoint\":\"https://prod.us-east-1.telemetry.desktop.kiro.dev\",\"serviceName\":\"kiroAgent\"}"}
+{"timestamp":"2026-07-19T01:47:16.710Z","level":"info","message":"[KiroAgent] Remote MCP client initialized"}
+{"timestamp":"2026-07-19T01:47:16.710Z","level":"info","message":"[KiroAgent] remote-tools-discovery.create {\"client\":\"kiro-ide\"}"}
+{"timestamp":"2026-07-19T01:47:16.720Z","level":"info","message":"[KiroAgent] Cleared stale task execution statuses"}
+{"timestamp":"2026-07-19T01:47:16.720Z","level":"info","message":"[KiroAgent] Platform initialized"}
+{"timestamp":"2026-07-19T01:47:16.721Z","level":"info","message":"[KiroAgent] Resolved capabilities: {\"fsReadTextFile\":false,\"fsWriteTextFile\":false,\"kiroFsReadFile\":false,\"kiroFsWriteFile\":false,\"kiroFsStat\":false,\"kiroFsReadDirectory\":false,\"kiroFsDelete\":false,\"terminal\":false,\"secretStorage\":false,\"openExternalUrl\":false,\"knowledge\":false,\"infrastructureSafety\":false}"}
+{"timestamp":"2026-07-19T01:47:16.721Z","level":"info","message":"[RemoteToolsDiscovery] Fetching available Remote tools"}
+{"timestamp":"2026-07-19T01:47:16.724Z","level":"warn","message":"[KiroAgent] Unrecognized clientInfo.name: 'cyril', falling back to inferred client type"}
+{"timestamp":"2026-07-19T01:47:16.724Z","level":"info","message":"[KiroAgent] Stored clientInfo.name: cyril"}
+{"timestamp":"2026-07-19T01:47:16.725Z","level":"info","message":"Handshake: returning logging config with 3 channels at /home/dwalleck/.kiro/logs/20260719T014716674"}
+{"timestamp":"2026-07-19T01:47:16.736Z","level":"info","message":"[KiroAgent] ACP session/new sessionId=sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331 modeId=vibe idempotent=false"}
+{"timestamp":"2026-07-19T01:47:16.863Z","level":"debug","message":"[ExperimentConfigService] disabled; skipping resolve"}
+{"timestamp":"2026-07-19T01:47:16.863Z","level":"error","message":"[RemoteToolsDiscovery] Failed to discover tools {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
+{"timestamp":"2026-07-19T01:47:16.864Z","level":"warn","message":"[ACPModelConfigProvider] Failed to refresh models: Social refresh failed: 401"}
+{"timestamp":"2026-07-19T01:47:16.864Z","level":"warn","message":"[KiroAgent] Remote tools discovery failed on startup: {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
+{"timestamp":"2026-07-19T01:47:16.877Z","level":"debug","message":"fs.loadAgentProfiles.start {\"system\":\"fs\",\"scope\":\"user\"}"}
+{"timestamp":"2026-07-19T01:47:16.886Z","level":"debug","message":"[ProfileLoader] Ignoring CLI-only agent profile {\"filePath\":\"/home/dwalleck/.kiro/agents/dg-dinesh.json\",\"cliOnlyFields\":[\"allowedTools\"]}"}
+{"timestamp":"2026-07-19T01:47:16.886Z","level":"debug","message":"[ProfileLoader] Ignoring CLI-only agent profile {\"filePath\":\"/home/dwalleck/.kiro/agents/dg-gilfoyle.json\",\"cliOnlyFields\":[\"allowedTools\"]}"}
+{"timestamp":"2026-07-19T01:47:16.887Z","level":"info","message":"fs.loadAgentProfiles.ok {\"system\":\"fs\",\"scope\":\"user\",\"durationMs\":10}"}
+{"timestamp":"2026-07-19T01:47:16.887Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/agents"}
+{"timestamp":"2026-07-19T01:47:16.887Z","level":"debug","message":"fs.loadAgentProfiles.start {\"system\":\"fs\",\"scope\":\"workspace\"}"}
+{"timestamp":"2026-07-19T01:47:16.888Z","level":"info","message":"fs.loadAgentProfiles.ok {\"system\":\"fs\",\"scope\":\"workspace\",\"durationMs\":1}"}
+{"timestamp":"2026-07-19T01:47:16.980Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro/settings for /home/dwalleck/.kiro/settings/permissions.yaml"}
+{"timestamp":"2026-07-19T01:47:16.981Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro/settings for /home/dwalleck/.kiro/settings/permissions.json"}
+{"timestamp":"2026-07-19T01:47:16.981Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro for /home/dwalleck/.kiro/workspace-roots/bae2672cdf14903a/permissions.yaml"}
+{"timestamp":"2026-07-19T01:47:16.981Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro for /home/dwalleck/.kiro/workspace-roots/bae2672cdf14903a/permissions.json"}
+{"timestamp":"2026-07-19T01:47:16.981Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/.kiro/settings for /home/dwalleck/.kiro/settings/kiroignore"}
+{"timestamp":"2026-07-19T01:47:16.981Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/steering"}
+{"timestamp":"2026-07-19T01:47:16.981Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/AGENTS.md"}
+{"timestamp":"2026-07-19T01:47:16.981Z","level":"debug","message":"[SteeringManager] Session created: sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331"}
+{"timestamp":"2026-07-19T01:47:16.982Z","level":"info","message":"[AdapterFactory] read=Node, write=Node, stat=Node, readDir=Node, delete=Node, terminal=Node"}
+{"timestamp":"2026-07-19T01:47:16.982Z","level":"info","message":"[WorkspaceConnection] clientTools=0, hasClientIOTools=false, injectedFs=false, injectedTerminal=false"}
+{"timestamp":"2026-07-19T01:47:16.983Z","level":"debug","message":"session.new.phase {\"phase\":\"createACPWorkspaceConnection\",\"sessionId\":\"sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331\",\"durationMs\":1}"}
+{"timestamp":"2026-07-19T01:47:16.983Z","level":"debug","message":"[ProgressiveContextManager] Session created: sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331"}
+{"timestamp":"2026-07-19T01:47:16.983Z","level":"debug","message":"[ConfigFileWatcher] Watching paths: /home/dwalleck/.kiro/skills, /home/dwalleck/.kiro/steering"}
+{"timestamp":"2026-07-19T01:47:16.983Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/skills"}
+{"timestamp":"2026-07-19T01:47:16.983Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/steering"}
+{"timestamp":"2026-07-19T01:47:16.983Z","level":"debug","message":"[ConfigFileWatcher] Watching paths: /home/dwalleck/.kiro/powers/installed"}
+{"timestamp":"2026-07-19T01:47:16.983Z","level":"debug","message":"[SlashCommandManager] Session created: sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331"}
+{"timestamp":"2026-07-19T01:47:16.984Z","level":"debug","message":"models.registry.session_created {\"sessionId\":\"sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331\"}"}
+{"timestamp":"2026-07-19T01:47:16.984Z","level":"debug","message":"[ConfigFileWatcher] Watching paths: /home/dwalleck/.kiro/settings/mcp.json"}
+{"timestamp":"2026-07-19T01:47:16.984Z","level":"debug","message":"[ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results for /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results/.kiro/settings/mcp.json"}
+{"timestamp":"2026-07-19T01:47:16.987Z","level":"debug","message":"session.new.phase {\"phase\":\"createSessionState\",\"sessionId\":\"sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331\",\"durationMs\":123}"}
+{"timestamp":"2026-07-19T01:47:16.987Z","level":"debug","message":"[KiroAgent] newSession: execEnv=local, repos=undefined, authMethod=social"}
+{"timestamp":"2026-07-19T01:47:16.987Z","level":"info","message":"[KiroAgent] Skipping global context fetch (remoteMCPClient=true, executionEnvironment=local)"}
+{"timestamp":"2026-07-19T01:47:16.989Z","level":"info","message":"[KiroAgent] Saving session sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331 to /home/dwalleck/.kiro/sessions"}
+{"timestamp":"2026-07-19T01:47:16.989Z","level":"debug","message":"fs.saveSession.start {\"system\":\"fs\"}"}
+{"timestamp":"2026-07-19T01:47:16.991Z","level":"info","message":"[RemoteToolsDiscovery] Fetching available Remote tools"}
+{"timestamp":"2026-07-19T01:47:16.994Z","level":"debug","message":"session.tools.list {\"sessionId\":\"sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331\",\"tagCount\":4,\"path\":\"broadcast\"}"}
+{"timestamp":"2026-07-19T01:47:17.009Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
+{"timestamp":"2026-07-19T01:47:17.011Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
+{"timestamp":"2026-07-19T01:47:17.011Z","level":"info","message":"[SessionPersistence] Saved session sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331 (0 messages) to /home/dwalleck/.kiro/sessions/bae2672cdf14903a/sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331"}
+{"timestamp":"2026-07-19T01:47:17.011Z","level":"info","message":"fs.saveSession.ok {\"system\":\"fs\",\"durationMs\":22}"}
+{"timestamp":"2026-07-19T01:47:17.011Z","level":"info","message":"[KiroAgent] Session sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331 saved successfully"}
+{"timestamp":"2026-07-19T01:47:17.012Z","level":"debug","message":"session.tools.list {\"sessionId\":\"sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331\",\"tagCount\":4,\"path\":\"caller\"}"}
+{"timestamp":"2026-07-19T01:47:17.014Z","level":"info","message":"session.new.total {\"sessionId\":\"sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331\",\"outcome\":\"resolved\",\"durationMs\":279}"}
+{"timestamp":"2026-07-19T01:47:17.017Z","level":"debug","message":"[SteeringManager] Pushed 5 docs to session sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331"}
+{"timestamp":"2026-07-19T01:47:17.017Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
+{"timestamp":"2026-07-19T01:47:17.017Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
+{"timestamp":"2026-07-19T01:47:17.018Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
+{"timestamp":"2026-07-19T01:47:17.018Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
+{"timestamp":"2026-07-19T01:47:17.019Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
+{"timestamp":"2026-07-19T01:47:17.019Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
+{"timestamp":"2026-07-19T01:47:17.021Z","level":"debug","message":"slash-commands.list {\"sessionId\":\"sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331\",\"commandCount\":5,\"path\":\"caller\"}"}
+{"timestamp":"2026-07-19T01:47:17.056Z","level":"debug","message":"[ProgressiveContextManager] Scanned 39 items, 39 unique, for 1 sessions"}
+{"timestamp":"2026-07-19T01:47:17.080Z","level":"error","message":"[RemoteToolsDiscovery] Failed to discover tools {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
+{"timestamp":"2026-07-19T01:47:17.080Z","level":"warn","message":"[ACPModelConfigProvider] Failed to refresh models: Social refresh failed: 401"}
+{"timestamp":"2026-07-19T01:47:17.080Z","level":"warn","message":"[RemoteToolsDiscovery] Lazy discovery failed {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
+{"timestamp":"2026-07-19T01:47:17.291Z","level":"debug","message":"[ProgressiveContextManager] Scanned 39 items, 39 unique, for 1 sessions"}
+{"timestamp":"2026-07-19T01:47:17.291Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
+{"timestamp":"2026-07-19T01:47:17.291Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
+{"timestamp":"2026-07-19T01:47:17.292Z","level":"debug","message":"slash-commands.list {\"sessionId\":\"sess_7bc78ca1-cbaf-4e2b-a16c-20bacd4cb331\",\"commandCount\":44,\"path\":\"broadcast\"}"}
+{"timestamp":"2026-07-19T01:47:18.700Z","level":"info","message":"[RemoteToolsDiscovery] Fetching available Remote tools"}
+{"timestamp":"2026-07-19T01:47:18.723Z","level":"debug","message":"[NodeSteeringDocumentSource] Found 2 global steering files"}
+{"timestamp":"2026-07-19T01:47:18.723Z","level":"debug","message":"[NodeSteeringDocumentSource] No AGENTS.md file found in /home/dwalleck/repos/cyril/.cyril-0wyn/probe-c-results"}
+{"timestamp":"2026-07-19T01:47:18.797Z","level":"error","message":"[RemoteToolsDiscovery] Failed to discover tools {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
+{"timestamp":"2026-07-19T01:47:18.797Z","level":"warn","message":"[RemoteToolsDiscovery] Lazy discovery failed {\"code\":-32000,\"name\":\"TokenExpiredError\"}"}
+{"timestamp":"2026-07-19T01:47:22.735Z","level":"debug","message":"[ConfigFileWatcher] Disposed"}
