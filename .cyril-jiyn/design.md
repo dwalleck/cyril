@@ -1,7 +1,10 @@
 # cyril-jiyn — design: KAS-7 hooks host (advertisement + responders + the v2 decision)
 
-Status: DRAFT — awaiting the HARD PAUSE decisions. Probes: `findings.md`
-(A/B both arms MATCH vs the buildSessionHooks carve).
+Status: **APPROVED 2026-07-19** (pause decisions: default mode **host**
+after an explicit get-vs-give-away walkthrough of host vs kas; three-value
+knob ships now; claims 1/14 manual fences APPROVED; sessionStart hooks
+EXECUTE). Probes: `findings.md` (A/B both arms MATCH vs the
+buildSessionHooks carve).
 
 ## Purpose
 
