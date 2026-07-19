@@ -386,7 +386,7 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
         );
         let err: acp::Result<acp::ExtResponse> =
             Err(acp::Error::new(-32603, "sqlite store locked"));
@@ -416,7 +416,7 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
         );
         let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(
             -32603,
@@ -447,7 +447,7 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
         );
         let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(-32603, "boom"));
         client
@@ -475,7 +475,7 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
         );
         let dir = tempfile::tempdir().unwrap();
         let f = dir.path().join("x.txt");
@@ -496,7 +496,7 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
         );
         let dir = tempfile::tempdir().unwrap();
         let f = dir.path().join("out.txt");
@@ -517,7 +517,7 @@ mod tests {
         KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
         )
     }
 

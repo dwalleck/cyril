@@ -450,11 +450,13 @@ fn tail_excerpt(snapshot: &[String]) -> Option<String> {
 /// (ADR-0002) — a default build reports that the feature is required rather than
 /// linking any KAS code. Pure — unit-testable without a subprocess, and the
 /// single place the engine-to-`AgentEngine` mapping lives.
-fn engine_for(agent_engine: AgentEngine) -> Result<std::rc::Rc<dyn Engine>, String> {
-    match agent_engine {
+fn engine_for(config: SpawnConfig) -> Result<std::rc::Rc<dyn Engine>, String> {
+    match config.engine {
         AgentEngine::V2 => Ok(std::rc::Rc::new(V2Engine)),
         #[cfg(feature = "kas")]
-        AgentEngine::Kas => Ok(std::rc::Rc::new(crate::protocol::engine::KasEngine)),
+        AgentEngine::Kas => Ok(std::rc::Rc::new(crate::protocol::engine::KasEngine {
+            hooks_mode: config.kas_hooks,
+        })),
         #[cfg(not(feature = "kas"))]
         AgentEngine::Kas => Err("KAS engine requires a build with --features kas".to_string()),
     }
@@ -510,7 +512,7 @@ async fn run_bridge(
     // 0. Engine gate (KAS-0, ADR-0001): bind the one engine the bridge uses for
     //    its life BEFORE spawning the subprocess, so an unavailable engine
     //    refuses cleanly (a disconnect notice, no panic) without spawning anything.
-    let engine = match engine_for(config.engine) {
+    let engine = match engine_for(config) {
         Ok(engine) => engine,
         Err(reason) => {
             notify_or_closed(
@@ -1860,7 +1862,10 @@ mod tests {
     // V2 always selects an engine — NO panic/unwrap.
     #[test]
     fn engine_for_v2_ok() {
-        assert!(engine_for(AgentEngine::V2).is_ok(), "v2 selects an engine");
+        assert!(
+            engine_for(SpawnConfig::default()).is_ok(),
+            "v2 selects an engine"
+        );
     }
 
     // l7tw C7 (unit form; the live form is the logged-out kiro-cli run in
@@ -2071,7 +2076,11 @@ mod tests {
     #[test]
     fn engine_for_kas_ok_under_feature() {
         assert!(
-            engine_for(AgentEngine::Kas).is_ok(),
+            engine_for(SpawnConfig {
+                engine: AgentEngine::Kas,
+                ..SpawnConfig::default()
+            })
+            .is_ok(),
             "Kas selects the KasEngine when built with --features kas"
         );
     }
@@ -2081,7 +2090,10 @@ mod tests {
     #[cfg(not(feature = "kas"))]
     #[test]
     fn engine_for_kas_unavailable_without_feature() {
-        match engine_for(AgentEngine::Kas) {
+        match engine_for(SpawnConfig {
+            engine: AgentEngine::Kas,
+            ..SpawnConfig::default()
+        }) {
             Err(reason) => assert!(
                 reason.contains("--features kas"),
                 "Kas gives a clean reason naming the feature, got {reason:?}"
@@ -2667,7 +2679,7 @@ mod tests {
             ..Script::default()
         }));
         with_engine_harness(
-            Rc::new(crate::protocol::engine::KasEngine),
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
             |sender, mut rx, _perm, _gate, _loop_handle, _kill| async move {
                 sender
@@ -3133,7 +3145,7 @@ mod tests {
         }));
         let probe = script.clone();
         with_engine_harness(
-            Rc::new(crate::protocol::engine::KasEngine),
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
             |sender, mut rx, _perm_rx, _gate, _loop, kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
@@ -3266,7 +3278,7 @@ mod tests {
         }));
         let probe = script.clone();
         with_engine_harness(
-            Rc::new(crate::protocol::engine::KasEngine),
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
             |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
@@ -3321,7 +3333,7 @@ mod tests {
             ..Default::default()
         }));
         with_engine_harness(
-            Rc::new(crate::protocol::engine::KasEngine),
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
             |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
