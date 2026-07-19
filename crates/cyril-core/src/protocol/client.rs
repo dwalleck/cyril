@@ -33,6 +33,9 @@ pub(crate) struct KiroClient {
     /// hooks agent-side; v2/Off advertise none).
     #[cfg(feature = "kas")]
     hooks: std::rc::Rc<crate::protocol::kas::hooks::HookRegistry>,
+    /// Session workspace, the cwd for hook command execution (cyril-jiyn).
+    #[cfg(feature = "kas")]
+    cwd: std::path::PathBuf,
 }
 
 impl KiroClient {
@@ -68,6 +71,8 @@ impl KiroClient {
             terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new()),
             #[cfg(feature = "kas")]
             hooks,
+            #[cfg(feature = "kas")]
+            cwd: cwd.to_path_buf(),
         }
     }
 
@@ -363,6 +368,11 @@ impl KiroClient {
             let params: serde_json::Value =
                 serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
             return self.hooks.respond_list(&params);
+        }
+        if args.method.as_ref() == crate::protocol::kas::hooks::EXECUTE_METHOD {
+            let params: serde_json::Value =
+                serde_json::from_str(args.params.get()).unwrap_or(serde_json::Value::Null);
+            return crate::protocol::kas::hooks::respond_execute(&params, &self.cwd).await;
         }
         // The bare-ACP fs/terminal lifecycle host callbacks are TYPED acp::Client
         // methods (the overrides above), not ext requests: fs/read_text_file (KAS-5a,

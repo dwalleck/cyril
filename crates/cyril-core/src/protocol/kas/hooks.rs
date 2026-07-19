@@ -13,6 +13,59 @@ use agent_client_protocol as acp;
 /// the leading underscore, per the `SHELL_TYPE_METHOD` precedent).
 pub(crate) const LIST_METHOD: &str = "kiro/hooks/list";
 
+/// The acp-stripped method name for `_kiro/hooks/executeHook`.
+pub(crate) const EXECUTE_METHOD: &str = "kiro/hooks/executeHook";
+
+/// Default per-hook execution timeout when the agent sends no `timeout`
+/// (covenant `HookExecuteParams.timeout?`). Bounds a runaway user command.
+const DEFAULT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
+/// Run a `runCommand` hook and shape the covenant reply
+/// `{output?, exitCode, cancelled}`. The command runs via the login shell with
+/// `USER_PROMPT` in the environment (covenant: the trigger's userPrompt) and
+/// the workspace as cwd. Output is stdout+stderr combined; `exitCode` is the
+/// real code (an exit-2 `preToolUse` hook is how KAS blocks a tool — passed
+/// through verbatim). On timeout the child is killed (`kill_on_drop`) and the
+/// reply is `{cancelled:true}`.
+pub(crate) async fn execute_hook(
+    command: &str,
+    user_prompt: &str,
+    cwd: &Path,
+    timeout: std::time::Duration,
+) -> serde_json::Value {
+    let mut cmd = tokio::process::Command::new("/bin/sh");
+    cmd.arg("-c")
+        .arg(command)
+        .env("USER_PROMPT", user_prompt)
+        .current_dir(cwd)
+        .stdin(std::process::Stdio::null())
+        .kill_on_drop(true);
+    match tokio::time::timeout(timeout, cmd.output()).await {
+        Ok(Ok(out)) => {
+            let mut combined = out.stdout;
+            combined.extend_from_slice(&out.stderr);
+            let output = String::from_utf8_lossy(&combined).into_owned();
+            // `.code()` is None only on signal death; surface that as a
+            // non-zero rather than a plausible-looking 0 (errors-are-not-
+            // defaults). 137 = 128 + SIGKILL, a conventional shell mapping.
+            let exit_code = out.status.code().unwrap_or(137);
+            serde_json::json!({"output": output, "exitCode": exit_code, "cancelled": false})
+        }
+        Ok(Err(e)) => {
+            tracing::warn!(command, error = %e, "hook command failed to spawn");
+            serde_json::json!({
+                "output": format!("hook failed to spawn: {e}"),
+                "exitCode": 127,
+                "cancelled": false
+            })
+        }
+        Err(_elapsed) => {
+            tracing::warn!(command, ?timeout, "hook timed out; child killed");
+            serde_json::json!({"cancelled": true, "exitCode": 124})
+        }
+    }
+}
+
 /// A loaded, servable hook: one `runCommand` entry from a `.kiro/hooks/*.json`
 /// file, keyed by the wire-side (camelCase) trigger it answers to.
 #[derive(Debug, Clone)]
@@ -215,6 +268,44 @@ impl HookRegistry {
     }
 }
 
+/// Answer the `_kiro/hooks/executeHook` ext request: run the params' command
+/// and reply `{output?, exitCode, cancelled}`. The command is the one cyril
+/// handed the agent in its `list` response (echoed back per the covenant);
+/// `cwd` is the session workspace. A missing `command` is a warn + a
+/// non-executing `{exitCode:127}` reply rather than an errored turn.
+pub(crate) async fn respond_execute(
+    params: &serde_json::Value,
+    cwd: &Path,
+) -> acp::Result<acp::ExtResponse> {
+    let command = params.get("command").and_then(|c| c.as_str());
+    let user_prompt = params
+        .get("userPrompt")
+        .and_then(|u| u.as_str())
+        .unwrap_or("");
+    // The wire `timeout` is in SECONDS — the hook file schema declares
+    // "timeout must be >= 0 seconds" and the host-callback forwards
+    // `action.timeout` verbatim (2.13.0 bundle carve). Treating it as millis
+    // would make every timeout 1000x too short (schema-vs-runtime, verified
+    // against the bundle not assumed).
+    let timeout = params
+        .get("timeout")
+        .and_then(serde_json::Value::as_u64)
+        .map_or(DEFAULT_TIMEOUT, std::time::Duration::from_secs);
+
+    let reply = match command {
+        Some(cmd) => execute_hook(cmd, user_prompt, cwd, timeout).await,
+        None => {
+            tracing::warn!("executeHook without a command; not executed");
+            serde_json::json!({"output": "no command", "exitCode": 127, "cancelled": false})
+        }
+    };
+    let body = serde_json::to_string(&reply)
+        .map_err(|e| acp::Error::new(-32603, format!("serialize executeHook reply: {e}")))?;
+    let raw = serde_json::value::RawValue::from_string(body)
+        .map_err(|e| acp::Error::new(-32603, format!("executeHook raw value: {e}")))?;
+    Ok(acp::ExtResponse::new(raw.into()))
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -359,5 +450,71 @@ mod tests {
         assert_eq!(names(&reg.list("preToolUse", None)), vec!["h:always"]);
         // Unknown trigger → empty, not an error.
         assert!(reg.list("bogusTrigger", Some("fs_write")).is_empty());
+    }
+
+    // cyril-jiyn claim 6 fence: the command runs with USER_PROMPT in env and
+    // the workspace as cwd — a command echoing both proves the wiring.
+    #[tokio::test]
+    async fn execute_hook_env_and_cwd() {
+        let dir = tempfile::tempdir().unwrap();
+        let out = execute_hook(
+            r#"printf '%s' "$USER_PROMPT"; printf ' @ '; pwd"#,
+            "the-prompt",
+            dir.path(),
+            std::time::Duration::from_secs(10),
+        )
+        .await;
+        let text = out["output"].as_str().unwrap();
+        assert!(text.starts_with("the-prompt @ "), "USER_PROMPT env: {text}");
+        // The tempdir may be a symlink (macOS /tmp); compare the trailing name.
+        let leaf = dir.path().file_name().unwrap().to_str().unwrap();
+        assert!(text.contains(leaf), "cwd is the workspace: {text}");
+        assert_eq!(out["exitCode"], 0);
+        assert_eq!(out["cancelled"], false);
+    }
+
+    // cyril-jiyn claim 7 fence: combined stdout+stderr and the REAL exit code
+    // for 0, 1, and 2 — a bool-success mapping or a dropped stderr fails this.
+    #[tokio::test]
+    async fn execute_hook_real_exit_codes() {
+        let dir = tempfile::tempdir().unwrap();
+        let t = std::time::Duration::from_secs(10);
+
+        let zero = execute_hook("echo out", "", dir.path(), t).await;
+        assert_eq!(zero["exitCode"], 0);
+        assert_eq!(zero["output"], "out\n");
+
+        let one = execute_hook("echo o; echo e >&2; exit 1", "", dir.path(), t).await;
+        assert_eq!(one["exitCode"], 1);
+        let combined = one["output"].as_str().unwrap();
+        assert!(
+            combined.contains("o") && combined.contains("e"),
+            "stdout+stderr combined: {combined:?}"
+        );
+
+        // Claim 8 (the AC's named block contract): exit 2 passes through
+        // verbatim as {output, exitCode:2, cancelled:false} — the preToolUse
+        // block signal.
+        let two = execute_hook("echo DENY; exit 2", "", dir.path(), t).await;
+        assert_eq!(two["exitCode"], 2, "exit 2 is the preToolUse block");
+        assert_eq!(two["cancelled"], false);
+        assert_eq!(two["output"], "DENY\n");
+    }
+
+    // cyril-jiyn claim 8 (block contract at the responder level): the
+    // executeHook reply for an exit-2 command is exactly
+    // {output, exitCode:2, cancelled:false} through respond_execute.
+    #[tokio::test]
+    async fn pre_tool_use_exit2_block_contract() {
+        let dir = tempfile::tempdir().unwrap();
+        let params = serde_json::json!({
+            "hookId": "h", "hookName": "policy", "command": "echo blocked; exit 2",
+            "sessionId": "s", "userPrompt": "{}"
+        });
+        let resp = respond_execute(&params, dir.path()).await.unwrap();
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        assert_eq!(reply["exitCode"], 2);
+        assert_eq!(reply["cancelled"], false);
+        assert_eq!(reply["output"], "blocked\n");
     }
 }
