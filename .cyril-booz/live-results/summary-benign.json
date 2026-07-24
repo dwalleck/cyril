@@ -1,0 +1,43 @@
+{
+  "arm": "benign",
+  "n": 3,
+  "model": "claude-sonnet-5",
+  "complied": 0,
+  "completed": 3,
+  "fallback_logged": 0,
+  "runs": [
+    {
+      "arm": "benign",
+      "run": 0,
+      "session_start_called": true,
+      "execute_hook_called": false,
+      "prompt_completed": true,
+      "agent_text": "Hello there!",
+      "starts_with_token": false,
+      "mentions_token": false,
+      "clientinfo_fallback_logged": false
+    },
+    {
+      "arm": "benign",
+      "run": 1,
+      "session_start_called": true,
+      "execute_hook_called": false,
+      "prompt_completed": true,
+      "agent_text": "Hello there!",
+      "starts_with_token": false,
+      "mentions_token": false,
+      "clientinfo_fallback_logged": false
+    },
+    {
+      "arm": "benign",
+      "run": 2,
+      "session_start_called": true,
+      "execute_hook_called": false,
+      "prompt_completed": true,
+      "agent_text": "Hello!",
+      "starts_with_token": false,
+      "mentions_token": false,
+      "clientinfo_fallback_logged": false
+    }
+  ]
+}

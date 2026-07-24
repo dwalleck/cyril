@@ -57,6 +57,20 @@ non-`kiro-ide` clientInfo, KAS omits its hooks system-prompt briefing,
 so the model treats `HOOK_INSTRUCTION` blocks as untrusted. Injection
 works mechanically; instruction *authority* is briefing-dependent.
 
+> **CORRECTION (cyril-booz, 2026-07-23) — the attribution above is wrong.**
+> The briefing is **not** omitted for cyril: an unrecognized `clientInfo.name`
+> falls back to **kiro-ide**, the exact branch the `hooksBlock` gate selects,
+> so cyril's session *does* carry the briefing (live-confirmed: the model
+> quoted its `<hooks>` section verbatim, `.cyril-booz/`). And authority is
+> **not** briefing-dependent — cyril-booz probed 7 framings ×3 runs
+> (a corrected briefing, prompt-body framing, KAS's own production
+> interception framing, even a benign fact): **0/18** complied. The refusal
+> is the model's prompt-injection defense, which is **structural** to the
+> user-turn injection point (`HOOK_INSTRUCTION` appended to the first user
+> prompt), not fixable by any client-supplied briefing — and kiro-ide would
+> see the identical refusal. Only the *mechanical* injection claim above
+> survives. See `.cyril-booz/findings.md`.
+
 ## Substrate detour: three false suspects, one real bug
 
 Every KAS ACP turn initially died with KRS HTTP 400
@@ -82,9 +96,12 @@ CONSTRUCTS the same elements agent-side; three constraints no schema
 would have shown: unknown `originalType` values throw (`assertNever`) in
 the consumer's telemetry path, command output packaging is
 `stdout || stderr` with empty-output hooks silently dropped, and
-injected hook instructions carry no authority for an unbriefed
-(non-kiro-ide) client. Plus: the profile row shape changed under the
-harness, silently poisoning every KAS probe turn since ~2.13.0.
+injected hook instructions carry no authority (~~for an unbriefed
+(non-kiro-ide) client~~ — corrected by cyril-booz: authority is not
+briefing-dependent; the model's injection defense refuses them
+regardless of framing, kiro-ide included). Plus: the profile row shape
+changed under the harness, silently poisoning every KAS probe turn since
+~2.13.0.
 
 ## Oracle
 
