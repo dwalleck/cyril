@@ -193,6 +193,20 @@ test_g4_no_verify_bypasses() {
 	rm -rf "$d"
 }
 
+# ---- Slice 3/4: docs convention (D1) ----
+
+# Grep the real checked-out docs (independent of prose): both CLAUDE.md and
+# AGENTS.md must name the helper and the core.hooksPath enable step. Fails if
+# the convention lands in only one file or omits the enable step.
+test_d1_docs_convention() {
+	local tok
+	for f in CLAUDE.md AGENTS.md; do
+		for tok in "scripts/session-worktree.sh" "core.hooksPath"; do
+			ck "$f:$tok" yes "$(grep -qF "$tok" "$REPO_ROOT/$f" && echo yes || echo no)"
+		done
+	done
+}
+
 # ---- runner ----
 
 main() {
