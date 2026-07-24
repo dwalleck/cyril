@@ -463,17 +463,15 @@ fn chrome_baseline_equivalence() {
 #[test]
 fn baseline_covers_probe_inventory() {
     const EXPECTED: [&str; 20] = [
+        // cyril-leiq: the five brightened roles replace their dim VGA tuples
+        // (accent_quinary 008080->56c7d0, subdued_negative 800000->d98a8a,
+        // accent_quaternary 800080->cd9ee6, emphasis 808000->d7ba7d; link
+        // 000080->6cb6ff isn't in chrome). Derived by applying the same
+        // substitution as the fixture and verified to equal fixture_rows().
         "RGB:008000|DEFAULT|0",
         "RGB:008000|RGB:1e1e2e|0",
-        "RGB:008080|DEFAULT|0",
-        "RGB:008080|RGB:1e1e2e|0",
-        "RGB:800000|RGB:1e1e2e|0",
-        "RGB:800000|RGB:1e1e2e|1",
-        "RGB:800080|DEFAULT|0",
-        "RGB:800080|RGB:1e1e2e|0",
-        "RGB:808000|DEFAULT|4",
-        "RGB:808000|RGB:1e1e2e|0",
-        "RGB:808000|RGB:1e1e2e|1",
+        "RGB:56c7d0|DEFAULT|0",
+        "RGB:56c7d0|RGB:1e1e2e|0",
         "RGB:808080|DEFAULT|0",
         "RGB:808080|RGB:1e1e2e|0",
         "RGB:808080|RGB:1e1e2e|1",
@@ -481,6 +479,13 @@ fn baseline_covers_probe_inventory() {
         "RGB:8c8c8c|DEFAULT|0",
         "RGB:b48ead|DEFAULT|0",
         "RGB:c0c0c0|DEFAULT|0",
+        "RGB:cd9ee6|DEFAULT|0",
+        "RGB:cd9ee6|RGB:1e1e2e|0",
+        "RGB:d7ba7d|DEFAULT|4",
+        "RGB:d7ba7d|RGB:1e1e2e|0",
+        "RGB:d7ba7d|RGB:1e1e2e|1",
+        "RGB:d98a8a|RGB:1e1e2e|0",
+        "RGB:d98a8a|RGB:1e1e2e|1",
         "RGB:ffffff|DEFAULT|1",
         "RGB:ffffff|RGB:1e1e2e|1",
     ];
@@ -524,7 +529,7 @@ fn edge_toolbar_idle_has_no_spinner() {
 fn edge_status_boundaries_pin_strict_thresholds() {
     for (scene, expected) in [
         ("status_boundary_70", "RGB:008000"),
-        ("status_boundary_90", "RGB:808000"),
+        ("status_boundary_90", "RGB:d7ba7d"), // cyril-leiq: emphasis brightened off 0x808000
     ] {
         let buffer = scene_buffer(scene);
         let styled: std::collections::BTreeSet<String> = (0..buffer.area.width)
