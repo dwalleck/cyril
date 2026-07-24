@@ -204,8 +204,20 @@ reproducibility confirmed). Capabilities `checkpoints`, `sessionList`, `policyNo
   without creating one (which is why a new `refreshGovernance()` was added — a fresh agent
   serving only a session-less observer would otherwise never resolve governance). The acronym is
   **never expanded** in the bundle (0→3 comment-only occurrences); "Agent Frontend Multiplexer"
-  is plausible but unconfirmed. **This mux is the WebSocket transport — the stdio single-client
-  path cyril spawns is unaffected by it.**
+  is plausible but unconfirmed. **The mux only runs on the WebSocket transport — it is dormant on
+  the stdio path that the local CLI and cyril use.** The `acp-server.js` entrypoint dispatches
+  `var transport = getCliArg("transport") ?? "stdio"; if (transport === "ws") startWebSocket() else
+  startStdio();` — `startWebSocket()` is the *only* caller of `new MultiplexStream()` (HTTP+ws on
+  `ACP_WS_PORT`, default 8082), whereas `startStdio()` binds `KiroAgent` **directly** to one ndjson
+  stream over `process.stdin/stdout` with no mux. The shipped `kiro-cli` spawns KAS as a stdio
+  subprocess (`node --experimental-wasm-modules acp-server.js`, transport defaults to `stdio`; the
+  Rust `kiro-cli-chat` carries no `--transport ws` / `ACP_WS_PORT` invocation), so **local v3 users
+  — and cyril — never exercise the mux**. Its consumer is the cloud/web-hosted deployment where a
+  BFF (web-portal service — named in the `.d.ts`: "the BFF opens a new WS connection for
+  `RespondToPermission`") fronts many portal connections to one hosted agent; raw ws connections
+  pass no `role`, so they default to `observer` ("external portals"). So the split is by
+  **deployment shape (stdio-local vs ws-hosted), not v2-vs-v3** — the mux ships inert in every KAS
+  bundle and activates only on the ws entrypoint, which ties to the still-gated cloud stack.
 - **Ext-method persistence classification** is now explicit: KAS tags every `_kiro/*` method as
   `transient` / `sessionForwarded` / `localOnly` / `localOnlyUntilScoped`, with a hard
   `assertExtMethodClassified` that throws if a method is unclassified — a good enumeration of the

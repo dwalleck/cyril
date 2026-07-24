@@ -29,14 +29,73 @@ pub(crate) const DID_CHANGE_METHOD: &str = "kiro/hooks/didChange";
 /// The acp-stripped method name for `_kiro/hooks/sessionStart`.
 pub(crate) const SESSION_START_METHOD: &str = "kiro/hooks/sessionStart";
 
-/// Answer `_kiro/hooks/sessionStart` with the wire-safe acknowledgment
-/// `{results: []}` (verified against the 2.7.1 host probe — the turn proceeds).
-/// Actually executing SessionStart hooks and packaging their output into
-/// `AcpPrecomputedHookResult[]` for context injection is deferred to
-/// cyril-tpfd: that element shape is not verifiable from the standalone
-/// bundle, and guessing a wire shape is the schema-vs-runtime trap.
-pub(crate) fn respond_session_start() -> acp::Result<acp::ExtResponse> {
-    json_ext_response(&serde_json::json!({ "results": [] }))
+/// Answer `_kiro/hooks/sessionStart` by executing the registry's
+/// SessionStart hooks and packaging their output as
+/// `AcpPrecomputedHookResult[]` — the carved shape (2.13.0/2.14.1 bundles,
+/// live-verified 2026-07-23, `.cyril-tpfd/findings.md`). KAS wraps each
+/// element's `content` in a `<HOOK_INSTRUCTION>` block appended to the
+/// session's first user prompt. Hooks run sequentially in registry order,
+/// each under its own file-declared timeout (default 60s), with
+/// `USER_PROMPT` present-but-empty (no prompt exists at session start).
+/// Zero hooks → `{results: []}`, the same wire-safe acknowledgment the
+/// pre-execution stub sent.
+pub(crate) async fn respond_session_start(
+    registry: &HookRegistry,
+    cwd: &Path,
+) -> acp::Result<acp::ExtResponse> {
+    let mut runs = Vec::new();
+    for def in registry.session_start_hooks() {
+        let outcome = run_hook_command(&def.command, "", cwd, def.effective_timeout()).await;
+        runs.push((def, outcome));
+    }
+    let results = package_session_start_results(runs);
+    json_ext_response(&serde_json::json!({ "results": results }))
+}
+
+/// Package hook run outcomes as `AcpPrecomputedHookResult` elements, per the
+/// carved KAS producer: include iff the run completed with non-empty output;
+/// `content` is stdout when non-empty, else stderr — never combined (this is
+/// deliberately NOT `executeHook`'s combined-output convention). Non-zero
+/// exits with output are still included (D1: the producer has no exit-code
+/// filter). `originalType` must stay the literal `"runCommand"` — an unknown
+/// value throws `assertNever` inside the agent's telemetry path.
+fn package_session_start_results(runs: Vec<(&HookDef, HookRunOutcome)>) -> Vec<serde_json::Value> {
+    let mut out = Vec::new();
+    for (def, outcome) in runs {
+        match outcome {
+            HookRunOutcome::Completed {
+                stdout,
+                stderr,
+                exit_code,
+            } => {
+                let content = if stdout.is_empty() { stderr } else { stdout };
+                if content.is_empty() {
+                    tracing::warn!(hook = %def.id, "sessionStart hook produced no output; skipped");
+                    continue;
+                }
+                if exit_code != 0 {
+                    tracing::debug!(
+                        hook = %def.id, exit_code,
+                        "sessionStart hook exited non-zero; output injected anyway (KAS parity)"
+                    );
+                }
+                out.push(serde_json::json!({
+                    "id": def.id,
+                    "name": def.name,
+                    "hookId": def.id,
+                    "originalType": "runCommand",
+                    "content": content,
+                }));
+            }
+            HookRunOutcome::SpawnFailed { message } => {
+                tracing::warn!(hook = %def.id, message, "sessionStart hook failed to spawn; skipped");
+            }
+            HookRunOutcome::TimedOut => {
+                tracing::warn!(hook = %def.id, "sessionStart hook timed out; skipped");
+            }
+        }
+    }
+    out
 }
 
 /// Wrap a JSON value as an ACP ext response (shared by the three hook
@@ -89,20 +148,33 @@ impl HookOps {
 /// (covenant `HookExecuteParams.timeout?`). Bounds a runaway user command.
 const DEFAULT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 
-/// Run a `runCommand` hook and shape the covenant reply
-/// `{output?, exitCode, cancelled}`. The command runs via the platform shell
-/// (`/bin/sh -c` on Unix, `cmd /C` on Windows — hooks execute natively on the
-/// host, like agent terminal commands) with `USER_PROMPT` in the environment
-/// (covenant: the trigger's userPrompt) and the workspace as cwd. Output is
-/// stdout+stderr combined; `exitCode` is the real code (an exit-2 `preToolUse`
-/// hook is how KAS blocks a tool — passed through verbatim). On timeout the
-/// child is killed (`kill_on_drop`) and the reply is `{cancelled:true}`.
-pub(crate) async fn execute_hook(
+/// Typed result of one host-driven hook command run — the shared core under
+/// both wire shapes: `executeHook` combines stdout+stderr into one `output`,
+/// while sessionStart packaging picks stdout-else-stderr (the carved KAS
+/// producer semantics). Keeping the streams separate here lets each caller
+/// apply its own convention without string-matching on error text.
+enum HookRunOutcome {
+    Completed {
+        stdout: String,
+        stderr: String,
+        exit_code: i32,
+    },
+    SpawnFailed {
+        message: String,
+    },
+    TimedOut,
+}
+
+/// Run a hook command via the platform shell (`/bin/sh -c` on Unix, `cmd /C`
+/// on Windows — hooks execute natively on the host, like agent terminal
+/// commands) with `USER_PROMPT` in the environment and `cwd` as the working
+/// directory. On timeout the child is killed (`kill_on_drop`).
+async fn run_hook_command(
     command: &str,
     user_prompt: &str,
     cwd: &Path,
     timeout: std::time::Duration,
-) -> serde_json::Value {
+) -> HookRunOutcome {
     #[cfg(unix)]
     let (shell, flag) = ("/bin/sh", "-c");
     #[cfg(windows)]
@@ -116,9 +188,6 @@ pub(crate) async fn execute_hook(
         .kill_on_drop(true);
     match tokio::time::timeout(timeout, cmd.output()).await {
         Ok(Ok(out)) => {
-            let mut combined = out.stdout;
-            combined.extend_from_slice(&out.stderr);
-            let output = String::from_utf8_lossy(&combined).into_owned();
             // `.code()` is None only on signal death; surface that as a
             // non-zero rather than a plausible-looking 0 (errors-are-not-
             // defaults). 137 = 128 + SIGKILL, a conventional shell mapping.
@@ -126,18 +195,52 @@ pub(crate) async fn execute_hook(
                 tracing::warn!(command, "hook killed by signal; reporting 137");
                 137
             });
-            serde_json::json!({"output": output, "exitCode": exit_code, "cancelled": false})
+            HookRunOutcome::Completed {
+                stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
+                stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
+                exit_code,
+            }
         }
         Ok(Err(e)) => {
             tracing::warn!(command, error = %e, "hook command failed to spawn");
-            serde_json::json!({
-                "output": format!("hook failed to spawn: {e}"),
-                "exitCode": 127,
-                "cancelled": false
-            })
+            HookRunOutcome::SpawnFailed {
+                message: e.to_string(),
+            }
         }
         Err(_elapsed) => {
             tracing::warn!(command, ?timeout, "hook timed out; child killed");
+            HookRunOutcome::TimedOut
+        }
+    }
+}
+
+/// Run a `runCommand` hook and shape the covenant `executeHook` reply
+/// `{output?, exitCode, cancelled}`. Output is stdout+stderr combined;
+/// `exitCode` is the real code (an exit-2 `preToolUse` hook is how KAS
+/// blocks a tool — passed through verbatim). On timeout the reply is
+/// `{cancelled:true}`.
+pub(crate) async fn execute_hook(
+    command: &str,
+    user_prompt: &str,
+    cwd: &Path,
+    timeout: std::time::Duration,
+) -> serde_json::Value {
+    match run_hook_command(command, user_prompt, cwd, timeout).await {
+        HookRunOutcome::Completed {
+            stdout,
+            stderr,
+            exit_code,
+        } => {
+            let mut output = stdout;
+            output.push_str(&stderr);
+            serde_json::json!({"output": output, "exitCode": exit_code, "cancelled": false})
+        }
+        HookRunOutcome::SpawnFailed { message } => serde_json::json!({
+            "output": format!("hook failed to spawn: {message}"),
+            "exitCode": 127,
+            "cancelled": false
+        }),
+        HookRunOutcome::TimedOut => {
             serde_json::json!({"cancelled": true, "exitCode": 124})
         }
     }
@@ -160,6 +263,18 @@ pub(crate) struct HookDef {
     /// like `fs_.*`). Applied against `toolId` on `list`.
     pub matcher: Option<regex::Regex>,
     pub command: String,
+    /// The file's `action.timeout` in seconds, if declared.
+    pub timeout: Option<u64>,
+}
+
+impl HookDef {
+    /// Execution bound for host-driven runs: the file's `action.timeout`
+    /// seconds, else the 60s default. A declared `0` is honored verbatim
+    /// (degenerate: the hook always times out, visible via the skip warn).
+    pub(crate) fn effective_timeout(&self) -> std::time::Duration {
+        self.timeout
+            .map_or(DEFAULT_TIMEOUT, std::time::Duration::from_secs)
+    }
 }
 
 /// The on-disk file schema (kasHookFileSchema shape; hooksBlock carve in
@@ -186,6 +301,11 @@ struct HookAction {
     kind: String,
     #[serde(default)]
     command: Option<String>,
+    /// Per-hook execution bound in SECONDS (kasHookFileSchema: "timeout
+    /// must be >= 0 seconds"). Used by host-driven sessionStart execution;
+    /// `executeHook` keeps taking its timeout from the wire instead.
+    #[serde(default)]
+    timeout: Option<u64>,
 }
 
 /// PascalCase file trigger → camelCase wire trigger. `None` for triggers the
@@ -309,6 +429,7 @@ impl HookRegistry {
                 wire_trigger: trigger,
                 matcher,
                 command,
+                timeout: entry.action.timeout,
             });
         }
     }
@@ -332,13 +453,7 @@ impl HookRegistry {
     /// `tool_id` is absent (there is nothing to match) or does not match; an
     /// unknown trigger simply yields an empty list, never an error.
     pub(crate) fn list(&self, trigger: &str, tool_id: Option<&str>) -> Vec<serde_json::Value> {
-        self.hooks
-            .iter()
-            .filter(|h| h.wire_trigger == trigger)
-            .filter(|h| match &h.matcher {
-                None => true,
-                Some(rx) => tool_id.is_some_and(|t| rx.is_match(t)),
-            })
+        self.matching(trigger, tool_id)
             .map(|h| {
                 serde_json::json!({
                     "id": h.id,
@@ -348,6 +463,45 @@ impl HookRegistry {
                 })
             })
             .collect()
+    }
+
+    /// The single membership predicate under both the wire `list` reply and
+    /// host-driven sessionStart execution: wire trigger equals `trigger`,
+    /// and the optional matcher accepts `tool_id` (a matcher-carrying hook
+    /// is excluded when there is no tool context to match).
+    fn matching<'a>(
+        &'a self,
+        trigger: &'a str,
+        tool_id: Option<&'a str>,
+    ) -> impl Iterator<Item = &'a HookDef> + 'a {
+        self.hooks
+            .iter()
+            .filter(move |h| h.wire_trigger == trigger)
+            .filter(move |h| match &h.matcher {
+                None => true,
+                Some(rx) => tool_id.is_some_and(|t| rx.is_match(t)),
+            })
+    }
+
+    /// The hooks host-driven sessionStart execution serves — the same
+    /// `matching` predicate as `list("sessionStart", None)`, so the accessor
+    /// and the wire list cannot disagree on membership (structurally, not by
+    /// parallel filters kept in sync by hand). A matcher-carrying
+    /// sessionStart hook can never be a member (no tool context to match at
+    /// session start); that exclusion is debug-logged here so the hook does
+    /// not vanish without trace.
+    fn session_start_hooks(&self) -> impl Iterator<Item = &HookDef> {
+        for h in self
+            .hooks
+            .iter()
+            .filter(|h| h.wire_trigger == "sessionStart" && h.matcher.is_some())
+        {
+            tracing::debug!(
+                hook = %h.name,
+                "sessionStart hook has a matcher; excluded (nothing to match at session start)"
+            );
+        }
+        self.matching("sessionStart", None)
     }
 }
 
@@ -554,6 +708,33 @@ mod tests {
         assert!(reg.list("bogusTrigger", Some("fs_write")).is_empty());
     }
 
+    // cyril-tpfd claim 7 (parse half): `action.timeout` is SECONDS, absent
+    // means 60s, and a declared 0 parses verbatim — a required-field or
+    // parse-failure-collapse regression breaks existing timeout-less files.
+    #[test]
+    fn hook_def_default_timeout() {
+        let ws = tempfile::tempdir().unwrap();
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "t.json",
+            r#"{"version":"v1","hooks":[
+                {"name":"fast","trigger":"SessionStart",
+                 "action":{"type":"command","command":"echo a","timeout":2}},
+                {"name":"zero","trigger":"SessionStart",
+                 "action":{"type":"command","command":"echo b","timeout":0}},
+                {"name":"plain","trigger":"SessionStart",
+                 "action":{"type":"command","command":"echo c"}}
+            ]}"#,
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let secs: Vec<u64> = reg
+            .hooks
+            .iter()
+            .map(|h| h.effective_timeout().as_secs())
+            .collect();
+        assert_eq!(secs, vec![2, 0, 60]);
+    }
+
     // A malformed list frame (no `trigger`) is a warn + empty reply, never an
     // errored turn — fences the logged early-return against a future panic
     // or error-reply rewrite.
@@ -720,13 +901,284 @@ mod tests {
         assert_eq!(reply["cancelled"], true);
     }
 
-    // cyril-jiyn: sessionStart is acknowledged with the wire-safe empty
-    // results (precomputed execution is cyril-tpfd). A non-array or an error
-    // reply would break the turn's sessionStart phase.
-    #[test]
-    fn session_start_acknowledges_empty_results() {
-        let resp = respond_session_start().unwrap();
+    // cyril-tpfd claim 8: zero sessionStart hooks → `{results: []}`, byte-
+    // compatible with the pre-execution stub. A non-array or an error reply
+    // would break the turn's sessionStart phase.
+    #[tokio::test]
+    async fn session_start_acknowledges_empty_results() {
+        let dir = tempfile::tempdir().unwrap();
+        let reg = HookRegistry { hooks: Vec::new() };
+        let resp = respond_session_start(&reg, dir.path()).await.unwrap();
         let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
         assert_eq!(reply["results"], serde_json::json!([]));
+    }
+
+    fn session_start_def(id: &str, command: &str) -> HookDef {
+        HookDef {
+            id: id.to_string(),
+            name: format!("{id}-name"),
+            wire_trigger: "sessionStart",
+            matcher: None,
+            command: command.to_string(),
+            timeout: None,
+        }
+    }
+
+    fn completed(stdout: &str, stderr: &str, exit_code: i32) -> HookRunOutcome {
+        HookRunOutcome::Completed {
+            stdout: stdout.to_string(),
+            stderr: stderr.to_string(),
+            exit_code,
+        }
+    }
+
+    // cyril-tpfd claim 3: element key-set and identity fields match the
+    // carved AcpPrecomputedHookResult exactly (the live-accepted element,
+    // .cyril-tpfd/live-results/result-shaped.json); originalType is the
+    // literal "runCommand" — anything else throws assertNever agent-side.
+    #[test]
+    fn session_start_element_shape_matches_carve() {
+        let d = session_start_def("f:greet", "unused");
+        let els = package_session_start_results(vec![(&d, completed("hi\n", "", 0))]);
+        assert_eq!(els.len(), 1);
+        let obj = els[0].as_object().unwrap();
+        let mut keys: Vec<&str> = obj.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["content", "hookId", "id", "name", "originalType"]);
+        assert_eq!(els[0]["id"], "f:greet");
+        assert_eq!(els[0]["hookId"], "f:greet");
+        assert_eq!(els[0]["name"], "f:greet-name");
+        assert_eq!(els[0]["originalType"], "runCommand");
+        assert_eq!(els[0]["content"], "hi\n");
+    }
+
+    // cyril-tpfd claim 4: content is stdout-ELSE-stderr, never combined —
+    // an executeHook-style combined packaging fails this.
+    #[test]
+    fn session_start_content_stdout_precedence() {
+        let d = session_start_def("f:both", "unused");
+        let els = package_session_start_results(vec![(&d, completed("out\n", "err\n", 0))]);
+        assert_eq!(els[0]["content"], "out\n");
+    }
+
+    // cyril-tpfd claim 5 (D1 parity): a non-zero exit with output is still
+    // included — an exit-code filter fails this.
+    #[test]
+    fn session_start_nonzero_exit_still_included() {
+        let d = session_start_def("f:warn", "unused");
+        let els = package_session_start_results(vec![(&d, completed("", "boom\n", 3))]);
+        assert_eq!(els.len(), 1);
+        assert_eq!(els[0]["content"], "boom\n");
+    }
+
+    // cyril-tpfd claims 2+6 (pure half): mixed outcomes — empty output,
+    // spawn-fail, and timeout are skipped; survivors appear in run order.
+    #[test]
+    fn session_start_packaging_skips_and_orders() {
+        let a = session_start_def("f:a", "unused");
+        let b = session_start_def("f:b", "unused");
+        let c = session_start_def("f:c", "unused");
+        let d = session_start_def("f:d", "unused");
+        let e = session_start_def("f:e", "unused");
+        let els = package_session_start_results(vec![
+            (&a, completed("first\n", "ignored\n", 0)),
+            (&b, completed("", "", 0)),
+            (
+                &c,
+                HookRunOutcome::SpawnFailed {
+                    message: "no shell".into(),
+                },
+            ),
+            (&d, HookRunOutcome::TimedOut),
+            (&e, completed("", "last\n", 1)),
+        ]);
+        let contents: Vec<&str> = els.iter().map(|x| x["content"].as_str().unwrap()).collect();
+        assert_eq!(contents, ["first\n", "last\n"]);
+        let ids: Vec<&str> = els.iter().map(|x| x["id"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["f:a", "f:e"]);
+    }
+
+    // cyril-tpfd claim 2 (executed half): two REAL hooks run and their reply
+    // order equals within-file registry order — a concurrent-join or
+    // collection reorder fails this. (The pure-packer half of claim 2 is
+    // session_start_packaging_skips_and_orders.)
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn session_start_results_in_registry_order() {
+        let ws = tempfile::tempdir().unwrap();
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "ord.json",
+            r#"{"version":"v1","hooks":[
+                {"name":"first","trigger":"SessionStart",
+                 "action":{"type":"command","command":"echo A"}},
+                {"name":"second","trigger":"SessionStart",
+                 "action":{"type":"command","command":"echo B"}}
+            ]}"#,
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let resp = respond_session_start(&reg, ws.path()).await.unwrap();
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        let contents: Vec<&str> = reply["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["content"].as_str().unwrap())
+            .collect();
+        assert_eq!(contents, ["A\n", "B\n"]);
+    }
+
+    // cyril-tpfd claim 1: only sessionStart-trigger hooks run — a hook
+    // registered for another trigger leaves no marker and no element. POSIX
+    // commands; meaningful only on Unix (Windows executor path is fenced by
+    // execute_hook_real_exit_codes_windows + session_start_executes_on_windows).
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn session_start_runs_only_session_start_hooks() {
+        let ws = tempfile::tempdir().unwrap();
+        let ss = ws.path().join("ss-marker");
+        let pre = ws.path().join("pre-marker");
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "m.json",
+            &format!(
+                r#"{{"version":"v1","hooks":[
+                    {{"name":"ss","trigger":"SessionStart",
+                     "action":{{"type":"command","command":"touch {} && echo ss-ran"}}}},
+                    {{"name":"pre","trigger":"PreToolUse",
+                     "action":{{"type":"command","command":"touch {} && echo pre-ran"}}}}
+                ]}}"#,
+                ss.display(),
+                pre.display()
+            ),
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let resp = respond_session_start(&reg, ws.path()).await.unwrap();
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        assert!(ss.exists(), "sessionStart hook ran");
+        assert!(
+            !pre.exists(),
+            "preToolUse hook must not run at sessionStart"
+        );
+        assert_eq!(reply["results"].as_array().unwrap().len(), 1);
+        assert_eq!(reply["results"][0]["content"], "ss-ran\n");
+    }
+
+    // cyril-tpfd claims 6+7 (integration): a 1s-timeout sleeper is skipped
+    // fast (seconds, not millis — a millis misread would also cut the 2s
+    // `sleep 1 && echo ok` hook), empty output is skipped, and the healthy
+    // hooks still land in a well-formed reply.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn session_start_skips_empty_and_timeout() {
+        let ws = tempfile::tempdir().unwrap();
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "mix.json",
+            r#"{"version":"v1","hooks":[
+                {"name":"silent","trigger":"SessionStart",
+                 "action":{"type":"command","command":"true"}},
+                {"name":"stuck","trigger":"SessionStart",
+                 "action":{"type":"command","command":"sleep 30","timeout":1}},
+                {"name":"slowok","trigger":"SessionStart",
+                 "action":{"type":"command","command":"sleep 1 && echo ok","timeout":2}}
+            ]}"#,
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let start = std::time::Instant::now();
+        let resp = respond_session_start(&reg, ws.path()).await.unwrap();
+        assert!(
+            start.elapsed() < std::time::Duration::from_secs(10),
+            "stuck hook was killed at its 1s timeout, not awaited for 30s"
+        );
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        let results = reply["results"].as_array().unwrap();
+        assert_eq!(results.len(), 1, "silent+stuck skipped, slowok included");
+        assert_eq!(results[0]["content"], "ok\n");
+        assert_eq!(results[0]["name"], "slowok");
+    }
+
+    // cyril-tpfd claim 9: USER_PROMPT is present-but-empty. `printenv VAR`
+    // exits 1 with no output when VAR is UNSET (element absent) and prints
+    // an empty line when set-empty — so this fence distinguishes the two.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn session_start_user_prompt_env_empty() {
+        let ws = tempfile::tempdir().unwrap();
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "env.json",
+            r#"{"version":"v1","hooks":[
+                {"name":"envcheck","trigger":"SessionStart",
+                 "action":{"type":"command","command":"printenv USER_PROMPT && echo SET"}}
+            ]}"#,
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let resp = respond_session_start(&reg, ws.path()).await.unwrap();
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        let results = reply["results"].as_array().unwrap();
+        assert_eq!(
+            results.len(),
+            1,
+            "USER_PROMPT must be set (empty), not unset"
+        );
+        assert_eq!(results[0]["content"], "\nSET\n");
+    }
+
+    // cyril-tpfd claim 10: sessionStart execution is a non-blocking future —
+    // a concurrent future on the same task resolves while a 3s hook runs. A
+    // blocking executor (std::process inside the async fn) starves the task
+    // and fails this. Responder-level with an explicit registry for
+    // determinism (KiroClient::new would merge ~/.kiro/hooks — a dev
+    // machine's real hooks must not run in tests); ext_method-level
+    // concurrency for hook responders is already fenced by
+    // client::slow_hook_does_not_block_loop.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn slow_session_start_does_not_block_loop() {
+        let ws = tempfile::tempdir().unwrap();
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "slow.json",
+            r#"{"version":"v1","hooks":[
+                {"name":"slow","trigger":"SessionStart",
+                 "action":{"type":"command","command":"sleep 3 && echo done"}}
+            ]}"#,
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let start = std::time::Instant::now();
+        // Timing captured at RESOLUTION of the cheap future — measured after
+        // join! it would always include the hook's 3s (the jiyn P2 bug class).
+        let (resp, cheap_elapsed) = tokio::join!(respond_session_start(&reg, ws.path()), async {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            start.elapsed()
+        });
+        assert!(resp.is_ok());
+        assert!(
+            cheap_elapsed < std::time::Duration::from_secs(2),
+            "concurrent future must resolve while the 3s sessionStart hook runs: {cheap_elapsed:?}"
+        );
+    }
+
+    // Windows counterpart: sessionStart execution works through cmd /C and
+    // packages output (the platform-shell regression class).
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn session_start_executes_on_windows() {
+        let ws = tempfile::tempdir().unwrap();
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "w.json",
+            r#"{"version":"v1","hooks":[
+                {"name":"hello","trigger":"SessionStart",
+                 "action":{"type":"command","command":"echo ok"}}
+            ]}"#,
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let resp = respond_session_start(&reg, ws.path()).await.unwrap();
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        let results = reply["results"].as_array().unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["content"], "ok\r\n");
     }
 }
