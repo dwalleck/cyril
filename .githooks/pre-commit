@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# cyril-4rc1 guard: feature work belongs in a linked worktree; the primary
+# shared checkout is for main-line commits only. Parallel Claude sessions that
+# share the primary checkout land commits on whichever branch is checked out
+# (3× data loss — see cyril-4rc1), so this refuses a feature-branch commit made
+# in the primary checkout and points at the worktree helper.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+# Override a block:        git commit --no-verify
+set -euo pipefail
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+
+# Main-line branches are allowed anywhere; "HEAD" means a detached checkout
+# (rebase/merge/bisect) — never block those.
+case "$branch" in
+main | HEAD) exit 0 ;;
+esac
+
+# Allow feature commits in a LINKED worktree; block only in the primary. In the
+# primary checkout the resolved git dir equals the common dir; in a linked
+# worktree it is .../.git/worktrees/<name> and differs. Resolve BOTH operands
+# physically (`pwd -P`): when the checkout is reached through a symlink,
+# --absolute-git-dir yields the physical path while a logical `pwd` keeps the
+# symlink, and the mismatch would misread the primary as linked and let the
+# commit through (verified; the symlinked-path failure mode).
+gitdir=$(cd "$(git rev-parse --absolute-git-dir)" && pwd -P)
+common=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
+[ "$gitdir" != "$common" ] && exit 0
+
+echo "cyril-4rc1: refusing a '$branch' commit in the primary shared checkout." >&2
+echo "Feature work belongs in a worktree — parallel sessions collide here:" >&2
+echo "    dest=\$(scripts/session-worktree.sh $branch) && cd \"\$dest\"" >&2
+echo "Override (not recommended):  git commit --no-verify" >&2
+exit 1

@@ -149,12 +149,24 @@ jobs:
       - name: Test (--features kas)
         run: cargo nextest run -p cyril -p cyril-core --features kas
 
+  # cyril-4rc1: the worktree helper + guard are dev tooling (bash), not product
+  # code, so they ride an ubuntu-only shell job rather than the Rust matrix.
+  worktree-tooling:
+    name: Worktree Tooling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Worktree helper + guard fences
+        run: bash scripts/tests/worktree_test.sh
+
   # Summary job that requires all other jobs to pass — use this as the single
   # required status check in branch protection.
   ci-success:
     name: CI Success
     if: always()
-    needs: [commitlint, format, lint, test, build, kas-feature]
+    needs: [commitlint, format, lint, test, build, kas-feature, worktree-tooling]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs
@@ -169,7 +181,8 @@ jobs:
              [[ "${{ needs.lint.result }}" != "success" ]] || \
              [[ "${{ needs.test.result }}" != "success" ]] || \
              [[ "${{ needs.build.result }}" != "success" ]] || \
-             [[ "${{ needs.kas-feature.result }}" != "success" ]]; then
+             [[ "${{ needs.kas-feature.result }}" != "success" ]] || \
+             [[ "${{ needs.worktree-tooling.result }}" != "success" ]]; then
             echo "One or more CI jobs failed"
             exit 1
           fi

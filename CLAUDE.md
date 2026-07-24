@@ -55,6 +55,36 @@ When using subagents for code changes:
 - **Verify completeness before moving on** — after each subagent finishes, check for unstaged files, incomplete implementations, and TODO comments left behind.
 - **Never weaken lint rules** — if a subagent disables `unsafe_code = "forbid"` or downgrades `unwrap_used = "deny"` to make its code compile, that is a bug to fix, not a shortcut to accept.
 
+### Parallel sessions — one worktree per session (cyril-4rc1)
+
+Concurrent Claude sessions MUST NOT share this checkout. When two sessions
+commit in the same working directory, commits land on whichever branch is
+checked out — a session's work "hitchhikes" onto another's branch, and the
+relocation rebases have dropped commits (happened 3×). Each concurrent session
+works in its own linked **git worktree** instead; git then refuses to check out
+one branch in two worktrees, so the collision is structurally impossible.
+
+Start a session's worktree and enter it:
+
+```sh
+dest=$(scripts/session-worktree.sh feat/cyril-xyz)   # create or reuse; prints the path
+cd "$dest"
+```
+
+The primary checkout (`~/repos/cyril`) is for **main-line commits only**
+(`chore(rivets)`, docs, merges). A tracked guard enforces this — enable it once
+per clone:
+
+```sh
+git config core.hooksPath .githooks   # activates .githooks/pre-commit
+```
+
+Once enabled, a feature-branch commit made in the primary checkout is refused
+with a pointer to the helper; feature commits inside a linked worktree pass
+untouched. Override in a pinch with `git commit --no-verify`. This git guard is
+separate from the Claude-Code `rustfmt` hook (a harness hook in
+`.claude/settings.json`); `.githooks/` is the repo's git-hooks directory.
+
 ### Reverse Engineering
 
 When reverse-engineering Kiro CLI or similar tools, follow this priority order:

@@ -1,0 +1,24 @@
+### SHARED-CHECKOUT REGIME (the bug) ###
+feat-a tip:  9ef0619 base
+feat-b tip:  ab8b27b A-work (meant for feat-a)
+A-work landed on: feat-b 
+
+### WORKTREE-PER-SESSION REGIME (the fix) ###
+feat-a tip:  fdbc4fa A-work isolated
+feat-b tip:  3a79ce6 B-work isolated
+worktrees:
+  /home/dwalleck/.claude/tmp/tmp.mGKpAYX2Xk/repo 9ef0619 [main]
+  /home/dwalleck/.claude/tmp/tmp.mGKpAYX2Xk/wt-a fdbc4fa [feat-a]
+  /home/dwalleck/.claude/tmp/tmp.mGKpAYX2Xk/wt-b 3a79ce6 [feat-b]
+
+### STRUCTURAL GUARD: can a 2nd worktree grab an already-checked-out branch? ###
+dup-checkout: REFUSED (exit 128) -> fatal: 'feat-a' is already used by worktree at '/home/dwalleck/.claude/tmp/tmp.mGKpAYX2Xk/wt-a'
+
+REPO=/home/dwalleck/.claude/tmp/tmp.mGKpAYX2Xk/repo
+ROOT=/home/dwalleck/.claude/tmp/tmp.mGKpAYX2Xk
+### hook wired via core.hooksPath (tracked dir .githooks/) ###
+commit-on-main: BLOCKED (exit 1) -> GUARD: refusing feature commit on main
+hook-ran marker after main attempt: yes
+commit-on-feat-x: SUCCEEDED (guard allowed)
+commit --no-verify on main: SUCCEEDED (hook bypassed, as documented)
+ROOT=/home/dwalleck/.claude/tmp/tmp.Uu1bVTldI2
