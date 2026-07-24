@@ -93,6 +93,14 @@ pub struct UiState {
     // `steering_*` notifications for K1b's toolbar chip. Render is K1b.
     steering_queued: usize,
 
+    // cyril-nvmh: consecutive `TurnCompleted`s observed while `steering_queued`
+    // is non-zero with NO intervening `SteeringConsumed`. A tail steer's
+    // queued+consumed pair defers to exactly the next turn (cyril-7z7u probe),
+    // so two turn-ends without a consume prove the steer is gone — the 2nd
+    // drains the optimistic chip. Reset by every steer-reconciliation event so
+    // a later legitimate steer isn't drained by turn-ends that predate it.
+    turns_since_steer_activity: usize,
+
     // Voice input (CN2 / V1a). Projected by App from VoiceEvents. `voice_level`
     // is only meaningful while `voice_status == Listening`.
     voice_status: VoiceStatus,
@@ -296,6 +304,7 @@ impl UiState {
             quit_requested: false,
             deep_idle: false,
             steering_queued: 0,
+            turns_since_steer_activity: 0,
             voice_status: VoiceStatus::Idle,
             voice_level: 0.0,
             max_messages,
@@ -477,6 +486,28 @@ impl UiState {
                 // turn-end is genuinely still queued and drains via `SteeringConsumed`
                 // (possibly next turn). The optimistic chip drains on consumed, not
                 // on turn-end; resetting here would under-count a pending steer.
+                //
+                // cyril-nvmh: but a steer whose consume NEVER arrives (turn
+                // cancelled/errored, or an accept the backend never streams a
+                // consume for) would otherwise leave a phantom chip until `/new`.
+                // The 7z7u pair defers to EXACTLY the next turn, so a chip that
+                // survives TWO consecutive turn-ends with no intervening
+                // `SteeringConsumed` is provably gone — drain it on the 2nd.
+                // One idle tail (a single turn-end) is truthful and must NOT
+                // drain: the real consume arrives on the next turn and resets
+                // the counter first.
+                if self.steering_queued > 0 {
+                    self.turns_since_steer_activity += 1;
+                    if self.turns_since_steer_activity >= 2 {
+                        self.steering_queued = 0;
+                        self.turns_since_steer_activity = 0;
+                        // Keep the 7z7u oracle (counter == #Queued chips): the
+                        // steer can never land now, so finalize its echoes too.
+                        if self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false) {
+                            self.messages_version += 1;
+                        }
+                    }
+                }
                 self.set_activity(Activity::Ready);
                 true
             }
@@ -490,6 +521,15 @@ impl UiState {
                 // `Context: N%` and 5-label bar as if the session were alive.
                 self.context_usage = None;
                 self.context_breakdown = None;
+                // cyril-nvmh (path d): a dead bridge can never drain a queued
+                // steer, so this is an explicit drain point for the optimistic
+                // chip too — otherwise it leaks past the disconnect until `/new`.
+                // Finalize the Queued echoes with it to keep the 7z7u oracle
+                // (counter == #Queued chips); the added system message already
+                // bumps `messages_version`, so the flip's redraw is covered.
+                self.steering_queued = 0;
+                self.turns_since_steer_activity = 0;
+                self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false);
                 self.set_activity(Activity::Idle);
                 true
             }
@@ -559,6 +599,10 @@ impl UiState {
                 None => false,
             },
             Notification::SteeringConsumed { message_id, .. } => {
+                // cyril-nvmh: a consume proves the queue is actively draining, so
+                // reset the consecutive-turn drain counter — a later steer gets a
+                // fresh idle-tail grace instead of inheriting stale turn-ends.
+                self.turns_since_steer_activity = 0;
                 // One queued steer drained into the turn. Id-match preferred,
                 // FIFO fallback (cyril-vgcm C9); `content` is advisory, never a
                 // match key. The counter tracks ACTUAL flips — a duplicate
@@ -581,6 +625,8 @@ impl UiState {
             Notification::SteeringCleared { message_ids } => {
                 if message_ids.is_empty() {
                     self.steering_queued = 0;
+                    // cyril-nvmh: reconciling the queue resets the drain counter.
+                    self.turns_since_steer_activity = 0;
                     if self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false) {
                         self.messages_version += 1;
                     }
@@ -589,6 +635,8 @@ impl UiState {
                     let flips = self.flip_cleared_steer_echoes(message_ids);
                     if flips > 0 {
                         self.steering_queued = self.steering_queued.saturating_sub(flips);
+                        // cyril-nvmh: reconciling the queue resets the drain counter.
+                        self.turns_since_steer_activity = 0;
                         self.messages_version += 1;
                         true
                     } else {
@@ -614,6 +662,8 @@ impl UiState {
                 // burst may have several in flight before the single bridge-dedup'd
                 // notice). Terminal states untouched.
                 self.steering_queued = 0;
+                // cyril-nvmh: no chip remains, so the drain counter resets too.
+                self.turns_since_steer_activity = 0;
                 self.flip_queued_steer_echoes(SteerEchoStatus::Unsupported, false);
                 true
             }
@@ -649,6 +699,8 @@ impl UiState {
                 // not the wire. It is the ONLY steer-queue counter; the old
                 // SessionController.steering_depth mirror was deleted — cyril-85py.)
                 self.steering_queued = 0;
+                // cyril-nvmh: a fresh session starts with a clean drain counter.
+                self.turns_since_steer_activity = 0;
                 // Finalize any leftover Queued steer echoes from the old session.
                 // The new session is a different session_id; its SteeringConsumed
                 // would otherwise FIFO-flip an orphan echo from the dead session
@@ -2225,6 +2277,181 @@ mod tests {
                 }
             )),
             "all Queued echoes flipped off Queued"
+        );
+    }
+
+    // cyril-nvmh fence helper: number of still-`Queued` steer echoes. The
+    // cyril-7z7u oracle is `steering_queued() == queued_echoes(&state)`, so
+    // every drain path must zero BOTH the counter and the Queued echoes.
+    fn queued_echoes(s: &UiState) -> usize {
+        s.messages()
+            .iter()
+            .filter(|m| {
+                matches!(
+                    m.kind(),
+                    ChatMessageKind::SteerEcho {
+                        status: SteerEchoStatus::Queued,
+                        ..
+                    }
+                )
+            })
+            .count()
+    }
+
+    // cyril-nvmh path (c): the backend accepts a tail steer (queued:true) but
+    // never streams a `SteeringConsumed`. A steer that survives TWO consecutive
+    // turn-ends with no intervening consume is provably gone (cyril-7z7u probe:
+    // a tail steer's queued+consumed pair defers to exactly the NEXT turn), so
+    // the optimistic chip must drain on the 2nd turn-end. Before the fix the
+    // chip sticks at 1 forever.
+    #[test]
+    fn steer_chip_drains_after_two_turns_without_consume() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("finish the refactor");
+        assert_eq!(state.steering_queued(), 1);
+
+        // First turn-end: the steer is a truthful tail steer — chip survives.
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            state.steering_queued(),
+            1,
+            "one idle tail must NOT drain (path a is truthful)"
+        );
+        assert_eq!(queued_echoes(&state), 1, "echo still Queued after one tail");
+
+        // Second consecutive turn-end, still no consume: the steer is gone.
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            state.steering_queued(),
+            0,
+            "2nd consecutive turn-end with no consume drains the phantom chip"
+        );
+        assert_eq!(
+            queued_echoes(&state),
+            0,
+            "7z7u oracle: draining the chip also finalizes the Queued echo"
+        );
+    }
+
+    // cyril-nvmh path (b): a turn ends non-EndTurn (cancelled / errored) with the
+    // steer un-consumed. Same drain contract — two turn-ends without a consume
+    // means the steer never landed. Before the fix the chip sticks forever.
+    #[test]
+    fn steer_chip_drains_after_cancelled_turn_without_consume() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("abort and retry");
+        assert_eq!(state.steering_queued(), 1);
+
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::Cancelled,
+        });
+        assert_eq!(state.steering_queued(), 1, "one turn-tail must not drain");
+
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::Cancelled,
+        });
+        assert_eq!(
+            state.steering_queued(),
+            0,
+            "cancelled/errored turns with no consume drain on the 2nd turn-end"
+        );
+        assert_eq!(queued_echoes(&state), 0, "7z7u oracle holds after drain");
+    }
+
+    // cyril-nvmh path (d): a dead bridge can never drain a queued steer, so
+    // `BridgeDisconnected` is an explicit drain point alongside the context /
+    // tokens / activity it already clears. Before the fix the chip leaks past
+    // the disconnect until `/new`.
+    #[test]
+    fn steer_chip_drains_on_disconnect() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("keep going");
+        state.add_steer_echo("and this too");
+        assert_eq!(state.steering_queued(), 2);
+
+        state.apply_notification(&Notification::BridgeDisconnected {
+            reason: "kiro-cli exited".into(),
+        });
+        assert_eq!(
+            state.steering_queued(),
+            0,
+            "a dead bridge drains the optimistic steer chip"
+        );
+        assert_eq!(
+            queued_echoes(&state),
+            0,
+            "7z7u oracle: disconnect finalizes the Queued echoes too"
+        );
+    }
+
+    // cyril-nvmh path (a) guard: a single idle turn-tail is TRUTHFUL, not
+    // phantom (cyril-7z7u probe). The chip must survive exactly one turn-end and
+    // then drain via the real `SteeringConsumed` that arrives on the NEXT turn —
+    // it must NOT be drained prematurely by the 2nd-turn rule.
+    #[test]
+    fn steer_chip_survives_single_idle_tail() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("run the tests");
+        assert_eq!(state.steering_queued(), 1);
+
+        // Turn ends with the steer still queued (user then goes idle).
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            state.steering_queued(),
+            1,
+            "the steer is genuinely still queued through one idle tail"
+        );
+        assert_eq!(queued_echoes(&state), 1, "echo remains Queued");
+
+        // The next turn starts and the backend finally consumes the steer.
+        assert!(state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        }));
+        assert_eq!(
+            state.steering_queued(),
+            0,
+            "the real consume on the next turn drains the chip"
+        );
+        assert_eq!(queued_echoes(&state), 0);
+    }
+
+    // cyril-nvmh guard for note #4: a `SteeringConsumed` resets the
+    // consecutive-turn drain counter, so a LATER legitimate steer is not wrongly
+    // drained by turn-ends that predate it. Without the reset, a fresh steer
+    // would inherit a stale count and drain after a single idle tail.
+    #[test]
+    fn steer_chip_consume_resets_drain_counter() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("first steer");
+
+        // One turn-end accrues a turn against the first steer, then it consumes.
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert!(state.apply_notification(&Notification::SteeringConsumed {
+            content: None,
+            message_id: None,
+        }));
+        assert_eq!(state.steering_queued(), 0);
+
+        // A brand-new steer must get a full grace of one idle tail — the stale
+        // turn count from before the consume must not carry over.
+        state.add_steer_echo("second steer");
+        assert_eq!(state.steering_queued(), 1);
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            state.steering_queued(),
+            1,
+            "the drain counter reset on consume; the new steer survives its tail"
         );
     }
 
