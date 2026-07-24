@@ -138,6 +138,30 @@ polling (`watch`+`watch_poll`), and human-in-the-loop (`need_input`, `node_pause
 and is a strong signal that Kiro is heading toward orchestrated multi-node workflows on the ACP
 wire. Watch item — model the notification shape now so cyril can render it when an emitter ships.
 
+**Two layers — the protocol is a facade, but the orchestration it presents is real (correction of
+record).** Digging past the protocol: the `_kiro/workflow/*` progress *protocol* is unwired on
+**both** ends — no emitter (KAS and v2 both 0), and tui.js's parser produces a `workflow_progress`
+stream event that appears exactly **once** in the bundle (the production site in the converter),
+with no consumer/`WorkflowPanel`/renderer — so it is parse-and-drop scaffolding. **But the DAG
+orchestration *capability* it visualizes is real and executing:** KAS's registered
+`OrchestrateSubAgent` / `orchestrate_subagent` tool has a full input schema (`buildSchema`) —
+`task` → `stages[]` (`{name, role, prompt_template, depends_on, inlineAgent?}`, a DAG via
+`depends_on`, independents run in parallel) plus a `repeat` block (`maxIterations` 1–20,
+`stopCondition.containsText`, `onMaxIterations` `continue`/`abort`) — and the executor **runs the
+loop** (`[OrchestrateSubAgent] repeat.complete`/`repeat.exhausted` logging;
+`if (repeat.onMaxIterations === "abort") …`). So the field-name mismatch is the tell — the engine
+speaks `stages`/`depends_on`/`repeat`; the client protocol speaks `nodeTree`/node-types/
+`workflow-progress` — two vocabularies for the same concept, designed at different times. Today an
+`OrchestrateSubAgent` run reports through the ordinary **`agent-subtask` tool-call** channel cyril
+already receives, *not* the live workflow-progress protocol. **Corrects the record:** the
+"`OrchestrateSubAgent` = one-shot, fail-fast, **no loop**" characterization in CLAUDE.md and the
+2.7.1 / 2.10.0 audits is **stale** — a bounded `repeat` loop is present at least since **KAS 0.18.2
+(2.13.0)** (byte-identical schema markers in 0.18.2 and 0.22.7), i.e. it landed in the
+2.10.0→2.13.0 window and was simply overlooked, not a 2.14.0 addition. **Nearer-term cyril angle
+(→ cyril-6beh):** cyril can surface `OrchestrateSubAgent` pipeline runs (stages + the repeat loop)
+from the `agent-subtask` tool-call stream it already receives, without waiting for the workflow
+protocol to light up.
+
 ### `_kiro/frontendToolCall` client handler REMOVED in 2.14.0
 
 The client-side handler added in **2.13.0** (registered cap `frontendToolCall:true`, declined

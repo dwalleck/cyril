@@ -149,6 +149,13 @@ So KAS **silently skips** any agent that uses `allowedTools`/`toolsSettings` and
 
 ### How a crew executes — one-shot, fail-fast DAG (no native loop)
 
+> **Superseded on the "no loop" point (2026-07 / KAS 0.18.2+).** Accurate for 2.7.1 (KAS 0.3.x), but
+> `OrchestrateSubAgent` has since gained a **bounded `repeat` loop** (`maxIterations` 1–20 +
+> `stopCondition.containsText` + `onMaxIterations` `continue`/`abort`), present at least since KAS
+> 0.18.2 (kiro-cli 2.13.0). The fail-fast, cycle-rejecting per-iteration DAG below still holds — the
+> loop wraps the whole pipeline, it doesn't add intra-DAG cycles. See
+> [docs/kiro-2.14.1-wire-audit.md](kiro-2.14.1-wire-audit.md) (workflow section).
+
 Mental model: KAS exposes subagents through **two tools over one registry** — `InvokeSubAgent` delegates *one* task to one registered agent; `OrchestrateSubAgent` runs a whole *crew* (DAG of registered agents) in a single call. Registered agents (your custom-agent definitions) are the stage `role`s and are also individually callable as `subagent/<agentId>`.
 
 **Each stage runs as its `role` agent, with that agent's own model, tools, and permissions.** KAS resolves `role` → the registered `CustomAgentDefinition` and applies, per stage: its **`model`** override (`definition.model` → `executionModel`/`modelOverride` — stages can run on different models); its **`tools`/`excludedTools`** allowlist (`buildToolPolicy` → `filterTools`, plus `includeMcpJson`/`includePowers`); and its **`permissions.rules`** as a `SubagentPolicyEngine` built via `policySession.createSubagentEngine(definition.permissions)` that **combines restrictively with the parent** (`combineResults` takes the more-restrictive effect). So per-agent model choices and write/exec scoping *are* honored across a crew — a stage can only be scoped **down** from the parent session, never escalate above it. (`CustomAgentDefinition` carries `model?`, `tools`/`excludedTools`, and `permissions: {rules:[{capability, match?, exclude?, effect: allow|deny|ask}]}`.)
