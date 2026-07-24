@@ -92,7 +92,7 @@ level, enforced by fence not runtime check (violation = fence failure,
 not silent wrong output).
 
 **Verification:**
-- [ ] `session_start_runs_only_session_start_hooks`, `session_start_skips_empty_and_timeout`, `session_start_timeout_seconds_not_millis`, `session_start_user_prompt_env_empty` pass
+- [ ] `session_start_runs_only_session_start_hooks`, `session_start_skips_empty_and_timeout` (carries the secs-not-millis catch — planned as a separate `session_start_timeout_seconds_not_millis`, folded per review P2), `session_start_user_prompt_env_empty` pass
 - [ ] `session_start_acknowledges_empty_results` retargeted (async) and passing
 - [ ] Budgets hold at fixture scale (<10s)
 
