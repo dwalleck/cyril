@@ -90,20 +90,25 @@ impl HookOps {
 const DEFAULT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 
 /// Run a `runCommand` hook and shape the covenant reply
-/// `{output?, exitCode, cancelled}`. The command runs via the login shell with
-/// `USER_PROMPT` in the environment (covenant: the trigger's userPrompt) and
-/// the workspace as cwd. Output is stdout+stderr combined; `exitCode` is the
-/// real code (an exit-2 `preToolUse` hook is how KAS blocks a tool — passed
-/// through verbatim). On timeout the child is killed (`kill_on_drop`) and the
-/// reply is `{cancelled:true}`.
+/// `{output?, exitCode, cancelled}`. The command runs via the platform shell
+/// (`/bin/sh -c` on Unix, `cmd /C` on Windows — hooks execute natively on the
+/// host, like agent terminal commands) with `USER_PROMPT` in the environment
+/// (covenant: the trigger's userPrompt) and the workspace as cwd. Output is
+/// stdout+stderr combined; `exitCode` is the real code (an exit-2 `preToolUse`
+/// hook is how KAS blocks a tool — passed through verbatim). On timeout the
+/// child is killed (`kill_on_drop`) and the reply is `{cancelled:true}`.
 pub(crate) async fn execute_hook(
     command: &str,
     user_prompt: &str,
     cwd: &Path,
     timeout: std::time::Duration,
 ) -> serde_json::Value {
-    let mut cmd = tokio::process::Command::new("/bin/sh");
-    cmd.arg("-c")
+    #[cfg(unix)]
+    let (shell, flag) = ("/bin/sh", "-c");
+    #[cfg(windows)]
+    let (shell, flag) = ("cmd", "/C");
+    let mut cmd = tokio::process::Command::new(shell);
+    cmd.arg(flag)
         .arg(command)
         .env("USER_PROMPT", user_prompt)
         .current_dir(cwd)
@@ -534,7 +539,9 @@ mod tests {
     }
 
     // cyril-jiyn claim 6 fence: the command runs with USER_PROMPT in env and
-    // the workspace as cwd — a command echoing both proves the wiring.
+    // the workspace as cwd — a command echoing both proves the wiring. POSIX
+    // command syntax (printf/pwd/$VAR) — meaningful only on Unix.
+    #[cfg(unix)]
     #[tokio::test]
     async fn execute_hook_env_and_cwd() {
         let dir = tempfile::tempdir().unwrap();
@@ -556,6 +563,8 @@ mod tests {
 
     // cyril-jiyn claim 7 fence: combined stdout+stderr and the REAL exit code
     // for 0, 1, and 2 — a bool-success mapping or a dropped stderr fails this.
+    // POSIX syntax (`;`, `>&2`) — the Windows counterpart is below.
+    #[cfg(unix)]
     #[tokio::test]
     async fn execute_hook_real_exit_codes() {
         let dir = tempfile::tempdir().unwrap();
@@ -582,14 +591,37 @@ mod tests {
         assert_eq!(two["output"], "DENY\n");
     }
 
+    // Windows counterpart of the claim 7/8 fences: the hook spawns via
+    // `cmd /C` and the real exit code + output cross the reply. Fences the
+    // hardcoded-/bin/sh regression, where every hook died as spawn-fail 127.
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn execute_hook_real_exit_codes_windows() {
+        let dir = tempfile::tempdir().unwrap();
+        let t = std::time::Duration::from_secs(10);
+
+        let zero = execute_hook("echo out", "", dir.path(), t).await;
+        assert_eq!(zero["exitCode"], 0);
+        assert_eq!(zero["output"], "out\r\n");
+
+        let two = execute_hook("echo DENY& exit /b 2", "", dir.path(), t).await;
+        assert_eq!(two["exitCode"], 2, "exit 2 is the preToolUse block");
+        assert_eq!(two["cancelled"], false);
+        assert_eq!(two["output"], "DENY\r\n");
+    }
+
     // cyril-jiyn claim 8 (block contract at the responder level): the
     // executeHook reply for an exit-2 command is exactly
     // {output, exitCode:2, cancelled:false} through respond_execute.
     #[tokio::test]
     async fn pre_tool_use_exit2_block_contract() {
         let dir = tempfile::tempdir().unwrap();
+        #[cfg(unix)]
+        let (command, expected) = ("echo blocked; exit 2", "blocked\n");
+        #[cfg(windows)]
+        let (command, expected) = ("echo blocked& exit /b 2", "blocked\r\n");
         let params = serde_json::json!({
-            "hookId": "h", "hookName": "policy", "command": "echo blocked; exit 2",
+            "hookId": "h", "hookName": "policy", "command": command,
             "sessionId": "s", "userPrompt": "{}"
         });
         let resp = respond_execute(&params, dir.path(), &HookOps::default())
@@ -598,8 +630,15 @@ mod tests {
         let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
         assert_eq!(reply["exitCode"], 2);
         assert_eq!(reply["cancelled"], false);
-        assert_eq!(reply["output"], "blocked\n");
+        assert_eq!(reply["output"], expected);
     }
+
+    // A ~30s sleeper for the timeout/cancel fences. `ping -n` is the cmd-shell
+    // idiom: `timeout /t` errors out when stdin is redirected (it is — null).
+    #[cfg(unix)]
+    const SLEEP_30: &str = "sleep 30";
+    #[cfg(windows)]
+    const SLEEP_30: &str = "ping -n 31 127.0.0.1 >nul";
 
     // cyril-jiyn claim 9 fence: a hook exceeding its timeout is killed and the
     // reply says cancelled — a timer-without-kill leaves the child alive and
@@ -610,7 +649,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let start = std::time::Instant::now();
         let out = execute_hook(
-            "sleep 30",
+            SLEEP_30,
             "",
             dir.path(),
             std::time::Duration::from_millis(300),
@@ -633,7 +672,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let ops = HookOps::default();
         let params = serde_json::json!({
-            "hookId": "h", "hookName": "slow", "command": "sleep 30",
+            "hookId": "h", "hookName": "slow", "command": SLEEP_30,
             "sessionId": "s", "userPrompt": "", "operationId": "op-1"
         });
         // Both futures run on this one task via join! (no LocalSet needed):
