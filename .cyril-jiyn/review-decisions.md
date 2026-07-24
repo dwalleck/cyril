@@ -69,5 +69,8 @@ decision. Applied fixes: commit `a63a4ed` (N1–N3) and `19c0d25` (N10).
 Applied: N1, N2, N3 (`a63a4ed`), N10 (`19c0d25`). Rejected with evidence:
 N4, N5, N6, N8, N11 (three by citing pre-PR decisions). Deferred with
 tracker: N7 → cyril-qr6l. Merge actions: N12 (close cyril-jmjb).
-**Open for the approver: N9** — ratify the sessionStart execute→stub
-deferral (cyril-tpfd) or require execution before merge.
+
+**N9 RATIFIED by the approver at merge (2026-07-23):** the sessionStart
+execute→stub deferral stands; execution ships with cyril-tpfd once the
+`AcpPrecomputedHookResult` shape is verifiable. This closes the last open
+deviation from the pause-approved design.
