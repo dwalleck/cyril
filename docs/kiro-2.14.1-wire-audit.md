@@ -193,13 +193,19 @@ reproducibility confirmed). Capabilities `checkpoints`, `sessionList`, `policyNo
 
 ### KAS internals of note (directly verified)
 
-- **AFM observer/standalone mode** (net-new). The `_kiro/userInput/respond` docstring and the
-  `multiplex-stream.ts` layer describe an "AFM observer window" — a session-less client that
-  browses a running session and forwards a user's answer to a pending `_kiro/userInput` by
-  `toolCallId` (it never sees the agent's raw JSON-RPC id; in standalone/AFM mode the observer's
-  raw response is discarded by the mux). This is a multi-client topology: one primary driver plus
-  observer window(s). `multiplex` machinery pre-existed (34 refs in 0.18.2); "AFM" is the new
-  framing (0→3).
+- **AFM observer/standalone mode** (net-new). A `MultiplexStream` fans **multiple concurrent
+  WebSocket clients into one `KiroAgent`**, with a new `ClientRole = 'primary' | 'observer'`
+  (`multiplex-stream.d.ts:54`). A *primary* answers agent-initiated requests via normal JSON-RPC
+  responses and receives fs/terminal callbacks; an *observer* gets a synchronous protocol-level
+  ack, has its raw responses discarded by the mux, and resolves prompts asynchronously by
+  `toolCallId` (`_kiro/permission/respond` pre-existing; `_kiro/userInput/respond` new). Default
+  role is **observer** for backward compat with "standalone WS server scenarios where all
+  connections are external portals." The "AFM window" is such an observer, browsing sessions
+  without creating one (which is why a new `refreshGovernance()` was added — a fresh agent
+  serving only a session-less observer would otherwise never resolve governance). The acronym is
+  **never expanded** in the bundle (0→3 comment-only occurrences); "Agent Frontend Multiplexer"
+  is plausible but unconfirmed. **This mux is the WebSocket transport — the stdio single-client
+  path cyril spawns is unaffected by it.**
 - **Ext-method persistence classification** is now explicit: KAS tags every `_kiro/*` method as
   `transient` / `sessionForwarded` / `localOnly` / `localOnlyUntilScoped`, with a hard
   `assertExtMethodClassified` that throws if a method is unclassified — a good enumeration of the
@@ -212,8 +218,45 @@ reproducibility confirmed). Capabilities `checkpoints`, `sessionList`, `policyNo
   `relayConfigured` (→ `executionTargets:["local","cloud-sandbox"]`), `remoteConfigured` (→
   `sessionSources:["local","remote"]`, `sessionListScopes:["workspace","user"]`), and
   `providersConfigured` (→ `sourceProviders` + the two `sourceProviders/*` methods). None active
-  on a local logged-out run, so the wire stays local-only — consistent with the telemetry showing
-  the cloud stack being *measured* but not yet reachable.
+  on a local logged-out run, so the wire stays local-only.
+
+- **Cloud/relay execution is now WIRED, not just measured** — the real substance of the KAS jump.
+  0.22.7 swaps the fat `@amzn/kiro-web-portal-service-typescript-client` (~100 Smithy commands:
+  threads, billing, automations, learnings, secrets…) for a slim
+  **`@amzn/kiro-web-portal-service-bearer-typescript-client`** (`KiroWebBearerService`) with ~30
+  agent-plane commands including a **new `SendAcpMessage` op** (ext methods/notifications forward
+  over it as `relayed.acp_message.forward`), `StreamSendMessage`, `LoadSession`, `CancelSession`,
+  `RespondToPermission`. Sessions now carry residency `kind: "relayed" | local`; a relayed
+  prompt goes to the sandbox via `remoteAgent.submitPrompt` (renamed from 0.18.2's `submitTurn`)
+  and a per-session durable **"downlink"** pump projects `content/callback/turnEnded/
+  historyComplete` frames to subscribed clients; `session/load` returns once the downlink opens;
+  new `TurnWaiter` parks handlers on turn boundaries. Comment: "a relayed session is
+  indistinguishable from a local one to the client." Refusals surface as
+  `RemoteSessionUnsupportedError`. So the cloud stack moved from **dormant scaffolding (2.12.3) →
+  wired-but-gated (2.14.0)**; it is still inert on a local/logged-out run, but the execution
+  plumbing now exists. Notably `RespondToFrontendToolCall` did **not** survive the BFF swap —
+  reinforcing the client-side `frontendToolCall` withdrawal above. Residency routing lives in a
+  new `src/acp/ext-method-routing.ts` (the transient/localOnly/sessionForwarded/
+  localOnlyUntilScoped table above).
+
+- **Unsolicited safety/governance pushes at session start** (client-relevant, but gated). New
+  `bootstrapSafetyProperties` fire-and-forgets a `_kiro/safety/propertiesChanged` push at *both*
+  `session/new` and `session/load` (gated on the client advertising the safety cap +
+  monitor/enforce flag); a `_kiro/governance/state` push goes to every WS client at connect with
+  an **empty `sessionId: ""`**. cyril won't receive these unless it advertises `infrastructureSafety`,
+  but the pattern to remember is: **KAS can push session-less/unsolicited state at session start.**
+  Paired with a new KAS-side infra-deploy detector (classifies `cloudformation/cdk/sam/terraform/
+  tofu/pulumi/kubectl/helm…` bash invocations into interactive/alwaysAuto/bypassed by flags) — the
+  KAS analogue of the v2 Rust permission detector.
+
+- **Stream-recovery** (off-wire, matches the 2.14.0 "[V3] automatic retry" changelog item): a
+  shared-budget retry loop silently re-issues empty (`EMPTY_RESPONSE_RETRY`) and truncation-
+  suspected (`TRUNCATED_RESPONSE_RETRY`) model streams, plus a Q-multiblock reasoningContent
+  strip-and-retry; on exhaustion the turn fails with `NoResponseError` instead of silently ending.
+
+- **Frozen** (occurrence-count-confirmed): no new tools, subagents, agent definitions, modes, or
+  `session_info_update` variants; `buildConfigOptions` identical; checkpoints/`kiro-snapshot-v2`,
+  steering, `searchMemories`/`memoryEnable`, KiroClientMeta inbound flags — all flat.
 
 ## Telemetry metric catalog (2.14.0-specific; 2.14.1 byte-identical here)
 
@@ -227,8 +270,9 @@ reproducibility confirmed). Capabilities `checkpoints`, `sessionList`, `policyNo
 - `cloud_event` allowed-values gain `ready` + `provision_failed` (completes the cloud-session
   lifecycle state machine on the existing `kiro_cli_cloud_session_total`).
 
-The dormant cloud-agent stack (first seen 2.12.3) is now being **measured** — a strong
-pre-launch signal, though still zero doc-manifest footprint and dormant on the wire.
+These metrics measure the cloud/relay execution path that 0.22.7 **wired** (see the KAS section)
+— the stack progressed from dormant-scaffolding (2.12.3) to wired-and-instrumented (2.14.0),
+still gated off on a local run and with zero doc-manifest footprint, but no longer just a spec.
 
 ## Doc-manifest delta — SAFE
 
