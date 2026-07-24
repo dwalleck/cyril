@@ -162,6 +162,24 @@ already receives, *not* the live workflow-progress protocol. **Corrects the reco
 from the `agent-subtask` tool-call stream it already receives, without waiting for the workflow
 protocol to light up.
 
+**Trace-verified emission shape + the one blocker (2026-07-24).** Confirmed against the committed
+KAS trace `experiments/conductor-spike/kas-live-session-trace-2.11.0.jsonl` (KAS 0.8.0): a subagent
+run surfaces as ordinary `session/update` **`tool_call` + `tool_call_update`** frames tagged
+`_meta.kiro: {kind: "agent-subtask", agentSubtaskId: <uuid>}` (sample: 5 subtask groups, 44
+`tool_call` + 113 `tool_call_update` + 8 `session_info_update`), with the **plan in the initial
+`tool_call`'s `rawInput`** (invoke path `{name, prompt, explanation, contextFiles, preset}`) and
+grouping by `agentSubtaskId`. **The blocker is client-side, not a missing emitter:** these arrive
+with ACP **`kind: "other"`**, which cyril filters as agent "planning" steps
+([[reference_kiro_tool_input_schemas]] / CLAUDE.md ToolKind::Other rule) — so cyril drops the whole
+run unless it checks `_meta.kiro.kind == "agent-subtask"` *before* that filter. A live 2.14.1
+`OrchestrateSubAgent` capture to pin the `{task, stages, repeat}` wire shape was **attempted and
+blocked**: the harness (`experiments/conductor-spike/probe-kas-orchestrate-capture-2.14.1.py`,
+faithful `kiro-cli-chat acp --agent-engine kas` spawn) reached KAS, but every on-disk token is
+expired (`kiro-auth-token*.json`; `auth_kv` not plaintext), so KAS rejected `getAccessToken` with
+`-32000 TokenInvalidError` and the turn never orchestrated (log:
+`logs/kas-orchestrate-capture-2.14.1-attempt.summary`). Re-run it with a fresh token (right after
+`kiro login`, or wire OIDC refresh into the probe) to capture the DAG/repeat wire shape.
+
 ### `_kiro/frontendToolCall` client handler REMOVED in 2.14.0
 
 The client-side handler added in **2.13.0** (registered cap `frontendToolCall:true`, declined

@@ -1,0 +1,14 @@
+sessionId: sess_acaaa0fb-a4c0-4281-b55b-f039e84acb3e | init ok: True
+
+=== stopReason: None ===
+auth getAccessToken calls: 7 | userInput calls: 0
+INBOUND methods: {"_kiro/auth/getAccessToken": 7, "_kiro/mcp/status": 2, "_kiro/governance/state": 1, "_kiro/tools/didChange": 2, "_kiro/sessions/changed": 4, "_kiro/steering/documents_changed": 1, "session/update": 10, "_kiro/powers/items_changed": 1}
+session/update kinds: {"available_commands_update": 1, "session_info_update": 8, "agent_message_chunk": 1}
+tool_call _meta.kiro.kind histogram: {}
+distinct agentSubtaskId: 0
+workflow-progress frames: 0 | loop_iteration frames: 0
+orchestrate/invoke rawInputs captured: 0
+
+--- tool_call timeline (upd | acpKind | title | metaKind | subtask | rawInputKeys) ---
+
+full raw wire log -> /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/500d4587-d5ad-4e0a-bec9-961d44926eae/scratchpad/kas-orchestrate-capture-2.14.1.jsonl
