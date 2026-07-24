@@ -913,11 +913,14 @@ mod tests {
     const BG_BLACK: (u8, u8, u8) = (0x00, 0x00, 0x00);
     const BG_CHROME: (u8, u8, u8) = (0x1e, 0x1e, 0x2e);
 
-    // Per-tier targets (design FD-1): PRIMARY = AA text, MUTED = AA large / UI,
-    // SATURATED = keep the standard hue (>=3.0 chrome / >=4.5 black).
-    const PRIMARY: f64 = 4.5;
-    const MUTED: f64 = 3.0;
-    const SATURATED: f64 = 3.0;
+    // Per-tier targets (design FD-1) as (chrome_min, black_min): PRIMARY = AA
+    // text on both; MUTED = AA large / UI on both; SATURATED keeps the standard
+    // hue, quieter on chrome (>=3.0) but readable on black (>=4.5). The two legs
+    // are enforced separately so the asymmetric SATURATED target is not silently
+    // collapsed to its chrome leg.
+    const PRIMARY: (f64, f64) = (4.5, 4.5);
+    const MUTED: (f64, f64) = (3.0, 3.0);
+    const SATURATED: (f64, f64) = (3.0, 4.5);
 
     #[test]
     fn cyril_dark_contrast_contract() {
@@ -929,8 +932,11 @@ mod tests {
         );
 
         let t = resolve_truecolor(ThemeId::CyrilDark);
-        // (role color, tier target) for every conversation FOREGROUND role.
-        let roles: [(&str, Color, f64); 24] = [
+        // (role color, (chrome_min, black_min)) for every conversation
+        // FOREGROUND role — every distinct role, including the two diff roles
+        // that share success/danger's RGB (an independent change to either
+        // would otherwise slip the fence).
+        let roles: [(&str, Color, (f64, f64)); 26] = [
             ("text", t.text, PRIMARY),
             ("user", t.user, PRIMARY),
             ("agent", t.agent, PRIMARY),
@@ -953,17 +959,18 @@ mod tests {
             ("subdued_positive", t.subdued_positive, MUTED),
             ("subdued_negative", t.subdued_negative, MUTED),
             ("success", t.success, SATURATED),
+            ("diff_add", t.diff_add, SATURATED),
             ("warning", t.warning, SATURATED),
             ("danger", t.danger, SATURATED),
+            ("diff_delete", t.diff_delete, SATURATED),
         ];
-        for (name, color, target) in roles {
+        for (name, color, (chrome_min, black_min)) in roles {
             let rgb = rgb_of(color);
             let (cb, cc) = (contrast(rgb, BG_BLACK), contrast(rgb, BG_CHROME));
-            let worst = cb.min(cc);
             assert!(
-                worst >= target,
-                "{name} #{:02x}{:02x}{:02x}: contrast {worst:.2} < tier {target} \
-                 (black {cb:.2}, chrome {cc:.2})",
+                cc >= chrome_min && cb >= black_min,
+                "{name} #{:02x}{:02x}{:02x}: contrast black {cb:.2} (>= {black_min}), \
+                 chrome {cc:.2} (>= {chrome_min}) — tier not met",
                 rgb.0,
                 rgb.1,
                 rgb.2
@@ -988,10 +995,10 @@ mod tests {
             r < g && r < b,
             "accent_quinary must stay teal (red is the min)"
         );
-        let (r, _g, b) = rgb_of(t.accent_quaternary);
+        let (r, g, b) = rgb_of(t.accent_quaternary);
         assert!(
-            r > 0x40 && b > 0x40,
-            "accent_quaternary must keep magenta (red+blue)"
+            g < r && g < b,
+            "accent_quaternary must stay magenta (green is the min)"
         );
         let (r, g, b) = rgb_of(t.emphasis);
         assert!(
