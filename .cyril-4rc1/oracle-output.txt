@@ -1,0 +1,11 @@
+PASS bug: hitchhiker on feat-b (yes)
+PASS bug: NOT on intended feat-a (no)
+PASS fix: A-work on feat-a (yes)
+PASS fix: B-work on feat-b (yes)
+PASS fix: A-work NOT on feat-b (no)
+PASS fix: B-work NOT on feat-a (no)
+PASS fix: feat-a tip lives only where expected (feat-a )
+PASS worktrees present (3)
+PASS dup-branch worktree refused (refused)
+
+oracle: 9 passed, 0 failed
