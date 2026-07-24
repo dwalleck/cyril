@@ -22,7 +22,16 @@ resolved client (probe-verified against the shipped 2.13.0 bundle,
    `KIRO_LOAD_ALL_REMOTE_TOOLS=true` forces `*` (debug-grade, tools only).
 3. **Hooks briefing** (`hooksBlock`): injected into the system prompt only
    for kiro-ide — see cyril-jiyn (KAS-7) for the coupling with cyril's hooks
-   machinery.
+   machinery. **cyril _receives_ this briefing** — its unrecognized name
+   falls back to kiro-ide, the branch the `hooksBlock` gate selects
+   (`client === "kiro-ide" ? hooksBlock : ""`); live-confirmed by the
+   `sysprompt` arm of `.cyril-booz/`, where the model quoted its `<hooks>`
+   section verbatim. Note the briefing is an _authoring_ guide (how to
+   create hooks) and confers **no authority** on injected `HOOK_INSTRUCTION`
+   hook output — cyril-booz probed every framing (including KAS's own
+   production framing) and none restored compliance (0/18). The refusal
+   cyril-tpfd saw is the model's injection defense, structural to the
+   user-turn injection point, not a missing briefing. See cyril-booz.
 4. **Repository honoring** (`honorsRepositories`): kiro-web/sandbox only.
 
 Probing also established there is **no override**: the fallback inference is
