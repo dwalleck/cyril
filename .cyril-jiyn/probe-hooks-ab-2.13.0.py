@@ -41,11 +41,16 @@ def token():
     c = sqlite3.connect(DB)
     tok = json.loads(c.execute(
         "select value from auth_kv where key='kirocli:odic:token'").fetchone()[0])
-    arn = c.execute(
+    raw = c.execute(
         "select value from state where key='api.codewhisperer.profile'").fetchone()[0]
-    arn = arn.decode() if isinstance(arn, (bytes, bytearray)) else arn
-    if arn.strip().startswith('"'):
-        arn = json.loads(arn)
+    raw = raw.decode() if isinstance(raw, (bytes, bytearray)) else raw
+    # The profile row is a JSON OBJECT {"arn", "profile_name"}; sending it
+    # verbatim as profileArn = KRS 400 REQUEST_BODY_INVALID on every turn
+    # (this poisoned the 2026-07-19 A/B's prompt_completed; LIST/EXEC/marker
+    # conclusions were unaffected — those fire before the model call).
+    # Fixed 2026-07-23 (cyril-tpfd).
+    prof = json.loads(raw)
+    arn = prof["arn"] if isinstance(prof, dict) else prof
     return {"accessToken": tok["access_token"], "expiresAt": tok["expires_at"],
             "profileArn": arn}
 

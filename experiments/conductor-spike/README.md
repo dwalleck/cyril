@@ -69,3 +69,11 @@ agent-side (marker file created), while the host arm drives `list`+`executeHook`
 and leaves the disk hook inert. If `buildSessionHooks` selection changes (both
 models active, or a different gate), update the decided default in
 docs/ROADMAP.md KAS-7 and re-triage the kas_hooks knob.
+
+Harness caveat (fixed 2026-07-23, cyril-tpfd): until then the probe's
+`token()` sent the `api.codewhisperer.profile` row — a JSON object — verbatim
+as `profileArn`, so every turn died with KRS 400 REQUEST_BODY_INVALID and the
+2026-07-19 A/B recorded `prompt_completed: false` in both arms. The A/B's
+LIST/EXEC/marker conclusions are unaffected (those callbacks fire before the
+model call). Expect `prompt_completed: true` from fixed runs; a false there is
+signal again.
