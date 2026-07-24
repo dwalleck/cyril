@@ -648,66 +648,66 @@ approval-option	6	8	 	Reset	Reset	NONE
 approval-option	7	8	 	Reset	Reset	NONE
 approval-option	8	8	 	Reset	Reset	NONE
 approval-option	9	8	 	Reset	Reset	NONE
-approval-option	10	8	┌	Yellow	Reset	NONE
-approval-option	11	8	 	Yellow	Reset	BOLD
-approval-option	12	8	P	Yellow	Reset	BOLD
-approval-option	13	8	e	Yellow	Reset	BOLD
-approval-option	14	8	r	Yellow	Reset	BOLD
-approval-option	15	8	m	Yellow	Reset	BOLD
-approval-option	16	8	i	Yellow	Reset	BOLD
-approval-option	17	8	s	Yellow	Reset	BOLD
-approval-option	18	8	s	Yellow	Reset	BOLD
-approval-option	19	8	i	Yellow	Reset	BOLD
-approval-option	20	8	o	Yellow	Reset	BOLD
-approval-option	21	8	n	Yellow	Reset	BOLD
-approval-option	22	8	 	Yellow	Reset	BOLD
-approval-option	23	8	R	Yellow	Reset	BOLD
-approval-option	24	8	e	Yellow	Reset	BOLD
-approval-option	25	8	q	Yellow	Reset	BOLD
-approval-option	26	8	u	Yellow	Reset	BOLD
-approval-option	27	8	i	Yellow	Reset	BOLD
-approval-option	28	8	r	Yellow	Reset	BOLD
-approval-option	29	8	e	Yellow	Reset	BOLD
-approval-option	30	8	d	Yellow	Reset	BOLD
-approval-option	31	8	 	Yellow	Reset	BOLD
-approval-option	32	8	─	Yellow	Reset	NONE
-approval-option	33	8	─	Yellow	Reset	NONE
-approval-option	34	8	─	Yellow	Reset	NONE
-approval-option	35	8	─	Yellow	Reset	NONE
-approval-option	36	8	─	Yellow	Reset	NONE
-approval-option	37	8	─	Yellow	Reset	NONE
-approval-option	38	8	─	Yellow	Reset	NONE
-approval-option	39	8	─	Yellow	Reset	NONE
-approval-option	40	8	─	Yellow	Reset	NONE
-approval-option	41	8	─	Yellow	Reset	NONE
-approval-option	42	8	─	Yellow	Reset	NONE
-approval-option	43	8	─	Yellow	Reset	NONE
-approval-option	44	8	─	Yellow	Reset	NONE
-approval-option	45	8	─	Yellow	Reset	NONE
-approval-option	46	8	─	Yellow	Reset	NONE
-approval-option	47	8	─	Yellow	Reset	NONE
-approval-option	48	8	─	Yellow	Reset	NONE
-approval-option	49	8	─	Yellow	Reset	NONE
-approval-option	50	8	─	Yellow	Reset	NONE
-approval-option	51	8	─	Yellow	Reset	NONE
-approval-option	52	8	─	Yellow	Reset	NONE
-approval-option	53	8	─	Yellow	Reset	NONE
-approval-option	54	8	─	Yellow	Reset	NONE
-approval-option	55	8	─	Yellow	Reset	NONE
-approval-option	56	8	─	Yellow	Reset	NONE
-approval-option	57	8	─	Yellow	Reset	NONE
-approval-option	58	8	─	Yellow	Reset	NONE
-approval-option	59	8	─	Yellow	Reset	NONE
-approval-option	60	8	─	Yellow	Reset	NONE
-approval-option	61	8	─	Yellow	Reset	NONE
-approval-option	62	8	─	Yellow	Reset	NONE
-approval-option	63	8	─	Yellow	Reset	NONE
-approval-option	64	8	─	Yellow	Reset	NONE
-approval-option	65	8	─	Yellow	Reset	NONE
-approval-option	66	8	─	Yellow	Reset	NONE
-approval-option	67	8	─	Yellow	Reset	NONE
-approval-option	68	8	─	Yellow	Reset	NONE
-approval-option	69	8	┐	Yellow	Reset	NONE
+approval-option	10	8	┌	Rgb(215, 186, 125)	Reset	NONE
+approval-option	11	8	 	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	12	8	P	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	13	8	e	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	14	8	r	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	15	8	m	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	16	8	i	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	17	8	s	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	18	8	s	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	19	8	i	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	20	8	o	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	21	8	n	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	22	8	 	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	23	8	R	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	24	8	e	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	25	8	q	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	26	8	u	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	27	8	i	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	28	8	r	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	29	8	e	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	30	8	d	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	31	8	 	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	32	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	33	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	34	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	35	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	36	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	37	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	38	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	39	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	40	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	41	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	42	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	43	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	44	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	45	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	46	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	47	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	48	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	49	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	50	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	51	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	52	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	53	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	54	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	55	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	56	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	57	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	58	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	59	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	60	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	61	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	62	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	63	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	64	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	65	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	66	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	67	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	68	8	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	69	8	┐	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	8	 	Reset	Reset	NONE
 approval-option	71	8	 	Reset	Reset	NONE
 approval-option	72	8	 	Reset	Reset	NONE
@@ -728,23 +728,23 @@ approval-option	6	9	 	Reset	Reset	NONE
 approval-option	7	9	 	Reset	Reset	NONE
 approval-option	8	9	 	Reset	Reset	NONE
 approval-option	9	9	 	Reset	Reset	NONE
-approval-option	10	9	│	Yellow	Reset	NONE
-approval-option	11	9	A	Yellow	Reset	NONE
-approval-option	12	9	l	Yellow	Reset	NONE
-approval-option	13	9	l	Yellow	Reset	NONE
-approval-option	14	9	o	Yellow	Reset	NONE
-approval-option	15	9	w	Yellow	Reset	NONE
-approval-option	16	9	 	Yellow	Reset	NONE
-approval-option	17	9	e	Yellow	Reset	NONE
-approval-option	18	9	x	Yellow	Reset	NONE
-approval-option	19	9	e	Yellow	Reset	NONE
-approval-option	20	9	c	Yellow	Reset	NONE
-approval-option	21	9	u	Yellow	Reset	NONE
-approval-option	22	9	t	Yellow	Reset	NONE
-approval-option	23	9	i	Yellow	Reset	NONE
-approval-option	24	9	o	Yellow	Reset	NONE
-approval-option	25	9	n	Yellow	Reset	NONE
-approval-option	26	9	?	Yellow	Reset	NONE
+approval-option	10	9	│	Rgb(215, 186, 125)	Reset	NONE
+approval-option	11	9	A	Rgb(215, 186, 125)	Reset	NONE
+approval-option	12	9	l	Rgb(215, 186, 125)	Reset	NONE
+approval-option	13	9	l	Rgb(215, 186, 125)	Reset	NONE
+approval-option	14	9	o	Rgb(215, 186, 125)	Reset	NONE
+approval-option	15	9	w	Rgb(215, 186, 125)	Reset	NONE
+approval-option	16	9	 	Rgb(215, 186, 125)	Reset	NONE
+approval-option	17	9	e	Rgb(215, 186, 125)	Reset	NONE
+approval-option	18	9	x	Rgb(215, 186, 125)	Reset	NONE
+approval-option	19	9	e	Rgb(215, 186, 125)	Reset	NONE
+approval-option	20	9	c	Rgb(215, 186, 125)	Reset	NONE
+approval-option	21	9	u	Rgb(215, 186, 125)	Reset	NONE
+approval-option	22	9	t	Rgb(215, 186, 125)	Reset	NONE
+approval-option	23	9	i	Rgb(215, 186, 125)	Reset	NONE
+approval-option	24	9	o	Rgb(215, 186, 125)	Reset	NONE
+approval-option	25	9	n	Rgb(215, 186, 125)	Reset	NONE
+approval-option	26	9	?	Rgb(215, 186, 125)	Reset	NONE
 approval-option	27	9	 	Reset	Reset	NONE
 approval-option	28	9	 	Reset	Reset	NONE
 approval-option	29	9	 	Reset	Reset	NONE
@@ -787,7 +787,7 @@ approval-option	65	9	 	Reset	Reset	NONE
 approval-option	66	9	 	Reset	Reset	NONE
 approval-option	67	9	 	Reset	Reset	NONE
 approval-option	68	9	 	Reset	Reset	NONE
-approval-option	69	9	│	Yellow	Reset	NONE
+approval-option	69	9	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	9	 	Reset	Reset	NONE
 approval-option	71	9	 	Reset	Reset	NONE
 approval-option	72	9	 	Reset	Reset	NONE
@@ -808,7 +808,7 @@ approval-option	6	10	 	Reset	Reset	NONE
 approval-option	7	10	 	Reset	Reset	NONE
 approval-option	8	10	 	Reset	Reset	NONE
 approval-option	9	10	 	Reset	Reset	NONE
-approval-option	10	10	│	Yellow	Reset	NONE
+approval-option	10	10	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	11	10	 	Reset	Reset	NONE
 approval-option	12	10	 	Reset	Reset	NONE
 approval-option	13	10	 	Reset	Reset	NONE
@@ -867,7 +867,7 @@ approval-option	65	10	 	Reset	Reset	NONE
 approval-option	66	10	 	Reset	Reset	NONE
 approval-option	67	10	 	Reset	Reset	NONE
 approval-option	68	10	 	Reset	Reset	NONE
-approval-option	69	10	│	Yellow	Reset	NONE
+approval-option	69	10	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	10	 	Reset	Reset	NONE
 approval-option	71	10	 	Reset	Reset	NONE
 approval-option	72	10	 	Reset	Reset	NONE
@@ -888,7 +888,7 @@ approval-option	6	11	 	Reset	Reset	NONE
 approval-option	7	11	 	Reset	Reset	NONE
 approval-option	8	11	 	Reset	Reset	NONE
 approval-option	9	11	 	Reset	Reset	NONE
-approval-option	10	11	│	Yellow	Reset	NONE
+approval-option	10	11	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	11	11	▸	White	Rgb(50, 50, 70)	BOLD
 approval-option	12	11	 	White	Rgb(50, 50, 70)	BOLD
 approval-option	13	11	A	White	Rgb(50, 50, 70)	BOLD
@@ -947,7 +947,7 @@ approval-option	65	11	 	Reset	Reset	NONE
 approval-option	66	11	 	Reset	Reset	NONE
 approval-option	67	11	 	Reset	Reset	NONE
 approval-option	68	11	 	Reset	Reset	NONE
-approval-option	69	11	│	Yellow	Reset	NONE
+approval-option	69	11	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	11	 	Reset	Reset	NONE
 approval-option	71	11	 	Reset	Reset	NONE
 approval-option	72	11	 	Reset	Reset	NONE
@@ -968,7 +968,7 @@ approval-option	6	12	 	Reset	Reset	NONE
 approval-option	7	12	 	Reset	Reset	NONE
 approval-option	8	12	 	Reset	Reset	NONE
 approval-option	9	12	 	Reset	Reset	NONE
-approval-option	10	12	│	Yellow	Reset	NONE
+approval-option	10	12	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	11	12	 	Gray	Reset	NONE
 approval-option	12	12	 	Gray	Reset	NONE
 approval-option	13	12	R	Gray	Reset	NONE
@@ -1027,7 +1027,7 @@ approval-option	65	12	 	Reset	Reset	NONE
 approval-option	66	12	 	Reset	Reset	NONE
 approval-option	67	12	 	Reset	Reset	NONE
 approval-option	68	12	 	Reset	Reset	NONE
-approval-option	69	12	│	Yellow	Reset	NONE
+approval-option	69	12	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	12	 	Reset	Reset	NONE
 approval-option	71	12	 	Reset	Reset	NONE
 approval-option	72	12	 	Reset	Reset	NONE
@@ -1048,7 +1048,7 @@ approval-option	6	13	 	Reset	Reset	NONE
 approval-option	7	13	 	Reset	Reset	NONE
 approval-option	8	13	 	Reset	Reset	NONE
 approval-option	9	13	 	Reset	Reset	NONE
-approval-option	10	13	│	Yellow	Reset	NONE
+approval-option	10	13	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	11	13	 	Reset	Reset	NONE
 approval-option	12	13	 	Reset	Reset	NONE
 approval-option	13	13	 	Reset	Reset	NONE
@@ -1107,7 +1107,7 @@ approval-option	65	13	 	Reset	Reset	NONE
 approval-option	66	13	 	Reset	Reset	NONE
 approval-option	67	13	 	Reset	Reset	NONE
 approval-option	68	13	 	Reset	Reset	NONE
-approval-option	69	13	│	Yellow	Reset	NONE
+approval-option	69	13	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	13	 	Reset	Reset	NONE
 approval-option	71	13	 	Reset	Reset	NONE
 approval-option	72	13	 	Reset	Reset	NONE
@@ -1128,7 +1128,7 @@ approval-option	6	14	 	Reset	Reset	NONE
 approval-option	7	14	 	Reset	Reset	NONE
 approval-option	8	14	 	Reset	Reset	NONE
 approval-option	9	14	 	Reset	Reset	NONE
-approval-option	10	14	│	Yellow	Reset	NONE
+approval-option	10	14	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	11	14	 	Reset	Reset	NONE
 approval-option	12	14	 	Reset	Reset	NONE
 approval-option	13	14	 	Reset	Reset	NONE
@@ -1187,7 +1187,7 @@ approval-option	65	14	 	Reset	Reset	NONE
 approval-option	66	14	 	Reset	Reset	NONE
 approval-option	67	14	 	Reset	Reset	NONE
 approval-option	68	14	 	Reset	Reset	NONE
-approval-option	69	14	│	Yellow	Reset	NONE
+approval-option	69	14	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	14	 	Reset	Reset	NONE
 approval-option	71	14	 	Reset	Reset	NONE
 approval-option	72	14	 	Reset	Reset	NONE
@@ -1208,66 +1208,66 @@ approval-option	6	15	 	Reset	Reset	NONE
 approval-option	7	15	 	Reset	Reset	NONE
 approval-option	8	15	 	Reset	Reset	NONE
 approval-option	9	15	 	Reset	Reset	NONE
-approval-option	10	15	└	Yellow	Reset	NONE
-approval-option	11	15	─	Yellow	Reset	NONE
-approval-option	12	15	─	Yellow	Reset	NONE
-approval-option	13	15	─	Yellow	Reset	NONE
-approval-option	14	15	─	Yellow	Reset	NONE
-approval-option	15	15	─	Yellow	Reset	NONE
-approval-option	16	15	─	Yellow	Reset	NONE
-approval-option	17	15	─	Yellow	Reset	NONE
-approval-option	18	15	─	Yellow	Reset	NONE
-approval-option	19	15	─	Yellow	Reset	NONE
-approval-option	20	15	─	Yellow	Reset	NONE
-approval-option	21	15	─	Yellow	Reset	NONE
-approval-option	22	15	─	Yellow	Reset	NONE
-approval-option	23	15	─	Yellow	Reset	NONE
-approval-option	24	15	─	Yellow	Reset	NONE
-approval-option	25	15	─	Yellow	Reset	NONE
-approval-option	26	15	─	Yellow	Reset	NONE
-approval-option	27	15	─	Yellow	Reset	NONE
-approval-option	28	15	─	Yellow	Reset	NONE
-approval-option	29	15	─	Yellow	Reset	NONE
-approval-option	30	15	─	Yellow	Reset	NONE
-approval-option	31	15	─	Yellow	Reset	NONE
-approval-option	32	15	─	Yellow	Reset	NONE
-approval-option	33	15	─	Yellow	Reset	NONE
-approval-option	34	15	─	Yellow	Reset	NONE
-approval-option	35	15	─	Yellow	Reset	NONE
-approval-option	36	15	─	Yellow	Reset	NONE
-approval-option	37	15	─	Yellow	Reset	NONE
-approval-option	38	15	─	Yellow	Reset	NONE
-approval-option	39	15	─	Yellow	Reset	NONE
-approval-option	40	15	─	Yellow	Reset	NONE
-approval-option	41	15	─	Yellow	Reset	NONE
-approval-option	42	15	─	Yellow	Reset	NONE
-approval-option	43	15	─	Yellow	Reset	NONE
-approval-option	44	15	─	Yellow	Reset	NONE
-approval-option	45	15	─	Yellow	Reset	NONE
-approval-option	46	15	─	Yellow	Reset	NONE
-approval-option	47	15	─	Yellow	Reset	NONE
-approval-option	48	15	─	Yellow	Reset	NONE
-approval-option	49	15	─	Yellow	Reset	NONE
-approval-option	50	15	─	Yellow	Reset	NONE
-approval-option	51	15	─	Yellow	Reset	NONE
-approval-option	52	15	─	Yellow	Reset	NONE
-approval-option	53	15	─	Yellow	Reset	NONE
-approval-option	54	15	─	Yellow	Reset	NONE
-approval-option	55	15	─	Yellow	Reset	NONE
-approval-option	56	15	─	Yellow	Reset	NONE
-approval-option	57	15	─	Yellow	Reset	NONE
-approval-option	58	15	─	Yellow	Reset	NONE
-approval-option	59	15	─	Yellow	Reset	NONE
-approval-option	60	15	─	Yellow	Reset	NONE
-approval-option	61	15	─	Yellow	Reset	NONE
-approval-option	62	15	─	Yellow	Reset	NONE
-approval-option	63	15	─	Yellow	Reset	NONE
-approval-option	64	15	─	Yellow	Reset	NONE
-approval-option	65	15	─	Yellow	Reset	NONE
-approval-option	66	15	─	Yellow	Reset	NONE
-approval-option	67	15	─	Yellow	Reset	NONE
-approval-option	68	15	─	Yellow	Reset	NONE
-approval-option	69	15	┘	Yellow	Reset	NONE
+approval-option	10	15	└	Rgb(215, 186, 125)	Reset	NONE
+approval-option	11	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	12	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	13	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	14	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	15	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	16	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	17	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	18	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	19	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	20	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	21	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	22	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	23	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	24	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	25	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	26	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	27	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	28	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	29	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	30	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	31	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	32	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	33	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	34	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	35	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	36	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	37	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	38	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	39	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	40	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	41	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	42	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	43	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	44	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	45	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	46	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	47	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	48	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	49	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	50	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	51	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	52	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	53	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	54	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	55	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	56	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	57	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	58	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	59	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	60	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	61	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	62	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	63	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	64	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	65	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	66	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	67	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	68	15	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	69	15	┘	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	15	 	Reset	Reset	NONE
 approval-option	71	15	 	Reset	Reset	NONE
 approval-option	72	15	 	Reset	Reset	NONE
@@ -2486,70 +2486,70 @@ approval-trust	4	7	 	Reset	Reset	NONE
 approval-trust	5	7	 	Reset	Reset	NONE
 approval-trust	6	7	 	Reset	Reset	NONE
 approval-trust	7	7	 	Reset	Reset	NONE
-approval-trust	8	7	┌	Cyan	Reset	NONE
-approval-trust	9	7	 	Cyan	Reset	BOLD
-approval-trust	10	7	A	Cyan	Reset	BOLD
-approval-trust	11	7	l	Cyan	Reset	BOLD
-approval-trust	12	7	w	Cyan	Reset	BOLD
-approval-trust	13	7	a	Cyan	Reset	BOLD
-approval-trust	14	7	y	Cyan	Reset	BOLD
-approval-trust	15	7	s	Cyan	Reset	BOLD
-approval-trust	16	7	 	Cyan	Reset	BOLD
-approval-trust	17	7	A	Cyan	Reset	BOLD
-approval-trust	18	7	l	Cyan	Reset	BOLD
-approval-trust	19	7	l	Cyan	Reset	BOLD
-approval-trust	20	7	o	Cyan	Reset	BOLD
-approval-trust	21	7	w	Cyan	Reset	BOLD
-approval-trust	22	7	 	Cyan	Reset	BOLD
-approval-trust	23	7	—	Cyan	Reset	BOLD
-approval-trust	24	7	 	Cyan	Reset	BOLD
-approval-trust	25	7	C	Cyan	Reset	BOLD
-approval-trust	26	7	h	Cyan	Reset	BOLD
-approval-trust	27	7	o	Cyan	Reset	BOLD
-approval-trust	28	7	o	Cyan	Reset	BOLD
-approval-trust	29	7	s	Cyan	Reset	BOLD
-approval-trust	30	7	e	Cyan	Reset	BOLD
-approval-trust	31	7	 	Cyan	Reset	BOLD
-approval-trust	32	7	S	Cyan	Reset	BOLD
-approval-trust	33	7	c	Cyan	Reset	BOLD
-approval-trust	34	7	o	Cyan	Reset	BOLD
-approval-trust	35	7	p	Cyan	Reset	BOLD
-approval-trust	36	7	e	Cyan	Reset	BOLD
-approval-trust	37	7	 	Cyan	Reset	BOLD
-approval-trust	38	7	─	Cyan	Reset	NONE
-approval-trust	39	7	─	Cyan	Reset	NONE
-approval-trust	40	7	─	Cyan	Reset	NONE
-approval-trust	41	7	─	Cyan	Reset	NONE
-approval-trust	42	7	─	Cyan	Reset	NONE
-approval-trust	43	7	─	Cyan	Reset	NONE
-approval-trust	44	7	─	Cyan	Reset	NONE
-approval-trust	45	7	─	Cyan	Reset	NONE
-approval-trust	46	7	─	Cyan	Reset	NONE
-approval-trust	47	7	─	Cyan	Reset	NONE
-approval-trust	48	7	─	Cyan	Reset	NONE
-approval-trust	49	7	─	Cyan	Reset	NONE
-approval-trust	50	7	─	Cyan	Reset	NONE
-approval-trust	51	7	─	Cyan	Reset	NONE
-approval-trust	52	7	─	Cyan	Reset	NONE
-approval-trust	53	7	─	Cyan	Reset	NONE
-approval-trust	54	7	─	Cyan	Reset	NONE
-approval-trust	55	7	─	Cyan	Reset	NONE
-approval-trust	56	7	─	Cyan	Reset	NONE
-approval-trust	57	7	─	Cyan	Reset	NONE
-approval-trust	58	7	─	Cyan	Reset	NONE
-approval-trust	59	7	─	Cyan	Reset	NONE
-approval-trust	60	7	─	Cyan	Reset	NONE
-approval-trust	61	7	─	Cyan	Reset	NONE
-approval-trust	62	7	─	Cyan	Reset	NONE
-approval-trust	63	7	─	Cyan	Reset	NONE
-approval-trust	64	7	─	Cyan	Reset	NONE
-approval-trust	65	7	─	Cyan	Reset	NONE
-approval-trust	66	7	─	Cyan	Reset	NONE
-approval-trust	67	7	─	Cyan	Reset	NONE
-approval-trust	68	7	─	Cyan	Reset	NONE
-approval-trust	69	7	─	Cyan	Reset	NONE
-approval-trust	70	7	─	Cyan	Reset	NONE
-approval-trust	71	7	┐	Cyan	Reset	NONE
+approval-trust	8	7	┌	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	9	7	 	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	10	7	A	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	11	7	l	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	12	7	w	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	13	7	a	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	14	7	y	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	15	7	s	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	16	7	 	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	17	7	A	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	18	7	l	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	19	7	l	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	20	7	o	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	21	7	w	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	22	7	 	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	23	7	—	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	24	7	 	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	25	7	C	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	26	7	h	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	27	7	o	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	28	7	o	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	29	7	s	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	30	7	e	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	31	7	 	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	32	7	S	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	33	7	c	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	34	7	o	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	35	7	p	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	36	7	e	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	37	7	 	Rgb(86, 199, 208)	Reset	BOLD
+approval-trust	38	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	39	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	40	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	41	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	42	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	43	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	44	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	45	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	46	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	47	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	48	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	49	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	50	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	51	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	52	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	53	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	54	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	55	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	56	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	57	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	58	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	59	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	60	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	61	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	62	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	63	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	64	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	65	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	66	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	67	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	68	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	69	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	70	7	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	71	7	┐	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	7	 	Reset	Reset	NONE
 approval-trust	73	7	 	Reset	Reset	NONE
 approval-trust	74	7	 	Reset	Reset	NONE
@@ -2566,26 +2566,26 @@ approval-trust	4	8	 	Reset	Reset	NONE
 approval-trust	5	8	 	Reset	Reset	NONE
 approval-trust	6	8	 	Reset	Reset	NONE
 approval-trust	7	8	 	Reset	Reset	NONE
-approval-trust	8	8	│	Cyan	Reset	NONE
-approval-trust	9	8	S	Cyan	Reset	NONE
-approval-trust	10	8	e	Cyan	Reset	NONE
-approval-trust	11	8	l	Cyan	Reset	NONE
-approval-trust	12	8	e	Cyan	Reset	NONE
-approval-trust	13	8	c	Cyan	Reset	NONE
-approval-trust	14	8	t	Cyan	Reset	NONE
-approval-trust	15	8	 	Cyan	Reset	NONE
-approval-trust	16	8	t	Cyan	Reset	NONE
-approval-trust	17	8	r	Cyan	Reset	NONE
-approval-trust	18	8	u	Cyan	Reset	NONE
-approval-trust	19	8	s	Cyan	Reset	NONE
-approval-trust	20	8	t	Cyan	Reset	NONE
-approval-trust	21	8	 	Cyan	Reset	NONE
-approval-trust	22	8	l	Cyan	Reset	NONE
-approval-trust	23	8	e	Cyan	Reset	NONE
-approval-trust	24	8	v	Cyan	Reset	NONE
-approval-trust	25	8	e	Cyan	Reset	NONE
-approval-trust	26	8	l	Cyan	Reset	NONE
-approval-trust	27	8	:	Cyan	Reset	NONE
+approval-trust	8	8	│	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	9	8	S	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	10	8	e	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	11	8	l	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	12	8	e	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	13	8	c	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	14	8	t	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	15	8	 	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	16	8	t	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	17	8	r	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	18	8	u	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	19	8	s	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	20	8	t	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	21	8	 	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	22	8	l	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	23	8	e	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	24	8	v	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	25	8	e	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	26	8	l	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	27	8	:	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	28	8	 	Reset	Reset	NONE
 approval-trust	29	8	 	Reset	Reset	NONE
 approval-trust	30	8	 	Reset	Reset	NONE
@@ -2629,7 +2629,7 @@ approval-trust	67	8	 	Reset	Reset	NONE
 approval-trust	68	8	 	Reset	Reset	NONE
 approval-trust	69	8	 	Reset	Reset	NONE
 approval-trust	70	8	 	Reset	Reset	NONE
-approval-trust	71	8	│	Cyan	Reset	NONE
+approval-trust	71	8	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	8	 	Reset	Reset	NONE
 approval-trust	73	8	 	Reset	Reset	NONE
 approval-trust	74	8	 	Reset	Reset	NONE
@@ -2646,7 +2646,7 @@ approval-trust	4	9	 	Reset	Reset	NONE
 approval-trust	5	9	 	Reset	Reset	NONE
 approval-trust	6	9	 	Reset	Reset	NONE
 approval-trust	7	9	 	Reset	Reset	NONE
-approval-trust	8	9	│	Cyan	Reset	NONE
+approval-trust	8	9	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	9	9	 	Reset	Reset	NONE
 approval-trust	10	9	 	Reset	Reset	NONE
 approval-trust	11	9	 	Reset	Reset	NONE
@@ -2709,7 +2709,7 @@ approval-trust	67	9	 	Reset	Reset	NONE
 approval-trust	68	9	 	Reset	Reset	NONE
 approval-trust	69	9	 	Reset	Reset	NONE
 approval-trust	70	9	 	Reset	Reset	NONE
-approval-trust	71	9	│	Cyan	Reset	NONE
+approval-trust	71	9	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	9	 	Reset	Reset	NONE
 approval-trust	73	9	 	Reset	Reset	NONE
 approval-trust	74	9	 	Reset	Reset	NONE
@@ -2726,7 +2726,7 @@ approval-trust	4	10	 	Reset	Reset	NONE
 approval-trust	5	10	 	Reset	Reset	NONE
 approval-trust	6	10	 	Reset	Reset	NONE
 approval-trust	7	10	 	Reset	Reset	NONE
-approval-trust	8	10	│	Cyan	Reset	NONE
+approval-trust	8	10	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	9	10	▸	White	Rgb(50, 50, 70)	BOLD
 approval-trust	10	10	 	White	Rgb(50, 50, 70)	BOLD
 approval-trust	11	10	S	White	Rgb(50, 50, 70)	BOLD
@@ -2789,7 +2789,7 @@ approval-trust	67	10	 	Reset	Reset	NONE
 approval-trust	68	10	 	Reset	Reset	NONE
 approval-trust	69	10	 	Reset	Reset	NONE
 approval-trust	70	10	 	Reset	Reset	NONE
-approval-trust	71	10	│	Cyan	Reset	NONE
+approval-trust	71	10	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	10	 	Reset	Reset	NONE
 approval-trust	73	10	 	Reset	Reset	NONE
 approval-trust	74	10	 	Reset	Reset	NONE
@@ -2806,7 +2806,7 @@ approval-trust	4	11	 	Reset	Reset	NONE
 approval-trust	5	11	 	Reset	Reset	NONE
 approval-trust	6	11	 	Reset	Reset	NONE
 approval-trust	7	11	 	Reset	Reset	NONE
-approval-trust	8	11	│	Cyan	Reset	NONE
+approval-trust	8	11	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	9	11	 	DarkGray	Rgb(50, 50, 70)	NONE
 approval-trust	10	11	 	DarkGray	Rgb(50, 50, 70)	NONE
 approval-trust	11	11	 	DarkGray	Rgb(50, 50, 70)	NONE
@@ -2869,7 +2869,7 @@ approval-trust	67	11	 	Reset	Reset	NONE
 approval-trust	68	11	 	Reset	Reset	NONE
 approval-trust	69	11	 	Reset	Reset	NONE
 approval-trust	70	11	 	Reset	Reset	NONE
-approval-trust	71	11	│	Cyan	Reset	NONE
+approval-trust	71	11	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	11	 	Reset	Reset	NONE
 approval-trust	73	11	 	Reset	Reset	NONE
 approval-trust	74	11	 	Reset	Reset	NONE
@@ -2886,7 +2886,7 @@ approval-trust	4	12	 	Reset	Reset	NONE
 approval-trust	5	12	 	Reset	Reset	NONE
 approval-trust	6	12	 	Reset	Reset	NONE
 approval-trust	7	12	 	Reset	Reset	NONE
-approval-trust	8	12	│	Cyan	Reset	NONE
+approval-trust	8	12	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	9	12	 	Reset	Reset	NONE
 approval-trust	10	12	 	Reset	Reset	NONE
 approval-trust	11	12	 	Reset	Reset	NONE
@@ -2949,7 +2949,7 @@ approval-trust	67	12	 	Reset	Reset	NONE
 approval-trust	68	12	 	Reset	Reset	NONE
 approval-trust	69	12	 	Reset	Reset	NONE
 approval-trust	70	12	 	Reset	Reset	NONE
-approval-trust	71	12	│	Cyan	Reset	NONE
+approval-trust	71	12	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	12	 	Reset	Reset	NONE
 approval-trust	73	12	 	Reset	Reset	NONE
 approval-trust	74	12	 	Reset	Reset	NONE
@@ -2966,7 +2966,7 @@ approval-trust	4	13	 	Reset	Reset	NONE
 approval-trust	5	13	 	Reset	Reset	NONE
 approval-trust	6	13	 	Reset	Reset	NONE
 approval-trust	7	13	 	Reset	Reset	NONE
-approval-trust	8	13	│	Cyan	Reset	NONE
+approval-trust	8	13	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	9	13	 	Gray	Reset	NONE
 approval-trust	10	13	 	Gray	Reset	NONE
 approval-trust	11	13	A	Gray	Reset	NONE
@@ -3029,7 +3029,7 @@ approval-trust	67	13	 	Reset	Reset	NONE
 approval-trust	68	13	 	Reset	Reset	NONE
 approval-trust	69	13	 	Reset	Reset	NONE
 approval-trust	70	13	 	Reset	Reset	NONE
-approval-trust	71	13	│	Cyan	Reset	NONE
+approval-trust	71	13	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	13	 	Reset	Reset	NONE
 approval-trust	73	13	 	Reset	Reset	NONE
 approval-trust	74	13	 	Reset	Reset	NONE
@@ -3046,7 +3046,7 @@ approval-trust	4	14	 	Reset	Reset	NONE
 approval-trust	5	14	 	Reset	Reset	NONE
 approval-trust	6	14	 	Reset	Reset	NONE
 approval-trust	7	14	 	Reset	Reset	NONE
-approval-trust	8	14	│	Cyan	Reset	NONE
+approval-trust	8	14	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	9	14	 	DarkGray	Reset	NONE
 approval-trust	10	14	 	DarkGray	Reset	NONE
 approval-trust	11	14	 	DarkGray	Reset	NONE
@@ -3109,7 +3109,7 @@ approval-trust	67	14	 	Reset	Reset	NONE
 approval-trust	68	14	 	Reset	Reset	NONE
 approval-trust	69	14	 	Reset	Reset	NONE
 approval-trust	70	14	 	Reset	Reset	NONE
-approval-trust	71	14	│	Cyan	Reset	NONE
+approval-trust	71	14	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	14	 	Reset	Reset	NONE
 approval-trust	73	14	 	Reset	Reset	NONE
 approval-trust	74	14	 	Reset	Reset	NONE
@@ -3126,7 +3126,7 @@ approval-trust	4	15	 	Reset	Reset	NONE
 approval-trust	5	15	 	Reset	Reset	NONE
 approval-trust	6	15	 	Reset	Reset	NONE
 approval-trust	7	15	 	Reset	Reset	NONE
-approval-trust	8	15	│	Cyan	Reset	NONE
+approval-trust	8	15	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	9	15	 	Reset	Reset	NONE
 approval-trust	10	15	 	Reset	Reset	NONE
 approval-trust	11	15	 	Reset	Reset	NONE
@@ -3189,7 +3189,7 @@ approval-trust	67	15	 	Reset	Reset	NONE
 approval-trust	68	15	 	Reset	Reset	NONE
 approval-trust	69	15	 	Reset	Reset	NONE
 approval-trust	70	15	 	Reset	Reset	NONE
-approval-trust	71	15	│	Cyan	Reset	NONE
+approval-trust	71	15	│	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	15	 	Reset	Reset	NONE
 approval-trust	73	15	 	Reset	Reset	NONE
 approval-trust	74	15	 	Reset	Reset	NONE
@@ -3206,70 +3206,70 @@ approval-trust	4	16	 	Reset	Reset	NONE
 approval-trust	5	16	 	Reset	Reset	NONE
 approval-trust	6	16	 	Reset	Reset	NONE
 approval-trust	7	16	 	Reset	Reset	NONE
-approval-trust	8	16	└	Cyan	Reset	NONE
-approval-trust	9	16	─	Cyan	Reset	NONE
-approval-trust	10	16	─	Cyan	Reset	NONE
-approval-trust	11	16	─	Cyan	Reset	NONE
-approval-trust	12	16	─	Cyan	Reset	NONE
-approval-trust	13	16	─	Cyan	Reset	NONE
-approval-trust	14	16	─	Cyan	Reset	NONE
-approval-trust	15	16	─	Cyan	Reset	NONE
-approval-trust	16	16	─	Cyan	Reset	NONE
-approval-trust	17	16	─	Cyan	Reset	NONE
-approval-trust	18	16	─	Cyan	Reset	NONE
-approval-trust	19	16	─	Cyan	Reset	NONE
-approval-trust	20	16	─	Cyan	Reset	NONE
-approval-trust	21	16	─	Cyan	Reset	NONE
-approval-trust	22	16	─	Cyan	Reset	NONE
-approval-trust	23	16	─	Cyan	Reset	NONE
-approval-trust	24	16	─	Cyan	Reset	NONE
-approval-trust	25	16	─	Cyan	Reset	NONE
-approval-trust	26	16	─	Cyan	Reset	NONE
-approval-trust	27	16	─	Cyan	Reset	NONE
-approval-trust	28	16	─	Cyan	Reset	NONE
-approval-trust	29	16	─	Cyan	Reset	NONE
-approval-trust	30	16	─	Cyan	Reset	NONE
-approval-trust	31	16	─	Cyan	Reset	NONE
-approval-trust	32	16	─	Cyan	Reset	NONE
-approval-trust	33	16	─	Cyan	Reset	NONE
-approval-trust	34	16	─	Cyan	Reset	NONE
-approval-trust	35	16	─	Cyan	Reset	NONE
-approval-trust	36	16	─	Cyan	Reset	NONE
-approval-trust	37	16	─	Cyan	Reset	NONE
-approval-trust	38	16	─	Cyan	Reset	NONE
-approval-trust	39	16	─	Cyan	Reset	NONE
-approval-trust	40	16	─	Cyan	Reset	NONE
-approval-trust	41	16	─	Cyan	Reset	NONE
-approval-trust	42	16	─	Cyan	Reset	NONE
-approval-trust	43	16	─	Cyan	Reset	NONE
-approval-trust	44	16	─	Cyan	Reset	NONE
-approval-trust	45	16	─	Cyan	Reset	NONE
-approval-trust	46	16	─	Cyan	Reset	NONE
-approval-trust	47	16	─	Cyan	Reset	NONE
-approval-trust	48	16	─	Cyan	Reset	NONE
-approval-trust	49	16	─	Cyan	Reset	NONE
-approval-trust	50	16	─	Cyan	Reset	NONE
-approval-trust	51	16	─	Cyan	Reset	NONE
-approval-trust	52	16	─	Cyan	Reset	NONE
-approval-trust	53	16	─	Cyan	Reset	NONE
-approval-trust	54	16	─	Cyan	Reset	NONE
-approval-trust	55	16	─	Cyan	Reset	NONE
-approval-trust	56	16	─	Cyan	Reset	NONE
-approval-trust	57	16	─	Cyan	Reset	NONE
-approval-trust	58	16	─	Cyan	Reset	NONE
-approval-trust	59	16	─	Cyan	Reset	NONE
-approval-trust	60	16	─	Cyan	Reset	NONE
-approval-trust	61	16	─	Cyan	Reset	NONE
-approval-trust	62	16	─	Cyan	Reset	NONE
-approval-trust	63	16	─	Cyan	Reset	NONE
-approval-trust	64	16	─	Cyan	Reset	NONE
-approval-trust	65	16	─	Cyan	Reset	NONE
-approval-trust	66	16	─	Cyan	Reset	NONE
-approval-trust	67	16	─	Cyan	Reset	NONE
-approval-trust	68	16	─	Cyan	Reset	NONE
-approval-trust	69	16	─	Cyan	Reset	NONE
-approval-trust	70	16	─	Cyan	Reset	NONE
-approval-trust	71	16	┘	Cyan	Reset	NONE
+approval-trust	8	16	└	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	9	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	10	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	11	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	12	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	13	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	14	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	15	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	16	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	17	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	18	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	19	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	20	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	21	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	22	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	23	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	24	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	25	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	26	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	27	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	28	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	29	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	30	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	31	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	32	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	33	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	34	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	35	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	36	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	37	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	38	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	39	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	40	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	41	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	42	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	43	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	44	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	45	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	46	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	47	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	48	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	49	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	50	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	51	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	52	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	53	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	54	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	55	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	56	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	57	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	58	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	59	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	60	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	61	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	62	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	63	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	64	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	65	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	66	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	67	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	68	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	69	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	70	16	─	Rgb(86, 199, 208)	Reset	NONE
+approval-trust	71	16	┘	Rgb(86, 199, 208)	Reset	NONE
 approval-trust	72	16	 	Reset	Reset	NONE
 approval-trust	73	16	 	Reset	Reset	NONE
 approval-trust	74	16	 	Reset	Reset	NONE
@@ -4480,87 +4480,87 @@ picker	78	7	 	Reset	Reset	NONE
 picker	79	7	 	Reset	Reset	NONE
 picker	0	8	 	Reset	Reset	NONE
 picker	1	8	 	Reset	Reset	NONE
-picker	2	8	┌	Cyan	Reset	NONE
-picker	3	8	 	Cyan	Reset	BOLD
-picker	4	8	P	Cyan	Reset	BOLD
-picker	5	8	r	Cyan	Reset	BOLD
-picker	6	8	o	Cyan	Reset	BOLD
-picker	7	8	b	Cyan	Reset	BOLD
-picker	8	8	e	Cyan	Reset	BOLD
-picker	9	8	 	Cyan	Reset	BOLD
-picker	10	8	─	Cyan	Reset	NONE
-picker	11	8	─	Cyan	Reset	NONE
-picker	12	8	─	Cyan	Reset	NONE
-picker	13	8	─	Cyan	Reset	NONE
-picker	14	8	─	Cyan	Reset	NONE
-picker	15	8	─	Cyan	Reset	NONE
-picker	16	8	─	Cyan	Reset	NONE
-picker	17	8	─	Cyan	Reset	NONE
-picker	18	8	─	Cyan	Reset	NONE
-picker	19	8	─	Cyan	Reset	NONE
-picker	20	8	─	Cyan	Reset	NONE
-picker	21	8	─	Cyan	Reset	NONE
-picker	22	8	─	Cyan	Reset	NONE
-picker	23	8	─	Cyan	Reset	NONE
-picker	24	8	─	Cyan	Reset	NONE
-picker	25	8	─	Cyan	Reset	NONE
-picker	26	8	─	Cyan	Reset	NONE
-picker	27	8	─	Cyan	Reset	NONE
-picker	28	8	─	Cyan	Reset	NONE
-picker	29	8	─	Cyan	Reset	NONE
-picker	30	8	─	Cyan	Reset	NONE
-picker	31	8	─	Cyan	Reset	NONE
-picker	32	8	─	Cyan	Reset	NONE
-picker	33	8	─	Cyan	Reset	NONE
-picker	34	8	─	Cyan	Reset	NONE
-picker	35	8	─	Cyan	Reset	NONE
-picker	36	8	─	Cyan	Reset	NONE
-picker	37	8	─	Cyan	Reset	NONE
-picker	38	8	─	Cyan	Reset	NONE
-picker	39	8	─	Cyan	Reset	NONE
-picker	40	8	─	Cyan	Reset	NONE
-picker	41	8	─	Cyan	Reset	NONE
-picker	42	8	─	Cyan	Reset	NONE
-picker	43	8	─	Cyan	Reset	NONE
-picker	44	8	─	Cyan	Reset	NONE
-picker	45	8	─	Cyan	Reset	NONE
-picker	46	8	─	Cyan	Reset	NONE
-picker	47	8	─	Cyan	Reset	NONE
-picker	48	8	─	Cyan	Reset	NONE
-picker	49	8	─	Cyan	Reset	NONE
-picker	50	8	─	Cyan	Reset	NONE
-picker	51	8	─	Cyan	Reset	NONE
-picker	52	8	─	Cyan	Reset	NONE
-picker	53	8	─	Cyan	Reset	NONE
-picker	54	8	─	Cyan	Reset	NONE
-picker	55	8	─	Cyan	Reset	NONE
-picker	56	8	─	Cyan	Reset	NONE
-picker	57	8	─	Cyan	Reset	NONE
-picker	58	8	─	Cyan	Reset	NONE
-picker	59	8	─	Cyan	Reset	NONE
-picker	60	8	─	Cyan	Reset	NONE
-picker	61	8	─	Cyan	Reset	NONE
-picker	62	8	─	Cyan	Reset	NONE
-picker	63	8	─	Cyan	Reset	NONE
-picker	64	8	─	Cyan	Reset	NONE
-picker	65	8	─	Cyan	Reset	NONE
-picker	66	8	─	Cyan	Reset	NONE
-picker	67	8	─	Cyan	Reset	NONE
-picker	68	8	─	Cyan	Reset	NONE
-picker	69	8	─	Cyan	Reset	NONE
-picker	70	8	─	Cyan	Reset	NONE
-picker	71	8	─	Cyan	Reset	NONE
-picker	72	8	─	Cyan	Reset	NONE
-picker	73	8	─	Cyan	Reset	NONE
-picker	74	8	─	Cyan	Reset	NONE
-picker	75	8	─	Cyan	Reset	NONE
-picker	76	8	─	Cyan	Reset	NONE
-picker	77	8	┐	Cyan	Reset	NONE
+picker	2	8	┌	Rgb(86, 199, 208)	Reset	NONE
+picker	3	8	 	Rgb(86, 199, 208)	Reset	BOLD
+picker	4	8	P	Rgb(86, 199, 208)	Reset	BOLD
+picker	5	8	r	Rgb(86, 199, 208)	Reset	BOLD
+picker	6	8	o	Rgb(86, 199, 208)	Reset	BOLD
+picker	7	8	b	Rgb(86, 199, 208)	Reset	BOLD
+picker	8	8	e	Rgb(86, 199, 208)	Reset	BOLD
+picker	9	8	 	Rgb(86, 199, 208)	Reset	BOLD
+picker	10	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	11	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	12	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	13	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	14	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	15	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	16	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	17	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	18	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	19	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	20	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	21	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	22	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	23	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	24	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	25	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	26	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	27	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	28	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	29	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	30	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	31	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	32	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	33	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	34	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	35	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	36	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	37	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	38	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	39	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	40	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	41	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	42	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	43	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	44	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	45	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	46	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	47	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	48	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	49	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	50	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	51	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	52	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	53	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	54	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	55	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	56	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	57	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	58	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	59	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	60	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	61	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	62	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	63	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	64	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	65	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	66	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	67	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	68	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	69	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	70	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	71	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	72	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	73	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	74	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	75	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	76	8	─	Rgb(86, 199, 208)	Reset	NONE
+picker	77	8	┐	Rgb(86, 199, 208)	Reset	NONE
 picker	78	8	 	Reset	Reset	NONE
 picker	79	8	 	Reset	Reset	NONE
 picker	0	9	 	Reset	Reset	NONE
 picker	1	9	 	Reset	Reset	NONE
-picker	2	9	│	Cyan	Reset	NONE
+picker	2	9	│	Rgb(86, 199, 208)	Reset	NONE
 picker	3	9	F	DarkGray	Reset	NONE
 picker	4	9	i	DarkGray	Reset	NONE
 picker	5	9	l	DarkGray	Reset	NONE
@@ -4635,12 +4635,12 @@ picker	73	9	 	Reset	Reset	NONE
 picker	74	9	 	Reset	Reset	NONE
 picker	75	9	 	Reset	Reset	NONE
 picker	76	9	 	Reset	Reset	NONE
-picker	77	9	│	Cyan	Reset	NONE
+picker	77	9	│	Rgb(86, 199, 208)	Reset	NONE
 picker	78	9	 	Reset	Reset	NONE
 picker	79	9	 	Reset	Reset	NONE
 picker	0	10	 	Reset	Reset	NONE
 picker	1	10	 	Reset	Reset	NONE
-picker	2	10	│	Cyan	Reset	NONE
+picker	2	10	│	Rgb(86, 199, 208)	Reset	NONE
 picker	3	10	 	Reset	Reset	NONE
 picker	4	10	 	Reset	Reset	NONE
 picker	5	10	 	Reset	Reset	NONE
@@ -4715,12 +4715,12 @@ picker	73	10	 	Reset	Reset	NONE
 picker	74	10	 	Reset	Reset	NONE
 picker	75	10	 	Reset	Reset	NONE
 picker	76	10	 	Reset	Reset	NONE
-picker	77	10	│	Cyan	Reset	NONE
+picker	77	10	│	Rgb(86, 199, 208)	Reset	NONE
 picker	78	10	 	Reset	Reset	NONE
 picker	79	10	 	Reset	Reset	NONE
 picker	0	11	 	Reset	Reset	NONE
 picker	1	11	 	Reset	Reset	NONE
-picker	2	11	│	Cyan	Reset	NONE
+picker	2	11	│	Rgb(86, 199, 208)	Reset	NONE
 picker	3	11	 	Gray	Reset	NONE
 picker	4	11	 	Gray	Reset	NONE
 picker	5	11	o	Gray	Reset	NONE
@@ -4795,12 +4795,12 @@ picker	73	11	 	Reset	Reset	NONE
 picker	74	11	 	Reset	Reset	NONE
 picker	75	11	 	Reset	Reset	NONE
 picker	76	11	 	Reset	Reset	NONE
-picker	77	11	│	Cyan	Reset	NONE
+picker	77	11	│	Rgb(86, 199, 208)	Reset	NONE
 picker	78	11	 	Reset	Reset	NONE
 picker	79	11	 	Reset	Reset	NONE
 picker	0	12	 	Reset	Reset	NONE
 picker	1	12	 	Reset	Reset	NONE
-picker	2	12	│	Cyan	Reset	NONE
+picker	2	12	│	Rgb(86, 199, 208)	Reset	NONE
 picker	3	12	▸	White	Rgb(50, 50, 70)	NONE
 picker	4	12	 	White	Rgb(50, 50, 70)	NONE
 picker	5	12	o	White	Rgb(50, 50, 70)	NONE
@@ -4875,12 +4875,12 @@ picker	73	12	 	Reset	Reset	NONE
 picker	74	12	 	Reset	Reset	NONE
 picker	75	12	 	Reset	Reset	NONE
 picker	76	12	 	Reset	Reset	NONE
-picker	77	12	│	Cyan	Reset	NONE
+picker	77	12	│	Rgb(86, 199, 208)	Reset	NONE
 picker	78	12	 	Reset	Reset	NONE
 picker	79	12	 	Reset	Reset	NONE
 picker	0	13	 	Reset	Reset	NONE
 picker	1	13	 	Reset	Reset	NONE
-picker	2	13	│	Cyan	Reset	NONE
+picker	2	13	│	Rgb(86, 199, 208)	Reset	NONE
 picker	3	13	 	DarkGray	Reset	ITALIC
 picker	4	13	 	DarkGray	Reset	ITALIC
 picker	5	13	 	DarkGray	Reset	ITALIC
@@ -4955,12 +4955,12 @@ picker	73	13	 	Reset	Reset	NONE
 picker	74	13	 	Reset	Reset	NONE
 picker	75	13	 	Reset	Reset	NONE
 picker	76	13	 	Reset	Reset	NONE
-picker	77	13	│	Cyan	Reset	NONE
+picker	77	13	│	Rgb(86, 199, 208)	Reset	NONE
 picker	78	13	 	Reset	Reset	NONE
 picker	79	13	 	Reset	Reset	NONE
 picker	0	14	 	Reset	Reset	NONE
 picker	1	14	 	Reset	Reset	NONE
-picker	2	14	│	Cyan	Reset	NONE
+picker	2	14	│	Rgb(86, 199, 208)	Reset	NONE
 picker	3	14	 	Gray	Reset	NONE
 picker	4	14	 	Gray	Reset	NONE
 picker	5	14	o	Gray	Reset	NONE
@@ -5035,87 +5035,87 @@ picker	73	14	 	Reset	Reset	NONE
 picker	74	14	 	Reset	Reset	NONE
 picker	75	14	 	Reset	Reset	NONE
 picker	76	14	 	Reset	Reset	NONE
-picker	77	14	│	Cyan	Reset	NONE
+picker	77	14	│	Rgb(86, 199, 208)	Reset	NONE
 picker	78	14	 	Reset	Reset	NONE
 picker	79	14	 	Reset	Reset	NONE
 picker	0	15	 	Reset	Reset	NONE
 picker	1	15	 	Reset	Reset	NONE
-picker	2	15	└	Cyan	Reset	NONE
-picker	3	15	─	Cyan	Reset	NONE
-picker	4	15	─	Cyan	Reset	NONE
-picker	5	15	─	Cyan	Reset	NONE
-picker	6	15	─	Cyan	Reset	NONE
-picker	7	15	─	Cyan	Reset	NONE
-picker	8	15	─	Cyan	Reset	NONE
-picker	9	15	─	Cyan	Reset	NONE
-picker	10	15	─	Cyan	Reset	NONE
-picker	11	15	─	Cyan	Reset	NONE
-picker	12	15	─	Cyan	Reset	NONE
-picker	13	15	─	Cyan	Reset	NONE
-picker	14	15	─	Cyan	Reset	NONE
-picker	15	15	─	Cyan	Reset	NONE
-picker	16	15	─	Cyan	Reset	NONE
-picker	17	15	─	Cyan	Reset	NONE
-picker	18	15	─	Cyan	Reset	NONE
-picker	19	15	─	Cyan	Reset	NONE
-picker	20	15	─	Cyan	Reset	NONE
-picker	21	15	─	Cyan	Reset	NONE
-picker	22	15	─	Cyan	Reset	NONE
-picker	23	15	─	Cyan	Reset	NONE
-picker	24	15	─	Cyan	Reset	NONE
-picker	25	15	─	Cyan	Reset	NONE
-picker	26	15	─	Cyan	Reset	NONE
-picker	27	15	─	Cyan	Reset	NONE
-picker	28	15	─	Cyan	Reset	NONE
-picker	29	15	─	Cyan	Reset	NONE
-picker	30	15	─	Cyan	Reset	NONE
-picker	31	15	─	Cyan	Reset	NONE
-picker	32	15	─	Cyan	Reset	NONE
-picker	33	15	─	Cyan	Reset	NONE
-picker	34	15	─	Cyan	Reset	NONE
-picker	35	15	─	Cyan	Reset	NONE
-picker	36	15	─	Cyan	Reset	NONE
-picker	37	15	─	Cyan	Reset	NONE
-picker	38	15	─	Cyan	Reset	NONE
-picker	39	15	─	Cyan	Reset	NONE
-picker	40	15	─	Cyan	Reset	NONE
-picker	41	15	─	Cyan	Reset	NONE
-picker	42	15	─	Cyan	Reset	NONE
-picker	43	15	─	Cyan	Reset	NONE
-picker	44	15	─	Cyan	Reset	NONE
-picker	45	15	─	Cyan	Reset	NONE
-picker	46	15	─	Cyan	Reset	NONE
-picker	47	15	─	Cyan	Reset	NONE
-picker	48	15	─	Cyan	Reset	NONE
-picker	49	15	─	Cyan	Reset	NONE
-picker	50	15	─	Cyan	Reset	NONE
-picker	51	15	─	Cyan	Reset	NONE
-picker	52	15	─	Cyan	Reset	NONE
-picker	53	15	─	Cyan	Reset	NONE
-picker	54	15	─	Cyan	Reset	NONE
-picker	55	15	─	Cyan	Reset	NONE
-picker	56	15	─	Cyan	Reset	NONE
-picker	57	15	─	Cyan	Reset	NONE
-picker	58	15	─	Cyan	Reset	NONE
-picker	59	15	─	Cyan	Reset	NONE
-picker	60	15	─	Cyan	Reset	NONE
-picker	61	15	─	Cyan	Reset	NONE
-picker	62	15	─	Cyan	Reset	NONE
-picker	63	15	─	Cyan	Reset	NONE
-picker	64	15	─	Cyan	Reset	NONE
-picker	65	15	─	Cyan	Reset	NONE
-picker	66	15	─	Cyan	Reset	NONE
-picker	67	15	─	Cyan	Reset	NONE
-picker	68	15	─	Cyan	Reset	NONE
-picker	69	15	─	Cyan	Reset	NONE
-picker	70	15	─	Cyan	Reset	NONE
-picker	71	15	─	Cyan	Reset	NONE
-picker	72	15	─	Cyan	Reset	NONE
-picker	73	15	─	Cyan	Reset	NONE
-picker	74	15	─	Cyan	Reset	NONE
-picker	75	15	─	Cyan	Reset	NONE
-picker	76	15	─	Cyan	Reset	NONE
-picker	77	15	┘	Cyan	Reset	NONE
+picker	2	15	└	Rgb(86, 199, 208)	Reset	NONE
+picker	3	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	4	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	5	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	6	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	7	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	8	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	9	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	10	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	11	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	12	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	13	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	14	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	15	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	16	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	17	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	18	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	19	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	20	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	21	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	22	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	23	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	24	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	25	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	26	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	27	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	28	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	29	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	30	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	31	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	32	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	33	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	34	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	35	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	36	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	37	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	38	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	39	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	40	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	41	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	42	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	43	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	44	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	45	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	46	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	47	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	48	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	49	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	50	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	51	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	52	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	53	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	54	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	55	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	56	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	57	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	58	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	59	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	60	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	61	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	62	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	63	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	64	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	65	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	66	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	67	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	68	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	69	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	70	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	71	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	72	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	73	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	74	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	75	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	76	15	─	Rgb(86, 199, 208)	Reset	NONE
+picker	77	15	┘	Rgb(86, 199, 208)	Reset	NONE
 picker	78	15	 	Reset	Reset	NONE
 picker	79	15	 	Reset	Reset	NONE
 picker	0	16	 	Reset	Reset	NONE
@@ -6480,87 +6480,87 @@ hooks	78	8	 	Reset	Reset	NONE
 hooks	79	8	 	Reset	Reset	NONE
 hooks	0	9	 	Reset	Reset	NONE
 hooks	1	9	 	Reset	Reset	NONE
-hooks	2	9	┌	Cyan	Reset	NONE
-hooks	3	9	 	Cyan	Reset	BOLD
-hooks	4	9	/	Cyan	Reset	BOLD
-hooks	5	9	h	Cyan	Reset	BOLD
-hooks	6	9	o	Cyan	Reset	BOLD
-hooks	7	9	o	Cyan	Reset	BOLD
-hooks	8	9	k	Cyan	Reset	BOLD
-hooks	9	9	s	Cyan	Reset	BOLD
-hooks	10	9	 	Cyan	Reset	BOLD
-hooks	11	9	·	Cyan	Reset	BOLD
-hooks	12	9	 	Cyan	Reset	BOLD
-hooks	13	9	2	Cyan	Reset	BOLD
-hooks	14	9	 	Cyan	Reset	BOLD
-hooks	15	9	h	Cyan	Reset	BOLD
-hooks	16	9	o	Cyan	Reset	BOLD
-hooks	17	9	o	Cyan	Reset	BOLD
-hooks	18	9	k	Cyan	Reset	BOLD
-hooks	19	9	s	Cyan	Reset	BOLD
-hooks	20	9	 	Cyan	Reset	BOLD
-hooks	21	9	─	Cyan	Reset	NONE
-hooks	22	9	─	Cyan	Reset	NONE
-hooks	23	9	─	Cyan	Reset	NONE
-hooks	24	9	─	Cyan	Reset	NONE
-hooks	25	9	─	Cyan	Reset	NONE
-hooks	26	9	─	Cyan	Reset	NONE
-hooks	27	9	─	Cyan	Reset	NONE
-hooks	28	9	─	Cyan	Reset	NONE
-hooks	29	9	─	Cyan	Reset	NONE
-hooks	30	9	─	Cyan	Reset	NONE
-hooks	31	9	─	Cyan	Reset	NONE
-hooks	32	9	─	Cyan	Reset	NONE
-hooks	33	9	─	Cyan	Reset	NONE
-hooks	34	9	─	Cyan	Reset	NONE
-hooks	35	9	─	Cyan	Reset	NONE
-hooks	36	9	─	Cyan	Reset	NONE
-hooks	37	9	─	Cyan	Reset	NONE
-hooks	38	9	─	Cyan	Reset	NONE
-hooks	39	9	─	Cyan	Reset	NONE
-hooks	40	9	─	Cyan	Reset	NONE
-hooks	41	9	─	Cyan	Reset	NONE
-hooks	42	9	─	Cyan	Reset	NONE
-hooks	43	9	─	Cyan	Reset	NONE
-hooks	44	9	─	Cyan	Reset	NONE
-hooks	45	9	─	Cyan	Reset	NONE
-hooks	46	9	─	Cyan	Reset	NONE
-hooks	47	9	─	Cyan	Reset	NONE
-hooks	48	9	─	Cyan	Reset	NONE
-hooks	49	9	─	Cyan	Reset	NONE
-hooks	50	9	─	Cyan	Reset	NONE
-hooks	51	9	─	Cyan	Reset	NONE
-hooks	52	9	─	Cyan	Reset	NONE
-hooks	53	9	─	Cyan	Reset	NONE
-hooks	54	9	─	Cyan	Reset	NONE
-hooks	55	9	─	Cyan	Reset	NONE
-hooks	56	9	─	Cyan	Reset	NONE
-hooks	57	9	─	Cyan	Reset	NONE
-hooks	58	9	─	Cyan	Reset	NONE
-hooks	59	9	─	Cyan	Reset	NONE
-hooks	60	9	─	Cyan	Reset	NONE
-hooks	61	9	─	Cyan	Reset	NONE
-hooks	62	9	─	Cyan	Reset	NONE
-hooks	63	9	─	Cyan	Reset	NONE
-hooks	64	9	─	Cyan	Reset	NONE
-hooks	65	9	─	Cyan	Reset	NONE
-hooks	66	9	─	Cyan	Reset	NONE
-hooks	67	9	─	Cyan	Reset	NONE
-hooks	68	9	─	Cyan	Reset	NONE
-hooks	69	9	─	Cyan	Reset	NONE
-hooks	70	9	─	Cyan	Reset	NONE
-hooks	71	9	─	Cyan	Reset	NONE
-hooks	72	9	─	Cyan	Reset	NONE
-hooks	73	9	─	Cyan	Reset	NONE
-hooks	74	9	─	Cyan	Reset	NONE
-hooks	75	9	─	Cyan	Reset	NONE
-hooks	76	9	─	Cyan	Reset	NONE
-hooks	77	9	┐	Cyan	Reset	NONE
+hooks	2	9	┌	Rgb(86, 199, 208)	Reset	NONE
+hooks	3	9	 	Rgb(86, 199, 208)	Reset	BOLD
+hooks	4	9	/	Rgb(86, 199, 208)	Reset	BOLD
+hooks	5	9	h	Rgb(86, 199, 208)	Reset	BOLD
+hooks	6	9	o	Rgb(86, 199, 208)	Reset	BOLD
+hooks	7	9	o	Rgb(86, 199, 208)	Reset	BOLD
+hooks	8	9	k	Rgb(86, 199, 208)	Reset	BOLD
+hooks	9	9	s	Rgb(86, 199, 208)	Reset	BOLD
+hooks	10	9	 	Rgb(86, 199, 208)	Reset	BOLD
+hooks	11	9	·	Rgb(86, 199, 208)	Reset	BOLD
+hooks	12	9	 	Rgb(86, 199, 208)	Reset	BOLD
+hooks	13	9	2	Rgb(86, 199, 208)	Reset	BOLD
+hooks	14	9	 	Rgb(86, 199, 208)	Reset	BOLD
+hooks	15	9	h	Rgb(86, 199, 208)	Reset	BOLD
+hooks	16	9	o	Rgb(86, 199, 208)	Reset	BOLD
+hooks	17	9	o	Rgb(86, 199, 208)	Reset	BOLD
+hooks	18	9	k	Rgb(86, 199, 208)	Reset	BOLD
+hooks	19	9	s	Rgb(86, 199, 208)	Reset	BOLD
+hooks	20	9	 	Rgb(86, 199, 208)	Reset	BOLD
+hooks	21	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	22	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	23	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	24	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	25	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	26	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	27	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	28	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	29	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	30	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	31	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	32	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	33	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	34	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	35	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	36	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	37	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	38	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	39	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	40	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	41	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	42	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	43	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	44	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	45	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	46	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	47	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	48	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	49	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	50	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	51	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	52	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	53	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	54	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	55	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	56	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	57	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	58	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	59	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	60	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	61	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	62	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	63	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	64	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	65	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	66	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	67	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	68	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	69	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	70	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	71	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	72	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	73	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	74	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	75	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	76	9	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	77	9	┐	Rgb(86, 199, 208)	Reset	NONE
 hooks	78	9	 	Reset	Reset	NONE
 hooks	79	9	 	Reset	Reset	NONE
 hooks	0	10	 	Reset	Reset	NONE
 hooks	1	10	 	Reset	Reset	NONE
-hooks	2	10	│	Cyan	Reset	NONE
+hooks	2	10	│	Rgb(86, 199, 208)	Reset	NONE
 hooks	3	10	 	DarkGray	Reset	BOLD
 hooks	4	10	 	DarkGray	Reset	BOLD
 hooks	5	10	T	DarkGray	Reset	BOLD
@@ -6635,12 +6635,12 @@ hooks	73	10	 	DarkGray	Reset	BOLD
 hooks	74	10	 	DarkGray	Reset	BOLD
 hooks	75	10	 	DarkGray	Reset	BOLD
 hooks	76	10	 	DarkGray	Reset	BOLD
-hooks	77	10	│	Cyan	Reset	NONE
+hooks	77	10	│	Rgb(86, 199, 208)	Reset	NONE
 hooks	78	10	 	Reset	Reset	NONE
 hooks	79	10	 	Reset	Reset	NONE
 hooks	0	11	 	Reset	Reset	NONE
 hooks	1	11	 	Reset	Reset	NONE
-hooks	2	11	│	Cyan	Reset	NONE
+hooks	2	11	│	Rgb(86, 199, 208)	Reset	NONE
 hooks	3	11	 	Rgb(176, 141, 255)	Reset	NONE
 hooks	4	11	 	Rgb(176, 141, 255)	Reset	NONE
 hooks	5	11	a	Rgb(176, 141, 255)	Reset	NONE
@@ -6715,12 +6715,12 @@ hooks	73	11	 	DarkGray	Reset	NONE
 hooks	74	11	 	DarkGray	Reset	NONE
 hooks	75	11	 	DarkGray	Reset	NONE
 hooks	76	11	 	DarkGray	Reset	NONE
-hooks	77	11	│	Cyan	Reset	NONE
+hooks	77	11	│	Rgb(86, 199, 208)	Reset	NONE
 hooks	78	11	 	Reset	Reset	NONE
 hooks	79	11	 	Reset	Reset	NONE
 hooks	0	12	 	Reset	Reset	NONE
 hooks	1	12	 	Reset	Reset	NONE
-hooks	2	12	│	Cyan	Reset	NONE
+hooks	2	12	│	Rgb(86, 199, 208)	Reset	NONE
 hooks	3	12	 	Rgb(176, 141, 255)	Reset	NONE
 hooks	4	12	 	Rgb(176, 141, 255)	Reset	NONE
 hooks	5	12	u	Rgb(176, 141, 255)	Reset	NONE
@@ -6777,30 +6777,30 @@ hooks	55	12	 	Gray	Reset	NONE
 hooks	56	12	 	Gray	Reset	NONE
 hooks	57	12	 	Gray	Reset	NONE
 hooks	58	12	 	Gray	Reset	NONE
-hooks	59	12	*	Cyan	Reset	NONE
-hooks	60	12	.	Cyan	Reset	NONE
-hooks	61	12	r	Cyan	Reset	NONE
-hooks	62	12	s	Cyan	Reset	NONE
-hooks	63	12	 	Cyan	Reset	NONE
-hooks	64	12	 	Cyan	Reset	NONE
-hooks	65	12	 	Cyan	Reset	NONE
-hooks	66	12	 	Cyan	Reset	NONE
-hooks	67	12	 	Cyan	Reset	NONE
-hooks	68	12	 	Cyan	Reset	NONE
-hooks	69	12	 	Cyan	Reset	NONE
-hooks	70	12	 	Cyan	Reset	NONE
-hooks	71	12	 	Cyan	Reset	NONE
-hooks	72	12	 	Cyan	Reset	NONE
-hooks	73	12	 	Cyan	Reset	NONE
-hooks	74	12	 	Cyan	Reset	NONE
-hooks	75	12	 	Cyan	Reset	NONE
-hooks	76	12	 	Cyan	Reset	NONE
-hooks	77	12	│	Cyan	Reset	NONE
+hooks	59	12	*	Rgb(86, 199, 208)	Reset	NONE
+hooks	60	12	.	Rgb(86, 199, 208)	Reset	NONE
+hooks	61	12	r	Rgb(86, 199, 208)	Reset	NONE
+hooks	62	12	s	Rgb(86, 199, 208)	Reset	NONE
+hooks	63	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	64	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	65	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	66	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	67	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	68	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	69	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	70	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	71	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	72	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	73	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	74	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	75	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	76	12	 	Rgb(86, 199, 208)	Reset	NONE
+hooks	77	12	│	Rgb(86, 199, 208)	Reset	NONE
 hooks	78	12	 	Reset	Reset	NONE
 hooks	79	12	 	Reset	Reset	NONE
 hooks	0	13	 	Reset	Reset	NONE
 hooks	1	13	 	Reset	Reset	NONE
-hooks	2	13	│	Cyan	Reset	NONE
+hooks	2	13	│	Rgb(86, 199, 208)	Reset	NONE
 hooks	3	13	 	Reset	Reset	NONE
 hooks	4	13	 	Reset	Reset	NONE
 hooks	5	13	 	Reset	Reset	NONE
@@ -6875,87 +6875,87 @@ hooks	73	13	 	Reset	Reset	NONE
 hooks	74	13	 	Reset	Reset	NONE
 hooks	75	13	 	Reset	Reset	NONE
 hooks	76	13	 	Reset	Reset	NONE
-hooks	77	13	│	Cyan	Reset	NONE
+hooks	77	13	│	Rgb(86, 199, 208)	Reset	NONE
 hooks	78	13	 	Reset	Reset	NONE
 hooks	79	13	 	Reset	Reset	NONE
 hooks	0	14	 	Reset	Reset	NONE
 hooks	1	14	 	Reset	Reset	NONE
-hooks	2	14	└	Cyan	Reset	NONE
-hooks	3	14	─	Cyan	Reset	NONE
-hooks	4	14	─	Cyan	Reset	NONE
-hooks	5	14	─	Cyan	Reset	NONE
-hooks	6	14	─	Cyan	Reset	NONE
-hooks	7	14	─	Cyan	Reset	NONE
-hooks	8	14	─	Cyan	Reset	NONE
-hooks	9	14	─	Cyan	Reset	NONE
-hooks	10	14	─	Cyan	Reset	NONE
-hooks	11	14	─	Cyan	Reset	NONE
-hooks	12	14	─	Cyan	Reset	NONE
-hooks	13	14	─	Cyan	Reset	NONE
-hooks	14	14	─	Cyan	Reset	NONE
-hooks	15	14	─	Cyan	Reset	NONE
-hooks	16	14	─	Cyan	Reset	NONE
-hooks	17	14	─	Cyan	Reset	NONE
-hooks	18	14	─	Cyan	Reset	NONE
-hooks	19	14	─	Cyan	Reset	NONE
-hooks	20	14	─	Cyan	Reset	NONE
-hooks	21	14	─	Cyan	Reset	NONE
-hooks	22	14	─	Cyan	Reset	NONE
-hooks	23	14	─	Cyan	Reset	NONE
-hooks	24	14	─	Cyan	Reset	NONE
-hooks	25	14	─	Cyan	Reset	NONE
-hooks	26	14	─	Cyan	Reset	NONE
-hooks	27	14	─	Cyan	Reset	NONE
-hooks	28	14	─	Cyan	Reset	NONE
-hooks	29	14	─	Cyan	Reset	NONE
-hooks	30	14	─	Cyan	Reset	NONE
-hooks	31	14	─	Cyan	Reset	NONE
-hooks	32	14	─	Cyan	Reset	NONE
-hooks	33	14	─	Cyan	Reset	NONE
-hooks	34	14	─	Cyan	Reset	NONE
-hooks	35	14	─	Cyan	Reset	NONE
-hooks	36	14	─	Cyan	Reset	NONE
-hooks	37	14	─	Cyan	Reset	NONE
-hooks	38	14	─	Cyan	Reset	NONE
-hooks	39	14	─	Cyan	Reset	NONE
-hooks	40	14	─	Cyan	Reset	NONE
-hooks	41	14	─	Cyan	Reset	NONE
-hooks	42	14	─	Cyan	Reset	NONE
-hooks	43	14	─	Cyan	Reset	NONE
-hooks	44	14	─	Cyan	Reset	NONE
-hooks	45	14	─	Cyan	Reset	NONE
-hooks	46	14	─	Cyan	Reset	NONE
-hooks	47	14	─	Cyan	Reset	NONE
-hooks	48	14	─	Cyan	Reset	NONE
-hooks	49	14	─	Cyan	Reset	NONE
-hooks	50	14	─	Cyan	Reset	NONE
-hooks	51	14	─	Cyan	Reset	NONE
-hooks	52	14	─	Cyan	Reset	NONE
-hooks	53	14	─	Cyan	Reset	NONE
-hooks	54	14	─	Cyan	Reset	NONE
-hooks	55	14	─	Cyan	Reset	NONE
-hooks	56	14	─	Cyan	Reset	NONE
-hooks	57	14	─	Cyan	Reset	NONE
-hooks	58	14	─	Cyan	Reset	NONE
-hooks	59	14	─	Cyan	Reset	NONE
-hooks	60	14	─	Cyan	Reset	NONE
-hooks	61	14	─	Cyan	Reset	NONE
-hooks	62	14	─	Cyan	Reset	NONE
-hooks	63	14	─	Cyan	Reset	NONE
-hooks	64	14	─	Cyan	Reset	NONE
-hooks	65	14	─	Cyan	Reset	NONE
-hooks	66	14	─	Cyan	Reset	NONE
-hooks	67	14	─	Cyan	Reset	NONE
-hooks	68	14	─	Cyan	Reset	NONE
-hooks	69	14	─	Cyan	Reset	NONE
-hooks	70	14	─	Cyan	Reset	NONE
-hooks	71	14	─	Cyan	Reset	NONE
-hooks	72	14	─	Cyan	Reset	NONE
-hooks	73	14	─	Cyan	Reset	NONE
-hooks	74	14	─	Cyan	Reset	NONE
-hooks	75	14	─	Cyan	Reset	NONE
-hooks	76	14	─	Cyan	Reset	NONE
-hooks	77	14	┘	Cyan	Reset	NONE
+hooks	2	14	└	Rgb(86, 199, 208)	Reset	NONE
+hooks	3	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	4	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	5	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	6	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	7	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	8	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	9	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	10	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	11	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	12	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	13	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	14	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	15	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	16	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	17	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	18	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	19	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	20	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	21	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	22	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	23	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	24	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	25	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	26	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	27	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	28	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	29	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	30	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	31	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	32	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	33	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	34	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	35	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	36	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	37	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	38	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	39	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	40	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	41	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	42	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	43	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	44	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	45	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	46	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	47	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	48	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	49	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	50	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	51	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	52	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	53	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	54	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	55	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	56	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	57	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	58	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	59	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	60	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	61	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	62	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	63	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	64	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	65	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	66	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	67	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	68	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	69	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	70	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	71	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	72	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	73	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	74	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	75	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	76	14	─	Rgb(86, 199, 208)	Reset	NONE
+hooks	77	14	┘	Rgb(86, 199, 208)	Reset	NONE
 hooks	78	14	 	Reset	Reset	NONE
 hooks	79	14	 	Reset	Reset	NONE
 hooks	0	15	 	Reset	Reset	NONE
@@ -7855,52 +7855,52 @@ code	13	2	 	Reset	Reset	NONE
 code	14	2	 	Reset	Reset	NONE
 code	15	2	 	Reset	Reset	NONE
 code	16	2	 	Reset	Reset	NONE
-code	17	2	┌	Cyan	Reset	NONE
-code	18	2	 	Cyan	Reset	BOLD
-code	19	2	/	Cyan	Reset	BOLD
-code	20	2	c	Cyan	Reset	BOLD
-code	21	2	o	Cyan	Reset	BOLD
-code	22	2	d	Cyan	Reset	BOLD
-code	23	2	e	Cyan	Reset	BOLD
-code	24	2	 	Cyan	Reset	BOLD
-code	25	2	─	Cyan	Reset	NONE
-code	26	2	─	Cyan	Reset	NONE
-code	27	2	─	Cyan	Reset	NONE
-code	28	2	─	Cyan	Reset	NONE
-code	29	2	─	Cyan	Reset	NONE
-code	30	2	─	Cyan	Reset	NONE
-code	31	2	─	Cyan	Reset	NONE
-code	32	2	─	Cyan	Reset	NONE
-code	33	2	─	Cyan	Reset	NONE
-code	34	2	─	Cyan	Reset	NONE
-code	35	2	─	Cyan	Reset	NONE
-code	36	2	─	Cyan	Reset	NONE
-code	37	2	─	Cyan	Reset	NONE
-code	38	2	─	Cyan	Reset	NONE
-code	39	2	─	Cyan	Reset	NONE
-code	40	2	─	Cyan	Reset	NONE
-code	41	2	─	Cyan	Reset	NONE
-code	42	2	─	Cyan	Reset	NONE
-code	43	2	─	Cyan	Reset	NONE
-code	44	2	─	Cyan	Reset	NONE
-code	45	2	─	Cyan	Reset	NONE
-code	46	2	─	Cyan	Reset	NONE
-code	47	2	─	Cyan	Reset	NONE
-code	48	2	─	Cyan	Reset	NONE
-code	49	2	─	Cyan	Reset	NONE
-code	50	2	─	Cyan	Reset	NONE
-code	51	2	─	Cyan	Reset	NONE
-code	52	2	─	Cyan	Reset	NONE
-code	53	2	─	Cyan	Reset	NONE
-code	54	2	─	Cyan	Reset	NONE
-code	55	2	─	Cyan	Reset	NONE
-code	56	2	─	Cyan	Reset	NONE
-code	57	2	─	Cyan	Reset	NONE
-code	58	2	─	Cyan	Reset	NONE
-code	59	2	─	Cyan	Reset	NONE
-code	60	2	─	Cyan	Reset	NONE
-code	61	2	─	Cyan	Reset	NONE
-code	62	2	┐	Cyan	Reset	NONE
+code	17	2	┌	Rgb(86, 199, 208)	Reset	NONE
+code	18	2	 	Rgb(86, 199, 208)	Reset	BOLD
+code	19	2	/	Rgb(86, 199, 208)	Reset	BOLD
+code	20	2	c	Rgb(86, 199, 208)	Reset	BOLD
+code	21	2	o	Rgb(86, 199, 208)	Reset	BOLD
+code	22	2	d	Rgb(86, 199, 208)	Reset	BOLD
+code	23	2	e	Rgb(86, 199, 208)	Reset	BOLD
+code	24	2	 	Rgb(86, 199, 208)	Reset	BOLD
+code	25	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	26	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	27	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	28	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	29	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	30	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	31	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	32	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	33	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	34	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	35	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	36	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	37	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	38	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	39	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	40	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	41	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	42	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	43	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	44	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	45	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	46	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	47	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	48	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	49	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	50	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	51	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	52	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	53	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	54	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	55	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	56	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	57	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	58	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	59	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	60	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	61	2	─	Rgb(86, 199, 208)	Reset	NONE
+code	62	2	┐	Rgb(86, 199, 208)	Reset	NONE
 code	63	2	 	Reset	Reset	NONE
 code	64	2	 	Reset	Reset	NONE
 code	65	2	 	Reset	Reset	NONE
@@ -7935,7 +7935,7 @@ code	13	3	 	Reset	Reset	NONE
 code	14	3	 	Reset	Reset	NONE
 code	15	3	 	Reset	Reset	NONE
 code	16	3	 	Reset	Reset	NONE
-code	17	3	│	Cyan	Reset	NONE
+code	17	3	│	Rgb(86, 199, 208)	Reset	NONE
 code	18	3	✓	Green	Reset	NONE
 code	19	3	 	Green	Reset	NONE
 code	20	3	i	Green	Reset	NONE
@@ -7980,7 +7980,7 @@ code	58	3	 	Reset	Reset	NONE
 code	59	3	 	Reset	Reset	NONE
 code	60	3	 	Reset	Reset	NONE
 code	61	3	 	Reset	Reset	NONE
-code	62	3	│	Cyan	Reset	NONE
+code	62	3	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	3	 	Reset	Reset	NONE
 code	64	3	 	Reset	Reset	NONE
 code	65	3	 	Reset	Reset	NONE
@@ -8015,7 +8015,7 @@ code	13	4	 	Reset	Reset	NONE
 code	14	4	 	Reset	Reset	NONE
 code	15	4	 	Reset	Reset	NONE
 code	16	4	 	Reset	Reset	NONE
-code	17	4	│	Cyan	Reset	NONE
+code	17	4	│	Rgb(86, 199, 208)	Reset	NONE
 code	18	4	 	Reset	Reset	NONE
 code	19	4	 	Reset	Reset	NONE
 code	20	4	 	Reset	Reset	NONE
@@ -8060,7 +8060,7 @@ code	58	4	 	Reset	Reset	NONE
 code	59	4	 	Reset	Reset	NONE
 code	60	4	 	Reset	Reset	NONE
 code	61	4	 	Reset	Reset	NONE
-code	62	4	│	Cyan	Reset	NONE
+code	62	4	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	4	 	Reset	Reset	NONE
 code	64	4	 	Reset	Reset	NONE
 code	65	4	 	Reset	Reset	NONE
@@ -8095,22 +8095,22 @@ code	13	5	 	Reset	Reset	NONE
 code	14	5	 	Reset	Reset	NONE
 code	15	5	 	Reset	Reset	NONE
 code	16	5	 	Reset	Reset	NONE
-code	17	5	│	Cyan	Reset	NONE
-code	18	5	⚠	Yellow	Reset	NONE
-code	19	5	 	Yellow	Reset	NONE
-code	20	5	p	Yellow	Reset	NONE
-code	21	5	a	Yellow	Reset	NONE
-code	22	5	r	Yellow	Reset	NONE
-code	23	5	t	Yellow	Reset	NONE
-code	24	5	i	Yellow	Reset	NONE
-code	25	5	a	Yellow	Reset	NONE
-code	26	5	l	Yellow	Reset	NONE
-code	27	5	 	Yellow	Reset	NONE
-code	28	5	i	Yellow	Reset	NONE
-code	29	5	n	Yellow	Reset	NONE
-code	30	5	d	Yellow	Reset	NONE
-code	31	5	e	Yellow	Reset	NONE
-code	32	5	x	Yellow	Reset	NONE
+code	17	5	│	Rgb(86, 199, 208)	Reset	NONE
+code	18	5	⚠	Rgb(215, 186, 125)	Reset	NONE
+code	19	5	 	Rgb(215, 186, 125)	Reset	NONE
+code	20	5	p	Rgb(215, 186, 125)	Reset	NONE
+code	21	5	a	Rgb(215, 186, 125)	Reset	NONE
+code	22	5	r	Rgb(215, 186, 125)	Reset	NONE
+code	23	5	t	Rgb(215, 186, 125)	Reset	NONE
+code	24	5	i	Rgb(215, 186, 125)	Reset	NONE
+code	25	5	a	Rgb(215, 186, 125)	Reset	NONE
+code	26	5	l	Rgb(215, 186, 125)	Reset	NONE
+code	27	5	 	Rgb(215, 186, 125)	Reset	NONE
+code	28	5	i	Rgb(215, 186, 125)	Reset	NONE
+code	29	5	n	Rgb(215, 186, 125)	Reset	NONE
+code	30	5	d	Rgb(215, 186, 125)	Reset	NONE
+code	31	5	e	Rgb(215, 186, 125)	Reset	NONE
+code	32	5	x	Rgb(215, 186, 125)	Reset	NONE
 code	33	5	 	Reset	Reset	NONE
 code	34	5	 	Reset	Reset	NONE
 code	35	5	 	Reset	Reset	NONE
@@ -8140,7 +8140,7 @@ code	58	5	 	Reset	Reset	NONE
 code	59	5	 	Reset	Reset	NONE
 code	60	5	 	Reset	Reset	NONE
 code	61	5	 	Reset	Reset	NONE
-code	62	5	│	Cyan	Reset	NONE
+code	62	5	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	5	 	Reset	Reset	NONE
 code	64	5	 	Reset	Reset	NONE
 code	65	5	 	Reset	Reset	NONE
@@ -8175,7 +8175,7 @@ code	13	6	 	Reset	Reset	NONE
 code	14	6	 	Reset	Reset	NONE
 code	15	6	 	Reset	Reset	NONE
 code	16	6	 	Reset	Reset	NONE
-code	17	6	│	Cyan	Reset	NONE
+code	17	6	│	Rgb(86, 199, 208)	Reset	NONE
 code	18	6	 	Reset	Reset	NONE
 code	19	6	 	Reset	Reset	NONE
 code	20	6	 	Reset	Reset	NONE
@@ -8220,7 +8220,7 @@ code	58	6	 	Reset	Reset	NONE
 code	59	6	 	Reset	Reset	NONE
 code	60	6	 	Reset	Reset	NONE
 code	61	6	 	Reset	Reset	NONE
-code	62	6	│	Cyan	Reset	NONE
+code	62	6	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	6	 	Reset	Reset	NONE
 code	64	6	 	Reset	Reset	NONE
 code	65	6	 	Reset	Reset	NONE
@@ -8255,18 +8255,18 @@ code	13	7	 	Reset	Reset	NONE
 code	14	7	 	Reset	Reset	NONE
 code	15	7	 	Reset	Reset	NONE
 code	16	7	 	Reset	Reset	NONE
-code	17	7	│	Cyan	Reset	NONE
-code	18	7	W	Cyan	Reset	NONE
-code	19	7	o	Cyan	Reset	NONE
-code	20	7	r	Cyan	Reset	NONE
-code	21	7	k	Cyan	Reset	NONE
-code	22	7	s	Cyan	Reset	NONE
-code	23	7	p	Cyan	Reset	NONE
-code	24	7	a	Cyan	Reset	NONE
-code	25	7	c	Cyan	Reset	NONE
-code	26	7	e	Cyan	Reset	NONE
-code	27	7	:	Cyan	Reset	NONE
-code	28	7	 	Cyan	Reset	NONE
+code	17	7	│	Rgb(86, 199, 208)	Reset	NONE
+code	18	7	W	Rgb(86, 199, 208)	Reset	NONE
+code	19	7	o	Rgb(86, 199, 208)	Reset	NONE
+code	20	7	r	Rgb(86, 199, 208)	Reset	NONE
+code	21	7	k	Rgb(86, 199, 208)	Reset	NONE
+code	22	7	s	Rgb(86, 199, 208)	Reset	NONE
+code	23	7	p	Rgb(86, 199, 208)	Reset	NONE
+code	24	7	a	Rgb(86, 199, 208)	Reset	NONE
+code	25	7	c	Rgb(86, 199, 208)	Reset	NONE
+code	26	7	e	Rgb(86, 199, 208)	Reset	NONE
+code	27	7	:	Rgb(86, 199, 208)	Reset	NONE
+code	28	7	 	Rgb(86, 199, 208)	Reset	NONE
 code	29	7	/	DarkGray	Reset	NONE
 code	30	7	r	DarkGray	Reset	NONE
 code	31	7	e	DarkGray	Reset	NONE
@@ -8300,7 +8300,7 @@ code	58	7	 	Reset	Reset	NONE
 code	59	7	 	Reset	Reset	NONE
 code	60	7	 	Reset	Reset	NONE
 code	61	7	 	Reset	Reset	NONE
-code	62	7	│	Cyan	Reset	NONE
+code	62	7	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	7	 	Reset	Reset	NONE
 code	64	7	 	Reset	Reset	NONE
 code	65	7	 	Reset	Reset	NONE
@@ -8335,18 +8335,18 @@ code	13	8	 	Reset	Reset	NONE
 code	14	8	 	Reset	Reset	NONE
 code	15	8	 	Reset	Reset	NONE
 code	16	8	 	Reset	Reset	NONE
-code	17	8	│	Cyan	Reset	NONE
-code	18	8	L	Cyan	Reset	NONE
-code	19	8	a	Cyan	Reset	NONE
-code	20	8	n	Cyan	Reset	NONE
-code	21	8	g	Cyan	Reset	NONE
-code	22	8	u	Cyan	Reset	NONE
-code	23	8	a	Cyan	Reset	NONE
-code	24	8	g	Cyan	Reset	NONE
-code	25	8	e	Cyan	Reset	NONE
-code	26	8	s	Cyan	Reset	NONE
-code	27	8	:	Cyan	Reset	NONE
-code	28	8	 	Cyan	Reset	NONE
+code	17	8	│	Rgb(86, 199, 208)	Reset	NONE
+code	18	8	L	Rgb(86, 199, 208)	Reset	NONE
+code	19	8	a	Rgb(86, 199, 208)	Reset	NONE
+code	20	8	n	Rgb(86, 199, 208)	Reset	NONE
+code	21	8	g	Rgb(86, 199, 208)	Reset	NONE
+code	22	8	u	Rgb(86, 199, 208)	Reset	NONE
+code	23	8	a	Rgb(86, 199, 208)	Reset	NONE
+code	24	8	g	Rgb(86, 199, 208)	Reset	NONE
+code	25	8	e	Rgb(86, 199, 208)	Reset	NONE
+code	26	8	s	Rgb(86, 199, 208)	Reset	NONE
+code	27	8	:	Rgb(86, 199, 208)	Reset	NONE
+code	28	8	 	Rgb(86, 199, 208)	Reset	NONE
 code	29	8	r	DarkGray	Reset	NONE
 code	30	8	u	DarkGray	Reset	NONE
 code	31	8	s	DarkGray	Reset	NONE
@@ -8380,7 +8380,7 @@ code	58	8	 	Reset	Reset	NONE
 code	59	8	 	Reset	Reset	NONE
 code	60	8	 	Reset	Reset	NONE
 code	61	8	 	Reset	Reset	NONE
-code	62	8	│	Cyan	Reset	NONE
+code	62	8	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	8	 	Reset	Reset	NONE
 code	64	8	 	Reset	Reset	NONE
 code	65	8	 	Reset	Reset	NONE
@@ -8415,18 +8415,18 @@ code	13	9	 	Reset	Reset	NONE
 code	14	9	 	Reset	Reset	NONE
 code	15	9	 	Reset	Reset	NONE
 code	16	9	 	Reset	Reset	NONE
-code	17	9	│	Cyan	Reset	NONE
-code	18	9	M	Cyan	Reset	NONE
-code	19	9	a	Cyan	Reset	NONE
-code	20	9	r	Cyan	Reset	NONE
-code	21	9	k	Cyan	Reset	NONE
-code	22	9	e	Cyan	Reset	NONE
-code	23	9	r	Cyan	Reset	NONE
-code	24	9	s	Cyan	Reset	NONE
-code	25	9	:	Cyan	Reset	NONE
-code	26	9	 	Cyan	Reset	NONE
-code	27	9	 	Cyan	Reset	NONE
-code	28	9	 	Cyan	Reset	NONE
+code	17	9	│	Rgb(86, 199, 208)	Reset	NONE
+code	18	9	M	Rgb(86, 199, 208)	Reset	NONE
+code	19	9	a	Rgb(86, 199, 208)	Reset	NONE
+code	20	9	r	Rgb(86, 199, 208)	Reset	NONE
+code	21	9	k	Rgb(86, 199, 208)	Reset	NONE
+code	22	9	e	Rgb(86, 199, 208)	Reset	NONE
+code	23	9	r	Rgb(86, 199, 208)	Reset	NONE
+code	24	9	s	Rgb(86, 199, 208)	Reset	NONE
+code	25	9	:	Rgb(86, 199, 208)	Reset	NONE
+code	26	9	 	Rgb(86, 199, 208)	Reset	NONE
+code	27	9	 	Rgb(86, 199, 208)	Reset	NONE
+code	28	9	 	Rgb(86, 199, 208)	Reset	NONE
 code	29	9	C	DarkGray	Reset	NONE
 code	30	9	a	DarkGray	Reset	NONE
 code	31	9	r	DarkGray	Reset	NONE
@@ -8460,7 +8460,7 @@ code	58	9	 	Reset	Reset	NONE
 code	59	9	 	Reset	Reset	NONE
 code	60	9	 	Reset	Reset	NONE
 code	61	9	 	Reset	Reset	NONE
-code	62	9	│	Cyan	Reset	NONE
+code	62	9	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	9	 	Reset	Reset	NONE
 code	64	9	 	Reset	Reset	NONE
 code	65	9	 	Reset	Reset	NONE
@@ -8495,7 +8495,7 @@ code	13	10	 	Reset	Reset	NONE
 code	14	10	 	Reset	Reset	NONE
 code	15	10	 	Reset	Reset	NONE
 code	16	10	 	Reset	Reset	NONE
-code	17	10	│	Cyan	Reset	NONE
+code	17	10	│	Rgb(86, 199, 208)	Reset	NONE
 code	18	10	 	Reset	Reset	NONE
 code	19	10	 	Reset	Reset	NONE
 code	20	10	 	Reset	Reset	NONE
@@ -8540,7 +8540,7 @@ code	58	10	 	Reset	Reset	NONE
 code	59	10	 	Reset	Reset	NONE
 code	60	10	 	Reset	Reset	NONE
 code	61	10	 	Reset	Reset	NONE
-code	62	10	│	Cyan	Reset	NONE
+code	62	10	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	10	 	Reset	Reset	NONE
 code	64	10	 	Reset	Reset	NONE
 code	65	10	 	Reset	Reset	NONE
@@ -8575,19 +8575,19 @@ code	13	11	 	Reset	Reset	NONE
 code	14	11	 	Reset	Reset	NONE
 code	15	11	 	Reset	Reset	NONE
 code	16	11	 	Reset	Reset	NONE
-code	17	11	│	Cyan	Reset	NONE
-code	18	11	L	Cyan	Reset	NONE
-code	19	11	S	Cyan	Reset	NONE
-code	20	11	P	Cyan	Reset	NONE
-code	21	11	 	Cyan	Reset	NONE
-code	22	11	S	Cyan	Reset	NONE
-code	23	11	e	Cyan	Reset	NONE
-code	24	11	r	Cyan	Reset	NONE
-code	25	11	v	Cyan	Reset	NONE
-code	26	11	e	Cyan	Reset	NONE
-code	27	11	r	Cyan	Reset	NONE
-code	28	11	s	Cyan	Reset	NONE
-code	29	11	:	Cyan	Reset	NONE
+code	17	11	│	Rgb(86, 199, 208)	Reset	NONE
+code	18	11	L	Rgb(86, 199, 208)	Reset	NONE
+code	19	11	S	Rgb(86, 199, 208)	Reset	NONE
+code	20	11	P	Rgb(86, 199, 208)	Reset	NONE
+code	21	11	 	Rgb(86, 199, 208)	Reset	NONE
+code	22	11	S	Rgb(86, 199, 208)	Reset	NONE
+code	23	11	e	Rgb(86, 199, 208)	Reset	NONE
+code	24	11	r	Rgb(86, 199, 208)	Reset	NONE
+code	25	11	v	Rgb(86, 199, 208)	Reset	NONE
+code	26	11	e	Rgb(86, 199, 208)	Reset	NONE
+code	27	11	r	Rgb(86, 199, 208)	Reset	NONE
+code	28	11	s	Rgb(86, 199, 208)	Reset	NONE
+code	29	11	:	Rgb(86, 199, 208)	Reset	NONE
 code	30	11	 	Reset	Reset	NONE
 code	31	11	 	Reset	Reset	NONE
 code	32	11	 	Reset	Reset	NONE
@@ -8620,7 +8620,7 @@ code	58	11	 	Reset	Reset	NONE
 code	59	11	 	Reset	Reset	NONE
 code	60	11	 	Reset	Reset	NONE
 code	61	11	 	Reset	Reset	NONE
-code	62	11	│	Cyan	Reset	NONE
+code	62	11	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	11	 	Reset	Reset	NONE
 code	64	11	 	Reset	Reset	NONE
 code	65	11	 	Reset	Reset	NONE
@@ -8655,7 +8655,7 @@ code	13	12	 	Reset	Reset	NONE
 code	14	12	 	Reset	Reset	NONE
 code	15	12	 	Reset	Reset	NONE
 code	16	12	 	Reset	Reset	NONE
-code	17	12	│	Cyan	Reset	NONE
+code	17	12	│	Rgb(86, 199, 208)	Reset	NONE
 code	18	12	✓	Green	Reset	NONE
 code	19	12	 	Green	Reset	NONE
 code	20	12	r	Green	Reset	NONE
@@ -8700,7 +8700,7 @@ code	58	12	s	Green	Reset	NONE
 code	59	12	)	Green	Reset	NONE
 code	60	12	 	Reset	Reset	NONE
 code	61	12	 	Reset	Reset	NONE
-code	62	12	│	Cyan	Reset	NONE
+code	62	12	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	12	 	Reset	Reset	NONE
 code	64	12	 	Reset	Reset	NONE
 code	65	12	 	Reset	Reset	NONE
@@ -8735,11 +8735,11 @@ code	13	13	 	Reset	Reset	NONE
 code	14	13	 	Reset	Reset	NONE
 code	15	13	 	Reset	Reset	NONE
 code	16	13	 	Reset	Reset	NONE
-code	17	13	│	Cyan	Reset	NONE
-code	18	13	◐	Yellow	Reset	NONE
-code	19	13	 	Yellow	Reset	NONE
-code	20	13	t	Yellow	Reset	NONE
-code	21	13	s	Yellow	Reset	NONE
+code	17	13	│	Rgb(86, 199, 208)	Reset	NONE
+code	18	13	◐	Rgb(215, 186, 125)	Reset	NONE
+code	19	13	 	Rgb(215, 186, 125)	Reset	NONE
+code	20	13	t	Rgb(215, 186, 125)	Reset	NONE
+code	21	13	s	Rgb(215, 186, 125)	Reset	NONE
 code	22	13	 	DarkGray	Reset	NONE
 code	23	13	 	DarkGray	Reset	NONE
 code	24	13	(	DarkGray	Reset	NONE
@@ -8758,18 +8758,18 @@ code	36	13	 	DarkGray	Reset	NONE
 code	37	13	 	DarkGray	Reset	NONE
 code	38	13	 	DarkGray	Reset	NONE
 code	39	13	 	DarkGray	Reset	NONE
-code	40	13	i	Yellow	Reset	NONE
-code	41	13	n	Yellow	Reset	NONE
-code	42	13	i	Yellow	Reset	NONE
-code	43	13	t	Yellow	Reset	NONE
-code	44	13	i	Yellow	Reset	NONE
-code	45	13	a	Yellow	Reset	NONE
-code	46	13	l	Yellow	Reset	NONE
-code	47	13	i	Yellow	Reset	NONE
-code	48	13	z	Yellow	Reset	NONE
-code	49	13	i	Yellow	Reset	NONE
-code	50	13	n	Yellow	Reset	NONE
-code	51	13	g	Yellow	Reset	NONE
+code	40	13	i	Rgb(215, 186, 125)	Reset	NONE
+code	41	13	n	Rgb(215, 186, 125)	Reset	NONE
+code	42	13	i	Rgb(215, 186, 125)	Reset	NONE
+code	43	13	t	Rgb(215, 186, 125)	Reset	NONE
+code	44	13	i	Rgb(215, 186, 125)	Reset	NONE
+code	45	13	a	Rgb(215, 186, 125)	Reset	NONE
+code	46	13	l	Rgb(215, 186, 125)	Reset	NONE
+code	47	13	i	Rgb(215, 186, 125)	Reset	NONE
+code	48	13	z	Rgb(215, 186, 125)	Reset	NONE
+code	49	13	i	Rgb(215, 186, 125)	Reset	NONE
+code	50	13	n	Rgb(215, 186, 125)	Reset	NONE
+code	51	13	g	Rgb(215, 186, 125)	Reset	NONE
 code	52	13	 	Reset	Reset	NONE
 code	53	13	 	Reset	Reset	NONE
 code	54	13	 	Reset	Reset	NONE
@@ -8780,7 +8780,7 @@ code	58	13	 	Reset	Reset	NONE
 code	59	13	 	Reset	Reset	NONE
 code	60	13	 	Reset	Reset	NONE
 code	61	13	 	Reset	Reset	NONE
-code	62	13	│	Cyan	Reset	NONE
+code	62	13	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	13	 	Reset	Reset	NONE
 code	64	13	 	Reset	Reset	NONE
 code	65	13	 	Reset	Reset	NONE
@@ -8815,11 +8815,11 @@ code	13	14	 	Reset	Reset	NONE
 code	14	14	 	Reset	Reset	NONE
 code	15	14	 	Reset	Reset	NONE
 code	16	14	 	Reset	Reset	NONE
-code	17	14	│	Cyan	Reset	NONE
-code	18	14	✗	Red	Reset	NONE
-code	19	14	 	Red	Reset	NONE
-code	20	14	p	Red	Reset	NONE
-code	21	14	y	Red	Reset	NONE
+code	17	14	│	Rgb(86, 199, 208)	Reset	NONE
+code	18	14	✗	Rgb(217, 138, 138)	Reset	NONE
+code	19	14	 	Rgb(217, 138, 138)	Reset	NONE
+code	20	14	p	Rgb(217, 138, 138)	Reset	NONE
+code	21	14	y	Rgb(217, 138, 138)	Reset	NONE
 code	22	14	 	DarkGray	Reset	NONE
 code	23	14	 	DarkGray	Reset	NONE
 code	24	14	(	DarkGray	Reset	NONE
@@ -8838,12 +8838,12 @@ code	36	14	 	DarkGray	Reset	NONE
 code	37	14	 	DarkGray	Reset	NONE
 code	38	14	 	DarkGray	Reset	NONE
 code	39	14	 	DarkGray	Reset	NONE
-code	40	14	f	Red	Reset	NONE
-code	41	14	a	Red	Reset	NONE
-code	42	14	i	Red	Reset	NONE
-code	43	14	l	Red	Reset	NONE
-code	44	14	e	Red	Reset	NONE
-code	45	14	d	Red	Reset	NONE
+code	40	14	f	Rgb(217, 138, 138)	Reset	NONE
+code	41	14	a	Rgb(217, 138, 138)	Reset	NONE
+code	42	14	i	Rgb(217, 138, 138)	Reset	NONE
+code	43	14	l	Rgb(217, 138, 138)	Reset	NONE
+code	44	14	e	Rgb(217, 138, 138)	Reset	NONE
+code	45	14	d	Rgb(217, 138, 138)	Reset	NONE
 code	46	14	 	Reset	Reset	NONE
 code	47	14	 	Reset	Reset	NONE
 code	48	14	 	Reset	Reset	NONE
@@ -8860,7 +8860,7 @@ code	58	14	 	Reset	Reset	NONE
 code	59	14	 	Reset	Reset	NONE
 code	60	14	 	Reset	Reset	NONE
 code	61	14	 	Reset	Reset	NONE
-code	62	14	│	Cyan	Reset	NONE
+code	62	14	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	14	 	Reset	Reset	NONE
 code	64	14	 	Reset	Reset	NONE
 code	65	14	 	Reset	Reset	NONE
@@ -8895,7 +8895,7 @@ code	13	15	 	Reset	Reset	NONE
 code	14	15	 	Reset	Reset	NONE
 code	15	15	 	Reset	Reset	NONE
 code	16	15	 	Reset	Reset	NONE
-code	17	15	│	Cyan	Reset	NONE
+code	17	15	│	Rgb(86, 199, 208)	Reset	NONE
 code	18	15	○	DarkGray	Reset	NONE
 code	19	15	 	DarkGray	Reset	NONE
 code	20	15	g	DarkGray	Reset	NONE
@@ -8940,7 +8940,7 @@ code	58	15	 	Reset	Reset	NONE
 code	59	15	 	Reset	Reset	NONE
 code	60	15	 	Reset	Reset	NONE
 code	61	15	 	Reset	Reset	NONE
-code	62	15	│	Cyan	Reset	NONE
+code	62	15	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	15	 	Reset	Reset	NONE
 code	64	15	 	Reset	Reset	NONE
 code	65	15	 	Reset	Reset	NONE
@@ -8975,7 +8975,7 @@ code	13	16	 	Reset	Reset	NONE
 code	14	16	 	Reset	Reset	NONE
 code	15	16	 	Reset	Reset	NONE
 code	16	16	 	Reset	Reset	NONE
-code	17	16	│	Cyan	Reset	NONE
+code	17	16	│	Rgb(86, 199, 208)	Reset	NONE
 code	18	16	 	Reset	Reset	NONE
 code	19	16	 	Reset	Reset	NONE
 code	20	16	 	Reset	Reset	NONE
@@ -9020,7 +9020,7 @@ code	58	16	 	Reset	Reset	NONE
 code	59	16	 	Reset	Reset	NONE
 code	60	16	 	Reset	Reset	NONE
 code	61	16	 	Reset	Reset	NONE
-code	62	16	│	Cyan	Reset	NONE
+code	62	16	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	16	 	Reset	Reset	NONE
 code	64	16	 	Reset	Reset	NONE
 code	65	16	 	Reset	Reset	NONE
@@ -9055,7 +9055,7 @@ code	13	17	 	Reset	Reset	NONE
 code	14	17	 	Reset	Reset	NONE
 code	15	17	 	Reset	Reset	NONE
 code	16	17	 	Reset	Reset	NONE
-code	17	17	│	Cyan	Reset	NONE
+code	17	17	│	Rgb(86, 199, 208)	Reset	NONE
 code	18	17	C	DarkGray	Reset	NONE
 code	19	17	o	DarkGray	Reset	NONE
 code	20	17	n	DarkGray	Reset	NONE
@@ -9064,21 +9064,21 @@ code	22	17	i	DarkGray	Reset	NONE
 code	23	17	g	DarkGray	Reset	NONE
 code	24	17	:	DarkGray	Reset	NONE
 code	25	17	 	DarkGray	Reset	NONE
-code	26	17	/	Cyan	Reset	NONE
-code	27	17	r	Cyan	Reset	NONE
-code	28	17	e	Cyan	Reset	NONE
-code	29	17	p	Cyan	Reset	NONE
-code	30	17	o	Cyan	Reset	NONE
-code	31	17	/	Cyan	Reset	NONE
-code	32	17	.	Cyan	Reset	NONE
-code	33	17	l	Cyan	Reset	NONE
-code	34	17	s	Cyan	Reset	NONE
-code	35	17	p	Cyan	Reset	NONE
-code	36	17	.	Cyan	Reset	NONE
-code	37	17	j	Cyan	Reset	NONE
-code	38	17	s	Cyan	Reset	NONE
-code	39	17	o	Cyan	Reset	NONE
-code	40	17	n	Cyan	Reset	NONE
+code	26	17	/	Rgb(86, 199, 208)	Reset	NONE
+code	27	17	r	Rgb(86, 199, 208)	Reset	NONE
+code	28	17	e	Rgb(86, 199, 208)	Reset	NONE
+code	29	17	p	Rgb(86, 199, 208)	Reset	NONE
+code	30	17	o	Rgb(86, 199, 208)	Reset	NONE
+code	31	17	/	Rgb(86, 199, 208)	Reset	NONE
+code	32	17	.	Rgb(86, 199, 208)	Reset	NONE
+code	33	17	l	Rgb(86, 199, 208)	Reset	NONE
+code	34	17	s	Rgb(86, 199, 208)	Reset	NONE
+code	35	17	p	Rgb(86, 199, 208)	Reset	NONE
+code	36	17	.	Rgb(86, 199, 208)	Reset	NONE
+code	37	17	j	Rgb(86, 199, 208)	Reset	NONE
+code	38	17	s	Rgb(86, 199, 208)	Reset	NONE
+code	39	17	o	Rgb(86, 199, 208)	Reset	NONE
+code	40	17	n	Rgb(86, 199, 208)	Reset	NONE
 code	41	17	 	Reset	Reset	NONE
 code	42	17	 	Reset	Reset	NONE
 code	43	17	 	Reset	Reset	NONE
@@ -9100,7 +9100,7 @@ code	58	17	 	Reset	Reset	NONE
 code	59	17	 	Reset	Reset	NONE
 code	60	17	 	Reset	Reset	NONE
 code	61	17	 	Reset	Reset	NONE
-code	62	17	│	Cyan	Reset	NONE
+code	62	17	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	17	 	Reset	Reset	NONE
 code	64	17	 	Reset	Reset	NONE
 code	65	17	 	Reset	Reset	NONE
@@ -9135,7 +9135,7 @@ code	13	18	 	Reset	Reset	NONE
 code	14	18	 	Reset	Reset	NONE
 code	15	18	 	Reset	Reset	NONE
 code	16	18	 	Reset	Reset	NONE
-code	17	18	│	Cyan	Reset	NONE
+code	17	18	│	Rgb(86, 199, 208)	Reset	NONE
 code	18	18	 	Reset	Reset	NONE
 code	19	18	 	Reset	Reset	NONE
 code	20	18	 	Reset	Reset	NONE
@@ -9180,7 +9180,7 @@ code	58	18	 	Reset	Reset	NONE
 code	59	18	 	Reset	Reset	NONE
 code	60	18	 	Reset	Reset	NONE
 code	61	18	 	Reset	Reset	NONE
-code	62	18	│	Cyan	Reset	NONE
+code	62	18	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	18	 	Reset	Reset	NONE
 code	64	18	 	Reset	Reset	NONE
 code	65	18	 	Reset	Reset	NONE
@@ -9215,10 +9215,10 @@ code	13	19	 	Reset	Reset	NONE
 code	14	19	 	Reset	Reset	NONE
 code	15	19	 	Reset	Reset	NONE
 code	16	19	 	Reset	Reset	NONE
-code	17	19	│	Cyan	Reset	NONE
-code	18	19	[	Cyan	Reset	NONE
-code	19	19	r	Cyan	Reset	NONE
-code	20	19	]	Cyan	Reset	NONE
+code	17	19	│	Rgb(86, 199, 208)	Reset	NONE
+code	18	19	[	Rgb(86, 199, 208)	Reset	NONE
+code	19	19	r	Rgb(86, 199, 208)	Reset	NONE
+code	20	19	]	Rgb(86, 199, 208)	Reset	NONE
 code	21	19	 	DarkGray	Reset	NONE
 code	22	19	r	DarkGray	Reset	NONE
 code	23	19	e	DarkGray	Reset	NONE
@@ -9229,11 +9229,11 @@ code	27	19	s	DarkGray	Reset	NONE
 code	28	19	h	DarkGray	Reset	NONE
 code	29	19	 	DarkGray	Reset	NONE
 code	30	19	 	DarkGray	Reset	NONE
-code	31	19	[	Cyan	Reset	NONE
-code	32	19	E	Cyan	Reset	NONE
-code	33	19	s	Cyan	Reset	NONE
-code	34	19	c	Cyan	Reset	NONE
-code	35	19	]	Cyan	Reset	NONE
+code	31	19	[	Rgb(86, 199, 208)	Reset	NONE
+code	32	19	E	Rgb(86, 199, 208)	Reset	NONE
+code	33	19	s	Rgb(86, 199, 208)	Reset	NONE
+code	34	19	c	Rgb(86, 199, 208)	Reset	NONE
+code	35	19	]	Rgb(86, 199, 208)	Reset	NONE
 code	36	19	 	DarkGray	Reset	NONE
 code	37	19	c	DarkGray	Reset	NONE
 code	38	19	l	DarkGray	Reset	NONE
@@ -9260,7 +9260,7 @@ code	58	19	 	Reset	Reset	NONE
 code	59	19	 	Reset	Reset	NONE
 code	60	19	 	Reset	Reset	NONE
 code	61	19	 	Reset	Reset	NONE
-code	62	19	│	Cyan	Reset	NONE
+code	62	19	│	Rgb(86, 199, 208)	Reset	NONE
 code	63	19	 	Reset	Reset	NONE
 code	64	19	 	Reset	Reset	NONE
 code	65	19	 	Reset	Reset	NONE
@@ -9295,52 +9295,52 @@ code	13	20	 	Reset	Reset	NONE
 code	14	20	 	Reset	Reset	NONE
 code	15	20	 	Reset	Reset	NONE
 code	16	20	 	Reset	Reset	NONE
-code	17	20	└	Cyan	Reset	NONE
-code	18	20	─	Cyan	Reset	NONE
-code	19	20	─	Cyan	Reset	NONE
-code	20	20	─	Cyan	Reset	NONE
-code	21	20	─	Cyan	Reset	NONE
-code	22	20	─	Cyan	Reset	NONE
-code	23	20	─	Cyan	Reset	NONE
-code	24	20	─	Cyan	Reset	NONE
-code	25	20	─	Cyan	Reset	NONE
-code	26	20	─	Cyan	Reset	NONE
-code	27	20	─	Cyan	Reset	NONE
-code	28	20	─	Cyan	Reset	NONE
-code	29	20	─	Cyan	Reset	NONE
-code	30	20	─	Cyan	Reset	NONE
-code	31	20	─	Cyan	Reset	NONE
-code	32	20	─	Cyan	Reset	NONE
-code	33	20	─	Cyan	Reset	NONE
-code	34	20	─	Cyan	Reset	NONE
-code	35	20	─	Cyan	Reset	NONE
-code	36	20	─	Cyan	Reset	NONE
-code	37	20	─	Cyan	Reset	NONE
-code	38	20	─	Cyan	Reset	NONE
-code	39	20	─	Cyan	Reset	NONE
-code	40	20	─	Cyan	Reset	NONE
-code	41	20	─	Cyan	Reset	NONE
-code	42	20	─	Cyan	Reset	NONE
-code	43	20	─	Cyan	Reset	NONE
-code	44	20	─	Cyan	Reset	NONE
-code	45	20	─	Cyan	Reset	NONE
-code	46	20	─	Cyan	Reset	NONE
-code	47	20	─	Cyan	Reset	NONE
-code	48	20	─	Cyan	Reset	NONE
-code	49	20	─	Cyan	Reset	NONE
-code	50	20	─	Cyan	Reset	NONE
-code	51	20	─	Cyan	Reset	NONE
-code	52	20	─	Cyan	Reset	NONE
-code	53	20	─	Cyan	Reset	NONE
-code	54	20	─	Cyan	Reset	NONE
-code	55	20	─	Cyan	Reset	NONE
-code	56	20	─	Cyan	Reset	NONE
-code	57	20	─	Cyan	Reset	NONE
-code	58	20	─	Cyan	Reset	NONE
-code	59	20	─	Cyan	Reset	NONE
-code	60	20	─	Cyan	Reset	NONE
-code	61	20	─	Cyan	Reset	NONE
-code	62	20	┘	Cyan	Reset	NONE
+code	17	20	└	Rgb(86, 199, 208)	Reset	NONE
+code	18	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	19	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	20	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	21	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	22	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	23	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	24	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	25	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	26	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	27	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	28	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	29	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	30	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	31	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	32	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	33	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	34	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	35	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	36	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	37	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	38	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	39	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	40	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	41	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	42	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	43	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	44	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	45	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	46	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	47	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	48	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	49	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	50	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	51	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	52	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	53	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	54	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	55	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	56	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	57	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	58	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	59	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	60	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	61	20	─	Rgb(86, 199, 208)	Reset	NONE
+code	62	20	┘	Rgb(86, 199, 208)	Reset	NONE
 code	63	20	 	Reset	Reset	NONE
 code	64	20	 	Reset	Reset	NONE
 code	65	20	 	Reset	Reset	NONE
