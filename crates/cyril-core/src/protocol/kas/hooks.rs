@@ -1072,6 +1072,41 @@ mod tests {
         assert_eq!(results[0]["content"], "\nSET\n");
     }
 
+    // cyril-tpfd claim 10: sessionStart execution is a non-blocking future —
+    // a concurrent future on the same task resolves while a 3s hook runs. A
+    // blocking executor (std::process inside the async fn) starves the task
+    // and fails this. Responder-level with an explicit registry for
+    // determinism (KiroClient::new would merge ~/.kiro/hooks — a dev
+    // machine's real hooks must not run in tests); ext_method-level
+    // concurrency for hook responders is already fenced by
+    // client::slow_hook_does_not_block_loop.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn slow_session_start_does_not_block_loop() {
+        let ws = tempfile::tempdir().unwrap();
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "slow.json",
+            r#"{"version":"v1","hooks":[
+                {"name":"slow","trigger":"SessionStart",
+                 "action":{"type":"command","command":"sleep 3 && echo done"}}
+            ]}"#,
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let start = std::time::Instant::now();
+        // Timing captured at RESOLUTION of the cheap future — measured after
+        // join! it would always include the hook's 3s (the jiyn P2 bug class).
+        let (resp, cheap_elapsed) = tokio::join!(respond_session_start(&reg, ws.path()), async {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            start.elapsed()
+        });
+        assert!(resp.is_ok());
+        assert!(
+            cheap_elapsed < std::time::Duration::from_secs(2),
+            "concurrent future must resolve while the 3s sessionStart hook runs: {cheap_elapsed:?}"
+        );
+    }
+
     // Windows counterpart: sessionStart execution works through cmd /C and
     // packages output (the platform-shell regression class).
     #[cfg(windows)]
