@@ -38,15 +38,14 @@ Three parts, "make the right thing easy + the wrong thing hard + fence it":
    Bypassable with `--no-verify` (documented). Feature commits in a linked
    worktree pass untouched.
 
-**Two flagged decisions for the pause** (each trims the design, none blocks it):
-- **FD-1 — include the guard hook (part 3)?** It makes the convention
-  self-enforcing but imposes a policy: the primary checkout becomes main-line
-  only. Drop it → parts 1+2 only (helper + docs), relying on the helper's
-  ergonomics + git's own exit-128.
-- **FD-2 — add a CI job for the fence?** The regression fence is a bash test
-  (`scripts/tests/worktree_test.sh`). CI today is Rust-only; a deterministic
-  fence needs a minimal ubuntu step running that test. Decline → the test is
-  committed and run-on-demand, fence status `manual` (needs explicit approval).
+**Pause decisions (resolved 2026-07-24):**
+- **FD-1 = BLOCKING guard.** Part 3 ships and *blocks* (not warns) feature-branch
+  commits in the primary checkout. Policy accepted: primary checkout is
+  main-line only; feature work goes in a linked worktree. Opt-in via
+  `core.hooksPath` (does not retroactively block this build session).
+- **FD-2 = ADD CI job.** A minimal ubuntu-only workflow step runs
+  `scripts/tests/worktree_test.sh` on every push. All G*/D1 fences are therefore
+  deterministic-CI, not `manual`.
 
 ## Input shapes
 
