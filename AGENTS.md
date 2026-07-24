@@ -160,7 +160,12 @@ The largest file. Translates raw ACP protocol messages → typed `Notification` 
 Key options: `ui.max_messages` (500), `ui.stream_buffer_timeout_ms` (150), `ui.mouse_capture` (true), `agent.agent_name` ("kiro-cli").
 
 ### Git Hooks
-`.claude/hooks/rustfmt.sh` — runs `rustfmt --edition 2024` on staged `.rs` files before commit.
+`.claude/hooks/rustfmt.sh` — runs `rustfmt --edition 2024` on staged `.rs` files before commit (a Claude-Code harness hook, wired in `.claude/settings.json`).
+
+`.githooks/pre-commit` — the cyril-4rc1 worktree guard: in the **primary** checkout it refuses a feature-branch commit (feature work belongs in a per-session worktree; parallel sessions collide in a shared checkout). Enable once per clone with `git config core.hooksPath .githooks`; bypass with `git commit --no-verify`. `.githooks/` is the repo's git-hooks directory (distinct from the harness hook above).
+
+### Parallel sessions
+Run each concurrent session in its own linked worktree — `dest=$(scripts/session-worktree.sh <branch>) && cd "$dest"` — never share the primary checkout. See CLAUDE.md → "Parallel sessions" for the full rationale.
 
 ### Logging
 JSON-structured logs to `~/.config/cyril/cyril.log` via `tracing-subscriber`. Enable debug: `RUST_LOG=debug cargo run`.
