@@ -453,13 +453,7 @@ impl HookRegistry {
     /// `tool_id` is absent (there is nothing to match) or does not match; an
     /// unknown trigger simply yields an empty list, never an error.
     pub(crate) fn list(&self, trigger: &str, tool_id: Option<&str>) -> Vec<serde_json::Value> {
-        self.hooks
-            .iter()
-            .filter(|h| h.wire_trigger == trigger)
-            .filter(|h| match &h.matcher {
-                None => true,
-                Some(rx) => tool_id.is_some_and(|t| rx.is_match(t)),
-            })
+        self.matching(trigger, tool_id)
             .map(|h| {
                 serde_json::json!({
                     "id": h.id,
@@ -471,14 +465,30 @@ impl HookRegistry {
             .collect()
     }
 
-    /// The hooks host-driven sessionStart execution serves — mirrors
-    /// `list("sessionStart", None)` semantics exactly (matcher-carrying
-    /// hooks are excluded: there is no tool context at session start), so
-    /// the accessor and the wire list can never disagree on membership.
-    fn session_start_hooks(&self) -> impl Iterator<Item = &HookDef> {
+    /// The single membership predicate under both the wire `list` reply and
+    /// host-driven sessionStart execution: wire trigger equals `trigger`,
+    /// and the optional matcher accepts `tool_id` (a matcher-carrying hook
+    /// is excluded when there is no tool context to match).
+    fn matching<'a>(
+        &'a self,
+        trigger: &'a str,
+        tool_id: Option<&'a str>,
+    ) -> impl Iterator<Item = &'a HookDef> + 'a {
         self.hooks
             .iter()
-            .filter(|h| h.wire_trigger == "sessionStart" && h.matcher.is_none())
+            .filter(move |h| h.wire_trigger == trigger)
+            .filter(move |h| match &h.matcher {
+                None => true,
+                Some(rx) => tool_id.is_some_and(|t| rx.is_match(t)),
+            })
+    }
+
+    /// The hooks host-driven sessionStart execution serves — the same
+    /// `matching` predicate as `list("sessionStart", None)`, so the accessor
+    /// and the wire list cannot disagree on membership (structurally, not by
+    /// parallel filters kept in sync by hand).
+    fn session_start_hooks(&self) -> impl Iterator<Item = &HookDef> {
+        self.matching("sessionStart", None)
     }
 }
 
@@ -973,6 +983,36 @@ mod tests {
         assert_eq!(contents, ["first\n", "last\n"]);
         let ids: Vec<&str> = els.iter().map(|x| x["id"].as_str().unwrap()).collect();
         assert_eq!(ids, ["f:a", "f:e"]);
+    }
+
+    // cyril-tpfd claim 2 (executed half): two REAL hooks run and their reply
+    // order equals within-file registry order — a concurrent-join or
+    // collection reorder fails this. (The pure-packer half of claim 2 is
+    // session_start_packaging_skips_and_orders.)
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn session_start_results_in_registry_order() {
+        let ws = tempfile::tempdir().unwrap();
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "ord.json",
+            r#"{"version":"v1","hooks":[
+                {"name":"first","trigger":"SessionStart",
+                 "action":{"type":"command","command":"echo A"}},
+                {"name":"second","trigger":"SessionStart",
+                 "action":{"type":"command","command":"echo B"}}
+            ]}"#,
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let resp = respond_session_start(&reg, ws.path()).await.unwrap();
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        let contents: Vec<&str> = reply["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["content"].as_str().unwrap())
+            .collect();
+        assert_eq!(contents, ["A\n", "B\n"]);
     }
 
     // cyril-tpfd claim 1: only sessionStart-trigger hooks run — a hook
