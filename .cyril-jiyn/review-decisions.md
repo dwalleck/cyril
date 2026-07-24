@@ -33,3 +33,41 @@ Notable: P2's verification found a genuine bug in my own substitute test
 (`join!` measures both futures' completion, so elapsed-after-join always
 included the hook's full runtime). The corrected fence captures the timing at
 shell_type resolution and now actually proves non-blocking.
+
+# cyril-jiyn — post-PR two-axis review decisions (2026-07-23, PR #62)
+
+Second two-axis review, run against `main...HEAD` after the PR opened.
+Findings verified per gilfoyle/assessing-review-feedback; three re-litigated
+points from the pre-PR review above were rejected by citing the prior
+decision. Applied fixes: commit `a63a4ed` (N1–N3) and `19c0d25` (N10).
+
+## Standards axis
+
+| # | Finding (one line) | Category | Verified? | Decision | Note |
+|---|---|---|---|---|---|
+| N1 | `entries.flatten()` drops per-entry read_dir errors | Bug | Yes — contradicts `load()`'s own "every per-entry problem is a warn + skip" doc contract | Accept | `a63a4ed`: match + warn + skip |
+| N2 | `respond_list` trigger `unwrap_or("")` + `executeHook` userPrompt fallback, both silent | Standards | Yes | Modify | `a63a4ed`: the `""` trigger was also a sentinel — replaced with logged let-else early empty reply + `respond_list_missing_trigger_replies_empty` fence; userPrompt fallback now warns |
+| N3 | `code().unwrap_or(137)` silent on signal death | Standards | Yes | Modify | `a63a4ed`: warn added; the 137 mapping itself stays per prior S3 rejection (no cross-platform signal number worth forking for) |
+| N4 | `parse_ext_params` logs `debug!`, CLAUDE.md says warn | Style | Yes | Reject | Already decided: prior S2 chose `debug!` deliberately (unreachable in practice — RawValue pre-validated) |
+| N5 | Reply JSON hand-built in 5 spots; `wire_trigger` as `&'static str` | Design | Yes | Reject | `json!` is the established kas-responder idiom (`json_ext_response` pins the plumbing); enum half already rejected as prior S5 (wire pass-through; the PascalCase→camelCase map is the typed layer) |
+| N6 | Method if-cascade grows in both `handle_ext_request` and `ext_notification` | Design | Yes | Reject | Matches the existing client.rs dispatch idiom (auth/shell_type); revisit as a dispatch table if it grows again |
+| N7 | `respond_execute` runs wire-supplied command verbatim; registry never consulted | Design/security | Yes — covenant makes executeHook an echo of list-served commands, and says the client "handles approval" | Reject (defer) | Filed **cyril-qr6l** (discovered-from cyril-jiyn): probe whether KAS echoes ids/commands unchanged, then cross-check + warn/deny on mismatch — the org-gate integrity property |
+| N8 | hooks.rs (705 lines) is two halves; split | Polish | Yes | Reject | Registry + executor are two cohesive halves of one covenant surface; split when a third concern arrives |
+
+## Spec axis
+
+| # | Finding (one line) | Category | Verified? | Decision | Note |
+|---|---|---|---|---|---|
+| N9 | sessionStart stub reverses pause-approved EXECUTE | Spec deviation | Yes | **Surface to approver** (again) | Same as prior P3 — deferral to cyril-tpfd is honest + evidence-driven but must be ratified by the approver at merge; still open |
+| N10 | Wire-audit doc lacks the decided default + no-composition result | Docs gap | Yes — narrower than reported: the hooks section exists, the decision record was absent | Modify (absorb) | `19c0d25`: decided-default bullet added to the wire-audit hooks section; covenant half stays tracked at cyril-mfkg |
+| N11 | A/B capture partial (`prompt_completed: false` both arms; preToolUse never fired on 2.13.0) | Evidence quality | Yes | Reject | Honestly caveated in findings.md; exit-2 block rests on the 2.7.1 end-to-end capture + source continuity; per-release both-arms fence stands |
+| N12 | cyril-jmjb absorbed by slice 0 but still open | Process | Yes (rivets: open) | Accept (merge action) | Close cyril-jmjb alongside cyril-jiyn when PR #62 merges |
+| N13 | Windows `cmd /C` path + tests were unrequested | Scope | Yes | Accept (keep) | CI-forced platform fix; Windows is a supported platform (CLAUDE.md Platform Constraints) |
+
+## Outcome
+
+Applied: N1, N2, N3 (`a63a4ed`), N10 (`19c0d25`). Rejected with evidence:
+N4, N5, N6, N8, N11 (three by citing pre-PR decisions). Deferred with
+tracker: N7 → cyril-qr6l. Merge actions: N12 (close cyril-jmjb).
+**Open for the approver: N9** — ratify the sessionStart execute→stub
+deferral (cyril-tpfd) or require execution before merge.
