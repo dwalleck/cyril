@@ -486,8 +486,21 @@ impl HookRegistry {
     /// The hooks host-driven sessionStart execution serves — the same
     /// `matching` predicate as `list("sessionStart", None)`, so the accessor
     /// and the wire list cannot disagree on membership (structurally, not by
-    /// parallel filters kept in sync by hand).
+    /// parallel filters kept in sync by hand). A matcher-carrying
+    /// sessionStart hook can never be a member (no tool context to match at
+    /// session start); that exclusion is debug-logged here so the hook does
+    /// not vanish without trace.
     fn session_start_hooks(&self) -> impl Iterator<Item = &HookDef> {
+        for h in self
+            .hooks
+            .iter()
+            .filter(|h| h.wire_trigger == "sessionStart" && h.matcher.is_some())
+        {
+            tracing::debug!(
+                hook = %h.name,
+                "sessionStart hook has a matcher; excluded (nothing to match at session start)"
+            );
+        }
         self.matching("sessionStart", None)
     }
 }

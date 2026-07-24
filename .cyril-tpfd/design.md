@@ -52,7 +52,9 @@ consumption semantics are probe-verified (`findings.md`: carve on
   gates it — jiyn A/B); `kas`/`off` out of scope.
 - SessionStart hook WITH a `matcher`: excluded by `list(trigger, None)`
   semantics (nothing to match at session start). Accepted divergence,
-  degenerate config; debug-logged by existing list filtering.
+  degenerate config; debug-logged at sessionStart membership
+  (`session_start_hooks` — generic list filtering stays silent, since
+  matcher exclusion under a real `toolId` is routine wire semantics).
 
 ## Subtractive sweep
 
