@@ -48,6 +48,19 @@ test_h1_create_new_branch() {
 	rm -rf "$r" "$dest"
 }
 
+# H1 (base-ref arm): the optional 2nd arg branches from a specific ref, not HEAD.
+test_h1b_base_ref() {
+	local r
+	r=$(new_repo)
+	local first
+	first=$(git -C "$r" rev-parse HEAD)
+	git -C "$r" -c user.name=t -c user.email=t@x commit -q --allow-empty -m second
+	local dest
+	dest=$(cd "$r" && bash "$HELPER" feat-based "$first")
+	ck head-at-base "$first" "$(git -C "$dest" rev-parse HEAD)"
+	rm -rf "$r" "$dest"
+}
+
 test_h2_existing_branch_no_dup() {
 	local r
 	r=$(new_repo)
@@ -193,6 +206,33 @@ test_g4_no_verify_bypasses() {
 	rm -rf "$d"
 }
 
+# Regression fence for the symlinked-path bug: reaching the PRIMARY checkout
+# through a symlink must still be detected as primary and BLOCK a feature
+# commit. Fails a guard that compares a physical --absolute-git-dir against a
+# logical `pwd` (they diverge under the symlink → misread as linked → allowed).
+test_g5_primary_via_symlink_blocked() {
+	local d link
+	d=$(repo_with_guard)
+	git -C "$d" switch -q -c feat-sym
+	link=$(mktemp -d)/lnk
+	ln -s "$d" "$link"
+	local before rc=0
+	before=$(git -C "$link" rev-parse HEAD)
+	git -C "$link" -c user.name=t -c user.email=t@x commit --allow-empty -m x >/dev/null 2>&1 || rc=$?
+	ck blocked-via-symlink yes "$([ "$rc" -ne 0 ] && echo yes || echo no)"
+	ck head-unmoved "$before" "$(git -C "$link" rev-parse HEAD)"
+	rm -rf "$d" "$(dirname "$link")"
+}
+
+# The guard allows a DETACHED HEAD in the primary (rebase/merge/bisect use it).
+test_g6_detached_head_allowed() {
+	local d
+	d=$(repo_with_guard)
+	git -C "$d" checkout -q --detach
+	ck detached-allowed 0 "$(_commit "$d")"
+	rm -rf "$d"
+}
+
 # ---- Slice 3/4: docs convention (D1) ----
 
 # Grep the real checked-out docs (independent of prose): both CLAUDE.md and
@@ -210,12 +250,19 @@ test_d1_docs_convention() {
 # ---- runner ----
 
 main() {
-	local fns
+	local fns before
 	fns=$(declare -F | awk '{print $3}' | grep '^test_' | sort)
 	for fn in $fns; do
 		CURRENT="$fn"
 		echo "== $fn =="
+		before=$((PASS + FAIL))
 		"$fn"
+		# A test that produced zero assertions (setup died before any `ck`)
+		# would otherwise be invisible — count it as a failure, not a pass.
+		if [ $((PASS + FAIL)) -eq "$before" ]; then
+			echo "  FAIL $fn: produced no assertions" >&2
+			FAIL=$((FAIL + 1))
+		fi
 	done
 	echo
 	echo "worktree_test: $PASS passed, $FAIL failed" >&2
