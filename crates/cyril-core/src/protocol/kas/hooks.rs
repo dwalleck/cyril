@@ -153,7 +153,7 @@ const DEFAULT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 /// while sessionStart packaging picks stdout-else-stderr (the carved KAS
 /// producer semantics). Keeping the streams separate here lets each caller
 /// apply its own convention without string-matching on error text.
-pub(crate) enum HookRunOutcome {
+enum HookRunOutcome {
     Completed {
         stdout: String,
         stderr: String,
