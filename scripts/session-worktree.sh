@@ -32,10 +32,14 @@ primary=$(dirname "$common")
 dest="$(dirname "$primary")/cyril-wt-${branch//\//-}"
 
 # Idempotent: if a worktree already holds this branch, report it and stop.
-if existing=$(git worktree list --porcelain | awk -v b="refs/heads/$branch" '
+# Assign on its own line (not inside the `if`) so a failed `git worktree list`
+# aborts under `set -e`/`pipefail` rather than being masked as "no existing
+# worktree" and silently creating a duplicate.
+existing=$(git worktree list --porcelain | awk -v b="refs/heads/$branch" '
 	$1 == "worktree" { p = $2 }
 	$1 == "branch" && $2 == b { print p }
-'); [ -n "$existing" ]; then
+')
+if [ -n "$existing" ]; then
 	echo "$existing"
 	exit 0
 fi
