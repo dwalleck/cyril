@@ -1,0 +1,57 @@
+# Carved from /home/dwalleck/.local/share/kiro-cli/kas/2.13.0-6b915aea9d06da0c64b46da6eb0e2cf40bfe1db59d01ddb8d701ecdbdc874f39/node_modules/@kiro/agent/dist/server/acp-server.js
+# offset 20028644
+
+async buildSessionHooks(sessionId, workspacePaths) {
+    if (this.v2HooksCache && workspacePaths.length > 0) {
+      const cwd = workspacePaths[0];
+      const entry = this.v2HooksCache.getOrCreate(workspacePaths);
+      await this.reloadV2HooksForEntry(entry);
+      const v2PreExecutor = createV2PreToolUseExecutor(
+        entry.module,
+        cwd,
+        async (reason, toolId) => requestAskHookPermission({
+          connection: this.connection,
+          sessionId,
+          reason,
+          toolName: toolId
+        })
+      );
+      const v2PostExecutor = createV2PostToolUseExecutor(entry.module, cwd);
+      const { pre, post } = this._infraSafetyEnabled ? await this.wrapWithSafetyGate(v2PreExecutor, v2PostExecutor) : { pre: v2PreExecutor, post: v2PostExecutor };
+      const postFile = createV2PostFileExecutor(entry.module, cwd, sessionId);
+      return new SessionHooks({
+        provider: createV2HooksProvider(
+          entry.module,
+          cwd,
+          async ({ question, hookName, options: options2 }) => requestHookConfirmChoice({
+            connection: this.connection,
+            sessionId,
+            question,
+            hookName,
+            options: options2
+          })
+        ),
+        preToolUse: pre,
+        postToolUse: post,
+        postFile
+      });
+    }
+    return this.v1SessionHooks ?? SessionHooks.disabled;
+  }
+  /**
+   * Look up the v2 HooksModule for a given session ID. Returns undefined when
+   * v2 hooks are not active or the session's 
+
+# v1 binding doc:
+  /** v2 hooks module cache — keyed by sorted+hashed workspace paths. */
+  v2HooksCache;
+  /**
+   * v1 ACP hook binding, built once at handshake when the client advertises v1
+   * hooks. The ACP provider/executors route by the firing execution's session
+   * id (carried in graph state) and are workspace-independent, so a single
+   * connection-bound instance serves every session — `buildSessionHooks`
+   * returns it as each session's binding.
+   */
+  v1SessionHooks;
+  telemetryProviders;
+  testT

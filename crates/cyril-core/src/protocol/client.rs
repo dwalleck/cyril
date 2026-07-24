@@ -27,6 +27,19 @@ pub(crate) struct KiroClient {
     /// (cyril-3lh8); the registry stays the sole owner of process lifecycle.
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
+    /// KAS-7 (cyril-jiyn): the hook registry serving `_kiro/hooks/*`, loaded
+    /// once at construction from the workspace + global `.kiro/hooks` when the
+    /// bound engine's hooks mode is `Host`. Empty otherwise (Kas mode runs
+    /// hooks agent-side; v2/Off advertise none).
+    #[cfg(feature = "kas")]
+    hooks: std::rc::Rc<crate::protocol::kas::hooks::HookRegistry>,
+    /// Session workspace, the cwd for hook command execution (cyril-jiyn).
+    #[cfg(feature = "kas")]
+    cwd: std::path::PathBuf,
+    /// In-flight hook operations, so `_kiro/hooks/cancel` can abort one
+    /// (cyril-jiyn).
+    #[cfg(feature = "kas")]
+    hook_ops: crate::protocol::kas::hooks::HookOps,
 }
 
 impl KiroClient {
@@ -34,7 +47,25 @@ impl KiroClient {
         notification_tx: mpsc::Sender<RoutedNotification>,
         permission_tx: mpsc::Sender<PermissionRequest>,
         engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
+        cwd: &std::path::Path,
     ) -> Self {
+        #[cfg(not(feature = "kas"))]
+        let _ = cwd; // hooks registry (the only cwd consumer) is kas-only
+        #[cfg(feature = "kas")]
+        let hooks = {
+            use crate::types::kas_hooks::KasHooksMode;
+            let registry = if engine.hooks_mode() == KasHooksMode::Host {
+                crate::protocol::kas::hooks::HookRegistry::load(
+                    cwd,
+                    crate::kiro_agent_config::home_dir()
+                        .map(|h| h.join(".kiro"))
+                        .as_deref(),
+                )
+            } else {
+                crate::protocol::kas::hooks::HookRegistry::default()
+            };
+            std::rc::Rc::new(registry)
+        };
         Self {
             notification_tx,
             permission_tx,
@@ -42,6 +73,12 @@ impl KiroClient {
             engine,
             #[cfg(feature = "kas")]
             terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new()),
+            #[cfg(feature = "kas")]
+            hooks,
+            #[cfg(feature = "kas")]
+            cwd: cwd.to_path_buf(),
+            #[cfg(feature = "kas")]
+            hook_ops: crate::protocol::kas::hooks::HookOps::default(),
         }
     }
 
@@ -153,6 +190,24 @@ impl acp::Client for KiroClient {
             }
         };
 
+        // KAS-7 hooks host notifications (cyril-jiyn), handled cyril-side rather
+        // than converted to a UI notification: `cancel` aborts an in-flight
+        // hook by operationId; `didChange` announces on-disk hook edits (no
+        // hot-reload in v1 — cyril-2adk — so it is logged, not acted on).
+        #[cfg(feature = "kas")]
+        {
+            if args.method.as_ref() == crate::protocol::kas::hooks::CANCEL_METHOD {
+                if let Some(op_id) = params.get("operationId").and_then(|o| o.as_str()) {
+                    self.hook_ops.cancel(op_id);
+                }
+                return Ok(());
+            }
+            if args.method.as_ref() == crate::protocol::kas::hooks::DID_CHANGE_METHOD {
+                tracing::info!("KAS hooks changed on disk; reload deferred (cyril-2adk)");
+                return Ok(());
+            }
+        }
+
         match self
             .engine
             .convert_ext_notification(args.method.as_ref(), &params)
@@ -205,7 +260,7 @@ impl acp::Client for KiroClient {
     /// which fails the turn while the user sees nothing actionable.
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         let method = args.method.to_string();
-        let result = Self::handle_ext_request(args).await;
+        let result = self.handle_ext_request(args).await;
         self.notify_if_auth_failure(&method, &result).await;
         result
     }
@@ -326,12 +381,28 @@ impl KiroClient {
     /// Route an ext request (`_kiro/*`): KAS-1 `getAccessToken`, KAS-5b
     /// `terminal/shell_type`.
     #[cfg(feature = "kas")]
-    async fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+    async fn handle_ext_request(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         if args.method.as_ref() == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
             return crate::protocol::kas::terminal_io::respond_shell_type();
+        }
+        if args.method.as_ref() == crate::protocol::kas::hooks::LIST_METHOD {
+            let params = parse_ext_params(&args);
+            return self.hooks.respond_list(&params);
+        }
+        if args.method.as_ref() == crate::protocol::kas::hooks::EXECUTE_METHOD {
+            let params = parse_ext_params(&args);
+            return crate::protocol::kas::hooks::respond_execute(
+                &params,
+                &self.cwd,
+                &self.hook_ops,
+            )
+            .await;
+        }
+        if args.method.as_ref() == crate::protocol::kas::hooks::SESSION_START_METHOD {
+            return crate::protocol::kas::hooks::respond_session_start();
         }
         // The bare-ACP fs/terminal lifecycle host callbacks are TYPED acp::Client
         // methods (the overrides above), not ext requests: fs/read_text_file (KAS-5a,
@@ -342,8 +413,23 @@ impl KiroClient {
 
     /// Default build: no KAS ext requests are handled.
     #[cfg(not(feature = "kas"))]
-    async fn handle_ext_request(args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
+    async fn handle_ext_request(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         unhandled_ext_response(args.method.as_ref())
+    }
+}
+
+/// Parse an ext request's params to JSON, logging (not swallowing) a parse
+/// failure. `RawValue` is pre-validated JSON so this is practically
+/// unreachable, but a `Null` fallback with no breadcrumb is the one spot that
+/// would diverge from the module's log-before-fallback posture.
+#[cfg(feature = "kas")]
+fn parse_ext_params(args: &acp::ExtRequest) -> serde_json::Value {
+    match serde_json::from_str(args.params.get()) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::debug!(method = %args.method, error = %e, "ext request params not JSON; using null");
+            serde_json::Value::Null
+        }
     }
 }
 
@@ -386,7 +472,8 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let err: acp::Result<acp::ExtResponse> =
             Err(acp::Error::new(-32603, "sqlite store locked"));
@@ -416,7 +503,8 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(
             -32603,
@@ -447,7 +535,8 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(-32603, "boom"));
         client
@@ -475,7 +564,8 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
         let f = dir.path().join("x.txt");
@@ -496,7 +586,8 @@ mod tests {
         let client = KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
         let f = dir.path().join("out.txt");
@@ -517,8 +608,131 @@ mod tests {
         KiroClient::new(
             ntx,
             ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine),
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            std::path::Path::new("/tmp"),
         )
+    }
+
+    // cyril-jiyn slice 3v: the `_kiro/hooks/list` ext request routes through
+    // handle_ext_request to the client's registry and replies with the
+    // matching hooks. A Host-mode KasEngine client loads a real registry from
+    // a tempdir. Fails if the method arm is missing (falls to the null
+    // default) or the registry isn't wired to the dispatch.
+    #[tokio::test]
+    async fn hooks_list_ext_request_routes_to_registry() {
+        use agent_client_protocol::Client as _;
+
+        let dir = tempfile::tempdir().unwrap();
+        let hooks_dir = dir.path().join(".kiro/hooks");
+        std::fs::create_dir_all(&hooks_dir).unwrap();
+        std::fs::write(
+            hooks_dir.join("h.json"),
+            r#"{"version":"v1","hooks":[
+                {"name":"greet","trigger":"UserPromptSubmit",
+                 "action":{"type":"command","command":"echo hi"}}
+            ]}"#,
+        )
+        .unwrap();
+
+        let (ntx, _nrx) = mpsc::channel(1);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            dir.path(),
+        );
+
+        let params = serde_json::value::RawValue::from_string(
+            serde_json::json!({"trigger": "promptSubmit"}).to_string(),
+        )
+        .unwrap();
+        let resp = client
+            .ext_method(acp::ExtRequest::new(
+                crate::protocol::kas::hooks::LIST_METHOD,
+                params.into(),
+            ))
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        let hooks = body["hooks"].as_array().expect("hooks array");
+        assert_eq!(hooks.len(), 1, "the promptSubmit hook is served");
+        assert_eq!(hooks[0]["id"], "h:greet");
+    }
+
+    // cyril-jiyn claim 12 fence: the _kiro/hooks/didChange notification is
+    // consumed without error (and without reaching the converter's
+    // unknown-variant path). Fails if the arm is missing.
+    #[tokio::test]
+    async fn hooks_did_change_consumed() {
+        let client = kas_client();
+        let params = serde_json::value::RawValue::from_string("{}".to_string()).unwrap();
+        let res = client
+            .ext_notification(acp::ExtNotification::new(
+                crate::protocol::kas::hooks::DID_CHANGE_METHOD,
+                params.into(),
+            ))
+            .await;
+        assert!(res.is_ok(), "didChange is consumed cleanly");
+    }
+
+    // cyril-jiyn claim 13 fence: a slow executeHook does not serialize the
+    // client — an independent shell_type ext request completes long before the
+    // slow hook finishes. A synchronous (blocking) executor would make the
+    // shell_type reply wait for the whole hook. Uses join! on one task; the
+    // async executor + per-request handling let both progress.
+    #[tokio::test]
+    async fn slow_hook_does_not_block_loop() {
+        use agent_client_protocol::Client as _;
+
+        let dir = tempfile::tempdir().unwrap();
+        let (ntx, _nrx) = mpsc::channel(1);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            dir.path(),
+        );
+
+        let exec_params = serde_json::value::RawValue::from_string(
+            serde_json::json!({
+                "hookId": "h", "hookName": "slow", "command": "sleep 3",
+                "sessionId": "s", "userPrompt": ""
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let slow = client.ext_method(acp::ExtRequest::new(
+            crate::protocol::kas::hooks::EXECUTE_METHOD,
+            exec_params.into(),
+        ));
+
+        let shell_start = std::time::Instant::now();
+        // Capture when shell_type RESOLVES inside the block — measuring after
+        // join! would always include the 3s (join! awaits both). A blocking
+        // executor would starve this future until the hook finished.
+        let (_slow_res, (shell_res, shell_elapsed)) = tokio::join!(slow, async {
+            let params =
+                serde_json::value::RawValue::from_string("{\"sessionId\":\"s\"}".to_string())
+                    .unwrap();
+            let r = client
+                .ext_method(acp::ExtRequest::new(
+                    crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD,
+                    params.into(),
+                ))
+                .await;
+            (r, shell_start.elapsed())
+        });
+        assert!(shell_res.is_ok());
+        assert!(
+            shell_elapsed < std::time::Duration::from_secs(2),
+            "shell_type resolved while the 3s hook was still running (not serialized): {shell_elapsed:?}"
+        );
     }
 
     #[tokio::test]
@@ -583,6 +797,7 @@ mod metadata_routing_tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
+            std::path::Path::new("/tmp"),
         )
     }
 

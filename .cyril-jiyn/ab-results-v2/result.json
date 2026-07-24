@@ -1,0 +1,14 @@
+{
+  "arm": "v2",
+  "meta": {
+    "enabled": true,
+    "v2": true
+  },
+  "prompt_completed": false,
+  "list_calls": [],
+  "exec_calls": [],
+  "other_hook": [],
+  "marker_file_created": true,
+  "agent_saw_HOOKV2FIRED": false,
+  "agent_saw_HOSTHOOKFIRED": false
+}

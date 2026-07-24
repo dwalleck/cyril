@@ -57,3 +57,15 @@ The conductor passthrough result unblocks the integration plan in `project_cyril
   kiro-ide silently and `kiro-cli` is accepted. If the recognition set, the
   fallback target, the warn text, or the allowlist branches move, update
   ADR-0006 and re-triage cyril-jrl1/cyril-ctnv.
+
+## Per-release fence: KAS hooks host models (cyril-jiyn / KAS-7)
+
+Each kiro-cli release, re-run `.cyril-jiyn/probe-hooks-ab-2.13.0.py` (ARM=host
+and ARM=v2; update its 2.13.0 glob to the new version). It is the manual
+regression fence for the claim that the `enabled` (host-callback) and `v2`
+(agent-side standalone loader) hook models **do not compose** — the v2 arm
+must drive ZERO `_kiro/hooks/*` host callbacks and execute the on-disk hook
+agent-side (marker file created), while the host arm drives `list`+`executeHook`
+and leaves the disk hook inert. If `buildSessionHooks` selection changes (both
+models active, or a different gate), update the decided default in
+docs/ROADMAP.md KAS-7 and re-triage the kas_hooks knob.

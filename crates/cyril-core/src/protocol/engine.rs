@@ -34,6 +34,15 @@ pub(crate) trait Engine {
     /// Client capabilities advertised at the ACP `initialize` handshake.
     fn client_capabilities(&self) -> acp::ClientCapabilities;
 
+    /// The decided hooks host mode (cyril-jiyn, KAS-7). Only `Host` makes the
+    /// client load and serve a hook registry; v2 never has `_meta.kiro`
+    /// capabilities, so it reports `Off`. Gated to the `kas` feature — the
+    /// only caller is the KAS-only hook-registry construction.
+    #[cfg(feature = "kas")]
+    fn hooks_mode(&self) -> crate::types::kas_hooks::KasHooksMode {
+        crate::types::kas_hooks::KasHooksMode::Off
+    }
+
     /// Convert a standard `session/update` notification to an internal one.
     /// Returns `None` for updates this engine does not surface to the UI.
     fn convert_session_update(
@@ -98,12 +107,21 @@ impl Engine for V2Engine {
 /// cyril-ufie) capabilities so KAS delegates file I/O and shell execution to
 /// cyril's host-io responders instead of running them in-process.
 #[cfg(feature = "kas")]
-pub(crate) struct KasEngine;
+#[derive(Default)]
+pub(crate) struct KasEngine {
+    /// The decided hooks advertisement (cyril-jiyn); carried by the engine so
+    /// `client_capabilities()` stays parameterless on the trait.
+    pub(crate) hooks_mode: crate::types::kas_hooks::KasHooksMode,
+}
 
 #[cfg(feature = "kas")]
 impl Engine for KasEngine {
     fn kind(&self) -> AgentEngine {
         AgentEngine::Kas
+    }
+
+    fn hooks_mode(&self) -> crate::types::kas_hooks::KasHooksMode {
+        self.hooks_mode
     }
 
     fn client_capabilities(&self) -> acp::ClientCapabilities {
@@ -117,7 +135,7 @@ impl Engine for KasEngine {
                 .read_text_file(true)
                 .write_text_file(true))
             .terminal(true)
-            .meta(super::kas::settings::kiro_settings_meta())
+            .meta(super::kas::settings::kiro_client_meta(self.hooks_mode))
     }
 
     fn convert_session_update(
@@ -169,7 +187,7 @@ mod tests {
         // terminal (go-live), so KAS delegates shell execution to cyril's terminal
         // responders. Stress fixture: V2Engine must STILL be empty — designed to fail
         // if the KAS caps body is copy-pasted into V2 (the parity-break bug).
-        let caps = KasEngine.client_capabilities();
+        let caps = KasEngine::default().client_capabilities();
         assert!(
             caps.fs.read_text_file,
             "KAS must advertise fs.read_text_file"
@@ -189,13 +207,54 @@ mod tests {
         );
     }
 
+    // cyril-jiyn claim 2 fence: the mode×engine advertisement matrix. The V2
+    // cells run under `--features kas` too — a cfg-keyed implementation (the
+    // cyril-dn91 trap) fails them. Absent-key asserts enforce the no-sentinel
+    // rule: Off means NO hooks key (not enabled:false), Host means NO v2 key
+    // (not v2:false) — oracle is the serialized JSON vs the covenant §2
+    // shapes, not the constructor's enums.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn kas_hooks_advertisement_matrix() {
+        use crate::types::kas_hooks::KasHooksMode;
+
+        let hooks_json = |mode: KasHooksMode| -> Option<serde_json::Value> {
+            let caps = KasEngine { hooks_mode: mode }.client_capabilities();
+            let meta = serde_json::to_value(caps.meta.expect("KAS meta present")).unwrap();
+            meta.get("kiro").and_then(|k| k.get("hooks")).cloned()
+        };
+
+        assert_eq!(
+            hooks_json(KasHooksMode::Host),
+            Some(json!({"enabled": true})),
+            "Host advertises enabled only — no v2 key at all"
+        );
+        assert_eq!(
+            hooks_json(KasHooksMode::Kas),
+            Some(json!({"enabled": true, "v2": true})),
+            "Kas advertises the standalone loader"
+        );
+        assert_eq!(
+            hooks_json(KasHooksMode::Off),
+            None,
+            "Off omits the hooks key entirely (absence, not enabled:false)"
+        );
+
+        // V2-engine cells: no _meta at all regardless of the knob — bound-engine
+        // keying, exercised in the kas-feature build (the dn91 trap fence).
+        assert!(
+            V2Engine.client_capabilities().meta.is_none(),
+            "V2Engine advertises no _meta.kiro whatever the knob says"
+        );
+    }
+
     #[cfg(feature = "kas")]
     #[test]
     fn kas_sets_kiro_settings_meta_v2_none() {
         // cyril-nhzw claim 1: KasEngine attaches `_meta.kiro.settings` (an
         // AgentSettings object); V2Engine attaches no `_meta`. Stress fixture: the
         // parity-break bug (KAS meta leaking into V2) fails the v2 assertion.
-        let kas = KasEngine.client_capabilities();
+        let kas = KasEngine::default().client_capabilities();
         let settings = kas
             .meta
             .as_ref()
@@ -267,7 +326,7 @@ mod tests {
     #[test]
     fn probe_kas_engine_routes_rate_limit() {
         let params = json!({ "message": "Rate limit exceeded" });
-        let r = KasEngine.convert_ext_notification("kiro/error/rate_limit", &params);
+        let r = KasEngine::default().convert_ext_notification("kiro/error/rate_limit", &params);
         assert!(
             matches!(r, Ok(Some(crate::types::Notification::RateLimited { .. }))),
             "KasEngine must route rate_limit to RateLimited, got {r:?}"

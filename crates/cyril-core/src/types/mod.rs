@@ -5,6 +5,7 @@ pub mod command;
 pub mod config;
 pub mod event;
 pub mod hook;
+pub mod kas_hooks;
 pub mod kas_spawn;
 pub mod message;
 pub mod plan;

@@ -9,6 +9,7 @@ use crate::types::StopReason;
 use crate::types::agent_command::AgentCommand;
 use crate::types::agent_engine::AgentEngine;
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
+use crate::types::kas_hooks::KasHooksMode;
 use crate::types::kas_spawn::KasSpawn;
 use crate::types::present_as::PresentAs;
 
@@ -121,6 +122,24 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     (handle, channels)
 }
 
+/// The spawn-time knob bundle for a bridge (cyril-jmjb): which engine, how
+/// KAS is launched, and what identity is presented. These travel together
+/// from `[agent]` config through `spawn_bridge` — bundling them means the
+/// next knob is one field, not another signature ripple across every
+/// caller.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SpawnConfig {
+    /// Which Kiro engine to drive (ADR-0001; bound for the bridge's life).
+    pub engine: AgentEngine,
+    /// KAS launch shape (free | wrapper); ignored for v2 (cyril-evwh).
+    pub kas_spawn: KasSpawn,
+    /// The `clientInfo` identity presented at initialize (ADR-0006).
+    pub present_as: PresentAs,
+    /// Which hook model runs on the KAS engine (cyril-jiyn, KAS-7); ignored
+    /// for v2.
+    pub kas_hooks: KasHooksMode,
+}
+
 /// Spawn the ACP bridge on a dedicated thread.
 /// Returns a BridgeHandle for the Send world to communicate through.
 ///
@@ -130,9 +149,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
 /// close.
 pub fn spawn_bridge(
     agent_command: AgentCommand,
-    agent_engine: AgentEngine,
-    kas_spawn: KasSpawn,
-    present_as: PresentAs,
+    config: SpawnConfig,
     cwd: PathBuf,
 ) -> crate::Result<BridgeHandle> {
     let (handle, channels) = create_channel_pair();
@@ -151,16 +168,7 @@ pub fn spawn_bridge(
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
                     let reason = local.block_on(&rt, async move {
-                        match run_bridge(
-                            &agent_command,
-                            agent_engine,
-                            kas_spawn,
-                            present_as,
-                            &cwd,
-                            channels,
-                        )
-                        .await
-                        {
+                        match run_bridge(&agent_command, config, &cwd, channels).await {
                             Ok(()) => None,
                             Err(e) => {
                                 tracing::error!(error = %e, "bridge terminated with error");
@@ -442,11 +450,13 @@ fn tail_excerpt(snapshot: &[String]) -> Option<String> {
 /// (ADR-0002) — a default build reports that the feature is required rather than
 /// linking any KAS code. Pure — unit-testable without a subprocess, and the
 /// single place the engine-to-`AgentEngine` mapping lives.
-fn engine_for(agent_engine: AgentEngine) -> Result<std::rc::Rc<dyn Engine>, String> {
-    match agent_engine {
+fn engine_for(config: SpawnConfig) -> Result<std::rc::Rc<dyn Engine>, String> {
+    match config.engine {
         AgentEngine::V2 => Ok(std::rc::Rc::new(V2Engine)),
         #[cfg(feature = "kas")]
-        AgentEngine::Kas => Ok(std::rc::Rc::new(crate::protocol::engine::KasEngine)),
+        AgentEngine::Kas => Ok(std::rc::Rc::new(crate::protocol::engine::KasEngine {
+            hooks_mode: config.kas_hooks,
+        })),
         #[cfg(not(feature = "kas"))]
         AgentEngine::Kas => Err("KAS engine requires a build with --features kas".to_string()),
     }
@@ -489,9 +499,7 @@ fn resolve_spawn_command(
 
 async fn run_bridge(
     agent_command: &AgentCommand,
-    agent_engine: AgentEngine,
-    kas_spawn: KasSpawn,
-    present_as: PresentAs,
+    config: SpawnConfig,
     cwd: &std::path::Path,
     channels: BridgeChannels,
 ) -> crate::Result<()> {
@@ -504,7 +512,7 @@ async fn run_bridge(
     // 0. Engine gate (KAS-0, ADR-0001): bind the one engine the bridge uses for
     //    its life BEFORE spawning the subprocess, so an unavailable engine
     //    refuses cleanly (a disconnect notice, no panic) without spawning anything.
-    let engine = match engine_for(agent_engine) {
+    let engine = match engine_for(config) {
         Ok(engine) => engine,
         Err(reason) => {
             notify_or_closed(
@@ -521,7 +529,8 @@ async fn run_bridge(
     //    precondition becomes a specific, actionable BridgeDisconnected reason
     //    (spec B6 — no auto-recover, no v2 fallback). v2 (and any default build)
     //    spawns the CLI `agent_command` unchanged. The clone is startup-only.
-    let spawn_command = match resolve_spawn_command(agent_command, agent_engine, kas_spawn) {
+    let spawn_command = match resolve_spawn_command(agent_command, config.engine, config.kas_spawn)
+    {
         Ok(cmd) => cmd,
         Err(reason) => {
             notify_or_closed(
@@ -544,7 +553,7 @@ async fn run_bridge(
     // FORWARDS them to the App without awaiting resolution — the response flows
     // back on the request's embedded `responder` oneshot, bypassing the loop.
     let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone());
+    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone(), cwd);
     // cyril-3lh8: grab the shared terminal-registry handle BEFORE the connection
     // takes ownership of the client — run_loop's CancelRequest arm reaps with it.
     #[cfg(feature = "kas")]
@@ -603,7 +612,7 @@ async fn run_bridge(
         channels,
         cwd.to_path_buf(),
         engine,
-        present_as,
+        config.present_as,
         InternalChannels {
             inbound_tx,
             inbound_rx,
@@ -1853,7 +1862,10 @@ mod tests {
     // V2 always selects an engine — NO panic/unwrap.
     #[test]
     fn engine_for_v2_ok() {
-        assert!(engine_for(AgentEngine::V2).is_ok(), "v2 selects an engine");
+        assert!(
+            engine_for(SpawnConfig::default()).is_ok(),
+            "v2 selects an engine"
+        );
     }
 
     // l7tw C7 (unit form; the live form is the logged-out kiro-cli run in
@@ -2040,14 +2052,8 @@ mod tests {
     async fn spawn_failure_disconnect_reason_wellformed() {
         let cmd = AgentCommand::try_from_argv(vec!["cyril-l7tw-no-such-binary".to_string()])
             .expect("argv");
-        let handle = spawn_bridge(
-            cmd,
-            AgentEngine::default(),
-            KasSpawn::default(),
-            PresentAs::default(),
-            std::env::temp_dir(),
-        )
-        .expect("bridge thread spawns");
+        let handle = spawn_bridge(cmd, SpawnConfig::default(), std::env::temp_dir())
+            .expect("bridge thread spawns");
         let (_sender, mut rx, _perm) = handle.split();
         let routed = tokio::time::timeout(Duration::from_secs(10), rx.recv())
             .await
@@ -2070,7 +2076,11 @@ mod tests {
     #[test]
     fn engine_for_kas_ok_under_feature() {
         assert!(
-            engine_for(AgentEngine::Kas).is_ok(),
+            engine_for(SpawnConfig {
+                engine: AgentEngine::Kas,
+                ..SpawnConfig::default()
+            })
+            .is_ok(),
             "Kas selects the KasEngine when built with --features kas"
         );
     }
@@ -2080,7 +2090,10 @@ mod tests {
     #[cfg(not(feature = "kas"))]
     #[test]
     fn engine_for_kas_unavailable_without_feature() {
-        match engine_for(AgentEngine::Kas) {
+        match engine_for(SpawnConfig {
+            engine: AgentEngine::Kas,
+            ..SpawnConfig::default()
+        }) {
             Err(reason) => assert!(
                 reason.contains("--features kas"),
                 "Kas gives a clean reason naming the feature, got {reason:?}"
@@ -2392,7 +2405,12 @@ mod tests {
                 let (inbound_tx, inbound_rx) =
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
                 let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-                let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone());
+                let client = KiroClient::new(
+                    inbound_tx.clone(),
+                    req_tx,
+                    engine.clone(),
+                    &std::env::temp_dir(),
+                );
                 // cyril-3lh8: mirror run_bridge — the loop shares the client's
                 // terminal registry so CancelRequest can reap.
                 #[cfg(feature = "kas")]
@@ -2666,7 +2684,7 @@ mod tests {
             ..Script::default()
         }));
         with_engine_harness(
-            Rc::new(crate::protocol::engine::KasEngine),
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
             |sender, mut rx, _perm, _gate, _loop_handle, _kill| async move {
                 sender
@@ -2706,7 +2724,8 @@ mod tests {
                 let (notif_tx, _notif_rx) =
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
                 let (req_tx, _req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-                let client = KiroClient::new(notif_tx, req_tx, Rc::new(V2Engine));
+                let client =
+                    KiroClient::new(notif_tx, req_tx, Rc::new(V2Engine), &std::env::temp_dir());
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);
                 let (cr, cw) = tokio::io::split(c_io);
                 let (conn, io_task) =
@@ -3132,7 +3151,7 @@ mod tests {
         }));
         let probe = script.clone();
         with_engine_harness(
-            Rc::new(crate::protocol::engine::KasEngine),
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
             |sender, mut rx, _perm_rx, _gate, _loop, kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
@@ -3265,7 +3284,7 @@ mod tests {
         }));
         let probe = script.clone();
         with_engine_harness(
-            Rc::new(crate::protocol::engine::KasEngine),
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
             |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
@@ -3320,7 +3339,7 @@ mod tests {
             ..Default::default()
         }));
         with_engine_harness(
-            Rc::new(crate::protocol::engine::KasEngine),
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
             |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;

@@ -1,0 +1,39 @@
+# Carved from /home/dwalleck/.local/share/kiro-cli/kas/2.13.0-6b915aea9d06da0c64b46da6eb0e2cf40bfe1db59d01ddb8d701ecdbdc874f39/node_modules/@kiro/agent/dist/server/acp-server.js
+# offset 18928683 (handshake: v2HooksCache + NodeProcessRunner construction)
+
+      acpToolApproval: effectiveApproval,
+            isResourceDenied: (cap, res) => policySession.isResourceDenied(cap, res)
+          })
+        );
+      }
+      if (knowledgeTool) {
+        chatTools.push(knowledgeTool);
+      }
+      if (primaryCwd && clientMeta?.hooks && typeof clientMeta.hooks === "object" && "v2" in clientMeta.hooks) {
+        const hooksConfig = clientMeta.hooks;
+        if (hooksConfig.v2 === true) {
+          const hookFs = injectedFileSystem ?? new NodeFileSystem(primaryCwd);
+          chatTools.push(new CreateHookTool({ fs: hookFs, workspaceRoot: primaryCwd, origin: "acp" }));
+        }
+      }
+      const specAgentTools = [
+        ...mergeTools(coreTools, getSpecTools(workspace, effectiveApproval, c2sStore)),
+        ...acpClientTools,
+        ...getMcpTools()
+      ];
+      if (customAgentRegistry) {
+        specAgentTools.push(
+          createAcpInvokeSubAgentTool(customAgentRegistry, effectiveApproval, true, void 0, policySession)
+        );
+      }
+      if (progressiveContextManager) {
+        specAgentTools.push(
+          createAcpDiscloseContextTool(
+            progressiveContextManager,
+            effectiveApproval,
+            (cap, res) => policySession.isResourceDenied(cap, res),
+            sessionId
+          )
+        );
+      }
+ 

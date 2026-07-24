@@ -173,15 +173,35 @@ pub(crate) fn marshal_agent_settings(e: &Map<String, Value>) -> Value {
 }
 
 /// Build the `_meta` object cyril attaches to the KAS `initialize`
-/// `clientCapabilities`: `{"kiro": {"settings": <AgentSettings>}}`. Reads the live
-/// global cli.json each call (initialize is once per session).
-pub(crate) fn kiro_settings_meta() -> acp::Meta {
+/// `clientCapabilities`: `{"kiro": {"settings": <AgentSettings>, "hooks"?: …}}`.
+/// Reads the live global cli.json each call (initialize is once per session).
+///
+/// The `hooks` key follows the decided [`KasHooksMode`] (cyril-jiyn, KAS-7):
+/// `Host` → `{enabled:true}` (cyril's responders execute hooks), `Kas` →
+/// `{enabled:true, v2:true}` (KAS's standalone loader — replaces the host
+/// callbacks wholesale, `.cyril-jiyn/findings.md` Q1), `Off` → the key is
+/// ABSENT (not `{enabled:false}` — absence is the covenant's off state, and
+/// a sentinel false would still construct KAS-side hook plumbing).
+pub(crate) fn kiro_client_meta(hooks_mode: crate::types::kas_hooks::KasHooksMode) -> acp::Meta {
+    use crate::types::kas_hooks::KasHooksMode;
+
     let settings = marshal_agent_settings(&read_cli_settings());
+    let mut kiro = serde_json::Map::new();
+    kiro.insert("settings".to_string(), settings);
+    match hooks_mode {
+        KasHooksMode::Host => {
+            kiro.insert("hooks".to_string(), serde_json::json!({ "enabled": true }));
+        }
+        KasHooksMode::Kas => {
+            kiro.insert(
+                "hooks".to_string(),
+                serde_json::json!({ "enabled": true, "v2": true }),
+            );
+        }
+        KasHooksMode::Off => {}
+    }
     let mut meta = acp::Meta::new();
-    meta.insert(
-        "kiro".to_string(),
-        serde_json::json!({ "settings": settings }),
-    );
+    meta.insert("kiro".to_string(), serde_json::Value::Object(kiro));
     meta
 }
 

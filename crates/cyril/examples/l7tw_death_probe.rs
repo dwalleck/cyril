@@ -34,9 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let agent_command = AgentCommand::try_from_argv(argv)?;
     let bridge = spawn_bridge(
         agent_command,
-        AgentEngine::default(),
-        KasSpawn::default(),
-        PresentAs::default(),
+        cyril_core::protocol::bridge::SpawnConfig::default(),
         cwd.clone(),
     )?;
     let (sender, mut notification_rx, mut permission_rx) = bridge.split();

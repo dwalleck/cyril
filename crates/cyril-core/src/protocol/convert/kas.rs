@@ -456,7 +456,7 @@ mod tests {
     #[test]
     fn kas_engine_routes_turn_end_to_completion() {
         let (_v, sn) = load("session_info_update_turn_end.json");
-        let n = KasEngine.convert_session_update(&sn, &HashMap::new());
+        let n = KasEngine::default().convert_session_update(&sn, &HashMap::new());
         assert!(matches!(
             n,
             Some(Notification::TurnCompleted {
@@ -470,7 +470,7 @@ mod tests {
         // Slice 1 must NOT break text rendering: non-turn_end updates delegate
         // to the generic converter (agent_message_chunk -> AgentMessage).
         let (_v, sn) = load("agent_message_chunk.json");
-        let n = KasEngine.convert_session_update(&sn, &HashMap::new());
+        let n = KasEngine::default().convert_session_update(&sn, &HashMap::new());
         assert!(
             matches!(n, Some(Notification::AgentMessage(_))),
             "agent_message_chunk must still render via the generic path, got {n:?}"
@@ -484,7 +484,7 @@ mod tests {
         // strips the leading underscore) drops to `Ok(None)` — no error, no hang.
         // KasEngine delegates ext frames to the v2 `kiro::` handler, whose
         // unknown-variant arm owns this; this fences the KAS engine path.
-        let r = KasEngine.convert_ext_notification("kiro/does/not/exist", &json!({}));
+        let r = KasEngine::default().convert_ext_notification("kiro/does/not/exist", &json!({}));
         assert!(
             matches!(r, Ok(None)),
             "unknown _kiro/* frame must drop to Ok(None), got {r:?}"

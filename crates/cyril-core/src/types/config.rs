@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::agent_engine::AgentEngine;
+use super::kas_hooks::KasHooksMode;
 use super::kas_spawn::KasSpawn;
 use super::present_as::PresentAs;
 
@@ -56,6 +57,11 @@ pub struct AgentConfig {
     /// `"kiro-cli"` (opt-in impersonation, KAS engine only — inert with a
     /// warning on v2).
     pub present_as: PresentAs,
+    /// Which hook model runs on the KAS engine (cyril-jiyn, KAS-7). TOML
+    /// `kas_hooks = "host"` (default: cyril executes hooks and can block
+    /// preToolUse), `"kas"` (KAS's standalone loader executes them
+    /// agent-side), or `"off"`. The models do not compose.
+    pub kas_hooks: KasHooksMode,
 }
 
 impl Default for AgentConfig {
@@ -66,6 +72,7 @@ impl Default for AgentConfig {
             engine: AgentEngine::default(),
             kas_spawn: KasSpawn::default(),
             present_as: PresentAs::default(),
+            kas_hooks: KasHooksMode::default(),
         }
     }
 }
@@ -225,6 +232,50 @@ agent_name = "opencode"
     // that must never be expressible; the case variant guards serde
     // laxness; a config carrying other valid keys proves the rejection is
     // whole-file, not field-skipping.
+    // cyril-jiyn claim 3 fence: same whole-file posture for kas_hooks.
+    // "both" is the plausible guess for the composition KAS doesn't offer.
+    #[test]
+    fn invalid_kas_hooks_falls_back_to_default_config() {
+        for bad in ["both", "Host"] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("config.toml");
+            std::fs::write(
+                &path,
+                format!("[ui]\nmax_messages = 1000\n\n[agent]\nkas_hooks = \"{bad}\"\n"),
+            )
+            .unwrap();
+
+            let config = Config::load_from_path(&path);
+            assert_eq!(config.agent.kas_hooks, KasHooksMode::Host, "{bad}");
+            assert_eq!(
+                config.ui.max_messages, 500,
+                "rejection must be whole-file, not field-skipping"
+            );
+        }
+    }
+
+    #[test]
+    fn kas_hooks_valid_values_parse() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "[agent]\nkas_hooks = \"off\"\n").unwrap();
+        assert_eq!(
+            Config::load_from_path(&path).agent.kas_hooks,
+            KasHooksMode::Off
+        );
+        std::fs::write(&path, "[agent]\nkas_hooks = \"kas\"\n").unwrap();
+        assert_eq!(
+            Config::load_from_path(&path).agent.kas_hooks,
+            KasHooksMode::Kas
+        );
+        std::fs::write(&path, "[agent]\nengine = \"kas\"\n").unwrap();
+        assert_eq!(
+            Config::load_from_path(&path).agent.kas_hooks,
+            KasHooksMode::Host,
+            "absent defaults to Host"
+        );
+    }
+
     #[test]
     fn invalid_present_as_falls_back_to_default_config() {
         for bad in ["kiro-web", "KiroCli"] {

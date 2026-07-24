@@ -22,7 +22,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use cyril_core::protocol::bridge::spawn_bridge;
+use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
 use cyril_core::types::*;
 use tokio::sync::mpsc::Receiver;
 
@@ -41,9 +41,11 @@ async fn fs_read_write_served_by_cyril() {
     let placeholder = AgentCommand::new("unused-for-kas-free-path");
     let bridge = spawn_bridge(
         placeholder,
-        AgentEngine::Kas,
-        KasSpawn::Free,
-        PresentAs::default(),
+        SpawnConfig {
+            engine: AgentEngine::Kas,
+            kas_spawn: KasSpawn::Free,
+            ..SpawnConfig::default()
+        },
         dir.path().to_path_buf(),
     )
     .expect("spawn_bridge");

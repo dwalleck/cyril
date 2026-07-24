@@ -17,7 +17,7 @@
 
 use std::time::Duration;
 
-use cyril_core::protocol::bridge::spawn_bridge;
+use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
 use cyril_core::types::*;
 use tokio::sync::mpsc::Receiver;
 
@@ -31,9 +31,11 @@ async fn freepath_turn_completes_through_bridge() {
     let cwd = std::env::temp_dir();
     let bridge = spawn_bridge(
         placeholder,
-        AgentEngine::Kas,
-        KasSpawn::Free,
-        PresentAs::default(),
+        SpawnConfig {
+            engine: AgentEngine::Kas,
+            kas_spawn: KasSpawn::Free,
+            ..SpawnConfig::default()
+        },
         cwd.clone(),
     )
     .expect("spawn_bridge");
