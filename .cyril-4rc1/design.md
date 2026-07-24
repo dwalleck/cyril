@@ -52,7 +52,8 @@ Three parts, "make the right thing easy + the wrong thing hard + fence it":
 **Helper `session-worktree.sh <branch> [base]`:**
 - branch that does not exist → create from base. (H1)
 - branch that exists locally, unused → check out in a worktree. (H2)
-- branch already checked out in another worktree → git refuses. (H3)
+- branch already held by a worktree → helper is idempotent (returns existing
+  path); a raw `git worktree add` on it is refused by git. (H3)
 - branch name containing `/` (feat/cyril-4rc1) → dir leaf must not nest. (H4)
 - re-run for an existing worktree → idempotent. (H5)
 - missing branch arg → usage error. (H6)
@@ -71,7 +72,7 @@ Three parts, "make the right thing easy + the wrong thing hard + fence it":
 |---|-------|-----------|--------|------|--------|------------------|
 | H1 | `<new-branch>` creates a linked worktree with HEAD=branch, branched from base | run helper for a fresh branch in a temp repo | `git -C <dest> branch --show-current` + dir exists | 3m | **passed** (proto) | `worktree_test.sh::h1_create` |
 | H2 | `<existing-local-branch>` adds a worktree on it, no duplicate branch | pre-create branch, run helper | `git branch --list` count unchanged; worktree on branch | 3m | pending | `worktree_test.sh::h2_existing` |
-| H3 | branch already checked out elsewhere → non-zero exit, no stray worktree dir | run helper for an in-use branch | git exit ≠ 0; `git worktree list` count unchanged | 3m | **passed** (proto, via git rc) | `worktree_test.sh::h3_inuse` |
+| H3 | a branch already held by a worktree is not duplicated: the helper is idempotent (returns the existing path, exit 0), and a *raw* `git worktree add` on that branch is refused by git (exit ≠ 0) | run helper twice, then a raw `git worktree add` on the in-use branch | `git worktree list` count unchanged + git exit ≠ 0 on the raw add | 3m | **passed** | `worktree_test.sh::test_h3_inuse_branch_refused` |
 | H4 | a `/`-containing branch name → worktree dir leaf has no `/`; branch preserved | run helper for `feat/x` | `basename <dest>` has no slash; branch = `feat/x` | 3m | **passed** (proto) | `worktree_test.sh::h4_slash` |
 | H5 | re-run for an existing worktree is idempotent (exit 0, same path, no 2nd wt) | run helper twice | worktree count equal; same path printed | 3m | **passed** (proto) | `worktree_test.sh::h5_idempotent` |
 | H6 | missing branch arg → non-zero exit + usage | run helper with no args | exit 2; stderr contains "usage" | 2m | **passed** (proto) | `worktree_test.sh::h6_usage` |
