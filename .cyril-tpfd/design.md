@@ -138,3 +138,9 @@ Cheapest falsifiers already run and passed: #3 (live shaped-arm), #4
 - **D2 — harness fix scope.** Fix `.cyril-jiyn/probe-hooks-ab-2.13.0.py`
   in this branch (claim 12) since it's the load-bearing per-release
   fence and the bug provably poisoned its turns. Recommend: yes.
+
+## Approval
+
+APPROVED at hard pause 2026-07-23 (user: "approved"). D1 = parity
+(non-zero-exit hooks with output are included, matching the KAS
+producer). D2 = yes (fence-probe token() fix ships in this branch).
