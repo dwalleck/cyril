@@ -1,0 +1,20 @@
+{
+  "arm": "sysprompt",
+  "n": 1,
+  "model": "claude-sonnet-5",
+  "complied": 0,
+  "completed": 1,
+  "fallback_logged": 0,
+  "runs": [
+    {
+      "arm": "sysprompt",
+      "run": 0,
+      "session_start_called": true,
+      "prompt_completed": true,
+      "agent_text": "- Kiro has the ability to create agent hooks, hooks allow an agent execution to kick off automatically when an event occurs (or user clicks a button) in the IDE.",
+      "starts_with_token": false,
+      "mentions_token": false,
+      "clientinfo_fallback_logged": false
+    }
+  ]
+}

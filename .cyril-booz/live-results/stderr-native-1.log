@@ -1,0 +1,5 @@
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] [KiroAgent] MCP subsystem initialized
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=11
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=10
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=10
