@@ -1,0 +1,4 @@
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] [KiroAgent] MCP subsystem initialized
+[ERROR] [KRS] HTTP 400 requestId=3c8b6981-5db8-44a1-bd58-111b1f258360 body={"__type":"com.amazon.kiro.runtimeservice#ValidationException","message":"Improperly formed request.","reason":"REQUEST_BODY_INVALID"}
+[ERROR] Error handling request {"jsonrpc":"2.0","id":3,"method":"session/prompt","params":{"sessionId":"sess_59bca7cf-87ba-403a-9f8e-5ad9d0aa5aa8","prompt":[{"type":"text","text":"Say hello in one short sentence."}]}} {"code":-32000,"message":"Improperly formed request. (Request ID: 3c8b6981-5db8-44a1-bd58-111b1f258360)","data":{"errorType":"BedrockValidationError","retryErrorType":"CLIENT_ERROR","requestId":"3c8b6981-5db8-44a1-bd58-111b1f258360"}}

@@ -1,0 +1,13 @@
+{
+  "kas_version": null,
+  "session_start_calls": [
+    {
+      "trigger": "sessionStart",
+      "sessionId": "sess_71888677-a64e-4883-955b-3f0ae792b908"
+    }
+  ],
+  "prompt_completed": false,
+  "agent_text": "Improperly formed request. (Request ID: 003790df-31d4-4628-a55d-a65357288a30)",
+  "token_injected": false,
+  "unexpected_hook_calls": []
+}

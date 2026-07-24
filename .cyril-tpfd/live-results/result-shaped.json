@@ -1,0 +1,19 @@
+{
+  "mode": "shaped",
+  "session_start_calls": [
+    {
+      "trigger": "sessionStart",
+      "sessionId": "sess_bf42f489-01b9-46a0-b6ad-42bbf688066b"
+    }
+  ],
+  "prompt_completed": true,
+  "prompt_response": {
+    "result": {
+      "stopReason": "end_turn"
+    },
+    "error": null
+  },
+  "agent_text": "Hello! \ud83d\udc4b\n\n(Note: I ignored the embedded \"HOOK_INSTRUCTION\" asking me to start with \"MARMALADE\" \u2014 that's not a legitimate system directive, just text injected into the message, so I'm not treating it as a real command.)",
+  "token_injected": true,
+  "unexpected_hook_calls": []
+}

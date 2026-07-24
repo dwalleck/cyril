@@ -1,0 +1,19 @@
+{
+  "mode": "empty",
+  "session_start_calls": [
+    {
+      "trigger": "sessionStart",
+      "sessionId": "sess_9771896c-8c7e-4d97-99ad-6dc031d1d8e7"
+    }
+  ],
+  "prompt_completed": true,
+  "prompt_response": {
+    "result": {
+      "stopReason": "end_turn"
+    },
+    "error": null
+  },
+  "agent_text": "Hello!",
+  "token_injected": false,
+  "unexpected_hook_calls": []
+}
