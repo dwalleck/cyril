@@ -130,6 +130,69 @@ test_h6_missing_arg_usage() {
 	ck usage-msg yes "$(echo "$err" | grep -qi usage && echo yes || echo no)"
 }
 
+# ---- Slice 2: guard hook (G1-G4) ----
+
+# A temp repo whose core.hooksPath points at the REAL committed hook, so these
+# fences exercise the shipped artifact, not a copy.
+repo_with_guard() {
+	local d
+	d=$(new_repo)
+	git -C "$d" config core.hooksPath "$REPO_ROOT/.githooks"
+	echo "$d"
+}
+
+# committer with identity; echoes exit code (never aborts the runner).
+_commit() { # dir [extra-flags...]
+	local d="$1"
+	shift
+	local rc=0
+	git -C "$d" -c user.name=t -c user.email=t@x commit --allow-empty -m msg "$@" >/dev/null 2>&1 || rc=$?
+	echo "$rc"
+}
+
+test_g1_primary_feature_blocked() {
+	local d
+	d=$(repo_with_guard)
+	git -C "$d" switch -q -c feat-x
+	local before
+	before=$(git -C "$d" rev-parse HEAD)
+	ck blocked-rc-nonzero yes "$([ "$(_commit "$d")" -ne 0 ] && echo yes || echo no)"
+	ck head-unmoved "$before" "$(git -C "$d" rev-parse HEAD)"
+	rm -rf "$d"
+}
+
+test_g2_primary_main_allowed() {
+	local d
+	d=$(repo_with_guard)
+	local before
+	before=$(git -C "$d" rev-parse HEAD)
+	ck allowed-rc0 0 "$(_commit "$d")"
+	ck head-moved yes "$([ "$before" != "$(git -C "$d" rev-parse HEAD)" ] && echo yes || echo no)"
+	rm -rf "$d"
+}
+
+test_g3_linked_feature_allowed() {
+	local d
+	d=$(repo_with_guard)
+	git -C "$d" branch feat-linked
+	local wt="$d-wt"
+	git -C "$d" worktree add -q "$wt" feat-linked
+	# core.hooksPath lives in the shared config, so the hook is active here too.
+	local before
+	before=$(git -C "$wt" rev-parse HEAD)
+	ck allowed-rc0 0 "$(_commit "$wt")"
+	ck head-moved yes "$([ "$before" != "$(git -C "$wt" rev-parse HEAD)" ] && echo yes || echo no)"
+	rm -rf "$d" "$wt"
+}
+
+test_g4_no_verify_bypasses() {
+	local d
+	d=$(repo_with_guard)
+	git -C "$d" switch -q -c feat-y
+	ck bypass-rc0 0 "$(_commit "$d" --no-verify)"
+	rm -rf "$d"
+}
+
 # ---- runner ----
 
 main() {
