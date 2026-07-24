@@ -122,7 +122,10 @@ pub(crate) async fn execute_hook(
             // `.code()` is None only on signal death; surface that as a
             // non-zero rather than a plausible-looking 0 (errors-are-not-
             // defaults). 137 = 128 + SIGKILL, a conventional shell mapping.
-            let exit_code = out.status.code().unwrap_or(137);
+            let exit_code = out.status.code().unwrap_or_else(|| {
+                tracing::warn!(command, "hook killed by signal; reporting 137");
+                137
+            });
             serde_json::json!({"output": output, "exitCode": exit_code, "cancelled": false})
         }
         Ok(Err(e)) => {
@@ -224,7 +227,14 @@ impl HookRegistry {
                     continue;
                 }
             };
-            for entry in entries.flatten() {
+            for entry in entries {
+                let entry = match entry {
+                    Ok(e) => e,
+                    Err(e) => {
+                        tracing::warn!(dir = %dir.display(), error = %e, "hooks dir entry unreadable; skipped");
+                        continue;
+                    }
+                };
                 let path = entry.path();
                 if path.extension().and_then(|e| e.to_str()) != Some("json") {
                     continue;
@@ -307,7 +317,10 @@ impl HookRegistry {
     /// `{hooks: [...]}`. A missing `trigger` yields an empty list (the agent
     /// always sends one; a malformed frame should not error the turn).
     pub(crate) fn respond_list(&self, params: &serde_json::Value) -> acp::Result<acp::ExtResponse> {
-        let trigger = params.get("trigger").and_then(|t| t.as_str()).unwrap_or("");
+        let Some(trigger) = params.get("trigger").and_then(|t| t.as_str()) else {
+            tracing::warn!("hooks/list without a trigger; replying empty");
+            return json_ext_response(&serde_json::json!({ "hooks": [] }));
+        };
         let tool_id = params.get("toolId").and_then(|t| t.as_str());
         let hooks = self.list(trigger, tool_id);
         json_ext_response(&serde_json::json!({ "hooks": hooks }))
@@ -352,7 +365,10 @@ pub(crate) async fn respond_execute(
     let user_prompt = params
         .get("userPrompt")
         .and_then(|u| u.as_str())
-        .unwrap_or("");
+        .unwrap_or_else(|| {
+            tracing::warn!("executeHook without userPrompt; USER_PROMPT set empty");
+            ""
+        });
     // The wire `timeout` is in SECONDS — the hook file schema declares
     // "timeout must be >= 0 seconds" and the host-callback forwards
     // `action.timeout` verbatim (2.13.0 bundle carve). Treating it as millis
@@ -536,6 +552,17 @@ mod tests {
         assert_eq!(names(&reg.list("preToolUse", None)), vec!["h:always"]);
         // Unknown trigger → empty, not an error.
         assert!(reg.list("bogusTrigger", Some("fs_write")).is_empty());
+    }
+
+    // A malformed list frame (no `trigger`) is a warn + empty reply, never an
+    // errored turn — fences the logged early-return against a future panic
+    // or error-reply rewrite.
+    #[test]
+    fn respond_list_missing_trigger_replies_empty() {
+        let reg = HookRegistry { hooks: Vec::new() };
+        let resp = reg.respond_list(&serde_json::json!({})).unwrap();
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        assert_eq!(reply["hooks"], serde_json::json!([]));
     }
 
     // cyril-jiyn claim 6 fence: the command runs with USER_PROMPT in env and
