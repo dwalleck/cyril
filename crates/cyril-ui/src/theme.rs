@@ -138,6 +138,10 @@ impl SourceTheme {
     }
 }
 
+/// The fixed Cyril Dark source palette. Role values are fixed brightened RGB
+/// (not terminal-named colors) held to per-tier WCAG contrast targets — see
+/// `docs/adr/0007-cyril-dark-contrast-contract.md` and enforced by
+/// `tests::cyril_dark_contrast_contract`.
 fn cyril_dark_source(id: ThemeId) -> SourceTheme {
     match id {
         ThemeId::CyrilDark => SourceTheme {
