@@ -19,9 +19,13 @@ esac
 
 # Allow feature commits in a LINKED worktree; block only in the primary. In the
 # primary checkout the resolved git dir equals the common dir; in a linked
-# worktree it is .../.git/worktrees/<name> and differs.
-gitdir=$(git rev-parse --absolute-git-dir)
-common=$(cd "$(git rev-parse --git-common-dir)" && pwd)
+# worktree it is .../.git/worktrees/<name> and differs. Resolve BOTH operands
+# physically (`pwd -P`): when the checkout is reached through a symlink,
+# --absolute-git-dir yields the physical path while a logical `pwd` keeps the
+# symlink, and the mismatch would misread the primary as linked and let the
+# commit through (verified; the symlinked-path failure mode).
+gitdir=$(cd "$(git rev-parse --absolute-git-dir)" && pwd -P)
+common=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
 [ "$gitdir" != "$common" ] && exit 0
 
 echo "cyril-4rc1: refusing a '$branch' commit in the primary shared checkout." >&2
