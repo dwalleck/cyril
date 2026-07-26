@@ -1,0 +1,9 @@
+ORACLE accent_tertiary #000080
+ORACLE accent_quaternary #800080
+ORACLE accent_quinary #008080
+ORACLE subdued #808080
+ORACLE subdued_positive #008000
+ORACLE subdued_negative #800000
+ORACLE emphasis #808000
+ORACLE danger #ff0000
+ORACLE text #ffffff

@@ -138,6 +138,10 @@ impl SourceTheme {
     }
 }
 
+/// The fixed Cyril Dark source palette. Role values are fixed brightened RGB
+/// (not terminal-named colors) held to per-tier WCAG contrast targets — see
+/// `docs/adr/0007-cyril-dark-contrast-contract.md` and enforced by
+/// `tests::cyril_dark_contrast_contract`.
 fn cyril_dark_source(id: ThemeId) -> SourceTheme {
     match id {
         ThemeId::CyrilDark => SourceTheme {
@@ -161,13 +165,17 @@ fn cyril_dark_source(id: ThemeId) -> SourceTheme {
             diff_add: SourceColor::Rgb(0x00, 0xff, 0x00),
             diff_delete: SourceColor::Rgb(0xff, 0x00, 0x00),
             diff_context: SourceColor::Rgb(0x8c, 0x8c, 0x8c),
-            emphasis: SourceColor::Rgb(0x80, 0x80, 0x00),
-            accent_tertiary: SourceColor::Rgb(0x00, 0x00, 0x80),
-            accent_quaternary: SourceColor::Rgb(0x80, 0x00, 0x80),
-            accent_quinary: SourceColor::Rgb(0x00, 0x80, 0x80),
+            // cyril-leiq: brightened off the VGA dark-half so conversation roles
+            // meet per-tier contrast on dark terminals (was 0x808000; link
+            // accent_tertiary was 0x000080 = 1.02:1 on chrome). Fixed RGB, hue
+            // preserved; contract enforced by `cyril_dark_contrast_contract`.
+            emphasis: SourceColor::Rgb(0xd7, 0xba, 0x7d),
+            accent_tertiary: SourceColor::Rgb(0x6c, 0xb6, 0xff),
+            accent_quaternary: SourceColor::Rgb(0xcd, 0x9e, 0xe6),
+            accent_quinary: SourceColor::Rgb(0x56, 0xc7, 0xd0),
             subdued: SourceColor::Rgb(0x80, 0x80, 0x80),
             subdued_positive: SourceColor::Rgb(0x00, 0x80, 0x00),
-            subdued_negative: SourceColor::Rgb(0x80, 0x00, 0x00),
+            subdued_negative: SourceColor::Rgb(0xd9, 0x8a, 0x8a),
             soft_accent: SourceColor::Rgb(0x8a, 0xb4, 0xf8),
             positive_accent: SourceColor::Rgb(0x81, 0xc7, 0x84),
             inset_background: SourceColor::Rgb(0x28, 0x2c, 0x34),
@@ -533,13 +541,13 @@ mod tests {
         ("diff_add", SourceColor::Rgb(0x00, 0xff, 0x00)),
         ("diff_delete", SourceColor::Rgb(0xff, 0x00, 0x00)),
         ("diff_context", SourceColor::Rgb(0x8c, 0x8c, 0x8c)),
-        ("emphasis", SourceColor::Rgb(0x80, 0x80, 0x00)),
-        ("accent_tertiary", SourceColor::Rgb(0x00, 0x00, 0x80)),
-        ("accent_quaternary", SourceColor::Rgb(0x80, 0x00, 0x80)),
-        ("accent_quinary", SourceColor::Rgb(0x00, 0x80, 0x80)),
+        ("emphasis", SourceColor::Rgb(0xd7, 0xba, 0x7d)),
+        ("accent_tertiary", SourceColor::Rgb(0x6c, 0xb6, 0xff)),
+        ("accent_quaternary", SourceColor::Rgb(0xcd, 0x9e, 0xe6)),
+        ("accent_quinary", SourceColor::Rgb(0x56, 0xc7, 0xd0)),
         ("subdued", SourceColor::Rgb(0x80, 0x80, 0x80)),
         ("subdued_positive", SourceColor::Rgb(0x00, 0x80, 0x00)),
-        ("subdued_negative", SourceColor::Rgb(0x80, 0x00, 0x00)),
+        ("subdued_negative", SourceColor::Rgb(0xd9, 0x8a, 0x8a)),
         ("soft_accent", SourceColor::Rgb(0x8a, 0xb4, 0xf8)),
         ("positive_accent", SourceColor::Rgb(0x81, 0xc7, 0x84)),
         ("inset_background", SourceColor::Rgb(0x28, 0x2c, 0x34)),
@@ -682,19 +690,20 @@ mod tests {
     #[test]
     fn conversation_legacy_colors_are_representable() {
         let available = cyril_dark_source(ThemeId::CyrilDark).roles();
+        // cyril-leiq DELIBERATELY supersedes five dim VGA legacy colors that
+        // the ghuu migration had preserved (they were unreadable on dark
+        // terminals): Red 0x800000, Yellow-olive 0x808000, Blue 0x000080,
+        // Magenta 0x800080, Cyan 0x008080. Those roles now carry brightened,
+        // hue-preserving values (see cyril_dark_contrast_contract). The
+        // remaining legacy colors are still preserved.
         let required = [
             SourceColor::Rgb(0x8a, 0xb4, 0xf8),
             SourceColor::Rgb(0x81, 0xc7, 0x84),
             SourceColor::Rgb(0xb4, 0x8e, 0xad),
             SourceColor::Rgb(0x8c, 0x8c, 0x8c),
             SourceColor::Rgb(0x28, 0x2c, 0x34),
-            SourceColor::Rgb(0x80, 0x00, 0x00),
-            SourceColor::Rgb(0x00, 0x80, 0x00),
-            SourceColor::Rgb(0x80, 0x80, 0x00),
-            SourceColor::Rgb(0x00, 0x00, 0x80),
-            SourceColor::Rgb(0x80, 0x00, 0x80),
-            SourceColor::Rgb(0x00, 0x80, 0x80),
-            SourceColor::Rgb(0x80, 0x80, 0x80),
+            SourceColor::Rgb(0x00, 0x80, 0x00), // Green -> subdued_positive (unchanged)
+            SourceColor::Rgb(0x80, 0x80, 0x80), // DarkGray -> subdued (unchanged)
             SourceColor::Rgb(0xff, 0xff, 0xff),
         ];
 
@@ -712,14 +721,14 @@ mod tests {
     #[test]
     fn modal_legacy_colors_are_representable() {
         let available = cyril_dark_source(ThemeId::CyrilDark).roles();
+        // cyril-leiq supersedes the dim VGA Cyan/Yellow/Red legacy colors
+        // (they mapped to accent_quinary/emphasis/subdued_negative, now
+        // brightened for contrast — see cyril_dark_contrast_contract).
         let required = [
             SourceColor::Rgb(0x32, 0x32, 0x46), // Rgb(50,50,70) selection bg
             SourceColor::Rgb(0xff, 0xff, 0xff), // Color::White
-            SourceColor::Rgb(0x00, 0x80, 0x80), // Color::Cyan
             SourceColor::Rgb(0x80, 0x80, 0x80), // Color::DarkGray
-            SourceColor::Rgb(0x80, 0x80, 0x00), // Color::Yellow
             SourceColor::Rgb(0x00, 0x80, 0x00), // Color::Green
-            SourceColor::Rgb(0x80, 0x00, 0x00), // Color::Red
             SourceColor::Rgb(0xc0, 0xc0, 0xc0), // Color::Gray -> text_secondary
             SourceColor::Rgb(0xb0, 0x8d, 0xff), // matcher purple -> accent_violet
         ];
@@ -739,16 +748,15 @@ mod tests {
     #[test]
     fn chrome_legacy_colors_are_representable() {
         let available = cyril_dark_source(ThemeId::CyrilDark).roles();
+        // cyril-leiq supersedes the dim VGA Yellow/Red/Cyan/Magenta legacy
+        // colors (they mapped to emphasis/subdued_negative/accent_quinary/
+        // accent_quaternary, now brightened — see cyril_dark_contrast_contract).
         let required = [
             SourceColor::Rgb(0x1e, 0x1e, 0x2e), // Rgb(30,30,46) chrome bg
             SourceColor::Rgb(0xff, 0xff, 0xff), // Color::White
             SourceColor::Rgb(0x80, 0x80, 0x80), // Color::DarkGray
             SourceColor::Rgb(0xc0, 0xc0, 0xc0), // Color::Gray
-            SourceColor::Rgb(0x80, 0x80, 0x00), // Color::Yellow
             SourceColor::Rgb(0x00, 0x80, 0x00), // Color::Green
-            SourceColor::Rgb(0x80, 0x00, 0x00), // Color::Red
-            SourceColor::Rgb(0x00, 0x80, 0x80), // Color::Cyan
-            SourceColor::Rgb(0x80, 0x00, 0x80), // Color::Magenta
             SourceColor::Rgb(0x8a, 0xb4, 0xf8), // was palette::USER_BLUE (module removed, cyril-6r3a)
             SourceColor::Rgb(0x8c, 0x8c, 0x8c), // was palette::MUTED_GRAY (module removed, cyril-6r3a)
             SourceColor::Rgb(0xb4, 0x8e, 0xad), // was palette::SYSTEM_MAUVE (module removed, cyril-6r3a)
@@ -797,10 +805,10 @@ mod tests {
     fn first_five_compatibility_roles_match_signed_values() {
         let actual = cyril_dark_source(ThemeId::CyrilDark).roles();
         let expected = [
-            ("emphasis", SourceColor::Rgb(0x80, 0x80, 0x00)),
-            ("accent_tertiary", SourceColor::Rgb(0x00, 0x00, 0x80)),
-            ("accent_quaternary", SourceColor::Rgb(0x80, 0x00, 0x80)),
-            ("accent_quinary", SourceColor::Rgb(0x00, 0x80, 0x80)),
+            ("emphasis", SourceColor::Rgb(0xd7, 0xba, 0x7d)),
+            ("accent_tertiary", SourceColor::Rgb(0x6c, 0xb6, 0xff)),
+            ("accent_quaternary", SourceColor::Rgb(0xcd, 0x9e, 0xe6)),
+            ("accent_quinary", SourceColor::Rgb(0x56, 0xc7, 0xd0)),
             ("subdued", SourceColor::Rgb(0x80, 0x80, 0x80)),
         ];
 
@@ -818,7 +826,7 @@ mod tests {
         let actual = cyril_dark_source(ThemeId::CyrilDark).roles();
         let expected = [
             ("subdued_positive", SourceColor::Rgb(0x00, 0x80, 0x00)),
-            ("subdued_negative", SourceColor::Rgb(0x80, 0x00, 0x00)),
+            ("subdued_negative", SourceColor::Rgb(0xd9, 0x8a, 0x8a)),
             ("soft_accent", SourceColor::Rgb(0x8a, 0xb4, 0xf8)),
             ("positive_accent", SourceColor::Rgb(0x81, 0xc7, 0x84)),
             ("inset_background", SourceColor::Rgb(0x28, 0x2c, 0x34)),
@@ -851,17 +859,152 @@ mod tests {
         assert_eq!(theme.muted, Color::Rgb(0x8c, 0x8c, 0x8c));
         assert_eq!(theme.accent, Color::Rgb(0x00, 0xff, 0xff));
         assert_eq!(theme.user, Color::Rgb(0x8a, 0xb4, 0xf8));
-        assert_eq!(theme.emphasis, Color::Rgb(0x80, 0x80, 0x00));
-        assert_eq!(theme.accent_tertiary, Color::Rgb(0x00, 0x00, 0x80));
-        assert_eq!(theme.accent_quaternary, Color::Rgb(0x80, 0x00, 0x80));
-        assert_eq!(theme.accent_quinary, Color::Rgb(0x00, 0x80, 0x80));
+        // cyril-leiq: the five brightened roles (contract-checked below).
+        assert_eq!(theme.emphasis, Color::Rgb(0xd7, 0xba, 0x7d));
+        assert_eq!(theme.accent_tertiary, Color::Rgb(0x6c, 0xb6, 0xff));
+        assert_eq!(theme.accent_quaternary, Color::Rgb(0xcd, 0x9e, 0xe6));
+        assert_eq!(theme.accent_quinary, Color::Rgb(0x56, 0xc7, 0xd0));
         assert_eq!(theme.subdued, Color::Rgb(0x80, 0x80, 0x80));
         assert_eq!(theme.subdued_positive, Color::Rgb(0x00, 0x80, 0x00));
-        assert_eq!(theme.subdued_negative, Color::Rgb(0x80, 0x00, 0x00));
+        assert_eq!(theme.subdued_negative, Color::Rgb(0xd9, 0x8a, 0x8a));
         assert_eq!(theme.soft_accent, Color::Rgb(0x8a, 0xb4, 0xf8));
         assert_eq!(theme.positive_accent, Color::Rgb(0x81, 0xc7, 0x84));
         assert_eq!(theme.inset_background, Color::Rgb(0x28, 0x2c, 0x34));
         assert_eq!(theme.syntax, Some(SyntaxTheme::Base16EightiesDark));
+    }
+
+    // --- cyril-leiq: Cyril Dark contrast contract ------------------------------
+    // The regression fence for AC3. Computes WCAG 2.x contrast in Rust
+    // (independent of the Python probe `.cyril-leiq/probe_contrast.py`) and
+    // asserts every conversation foreground role meets its tier target against
+    // both representative dark backgrounds. The white-on-black == 21.0 anchor
+    // validates the formula so the fence cannot pass vacuously. Fixed-RGB /
+    // per-tier decision: docs/adr/0007-cyril-dark-contrast-contract.md.
+
+    fn srgb_to_linear(c8: u8) -> f64 {
+        let c = f64::from(c8) / 255.0;
+        if c <= 0.03928 {
+            c / 12.92
+        } else {
+            ((c + 0.055) / 1.055).powf(2.4)
+        }
+    }
+
+    fn relative_luminance((r, g, b): (u8, u8, u8)) -> f64 {
+        0.2126 * srgb_to_linear(r) + 0.7152 * srgb_to_linear(g) + 0.0722 * srgb_to_linear(b)
+    }
+
+    fn contrast(fg: (u8, u8, u8), bg: (u8, u8, u8)) -> f64 {
+        let (a, b) = (relative_luminance(fg), relative_luminance(bg));
+        let (hi, lo) = if a >= b { (a, b) } else { (b, a) };
+        (hi + 0.05) / (lo + 0.05)
+    }
+
+    fn rgb_of(c: Color) -> (u8, u8, u8) {
+        match c {
+            Color::Rgb(r, g, b) => (r, g, b),
+            other => panic!("Cyril Dark truecolor role must be Rgb, got {other:?}"),
+        }
+    }
+
+    // Representative dark backgrounds: pure black (a bare terminal) and the
+    // theme's own chrome. Chrome is the tighter of the two for light-ish
+    // foregrounds, so a role passing both is safe on any dark bg between them.
+    const BG_BLACK: (u8, u8, u8) = (0x00, 0x00, 0x00);
+    const BG_CHROME: (u8, u8, u8) = (0x1e, 0x1e, 0x2e);
+
+    // Per-tier targets (design FD-1) as (chrome_min, black_min): PRIMARY = AA
+    // text on both; MUTED = AA large / UI on both; SATURATED keeps the standard
+    // hue, quieter on chrome (>=3.0) but readable on black (>=4.5). The two legs
+    // are enforced separately so the asymmetric SATURATED target is not silently
+    // collapsed to its chrome leg.
+    const PRIMARY: (f64, f64) = (4.5, 4.5);
+    const MUTED: (f64, f64) = (3.0, 3.0);
+    const SATURATED: (f64, f64) = (3.0, 4.5);
+
+    #[test]
+    fn cyril_dark_contrast_contract() {
+        // Anchor: white-on-black is exactly 21.0 by definition — guards a
+        // broken luminance formula from making the whole fence vacuous.
+        assert!(
+            (contrast((0xff, 0xff, 0xff), BG_BLACK) - 21.0).abs() < 0.01,
+            "WCAG formula anchor failed"
+        );
+
+        let t = resolve_truecolor(ThemeId::CyrilDark);
+        // (role color, (chrome_min, black_min)) for every conversation
+        // FOREGROUND role — every distinct role, including the two diff roles
+        // that share success/danger's RGB (an independent change to either
+        // would otherwise slip the fence).
+        let roles: [(&str, Color, (f64, f64)); 26] = [
+            ("text", t.text, PRIMARY),
+            ("user", t.user, PRIMARY),
+            ("agent", t.agent, PRIMARY),
+            ("system", t.system, PRIMARY),
+            ("accent", t.accent, PRIMARY),
+            ("accent_alt", t.accent_alt, PRIMARY),
+            ("accent_violet", t.accent_violet, PRIMARY),
+            ("info", t.info, PRIMARY),
+            ("soft_accent", t.soft_accent, PRIMARY),
+            ("positive_accent", t.positive_accent, PRIMARY),
+            ("emphasis", t.emphasis, PRIMARY),
+            ("accent_tertiary", t.accent_tertiary, PRIMARY),
+            ("accent_quaternary", t.accent_quaternary, PRIMARY),
+            ("accent_quinary", t.accent_quinary, PRIMARY),
+            ("muted", t.muted, MUTED),
+            ("border", t.border, MUTED),
+            ("diff_context", t.diff_context, MUTED),
+            ("text_secondary", t.text_secondary, MUTED),
+            ("subdued", t.subdued, MUTED),
+            ("subdued_positive", t.subdued_positive, MUTED),
+            ("subdued_negative", t.subdued_negative, MUTED),
+            ("success", t.success, SATURATED),
+            ("diff_add", t.diff_add, SATURATED),
+            ("warning", t.warning, SATURATED),
+            ("danger", t.danger, SATURATED),
+            ("diff_delete", t.diff_delete, SATURATED),
+        ];
+        for (name, color, (chrome_min, black_min)) in roles {
+            let rgb = rgb_of(color);
+            let (cb, cc) = (contrast(rgb, BG_BLACK), contrast(rgb, BG_CHROME));
+            assert!(
+                cc >= chrome_min && cb >= black_min,
+                "{name} #{:02x}{:02x}{:02x}: contrast black {cb:.2} (>= {black_min}), \
+                 chrome {cc:.2} (>= {chrome_min}) — tier not met",
+                rgb.0,
+                rgb.1,
+                rgb.2
+            );
+        }
+    }
+
+    #[test]
+    fn cyril_dark_hue_identity() {
+        // The five brightened roles must keep their hue family — a value that
+        // hit the contrast target by swapping hue (e.g. a red "link") is wrong.
+        let t = resolve_truecolor(ThemeId::CyrilDark);
+        let (r, g, b) = rgb_of(t.accent_tertiary);
+        assert!(
+            b >= r && b >= g,
+            "link (accent_tertiary) must stay blue-dominant"
+        );
+        let (r, g, b) = rgb_of(t.subdued_negative);
+        assert!(r >= g && r >= b, "subdued_negative must stay red-dominant");
+        let (r, g, b) = rgb_of(t.accent_quinary);
+        assert!(
+            r < g && r < b,
+            "accent_quinary must stay teal (red is the min)"
+        );
+        let (r, g, b) = rgb_of(t.accent_quaternary);
+        assert!(
+            g < r && g < b,
+            "accent_quaternary must stay magenta (green is the min)"
+        );
+        let (r, g, b) = rgb_of(t.emphasis);
+        assert!(
+            r >= b && g >= b,
+            "emphasis must stay warm (blue is the min)"
+        );
     }
 
     #[test]
