@@ -302,14 +302,16 @@ bounded, and treat a hang as failure rather than slowness.
 
 ## Slice 11: rate-limited turns release via the response
 
-**Claim:** C10 — a rate-limited turn releases the busy guard (restores cyril-3zy4); no
-observation-alone release.
+**Claim:** C10 — a rate-limited turn releases the busy guard (**preserves** the shipped
+cyril-3zy4 behavior, closed 2026-07-17); no observation-alone release.
 **Oracle:** App completion count + fake-server prompt transcript (design C10).
 **Stress fixture:** inject a rate limit around **both** receipt orders. Expected: the turn
 releases via its response and is **not** left Busy. Bug classes: (i) mapping
 `RateLimited` to a release on mere observation, which would release turns that never ran;
-(ii) the voided choice-A behavior where the response never releases — the regression this
-slice exists to prevent, and the direct conflict the timing audit found with cyril-3zy4.
+(ii) the voided choice-A behavior where the response never releases. Since cyril-3zy4 is
+already shipped and closed, this slice is a **regression fence over live behavior**, not
+new functionality — the timing audit's finding was that choice-A would have broken a
+feature already in main.
 **Loop budget:** no loop; O(1) per completion.
 **Wall budget:** n/a.
 **Files:** `crates/cyril-core/src/protocol/bridge.rs`.
@@ -356,7 +358,7 @@ subscriber (cyril logs to `cyril.log`, never stdout — a TUI owns stdout, so a 
 | reference | issue | status | covers it? |
 |---|---|---|---|
 | target issue | `cyril-a71q` | open, in_progress | yes — turn-seq dedup + cross-session |
-| busy-guard release for rate limits | `cyril-3zy4` | open | yes — "a rate-limited turn must release the busy guard"; S11 restores it |
+| busy-guard release for rate limits | `cyril-3zy4` | **closed 2026-07-17** | yes — KAS-8 shipped the rate-limit surfacing incl. clearing the busy state. S11 **preserves** shipped behavior; it does not restore it. The voided choice-A would have *regressed* it — that is what the timing audit caught. |
 | stop-reason authority deferred, not decided | `cyril-pnwb` | open | yes — owns precedence; S5 records tuples only, selects none |
 | stream-ordering (agent text after TurnCompleted) | `cyril-9akh` | open | yes — explicitly out of scope per `related-issues.md` |
 | reconnect/respawn after disconnect | `cyril-gua0` | open | yes — out of scope; S8 preserves fail-stop only |
