@@ -225,6 +225,17 @@ in the keychain rather than the DB row (`no secret found in the database`).
 **Unverified:** the IdC / Builder ID / external-IdP extraction paths. Anyone re-running under those
 logins should measure their own row and record it here rather than assuming the social shape.
 
+Check which one you are on before any of this — `accountType` is the machine-readable field:
+
+```sh
+kiro-cli user whoami --format json   # -> {"accountType": "SocialGitHub", "email": …}
+kiro-cli user profile                # errors under social: "only available for IAM Identity
+                                     #   Center or External IdP users" — a second discriminator
+```
+
+Measured value here was `SocialGitHub`; the binary's `authMethod` enum is
+`Enterprise | ExternalIdp | BuilderId | Google | Github`.
+
 ### `_kiro/frontendToolCall` client handler REMOVED in 2.14.0
 
 The client-side handler added in **2.13.0** (registered cap `frontendToolCall:true`, declined

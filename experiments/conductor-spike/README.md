@@ -76,10 +76,21 @@ reads as evidence about the agent when it is really evidence about your credenti
 Check `error` after every request and abort non-zero. A zero is only meaningful from a
 run that is known to have reached the code path being measured.
 
-**Auth for KAS probes — and it depends on your login.** `~/.aws/sso/cache/kiro-auth-token*.json`
-goes stale, because kiro-cli refreshes into its SQLite `auth_kv`. Under **GitHub social
-auth** (measured) the fresh token is in `~/.local/share/kiro-cli/data.sqlite3`, row key
-`kirocli:social:token`, as plaintext JSON already carrying `profile_arn`.
+**Auth for KAS probes — check your login first.**
+
+```sh
+kiro-cli user whoami --format json    # -> {"accountType": "SocialGitHub", "email": …}
+```
+
+`accountType` tells you which credential layout you have, and it changes everything below.
+(`kiro-cli user profile` erroring with *"only available for IAM Identity Center or External
+IdP users"* is a second, cheaper discriminator.)
+
+`~/.aws/sso/cache/kiro-auth-token*.json` goes stale on every method, because kiro-cli
+refreshes into its SQLite `auth_kv` — that is the usual cause of `-32000 TokenInvalidError`.
+Under **GitHub social auth** (measured) the fresh token is in
+`~/.local/share/kiro-cli/data.sqlite3`, row key `kirocli:social:token`, as plaintext JSON
+already carrying `profile_arn`.
 
 Do not assume that shape on a different login. The key is `kirocli:odic:token` for
 IdC/Builder ID and `kirocli:external-idp:token` for external IdP, `profile_arn` is only
