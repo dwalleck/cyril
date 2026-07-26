@@ -104,7 +104,9 @@ reasons otherwise stable except as noted.
 
 ### `_kiro/workflow/*` — client-side workflow-progress protocol (NEW, forward-looking)
 
-2.14.1 adds a full **client-side parser + renderer for a DAG workflow-progress protocol**, but
+2.14.1 adds **client-side parser/converter-only scaffolding for a DAG workflow-progress
+protocol** — there is no renderer (see the two-layers correction below: the converter produces a
+`workflow_progress` stream event with no consumer, no `WorkflowPanel`, nothing that draws it) — and
 **neither shipped engine emits it**: KAS 0.22.7 has zero `workflow-progress`/`wf-progress`
 occurrences, and tui.js registers no client-initiated `_kiro/workflow/start|control` method —
 only inbound handling. It is scaffolding for a future workflow-orchestration engine (cloud or a
@@ -137,6 +139,102 @@ polling (`watch`+`watch_poll`), and human-in-the-loop (`need_input`, `node_pause
 **overlaps cyril's own session-level-workflow ambition** ([[project_cyril_session_level_workflows]])
 and is a strong signal that Kiro is heading toward orchestrated multi-node workflows on the ACP
 wire. Watch item — model the notification shape now so cyril can render it when an emitter ships.
+
+**Two layers — the protocol is a facade, but the orchestration it presents is real (correction of
+record).** Digging past the protocol: the `_kiro/workflow/*` progress *protocol* is unwired on
+**both** ends — no emitter (KAS and v2 both 0), and tui.js's parser produces a `workflow_progress`
+stream event that appears exactly **once** in the bundle (the production site in the converter),
+with no consumer/`WorkflowPanel`/renderer — so it is parse-and-drop scaffolding. **But the DAG
+orchestration *capability* it visualizes is real and executing:** KAS's registered
+`OrchestrateSubAgent` / `orchestrate_subagent` tool has a full input schema (`buildSchema`) —
+`task` → `stages[]` (`{name, role, prompt_template, depends_on, inlineAgent?}`, a DAG via
+`depends_on`, independents run in parallel) plus a `repeat` block (`maxIterations` 1–20,
+`stopCondition.containsText`, `onMaxIterations` `continue`/`abort`) — and the executor **runs the
+loop** (`[OrchestrateSubAgent] repeat.complete`/`repeat.exhausted` logging;
+`if (repeat.onMaxIterations === "abort") …`). So the field-name mismatch is the tell — the engine
+speaks `stages`/`depends_on`/`repeat`; the client protocol speaks `nodeTree`/node-types/
+`workflow-progress` — two vocabularies for the same concept, designed at different times. Today an
+`OrchestrateSubAgent` run reports through the ordinary **`agent-subtask` tool-call** channel cyril
+already receives, *not* the live workflow-progress protocol. **Corrects the record:** the
+"`OrchestrateSubAgent` = one-shot, fail-fast, **no loop**" characterization in CLAUDE.md and the
+2.7.1 / 2.10.0 audits is **stale** — a bounded `repeat` loop is present at least since **KAS 0.18.2
+(2.13.0)** (byte-identical schema markers in 0.18.2 and 0.22.7), i.e. it landed in the
+2.10.0→2.13.0 window and was simply overlooked, not a 2.14.0 addition. **Nearer-term cyril angle
+(→ cyril-6beh):** cyril can surface `OrchestrateSubAgent` pipeline runs (stages + the repeat loop)
+from the `agent-subtask` tool-call stream it already receives, without waiting for the workflow
+protocol to light up.
+
+**Trace-verified emission shape + the one blocker (2026-07-24).** Confirmed against the committed
+KAS trace `experiments/conductor-spike/kas-live-session-trace-2.11.0.jsonl` (KAS 0.8.0): a subagent
+run surfaces as ordinary `session/update` **`tool_call` + `tool_call_update`** frames tagged
+`_meta.kiro: {kind: "agent-subtask", agentSubtaskId: <uuid>}` (sample: 5 subtask groups, 44
+`tool_call` + 113 `tool_call_update` + 8 `session_info_update`), with the **plan in the initial
+`tool_call`'s `rawInput`** (invoke path `{name, prompt, explanation, contextFiles, preset}`) and
+grouping by `agentSubtaskId`. **The blocker is client-side, not a missing emitter:** these arrive
+with ACP **`kind: "other"`**, which cyril filters as agent "planning" steps
+([[reference_kiro_tool_input_schemas]] / CLAUDE.md ToolKind::Other rule) — so cyril drops the whole
+run unless it checks `_meta.kiro.kind == "agent-subtask"` *before* that filter. A live 2.14.1
+`OrchestrateSubAgent` capture to pin the `{task, stages, repeat}` wire shape was **attempted and
+blocked**: the harness (`experiments/conductor-spike/probe-kas-orchestrate-capture-2.14.1.py`,
+faithful `kiro-cli-chat acp --agent-engine kas` spawn) reached KAS, but the on-disk
+`kiro-auth-token*.json` cache is stale — kiro-cli refreshes into its SQLite `auth_kv`, not the
+JSON — so KAS rejected `getAccessToken` with `-32000 TokenInvalidError` and the turn never
+orchestrated (log: `logs/kas-orchestrate-capture-2.14.1-attempt.summary`).
+
+**Fresh-token recipe — measured, but AUTH-METHOD-SPECIFIC (2026-07-26, kiro-cli 2.14.2, GitHub
+social auth).** Read the caveat below before trusting this on a different login.
+
+Measured under **social (GitHub) auth**: `auth_kv` stores plaintext JSON and the row already
+carries `profile_arn`, so nothing needs merging from the JSON cache. Key name varies by auth
+method (`kirocli:social:token`, `kirocli:odic:token`, `kirocli:external-idp:token`):
+
+```sh
+sqlite3 ~/.local/share/kiro-cli/data.sqlite3 \
+  "select value from auth_kv where key='kirocli:social:token'"
+# -> {access_token, expires_at, profile_arn, provider, refresh_token}  (snake_case)
+# rewrite to camelCase {accessToken, expiresAt, profileArn, provider, authMethod} as fresh-token.json
+python3 experiments/conductor-spike/probe-kas-orchestrate-capture-2.14.1.py \
+  ~/.local/bin/kiro-cli-chat /tmp/orch-capture.jsonl /tmp/fresh-token.json
+```
+
+The third argument is optional in the signature but required in practice — omitting it falls back
+to the known-stale cache file. The probe validates the token before spawning Kiro and exits
+non-zero if it is missing a field, so a credential problem can no longer masquerade as a
+zero-frame capture. Auth responses are written to the capture with secrets replaced by
+`<redacted>`, matching the `kas-live-session-trace-2.11.0.jsonl` convention.
+
+⚠️ **Do not generalize the above to IAM Identity Center / Builder ID logins — it was measured on
+one auth method only (n=1).** The binary shows the paths genuinely differ:
+
+- `social token has no profile ARN, treating as invalid` and `profileArn is required but was not
+  found for social login.` — a **social** token *must* carry `profile_arn` in the row, which is why
+  it was there to read.
+- `Lazily resolved profileArn from list_available_profiles` — other methods resolve `profileArn`
+  through an API call instead, so it is **not** guaranteed to be in the token row.
+- `Error getting builder id token from keychain` alongside `loading builder id token from the
+  secret store` — Builder ID has an OS-keychain path distinct from the DB row.
+
+Consequence: **the probe's original comment was probably right for the setup it was written on.**
+It named `kirocli:odic:token` and prescribed merging `profileArn` from
+`kiro-auth-token-cli.json` — which is the correct shape for an IdC/Builder-ID login, where the row
+key differs and `profileArn` is resolved separately. An earlier draft of this section flatly called
+that comment wrong; it was not, it was written for a different auth method. Likewise the
+"`auth_kv` not plaintext" note may have been accurate for a Builder-ID setup where the token sits
+in the keychain rather than the DB row (`no secret found in the database`).
+
+**Unverified:** the IdC / Builder ID / external-IdP extraction paths. Anyone re-running under those
+logins should measure their own row and record it here rather than assuming the social shape.
+
+Check which one you are on before any of this — `accountType` is the machine-readable field:
+
+```sh
+kiro-cli user whoami --format json   # -> {"accountType": "SocialGitHub", "email": …}
+kiro-cli user profile                # errors under social: "only available for IAM Identity
+                                     #   Center or External IdP users" — a second discriminator
+```
+
+Measured value here was `SocialGitHub`; the binary's `authMethod` enum is
+`Enterprise | ExternalIdp | BuilderId | Google | Github`.
 
 ### `_kiro/frontendToolCall` client handler REMOVED in 2.14.0
 

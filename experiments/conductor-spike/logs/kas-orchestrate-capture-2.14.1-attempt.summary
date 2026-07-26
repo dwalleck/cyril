@@ -1,0 +1,36 @@
+# ANNOTATION (added 2026-07-26, not part of the captured output) ------------------
+# THIS CAPTURE FAILED. It is retained as provenance of the blocked attempt, NOT as
+# evidence about KAS behaviour. Every zero below is uninformative: the turn never
+# orchestrated.
+#
+# Cause: KAS rejected _kiro/auth/getAccessToken with -32000 TokenInvalidError (the
+# 7 auth calls below are its retries) because the probe read the stale
+# ~/.aws/sso/cache/kiro-auth-token-cli.json. That error is not in the text below —
+# the probe of the day reported only result fields, so an errored response printed
+# as "init ok: True" / "stopReason: None". Both defects are now fixed: the probe
+# validates the token before spawning and aborts non-zero on any JSON-RPC error.
+#
+# The raw wire log was written to a session-scoped scratchpad and was NOT retained;
+# there is no archived jsonl for this run. Re-running per the fresh-token recipe in
+# docs/kiro-2.14.1-wire-audit.md produces a valid capture to supersede this file.
+#
+# NOTE the counts below predate the workflow-progress detector fix, which only
+# recognised _meta.kiro.kind / update.kind and would have missed the documented
+# nested _meta.kiro.notification.kind and wf-progress-* forms. "0" here reflects a
+# turn that produced no frames at all, not a working detector.
+# ---------------------------------------------------------------------------------
+
+sessionId: sess_acaaa0fb-a4c0-4281-b55b-f039e84acb3e | init ok: True
+
+=== stopReason: None ===
+auth getAccessToken calls: 7 | userInput calls: 0
+INBOUND methods: {"_kiro/auth/getAccessToken": 7, "_kiro/mcp/status": 2, "_kiro/governance/state": 1, "_kiro/tools/didChange": 2, "_kiro/sessions/changed": 4, "_kiro/steering/documents_changed": 1, "session/update": 10, "_kiro/powers/items_changed": 1}
+session/update kinds: {"available_commands_update": 1, "session_info_update": 8, "agent_message_chunk": 1}
+tool_call _meta.kiro.kind histogram: {}
+distinct agentSubtaskId: 0
+workflow-progress frames: 0 | loop_iteration frames: 0
+orchestrate/invoke rawInputs captured: 0
+
+--- tool_call timeline (upd | acpKind | title | metaKind | subtask | rawInputKeys) ---
+
+full raw wire log -> (session-scoped scratchpad; NOT retained — see annotation above)
