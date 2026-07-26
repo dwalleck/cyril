@@ -1,7 +1,8 @@
 # cyril-leiq — budgeted plan
 
-Approved design: per-tier targets (PRIMARY 4.5 / MUTED 3.0 / SATURATED keep-hue),
-fixed-RGB (not remap), 5 role values change, bound to #1e1e2e + #000000. Two
+Approved design: per-tier targets (PRIMARY ≥4.5 on both backgrounds, MUTED ≥3.0
+on both, SATURATED ≥3.0 on chrome / ≥4.5 on black + keep-hue), fixed-RGB (not
+remap), 5 role values change, bound to #1e1e2e + #000000. Two
 slices: the atomic value+fence change (green), then the AC2 documentation.
 
 Impact analysis (done, pre-plan): the value change breaks exactly —
@@ -23,8 +24,9 @@ Gate per slice: `cargo nextest run -p cyril-ui`, `cargo nextest run --workspace`
 ## Slice 1: brighten the 5 dim roles + contrast-contract & hue fences + test fallout
 
 **Claim:** design claims 1-6 — every PRIMARY conversation role ≥ 4.5:1 and every
-MUTED role ≥ 3.0:1 vs both #1e1e2e and #000000, saturated hues kept, the link
-role ≥ 4.5:1, changed roles keep their hue family, and already-passing roles are
+MUTED role ≥ 3.0:1 vs both #1e1e2e and #000000; every SATURATED role keeps its
+hue and meets ≥3.0:1 vs chrome / ≥4.5:1 vs black; the link role ≥ 4.5:1,
+changed roles keep their hue family, and already-passing roles are
 byte-unchanged.
 **Oracle:** the Rust contrast fence computes WCAG contrast independently of the
 Python probe (`falsifier_proposed.py`); the two must agree per role, and the

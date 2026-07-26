@@ -50,7 +50,7 @@ satisfied by this PR being that conscious review.
   - PRIMARY currently failing: `accent_tertiary` (1.02 chrome), `accent_quaternary`
     (1.74), `accent_quinary` (3.44), `emphasis` (3.91).
   - PRIMARY currently passing (must stay ≥4.5, unchanged): text, user, agent,
-    accent, info, soft_accent, positive_accent, accent_alt, accent_violet.
+    system, accent, info, soft_accent, positive_accent, accent_alt, accent_violet.
   - MUTED currently failing: `subdued_negative` (1.50).
   - MUTED currently passing (≥3.0, unchanged): subdued (4.15), subdued_positive
     (3.19), muted, diff_context, text_secondary, border.

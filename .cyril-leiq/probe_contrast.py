@@ -17,9 +17,9 @@ from pathlib import Path
 
 THEME = Path(__file__).resolve().parent.parent / "crates/cyril-ui/src/theme.rs"
 
-# Representative dark backgrounds. canvas is Reset (the terminal's own bg), so
-# the worst realistic case is near-black; chrome (0x1e1e2e) is where some
-# surfaces sit.
+# Representative dark backgrounds: the terminal's black canvas and the theme's
+# chrome. Contrast is measured against both rather than assuming either one is
+# universally the tighter background.
 BACKGROUNDS = {"black": (0x00, 0x00, 0x00), "chrome": (0x1E, 0x1E, 0x2E)}
 
 # Roles that carry FOREGROUND text in conversation (chat.rs / markdown.rs).
@@ -33,6 +33,9 @@ FG_ROLES = {
     "subdued_negative", "soft_accent", "positive_accent", "text_secondary",
     "accent_violet",
 }
+
+NON_FOREGROUND_RGB_ROLES = {"chrome", "code", "selection", "inset_background"}
+EXPECTED_RGB_ROLES = FG_ROLES | NON_FOREGROUND_RGB_ROLES
 AA_TEXT = 4.5   # WCAG AA, normal text
 AA_LARGE = 3.0  # WCAG AA, large text / UI components
 
@@ -71,6 +74,15 @@ def parse_source_roles() -> dict:
 
 def main() -> int:
     roles = parse_source_roles()
+    actual_roles = set(roles)
+    if actual_roles != EXPECTED_RGB_ROLES:
+        missing = sorted(EXPECTED_RGB_ROLES - actual_roles)
+        unexpected = sorted(actual_roles - EXPECTED_RGB_ROLES)
+        print(
+            f"ROLE INVENTORY FAILED: missing={missing}, unexpected={unexpected}",
+            file=sys.stderr,
+        )
+        return 2
 
     # Formula anchor: white on black is exactly 21.00 by WCAG definition.
     anchor = contrast((255, 255, 255), (0, 0, 0))

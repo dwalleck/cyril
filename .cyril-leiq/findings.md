@@ -16,8 +16,8 @@ target (4.5:1) on a dark terminal, and by how much?
 
 Independent of the theme-resolution code (reads the `cyril_dark_source` RGB
 literals directly). Anchor: white-on-black computes to **21.00** (WCAG max),
-so the formula is correct. Contrast of each foreground role vs `#000000`
-(black, worst case) and `#1e1e2e` (chrome):
+so the formula is correct. Contrast of each foreground role against the two
+representative backgrounds, `#000000` (black) and `#1e1e2e` (chrome):
 
 **Tier 1 — hard-unreadable (< 3:1 on black):**
 | role | rgb | vs black | note |
@@ -35,9 +35,9 @@ black, 4.10 on chrome. Pure red's luminance coefficient (0.2126) caps it near
 ~5:1; it is the standard semantic red, not a migration mistake. The design
 must NOT treat it as broken (raising it would desaturate the danger signal).
 
-Passing roles (all ≥ 4.5 on black): text, user, agent, accent, info, success,
-warning, soft_accent, positive_accent, accent_alt, accent_violet,
-text_secondary, muted, border, diff_add — 15 of 26.
+Passing roles (all ≥ 4.5 on black): text, user, agent, system, accent, info,
+success, warning, soft_accent, positive_accent, accent_alt, accent_violet,
+text_secondary, muted, border, diff_context, diff_add — 17 of 26.
 
 ## Oracle — two independent axes, both agree
 
