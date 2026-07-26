@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# git shim — feeds repo-state FACTS to the model as labeled side-band notes,
+# while keeping the command's stdout byte-exact.
+#
+# Motivation: cyril has been bitten three times by commits landing on whichever
+# branch happened to be checked out (CLAUDE.md "Parallel sessions — one worktree
+# per session"). The facts that prevent it — current branch, main vs linked
+# worktree, whether the pre-commit guard is active, which branches other
+# worktrees hold — are worth giving the model on every branch-sensitive command,
+# but they must not be spliced into what `git` itself printed.
+#
+# CHANNEL SEMANTICS (measured on the wire, kiro-cli 2.14.2 —
+# experiments/conductor-spike/probe-git-shim-2.14.2.py):
+#   stdout             → model (tool result `stdout`) AND human (streamed content)
+#   $AGENT_DISPLAY_OUT → human ONLY  (streamed content; absent from tool result)
+#   $AGENT_CONTEXT_OUT → model as `rawOutput.Json.agent_notes` AND ALSO streamed
+#                        to the human as tool_call_update content
+# So the context channel is NOT hidden from the user. Its two real properties
+# are (a) the model receives it in a separate, labeled field rather than mixed
+# into command output, and (b) stdout stays byte-exact. Only the display channel
+# is genuinely one-audience.
+#
+# Behavior:
+#   - Human at the terminal (no $AGENT_*_OUT vars) → exec real git, untouched.
+#   - Subcommand where branch identity isn't load-bearing → exec real git.
+#   - Agent-driven status/commit/push/switch/checkout:
+#       * real git's own output → stdout, completely unmodified
+#       * repo-state facts      → $AGENT_CONTEXT_OUT (arrives as agent_notes)
+#       * a one-line marker     → $AGENT_DISPLAY_OUT (never enters the model's
+#                                 tool result, so it can't be mistaken for output)
+#
+# Deliberately DECLARATIVE. A live probe found the model classifies injected
+# *instructions* on this channel as a prompt-injection attempt and refuses them,
+# so this emits state to reason from ("worktree-kind: main"), never orders
+# ("do not commit here").
+#
+# Caveat: writes to the FIFOs block if no reader is attached; the [ -n ] guard
+# means that can only happen if Kiro exported the vars but died mid-command.
+
+set -u
+
+SHIM_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+# Resolve the real git by stripping the shim dir from PATH.
+REAL_PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$SHIM_DIR" | paste -sd:)
+REAL_GIT=$(PATH="$REAL_PATH" command -v git) || {
+    echo "[git-shim] real git not found on PATH" >&2
+    exit 127
+}
+
+sub="${1:-}"
+case "$sub" in
+    status | commit | push | switch | checkout) ;;
+    *) exec "$REAL_GIT" "$@" ;;
+esac
+
+if [ -z "${AGENT_DISPLAY_OUT:-}" ] || [ -z "${AGENT_CONTEXT_OUT:-}" ]; then
+    exec "$REAL_GIT" "$@"
+fi
+
+# Run the real command first; its output is the model's and the user's inline
+# result, untouched. Annotation happens afterwards so a failing git command
+# still gets annotated (the failure is often exactly when branch state matters).
+"$REAL_GIT" "$@"
+status=$?
+
+# Not a repository → nothing to annotate, but still report cleanly.
+if ! "$REAL_GIT" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "[git-shim] 'git $sub' ran outside a git repository; no repo-state facts to add." \
+        >"$AGENT_DISPLAY_OUT"
+    exit "$status"
+fi
+
+branch=$("$REAL_GIT" branch --show-current 2>/dev/null)
+toplevel=$("$REAL_GIT" rev-parse --show-toplevel 2>/dev/null)
+# Portable main-vs-linked test: in a linked worktree, --git-dir is a per-worktree
+# directory while --git-common-dir points at the shared one. Equal => main.
+git_dir=$("$REAL_GIT" rev-parse --absolute-git-dir 2>/dev/null)
+common_dir=$(cd "$toplevel" 2>/dev/null && "$REAL_GIT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+if [ "$git_dir" = "$common_dir" ]; then
+    worktree_kind=main
+else
+    worktree_kind=linked
+fi
+hooks_path=$("$REAL_GIT" config core.hooksPath 2>/dev/null || true)
+dirty=$("$REAL_GIT" status --porcelain 2>/dev/null | grep -cv '^??' || true)
+untracked=$("$REAL_GIT" status --porcelain 2>/dev/null | grep -c '^??' || true)
+upstream=$("$REAL_GIT" rev-parse --abbrev-ref '@{u}' 2>/dev/null || echo none)
+if [ "$upstream" != none ]; then
+    counts=$("$REAL_GIT" rev-list --left-right --count "@{u}...HEAD" 2>/dev/null || echo "? ?")
+    behind=${counts%%	*}
+    ahead=${counts##*	}
+else
+    behind=- ; ahead=-
+fi
+
+{
+    echo "repo-state facts for 'git $sub' (exit=$status), gathered by the git shim:"
+    echo "  branch: ${branch:-<detached HEAD>}"
+    echo "  worktree-root: $toplevel"
+    echo "  worktree-kind: $worktree_kind"
+    echo "  core.hooksPath: ${hooks_path:-unset}"
+    echo "  tracked-modified: $dirty   untracked: $untracked"
+    echo "  upstream: $upstream (ahead: $ahead, behind: $behind)"
+    echo "  branches checked out in other worktrees:"
+    "$REAL_GIT" worktree list --porcelain 2>/dev/null \
+        | awk -v self="$toplevel" '
+            /^worktree /{wt=substr($0,10)}
+            /^branch /{b=$2; sub("refs/heads/","",b); if (wt != self) print "    " b "  (" wt ")"}' \
+        || echo "    <unavailable>"
+} >"$AGENT_CONTEXT_OUT"
+
+echo "[git-shim] annotated 'git $sub' with repo-state facts delivered as agent_notes (branch=${branch:-detached}, worktree-kind=$worktree_kind)." \
+    >"$AGENT_DISPLAY_OUT"
+
+exit "$status"

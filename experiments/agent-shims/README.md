@@ -36,6 +36,43 @@ Cyril could do this in the bridge spawn (a future proxy-stage/skill concern).
 - `cargo` — wraps `test` / `clippy` / `build` / `check`. All other subcommands
   and human-driven invocations (env vars unset) `exec` the real cargo
   untouched, so the shim is safe to have on PATH permanently.
+- `git` — wraps `status` / `commit` / `push` / `switch` / `checkout`. Different
+  goal from `cargo`: not token economy but **labeled side-band facts with
+  byte-exact stdout**. Real git output passes through untouched; repo-state facts
+  (branch, main-vs-linked worktree, `core.hooksPath`, dirty counts, upstream
+  ahead/behind, branches held by sibling worktrees) are delivered to the model as
+  `agent_notes` instead of being spliced into command output. Aimed at the
+  branch-hitchhiking hazard in CLAUDE.md ("Parallel sessions — one worktree per
+  session"), which has bitten this repo three times: the model gets the state it
+  needs to notice it is about to commit on the wrong branch.
+
+### Channel semantics — measured, and NOT what you'd assume
+
+Verified on the wire at kiro-cli 2.14.2
+(`experiments/conductor-spike/probe-git-shim-2.14.2.py`):
+
+| Channel | Model | Human |
+|---|---|---|
+| `stdout` | yes — tool result `stdout` | yes — streamed content |
+| `$AGENT_DISPLAY_OUT` | **no** | yes — streamed content |
+| `$AGENT_CONTEXT_OUT` | yes — `rawOutput.Json.agent_notes` | **yes** — also streamed as content |
+
+**Only the display channel is one-audience.** `$AGENT_CONTEXT_OUT` is *not*
+hidden from the user: Kiro streams both FIFOs into `tool_call_update.content`
+interleaved with stdout in arrival order, so a cyril user sees the notes live.
+Its real value is that the model receives the text in a separate labeled field
+and that stdout stays byte-exact — not invisibility.
+
+### Why the facts are declarative
+
+The `git` shim emits state (`worktree-kind: main`), never instructions ("do not
+commit here"). The 2.5.1 side-channel probe found the model classifies injected
+*instructions* on `$AGENT_CONTEXT_OUT` as a prompt-injection attempt and
+deliberately refuses them — so facts-to-reason-from is the only reliable payload.
+
+Main-vs-linked worktree is detected portably by comparing
+`git rev-parse --absolute-git-dir` with `--git-common-dir` (equal ⇒ main), not by
+hardcoding a checkout path.
 
 ## Caveats
 
