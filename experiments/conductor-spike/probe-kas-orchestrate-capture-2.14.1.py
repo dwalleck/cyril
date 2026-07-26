@@ -17,15 +17,22 @@ The optional third argument is REQUIRED in practice: the on-disk
 `~/.aws/sso/cache/kiro-auth-token*.json` are stale because kiro-cli refreshes into its
 SQLite `auth_kv`, not the JSON, so the default path yields `-32000 TokenInvalidError`.
 
-Building fresh-token.json (measured 2026-07-26, kiro-cli 2.14.2):
+Building fresh-token.json — measured under GITHUB SOCIAL AUTH (2026-07-26, kiro-cli 2.14.2):
     sqlite3 ~/.local/share/kiro-cli/data.sqlite3 \
         "select value from auth_kv where key='kirocli:social:token'"
-`auth_kv` IS plaintext JSON. The row carries snake_case
-{access_token, expires_at, profile_arn, provider, refresh_token} — profile_arn included,
-so nothing needs merging from the JSON cache. Key name varies by auth method:
-`kirocli:social:token`, `kirocli:odic:token`, or `kirocli:external-idp:token`.
+Under social auth `auth_kv` is plaintext JSON and the row carries snake_case
+{access_token, expires_at, profile_arn, provider, refresh_token} — profile_arn included.
 Rewrite to the camelCase shape this probe expects:
     {"accessToken": …, "expiresAt": …, "profileArn": …, "provider": …, "authMethod": …}
+
+AUTH METHOD MATTERS — the above is n=1. Key name varies (`kirocli:social:token`,
+`kirocli:odic:token`, `kirocli:external-idp:token`), and profile_arn is only guaranteed
+in the row for social ("social token has no profile ARN, treating as invalid"); other
+methods resolve it via list_available_profiles ("Lazily resolved profileArn from
+list_available_profiles"), and Builder ID has a keychain path distinct from the DB.
+Under IdC/Builder ID the older recipe — read `kirocli:odic:token` and merge profileArn
+from kiro-auth-token-cli.json — is the correct one. Measure your own row; do not assume
+the social shape. See docs/kiro-2.14.1-wire-audit.md.
 
 Credential hygiene: auth responses are sent to KAS in full but written to the capture
 with secrets replaced by "<redacted>", matching the committed
@@ -36,13 +43,17 @@ import json, os, subprocess, threading, queue, time, tempfile, sys
 USAGE = ("Usage: probe-kas-orchestrate-capture-2.14.1.py "
          "<kiro-cli-chat> <out.jsonl> [fresh-token.json]")
 TOKEN_RECIPE = (
-    "Build fresh-token.json from the CLI's own store (auth_kv IS plaintext JSON):\n"
+    "Build fresh-token.json from the CLI's own store. Under GITHUB SOCIAL auth:\n"
     "  sqlite3 ~/.local/share/kiro-cli/data.sqlite3 \\\n"
     "    \"select value from auth_kv where key='kirocli:social:token'\"\n"
-    "The row holds snake_case {access_token, expires_at, profile_arn, provider,\n"
+    "-> plaintext JSON {access_token, expires_at, profile_arn, provider,\n"
     "refresh_token}; rewrite to camelCase {accessToken, expiresAt, profileArn,\n"
-    "provider, authMethod}. Key varies by auth method: kirocli:social:token,\n"
-    "kirocli:odic:token, or kirocli:external-idp:token.")
+    "provider, authMethod}.\n"
+    "AUTH METHOD MATTERS: key is kirocli:odic:token (IdC/Builder ID) or\n"
+    "kirocli:external-idp:token elsewhere, and profile_arn is only guaranteed in the\n"
+    "row for social — other methods resolve it via list_available_profiles, so merge\n"
+    "profileArn from kiro-auth-token-cli.json there. See\n"
+    "docs/kiro-2.14.1-wire-audit.md.")
 
 if len(sys.argv) < 3:
     print(USAGE, file=sys.stderr)

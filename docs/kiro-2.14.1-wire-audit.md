@@ -181,11 +181,12 @@ faithful `kiro-cli-chat acp --agent-engine kas` spawn) reached KAS, but the on-d
 JSON — so KAS rejected `getAccessToken` with `-32000 TokenInvalidError` and the turn never
 orchestrated (log: `logs/kas-orchestrate-capture-2.14.1-attempt.summary`).
 
-**Verified fresh-token recipe (measured 2026-07-26, kiro-cli 2.14.2).** An earlier draft of this
-section claimed `auth_kv` was "not plaintext"; that is **wrong**, and so was the probe's original
-comment. Measured: `auth_kv` stores plaintext JSON, and the row already carries `profile_arn`, so
-nothing needs merging from the JSON cache. The key name varies by auth method
-(`kirocli:social:token`, `kirocli:odic:token`, `kirocli:external-idp:token`):
+**Fresh-token recipe — measured, but AUTH-METHOD-SPECIFIC (2026-07-26, kiro-cli 2.14.2, GitHub
+social auth).** Read the caveat below before trusting this on a different login.
+
+Measured under **social (GitHub) auth**: `auth_kv` stores plaintext JSON and the row already
+carries `profile_arn`, so nothing needs merging from the JSON cache. Key name varies by auth
+method (`kirocli:social:token`, `kirocli:odic:token`, `kirocli:external-idp:token`):
 
 ```sh
 sqlite3 ~/.local/share/kiro-cli/data.sqlite3 \
@@ -201,6 +202,28 @@ to the known-stale cache file. The probe validates the token before spawning Kir
 non-zero if it is missing a field, so a credential problem can no longer masquerade as a
 zero-frame capture. Auth responses are written to the capture with secrets replaced by
 `<redacted>`, matching the `kas-live-session-trace-2.11.0.jsonl` convention.
+
+⚠️ **Do not generalize the above to IAM Identity Center / Builder ID logins — it was measured on
+one auth method only (n=1).** The binary shows the paths genuinely differ:
+
+- `social token has no profile ARN, treating as invalid` and `profileArn is required but was not
+  found for social login.` — a **social** token *must* carry `profile_arn` in the row, which is why
+  it was there to read.
+- `Lazily resolved profileArn from list_available_profiles` — other methods resolve `profileArn`
+  through an API call instead, so it is **not** guaranteed to be in the token row.
+- `Error getting builder id token from keychain` alongside `loading builder id token from the
+  secret store` — Builder ID has an OS-keychain path distinct from the DB row.
+
+Consequence: **the probe's original comment was probably right for the setup it was written on.**
+It named `kirocli:odic:token` and prescribed merging `profileArn` from
+`kiro-auth-token-cli.json` — which is the correct shape for an IdC/Builder-ID login, where the row
+key differs and `profileArn` is resolved separately. An earlier draft of this section flatly called
+that comment wrong; it was not, it was written for a different auth method. Likewise the
+"`auth_kv` not plaintext" note may have been accurate for a Builder-ID setup where the token sits
+in the keychain rather than the DB row (`no secret found in the database`).
+
+**Unverified:** the IdC / Builder ID / external-IdP extraction paths. Anyone re-running under those
+logins should measure their own row and record it here rather than assuming the social shape.
 
 ### `_kiro/frontendToolCall` client handler REMOVED in 2.14.0
 
