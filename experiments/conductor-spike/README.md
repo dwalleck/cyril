@@ -43,6 +43,45 @@ python3 experiments/conductor-spike/diff_fields.py \
 
 (Wrapper scripts write to `/tmp/conductor-spike/logs*/` since `/tmp` is fine for runtime artifacts. The captures saved here are the post-run copies.)
 
+## Probe conventions
+
+Rules for any new `probe-*.py` in this directory. Both exist because they were
+violated and the violation was caught in review, not by a tool.
+
+**1. Never persist a credential.** A probe that answers `_kiro/auth/getAccessToken`
+holds a live bearer token. If it also logs frames to a capture file, the token lands
+in that file — and captures get committed. Redact on the way to the log *only*, so
+the agent still receives the real token and the frame shape survives:
+
+```python
+SECRET_KEYS = {"accessToken", "access_token", "refreshToken", "refresh_token",
+               "idToken", "id_token", "clientSecret", "client_secret", "bearer"}
+
+def redact(obj):
+    if isinstance(obj, dict):
+        return {k: ("<redacted>" if k in SECRET_KEYS and obj[k] else redact(obj[k])) for k in obj}
+    if isinstance(obj, list):
+        return [redact(x) for x in obj]
+    return obj
+```
+
+`<redacted>` is the established marker — `kas-live-session-trace-2.11.0.jsonl` already
+uses it. Reference implementation: `probe-kas-orchestrate-capture-2.14.1.py`. Two
+probes still violate this (cyril-hhgw).
+
+**2. A failed probe must not report zeros.** `pump()`-style helpers return JSON-RPC
+*error* responses as readily as results, so `bool(resp)` is true for a failure,
+`resp["result"]["x"]` silently yields `None`, and the run prints "0 frames" — which
+reads as evidence about the agent when it is really evidence about your credentials.
+Check `error` after every request and abort non-zero. A zero is only meaningful from a
+run that is known to have reached the code path being measured.
+
+**Auth for KAS probes.** `~/.aws/sso/cache/kiro-auth-token*.json` goes stale — kiro-cli
+refreshes into its SQLite `auth_kv`, not the JSON. Build a fresh token from
+`~/.local/share/kiro-cli/data.sqlite3`, row key `kirocli:social:token` (or
+`kirocli:odic:token` / `kirocli:external-idp:token`); it is plaintext JSON carrying
+`profile_arn` already. Full recipe: `docs/kiro-2.14.1-wire-audit.md`.
+
 ## Why this matters for cyril
 
 The conductor passthrough result unblocks the integration plan in `project_cyril_conductor_integration.md`: cyril's bridge can swap `kiro-cli acp` for `sacp-conductor agent "kiro-cli acp"` with zero protocol changes, opening the door to pluggable proxy stages (skill resolver, transcript recorder, auto-approval, etc.) without rewriting cyril as a proxy.

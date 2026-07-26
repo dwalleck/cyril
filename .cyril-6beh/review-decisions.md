@@ -20,6 +20,42 @@ Three fixes are *modified* rather than accepted as written, for reasons below.
 | P4 | [P2] 2.7.1 audit still says filtered calls render opaquely | Bug | **Yes** — `docs/kiro-2.7.1-wire-audit.md:262` says "They already render as opaque tool calls today; nested-crew UI is the only gap" | **Accept** | Corrected to state they are filtered by the `ToolKind::Other` rule and need the `_meta.kiro.kind` exception first. |
 | P5 | [P2] capture terminates without draining trailing frames | Bug | **Yes** — `pump()` returns on the prompt response, then terminates immediately | **Accept** | Close stdin, drain to EOF or a bounded quiet period, then summarize and reap. |
 
+## Deferred work — tracker IDs
+
+The skill requires every deferral to name a tracker ID. Two of the decisions above
+defer work; both are now filed.
+
+| From | Deferred work | Tracker |
+|---|---|---|
+| P1 (Modify) | Regenerate the attempt summary from a real run — needs the live authenticated capture that is itself the blocked task | **cyril-ucii** |
+| S1 (scope) | The same credential defect in two *other* probes, found by sweeping the directory after fixing this one | **cyril-hhgw** |
+
+## Follow-on findings from the sweep (not in the review)
+
+Checking whether the probe fixes implied changes elsewhere turned up three things
+the review could not have seen from one file:
+
+1. **The credential defect is not unique to this probe.** 49 probes in
+   `experiments/conductor-spike` answer `getAccessToken`; two of them —
+   `probe-kas-compact-summarization-2.9.0.py` and `probe-kas-orchestrate-wire-2.9.0.py`
+   — persist the reply verbatim via the identical `rep→send→rec→file` chain. The other
+   45 were checked and do not write the auth reply to a file. No committed capture
+   currently leaks (swept; the only committed `accessToken` is the literal
+   `<redacted>`). Filed **cyril-hhgw**.
+2. **There was no written convention to violate.** `experiments/conductor-spike/README.md`
+   documented layout and reproduction but said nothing about credentials or about
+   failed probes reporting zeros. Both rules added there, with the `redact()`
+   reference implementation, so the next probe author inherits them.
+3. **The `auth_kv` measurement is load-bearing for an unrelated open issue.**
+   `cyril-taba` (p2, auto-refresh the token before `getAccessToken` in wrapper mode)
+   lists refresh candidates as a `kiro-cli whoami/profile` shell-out or KAS's own
+   file-auth path, and its own notes call the shell-out "inherently fragile … relies on
+   an undocumented side effect". The token is in fact readable directly from
+   `auth_kv` as plaintext JSON with `profile_arn` included. Recorded on that issue as
+   a third candidate — trading one fragility (undocumented side effect) for another
+   (another program's DB schema and locking), so it needs the same falsifier, but it
+   was absent from the candidate list entirely.
+
 ## Observed but deliberately not changed
 
 - `probe-…-2.14.1.py` orchestrate-detection has a redundant clause:
