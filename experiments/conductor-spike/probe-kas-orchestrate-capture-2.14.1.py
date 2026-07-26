@@ -16,7 +16,12 @@ import json, os, subprocess, threading, queue, time, tempfile, sys
 
 KIRO = sys.argv[1]
 OUT = sys.argv[2]
-TOKEN = os.path.expanduser("~/.aws/sso/cache/kiro-auth-token-cli.json")
+# Token file with a FRESH access token. The on-disk kiro-auth-token*.json are often
+# stale (kiro-cli refreshes into its SQLite auth_kv, not the JSON); pass a freshly
+# assembled file as argv[3] — {accessToken (fresh), expiresAt (fresh), profileArn (stable)}.
+# Recipe: read auth_kv 'kirocli:odic:token' (access_token/expires_at, snake_case) + merge
+# profileArn from kiro-auth-token-cli.json. See docs/kiro-2.14.1-wire-audit.md.
+TOKEN = sys.argv[3] if len(sys.argv) > 3 else os.path.expanduser("~/.aws/sso/cache/kiro-auth-token-cli.json")
 CWD = tempfile.mkdtemp(prefix="kas-orch-cap-")
 subprocess.run("git init -q -b main", cwd=CWD, shell=True)
 log = open(OUT, "w")
