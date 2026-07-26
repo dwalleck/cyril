@@ -227,7 +227,7 @@ Every material boundary in `prototype.md` is carried here.
 
 | ID | Erased/unseen difference | Disposition |
 | --- | --- | --- |
-| B1 | Scripted traces cannot see unrepresented scheduler interleavings or undocumented live frames. | Named risk; C2 requires order-independence so unscripted orders change bounds, not correctness. |
+| B1 | Scripted traces cannot see unrepresented scheduler interleavings or undocumented live frames. | Named risk; C2 requires order-independence so unscripted orders change bounds, not correctness. **NARROWED 2026-07-26 (`corroboration-2026-07-26.md`):** emitter-side ordering is enforced by `pendingTerminalStatus`/`commitTermination` (broadcast lands between durable write and terminal flip), not by scheduling; C2 is retained for cyril-side channel jitter, still untraced. |
 | B2 | Routing tests cannot see consumers bypassing `RoutedNotification`. | Named risk; C7 pairs runtime deltas with consumer source review. |
 | B3 | Evidence tests cannot decide reason precedence. | cyril-pnwb owns it; C6 records tuples only. |
 | B4 | Lifecycle fixtures cannot see OS-specific death timing. | Named risk; C5 claims ordering, not timing coverage. |
@@ -236,7 +236,7 @@ Every material boundary in `prototype.md` is carried here.
 | B7 | The 257 fixture cannot see an indefinitely wedged consumer. | Named risk; C9 conditions on a live resumed receiver. |
 | B8 | Workspace tests cannot see live wire drift or production scheduling. | Named risk; captured fixtures supplement. |
 | B9 | Sanitized session IDs erase original opaque values. | Equality fixtures cover routing; accepted risk. |
-| B10 | Two-turn capture cannot prove every KAS version honors order or at-most-one `turn_end`; duplicates carry no identity. | Named unsupported drift; order-independence (C2) and absorb-first degradation bound the damage; duplicate `turn_end` remains the one named unsafety. |
+| B10 | Two-turn capture cannot prove every KAS version honors order or at-most-one `turn_end`; duplicates carry no identity. | Named unsupported drift; order-independence (C2) and absorb-first degradation bound the damage; duplicate `turn_end` remains the one named unsafety. **NARROWED 2026-07-26:** the identity-free half is now source-confirmed — every wire emission is `{kind, stopReason}`; `executionId` exists only on the persisted payload. At-most-one is corroborated by construction in the 2.12.0 bundle (single owned `executionId`, `isOwnedEvent` orphan drop, supersede aborts-and-awaits durable `turn_end`), but the emitter was read at 2.12.0 while the capture is 2.11.0/KAS 0.8.0 — 'every KAS version' stands. |
 | B11 | The model falsifier is not the bridge: channel mechanics, task lifetimes, and select-arm scheduling are abstracted. | Every model-passed claim carries a deterministic implementation fence (C3–C5 named; C1/C2/C6 land as bridge harness tests in the plan). |
 | B12 | The model does not observe the allocator, rate-limit consumer, or 257 backlog. | C8–C10 are separate implementation fences. |
 | B13 | Hidden turn labels are unavailable to production. | Deliberate: production creates the owner at dispatch and never infers one from content. |
