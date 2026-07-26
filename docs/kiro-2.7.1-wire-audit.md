@@ -259,7 +259,7 @@ So the first-party flow is: **resolve** the active token across the three types 
 
 **New `session/update` variant `config_option_update`** echoes the full `configOptions` array mid-turn.
 
-**Cyril impact:** the current `SubagentTracker` + `crew_panel` (built on `list_update`) will see *nothing* under KAS. To render KAS crews, cyril groups `tool_call`s by `_meta.kiro.agentSubtaskId` and recognizes `kind:"agent-subtask"` + the `title:"Subagent Response"` child returns. They already render as opaque tool calls today; nested-crew UI is the only gap.
+**Cyril impact:** the current `SubagentTracker` + `crew_panel` (built on `list_update`) will see *nothing* under KAS. To render KAS crews, cyril groups `tool_call`s by `_meta.kiro.agentSubtaskId` and recognizes `kind:"agent-subtask"` + the `title:"Subagent Response"` child returns. **Corrected 2026-07-26 (2.14.1 audit):** they do *not* render today. These calls arrive with ACP `kind: "other"`, which cyril filters out as agent "planning" steps, so the whole subagent run is dropped — cyril must special-case `_meta.kiro.kind == "agent-subtask"` *before* the `ToolKind::Other` filter. Nested-crew UI is the gap *after* that; the filter exception is the prerequisite. See [docs/kiro-2.14.1-wire-audit.md](kiro-2.14.1-wire-audit.md).
 
 ### The DAG orchestrator (`OrchestrateSubAgent`) is gated off by default
 

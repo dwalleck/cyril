@@ -104,7 +104,9 @@ reasons otherwise stable except as noted.
 
 ### `_kiro/workflow/*` — client-side workflow-progress protocol (NEW, forward-looking)
 
-2.14.1 adds a full **client-side parser + renderer for a DAG workflow-progress protocol**, but
+2.14.1 adds **client-side parser/converter-only scaffolding for a DAG workflow-progress
+protocol** — there is no renderer (see the two-layers correction below: the converter produces a
+`workflow_progress` stream event with no consumer, no `WorkflowPanel`, nothing that draws it) — and
 **neither shipped engine emits it**: KAS 0.22.7 has zero `workflow-progress`/`wf-progress`
 occurrences, and tui.js registers no client-initiated `_kiro/workflow/start|control` method —
 only inbound handling. It is scaffolding for a future workflow-orchestration engine (cloud or a
@@ -174,11 +176,31 @@ with ACP **`kind: "other"`**, which cyril filters as agent "planning" steps
 run unless it checks `_meta.kiro.kind == "agent-subtask"` *before* that filter. A live 2.14.1
 `OrchestrateSubAgent` capture to pin the `{task, stages, repeat}` wire shape was **attempted and
 blocked**: the harness (`experiments/conductor-spike/probe-kas-orchestrate-capture-2.14.1.py`,
-faithful `kiro-cli-chat acp --agent-engine kas` spawn) reached KAS, but every on-disk token is
-expired (`kiro-auth-token*.json`; `auth_kv` not plaintext), so KAS rejected `getAccessToken` with
-`-32000 TokenInvalidError` and the turn never orchestrated (log:
-`logs/kas-orchestrate-capture-2.14.1-attempt.summary`). Re-run it with a fresh token (right after
-`kiro login`, or wire OIDC refresh into the probe) to capture the DAG/repeat wire shape.
+faithful `kiro-cli-chat acp --agent-engine kas` spawn) reached KAS, but the on-disk
+`kiro-auth-token*.json` cache is stale — kiro-cli refreshes into its SQLite `auth_kv`, not the
+JSON — so KAS rejected `getAccessToken` with `-32000 TokenInvalidError` and the turn never
+orchestrated (log: `logs/kas-orchestrate-capture-2.14.1-attempt.summary`).
+
+**Verified fresh-token recipe (measured 2026-07-26, kiro-cli 2.14.2).** An earlier draft of this
+section claimed `auth_kv` was "not plaintext"; that is **wrong**, and so was the probe's original
+comment. Measured: `auth_kv` stores plaintext JSON, and the row already carries `profile_arn`, so
+nothing needs merging from the JSON cache. The key name varies by auth method
+(`kirocli:social:token`, `kirocli:odic:token`, `kirocli:external-idp:token`):
+
+```sh
+sqlite3 ~/.local/share/kiro-cli/data.sqlite3 \
+  "select value from auth_kv where key='kirocli:social:token'"
+# -> {access_token, expires_at, profile_arn, provider, refresh_token}  (snake_case)
+# rewrite to camelCase {accessToken, expiresAt, profileArn, provider, authMethod} as fresh-token.json
+python3 experiments/conductor-spike/probe-kas-orchestrate-capture-2.14.1.py \
+  ~/.local/bin/kiro-cli-chat /tmp/orch-capture.jsonl /tmp/fresh-token.json
+```
+
+The third argument is optional in the signature but required in practice — omitting it falls back
+to the known-stale cache file. The probe validates the token before spawning Kiro and exits
+non-zero if it is missing a field, so a credential problem can no longer masquerade as a
+zero-frame capture. Auth responses are written to the capture with secrets replaced by
+`<redacted>`, matching the `kas-live-session-trace-2.11.0.jsonl` convention.
 
 ### `_kiro/frontendToolCall` client handler REMOVED in 2.14.0
 
