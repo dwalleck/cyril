@@ -795,7 +795,14 @@ async fn run_loop(
     // cyril-atjw (KAS-0, ADR-0004): the in-flight turn's task, kept ONLY so
     // `Shutdown` can abort it (so it can't linger holding the connection past
     // run_loop's return). It is no longer the "is a turn running" signal.
-    let mut prompt_task: Option<tokio::task::JoinHandle<()>> = None;
+    // cyril-a71q C4: prompt tasks are tracked as a SET, not a single slot.
+    // Under KAS a turn's task outlives its `turn_end` release, so a single slot
+    // was overwritten when the next turn started -- and dropping a JoinHandle
+    // DETACHES the task rather than aborting it, so the previous turn's task
+    // lingered past run_loop holding the connection. Bounded in practice by
+    // "turns whose prompt RPC has not resolved yet, plus the active one";
+    // finished handles are pruned on each dispatch.
+    let mut prompt_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
     // The session whose turn is in flight — at most one (ADR-0004). Set on
     // SendPrompt, cleared when the loop OBSERVES that turn's `TurnCompleted` on
     // the internal channel (engine-agnostic: v2 synthesizes it from the prompt
@@ -803,8 +810,8 @@ async fn run_loop(
     // and the CancelRequest target — a mid-turn NewSession can retarget
     // `active_session_id`, so cancel must use this, not that.
     //
-    // NB (cyril-j16p / KAS-2a): under KAS the prompt task may outlive `turn_end`,
-    // so this flag and `prompt_task` will intentionally diverge there; in v2 they
+    // NB (cyril-j16p / KAS-2a): under KAS a prompt task may outlive `turn_end`,
+    // so this record and `prompt_tasks` intentionally diverge there; in v2 they
     // clear together (the prompt resolves AT turn-end). Do not re-merge them.
     // cyril-a71q: the active turn is now a RECORD, not just a session id. The
     // session alone is not per-turn unique, so a late completion from turn A
@@ -991,7 +998,17 @@ async fn run_loop(
                     owner: turn_owner,
                     session: acp_session_id,
                 });
-                prompt_task = Some(handle);
+                // O(n) over live handles with n <= 2 in the researched ordering
+                // (a turn's response follows its turn_end within ~1ms, so at most
+                // one released-but-unresolved task coexists with the active one).
+                prompt_tasks.retain(|h| !h.is_finished());
+                if prompt_tasks.len() > 2 {
+                    tracing::debug!(
+                        live = prompt_tasks.len(),
+                        "more live prompt tasks than the researched bound"
+                    );
+                }
+                prompt_tasks.push(handle);
             }
             BridgeCommand::CancelRequest => {
                 // cyril-84ca / ADR-0004: prefer the in-flight turn's own session.
@@ -1799,7 +1816,9 @@ async fn run_loop(
                 // cyril-84ca: abort an in-flight turn so its task doesn't linger
                 // past run_loop's return holding the connection. The loop being
                 // free is what lets Shutdown be processed mid-turn at all.
-                if let Some(handle) = prompt_task.take() {
+                // Abort EVERY live task, not just the newest: a released turn's
+                // task may still be parked on its prompt response.
+                for handle in prompt_tasks.drain(..) {
                     handle.abort();
                 }
                 break;
@@ -3786,6 +3805,77 @@ mod tests {
                     probe.borrow().received.contains(&"cancel".to_string()),
                     "agent received the cancel mid-turn"
                 );
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 6). Claim C4: shutdown aborts EVERY live prompt
+    /// task, not just the newest, so none outlives `run_loop` holding the
+    /// connection.
+    ///
+    /// Bug class: a single `Option<JoinHandle>` slot. Under KAS a turn's task
+    /// outlives its `turn_end` release, so starting the next turn overwrote the
+    /// slot -- and dropping a JoinHandle DETACHES the task rather than aborting
+    /// it. Sequence: A's turn_end releases it while its prompt stays parked, B is
+    /// accepted and parks too, Shutdown arrives with two live tasks.
+    ///
+    /// DISCRIMINATING POWER, stated honestly: mutation-tested by aborting only
+    /// the newest handle (the pre-fix behavior) -- this test still PASSES. The
+    /// reason is architectural: run_loop's tasks live on a LocalSet that
+    /// `local.block_on(&rt, ..)` drops the instant run_loop returns, so a
+    /// DETACHED task dies at teardown anyway. The slice-6 change is therefore a
+    /// tightening, not a leak fix: it removes a silent detach and makes teardown
+    /// deterministic rather than incidental. This fixture's value is as a guard
+    /// for a future in which run_loop no longer owns the runtime -- at which
+    /// point the masking disappears and the mutation would fail here.
+    async fn shutdown_aborts_every_live_prompt_task() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+
+                // A: released by turn_end; its prompt task stays parked.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["A".into()],
+                    })
+                    .await
+                    .unwrap();
+                let _a = drain_to_turn_envelope(&mut rx).await;
+
+                // B: accepted (A released) and also parks -> two live tasks.
+                probe.borrow_mut().emit_turn_end = false;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["B".into()],
+                    })
+                    .await
+                    .unwrap();
+                wait_for_received(&probe, "prompt", 5).await;
+
+                sender.send(BridgeCommand::Shutdown).await.unwrap();
+
+                // The loop exits and drops its sender, so the channel closes. A
+                // task that survived the abort would still be parked on the gate
+                // and could emit after shutdown; nothing may arrive.
+                while let Some(n) = recv_notif(&mut rx, 2).await {
+                    assert!(
+                        !matches!(n, Notification::TurnCompleted { .. }),
+                        "no completion may arrive after shutdown -- a task outlived run_loop"
+                    );
+                }
             },
         )
         .await;
