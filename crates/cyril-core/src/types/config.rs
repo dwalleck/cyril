@@ -18,11 +18,9 @@ pub struct Config {
 pub struct UiConfig {
     /// Max messages retained in chat history.
     pub max_messages: usize,
-    /// Max syntax highlight cache entries.
-    pub highlight_cache_size: usize,
-    /// Streaming buffer flush timeout in ms.
-    pub stream_buffer_timeout_ms: u64,
-    /// Enable mouse capture on startup.
+    /// Enable mouse capture on startup. Mouse capture intercepts selection and
+    /// scroll, so a user who prefers their terminal's own selection sets this
+    /// `false`; `Ctrl+M` toggles it at runtime from whichever state this picks.
     pub mouse_capture: bool,
 }
 
@@ -30,8 +28,6 @@ impl Default for UiConfig {
     fn default() -> Self {
         Self {
             max_messages: 500,
-            highlight_cache_size: 20,
-            stream_buffer_timeout_ms: 150,
             mouse_capture: true,
         }
     }
@@ -109,13 +105,17 @@ mod tests {
     fn default_ui_config() {
         let config = UiConfig::default();
         assert_eq!(config.max_messages, 500);
-        assert_eq!(config.highlight_cache_size, 20);
-        assert_eq!(config.stream_buffer_timeout_ms, 150);
         assert!(config.mouse_capture);
     }
 
+    // cyril-nd4h claim C7 fence, serialization layer: the schema is exactly the
+    // fields that production actually consumes. `highlight_cache_size` and
+    // `stream_buffer_timeout_ms` were serialized and documented here for months
+    // with zero readers, so a *new* key appearing in this list is the signal
+    // that the same rot has started again. Pairs with the exhaustive
+    // destructure in `App::new`, which catches it at the consumption end.
     #[test]
-    fn default_ui_config_schema_is_exactly_four_fields() -> anyhow::Result<()> {
+    fn default_ui_config_schema_is_exactly_two_fields() -> anyhow::Result<()> {
         use anyhow::Context;
 
         let config: Config = toml::from_str(
@@ -135,15 +135,7 @@ mouse_capture = false
 
         assert_eq!(config.ui.max_messages, 1000);
         assert!(!config.ui.mouse_capture);
-        assert_eq!(
-            keys,
-            [
-                "highlight_cache_size",
-                "max_messages",
-                "mouse_capture",
-                "stream_buffer_timeout_ms",
-            ]
-        );
+        assert_eq!(keys, ["max_messages", "mouse_capture"]);
         Ok(())
     }
 
@@ -184,7 +176,8 @@ agent_name = "opencode"
         assert!(!config.ui.mouse_capture);
         assert_eq!(config.agent.agent_name, "opencode");
         // Unspecified fields get defaults
-        assert_eq!(config.ui.highlight_cache_size, 20);
+        assert_eq!(config.ui.max_messages, 1000);
+        assert!(config.agent.extra_args.is_empty());
     }
 
     #[test]
