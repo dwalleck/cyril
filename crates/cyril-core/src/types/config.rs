@@ -199,6 +199,36 @@ agent_name = "opencode"
         assert_eq!(config.ui.max_messages, 500);
     }
 
+    // cyril-nd4h claim C10: honoring mouse_capture must not change the failure
+    // posture. A wrong-typed value follows the house rule set by
+    // invalid_kas_hooks_falls_back_to_default_config -- the whole file is
+    // rejected (warn + defaults), never field-skipped. The bug class: a
+    // refactor that "tightens" load_from_path into `?` or `.expect()` and turns
+    // a warn-and-continue into a startup crash, which no happy-path config test
+    // would notice.
+    #[test]
+    fn wrong_typed_mouse_capture_falls_back_to_whole_file_defaults() {
+        for bad in ["\"yes\"", "1", "[]"] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("config.toml");
+            std::fs::write(
+                &path,
+                format!("[ui]\nmax_messages = 1000\nmouse_capture = {bad}\n"),
+            )
+            .unwrap();
+
+            let config = Config::load_from_path(&path);
+            assert!(
+                config.ui.mouse_capture,
+                "{bad}: an unparseable value must leave the default in place"
+            );
+            assert_eq!(
+                config.ui.max_messages, 500,
+                "{bad}: rejection must be whole-file, not field-skipping"
+            );
+        }
+    }
+
     #[test]
     fn present_as_absent_defaults_to_cyril() {
         let dir = tempfile::tempdir().unwrap();
