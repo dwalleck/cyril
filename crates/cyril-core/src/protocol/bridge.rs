@@ -12,6 +12,7 @@ use crate::types::event::{BridgeCommand, Notification, PermissionRequest, Routed
 use crate::types::kas_hooks::KasHooksMode;
 use crate::types::kas_spawn::KasSpawn;
 use crate::types::present_as::PresentAs;
+use crate::types::turn::{TurnAllocator, TurnId};
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -664,6 +665,20 @@ pub(crate) fn client_info(
         .title("Cyril".to_string())
 }
 
+/// The turn currently occupying the bridge (cyril-a71q).
+///
+/// Holds the per-turn `owner` identity plus the session the turn was dispatched
+/// against. `session` is deliberately a snapshot: `active_session_id` can be
+/// retargeted mid-turn by a `NewSession`/`LoadSession`, and cancel must still
+/// reach the turn that is actually running.
+///
+/// Fully-qualified path because the `acp` alias in this file is function-scoped.
+#[derive(Debug)]
+struct ActiveTurn {
+    owner: TurnId,
+    session: agent_client_protocol::SessionId,
+}
+
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
 /// tests can drive it against an in-process fake agent (no `kiro-cli`
 /// subprocess). `conn` is `Rc` so a prompt future can be driven off this loop
@@ -757,7 +772,15 @@ async fn run_loop(
     // NB (cyril-j16p / KAS-2a): under KAS the prompt task may outlive `turn_end`,
     // so this flag and `prompt_task` will intentionally diverge there; in v2 they
     // clear together (the prompt resolves AT turn-end). Do not re-merge them.
-    let mut turn_in_flight: Option<acp::SessionId> = None;
+    // cyril-a71q: the active turn is now a RECORD, not just a session id. The
+    // session alone is not per-turn unique, so a late completion from turn A
+    // matched a newly-started turn B and wrongly cleared it. `owner` is the
+    // per-turn identity that makes them distinguishable; `session` is captured
+    // at dispatch and is IMMUTABLE for the turn's lifetime -- a mid-turn
+    // NewSession/LoadSession retargets `active_session_id`, and cancel must
+    // still reach the turn that is actually running.
+    let mut active_turn: Option<ActiveTurn> = None;
+    let mut turn_alloc = TurnAllocator::new();
     // cyril-l7tw C4: set when the io watcher reports the connection dead while
     // a turn is in flight. The disconnect is DEFERRED until the loop observes
     // that turn's TurnCompleted (the prompt task's Err arm delivers a
@@ -770,7 +793,7 @@ async fn run_loop(
     loop {
         // Single mediator (ADR-0004): one `select!` services commands AND the
         // internal notification stream, so the loop stays free during a turn
-        // (cyril-84ca) and OBSERVES every `TurnCompleted` to clear `turn_in_flight`.
+        // (cyril-84ca) and OBSERVES every `TurnCompleted` to clear `active_turn`.
         tokio::select! {
             cmd = channels.command_rx.recv() => {
                 let Some(cmd) = cmd else { break }; // App dropped the command channel.
@@ -837,9 +860,9 @@ async fn run_loop(
                 // cyril-84ca / ADR-0004: at most one turn in flight. A SendPrompt
                 // arriving while a turn runs must NOT start a second conn.prompt()
                 // (two concurrent turns on one session is undefined); reject it with
-                // a BridgeError. `turn_in_flight` clears when the loop observes this
+                // a BridgeError. `active_turn` clears when the loop observes this
                 // turn's TurnCompleted, so the next turn is then allowed.
-                if turn_in_flight.is_some() {
+                if active_turn.is_some() {
                     if notify_or_closed(
                         &channels.notification_tx,
                         Notification::BridgeError {
@@ -853,6 +876,24 @@ async fn run_loop(
                     }
                     continue;
                 }
+                // cyril-a71q C8: allocate this turn's owner BEFORE dispatch. The
+                // allocator fails closed at u64 exhaustion rather than reissuing a
+                // live owner; refuse the turn instead of running one whose
+                // completions could match somebody else's.
+                let Some(turn_owner) = turn_alloc.allocate() else {
+                    if notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeError {
+                            operation: "prompt".into(),
+                            message: "turn identity space exhausted".into(),
+                        },
+                    )
+                    .await
+                    {
+                        break;
+                    }
+                    continue;
+                };
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 let prompt: Vec<acp::ContentBlock> = content_blocks
                     .into_iter()
@@ -873,7 +914,10 @@ async fn run_loop(
                 let handle = tokio::task::spawn_local(async move {
                     // One TurnCompleted construction for both arms (success and
                     // transport error) so the terminal marker can't drift between
-                    // them — e.g. when KAS-2a adds a turn id field to TurnCompleted.
+                    // them. cyril-a71q added that turn identity — on the
+                    // RoutedNotification envelope rather than inside TurnCompleted,
+                    // so this construction stayed single and the stamp is applied
+                    // once, below.
                     let stop_reason = match turn_conn.prompt(request).await {
                         Ok(response) => crate::protocol::convert::to_stop_reason(response.stop_reason),
                         Err(e) => {
@@ -898,11 +942,19 @@ async fn run_loop(
                         }
                     };
                     let note = Notification::TurnCompleted { stop_reason };
-                    if let Err(e) = turn_tx.send(note.into()).await {
+                    // cyril-a71q: stamp the owner. This completion is synthesized
+                    // from a source the bridge owns (the prompt RPC), so the turn
+                    // is known exactly -- unlike the KAS wire turn_end, which
+                    // carries no identity and is resolved by session instead.
+                    let routed = RoutedNotification::from(note).with_turn(turn_owner);
+                    if let Err(e) = turn_tx.send(routed).await {
                         tracing::debug!(error = %e, "TurnCompleted send failed (App gone)");
                     }
                 });
-                turn_in_flight = Some(acp_session_id);
+                active_turn = Some(ActiveTurn {
+                    owner: turn_owner,
+                    session: acp_session_id,
+                });
                 prompt_task = Some(handle);
             }
             BridgeCommand::CancelRequest => {
@@ -910,7 +962,10 @@ async fn run_loop(
                 // The loop is free during a turn, so a mid-turn NewSession/LoadSession
                 // can retarget `active_session_id`; cancel must still hit the running
                 // turn. Fall back to `active_session_id` when no turn is in flight.
-                let cancel_target = turn_in_flight.as_ref().or(active_session_id.as_ref());
+                let cancel_target = active_turn
+                    .as_ref()
+                    .map(|t| &t.session)
+                    .or(active_session_id.as_ref());
                 if let Some(session_id) = cancel_target {
                     if let Err(e) = conn
                         .cancel(acp::CancelNotification::new(session_id.clone()))
@@ -1732,10 +1787,10 @@ async fn run_loop(
                 // turn started would need per-turn identity — cyril-a71q.)
                 let mut completed_turn = false;
                 if matches!(routed.notification, Notification::TurnCompleted { .. }) {
-                    if turn_in_flight.is_none() {
+                    let Some(finished) = active_turn.take() else {
                         continue; // duplicate completion for an already-ended turn
-                    }
-                    turn_in_flight = None;
+                    };
+                    tracing::debug!(owner = %finished.owner, "turn completed");
                     completed_turn = true;
                 }
                 if channels.notification_tx.send(routed).await.is_err() {
@@ -1765,7 +1820,7 @@ async fn run_loop(
                     tracing::warn!("io watcher dropped without a reason");
                     "agent connection closed unexpectedly".into()
                 });
-                if turn_in_flight.is_some() {
+                if active_turn.is_some() {
                     // Defer: let the in-flight turn's BridgeError+TurnCompleted
                     // (already en route via the inbound channel) reach the App
                     // first; the inbound arm below emits the disconnect after
@@ -2496,6 +2551,24 @@ mod tests {
         match tokio::time::timeout(Duration::from_secs(secs), rx.recv()).await {
             Ok(Some(r)) => Some(r.notification),
             _ => None,
+        }
+    }
+
+    /// Drain until the first `TurnCompleted`, returning the whole ENVELOPE so the
+    /// caller can inspect its `turn` stamp (cyril-a71q). `drain_to_turn` unwraps
+    /// the envelope and loses that.
+    async fn drain_to_turn_envelope(
+        rx: &mut mpsc::Receiver<RoutedNotification>,
+    ) -> RoutedNotification {
+        loop {
+            match tokio::time::timeout(Duration::from_secs(5), rx.recv()).await {
+                Ok(Some(r)) => {
+                    if matches!(r.notification, Notification::TurnCompleted { .. }) {
+                        return r;
+                    }
+                }
+                _ => panic!("no TurnCompleted within 5s"),
+            }
         }
     }
 
@@ -3275,7 +3348,7 @@ mod tests {
         // KAS-2a (cyril-j16p) Slice 2 — double-fire dedup: a KAS turn emits BOTH a
         // `turn_end` notification (-> TurnCompleted via KasEngine) AND a prompt
         // response (-> TurnCompleted via the off-loop task). The loop must forward
-        // EXACTLY ONE and clear `turn_in_flight` once, so a follow-up SendPrompt is
+        // EXACTLY ONE and clear `active_turn` once, so a follow-up SendPrompt is
         // accepted (not rejected "a turn is already in progress"). Designed to FAIL
         // if the duplicate is forwarded (double-commit) or the flag double-cleared.
         let script = Rc::new(RefCell::new(Script {
@@ -3303,7 +3376,7 @@ mod tests {
                     ),
                     "exactly one TurnCompleted forwarded — the duplicate is dropped"
                 );
-                // turn_in_flight cleared once -> a fresh turn is accepted.
+                // active_turn cleared once -> a fresh turn is accepted.
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
@@ -3427,7 +3500,7 @@ mod tests {
         // C4: a SendPrompt while a turn is in flight does NOT start a 2nd
         // conn.prompt(); it is rejected with a BridgeError and the agent sees only
         // one prompt for that turn. C9: once the turn's TurnCompleted is observed
-        // on the internal channel, `turn_in_flight` clears (ADR-0004), so a later
+        // on the internal channel, `active_turn` clears (ADR-0004), so a later
         // SendPrompt starts a fresh turn.
         let script = Rc::new(RefCell::new(Script {
             block_prompt: true,
@@ -3465,7 +3538,7 @@ mod tests {
                 1,
                 "C4: the rejected prompt was never sent to the agent"
             );
-            // C9: turn_in_flight cleared (TurnCompleted observed) -> fresh turn 2.
+            // C9: active_turn cleared (TurnCompleted observed) -> fresh turn 2.
             sender
                 .send(BridgeCommand::SendPrompt {
                     session_id: sid,
@@ -3589,6 +3662,49 @@ mod tests {
                     probe.borrow().received.contains(&"cancel".to_string()),
                     "agent received the cancel mid-turn"
                 );
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 3). Claim C1 part 1: every accepted turn gets
+    /// its own owner, allocated at dispatch.
+    ///
+    /// Bug class: allocating once and reusing, or not stamping at all -- either
+    /// makes two turns indistinguishable, which is the whole defect. The
+    /// companion property (the record's session is immutable under a mid-turn
+    /// retarget) is already fenced by
+    /// `cancel_targets_inflight_turn_after_midturn_new_session` below, so this
+    /// does not duplicate it.
+    async fn successive_turns_get_distinct_owners() {
+        with_harness(
+            Rc::new(RefCell::new(Script::default())),
+            move |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["one".into()],
+                    })
+                    .await
+                    .unwrap();
+                let first = drain_to_turn_envelope(&mut rx).await;
+
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["two".into()],
+                    })
+                    .await
+                    .unwrap();
+                let second = drain_to_turn_envelope(&mut rx).await;
+
+                let a = first.turn.expect("turn 1 completion carries its owner");
+                let b = second.turn.expect("turn 2 completion carries its owner");
+                assert_ne!(a, b, "each accepted turn must get a distinct owner");
+                assert!(a < b, "owners must be monotonic in dispatch order");
             },
         )
         .await;
