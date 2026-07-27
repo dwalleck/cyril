@@ -14,6 +14,7 @@ pub mod prompt;
 pub mod session;
 pub mod subagent;
 pub mod tool_call;
+pub mod turn;
 pub mod voice;
 
 // Convenience re-exports
@@ -40,4 +41,5 @@ pub use subagent::{LoopState, PendingStage, SubagentInfo, SubagentStatus};
 pub use tool_call::{
     ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
 };
+pub use turn::{TurnAllocator, TurnId};
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
