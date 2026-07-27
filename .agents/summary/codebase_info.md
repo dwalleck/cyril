@@ -52,8 +52,6 @@ User config loaded from `~/.config/cyril/config.toml` (TOML). Falls back to defa
 | Section | Key | Default | Purpose |
 |---------|-----|---------|---------|
 | `ui` | `max_messages` | 500 | Chat history limit |
-| `ui` | `highlight_cache_size` | 20 | Syntax highlight LRU entries |
-| `ui` | `stream_buffer_timeout_ms` | 150 | Streaming flush timeout |
-| `ui` | `mouse_capture` | true | Enable mouse on startup |
+| `ui` | `mouse_capture` | true | Enable mouse capture on startup; `Ctrl+M` toggles at runtime |
 | `agent` | `agent_name` | `"kiro-cli"` | Agent binary name |
 | `agent` | `extra_args` | `[]` | Extra subprocess args |

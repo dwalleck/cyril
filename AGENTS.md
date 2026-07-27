@@ -157,7 +157,9 @@ The largest file. Translates raw ACP protocol messages → typed `Notification` 
 ### User Config
 `~/.config/cyril/config.toml` (TOML). Falls back to defaults if missing/invalid.
 
-Key options: `ui.max_messages` (500), `ui.stream_buffer_timeout_ms` (150), `ui.mouse_capture` (true), `agent.agent_name` ("kiro-cli").
+Key options: `ui.max_messages` (500), `ui.mouse_capture` (true), `agent.agent_name` ("kiro-cli").
+
+Every `[ui]` key is consumed at `App::new`, which destructures `UiConfig` exhaustively — a new key that nothing reads fails to compile (cyril-nd4h). Unknown keys in an existing file are ignored, so options removed in a later release never break an old config.
 
 ### Git Hooks
 `.claude/hooks/rustfmt.sh` — runs `rustfmt --edition 2024` on staged `.rs` files before commit (a Claude-Code harness hook, wired in `.claude/settings.json`).
