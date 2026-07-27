@@ -1956,9 +1956,15 @@ async fn run_loop(
                                         "forwarding foreign terminal; main turn untouched"
                                     );
                                 }
-                                // No active turn: nothing to release and no owner to
-                                // attribute it to. Forward for the routed consumer.
-                                None => {}
+                                // No active turn: a late or duplicate terminal for a
+                                // turn that already ended. DROP it -- forwarding
+                                // would make the App commit streaming and metering a
+                                // second time. spec.md:242 ("Empty set (no active
+                                // turn) | Drop an unowned ... terminal observation
+                                // unless it matches a dangling companion
+                                // expectation") and design C3; the dangling-companion
+                                // case is already handled by the absorb check above.
+                                None => continue,
                             }
                         }
                     }
@@ -2150,6 +2156,66 @@ mod tests {
     // consumer only starts draining afterwards. `try_send` returns Full and
     // the disconnect vanishes; the bounded send waits for the drain and
     // delivers it LAST (after the backlog, in channel order).
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// REGRESSION FENCE (pre-PR review). An unstamped terminal that matches NO
+    /// companion expectation and has NO active turn must be DROPPED.
+    ///
+    /// Slice 7 broke this: writing the foreign-forwarding arm, I gave the
+    /// no-active arm the same treatment (`None => {}`) reasoning it should reach
+    /// "the routed consumer". The foreign case HAS a consumer; this one does not
+    /// -- it is a late or duplicate terminal for a turn that already ended, and
+    /// forwarding makes the App commit streaming and metering twice. `main`
+    /// dropped it; spec.md:242 requires Drop.
+    ///
+    /// Reaching that arm needs care. The harness delivers the prompt RESPONSE
+    /// before the turn_end (more hops on the notification path), so the response
+    /// releases the turn and registers a `Wire` expectation scoped to the MAIN
+    /// session. A main-scoped turn_end would then be absorbed by the ledger and
+    /// never reach the no-active arm at all -- which is exactly why a first
+    /// attempt at this fence passed under mutation. Scoping the turn_end to a
+    /// FOREIGN session defeats the absorb check (session mismatch) and leaves it
+    /// with no active turn to own it, which is the branch under test.
+    async fn unowned_terminal_with_no_active_turn_is_dropped() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            turn_end_session: Some("sess_foreign".into()),
+            ..Default::default()
+        }));
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["one".into()],
+                    })
+                    .await
+                    .unwrap();
+
+                // The response releases the turn and stamps its own completion.
+                let released = drain_to_turn_envelope(&mut rx).await;
+                assert!(
+                    released.turn.is_some(),
+                    "released by the owner-stamped response"
+                );
+
+                // The foreign turn_end now has no active turn and no matching
+                // expectation. It must be dropped, not forwarded.
+                assert!(
+                    !matches!(
+                        recv_notif(&mut rx, 1).await,
+                        Some(Notification::TurnCompleted { .. })
+                    ),
+                    "an unowned terminal with no active turn must be dropped"
+                );
+            },
+        )
+        .await;
+    }
+
     // STRESS FIXTURE (plan slice 11). Claim C10: a mid-turn OBSERVATION never
     // releases a turn; only its own terminal source does.
     //

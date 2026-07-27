@@ -934,8 +934,12 @@ fn classify_notification_route(
         // subagent is already tracked only decides which stream receives it, not
         // whether main is spared; both paths spare main.
         (Some(_), Some(_)) => NotificationRoute::Subagent,
-        // Scoped but no main session yet: nothing to be foreign TO, so main.
-        (Some(_), None) => NotificationRoute::Main,
+        // Scoped while no main session id is known yet. NOT main: the caller's
+        // two guards then decide -- a tracked subagent gets its stream, anything
+        // else falls through. Collapsing this to Main silently rerouted a tracked
+        // subagent's frames into main state when they arrived before
+        // SessionCreated.
+        (Some(_), None) => NotificationRoute::Subagent,
     }
 }
 
@@ -1552,10 +1556,14 @@ mod tests {
             NotificationRoute::Subagent,
             "a foreign terminal must never touch main -- the cross-session split-brain"
         );
-        // Scoped but no main session yet: nothing to be foreign TO.
+        // Scoped while no main session is known: NOT main. The caller's guards
+        // then route a tracked subagent to its stream and let anything else fall
+        // through -- exactly what the pre-extraction `unwrap_or(false)` did.
         assert_eq!(
             classify_notification_route(Some(&foreign), None),
-            NotificationRoute::Main
+            NotificationRoute::Subagent,
+            "no main session yet must not mean 'main' -- that reroutes a tracked \
+             subagent's frames into main state"
         );
         // Adversarial: equal ids that are distinct objects still compare as main.
         assert_eq!(

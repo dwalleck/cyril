@@ -88,10 +88,14 @@ impl TurnAllocator {
     }
 
     /// Test-only constructor for exercising the exhaustion boundary without
-    /// 2^64 allocations. `pub` (not `pub(crate)`) because the bridge harness in
-    /// the binary crate is a separate compilation unit and cannot see
-    /// `pub(crate)` items — see CLAUDE.md on lib/bin test visibility.
-    pub fn starting_at(next: u64) -> Self {
+    /// 2^64 allocations.
+    ///
+    /// `#[cfg(test)]` rather than `pub`: an earlier revision made it public and
+    /// justified it with a CLAUDE.md rule about lib/bin test visibility that does
+    /// not exist. Its only callers are this module's own tests. If a bridge-level
+    /// exhaustion fence is built (cyril-mqvx), widen it then — with a real reason.
+    #[cfg(test)]
+    pub(crate) fn starting_at(next: u64) -> Self {
         Self {
             next,
             exhausted: false,
