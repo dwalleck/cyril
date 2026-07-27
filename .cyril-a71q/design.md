@@ -225,6 +225,12 @@ Every material boundary in `prototype.md` is carried here.
 
 ## Oracle blindness ledger
 
+Blindnesses B15–B17 were added during the build (2026-07-26), not the design. Each
+records a claim whose accompanying fence was **mutation-tested and found not to
+discriminate**, together with the structural reason. They are triage outcomes, not gaps:
+the concern was raised, tested, explained, and its real fence located. A green suite that
+does not say this overstates what it proves.
+
 | ID | Erased/unseen difference | Disposition |
 | --- | --- | --- |
 | B1 | Scripted traces cannot see unrepresented scheduler interleavings or undocumented live frames. | Named risk; C2 requires order-independence so unscripted orders change bounds, not correctness. **NARROWED 2026-07-26 (`corroboration-2026-07-26.md`):** emitter-side ordering is enforced by `pendingTerminalStatus`/`commitTermination` (broadcast lands between durable write and terminal flip), not by scheduling; C2 is retained for cyril-side channel jitter, still untraced. |
@@ -242,6 +248,9 @@ Every material boundary in `prototype.md` is carried here.
 | B13 | Hidden turn labels are unavailable to production. | Deliberate: production creates the owner at dispatch and never infers one from content. |
 | B14 | Double-drift liveness (T5) defers to the fail-stop lifecycle. | Signed residual in spec.md; requires two simultaneous unsupported omissions. |
 | B15 | The prior pipeline's Node mock probes were not rerun. | Production substrate unchanged since `prototype.md`; runtime defect reproductions remain valid per its post-correction note. |
+| B16 | The bridge cannot see whether the companion ledger CLEARS on absorption (falsifier mutation M2). | Mutation-verified during slice 5: the bridge fixture passes with clearing removed. Cause is the design's own prediction — absorb-first and release-first are observationally identical under supported input, so a dangling entry is simply replaced by the next release. Harm needs double drift ⇒ subsumed by B14. Real fence is the falsifier's `T1/T2 both_evidence`/`companion_absorbed`, where M2 fails 9 assertions. Fixture: `companion_ledger_absorbs_one_and_does_not_leak_across_turns`. |
+| B17 | The bridge cannot see whether shutdown aborts EVERY live prompt task or only the newest. | Mutation-verified during slice 6: abort-newest-only still passes. `run_loop`'s tasks live on a LocalSet that `local.block_on` drops the instant it returns, so a detached task dies at teardown regardless — the abort is deterministic teardown, not leak prevention. Becomes discriminating if `run_loop` ever stops owning the runtime. Fixture: `shutdown_aborts_every_live_prompt_task`. |
+| B18 | The bridge cannot see whether the deferred disconnect is owner-keyed. | Mutation-verified during slice 8: removing `completed_turn &&` still passes. The scenario is unreachable — after the connection dies no further wire frame can arrive in the deferred window, so the only terminal available there is the dying owner's own from the prompt task's error arm. Defence against a state the transport cannot produce. Fixture: `foreign_terminal_does_not_satisfy_deferred_disconnect`. |
 
 ## Negative space
 

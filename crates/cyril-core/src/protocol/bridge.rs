@@ -3868,7 +3868,8 @@ mod tests {
     /// as stale, the deferred disconnect would never fire and this test would
     /// panic on the 5s timeout -- a real regression guard.
     ///
-    /// It does NOT discriminate the gate's owner-keying: mutation-tested by
+    /// It does NOT discriminate the gate's owner-keying (design.md blindness B18):
+    /// mutation-tested by
     /// removing `completed_turn &&`, and this test still passes. The reason is
     /// that the scenario is unreachable -- after the kill the connection is dead,
     /// so no further wire frame (foreign or otherwise) can arrive in the deferred
@@ -4018,7 +4019,7 @@ mod tests {
     /// it. Sequence: A's turn_end releases it while its prompt stays parked, B is
     /// accepted and parks too, Shutdown arrives with two live tasks.
     ///
-    /// DISCRIMINATING POWER, stated honestly: mutation-tested by aborting only
+    /// DISCRIMINATING POWER (design.md blindness B17): mutation-tested by aborting only
     /// the newest handle (the pre-fix behavior) -- this test still PASSES. The
     /// reason is architectural: run_loop's tasks live on a LocalSet that
     /// `local.block_on(&rt, ..)` drops the instant run_loop returns, so a
@@ -4089,7 +4090,7 @@ mod tests {
     /// would be eaten by turn 1's dangling expectation and turn 2 would never
     /// release -- a freeze.
     ///
-    /// DISCRIMINATING POWER, stated honestly: this fence catches a ledger that
+    /// DISCRIMINATING POWER (design.md blindness B16): this fence catches a ledger that
     /// FREEZES turns. It does NOT catch a ledger that fails to clear on
     /// absorption (falsifier mutation M2) -- verified by mutation, which this
     /// test passes. The reason is the design's own prediction: absorb-first and
