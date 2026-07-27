@@ -48,8 +48,14 @@
 - 2026-07-12 (takeover): Requester consequence sign-off for the re-anchored spec. Verbatim reply: "I confirm these consequences".
 - 2026-07-12 (takeover): Re-anchored design gate passed. Cheapest falsifier models first-source-wins + `TurnId` stamping + absorb-first one-entry companion ledger: correct policy 0/34 failures, 4/4 buggy-policy mutations caught with distinct signatures. Signed residual: double-drift (producer omits A's `turn_end` AND B's response) leaves B Busy until the fail-stop lifecycle — requires two simultaneous unsupported omissions. Absorb-first chosen over release-first: identical under supported input, safe (vs. wrong-clear) under single-drift.
 
+- 2026-07-26 (resume): Source corroboration of the ordering premise run on the machine holding the research archive (`corroboration-2026-07-26.md`). Client (tui.js 2.11.0) never consumes `turn_end` — it ends the turn on the awaited `session/prompt` response. Emitter (@kiro/agent 2.12.0) broadcasts `turn_end` on Success/Failed/Aborted and keeps the execution non-terminal until `turn_end` is durable, so the RPC cannot resolve first. NEW: the wire `turn_end` is confirmed identity-free (every emission `{kind, stopReason}`; `executionId` only on the persisted payload) — the design's id-match/session-ledger asymmetry is now evidence, not assumption. Blindnesses B1 and B10 narrowed; no contradiction trigger fired, so the design stands.
+- 2026-07-26: Requester approved the design for the build. Verbatim reply: "yes, approved". Residuals accepted as presented: B14 double-drift Busy (signed in spec.md) and duplicate `turn_end` as the one named unsafety, bounded by absorb-first.
+- 2026-07-26: Budgeted plan written (`plan.md`) — 11 slices over C1–C10, hard gate clean.
+- 2026-07-26: Plan-time correction. `cyril-3zy4` is CLOSED (2026-07-17, KAS-8 shipped the rate-limit surfacing incl. the busy clear), not open as the plan's first draft recorded. Slice 11 is therefore a regression fence over behavior already live on main, not new functionality — and the timing audit's finding sharpens to "choice-A would have broken a shipped feature".
+- 2026-07-26: **Turn-id placement decided — the ENVELOPE.** Measured blast radius drove it: `Notification::TurnCompleted` has 80 construction sites across 9 files (~70 unrelated tests, which would each gain a meaningless `turn: None`), versus 6 sites across 3 files for `RoutedNotification`. The envelope is also the semantically correct home — it already carries `session_id` as routing/ownership metadata while `Notification` stays domain content — and the identity-free KAS wire arm falls out as an envelope `None`. Mediation policy is unchanged, so `design_reanchored_falsifier.py` remains valid unedited. Requester reply: "Option 2".
+
 ## Halt
 
 - Phase: none
 - Reason: none
-- Resume condition: n/a — design passed; next phase is the budgeted build plan (`.cyril-a71q/plan.md`), pending requester direction
+- Resume condition: n/a — plan passed and turn-id placement decided; next phase is the checkpointed build over plan.md's 11 slices

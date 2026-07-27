@@ -25,7 +25,7 @@ it, and any slice that *did* introduce iteration would be a budget violation to 
 
 ---
 
-## FLAGGED DEVIATION FROM THE DESIGN (placement only — requester decision)
+## DECIDED: turn-id placement — the ENVELOPE (requester, 2026-07-26: "Option 2")
 
 `design.md` §Architecture and `next-steps.md` both say *"`TurnCompleted` gains
 `Option<TurnId>`"*. Measured blast radius of that literal placement:
@@ -55,9 +55,11 @@ notification }` gains `turn: Option<TurnId>`. Rationale:
 **This changes placement, not policy.** The mediation rules (id-match → absorb/release/
 stale; session-match absorb-first for the identity-free arm) are unchanged, so
 `design_reanchored_falsifier.py` — which models policy over abstract owners, not Rust
-types — remains valid and passing without edit. If the requester prefers the literal
-design wording, S2 becomes an 80-site mechanical slice and must be split by file; say so
-and I will re-cut it.
+types — remains valid and passing without edit.
+
+**DECIDED 2026-07-26: the envelope.** The design's literal wording (`Notification::TurnCompleted`
+gains the field) is superseded on placement only; every claim, fixture and budget below is
+unaffected. Slices 2–11 are written against the envelope.
 
 ---
 
