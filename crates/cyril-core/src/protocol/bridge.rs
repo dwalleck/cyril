@@ -665,6 +665,18 @@ pub(crate) fn client_info(
         .title("Cyril".to_string())
 }
 
+/// Does a routed notification's scope name this ACP session?
+///
+/// The envelope carries cyril's `SessionId`; the active record carries the
+/// `agent_client_protocol` one. Compared as strings because they are distinct
+/// newtypes over the same wire value.
+fn scope_is(
+    routed: Option<&crate::types::session::SessionId>,
+    session: &agent_client_protocol::SessionId,
+) -> bool {
+    routed.is_some_and(|s| s.as_str() == session.0.as_ref())
+}
+
 /// Which terminal source the mediator is still expecting for a released turn.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CompanionSource {
@@ -1901,9 +1913,7 @@ async fn run_loop(
                             // session.
                             let absorbed = companion.as_ref().is_some_and(|c| {
                                 c.awaiting == CompanionSource::Wire
-                                    && routed.session_id.as_ref().is_some_and(|s| {
-                                        s.as_str() == c.session.0.as_ref()
-                                    })
+                                    && scope_is(routed.session_id.as_ref(), &c.session)
                             });
                             if absorbed {
                                 if let Some(c) = companion.take() {
@@ -1917,7 +1927,10 @@ async fn run_loop(
                                 continue;
                             }
                             match active_turn.as_ref() {
-                                Some(active) => {
+                                // Scoped to the ACTIVE turn's own session -> release.
+                                Some(active)
+                                    if scope_is(routed.session_id.as_ref(), &active.session) =>
+                                {
                                     companion = Some(Companion {
                                         owner: active.owner,
                                         session: active.session.clone(),
@@ -1931,7 +1944,21 @@ async fn run_loop(
                                     active_turn = None;
                                     completed_turn = true;
                                 }
-                                None => continue,
+                                // cyril-a71q C3: a FOREIGN session's terminal. Forward
+                                // it once so that session's own consumer (a subagent
+                                // stream) sees it, but touch nothing on the main
+                                // turn -- the cross-session split-brain was this
+                                // signal clearing the main busy guard.
+                                Some(active) => {
+                                    tracing::debug!(
+                                        foreign = ?routed.session_id,
+                                        active_owner = %active.owner,
+                                        "forwarding foreign terminal; main turn untouched"
+                                    );
+                                }
+                                // No active turn: nothing to release and no owner to
+                                // attribute it to. Forward for the routed consumer.
+                                None => {}
                             }
                         }
                     }
@@ -2327,6 +2354,11 @@ mod tests {
         /// blocks until the client answers) before completing — exercises Slice 3's
         /// loop request-forward path (ADR-0004).
         request_perm: bool,
+        /// Scope override for the emitted `turn_end` (cyril-a71q C3): when set,
+        /// the frame is scoped to THIS session id instead of the prompt's own,
+        /// modelling a subagent/foreign session's terminal arriving while the
+        /// main turn runs.
+        turn_end_session: Option<String>,
         /// When set, `prompt` emits a KAS `session_info_update`->`turn_end`
         /// notification before its (possibly parked) response — modelling KAS's
         /// dual completion signal so the loop's dedup (KAS-2a Slice 2) is exercised.
@@ -2402,7 +2434,7 @@ mod tests {
         async fn prompt(&self, a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
             // Copy the flags out and DROP the borrow before any await — a RefCell
             // borrow held across `.await` would panic on re-entry.
-            let (block, err, want_perm, emit_turn_end, emit_chunks) = {
+            let (block, err, want_perm, emit_turn_end, emit_chunks, turn_end_session) = {
                 let mut s = self.script.borrow_mut();
                 s.received.push("prompt".into());
                 s.prompt_count += 1;
@@ -2412,6 +2444,7 @@ mod tests {
                     s.request_perm,
                     s.emit_turn_end,
                     s.emit_chunks,
+                    s.turn_end_session.clone(),
                 )
             };
             if emit_chunks > 0 {
@@ -2421,7 +2454,9 @@ mod tests {
                     for i in 0..emit_chunks {
                         let note: acp::SessionNotification =
                             serde_json::from_value(serde_json::json!({
-                                "sessionId": a.session_id.to_string(),
+                                "sessionId": turn_end_session
+                            .clone()
+                            .unwrap_or_else(|| a.session_id.to_string()),
                                 "update": {
                                     "sessionUpdate": "agent_message_chunk",
                                     "content": { "type": "text", "text": format!("c{i}") }
@@ -2442,7 +2477,9 @@ mod tests {
                 let conn = self.agent_conn.borrow().clone();
                 if let Some(conn) = conn {
                     let note: acp::SessionNotification = serde_json::from_value(serde_json::json!({
-                        "sessionId": a.session_id.to_string(),
+                        "sessionId": turn_end_session
+                            .clone()
+                            .unwrap_or_else(|| a.session_id.to_string()),
                         "update": {
                             "sessionUpdate": "session_info_update",
                             "_meta": { "kiro": { "kind": "turn_end", "stopReason": "end_turn" } }
@@ -3804,6 +3841,70 @@ mod tests {
                 assert!(
                     probe.borrow().received.contains(&"cancel".to_string()),
                     "agent received the cancel mid-turn"
+                );
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 7). Claim C3: a FOREIGN session's terminal is
+    /// forwarded once to its routed consumer and mutates nothing on the main
+    /// turn.
+    ///
+    /// The cross-session split-brain the issue's description raised independently
+    /// of the same-session bug: the unstamped arm released whatever turn was
+    /// active without comparing sessions, so a subagent session's `turn_end`
+    /// cleared the MAIN busy guard. Expected: the foreign frame reaches the App
+    /// (its own consumer needs it), the main turn stays busy, and a prompt sent
+    /// afterwards is still rejected as busy.
+    async fn foreign_terminal_forwards_without_releasing_main_turn() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            turn_end_session: Some("sess_foreign".into()),
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["A".into()],
+                    })
+                    .await
+                    .unwrap();
+
+                // The foreign terminal is forwarded (its consumer needs it) ...
+                let fwd = recv_notif(&mut rx, 5).await;
+                assert!(
+                    matches!(fwd, Some(Notification::TurnCompleted { .. })),
+                    "the foreign terminal is forwarded to its routed consumer"
+                );
+
+                // ... but the MAIN turn is untouched, so a second prompt is still
+                // rejected as busy rather than accepted.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["B".into()],
+                    })
+                    .await
+                    .unwrap();
+                let next = recv_notif(&mut rx, 5).await;
+                assert!(
+                    matches!(next, Some(Notification::BridgeError { .. })),
+                    "main turn still busy -- the foreign terminal released nothing"
+                );
+                assert_eq!(
+                    probe.borrow().prompt_count,
+                    1,
+                    "the second prompt never reached the agent"
                 );
             },
         )

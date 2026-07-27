@@ -4,8 +4,6 @@ recv method=session/new id=1
 recv method=session/prompt id=2
 recv prompt name=B id=2
 emit turn_end session=sess_foreign owner=X-foreign
+emit turn_end session=sess_main owner=B-owned
 recv method=session/prompt id=3
 recv prompt name=C id=3
-emit turn_end session=sess_main owner=B-owned
-recv method=session/prompt id=4
-recv prompt name=D id=4

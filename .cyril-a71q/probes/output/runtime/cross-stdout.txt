@@ -1,5 +1,6 @@
 scenario=cross
 new scope=global kind=session-created owner=-
 terminal-1 scope=sess_foreign kind=turn-completed:EndTurn owner=-
+terminal-2 scope=global kind=bridge-error:prompt:a turn is already in progress owner=-
 terminal-2 scope=sess_main kind=turn-completed:EndTurn owner=-
 guard-probe-sent
