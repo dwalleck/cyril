@@ -54,6 +54,34 @@ impl BridgeHandle {
         }
     }
 
+    /// Test-only handle over dummy channels, with **no bridge behind them**
+    /// (cyril-nd4h). It exists so `App` can be constructed in unit tests that
+    /// only inspect state assembled at construction time — before this, `App`
+    /// was untestable, because `BridgeHandle`'s fields are private and it had
+    /// no constructor. That is why `app.rs`'s test module only ever covered
+    /// free functions.
+    ///
+    /// The peer ends are dropped, so `recv_notification` / `recv_permission`
+    /// return `None` immediately and command sends fail. That is correct for
+    /// construction-only tests and useless for anything that needs to drive a
+    /// turn — such a test wants a real bridge, not this.
+    ///
+    /// Not a correctness precondition: misuse yields a handle wired to nothing,
+    /// which no production caller reaches and which corrupts no data. So
+    /// `#[doc(hidden)]` plus this comment is the whole enforcement — there is
+    /// no silently-wrong output for a runtime check to catch.
+    #[doc(hidden)]
+    pub fn for_tests() -> Self {
+        let (command_tx, _command_rx) = mpsc::channel(COMMAND_CAPACITY);
+        let (_notification_tx, notification_rx) = mpsc::channel(NOTIFICATION_CAPACITY);
+        let (_permission_tx, permission_rx) = mpsc::channel(PERMISSION_CAPACITY);
+        Self {
+            command_tx,
+            notification_rx,
+            permission_rx,
+        }
+    }
+
     /// Split into individual receivers and a sender, for use in `tokio::select!`
     /// where borrowing `&mut self` twice is not allowed.
     pub fn split(
@@ -2040,6 +2068,27 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    // cyril-nd4h: `for_tests()` exists only to make `App` constructible in unit
+    // tests, and its doc comment promises there is no bridge behind it. Fence
+    // that promise, so nobody reaches for it to drive a turn and then debugs a
+    // silent hang. The bug class: a future edit that keeps the peer ends alive
+    // (e.g. stashing them in the struct) would make these receivers block
+    // forever instead of returning None, quietly breaking the contract.
+    #[tokio::test]
+    async fn for_tests_handle_has_no_bridge_behind_it() {
+        let mut handle = BridgeHandle::for_tests();
+        assert!(
+            handle.recv_notification().await.is_none(),
+            "for_tests() drops the notification sender, so recv must report a \
+             dead bridge immediately rather than block"
+        );
+        assert!(
+            handle.recv_permission().await.is_none(),
+            "for_tests() drops the permission sender, so recv must report a \
+             dead bridge immediately rather than block"
+        );
+    }
 
     // ── cyril-0wyn identity fences (claims 1 and 5) ──────────────────────────
 
