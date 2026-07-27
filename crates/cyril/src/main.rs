@@ -69,26 +69,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     rt.block_on(async {
-        let mut app = app::App::new(bridge, config.ui.max_messages, cwd.clone());
+        let mut app = app::App::new(bridge, &config.ui, cwd.clone());
 
         // Create initial session
         app.create_initial_session(cwd).await;
 
         // Initialize terminal
         let mut terminal = ratatui::init();
-        crossterm::execute!(
-            std::io::stdout(),
-            crossterm::event::EnableMouseCapture,
-            crossterm::event::EnableBracketedPaste,
-        )
-        .map_err(|e| {
-            cyril_core::Error::with_source(
-                cyril_core::ErrorKind::Transport {
-                    detail: "failed to enable mouse capture / bracketed paste".into(),
+        crossterm::execute!(std::io::stdout(), crossterm::event::EnableBracketedPaste).map_err(
+            |e| {
+                cyril_core::Error::with_source(
+                    cyril_core::ErrorKind::Transport {
+                        detail: "failed to enable bracketed paste".into(),
+                    },
+                    e,
+                )
+            },
+        )?;
+
+        // Mouse capture follows `ui.mouse_capture` (cyril-nd4h). Derived from
+        // App's state, NOT read from the config again: two independent reads is
+        // exactly how this flag and the terminal drift apart, which shows up as
+        // a first Ctrl+M press that appears to do nothing. The restore path
+        // below disables unconditionally, which is a no-op when never enabled.
+        if app.mouse_captured() {
+            crossterm::execute!(std::io::stdout(), crossterm::event::EnableMouseCapture).map_err(
+                |e| {
+                    cyril_core::Error::with_source(
+                        cyril_core::ErrorKind::Transport {
+                            detail: "failed to enable mouse capture".into(),
+                        },
+                        e,
+                    )
                 },
-                e,
-            )
-        })?;
+            )?;
+        }
 
         let result = app.run(&mut terminal).await;
 

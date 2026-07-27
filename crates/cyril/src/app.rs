@@ -60,7 +60,20 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(bridge: BridgeHandle, max_messages: usize, cwd: PathBuf) -> Self {
+    /// Build the app from the UI config.
+    ///
+    /// Takes `&UiConfig` rather than loose scalars on purpose (cyril-nd4h): the
+    /// destructure below is exhaustive, so a new `UiConfig` field cannot be
+    /// added without the compiler demanding a decision about consuming it here.
+    /// Two fields shipped serialized and documented for months while nothing
+    /// read them; this seam is what stops that recurring.
+    pub fn new(bridge: BridgeHandle, ui: &config::UiConfig, cwd: PathBuf) -> Self {
+        // EXHAUSTIVE ON PURPOSE -- no `..`. Adding a UiConfig field must fail
+        // compilation here rather than join the ranks of the silently ignored.
+        let &config::UiConfig {
+            max_messages,
+            mouse_capture,
+        } = ui;
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
         let commands = CommandRegistry::with_builtins();
         let info: Vec<(String, Option<String>)> = commands
@@ -76,9 +89,11 @@ impl App {
             .collect();
         let mut ui_state = UiState::new(max_messages);
         ui_state.set_command_info(info);
-        // main.rs enables mouse capture before the event loop, so sync the
-        // initial state to avoid an inverted Ctrl+M toggle.
-        ui_state.set_mouse_captured(true);
+        // This is the ONE read of the configured mouse mode (cyril-nd4h).
+        // main.rs derives the terminal's startup mode from `mouse_captured()`
+        // rather than reading the config a second time, so the flag and the
+        // terminal cannot disagree and Ctrl+M can never start out inverted.
+        ui_state.set_mouse_captured(mouse_capture);
         Self {
             bridge_sender,
             notification_rx,
@@ -92,6 +107,15 @@ impl App {
             voice: spawn_voice_engine(),
             voice_active: false,
         }
+    }
+
+    /// Whether mouse capture should be active, per `ui.mouse_capture`.
+    ///
+    /// `main.rs` calls this to decide whether to issue `EnableMouseCapture` at
+    /// startup, instead of reading the config itself — one read, two consumers
+    /// (cyril-nd4h claim C3). `ui_state` stays private.
+    pub fn mouse_captured(&self) -> bool {
+        self.ui_state.mouse_captured()
     }
 
     pub async fn create_initial_session(&mut self, cwd: PathBuf) {
@@ -1527,6 +1551,52 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    // ── cyril-nd4h: ui.mouse_capture is actually honored (claims C1, C2) ──────
+    //
+    // STRESS FIXTURE: all three reachable shapes -- explicit false, explicit
+    // true, and absent (default). One-sided fences are the bug class here: a
+    // test that only checks `false` passes under an implementation hardcoded to
+    // `false`, and a test that only checks the default passes under the
+    // hardcoded `true` this ticket removes. The `false` case is the sentinel --
+    // it fails against pre-fix code, where App::new called
+    // `set_mouse_captured(true)` unconditionally.
+    fn app_with_mouse_capture(mouse_capture: bool) -> App {
+        App::new(
+            BridgeHandle::for_tests(),
+            &config::UiConfig {
+                mouse_capture,
+                ..config::UiConfig::default()
+            },
+            PathBuf::from("/tmp"),
+        )
+    }
+
+    #[test]
+    fn mouse_capture_false_is_honored() {
+        assert!(
+            !app_with_mouse_capture(false).mouse_captured(),
+            "ui.mouse_capture = false must reach App's startup state; before \
+             cyril-nd4h this was hardcoded true and the setting did nothing"
+        );
+    }
+
+    #[test]
+    fn mouse_capture_true_is_honored() {
+        assert!(app_with_mouse_capture(true).mouse_captured());
+    }
+
+    #[test]
+    fn mouse_capture_absent_defaults_to_enabled() {
+        // The default must stay ON: a user who never wrote the key keeps the
+        // behavior they had before this ticket existed.
+        let app = App::new(
+            BridgeHandle::for_tests(),
+            &config::UiConfig::default(),
+            PathBuf::from("/tmp"),
+        );
+        assert!(app.mouse_captured());
+    }
 
     // cyril-a71q slice 9 / claim C7: notification routing truth table.
     //
