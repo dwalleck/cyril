@@ -1,17 +1,26 @@
 {
   "max_messages": [
     [
-      "crates/cyril/src/main.rs",
-      72,
-      "no field `max_messages` on type `UiConfig`"
+      "crates/cyril/src/app.rs",
+      74,
+      "struct `UiConfig` does not have a field named `max_messages`"
     ],
     [
-      "crates/cyril/src/main.rs",
-      72,
-      "no field `max_messages` on type `UiConfig`"
+      "crates/cyril/src/app.rs",
+      73,
+      "pattern does not mention field `max_messages_PROBEX`"
     ]
   ],
-  "highlight_cache_size": [],
-  "stream_buffer_timeout_ms": [],
-  "mouse_capture": []
+  "mouse_capture": [
+    [
+      "crates/cyril/src/app.rs",
+      75,
+      "struct `UiConfig` does not have a field named `mouse_capture`"
+    ],
+    [
+      "crates/cyril/src/app.rs",
+      73,
+      "pattern does not mention field `mouse_capture_PROBEX`"
+    ]
+  ]
 }
