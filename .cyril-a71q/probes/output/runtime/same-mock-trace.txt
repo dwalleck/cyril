@@ -7,6 +7,6 @@ emit turn_end session=sess_main owner=A-scoped
 recv method=session/prompt id=3
 recv prompt name=B id=3
 respond late prompt owner=A
+emit turn_end session=sess_main owner=B-owned
 recv method=session/prompt id=4
 recv prompt name=C id=4
-emit turn_end session=sess_main owner=B-owned

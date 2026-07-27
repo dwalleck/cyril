@@ -1787,11 +1787,41 @@ async fn run_loop(
                 // turn started would need per-turn identity — cyril-a71q.)
                 let mut completed_turn = false;
                 if matches!(routed.notification, Notification::TurnCompleted { .. }) {
-                    let Some(finished) = active_turn.take() else {
-                        continue; // duplicate completion for an already-ended turn
-                    };
-                    tracing::debug!(owner = %finished.owner, "turn completed");
-                    completed_turn = true;
+                    // cyril-a71q C1: mediate by OWNER, not by "is anything running".
+                    // The old guard cleared whatever turn happened to be active, so
+                    // turn A's late prompt response released turn B.
+                    match (routed.turn, active_turn.as_ref()) {
+                        // Stamped and owns the active turn -> release it.
+                        (Some(id), Some(active)) if id == active.owner => {
+                            tracing::debug!(owner = %id, "turn completed");
+                            active_turn = None;
+                            completed_turn = true;
+                        }
+                        // Stamped but does NOT own the active turn (or nothing is
+                        // active): this is A's completion arriving after A already
+                        // ended. Dropping it is the fix -- forwarding would clear a
+                        // turn it has no claim on.
+                        (Some(id), _) => {
+                            tracing::debug!(
+                                stale_owner = %id,
+                                active = ?active_turn.as_ref().map(|t| t.owner),
+                                "dropping stale completion"
+                            );
+                            continue;
+                        }
+                        // Unstamped: the KAS wire `turn_end`, which carries no turn
+                        // identity at all (source-confirmed: the frame is
+                        // {kind, stopReason}). Resolved by session; the companion
+                        // ledger that makes this precise is slice 5. Until then it
+                        // keeps the shipped first-source-wins behavior so a KAS turn
+                        // still releases -- liveness must not regress mid-build.
+                        (None, Some(active)) => {
+                            tracing::debug!(owner = %active.owner, "turn completed (wire turn_end)");
+                            active_turn = None;
+                            completed_turn = true;
+                        }
+                        (None, None) => continue, // duplicate for an already-ended turn
+                    }
                 }
                 if channels.notification_tx.send(routed).await.is_err() {
                     break; // App dropped the notification channel.
@@ -3661,6 +3691,81 @@ mod tests {
                 assert!(
                     probe.borrow().received.contains(&"cancel".to_string()),
                     "agent received the cancel mid-turn"
+                );
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 4). Claim C1: a stale owner-stamped completion
+    /// forwards ZERO completions and releases ZERO newer turns.
+    ///
+    /// The literal defect in cyril-a71q's title, reproduced end to end:
+    ///   1. turn A emits its KAS `turn_end` (releasing A) and its prompt PARKS,
+    ///   2. turn B is accepted and becomes the active turn,
+    ///   3. A's parked prompt finally resolves -> a completion stamped with A's
+    ///      owner arrives while B is running.
+    /// Under the old session-only guard step 3 matched B's `turn_in_flight`
+    /// (session id is not per-turn unique) and wrongly cleared B. `notify_one`
+    /// wakes exactly the first parked prompt (A), which is what makes the
+    /// interleaving deterministic rather than a race.
+    async fn stale_stamped_completion_does_not_release_newer_turn() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+
+                // (1) A: turn_end releases it; its prompt stays parked on the gate.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["A".into()],
+                    })
+                    .await
+                    .unwrap();
+                let a_release = drain_to_turn_envelope(&mut rx).await;
+                assert_eq!(
+                    a_release.turn, None,
+                    "A was released by the wire turn_end, which carries no owner"
+                );
+
+                // (2) B: no turn_end this time, so B stays ACTIVE while parked.
+                probe.borrow_mut().emit_turn_end = false;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["B".into()],
+                    })
+                    .await
+                    .unwrap();
+                wait_for_received(&probe, "prompt", 5).await;
+
+                // (3) wake ONLY A -> its late stamped completion lands while B runs.
+                gate.notify_one();
+                assert!(
+                    !matches!(
+                        recv_notif(&mut rx, 1).await,
+                        Some(Notification::TurnCompleted { .. })
+                    ),
+                    "A's late completion must NOT be forwarded -- it does not own B"
+                );
+
+                // COUNTER-FIXTURE: B still releases via its own completion. The
+                // fence must reject the stale signal without freezing the turn.
+                gate.notify_one();
+                let b_release = drain_to_turn_envelope(&mut rx).await;
+                assert!(
+                    b_release.turn.is_some(),
+                    "B released via its own owner-stamped completion"
                 );
             },
         )

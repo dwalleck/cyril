@@ -1,5 +1,5 @@
 scenario=cross
-new scope=global kind=session-created
-terminal-1 scope=sess_foreign kind=turn-completed:EndTurn
-terminal-2 scope=sess_main kind=turn-completed:EndTurn
+new scope=global kind=session-created owner=-
+terminal-1 scope=sess_foreign kind=turn-completed:EndTurn owner=-
+terminal-2 scope=sess_main kind=turn-completed:EndTurn owner=-
 guard-probe-sent
