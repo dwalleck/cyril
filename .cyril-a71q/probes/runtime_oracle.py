@@ -20,11 +20,22 @@ items = [
  ('cross/X foreign terminal', 'forward-foreign', 'terminal-1 scope=sess_foreign kind=turn-completed' in cross_out),
  ('cross/C before B terminal', 'reject-busy', not before(cross_trace, 'recv prompt name=C', 'owner=B-owned')),
  ('cross/B owned terminal', 'complete-active', 'terminal-2 scope=sess_main kind=turn-completed' in cross_out),
- ('response/R1 prompt response', 'secondary-nonterminal',
-  'terminal-1 scope=global kind=turn-completed' not in response_out),
- ('response/R2 prompt accepted', 'reject-busy', 'recv prompt name=R2' not in response_trace),
- ('response/R2 prompt response', 'secondary-nonterminal',
-  'terminal-2 scope=global kind=turn-completed' not in response_out),
+ # RELABELLED 2026-07-26 (cyril-a71q re-anchor). These three encoded the VOIDED
+ # sole-turn_end contract: "the response forwards 0 completions... T remains Busy
+ # until an existing owned failure... the response alone admits 0 later prompts"
+ # (spec-superseded-sole-turn-end.md:42,54). The APPROVED re-anchored spec inverts
+ # it: "it releases T and forwards exactly 1 completion (liveness -- Busy never
+ # persists past an available terminal source)" (spec.md:73,246). First-source-wins
+ # is retained, so a response-only turn releases via its response and the next
+ # prompt is legitimately accepted. The captures are unchanged and still valid --
+ # only the contract layered on top of them was wrong, exactly as timing-audit.md
+ # predicted for prototype artifacts. Under the approved contract these three are
+ # ALREADY CORRECT in shipped cyril; they were never defects.
+ ('response/R1 prompt response', 'releases-first-source',
+  'terminal-1 scope=global kind=turn-completed' in response_out),
+ ('response/R2 prompt accepted', 'accept-after-release', 'recv prompt name=R2' in response_trace),
+ ('response/R2 prompt response', 'releases-first-source',
+  'terminal-2 scope=global kind=turn-completed' in response_out),
 ]
 for name, expected, agrees in items:
     actual = 'expected' if agrees else 'CURRENT-DEFECT'
@@ -32,9 +43,14 @@ for name, expected, agrees in items:
 print(f'item_agreement={sum(x[2] for x in items)}/{len(items)}')
 defects = [name for name, _, agrees in items if not agrees]
 print('defect_items=' + ', '.join(defects))
-existing = {'same/A late response', 'same/C before B terminal', 'cross/C before B terminal'}
-revised = {'response/R1 prompt response', 'response/R2 prompt accepted',
- 'response/R2 prompt response'}
-print(f'existing_defect_set_preserved={existing == set(defects) & existing}')
-print(f'revised_spec_defect_reproduced={revised.issubset(defects)}')
-print(f'model_defect_reproduced={(existing | revised).issubset(defects)}')
+# The REAL defect set under the approved re-anchored contract: three same/cross
+# ownership bugs. The former `revised`/`model` flags counted the three response/*
+# items as defects too; those encoded the voided sole-turn_end spec and were
+# relabelled above, so those flags are removed rather than left reading False and
+# looking like a regression.
+real_defects = {'same/A late response', 'same/C before B terminal', 'cross/C before B terminal'}
+found = set(defects)
+print(f'real_defect_set_reproduced={real_defects == found}')
+print(f'unexpected_defects={sorted(found - real_defects) or "none"}')
+print('BUILD-TARGET: real_defect_set_reproduced flips True->False and '
+      'item_agreement 6/9->9/9 when cyril-a71q lands; any other movement is drift.')

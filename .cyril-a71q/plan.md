@@ -63,12 +63,58 @@ unaffected. Slices 2–11 are written against the envelope.
 
 ---
 
+## Oracle protocol (amended 2026-07-26 — read before running any slice gate)
+
+The build skill's step (d) says "run the prove-it-prototype oracle against the binary;
+they must still agree." Applied naively here that gate is **backwards**, and would halt
+every slice that actually fixes something. Two corrections:
+
+**1. The runtime oracle is a flip-check, not an agree-check.** `probes/runtime_oracle.py`
+is artifact-only: it reads captures under `probes/output/runtime/` and labels each of 9
+items `expected` or `CURRENT-DEFECT`. Six of those items encode behavior that is already
+correct; three encode the bug this issue fixes. Continued agreement on the three would
+mean the fix did nothing. The gate is therefore:
+
+| stage | `item_agreement` | `real_defect_set_reproduced` |
+|---|---|---|
+| pre-build baseline (recorded) | **6/9** | `True` |
+| after S1–S3 (substrate only, no mediation change) | 6/9 | `True` |
+| after S4 (id-stamped mediation) | 8/9 — `same/A late response`, `same/C before B terminal` flip | `False` |
+| after S7 (scope isolation) | **9/9** — `cross/C before B terminal` flips | `False` |
+| S5, S6, S8–S11 | unchanged from the row above | unchanged |
+
+`unexpected_defects` must read `none` at **every** stage. Any item moving at a stage not
+listed above is drift → STOP, per the skill. Re-running the captures requires
+`run_runtime_probes.py` against the rebuilt binary; the `hidden_expected` labels are the
+invariant and must never be edited to make a slice pass.
+
+**2. Three oracle labels encoded the VOIDED contract and were corrected.** The
+`response/*` items asserted `secondary-nonterminal` / `reject-busy` — i.e. a response
+must not release a turn and the next prompt must be rejected. That is the superseded
+sole-`turn_end` spec verbatim (`spec-superseded-sole-turn-end.md:42,54`). The approved
+re-anchored spec inverts it: *"it releases T and forwards exactly 1 completion (liveness
+— Busy never persists past an available terminal source)"* (`spec.md:73,246`). Relabelled
+to `releases-first-source` / `accept-after-release`, which shipped cyril **already
+satisfies** — so the honest pre-build baseline is 6/9, not the 3/9 the artifact recorded.
+The captures themselves are untouched and still valid; only the contract layered on top
+was wrong, exactly as `timing-audit.md` anticipated for prototype artifacts.
+
+**Consequence for the plan:** three of the six "defects" the prototype reported were never
+defects. The build must fix **three** ownership bugs, not six, and any slice that changes
+a `response/*` item is doing something wrong.
+
+---
+
 ## Slice 1: `TurnId` newtype with a fail-closed allocator
 
 **Claim:** C8 — identity uniqueness; a counter wrap must never recreate a live owner.
-**Oracle:** `design_reanchored_falsifier.py`'s abstract owner allocator (monotonic, never
-reissues) — compare the Rust allocator's emitted sequence against it for the boundary
-window.
+**Oracle:** `probes/alloc_oracle.py` — an independent from-scratch model of monotonic
+checked allocation. The Rust test writes its emitted sequence (one id per line, or
+`EXHAUSTED`); `alloc_oracle.py --check <file>` compares. **Corrected 2026-07-26:** the
+first draft cited `design_reanchored_falsifier.py`'s "abstract owner allocator" — that
+file models mediation policy over already-existing owners and contains no allocator at
+all. The citation was fictional; this oracle was written to replace it and self-tests
+that it catches both `wrapping_add` and `saturating_add`.
 **Stress fixture:** allocator primed to `u64::MAX - 1`. Expected, written before
 implementation: allocation N succeeds → `TurnId(u64::MAX)`; allocation N+1 returns
 `None`/`Err` (fail closed); the allocator does **not** wrap to 0 and does **not** reissue
