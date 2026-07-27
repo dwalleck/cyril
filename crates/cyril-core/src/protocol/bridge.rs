@@ -2150,6 +2150,63 @@ mod tests {
     // consumer only starts draining afterwards. `try_send` returns Full and
     // the disconnect vanishes; the bounded send waits for the drain and
     // delivers it LAST (after the backlog, in channel order).
+    // STRESS FIXTURE (plan slice 10). Claim C9: turn ownership is not lost at
+    // channel capacity, and receipt order is preserved.
+    //
+    // The bridge forwards with an AWAITED `send`, so backpressure blocks rather
+    // than drops -- but the a71q question is narrower than liveness: does the
+    // owner STAMP survive a full backlog, and does it arrive in the order sent?
+    // A stamp lost or reordered at capacity would make a completion
+    // unattributable exactly when the system is most loaded. Fills to
+    // NOTIFICATION_CAPACITY with distinct owners, proves the next send would
+    // block, then drains and reconciles every id against the send order.
+    #[test]
+    fn owned_terminal_survives_256_backlog() {
+        let (handle, channels) = create_channel_pair();
+        let sent: Vec<TurnId> = (0..NOTIFICATION_CAPACITY as u64).map(TurnId::new).collect();
+        for id in &sent {
+            channels
+                .notification_tx
+                .try_send(
+                    RoutedNotification::from(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    })
+                    .with_turn(*id),
+                )
+                .unwrap();
+        }
+        assert!(
+            channels
+                .notification_tx
+                .try_send(
+                    RoutedNotification::from(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    })
+                    .with_turn(TurnId::new(9_999)),
+                )
+                .is_err(),
+            "channel is verifiably full at capacity — the 257th must block, not drop"
+        );
+
+        drop(channels);
+        let (_sender, mut rx, _perm) = handle.split();
+        let mut received = Vec::new();
+        while let Ok(r) = rx.try_recv() {
+            received.push(r.turn.expect("every stamped frame keeps its owner"));
+        }
+
+        assert_eq!(
+            received.len(),
+            NOTIFICATION_CAPACITY,
+            "no frame lost at capacity"
+        );
+        assert_eq!(received, sent, "owners arrive intact and in send order");
+        // Adversarial: distinctness is the property that makes attribution work.
+        // A backlog that collapsed stamps would still pass a length check.
+        let unique: std::collections::HashSet<TurnId> = received.iter().copied().collect();
+        assert_eq!(unique.len(), received.len(), "no owner was duplicated");
+    }
+
     #[test]
     fn failstop_disconnect_survives_full_channel() {
         let (handle, channels) = create_channel_pair();
