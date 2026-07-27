@@ -665,6 +665,40 @@ pub(crate) fn client_info(
         .title("Cyril".to_string())
 }
 
+/// Which terminal source the mediator is still expecting for a released turn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CompanionSource {
+    /// The KAS wire `session_info_update{kind:"turn_end"}` — identity-free, so
+    /// it can only be matched by session.
+    Wire,
+    /// The completion the bridge synthesizes from the prompt RPC — carries its
+    /// owner, so it is matched by id.
+    Synthesized,
+}
+
+/// The one companion signal still owed for a turn that already released
+/// (cyril-a71q C6).
+///
+/// A KAS turn has two terminal sources. The first to arrive releases the turn
+/// (first-source-wins, retained from cyril-j16p); the second is not a duplicate
+/// to be dropped blindly but an *expected* signal to be absorbed — absorbing is
+/// what lets both `{source, reason}` observations be recorded for cyril-pnwb
+/// instead of the second one being lost.
+///
+/// At most one entry exists at any time: registering a new expectation replaces
+/// a dangling one, so the ledger is bounded by construction rather than by a
+/// cleanup pass.
+#[derive(Debug)]
+struct Companion {
+    owner: TurnId,
+    session: agent_client_protocol::SessionId,
+    awaiting: CompanionSource,
+    /// `{source, reason}` of the signal that already arrived. The second is
+    /// logged on absorption; no precedence between them is selected here —
+    /// that decision belongs to cyril-pnwb.
+    first: (CompanionSource, StopReason),
+}
+
 /// The turn currently occupying the bridge (cyril-a71q).
 ///
 /// Holds the per-turn `owner` identity plus the session the turn was dispatched
@@ -781,6 +815,8 @@ async fn run_loop(
     // still reach the turn that is actually running.
     let mut active_turn: Option<ActiveTurn> = None;
     let mut turn_alloc = TurnAllocator::new();
+    // cyril-a71q C6: at most ONE outstanding companion expectation. See `Companion`.
+    let mut companion: Option<Companion> = None;
     // cyril-l7tw C4: set when the io watcher reports the connection dead while
     // a turn is in flight. The disconnect is DEFERRED until the loop observes
     // that turn's TurnCompleted (the prompt task's Err arm delivers a
@@ -1790,37 +1826,95 @@ async fn run_loop(
                     // cyril-a71q C1: mediate by OWNER, not by "is anything running".
                     // The old guard cleared whatever turn happened to be active, so
                     // turn A's late prompt response released turn B.
-                    match (routed.turn, active_turn.as_ref()) {
-                        // Stamped and owns the active turn -> release it.
-                        (Some(id), Some(active)) if id == active.owner => {
-                            tracing::debug!(owner = %id, "turn completed");
-                            active_turn = None;
-                            completed_turn = true;
+                    let reason = match &routed.notification {
+                        Notification::TurnCompleted { stop_reason } => *stop_reason,
+                        _ => unreachable!("guarded by the matches! above"),
+                    };
+                    // ABSORB-FIRST. Checking the ledger before the active turn is
+                    // what makes single drift safe: a stale signal is absorbed by
+                    // the expectation it belongs to instead of clearing the newer
+                    // turn (falsifier mutation M3 fails the other order).
+                    match routed.turn {
+                        Some(id) => {
+                            // (1) the synthesized companion this turn still owed
+                            let absorbed = companion.as_ref().is_some_and(|c| {
+                                c.awaiting == CompanionSource::Synthesized && c.owner == id
+                            });
+                            if absorbed {
+                                if let Some(c) = companion.take() {
+                                    tracing::debug!(
+                                        owner = %c.owner,
+                                        first = ?c.first,
+                                        second = ?(CompanionSource::Synthesized, reason),
+                                        "absorbed expected companion"
+                                    );
+                                }
+                                continue;
+                            }
+                            // (2) owns the active turn -> release
+                            match active_turn.as_ref() {
+                                Some(active) if active.owner == id => {
+                                    companion = Some(Companion {
+                                        owner: active.owner,
+                                        session: active.session.clone(),
+                                        awaiting: CompanionSource::Wire,
+                                        first: (CompanionSource::Synthesized, reason),
+                                    });
+                                    tracing::debug!(owner = %id, "turn completed");
+                                    active_turn = None;
+                                    completed_turn = true;
+                                }
+                                // (3) stale
+                                other => {
+                                    tracing::debug!(
+                                        stale_owner = %id,
+                                        active = ?other.map(|t| t.owner),
+                                        "dropping stale completion"
+                                    );
+                                    continue;
+                                }
+                            }
                         }
-                        // Stamped but does NOT own the active turn (or nothing is
-                        // active): this is A's completion arriving after A already
-                        // ended. Dropping it is the fix -- forwarding would clear a
-                        // turn it has no claim on.
-                        (Some(id), _) => {
-                            tracing::debug!(
-                                stale_owner = %id,
-                                active = ?active_turn.as_ref().map(|t| t.owner),
-                                "dropping stale completion"
-                            );
-                            continue;
+                        None => {
+                            // Identity-free: the KAS wire `turn_end`. The frame is
+                            // {kind, stopReason} with no execution id -- confirmed
+                            // against the KAS emitter, not inferred. Matched by
+                            // session.
+                            let absorbed = companion.as_ref().is_some_and(|c| {
+                                c.awaiting == CompanionSource::Wire
+                                    && routed.session_id.as_ref().is_some_and(|s| {
+                                        s.as_str() == c.session.0.as_ref()
+                                    })
+                            });
+                            if absorbed {
+                                if let Some(c) = companion.take() {
+                                    tracing::debug!(
+                                        owner = %c.owner,
+                                        first = ?c.first,
+                                        second = ?(CompanionSource::Wire, reason),
+                                        "absorbed expected companion"
+                                    );
+                                }
+                                continue;
+                            }
+                            match active_turn.as_ref() {
+                                Some(active) => {
+                                    companion = Some(Companion {
+                                        owner: active.owner,
+                                        session: active.session.clone(),
+                                        awaiting: CompanionSource::Synthesized,
+                                        first: (CompanionSource::Wire, reason),
+                                    });
+                                    tracing::debug!(
+                                        owner = %active.owner,
+                                        "turn completed (wire turn_end)"
+                                    );
+                                    active_turn = None;
+                                    completed_turn = true;
+                                }
+                                None => continue,
+                            }
                         }
-                        // Unstamped: the KAS wire `turn_end`, which carries no turn
-                        // identity at all (source-confirmed: the frame is
-                        // {kind, stopReason}). Resolved by session; the companion
-                        // ledger that makes this precise is slice 5. Until then it
-                        // keeps the shipped first-source-wins behavior so a KAS turn
-                        // still releases -- liveness must not regress mid-build.
-                        (None, Some(active)) => {
-                            tracing::debug!(owner = %active.owner, "turn completed (wire turn_end)");
-                            active_turn = None;
-                            completed_turn = true;
-                        }
-                        (None, None) => continue, // duplicate for an already-ended turn
                     }
                 }
                 if channels.notification_tx.send(routed).await.is_err() {
@@ -3691,6 +3785,80 @@ mod tests {
                 assert!(
                     probe.borrow().received.contains(&"cancel".to_string()),
                     "agent received the cancel mid-turn"
+                );
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 5). Claims C1/C6: the companion ledger holds at
+    /// most one entry and never leaks across turns.
+    ///
+    /// Two consecutive KAS turns, each producing BOTH terminal signals. Per turn:
+    /// `turn_end` releases (registering the synthesized companion as expected),
+    /// then the prompt response is ABSORBED against that expectation and the
+    /// ledger empties. If absorption did not clear the entry, turn 2's `turn_end`
+    /// would be eaten by turn 1's dangling expectation and turn 2 would never
+    /// release -- a freeze.
+    ///
+    /// DISCRIMINATING POWER, stated honestly: this fence catches a ledger that
+    /// FREEZES turns. It does NOT catch a ledger that fails to clear on
+    /// absorption (falsifier mutation M2) -- verified by mutation, which this
+    /// test passes. The reason is the design's own prediction: absorb-first and
+    /// release-first are "observationally identical under supported input", so a
+    /// dangling entry is simply replaced by the next release and causes no
+    /// observable harm. Its harm needs double drift (a turn emitting turn_end
+    /// with no response), which the live wire does not produce -- the signed
+    /// residual B14. C6's real fence is therefore the falsifier's evidence
+    /// assertions (T1/T2 `both_evidence`, `companion_absorbed`), where M2 fails
+    /// 9 assertions; see design.md's claim table.
+    async fn companion_ledger_absorbs_one_and_does_not_leak_across_turns() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+
+                for label in ["one", "two"] {
+                    sender
+                        .send(BridgeCommand::SendPrompt {
+                            session_id: sid.clone(),
+                            content_blocks: vec![label.into()],
+                        })
+                        .await
+                        .unwrap();
+                    // Deliberately does NOT assert which source won. Both are
+                    // legal per C2 (order independence), and the harness in fact
+                    // delivers the prompt response first -- the notification path
+                    // (conn -> client callback -> convert -> channel) has more hops
+                    // than the prompt task's direct send, so the response overtakes
+                    // the turn_end the fake emitted before it. That makes this
+                    // fixture exercise the DEFENSIVE receipt order, which the live
+                    // wire does not produce (timing-audit SS2), and which is
+                    // therefore otherwise untested.
+                    let _env = drain_to_turn_envelope(&mut rx).await;
+                    assert!(
+                        !matches!(
+                            recv_notif(&mut rx, 1).await,
+                            Some(Notification::TurnCompleted { .. })
+                        ),
+                        "{label}: the companion response is absorbed, not forwarded"
+                    );
+                }
+
+                // Both turns reached the agent -> neither was rejected as busy,
+                // so turn 1's expectation did not survive to eat turn 2.
+                assert_eq!(
+                    probe.borrow().prompt_count,
+                    2,
+                    "turn 2 was accepted -- the ledger did not leak across turns"
                 );
             },
         )
