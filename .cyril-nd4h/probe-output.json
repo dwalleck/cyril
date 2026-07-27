@@ -1,0 +1,17 @@
+{
+  "max_messages": [
+    [
+      "crates/cyril/src/main.rs",
+      72,
+      "no field `max_messages` on type `UiConfig`"
+    ],
+    [
+      "crates/cyril/src/main.rs",
+      72,
+      "no field `max_messages` on type `UiConfig`"
+    ]
+  ],
+  "highlight_cache_size": [],
+  "stream_buffer_timeout_ms": [],
+  "mouse_capture": []
+}
