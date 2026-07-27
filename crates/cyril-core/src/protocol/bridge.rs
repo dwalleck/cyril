@@ -12,6 +12,7 @@ use crate::types::event::{BridgeCommand, Notification, PermissionRequest, Routed
 use crate::types::kas_hooks::KasHooksMode;
 use crate::types::kas_spawn::KasSpawn;
 use crate::types::present_as::PresentAs;
+use crate::types::turn::{TurnAllocator, TurnId};
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -664,6 +665,66 @@ pub(crate) fn client_info(
         .title("Cyril".to_string())
 }
 
+/// Does a routed notification's scope name this ACP session?
+///
+/// The envelope carries cyril's `SessionId`; the active record carries the
+/// `agent_client_protocol` one. Compared as strings because they are distinct
+/// newtypes over the same wire value.
+fn scope_is(
+    routed: Option<&crate::types::session::SessionId>,
+    session: &agent_client_protocol::SessionId,
+) -> bool {
+    routed.is_some_and(|s| s.as_str() == session.0.as_ref())
+}
+
+/// Which terminal source the mediator is still expecting for a released turn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CompanionSource {
+    /// The KAS wire `session_info_update{kind:"turn_end"}` — identity-free, so
+    /// it can only be matched by session.
+    Wire,
+    /// The completion the bridge synthesizes from the prompt RPC — carries its
+    /// owner, so it is matched by id.
+    Synthesized,
+}
+
+/// The one companion signal still owed for a turn that already released
+/// (cyril-a71q C6).
+///
+/// A KAS turn has two terminal sources. The first to arrive releases the turn
+/// (first-source-wins, retained from cyril-j16p); the second is not a duplicate
+/// to be dropped blindly but an *expected* signal to be absorbed — absorbing is
+/// what lets both `{source, reason}` observations be recorded for cyril-pnwb
+/// instead of the second one being lost.
+///
+/// At most one entry exists at any time: registering a new expectation replaces
+/// a dangling one, so the ledger is bounded by construction rather than by a
+/// cleanup pass.
+#[derive(Debug)]
+struct Companion {
+    owner: TurnId,
+    session: agent_client_protocol::SessionId,
+    awaiting: CompanionSource,
+    /// `{source, reason}` of the signal that already arrived. The second is
+    /// logged on absorption; no precedence between them is selected here —
+    /// that decision belongs to cyril-pnwb.
+    first: (CompanionSource, StopReason),
+}
+
+/// The turn currently occupying the bridge (cyril-a71q).
+///
+/// Holds the per-turn `owner` identity plus the session the turn was dispatched
+/// against. `session` is deliberately a snapshot: `active_session_id` can be
+/// retargeted mid-turn by a `NewSession`/`LoadSession`, and cancel must still
+/// reach the turn that is actually running.
+///
+/// Fully-qualified path because the `acp` alias in this file is function-scoped.
+#[derive(Debug)]
+struct ActiveTurn {
+    owner: TurnId,
+    session: agent_client_protocol::SessionId,
+}
+
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
 /// tests can drive it against an in-process fake agent (no `kiro-cli`
 /// subprocess). `conn` is `Rc` so a prompt future can be driven off this loop
@@ -746,7 +807,14 @@ async fn run_loop(
     // cyril-atjw (KAS-0, ADR-0004): the in-flight turn's task, kept ONLY so
     // `Shutdown` can abort it (so it can't linger holding the connection past
     // run_loop's return). It is no longer the "is a turn running" signal.
-    let mut prompt_task: Option<tokio::task::JoinHandle<()>> = None;
+    // cyril-a71q C4: prompt tasks are tracked as a SET, not a single slot.
+    // Under KAS a turn's task outlives its `turn_end` release, so a single slot
+    // was overwritten when the next turn started -- and dropping a JoinHandle
+    // DETACHES the task rather than aborting it, so the previous turn's task
+    // lingered past run_loop holding the connection. Bounded in practice by
+    // "turns whose prompt RPC has not resolved yet, plus the active one";
+    // finished handles are pruned on each dispatch.
+    let mut prompt_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
     // The session whose turn is in flight — at most one (ADR-0004). Set on
     // SendPrompt, cleared when the loop OBSERVES that turn's `TurnCompleted` on
     // the internal channel (engine-agnostic: v2 synthesizes it from the prompt
@@ -754,10 +822,20 @@ async fn run_loop(
     // and the CancelRequest target — a mid-turn NewSession can retarget
     // `active_session_id`, so cancel must use this, not that.
     //
-    // NB (cyril-j16p / KAS-2a): under KAS the prompt task may outlive `turn_end`,
-    // so this flag and `prompt_task` will intentionally diverge there; in v2 they
+    // NB (cyril-j16p / KAS-2a): under KAS a prompt task may outlive `turn_end`,
+    // so this record and `prompt_tasks` intentionally diverge there; in v2 they
     // clear together (the prompt resolves AT turn-end). Do not re-merge them.
-    let mut turn_in_flight: Option<acp::SessionId> = None;
+    // cyril-a71q: the active turn is now a RECORD, not just a session id. The
+    // session alone is not per-turn unique, so a late completion from turn A
+    // matched a newly-started turn B and wrongly cleared it. `owner` is the
+    // per-turn identity that makes them distinguishable; `session` is captured
+    // at dispatch and is IMMUTABLE for the turn's lifetime -- a mid-turn
+    // NewSession/LoadSession retargets `active_session_id`, and cancel must
+    // still reach the turn that is actually running.
+    let mut active_turn: Option<ActiveTurn> = None;
+    let mut turn_alloc = TurnAllocator::new();
+    // cyril-a71q C6: at most ONE outstanding companion expectation. See `Companion`.
+    let mut companion: Option<Companion> = None;
     // cyril-l7tw C4: set when the io watcher reports the connection dead while
     // a turn is in flight. The disconnect is DEFERRED until the loop observes
     // that turn's TurnCompleted (the prompt task's Err arm delivers a
@@ -770,7 +848,7 @@ async fn run_loop(
     loop {
         // Single mediator (ADR-0004): one `select!` services commands AND the
         // internal notification stream, so the loop stays free during a turn
-        // (cyril-84ca) and OBSERVES every `TurnCompleted` to clear `turn_in_flight`.
+        // (cyril-84ca) and OBSERVES every `TurnCompleted` to clear `active_turn`.
         tokio::select! {
             cmd = channels.command_rx.recv() => {
                 let Some(cmd) = cmd else { break }; // App dropped the command channel.
@@ -837,9 +915,9 @@ async fn run_loop(
                 // cyril-84ca / ADR-0004: at most one turn in flight. A SendPrompt
                 // arriving while a turn runs must NOT start a second conn.prompt()
                 // (two concurrent turns on one session is undefined); reject it with
-                // a BridgeError. `turn_in_flight` clears when the loop observes this
+                // a BridgeError. `active_turn` clears when the loop observes this
                 // turn's TurnCompleted, so the next turn is then allowed.
-                if turn_in_flight.is_some() {
+                if active_turn.is_some() {
                     if notify_or_closed(
                         &channels.notification_tx,
                         Notification::BridgeError {
@@ -853,6 +931,24 @@ async fn run_loop(
                     }
                     continue;
                 }
+                // cyril-a71q C8: allocate this turn's owner BEFORE dispatch. The
+                // allocator fails closed at u64 exhaustion rather than reissuing a
+                // live owner; refuse the turn instead of running one whose
+                // completions could match somebody else's.
+                let Some(turn_owner) = turn_alloc.allocate() else {
+                    if notify_or_closed(
+                        &channels.notification_tx,
+                        Notification::BridgeError {
+                            operation: "prompt".into(),
+                            message: "turn identity space exhausted".into(),
+                        },
+                    )
+                    .await
+                    {
+                        break;
+                    }
+                    continue;
+                };
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 let prompt: Vec<acp::ContentBlock> = content_blocks
                     .into_iter()
@@ -873,7 +969,10 @@ async fn run_loop(
                 let handle = tokio::task::spawn_local(async move {
                     // One TurnCompleted construction for both arms (success and
                     // transport error) so the terminal marker can't drift between
-                    // them — e.g. when KAS-2a adds a turn id field to TurnCompleted.
+                    // them. cyril-a71q added that turn identity — on the
+                    // RoutedNotification envelope rather than inside TurnCompleted,
+                    // so this construction stayed single and the stamp is applied
+                    // once, below.
                     let stop_reason = match turn_conn.prompt(request).await {
                         Ok(response) => crate::protocol::convert::to_stop_reason(response.stop_reason),
                         Err(e) => {
@@ -898,19 +997,40 @@ async fn run_loop(
                         }
                     };
                     let note = Notification::TurnCompleted { stop_reason };
-                    if let Err(e) = turn_tx.send(note.into()).await {
+                    // cyril-a71q: stamp the owner. This completion is synthesized
+                    // from a source the bridge owns (the prompt RPC), so the turn
+                    // is known exactly -- unlike the KAS wire turn_end, which
+                    // carries no identity and is resolved by session instead.
+                    let routed = RoutedNotification::from(note).with_turn(turn_owner);
+                    if let Err(e) = turn_tx.send(routed).await {
                         tracing::debug!(error = %e, "TurnCompleted send failed (App gone)");
                     }
                 });
-                turn_in_flight = Some(acp_session_id);
-                prompt_task = Some(handle);
+                active_turn = Some(ActiveTurn {
+                    owner: turn_owner,
+                    session: acp_session_id,
+                });
+                // O(n) over live handles with n <= 2 in the researched ordering
+                // (a turn's response follows its turn_end within ~1ms, so at most
+                // one released-but-unresolved task coexists with the active one).
+                prompt_tasks.retain(|h| !h.is_finished());
+                if prompt_tasks.len() > 2 {
+                    tracing::debug!(
+                        live = prompt_tasks.len(),
+                        "more live prompt tasks than the researched bound"
+                    );
+                }
+                prompt_tasks.push(handle);
             }
             BridgeCommand::CancelRequest => {
                 // cyril-84ca / ADR-0004: prefer the in-flight turn's own session.
                 // The loop is free during a turn, so a mid-turn NewSession/LoadSession
                 // can retarget `active_session_id`; cancel must still hit the running
                 // turn. Fall back to `active_session_id` when no turn is in flight.
-                let cancel_target = turn_in_flight.as_ref().or(active_session_id.as_ref());
+                let cancel_target = active_turn
+                    .as_ref()
+                    .map(|t| &t.session)
+                    .or(active_session_id.as_ref());
                 if let Some(session_id) = cancel_target {
                     if let Err(e) = conn
                         .cancel(acp::CancelNotification::new(session_id.clone()))
@@ -1708,7 +1828,9 @@ async fn run_loop(
                 // cyril-84ca: abort an in-flight turn so its task doesn't linger
                 // past run_loop's return holding the connection. The loop being
                 // free is what lets Shutdown be processed mid-turn at all.
-                if let Some(handle) = prompt_task.take() {
+                // Abort EVERY live task, not just the newest: a released turn's
+                // task may still be parked on its prompt response.
+                for handle in prompt_tasks.drain(..) {
                     handle.abort();
                 }
                 break;
@@ -1731,12 +1853,122 @@ async fn run_loop(
                 // (Residual: a stale duplicate arriving after a NEW same-session
                 // turn started would need per-turn identity — cyril-a71q.)
                 let mut completed_turn = false;
-                if matches!(routed.notification, Notification::TurnCompleted { .. }) {
-                    if turn_in_flight.is_none() {
-                        continue; // duplicate completion for an already-ended turn
+                if let Notification::TurnCompleted { stop_reason: reason } = routed.notification {
+                    // cyril-a71q C1: mediate by OWNER, not by "is anything running".
+                    // The old guard cleared whatever turn happened to be active, so
+                    // turn A's late prompt response released turn B.
+                    //
+                    // One `if let` rather than `matches!` + a second match with an
+                    // `unreachable!` arm: the pair re-tested the same value and left
+                    // a production panic in the hot notification path, which a later
+                    // refactor could make reachable.
+                    // ABSORB-FIRST. Checking the ledger before the active turn is
+                    // what makes single drift safe: a stale signal is absorbed by
+                    // the expectation it belongs to instead of clearing the newer
+                    // turn (falsifier mutation M3 fails the other order).
+                    match routed.turn {
+                        Some(id) => {
+                            // (1) the synthesized companion this turn still owed
+                            let absorbed = companion.as_ref().is_some_and(|c| {
+                                c.awaiting == CompanionSource::Synthesized && c.owner == id
+                            });
+                            if absorbed {
+                                if let Some(c) = companion.take() {
+                                    tracing::debug!(
+                                        owner = %c.owner,
+                                        first = ?c.first,
+                                        second = ?(CompanionSource::Synthesized, reason),
+                                        "absorbed expected companion"
+                                    );
+                                }
+                                continue;
+                            }
+                            // (2) owns the active turn -> release
+                            match active_turn.as_ref() {
+                                Some(active) if active.owner == id => {
+                                    companion = Some(Companion {
+                                        owner: active.owner,
+                                        session: active.session.clone(),
+                                        awaiting: CompanionSource::Wire,
+                                        first: (CompanionSource::Synthesized, reason),
+                                    });
+                                    tracing::debug!(owner = %id, "turn completed");
+                                    active_turn = None;
+                                    completed_turn = true;
+                                }
+                                // (3) stale
+                                other => {
+                                    tracing::debug!(
+                                        stale_owner = %id,
+                                        active = ?other.map(|t| t.owner),
+                                        "dropping stale completion"
+                                    );
+                                    continue;
+                                }
+                            }
+                        }
+                        None => {
+                            // Identity-free: the KAS wire `turn_end`. The frame is
+                            // {kind, stopReason} with no execution id -- confirmed
+                            // against the KAS emitter, not inferred. Matched by
+                            // session.
+                            let absorbed = companion.as_ref().is_some_and(|c| {
+                                c.awaiting == CompanionSource::Wire
+                                    && scope_is(routed.session_id.as_ref(), &c.session)
+                            });
+                            if absorbed {
+                                if let Some(c) = companion.take() {
+                                    tracing::debug!(
+                                        owner = %c.owner,
+                                        first = ?c.first,
+                                        second = ?(CompanionSource::Wire, reason),
+                                        "absorbed expected companion"
+                                    );
+                                }
+                                continue;
+                            }
+                            match active_turn.as_ref() {
+                                // Scoped to the ACTIVE turn's own session -> release.
+                                Some(active)
+                                    if scope_is(routed.session_id.as_ref(), &active.session) =>
+                                {
+                                    companion = Some(Companion {
+                                        owner: active.owner,
+                                        session: active.session.clone(),
+                                        awaiting: CompanionSource::Synthesized,
+                                        first: (CompanionSource::Wire, reason),
+                                    });
+                                    tracing::debug!(
+                                        owner = %active.owner,
+                                        "turn completed (wire turn_end)"
+                                    );
+                                    active_turn = None;
+                                    completed_turn = true;
+                                }
+                                // cyril-a71q C3: a FOREIGN session's terminal. Forward
+                                // it once so that session's own consumer (a subagent
+                                // stream) sees it, but touch nothing on the main
+                                // turn -- the cross-session split-brain was this
+                                // signal clearing the main busy guard.
+                                Some(active) => {
+                                    tracing::debug!(
+                                        foreign = ?routed.session_id,
+                                        active_owner = %active.owner,
+                                        "forwarding foreign terminal; main turn untouched"
+                                    );
+                                }
+                                // No active turn: a late or duplicate terminal for a
+                                // turn that already ended. DROP it -- forwarding
+                                // would make the App commit streaming and metering a
+                                // second time. spec.md:242 ("Empty set (no active
+                                // turn) | Drop an unowned ... terminal observation
+                                // unless it matches a dangling companion
+                                // expectation") and design C3; the dangling-companion
+                                // case is already handled by the absorb check above.
+                                None => continue,
+                            }
+                        }
                     }
-                    turn_in_flight = None;
-                    completed_turn = true;
                 }
                 if channels.notification_tx.send(routed).await.is_err() {
                     break; // App dropped the notification channel.
@@ -1765,7 +1997,7 @@ async fn run_loop(
                     tracing::warn!("io watcher dropped without a reason");
                     "agent connection closed unexpectedly".into()
                 });
-                if turn_in_flight.is_some() {
+                if active_turn.is_some() {
                     // Defer: let the in-flight turn's BridgeError+TurnCompleted
                     // (already en route via the inbound channel) reach the App
                     // first; the inbound arm below emits the disconnect after
@@ -1925,6 +2157,205 @@ mod tests {
     // consumer only starts draining afterwards. `try_send` returns Full and
     // the disconnect vanishes; the bounded send waits for the drain and
     // delivers it LAST (after the backlog, in channel order).
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// REGRESSION FENCE (pre-PR review). An unstamped terminal that matches NO
+    /// companion expectation and has NO active turn must be DROPPED.
+    ///
+    /// Slice 7 broke this: writing the foreign-forwarding arm, I gave the
+    /// no-active arm the same treatment (`None => {}`) reasoning it should reach
+    /// "the routed consumer". The foreign case HAS a consumer; this one does not
+    /// -- it is a late or duplicate terminal for a turn that already ended, and
+    /// forwarding makes the App commit streaming and metering twice. `main`
+    /// dropped it; spec.md:242 requires Drop.
+    ///
+    /// Reaching that arm needs care. The harness delivers the prompt RESPONSE
+    /// before the turn_end (more hops on the notification path), so the response
+    /// releases the turn and registers a `Wire` expectation scoped to the MAIN
+    /// session. A main-scoped turn_end would then be absorbed by the ledger and
+    /// never reach the no-active arm at all -- which is exactly why a first
+    /// attempt at this fence passed under mutation. Scoping the turn_end to a
+    /// FOREIGN session defeats the absorb check (session mismatch) and leaves it
+    /// with no active turn to own it, which is the branch under test.
+    async fn unowned_terminal_with_no_active_turn_is_dropped() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            turn_end_session: Some("sess_foreign".into()),
+            ..Default::default()
+        }));
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["one".into()],
+                    })
+                    .await
+                    .unwrap();
+
+                // The response releases the turn and stamps its own completion.
+                let released = drain_to_turn_envelope(&mut rx).await;
+                assert!(
+                    released.turn.is_some(),
+                    "released by the owner-stamped response"
+                );
+
+                // The foreign turn_end now has no active turn and no matching
+                // expectation. It must be dropped, not forwarded.
+                assert!(
+                    !matches!(
+                        recv_notif(&mut rx, 1).await,
+                        Some(Notification::TurnCompleted { .. })
+                    ),
+                    "an unowned terminal with no active turn must be dropped"
+                );
+            },
+        )
+        .await;
+    }
+
+    // STRESS FIXTURE (plan slice 11). Claim C10: a mid-turn OBSERVATION never
+    // releases a turn; only its own terminal source does.
+    //
+    // Regression fence over behavior already shipped in cyril-3zy4 (closed
+    // 2026-07-17), not new functionality. It matters because the VOIDED choice-A
+    // contract would have broken it: under "sole turn_end release authority" a
+    // rate-limited turn whose turn_end never came stayed Busy until disconnect,
+    // and that design explicitly demanded 3zy4's requirement be "revised". The
+    // re-anchored contract keeps first-source-wins, so the response releases it.
+    //
+    // `emit_chunks` stands in for the rate-limit frame: the harness can produce
+    // agent_message_chunk mid-turn and not `_kiro/error/rate_limit`, and the
+    // property under test is identical for both -- a NON-COMPLETION notification
+    // arriving mid-turn must be forwarded without touching the busy guard.
+    // Widening the fake to emit the ext frame would test the converter, which
+    // convert/kiro.rs already fences (`probe_kas_dialect_rate_limit_converts`).
+    #[tokio::test]
+    async fn mid_turn_observation_does_not_release_the_turn() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_chunks: 3,
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_harness(
+            script,
+            move |sender, mut rx, _perm_rx, gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+
+                // The observations arrive and are forwarded ...
+                let mut chunks = 0;
+                while chunks < 3 {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::AgentMessage(_)) => chunks += 1,
+                        Some(Notification::TurnCompleted { .. }) => {
+                            panic!("an observation released the turn -- C10 violated")
+                        }
+                        Some(_) => {}
+                        None => panic!("only saw {chunks} of 3 observations"),
+                    }
+                }
+
+                // ... and the turn is STILL busy: a second prompt is rejected.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["second".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    matches!(
+                        recv_notif(&mut rx, 5).await,
+                        Some(Notification::BridgeError { .. })
+                    ),
+                    "turn still busy after 3 observations -- none of them released it"
+                );
+
+                // Its own terminal still releases it: no freeze (cyril-3zy4).
+                gate.notify_one();
+                assert_eq!(
+                    drain_to_turn(&mut rx).await,
+                    StopReason::EndTurn,
+                    "the turn releases via its own completion"
+                );
+                assert_eq!(
+                    probe.borrow().prompt_count,
+                    1,
+                    "the rejected prompt never reached the agent"
+                );
+            },
+        )
+        .await;
+    }
+
+    // STRESS FIXTURE (plan slice 10). Claim C9: turn ownership is not lost at
+    // channel capacity, and receipt order is preserved.
+    //
+    // The bridge forwards with an AWAITED `send`, so backpressure blocks rather
+    // than drops -- but the a71q question is narrower than liveness: does the
+    // owner STAMP survive a full backlog, and does it arrive in the order sent?
+    // A stamp lost or reordered at capacity would make a completion
+    // unattributable exactly when the system is most loaded. Fills to
+    // NOTIFICATION_CAPACITY with distinct owners, proves the next send would
+    // block, then drains and reconciles every id against the send order.
+    #[test]
+    fn owned_terminal_survives_256_backlog() {
+        let (handle, channels) = create_channel_pair();
+        let sent: Vec<TurnId> = (0..NOTIFICATION_CAPACITY as u64).map(TurnId::new).collect();
+        for id in &sent {
+            channels
+                .notification_tx
+                .try_send(
+                    RoutedNotification::from(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    })
+                    .with_turn(*id),
+                )
+                .unwrap();
+        }
+        assert!(
+            channels
+                .notification_tx
+                .try_send(
+                    RoutedNotification::from(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    })
+                    .with_turn(TurnId::new(9_999)),
+                )
+                .is_err(),
+            "channel is verifiably full at capacity — the 257th must block, not drop"
+        );
+
+        drop(channels);
+        let (_sender, mut rx, _perm) = handle.split();
+        let mut received = Vec::new();
+        while let Ok(r) = rx.try_recv() {
+            received.push(r.turn.expect("every stamped frame keeps its owner"));
+        }
+
+        assert_eq!(
+            received.len(),
+            NOTIFICATION_CAPACITY,
+            "no frame lost at capacity"
+        );
+        assert_eq!(received, sent, "owners arrive intact and in send order");
+        // Adversarial: distinctness is the property that makes attribution work.
+        // A backlog that collapsed stamps would still pass a length check.
+        let unique: std::collections::HashSet<TurnId> = received.iter().copied().collect();
+        assert_eq!(unique.len(), received.len(), "no owner was duplicated");
+    }
+
     #[test]
     fn failstop_disconnect_survives_full_channel() {
         let (handle, channels) = create_channel_pair();
@@ -2129,6 +2560,11 @@ mod tests {
         /// blocks until the client answers) before completing — exercises Slice 3's
         /// loop request-forward path (ADR-0004).
         request_perm: bool,
+        /// Scope override for the emitted `turn_end` (cyril-a71q C3): when set,
+        /// the frame is scoped to THIS session id instead of the prompt's own,
+        /// modelling a subagent/foreign session's terminal arriving while the
+        /// main turn runs.
+        turn_end_session: Option<String>,
         /// When set, `prompt` emits a KAS `session_info_update`->`turn_end`
         /// notification before its (possibly parked) response — modelling KAS's
         /// dual completion signal so the loop's dedup (KAS-2a Slice 2) is exercised.
@@ -2204,7 +2640,7 @@ mod tests {
         async fn prompt(&self, a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
             // Copy the flags out and DROP the borrow before any await — a RefCell
             // borrow held across `.await` would panic on re-entry.
-            let (block, err, want_perm, emit_turn_end, emit_chunks) = {
+            let (block, err, want_perm, emit_turn_end, emit_chunks, turn_end_session) = {
                 let mut s = self.script.borrow_mut();
                 s.received.push("prompt".into());
                 s.prompt_count += 1;
@@ -2214,6 +2650,7 @@ mod tests {
                     s.request_perm,
                     s.emit_turn_end,
                     s.emit_chunks,
+                    s.turn_end_session.clone(),
                 )
             };
             if emit_chunks > 0 {
@@ -2223,7 +2660,9 @@ mod tests {
                     for i in 0..emit_chunks {
                         let note: acp::SessionNotification =
                             serde_json::from_value(serde_json::json!({
-                                "sessionId": a.session_id.to_string(),
+                                "sessionId": turn_end_session
+                            .clone()
+                            .unwrap_or_else(|| a.session_id.to_string()),
                                 "update": {
                                     "sessionUpdate": "agent_message_chunk",
                                     "content": { "type": "text", "text": format!("c{i}") }
@@ -2244,7 +2683,9 @@ mod tests {
                 let conn = self.agent_conn.borrow().clone();
                 if let Some(conn) = conn {
                     let note: acp::SessionNotification = serde_json::from_value(serde_json::json!({
-                        "sessionId": a.session_id.to_string(),
+                        "sessionId": turn_end_session
+                            .clone()
+                            .unwrap_or_else(|| a.session_id.to_string()),
                         "update": {
                             "sessionUpdate": "session_info_update",
                             "_meta": { "kiro": { "kind": "turn_end", "stopReason": "end_turn" } }
@@ -2496,6 +2937,24 @@ mod tests {
         match tokio::time::timeout(Duration::from_secs(secs), rx.recv()).await {
             Ok(Some(r)) => Some(r.notification),
             _ => None,
+        }
+    }
+
+    /// Drain until the first `TurnCompleted`, returning the whole ENVELOPE so the
+    /// caller can inspect its `turn` stamp (cyril-a71q). `drain_to_turn` unwraps
+    /// the envelope and loses that.
+    async fn drain_to_turn_envelope(
+        rx: &mut mpsc::Receiver<RoutedNotification>,
+    ) -> RoutedNotification {
+        loop {
+            match tokio::time::timeout(Duration::from_secs(5), rx.recv()).await {
+                Ok(Some(r)) => {
+                    if matches!(r.notification, Notification::TurnCompleted { .. }) {
+                        return r;
+                    }
+                }
+                _ => panic!("no TurnCompleted within 5s"),
+            }
         }
     }
 
@@ -3275,7 +3734,7 @@ mod tests {
         // KAS-2a (cyril-j16p) Slice 2 — double-fire dedup: a KAS turn emits BOTH a
         // `turn_end` notification (-> TurnCompleted via KasEngine) AND a prompt
         // response (-> TurnCompleted via the off-loop task). The loop must forward
-        // EXACTLY ONE and clear `turn_in_flight` once, so a follow-up SendPrompt is
+        // EXACTLY ONE and clear `active_turn` once, so a follow-up SendPrompt is
         // accepted (not rejected "a turn is already in progress"). Designed to FAIL
         // if the duplicate is forwarded (double-commit) or the flag double-cleared.
         let script = Rc::new(RefCell::new(Script {
@@ -3303,7 +3762,7 @@ mod tests {
                     ),
                     "exactly one TurnCompleted forwarded — the duplicate is dropped"
                 );
-                // turn_in_flight cleared once -> a fresh turn is accepted.
+                // active_turn cleared once -> a fresh turn is accepted.
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
@@ -3427,7 +3886,7 @@ mod tests {
         // C4: a SendPrompt while a turn is in flight does NOT start a 2nd
         // conn.prompt(); it is rejected with a BridgeError and the agent sees only
         // one prompt for that turn. C9: once the turn's TurnCompleted is observed
-        // on the internal channel, `turn_in_flight` clears (ADR-0004), so a later
+        // on the internal channel, `active_turn` clears (ADR-0004), so a later
         // SendPrompt starts a fresh turn.
         let script = Rc::new(RefCell::new(Script {
             block_prompt: true,
@@ -3465,7 +3924,7 @@ mod tests {
                 1,
                 "C4: the rejected prompt was never sent to the agent"
             );
-            // C9: turn_in_flight cleared (TurnCompleted observed) -> fresh turn 2.
+            // C9: active_turn cleared (TurnCompleted observed) -> fresh turn 2.
             sender
                 .send(BridgeCommand::SendPrompt {
                     session_id: sid,
@@ -3589,6 +4048,429 @@ mod tests {
                     probe.borrow().received.contains(&"cancel".to_string()),
                     "agent received the cancel mid-turn"
                 );
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 8). Claim C5: only the DYING owner's terminal
+    /// satisfies its deferred disconnect.
+    ///
+    /// The connection dies mid-turn, so the disconnect is deferred until that
+    /// turn's terminal marker reaches the App (cyril-l7tw C4). A foreign
+    /// session's terminal arriving in that window must NOT stand in for it: the
+    /// deferred disconnect belongs to the dying turn, and satisfying it early
+    /// would emit BridgeDisconnected before the owner's own
+    /// BridgeError -> TurnCompleted pair, breaking the documented order.
+    ///
+    /// No production change accompanies this fixture -- slices 4 and 7 already
+    /// made `completed_turn` reachable only by an owned release (stale
+    /// `continue`s, foreign falls through false).
+    ///
+    /// WHAT IT ACTUALLY PROVES, stated honestly: that the slice 4-7 mediation did
+    /// not BREAK the fail-stop path. If the owner's own completion were dropped
+    /// as stale, the deferred disconnect would never fire and this test would
+    /// panic on the 5s timeout -- a real regression guard.
+    ///
+    /// It does NOT discriminate the gate's owner-keying (design.md blindness B18):
+    /// mutation-tested by
+    /// removing `completed_turn &&`, and this test still passes. The reason is
+    /// that the scenario is unreachable -- after the kill the connection is dead,
+    /// so no further wire frame (foreign or otherwise) can arrive in the deferred
+    /// window. The only terminal that can appear there is the dying owner's own,
+    /// from the prompt task's error arm. The owner-keying is defence against a
+    /// state the transport cannot produce.
+    async fn foreign_terminal_does_not_satisfy_deferred_disconnect() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            emit_turn_end: true,
+            turn_end_session: Some("sess_foreign".into()),
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, loop_handle, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+
+                // The foreign terminal is already in flight from the fake; kill the
+                // connection so the disconnect is deferred behind the OWNER's marker.
+                kill.kill();
+
+                let mut order = Vec::new();
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeError { .. }) => order.push("error"),
+                        Some(Notification::TurnCompleted { .. }) => order.push("completed"),
+                        Some(Notification::BridgeDisconnected { .. }) => {
+                            order.push("disconnected");
+                            break;
+                        }
+                        Some(_) => {}
+                        None => panic!("no BridgeDisconnected within 5s; saw {order:?}"),
+                    }
+                }
+
+                // The documented order still holds. A foreign terminal satisfying
+                // the deferred disconnect would put "disconnected" before the
+                // owner's "error"/"completed" pair.
+                let first_disconnect = order.iter().position(|s| *s == "disconnected");
+                let owner_error = order.iter().position(|s| *s == "error");
+                assert!(
+                    owner_error < first_disconnect,
+                    "the dying owner's BridgeError precedes the disconnect; saw {order:?}"
+                );
+                assert_eq!(
+                    order.last().copied(),
+                    Some("disconnected"),
+                    "disconnect is last; saw {order:?}"
+                );
+
+                let loop_result = tokio::time::timeout(Duration::from_secs(5), loop_handle)
+                    .await
+                    .expect("run_loop must exit after mid-turn death");
+                assert!(loop_result.is_ok(), "run_loop task completed cleanly");
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 7). Claim C3: a FOREIGN session's terminal is
+    /// forwarded once to its routed consumer and mutates nothing on the main
+    /// turn.
+    ///
+    /// The cross-session split-brain the issue's description raised independently
+    /// of the same-session bug: the unstamped arm released whatever turn was
+    /// active without comparing sessions, so a subagent session's `turn_end`
+    /// cleared the MAIN busy guard. Expected: the foreign frame reaches the App
+    /// (its own consumer needs it), the main turn stays busy, and a prompt sent
+    /// afterwards is still rejected as busy.
+    async fn foreign_terminal_forwards_without_releasing_main_turn() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            turn_end_session: Some("sess_foreign".into()),
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["A".into()],
+                    })
+                    .await
+                    .unwrap();
+
+                // The foreign terminal is forwarded (its consumer needs it) ...
+                let fwd = recv_notif(&mut rx, 5).await;
+                assert!(
+                    matches!(fwd, Some(Notification::TurnCompleted { .. })),
+                    "the foreign terminal is forwarded to its routed consumer"
+                );
+
+                // ... but the MAIN turn is untouched, so a second prompt is still
+                // rejected as busy rather than accepted.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["B".into()],
+                    })
+                    .await
+                    .unwrap();
+                let next = recv_notif(&mut rx, 5).await;
+                assert!(
+                    matches!(next, Some(Notification::BridgeError { .. })),
+                    "main turn still busy -- the foreign terminal released nothing"
+                );
+                assert_eq!(
+                    probe.borrow().prompt_count,
+                    1,
+                    "the second prompt never reached the agent"
+                );
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 6). Claim C4: shutdown aborts EVERY live prompt
+    /// task, not just the newest, so none outlives `run_loop` holding the
+    /// connection.
+    ///
+    /// Bug class: a single `Option<JoinHandle>` slot. Under KAS a turn's task
+    /// outlives its `turn_end` release, so starting the next turn overwrote the
+    /// slot -- and dropping a JoinHandle DETACHES the task rather than aborting
+    /// it. Sequence: A's turn_end releases it while its prompt stays parked, B is
+    /// accepted and parks too, Shutdown arrives with two live tasks.
+    ///
+    /// DISCRIMINATING POWER (design.md blindness B17): mutation-tested by aborting only
+    /// the newest handle (the pre-fix behavior) -- this test still PASSES. The
+    /// reason is architectural: run_loop's tasks live on a LocalSet that
+    /// `local.block_on(&rt, ..)` drops the instant run_loop returns, so a
+    /// DETACHED task dies at teardown anyway. The slice-6 change is therefore a
+    /// tightening, not a leak fix: it removes a silent detach and makes teardown
+    /// deterministic rather than incidental. This fixture's value is as a guard
+    /// for a future in which run_loop no longer owns the runtime -- at which
+    /// point the masking disappears and the mutation would fail here.
+    async fn shutdown_aborts_every_live_prompt_task() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+
+                // A: released by turn_end; its prompt task stays parked.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["A".into()],
+                    })
+                    .await
+                    .unwrap();
+                let _a = drain_to_turn_envelope(&mut rx).await;
+
+                // B: accepted (A released) and also parks -> two live tasks.
+                probe.borrow_mut().emit_turn_end = false;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["B".into()],
+                    })
+                    .await
+                    .unwrap();
+                wait_for_received(&probe, "prompt", 5).await;
+
+                sender.send(BridgeCommand::Shutdown).await.unwrap();
+
+                // The loop exits and drops its sender, so the channel closes. A
+                // task that survived the abort would still be parked on the gate
+                // and could emit after shutdown; nothing may arrive.
+                while let Some(n) = recv_notif(&mut rx, 2).await {
+                    assert!(
+                        !matches!(n, Notification::TurnCompleted { .. }),
+                        "no completion may arrive after shutdown -- a task outlived run_loop"
+                    );
+                }
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 5). Claims C1/C6: the companion ledger holds at
+    /// most one entry and never leaks across turns.
+    ///
+    /// Two consecutive KAS turns, each producing BOTH terminal signals. Per turn:
+    /// `turn_end` releases (registering the synthesized companion as expected),
+    /// then the prompt response is ABSORBED against that expectation and the
+    /// ledger empties. If absorption did not clear the entry, turn 2's `turn_end`
+    /// would be eaten by turn 1's dangling expectation and turn 2 would never
+    /// release -- a freeze.
+    ///
+    /// DISCRIMINATING POWER (design.md blindness B16): this fence catches a ledger that
+    /// FREEZES turns. It does NOT catch a ledger that fails to clear on
+    /// absorption (falsifier mutation M2) -- verified by mutation, which this
+    /// test passes. The reason is the design's own prediction: absorb-first and
+    /// release-first are "observationally identical under supported input", so a
+    /// dangling entry is simply replaced by the next release and causes no
+    /// observable harm. Its harm needs double drift (a turn emitting turn_end
+    /// with no response), which the live wire does not produce -- the signed
+    /// residual B14. C6's real fence is therefore the falsifier's evidence
+    /// assertions (T1/T2 `both_evidence`, `companion_absorbed`), where M2 fails
+    /// 9 assertions; see design.md's claim table.
+    async fn companion_ledger_absorbs_one_and_does_not_leak_across_turns() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+
+                for label in ["one", "two"] {
+                    sender
+                        .send(BridgeCommand::SendPrompt {
+                            session_id: sid.clone(),
+                            content_blocks: vec![label.into()],
+                        })
+                        .await
+                        .unwrap();
+                    // Deliberately does NOT assert which source won. Both are
+                    // legal per C2 (order independence), and the harness in fact
+                    // delivers the prompt response first -- the notification path
+                    // (conn -> client callback -> convert -> channel) has more hops
+                    // than the prompt task's direct send, so the response overtakes
+                    // the turn_end the fake emitted before it. That makes this
+                    // fixture exercise the DEFENSIVE receipt order, which the live
+                    // wire does not produce (timing-audit SS2), and which is
+                    // therefore otherwise untested.
+                    let _env = drain_to_turn_envelope(&mut rx).await;
+                    assert!(
+                        !matches!(
+                            recv_notif(&mut rx, 1).await,
+                            Some(Notification::TurnCompleted { .. })
+                        ),
+                        "{label}: the companion response is absorbed, not forwarded"
+                    );
+                }
+
+                // Both turns reached the agent -> neither was rejected as busy,
+                // so turn 1's expectation did not survive to eat turn 2.
+                assert_eq!(
+                    probe.borrow().prompt_count,
+                    2,
+                    "turn 2 was accepted -- the ledger did not leak across turns"
+                );
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 4). Claim C1: a stale owner-stamped completion
+    /// forwards ZERO completions and releases ZERO newer turns.
+    ///
+    /// The literal defect in cyril-a71q's title, reproduced end to end:
+    ///   1. turn A emits its KAS `turn_end` (releasing A) and its prompt PARKS,
+    ///   2. turn B is accepted and becomes the active turn,
+    ///   3. A's parked prompt finally resolves -> a completion stamped with A's
+    ///      owner arrives while B is running.
+    /// Under the old session-only guard step 3 matched B's `turn_in_flight`
+    /// (session id is not per-turn unique) and wrongly cleared B. `notify_one`
+    /// wakes exactly the first parked prompt (A), which is what makes the
+    /// interleaving deterministic rather than a race.
+    async fn stale_stamped_completion_does_not_release_newer_turn() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_turn_end: true,
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+
+                // (1) A: turn_end releases it; its prompt stays parked on the gate.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["A".into()],
+                    })
+                    .await
+                    .unwrap();
+                let a_release = drain_to_turn_envelope(&mut rx).await;
+                assert_eq!(
+                    a_release.turn, None,
+                    "A was released by the wire turn_end, which carries no owner"
+                );
+
+                // (2) B: no turn_end this time, so B stays ACTIVE while parked.
+                probe.borrow_mut().emit_turn_end = false;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["B".into()],
+                    })
+                    .await
+                    .unwrap();
+                wait_for_received(&probe, "prompt", 5).await;
+
+                // (3) wake ONLY A -> its late stamped completion lands while B runs.
+                gate.notify_one();
+                assert!(
+                    !matches!(
+                        recv_notif(&mut rx, 1).await,
+                        Some(Notification::TurnCompleted { .. })
+                    ),
+                    "A's late completion must NOT be forwarded -- it does not own B"
+                );
+
+                // COUNTER-FIXTURE: B still releases via its own completion. The
+                // fence must reject the stale signal without freezing the turn.
+                gate.notify_one();
+                let b_release = drain_to_turn_envelope(&mut rx).await;
+                assert!(
+                    b_release.turn.is_some(),
+                    "B released via its own owner-stamped completion"
+                );
+            },
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    /// STRESS FIXTURE (plan slice 3). Claim C1 part 1: every accepted turn gets
+    /// its own owner, allocated at dispatch.
+    ///
+    /// Bug class: allocating once and reusing, or not stamping at all -- either
+    /// makes two turns indistinguishable, which is the whole defect. The
+    /// companion property (the record's session is immutable under a mid-turn
+    /// retarget) is already fenced by
+    /// `cancel_targets_inflight_turn_after_midturn_new_session` below, so this
+    /// does not duplicate it.
+    async fn successive_turns_get_distinct_owners() {
+        with_harness(
+            Rc::new(RefCell::new(Script::default())),
+            move |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["one".into()],
+                    })
+                    .await
+                    .unwrap();
+                let first = drain_to_turn_envelope(&mut rx).await;
+
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["two".into()],
+                    })
+                    .await
+                    .unwrap();
+                let second = drain_to_turn_envelope(&mut rx).await;
+
+                let a = first.turn.expect("turn 1 completion carries its owner");
+                let b = second.turn.expect("turn 2 completion carries its owner");
+                assert_ne!(a, b, "each accepted turn must get a distinct owner");
+                assert!(a < b, "owners must be monotonic in dispatch order");
             },
         )
         .await;

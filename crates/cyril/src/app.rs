@@ -263,6 +263,12 @@ impl App {
         let RoutedNotification {
             session_id,
             notification,
+            // cyril-a71q: the bridge has already mediated ownership by the time a
+            // notification reaches the App -- a stale or absorbed completion never
+            // gets forwarded. The App therefore has no ownership decision left to
+            // make and deliberately ignores the stamp. Bound explicitly rather
+            // than `..` so a rename breaks loudly here.
+            turn: _,
         } = routed;
 
         // Tracker-level notifications (list_update, inbox) are global:
@@ -281,7 +287,8 @@ impl App {
         // a known subagent, route to SubagentUiState and return early.
         // If session_id is None or matches the main session, fall through.
         if let Some(ref sid) = session_id {
-            let is_main = self.session.id().map(|m| m == sid).unwrap_or(false);
+            let is_main = classify_notification_route(Some(sid), self.session.id())
+                == NotificationRoute::Main;
             if !is_main && self.ui_state.subagent_tracker().is_subagent(sid) {
                 self.ui_state
                     .apply_subagent_notification(sid, &notification);
@@ -900,6 +907,42 @@ impl App {
     }
 }
 
+/// Where a session-scoped notification belongs (cyril-a71q C7).
+///
+/// Extracted as a pure function so the routing rule is testable without building
+/// an `App` — the same shape as `classify_submit`. The rule decides whether a
+/// notification may touch MAIN state at all, which is what makes "only the owned
+/// release mutates main" checkable rather than asserted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NotificationRoute {
+    /// Global (no scope) or the main session: apply to `SessionController`/`UiState`.
+    Main,
+    /// A different session: apply to that subagent's stream, main untouched.
+    Subagent,
+}
+
+fn classify_notification_route(
+    scope: Option<&SessionId>,
+    main: Option<&SessionId>,
+) -> NotificationRoute {
+    match (scope, main) {
+        // Unscoped -> global lifecycle event, nothing to compare against.
+        (None, _) => NotificationRoute::Main,
+        // Scoped and it IS the main session.
+        (Some(s), Some(m)) if s == m => NotificationRoute::Main,
+        // Scoped, main is known, and it is NOT main -> foreign. Whether the
+        // subagent is already tracked only decides which stream receives it, not
+        // whether main is spared; both paths spare main.
+        (Some(_), Some(_)) => NotificationRoute::Subagent,
+        // Scoped while no main session id is known yet. NOT main: the caller's
+        // two guards then decide -- a tracked subagent gets its stream, anything
+        // else falls through. Collapsing this to Main silently rerouted a tracked
+        // subagent's frames into main state when they arrived before
+        // SessionCreated.
+        (Some(_), None) => NotificationRoute::Subagent,
+    }
+}
+
 /// Where a non-empty, non-command Enter submit should go (ROADMAP K1b, cyril-bm1j).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SubmitRoute {
@@ -1484,6 +1527,51 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    // cyril-a71q slice 9 / claim C7: notification routing truth table.
+    //
+    // STRESS FIXTURE. The claim is "only the owned release mutates MAIN state".
+    // Stale and absorbed completions never reach the App at all -- the bridge
+    // drops them (fenced there by slices 4, 5 and 7). What reaches the App and
+    // must still spare main is the FOREIGN-scoped terminal, and this is the rule
+    // that spares it.
+    #[test]
+    fn classify_notification_route_truth_table() {
+        let main = SessionId::new("sess_main");
+        let foreign = SessionId::new("sess_foreign");
+
+        // Unscoped -> global lifecycle event; nothing to compare against.
+        assert_eq!(
+            classify_notification_route(None, Some(&main)),
+            NotificationRoute::Main
+        );
+        // Scoped to the main session -> main.
+        assert_eq!(
+            classify_notification_route(Some(&main), Some(&main)),
+            NotificationRoute::Main
+        );
+        // THE CLAIM: a foreign session's terminal must not reach main state.
+        assert_eq!(
+            classify_notification_route(Some(&foreign), Some(&main)),
+            NotificationRoute::Subagent,
+            "a foreign terminal must never touch main -- the cross-session split-brain"
+        );
+        // Scoped while no main session is known: NOT main. The caller's guards
+        // then route a tracked subagent to its stream and let anything else fall
+        // through -- exactly what the pre-extraction `unwrap_or(false)` did.
+        assert_eq!(
+            classify_notification_route(Some(&foreign), None),
+            NotificationRoute::Subagent,
+            "no main session yet must not mean 'main' -- that reroutes a tracked \
+             subagent's frames into main state"
+        );
+        // Adversarial: equal ids that are distinct objects still compare as main.
+        assert_eq!(
+            classify_notification_route(Some(&SessionId::new("sess_main")), Some(&main)),
+            NotificationRoute::Main,
+            "identity is by value, not by pointer"
+        );
+    }
 
     // cyril-bm1j Slice 9 / claims C1, C2: submit routing truth table.
     #[test]

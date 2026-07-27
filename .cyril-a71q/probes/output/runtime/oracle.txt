@@ -1,0 +1,14 @@
+same/A scoped terminal: hidden_expected=complete-active comparison=expected
+same/A late response: hidden_expected=drop-stale comparison=CURRENT-DEFECT
+same/C before B terminal: hidden_expected=reject-busy comparison=CURRENT-DEFECT
+cross/X foreign terminal: hidden_expected=forward-foreign comparison=expected
+cross/C before B terminal: hidden_expected=reject-busy comparison=CURRENT-DEFECT
+cross/B owned terminal: hidden_expected=complete-active comparison=expected
+response/R1 prompt response: hidden_expected=releases-first-source comparison=expected
+response/R2 prompt accepted: hidden_expected=accept-after-release comparison=expected
+response/R2 prompt response: hidden_expected=releases-first-source comparison=expected
+item_agreement=6/9
+defect_items=same/A late response, same/C before B terminal, cross/C before B terminal
+real_defect_set_reproduced=True
+unexpected_defects=none
+BUILD-TARGET: real_defect_set_reproduced flips True->False and item_agreement 6/9->9/9 when cyril-a71q lands; any other movement is drift.

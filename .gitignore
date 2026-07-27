@@ -15,3 +15,7 @@ docs/kiro-tui-*.js.sha256
 # Python probe caches
 __pycache__/
 *.pyc
+
+# cyril-a71q artifact-only runtime probe scratch
+.cyril-a71q/probes/runtime/target/
+.cyril-a71q/probes/.tmp-fake-home/

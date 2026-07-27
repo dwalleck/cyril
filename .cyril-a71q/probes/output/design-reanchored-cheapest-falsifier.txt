@@ -1,0 +1,7 @@
+REANCHOR correct_policy_failures=[]
+REANCHOR M1_session_only failed=['T7.B_still_busy', 'T7.stale_stamped_drops']
+REANCHOR M2_no_ledger failed=['T1.both_evidence', 'T1.companion_absorbed', 'T2.both_evidence', 'T2.companion_absorbed', 'T4.B_not_wrongly_released', 'T4.B_releases_via_own_synth', 'T4.ambiguous_absorbed', 'T5.same_action_as_T4', 'T5.signed_residual_busy']
+REANCHOR M3_release_first failed=['T4.B_not_wrongly_released', 'T4.B_releases_via_own_synth', 'T4.ambiguous_absorbed', 'T5.same_action_as_T4', 'T5.signed_residual_busy']
+REANCHOR M4_v2_session_match failed=['T2.both_evidence', 'T2.companion_absorbed', 'T2.release_on_response', 'T4.B_not_wrongly_released', 'T4.B_releases_via_own_synth', 'T4.ambiguous_absorbed', 'T4.safety', 'T5.same_action_as_T4', 'T5.signed_residual_busy', 'T7.B_still_busy', 'T7.v2_not_frozen', 'T7.v2_releases_on_id']
+REANCHOR distinct_mutation_signatures=4/4
+REANCHORED-CHEAPEST-PASSED
