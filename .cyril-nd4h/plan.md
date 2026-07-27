@@ -300,3 +300,38 @@ issues whose content covers the thing cited. No uncited deferrals. **No gaps.**
 C5 (S1) · C6 (S3,S5) · C7 (S8) · C8 (S5,S8) · C9 (S5,S6) · C10 (S7). All ten
 design claims are covered; no slice implements a claim the design does not
 list.
+
+---
+
+## Deviations during execution
+
+The plan is a hypothesis; these are the places reality corrected it. Recorded
+so the commit history and this document do not disagree.
+
+1. **Slice order swapped (3 ↔ 4).** As written, Slice 3 had no fixture of its
+   own and deferred to Slices 4-5 — but the per-slice gate requires running
+   *this* slice's fixture. The test-support seam (`bridge.rs`) landed first
+   instead, so the wire-through slice could carry its fixtures in the same
+   commit. Every slice ended up ≤2 files regardless.
+
+2. **Slices 5 and 6 merged, and reordered.** The scanner asserts the docs are
+   already correct, so shipping it before the docs edit would have failed its
+   own gate. Docs first, then the fence, in one commit.
+
+3. **Three doc surfaces, not two.** The plan named `AGENTS.md` and
+   `.agents/summary/codebase_info.md`; `.agents/summary/data_models.md` also
+   listed the removed fields. The fixture's own rationale ("both surfaces or
+   the claim is half-done") is what caught it — the count was just wrong.
+
+4. **The scanner needed comment-stripping.** Its first run flagged `main.rs`'s
+   own explanatory comment, which names the config field while not reading it.
+   A fence that forces code to go undocumented in order to pass is shaping the
+   source for the scanner's convenience, so the scan now judges code only.
+
+5. **`probe.py` changed twice in Slice 8** — hardcoded field list made
+   self-deriving, and `--all-targets` dropped after it produced a false pass
+   that reported only test-file consumers. Both are recorded in `audit.md`.
+
+6. **Slice 3's "unused `pub fn`" irony.** `BridgeHandle::for_tests` would have
+   shipped as public API with no test — the exact disease this ticket treats —
+   so it gained a fixture fencing its documented no-bridge-behind-it contract.
