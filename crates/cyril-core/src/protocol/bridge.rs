@@ -2150,6 +2150,88 @@ mod tests {
     // consumer only starts draining afterwards. `try_send` returns Full and
     // the disconnect vanishes; the bounded send waits for the drain and
     // delivers it LAST (after the backlog, in channel order).
+    // STRESS FIXTURE (plan slice 11). Claim C10: a mid-turn OBSERVATION never
+    // releases a turn; only its own terminal source does.
+    //
+    // Regression fence over behavior already shipped in cyril-3zy4 (closed
+    // 2026-07-17), not new functionality. It matters because the VOIDED choice-A
+    // contract would have broken it: under "sole turn_end release authority" a
+    // rate-limited turn whose turn_end never came stayed Busy until disconnect,
+    // and that design explicitly demanded 3zy4's requirement be "revised". The
+    // re-anchored contract keeps first-source-wins, so the response releases it.
+    //
+    // `emit_chunks` stands in for the rate-limit frame: the harness can produce
+    // agent_message_chunk mid-turn and not `_kiro/error/rate_limit`, and the
+    // property under test is identical for both -- a NON-COMPLETION notification
+    // arriving mid-turn must be forwarded without touching the busy guard.
+    // Widening the fake to emit the ext frame would test the converter, which
+    // convert/kiro.rs already fences (`probe_kas_dialect_rate_limit_converts`).
+    #[tokio::test]
+    async fn mid_turn_observation_does_not_release_the_turn() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_chunks: 3,
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_harness(
+            script,
+            move |sender, mut rx, _perm_rx, gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+
+                // The observations arrive and are forwarded ...
+                let mut chunks = 0;
+                while chunks < 3 {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::AgentMessage(_)) => chunks += 1,
+                        Some(Notification::TurnCompleted { .. }) => {
+                            panic!("an observation released the turn -- C10 violated")
+                        }
+                        Some(_) => {}
+                        None => panic!("only saw {chunks} of 3 observations"),
+                    }
+                }
+
+                // ... and the turn is STILL busy: a second prompt is rejected.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["second".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    matches!(
+                        recv_notif(&mut rx, 5).await,
+                        Some(Notification::BridgeError { .. })
+                    ),
+                    "turn still busy after 3 observations -- none of them released it"
+                );
+
+                // Its own terminal still releases it: no freeze (cyril-3zy4).
+                gate.notify_one();
+                assert_eq!(
+                    drain_to_turn(&mut rx).await,
+                    StopReason::EndTurn,
+                    "the turn releases via its own completion"
+                );
+                assert_eq!(
+                    probe.borrow().prompt_count,
+                    1,
+                    "the rejected prompt never reached the agent"
+                );
+            },
+        )
+        .await;
+    }
+
     // STRESS FIXTURE (plan slice 10). Claim C9: turn ownership is not lost at
     // channel capacity, and receipt order is preserved.
     //
