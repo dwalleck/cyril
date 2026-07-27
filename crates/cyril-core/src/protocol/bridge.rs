@@ -1853,14 +1853,15 @@ async fn run_loop(
                 // (Residual: a stale duplicate arriving after a NEW same-session
                 // turn started would need per-turn identity — cyril-a71q.)
                 let mut completed_turn = false;
-                if matches!(routed.notification, Notification::TurnCompleted { .. }) {
+                if let Notification::TurnCompleted { stop_reason: reason } = routed.notification {
                     // cyril-a71q C1: mediate by OWNER, not by "is anything running".
                     // The old guard cleared whatever turn happened to be active, so
                     // turn A's late prompt response released turn B.
-                    let reason = match &routed.notification {
-                        Notification::TurnCompleted { stop_reason } => *stop_reason,
-                        _ => unreachable!("guarded by the matches! above"),
-                    };
+                    //
+                    // One `if let` rather than `matches!` + a second match with an
+                    // `unreachable!` arm: the pair re-tested the same value and left
+                    // a production panic in the hot notification path, which a later
+                    // refactor could make reachable.
                     // ABSORB-FIRST. Checking the ledger before the active turn is
                     // what makes single drift safe: a stale signal is absorbed by
                     // the expectation it belongs to instead of clearing the newer
