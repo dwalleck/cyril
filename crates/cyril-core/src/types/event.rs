@@ -6,6 +6,7 @@ use crate::types::session::{
     SessionMode, StopReason, TokenCounts, TurnMetering,
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
+use crate::types::turn::TurnId;
 
 /// KAS `_kiro/system/notify` severity level (KAS 0.17.2+).
 /// Currently `info` and `warning`; the `Unknown` arm captures future levels
@@ -287,6 +288,22 @@ pub enum Notification {
 pub struct RoutedNotification {
     pub session_id: Option<SessionId>,
     pub notification: Notification,
+    /// Which accepted turn this notification belongs to, when that is knowable
+    /// (cyril-a71q).
+    ///
+    /// `Some(id)` — the bridge synthesized this from a source it owns (a prompt
+    /// RPC result, or an error path), so it can name the turn exactly.
+    ///
+    /// `None` — no turn identity is available. This is the normal, expected
+    /// state for the KAS wire `turn_end`: the producer emits
+    /// `{kind, stopReason}` and nothing else. `executionId` exists only on KAS's
+    /// *persisted* record, never on the wire frame — source-confirmed in
+    /// `.cyril-a71q/corroboration-2026-07-26.md`. Those completions are resolved
+    /// by session against the companion ledger instead.
+    ///
+    /// `Option` for genuinely-absent, never a sentinel: a `TurnId(0)` stand-in
+    /// would collide with the first id the allocator ever issues.
+    pub turn: Option<TurnId>,
 }
 
 impl RoutedNotification {
@@ -295,6 +312,7 @@ impl RoutedNotification {
         Self {
             session_id: None,
             notification,
+            turn: None,
         }
     }
 
@@ -303,7 +321,18 @@ impl RoutedNotification {
         Self {
             session_id: Some(session_id),
             notification,
+            turn: None,
         }
+    }
+
+    /// Stamp this notification with the turn that owns it.
+    ///
+    /// Used by the bridge on completions it synthesizes itself, where the owning
+    /// turn is known. Wire-sourced frames keep `turn: None` — see the field docs.
+    #[must_use]
+    pub fn with_turn(mut self, turn: TurnId) -> Self {
+        self.turn = Some(turn);
+        self
     }
 }
 
@@ -467,6 +496,58 @@ pub enum BridgeCommand {
         session_id: SessionId,
     },
     Shutdown,
+}
+
+#[cfg(test)]
+mod turn_stamp_tests {
+    use super::*;
+
+    fn note() -> Notification {
+        Notification::TurnCompleted {
+            stop_reason: crate::types::session::StopReason::EndTurn,
+        }
+    }
+
+    /// STRESS FIXTURE (plan slice 2). Bug class: collapsing "no turn identity"
+    /// into a sentinel such as `TurnId(0)`, which would make the identity-free
+    /// KAS wire arm collide with the first id the allocator ever issues.
+    /// Expected outcome, written before the implementation: the three arms are
+    /// mutually distinguishable, and absent is not equal to zero.
+    #[test]
+    fn absent_turn_is_not_a_sentinel() {
+        let synthesized = RoutedNotification::global(note()).with_turn(TurnId::new(0));
+        let wire = RoutedNotification::scoped(SessionId::new("sess_main"), note());
+        let v2 = RoutedNotification::global(note()).with_turn(TurnId::new(1));
+
+        // The first-ever allocated id is 0 (slice 1). If absence were encoded as
+        // TurnId(0) these two would be indistinguishable -- the whole point.
+        assert_eq!(synthesized.turn, Some(TurnId::new(0)));
+        assert_eq!(wire.turn, None, "wire turn_end carries no identity");
+        assert_ne!(synthesized.turn, wire.turn);
+        assert_ne!(synthesized.turn, v2.turn);
+
+        // And absence must not silently coerce to a value.
+        assert!(wire.turn.is_none());
+        assert_ne!(wire.turn, Some(TurnId::new(0)));
+    }
+
+    #[test]
+    fn constructors_default_to_unowned() {
+        assert_eq!(RoutedNotification::global(note()).turn, None);
+        assert_eq!(
+            RoutedNotification::scoped(SessionId::new("s"), note()).turn,
+            None
+        );
+        assert_eq!(RoutedNotification::from(note()).turn, None);
+    }
+
+    #[test]
+    fn with_turn_preserves_scope() {
+        let r = RoutedNotification::scoped(SessionId::new("sess_main"), note())
+            .with_turn(TurnId::new(42));
+        assert_eq!(r.session_id, Some(SessionId::new("sess_main")));
+        assert_eq!(r.turn, Some(TurnId::new(42)));
+    }
 }
 
 #[cfg(test)]

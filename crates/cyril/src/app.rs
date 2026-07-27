@@ -263,6 +263,12 @@ impl App {
         let RoutedNotification {
             session_id,
             notification,
+            // cyril-a71q: the bridge has already mediated ownership by the time a
+            // notification reaches the App -- a stale or absorbed completion never
+            // gets forwarded. The App therefore has no ownership decision left to
+            // make and deliberately ignores the stamp. Bound explicitly rather
+            // than `..` so a rename breaks loudly here.
+            turn: _,
         } = routed;
 
         // Tracker-level notifications (list_update, inbox) are global:
