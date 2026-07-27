@@ -3849,6 +3849,101 @@ mod tests {
 
     #[cfg(feature = "kas")]
     #[tokio::test]
+    /// STRESS FIXTURE (plan slice 8). Claim C5: only the DYING owner's terminal
+    /// satisfies its deferred disconnect.
+    ///
+    /// The connection dies mid-turn, so the disconnect is deferred until that
+    /// turn's terminal marker reaches the App (cyril-l7tw C4). A foreign
+    /// session's terminal arriving in that window must NOT stand in for it: the
+    /// deferred disconnect belongs to the dying turn, and satisfying it early
+    /// would emit BridgeDisconnected before the owner's own
+    /// BridgeError -> TurnCompleted pair, breaking the documented order.
+    ///
+    /// No production change accompanies this fixture -- slices 4 and 7 already
+    /// made `completed_turn` reachable only by an owned release (stale
+    /// `continue`s, foreign falls through false).
+    ///
+    /// WHAT IT ACTUALLY PROVES, stated honestly: that the slice 4-7 mediation did
+    /// not BREAK the fail-stop path. If the owner's own completion were dropped
+    /// as stale, the deferred disconnect would never fire and this test would
+    /// panic on the 5s timeout -- a real regression guard.
+    ///
+    /// It does NOT discriminate the gate's owner-keying: mutation-tested by
+    /// removing `completed_turn &&`, and this test still passes. The reason is
+    /// that the scenario is unreachable -- after the kill the connection is dead,
+    /// so no further wire frame (foreign or otherwise) can arrive in the deferred
+    /// window. The only terminal that can appear there is the dying owner's own,
+    /// from the prompt task's error arm. The owner-keying is defence against a
+    /// state the transport cannot produce.
+    async fn foreign_terminal_does_not_satisfy_deferred_disconnect() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            emit_turn_end: true,
+            turn_end_session: Some("sess_foreign".into()),
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, loop_handle, kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["go".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_received(&probe, "prompt", 5).await,
+                    "prompt reached the agent before the kill"
+                );
+
+                // The foreign terminal is already in flight from the fake; kill the
+                // connection so the disconnect is deferred behind the OWNER's marker.
+                kill.kill();
+
+                let mut order = Vec::new();
+                loop {
+                    match recv_notif(&mut rx, 5).await {
+                        Some(Notification::BridgeError { .. }) => order.push("error"),
+                        Some(Notification::TurnCompleted { .. }) => order.push("completed"),
+                        Some(Notification::BridgeDisconnected { .. }) => {
+                            order.push("disconnected");
+                            break;
+                        }
+                        Some(_) => {}
+                        None => panic!("no BridgeDisconnected within 5s; saw {order:?}"),
+                    }
+                }
+
+                // The documented order still holds. A foreign terminal satisfying
+                // the deferred disconnect would put "disconnected" before the
+                // owner's "error"/"completed" pair.
+                let first_disconnect = order.iter().position(|s| *s == "disconnected");
+                let owner_error = order.iter().position(|s| *s == "error");
+                assert!(
+                    owner_error < first_disconnect,
+                    "the dying owner's BridgeError precedes the disconnect; saw {order:?}"
+                );
+                assert_eq!(
+                    order.last().copied(),
+                    Some("disconnected"),
+                    "disconnect is last; saw {order:?}"
+                );
+
+                let loop_result = tokio::time::timeout(Duration::from_secs(5), loop_handle)
+                    .await
+                    .expect("run_loop must exit after mid-turn death");
+                assert!(loop_result.is_ok(), "run_loop task completed cleanly");
+            },
+        )
+        .await;
+    }
+
+    #[cfg(feature = "kas")]
+    #[tokio::test]
     /// STRESS FIXTURE (plan slice 7). Claim C3: a FOREIGN session's terminal is
     /// forwarded once to its routed consumer and mutates nothing on the main
     /// turn.
