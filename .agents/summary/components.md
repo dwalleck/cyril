@@ -185,7 +185,7 @@ Per-subagent message streams (`SubagentStream`). Manages focused subagent for dr
 
 ### `stream_buffer.rs` — StreamBuffer
 
-Buffers streaming text and flushes at semantic boundaries (newlines, code fences) or after a configurable timeout. Prevents partial-line rendering during streaming.
+Designed to buffer streaming text and flush at semantic boundaries (newlines, code fences) or after a timeout. **Currently has no production consumer** — nothing constructs it (cyril-ell0).
 
 ### `file_completer.rs` — FileCompleter
 
@@ -193,11 +193,11 @@ Provides `@path/to/file` autocomplete. Loads directory tree asynchronously, resp
 
 ### `highlight.rs` — Syntax Highlighting
 
-Syntect-based code highlighting with LRU cache integration.
+Syntect-based code highlighting with bounded-cache integration.
 
-### `cache.rs` — LRU Cache
+### `cache.rs` — Bounded Cache
 
-Generic LRU cache used by the markdown renderer and syntax highlighter.
+Generic bounded cache used by the markdown renderer and syntax highlighter. NOT an LRU: on overflow it drops the oldest HALF of entries in insertion order, so occupancy sawtooths between capacity/2 and capacity.
 
 ### `error.rs` — UI Error Types
 

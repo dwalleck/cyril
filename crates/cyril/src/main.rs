@@ -92,17 +92,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // exactly how this flag and the terminal drift apart, which shows up as
         // a first Ctrl+M press that appears to do nothing. The restore path
         // below disables unconditionally, which is a no-op when never enabled.
-        if app.mouse_captured() {
-            crossterm::execute!(std::io::stdout(), crossterm::event::EnableMouseCapture).map_err(
-                |e| {
-                    cyril_core::Error::with_source(
-                        cyril_core::ErrorKind::Transport {
-                            detail: "failed to enable mouse capture".into(),
-                        },
-                        e,
-                    )
-                },
-            )?;
+        //
+        // Non-fatal on purpose, matching the runtime Ctrl+M handler: a terminal
+        // that refuses mouse capture should not stop cyril from starting. `?`
+        // here would also abandon the terminal mid-setup — past `ratatui::init()`
+        // and with bracketed paste already on — skipping the restore below.
+        // Rolling the flag back keeps UiState in agreement with the terminal.
+        if app.mouse_captured()
+            && let Err(e) =
+                crossterm::execute!(std::io::stdout(), crossterm::event::EnableMouseCapture)
+        {
+            tracing::warn!(error = %e, "failed to enable mouse capture; continuing without it");
+            app.set_mouse_captured(false);
         }
 
         let result = app.run(&mut terminal).await;

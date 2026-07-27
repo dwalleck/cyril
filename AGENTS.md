@@ -45,8 +45,8 @@ crates/
       subagent_ui.rs  # SubagentUiState — per-subagent message streams, drill-in focus
       stream_buffer.rs # Semantic-boundary streaming buffer
       file_completer.rs # @-file autocomplete (async, .gitignore-aware)
-      highlight.rs    # Syntect-based syntax highlighting with LRU cache
-      cache.rs        # Generic LRU cache
+      highlight.rs    # Syntect-based syntax highlighting with a bounded cache
+      cache.rs        # Generic bounded cache (insertion-order, oldest-half eviction)
       widgets/
         chat.rs       # Message display, tool call diffs, subagent drill-in
         markdown.rs   # pulldown-cmark → ratatui spans with syntax highlighting
@@ -147,7 +147,7 @@ cargo test --workspace                       # unit + integration tests
 The largest file. Translates raw ACP protocol messages → typed `Notification` variants. Maintains a `tool_call_inputs` cache because permission requests arrive without `raw_input`. Most likely file to need changes when the ACP protocol evolves.
 
 ### Streaming Buffer
-`StreamBuffer` flushes at semantic boundaries (newlines, code fences) or after a configurable timeout (default 150ms). Prevents partial-line rendering during streaming.
+`StreamBuffer` is designed to flush at semantic boundaries (newlines, code fences) or after a timeout. **It has no production consumer** — nothing constructs it, and the `[ui]` option that nominally configured its timeout was removed in cyril-nd4h once it turned out to configure nothing. Its fate is tracked at cyril-ell0.
 
 ### Panic-Safe Rendering
 `render::draw()` wraps the inner draw in `catch_unwind`. On panic, renders a fallback "Render error" message instead of crashing.

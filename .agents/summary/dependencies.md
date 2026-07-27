@@ -122,7 +122,7 @@ Uses the `unstable-rendered-line-info` feature for accurate scroll calculations.
 Configured with `event-stream` feature (no default features). Provides `EventStream` for async terminal event reading and mouse capture control.
 
 ### `syntect` (5)
-Uses `default-fancy` features for syntax highlighting. Integrated via `cyril-ui/src/highlight.rs` with LRU caching.
+Uses `default-fancy` features for syntax highlighting. Integrated via `cyril-ui/src/highlight.rs` with bounded caching.
 
 ### `tokio` Feature Configuration
 - `cyril` (binary): `features = ["full"]`

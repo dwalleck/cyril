@@ -118,6 +118,18 @@ impl App {
         self.ui_state.mouse_captured()
     }
 
+    /// Correct the mouse-capture flag when the terminal refuses the mode.
+    ///
+    /// Startup asks the terminal for capture only when configured; if that
+    /// request fails, the flag has to follow, or `UiState` claims a mode the
+    /// terminal is not in and the first `Ctrl+M` press flips to the state
+    /// already in effect — the inverted-toggle failure again, arriving by a
+    /// different route. This is the same rollback the `Ctrl+M` handler already
+    /// performs when `execute!` fails.
+    pub fn set_mouse_captured(&mut self, captured: bool) {
+        self.ui_state.set_mouse_captured(captured);
+    }
+
     pub async fn create_initial_session(&mut self, cwd: PathBuf) {
         self.ui_state
             .add_system_message("Connecting to agent...".into());

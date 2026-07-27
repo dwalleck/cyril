@@ -43,12 +43,63 @@ fn is_ident_byte(b: u8) -> bool {
 /// convenience rather than the other way round.
 fn strip_line_comments(src: &str) -> String {
     src.lines()
-        .map(|line| match line.find("//") {
-            Some(i) => &line[..i],
-            None => line,
+        .map(|line| {
+            // Skip `//` preceded by `:` so a URL (`https://…`) is not mistaken
+            // for a comment start. Cutting there would silently truncate real
+            // code to its right — a FALSE NEGATIVE, the direction that makes a
+            // fence quietly stop fencing.
+            let bytes = line.as_bytes();
+            let cut = line.match_indices("//").find_map(|(i, _)| {
+                if i > 0 && bytes[i - 1] == b':' {
+                    None
+                } else {
+                    Some(i)
+                }
+            });
+            match cut {
+                Some(i) => &line[..i],
+                None => line,
+            }
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// Every doc surface that describes config or the cache, discovered rather than
+/// hand-listed.
+///
+/// Hand-listing is what let the first version of this fence pass trivially: it
+/// named exactly the three files that had already been fixed, so it could not
+/// have failed. Four more surfaces still carried the stale claims. Globbing
+/// `.agents/summary/` means a doc added later is covered on the day it lands.
+///
+/// `docs/plans/` is deliberately excluded: those are dated, archived planning
+/// documents recording what was designed at the time. They are an audit trail,
+/// not live documentation, and rewriting them would falsify history.
+fn doc_surfaces() -> Vec<String> {
+    let mut out = vec!["AGENTS.md".to_string(), "CLAUDE.md".to_string()];
+    let summary = repo_root().join(".agents/summary");
+    let Ok(entries) = std::fs::read_dir(&summary) else {
+        panic!("{} must exist — doc fences depend on it", summary.display());
+    };
+    let mut found: Vec<String> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "md"))
+        .filter_map(|p| {
+            p.file_name()
+                .and_then(|n| n.to_str())
+                .map(|n| format!(".agents/summary/{n}"))
+        })
+        .collect();
+    found.sort();
+    assert!(
+        found.len() >= 3,
+        "expected several .agents/summary docs, found {found:?} — if the \
+         directory moved, this fence needs updating, not deleting"
+    );
+    out.extend(found);
+    out
 }
 
 /// Whole-word search: `mouse_capture` must NOT match inside `mouse_captured`.
@@ -195,12 +246,8 @@ fn highlight_and_markdown_caches_still_hold_256() {
 /// only two of them.
 #[test]
 fn docs_do_not_advertise_removed_config_keys() {
-    for rel in [
-        "AGENTS.md",
-        ".agents/summary/codebase_info.md",
-        ".agents/summary/data_models.md",
-    ] {
-        let doc = read_normalized(rel);
+    for rel in doc_surfaces() {
+        let doc = read_normalized(&rel);
         for removed in ["highlight_cache_size", "stream_buffer_timeout_ms"] {
             assert!(
                 !contains_word(&doc, removed),
@@ -217,10 +264,19 @@ fn docs_do_not_advertise_removed_config_keys() {
 /// independent of the values being wrong.
 #[test]
 fn docs_do_not_call_the_hash_cache_an_lru() {
-    let doc = read_normalized(".agents/summary/codebase_info.md");
-    assert!(
-        !doc.contains("LRU"),
-        "HashCache evicts the oldest HALF on overflow (cache.rs) — calling it an \
-         LRU misdescribes both its eviction policy and its retention curve"
-    );
+    for rel in doc_surfaces() {
+        let doc = read_normalized(&rel);
+        for (n, line) in doc.lines().enumerate() {
+            // "NOT an LRU" is the correction itself, not a recurrence.
+            if line.contains("LRU") && !line.contains("NOT an LRU") {
+                panic!(
+                    "{rel}:{} calls the cache an LRU — HashCache drops the oldest \
+                     HALF on overflow (cache.rs:28), so occupancy sawtooths \
+                     between capacity/2 and capacity. The label misdescribes both \
+                     the eviction policy and the retention curve:\n  {line}",
+                    n + 1
+                );
+            }
+        }
+    }
 }
