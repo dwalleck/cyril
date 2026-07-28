@@ -2077,16 +2077,28 @@ mod tests {
     // forever instead of returning None, quietly breaking the contract.
     #[tokio::test]
     async fn for_tests_handle_has_no_bridge_behind_it() {
+        // Bounded on purpose. The defect this test exists to catch -- a future
+        // edit that keeps the peer senders alive -- makes `recv()` block
+        // FOREVER rather than return None. Awaiting it bare would hang the
+        // suite instead of failing it, which is the one outcome a fence must
+        // never produce: a hang reads as "still running", not "broken".
+        let limit = std::time::Duration::from_secs(5);
         let mut handle = BridgeHandle::for_tests();
+
+        let notification = tokio::time::timeout(limit, handle.recv_notification())
+            .await
+            .expect("recv_notification must resolve, not hang: for_tests() drops the sender");
         assert!(
-            handle.recv_notification().await.is_none(),
-            "for_tests() drops the notification sender, so recv must report a \
-             dead bridge immediately rather than block"
+            notification.is_none(),
+            "a dropped sender must surface as a dead bridge (None)"
         );
+
+        let permission = tokio::time::timeout(limit, handle.recv_permission())
+            .await
+            .expect("recv_permission must resolve, not hang: for_tests() drops the sender");
         assert!(
-            handle.recv_permission().await.is_none(),
-            "for_tests() drops the permission sender, so recv must report a \
-             dead bridge immediately rather than block"
+            permission.is_none(),
+            "a dropped sender must surface as a dead bridge (None)"
         );
     }
 

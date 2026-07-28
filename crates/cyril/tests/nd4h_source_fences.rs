@@ -133,9 +133,30 @@ fn main_does_not_read_mouse_capture_directly() {
          mode from app.mouse_captured(). A second independent read is the \
          desync that makes the first Ctrl+M press appear dead."
     );
+    // Presence of the call is not enough: an unused `app.mouse_captured()`
+    // sitting beside an UNCONDITIONAL EnableMouseCapture would satisfy a mere
+    // "contains" check while restoring exactly the bug this ticket fixed. Bind
+    // the two together — the guard must appear, and every EnableMouseCapture
+    // must sit after it.
+    let Some(guard) = main_rs.find("if app.mouse_captured()") else {
+        panic!("main.rs must gate the mouse-capture setup on `if app.mouse_captured()`");
+    };
+    let enables: Vec<usize> = main_rs
+        .match_indices("EnableMouseCapture")
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(
+        enables.len(),
+        1,
+        "expected exactly one EnableMouseCapture in main.rs, found {} — a second \
+         one is almost certainly unconditional",
+        enables.len()
+    );
     assert!(
-        main_rs.contains("app.mouse_captured()"),
-        "main.rs must still gate EnableMouseCapture on App's state"
+        enables[0] > guard,
+        "EnableMouseCapture must occur inside the `if app.mouse_captured()` \
+         branch. Emitting it before the guard re-enables capture regardless of \
+         ui.mouse_capture, which is the original defect."
     );
 }
 

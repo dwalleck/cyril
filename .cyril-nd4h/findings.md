@@ -11,13 +11,21 @@ is zero.**
 
 ## Slice 1 — which fields have a production consumer?
 
-- **Probe** (`probe.py`, 74 lines): the *compiler* as instrument. Rename one
-  field at a time inside `config.rs` only (file stays self-consistent), run
-  `cargo check --all-features --all-targets --message-format=json`, and treat
-  any error with a primary span outside `config.rs` as proof of a consumer.
-  Semantic — sees through `..Default::default()`, aliases, and `cfg` gates.
-  `--all-features` is load-bearing: a consumer behind `#[cfg(feature = "kas")]`
-  would otherwise read as absent (cf. cyril-ykkc).
+- **Probe** (`probe.py`): the *compiler* as instrument. Rename one field at a
+  time inside `config.rs` only (file stays self-consistent), run
+  `cargo check --all-features --message-format=json`, and treat any error with
+  a primary span outside `config.rs` as proof the field is *named* at a
+  consumption site. Semantic — sees through `..Default::default()`, aliases,
+  and `cfg` gates. `--all-features` is load-bearing: a consumer behind
+  `#[cfg(feature = "kas")]` would otherwise read as absent (cf. cyril-ykkc).
+
+  > **Corrected after review.** This slice originally passed `--all-targets`
+  > and treated rename errors alone as proof of consumption. Both were wrong,
+  > and both produced false passes — see `audit.md` for the full account. The
+  > probe now omits `--all-targets` (so the claim is about *production*
+  > consumers) and adds a second signal, rustc's `unused_variables`, because
+  > error recovery makes rename-diagnostics unable to distinguish a field that
+  > is *bound* from one that is *used*.
 - **Oracle**: word-boundary textual scan (`grep -rnw`) over `crates/`,
   excluding the definition site. Fails in completely different ways than a
   type checker does.

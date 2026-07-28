@@ -77,8 +77,47 @@ Non-vacuity was proven by mutation for the three load-bearing fences (C2, C4,
 C5) — each was shown to go red under the specific bug it guards against, and
 the source file restored byte-exact afterwards.
 
+## Third correction, from PR review — the probe proved less than it claimed
+
+Review of PR #70 found the audit above still overstated itself, and the finding
+was **confirmed by experiment**: deleting `ui_state.set_mouse_captured(mouse_capture)`
+— which makes the field genuinely dead again — left the probe printing
+`ignored=[]`, `AUDIT PASS`, exit `0`.
+
+The cause is **rustc error recovery**. When a destructuring pattern names a
+field that no longer exists, rustc creates the binding anyway so compilation can
+continue, and every downstream use resolves without complaint. Renaming a field
+therefore yields only *pattern* diagnostics (E0026, E0027) whether or not the
+bound value is ever used. Signal A cannot see the difference.
+
+The reviewer's proposed remedy — "exclude pattern diagnostics and require
+evidence from an actual use" — would have made it worse: with error recovery
+suppressing use-site errors, excluding pattern diagnostics leaves *nothing*, and
+every field would report as unconsumed. Right bug, wrong fix.
+
+`probe.py` now requires **two independent signals**:
+
+- **A — named**: renaming the field produces an error outside `config.rs`.
+- **B — used**: the field does *not* appear in rustc's `unused_variables`
+  warnings on a clean build.
+
+Honored iff A ∧ ¬B. Verified both directions: clean tree → `AUDIT PASS`, exit 0;
+assignment dropped → `mouse_capture IGNORED (bound but never used)`,
+`AUDIT FAIL`, exit 1.
+
+Also corrected in the same pass: the probe restores `config.rs` from its
+**bytes**, not text (text mode silently rewrites a CRLF checkout to LF and then
+compares equal — the byte-exactness claim was false on a CRLF host); a failed
+audit now exits nonzero; and `probe2.py` **derives** the cache capacity from the
+production statics instead of hardcoding it, so changing them changes the probe
+(verified: flipping one static to 20 makes probe2 exit 1), while also checking
+cargo's status and asserting both measurements.
+
 ## Full gate
 
-`cargo nextest run --all-features` — 1238 passed, 5 skipped ·
-`cargo clippy --all-features --all-targets -- -D warnings` — clean ·
-`cargo fmt --check` — clean.
+- `cargo nextest run --all-features` — 1238 passed, 5 skipped
+- `cargo test --all-features --doc` — 0 passed, 0 failed (**the workspace has no
+  doctests**; recorded explicitly because nextest does not run them, so
+  "nextest is green" is not by itself the full gate AGENTS.md asks for)
+- `cargo clippy --all-features --all-targets -- -D warnings` — clean
+- `cargo fmt --check` — clean

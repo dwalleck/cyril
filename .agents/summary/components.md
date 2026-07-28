@@ -197,7 +197,7 @@ Syntect-based code highlighting with bounded-cache integration.
 
 ### `cache.rs` — Bounded Cache
 
-Generic bounded cache used by the markdown renderer and syntax highlighter. NOT an LRU: on overflow it drops the oldest HALF of entries in insertion order, so occupancy sawtooths between capacity/2 and capacity.
+Generic bounded cache used by the markdown renderer and syntax highlighter. NOT an LRU: on overflow it drops the oldest HALF of entries in insertion order. At the production capacity (256, in both `highlight.rs` and `widgets/markdown.rs`) occupancy therefore sawtooths between roughly capacity/2 and capacity rather than sitting at the limit. The eviction count is `order.len() / 2`, which rounds to zero at very small capacities — so `capacity` is not a strict upper bound there (capacity 1 settles at 2 entries). The type is written for the large-capacity case it is actually used in.
 
 ### `error.rs` — UI Error Types
 
