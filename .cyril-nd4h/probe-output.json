@@ -1,0 +1,8 @@
+{
+  "fields": [
+    "max_messages",
+    "mouse_capture"
+  ],
+  "ignored": [],
+  "bound_but_unused": []
+}

@@ -21,13 +21,13 @@ sequenceDiagram
     Bridge->>Bridge: Create channel pairs
     Bridge->>Bridge: Start bridge loop (tokio::spawn)
     Bridge-->>Main: BridgeHandle
-    Main->>App: App::new(bridge, max_messages)
+    Main->>App: App::new(bridge, &config.ui, cwd)
     App->>App: Split BridgeHandle → sender + receivers
     App->>App: Register builtin commands
     App->>App: create_initial_session(cwd)
     App->>Agent: BridgeCommand::NewSession
     Agent-->>App: SessionCreated notification
-    App->>App: Initialize terminal (ratatui + mouse capture)
+    App->>App: Initialize terminal (ratatui + bracketed paste; mouse capture iff ui.mouse_capture)
     App->>App: Enter event loop
 ```
 
@@ -207,7 +207,7 @@ graph TB
 
     MD --> PULLDOWN[pulldown-cmark parser]
     MD --> SYNTECT[syntect highlighter]
-    MD --> CACHE[LRU cache]
+    MD --> CACHE[bounded cache]
 
     subgraph "Overlays (on top)"
         APPROVAL[approval::render]

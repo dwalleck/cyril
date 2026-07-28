@@ -252,8 +252,6 @@ classDiagram
 
     class UiConfig {
         +max_messages: usize = 500
-        +highlight_cache_size: usize = 20
-        +stream_buffer_timeout_ms: u64 = 150
         +mouse_capture: bool = true
     }
 

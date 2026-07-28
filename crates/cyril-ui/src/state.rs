@@ -1880,6 +1880,38 @@ mod tests {
         assert_eq!(state.steering_queued(), 0);
     }
 
+    // cyril-nd4h claim C4. Once `ui.mouse_capture` is honored, startup state is
+    // no longer unconditionally `true`, so the toggle must be correct from
+    // EITHER starting state -- the first press always changes the mode.
+    //
+    // STRESS FIXTURE: both directions, deliberately. A fixture that only starts
+    // from the historical hardcoded default cannot distinguish a real toggle
+    // from an implementation that ignores current state (`= true`) or inverts
+    // it -- and "inverted Ctrl+M" is the exact failure the App startup comment
+    // has been warning about.
+    #[test]
+    fn mouse_capture_toggles_from_either_starting_state() {
+        for start in [false, true] {
+            let mut state = UiState::new(500);
+            state.set_mouse_captured(start);
+            assert_eq!(state.mouse_captured(), start, "setter must stick");
+
+            state.toggle_mouse_capture();
+            assert_eq!(
+                state.mouse_captured(),
+                !start,
+                "first toggle from {start} must flip the mode, not force a constant"
+            );
+
+            state.toggle_mouse_capture();
+            assert_eq!(
+                state.mouse_captured(),
+                start,
+                "second toggle from {start} must return to the starting mode"
+            );
+        }
+    }
+
     #[test]
     fn new_state_uses_cyril_dark_truecolor() {
         let state = UiState::new(500);
