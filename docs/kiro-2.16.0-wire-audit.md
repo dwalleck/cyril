@@ -1,8 +1,12 @@
 # kiro-cli 2.16.0 wire audit (2026-07-30, vs 2.15.0)
 
 **Verdict: SAFE for cyril's current v2 path — but this is the biggest KAS release since
-2.7.1.** The v2 (Rust) surface cyril consumes is unchanged at settle (zero field-path delta), and
-the one v2 response that *did* change (`/context`) is **purely additive**. On the KAS side,
+2.7.1.** The v2 (Rust) surface cyril consumes is unchanged at settle (zero field-path delta) and
+across **all 19 command responses swept except `/context`**, whose change is **purely additive**.
+Turn traffic carries two further v2 changes, both **additive and both improvements cyril gets for
+free**: the post-`/model`-switch `_kiro.dev/metadata` push now carries a recomputed
+`contextUsagePercentage` (it carried none on 2.15.0, leaving clients stale), and the `/model`
+execute response gained the same field. On the KAS side,
 `@kiro/agent` jumped **0.25.17 → 0.27.8** and shipped a **complete, functional, multi-agent
 workflow engine** — the `_kiro/workflow/*` emitter that has been missing since the protocol was
 first spotted at 2.14.1. It is **live and answering today**, gated behind an opt-in setting.
@@ -643,17 +647,69 @@ Recorded so the next audit knows where the holes are rather than re-deriving the
   - `contextUsagePercentage` shifts (3.574 → 2.991 on 2.16.0), confirming the flag really does
     change the prompt/toolset. **Anyone benchmarking cyril must keep `KIRO_TEST_MODE` unset.**
 
+### Turn traffic, via the free mock backend
+
+`probe-v2-turn-traffic-ab-2.16.0.py` closes the biggest hole: no probe in this audit had ever
+driven a **turn**, so `_kiro.dev/metadata` was only ever seen in its empty pre-turn form and no
+`session/update` turn variant had been observed at all.
+
+`KIRO_MOCK_CHAT_RESPONSE` makes this free and deterministic — it is a **file path** to a JSON
+array-of-arrays, one outer element per turn, inner strings streamed as `agent_message_chunk`s.
+Two turns plus a model switch, on both binaries, zero credits and no network.
+Mock is **strings-only** (object entries panic kiro-cli at `initialize`), so this run still yields
+**no tool calls, no permission prompts and no `meteringUsage`** — see the residual gaps below.
+
+Turn-shaped message inventory (identical on both): `session/update:agent_message_chunk` ×4,
+`_kiro.dev/metadata` ×7, `_kiro.dev/commands/available`, `_kiro.dev/subagent/list_update`,
+`session/prompt` → `stopReason: "end_turn"`. Streamed chunks concatenated identically.
+
+**This is where 2.16.0's third changelog line actually lives** — "context usage percentage now
+recalculates when switching models via `/model`" — and it lands in **two** places, both on cyril's
+path:
+
+1. **The pushed `_kiro.dev/metadata` after a model switch.** This is the real fix:
+
+   ```jsonc
+   // 2.15.0 — post-/model-switch push carries NO percentage; client stays stale
+   {"sessionId": "b4d10c45…"}
+   // 2.16.0 — recomputed value is pushed
+   {"sessionId": "bcc78d36…", "contextUsagePercentage": 0.715399980545044}
+   ```
+
+   On ≤2.15.0 a client's cached percentage stayed at the pre-switch value (3.39%) until the user
+   manually ran `/context`. On 2.16.0 it self-corrects.
+2. **The `/model` execute response gained `data.contextUsagePercentage`.**
+
+**cyril inherits the fix for free and needs no change.** `convert/kiro.rs:271` maps an absent
+`contextUsagePercentage` to `None` (deliberately — duration/effort-only frames are a real wire
+shape), and `session.rs:132` guards the assignment `if let Some(u) = context_usage`, so the cached
+value is retained on sparse frames and updated on populated ones. The stale-toolbar behaviour on
+≤2.15.0 was Kiro's, not cyril's.
+
+**Two methodology lessons, both worth carrying forward:**
+
+- **Field-path set diffing across aggregated frames hides per-frame behavioural changes.** The
+  aggregate `_kiro.dev/metadata` path set is **identical** (3 paths) on both versions — because
+  2.15.0 does emit `contextUsagePercentage`, just on a *different frame*. The differ reported
+  "same" and the change was only visible by looking at **which frame** carried the field. A
+  set-union diff answers "can this field ever appear", not "does it appear when it should".
+- **Executing a command with empty args does not cover its mutating form.** The all-commands
+  sweep ran `/model` with `args: {}` (a query) and found no delta; the `data.contextUsagePercentage`
+  addition only appears when `/model` is invoked *with a value* to actually switch.
+
 ### Residual gaps — genuinely not covered
 
-- **No turn traffic on either engine.** Everything here is handshake, settle, and command
-  responses. `_kiro.dev/metadata` was only ever seen in its **empty pre-turn form (2 field
-  paths)** — the populated form (`meteringUsage[]`, `turnDurationMs`, `effort`, `refusal`) never
-  appeared, so field changes there would be invisible to this audit. Same for tool-call
-  notifications, `session/request_permission`, and thought chunks.
-  `_kiro.dev/subagent/list_update` likewise only appeared empty.
-  *Cheap way in next time:* `KIRO_MOCK_CHAT_RESPONSE` is a free deterministic backend, but it is
-  **strings-only** (object entries panic kiro-cli at `initialize`), so it yields agent text and
-  turn lifecycle **but no tool calls, no metering, no permission prompts**.
+- **Turn traffic is only PARTLY covered** (see the mock-backend section above). Agent text and
+  turn lifecycle are now verified on v2; what the strings-only mock cannot reach remains
+  unchecked: **tool-call notifications** (`session/update` `tool_call`/`tool_call_update`),
+  **`session/request_permission`**, **thought chunks**, and the **`meteringUsage[]`** /
+  `refusal` fields on `_kiro.dev/metadata` (mock turns are zero-credit, so no metering frame is
+  ever produced). Reaching those needs a real turn — i.e. credits — or a fake bridge.
+  `_kiro.dev/subagent/list_update` was still only ever seen in its empty form.
+- **No KAS turn traffic at all.** The mock backend is read by the two **Rust** crates
+  (`chat_cli`, `chat_cli_v2`); KAS has its own TypeScript backend client, so
+  `KIRO_MOCK_CHAT_RESPONSE` does not cover `--agent-engine kas`. The only KAS turns taken this
+  audit were the paid workflow runs.
 - **`nm` cannot detect new fields on existing structs** — a documented limit of the method. Only
   the live A/B can, and only for messages the probe actually elicits. Anything on a message shape
   not exercised above is unchecked by construction.
@@ -692,6 +748,9 @@ probe-v2-context-breakdown-ab-2.16.0.py <bin> v2-context-<ver>.jsonl
 # EVERY read-only v2 command + options queries (free)     [NEW this audit]
 probe-v2-all-commands-ab-2.16.0.py <bin> v2-allcmd-<ver>.jsonl
 # ...and again with KIRO_TEST_MODE=1 to sweep dark-shipped flags
+
+# v2 TURN traffic via the free mock backend (free, offline)  [NEW this audit]
+probe-v2-turn-traffic-ab-2.16.0.py <bin> v2-turn-<ver>.jsonl
 
 # KAS host-init A/B (no prompt turn, zero credits)
 probe-kas-hostinit-2.15.0.py <bin> kas-hostinit-<ver>.jsonl
