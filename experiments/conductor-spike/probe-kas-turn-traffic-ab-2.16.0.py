@@ -117,16 +117,19 @@ AGENT = {}          # turn_tag -> concatenated agent text
 # naive capture writes credentials to disk — the defect cyril-hhgw tracks in two
 # older probes. Scrub at emit time so the capture is committable by construction
 # rather than needing a post-hoc pass someone can forget.
-SECRET_KEYS = {"accessToken", "access_token", "profileArn", "profile_arn",
-               "idToken", "refreshToken", "authorization", "Authorization"}
+SECRET_KEYS = {"accessToken", "access_token", "refreshToken", "refresh_token",
+               "idToken", "id_token", "clientSecret", "client_secret", "bearer",
+               "profileArn", "profile_arn", "authorization", "Authorization"}
 
 
-def scrub(o):
-    if isinstance(o, dict):
-        return {k: ("<redacted>" if k in SECRET_KEYS else scrub(v)) for k, v in o.items()}
-    if isinstance(o, list):
-        return [scrub(v) for v in o]
-    return o
+def scrub(obj):
+    """Deep-copy with credential values replaced. Applied only on the way to the log."""
+    if isinstance(obj, dict):
+        return {k: ("<redacted>" if k in SECRET_KEYS and obj[k] else scrub(obj[k]))
+                for k in obj}
+    if isinstance(obj, list):
+        return [scrub(x) for x in obj]
+    return obj
 
 
 def emit(direction, envelope, method, parsed):

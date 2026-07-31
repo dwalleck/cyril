@@ -65,7 +65,10 @@ TOKEN = sys.argv[3] if len(sys.argv) > 3 else os.path.expanduser(
     "~/.aws/sso/cache/kiro-auth-token-cli.json")
 
 SECRET_KEYS = {"accessToken", "access_token", "refreshToken", "refresh_token",
-               "idToken", "id_token", "clientSecret", "client_secret", "bearer"}
+               "idToken", "id_token", "clientSecret", "client_secret", "bearer",
+               # profileArn is not a bearer credential but it is an account-identifying
+               # ARN; added 2026-07-31 so all bidirectional-logging probes share one set.
+               "profileArn", "profile_arn", "authorization", "Authorization"}
 
 
 def load_token(path):

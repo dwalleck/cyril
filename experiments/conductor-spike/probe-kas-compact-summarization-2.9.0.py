@@ -13,7 +13,28 @@ TOKEN = os.path.expanduser("~/.aws/sso/cache/kiro-auth-token.json")
 CWD = tempfile.mkdtemp(prefix="kas-compact-")
 subprocess.run("git init -q -b main", cwd=CWD, shell=True)
 log = open(OUT, "w")
-def rec(d, o): log.write(json.dumps({"d": d, **o}) + "\n"); log.flush()
+
+# cyril-hhgw: `rec()` logs every frame including our own reply to
+# _kiro/auth/getAccessToken, which carries a LIVE bearer token. Redact on the way
+# to the log ONLY — KAS still receives the real value and the frame shape survives,
+# so the capture stays diff-able and is committable by construction. Matches the
+# "<redacted>" convention in the committed kas-live-session-trace-2.11.0.jsonl.
+SECRET_KEYS = {"accessToken", "access_token", "refreshToken", "refresh_token",
+               "idToken", "id_token", "clientSecret", "client_secret", "bearer",
+               "profileArn", "profile_arn", "authorization", "Authorization"}
+
+
+def redact(obj):
+    """Deep-copy with credential values replaced. Applied only on the way to the log."""
+    if isinstance(obj, dict):
+        return {k: ("<redacted>" if k in SECRET_KEYS and obj[k] else redact(obj[k]))
+                for k in obj}
+    if isinstance(obj, list):
+        return [redact(x) for x in obj]
+    return obj
+
+
+def rec(d, o): log.write(json.dumps({"d": d, **redact(o)}) + "\n"); log.flush()
 proc = subprocess.Popen([runtime, "--experimental-wasm-modules", SERVER, "--transport=stdio"],
                         cwd=CWD, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                         stderr=subprocess.DEVNULL, text=True, bufsize=1)
