@@ -511,7 +511,66 @@ KAS now publishes it per model alongside the existing `hasEffort` / `effortSchem
 `defaultEffortLevel` gives a real default to render against.
 
 `sourceProviders: false`, `executionTargets: ["local"]`, `sessionSources: ["local"]` — cloud/relay
-still dormant on a local run.
+still dormant on a local run. See the next section for what moved underneath.
+
+## Cloud / remote-agent stack (`_kiro/sourceProviders/*`) — wire-frozen, internals churning
+
+**The wire surface did not change in 2.16.0.** Both methods are present and unmodified in the
+109-literal set, and all four capability keys still report their dormant local-only values. What
+changed is underneath, plus one field pair that finally surfaced.
+
+Full characterization lives in **[docs/kiro-2.12.3-wire-audit.md](kiro-2.12.3-wire-audit.md)**
+(where the stack landed, in KAS 0.17.2) — not repeated here. The short version, for context:
+
+- `_kiro/sourceProviders/list` (connection-scoped, session-less, no request fields) and
+  `listResources` (`{providerType, cursor?, limit?}`, paged) expose an **account-scoped catalog of
+  repo providers — `GITHUB` / `GITLAB` / `MIDWAY`** (MIDWAY = internal-Amazon), each with
+  `connectionStatus` + `setupUrl` for OAuth handoff. It is the discovery half of running an agent
+  against a cloud-hosted repo in a `cloud-sandbox` execution target (placement `relayed` rather
+  than `executedHere`).
+- **One env var gates all of it**: `KIRO_REMOTE_SESSIONS_ENDPOINT` (or
+  `--remote-sessions-endpoint`) flips **all four caps at once** — `sourceProviders true`,
+  `sessionSources` +`remote`, `sessionListScopes` +`user`, `executionTargets` +`cloud-sandbox`.
+  No per-cap flags.
+- **Dispatch is unconditional**: calling either method without a wired catalog returns a typed
+  `-32000 "no source provider catalog is configured"`, **not `-32601`** — so a client cannot
+  feature-detect the cloud stack by probing for method-not-found.
+- Backend is a **distinct service** from the CodeWhisperer streaming endpoint that serves turns:
+  `@amzn/kiro-web-portal-service`, Smithy **RPC-v2-CBOR**, `POST
+  /service/KiroWebPortalService/operation/<Op>`, with operation names that do **not** match the
+  ACP method names (`sourceProviders/list` → `ListAvailableProviders`, `listResources` →
+  `ListProviderResources`). Auth contract is three headers: `Authorization: Bearer`,
+  `X-Kiro-Idp`, `X-Kiro-Profile-Arn`.
+
+### What 2.16.0 changed
+
+1. **The cloud vocabulary reached the wire on a purely local run.** `_kiro/sessions/changed`
+   now carries `upserted[].source` (`"local"`) and `upserted[].executionTarget.kind` (`"local"`)
+   — see the handshake table above. These are the cloud stack's persisted per-session fields; up
+   to 2.15.0 they stayed internal. Nothing is enabled by their appearance, but a cyril that
+   consumes `sessions/changed` will now see them, and the same fields are what carry `remote` /
+   `cloud-sandbox` once the endpoint is set.
+2. **The cloud-config transport moved to a generated Smithy client.**
+   `src/cloud-config/source/http-cloud-config-transport.ts` and
+   `src/cloud-config/source/inert-cloud-config-source.ts` were **removed**, replaced by
+   `src/cloud-config/source/smithy-cloud-config-transport.ts` — a `KiroWebBearerServiceClient`
+   with the same `addKiroAuthHeaders` middleware, paging `GetConfigManifestCommand` via
+   `nextToken` (`MAX_PAGES 1000`, 30s request timeout). Nearly every `src/session/bff-*.ts` module
+   changed alongside it (`bff-source-provider-catalog`, `bff-remote-session-source`,
+   `bff-remote-agent-link`, `bff-provider-resources`, `remote-sessions-composition`, …).
+
+**Keep these two features distinct:** cloud-**config** (org-pushed configuration manifests) is not
+the same surface as source**Providers** (repo-provider catalog). They share the web-portal backend
+and the auth contract, which is why they move together, but they are separate features.
+
+Deliberately *not* concluding anything from the removal of `inert-cloud-config-source.ts`. "Inert"
+names a no-op source and its deletion is suggestive, but the composition module's bundler-renamed
+identifiers did not let us confirm what replaced it — and the capability values are still dormant,
+which is the fact that matters. Treat this as churn, not as a launch signal.
+
+**cyril status: unchanged — KAS-8 / deferred.** `cyril-tikf` still stands: model or
+explicitly-ignore the four capability keys per the model-full-wire-surface rule. There is no
+reason to speak the protocol until there is a cloud feature to speak it for.
 
 ## Two other new `_kiro/*` methods
 
