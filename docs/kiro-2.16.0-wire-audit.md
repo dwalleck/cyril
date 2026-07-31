@@ -148,12 +148,14 @@ Note the engine implements **five** node types; the seven bundled recipes only e
 ```jsonc
 { workflowId, workflowName, status, inputs, artifacts, capturedOutputs,
   root: NodeState,          // synthetic root, type "sequence", nodeId === workflowId
-  createdAt, planRevision }
+  createdAt, planRevision,
+  parentSessionId,          // observed live; not visible in initState()
+  workspacePath }           // observed live; not visible in initState()
 ```
 
 `NodeState` mirrors `NodeDescriptor` plus runtime fields: `status`, `children[]`, and per-node
 `sessionId`, `artifacts`, `capturedOutput`, `failureReason`, `iteration`, `branchId`,
-`completionSignal`, `endedAt`.
+`completionSignal`, `startedAt`, `endedAt`.
 
 **`nodePath`** — array from `nodePathTo()` (`src/workflow/node-tree.ts`), rooted at `workflowId`.
 Inside a `repeat`, the segment is **`iter-<n>`, not the child nodeId**:
@@ -174,6 +176,12 @@ Inside a `repeat`, the segment is **`iter-<n>`, not the child nodeId**:
 
 Do **not** confuse these with `success`/`warning`/`fault`, which are `send_message` *severity*
 values landing on `nodeState.completionSignal` — see the third hazard below.
+
+Four of these shapes (`run_start`, `node_start`, `node_complete`, `run_complete`) plus
+`NodeDescriptor`, `WorkflowState` and `nodePath` are **confirmed against a live run** — see
+"Live end-to-end verification" below, which also lists three corrections the run forced. The
+other five (`node_paused`, `paused`, `steps_queued`, `loop_iteration`, `watch_poll`) remain
+static-only.
 
 ### Three hazards for any consumer
 
@@ -251,6 +259,65 @@ runtime answers.
 
   Both `defaultPollIntervalSec: 60`, `minPollIntervalSec: 30`. These make workflows
   **externally-triggered and long-running**, not just fire-and-forget.
+
+### Live end-to-end verification — a CLIENT-authored DAG executes
+
+Everything above is static (bundle literals + read-only calls). Per
+`feedback_kiro_schema_vs_runtime`, that only proves schema-acceptance. So
+`probe-kas-custom-dag-live-2.16.0.py` **runs a DAG the client wrote inline** — no model involved
+in constructing it — and captures the real notifications. Capture:
+`experiments/conductor-spike/kas-custom-dag-2.16.0.jsonl`.
+
+The DAG: one `parallel` node, `joinPolicy: "all"`, two `wf-coder` steps whose prompts forbid tool
+use, with a `{{token}}` template variable. **This costs credits** (two real agent sessions); the
+whole run took ~4.7s wall-clock.
+
+**Result: it works.** `_kiro/workflow/new` accepted the inline object and
+`_kiro/workflow/invoke` ran it to `status: "completed"`. Ten notifications, in order:
+
+```
+run_start
+node_start   fan    parallel  (no sessionId, no branchId, no agentName)
+node_start   alpha  step      (no sessionId)  branchId=alpha
+node_start   beta   step      (no sessionId)  branchId=beta
+node_start   alpha  step      sessionId=sess_a3d8bb37…  branchId=alpha
+node_start   beta   step      sessionId=sess_fd35dac1…  branchId=beta
+node_complete alpha  status=completed  capturedOutput=""
+node_complete beta   status=completed  capturedOutput=""
+node_complete fan    status=completed
+run_complete         status=completed
+```
+
+Confirmed against the documented shapes:
+
+- **The double `node_start` is real** — `alpha` and `beta` each emitted twice, the second carrying
+  `sessionId`. Note both branches emit their *first* `node_start` before either receives a
+  session, so a consumer cannot assume start/session pairs arrive adjacently.
+- **Steps are peer sessions** — three distinct sessionIds appeared on `session/update`: the parent
+  plus one per step. Confirms the architecture section empirically.
+- **`nodePath`** came back exactly as modelled: `["wf_a02797…", "fan", "alpha"]`.
+- **Optional-field guards behave as read** — the `parallel` node's `node_start` carried no
+  `agentName` and no `branchId`; step nodes carried both.
+- **`parentSessionId` is injected on every event**, including ones whose payload never sets it.
+- **`completionSignal: "success"`** appeared on both step NodeStates in `finalState`, confirming
+  the `send_message`-severity mechanism.
+- `node_paused`, `paused`, `steps_queued`, `loop_iteration` and `watch_poll` did **not** fire —
+  expected, since the DAG has no `repeat`/`watch` node and nothing paused. **Those five payload
+  shapes remain static-only, not live-verified.**
+
+Three corrections the live run forced:
+
+1. **`_kiro/workflow/new` returns `{workflowId, initialState}`** — the full `WorkflowState`, not
+   the `{workflowId, status}` that the agent-facing `run_workflow` tool returns. A client gets the
+   whole initial tree up front and does not need `run_start` to learn the plan.
+2. **`WorkflowState` also carries `parentSessionId` and `workspacePath`**, neither of which is set
+   in `initState()` — they are attached later, so a static read of that function under-reports.
+3. **`NodeState` carries `startedAt`** alongside `endedAt`.
+
+One behaviour worth flagging: **`node_start.prompt` carries the RAW, un-interpolated template.**
+The emitted value was literally `"… reporting exactly: alpha-{{token}}"`, not `alpha-OK42`.
+Interpolation happens downstream of the notification, so a client rendering `prompt` shows
+template source, not what the agent received.
 
 ### Architecture — workflow steps are full sessions, not subagents
 
@@ -430,6 +497,9 @@ probe-kas-hostinit-2.15.0.py <bin> kas-hostinit-<ver>.jsonl
 
 # KAS workflow runtime, gate flipped on (no prompt turn)  [NEW this audit]
 probe-kas-workflow-runtime-2.16.0.py <bin> kas-workflow-<ver>.jsonl
+
+# LIVE client-authored DAG execution (COSTS CREDITS — two real agent sessions)
+probe-kas-custom-dag-live-2.16.0.py <bin> kas-custom-dag-<ver>.jsonl
 
 # doc manifest
 extract_doc_manifest.py <bin> docs/kiro-docs-index-<ver>
