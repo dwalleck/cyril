@@ -697,6 +697,81 @@ value is retained on sparse frames and updated on populated ones. The stale-tool
   sweep ran `/model` with `args: {}` (a query) and found no delta; the `data.contextUsagePercentage`
   addition only appears when `/model` is invoked *with a value* to actually switch.
 
+### KAS real-turn traffic (paid A/B) — one turn-only field, plus a falsifier closed
+
+`probe-kas-turn-traffic-ab-2.16.0.py` is the KAS lane that never existed: every other KAS probe
+in the tree is targeted at one feature, so nothing captured the whole turn surface in a
+binary-parameterized run. There is **no mock backend for KAS** (`KIRO_MOCK_CHAT_RESPONSE` is read
+by the two Rust crates; KAS has its own TS client), so **every turn is a paid model call** — this
+is 4 turns × 2 binaries, run on cyril's real path (`kiro-cli-chat acp --agent-engine kas`).
+
+Scenario, chosen to maximise surface per paid turn: **read** (fs tool calls + `fs/*` callbacks) →
+**exit-code** (non-zero terminal exit) → **write** (fs_write + checkpoints) → **subtask** (the
+`agent-subtask` path). Output is written directly in `diff-acp-wire.py`'s record format, so the
+legs diff with no adapter.
+
+Surface actually exercised (identical inventory on both binaries): `tool_call` /
+`tool_call_update`, including the `_meta.kiro.kind: "agent-subtask"` variants; the full
+`session_info_update` kind set — `turn_start`, `turn_end`, `turn_completion`, `context_usage`,
+`user_message_id_assigned`, `pending_interaction`, `interaction_resolved`, `focus_update`;
+`config_option_update`; `available_commands_update`; and 9 distinct host callbacks
+(`fs/read_text_file` ×3, `fs/write_text_file`, `terminal/{create,output,wait_for_exit,release}`,
+`session/request_permission` ×2, `_kiro/auth/getAccessToken`, `_kiro/terminal/shell_type`).
+
+**The one genuinely new turn-only field:**
+
+```jsonc
+// session/update :: session_info_update, _meta.kiro.kind == "turn_completion"
+{"promptTurnSummaries": [{"unit":"credit","unitPlural":"credits",
+                          "usage":0.10456622736318409,"usedTools":["read_file"]}],
+ "elapsedTime": 4442, "status": "success",
+ "requestIds": ["fdc505a9-…","9edf2750-…"]}          // <-- NEW in 2.16.0
+```
+
+`requestIds[]` appears on **`turn_completion` only** — 4/4 such frames on 2.16.0, **0/4 on
+2.15.0** — and on no other kind (`context_usage`, `turn_end`, `turn_start`,
+`user_message_id_assigned`, `pending_interaction`, `interaction_resolved`, `focus_update` all
+carry none, on both). It sits beside the existing metering payload, so it reads as backend
+request correlation for the turn.
+
+**cyril action:** `crates/cyril-core/tests/fixtures/kas/session_info_update_turn_completion.json`
+models `promptTurnSummaries`/`elapsedTime`/`status` but **not `requestIds`**. Per the
+model-full-wire-surface rule that fixture is now an incomplete sample of the real frame.
+
+Everything else the differ reported was already known from the cheaper probes — `sessions/changed`
+`source`+`executionTarget.kind`, `replayMarking`, `_meta.workflowsEnabled`,
+`effortLevels`/`defaultEffortLevel` — which is itself a useful result: **the expensive lane
+confirmed the cheap lanes rather than contradicting them.** `tool_call`, `tool_call_update`,
+`agent_message_chunk`, `turn_end` and every host-callback shape are **byte-stable** across the two
+binaries.
+
+One detail the turn A/B added to the effort story: the advertised `effortLevels` ladder includes
+**`"none"`**, and only for the GPT models — `GPT 5.6 Sol` / `Terra` / `Luna` all report
+`["none","low","medium","high","xhigh","max"]` with `defaultEffortLevel: "high"`. That is direct
+evidence for **cyril-8yka** (stale effort badge when a GPT model reports `effort: "none"`):
+`none` is a *legitimate advertised level*, not a degenerate value to paper over.
+
+**Residual falsifier CLOSED.** `reference_kiro_terminal_wait_exit_reply_shape` recorded an
+outstanding live check: reply to `terminal/wait_for_exit` with the **flat** typed shape and prove
+KAS surfaces a non-zero code. Turn 2 does exactly that — host exits **3**, we reply
+`{"exitCode": 3, "signal": null}` (flat, no `exitStatus` wrapper), and the agent answers *"The
+exit code was 3."* on **both** binaries. The nested shape in
+`probe-kas-fs-terminal-host-2.10.0.py` remains the trap that memory describes.
+
+**A live-confirmed KAS quirk, and a cyril bug reproduced.** `terminal/create` sends the command as
+a **single shell string with no `args` array**:
+
+```jsonc
+{"sessionId":"sess_…","command":"sh -c 'exit 3'","cwd":"/…"}
+```
+
+A host that exec's `[command, *args]` argv-style looks for a file literally named `sh -c 'exit 3'`
+and fails `ENOENT`. The first run of this probe did exactly that and produced exit 1 — which is
+the defect **cyril-6bol** already tracks ("create runs argv with no shell"). A correct host runs
+the string through a shell when `args` is absent. Worth noting the first run's falsifier *looked*
+like a pass (the agent said "3" by reasoning about the intended command) — the verdict logic now
+requires the **host** to have actually produced the code before it will report PASS.
+
 ### Residual gaps — genuinely not covered
 
 - **Turn traffic is only PARTLY covered** (see the mock-backend section above). Agent text and
@@ -706,10 +781,10 @@ value is retained on sparse frames and updated on populated ones. The stale-tool
   `refusal` fields on `_kiro.dev/metadata` (mock turns are zero-credit, so no metering frame is
   ever produced). Reaching those needs a real turn — i.e. credits — or a fake bridge.
   `_kiro.dev/subagent/list_update` was still only ever seen in its empty form.
-- **No KAS turn traffic at all.** The mock backend is read by the two **Rust** crates
-  (`chat_cli`, `chat_cli_v2`); KAS has its own TypeScript backend client, so
-  `KIRO_MOCK_CHAT_RESPONSE` does not cover `--agent-engine kas`. The only KAS turns taken this
-  audit were the paid workflow runs.
+- **KAS turn traffic is now covered** (paid A/B, see above) for text, tool calls, subtasks,
+  permissions, fs + terminal callbacks and all eight `session_info_update` kinds. Still unexercised
+  there: MCP tool calls, thought/reasoning chunks, `_kiro/workflow/*` during a *prompted* turn (the
+  workflow runs were invoked directly), error/throttle paths, and `node_paused`.
 - **`nm` cannot detect new fields on existing structs** — a documented limit of the method. Only
   the live A/B can, and only for messages the probe actually elicits. Anything on a message shape
   not exercised above is unchecked by construction.
@@ -751,6 +826,11 @@ probe-v2-all-commands-ab-2.16.0.py <bin> v2-allcmd-<ver>.jsonl
 
 # v2 TURN traffic via the free mock backend (free, offline)  [NEW this audit]
 probe-v2-turn-traffic-ab-2.16.0.py <bin> v2-turn-<ver>.jsonl
+
+# KAS full-surface REAL turns — COSTS CREDITS (4 turns/binary) [NEW this audit]
+probe-kas-turn-traffic-ab-2.16.0.py <bin> kas-turn-<ver>.jsonl
+diff-acp-wire.py kas-turn-2.15.0.jsonl kas-turn-2.16.0.jsonl \
+    --label-old 2.15.0 --label-new 2.16.0
 
 # KAS host-init A/B (no prompt turn, zero credits)
 probe-kas-hostinit-2.15.0.py <bin> kas-hostinit-<ver>.jsonl
