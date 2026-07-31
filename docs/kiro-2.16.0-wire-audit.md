@@ -175,17 +175,23 @@ Inside a `repeat`, the segment is **`iter-<n>`, not the child nodeId**:
 | node `type` | `step` `sequence` `repeat` `parallel` `watch` |
 
 Do **not** confuse these with `success`/`warning`/`fault`, which are `send_message` *severity*
-values landing on `nodeState.completionSignal` — see the third hazard below.
+values landing on `nodeState.completionSignal` — see the send_message hazard below.
 
-Four of these shapes (`run_start`, `node_start`, `node_complete`, `run_complete`) plus
-`NodeDescriptor`, `WorkflowState` and `nodePath` are **confirmed against a live run** — see
-"Live end-to-end verification" below, which also lists three corrections the run forced. The
-other five (`node_paused`, `paused`, `steps_queued`, `loop_iteration`, `watch_poll`) remain
-static-only.
+**Eight of the nine shapes are confirmed against live runs** across two probes — see "Live
+end-to-end verification" and "Live verification — repeat + watch" below, which between them list
+six corrections the runs forced. Only **`node_paused` remains static-only**: it did not fire on
+the `repeat`-exhaustion path (see the pairing correction below), and its other emit conditions
+(mid-node pause request, `send_message` severity `warning`, throttle retry, stale-run liveness)
+were not reachable from a scripted probe.
 
-### Three hazards for any consumer
+### Six hazards for any consumer
 
-1. **`node_start` fires twice per step node.** The first emission precedes session creation (no
+1. **`run_complete` does not mean the run finished.** It is emitted with
+   **`status: "paused"`** as well as with terminal statuses (observed live on the `repeat`
+   exhaustion path). Only `completed`/`failed`/`aborted` are terminal, and only those unsubscribe
+   the bridge. **Check `status` — never treat the arrival of `run_complete` as end-of-run**, or a
+   client will tear down a workflow that is still live and resumable.
+2. **`node_start` fires twice per step node.** The first emission precedes session creation (no
    `sessionId`); `executeStep`'s `onSessionCreated` callback re-emits the *same* `nodeId`/
    `nodePath` with `sessionId` populated. The bundle comment says this is deliberate — it lets
    clients map `nodeId → sessionId` for drill-in and per-step approvals without a later signal.
@@ -193,11 +199,11 @@ static-only.
    `(workflowId, nodeId, nodePath)` and guard partial fields, never append. **On the resume path
    the paused node already has a `sessionId` at re-entry, so it rides the first emission and the
    re-emit does not happen — the emission count is not fixed.**
-2. **`steps_queued` is overloaded.** It is both "here are the pending steps" (`pendingSteps`
-   populated, no `resolution`) and a bare acknowledgement of a queued-step proposal
-   (`pendingSteps: []` with `resolution.outcome`). Treating empty `pendingSteps` as "queue
-   drained" is wrong.
-3. **Step completion rides `send_message`, not the workflow protocol.**
+3. **`steps_queued` is overloaded.** It is both "here are the pending steps" (`pendingSteps`
+   populated, **no `resolution` key at all** — confirmed live) and a bare acknowledgement of a
+   queued-step proposal (`pendingSteps: []` with `resolution.outcome`). Treating empty
+   `pendingSteps` as "queue drained" is wrong.
+4. **Step completion rides `send_message`, not the workflow protocol.**
    `WORKFLOW_STEP_COMPLETION_PROTOCOL` steering tells the step agent every turn must end with a
    `send_message` call carrying severity `success` (done), `warning` (needs user input → node
    pauses), or `fault` (failed); that severity lands on `nodeState.completionSignal`. A step's
@@ -206,6 +212,14 @@ static-only.
    completing. `src/workflow/run-liveness.ts` exists to force-pause stale `running` nodes for
    exactly this reason, emitting `node_paused` + `paused` with `STALE_RUNNING_PAUSE_REASON`. Do
    not treat `node_complete` as a reliable liveness signal.
+5. **`paused` and `node_paused` are independent, not paired** (live-verified: `repeat` exhaustion
+   emitted `paused` only, `node_paused` zero times). Do not wait for one on the strength of the
+   other.
+6. **`nodePath` is the only stable node identity.** `node_start` carries `iteration` but
+   `node_complete` does not, and a `repeat` re-uses the same `nodeId` every pass — so keying on
+   `nodeId` (or on `(nodeId, iteration)` read off `node_complete`) collapses iterations together.
+   Note also that `finalState` names iteration wrappers `loop#0`/`loop#1` while `nodePath` uses
+   `iter-0`/`iter-1`; **the two schemes do not match** and must be translated.
 
 ### The gate — opt-in, surfaced on the wire
 
@@ -318,6 +332,78 @@ One behaviour worth flagging: **`node_start.prompt` carries the RAW, un-interpol
 The emitted value was literally `"… reporting exactly: alpha-{{token}}"`, not `alpha-OK42`.
 Interpolation happens downstream of the notification, so a client rendering `prompt` shows
 template source, not what the agent received.
+
+### Live verification — `repeat` + `watch`, and where the model was wrong
+
+The custom-DAG run left five shapes unexercised. `probe-kas-workflow-repeat-watch-2.16.0.py`
+drives four of them in three phases; capture:
+`experiments/conductor-spike/kas-repeat-watch-2.16.0.jsonl`.
+
+- **Phase A — `watch`.** A single `watch` node on `github-pr` pointed at a **merged** PR. Watch
+  nodes are explicitly non-LLM, so **this phase costs zero credits.** Merged ⇒ `terminal-state` on
+  the first poll. (`idleTimeoutSec: 35` was set as a bounded safety net, since a failing `gh`
+  returns `idle` and would otherwise re-poll forever.)
+- **Phase B — `repeat`.** `maxIterations: 2`, `onMaxIterations: "pause"`, with a `fileCheck`
+  stopCondition on a file that never exists. Costs 2 trivial agent turns.
+- **Phase C — `steps_queued`.** `_kiro/workflow/update` with `action: "replace_remaining"` against
+  the paused run from phase B.
+
+Verified exactly as documented:
+
+```jsonc
+// watch_poll  (phase A)
+{ "workflowId": "wf_286a2d82…", "nodeId": "pr-watch",
+  "nodePath": ["wf_286a2d82…", "pr-watch"],
+  "outcome": "terminal-state", "at": "2026-07-31T03:54:37.084Z", "parentSessionId": "sess_…" }
+
+// loop_iteration  (phase B) — note the iteration counter is ZERO-INDEXED
+{ "workflowId": "wf_6d86e090…", "loopId": "loop", "iteration": 0, "stopConditionMet": false, … }
+{ "workflowId": "wf_6d86e090…", "loopId": "loop", "iteration": 1, "stopConditionMet": false, … }
+
+// paused  (phase B)
+{ "workflowId": "wf_6d86e090…", "pauseReason": "Repeat 'loop' reached maxIterations.", … }
+
+// steps_queued  (phase C) — the POPULATED-LIST form; no `resolution` key at all
+{ "workflowId": "wf_6d86e090…",
+  "pendingSteps": [{ "nodeId": "final", "type": "step", "agentName": "wf-coder" }], … }
+```
+
+`nodePath`'s `iter-<n>` rule is confirmed verbatim:
+`["wf_6d86e090…", "loop", "iter-0", "tick"]`. The double `node_start` also holds inside a
+`repeat`.
+
+**Three more corrections the run forced:**
+
+4. **`run_complete` does NOT mean the run finished.** Phase B emitted
+   `run_complete` with **`status: "paused"`** — which is not in the terminal set, so the bridge
+   stayed subscribed. `run_complete` signals "the runner's execution pass returned", and pausing
+   is one way that happens. A consumer treating it as end-of-run will tear down a live workflow.
+5. **`paused` and `node_paused` are NOT paired.** The `maxIterations` exhaustion path emitted
+   `paused` only — `node_paused` fired **zero** times across the whole probe. The two are
+   independent signals, so do not wait for one on the strength of the other.
+6. **`node_complete` omits `iteration`.** `node_start` carries `iteration` (0, 1), `node_complete`
+   does not. Combined with the repeat re-using the same `nodeId` (`tick`) every pass, **`nodePath`
+   is the only reliable node identity across the start/complete pair** — keying on `nodeId`, or on
+   `(nodeId, iteration)` taken from `node_complete`, collapses iterations together.
+
+Also worth knowing: in `finalState` the repeat's per-iteration wrappers are synthetic `sequence`
+nodes with nodeIds **`loop#0`, `loop#1`** — the `#N` form, whereas the same iteration appears in
+`nodePath` as `iter-0`, `iter-1`. **The two identifier schemes do not match**, so a client
+correlating `finalState` against streamed events must translate between them.
+
+**A real trap in the documented recovery path.** `run_workflow`'s own description says a
+maxIterations-paused run can be advanced by `update_workflow(replace_remaining)`. Live, that call
+returned:
+
+```json
+{ "workflowId": "wf_6d86e090…", "updated": true, "queued": true,
+  "message": "Queued: the remaining steps will be replaced after the current step completes." }
+```
+
+…and the replacement **never applied**: the run was paused with no step in flight, so nothing ever
+"completed" to trigger the swap. The `final` step never ran and the workflow stayed `paused`. So
+`replace_remaining` alone does **not** resume an exhausted loop — it only queues intent. Recovery
+needs `resume`/`retry` (or cancel-then-retry) as well.
 
 ### Architecture — workflow steps are full sessions, not subagents
 
@@ -500,6 +586,9 @@ probe-kas-workflow-runtime-2.16.0.py <bin> kas-workflow-<ver>.jsonl
 
 # LIVE client-authored DAG execution (COSTS CREDITS — two real agent sessions)
 probe-kas-custom-dag-live-2.16.0.py <bin> kas-custom-dag-<ver>.jsonl
+
+# LIVE repeat + watch + steps_queued (watch phase is FREE; repeat costs 2 turns)
+probe-kas-workflow-repeat-watch-2.16.0.py <bin> kas-repeat-watch-<ver>.jsonl
 
 # doc manifest
 extract_doc_manifest.py <bin> docs/kiro-docs-index-<ver>
