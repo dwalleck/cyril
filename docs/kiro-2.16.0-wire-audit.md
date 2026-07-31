@@ -68,6 +68,137 @@ Each event emits `{...event.payload, parentSessionId?}`. The bridge auto-unsubsc
 `run_complete` carries a terminal status. Pending lifecycle events buffered before the bridge
 attaches are flushed on subscribe — so a client attaching late does not miss the run's opening.
 
+### Event payload shapes
+
+Reconstructed from the constructed object literals at the emit sites in
+`src/workflow/workflow-runner.ts` and `src/workflow/run-liveness.ts` — the bundle is compiled JS,
+so the TypeScript types are erased and these are the literals themselves, not a declared schema.
+
+**Envelope.** Every event is a plain JSON-RPC **notification** (no `id`, no reply). The bridge
+flattens the payload straight into `params` and injects `parentSessionId`:
+
+```js
+const payload = parentSessionId !== undefined
+  ? { ...event.payload, parentSessionId }
+  : event.payload;
+void emit(KIND_TO_METHOD[event.kind], payload);
+```
+
+So `params` = the payload below **plus `parentSessionId`** when the run has one. There is **no
+top-level `sessionId`** — these are workflow-scoped, not session-scoped, so cyril's
+`RoutedNotification` session-matching will not route them. **`workflowId` is the correlation key
+on every event.**
+
+```jsonc
+// _kiro/workflow/run_start
+{ workflowId, workflowName, inputs, nodeTree: NodeDescriptor[], parentSessionId }
+
+// _kiro/workflow/run_complete
+{ workflowId, status, finalState: WorkflowState }
+
+// _kiro/workflow/node_start
+{ workflowId, nodeId, nodePath: string[], type,
+  agentName?,     // step nodes only
+  sessionId?,     // see the double-emit note below
+  prompt?,        // step nodes carrying an inline prompt
+  iteration?,     // present inside a repeat
+  branchId? }     // present inside a parallel
+
+// _kiro/workflow/node_complete
+{ workflowId, nodeId, nodePath, status,
+  artifacts?,       // omitted when empty
+  capturedOutput?,
+  failureReason? }
+
+// _kiro/workflow/node_paused
+{ workflowId, nodeId, nodePath, reason }
+
+// _kiro/workflow/paused
+{ workflowId, pauseReason }
+
+// _kiro/workflow/steps_queued
+{ workflowId, pendingSteps: NodeDescriptor[],
+  resolution?: { outcome: "applied" | "rejected" | "dropped", reason? } }
+
+// _kiro/workflow/loop_iteration
+{ workflowId, loopId, iteration, stopConditionMet: boolean }
+
+// _kiro/workflow/watch_poll
+{ workflowId, nodeId, nodePath, outcome, at }   // `at` = deps.clock.now()
+```
+
+**`NodeDescriptor`** — appears in `run_start.nodeTree` and `steps_queued.pendingSteps`, built by
+`nodeToDescriptor()` (`src/workflow/recipe-plan.ts`). Discriminated on `type`, five variants:
+
+```jsonc
+{ nodeId, type: "step",     agentName, modelId?, effortLevel? }
+{ nodeId, type: "sequence", steps: NodeDescriptor[] }
+{ nodeId, type: "repeat",   steps: NodeDescriptor[], maxIterations, onMaxIterations,
+                            stopCondition?, stopWhen? }
+{ nodeId, type: "parallel", branches: NodeDescriptor[] }
+{ nodeId, type: "watch",    agentName }   // agentName carries the HANDLER id (github-pr / crux-cr)
+```
+
+Note the engine implements **five** node types; the seven bundled recipes only exercise `step`,
+`repeat`, and `parallel`. `sequence` and `watch` are real but unused by the shipped recipes.
+
+**`WorkflowState`** — the whole persisted run, shipped verbatim in `run_complete.finalState`
+(`initState()`, `src/workflow/workflow-state.ts`):
+
+```jsonc
+{ workflowId, workflowName, status, inputs, artifacts, capturedOutputs,
+  root: NodeState,          // synthetic root, type "sequence", nodeId === workflowId
+  createdAt, planRevision }
+```
+
+`NodeState` mirrors `NodeDescriptor` plus runtime fields: `status`, `children[]`, and per-node
+`sessionId`, `artifacts`, `capturedOutput`, `failureReason`, `iteration`, `branchId`,
+`completionSignal`, `endedAt`.
+
+**`nodePath`** — array from `nodePathTo()` (`src/workflow/node-tree.ts`), rooted at `workflowId`.
+Inside a `repeat`, the segment is **`iter-<n>`, not the child nodeId**:
+
+```
+[workflowId, "review-loop", "iter-2", "run-tests"]
+```
+
+**Enum domains** (from status assignments across the workflow modules):
+
+| Field | Values |
+|---|---|
+| workflow `status` | `running` `paused` `completed` `failed` `aborted` — terminal set is `completed`/`failed`/`aborted` per `isTerminalWorkflowStatus()` |
+| node `status` | `pending` `running` `paused` `completed` `failed` `aborted` `skipped` |
+| `watch_poll.outcome` | `new-activity` `idle` `idle-timeout` `terminal-state` |
+| `steps_queued.resolution.outcome` | `applied` `rejected` `dropped` |
+| node `type` | `step` `sequence` `repeat` `parallel` `watch` |
+
+Do **not** confuse these with `success`/`warning`/`fault`, which are `send_message` *severity*
+values landing on `nodeState.completionSignal` — see the third hazard below.
+
+### Three hazards for any consumer
+
+1. **`node_start` fires twice per step node.** The first emission precedes session creation (no
+   `sessionId`); `executeStep`'s `onSessionCreated` callback re-emits the *same* `nodeId`/
+   `nodePath` with `sessionId` populated. The bundle comment says this is deliberate — it lets
+   clients map `nodeId → sessionId` for drill-in and per-step approvals without a later signal.
+   Structurally this is the same merge-update hazard as `ToolCallUpdate`: merge on
+   `(workflowId, nodeId, nodePath)` and guard partial fields, never append. **On the resume path
+   the paused node already has a `sessionId` at re-entry, so it rides the first emission and the
+   re-emit does not happen — the emission count is not fixed.**
+2. **`steps_queued` is overloaded.** It is both "here are the pending steps" (`pendingSteps`
+   populated, no `resolution`) and a bare acknowledgement of a queued-step proposal
+   (`pendingSteps: []` with `resolution.outcome`). Treating empty `pendingSteps` as "queue
+   drained" is wrong.
+3. **Step completion rides `send_message`, not the workflow protocol.**
+   `WORKFLOW_STEP_COMPLETION_PROTOCOL` steering tells the step agent every turn must end with a
+   `send_message` call carrying severity `success` (done), `warning` (needs user input → node
+   pauses), or `fault` (failed); that severity lands on `nodeState.completionSignal`. A step's
+   outcome is therefore decided by a **model-issued tool call** — if the agent omits it, the node
+   sits `paused` with reason `"Awaiting next user message on step session."` instead of
+   completing. `src/workflow/run-liveness.ts` exists to force-pause stale `running` nodes for
+   exactly this reason, emitting `node_paused` + `paused` with `STALE_RUNNING_PAUSE_REASON`. Do
+   not treat `node_complete` as a reliable liveness signal.
+
 ### The gate — opt-in, surfaced on the wire
 
 ```js
@@ -108,9 +239,10 @@ runtime answers.
   | `ralph` | 1 | `repeat` | `goal`, `prd_path` |
   | `semantic-review-multi-model` | 3 | `parallel`,`step` | `target`, `workdir` |
 
-  Node types are `step`, `repeat`, and **`parallel`** — a real DAG scheduler
-  (`src/workflow/parallel-scheduler.ts`), not a linear chain. `autoresearch` runs `maxIterations:
-  1000` with `onMaxIterations: "pause"`.
+  The recipes exercise `step`, `repeat`, and **`parallel`** — a real DAG scheduler
+  (`src/workflow/parallel-scheduler.ts`), not a linear chain. (The engine implements five node
+  types; `sequence` and `watch` are real but unused by the bundled set — see the payload-shapes
+  section.) `autoresearch` runs `maxIterations: 1000` with `onMaxIterations: "pause"`.
 
 - **`_kiro/workflow/listWatchHandlers`** → 2 handlers with JSON-Schema configs:
   - `github-pr` — polls a GitHub PR for comments/reviews/check status via the `gh` CLI
