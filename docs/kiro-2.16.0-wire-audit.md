@@ -615,6 +615,58 @@ Kiro intends to make it public.
 
 Artifacts: `docs/kiro-docs-index-2.16.0-{88,118,merged}.json`.
 
+## Coverage — what this audit checked, and what it did NOT
+
+Recorded so the next audit knows where the holes are rather than re-deriving them.
+
+### Gap-closure passes run after the first draft
+
+- **Every advertised v2 command response, not just `/context`.** The settle A/B cannot see command
+  responses at all, and the first pass only executed `/context` because the nm diff pointed there.
+  `probe-v2-all-commands-ab-2.16.0.py` executes **16 read-only commands plus 3
+  `commands/options` queries** on both binaries and structurally diffs every response. Result:
+  **`/context` is the only one that changed** — the other 18 are field-path identical. That
+  upgrades "v2 is frozen" from an inference to a measurement.
+  Skipped as unsafe/stateful: `quit` `clear` `compact` `rewind` `paste` `reply` `chat` `feedback`.
+- **Dark-shipped feature flags.** `KIRO_TEST_MODE` flips Kiro's 0%-rollout flags to treatment, and
+  the flag registry names one **`workflows`** (alongside `remote_sandbox`, `c2s`) — so the obvious
+  question is whether the v2 Rust engine hides a workflow surface too. Ran the full command sweep
+  with it set, on **both** binaries. Findings, all **pre-existing, none 2.16.0-attributable**:
+  - **No `workflows` command and no workflow tool appear on v2, even with the flag on.** The
+    workflow engine is **KAS-only**. (This also refutes the older note that `KIRO_TEST_MODE` might
+    be the only way to reach workflows on the ACP path — the real lever is the KAS
+    `settings.workflows.enabled` gate.)
+  - `voice` appears as a 25th command under test mode — identically on 2.15.0 and 2.16.0.
+  - Test mode deterministically **suppresses backend-served data**: `usage` returns no `data` and
+    `commands/options` for `model` returns 0 options (19 without it). Identical both versions, so
+    these are test-mode artifacts, not flakiness and not a release delta.
+  - `contextUsagePercentage` shifts (3.574 → 2.991 on 2.16.0), confirming the flag really does
+    change the prompt/toolset. **Anyone benchmarking cyril must keep `KIRO_TEST_MODE` unset.**
+
+### Residual gaps — genuinely not covered
+
+- **No turn traffic on either engine.** Everything here is handshake, settle, and command
+  responses. `_kiro.dev/metadata` was only ever seen in its **empty pre-turn form (2 field
+  paths)** — the populated form (`meteringUsage[]`, `turnDurationMs`, `effort`, `refusal`) never
+  appeared, so field changes there would be invisible to this audit. Same for tool-call
+  notifications, `session/request_permission`, and thought chunks.
+  `_kiro.dev/subagent/list_update` likewise only appeared empty.
+  *Cheap way in next time:* `KIRO_MOCK_CHAT_RESPONSE` is a free deterministic backend, but it is
+  **strings-only** (object entries panic kiro-cli at `initialize`), so it yields agent text and
+  turn lifecycle **but no tool calls, no metering, no permission prompts**.
+- **`nm` cannot detect new fields on existing structs** — a documented limit of the method. Only
+  the live A/B can, and only for messages the probe actually elicits. Anything on a message shape
+  not exercised above is unchecked by construction.
+- **Backend axis untested.** All captures were same-day, which isolates the *binary* axis by
+  design. A backend rollout can add fields with no version change at all (this is exactly how
+  `meteringUsage[]` appeared in 2026-05). Detecting that needs a **same-binary re-capture weeks
+  apart**, which no single release audit can do.
+- **KAS `session_info_update` kinds unverified.** `context_usage` and `turn_end` are pushed
+  during turns; the host-init probe stops before the first prompt. `src/utils/context-usage-
+  breakdown.ts` being `cmp`-identical is good static evidence, but it is not a wire observation.
+- **Five `_kiro/workflow/*` shapes are live-verified, `node_paused` is not** — see the repeat +
+  watch section.
+
 ## What this means for cyril
 
 1. **No breakage.** v2 is frozen at settle; the one changed v2 response is additive and cyril's
@@ -636,6 +688,10 @@ probe-v2-surface-ab-2.11.0.py <bin> v2-surface-<ver>.jsonl
 
 # v2 /context command A/B (no prompt turn, free)          [NEW this audit]
 probe-v2-context-breakdown-ab-2.16.0.py <bin> v2-context-<ver>.jsonl
+
+# EVERY read-only v2 command + options queries (free)     [NEW this audit]
+probe-v2-all-commands-ab-2.16.0.py <bin> v2-allcmd-<ver>.jsonl
+# ...and again with KIRO_TEST_MODE=1 to sweep dark-shipped flags
 
 # KAS host-init A/B (no prompt turn, zero credits)
 probe-kas-hostinit-2.15.0.py <bin> kas-hostinit-<ver>.jsonl
