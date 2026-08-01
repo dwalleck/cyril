@@ -72,8 +72,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Who answers `/hooks` depends on which side owns a hook registry
         // (cyril-gk17) — resolved once here, from the same two values the
         // bridge was spawned with.
-        let hooks_source =
-            cyril_core::commands::HooksCommandSource::resolve(agent_engine, config.agent.kas_hooks);
+        let hooks_source = cyril_core::commands::HooksCommandSource::resolve(
+            agent_engine,
+            config.agent.kas_hooks,
+            cwd.clone(),
+        );
         let mut app = app::App::new(bridge, &config.ui, cwd.clone(), hooks_source);
 
         // Create initial session

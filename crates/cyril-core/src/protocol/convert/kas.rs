@@ -42,6 +42,38 @@ use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
 pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Option<Notification> {
     let kiro = siu.meta.as_ref()?.get("kiro")?;
     match kiro.get("kind").and_then(serde_json::Value::as_str) {
+        // cyril-gk17: a KAS-executed hook reached a terminal state. Carved
+        // producer: `ContextualHookInvoked` / `handleHookAction` build
+        // `{hook: {hookId, operationId, name, status, actionType, output?}}`,
+        // where `status` comes from `mapActionStateToHookStatus`:
+        // completed | failed | canceled | running | awaiting_approval.
+        //
+        // Only terminal states surface. `running` fires on every hook start and
+        // `awaiting_approval` is already represented by the permission request,
+        // so both would be duplicate chat noise — dropped, not rendered.
+        Some("hook_update") => {
+            let hook = kiro.get("hook")?;
+            let status = hook.get("status").and_then(serde_json::Value::as_str)?;
+            if matches!(status, "running" | "awaiting_approval") {
+                tracing::debug!(status, "KAS hook progress; not surfaced");
+                return None;
+            }
+            // A hook with no name is unattributable — surfacing "hook  failed"
+            // tells the user nothing actionable, so log and drop.
+            let Some(name) = hook.get("name").and_then(serde_json::Value::as_str) else {
+                tracing::warn!(status, "KAS hook_update carries no name; dropped");
+                return None;
+            };
+            Some(Notification::HookExecuted {
+                name: name.to_string(),
+                status: status.to_string(),
+                // Only `runCommand` hooks carry an exit code, and only once the
+                // run produced one. Absent means "not reported", never 0.
+                exit_code: hook
+                    .pointer("/output/result/exitCode")
+                    .and_then(serde_json::Value::as_i64),
+            })
+        }
         Some("turn_end") => Some(Notification::TurnCompleted {
             stop_reason: turn_end_stop_reason(kiro),
         }),
@@ -158,12 +190,6 @@ mod tests {
 
     use serde_json::json;
 
-    use super::*;
-    use crate::protocol::engine::{Engine, KasEngine};
-
-    /// Deserialize a captured fixture into a `SessionNotification` — the exact
-    /// layer the acp Client parses a `session/update` at (mirrors the
-    /// `schema_deserializes_captured_kas_session_updates` loader in `mod.rs`).
     fn load(name: &str) -> (serde_json::Value, acp::SessionNotification) {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests/fixtures/kas")
@@ -181,6 +207,92 @@ mod tests {
             other => panic!("fixture is not a session_info_update: {other:?}"),
         }
     }
+
+    /// Build a `session_info_update` carrying `_meta.kiro = kiro`, the envelope
+    /// every KAS lifecycle frame arrives in.
+    fn siu(kiro: serde_json::Value) -> acp::SessionInfoUpdate {
+        let sn: acp::SessionNotification = serde_json::from_value(json!({
+            "sessionId": "sess_test",
+            "update": { "sessionUpdate": "session_info_update", "_meta": { "kiro": kiro } }
+        }))
+        .expect("session_info_update envelope deserializes");
+        match sn.update {
+            acp::SessionUpdate::SessionInfoUpdate(siu) => siu,
+            other => panic!("not a session_info_update: {other:?}"),
+        }
+    }
+
+    // cyril-gk17: the hook_update frame, verbatim from the live capture
+    // `kas-v2hooks-2.16.0.jsonl`. Under kas_hooks="kas" the AGENT runs these
+    // commands on the host with no permission prompt, so dropping the frame
+    // means shell execution with no user-visible record at all.
+    #[test]
+    fn hook_update_terminal_states_surface_progress_states_drop() {
+        let frame = |status: &str, exit: Option<i64>| {
+            let mut hook = serde_json::json!({
+                "hookId": "/w/.kiro/hooks/audit.json#hook-0",
+                "operationId": "7211cbc3-fca6-4c7f-a4c7-58435b8be937",
+                "name": "cyril-audit-pre",
+                "status": status,
+                "actionType": "runCommand"
+            });
+            if let Some(code) = exit {
+                hook["output"] = serde_json::json!({ "result": { "exitCode": code } });
+            }
+            siu(serde_json::json!({ "kind": "hook_update", "hook": hook }))
+        };
+
+        // Terminal states surface, carrying the exit code when reported.
+        match session_info_to_notification(&frame("completed", Some(0))) {
+            Some(Notification::HookExecuted {
+                name,
+                status,
+                exit_code,
+            }) => {
+                assert_eq!(name, "cyril-audit-pre");
+                assert_eq!(status, "completed");
+                assert_eq!(exit_code, Some(0));
+            }
+            other => panic!("completed must surface, got {other:?}"),
+        }
+        for status in ["failed", "canceled"] {
+            assert!(
+                matches!(
+                    session_info_to_notification(&frame(status, None)),
+                    Some(Notification::HookExecuted {
+                        exit_code: None,
+                        ..
+                    })
+                ),
+                "{status} must surface with no invented exit code"
+            );
+        }
+
+        // Progress states are noise — `running` fires on every hook start.
+        for status in ["running", "awaiting_approval"] {
+            assert!(
+                session_info_to_notification(&frame(status, None)).is_none(),
+                "{status} must not reach the transcript"
+            );
+        }
+    }
+
+    #[test]
+    fn hook_update_without_a_name_is_dropped() {
+        // "Hook : failed" tells the user nothing actionable.
+        let f = siu(serde_json::json!({
+            "kind": "hook_update",
+            "hook": { "status": "failed", "actionType": "runCommand" }
+        }));
+        assert!(session_info_to_notification(&f).is_none());
+    }
+
+    use super::*;
+    use crate::protocol::engine::{Engine, KasEngine};
+
+    /// Deserialize a captured fixture into a `SessionNotification` — the exact
+    /// layer the acp Client parses a `session/update` at (mirrors the
+    /// `schema_deserializes_captured_kas_session_updates` loader in `mod.rs`).
 
     #[test]
     fn turn_end_maps_to_turn_completed_endturn() {

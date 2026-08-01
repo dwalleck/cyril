@@ -62,9 +62,22 @@ pub(crate) const SESSION_START_METHOD: &str = "kiro/hooks/sessionStart";
 /// and simply has no command to display, so dropping the whole registry over
 /// one would hide every other hook the user has.
 pub(crate) fn parse_wire_hooks(params: &serde_json::Value) -> Option<Vec<crate::types::HookInfo>> {
-    let Some(array) = params.get("hooks").and_then(|h| h.as_array()) else {
-        tracing::debug!("KAS hooks payload has no `hooks` array");
-        return None;
+    // Missing and corrupt are different failure modes and must not collapse:
+    // an ABSENT `hooks` key is normal (a host-mode didChange carries none),
+    // while a PRESENT key of the wrong type is wire drift worth a warning.
+    let array = match params.get("hooks") {
+        None => {
+            tracing::debug!("KAS hooks payload carries no `hooks` key");
+            return None;
+        }
+        Some(serde_json::Value::Array(a)) => a,
+        Some(other) => {
+            tracing::warn!(
+                kind = ?std::mem::discriminant(other),
+                "KAS `hooks` is present but not an array — wire drift"
+            );
+            return None;
+        }
     };
     let mut out = Vec::with_capacity(array.len());
     for entry in array {

@@ -678,21 +678,30 @@ struct InternalChannels {
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
 
-/// Query KAS's hook registry (`_kiro/hooks/list`) and package the reply as the
-/// `CommandExecuted{command: "hooks"}` shape the `/hooks` panel already
-/// consumes (cyril-gk17).
+/// Send a hook listing outcome to the App: on success the two notifications
+/// below, on failure the single `BridgeError`. Returns whether the channel
+/// closed (the caller's signal to leave the run loop).
 ///
-/// Reusing that envelope is deliberate: the v2 and KAS registries reach the
-/// user through the same panel, so the dialect translation belongs at the wire
-/// edge — one display path, two dialects, the same split `convert/` makes.
-///
-/// `includeDisabled` is always `true`. A listing that hid disabled hooks would
-/// leave `/hooks enable <name>` unable to name its own target, and would make a
-/// disabled hook look simply absent.
-///
-/// Every failure path returns a `BridgeError` notification rather than nothing:
-/// the App is waiting on this command, and the bridge must notify for every
-/// command it processes, error cases included.
+/// Shared by `ListKasHooks` and `SetKasHookEnabled`, which differ only in how
+/// they obtain the listing.
+#[cfg(feature = "kas")]
+async fn send_hooks_listing(
+    tx: &mpsc::Sender<RoutedNotification>,
+    outcome: Result<Vec<crate::types::HookInfo>, Notification>,
+) -> bool {
+    match outcome {
+        Ok(hooks) => {
+            for note in hooks_listing_notifications(hooks) {
+                if notify_or_closed(tx, note).await {
+                    return true;
+                }
+            }
+            false
+        }
+        Err(note) => notify_or_closed(tx, note).await,
+    }
+}
+
 /// Two notifications per listing, in send order.
 ///
 /// `HooksChanged` goes first because it is what `SessionController` records —
@@ -711,6 +720,15 @@ fn hooks_listing_notifications(hooks: Vec<crate::types::HookInfo>) -> [Notificat
     ]
 }
 
+/// Query KAS's hook registry (`_kiro/hooks/list`) and translate the reply.
+///
+/// `includeDisabled` is always `true`. A listing that hid disabled hooks would
+/// leave `/hooks enable <name>` unable to name its own target, and would make a
+/// disabled hook look simply absent.
+///
+/// Every failure path returns a `BridgeError` notification rather than nothing:
+/// the App is waiting on this command, and the bridge must notify for every
+/// command it processes, error cases included.
 #[cfg(feature = "kas")]
 async fn kas_hooks_list(
     conn: &agent_client_protocol::ClientSideConnection,
@@ -1955,21 +1973,9 @@ async fn run_loop(
                 session_id,
                 workspace_paths,
             } => {
-                let mut closed = false;
-                match kas_hooks_list(&conn, &session_id, &workspace_paths, "hooks/list").await {
-                    Ok(hooks) => {
-                        for note in hooks_listing_notifications(hooks) {
-                            if notify_or_closed(&channels.notification_tx, note).await {
-                                closed = true;
-                                break;
-                            }
-                        }
-                    }
-                    Err(note) => {
-                        closed = notify_or_closed(&channels.notification_tx, note).await;
-                    }
-                }
-                if closed {
+                let listing =
+                    kas_hooks_list(&conn, &session_id, &workspace_paths, "hooks/list").await;
+                if send_hooks_listing(&channels.notification_tx, listing).await {
                     break;
                 }
             }
@@ -1995,38 +2001,48 @@ async fn run_loop(
                             operation: "hooks/setEnabled".to_string(),
                             message: format!("serialize params: {e}"),
                         })?;
-                        conn.ext_method(acp::ExtRequest::new(
-                            crate::protocol::kas::hooks::SET_ENABLED_METHOD,
-                            raw,
-                        ))
-                        .await
-                        .map_err(|e| {
-                            tracing::error!(error = %e, hook_id, enabled, "hooks/setEnabled failed");
-                            Notification::BridgeError {
+                        let reply = conn
+                            .ext_method(acp::ExtRequest::new(
+                                crate::protocol::kas::hooks::SET_ENABLED_METHOD,
+                                raw,
+                            ))
+                            .await
+                            .map_err(|e| {
+                                tracing::error!(error = %e, hook_id, enabled, "hooks/setEnabled failed");
+                                Notification::BridgeError {
+                                    operation: format!("hooks/setEnabled '{hook_id}'"),
+                                    message: e.to_string(),
+                                }
+                            })?;
+                        // A transport-level Ok is not an agent-level yes. The
+                        // reply is `{success: bool}` (+ an optional `message`),
+                        // and a `false` there means the agent declined to
+                        // rewrite the file — reporting that as success would
+                        // leave the user staring at an unchanged flag with no
+                        // explanation. Absent `success` is treated as success:
+                        // the field is optional on the covenant's
+                        // BaseCapabilityResponse, so absence is "not reported",
+                        // not "refused".
+                        if let Ok(body) =
+                            serde_json::from_str::<serde_json::Value>(reply.0.get())
+                            && body.get("success").and_then(|s| s.as_bool()) == Some(false)
+                        {
+                            let detail = body
+                                .get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("agent declined the change");
+                            tracing::warn!(hook_id, enabled, detail, "hooks/setEnabled refused");
+                            return Err(Notification::BridgeError {
                                 operation: format!("hooks/setEnabled '{hook_id}'"),
-                                message: e.to_string(),
-                            }
-                        })?;
+                                message: detail.to_string(),
+                            });
+                        }
                         kas_hooks_list(&conn, &session_id, &workspace_paths, "hooks/setEnabled")
                             .await
                     }
                     .await;
 
-                let mut closed = false;
-                match outcome {
-                    Ok(hooks) => {
-                        for note in hooks_listing_notifications(hooks) {
-                            if notify_or_closed(&channels.notification_tx, note).await {
-                                closed = true;
-                                break;
-                            }
-                        }
-                    }
-                    Err(note) => {
-                        closed = notify_or_closed(&channels.notification_tx, note).await;
-                    }
-                }
-                if closed {
+                if send_hooks_listing(&channels.notification_tx, outcome).await {
                     break;
                 }
             }

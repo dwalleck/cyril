@@ -217,22 +217,25 @@ impl Command for LoadCommand {
 /// - `/hooks enable|disable <name-or-id>` — flip a hook's `enabled` flag. The
 ///   agent rewrites the flag in the backing **file**, so the change persists
 ///   past the session; the command re-lists afterwards so the user sees it.
-pub struct KasHooksCommand;
+pub struct KasHooksCommand {
+    /// The session's workspace root, sent as `workspacePaths`.
+    ///
+    /// Supplied at construction from the SAME value the bridge was spawned
+    /// with, never re-derived from `std::env::current_dir()`: cyril accepts a
+    /// `--cwd` flag, so the process cwd and the workspace root genuinely
+    /// differ, and querying the wrong root returns an empty listing that
+    /// reads as "you have no hooks".
+    workspace_root: std::path::PathBuf,
+}
 
 impl KasHooksCommand {
-    /// Workspace roots to search for hook files. Hooks are workspace-scoped,
-    /// and this matches the cwd the bridge was spawned with — the same root
-    /// the agent already treats as the workspace.
-    fn workspace_paths() -> crate::Result<Vec<std::path::PathBuf>> {
-        let cwd = std::env::current_dir().map_err(|e| {
-            crate::Error::with_source(
-                crate::ErrorKind::CommandFailed {
-                    detail: "could not determine current working directory".into(),
-                },
-                e,
-            )
-        })?;
-        Ok(vec![cwd])
+    #[must_use]
+    pub fn new(workspace_root: std::path::PathBuf) -> Self {
+        Self { workspace_root }
+    }
+
+    fn workspace_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![self.workspace_root.clone()]
     }
 }
 
@@ -252,7 +255,7 @@ impl Command for KasHooksCommand {
                 "No active session — hooks are session-scoped.".into(),
             ));
         };
-        let workspace_paths = Self::workspace_paths()?;
+        let workspace_paths = self.workspace_paths();
 
         let mut parts = args.split_whitespace();
         let enabled = match parts.next() {
@@ -283,7 +286,7 @@ impl Command for KasHooksCommand {
         // name the agent will reject as an unknown hookId.
         let hook_id = match ctx.session.resolve_kas_hook_id(reference) {
             Ok(id) => id,
-            Err(candidates) if candidates.is_empty() => {
+            Err(crate::session::HookRefError::NotFound) => {
                 let known = ctx.session.kas_hooks().len();
                 return Ok(CommandResult::system_message(if known == 0 {
                     "No hooks known yet — run /hooks first.".into()
@@ -291,7 +294,7 @@ impl Command for KasHooksCommand {
                     format!("No hook named {reference:?} in the {known} known hooks.")
                 }));
             }
-            Err(candidates) => {
+            Err(crate::session::HookRefError::Ambiguous(candidates)) => {
                 return Ok(CommandResult::system_message(format!(
                     "{reference:?} is ambiguous across {} hooks — use the full id:\n  {}",
                     candidates.len(),

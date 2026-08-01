@@ -870,6 +870,24 @@ impl UiState {
                 self.add_system_message(format!("{operation} failed: {message}"));
                 true
             }
+            // cyril-gk17: a KAS-executed hook finished. Under `kas_hooks = "kas"`
+            // the agent runs these commands on this host with no permission
+            // prompt, so the transcript line IS the audit trail — it is the only
+            // place the user can see that a hook fired at all.
+            Notification::HookExecuted {
+                name,
+                status,
+                exit_code,
+            } => {
+                let mut text = format!("Hook {name}: {status}");
+                // Only appended when the hook actually reported one. A default
+                // of 0 would assert a clean exit that was never claimed.
+                if let Some(code) = exit_code {
+                    text.push_str(&format!(" (exit {code})"));
+                }
+                self.add_system_message(text);
+                true
+            }
             // Handled by the App via `refresh_hooks_panel`, not here
             // (cyril-gk17). It must NOT open the panel — it arrives unprompted
             // whenever KAS sees a hook file change — and this method cannot

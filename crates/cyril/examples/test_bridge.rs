@@ -585,6 +585,13 @@ fn print_notification(n: &Notification) {
         Notification::HooksChanged { hooks } => {
             println!("  [HooksChanged] {} hook(s)", hooks.len());
         }
+        Notification::HookExecuted {
+            name,
+            status,
+            exit_code,
+        } => {
+            println!("  [HookExecuted] {name}: {status} (exit {exit_code:?})");
+        }
         Notification::UsageUpdated { used, size } => {
             let pct = *used as f64 / (*size).max(1) as f64 * 100.0;
             println!("  [UsageUpdated] {used}/{size} tokens ({pct:.1}%)");

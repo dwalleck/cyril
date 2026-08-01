@@ -13,6 +13,19 @@
 /// - [`Kas`](Self::Kas): KAS's own file-watched loader executes on-disk
 ///   `.kiro/hooks` agent-side (hook-authoring tool + confirm dialogs);
 ///   execution leaves cyril's gate entirely.
+///
+///   **Workspace trust (cyril-gk17).** In this mode a `.kiro/hooks/*.json` in
+///   the workspace causes the AGENT to run arbitrary shell on this host, and
+///   no `session/request_permission` precedes it — live-verified on 2.16.0.
+///   Cyril's decision is deliberate and narrow: it does **not** implement a
+///   trust prompt, because it has no trust store to consult and inventing one
+///   would give a false assurance (KAS's own `workspaceTrusted` flag, which
+///   feeds `disabledReason: "untrusted-workspace"`, is the mechanism that
+///   belongs in that role and is not yet wired — cyril-mq15). Instead the
+///   mode stays **opt-in** (`Host` is the default), and every hook that runs
+///   is surfaced in the transcript via `Notification::HookExecuted`, so
+///   execution is at least never silent. Opting in is equivalent to trusting
+///   the workspace.
 /// - [`Off`](Self::Off): no hooks advertisement at all.
 ///
 /// Configured via TOML `[agent] kas_hooks = "host" | "kas" | "off"`.

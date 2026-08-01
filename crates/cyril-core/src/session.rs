@@ -1,5 +1,17 @@
 use crate::types::*;
 
+/// Why a user-typed hook reference did not resolve to a single hook id.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum HookRefError {
+    /// No hook in the known registry carries that id or name.
+    #[error("no hook by that id or name")]
+    NotFound,
+    /// Several hooks share the name. Carries every candidate's composite id so
+    /// the caller can tell the user exactly what to disambiguate with.
+    #[error("{} hooks share that name", .0.len())]
+    Ambiguous(Vec<String>),
+}
+
 pub struct SessionController {
     status: SessionStatus,
     id: Option<SessionId>,
@@ -115,8 +127,11 @@ impl SessionController {
     /// silently taking the first. Toggling the wrong hook rewrites a file on
     /// the user's disk, which is not a guess worth making.
     ///
-    /// `Err(vec![])` means no such hook; `Err` with entries means ambiguous.
-    pub fn resolve_kas_hook_id(&self, reference: &str) -> Result<String, Vec<String>> {
+    /// The two outcomes are distinct variants rather than an empty-vs-non-empty
+    /// `Vec`: "no such hook" and "ambiguous" get different guidance from the
+    /// command, and encoding them in a collection's length makes the illegal
+    /// fourth state (ambiguous-with-zero-candidates) representable.
+    pub fn resolve_kas_hook_id(&self, reference: &str) -> Result<String, HookRefError> {
         if self
             .kas_hooks
             .iter()
@@ -130,15 +145,14 @@ impl SessionController {
             .filter(|h| h.name.as_deref() == Some(reference))
             .filter_map(|h| h.id.clone())
             .collect();
-        if matches.len() == 1 {
-            match matches.pop() {
-                Some(id) => Ok(id),
-                // Unreachable given the length check; `Vec::pop` returns Option
-                // and this crate does not unwrap.
-                None => Err(Vec::new()),
+        match matches.pop() {
+            Some(id) if matches.is_empty() => Ok(id),
+            // `pop` already removed one, so put it back for the report.
+            Some(id) => {
+                matches.push(id);
+                Err(HookRefError::Ambiguous(matches))
             }
-        } else {
-            Err(matches)
+            None => Err(HookRefError::NotFound),
         }
     }
 
@@ -167,9 +181,13 @@ impl SessionController {
             // registry, so a hook deleted on disk must disappear here too
             // (cyril-gk17).
             Notification::HooksChanged { hooks } => {
+                // The contract is "did session state change", not "does the UI
+                // need work" — `kas_hooks` did change, so this is `true`. The
+                // App's own `HooksChanged` arm decides separately whether the
+                // panel is open and needs refreshing.
+                let changed = self.kas_hooks != *hooks;
                 self.kas_hooks = hooks.clone();
-                // No UI state of its own — the panel refresh is the App's job.
-                false
+                changed
             }
             Notification::ModeChanged { mode_id } => {
                 self.current_mode_id = Some(mode_id.clone());
@@ -1002,7 +1020,12 @@ mod kas_hook_tests {
         let err = s
             .resolve_kas_hook_id("audit")
             .expect_err("an ambiguous name must not resolve");
-        assert_eq!(err.len(), 2, "every candidate is reported: {err:?}");
+        match err {
+            HookRefError::Ambiguous(candidates) => {
+                assert_eq!(candidates.len(), 2, "every candidate is reported")
+            }
+            other => panic!("expected Ambiguous, got {other:?}"),
+        }
     }
 
     #[test]
@@ -1010,7 +1033,10 @@ mod kas_hook_tests {
         // Empty candidates means "no such hook"; a non-empty list means
         // "ambiguous". The command prints different guidance for each, so
         // collapsing them would misdirect the user.
+        // Distinct VARIANTS, not an empty-vs-non-empty collection: the command
+        // prints different guidance for each, so the type must not let them be
+        // confused (and cannot represent "ambiguous with zero candidates").
         let s = SessionController::new();
-        assert_eq!(s.resolve_kas_hook_id("nope"), Err(Vec::new()));
+        assert_eq!(s.resolve_kas_hook_id("nope"), Err(HookRefError::NotFound));
     }
 }

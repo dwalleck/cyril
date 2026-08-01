@@ -56,7 +56,7 @@ impl<'a> CommandContext<'a> {
 ///   [`Agent`](Self::Agent) too: there *cyril* owns the registry and serves
 ///   `_kiro/hooks/list` to the agent, so querying the agent would ask about a
 ///   registry it does not have.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum HooksCommandSource {
     /// Cyril registers no `/hooks`; the agent's own command (v2) handles it,
     /// or there is none.
@@ -64,21 +64,30 @@ pub enum HooksCommandSource {
     Agent,
     /// Cyril registers [`builtin::KasHooksCommand`], which queries the agent's
     /// registry over `_kiro/hooks/*`.
-    Kas,
+    ///
+    /// Carries the workspace root to send as `workspacePaths`. It rides on the
+    /// variant rather than being re-derived at call time because the root is
+    /// `--cwd` when the user passed one, which is NOT
+    /// `std::env::current_dir()`; querying the wrong root returns an empty
+    /// listing that reads as "you have no hooks". The `Agent` variant has no
+    /// root because it needs none.
+    Kas { workspace_root: std::path::PathBuf },
 }
 
 impl HooksCommandSource {
-    /// Resolve from the bound engine and the configured hooks mode. Both must
-    /// be KAS: the KAS engine alone is not enough, because in `host` mode the
-    /// registry lives on cyril's side of the wire.
+    /// Resolve from the bound engine, the configured hooks mode, and the
+    /// session's workspace root. Engine and mode must BOTH be KAS: the KAS
+    /// engine alone is not enough, because in `host` mode the registry lives
+    /// on cyril's side of the wire and the agent has none to query.
     #[must_use]
     pub fn resolve(
         engine: crate::types::AgentEngine,
         kas_hooks: crate::types::kas_hooks::KasHooksMode,
+        workspace_root: std::path::PathBuf,
     ) -> Self {
         match (engine, kas_hooks) {
             (crate::types::AgentEngine::Kas, crate::types::kas_hooks::KasHooksMode::Kas) => {
-                Self::Kas
+                Self::Kas { workspace_root }
             }
             _ => Self::Agent,
         }
@@ -228,9 +237,9 @@ impl CommandRegistry {
             "help", "clear", "quit", "new", "load", "steer", "voice", "sessions", "spawn", "kill",
             "msg",
         ];
-        if hooks == HooksCommandSource::Kas {
+        if let HooksCommandSource::Kas { workspace_root } = hooks {
             names.push("hooks");
-            registry.register(Arc::new(builtin::KasHooksCommand));
+            registry.register(Arc::new(builtin::KasHooksCommand::new(workspace_root)));
         }
         registry.register(Arc::new(builtin::HelpCommand::new(&names)));
         registry.register(Arc::new(builtin::ClearCommand));
@@ -1014,6 +1023,10 @@ mod hooks_source_tests {
     use crate::types::AgentEngine;
     use crate::types::kas_hooks::KasHooksMode;
 
+    fn root() -> std::path::PathBuf {
+        std::path::PathBuf::from("/workspace")
+    }
+
     #[test]
     fn only_kas_engine_with_kas_hooks_gets_the_builtin() {
         // The full matrix. The load-bearing cell is (Kas, Host): cyril OWNS the
@@ -1021,8 +1034,12 @@ mod hooks_source_tests {
         // the agent would query a registry it does not have. A resolver written
         // as `engine == Kas` alone passes every other cell and fails this one.
         assert_eq!(
-            HooksCommandSource::resolve(AgentEngine::Kas, KasHooksMode::Kas),
-            HooksCommandSource::Kas
+            HooksCommandSource::resolve(AgentEngine::Kas, KasHooksMode::Kas, root()),
+            HooksCommandSource::Kas {
+                workspace_root: root()
+            },
+            "the resolved source carries the workspace root VERBATIM — re-deriving \
+             it from the process cwd is the --cwd bug"
         );
         for (engine, mode) in [
             (AgentEngine::Kas, KasHooksMode::Host),
@@ -1032,7 +1049,7 @@ mod hooks_source_tests {
             (AgentEngine::V2, KasHooksMode::Off),
         ] {
             assert_eq!(
-                HooksCommandSource::resolve(engine, mode),
+                HooksCommandSource::resolve(engine, mode, root()),
                 HooksCommandSource::Agent,
                 "{engine:?} + {mode:?} must leave /hooks to the agent"
             );
@@ -1050,7 +1067,9 @@ mod hooks_source_tests {
                 .parse("/hooks")
                 .is_none()
         );
-        let kas = CommandRegistry::with_builtins(HooksCommandSource::Kas);
+        let kas = CommandRegistry::with_builtins(HooksCommandSource::Kas {
+            workspace_root: root(),
+        });
         let (cmd, args) = kas.parse("/hooks disable audit").expect("registered");
         assert_eq!(cmd.name(), "hooks");
         assert_eq!(args, "disable audit");

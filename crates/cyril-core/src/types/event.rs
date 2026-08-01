@@ -270,6 +270,27 @@ pub enum Notification {
         hooks: Vec<crate::types::HookInfo>,
     },
 
+    /// A KAS-side hook reached a terminal state (`session_info_update`,
+    /// `_meta.kiro.kind = "hook_update"`; cyril-gk17).
+    ///
+    /// Under `kas_hooks = "kas"` the AGENT executes hooks on this host, and no
+    /// `session/request_permission` precedes them — so the transcript record is
+    /// the only thing standing between the user and shell commands running
+    /// invisibly on their machine. That is why this is surfaced in chat rather
+    /// than logged: an audit trail nobody sees is not an audit trail.
+    ///
+    /// Only terminal states arrive here; `running` and `awaiting_approval` are
+    /// dropped at the converter as progress noise.
+    HookExecuted {
+        name: String,
+        /// Carved status vocabulary: `completed` | `failed` | `canceled`
+        /// (`mapActionStateToHookStatus`). Kept as a `String` so a new upstream
+        /// state surfaces verbatim instead of being silently reclassified.
+        status: String,
+        /// Present for `runCommand` hooks that reported one.
+        exit_code: Option<i64>,
+    },
+
     // Lifecycle
     SessionCreated {
         session_id: SessionId,

@@ -101,7 +101,7 @@ pub fn render(
             Some(m) => truncate_and_pad(m, MATCHER_COL),
             None => pad_right("—", MATCHER_COL),
         };
-        let matcher_style = if hook.matcher.is_some() {
+        let live_matcher_style = if hook.matcher.is_some() {
             Style::default().fg(theme.accent_quinary)
         } else {
             Style::default().fg(theme.subdued)
@@ -120,7 +120,7 @@ pub fn render(
             (
                 Style::default().fg(theme.accent_violet),
                 Style::default().fg(theme.text_secondary),
-                matcher_style,
+                live_matcher_style,
             )
         };
         lines.push(Line::from(vec![
