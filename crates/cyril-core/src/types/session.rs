@@ -428,12 +428,13 @@ impl TurnMetering {
         let mut merged = pending;
         if let Some(m) = metering {
             merged = Some(match merged {
-                // The incoming metering's own duration wins over the pending
-                // one; the standalone `duration_ms` below is the newest
-                // override when the frame carried `turnDurationMs`.
-                Some(prev) => {
-                    TurnMetering::new(m.credits(), m.duration_ms().or(prev.duration_ms()))
-                }
+                // Incoming populated fields win; absent fields preserve the
+                // pending value. The standalone `duration_ms` below is the
+                // newest override when the frame carried `turnDurationMs`.
+                Some(prev) => TurnMetering::new(
+                    m.credits().or(prev.credits()),
+                    m.duration_ms().or(prev.duration_ms()),
+                ),
                 None => m,
             });
         }
@@ -809,6 +810,22 @@ mod tests {
             Some(1000),
             "metering's own duration preserved"
         );
+    }
+
+    #[test]
+    fn metering_absence_merge_preserves_pending_credits() {
+        let merged = TurnMetering::merge_pending(
+            Some(TurnMetering::new(Some(0.018), None)),
+            Some(TurnMetering::new(None, Some(2281))),
+            None,
+        )
+        .expect("merged");
+        assert_eq!(
+            merged.credits(),
+            Some(0.018),
+            "an absent incoming credit field must preserve pending credits"
+        );
+        assert_eq!(merged.duration_ms(), Some(2281));
     }
 
     #[test]

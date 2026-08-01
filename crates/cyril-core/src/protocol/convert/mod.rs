@@ -918,6 +918,39 @@ mod tests {
     }
 
     #[test]
+    fn metering_absence_parser_does_not_fabricate_zero() {
+        for metering_usage in [
+            serde_json::json!([]),
+            serde_json::json!([{"unit": "credit"}]),
+        ] {
+            let params = serde_json::json!({
+                "meteringUsage": metering_usage,
+                "turnDurationMs": 12
+            });
+            let notification = to_ext_notification("kiro.dev/metadata", &params)
+                .expect("conversion should succeed")
+                .expect("metadata frame should convert");
+            let Notification::MetadataUpdated {
+                metering,
+                duration_ms,
+                ..
+            } = notification
+            else {
+                panic!("expected MetadataUpdated");
+            };
+            assert!(
+                metering.is_none(),
+                "metering without a numeric value must not become explicit zero"
+            );
+            assert_eq!(
+                duration_ms,
+                Some(12),
+                "duration remains independently available"
+            );
+        }
+    }
+
+    #[test]
     fn parse_metadata_with_tokens() {
         let params = serde_json::json!({
             "contextUsagePercentage": 15.0,

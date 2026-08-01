@@ -302,20 +302,27 @@ pub(crate) fn to_ext_notification(
                 },
             };
 
-            // Preserve zero-credit turns rather than filtering them out — a
-            // turn with `meteringUsage: [{value: 0.0, ...}]` (cached
-            // response, free tier, etc.) is semantically distinct from a
-            // turn with the field omitted entirely. The UI layer decides
-            // whether to display 0.0 or hide it.
+            // Preserve explicit zero-credit turns rather than filtering them
+            // out. A present array with no numeric `value`, however, carries
+            // no aggregate and must remain distinct from `Some(0.0)`.
             let metering = params
                 .get("meteringUsage")
                 .and_then(|m| m.as_array())
-                .map(|arr| {
-                    let credits: f64 = arr
-                        .iter()
-                        .filter_map(|u| u.get("value").and_then(|v| v.as_f64()))
-                        .sum();
-                    TurnMetering::new(Some(credits), duration_ms)
+                .and_then(|arr| {
+                    let mut credits = None;
+                    for usage in arr {
+                        match usage.get("value").and_then(|v| v.as_f64()) {
+                            Some(value) => *credits.get_or_insert(0.0) += value,
+                            None => tracing::warn!(
+                                value = ?usage,
+                                "metadata `meteringUsage` entry has no numeric `value`, ignoring"
+                            ),
+                        }
+                    }
+                    if arr.is_empty() {
+                        tracing::warn!("metadata `meteringUsage` is empty, ignoring");
+                    }
+                    credits.map(|total| TurnMetering::new(Some(total), duration_ms))
                 });
 
             let tokens = {
