@@ -237,7 +237,7 @@ All agent interactions are notification-driven. Commands return immediately; res
 
 Kiro v1.29+ supports subagents — child sessions spawned from the main agent that run in parallel with their own tool access and message streams. Cyril observes, displays, and controls these via:
 
-> **KAS uses a different subagent model.** This whole section describes the **v1/v2** engine (`agent_crew` + `kiro.dev/subagent/list_update`, which `SubagentTracker`/`crew_panel` key off). The **KAS** engine sends **no `list_update`** — its subagents are plain `tool_call`s tagged `_meta.kiro.kind: "agent-subtask"`, grouped by `agentSubtaskId`, with an `OrchestrateSubAgent` fail-fast DAG tool (**correction:** the earlier "no loop" is stale — it ships a bounded `repeat` loop, `maxIterations` 1–20 + `stopCondition` + `onMaxIterations`, present at least since KAS 0.18.2 / kiro-cli 2.13.0. **Evidence is static — the bundle's `buildSchema` plus the executor branching on `repeat` (`repeat.complete`/`repeat.exhausted`) — not a live capture; the 2.14.1 wire capture is still pending (cyril-6beh), so treat the `{task, stages, repeat}` wire shape as unconfirmed — schema-accepted ≠ functional.** See [docs/kiro-2.14.1-wire-audit.md](docs/kiro-2.14.1-wire-audit.md)) and bundled verification agents (`semantic_reviewer`, `functional_task_alignment`). Rendering KAS crews needs a separate path — see ROADMAP KAS-3 and [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md).
+> **KAS uses a different subagent model.** This whole section describes the **v1/v2** engine (`agent_crew` + `kiro.dev/subagent/list_update`, which `SubagentTracker`/`crew_panel` key off). The **KAS** engine sends **no `list_update`** — its subagents are plain `tool_call`s tagged `_meta.kiro.kind: "agent-subtask"`, grouped by `agentSubtaskId`, with an `OrchestrateSubAgent` fail-fast DAG tool (**correction:** the earlier "no loop" is stale — it ships a bounded `repeat` loop, `maxIterations` 1–20 + `stopCondition` + `onMaxIterations`, present at least since KAS 0.18.2 / kiro-cli 2.13.0. **LIVE-CONFIRMED 2026-08-01 on 2.16.0** (was static-only until then). The tool is **client-gated**: it only appears when `subagentOrchestration` is set in **`initialize._meta.kiro.settings`** (the `session/new` form does not work — the initialize form is what overrides the backend flag `prompts.ts` reads). Measured rawInput: `{task, stages[{name, role, prompt_template, depends_on?, inlineAgent?}], repeat?{maxIterations 1-20, stopCondition{containsText}, onMaxIterations continue|abort}}`. The tool_call also carries **`_meta.kiro.pipeline {groupId, stages[{name, role, status, dependsOn[], agentSubtaskId}]}`** — that is the render contract. **Rendering trap:** the pipeline meta has NO iteration counter, so across `repeat` iterations the same stage entry cycles running→completed→running→completed; only `agentSubtaskId` distinguishes iterations. See [docs/kiro-2.16.0-wire-audit.md](docs/kiro-2.16.0-wire-audit.md).** See [docs/kiro-2.14.1-wire-audit.md](docs/kiro-2.14.1-wire-audit.md)) and bundled verification agents (`semantic_reviewer`, `functional_task_alignment`). Rendering KAS crews needs a separate path — see ROADMAP KAS-3 and [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md).
 
 **Components:**
 
@@ -482,14 +482,14 @@ These are project invariants maintained from inception, not aspirations. Maintai
 
 ### Issue tracker
 
-Issues live in **rivets**, a local Rust JSONL-backed tracker (`rivets` CLI; run `rivets init` first). See `docs/agents/issue-tracker.md`.
+Issues live in **Rivets**, the repo-local JSONL-backed tracker at `.rivets/issues.jsonl` (use the `rivets` CLI). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Canonical five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), applied as rivets labels. See `docs/agents/triage-labels.md`.
+Use the canonical five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
 
