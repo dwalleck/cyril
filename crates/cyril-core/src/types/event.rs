@@ -257,6 +257,19 @@ pub enum Notification {
         message: String,
     },
 
+    /// KAS announced that its on-disk hook registry changed
+    /// (`_kiro/hooks/didChange`, cyril-gk17). Carries the **full** new
+    /// registry, so it is a replacement rather than a delta.
+    ///
+    /// Deliberately distinct from the `CommandExecuted{command: "hooks"}` path
+    /// that *opens* the panel: this arrives unprompted whenever a file is
+    /// edited, and a modal overlay that opens itself while the user is typing
+    /// is a worse outcome than a stale one. It refreshes an already-open
+    /// panel and is otherwise inert.
+    HooksChanged {
+        hooks: Vec<crate::types::HookInfo>,
+    },
+
     // Lifecycle
     SessionCreated {
         session_id: SessionId,
@@ -503,6 +516,29 @@ pub enum BridgeCommand {
     /// skipped silently — the bridge never re-sends on an unsupported session.
     ClearSteering {
         session_id: SessionId,
+    },
+    /// Query KAS's own hook registry via `_kiro/hooks/list` (cyril-gk17).
+    ///
+    /// Only meaningful under `kas_hooks = "kas"`, where the agent runs a
+    /// file-watched `.kiro/hooks` loader and advertises no `hooks` command of
+    /// its own. Under `"host"` cyril *serves* this same method instead, and
+    /// asking the agent would query a registry it does not have.
+    ListKasHooks {
+        session_id: SessionId,
+        /// Workspace roots to search, sent as `workspacePaths`.
+        workspace_paths: Vec<std::path::PathBuf>,
+    },
+    /// Flip a KAS hook's enabled flag via `_kiro/hooks/setEnabled`
+    /// (cyril-gk17). The agent rewrites the flag in the backing hook **file**,
+    /// so the change outlives the session.
+    SetKasHookEnabled {
+        session_id: SessionId,
+        /// The registry's composite `"<filePath>#hook-<n>"` id. A bare hook
+        /// name is not accepted by the agent.
+        hook_id: String,
+        enabled: bool,
+        /// Workspace roots for the follow-up listing that reports the result.
+        workspace_paths: Vec<std::path::PathBuf>,
     },
     Shutdown,
 }

@@ -203,7 +203,29 @@ impl acp::Client for KiroClient {
                 return Ok(());
             }
             if args.method.as_ref() == crate::protocol::kas::hooks::DID_CHANGE_METHOD {
-                tracing::info!("KAS hooks changed on disk; reload deferred (cyril-2adk)");
+                // Under `kas_hooks = "kas"` the notification carries KAS's FULL
+                // new registry, so cyril can refresh what it shows without
+                // asking (cyril-gk17). Under `"host"` cyril owns the registry
+                // and the payload has no `hooks` array — reloading cyril's own
+                // on-disk registry is a different job, still cyril-2adk.
+                match crate::protocol::kas::hooks::parse_wire_hooks(&params) {
+                    Some(hooks) => {
+                        tracing::debug!(count = hooks.len(), "KAS hook registry changed");
+                        if self
+                            .notification_tx
+                            .send(Notification::HooksChanged { hooks }.into())
+                            .await
+                            .is_err()
+                        {
+                            tracing::debug!("HooksChanged send failed (bridge closing)");
+                        }
+                    }
+                    None => {
+                        tracing::info!(
+                            "KAS hooks changed on disk; host-registry reload deferred (cyril-2adk)"
+                        );
+                    }
+                }
                 return Ok(());
             }
         }

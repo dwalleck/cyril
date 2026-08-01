@@ -21,6 +21,12 @@ pub struct SessionController {
     // in UiState (cyril-7z7u); a session-side mirror was write-only and would
     // drift under id-scoped clears, so it was deleted (cyril-vgcm C13/D5).
     steering_unsupported: bool,
+    /// Last KAS hook registry seen (cyril-gk17). Read-only lookup surface for
+    /// `/hooks enable|disable <name>`, which must turn a human-typed name into
+    /// the agent's composite `"<filePath>#hook-<n>"` id — the only identity
+    /// `_kiro/hooks/setEnabled` accepts. Empty on v2, whose registry carries
+    /// no ids at all.
+    kas_hooks: Vec<HookInfo>,
 }
 
 impl SessionController {
@@ -40,6 +46,7 @@ impl SessionController {
             pending_metering: None,
             last_turn: None,
             steering_unsupported: false,
+            kas_hooks: Vec::new(),
         }
     }
 
@@ -93,6 +100,48 @@ impl SessionController {
         self.steering_unsupported
     }
 
+    /// The last KAS hook registry seen (cyril-gk17). Empty until a `/hooks`
+    /// listing or a `didChange` lands.
+    pub fn kas_hooks(&self) -> &[HookInfo] {
+        &self.kas_hooks
+    }
+
+    /// Resolve a user-typed hook reference to the composite id that
+    /// `_kiro/hooks/setEnabled` requires.
+    ///
+    /// Accepts the composite id verbatim, or the hook's declared `name`.
+    /// Names are **not** unique — two hook files may each declare `audit` —
+    /// so an ambiguous name returns `Err` listing every candidate rather than
+    /// silently taking the first. Toggling the wrong hook rewrites a file on
+    /// the user's disk, which is not a guess worth making.
+    ///
+    /// `Err(vec![])` means no such hook; `Err` with entries means ambiguous.
+    pub fn resolve_kas_hook_id(&self, reference: &str) -> Result<String, Vec<String>> {
+        if self
+            .kas_hooks
+            .iter()
+            .any(|h| h.id.as_deref() == Some(reference))
+        {
+            return Ok(reference.to_string());
+        }
+        let mut matches: Vec<String> = self
+            .kas_hooks
+            .iter()
+            .filter(|h| h.name.as_deref() == Some(reference))
+            .filter_map(|h| h.id.clone())
+            .collect();
+        if matches.len() == 1 {
+            match matches.pop() {
+                Some(id) => Ok(id),
+                // Unreachable given the length check; `Vec::pop` returns Option
+                // and this crate does not unwrap.
+                None => Err(Vec::new()),
+            }
+        } else {
+            Err(matches)
+        }
+    }
+
     // Mutators
     pub fn set_session(&mut self, id: SessionId, status: SessionStatus) {
         self.id = Some(id);
@@ -114,6 +163,14 @@ impl SessionController {
     /// Apply a notification to session state. Returns whether state changed.
     pub fn apply_notification(&mut self, notification: &Notification) -> bool {
         match notification {
+            // Full-replacement, never a merge: the agent sends its whole
+            // registry, so a hook deleted on disk must disappear here too
+            // (cyril-gk17).
+            Notification::HooksChanged { hooks } => {
+                self.kas_hooks = hooks.clone();
+                // No UI state of its own — the panel refresh is the App's job.
+                false
+            }
             Notification::ModeChanged { mode_id } => {
                 self.current_mode_id = Some(mode_id.clone());
                 true
@@ -871,5 +928,89 @@ mod tests {
         assert_eq!(ctrl.modes()[0].id().as_str(), "new");
         assert_eq!(ctrl.models().len(), 1);
         assert_eq!(ctrl.models()[0].id().as_str(), "new-model");
+    }
+}
+
+#[cfg(test)]
+mod kas_hook_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+
+    fn hook(name: &str, id: &str) -> HookInfo {
+        HookInfo {
+            trigger: "PreToolUse".into(),
+            command: "echo hi".into(),
+            matcher: None,
+            id: Some(id.into()),
+            name: Some(name.into()),
+            enabled: Some(true),
+        }
+    }
+
+    #[test]
+    fn hooks_changed_replaces_never_merges() {
+        // The agent sends its FULL registry, so a hook deleted on disk must
+        // disappear here. A merge would keep resolving a name whose hook no
+        // longer exists, and `/hooks disable` would then send a stale id.
+        let mut s = SessionController::new();
+        s.apply_notification(&Notification::HooksChanged {
+            hooks: vec![hook("a", "f#hook-0"), hook("b", "f#hook-1")],
+        });
+        assert_eq!(s.kas_hooks().len(), 2);
+        s.apply_notification(&Notification::HooksChanged {
+            hooks: vec![hook("a", "f#hook-0")],
+        });
+        assert_eq!(s.kas_hooks().len(), 1);
+        assert!(
+            s.resolve_kas_hook_id("b").is_err(),
+            "the deleted hook is gone"
+        );
+    }
+
+    #[test]
+    fn resolves_by_name_and_by_composite_id() {
+        let mut s = SessionController::new();
+        s.apply_notification(&Notification::HooksChanged {
+            hooks: vec![hook("audit", "/w/.kiro/hooks/a.json#hook-0")],
+        });
+        assert_eq!(
+            s.resolve_kas_hook_id("audit"),
+            Ok("/w/.kiro/hooks/a.json#hook-0".to_string()),
+            "a name resolves to the composite id the agent requires"
+        );
+        // The id itself is accepted verbatim — the escape hatch the ambiguity
+        // message points users at.
+        assert_eq!(
+            s.resolve_kas_hook_id("/w/.kiro/hooks/a.json#hook-0"),
+            Ok("/w/.kiro/hooks/a.json#hook-0".to_string())
+        );
+    }
+
+    #[test]
+    fn ambiguous_name_refuses_rather_than_guessing() {
+        // Two hook FILES may each declare `audit`. Picking the first would
+        // rewrite the enabled flag in a file the user never named — so the
+        // resolver refuses and hands back every candidate.
+        let mut s = SessionController::new();
+        s.apply_notification(&Notification::HooksChanged {
+            hooks: vec![
+                hook("audit", "/w/.kiro/hooks/a.json#hook-0"),
+                hook("audit", "/w/.kiro/hooks/b.json#hook-0"),
+            ],
+        });
+        let err = s
+            .resolve_kas_hook_id("audit")
+            .expect_err("an ambiguous name must not resolve");
+        assert_eq!(err.len(), 2, "every candidate is reported: {err:?}");
+    }
+
+    #[test]
+    fn unknown_name_is_distinguishable_from_ambiguous() {
+        // Empty candidates means "no such hook"; a non-empty list means
+        // "ambiguous". The command prints different guidance for each, so
+        // collapsing them would misdirect the user.
+        let s = SessionController::new();
+        assert_eq!(s.resolve_kas_hook_id("nope"), Err(Vec::new()));
     }
 }

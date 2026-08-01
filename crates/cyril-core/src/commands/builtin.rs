@@ -201,3 +201,113 @@ impl Command for LoadCommand {
         Ok(CommandResult::dispatched())
     }
 }
+
+/// `/hooks` on the KAS engine (cyril-gk17).
+///
+/// KAS advertises no `hooks` command of its own — its command surface is
+/// skills-only — so on v2 this command is *not* registered and the agent's own
+/// `hooks` command handles the slash instead. See
+/// [`HooksCommandSource`](crate::commands::HooksCommandSource) for that split.
+///
+/// Under `kas_hooks = "kas"` the agent owns a file-watched `.kiro/hooks`
+/// registry and executes those hooks itself, so this is cyril's only window
+/// onto them:
+///
+/// - `/hooks` — list the registry (including disabled hooks).
+/// - `/hooks enable|disable <name-or-id>` — flip a hook's `enabled` flag. The
+///   agent rewrites the flag in the backing **file**, so the change persists
+///   past the session; the command re-lists afterwards so the user sees it.
+pub struct KasHooksCommand;
+
+impl KasHooksCommand {
+    /// Workspace roots to search for hook files. Hooks are workspace-scoped,
+    /// and this matches the cwd the bridge was spawned with — the same root
+    /// the agent already treats as the workspace.
+    fn workspace_paths() -> crate::Result<Vec<std::path::PathBuf>> {
+        let cwd = std::env::current_dir().map_err(|e| {
+            crate::Error::with_source(
+                crate::ErrorKind::CommandFailed {
+                    detail: "could not determine current working directory".into(),
+                },
+                e,
+            )
+        })?;
+        Ok(vec![cwd])
+    }
+}
+
+#[async_trait::async_trait]
+impl Command for KasHooksCommand {
+    fn name(&self) -> &str {
+        "hooks"
+    }
+
+    fn description(&self) -> &str {
+        "List KAS hooks; /hooks enable|disable <name> toggles one"
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        let Some(session_id) = ctx.session.id().cloned() else {
+            return Ok(CommandResult::system_message(
+                "No active session — hooks are session-scoped.".into(),
+            ));
+        };
+        let workspace_paths = Self::workspace_paths()?;
+
+        let mut parts = args.split_whitespace();
+        let enabled = match parts.next() {
+            None => {
+                ctx.bridge
+                    .send(BridgeCommand::ListKasHooks {
+                        session_id,
+                        workspace_paths,
+                    })
+                    .await?;
+                return Ok(CommandResult::dispatched());
+            }
+            Some("enable") => true,
+            Some("disable") => false,
+            Some(other) => {
+                return Ok(CommandResult::system_message(format!(
+                    "Unknown /hooks action {other:?}. Usage: /hooks | /hooks enable <name> | /hooks disable <name>"
+                )));
+            }
+        };
+        let Some(reference) = parts.next() else {
+            return Ok(CommandResult::system_message(
+                "Which hook? Usage: /hooks enable <name> | /hooks disable <name>".into(),
+            ));
+        };
+
+        // Resolution needs a listing to have landed. Saying so beats sending a
+        // name the agent will reject as an unknown hookId.
+        let hook_id = match ctx.session.resolve_kas_hook_id(reference) {
+            Ok(id) => id,
+            Err(candidates) if candidates.is_empty() => {
+                let known = ctx.session.kas_hooks().len();
+                return Ok(CommandResult::system_message(if known == 0 {
+                    "No hooks known yet — run /hooks first.".into()
+                } else {
+                    format!("No hook named {reference:?} in the {known} known hooks.")
+                }));
+            }
+            Err(candidates) => {
+                return Ok(CommandResult::system_message(format!(
+                    "{reference:?} is ambiguous across {} hooks — use the full id:\n  {}",
+                    candidates.len(),
+                    candidates.join("\n  ")
+                )));
+            }
+        };
+
+        ctx.bridge
+            .send(BridgeCommand::SetKasHookEnabled {
+                session_id,
+                hook_id,
+                enabled,
+                workspace_paths,
+            })
+            .await?;
+        Ok(CommandResult::dispatched())
+    }
+}

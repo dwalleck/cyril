@@ -513,6 +513,9 @@ mod tests {
                 trigger: "t".into(),
                 command: "c".into(),
                 matcher: Some("m".into()),
+                id: None,
+                name: None,
+                enabled: None,
             }],
             scroll_offset: 0,
         };

@@ -183,7 +183,8 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 | `session/{compact,export,history,context,delete,rename}` · `spec/*` | ⚠ KAS-7 non-goals |
 | `session/list` (2.12.3 response reshaped: per-entry `source`/`executionTarget`/`status` + `_meta.kiro.warnings`; request meta `sessionSource`/`listScope` additive+gated) | ❌ cyril-nn85 — future modeling |
 | `sourceProviders/{list,listResources}` (2.12.3; cloud repo catalog, gated on `remoteConfigured` via `KIRO_REMOTE_SESSIONS_ENDPOINT`) | ❌ KAS-8 — cloud, deferred (cyril-tikf caps) |
-| `checkpoint/{revert,revertMultiple}` · `mcp/{resetServer,getPrompt,getResource}` · `hooks/{triggerHook,setEnabled}` · `tasks/*` · `knowledge` | ❌ KAS-8 |
+| `checkpoint/{revert,revertMultiple}` · `mcp/{resetServer,getPrompt,getResource}` · `hooks/triggerHook` · `tasks/*` · `knowledge` | ❌ KAS-8 |
+| `hooks/{list,setEnabled}` (client→agent) | ✅ cyril-gk17 |
 
 *Agent→client notifications (the converter receives all; unhandled = invisible, not protocol-breaking):*
 
@@ -360,7 +361,7 @@ KAS hooks are a **host-callback** model, and cyril is the host. Verified live (`
 **Optional client→agent calls — add when a UX needs them:**
 
 - `checkpoint/{revert,revertMultiple}` — the KAS analog of v2 `/rewind`; wire when cyril surfaces rewind under KAS.
-- `hooks/{triggerHook,setEnabled}` — `setEnabled` (persist a hook's enabled state, 2.8.1) pairs with a KAS-7 hooks tree UI (enable/disable from the view); `triggerHook` is the manual-fire path. Wire with the KAS-7 hooks work.
+- ~~`hooks/setEnabled`~~ — **shipped 2026-08-01 (cyril-gk17)**, together with the client→agent direction of `hooks/list` and consumption of the `didChange` registry push. Under `kas_hooks = "kas"` the agent owns a file-watched `.kiro/hooks` registry and advertises no `hooks` command, so cyril registers its own `/hooks` (list; `enable|disable <name-or-id>`) and translates the wire shape — composite `"<filePath>#hook-<n>"` id, `runCommand` action tag, PascalCase `_meta.trigger` — into the existing panel. Note `_kiro/hooks/list` is genuinely **bidirectional**: which direction is live depends on the hook generation the client advertised, so `host` mode still *serves* it. Disabled hooks are listed (`includeDisabled`) and dimmed rather than hidden. Deferred: `triggerHook` (manual fire), and toggling from inside the panel rather than by command.
 - `tasks/{list,get_metadata}`, `_kiro/knowledge` — feature-specific; out of scope until their UX lands.
 
 **Tolerated notifications — surface opportunistically (the `debug!` arm keeps them non-fatal):** `powers/items_changed`, `progressive_context/items_changed`, `system/notify`, `_kiro/sessions/changed` (the multi-client observer roster — feeds the session-level-workflow direction), `tools/didChange`.

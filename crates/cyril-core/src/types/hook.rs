@@ -4,9 +4,8 @@ use serde::{Deserialize, Serialize};
 /// `hooks` command's response at `data.hooks[]`.
 ///
 /// This is Kiro's display-oriented projection of its backend `HookConfig` —
-/// only three fields, no execution details. Hooks themselves run entirely
-/// inside `kiro-cli-chat`; Cyril's role is strictly display-only via the
-/// `/hooks` command.
+/// no execution details. Hooks themselves run entirely inside
+/// `kiro-cli-chat`; Cyril's role is display-only via the `/hooks` command.
 ///
 /// Wire format from Kiro 1.29.6+:
 /// ```json
@@ -16,6 +15,14 @@ use serde::{Deserialize, Serialize};
 ///   "matcher": "read"
 /// }
 /// ```
+///
+/// The three optional fields below carry what the **KAS v2 hooks registry**
+/// reports and this v2 projection does not (cyril-gk17). They are `Option`
+/// rather than defaulted because absent and known-false are different facts:
+/// a v2 hook whose `enabled` is `None` is not "disabled", it comes from a
+/// registry that does not model enablement at all. All three are skipped when
+/// serializing, so a v2 `HookInfo` still round-trips as exactly the original
+/// three fields.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HookInfo {
     /// Trigger name from Kiro's `HookTrigger` enum. Observed values:
@@ -31,6 +38,23 @@ pub struct HookInfo {
     /// the hook runs for every tool of that trigger.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub matcher: Option<String>,
+
+    /// KAS v2 only: the registry's hook id, a **composite**
+    /// `"<absolute file path>#hook-<n>"` — not a bare name, and the only
+    /// value `_kiro/hooks/setEnabled` accepts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+
+    /// KAS v2 only: the hook's declared name, which is what a user will type
+    /// to address it rather than the composite [`id`](Self::id).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+
+    /// KAS v2 only: whether the hook is currently enabled. Listings request
+    /// `includeDisabled`, so disabled hooks are present and must not be
+    /// displayed as if they were live.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
 }
 
 #[cfg(test)]
@@ -81,6 +105,9 @@ mod tests {
             trigger: "Stop".into(),
             command: "foo".into(),
             matcher: None,
+            id: None,
+            name: None,
+            enabled: None,
         };
         let json = serde_json::to_string(&hook).unwrap();
         // matcher should not appear in the output at all, not even as null

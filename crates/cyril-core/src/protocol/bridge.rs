@@ -678,13 +678,87 @@ struct InternalChannels {
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
 
-/// The `clientInfo` cyril presents at `initialize` (cyril-0wyn, ADR-0006).
+/// Query KAS's hook registry (`_kiro/hooks/list`) and package the reply as the
+/// `CommandExecuted{command: "hooks"}` shape the `/hooks` panel already
+/// consumes (cyril-gk17).
 ///
-/// Single source of identity: `name` follows [`PresentAs`] (honest `"cyril"`
-/// default, opt-in `"kiro-cli"`); `title` is **always** `"Cyril"` — the
-/// impersonation is deliberately never total, so Kiro-side logs and telemetry
-/// can identify cyril sessions in every mode; `version` is the workspace
-/// version.
+/// Reusing that envelope is deliberate: the v2 and KAS registries reach the
+/// user through the same panel, so the dialect translation belongs at the wire
+/// edge — one display path, two dialects, the same split `convert/` makes.
+///
+/// `includeDisabled` is always `true`. A listing that hid disabled hooks would
+/// leave `/hooks enable <name>` unable to name its own target, and would make a
+/// disabled hook look simply absent.
+///
+/// Every failure path returns a `BridgeError` notification rather than nothing:
+/// the App is waiting on this command, and the bridge must notify for every
+/// command it processes, error cases included.
+/// Two notifications per listing, in send order.
+///
+/// `HooksChanged` goes first because it is what `SessionController` records —
+/// so by the time the panel renders, `/hooks disable <name>` can already
+/// resolve that name to its composite id. Reversing them would leave the user
+/// looking at a hook they cannot yet address.
+#[cfg(feature = "kas")]
+fn hooks_listing_notifications(hooks: Vec<crate::types::HookInfo>) -> [Notification; 2] {
+    let response = serde_json::json!({ "success": true, "data": { "hooks": hooks } });
+    [
+        Notification::HooksChanged { hooks },
+        Notification::CommandExecuted {
+            command: "hooks".to_string(),
+            response,
+        },
+    ]
+}
+
+#[cfg(feature = "kas")]
+async fn kas_hooks_list(
+    conn: &agent_client_protocol::ClientSideConnection,
+    session_id: &crate::types::SessionId,
+    workspace_paths: &[std::path::PathBuf],
+    operation: &str,
+) -> Result<Vec<crate::types::HookInfo>, Notification> {
+    use agent_client_protocol as acp;
+    // `ext_method` lives on the Agent trait, which the run loop imports locally.
+    use acp::Agent as _;
+
+    let fail = |message: String| Notification::BridgeError {
+        operation: operation.to_string(),
+        message,
+    };
+    let params = serde_json::json!({
+        "sessionId": session_id.as_str(),
+        "workspacePaths": workspace_paths,
+        "includeDisabled": true,
+    });
+    let raw = to_raw_arc(&params).map_err(|e| fail(format!("serialize params: {e}")))?;
+    let response = conn
+        .ext_method(acp::ExtRequest::new(
+            crate::protocol::kas::hooks::LIST_METHOD,
+            raw,
+        ))
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, operation, "hooks/list failed");
+            fail(e.to_string())
+        })?;
+    let body: serde_json::Value = serde_json::from_str(response.0.get())
+        .map_err(|e| fail(format!("hooks/list reply is not JSON: {e}")))?;
+    // Shape drift surfaces as a BridgeError naming the drift, not as an empty
+    // listing — "you have no hooks" and "cyril could not read the registry"
+    // must never look the same to the user.
+    crate::protocol::kas::hooks::parse_wire_hooks(&body)
+        .ok_or_else(|| fail("hooks/list reply carried no `hooks` array".to_string()))
+}
+
+/// The `clientInfo` cyril presents at `initialize` (cyril-0wyn ADR-0006,
+/// default flipped by cyril-df5l ADR-0008).
+///
+/// Single source of identity: `name` follows [`PresentAs`] (`"kiro-cli"` by
+/// default, `"cyril"` to opt out); `title` is **always** `"Cyril"` — the
+/// persona selection is deliberately never total, so Kiro-side logs and
+/// telemetry can identify cyril sessions in every mode; `version` is the
+/// workspace version.
 #[must_use]
 pub(crate) fn client_info(
     present_as: crate::types::present_as::PresentAs,
@@ -1856,6 +1930,104 @@ async fn run_loop(
                             }
                         }
                     }
+                }
+            }
+            #[cfg(not(feature = "kas"))]
+            BridgeCommand::ListKasHooks { .. } | BridgeCommand::SetKasHookEnabled { .. } => {
+                // Unreachable in practice — the `/hooks` command that emits
+                // these is only registered for the KAS engine, which a default
+                // build cannot bind. Answered rather than ignored so the App is
+                // never left waiting on a command the bridge silently dropped.
+                if notify_or_closed(
+                    &channels.notification_tx,
+                    Notification::BridgeError {
+                        operation: "hooks".to_string(),
+                        message: "this build has no KAS support (cargo feature `kas`)".to_string(),
+                    },
+                )
+                .await
+                {
+                    break;
+                }
+            }
+            #[cfg(feature = "kas")]
+            BridgeCommand::ListKasHooks {
+                session_id,
+                workspace_paths,
+            } => {
+                let mut closed = false;
+                match kas_hooks_list(&conn, &session_id, &workspace_paths, "hooks/list").await {
+                    Ok(hooks) => {
+                        for note in hooks_listing_notifications(hooks) {
+                            if notify_or_closed(&channels.notification_tx, note).await {
+                                closed = true;
+                                break;
+                            }
+                        }
+                    }
+                    Err(note) => {
+                        closed = notify_or_closed(&channels.notification_tx, note).await;
+                    }
+                }
+                if closed {
+                    break;
+                }
+            }
+            #[cfg(feature = "kas")]
+            BridgeCommand::SetKasHookEnabled {
+                session_id,
+                hook_id,
+                enabled,
+                workspace_paths,
+            } => {
+                let params = serde_json::json!({
+                    "sessionId": session_id.as_str(),
+                    "hookId": hook_id,
+                    "enabled": enabled,
+                });
+                // The reply is a bare `{success: true}` carrying no registry, so
+                // a follow-up listing is what actually shows the user the flag
+                // moved — and it catches an agent that answers success without
+                // rewriting the backing file.
+                let outcome: Result<Vec<crate::types::HookInfo>, Notification> =
+                    async {
+                        let raw = to_raw_arc(&params).map_err(|e| Notification::BridgeError {
+                            operation: "hooks/setEnabled".to_string(),
+                            message: format!("serialize params: {e}"),
+                        })?;
+                        conn.ext_method(acp::ExtRequest::new(
+                            crate::protocol::kas::hooks::SET_ENABLED_METHOD,
+                            raw,
+                        ))
+                        .await
+                        .map_err(|e| {
+                            tracing::error!(error = %e, hook_id, enabled, "hooks/setEnabled failed");
+                            Notification::BridgeError {
+                                operation: format!("hooks/setEnabled '{hook_id}'"),
+                                message: e.to_string(),
+                            }
+                        })?;
+                        kas_hooks_list(&conn, &session_id, &workspace_paths, "hooks/setEnabled")
+                            .await
+                    }
+                    .await;
+
+                let mut closed = false;
+                match outcome {
+                    Ok(hooks) => {
+                        for note in hooks_listing_notifications(hooks) {
+                            if notify_or_closed(&channels.notification_tx, note).await {
+                                closed = true;
+                                break;
+                            }
+                        }
+                    }
+                    Err(note) => {
+                        closed = notify_or_closed(&channels.notification_tx, note).await;
+                    }
+                }
+                if closed {
+                    break;
                 }
             }
             BridgeCommand::Shutdown => {

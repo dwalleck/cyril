@@ -130,6 +130,9 @@ fn hooks_clamped_above_input_windows_scrolled_rows() -> anyhow::Result<()> {
                 trigger: format!("trigger-{index}"),
                 command: format!("command-{index}"),
                 matcher: None,
+                id: None,
+                name: None,
+                enabled: None,
             })
             .collect(),
         scroll_offset: 8,
@@ -417,6 +420,9 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
                             trigger: format!("trigger-{index}"),
                             command: format!("command-{index}"),
                             matcher: None,
+                            id: None,
+                            name: None,
+                            enabled: None,
                         })
                         .collect(),
                     scroll_offset: 0,

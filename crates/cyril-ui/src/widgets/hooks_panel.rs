@@ -106,15 +106,26 @@ pub fn render(
         } else {
             Style::default().fg(theme.subdued)
         };
-        lines.push(Line::from(vec![
-            Span::styled(
-                format!("  {trigger_cell}  "),
+        // A KAS listing requests `includeDisabled`, so disabled hooks appear
+        // in this list. Rendering them identically to live ones would state
+        // something false about the workspace, so they dim (cyril-gk17).
+        // `enabled: None` — every v2 hook, from a registry with no such
+        // concept — is NOT dimmed: unknown is not disabled.
+        let (trigger_style, command_style, matcher_style) = if hook.enabled == Some(false) {
+            let dim = Style::default()
+                .fg(theme.subdued)
+                .add_modifier(Modifier::DIM);
+            (dim, dim, dim)
+        } else {
+            (
                 Style::default().fg(theme.accent_violet),
-            ),
-            Span::styled(
-                format!("{command_cell}  "),
                 Style::default().fg(theme.text_secondary),
-            ),
+                matcher_style,
+            )
+        };
+        lines.push(Line::from(vec![
+            Span::styled(format!("  {trigger_cell}  "), trigger_style),
+            Span::styled(format!("{command_cell}  "), command_style),
             Span::styled(matcher_cell, matcher_style),
         ]));
     }
@@ -215,6 +226,9 @@ mod tests {
                 trigger: "PreToolUse".into(),
                 command: "echo pre".into(),
                 matcher: Some("read".into()),
+                id: None,
+                name: None,
+                enabled: None,
             }],
             scroll_offset: 0,
         };
@@ -240,11 +254,17 @@ mod tests {
                     trigger: "PostToolUse".into(),
                     command: "post".into(),
                     matcher: Some("write".into()),
+                    id: None,
+                    name: None,
+                    enabled: None,
                 },
                 HookInfo {
                     trigger: "PreToolUse".into(),
                     command: "pre".into(),
                     matcher: None,
+                    id: None,
+                    name: None,
+                    enabled: None,
                 },
             ],
             scroll_offset: 0,
@@ -275,6 +295,9 @@ mod tests {
                 trigger: "Stop".into(),
                 command: long,
                 matcher: None,
+                id: None,
+                name: None,
+                enabled: None,
             }],
             scroll_offset: 0,
         };
@@ -296,6 +319,9 @@ mod tests {
                 trigger: "日本語トリガーテスト".into(),
                 command: "MARKER".into(),
                 matcher: None,
+                id: None,
+                name: None,
+                enabled: None,
             }],
             scroll_offset: 0,
         };
@@ -320,11 +346,17 @@ mod tests {
                     trigger: "Short".into(),
                     command: "FIRST".into(),
                     matcher: None,
+                    id: None,
+                    name: None,
+                    enabled: None,
                 },
                 HookInfo {
                     trigger: "日本語テスト".into(),
                     command: "SECOND".into(),
                     matcher: None,
+                    id: None,
+                    name: None,
+                    enabled: None,
                 },
             ],
             scroll_offset: 0,

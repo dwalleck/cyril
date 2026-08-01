@@ -16,7 +16,17 @@ use super::json_ext_response;
 
 /// The acp-stripped method name for `_kiro/hooks/list` (the acp library strips
 /// the leading underscore, per the `SHELL_TYPE_METHOD` precedent).
+///
+/// **This method is bidirectional, and which direction is live depends on the
+/// hook generation the client advertised** (cyril-gk17). Under
+/// `kas_hooks = "host"` the *agent* calls it and [`HookRegistry::respond_list`]
+/// answers. Under `kas_hooks = "kas"` the agent owns a file-watched registry
+/// and cyril calls it — same name, opposite direction, different registry.
 pub(crate) const LIST_METHOD: &str = "kiro/hooks/list";
+
+/// The acp-stripped method name for `_kiro/hooks/setEnabled`
+/// (client→agent only; it rewrites the `enabled` flag in the backing file).
+pub(crate) const SET_ENABLED_METHOD: &str = "kiro/hooks/setEnabled";
 
 /// The acp-stripped method name for `_kiro/hooks/executeHook`.
 pub(crate) const EXECUTE_METHOD: &str = "kiro/hooks/executeHook";
@@ -30,6 +40,73 @@ pub(crate) const DID_CHANGE_METHOD: &str = "kiro/hooks/didChange";
 
 /// The acp-stripped method name for `_kiro/hooks/sessionStart`.
 pub(crate) const SESSION_START_METHOD: &str = "kiro/hooks/sessionStart";
+
+/// Translate KAS's v2 hook registry — as carried by `_kiro/hooks/list`'s
+/// `{hooks: [...]}` reply and by the `_kiro/hooks/didChange` notification —
+/// into cyril's display [`HookInfo`](crate::types::HookInfo).
+///
+/// The wire shape differs from the on-disk hook file in three ways cyril must
+/// translate (live-verified 2026-07-31, `kas-v2hooks-2.16.0.jsonl`):
+///
+/// | | file | wire |
+/// |---|---|---|
+/// | identity | bare `name` | composite `"<filePath>#hook-<n>"` in `id` |
+/// | action tag | `"command"` | `"runCommand"` |
+/// | trigger case | `preToolUse` | `PreToolUse`, and under `_meta` |
+///
+/// Returns `None` when `hooks` is absent or is not an array — the caller then
+/// surfaces the raw payload rather than an empty panel, matching how the v2
+/// `/hooks` path already degrades. Individual entries that are malformed or
+/// carry a non-`runCommand` action are **skipped with a warning** rather than
+/// failing the batch: a `prompt`- or `agent`-action hook is legitimate on disk
+/// and simply has no command to display, so dropping the whole registry over
+/// one would hide every other hook the user has.
+pub(crate) fn parse_wire_hooks(params: &serde_json::Value) -> Option<Vec<crate::types::HookInfo>> {
+    let Some(array) = params.get("hooks").and_then(|h| h.as_array()) else {
+        tracing::debug!("KAS hooks payload has no `hooks` array");
+        return None;
+    };
+    let mut out = Vec::with_capacity(array.len());
+    for entry in array {
+        let meta = entry.get("_meta");
+        let action_type = entry.pointer("/action/type").and_then(|t| t.as_str());
+        let Some(command) = entry.pointer("/action/command").and_then(|c| c.as_str()) else {
+            tracing::warn!(
+                action_type,
+                id = entry.get("id").and_then(|i| i.as_str()),
+                "KAS hook has no runCommand command; skipped"
+            );
+            continue;
+        };
+        // `_meta.trigger` is PascalCase on the wire, which is already the case
+        // the v2 panel displays — so it passes through verbatim rather than
+        // being normalized and re-cased.
+        let Some(trigger) = meta.and_then(|m| m.get("trigger")).and_then(|t| t.as_str()) else {
+            tracing::warn!(
+                id = entry.get("id").and_then(|i| i.as_str()),
+                "KAS hook has no _meta.trigger; skipped"
+            );
+            continue;
+        };
+        out.push(crate::types::HookInfo {
+            trigger: trigger.to_string(),
+            command: command.to_string(),
+            // The v2 `matcher` column has no KAS counterpart: KAS matches with
+            // the hook file's own `matcher` field, which the wire projection
+            // does not carry. `None` is the honest answer, not "".
+            matcher: None,
+            id: entry.get("id").and_then(|i| i.as_str()).map(str::to_string),
+            name: entry
+                .get("name")
+                .and_then(|n| n.as_str())
+                .map(str::to_string),
+            enabled: meta
+                .and_then(|m| m.get("enabled"))
+                .and_then(|e| e.as_bool()),
+        });
+    }
+    Some(out)
+}
 
 /// Answer `_kiro/hooks/sessionStart` by executing the registry's
 /// SessionStart hooks and packaging their output as
@@ -551,6 +628,117 @@ pub(crate) async fn respond_execute(
         }
     };
     json_ext_response(&reply)
+}
+
+#[cfg(test)]
+mod wire_hook_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+
+    /// The `_kiro/hooks/didChange` payload captured live on kiro-cli 2.16.0 /
+    /// KAS 0.27.8 (`experiments/conductor-spike/kas-v2hooks-2.16.0.jsonl`),
+    /// verbatim. The `list` reply carries the same `{hooks: [...]}` element
+    /// shape, so one fixture fences both directions.
+    fn live_capture() -> serde_json::Value {
+        serde_json::json!({
+          "sessionId": "sess_80d7265a-c751-4754-a738-767f51c076ca",
+          "hooks": [
+            {
+              "id": "/tmp/kas-v2h/.kiro/hooks/audit.json#hook-0",
+              "name": "cyril-audit-pre",
+              "action": { "type": "runCommand", "command": "echo pre >> /tmp/evidence.txt" },
+              "_meta": {
+                "trigger": "PreToolUse",
+                "source": "standalone-file",
+                "filePath": "/tmp/kas-v2h/.kiro/hooks/audit.json",
+                "enabled": true
+              }
+            },
+            {
+              "id": "/tmp/kas-v2h/.kiro/hooks/audit.json#hook-1",
+              "name": "cyril-audit-start",
+              "action": { "type": "runCommand", "command": "echo start >> /tmp/evidence.txt" },
+              "_meta": {
+                "trigger": "SessionStart",
+                "source": "standalone-file",
+                "filePath": "/tmp/kas-v2h/.kiro/hooks/audit.json",
+                "enabled": false
+              }
+            }
+          ]
+        })
+    }
+
+    #[test]
+    fn translates_the_live_capture() {
+        let hooks = parse_wire_hooks(&live_capture()).expect("hooks array present");
+        assert_eq!(hooks.len(), 2);
+
+        // The three documented file-vs-wire divergences, asserted as VALUES so
+        // a translation that silently passed the file shape through would fail:
+        // the id is the COMPOSITE (not the bare name), the command comes from
+        // the `runCommand`-tagged action, and the trigger is the PascalCase one
+        // nested under `_meta` (not a top-level camelCase field, which does not
+        // exist on the wire at all).
+        assert_eq!(
+            hooks[0].id.as_deref(),
+            Some("/tmp/kas-v2h/.kiro/hooks/audit.json#hook-0")
+        );
+        assert_ne!(
+            hooks[0].id.as_deref(),
+            Some("cyril-audit-pre"),
+            "id is not the name"
+        );
+        assert_eq!(hooks[0].name.as_deref(), Some("cyril-audit-pre"));
+        assert_eq!(hooks[0].trigger, "PreToolUse");
+        assert_eq!(hooks[0].command, "echo pre >> /tmp/evidence.txt");
+        assert_eq!(hooks[0].enabled, Some(true));
+
+        // includeDisabled means a disabled hook is PRESENT and marked, not
+        // absent — the panel dims it on exactly this value.
+        assert_eq!(hooks[1].enabled, Some(false));
+        assert_eq!(hooks[1].trigger, "SessionStart");
+
+        // KAS carries no matcher in this projection; None, never "".
+        assert!(hooks.iter().all(|h| h.matcher.is_none()));
+    }
+
+    #[test]
+    fn missing_hooks_array_is_none_not_empty() {
+        // The distinction the caller depends on: `None` surfaces a BridgeError
+        // naming the drift, while `Some(vec![])` would render as "you have no
+        // hooks". A host-mode didChange (no `hooks` key) takes this path too.
+        assert!(parse_wire_hooks(&serde_json::json!({"sessionId": "s"})).is_none());
+        assert!(parse_wire_hooks(&serde_json::json!({"hooks": "not-an-array"})).is_none());
+        let empty = parse_wire_hooks(&serde_json::json!({"hooks": []})).expect("empty is Some");
+        assert!(
+            empty.is_empty(),
+            "a genuinely empty registry is Some(vec![])"
+        );
+    }
+
+    #[test]
+    fn malformed_entries_are_skipped_not_fatal() {
+        // A prompt-action hook is legitimate on disk and simply has no command
+        // to display. Dropping the whole registry over it would hide every
+        // other hook the user has, so the batch survives and the good entry
+        // still arrives.
+        let payload = serde_json::json!({"hooks": [
+            { "id": "a#hook-0", "name": "promptish",
+              "action": { "type": "prompt", "prompt": "think harder" },
+              "_meta": { "trigger": "Stop", "enabled": true } },
+            { "id": "b#hook-0", "name": "no-trigger",
+              "action": { "type": "runCommand", "command": "echo hi" },
+              "_meta": { "enabled": true } },
+            { "id": "c#hook-0", "name": "good",
+              "action": { "type": "runCommand", "command": "echo ok" },
+              "_meta": { "trigger": "PreToolUse", "enabled": true } }
+        ]});
+        let hooks = parse_wire_hooks(&payload).expect("array present");
+        assert_eq!(hooks.len(), 1, "only the well-formed entry survives");
+        assert_eq!(hooks[0].name.as_deref(), Some("good"));
+    }
 }
 
 #[cfg(test)]
