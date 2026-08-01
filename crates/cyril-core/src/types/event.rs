@@ -2,7 +2,7 @@ use crate::types::command::{CommandInfo, ConfigOption};
 use crate::types::message::{AgentMessage, AgentThought, UserMessage};
 use crate::types::plan::Plan;
 use crate::types::session::{
-    CompactionPhase, ContextBreakdown, ContextUsage, EffortLevel, ModeId, ModelInfo, SessionId,
+    CompactionPhase, ContextBreakdown, ContextUsage, EffortUpdate, ModeId, ModelInfo, SessionId,
     SessionMode, StopReason, TokenCounts, TurnMetering,
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
@@ -76,11 +76,20 @@ pub enum Notification {
         context_usage: Option<ContextUsage>,
         metering: Option<TurnMetering>,
         tokens: Option<TokenCounts>,
-        /// Thinking-effort level reported under thinking models (Kiro 2.5.0+).
-        /// `None` when the metadata frame omits it — which happens on
-        /// non-thinking models and (observed) mid-turn on context-only frames,
-        /// so consumers must treat absence as "no update", not "cleared".
-        effort: Option<EffortLevel>,
+        /// Turn duration in ms, parsed independently of `meteringUsage`
+        /// (cyril-1gim): Kiro emits duration/effort-only frames (real 2.4.1
+        /// shape) with no credits aggregate. Carried separately so a lone
+        /// duration reaches the turn summary instead of being dropped with
+        /// the absent metering. `None` when the frame omits `turnDurationMs`.
+        duration_ms: Option<u64>,
+        /// Effort-level change from the `effort` field on `kiro.dev/metadata`
+        /// (Kiro 2.5.0+). Tri-state per the wire (cyril-1gim): `Unchanged`
+        /// when the frame omits it — which happens on non-thinking models and
+        /// (observed) mid-turn on context-only frames, so consumers must
+        /// retain the current level, not clear it; `Clear` for an explicit
+        /// `effort: null` (engine-initiated badge clear); `Set` with a known
+        /// or backend-defined level.
+        effort: EffortUpdate,
         /// Session ID from the params-level `sessionId` on `kiro.dev/metadata`
         /// (cyril-fh06). During agent_crew runs every subagent session emits
         /// its own metadata frame; the bridge → client pathway promotes this
@@ -600,17 +609,20 @@ mod tests {
 
     #[test]
     fn notification_metadata_updated() {
+        use crate::types::session::EffortLevel;
         let n = Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(75.0)),
             metering: None,
             tokens: None,
-            effort: Some(EffortLevel::High),
+            duration_ms: None,
+            effort: EffortUpdate::Set(EffortLevel::High),
             session_id: Some(SessionId::new("sess_1")),
         };
         if let Notification::MetadataUpdated {
             context_usage,
             metering,
             tokens,
+            duration_ms,
             effort,
             session_id,
         } = n
@@ -621,7 +633,8 @@ mod tests {
             }
             assert!(metering.is_none());
             assert!(tokens.is_none());
-            assert_eq!(effort, Some(EffortLevel::High));
+            assert!(duration_ms.is_none());
+            assert_eq!(effort, EffortUpdate::Set(EffortLevel::High));
             assert_eq!(session_id, Some(SessionId::new("sess_1")));
         } else {
             panic!("wrong variant");

@@ -122,6 +122,7 @@ impl SessionController {
                 context_usage,
                 metering,
                 tokens,
+                duration_ms,
                 // `effort` is display-only; tracked in UiState for the toolbar,
                 // not in session command-context. Intentionally ignored here.
                 ..
@@ -132,9 +133,16 @@ impl SessionController {
                 if let Some(u) = context_usage {
                     self.context_usage = Some(u.clone());
                 }
-                if let Some(m) = metering {
-                    self.pending_metering = Some(m.clone());
-                }
+                // Credits and duration merge independently (order-independent,
+                // last-writer-wins per field): credits frames and
+                // duration/effort-only frames interleave (real 2.4.1 shape)
+                // and must not clobber each other — see
+                // `TurnMetering::merge_pending` (cyril-1gim).
+                self.pending_metering = TurnMetering::merge_pending(
+                    self.pending_metering.take(),
+                    metering.clone(),
+                    *duration_ms,
+                );
                 self.pending_tokens = tokens.clone();
                 true
             }
@@ -366,7 +374,8 @@ mod tests {
             context_usage: Some(ContextUsage::new(75.0)),
             metering: None,
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         assert!(changed);
@@ -402,9 +411,10 @@ mod tests {
         // Turn 1: MetadataUpdated + TurnCompleted
         ctrl.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(5.0)),
-            metering: Some(TurnMetering::new(0.018, Some(1948))),
+            metering: Some(TurnMetering::new(Some(0.018), Some(1948))),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -414,9 +424,10 @@ mod tests {
         // Turn 2: MetadataUpdated + TurnCompleted
         ctrl.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(6.0)),
-            metering: Some(TurnMetering::new(0.042, Some(5200))),
+            metering: Some(TurnMetering::new(Some(0.042), Some(5200))),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -464,9 +475,10 @@ mod tests {
 
         ctrl.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(50.0)),
-            metering: Some(TurnMetering::new(0.03, Some(2000))),
+            metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         assert!(
@@ -491,9 +503,10 @@ mod tests {
         let mut ctrl = SessionController::new();
         ctrl.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(0.01, None)),
+            metering: Some(TurnMetering::new(Some(0.01), None)),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -552,9 +565,10 @@ mod tests {
         // Turn 1
         ctrl.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(0.01, None)),
+            metering: Some(TurnMetering::new(Some(0.01), None)),
             tokens: Some(TokenCounts::new(100, 50, None)),
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -568,9 +582,10 @@ mod tests {
         // Turn 2
         ctrl.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(20.0)),
-            metering: Some(TurnMetering::new(0.05, Some(5000))),
+            metering: Some(TurnMetering::new(Some(0.05), Some(5000))),
             tokens: Some(TokenCounts::new(800, 400, Some(200))),
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -674,9 +689,10 @@ mod tests {
         let mut ctrl = SessionController::new();
         ctrl.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(0.05, Some(2000))),
+            metering: Some(TurnMetering::new(Some(0.05), Some(2000))),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -705,7 +721,8 @@ mod tests {
             context_usage: Some(ContextUsage::new(75.0)),
             metering: None,
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         assert!(ctrl.context_usage().is_some());

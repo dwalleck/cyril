@@ -171,8 +171,8 @@ impl TuiState for UiState {
         self.current_model.as_deref()
     }
 
-    fn effort(&self) -> Option<EffortLevel> {
-        self.effort
+    fn effort(&self) -> Option<&EffortLevel> {
+        self.effort.as_ref()
     }
 
     fn steering_queued(&self) -> usize {
@@ -411,6 +411,7 @@ impl UiState {
                 context_usage,
                 metering,
                 tokens,
+                duration_ms,
                 effort,
                 // Routing tag (cyril-fh06): the App has already diverted
                 // subagent-scoped frames before this state machine sees one.
@@ -425,14 +426,25 @@ impl UiState {
                     self.context_usage = Some(u.percentage());
                 }
                 self.pending_tokens = tokens.clone();
-                if let Some(m) = metering {
-                    self.pending_metering = Some(m.clone());
-                }
-                // Sticky: a frame that omits effort means "no update", not
-                // "cleared" — context-only frames interleave with effort frames
-                // mid-turn, so overwriting with None would make it flicker.
-                if let Some(e) = effort {
-                    self.effort = Some(*e);
+                // Credits and duration merge independently (order-independent,
+                // last-writer-wins per field): credits frames and
+                // duration/effort-only frames interleave (real 2.4.1 shape)
+                // and must not clobber each other — see
+                // `TurnMetering::merge_pending` (cyril-1gim).
+                self.pending_metering = TurnMetering::merge_pending(
+                    self.pending_metering.take(),
+                    metering.clone(),
+                    *duration_ms,
+                );
+                // Sticky: absent effort means "no update" — context-only
+                // frames interleave with effort frames mid-turn, so keeping
+                // the current badge avoids flicker. An explicit `effort: null`
+                // is the engine clearing the badge; a string sets it
+                // (cyril-1gim).
+                match effort {
+                    EffortUpdate::Unchanged => {}
+                    EffortUpdate::Clear => self.effort = None,
+                    EffortUpdate::Set(level) => self.effort = Some(level.clone()),
                 }
                 true
             }
@@ -4332,22 +4344,24 @@ mod tests {
             context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
-            effort: Some(EffortLevel::High),
+            effort: EffortUpdate::Set(EffortLevel::High),
+            duration_ms: None,
             session_id: None,
         });
-        assert_eq!(state.effort(), Some(EffortLevel::High));
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
 
         // A context-only frame mid-turn omits effort — must NOT clear it.
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(8.0)),
             metering: None,
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         assert_eq!(
             state.effort(),
-            Some(EffortLevel::High),
+            Some(&EffortLevel::High),
             "omitted effort must be sticky"
         );
 
@@ -4363,6 +4377,86 @@ mod tests {
     }
 
     #[test]
+    fn explicit_effort_clear_drops_badge() {
+        // tui.js checks `"effort" in e`: an explicit null is a badge-CLEAR
+        // signal (cyril-1gim), distinct from an absent field — the engine can
+        // turn the badge off mid-session and UiState must honor it.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Set(EffortLevel::High),
+            session_id: None,
+        });
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Clear,
+            session_id: None,
+        });
+        assert_eq!(state.effort(), None, "explicit null must clear the badge");
+    }
+
+    #[test]
+    fn unknown_effort_level_survives_to_ui() {
+        // A backend-defined level (schema-negotiated per model, cyril-1gim)
+        // must reach the toolbar instead of vanishing at the wire boundary.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Set(EffortLevel::Other("turbo".into())),
+            session_id: None,
+        });
+        assert_eq!(state.effort(), Some(&EffortLevel::Other("turbo".into())));
+    }
+
+    #[test]
+    fn duration_merge_is_order_independent() {
+        // Credits frames and duration/effort-only frames interleave (real
+        // 2.4.1 shape). When the credits frame lands AFTER the duration-only
+        // frames, the merged duration must survive (cyril-1gim).
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: Some(2281),
+            effort: EffortUpdate::Unchanged,
+            session_id: None,
+        });
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: Some(TurnMetering::new(Some(0.018), None)),
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Unchanged,
+            session_id: None,
+        });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        let m = state
+            .last_turn()
+            .expect("TurnSummary after TurnCompleted")
+            .metering()
+            .expect("metering present");
+        assert_eq!(m.credits(), Some(0.018));
+        assert_eq!(
+            m.duration_ms(),
+            Some(2281),
+            "earlier duration not clobbered"
+        );
+    }
+
+    #[test]
     fn metadata_without_context_retains_last_context() {
         // Replays the captured 2.4.1 wire shape: duration/effort-only frames
         // omit contextUsagePercentage. Such a frame must not stamp the
@@ -4372,16 +4466,18 @@ mod tests {
             context_usage: Some(ContextUsage::new(42.0)),
             metering: None,
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         assert!((state.context_usage().unwrap_or(-1.0) - 42.0).abs() < f64::EPSILON);
 
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: None,
-            metering: Some(TurnMetering::new(0.018, Some(2281))),
+            metering: Some(TurnMetering::new(Some(0.018), Some(2281))),
             tokens: None,
-            effort: Some(EffortLevel::High),
+            effort: EffortUpdate::Set(EffortLevel::High),
+            duration_ms: None,
             session_id: None,
         });
         assert!(
@@ -4390,7 +4486,7 @@ mod tests {
         );
         assert_eq!(
             state.effort(),
-            Some(EffortLevel::High),
+            Some(&EffortLevel::High),
             "effort from a context-less frame must still apply"
         );
 
@@ -4401,7 +4497,7 @@ mod tests {
         let m = summary
             .metering()
             .expect("metering from a context-less frame must still apply");
-        assert!((m.credits() - 0.018).abs() < 0.001);
+        assert!((m.credits().unwrap() - 0.018).abs() < 0.001);
         assert_eq!(m.duration_ms(), Some(2281));
     }
 
@@ -4413,10 +4509,11 @@ mod tests {
             context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
-            effort: Some(EffortLevel::High),
+            effort: EffortUpdate::Set(EffortLevel::High),
+            duration_ms: None,
             session_id: None,
         });
-        assert_eq!(state.effort(), Some(EffortLevel::High));
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
 
         // Switching to a non-thinking model (no new session) must clear effort,
         // otherwise the toolbar shows a phantom level the new model never reports.
@@ -4433,13 +4530,14 @@ mod tests {
             context_usage: Some(ContextUsage::new(8.0)),
             metering: None,
             tokens: None,
-            effort: Some(EffortLevel::Medium),
+            effort: EffortUpdate::Set(EffortLevel::Medium),
+            duration_ms: None,
             session_id: None,
         });
         state.set_current_model(Some("haiku".into()));
         assert_eq!(
             state.effort(),
-            Some(EffortLevel::Medium),
+            Some(&EffortLevel::Medium),
             "unchanged model must not clear effort"
         );
     }
@@ -4455,10 +4553,11 @@ mod tests {
             context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
-            effort: Some(EffortLevel::High),
+            effort: EffortUpdate::Set(EffortLevel::High),
+            duration_ms: None,
             session_id: None,
         });
-        assert_eq!(state.effort(), Some(EffortLevel::High));
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
 
         state.set_current_model(Some("haiku".into()));
         assert_eq!(
@@ -4476,9 +4575,10 @@ mod tests {
 
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(50.0)),
-            metering: Some(TurnMetering::new(0.03, Some(2000))),
+            metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         assert!(
@@ -4499,7 +4599,7 @@ mod tests {
         assert!(summary.token_counts().is_some());
         assert_eq!(summary.token_counts().unwrap().input(), 800);
         assert!(summary.metering().is_some());
-        assert!((summary.metering().unwrap().credits() - 0.03).abs() < 0.001);
+        assert!((summary.metering().unwrap().credits().unwrap() - 0.03).abs() < 0.001);
     }
 
     #[test]
@@ -4508,9 +4608,10 @@ mod tests {
 
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(0.01, None)),
+            metering: Some(TurnMetering::new(Some(0.01), None)),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -4538,9 +4639,10 @@ mod tests {
         // Turn 1
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(0.02, Some(1000))),
+            metering: Some(TurnMetering::new(Some(0.02), Some(1000))),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -4550,9 +4652,10 @@ mod tests {
         // Turn 2
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(20.0)),
-            metering: Some(TurnMetering::new(0.03, Some(2000))),
+            metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -4569,9 +4672,10 @@ mod tests {
 
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(0.05, Some(2000))),
+            metering: Some(TurnMetering::new(Some(0.05), Some(2000))),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {

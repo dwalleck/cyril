@@ -34,8 +34,8 @@ pub use present_as::PresentAs;
 pub use prompt::{PromptArgument, PromptInfo};
 pub use session::{
     CompactionPhase, ContextBreakdown, ContextBucket, ContextUsage, CreditUsage, EffortLevel,
-    ModeId, ModelId, ModelInfo, SessionCost, SessionId, SessionMode, SessionStatus, StopReason,
-    TokenCounts, TurnMetering, TurnSummary,
+    EffortUpdate, ModeId, ModelId, ModelInfo, SessionCost, SessionId, SessionMode, SessionStatus,
+    StopReason, TokenCounts, TurnMetering, TurnSummary,
 };
 pub use subagent::{LoopState, PendingStage, SubagentInfo, SubagentStatus};
 pub use tool_call::{

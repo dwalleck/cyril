@@ -331,6 +331,31 @@ mod tests {
     }
 
     #[test]
+    fn toolbar_renders_unknown_effort_verbatim() {
+        // A backend-defined level (schema-negotiated per model, cyril-1gim)
+        // must render its raw wire string — not vanish like the old
+        // closed-set None drop.
+        let state = MockTuiState {
+            current_model: Some("gpt-5.6-terra".into()),
+            effort: Some(cyril_core::types::EffortLevel::Other("turbo".into())),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(80, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &cyril_dark()))
+            .expect("draw");
+        let buf = terminal.backend().buffer();
+        let text: String = (0..80)
+            .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
+            .collect();
+        assert!(
+            text.contains("turbo"),
+            "unknown effort must render, got: {text:?}"
+        );
+    }
+
+    #[test]
     fn toolbar_omits_effort_when_absent() {
         let state = MockTuiState {
             current_model: Some("claude-haiku-4.5".into()),
