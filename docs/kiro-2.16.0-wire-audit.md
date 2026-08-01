@@ -798,6 +798,97 @@ requires the **host** to have actually produced the code before it will report P
 - **Five `_kiro/workflow/*` shapes are live-verified, `node_paused` is not** — see the repeat +
   watch section.
 
+## The KAS gate surface — the single most productive lane
+
+Written down because it is the through-line of this whole audit. **Almost every large
+finding came from flipping a gate, not from spending more turns.** The workflow engine, the
+hooks subsystem, and the paginated fs dialect were each one capability or settings key away,
+and each was found by accident. The gates are enumerable, so they should be enumerated.
+
+### Where the gates live (four distinct channels — they are not interchangeable)
+
+| Channel | Read as | Gates |
+|---|---|---|
+| `initialize.clientCapabilities.fs._meta.kiro.*` | `readFile`, `writeFile`, `stat`, `readDirectory`, `delete` | the `_kiro/fs/*` dialect (paginated) vs plain ACP `fs/read_text_file` |
+| `initialize.clientCapabilities._meta.kiro.*` | `secretStorage`, `openExternalUrl`, `knowledge`, `infrastructureSafety`, `c2sViews`, `hooks:{enabled,v2}` | whole subsystems |
+| `initialize._meta.kiro.settings` | 21 keys, `{enabled: bool}` | **overrides BACKEND feature flags** via `bridgeFeatureFlags()` |
+| `session/new._meta.kiro.settings` | same keys | session-scoped only — does **not** reach connection-scoped gates |
+
+The last two being different is load-bearing: `workflows` works from either, but anything read
+through `getModelConfigProvider().isFeatureEnabled()` only responds to the **initialize** form.
+An early probe sent `subagentOrchestration` at `session/new` and wrongly concluded the feature
+was backend-gated.
+
+Two naming traps cost real probe time:
+
+- **`hooks` must be an object.** `{enabled: true, v2: true}` — the bundle reads
+  `kiroMeta?.hooks?.enabled`, so the boolean `true` makes it `undefined` and silently skips
+  the entire block. Two probes concluded the hooks path was dead on that basis.
+- **The capability wire name ≠ the resolved field name.** `resolveCapabilities()` maps
+  `fs._meta.kiro.readFile` → `kiroFsReadFile`. Advertising the *resolved* name at top level
+  does nothing.
+
+### Settings sweep result (21 keys, one arm each, free)
+
+Five change the handshake:
+
+| Flag | Effect |
+|---|---|
+| `workflows` | `workflowsEnabled` **plus four slash commands**: `workflow-run`, `workflow-status`, `workflow-cancel`, `workflow-resume` |
+| `fta` | adds mode `functional_task_alignment` (7 → 8 modes) |
+| `goal` | adds the `goal` command |
+| `specPlan` | `specPlanEnabled` |
+| `steeringSupervisor` | `steeringSupervisorEnabled` — a `session/new._meta` field that **does not exist at all** by default |
+
+The workflow slash commands are worth dwelling on: every workflow probe in this audit drove
+`_kiro/workflow/*` directly and **never noticed the user-facing command surface appear**.
+Driving a protocol directly can hide the product feature built on top of it.
+
+No handshake delta from the other 13 (`checkpoint`, `codeIntelligence`, `compaction`,
+`disableAutoCompaction`, `inlineAgents`, `knowledge`, `largeToolOutputHandler`,
+`semanticReview`, `sessionEviction`, `tangentMode`, `thinking`, `todoList`, `toolSearch`) —
+but a handshake sweep cannot see in-turn behaviour, so that is "not observed here", not
+"no effect".
+
+### Client persona — `clientInfo.name`, not `_meta.kiro.clientName`
+
+`resolveAgentContext()` reads the **standard ACP `initialize.params.clientInfo.name`**;
+unrecognised or absent falls through to **`kiro-ide`**. Every capture in this repo was taken
+under the IDE persona, because no probe ever sent `clientInfo`.
+
+Measured across four arms (free): the **advertised surface is persona-invariant** — identical
+`authMethods`, modes, `configOptions`, `extensionMethods`, commands and pushes. What changes
+is the **system prompt** (context usage on an empty session: `kiro-ide` 0.9%, `kiro-cli` 0.8%,
+`kiro-web` 0.8%) and, for `kiro-web` only, **two tools run at session start**
+(`get_learnings_for_prompt`, `get_steering_files` — the `honorsRepositories()` branch).
+
+Because the surface is persona-invariant, persona does **not** explain
+`OrchestrateSubAgent`/`userInput`/`openExternalUrl` being absent. Those conclusions stand.
+cyril should send `clientInfo {name: "kiro-cli"}` → **cyril-df5l**.
+
+### Two results this audit records as INCONCLUSIVE, not negative
+
+Both are limits of the probe, not evidence about the feature — flagged so a later reader does
+not cite them as settled:
+
+- **`subagentOrchestration`** showed no handshake delta even through the initialize bridge,
+  but the surface it selects is chosen during *prompt construction*
+  (`getDelegationToolId(getModelConfigProvider().isFeatureEnabled(…))`), which a
+  handshake-only sweep cannot observe. One paid turn with the flag set at initialize would
+  settle **cyril-ucii**.
+- **`infraSafetyMonitor` / `infraSafetyEnforce`** showed no delta, but the real gate is
+  `clientSupportsSafety && (monitor || enforce)` and the sweep arms **did not advertise
+  `infrastructureSafety`** — half the condition was missing. Re-run before concluding
+  anything for **cyril-3ald**.
+
+### The standing limit: elective mechanisms
+
+Three separate surfaces could not be provoked by prompting — `OrchestrateSubAgent`,
+workflow `node_paused`, and `_kiro/userInput` / `_kiro/openExternalUrl`. In each case the
+mechanism is **elected by the model**, so no prompt reliably forces it. Treat this as a
+methodology limit rather than re-attempting per method. (Hooks *looked* like a fourth case and
+was not — it was a client-advertisement bug on our side.)
+
 ## What this means for cyril
 
 1. **No breakage.** v2 is frozen at settle; the one changed v2 response is additive and cyril's
@@ -829,6 +920,15 @@ probe-v2-turn-traffic-ab-2.16.0.py <bin> v2-turn-<ver>.jsonl
 
 # KAS full-surface REAL turns — COSTS CREDITS (4 turns/binary) [NEW this audit]
 probe-kas-turn-traffic-ab-2.16.0.py <bin> kas-turn-<ver>.jsonl
+
+# --- KAS surface mapping (all FREE unless noted) ---------------------------
+probe-kas-rpc-sweep-2.16.0.py          <bin> kas-rpc-sweep-<ver>.jsonl   # 1 turn
+probe-kas-rpc-corrections-2.16.0.py    <bin> kas-rpc-corrections.jsonl
+probe-kas-pushed-methods-2.16.0.py     <bin> kas-pushed-<ver>.jsonl      # 3 turns
+probe-kas-v2hooks-2.16.0.py            <bin> kas-v2hooks-<ver>.jsonl     # 1 turn
+probe-kas-client-persona-2.16.0.py     <bin> kas-persona-<ver>
+probe-kas-settings-sweep-2.16.0.py     <bin> kas-settings-<ver>
+probe-kas-safety-fork-load-2.16.0.py   <bin> kas-safety-fork-load.jsonl  # 1 turn
 diff-acp-wire.py kas-turn-2.15.0.jsonl kas-turn-2.16.0.jsonl \
     --label-old 2.15.0 --label-new 2.16.0
 
