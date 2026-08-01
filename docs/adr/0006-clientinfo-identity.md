@@ -1,6 +1,11 @@
 # Cyril presents its own clientInfo identity; kiro-cli impersonation is an explicit opt-in knob
 
-Status: accepted (2026-07-18, cyril-0wyn)
+Status: superseded by [ADR-0008](0008-kiro-cli-persona-default.md) (2026-08-01,
+cyril-df5l) — the **default** flipped to `kiro-cli` once the persona A/B
+measured what the choice costs. Everything else below still holds: the
+mechanism, the four persona-keyed behaviors, the no-override finding, the
+KAS-only scoping, and the `title` invariant. Originally accepted 2026-07-18
+(cyril-0wyn).
 
 ## Context
 

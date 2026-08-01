@@ -48,10 +48,11 @@ pub struct AgentConfig {
     /// = "free"` (default, zero-credential direct spawn) or `"wrapper"`
     /// (`kiro-cli acp --agent-engine v3` + the auth responder). Ignored for v2.
     pub kas_spawn: KasSpawn,
-    /// What identity cyril presents as `clientInfo.name` (cyril-0wyn,
-    /// ADR-0006). TOML `present_as = "cyril"` (default, honest) or
-    /// `"kiro-cli"` (opt-in impersonation, KAS engine only — inert with a
-    /// warning on v2).
+    /// What identity cyril presents as `clientInfo.name` (cyril-df5l,
+    /// ADR-0008, superseding ADR-0006). TOML `present_as = "kiro-cli"`
+    /// (default: the CLI persona) or `"cyril"` (opt out to KAS's
+    /// unrecognized-name `kiro-ide` fallback). KAS engine only — inert on v2,
+    /// which ignores `clientInfo.name` behaviorally.
     pub present_as: PresentAs,
     /// Which hook model runs on the KAS engine (cyril-jiyn, KAS-7). TOML
     /// `kas_hooks = "host"` (default: cyril executes hooks and can block
@@ -229,11 +230,25 @@ agent_name = "opencode"
         }
     }
 
+    // cyril-df5l / ADR-0008: a config that never mentions `present_as` gets
+    // the CLI persona, and the opt-out is expressible. Both halves matter —
+    // a flip that made "cyril" unreachable would be impersonation without
+    // consent, which ADR-0008 explicitly does not decide.
     #[test]
-    fn present_as_absent_defaults_to_cyril() {
+    fn present_as_absent_defaults_to_kiro_cli() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
         std::fs::write(&path, "[agent]\nengine = \"kas\"\n").unwrap();
+
+        let config = Config::load_from_path(&path);
+        assert_eq!(config.agent.present_as, PresentAs::KiroCli);
+    }
+
+    #[test]
+    fn present_as_cyril_opt_out_parses() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "[agent]\npresent_as = \"cyril\"\n").unwrap();
 
         let config = Config::load_from_path(&path);
         assert_eq!(config.agent.present_as, PresentAs::Cyril);
@@ -311,7 +326,12 @@ agent_name = "opencode"
             .unwrap();
 
             let config = Config::load_from_path(&path);
-            assert_eq!(config.agent.present_as, PresentAs::Cyril, "{bad}");
+            // The rejected file yields the ADR-0008 default, spelled out
+            // rather than written as `PresentAs::default()` — a tautological
+            // assertion would still pass if the default moved to `kiro-web`
+            // itself, which is the exact value this test exists to keep
+            // unreachable.
+            assert_eq!(config.agent.present_as, PresentAs::KiroCli, "{bad}");
             assert_eq!(
                 config.ui.max_messages, 500,
                 "rejection must be whole-file (house posture), not field-skipping"

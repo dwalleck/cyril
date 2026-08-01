@@ -781,14 +781,21 @@ async fn run_loop(
     use agent_client_protocol as acp;
 
     // 4. ACP handshake. Identity is resolved against the bound engine
-    //    (cyril-0wyn, ADR-0006): the `present_as` knob is KAS-only, and the
-    //    resolved standing is stated in the log because KAS's own
-    //    classification is invisible on the wire (.cyril-0wyn/findings.md Q3).
+    //    (cyril-0wyn ADR-0006, default flipped by cyril-df5l ADR-0008): the
+    //    `present_as` knob is KAS-only, and the resolved standing is stated in
+    //    the log because KAS's own classification is invisible on the wire
+    //    (.cyril-0wyn/findings.md Q3).
     let effective = crate::protocol::identity::effective_present_as(engine.kind(), present_as);
     if effective != present_as {
-        tracing::warn!(
+        // `debug!`, not `warn!`: since ADR-0008 the discarded value is the
+        // DEFAULT, so on v2 this fires for every user who never touched the
+        // knob. A warn there would report cyril's own default as user
+        // misconfiguration — noise that trains the reader to ignore warns.
+        // The fact is still recorded, and it is not a failure: v2 ignores
+        // `clientInfo.name` behaviorally, so nothing was lost.
+        tracing::debug!(
             configured = present_as.wire_name(),
-            "[agent] present_as has no effect on the v2 engine — presenting the honest identity"
+            "present_as is inert on the v2 engine — presenting the honest identity"
         );
     }
     if let Some(advisory) = crate::protocol::identity::identity_advisory(engine.kind(), effective) {
