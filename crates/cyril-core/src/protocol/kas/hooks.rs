@@ -41,6 +41,49 @@ pub(crate) const DID_CHANGE_METHOD: &str = "kiro/hooks/didChange";
 /// The acp-stripped method name for `_kiro/hooks/sessionStart`.
 pub(crate) const SESSION_START_METHOD: &str = "kiro/hooks/sessionStart";
 
+/// Why a `_kiro/hooks/setEnabled` reply did not confirm the change.
+///
+/// The two arms must not collapse: a `{success: false}` is the agent *telling*
+/// cyril it declined, while an unparseable body means cyril has no idea what
+/// happened. Both end the operation, but only the first can be reported to the
+/// user as the agent's answer (CLAUDE.md, "Distinguish 'missing' from
+/// 'corrupt'").
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub(crate) enum SetEnabledError {
+    /// The reply was not JSON at all — wire drift, not an answer.
+    #[error("setEnabled reply is not JSON: {0}")]
+    Corrupt(String),
+    /// The agent explicitly declined to rewrite the backing file.
+    #[error("{0}")]
+    Refused(String),
+}
+
+/// Decide whether a `_kiro/hooks/setEnabled` reply confirms the change.
+///
+/// A transport-level `Ok` is not an agent-level yes: `setEnabled` rewrites the
+/// `enabled` flag in a file on the user's disk, so "it returned" and "it did
+/// it" are different claims.
+///
+/// - **Absent `success` is success.** The field is optional on the covenant's
+///   `BaseCapabilityResponse`, so absence is "not reported", not "refused".
+/// - **`success: false` is a refusal**, carrying `message` when the agent
+///   supplied one.
+/// - **An unparseable body is neither** — reporting it as success would tell
+///   the user a disk mutation happened that cyril never confirmed.
+pub(crate) fn interpret_set_enabled_reply(raw: &str) -> Result<(), SetEnabledError> {
+    let body: serde_json::Value =
+        serde_json::from_str(raw).map_err(|e| SetEnabledError::Corrupt(e.to_string()))?;
+    if body.get("success").and_then(serde_json::Value::as_bool) == Some(false) {
+        return Err(SetEnabledError::Refused(
+            body.get("message")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("agent declined the change")
+                .to_string(),
+        ));
+    }
+    Ok(())
+}
+
 /// Translate KAS's v2 hook registry — as carried by `_kiro/hooks/list`'s
 /// `{hooks: [...]}` reply and by the `_kiro/hooks/didChange` notification —
 /// into cyril's display [`HookInfo`](crate::types::HookInfo).
@@ -763,6 +806,48 @@ mod tests {
     fn write(dir: &Path, name: &str, body: &str) {
         std::fs::create_dir_all(dir).unwrap();
         std::fs::write(dir.join(name), body).unwrap();
+    }
+
+    // cyril-gk17 review fence: `setEnabled` rewrites a file on the user's disk,
+    // so the three readings of its reply must stay distinct. The regression
+    // this guards is the middle case — a body that does not parse being taken
+    // as assent, which reported a mutation cyril never confirmed.
+    #[test]
+    fn set_enabled_reply_separates_confirmed_refused_and_corrupt() {
+        // Confirmed: explicit success, and absent `success` (optional on the
+        // covenant's BaseCapabilityResponse — "not reported", not "refused").
+        for ok in [r#"{"success":true}"#, "{}", r#"{"hooks":[]}"#] {
+            assert_eq!(
+                interpret_set_enabled_reply(ok),
+                Ok(()),
+                "{ok} must read as confirmed"
+            );
+        }
+
+        // Refused: the agent's own message is surfaced when it supplies one,
+        // and stands in for it when it does not.
+        assert_eq!(
+            interpret_set_enabled_reply(r#"{"success":false,"message":"file is read-only"}"#),
+            Err(SetEnabledError::Refused("file is read-only".to_string()))
+        );
+        assert_eq!(
+            interpret_set_enabled_reply(r#"{"success":false}"#),
+            Err(SetEnabledError::Refused(
+                "agent declined the change".to_string()
+            ))
+        );
+
+        // Corrupt: NOT success. An unparseable body means cyril has no idea
+        // whether the flag moved; saying "done" would be a false report.
+        for bad in ["", "not json", r#"{"success":"#] {
+            assert!(
+                matches!(
+                    interpret_set_enabled_reply(bad),
+                    Err(SetEnabledError::Corrupt(_))
+                ),
+                "{bad:?} must not read as confirmed"
+            );
+        }
     }
 
     // cyril-jiyn claim 4 fence (mapping half): a valid load maps PascalCase

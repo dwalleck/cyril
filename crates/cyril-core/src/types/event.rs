@@ -270,7 +270,7 @@ pub enum Notification {
         hooks: Vec<crate::types::HookInfo>,
     },
 
-    /// A KAS-side hook reached a terminal state (`session_info_update`,
+    /// A KAS-side hook changed state (`session_info_update`,
     /// `_meta.kiro.kind = "hook_update"`; cyril-gk17).
     ///
     /// Under `kas_hooks = "kas"` the AGENT executes hooks on this host, and no
@@ -279,13 +279,21 @@ pub enum Notification {
     /// invisibly on their machine. That is why this is surfaced in chat rather
     /// than logged: an audit trail nobody sees is not an audit trail.
     ///
-    /// Only terminal states arrive here; `running` and `awaiting_approval` are
-    /// dropped at the converter as progress noise.
+    /// EVERY state arrives here, progress included, so a hook that hangs still
+    /// leaves a record. **This does not make the trail complete:** KAS emits no
+    /// `hook_update` at all for some triggers — in `kas-v2hooks-2.16.0.jsonl`
+    /// the `sessionStart` hook demonstrably ran (host-side evidence file) and
+    /// produced zero frames, while only the `preToolUse` hook reported. Cyril
+    /// cannot surface what is never sent; see [`KasHooksMode::Kas`] for what
+    /// that costs the trust decision.
+    ///
+    /// [`KasHooksMode::Kas`]: crate::types::KasHooksMode::Kas
     HookExecuted {
         name: String,
-        /// Carved status vocabulary: `completed` | `failed` | `canceled`
-        /// (`mapActionStateToHookStatus`). Kept as a `String` so a new upstream
-        /// state surfaces verbatim instead of being silently reclassified.
+        /// Carved status vocabulary: `completed` | `failed` | `canceled` |
+        /// `running` | `awaiting_approval` (`mapActionStateToHookStatus`). Kept
+        /// as a `String` so a new upstream state surfaces verbatim instead of
+        /// being silently reclassified.
         status: String,
         /// Present for `runCommand` hooks that reported one.
         exit_code: Option<i64>,

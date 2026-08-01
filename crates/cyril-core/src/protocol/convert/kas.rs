@@ -42,22 +42,25 @@ use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
 pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Option<Notification> {
     let kiro = siu.meta.as_ref()?.get("kiro")?;
     match kiro.get("kind").and_then(serde_json::Value::as_str) {
-        // cyril-gk17: a KAS-executed hook reached a terminal state. Carved
-        // producer: `ContextualHookInvoked` / `handleHookAction` build
+        // cyril-gk17: a KAS-executed hook changed state. Carved producer:
+        // `ContextualHookInvoked` / `handleHookAction` build
         // `{hook: {hookId, operationId, name, status, actionType, output?}}`,
         // where `status` comes from `mapActionStateToHookStatus`:
         // completed | failed | canceled | running | awaiting_approval.
         //
-        // Only terminal states surface. `running` fires on every hook start and
-        // `awaiting_approval` is already represented by the permission request,
-        // so both would be duplicate chat noise — dropped, not rendered.
+        // EVERY state surfaces, progress included. `running` and
+        // `awaiting_approval` were dropped as noise on the reasoning that
+        // `awaiting_approval` is already represented by the permission request
+        // — the live capture refutes it: `kas-v2hooks-2.16.0.jsonl` holds ZERO
+        // `session/request_permission` frames, so a dropped `awaiting_approval`
+        // is represented by nothing at all. Dropping `running` is worse: a hook
+        // that hangs, or is killed before it reports, then leaves NO evidence it
+        // ever started — precisely the case an audit trail exists for. Under
+        // `kas_hooks = "kas"` this line is the only record that agent-run shell
+        // touched this host, so a duplicate line costs less than a missing one.
         Some("hook_update") => {
             let hook = kiro.get("hook")?;
             let status = hook.get("status").and_then(serde_json::Value::as_str)?;
-            if matches!(status, "running" | "awaiting_approval") {
-                tracing::debug!(status, "KAS hook progress; not surfaced");
-                return None;
-            }
             // A hook with no name is unattributable — surfacing "hook  failed"
             // tells the user nothing actionable, so log and drop.
             let Some(name) = hook.get("name").and_then(serde_json::Value::as_str) else {
@@ -268,12 +271,23 @@ mod tests {
             );
         }
 
-        // Progress states are noise — `running` fires on every hook start.
+        // Progress states surface too: a hook that hangs (or is killed before
+        // it reports) emits `running` and nothing else, and dropping it would
+        // leave the only audit trail of agent-run shell completely empty.
+        // Regression fence for the cyril-gk17 review finding.
         for status in ["running", "awaiting_approval"] {
-            assert!(
-                session_info_to_notification(&frame(status, None)).is_none(),
-                "{status} must not reach the transcript"
-            );
+            match session_info_to_notification(&frame(status, None)) {
+                Some(Notification::HookExecuted {
+                    name,
+                    status: got,
+                    exit_code,
+                }) => {
+                    assert_eq!(name, "cyril-audit-pre");
+                    assert_eq!(got, status, "status must surface verbatim");
+                    assert_eq!(exit_code, None, "{status} reports no exit code");
+                }
+                other => panic!("{status} must reach the transcript, got {other:?}"),
+            }
         }
     }
 

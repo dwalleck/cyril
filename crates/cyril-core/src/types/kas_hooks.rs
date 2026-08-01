@@ -22,10 +22,22 @@
 ///   would give a false assurance (KAS's own `workspaceTrusted` flag, which
 ///   feeds `disabledReason: "untrusted-workspace"`, is the mechanism that
 ///   belongs in that role and is not yet wired — cyril-mq15). Instead the
-///   mode stays **opt-in** (`Host` is the default), and every hook that runs
-///   is surfaced in the transcript via `Notification::HookExecuted`, so
-///   execution is at least never silent. Opting in is equivalent to trusting
-///   the workspace.
+///   mode stays **opt-in** (`Host` is the default), and every hook state KAS
+///   reports is surfaced in the transcript via `Notification::HookExecuted`.
+///
+///   **The compensating control is partial, and the gap is upstream.** The
+///   claim this decision originally rested on — "execution is never silent" —
+///   is false as stated. In `kas-v2hooks-2.16.0.jsonl` two hooks executed
+///   (host-side evidence file: `cyril-audit-hook-fired-start |
+///   cyril-audit-hook-fired-pre`) but KAS emitted exactly ONE `hook_update`,
+///   for the `preToolUse` hook; the `sessionStart` hook ran and reported
+///   nothing. Cyril surfaces every frame it receives, so this is not a cyril
+///   drop — but it means opting in accepts hook execution that leaves no
+///   record at all. Two further limits: the knob is **global**, so one opt-in
+///   trusts every workspace cyril is ever launched in, including one cloned
+///   later; and `Notification::HookExecuted` is a record, never a gate —
+///   nothing here can refuse a hook. Wiring `workspaceTrusted` (cyril-mq15)
+///   is what would make this a control rather than a disclosure.
 /// - [`Off`](Self::Off): no hooks advertisement at all.
 ///
 /// Configured via TOML `[agent] kas_hooks = "host" | "kas" | "off"`.

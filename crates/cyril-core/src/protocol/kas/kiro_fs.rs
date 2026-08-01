@@ -43,9 +43,26 @@
 //! **Audit, not gate.** Every mutation here logs at `info!` with its session and
 //! path, because these are exactly the side effects ADR-0003 says cyril exists
 //! to observe. It is a *record*, not a policy check: the central write/exec gate
-//! seam is still deferred to its first consumer (cyril-g9vt), and KAS raises no
-//! `session/request_permission` for `_kiro/fs/delete`. Advertising `delete` is
-//! therefore a deliberate grant of a host-executed delete path.
+//! seam is still deferred to its first consumer (cyril-g9vt).
+//!
+//! **Permission posture (live-verified 2026-08-01, `kas-fs-write-2.16.0.jsonl`,
+//! `probe-kas-fs-write-permission-2.16.0.py`).** KAS raises
+//! `session/request_permission` at the **tool-approval** layer, before the
+//! host callback — not per callback. Measured on 2.16.0: 2/2 writes and 1/1
+//! delete were each preceded by a permission frame in the same turn
+//! (`"Replace in File"`, `"Write File"`, `"Delete File"`). Two consequences:
+//!
+//! - Taking this dialect does **not** change the permission posture. The same
+//!   approval precedes `fs/write_text_file` and `_kiro/fs/write_file` alike,
+//!   so advertising `writeFile` moves no write off a gated path.
+//! - An earlier revision of this comment asserted that KAS raises no
+//!   permission for `_kiro/fs/delete`. That was read from carved source and is
+//!   **wrong on the wire** — a `"Delete File"` approval does precede it.
+//!
+//! Advertising `delete` remains a deliberate grant, but of a path the user is
+//! prompted for, not a silent one. What is genuinely ungated is the *scope*:
+//! [`to_native_checked`] requires only an absolute path, so an approved delete
+//! is unconfined and recurses. The approval is the gate; cyril adds none.
 
 use agent_client_protocol as acp;
 use serde::Deserialize;
@@ -465,8 +482,11 @@ pub(crate) async fn respond_read_directory(
 /// already accepts. An explicit `recursive: false` — which 2.16.0 never sends —
 /// is honored and refuses a non-empty directory.
 ///
-/// Logged at `info!`: this is the most destructive callback cyril answers, and
-/// no `session/request_permission` precedes it.
+/// Logged at `info!`: this is the most destructive callback cyril answers. A
+/// `"Delete File"` `session/request_permission` DOES precede it (live-verified
+/// 2026-08-01, `kas-fs-write-2.16.0.jsonl`) — but that approval names one path
+/// and cyril bounds nothing, so the `info!` line remains the only record of
+/// what was actually removed. See the module header on the permission posture.
 pub(crate) async fn respond_delete(params: &serde_json::Value) -> acp::Result<acp::ExtResponse> {
     let p: PathParams = parse_params(DELETE_METHOD, params)?;
     let path = to_native_checked(&p.path)?;
@@ -566,6 +586,24 @@ mod tests {
     }
 
     // ---- splice_range -------------------------------------------------------
+
+    /// The first `_meta.kiro.range` ever captured on the wire
+    /// (`kas-fs-write-2.16.0.jsonl`, 2026-08-01): a real partial edit of line 3
+    /// of a 5-line file. Until this capture every range case was carved-source
+    /// only. Confirms 0-based lines and that `character` indexes within a line.
+    #[test]
+    fn splice_matches_the_live_captured_range() {
+        let content = "alpha\nbravo\ncharlie\ndelta\necho\n";
+        let r = range(serde_json::json!({
+            "start": {"line": 2, "character": 0},
+            "end":   {"line": 2, "character": 7}
+        }));
+        assert_eq!(
+            splice_range(content, &r, "CHARLIE-EDITED"),
+            "alpha\nbravo\nCHARLIE-EDITED\ndelta\necho\n",
+            "must reproduce the file the live turn actually produced"
+        );
+    }
 
     // Oracle: expected values produced by running the carved `spliceRange`
     // under node (KAS 0.27.8). Each case is one row of that run.

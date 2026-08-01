@@ -2014,29 +2014,20 @@ async fn run_loop(
                                     message: e.to_string(),
                                 }
                             })?;
-                        // A transport-level Ok is not an agent-level yes. The
-                        // reply is `{success: bool}` (+ an optional `message`),
-                        // and a `false` there means the agent declined to
-                        // rewrite the file — reporting that as success would
-                        // leave the user staring at an unchanged flag with no
-                        // explanation. Absent `success` is treated as success:
-                        // the field is optional on the covenant's
-                        // BaseCapabilityResponse, so absence is "not reported",
-                        // not "refused".
-                        if let Ok(body) =
-                            serde_json::from_str::<serde_json::Value>(reply.0.get())
-                            && body.get("success").and_then(|s| s.as_bool()) == Some(false)
-                        {
-                            let detail = body
-                                .get("message")
-                                .and_then(|m| m.as_str())
-                                .unwrap_or("agent declined the change");
-                            tracing::warn!(hook_id, enabled, detail, "hooks/setEnabled refused");
-                            return Err(Notification::BridgeError {
-                                operation: format!("hooks/setEnabled '{hook_id}'"),
-                                message: detail.to_string(),
-                            });
-                        }
+                        // A transport-level Ok is not an agent-level yes: this
+                        // call rewrites a file on the user's disk, so "it
+                        // returned" and "it did it" are different claims. The
+                        // three-way reading (confirmed / refused / corrupt)
+                        // lives in `interpret_set_enabled_reply` so it can be
+                        // fenced; here we only map it onto the wire error.
+                        crate::protocol::kas::hooks::interpret_set_enabled_reply(reply.0.get())
+                            .map_err(|e| {
+                                tracing::warn!(error = %e, hook_id, enabled, "hooks/setEnabled did not confirm");
+                                Notification::BridgeError {
+                                    operation: format!("hooks/setEnabled '{hook_id}'"),
+                                    message: e.to_string(),
+                                }
+                            })?;
                         kas_hooks_list(&conn, &session_id, &workspace_paths, "hooks/setEnabled")
                             .await
                     }
