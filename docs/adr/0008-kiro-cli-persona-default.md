@@ -109,5 +109,11 @@ web session.
   silently falls back to `kiro-ide` — the same failure mode ADR-0006
   documented, now on the default path, so the fence is load-bearing.
 - ADR-0006 remains the record of the mechanism (the four persona-keyed
-  behaviors, the no-override finding, the `title` invariant); only its
-  **Decision** section's first bullet is superseded here.
+  behaviors, the no-override finding, the `title` invariant). Four things
+  there are superseded, each marked inline in that document: **Decision
+  bullet 1** (the default itself); **Decision bullet 2** on two points —
+  which arm is the opt-in, and its claim that the v2 discard carries a
+  warning (it logs at `debug!`, per the Consequences above); the **document
+  title**, which frames impersonation as an opt-in knob; and the
+  **Considered-options** bullet rejecting "impersonate `kiro-cli` by
+  default", which this ADR adopts.

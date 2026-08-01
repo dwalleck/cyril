@@ -1,6 +1,18 @@
 # Defer the sacp-proxy/conductor stack; KAS host callbacks are the near-term interception mechanism
 
-Status: accepted (2026-06-17)
+Status: accepted (2026-06-17); extended by
+[ADR-0009](0009-kiro-fs-dialect.md) and
+[ADR-0010](0010-kas-hook-registry-direction.md) (2026-08-01)
+
+**Scope note added 2026-08-01.** The Context below lists "org write/exec policy"
+among the concerns host callbacks deliver. As implemented, the fs responders
+deliver the **audit** half only — every mutation is logged, nothing is refused;
+the central write/exec gate seam is still deferred to its first consumer
+(cyril-g9vt). Read that claim as "host callbacks are where the gate will go",
+not "the gate exists". ADR-0009 records which callback *dialect* cyril answers
+(the choice this ADR left open), and ADR-0010 records that hooks are
+bidirectional — under `kas_hooks = "kas"` the agent, not cyril, executes them,
+which inverts this ADR's assumption for that one family.
 
 ## Context
 
