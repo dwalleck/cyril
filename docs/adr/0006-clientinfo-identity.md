@@ -1,6 +1,19 @@
-# Cyril presents its own clientInfo identity; kiro-cli impersonation is an explicit opt-in knob
+# Cyril presents its own clientInfo identity; kiro-cli impersonation is an explicit opt-in knob (superseded — `kiro-cli` is now the default)
 
-Status: accepted (2026-07-18, cyril-0wyn)
+Status: superseded by [ADR-0008](0008-kiro-cli-persona-default.md) (2026-08-01,
+cyril-df5l) — the **default** flipped to `kiro-cli` once the persona A/B
+measured what the choice costs. Originally accepted 2026-07-18 (cyril-0wyn).
+
+**Still holds:** the mechanism, the four persona-keyed behaviors, the
+no-override finding, the KAS-only scoping, and the `title` invariant.
+
+**Also superseded, beyond the default itself:** this document's title frames
+impersonation as "an explicit opt-in knob" — `"cyril"` is now the opt-out arm
+instead; and Decision bullet 2's parenthetical says the knob is inert *with a
+warning* on v2 — that discard now logs at `debug!`, since the discarded value is
+cyril's own default. Both are marked inline below. The original wording stands
+as the record of what was decided in July, not as a description of today's
+behavior.
 
 ## Context
 
@@ -52,6 +65,10 @@ available option.
   behavioral effect and impersonation would be pure telemetry
   misrepresentation). `PresentAs` is a two-variant enum: `kiro-ide`,
   `kiro-web`, and free strings are unrepresentable.
+  > **Superseded by ADR-0008** on two points: `kiro-cli` is the default and
+  > `"cyril"` the opt-in, reversing which arm this bullet describes; and the
+  > v2 discard logs at `debug!`, not `warn!`. KAS-only scoping and the
+  > two-variant enum are unchanged.
 - **Impersonation is never total.** `title` stays `"Cyril"` in every mode —
   Kiro-side logs and telemetry can always identify cyril sessions. This is a
   non-negotiable of the knob's design.
@@ -62,6 +79,12 @@ available option.
   telemetry, and cyril's positioning is to *be* a legitimate ACP client, not
   to win a detectability game (the pi-kiro lesson). Also brittle against
   upstream name-keyed changes.
+  > **Reversed by ADR-0008.** The rejection assumed a neutral alternative
+  > existed. The 4-arm A/B showed there is none — the honest name silently
+  > resolves to `kiro-ide`, so this option was never "impersonate vs. don't"
+  > but "which of three vendor personas". The telemetry cost is real and is
+  > accepted there; `title` stays `"Cyril"`, which is what keeps the
+  > detectability-game objection inapplicable.
 - **Honest name + env/config override on the KAS side** — does not exist;
   probe-disproven (`.cyril-0wyn/findings.md` fact 1).
 - **Fix upstream** — the right long-term answer; tracked as cyril-ctnv

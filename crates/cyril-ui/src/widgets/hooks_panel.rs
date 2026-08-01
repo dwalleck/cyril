@@ -101,20 +101,31 @@ pub fn render(
             Some(m) => truncate_and_pad(m, MATCHER_COL),
             None => pad_right("—", MATCHER_COL),
         };
-        let matcher_style = if hook.matcher.is_some() {
+        let live_matcher_style = if hook.matcher.is_some() {
             Style::default().fg(theme.accent_quinary)
         } else {
             Style::default().fg(theme.subdued)
         };
-        lines.push(Line::from(vec![
-            Span::styled(
-                format!("  {trigger_cell}  "),
+        // A KAS listing requests `includeDisabled`, so disabled hooks appear
+        // in this list. Rendering them identically to live ones would state
+        // something false about the workspace, so they dim (cyril-gk17).
+        // `enabled: None` — every v2 hook, from a registry with no such
+        // concept — is NOT dimmed: unknown is not disabled.
+        let (trigger_style, command_style, matcher_style) = if hook.enabled == Some(false) {
+            let dim = Style::default()
+                .fg(theme.subdued)
+                .add_modifier(Modifier::DIM);
+            (dim, dim, dim)
+        } else {
+            (
                 Style::default().fg(theme.accent_violet),
-            ),
-            Span::styled(
-                format!("{command_cell}  "),
                 Style::default().fg(theme.text_secondary),
-            ),
+                live_matcher_style,
+            )
+        };
+        lines.push(Line::from(vec![
+            Span::styled(format!("  {trigger_cell}  "), trigger_style),
+            Span::styled(format!("{command_cell}  "), command_style),
             Span::styled(matcher_cell, matcher_style),
         ]));
     }
@@ -211,11 +222,7 @@ mod tests {
     #[test]
     fn single_hook_is_singular_in_title() {
         let state = HooksPanelState {
-            hooks: vec![HookInfo {
-                trigger: "PreToolUse".into(),
-                command: "echo pre".into(),
-                matcher: Some("read".into()),
-            }],
+            hooks: vec![HookInfo::v2("PreToolUse", "echo pre", Some("read".into()))],
             scroll_offset: 0,
         };
         let terminal = draw(&state, 100, 24);
@@ -236,16 +243,8 @@ mod tests {
         // verifies the widget faithfully preserves that order on screen.
         let state = HooksPanelState {
             hooks: vec![
-                HookInfo {
-                    trigger: "PostToolUse".into(),
-                    command: "post".into(),
-                    matcher: Some("write".into()),
-                },
-                HookInfo {
-                    trigger: "PreToolUse".into(),
-                    command: "pre".into(),
-                    matcher: None,
-                },
+                HookInfo::v2("PostToolUse", "post", Some("write".into())),
+                HookInfo::v2("PreToolUse", "pre", None),
             ],
             scroll_offset: 0,
         };
@@ -271,11 +270,7 @@ mod tests {
     fn long_command_is_truncated_without_panic() {
         let long = "echo ".to_string() + &"x".repeat(500);
         let state = HooksPanelState {
-            hooks: vec![HookInfo {
-                trigger: "Stop".into(),
-                command: long,
-                matcher: None,
-            }],
+            hooks: vec![HookInfo::v2("Stop", long, None)],
             scroll_offset: 0,
         };
         // Small terminal forces aggressive truncation
@@ -292,11 +287,7 @@ mod tests {
         // a distinguishable marker in the Command column, so users can see
         // there's a value there even if the trigger is mangled.
         let state = HooksPanelState {
-            hooks: vec![HookInfo {
-                trigger: "日本語トリガーテスト".into(),
-                command: "MARKER".into(),
-                matcher: None,
-            }],
+            hooks: vec![HookInfo::v2("日本語トリガーテスト", "MARKER", None)],
             scroll_offset: 0,
         };
         let terminal = draw(&state, 100, 20);
@@ -316,16 +307,8 @@ mod tests {
         // right by several cells — this test catches that.
         let state = HooksPanelState {
             hooks: vec![
-                HookInfo {
-                    trigger: "Short".into(),
-                    command: "FIRST".into(),
-                    matcher: None,
-                },
-                HookInfo {
-                    trigger: "日本語テスト".into(),
-                    command: "SECOND".into(),
-                    matcher: None,
-                },
+                HookInfo::v2("Short", "FIRST", None),
+                HookInfo::v2("日本語テスト", "SECOND", None),
             ],
             scroll_offset: 0,
         };

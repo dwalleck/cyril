@@ -1,12 +1,40 @@
 use serde::{Deserialize, Serialize};
 
+/// A KAS v2 hook's registry identifier: the composite
+/// `"<absolute file path>#hook-<n>"`, not a bare name.
+///
+/// A newtype rather than a `String` because a hook has **two** addressable
+/// strings — this id and its declared `name` — and only this one is accepted by
+/// `_kiro/hooks/setEnabled`, which rewrites a file on the user's disk.
+/// `SessionController::resolve_kas_hook_id` exists precisely to turn a name
+/// into one of these, which is the evidence that the two are confusable;
+/// carrying both as `String` leaves the distinction to convention.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct HookId(String);
+
+impl HookId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for HookId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 /// Metadata about a single hook configured in the agent, as returned by the
 /// `hooks` command's response at `data.hooks[]`.
 ///
 /// This is Kiro's display-oriented projection of its backend `HookConfig` —
-/// only three fields, no execution details. Hooks themselves run entirely
-/// inside `kiro-cli-chat`; Cyril's role is strictly display-only via the
-/// `/hooks` command.
+/// no execution details. Hooks themselves run entirely inside
+/// `kiro-cli-chat`; Cyril's role is display-only via the `/hooks` command.
 ///
 /// Wire format from Kiro 1.29.6+:
 /// ```json
@@ -16,6 +44,14 @@ use serde::{Deserialize, Serialize};
 ///   "matcher": "read"
 /// }
 /// ```
+///
+/// The three optional fields below carry what the **KAS v2 hooks registry**
+/// reports and this v2 projection does not (cyril-gk17). They are `Option`
+/// rather than defaulted because absent and known-false are different facts:
+/// a v2 hook whose `enabled` is `None` is not "disabled", it comes from a
+/// registry that does not model enablement at all. All three are skipped when
+/// serializing, so a v2 `HookInfo` still round-trips as exactly the original
+/// three fields.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HookInfo {
     /// Trigger name from Kiro's `HookTrigger` enum. Observed values:
@@ -31,6 +67,47 @@ pub struct HookInfo {
     /// the hook runs for every tool of that trigger.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub matcher: Option<String>,
+
+    /// KAS v2 only: the registry's hook id, a **composite**
+    /// `"<absolute file path>#hook-<n>"` — not a bare name, and the only
+    /// value `_kiro/hooks/setEnabled` accepts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<HookId>,
+
+    /// KAS v2 only: the hook's declared name, which is what a user will type
+    /// to address it rather than the composite [`id`](Self::id).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+
+    /// KAS v2 only: whether the hook is currently enabled. Listings request
+    /// `includeDisabled`, so disabled hooks are present and must not be
+    /// displayed as if they were live.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+}
+
+impl HookInfo {
+    /// A hook from the **v2** projection, which carries only these three fields.
+    ///
+    /// The KAS-only fields being `Option` means every v2 construction site would
+    /// otherwise spell out `id: None, name: None, enabled: None` — one type
+    /// serving two registries, with half its fields inert in each. This
+    /// constructor keeps that noise in one place, so adding a fourth KAS field
+    /// touches this file rather than every caller.
+    pub fn v2(
+        trigger: impl Into<String>,
+        command: impl Into<String>,
+        matcher: Option<String>,
+    ) -> Self {
+        Self {
+            trigger: trigger.into(),
+            command: command.into(),
+            matcher,
+            id: None,
+            name: None,
+            enabled: None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -77,11 +154,7 @@ mod tests {
 
     #[test]
     fn roundtrip_serialization_omits_null_matcher() {
-        let hook = HookInfo {
-            trigger: "Stop".into(),
-            command: "foo".into(),
-            matcher: None,
-        };
+        let hook = HookInfo::v2("Stop", "foo", None);
         let json = serde_json::to_string(&hook).unwrap();
         // matcher should not appear in the output at all, not even as null
         assert!(!json.contains("matcher"));

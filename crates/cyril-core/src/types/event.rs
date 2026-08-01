@@ -257,6 +257,48 @@ pub enum Notification {
         message: String,
     },
 
+    /// KAS announced that its on-disk hook registry changed
+    /// (`_kiro/hooks/didChange`, cyril-gk17). Carries the **full** new
+    /// registry, so it is a replacement rather than a delta.
+    ///
+    /// Deliberately distinct from the `CommandExecuted{command: "hooks"}` path
+    /// that *opens* the panel: this arrives unprompted whenever a file is
+    /// edited, and a modal overlay that opens itself while the user is typing
+    /// is a worse outcome than a stale one. It refreshes an already-open
+    /// panel and is otherwise inert.
+    HooksChanged {
+        hooks: Vec<crate::types::HookInfo>,
+    },
+
+    /// A KAS-side hook changed state (`session_info_update`,
+    /// `_meta.kiro.kind = "hook_update"`; cyril-gk17).
+    ///
+    /// Under `kas_hooks = "kas"` the AGENT executes hooks on this host, and no
+    /// `session/request_permission` precedes them — so the transcript record is
+    /// the only thing standing between the user and shell commands running
+    /// invisibly on their machine. That is why this is surfaced in chat rather
+    /// than logged: an audit trail nobody sees is not an audit trail.
+    ///
+    /// EVERY state arrives here, progress included, so a hook that hangs still
+    /// leaves a record. **This does not make the trail complete:** KAS emits no
+    /// `hook_update` at all for some triggers — in `kas-v2hooks-2.16.0.jsonl`
+    /// the `sessionStart` hook demonstrably ran (host-side evidence file) and
+    /// produced zero frames, while only the `preToolUse` hook reported. Cyril
+    /// cannot surface what is never sent; see [`KasHooksMode::Kas`] for what
+    /// that costs the trust decision.
+    ///
+    /// [`KasHooksMode::Kas`]: crate::types::KasHooksMode::Kas
+    HookExecuted {
+        name: String,
+        /// Carved status vocabulary: `completed` | `failed` | `canceled` |
+        /// `running` | `awaiting_approval` (`mapActionStateToHookStatus`). Kept
+        /// as a `String` so a new upstream state surfaces verbatim instead of
+        /// being silently reclassified.
+        status: String,
+        /// Present for `runCommand` hooks that reported one.
+        exit_code: Option<i64>,
+    },
+
     // Lifecycle
     SessionCreated {
         session_id: SessionId,
@@ -503,6 +545,29 @@ pub enum BridgeCommand {
     /// skipped silently — the bridge never re-sends on an unsupported session.
     ClearSteering {
         session_id: SessionId,
+    },
+    /// Query KAS's own hook registry via `_kiro/hooks/list` (cyril-gk17).
+    ///
+    /// Only meaningful under `kas_hooks = "kas"`, where the agent runs a
+    /// file-watched `.kiro/hooks` loader and advertises no `hooks` command of
+    /// its own. Under `"host"` cyril *serves* this same method instead, and
+    /// asking the agent would query a registry it does not have.
+    ListKasHooks {
+        session_id: SessionId,
+        /// Workspace roots to search, sent as `workspacePaths`.
+        workspace_paths: Vec<std::path::PathBuf>,
+    },
+    /// Flip a KAS hook's enabled flag via `_kiro/hooks/setEnabled`
+    /// (cyril-gk17). The agent rewrites the flag in the backing hook **file**,
+    /// so the change outlives the session.
+    SetKasHookEnabled {
+        session_id: SessionId,
+        /// The registry's composite `"<filePath>#hook-<n>"` id. A bare hook
+        /// name is not accepted by the agent.
+        hook_id: crate::types::hook::HookId,
+        enabled: bool,
+        /// Workspace roots for the follow-up listing that reports the result.
+        workspace_paths: Vec<std::path::PathBuf>,
     },
     Shutdown,
 }

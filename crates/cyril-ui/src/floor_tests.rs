@@ -126,11 +126,7 @@ fn hooks_clamped_above_input_windows_scrolled_rows() -> anyhow::Result<()> {
 
     let hooks = HooksPanelState {
         hooks: (0..12)
-            .map(|index| HookInfo {
-                trigger: format!("trigger-{index}"),
-                command: format!("command-{index}"),
-                matcher: None,
-            })
+            .map(|index| HookInfo::v2(format!("trigger-{index}"), format!("command-{index}"), None))
             .collect(),
         scroll_offset: 8,
     };
@@ -413,10 +409,12 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
             Box::new(|state: &mut MockTuiState| {
                 state.hooks_panel = Some(HooksPanelState {
                     hooks: (0..12)
-                        .map(|index| HookInfo {
-                            trigger: format!("trigger-{index}"),
-                            command: format!("command-{index}"),
-                            matcher: None,
+                        .map(|index| {
+                            HookInfo::v2(
+                                format!("trigger-{index}"),
+                                format!("command-{index}"),
+                                None,
+                            )
                         })
                         .collect(),
                     scroll_offset: 0,
