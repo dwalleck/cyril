@@ -26,6 +26,14 @@
 //! kiro-cli 2.16.0) and cross-checked against the live capture
 //! `experiments/conductor-spike/kas-pushed-2.16.0.jsonl`.
 //!
+//! **Deviations from the reference** — the complete list, kept here so a reader
+//! can trust "faithful port" everywhere else: (1) [`respond_read_directory`]
+//! sorts entries, where the reference returns raw readdir order; (2)
+//! [`respond_delete`] stats with `symlink_metadata` where the reference uses
+//! `fs.stat`, which differs only for a **dangling** symlink (the reference
+//! throws `ENOENT`; cyril unlinks the link and succeeds — the more useful
+//! answer, since the link is real even when its target is not).
+//!
 //! Two carved traps in particular:
 //!
 //! - **`line` is 0-based here**, and slicing joins with `\n` (dropping the
@@ -71,12 +79,119 @@ use super::host_io::{io_err, to_native_checked, write_atomic};
 use super::json_ext_response;
 
 /// The acp-stripped method names (the acp library strips the leading `_`, per
-/// the `SHELL_TYPE_METHOD` precedent).
+/// the `SHELL_TYPE_METHOD` precedent). Paired with the `*_WIRE` names below —
+/// [`stripped_names_match_their_wire_names`] pins the relationship, so a rename
+/// cannot move one without the other.
 pub(crate) const READ_FILE_METHOD: &str = "kiro/fs/read_file";
 pub(crate) const WRITE_FILE_METHOD: &str = "kiro/fs/write_file";
 pub(crate) const STAT_METHOD: &str = "kiro/fs/stat";
 pub(crate) const READ_DIRECTORY_METHOD: &str = "kiro/fs/read_directory";
 pub(crate) const DELETE_METHOD: &str = "kiro/fs/delete";
+
+/// The same methods as they appear **on the wire**, with the leading `_`.
+///
+/// Errors and audit lines use these rather than hand-written literals: the
+/// underscore-stripped form above is an artifact of the acp library, and a
+/// reader grepping for the method Kiro documents needs to find something.
+pub(crate) const READ_FILE_WIRE: &str = "_kiro/fs/read_file";
+pub(crate) const WRITE_FILE_WIRE: &str = "_kiro/fs/write_file";
+pub(crate) const STAT_WIRE: &str = "_kiro/fs/stat";
+pub(crate) const READ_DIRECTORY_WIRE: &str = "_kiro/fs/read_directory";
+pub(crate) const DELETE_WIRE: &str = "_kiro/fs/delete";
+
+/// Which operation an [`FsOp`] row is. Exists so [`dispatch`] can match
+/// *exhaustively*: adding a row to [`FS_OPS`] without giving it a responder is
+/// then a compile error rather than a silent protocol-default null.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FsOpKind {
+    ReadFile,
+    WriteFile,
+    Stat,
+    ReadDirectory,
+    Delete,
+}
+
+/// One operation of the dialect: which operation it is, the capability flag
+/// that selects it, the acp-stripped name the library dispatches on, and the
+/// wire name.
+pub(crate) struct FsOp {
+    pub(crate) kind: FsOpKind,
+    /// Key inside `fs._meta.kiro` that selects this operation.
+    pub(crate) flag: &'static str,
+    /// acp-stripped method name (what `handle_ext_request` matches).
+    pub(crate) method: &'static str,
+    /// Wire method name, for errors and audit lines.
+    pub(crate) wire: &'static str,
+}
+
+/// Route one `_kiro/fs/*` request to its responder.
+///
+/// The `match` is exhaustive over [`FsOpKind`], which is the point: the
+/// advertisement, the dispatch, and the table are now one source instead of
+/// three that a comment asked you to keep in step.
+pub(crate) async fn dispatch(
+    op: &FsOp,
+    params: &serde_json::Value,
+) -> acp::Result<acp::ExtResponse> {
+    // Named with the WIRE spelling: this is the single point every dialect call
+    // passes through, and `_kiro/fs/...` is what a reader correlating a log
+    // against a capture greps for — the acp-stripped form appears nowhere on
+    // the wire.
+    tracing::debug!(method = op.wire, "KAS fs dialect dispatch");
+    match op.kind {
+        FsOpKind::ReadFile => respond_read_file(params).await,
+        FsOpKind::WriteFile => respond_write_file(params).await,
+        FsOpKind::Stat => respond_stat(params).await,
+        FsOpKind::ReadDirectory => respond_read_directory(params).await,
+        FsOpKind::Delete => respond_delete(params).await,
+    }
+}
+
+/// Find the operation a method name selects, if any.
+pub(crate) fn op_for_method(method: &str) -> Option<&'static FsOp> {
+    FS_OPS.iter().find(|op| op.method == method)
+}
+
+/// The five operations in one place.
+///
+/// Three sites have to move together — the advertisement
+/// ([`capabilities_meta`]), the dispatch cascade in `client.rs`, and the error
+/// strings. Deriving the advertisement from this table and fencing the dispatch
+/// against it turns a convention into a check: an advertised flag with no arm
+/// answers the protocol-default null, which the agent cannot distinguish from a
+/// successful empty result.
+pub(crate) const FS_OPS: &[FsOp] = &[
+    FsOp {
+        kind: FsOpKind::ReadFile,
+        flag: "readFile",
+        method: READ_FILE_METHOD,
+        wire: READ_FILE_WIRE,
+    },
+    FsOp {
+        kind: FsOpKind::WriteFile,
+        flag: "writeFile",
+        method: WRITE_FILE_METHOD,
+        wire: WRITE_FILE_WIRE,
+    },
+    FsOp {
+        kind: FsOpKind::Stat,
+        flag: "stat",
+        method: STAT_METHOD,
+        wire: STAT_WIRE,
+    },
+    FsOp {
+        kind: FsOpKind::ReadDirectory,
+        flag: "readDirectory",
+        method: READ_DIRECTORY_METHOD,
+        wire: READ_DIRECTORY_WIRE,
+    },
+    FsOp {
+        kind: FsOpKind::Delete,
+        flag: "delete",
+        method: DELETE_METHOD,
+        wire: DELETE_WIRE,
+    },
+];
 
 /// The `fs._meta.kiro` object that selects this dialect at `initialize`.
 ///
@@ -91,16 +206,13 @@ pub(crate) const DELETE_METHOD: &str = "kiro/fs/delete";
 /// two must move together.
 pub(crate) fn capabilities_meta() -> acp::Meta {
     let mut meta = acp::Meta::new();
-    meta.insert(
-        "kiro".to_string(),
-        serde_json::json!({
-            "readFile": true,
-            "writeFile": true,
-            "stat": true,
-            "readDirectory": true,
-            "delete": true,
-        }),
-    );
+    // Derived from FS_OPS, not hand-listed: the advertisement and the dispatch
+    // cascade must agree, and a second literal list is how they drift apart.
+    let flags: serde_json::Map<String, serde_json::Value> = FS_OPS
+        .iter()
+        .map(|op| (op.flag.to_string(), serde_json::Value::Bool(true)))
+        .collect();
+    meta.insert("kiro".to_string(), serde_json::Value::Object(flags));
     meta
 }
 
@@ -199,7 +311,7 @@ pub(crate) async fn respond_read_file(params: &serde_json::Value) -> acp::Result
     let path = to_native_checked(&p.path)?;
     let size = tokio::fs::metadata(&path)
         .await
-        .map_err(|e| io_err("_kiro/fs/read_file", &path, e))?
+        .map_err(|e| io_err(READ_FILE_WIRE, &path, e))?
         .len();
     if size > MAX_READ_SIZE {
         // Reference wording (NodeFileSystem.readTextFile), one decimal place.
@@ -214,7 +326,7 @@ pub(crate) async fn respond_read_file(params: &serde_json::Value) -> acp::Result
     }
     let text = tokio::fs::read_to_string(&path)
         .await
-        .map_err(|e| io_err("_kiro/fs/read_file", &path, e))?;
+        .map_err(|e| io_err(READ_FILE_WIRE, &path, e))?;
     tracing::debug!(
         session = %p.session_id, path = %path.display(), line = ?p.line, limit = ?p.limit,
         "KAS _kiro/fs/read_file"
@@ -278,7 +390,7 @@ pub(crate) async fn respond_write_file(
             let existing = match tokio::fs::read_to_string(&path).await {
                 Ok(s) => s,
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
-                Err(e) => return Err(io_err("_kiro/fs/write_file", &path, e)),
+                Err(e) => return Err(io_err(WRITE_FILE_WIRE, &path, e)),
             };
             splice_range(&existing, range, &p.content)
         }
@@ -295,10 +407,10 @@ pub(crate) async fn respond_write_file(
             tracing::warn!(path = %path.display(), error = %e, "KAS _kiro/fs/write_file task failed");
             acp::Error::new(
                 -32603,
-                format!("_kiro/fs/write_file {}: task failed: {e}", path.display()),
+                format!("{WRITE_FILE_WIRE} {}: task failed: {e}", path.display()),
             )
         })?
-        .map_err(|e| io_err("_kiro/fs/write_file", &path, e))?;
+        .map_err(|e| io_err(WRITE_FILE_WIRE, &path, e))?;
     json_ext_response(&serde_json::json!({}))
 }
 
@@ -402,7 +514,7 @@ pub(crate) async fn respond_stat(params: &serde_json::Value) -> acp::Result<acp:
     let path = to_native_checked(&p.path)?;
     let meta = tokio::fs::metadata(&path)
         .await
-        .map_err(|e| io_err("_kiro/fs/stat", &path, e))?;
+        .map_err(|e| io_err(STAT_WIRE, &path, e))?;
     // The reference's third variant, "symlink", is unreachable here for the same
     // reason it is unreachable there: the stat followed the link.
     let kind = if meta.is_dir() { "directory" } else { "file" };
@@ -419,6 +531,15 @@ pub(crate) async fn respond_stat(params: &serde_json::Value) -> acp::Result<acp:
 /// A missing directory returns `{entries: []}`, not an error — the reference
 /// maps `ENOENT` to an empty listing and callers depend on it. That is the one
 /// place here where empty does not mean "nothing there", so it is logged.
+///
+/// **DEVIATION from the reference — entries are sorted.** `NodeFileSystem`
+/// returns raw `readdir` order, which is filesystem-dependent; sorting makes
+/// captures and transcripts reproducible, and the agent imposes no ordering
+/// (`KiroReadDirectoryAdapter` passes entries through unmodified). This is the
+/// only intentional divergence in this module — everything else is a faithful
+/// port — so it is named here, in the module header's deviation list, and in
+/// the covenant note rather than only at the call site. Drop the sort if strict
+/// parity ever matters more than reproducibility.
 pub(crate) async fn respond_read_directory(
     params: &serde_json::Value,
 ) -> acp::Result<acp::ExtResponse> {
@@ -433,14 +554,14 @@ pub(crate) async fn respond_read_directory(
             );
             return json_ext_response(&serde_json::json!({ "entries": [] }));
         }
-        Err(e) => return Err(io_err("_kiro/fs/read_directory", &path, e)),
+        Err(e) => return Err(io_err(READ_DIRECTORY_WIRE, &path, e)),
     };
 
     let mut entries: Vec<(String, &'static str)> = Vec::new();
     while let Some(entry) = dir
         .next_entry()
         .await
-        .map_err(|e| io_err("_kiro/fs/read_directory", &path, e))?
+        .map_err(|e| io_err(READ_DIRECTORY_WIRE, &path, e))?
     {
         let kind = match entry.file_type().await {
             // Order matters and matches the reference: a symlink to a directory
@@ -449,10 +570,20 @@ pub(crate) async fn respond_read_directory(
             Ok(t) if t.is_symlink() => "symlink",
             Ok(_) => "file",
             Err(e) => {
-                // A racing unlink between readdir and the type query. Skipping
-                // would silently shrink the listing, so report it as a plain
-                // file and leave the breadcrumb.
-                tracing::debug!(path = %entry.path().display(), error = %e, "dir entry type unavailable");
+                // A racing unlink between readdir and the type query, or an
+                // EACCES on the parent. Skipping would silently shrink the
+                // listing, and the reference's FileType is 3-valued
+                // (directory|symlink|file) with no "unknown" — so parity forces
+                // one of the three, and "file" is the least-privileged guess.
+                //
+                // `warn!`, not `debug!`: this is an error becoming a plausible
+                // default, which CLAUDE.md ("Errors are not default values")
+                // says must carry at least a warning. `host_io` makes the same
+                // call for the same reason.
+                tracing::warn!(
+                    path = %entry.path().display(), error = %e,
+                    "dir entry type unavailable; reporting as `file`"
+                );
                 "file"
             }
         };
@@ -491,10 +622,14 @@ pub(crate) async fn respond_delete(params: &serde_json::Value) -> acp::Result<ac
     let p: PathParams = parse_params(DELETE_METHOD, params)?;
     let path = to_native_checked(&p.path)?;
     // symlink_metadata, not metadata: deleting a symlink must unlink the link
-    // itself, never recurse into the directory it points at.
+    // itself, never recurse into the directory it points at. DEVIATION: the
+    // reference stats (follows), so a DANGLING link throws ENOENT there and is
+    // unlinked here. Deliberate — the link exists, and refusing to remove it
+    // because its target vanished is the less useful of the two answers. See
+    // the module header's deviation list.
     let meta = tokio::fs::symlink_metadata(&path)
         .await
-        .map_err(|e| io_err("_kiro/fs/delete", &path, e))?;
+        .map_err(|e| io_err(DELETE_WIRE, &path, e))?;
     let recursive = p.recursive.unwrap_or(true);
     tracing::info!(
         session = %p.session_id, path = %path.display(),
@@ -509,7 +644,7 @@ pub(crate) async fn respond_delete(params: &serde_json::Value) -> acp::Result<ac
     } else {
         tokio::fs::remove_file(&path).await
     };
-    result.map_err(|e| io_err("_kiro/fs/delete", &path, e))?;
+    result.map_err(|e| io_err(DELETE_WIRE, &path, e))?;
     json_ext_response(&serde_json::json!({}))
 }
 
@@ -582,6 +717,43 @@ mod tests {
             slice_lines_0based(text, Some(1), Some(1)),
             super::super::host_io::slice_lines(text.to_string(), Some(1), Some(1)),
             "the 0-based and 1-based readings must not coincide at line=1"
+        );
+    }
+
+    // cyril-kf2g review fence: the wire name and the acp-stripped name are two
+    // spellings of one method, and nothing but this test ties them together —
+    // a rename that moved one would leave errors naming a method that is no
+    // longer dispatched.
+    #[test]
+    fn stripped_names_match_their_wire_names() {
+        for op in FS_OPS {
+            assert_eq!(
+                op.wire,
+                format!("_{}", op.method),
+                "{} must be the wire spelling of {}",
+                op.wire,
+                op.method
+            );
+        }
+    }
+
+    // The advertisement is DERIVED from FS_OPS, so this pins the derivation
+    // itself: every advertised key is a flag in the table and vice versa. The
+    // dispatch half of the same invariant is fenced in `client.rs`
+    // (`every_advertised_fs_flag_is_dispatched`).
+    #[test]
+    fn advertised_flags_are_exactly_the_table() {
+        let meta = capabilities_meta();
+        let kiro = serde_json::to_value(&meta).unwrap();
+        let obj = kiro["kiro"].as_object().expect("fs._meta.kiro object");
+        let mut advertised: Vec<&str> = obj.keys().map(String::as_str).collect();
+        advertised.sort_unstable();
+        let mut expected: Vec<&str> = FS_OPS.iter().map(|o| o.flag).collect();
+        expected.sort_unstable();
+        assert_eq!(advertised, expected);
+        assert!(
+            obj.values().all(|v| v == &serde_json::Value::Bool(true)),
+            "flags are advertised as `true`, never as an object"
         );
     }
 

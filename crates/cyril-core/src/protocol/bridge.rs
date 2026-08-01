@@ -163,7 +163,7 @@ pub struct SpawnConfig {
     /// KAS launch shape (free | wrapper); ignored for v2 (cyril-evwh).
     pub kas_spawn: KasSpawn,
     /// The `clientInfo` identity presented at initialize (ADR-0006).
-    pub present_as: PresentAs,
+    pub present_as: Option<PresentAs>,
     /// Which hook model runs on the KAS engine (cyril-jiyn, KAS-7); ignored
     /// for v2.
     pub kas_hooks: KasHooksMode,
@@ -854,7 +854,7 @@ async fn run_loop(
     mut channels: BridgeChannels,
     cwd: std::path::PathBuf,
     engine: std::rc::Rc<dyn Engine>,
-    present_as: PresentAs,
+    present_as: Option<PresentAs>,
     internal: InternalChannels,
 ) -> crate::Result<()> {
     // cyril-3lh8: the shared terminal-registry handle for the CancelRequest
@@ -877,18 +877,25 @@ async fn run_loop(
     //    `present_as` knob is KAS-only, and the resolved standing is stated in
     //    the log because KAS's own classification is invisible on the wire
     //    (.cyril-0wyn/findings.md Q3).
-    let effective = crate::protocol::identity::effective_present_as(engine.kind(), present_as);
-    if effective != present_as {
-        // `debug!`, not `warn!`: since ADR-0008 the discarded value is the
-        // DEFAULT, so on v2 this fires for every user who never touched the
-        // knob. A warn there would report cyril's own default as user
-        // misconfiguration — noise that trains the reader to ignore warns.
-        // The fact is still recorded, and it is not a failure: v2 ignores
-        // `clientInfo.name` behaviorally, so nothing was lost.
-        tracing::debug!(
-            configured = present_as.wire_name(),
-            "present_as is inert on the v2 engine — presenting the honest identity"
-        );
+    let requested = present_as.unwrap_or_default();
+    let effective = crate::protocol::identity::effective_present_as(engine.kind(), requested);
+    if effective != requested {
+        // The level keys on whether the user ASKED for the discarded value.
+        // Collapsing "chose kiro-cli" into "said nothing" forced a false
+        // either/or: warn and every v2 user is told their own default is
+        // misconfiguration, or debug and a user who edited config to opt in
+        // gets no signal at all that it did nothing.
+        match present_as {
+            Some(explicit) => tracing::warn!(
+                configured = explicit.wire_name(),
+                "[agent] present_as was set but is inert on the v2 engine — the knob \
+                 only affects KAS; presenting the honest identity"
+            ),
+            None => tracing::debug!(
+                configured = requested.wire_name(),
+                "default present_as is inert on the v2 engine — presenting the honest identity"
+            ),
+        }
     }
     if let Some(advisory) = crate::protocol::identity::identity_advisory(engine.kind(), effective) {
         tracing::info!("{advisory}");
@@ -3146,7 +3153,9 @@ mod tests {
                     channels,
                     std::env::temp_dir(),
                     engine,
-                    PresentAs::default(),
+                    // None = "not configured", the shape a real spawn has
+                    // unless the user names a persona.
+                    None,
                     InternalChannels {
                         inbound_tx,
                         inbound_rx,

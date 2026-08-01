@@ -193,6 +193,12 @@ mod tests {
 
     use serde_json::json;
 
+    use super::*;
+    use crate::protocol::engine::{Engine, KasEngine};
+
+    /// Deserialize a captured fixture into a `SessionNotification` — the exact
+    /// layer the acp Client parses a `session/update` at (mirrors the
+    /// `schema_deserializes_captured_kas_session_updates` loader in `mod.rs`).
     fn load(name: &str) -> (serde_json::Value, acp::SessionNotification) {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests/fixtures/kas")
@@ -300,13 +306,6 @@ mod tests {
         }));
         assert!(session_info_to_notification(&f).is_none());
     }
-
-    use super::*;
-    use crate::protocol::engine::{Engine, KasEngine};
-
-    /// Deserialize a captured fixture into a `SessionNotification` — the exact
-    /// layer the acp Client parses a `session/update` at (mirrors the
-    /// `schema_deserializes_captured_kas_session_updates` loader in `mod.rs`).
 
     #[test]
     fn turn_end_maps_to_turn_completed_endturn() {

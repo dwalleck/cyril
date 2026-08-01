@@ -41,6 +41,12 @@ pub(crate) const DID_CHANGE_METHOD: &str = "kiro/hooks/didChange";
 /// The acp-stripped method name for `_kiro/hooks/sessionStart`.
 pub(crate) const SESSION_START_METHOD: &str = "kiro/hooks/sessionStart";
 
+/// The wire spelling of a shell-command hook action. The hook FILE says
+/// `"command"`; the wire says `"runCommand"` — one of the three file/wire
+/// divergences [`parse_wire_hooks`] translates, and the only action type with
+/// anything for the panel to display.
+const WIRE_RUN_COMMAND: &str = "runCommand";
+
 /// Why a `_kiro/hooks/setEnabled` reply did not confirm the change.
 ///
 /// The two arms must not collapse: a `{success: false}` is the agent *telling*
@@ -126,6 +132,20 @@ pub(crate) fn parse_wire_hooks(params: &serde_json::Value) -> Option<Vec<crate::
     for entry in array {
         let meta = entry.get("_meta");
         let action_type = entry.pointer("/action/type").and_then(|t| t.as_str());
+        // The tag is CHECKED, not merely logged. `runCommand` is the wire
+        // spelling of the file's `command`, and that rename is one of the three
+        // divergences this function exists to translate — so accepting any
+        // action that merely happens to carry a `command` string would let a
+        // `{"type": "prompt", ...}` entry through as if it were a shell hook,
+        // and the divergence would have no real test behind it.
+        if action_type != Some(WIRE_RUN_COMMAND) {
+            tracing::warn!(
+                action_type,
+                id = entry.get("id").and_then(|i| i.as_str()),
+                "KAS hook action is not `runCommand`; skipped (nothing to display)"
+            );
+            continue;
+        }
         let Some(command) = entry.pointer("/action/command").and_then(|c| c.as_str()) else {
             tracing::warn!(
                 action_type,
@@ -806,6 +826,38 @@ mod tests {
     fn write(dir: &Path, name: &str, body: &str) {
         std::fs::create_dir_all(dir).unwrap();
         std::fs::write(dir.join(name), body).unwrap();
+    }
+
+    // cyril-gk17 review fence: the file-vs-wire action rename is a real check,
+    // not a log line. Before this, `action_type` was read and only printed, so a
+    // `prompt`-action entry that happened to carry a `command` string was
+    // accepted as a shell hook — and the fence for this divergence would pass
+    // identically against the file spelling, testing nothing.
+    #[test]
+    fn only_run_command_actions_are_displayed() {
+        let wire = serde_json::json!({"hooks": [
+            // The wire spelling: accepted.
+            {"id": "f#hook-0", "name": "ok",
+             "action": {"type": "runCommand", "command": "echo hi"},
+             "_meta": {"trigger": "PreToolUse", "enabled": true}},
+            // The FILE spelling on the wire: this is the divergence, and it must
+            // NOT be accepted just because a `command` key is present.
+            {"id": "f#hook-1", "name": "file-spelling",
+             "action": {"type": "command", "command": "echo no"},
+             "_meta": {"trigger": "PreToolUse", "enabled": true}},
+            // A legitimate non-shell action with a command-shaped payload.
+            {"id": "f#hook-2", "name": "prompt-action",
+             "action": {"type": "prompt", "command": "echo no"},
+             "_meta": {"trigger": "PreToolUse", "enabled": true}},
+        ]});
+        let hooks = parse_wire_hooks(&wire).expect("array present");
+        let names: Vec<&str> = hooks.iter().filter_map(|h| h.name.as_deref()).collect();
+        assert_eq!(
+            names,
+            vec!["ok"],
+            "only the runCommand action is displayable; the others are skipped, \
+             not silently rendered as shell hooks"
+        );
     }
 
     // cyril-gk17 review fence: `setEnabled` rewrites a file on the user's disk,
