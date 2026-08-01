@@ -670,6 +670,7 @@ mod tests {
             context_usage,
             metering,
             tokens,
+            duration_ms,
             effort,
             session_id,
         })) = result
@@ -678,7 +679,12 @@ mod tests {
             assert!((ctx.percentage() - 75.0).abs() < f64::EPSILON);
             assert!(metering.is_none());
             assert!(tokens.is_none());
-            assert!(effort.is_none(), "no effort field => None");
+            assert!(duration_ms.is_none());
+            assert_eq!(
+                effort,
+                EffortUpdate::Unchanged,
+                "no effort field => no change"
+            );
             assert!(session_id.is_none(), "no sessionId field => None (global)");
         } else {
             panic!("expected MetadataUpdated");
@@ -690,47 +696,148 @@ mod tests {
         let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": "high"});
         let result = to_ext_notification("kiro.dev/metadata", &params);
         if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
-            assert_eq!(effort, Some(EffortLevel::High));
+            assert_eq!(effort, EffortUpdate::Set(EffortLevel::High));
         } else {
             panic!("expected MetadataUpdated");
         }
     }
 
     #[test]
-    fn to_ext_notification_metadata_unrecognized_effort_is_none() {
-        // An unrecognized level must not surface as a badge (logged at debug!).
+    fn to_ext_notification_metadata_unrecognized_effort_is_preserved() {
+        // Backend-defined levels (cyril-1gim) must surface as `Other` and
+        // render, not vanish (still logged at debug!).
         let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": "turbo"});
         let result = to_ext_notification("kiro.dev/metadata", &params);
         if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
-            assert_eq!(effort, None);
+            assert_eq!(
+                effort,
+                EffortUpdate::Set(EffortLevel::Other("turbo".into()))
+            );
         } else {
             panic!("expected MetadataUpdated");
         }
     }
 
     #[test]
-    fn to_ext_notification_metadata_empty_effort_is_none() {
-        // An empty effort string must not surface as a blank "◇ " toolbar badge.
+    fn to_ext_notification_metadata_empty_effort_is_unchanged() {
+        // An empty effort string must not surface as a blank "◇ " toolbar badge
+        // nor clear an existing one — it's the wire's "not set".
         let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": ""});
         let result = to_ext_notification("kiro.dev/metadata", &params);
         if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
-            assert_eq!(effort, None);
+            assert_eq!(effort, EffortUpdate::Unchanged);
         } else {
             panic!("expected MetadataUpdated");
         }
     }
 
     #[test]
-    fn to_ext_notification_metadata_non_string_effort_is_none() {
+    fn to_ext_notification_metadata_non_string_effort_is_unchanged() {
         // A present-but-non-string effort field is corrupt (warned, not silent)
-        // and must not surface as a badge.
+        // and must neither set nor clear the badge.
         let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": 5});
         let result = to_ext_notification("kiro.dev/metadata", &params);
         if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
-            assert_eq!(effort, None);
+            assert_eq!(effort, EffortUpdate::Unchanged);
         } else {
             panic!("expected MetadataUpdated");
         }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_null_effort_clears() {
+        // tui.js checks `"effort" in e`: an explicit `effort: null` is a
+        // badge-CLEAR signal (cyril-1gim), distinct from an absent field —
+        // the engine can turn the badge off mid-session.
+        let params = serde_json::json!({"contextUsagePercentage": 7.5, "effort": null});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated { effort, .. })) = result {
+            assert_eq!(effort, EffortUpdate::Clear);
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_lone_duration_is_preserved() {
+        // A duration/effort-only frame (real 2.4.1 shape: {"sessionId",
+        // "turnDurationMs": 2281, "effort": "high"}) carries duration
+        // without a credits aggregate. The duration is parsed independently
+        // (cyril-1gim) so it can reach the turn summary; the absent
+        // meteringUsage stays None (no credits fabricated at the wire).
+        let params = serde_json::json!({"turnDurationMs": 2281, "effort": "high"});
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated {
+            metering,
+            duration_ms,
+            ..
+        })) = result
+        {
+            assert!(metering.is_none(), "no credits aggregate on this shape");
+            assert_eq!(duration_ms, Some(2281), "lone duration must be preserved");
+        } else {
+            panic!("expected MetadataUpdated");
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_refusal_and_stop_reason_not_flagged() {
+        // refusal {category, explanation, recommendedModel} and stopReason are
+        // known-but-ignored (both stay with cyril-h8zb). They must parse
+        // without tripping the unknown-key debug log.
+        let params = serde_json::json!({
+            "contextUsagePercentage": 7.5,
+            "refusal": {"category": "unsafe", "explanation": "blocked", "recommendedModel": "claude-opus"},
+            "stopReason": "CONTENT_FILTERED"
+        });
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        assert!(
+            result.is_ok(),
+            "known-but-ignored fields must not fail parsing"
+        );
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_unknown_key_logged() {
+        // A backend addition to kiro.dev/metadata must land visibly: the
+        // unrecognized top-level key is named in a debug log (cyril-1gim).
+        #[derive(Clone, Default)]
+        struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+        impl std::io::Write for CaptureWriter {
+            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                self.0.lock().expect("capture lock").extend_from_slice(buf);
+                Ok(buf.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+
+        impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
+            type Writer = CaptureWriter;
+            fn make_writer(&'a self) -> Self::Writer {
+                self.clone()
+            }
+        }
+
+        let capture = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .with_writer(capture.clone())
+            .finish();
+        let params =
+            serde_json::json!({"contextUsagePercentage": 7.5, "brandNewField": {"nested": 42}});
+        let result = tracing::subscriber::with_default(subscriber, || {
+            to_ext_notification("kiro.dev/metadata", &params)
+        });
+        assert!(result.is_ok());
+        let logs =
+            String::from_utf8(capture.0.lock().expect("capture lock").clone()).expect("utf8 logs");
+        assert!(
+            logs.contains("brandNewField"),
+            "unknown key must be named in the debug log; captured: {logs}"
+        );
     }
 
     #[test]
@@ -753,7 +860,7 @@ mod tests {
             let ctx = context_usage.expect("context_usage should be present");
             assert!((ctx.percentage() - 7.11).abs() < 0.01);
             let m = metering.unwrap();
-            assert!((m.credits() - 0.018).abs() < 0.001);
+            assert!((m.credits().unwrap() - 0.018).abs() < 0.001);
             assert_eq!(m.duration_ms(), Some(1948));
         } else {
             panic!("expected MetadataUpdated, got {:?}", result);
@@ -803,10 +910,43 @@ mod tests {
         let result = to_ext_notification("kiro.dev/metadata", &params);
         if let Ok(Some(Notification::MetadataUpdated { metering, .. })) = result {
             let m = metering.expect("zero-credit metering should be preserved");
-            assert!((m.credits() - 0.0).abs() < f64::EPSILON);
+            assert_eq!(m.credits(), Some(0.0));
             assert_eq!(m.duration_ms(), Some(12));
         } else {
             panic!("expected MetadataUpdated, got {:?}", result);
+        }
+    }
+
+    #[test]
+    fn metering_absence_parser_does_not_fabricate_zero() {
+        for metering_usage in [
+            serde_json::json!([]),
+            serde_json::json!([{"unit": "credit"}]),
+        ] {
+            let params = serde_json::json!({
+                "meteringUsage": metering_usage,
+                "turnDurationMs": 12
+            });
+            let notification = to_ext_notification("kiro.dev/metadata", &params)
+                .expect("conversion should succeed")
+                .expect("metadata frame should convert");
+            let Notification::MetadataUpdated {
+                metering,
+                duration_ms,
+                ..
+            } = notification
+            else {
+                panic!("expected MetadataUpdated");
+            };
+            assert!(
+                metering.is_none(),
+                "metering without a numeric value must not become explicit zero"
+            );
+            assert_eq!(
+                duration_ms,
+                Some(12),
+                "duration remains independently available"
+            );
         }
     }
 
@@ -897,9 +1037,9 @@ mod tests {
         })) = result
         {
             let m = metering.expect("metering on a context-less frame must be preserved");
-            assert!((m.credits() - 0.018).abs() < 0.001);
+            assert!((m.credits().unwrap() - 0.018).abs() < 0.001);
             assert_eq!(m.duration_ms(), Some(2281));
-            assert_eq!(effort, Some(EffortLevel::High));
+            assert_eq!(effort, EffortUpdate::Set(EffortLevel::High));
         } else {
             panic!("expected MetadataUpdated, got {:?}", result);
         }

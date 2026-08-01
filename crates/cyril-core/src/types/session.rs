@@ -20,23 +20,30 @@ impl fmt::Display for SessionId {
     }
 }
 
-/// Thinking-effort level reported under thinking models (Kiro 2.5.0+). A closed
-/// set on the wire: `low`/`medium`/`high`/`xhigh`/`max`. Modeled as an enum so an
-/// empty or unrecognized wire value can never surface as a toolbar badge.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Thinking-effort level reported under thinking models (Kiro 2.5.0+). NOT a
+/// closed wire set: levels are schema-negotiated per model — Anthropic models
+/// advertise `low`/`medium`/`high`/`xhigh`/`max` under output_config, GPT
+/// models a different enum under reasoning (cyril-1gim). Known levels keep
+/// typed variants; a backend-defined level is preserved verbatim in `Other`
+/// so it renders in the toolbar instead of silently vanishing.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EffortLevel {
     Low,
     Medium,
     High,
     XHigh,
     Max,
+    /// Backend-defined level outside the known set; carries the raw wire
+    /// string so it can be displayed as-is.
+    Other(String),
 }
 
 impl EffortLevel {
-    /// Parse a wire `effort` string. Returns `None` for an empty/absent value
-    /// (the wire's way of saying "not set") and for an unrecognized level — the
-    /// latter logged at `debug!` so a backend-side addition to the set is
-    /// visible rather than silently dropped.
+    /// Parse a wire `effort` string. Returns `None` for an empty value (the
+    /// wire's way of saying "not set"); a known level maps to its typed
+    /// variant, anything else is preserved as `Other` — unknown levels are
+    /// displayed, never dropped. The `debug!` log keeps backend additions
+    /// visible.
     pub fn from_wire(s: &str) -> Option<Self> {
         match s {
             "" => None,
@@ -48,21 +55,22 @@ impl EffortLevel {
             other => {
                 tracing::debug!(
                     effort = other,
-                    "unrecognized thinking-effort level on the wire"
+                    "unrecognized thinking-effort level on the wire; preserved as Other"
                 );
-                None
+                Some(Self::Other(other.to_string()))
             }
         }
     }
 
-    /// The canonical wire string for this level (also its display form).
-    pub fn as_str(self) -> &'static str {
+    /// The wire string for this level (also its display form).
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Low => "low",
             Self::Medium => "medium",
             Self::High => "high",
             Self::XHigh => "xhigh",
             Self::Max => "max",
+            Self::Other(s) => s,
         }
     }
 }
@@ -71,6 +79,22 @@ impl fmt::Display for EffortLevel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
+}
+
+/// Effort-level change carried by a `MetadataUpdated` frame. The wire is
+/// tri-state (cyril-1gim, carved from 2.12.1 tui.js `handleMetadataUpdate`):
+/// an *absent* `effort` field means "no update" (retain the current badge),
+/// an explicit `effort: null` is the engine clearing the level, and a string
+/// sets it. tui.js checks `"effort" in e`, so `null` is a real badge-CLEAR
+/// signal a plain `Option` cannot represent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EffortUpdate {
+    /// `effort` absent — keep whatever level is showing (sticky).
+    Unchanged,
+    /// Explicit `effort: null` — the engine cleared the badge.
+    Clear,
+    /// A string level, known or backend-defined.
+    Set(EffortLevel),
 }
 
 /// Session lifecycle state machine.
@@ -360,24 +384,67 @@ impl CreditUsage {
 /// Per-turn metering data from kiro.dev/metadata.
 #[derive(Debug, Clone)]
 pub struct TurnMetering {
-    credits: f64,
+    /// Credits for the turn. `None` when the wire carried no `meteringUsage`
+    /// aggregate (a duration/effort-only frame) — deliberately distinct from
+    /// an explicit `Some(0.0)`, which is a real zero-cost turn (cyril-1gim).
+    credits: Option<f64>,
     duration_ms: Option<u64>,
 }
 
 impl TurnMetering {
-    pub fn new(credits: f64, duration_ms: Option<u64>) -> Self {
+    pub fn new(credits: Option<f64>, duration_ms: Option<u64>) -> Self {
         Self {
             credits,
             duration_ms,
         }
     }
 
-    pub fn credits(&self) -> f64 {
+    pub fn credits(&self) -> Option<f64> {
         self.credits
     }
 
     pub fn duration_ms(&self) -> Option<u64> {
         self.duration_ms
+    }
+
+    /// Replace the duration, preserving credits.
+    pub fn with_duration_ms(mut self, duration_ms: Option<u64>) -> Self {
+        self.duration_ms = duration_ms;
+        self
+    }
+
+    /// Merge a metadata frame's parsed pieces into the pending turn state.
+    /// Order-independent, last-writer-wins per field (cyril-1gim): credits
+    /// come from `meteringUsage` frames, the duration from whichever frame
+    /// last carried `turnDurationMs` — credits frames and duration/effort-
+    /// only frames (real 2.4.1 shape) interleave, so neither must clobber
+    /// the other. Never fabricates a credits figure: a lone duration yields
+    /// `credits: None`, distinct from an explicit zero.
+    pub fn merge_pending(
+        pending: Option<TurnMetering>,
+        metering: Option<TurnMetering>,
+        duration_ms: Option<u64>,
+    ) -> Option<TurnMetering> {
+        let mut merged = pending;
+        if let Some(m) = metering {
+            merged = Some(match merged {
+                // Incoming populated fields win; absent fields preserve the
+                // pending value. The standalone `duration_ms` below is the
+                // newest override when the frame carried `turnDurationMs`.
+                Some(prev) => TurnMetering::new(
+                    m.credits().or(prev.credits()),
+                    m.duration_ms().or(prev.duration_ms()),
+                ),
+                None => m,
+            });
+        }
+        if let Some(d) = duration_ms {
+            merged = Some(match merged {
+                Some(m) => m.with_duration_ms(Some(d)),
+                None => TurnMetering::new(None, Some(d)),
+            });
+        }
+        merged
     }
 
     pub fn duration_display(&self) -> Option<String> {
@@ -410,17 +477,26 @@ impl SessionCost {
     }
 
     pub fn record_turn(&mut self, metering: &TurnMetering) {
-        let credits = metering.credits();
-        if credits.is_finite() {
-            self.total_credits += credits;
-        } else {
-            tracing::warn!(
-                credits,
-                "TurnMetering credits is non-finite, skipping accumulation"
-            );
+        match metering.credits() {
+            Some(credits) if credits.is_finite() => {
+                self.total_credits += credits;
+                self.last_turn_credits = Some(credits);
+            }
+            Some(credits) => {
+                tracing::warn!(
+                    credits,
+                    "TurnMetering credits is non-finite, skipping accumulation"
+                );
+                self.last_turn_credits = Some(credits);
+            }
+            None => {
+                // Duration-only turn: the wire carried no meteringUsage
+                // aggregate, so there is nothing to sum (cyril-1gim). The
+                // duration still lands in `last_turn_duration_ms` below.
+                self.last_turn_credits = None;
+            }
         }
         self.turn_count = self.turn_count.saturating_add(1);
-        self.last_turn_credits = Some(credits);
         self.last_turn_duration_ms = metering.duration_ms();
     }
 
@@ -569,9 +645,18 @@ mod tests {
     }
 
     #[test]
-    fn effort_level_from_wire_rejects_empty_and_unknown() {
+    fn effort_level_from_wire_preserves_unknown_levels() {
+        // Backend-defined levels (schema-negotiated per model, cyril-1gim):
+        // a GPT-style level must survive as `Other` and render, not vanish.
         assert_eq!(EffortLevel::from_wire(""), None, "empty => None");
-        assert_eq!(EffortLevel::from_wire("turbo"), None, "unknown => None");
+        let level = EffortLevel::from_wire("turbo").expect("unknown level preserved");
+        assert_eq!(level, EffortLevel::Other("turbo".into()));
+        assert_eq!(level.as_str(), "turbo", "as_str keeps the raw wire string");
+        assert_eq!(
+            format!("{level}"),
+            "turbo",
+            "Display shows the raw wire string"
+        );
     }
 
     #[test]
@@ -658,8 +743,8 @@ mod tests {
     #[test]
     fn session_cost_accumulates() {
         let mut cost = SessionCost::new();
-        cost.record_turn(&TurnMetering::new(0.018, Some(1948)));
-        cost.record_turn(&TurnMetering::new(0.042, Some(5200)));
+        cost.record_turn(&TurnMetering::new(Some(0.018), Some(1948)));
+        cost.record_turn(&TurnMetering::new(Some(0.042), Some(5200)));
         assert_eq!(cost.turn_count(), 2);
         assert!((cost.total_credits() - 0.060).abs() < 0.001);
         assert!((cost.last_turn_credits().unwrap() - 0.042).abs() < 0.001);
@@ -667,20 +752,127 @@ mod tests {
     }
 
     #[test]
+    fn metering_merge_pending_is_order_independent() {
+        // Credits frames and duration/effort-only frames interleave (real
+        // 2.4.1 shape); the merge is last-writer-wins per field, never
+        // clobbering (cyril-1gim).
+        // Duration after credits:
+        let m = TurnMetering::merge_pending(
+            None,
+            Some(TurnMetering::new(Some(0.018), Some(1000))),
+            None,
+        )
+        .and_then(|m| TurnMetering::merge_pending(Some(m), None, Some(2281)))
+        .expect("merged");
+        assert_eq!(
+            m.credits(),
+            Some(0.018),
+            "credits survive a duration-only frame"
+        );
+        assert_eq!(m.duration_ms(), Some(2281), "duration merged in");
+
+        // Credits after duration (the reverse order):
+        let m = TurnMetering::merge_pending(None, None, Some(2281))
+            .and_then(|m| {
+                TurnMetering::merge_pending(
+                    Some(m),
+                    Some(TurnMetering::new(Some(0.018), None)),
+                    None,
+                )
+            })
+            .expect("merged");
+        assert_eq!(m.credits(), Some(0.018), "credits frame lands");
+        assert_eq!(
+            m.duration_ms(),
+            Some(2281),
+            "earlier duration not clobbered"
+        );
+
+        // Newest duration wins when the standalone param carries it:
+        let m = TurnMetering::merge_pending(
+            None,
+            Some(TurnMetering::new(Some(0.018), Some(1000))),
+            Some(2281),
+        )
+        .expect("merged");
+        assert_eq!(m.duration_ms(), Some(2281));
+
+        // Incoming metering's own duration survives when the standalone param
+        // is absent:
+        let m = TurnMetering::merge_pending(
+            None,
+            Some(TurnMetering::new(Some(0.018), Some(1000))),
+            None,
+        )
+        .expect("merged");
+        assert_eq!(
+            m.duration_ms(),
+            Some(1000),
+            "metering's own duration preserved"
+        );
+    }
+
+    #[test]
+    fn metering_absence_merge_preserves_pending_credits() {
+        let merged = TurnMetering::merge_pending(
+            Some(TurnMetering::new(Some(0.018), None)),
+            Some(TurnMetering::new(None, Some(2281))),
+            None,
+        )
+        .expect("merged");
+        assert_eq!(
+            merged.credits(),
+            Some(0.018),
+            "an absent incoming credit field must preserve pending credits"
+        );
+        assert_eq!(merged.duration_ms(), Some(2281));
+    }
+
+    #[test]
+    fn metering_merge_pending_never_fabricates_credits() {
+        let m = TurnMetering::merge_pending(None, None, Some(2281))
+            .expect("a lone duration still produces metering state");
+        assert_eq!(m.credits(), None, "no credits figure fabricated");
+        assert_eq!(m.duration_ms(), Some(2281));
+        assert!(
+            TurnMetering::merge_pending(None, None, None).is_none(),
+            "nothing on the wire => no pending metering"
+        );
+    }
+
+    #[test]
+    fn session_cost_skips_duration_only_turns() {
+        let mut cost = SessionCost::new();
+        cost.record_turn(&TurnMetering::new(None, Some(2281)));
+        assert_eq!(cost.turn_count(), 1);
+        assert_eq!(
+            cost.total_credits(),
+            0.0,
+            "no credits summed for duration-only"
+        );
+        assert!(cost.last_turn_credits().is_none());
+        assert_eq!(cost.last_turn_duration_ms(), Some(2281));
+    }
+
+    #[test]
     fn duration_display_formatting() {
         assert_eq!(
-            TurnMetering::new(0.01, Some(500)).duration_display(),
+            TurnMetering::new(Some(0.01), Some(500)).duration_display(),
             Some("500ms".into())
         );
         assert_eq!(
-            TurnMetering::new(0.01, Some(1948)).duration_display(),
+            TurnMetering::new(Some(0.01), Some(1948)).duration_display(),
             Some("1.9s".into())
         );
         assert_eq!(
-            TurnMetering::new(0.01, Some(135000)).duration_display(),
+            TurnMetering::new(Some(0.01), Some(135000)).duration_display(),
             Some("2m 15s".into())
         );
-        assert!(TurnMetering::new(0.01, None).duration_display().is_none());
+        assert!(
+            TurnMetering::new(Some(0.01), None)
+                .duration_display()
+                .is_none()
+        );
     }
 
     #[test]
@@ -724,7 +916,7 @@ mod tests {
         let summary = TurnSummary::new(
             StopReason::MaxTokens,
             Some(TokenCounts::new(1000, 500, Some(200))),
-            Some(TurnMetering::new(0.05, Some(3000))),
+            Some(TurnMetering::new(Some(0.05), Some(3000))),
         );
         assert_eq!(summary.stop_reason(), StopReason::MaxTokens);
         assert!(summary.token_counts().is_some());

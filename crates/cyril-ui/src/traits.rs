@@ -44,8 +44,9 @@ pub trait TuiState {
     fn current_mode(&self) -> Option<&str>;
     fn current_model(&self) -> Option<&str>;
     /// Current thinking-effort level, if a thinking model is active and the
-    /// agent has reported it. `None` otherwise.
-    fn effort(&self) -> Option<EffortLevel>;
+    /// agent has reported it. `None` otherwise. Borrowed so a backend-defined
+    /// `EffortLevel::Other` string isn't cloned on every frame.
+    fn effort(&self) -> Option<&EffortLevel>;
     /// Count of un-consumed queued steers (ROADMAP K1b). Drives the toolbar chip.
     fn steering_queued(&self) -> usize;
     /// Current voice-input status (ROADMAP CN2). Defaults to `Idle` for state
@@ -603,8 +604,8 @@ pub mod test_support {
         fn current_model(&self) -> Option<&str> {
             self.current_model.as_deref()
         }
-        fn effort(&self) -> Option<EffortLevel> {
-            self.effort
+        fn effort(&self) -> Option<&EffortLevel> {
+            self.effort.as_ref()
         }
         fn steering_queued(&self) -> usize {
             self.steering_queued
