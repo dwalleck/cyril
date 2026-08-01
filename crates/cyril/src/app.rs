@@ -67,7 +67,12 @@ impl App {
     /// added without the compiler demanding a decision about consuming it here.
     /// Two fields shipped serialized and documented for months while nothing
     /// read them; this seam is what stops that recurring.
-    pub fn new(bridge: BridgeHandle, ui: &config::UiConfig, cwd: PathBuf) -> Self {
+    pub fn new(
+        bridge: BridgeHandle,
+        ui: &config::UiConfig,
+        cwd: PathBuf,
+        hooks: cyril_core::commands::HooksCommandSource,
+    ) -> Self {
         // EXHAUSTIVE ON PURPOSE -- no `..`. Adding a UiConfig field must fail
         // compilation here rather than join the ranks of the silently ignored.
         let &config::UiConfig {
@@ -75,7 +80,7 @@ impl App {
             mouse_capture,
         } = ui;
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
-        let commands = CommandRegistry::with_builtins();
+        let commands = CommandRegistry::with_builtins(hooks);
         let info: Vec<(String, Option<String>)> = commands
             .all_commands()
             .iter()
@@ -395,6 +400,17 @@ impl App {
             && msg.text == "__clear__"
         {
             self.ui_state.clear_messages();
+        }
+
+        // KAS pushed a new hook registry (cyril-gk17). `SessionController` has
+        // already recorded it for `/hooks enable|disable` name resolution, so
+        // the App's only remaining job is the view — and only when the panel is
+        // already open. This notification arrives unprompted on any hook-file
+        // edit, so it must never pop an overlay open by itself.
+        if let Notification::HooksChanged { ref hooks } = notification
+            && self.ui_state.refresh_hooks_panel(hooks.clone())
+        {
+            self.redraw_needed = true;
         }
 
         // Handle command options received — open picker or show message
@@ -1581,6 +1597,7 @@ mod tests {
                 ..config::UiConfig::default()
             },
             PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
         )
     }
 
@@ -1606,6 +1623,7 @@ mod tests {
             BridgeHandle::for_tests(),
             &config::UiConfig::default(),
             PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
         );
         assert!(app.mouse_captured());
     }
@@ -2383,6 +2401,12 @@ mod tests {
                 trigger: format!("T{i}"),
                 command: format!("cmd{i}"),
                 matcher: None,
+                id: None,
+                name: None,
+                enabled: None,
+                // v2-shaped, which is the point: the KAS-only fields are
+                // absent, and `enabled: None` means "this registry does not
+                // model enablement", not "disabled".
             })
             .collect();
         ui_state.show_hooks_panel(hooks);

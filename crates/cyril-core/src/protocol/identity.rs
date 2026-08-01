@@ -1,4 +1,5 @@
-//! Engine-scoped resolution of cyril's presented identity (cyril-0wyn, ADR-0006).
+//! Engine-scoped resolution of cyril's presented identity (cyril-0wyn ADR-0006,
+//! default flipped by cyril-df5l ADR-0008).
 //!
 //! Keyed off the **bound engine at runtime** ([`AgentEngine`]), never
 //! `cfg(feature = "kas")` — a feature-gated build still drives v2 engines, and
@@ -10,12 +11,13 @@ use crate::types::present_as::PresentAs;
 
 /// The identity actually presented on the wire for this engine.
 ///
-/// `present_as = "kiro-cli"` is a KAS-only knob: the v2 engine ignores
-/// `clientInfo.name` behaviorally, so impersonating there changes nothing but
-/// telemetry attribution — pure misrepresentation with zero function. On V2
-/// the configured value is therefore inert and the honest identity is
-/// presented; the spawn path warns when it discards a configured `KiroCli`
-/// (detectable as `effective_present_as(..) != configured`).
+/// `present_as` is a KAS-only knob: the v2 engine ignores `clientInfo.name`
+/// behaviorally, so presenting a Kiro name there changes nothing but telemetry
+/// attribution — pure misrepresentation with zero function. On V2 the
+/// configured value is therefore inert and the honest identity is presented,
+/// **including under ADR-0008's `KiroCli` default** — the flip is scoped to
+/// the engine that actually reads the name. The discard stays detectable as
+/// `effective_present_as(..) != configured` for the spawn path's log.
 #[must_use]
 pub fn effective_present_as(engine: AgentEngine, configured: PresentAs) -> PresentAs {
     match engine {
@@ -30,19 +32,23 @@ pub fn effective_present_as(engine: AgentEngine, configured: PresentAs) -> Prese
 /// KAS classifies clients by `clientInfo.name` and does not surface the
 /// resolved classification in the initialize response
 /// (`.cyril-0wyn/findings.md` Q3), so cyril states its own standing in
-/// `cyril.log` at `info` — the fail-loud half of ADR-0006.
+/// `cyril.log` at `info` — the fail-loud half of ADR-0006, kept by ADR-0008.
+/// Both KAS arms advise: under ADR-0008 the default is a Kiro name, and a
+/// default that silently changes how the agent is prompted is exactly the
+/// thing that must stay stated somewhere the user can read.
 #[must_use]
 pub fn identity_advisory(engine: AgentEngine, effective: PresentAs) -> Option<&'static str> {
     match (engine, effective) {
         (AgentEngine::V2, _) => None,
         (AgentEngine::Kas, PresentAs::Cyril) => Some(
-            "KAS classifies cyril as kiro-ide (unrecognized-name fallback): IDE persona, \
-             channel-gated remote tools, IDE hooks briefing in the system prompt — ADR-0006",
+            "opted out to clientInfo.name=cyril ([agent] present_as): KAS does not recognize \
+             the name and falls back to kiro-ide — IDE persona, channel-gated remote tools, \
+             IDE hooks briefing in the system prompt — ADR-0008",
         ),
         (AgentEngine::Kas, PresentAs::KiroCli) => Some(
-            "presenting as kiro-cli (opt-in impersonation, [agent] present_as): CLI persona, \
-             memoryEnabled remote-tools branch; Kiro telemetry will attribute this session \
-             to kiro-cli — ADR-0006",
+            "presenting as kiro-cli (default, ADR-0008): CLI persona, memoryEnabled \
+             remote-tools branch; title stays \"Cyril\", but Kiro telemetry will attribute \
+             this session to kiro-cli — set [agent] present_as = \"cyril\" to opt out",
         ),
     }
 }
@@ -94,16 +100,22 @@ mod tests {
         let fallback = identity_advisory(AgentEngine::Kas, PresentAs::Cyril)
             .expect("KAS+Cyril must advise about the kiro-ide fallback");
         assert!(fallback.contains("kiro-ide"));
-        assert!(fallback.contains("ADR-0006"));
+        assert!(fallback.contains("ADR-0008"));
 
-        let impersonation = identity_advisory(AgentEngine::Kas, PresentAs::KiroCli)
-            .expect("KAS+KiroCli must advise about the impersonation");
-        assert!(impersonation.contains("impersonation"));
-        assert!(impersonation.contains("kiro-cli"));
-        assert!(impersonation.contains("ADR-0006"));
+        // cyril-df5l: the DEFAULT arm must still advise. A flip that made the
+        // default silent would hide the persona change and the telemetry
+        // attribution from every user who never touched the knob — so this
+        // arm additionally has to name the telemetry consequence and the way
+        // out, not merely announce the name.
+        let default_arm = identity_advisory(AgentEngine::Kas, PresentAs::KiroCli)
+            .expect("KAS+KiroCli must advise about the presented persona");
+        assert!(default_arm.contains("kiro-cli"));
+        assert!(default_arm.contains("telemetry"));
+        assert!(default_arm.contains("present_as"));
+        assert!(default_arm.contains("ADR-0008"));
 
         assert_ne!(
-            fallback, impersonation,
+            fallback, default_arm,
             "the two advisories must be distinct texts (swapped-message guard)"
         );
     }

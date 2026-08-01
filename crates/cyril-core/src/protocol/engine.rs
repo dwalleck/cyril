@@ -130,10 +130,16 @@ impl Engine for KasEngine {
         // cyril's host-io/terminal responders. v2 stays empty (V2Engine).
         // cyril-nhzw: attach `_meta.kiro.settings` (AgentSettings marshaled from the
         // user's kiro-cli cli.json) so KAS honors the same feature flags v2 would.
+        // cyril-kf2g: `fs._meta.kiro` selects the `_kiro/fs/*` superset dialect —
+        // paginated reads plus stat/read_directory/delete, which have no bare-ACP
+        // equivalent and otherwise never reach cyril at all. The bare read/write
+        // flags stay advertised: they are the fallback if a future KAS drops a
+        // Kiro flag, and dropping them would strand those ops in-process.
         acp::ClientCapabilities::new()
             .fs(acp::FileSystemCapabilities::default()
                 .read_text_file(true)
-                .write_text_file(true))
+                .write_text_file(true)
+                .meta(super::kas::kiro_fs::capabilities_meta()))
             .terminal(true)
             .meta(super::kas::settings::kiro_client_meta(self.hooks_mode))
     }
@@ -205,6 +211,53 @@ mod tests {
             format!("{:?}", acp::ClientCapabilities::new()),
             "V2Engine must stay empty (no fs/terminal caps leaked from the KAS path)"
         );
+    }
+
+    // cyril-kf2g: the fs dialect gate is `clientCapabilities.fs._meta.kiro`,
+    // NOT top-level `clientCapabilities._meta.kiro`. That distinction is the
+    // entire finding — probe-kas-rpc-sweep-2.16.0.py advertised the resolved
+    // capability name at the TOP level, moved nothing, and concluded the
+    // trigger was "unknown". So this asserts the placement, not just the
+    // presence: the top-level assertion is what fails if the object drifts up
+    // a level, which is otherwise invisible (KAS ignores it silently and keeps
+    // using the bare-ACP dialect).
+    #[cfg(feature = "kas")]
+    #[test]
+    fn kas_advertises_kiro_fs_dialect_nested_under_fs() {
+        let caps = KasEngine::default().client_capabilities();
+
+        let fs_meta =
+            serde_json::to_value(caps.fs.meta.as_ref().expect("fs._meta present")).unwrap();
+        assert_eq!(
+            fs_meta.get("kiro"),
+            Some(&json!({
+                "readFile": true,
+                "writeFile": true,
+                "stat": true,
+                "readDirectory": true,
+                "delete": true,
+            })),
+            "all five wire flags, under fs._meta.kiro"
+        );
+
+        // The wrong placement must stay empty. `_meta.kiro` legitimately holds
+        // settings/hooks, so this checks for the fs keys specifically.
+        let top = serde_json::to_value(caps.meta.as_ref().expect("top _meta present")).unwrap();
+        let top_kiro = top.get("kiro").expect("_meta.kiro");
+        for flag in ["readFile", "writeFile", "stat", "readDirectory", "delete"] {
+            assert!(
+                top_kiro.get(flag).is_none(),
+                "{flag} must NOT sit at top-level _meta.kiro (the sweep's mistake)"
+            );
+        }
+
+        // The bare-ACP flags stay on: they are the fallback if a future KAS
+        // drops a Kiro flag, and are what `fs/write_text_file` still rides.
+        assert!(caps.fs.read_text_file && caps.fs.write_text_file);
+
+        // Parity-break guard: V2 advertises no fs capability at all, so it
+        // cannot acquire an fs._meta by copy-paste.
+        assert!(V2Engine.client_capabilities().fs.meta.is_none());
     }
 
     // cyril-jiyn claim 2 fence: the mode×engine advertisement matrix. The V2

@@ -201,3 +201,120 @@ impl Command for LoadCommand {
         Ok(CommandResult::dispatched())
     }
 }
+
+/// `/hooks` on the KAS engine (cyril-gk17).
+///
+/// KAS advertises no `hooks` command of its own — its command surface is
+/// skills-only — so on v2 this command is *not* registered and the agent's own
+/// `hooks` command handles the slash instead. See
+/// [`HooksCommandSource`](crate::commands::HooksCommandSource) for that split.
+///
+/// Under `kas_hooks = "kas"` the agent owns a file-watched `.kiro/hooks`
+/// registry and executes those hooks itself, so this is cyril's only window
+/// onto them:
+///
+/// - `/hooks` — list the registry (including disabled hooks).
+/// - `/hooks enable|disable <name-or-id>` — flip a hook's `enabled` flag. The
+///   agent rewrites the flag in the backing **file**, so the change persists
+///   past the session; the command re-lists afterwards so the user sees it.
+pub struct KasHooksCommand {
+    /// The session's workspace root, sent as `workspacePaths`.
+    ///
+    /// Supplied at construction from the SAME value the bridge was spawned
+    /// with, never re-derived from `std::env::current_dir()`: cyril accepts a
+    /// `--cwd` flag, so the process cwd and the workspace root genuinely
+    /// differ, and querying the wrong root returns an empty listing that
+    /// reads as "you have no hooks".
+    workspace_root: std::path::PathBuf,
+}
+
+impl KasHooksCommand {
+    #[must_use]
+    pub fn new(workspace_root: std::path::PathBuf) -> Self {
+        Self { workspace_root }
+    }
+
+    fn workspace_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![self.workspace_root.clone()]
+    }
+}
+
+#[async_trait::async_trait]
+impl Command for KasHooksCommand {
+    fn name(&self) -> &str {
+        "hooks"
+    }
+
+    fn description(&self) -> &str {
+        "List KAS hooks; /hooks enable|disable <name> toggles one"
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        let Some(session_id) = ctx.session.id().cloned() else {
+            return Ok(CommandResult::system_message(
+                "No active session — hooks are session-scoped.".into(),
+            ));
+        };
+        let workspace_paths = self.workspace_paths();
+
+        let mut parts = args.split_whitespace();
+        let enabled = match parts.next() {
+            None => {
+                ctx.bridge
+                    .send(BridgeCommand::ListKasHooks {
+                        session_id,
+                        workspace_paths,
+                    })
+                    .await?;
+                return Ok(CommandResult::dispatched());
+            }
+            Some("enable") => true,
+            Some("disable") => false,
+            Some(other) => {
+                return Ok(CommandResult::system_message(format!(
+                    "Unknown /hooks action {other:?}. Usage: /hooks | /hooks enable <name> | /hooks disable <name>"
+                )));
+            }
+        };
+        let Some(reference) = parts.next() else {
+            return Ok(CommandResult::system_message(
+                "Which hook? Usage: /hooks enable <name> | /hooks disable <name>".into(),
+            ));
+        };
+
+        // Resolution needs a listing to have landed. Saying so beats sending a
+        // name the agent will reject as an unknown hookId.
+        let hook_id = match ctx.session.resolve_kas_hook_id(reference) {
+            Ok(id) => id,
+            Err(crate::session::HookRefError::NotFound) => {
+                let known = ctx.session.kas_hooks().len();
+                return Ok(CommandResult::system_message(if known == 0 {
+                    "No hooks known yet — run /hooks first.".into()
+                } else {
+                    format!("No hook named {reference:?} in the {known} known hooks.")
+                }));
+            }
+            Err(crate::session::HookRefError::Ambiguous(candidates)) => {
+                return Ok(CommandResult::system_message(format!(
+                    "{reference:?} is ambiguous across {} hooks — use the full id:\n  {}",
+                    candidates.len(),
+                    candidates
+                        .iter()
+                        .map(crate::types::hook::HookId::as_str)
+                        .collect::<Vec<_>>()
+                        .join("\n  ")
+                )));
+            }
+        };
+
+        ctx.bridge
+            .send(BridgeCommand::SetKasHookEnabled {
+                session_id,
+                hook_id,
+                enabled,
+                workspace_paths,
+            })
+            .await?;
+        Ok(CommandResult::dispatched())
+    }
+}

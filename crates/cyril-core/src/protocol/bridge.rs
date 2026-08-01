@@ -163,7 +163,7 @@ pub struct SpawnConfig {
     /// KAS launch shape (free | wrapper); ignored for v2 (cyril-evwh).
     pub kas_spawn: KasSpawn,
     /// The `clientInfo` identity presented at initialize (ADR-0006).
-    pub present_as: PresentAs,
+    pub present_as: Option<PresentAs>,
     /// Which hook model runs on the KAS engine (cyril-jiyn, KAS-7); ignored
     /// for v2.
     pub kas_hooks: KasHooksMode,
@@ -678,13 +678,105 @@ struct InternalChannels {
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
 
-/// The `clientInfo` cyril presents at `initialize` (cyril-0wyn, ADR-0006).
+/// Send a hook listing outcome to the App: on success the two notifications
+/// below, on failure the single `BridgeError`. Returns whether the channel
+/// closed (the caller's signal to leave the run loop).
 ///
-/// Single source of identity: `name` follows [`PresentAs`] (honest `"cyril"`
-/// default, opt-in `"kiro-cli"`); `title` is **always** `"Cyril"` — the
-/// impersonation is deliberately never total, so Kiro-side logs and telemetry
-/// can identify cyril sessions in every mode; `version` is the workspace
-/// version.
+/// Shared by `ListKasHooks` and `SetKasHookEnabled`, which differ only in how
+/// they obtain the listing.
+#[cfg(feature = "kas")]
+async fn send_hooks_listing(
+    tx: &mpsc::Sender<RoutedNotification>,
+    outcome: Result<Vec<crate::types::HookInfo>, Notification>,
+) -> bool {
+    match outcome {
+        Ok(hooks) => {
+            for note in hooks_listing_notifications(hooks) {
+                if notify_or_closed(tx, note).await {
+                    return true;
+                }
+            }
+            false
+        }
+        Err(note) => notify_or_closed(tx, note).await,
+    }
+}
+
+/// Two notifications per listing, in send order.
+///
+/// `HooksChanged` goes first because it is what `SessionController` records —
+/// so by the time the panel renders, `/hooks disable <name>` can already
+/// resolve that name to its composite id. Reversing them would leave the user
+/// looking at a hook they cannot yet address.
+#[cfg(feature = "kas")]
+fn hooks_listing_notifications(hooks: Vec<crate::types::HookInfo>) -> [Notification; 2] {
+    let response = serde_json::json!({ "success": true, "data": { "hooks": hooks } });
+    [
+        Notification::HooksChanged { hooks },
+        Notification::CommandExecuted {
+            command: "hooks".to_string(),
+            response,
+        },
+    ]
+}
+
+/// Query KAS's hook registry (`_kiro/hooks/list`) and translate the reply.
+///
+/// `includeDisabled` is always `true`. A listing that hid disabled hooks would
+/// leave `/hooks enable <name>` unable to name its own target, and would make a
+/// disabled hook look simply absent.
+///
+/// Every failure path returns a `BridgeError` notification rather than nothing:
+/// the App is waiting on this command, and the bridge must notify for every
+/// command it processes, error cases included.
+#[cfg(feature = "kas")]
+async fn kas_hooks_list(
+    conn: &agent_client_protocol::ClientSideConnection,
+    session_id: &crate::types::SessionId,
+    workspace_paths: &[std::path::PathBuf],
+    operation: &str,
+) -> Result<Vec<crate::types::HookInfo>, Notification> {
+    use agent_client_protocol as acp;
+    // `ext_method` lives on the Agent trait, which the run loop imports locally.
+    use acp::Agent as _;
+
+    let fail = |message: String| Notification::BridgeError {
+        operation: operation.to_string(),
+        message,
+    };
+    let params = serde_json::json!({
+        "sessionId": session_id.as_str(),
+        "workspacePaths": workspace_paths,
+        "includeDisabled": true,
+    });
+    let raw = to_raw_arc(&params).map_err(|e| fail(format!("serialize params: {e}")))?;
+    let response = conn
+        .ext_method(acp::ExtRequest::new(
+            crate::protocol::kas::hooks::LIST_METHOD,
+            raw,
+        ))
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, operation, "hooks/list failed");
+            fail(e.to_string())
+        })?;
+    let body: serde_json::Value = serde_json::from_str(response.0.get())
+        .map_err(|e| fail(format!("hooks/list reply is not JSON: {e}")))?;
+    // Shape drift surfaces as a BridgeError naming the drift, not as an empty
+    // listing — "you have no hooks" and "cyril could not read the registry"
+    // must never look the same to the user.
+    crate::protocol::kas::hooks::parse_wire_hooks(&body)
+        .ok_or_else(|| fail("hooks/list reply carried no `hooks` array".to_string()))
+}
+
+/// The `clientInfo` cyril presents at `initialize` (cyril-0wyn ADR-0006,
+/// default flipped by cyril-df5l ADR-0008).
+///
+/// Single source of identity: `name` follows [`PresentAs`] (`"kiro-cli"` by
+/// default, `"cyril"` to opt out); `title` is **always** `"Cyril"` — the
+/// persona selection is deliberately never total, so Kiro-side logs and
+/// telemetry can identify cyril sessions in every mode; `version` is the
+/// workspace version.
 #[must_use]
 pub(crate) fn client_info(
     present_as: crate::types::present_as::PresentAs,
@@ -762,7 +854,7 @@ async fn run_loop(
     mut channels: BridgeChannels,
     cwd: std::path::PathBuf,
     engine: std::rc::Rc<dyn Engine>,
-    present_as: PresentAs,
+    present_as: Option<PresentAs>,
     internal: InternalChannels,
 ) -> crate::Result<()> {
     // cyril-3lh8: the shared terminal-registry handle for the CancelRequest
@@ -781,15 +873,29 @@ async fn run_loop(
     use agent_client_protocol as acp;
 
     // 4. ACP handshake. Identity is resolved against the bound engine
-    //    (cyril-0wyn, ADR-0006): the `present_as` knob is KAS-only, and the
-    //    resolved standing is stated in the log because KAS's own
-    //    classification is invisible on the wire (.cyril-0wyn/findings.md Q3).
-    let effective = crate::protocol::identity::effective_present_as(engine.kind(), present_as);
-    if effective != present_as {
-        tracing::warn!(
-            configured = present_as.wire_name(),
-            "[agent] present_as has no effect on the v2 engine — presenting the honest identity"
-        );
+    //    (cyril-0wyn ADR-0006, default flipped by cyril-df5l ADR-0008): the
+    //    `present_as` knob is KAS-only, and the resolved standing is stated in
+    //    the log because KAS's own classification is invisible on the wire
+    //    (.cyril-0wyn/findings.md Q3).
+    let requested = present_as.unwrap_or_default();
+    let effective = crate::protocol::identity::effective_present_as(engine.kind(), requested);
+    if effective != requested {
+        // The level keys on whether the user ASKED for the discarded value.
+        // Collapsing "chose kiro-cli" into "said nothing" forced a false
+        // either/or: warn and every v2 user is told their own default is
+        // misconfiguration, or debug and a user who edited config to opt in
+        // gets no signal at all that it did nothing.
+        match present_as {
+            Some(explicit) => tracing::warn!(
+                configured = explicit.wire_name(),
+                "[agent] present_as was set but is inert on the v2 engine — the knob \
+                 only affects KAS; presenting the honest identity"
+            ),
+            None => tracing::debug!(
+                configured = requested.wire_name(),
+                "default present_as is inert on the v2 engine — presenting the honest identity"
+            ),
+        }
     }
     if let Some(advisory) = crate::protocol::identity::identity_advisory(engine.kind(), effective) {
         tracing::info!("{advisory}");
@@ -1849,6 +1955,93 @@ async fn run_loop(
                             }
                         }
                     }
+                }
+            }
+            #[cfg(not(feature = "kas"))]
+            BridgeCommand::ListKasHooks { .. } | BridgeCommand::SetKasHookEnabled { .. } => {
+                // Unreachable in practice — the `/hooks` command that emits
+                // these is only registered for the KAS engine, which a default
+                // build cannot bind. Answered rather than ignored so the App is
+                // never left waiting on a command the bridge silently dropped.
+                if notify_or_closed(
+                    &channels.notification_tx,
+                    Notification::BridgeError {
+                        operation: "hooks".to_string(),
+                        message: "this build has no KAS support (cargo feature `kas`)".to_string(),
+                    },
+                )
+                .await
+                {
+                    break;
+                }
+            }
+            #[cfg(feature = "kas")]
+            BridgeCommand::ListKasHooks {
+                session_id,
+                workspace_paths,
+            } => {
+                let listing =
+                    kas_hooks_list(&conn, &session_id, &workspace_paths, "hooks/list").await;
+                if send_hooks_listing(&channels.notification_tx, listing).await {
+                    break;
+                }
+            }
+            #[cfg(feature = "kas")]
+            BridgeCommand::SetKasHookEnabled {
+                session_id,
+                hook_id,
+                enabled,
+                workspace_paths,
+            } => {
+                let params = serde_json::json!({
+                    "sessionId": session_id.as_str(),
+                    "hookId": hook_id,
+                    "enabled": enabled,
+                });
+                // The reply is a bare `{success: true}` carrying no registry, so
+                // a follow-up listing is what actually shows the user the flag
+                // moved — and it catches an agent that answers success without
+                // rewriting the backing file.
+                let outcome: Result<Vec<crate::types::HookInfo>, Notification> =
+                    async {
+                        let raw = to_raw_arc(&params).map_err(|e| Notification::BridgeError {
+                            operation: "hooks/setEnabled".to_string(),
+                            message: format!("serialize params: {e}"),
+                        })?;
+                        let reply = conn
+                            .ext_method(acp::ExtRequest::new(
+                                crate::protocol::kas::hooks::SET_ENABLED_METHOD,
+                                raw,
+                            ))
+                            .await
+                            .map_err(|e| {
+                                tracing::error!(error = %e, hook_id = %hook_id, enabled, "hooks/setEnabled failed");
+                                Notification::BridgeError {
+                                    operation: format!("hooks/setEnabled '{hook_id}'"),
+                                    message: e.to_string(),
+                                }
+                            })?;
+                        // A transport-level Ok is not an agent-level yes: this
+                        // call rewrites a file on the user's disk, so "it
+                        // returned" and "it did it" are different claims. The
+                        // three-way reading (confirmed / refused / corrupt)
+                        // lives in `interpret_set_enabled_reply` so it can be
+                        // fenced; here we only map it onto the wire error.
+                        crate::protocol::kas::hooks::interpret_set_enabled_reply(reply.0.get())
+                            .map_err(|e| {
+                                tracing::warn!(error = %e, hook_id = %hook_id, enabled, "hooks/setEnabled did not confirm");
+                                Notification::BridgeError {
+                                    operation: format!("hooks/setEnabled '{hook_id}'"),
+                                    message: e.to_string(),
+                                }
+                            })?;
+                        kas_hooks_list(&conn, &session_id, &workspace_paths, "hooks/setEnabled")
+                            .await
+                    }
+                    .await;
+
+                if send_hooks_listing(&channels.notification_tx, outcome).await {
+                    break;
                 }
             }
             BridgeCommand::Shutdown => {
@@ -2960,7 +3153,9 @@ mod tests {
                     channels,
                     std::env::temp_dir(),
                     engine,
-                    PresentAs::default(),
+                    // None = "not configured", the shape a real spawn has
+                    // unless the user names a persona.
+                    None,
                     InternalChannels {
                         inbound_tx,
                         inbound_rx,

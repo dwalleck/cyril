@@ -48,11 +48,21 @@ pub struct AgentConfig {
     /// = "free"` (default, zero-credential direct spawn) or `"wrapper"`
     /// (`kiro-cli acp --agent-engine v3` + the auth responder). Ignored for v2.
     pub kas_spawn: KasSpawn,
-    /// What identity cyril presents as `clientInfo.name` (cyril-0wyn,
-    /// ADR-0006). TOML `present_as = "cyril"` (default, honest) or
-    /// `"kiro-cli"` (opt-in impersonation, KAS engine only — inert with a
-    /// warning on v2).
-    pub present_as: PresentAs,
+    /// What identity cyril presents as `clientInfo.name` (cyril-df5l,
+    /// ADR-0008, superseding ADR-0006). TOML `present_as = "kiro-cli"`
+    /// (default: the CLI persona) or `"cyril"` (opt out to KAS's
+    /// unrecognized-name `kiro-ide` fallback). KAS engine only — inert on v2,
+    /// which ignores `clientInfo.name` behaviorally.
+    ///
+    /// `None` means the user named no persona, and is **not** interchangeable
+    /// with `Some(PresentAs::default())` even though the two resolve alike: on
+    /// v2 the knob is discarded, and an explicit choice being discarded earns a
+    /// `warn!` where cyril's own default being discarded does not. Collapsing
+    /// them under `#[serde(default)]` is what made that a false either/or —
+    /// every v2 user warned, or no v2 user told. Resolve with
+    /// [`AgentConfig::resolved_present_as`].
+    #[serde(default)]
+    pub present_as: Option<PresentAs>,
     /// Which hook model runs on the KAS engine (cyril-jiyn, KAS-7). TOML
     /// `kas_hooks = "host"` (default: cyril executes hooks and can block
     /// preToolUse), `"kas"` (KAS's standalone loader executes them
@@ -67,9 +77,18 @@ impl Default for AgentConfig {
             extra_args: Vec::new(),
             engine: AgentEngine::default(),
             kas_spawn: KasSpawn::default(),
-            present_as: PresentAs::default(),
+            present_as: None,
             kas_hooks: KasHooksMode::default(),
         }
+    }
+}
+
+impl AgentConfig {
+    /// The persona to present, applying ADR-0008's default when the user named
+    /// none. Use this wherever the *value* is needed; read the field directly
+    /// only to ask whether the choice was explicit.
+    pub fn resolved_present_as(&self) -> PresentAs {
+        self.present_as.unwrap_or_default()
     }
 }
 
@@ -229,14 +248,33 @@ agent_name = "opencode"
         }
     }
 
+    // cyril-df5l / ADR-0008: a config that never mentions `present_as` gets
+    // the CLI persona, and the opt-out is expressible. Both halves matter —
+    // a flip that made "cyril" unreachable would be impersonation without
+    // consent, which ADR-0008 explicitly does not decide.
     #[test]
-    fn present_as_absent_defaults_to_cyril() {
+    fn present_as_absent_defaults_to_kiro_cli() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
         std::fs::write(&path, "[agent]\nengine = \"kas\"\n").unwrap();
 
         let config = Config::load_from_path(&path);
-        assert_eq!(config.agent.present_as, PresentAs::Cyril);
+        // Absent stays ABSENT — the default is applied on resolve, not on
+        // parse, so the v2 discard can tell "chose kiro-cli" from "said
+        // nothing" and pick its log level accordingly.
+        assert_eq!(config.agent.present_as, None);
+        assert_eq!(config.agent.resolved_present_as(), PresentAs::KiroCli);
+    }
+
+    #[test]
+    fn present_as_cyril_opt_out_parses() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "[agent]\npresent_as = \"cyril\"\n").unwrap();
+
+        let config = Config::load_from_path(&path);
+        assert_eq!(config.agent.present_as, Some(PresentAs::Cyril));
+        assert_eq!(config.agent.resolved_present_as(), PresentAs::Cyril);
     }
 
     #[test]
@@ -246,7 +284,10 @@ agent_name = "opencode"
         std::fs::write(&path, "[agent]\npresent_as = \"kiro-cli\"\n").unwrap();
 
         let config = Config::load_from_path(&path);
-        assert_eq!(config.agent.present_as, PresentAs::KiroCli);
+        // An EXPLICIT kiro-cli is Some, not None, even though it matches the
+        // default: that is the whole point of the Option.
+        assert_eq!(config.agent.present_as, Some(PresentAs::KiroCli));
+        assert_eq!(config.agent.resolved_present_as(), PresentAs::KiroCli);
     }
 
     // cyril-0wyn claim 6 fence: an invalid present_as value follows the
@@ -311,7 +352,17 @@ agent_name = "opencode"
             .unwrap();
 
             let config = Config::load_from_path(&path);
-            assert_eq!(config.agent.present_as, PresentAs::Cyril, "{bad}");
+            // The rejected file yields the ADR-0008 default, spelled out
+            // rather than written as `PresentAs::default()` — a tautological
+            // assertion would still pass if the default moved to `kiro-web`
+            // itself, which is the exact value this test exists to keep
+            // unreachable.
+            assert_eq!(config.agent.present_as, None, "{bad}");
+            assert_eq!(
+                config.agent.resolved_present_as(),
+                PresentAs::KiroCli,
+                "{bad}"
+            );
             assert_eq!(
                 config.ui.max_messages, 500,
                 "rejection must be whole-file (house posture), not field-skipping"

@@ -237,7 +237,9 @@ fn message_limit_enforced() {
 
 #[test]
 fn command_registry_with_builtins_resolves() {
-    let registry = cyril_core::commands::CommandRegistry::with_builtins();
+    let registry = cyril_core::commands::CommandRegistry::with_builtins(
+        cyril_core::commands::HooksCommandSource::Agent,
+    );
     assert!(registry.parse("/help").is_some());
     assert!(registry.parse("/quit").is_some());
     assert!(registry.parse("/q").is_some());
@@ -248,7 +250,9 @@ fn command_registry_with_builtins_resolves() {
 
 #[tokio::test]
 async fn command_sends_to_bridge() {
-    let registry = cyril_core::commands::CommandRegistry::with_builtins();
+    let registry = cyril_core::commands::CommandRegistry::with_builtins(
+        cyril_core::commands::HooksCommandSource::Agent,
+    );
     let session = SessionController::new();
     let (tx, mut rx) = tokio::sync::mpsc::channel(4);
     let sender = cyril_core::protocol::bridge::BridgeSender::from_sender(tx);

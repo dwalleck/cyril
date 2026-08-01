@@ -870,6 +870,31 @@ impl UiState {
                 self.add_system_message(format!("{operation} failed: {message}"));
                 true
             }
+            // cyril-gk17: a KAS-executed hook finished. Under `kas_hooks = "kas"`
+            // the agent runs these commands on this host with no permission
+            // prompt, so the transcript line IS the audit trail — it is the only
+            // place the user can see that a hook fired at all.
+            Notification::HookExecuted {
+                name,
+                status,
+                exit_code,
+            } => {
+                let mut text = format!("Hook {name}: {status}");
+                // Only appended when the hook actually reported one. A default
+                // of 0 would assert a clean exit that was never claimed.
+                if let Some(code) = exit_code {
+                    text.push_str(&format!(" (exit {code})"));
+                }
+                self.add_system_message(text);
+                true
+            }
+            // Handled by the App via `refresh_hooks_panel`, not here
+            // (cyril-gk17). It must NOT open the panel — it arrives unprompted
+            // whenever KAS sees a hook file change — and this method cannot
+            // express "update only if already open" without duplicating that
+            // decision. Listed explicitly rather than falling into a catch-all
+            // so a future notification cannot be silently swallowed.
+            Notification::HooksChanged { .. } => false,
         }
     }
 
@@ -1873,6 +1898,31 @@ impl UiState {
             hooks,
             scroll_offset: 0,
         });
+    }
+
+    /// Replace the hooks panel's contents **only if it is already open**,
+    /// returning whether anything changed (cyril-gk17).
+    ///
+    /// KAS pushes `_kiro/hooks/didChange` whenever a hook file is edited,
+    /// unprompted. Routing that through
+    /// [`show_hooks_panel`](Self::show_hooks_panel) would make a modal overlay
+    /// open itself over whatever the user was doing — a worse outcome than a
+    /// stale panel — so an unprompted change with the panel closed is
+    /// deliberately invisible until the next `/hooks`.
+    ///
+    /// The scroll offset is preserved and then clamped: a refresh that
+    /// shortens the list must not strand the viewport past the end, and one
+    /// that merely flips an `enabled` flag must not yank the user to the top.
+    pub fn refresh_hooks_panel(&mut self, hooks: Vec<HookInfo>) -> bool {
+        let Some(panel) = self.hooks_panel.as_ref() else {
+            return false;
+        };
+        let scroll = panel.scroll_offset;
+        self.show_hooks_panel(hooks);
+        if let Some(panel) = self.hooks_panel.as_mut() {
+            panel.scroll_offset = scroll.min(panel.hooks.len().saturating_sub(1));
+        }
+        true
     }
 
     /// Close the hooks panel overlay.
@@ -4325,11 +4375,7 @@ mod tests {
     // --- Hooks panel tests ---
 
     fn sample_hook(trigger: &str, command: &str, matcher: Option<&str>) -> HookInfo {
-        HookInfo {
-            trigger: trigger.into(),
-            command: command.into(),
-            matcher: matcher.map(String::from),
-        }
+        HookInfo::v2(trigger, command, matcher.map(String::from))
     }
 
     #[test]
@@ -4371,6 +4417,54 @@ mod tests {
         let mut state = UiState::new(500);
         state.set_code_intelligence_active(true);
         assert!(state.code_intelligence_active());
+    }
+
+    // cyril-gk17: didChange arrives unprompted on ANY hook-file edit, so the
+    // refresh must never open the overlay by itself — a modal appearing over
+    // the user's input is worse than a stale panel.
+    #[test]
+    fn refresh_is_inert_while_the_panel_is_closed() {
+        let mut state = UiState::new(10);
+        let changed = state.refresh_hooks_panel(vec![HookInfo::v2("PreToolUse", "echo", None)]);
+        assert!(!changed, "a closed panel reports no change");
+        assert!(!state.has_hooks_panel(), "and must stay closed");
+    }
+
+    #[test]
+    fn refresh_replaces_contents_and_clamps_scroll() {
+        let hooks = |n: usize| -> Vec<HookInfo> {
+            (0..n)
+                .map(|i| HookInfo {
+                    // Reverse-ordered names so the panel's own (trigger,
+                    // command) sort is exercised rather than input order.
+                    trigger: format!("T{:02}", n - i),
+                    command: "echo".into(),
+                    matcher: None,
+                    id: None,
+                    name: None,
+                    enabled: None,
+                })
+                .collect()
+        };
+        let mut state = UiState::new(10);
+        state.show_hooks_panel(hooks(10));
+        state.hooks_panel_scroll_down(7);
+        assert_eq!(state.hooks_panel().map(|p| p.scroll_offset), Some(7));
+
+        // Shrinking the registry must not strand the viewport past the end.
+        assert!(state.refresh_hooks_panel(hooks(3)));
+        let panel = state.hooks_panel().expect("still open");
+        assert_eq!(panel.hooks.len(), 3, "contents are replaced, not merged");
+        assert_eq!(panel.scroll_offset, 2, "scroll clamps to the new last row");
+
+        // A same-size refresh (e.g. one `enabled` flag flipped) must NOT yank
+        // the user back to the top.
+        assert!(state.refresh_hooks_panel(hooks(3)));
+        assert_eq!(
+            state.hooks_panel().map(|p| p.scroll_offset),
+            Some(2),
+            "an in-place refresh preserves the viewport"
+        );
     }
 
     #[test]

@@ -509,11 +509,7 @@ mod tests {
             responder: tokio::sync::oneshot::channel().0,
         };
         let hooks = HooksPanelState {
-            hooks: vec![cyril_core::types::HookInfo {
-                trigger: "t".into(),
-                command: "c".into(),
-                matcher: Some("m".into()),
-            }],
+            hooks: vec![cyril_core::types::HookInfo::v2("t", "c", Some("m".into()))],
             scroll_offset: 0,
         };
         let code = CodePanelData {

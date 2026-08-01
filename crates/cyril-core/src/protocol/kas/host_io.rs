@@ -99,7 +99,7 @@ pub(crate) async fn write_text_file(
 /// guards arbitrary USER files, so it pays for durability (fsync),
 /// concurrency-safe random temp names, and permission fidelity — different
 /// tiers, not duplication.
-fn write_atomic(path: &std::path::Path, content: &str) -> std::io::Result<()> {
+pub(super) fn write_atomic(path: &std::path::Path, content: &str) -> std::io::Result<()> {
     use std::io::{Error, ErrorKind, Write as _};
     let canonical = match std::fs::canonicalize(path) {
         Ok(p) => p,
@@ -213,7 +213,7 @@ pub(crate) fn to_native_checked(path: &std::path::Path) -> acp::Result<std::path
 /// (incl. `NotFound` vs `PermissionDenied`) so wire/FS drift is diagnosable —
 /// surface, don't swallow (CLAUDE.md). `op` names the operation and leads both the
 /// structured log and the wire message.
-fn io_err(op: &str, path: &std::path::Path, e: std::io::Error) -> acp::Error {
+pub(super) fn io_err(op: &str, path: &std::path::Path, e: std::io::Error) -> acp::Error {
     tracing::debug!(op = %op, path = %path.display(), error = %e, "KAS fs host-io failed");
     acp::Error::new(-32603, format!("{op} {}: {e}", path.display()))
 }
@@ -226,7 +226,7 @@ fn io_err(op: &str, path: &std::path::Path, e: std::io::Error) -> acp::Error {
 ///
 /// O(L) over the file's lines (single pass); L ≲ 10^5 for a large source file,
 /// well under the 10^6 loop budget.
-fn slice_lines(text: String, line: Option<u32>, limit: Option<u32>) -> String {
+pub(super) fn slice_lines(text: String, line: Option<u32>, limit: Option<u32>) -> String {
     if line.is_none() && limit.is_none() {
         return text;
     }
