@@ -12,6 +12,7 @@ pub mod plan;
 pub mod present_as;
 pub mod prompt;
 pub mod session;
+pub mod steer_receipt;
 pub mod subagent;
 pub mod tool_call;
 pub mod turn;
@@ -37,6 +38,7 @@ pub use session::{
     ModeId, ModelId, ModelInfo, SessionCost, SessionId, SessionMode, SessionStatus, StopReason,
     TokenCounts, TurnMetering, TurnSummary,
 };
+pub use steer_receipt::SteerReceipt;
 pub use subagent::{LoopState, PendingStage, SubagentInfo, SubagentStatus};
 pub use tool_call::{
     ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,

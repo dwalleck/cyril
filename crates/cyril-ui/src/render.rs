@@ -165,6 +165,7 @@ mod tests {
                 text: text.to_string(),
                 status,
                 message_id: None,
+                note: None,
             },
             timestamp: std::time::Instant::now(),
         }
@@ -673,6 +674,7 @@ mod conversation_baseline_compatibility {
                 text: text.into(),
                 status,
                 message_id: None,
+                note: None,
             },
             timestamp: std::time::Instant::now(),
         }
