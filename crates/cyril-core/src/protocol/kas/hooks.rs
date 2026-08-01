@@ -12,6 +12,8 @@ use std::rc::Rc;
 
 use agent_client_protocol as acp;
 
+use super::json_ext_response;
+
 /// The acp-stripped method name for `_kiro/hooks/list` (the acp library strips
 /// the leading underscore, per the `SHELL_TYPE_METHOD` precedent).
 pub(crate) const LIST_METHOD: &str = "kiro/hooks/list";
@@ -96,17 +98,6 @@ fn package_session_start_results(runs: Vec<(&HookDef, HookRunOutcome)>) -> Vec<s
         }
     }
     out
-}
-
-/// Wrap a JSON value as an ACP ext response (shared by the three hook
-/// responders, which otherwise repeat the serialize → RawValue → ExtResponse
-/// dance verbatim).
-fn json_ext_response(value: &serde_json::Value) -> acp::Result<acp::ExtResponse> {
-    let body = serde_json::to_string(value)
-        .map_err(|e| acp::Error::new(-32603, format!("serialize hook reply: {e}")))?;
-    let raw = serde_json::value::RawValue::from_string(body)
-        .map_err(|e| acp::Error::new(-32603, format!("hook reply raw value: {e}")))?;
-    Ok(acp::ExtResponse::new(raw.into()))
 }
 
 /// In-flight hook executions, keyed by `operationId`, each holding a

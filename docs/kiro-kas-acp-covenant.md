@@ -153,15 +153,26 @@ One `session/update` variant carries everything v2 split across `kiro.dev/metada
 |---|---|
 | `fs/read_text_file` (bare) | ACP `ReadTextFileRequest` → `ReadTextFileResponse` |
 | `fs/write_text_file` (bare) | ACP `WriteTextFileRequest` → `WriteTextFileResponse` |
-| `_kiro/fs/read_file` | (Kiro superset of read_text_file) |
-| `_kiro/fs/write_file` | + optional `_meta.kiro.range {start?,end?: {line,character}}` |
-| `_kiro/fs/delete` | `{path, recursive?}` → `{}` |
-| `_kiro/fs/stat` | `{path}` → `{type: FileType, size}` |
-| `_kiro/fs/read_directory` | `{path}` → `{entries: DirectoryEntry[]}` |
+| `_kiro/fs/read_file` | `{path, line?, limit?}` → `{content}` — **`line` is 0-BASED**, unlike bare ACP's 1-based `line` (see note) |
+| `_kiro/fs/write_file` | `{path, content}` + optional `_meta.kiro.range {start?,end?: {line,character}}` → `{}` |
+| `_kiro/fs/delete` | `{path}` → `{}` — **2.16.0 sends no `recursive`** (see note) |
+| `_kiro/fs/stat` | `{path}` → `{type: FileType, size}`; `FileType = "file" \| "directory" \| "symlink"`. Both keys required |
+| `_kiro/fs/read_directory` | `{path}` → `{entries: {name, type: FileType}[]}` |
 | `terminal/{create,output,wait_for_exit,release,kill}` (bare) | ACP terminal lifecycle |
 | `_kiro/terminal/shell_type` | `{}` → `{shellType: string}` |
 
 All carry `BaseCapabilityRequest {sessionId, _meta?}` / `BaseCapabilityResponse {message?, _meta?}` (`capabilities/common.d.ts`).
+`message` is an **error channel**: every adapter does `if (response.message) throw`, so a success payload must not carry one.
+
+> **Selection gate + reference semantics (cyril-kf2g, carved from `@kiro/agent/dist/server/acp-server.js` @ KAS 0.27.8 / kiro-cli 2.16.0).** The `_kiro/fs/*` family is **client-selected** per operation via `clientCapabilities.fs._meta.kiro.{readFile,writeFile,stat,readDirectory,delete}` — nested under `fs`, *not* top-level `_meta.kiro`, and using **wire** names, not the resolved `kiroFs*` names. Each flag swaps one adapter (`KiroEnhancedReadAdapter`, …), falling back to the bare-ACP adapter and then to the in-process `NodeFileSystem`.
+>
+> That fallback is the contract: for every method above, `NodeFileSystem` (and `spliceRange` in `file-operations-utils.ts`) is the reference the client must agree with, or the agent behaves differently depending on a flag it cannot see the consequences of. Three places where the reference contradicts what the table alone implies:
+>
+> - **`line` is 0-based** and the slice rejoins with `\n` (`lines.slice(line, line+limit).join("\n")`), so a selection that stops short of EOF loses the trailing newline. Bare ACP's `line` is 1-based. The only live-observed value is `line: 0`, where both readings agree — a wrong reading ships silently. Reads over **10 MB** are refused (`MAX_READ_SIZE`).
+> - **Advertising `writeFile` re-routes range writes too**: `createAdaptersFromCapabilities` then picks `KiroRangeWrite` (sends `_meta.kiro.range`) instead of `LocalSpliceRangeWrite` (splices agent-side, sends whole-file content). A client that ignores the range turns every partial edit into a full-file overwrite. Range positions are **0-based lines, UTF-16 character offsets**; every level is optional (`{}` means the whole file).
+> - **`delete` recurses.** `NodeFileSystem.delete` does `fs.rm(path, {recursive: true})` for directories, and the 2.16.0 `KiroDeleteAdapter` sends `{sessionId, path}` with **no `recursive` field** despite the covenant type. No `session/request_permission` precedes it.
+>
+> `stat` follows symlinks (`fs.stat`), so its `symlink` variant is unreachable there; `read_directory` does **not** (`readdir` `withFileTypes`), so a symlink to a directory lists as `symlink`. A missing directory returns `{entries: []}`, not an error.
 
 ---
 

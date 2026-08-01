@@ -405,6 +405,30 @@ impl KiroClient {
             return crate::protocol::kas::hooks::respond_session_start(&self.hooks, &self.cwd)
                 .await;
         }
+        // cyril-kf2g: the `_kiro/fs/*` superset dialect, selected by the
+        // `fs._meta.kiro` capabilities this engine advertises. Every arm here
+        // must stay paired with its flag in `kiro_fs::capabilities_meta` — an
+        // advertised flag with no arm answers the protocol-default null, which
+        // the agent cannot distinguish from a successful empty result.
+        {
+            use crate::protocol::kas::kiro_fs;
+            let method = args.method.as_ref();
+            if method == kiro_fs::READ_FILE_METHOD {
+                return kiro_fs::respond_read_file(&parse_ext_params(&args)).await;
+            }
+            if method == kiro_fs::WRITE_FILE_METHOD {
+                return kiro_fs::respond_write_file(&parse_ext_params(&args)).await;
+            }
+            if method == kiro_fs::STAT_METHOD {
+                return kiro_fs::respond_stat(&parse_ext_params(&args)).await;
+            }
+            if method == kiro_fs::READ_DIRECTORY_METHOD {
+                return kiro_fs::respond_read_directory(&parse_ext_params(&args)).await;
+            }
+            if method == kiro_fs::DELETE_METHOD {
+                return kiro_fs::respond_delete(&parse_ext_params(&args)).await;
+            }
+        }
         // The bare-ACP fs/terminal lifecycle host callbacks are TYPED acp::Client
         // methods (the overrides above), not ext requests: fs/read_text_file (KAS-5a,
         // cyril-7bdu) and terminal/{create,output,wait_for_exit,release,kill} (KAS-5b,
@@ -661,6 +685,61 @@ mod tests {
         let hooks = body["hooks"].as_array().expect("hooks array");
         assert_eq!(hooks.len(), 1, "the promptSubmit hook is served");
         assert_eq!(hooks[0]["id"], "h:greet");
+    }
+
+    // cyril-kf2g: the `_kiro/fs/*` dialect routes through handle_ext_request to
+    // the kiro_fs responders. The unit tests in `kiro_fs` cover semantics; this
+    // one covers the WIRING, which they cannot — a responder that is written,
+    // tested, and never dispatched answers the protocol-default null, and the
+    // agent reads that as a successful empty result. One method per direction:
+    // a read-only one (stat) and the destructive one (delete).
+    #[tokio::test]
+    async fn kiro_fs_ext_requests_route_to_responders() {
+        use agent_client_protocol::Client as _;
+
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("probe.txt");
+        std::fs::write(&f, "12345").unwrap();
+
+        let (ntx, _nrx) = mpsc::channel(1);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            dir.path(),
+        );
+        let call = async |method: &'static str, params: serde_json::Value| {
+            let raw = serde_json::value::RawValue::from_string(params.to_string()).unwrap();
+            let resp = client
+                .ext_method(acp::ExtRequest::new(method, raw.into()))
+                .await
+                .unwrap_or_else(|e| panic!("{method} must be dispatched, got {e:?}"));
+            serde_json::from_str::<serde_json::Value>(resp.0.get()).unwrap()
+        };
+
+        let stat = call(
+            crate::protocol::kas::kiro_fs::STAT_METHOD,
+            serde_json::json!({"sessionId": "s", "path": f}),
+        )
+        .await;
+        assert_eq!(stat["type"], "file", "stat must reach the responder");
+        assert_eq!(stat["size"], 5);
+        assert!(
+            !stat.is_null(),
+            "a null body is the undispatched signature, not a result"
+        );
+
+        let deleted = call(
+            crate::protocol::kas::kiro_fs::DELETE_METHOD,
+            serde_json::json!({"sessionId": "s", "path": f}),
+        )
+        .await;
+        assert!(deleted.is_object(), "delete replies with an object");
+        assert!(
+            !f.exists(),
+            "delete must actually reach the filesystem — the side effect IS the wiring proof"
+        );
     }
 
     // cyril-jiyn claim 12 fence: the _kiro/hooks/didChange notification is
