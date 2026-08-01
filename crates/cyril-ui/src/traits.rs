@@ -44,8 +44,9 @@ pub trait TuiState {
     fn current_mode(&self) -> Option<&str>;
     fn current_model(&self) -> Option<&str>;
     /// Current thinking-effort level, if a thinking model is active and the
-    /// agent has reported it. `None` otherwise.
-    fn effort(&self) -> Option<EffortLevel>;
+    /// agent has reported it. `None` otherwise. Borrowed so a backend-defined
+    /// `EffortLevel::Other` string isn't cloned on every frame.
+    fn effort(&self) -> Option<&EffortLevel>;
     /// Count of un-consumed queued steers (ROADMAP K1b). Drives the toolbar chip.
     fn steering_queued(&self) -> usize;
     /// Current voice-input status (ROADMAP CN2). Defaults to `Idle` for state
@@ -127,10 +128,16 @@ pub enum ChatMessageKind {
     /// echo arrives (new-family v2 / KAS carry ids; `None` until then and
     /// forever on the old id-less dialect — cyril-vgcm C8). Not rendered;
     /// used only to reconcile id-scoped Consumed/Cleared echoes.
+    ///
+    /// `note` is the model's own account of how it handled the steer, harvested
+    /// from the `[STEERING <id>: …]` trailer it is instructed to emit
+    /// (cyril-3qwa). `None` until that trailer arrives — and forever if the
+    /// model declines to emit one, so the UI must degrade cleanly without it.
     SteerEcho {
         text: String,
         status: SteerEchoStatus,
         message_id: Option<String>,
+        note: Option<String>,
     },
 }
 
@@ -186,13 +193,15 @@ impl ChatMessage {
 
     /// A queue-steer echo, optimistically `Queued` (ROADMAP K1b, cyril-bm1j).
     /// `message_id` starts `None` — the wire `SteeringQueued` echo binds it
-    /// later (cyril-vgcm C8).
+    /// later (cyril-vgcm C8). `note` starts `None` — the model's
+    /// `[STEERING <id>: …]` trailer fills it if one arrives (cyril-3qwa).
     pub fn steer_echo(text: String) -> Self {
         Self {
             kind: ChatMessageKind::SteerEcho {
                 text,
                 status: SteerEchoStatus::Queued,
                 message_id: None,
+                note: None,
             },
             timestamp: std::time::Instant::now(),
         }
@@ -595,8 +604,8 @@ pub mod test_support {
         fn current_model(&self) -> Option<&str> {
             self.current_model.as_deref()
         }
-        fn effort(&self) -> Option<EffortLevel> {
-            self.effort
+        fn effort(&self) -> Option<&EffortLevel> {
+            self.effort.as_ref()
         }
         fn steering_queued(&self) -> usize {
             self.steering_queued

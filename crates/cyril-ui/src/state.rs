@@ -119,8 +119,14 @@ impl TuiState for UiState {
         &self.messages
     }
 
+    /// The live agent text, minus any trailing run that may still be growing
+    /// into a `[STEERING <id>: …]` receipt (cyril-3qwa). Withholding is a
+    /// suffix-only operation, so this stays a borrow of the buffer; the hidden
+    /// bytes are released the moment the run either completes (harvested away)
+    /// or is disproved (`withheld_tail` returns 0).
     fn streaming_text(&self) -> &str {
-        &self.streaming_text
+        let cut = self.streaming_text.len() - steer_receipt::withheld_tail(&self.streaming_text);
+        &self.streaming_text[..cut]
     }
 
     fn streaming_thought(&self) -> Option<&str> {
@@ -171,8 +177,8 @@ impl TuiState for UiState {
         self.current_model.as_deref()
     }
 
-    fn effort(&self) -> Option<EffortLevel> {
-        self.effort
+    fn effort(&self) -> Option<&EffortLevel> {
+        self.effort.as_ref()
     }
 
     fn steering_queued(&self) -> usize {
@@ -328,9 +334,11 @@ impl UiState {
                 self.flush_streaming_thought();
                 if msg.is_streaming {
                     self.streaming_text.push_str(&msg.text);
+                    self.harvest_steer_receipts();
                     self.set_activity(Activity::Streaming);
                 } else {
                     self.streaming_text.push_str(&msg.text);
+                    self.harvest_steer_receipts();
                     self.commit_streaming();
                     self.set_activity(Activity::Ready);
                 }
@@ -411,6 +419,7 @@ impl UiState {
                 context_usage,
                 metering,
                 tokens,
+                duration_ms,
                 effort,
                 // Routing tag (cyril-fh06): the App has already diverted
                 // subagent-scoped frames before this state machine sees one.
@@ -425,14 +434,25 @@ impl UiState {
                     self.context_usage = Some(u.percentage());
                 }
                 self.pending_tokens = tokens.clone();
-                if let Some(m) = metering {
-                    self.pending_metering = Some(m.clone());
-                }
-                // Sticky: a frame that omits effort means "no update", not
-                // "cleared" — context-only frames interleave with effort frames
-                // mid-turn, so overwriting with None would make it flicker.
-                if let Some(e) = effort {
-                    self.effort = Some(*e);
+                // Credits and duration merge independently (order-independent,
+                // last-writer-wins per field): credits frames and
+                // duration/effort-only frames interleave (real 2.4.1 shape)
+                // and must not clobber each other — see
+                // `TurnMetering::merge_pending` (cyril-1gim).
+                self.pending_metering = TurnMetering::merge_pending(
+                    self.pending_metering.take(),
+                    metering.clone(),
+                    *duration_ms,
+                );
+                // Sticky: absent effort means "no update" — context-only
+                // frames interleave with effort frames mid-turn, so keeping
+                // the current badge avoids flicker. An explicit `effort: null`
+                // is the engine clearing the badge; a string sets it
+                // (cyril-1gim).
+                match effort {
+                    EffortUpdate::Unchanged => {}
+                    EffortUpdate::Clear => self.effort = None,
+                    EffortUpdate::Set(level) => self.effort = Some(level.clone()),
                 }
                 true
             }
@@ -980,6 +1000,90 @@ impl UiState {
             }
         }
         false
+    }
+
+    /// Pull every complete `[STEERING <id>: …]` receipt out of the live agent
+    /// text and reconcile it onto its chip (cyril-3qwa).
+    ///
+    /// Called on each `AgentMessage` append, BEFORE any flush, so a receipt is
+    /// excised while it is still in the streaming buffer and never reaches a
+    /// committed `AgentText` message. Harvesting mutates `streaming_text` in
+    /// place; the caller has already decided the notification is state-changing,
+    /// so no return value is needed.
+    fn harvest_steer_receipts(&mut self) {
+        for receipt in steer_receipt::harvest(&mut self.streaming_text) {
+            self.apply_steer_receipt(&receipt);
+        }
+    }
+
+    /// Attach one receipt's note to the chip it names, flipping a still-Queued
+    /// chip to Applied (cyril-3qwa).
+    ///
+    /// The flip matters: normally `SteeringConsumed` has already flipped the chip
+    /// by the time the model emits its trailer, so this only adds the note. But a
+    /// receipt is itself *proof the model saw the steer*, so when the consumed
+    /// echo was dropped or renamed out from under cyril (the cyril-ppkx failure
+    /// mode) the receipt recovers the chip instead of leaving it stuck at Queued.
+    ///
+    /// Matching prefers the bound id. The fallback — oldest note-less, id-less,
+    /// non-terminal chip — covers the old id-less dialect, mirroring the FIFO
+    /// convention `flip_consumed_steer_echo` already uses. A receipt naming an
+    /// unknown id when every chip is already bound reconciles nothing: the note
+    /// is dropped rather than risk pinning it to the wrong steer.
+    fn apply_steer_receipt(&mut self, receipt: &SteerReceipt) {
+        let mut fallback = None;
+        for (idx, msg) in self.messages.iter().enumerate() {
+            if let ChatMessageKind::SteerEcho {
+                status,
+                message_id,
+                note,
+                ..
+            } = msg.kind()
+            {
+                if message_id.as_deref() == Some(receipt.id()) {
+                    fallback = Some(idx);
+                    break;
+                }
+                let terminal = matches!(
+                    status,
+                    SteerEchoStatus::Cleared | SteerEchoStatus::Unsupported
+                );
+                if fallback.is_none() && message_id.is_none() && note.is_none() && !terminal {
+                    fallback = Some(idx);
+                }
+            }
+        }
+        let Some(idx) = fallback else {
+            tracing::debug!(
+                receipt_id = receipt.id(),
+                "steer receipt matched no chip — note dropped"
+            );
+            return;
+        };
+        let Some(msg) = self.messages.get_mut(idx) else {
+            return;
+        };
+        if let ChatMessageKind::SteerEcho {
+            status,
+            message_id,
+            note,
+            ..
+        } = &mut msg.kind
+        {
+            *note = Some(receipt.note().to_string());
+            if message_id.is_none() {
+                *message_id = Some(receipt.id().to_string());
+            }
+            if *status == SteerEchoStatus::Queued {
+                // Recovery path: the receipt proves pickup that the wire echo
+                // failed to report. Keep the cyril-7z7u invariant
+                // (counter == #Queued chips) by decrementing alongside the flip.
+                *status = SteerEchoStatus::Applied;
+                self.steering_queued = self.steering_queued.saturating_sub(1);
+                self.turns_since_steer_activity = 0;
+            }
+            self.messages_version += 1;
+        }
     }
 
     /// Flip the Queued echo a Consumed echo names (cyril-vgcm C9): the chip
@@ -2328,6 +2432,202 @@ mod tests {
                 )
             })
             .count()
+    }
+
+    // ---- cyril-3qwa: the `[STEERING <id>: …]` receipt the model emits ----
+
+    /// Receipt id and note reproducing the 2026-07-23 AWS prompt-log capture's
+    /// SHAPE — `steer-<uuid>` id, em dash, backticks — with neutral content,
+    /// since the capture came from a private workspace. The id shape matches the
+    /// KAS `messageId` capture too.
+    const RECEIPT_ID: &str = "steer-3f2a9c14-7b6d-4e05-9a81-2c5d8e0b41f7";
+    const RECEIPT_NOTE: &str =
+        "Applied directly — used the external `region_map` sheet as the label source.";
+
+    fn steer_note(s: &UiState) -> Option<String> {
+        s.messages().iter().find_map(|m| match m.kind() {
+            ChatMessageKind::SteerEcho { note, .. } => note.clone(),
+            _ => None,
+        })
+    }
+
+    fn agent_chunk(state: &mut UiState, text: &str, streaming: bool) {
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: text.into(),
+            is_streaming: streaming,
+        }));
+    }
+
+    // The nominal path: queued -> consumed -> the model's trailer. The receipt
+    // must be excised from the committed agent text and land on the chip.
+    #[test]
+    fn receipt_annotates_the_chip_and_never_reaches_the_transcript() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("use the external spreadsheet");
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("use the external spreadsheet".into()),
+            message_id: Some(RECEIPT_ID.into()),
+        });
+        state.apply_notification(&Notification::SteeringConsumed {
+            content: Some("use the external spreadsheet".into()),
+            message_id: Some(RECEIPT_ID.into()),
+        });
+        assert_eq!(state.steering_queued(), 0, "consumed drained the chip");
+
+        agent_chunk(&mut state, "Committed and pushed.\n\n", true);
+        agent_chunk(
+            &mut state,
+            &format!("[STEERING {RECEIPT_ID}: {RECEIPT_NOTE}]"),
+            true,
+        );
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+
+        assert_eq!(steer_note(&state).as_deref(), Some(RECEIPT_NOTE));
+        let agent_text: String = state
+            .messages()
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::AgentText(t) => Some(t.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            agent_text, "Committed and pushed.\n\n",
+            "receipt leaked into the transcript"
+        );
+    }
+
+    // Recovery path (the cyril-ppkx failure mode): the wire consumed echo never
+    // arrives — renamed, dropped, or an unmapped dialect. The receipt is itself
+    // proof the model saw the steer, so it must drain the chip rather than leave
+    // it stuck at Queued. Fences the cyril-7z7u invariant across that recovery.
+    #[test]
+    fn receipt_recovers_a_chip_the_consumed_echo_never_drained() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("use the external spreadsheet");
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("use the external spreadsheet".into()),
+            message_id: Some(RECEIPT_ID.into()),
+        });
+        assert_eq!(state.steering_queued(), 1);
+
+        // No SteeringConsumed — straight to the model's trailer.
+        agent_chunk(
+            &mut state,
+            &format!("done. [STEERING {RECEIPT_ID}: {RECEIPT_NOTE}]"),
+            true,
+        );
+
+        assert_eq!(state.steering_queued(), 0, "receipt did not drain the chip");
+        assert_eq!(
+            state.steering_queued(),
+            queued_echoes(&state),
+            "cyril-7z7u invariant broken: counter != #Queued chips"
+        );
+        assert_eq!(steer_note(&state).as_deref(), Some(RECEIPT_NOTE));
+    }
+
+    // The id-less pre-rollout dialect: nothing ever binds an id, so the receipt
+    // falls back to the oldest note-less non-terminal chip (the same FIFO
+    // convention flip_consumed_steer_echo uses) and binds the id while it is there.
+    #[test]
+    fn receipt_falls_back_to_fifo_on_the_id_less_dialect() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("first");
+        state.add_steer_echo("second");
+        agent_chunk(
+            &mut state,
+            &format!("[STEERING {RECEIPT_ID}: {RECEIPT_NOTE}]"),
+            true,
+        );
+
+        let annotated: Vec<_> = state
+            .messages()
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::SteerEcho { text, note, .. } => Some((text.clone(), note.clone())),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            annotated,
+            vec![
+                ("first".to_string(), Some(RECEIPT_NOTE.to_string())),
+                ("second".to_string(), None),
+            ],
+            "receipt annotated the wrong chip"
+        );
+    }
+
+    // A receipt naming an id no chip carries, when every chip is already bound,
+    // must reconcile nothing rather than pin the note to an unrelated steer.
+    // The marker is still stripped — it is noise either way.
+    #[test]
+    fn unmatched_receipt_drops_the_note_but_still_strips() {
+        let mut state = UiState::new(500);
+        state.add_steer_echo("mine");
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("mine".into()),
+            message_id: Some("steer-mine".into()),
+        });
+        agent_chunk(
+            &mut state,
+            "ok [STEERING steer-someone-else: not yours]",
+            false,
+        );
+
+        assert_eq!(steer_note(&state), None, "note pinned to the wrong chip");
+        let agent_text: String = state
+            .messages()
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::AgentText(t) => Some(t.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(agent_text, "ok ", "unmatched receipt was not stripped");
+    }
+
+    // The live view must never expose marker bytes, at any chunk boundary —
+    // this is what stops the raw receipt from flashing mid-stream.
+    #[test]
+    fn streaming_view_never_leaks_receipt_bytes() {
+        let trailer = format!("[STEERING {RECEIPT_ID}: {RECEIPT_NOTE}]");
+        // Split the trailer at every byte boundary a chunk could land on.
+        for split in 1..trailer.len() {
+            if !trailer.is_char_boundary(split) {
+                continue;
+            }
+            let mut state = UiState::new(500);
+            agent_chunk(&mut state, "Done. ", true);
+            agent_chunk(&mut state, &trailer[..split], true);
+            assert_eq!(
+                state.streaming_text(),
+                "Done. ",
+                "leaked at split {split}: {:?}",
+                state.streaming_text()
+            );
+            agent_chunk(&mut state, &trailer[split..], true);
+            assert_eq!(
+                state.streaming_text(),
+                "Done. ",
+                "residue after completion at split {split}"
+            );
+        }
+    }
+
+    // Prose that merely opens with `[` must not be withheld from the live view —
+    // withholding real text would look like the stream had stalled.
+    #[test]
+    fn ordinary_bracket_prose_is_not_withheld() {
+        let mut state = UiState::new(500);
+        agent_chunk(&mut state, "see [1] and the [STEERING GROUP] notes", true);
+        assert_eq!(
+            state.streaming_text(),
+            "see [1] and the [STEERING GROUP] notes"
+        );
     }
 
     // cyril-nvmh path (c): the backend accepts a tail steer (queued:true) but
@@ -4332,22 +4632,24 @@ mod tests {
             context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
-            effort: Some(EffortLevel::High),
+            effort: EffortUpdate::Set(EffortLevel::High),
+            duration_ms: None,
             session_id: None,
         });
-        assert_eq!(state.effort(), Some(EffortLevel::High));
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
 
         // A context-only frame mid-turn omits effort — must NOT clear it.
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(8.0)),
             metering: None,
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         assert_eq!(
             state.effort(),
-            Some(EffortLevel::High),
+            Some(&EffortLevel::High),
             "omitted effort must be sticky"
         );
 
@@ -4363,6 +4665,86 @@ mod tests {
     }
 
     #[test]
+    fn explicit_effort_clear_drops_badge() {
+        // tui.js checks `"effort" in e`: an explicit null is a badge-CLEAR
+        // signal (cyril-1gim), distinct from an absent field — the engine can
+        // turn the badge off mid-session and UiState must honor it.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Set(EffortLevel::High),
+            session_id: None,
+        });
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Clear,
+            session_id: None,
+        });
+        assert_eq!(state.effort(), None, "explicit null must clear the badge");
+    }
+
+    #[test]
+    fn unknown_effort_level_survives_to_ui() {
+        // A backend-defined level (schema-negotiated per model, cyril-1gim)
+        // must reach the toolbar instead of vanishing at the wire boundary.
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Set(EffortLevel::Other("turbo".into())),
+            session_id: None,
+        });
+        assert_eq!(state.effort(), Some(&EffortLevel::Other("turbo".into())));
+    }
+
+    #[test]
+    fn duration_merge_is_order_independent() {
+        // Credits frames and duration/effort-only frames interleave (real
+        // 2.4.1 shape). When the credits frame lands AFTER the duration-only
+        // frames, the merged duration must survive (cyril-1gim).
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: Some(2281),
+            effort: EffortUpdate::Unchanged,
+            session_id: None,
+        });
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: Some(TurnMetering::new(Some(0.018), None)),
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Unchanged,
+            session_id: None,
+        });
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        let m = state
+            .last_turn()
+            .expect("TurnSummary after TurnCompleted")
+            .metering()
+            .expect("metering present");
+        assert_eq!(m.credits(), Some(0.018));
+        assert_eq!(
+            m.duration_ms(),
+            Some(2281),
+            "earlier duration not clobbered"
+        );
+    }
+
+    #[test]
     fn metadata_without_context_retains_last_context() {
         // Replays the captured 2.4.1 wire shape: duration/effort-only frames
         // omit contextUsagePercentage. Such a frame must not stamp the
@@ -4372,16 +4754,18 @@ mod tests {
             context_usage: Some(ContextUsage::new(42.0)),
             metering: None,
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         assert!((state.context_usage().unwrap_or(-1.0) - 42.0).abs() < f64::EPSILON);
 
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: None,
-            metering: Some(TurnMetering::new(0.018, Some(2281))),
+            metering: Some(TurnMetering::new(Some(0.018), Some(2281))),
             tokens: None,
-            effort: Some(EffortLevel::High),
+            effort: EffortUpdate::Set(EffortLevel::High),
+            duration_ms: None,
             session_id: None,
         });
         assert!(
@@ -4390,7 +4774,7 @@ mod tests {
         );
         assert_eq!(
             state.effort(),
-            Some(EffortLevel::High),
+            Some(&EffortLevel::High),
             "effort from a context-less frame must still apply"
         );
 
@@ -4401,7 +4785,7 @@ mod tests {
         let m = summary
             .metering()
             .expect("metering from a context-less frame must still apply");
-        assert!((m.credits() - 0.018).abs() < 0.001);
+        assert!((m.credits().unwrap() - 0.018).abs() < 0.001);
         assert_eq!(m.duration_ms(), Some(2281));
     }
 
@@ -4413,10 +4797,11 @@ mod tests {
             context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
-            effort: Some(EffortLevel::High),
+            effort: EffortUpdate::Set(EffortLevel::High),
+            duration_ms: None,
             session_id: None,
         });
-        assert_eq!(state.effort(), Some(EffortLevel::High));
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
 
         // Switching to a non-thinking model (no new session) must clear effort,
         // otherwise the toolbar shows a phantom level the new model never reports.
@@ -4433,13 +4818,14 @@ mod tests {
             context_usage: Some(ContextUsage::new(8.0)),
             metering: None,
             tokens: None,
-            effort: Some(EffortLevel::Medium),
+            effort: EffortUpdate::Set(EffortLevel::Medium),
+            duration_ms: None,
             session_id: None,
         });
         state.set_current_model(Some("haiku".into()));
         assert_eq!(
             state.effort(),
-            Some(EffortLevel::Medium),
+            Some(&EffortLevel::Medium),
             "unchanged model must not clear effort"
         );
     }
@@ -4455,10 +4841,11 @@ mod tests {
             context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
-            effort: Some(EffortLevel::High),
+            effort: EffortUpdate::Set(EffortLevel::High),
+            duration_ms: None,
             session_id: None,
         });
-        assert_eq!(state.effort(), Some(EffortLevel::High));
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
 
         state.set_current_model(Some("haiku".into()));
         assert_eq!(
@@ -4476,9 +4863,10 @@ mod tests {
 
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(50.0)),
-            metering: Some(TurnMetering::new(0.03, Some(2000))),
+            metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         assert!(
@@ -4499,7 +4887,7 @@ mod tests {
         assert!(summary.token_counts().is_some());
         assert_eq!(summary.token_counts().unwrap().input(), 800);
         assert!(summary.metering().is_some());
-        assert!((summary.metering().unwrap().credits() - 0.03).abs() < 0.001);
+        assert!((summary.metering().unwrap().credits().unwrap() - 0.03).abs() < 0.001);
     }
 
     #[test]
@@ -4508,9 +4896,10 @@ mod tests {
 
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(0.01, None)),
+            metering: Some(TurnMetering::new(Some(0.01), None)),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -4538,9 +4927,10 @@ mod tests {
         // Turn 1
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(0.02, Some(1000))),
+            metering: Some(TurnMetering::new(Some(0.02), Some(1000))),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -4550,9 +4940,10 @@ mod tests {
         // Turn 2
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(20.0)),
-            metering: Some(TurnMetering::new(0.03, Some(2000))),
+            metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -4569,9 +4960,10 @@ mod tests {
 
         state.apply_notification(&Notification::MetadataUpdated {
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(0.05, Some(2000))),
+            metering: Some(TurnMetering::new(Some(0.05), Some(2000))),
             tokens: None,
-            effort: None,
+            effort: EffortUpdate::Unchanged,
+            duration_ms: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {

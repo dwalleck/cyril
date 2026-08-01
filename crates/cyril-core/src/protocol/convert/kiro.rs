@@ -282,21 +282,47 @@ pub(crate) fn to_ext_notification(
                 },
             };
 
-            // Preserve zero-credit turns rather than filtering them out — a
-            // turn with `meteringUsage: [{value: 0.0, ...}]` (cached
-            // response, free tier, etc.) is semantically distinct from a
-            // turn with the field omitted entirely. The UI layer decides
-            // whether to display 0.0 or hide it.
+            // Turn duration (ms), parsed independently of `meteringUsage`
+            // (cyril-1gim): Kiro emits duration/effort-only frames (real 2.4.1
+            // shape) with no credits aggregate. Carried separately so a lone
+            // duration reaches the turn summary instead of being dropped with
+            // the absent metering. A present-but-non-integer value is corrupt
+            // (missing-vs-corrupt discipline, same as `effort` below).
+            let duration_ms = match params.get("turnDurationMs") {
+                None => None,
+                Some(v) => match v.as_u64() {
+                    Some(d) => Some(d),
+                    None => {
+                        tracing::warn!(
+                            value = ?v,
+                            "metadata `turnDurationMs` present but not an integer, ignoring"
+                        );
+                        None
+                    }
+                },
+            };
+
+            // Preserve explicit zero-credit turns rather than filtering them
+            // out. A present array with no numeric `value`, however, carries
+            // no aggregate and must remain distinct from `Some(0.0)`.
             let metering = params
                 .get("meteringUsage")
                 .and_then(|m| m.as_array())
-                .map(|arr| {
-                    let credits: f64 = arr
-                        .iter()
-                        .filter_map(|u| u.get("value").and_then(|v| v.as_f64()))
-                        .sum();
-                    let duration_ms = params.get("turnDurationMs").and_then(|d| d.as_u64());
-                    TurnMetering::new(credits, duration_ms)
+                .and_then(|arr| {
+                    let mut credits = None;
+                    for usage in arr {
+                        match usage.get("value").and_then(|v| v.as_f64()) {
+                            Some(value) => *credits.get_or_insert(0.0) += value,
+                            None => tracing::warn!(
+                                value = ?usage,
+                                "metadata `meteringUsage` entry has no numeric `value`, ignoring"
+                            ),
+                        }
+                    }
+                    if arr.is_empty() {
+                        tracing::warn!("metadata `meteringUsage` is empty, ignoring");
+                    }
+                    credits.map(|total| TurnMetering::new(Some(total), duration_ms))
                 });
 
             let tokens = {
@@ -309,22 +335,32 @@ pub(crate) fn to_ext_notification(
                 }
             };
 
-            // Thinking-effort level (Kiro 2.5.0+), present only under thinking
-            // models. `EffortLevel::from_wire` maps the closed wire set and
-            // returns None for empty/unrecognized values, so "" never reaches
-            // the UI as a level. An absent field is normal (non-thinking model);
-            // a present-but-non-string field is corrupt, so warn rather than
-            // silently degrading to None (distinguish missing from corrupt).
+            // Effort-level change (Kiro 2.5.0+, cyril-1gim). The wire is
+            // tri-state — tui.js checks `"effort" in e`:
+            //   * absent  → Unchanged (retain the current badge; non-thinking
+            //     models and mid-turn context-only frames omit it)
+            //   * null    → Clear (explicit engine-initiated badge clear —
+            //     previously dropped, so a backend clear never reached the UI)
+            //   * string  → Set. `EffortLevel::from_wire` maps known levels to
+            //     typed variants and preserves backend-defined levels as
+            //     `Other` (displayed, never dropped); "" maps to Unchanged
+            //     (the wire's "not set"). A present-but-non-string, non-null
+            //     field is corrupt, so warn rather than degrade silently
+            //     (distinguish missing from corrupt).
             let effort = match params.get("effort") {
-                None => None,
+                None => EffortUpdate::Unchanged,
+                Some(e) if e.is_null() => EffortUpdate::Clear,
                 Some(e) => match e.as_str() {
-                    Some(s) => EffortLevel::from_wire(s),
+                    Some(s) => match EffortLevel::from_wire(s) {
+                        Some(level) => EffortUpdate::Set(level),
+                        None => EffortUpdate::Unchanged,
+                    },
                     None => {
                         tracing::warn!(
                             effort = ?e,
                             "metadata `effort` present but not a string, ignoring"
                         );
-                        None
+                        EffortUpdate::Unchanged
                     }
                 },
             };
@@ -341,9 +377,46 @@ pub(crate) fn to_ext_notification(
                 .filter(|s| !s.is_empty())
                 .map(SessionId::new);
 
+            // Full `kiro.dev/metadata` field inventory (carved 2.12.1 tui.js
+            // handleMetadataUpdate + live captures, cyril-1gim). Parsed above:
+            // sessionId, contextUsagePercentage, meteringUsage[] (value summed;
+            // per-entry unit/unitPlural intentionally dropped — the aggregate
+            // credits figure is what the toolbar shows), turnDurationMs,
+            // effort, and the legacy inputTokens/outputTokens/cachedTokens
+            // (unconfirmed-on-wire on the v2 path; those names are the KAS
+            // normalizer's legacy fallbacks — kept, not trusted). Explicitly
+            // ignored here (belong to cyril-h8zb): refusal
+            // {category, explanation, recommendedModel} and stopReason. Any
+            // OTHER top-level key is a backend addition — logged at debug so
+            // a field lands visibly with zero binary change (the metering
+            // fields and the 2.12.1 refusal object both arrived this way).
+            if let Some(obj) = params.as_object() {
+                for key in obj.keys() {
+                    if !matches!(
+                        key.as_str(),
+                        "sessionId"
+                            | "contextUsagePercentage"
+                            | "meteringUsage"
+                            | "turnDurationMs"
+                            | "effort"
+                            | "inputTokens"
+                            | "outputTokens"
+                            | "cachedTokens"
+                            | "refusal"
+                            | "stopReason"
+                    ) {
+                        tracing::debug!(
+                            key = %key,
+                            "kiro.dev/metadata: unrecognized top-level field"
+                        );
+                    }
+                }
+            }
+
             Ok(Some(Notification::MetadataUpdated {
                 context_usage,
                 metering,
+                duration_ms,
                 tokens,
                 effort,
                 session_id,

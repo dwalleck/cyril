@@ -238,7 +238,9 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme:
             }
         }
         // `message_id` is reconciliation plumbing, not a display concern.
-        ChatMessageKind::SteerEcho { text, status, .. } => {
+        ChatMessageKind::SteerEcho {
+            text, status, note, ..
+        } => {
             let (suffix, color) = match status {
                 SteerEchoStatus::Queued => ("queued", theme.emphasis),
                 SteerEchoStatus::Applied => ("applied", theme.positive_accent),
@@ -256,6 +258,20 @@ fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme:
             ));
             for line in lines_iter {
                 lines.push(Line::styled(format!("    {line}"), style));
+            }
+            // The model's own account of how it handled this steer (cyril-3qwa),
+            // harvested from its `[STEERING <id>: …]` trailer. Rendered subdued
+            // and one level deeper — it annotates the steer, it is not the steer.
+            // Skipped when empty: `[STEERING <id>: ]` proves pickup but says
+            // nothing, and a bare marker line would be noise.
+            if let Some(note) = note.as_deref().map(str::trim).filter(|n| !n.is_empty()) {
+                let note_style = Style::default()
+                    .fg(theme.subdued)
+                    .add_modifier(Modifier::ITALIC);
+                for (i, line) in note.lines().enumerate() {
+                    let prefix = if i == 0 { "    ⤷ " } else { "      " };
+                    lines.push(Line::styled(format!("{prefix}{line}"), note_style));
+                }
             }
         }
     }
@@ -669,6 +685,7 @@ mod tests {
                 text: "steer".into(),
                 status,
                 message_id: None,
+                note: None,
             },
             timestamp: std::time::Instant::now(),
         };
@@ -1291,6 +1308,7 @@ mod tests {
                 text: "steer".into(),
                 status,
                 message_id: None,
+                note: None,
             },
             timestamp: std::time::Instant::now(),
         };
@@ -1876,6 +1894,7 @@ mod tests {
                     text: "café→ stop".into(),
                     status,
                     message_id: None,
+                    note: None,
                 },
                 timestamp: std::time::Instant::now(),
             };
@@ -1907,6 +1926,55 @@ mod tests {
             4,
             "all four statuses must render distinctly: {rendered:?}"
         );
+    }
+
+    // cyril-3qwa: the model's receipt note renders under the steer it explains,
+    // and an empty/absent note adds no line at all.
+    #[test]
+    fn steer_echo_renders_the_receipt_note_when_present() {
+        use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus};
+
+        let echo = |note: Option<&str>| ChatMessage {
+            kind: ChatMessageKind::SteerEcho {
+                text: "use the external spreadsheet".into(),
+                status: SteerEchoStatus::Applied,
+                message_id: Some("steer-3f2a9c14".into()),
+                note: note.map(str::to_string),
+            },
+            timestamp: std::time::Instant::now(),
+        };
+        let render = |msg: &ChatMessage| {
+            let mut lines = Vec::new();
+            render_message(
+                &mut lines,
+                msg,
+                80,
+                &crate::traits::test_support::marker_theme(),
+            );
+            lines.iter().map(ToString::to_string).collect::<Vec<_>>()
+        };
+
+        let with_note = render(&echo(Some("Applied directly — used the region sheet.")));
+        assert_eq!(with_note.len(), 2, "note must add exactly one line");
+        assert!(
+            with_note[0].contains("steer: use the external spreadsheet"),
+            "steer line changed: {:?}",
+            with_note[0]
+        );
+        assert!(
+            with_note[1].contains("Applied directly — used the region sheet."),
+            "note line missing: {:?}",
+            with_note[1]
+        );
+
+        // Absent and empty notes are both "nothing to say" — no extra line.
+        for note in [None, Some(""), Some("   ")] {
+            assert_eq!(
+                render(&echo(note)).len(),
+                1,
+                "note {note:?} must not add a line"
+            );
+        }
     }
 
     #[test]

@@ -912,8 +912,8 @@ mod metadata_routing_tests {
             .and_then(|t| t.metering())
             .expect("main frame carried metering");
         assert!(
-            (metering.credits() - 0.25).abs() < f64::EPSILON,
-            "main turn credits must come only from the main frame, got {}",
+            (metering.credits().unwrap() - 0.25).abs() < f64::EPSILON,
+            "main turn credits must come only from the main frame, got {:?}",
             metering.credits()
         );
     }
