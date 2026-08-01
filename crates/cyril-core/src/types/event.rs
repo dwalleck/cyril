@@ -564,7 +564,7 @@ pub enum BridgeCommand {
         session_id: SessionId,
         /// The registry's composite `"<filePath>#hook-<n>"` id. A bare hook
         /// name is not accepted by the agent.
-        hook_id: String,
+        hook_id: crate::types::hook::HookId,
         enabled: bool,
         /// Workspace roots for the follow-up listing that reports the result.
         workspace_paths: Vec<std::path::PathBuf>,

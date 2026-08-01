@@ -9,7 +9,7 @@ pub enum HookRefError {
     /// Several hooks share the name. Carries every candidate's composite id so
     /// the caller can tell the user exactly what to disambiguate with.
     #[error("{} hooks share that name", .0.len())]
-    Ambiguous(Vec<String>),
+    Ambiguous(Vec<crate::types::hook::HookId>),
 }
 
 pub struct SessionController {
@@ -131,15 +131,19 @@ impl SessionController {
     /// `Vec`: "no such hook" and "ambiguous" get different guidance from the
     /// command, and encoding them in a collection's length makes the illegal
     /// fourth state (ambiguous-with-zero-candidates) representable.
-    pub fn resolve_kas_hook_id(&self, reference: &str) -> Result<String, HookRefError> {
+    pub fn resolve_kas_hook_id(
+        &self,
+        reference: &str,
+    ) -> Result<crate::types::hook::HookId, HookRefError> {
+        use crate::types::hook::HookId;
         if self
             .kas_hooks
             .iter()
-            .any(|h| h.id.as_deref() == Some(reference))
+            .any(|h| h.id.as_ref().is_some_and(|id| id.as_str() == reference))
         {
-            return Ok(reference.to_string());
+            return Ok(HookId::new(reference));
         }
-        let mut matches: Vec<String> = self
+        let mut matches: Vec<HookId> = self
             .kas_hooks
             .iter()
             .filter(|h| h.name.as_deref() == Some(reference))
@@ -960,7 +964,7 @@ mod kas_hook_tests {
             trigger: "PreToolUse".into(),
             command: "echo hi".into(),
             matcher: None,
-            id: Some(id.into()),
+            id: Some(crate::types::hook::HookId::new(id)),
             name: Some(name.into()),
             enabled: Some(true),
         }
@@ -994,14 +998,18 @@ mod kas_hook_tests {
         });
         assert_eq!(
             s.resolve_kas_hook_id("audit"),
-            Ok("/w/.kiro/hooks/a.json#hook-0".to_string()),
+            Ok(crate::types::hook::HookId::new(
+                "/w/.kiro/hooks/a.json#hook-0"
+            )),
             "a name resolves to the composite id the agent requires"
         );
         // The id itself is accepted verbatim — the escape hatch the ambiguity
         // message points users at.
         assert_eq!(
             s.resolve_kas_hook_id("/w/.kiro/hooks/a.json#hook-0"),
-            Ok("/w/.kiro/hooks/a.json#hook-0".to_string())
+            Ok(crate::types::hook::HookId::new(
+                "/w/.kiro/hooks/a.json#hook-0"
+            ))
         );
     }
 

@@ -222,14 +222,7 @@ mod tests {
     #[test]
     fn single_hook_is_singular_in_title() {
         let state = HooksPanelState {
-            hooks: vec![HookInfo {
-                trigger: "PreToolUse".into(),
-                command: "echo pre".into(),
-                matcher: Some("read".into()),
-                id: None,
-                name: None,
-                enabled: None,
-            }],
+            hooks: vec![HookInfo::v2("PreToolUse", "echo pre", Some("read".into()))],
             scroll_offset: 0,
         };
         let terminal = draw(&state, 100, 24);
@@ -250,22 +243,8 @@ mod tests {
         // verifies the widget faithfully preserves that order on screen.
         let state = HooksPanelState {
             hooks: vec![
-                HookInfo {
-                    trigger: "PostToolUse".into(),
-                    command: "post".into(),
-                    matcher: Some("write".into()),
-                    id: None,
-                    name: None,
-                    enabled: None,
-                },
-                HookInfo {
-                    trigger: "PreToolUse".into(),
-                    command: "pre".into(),
-                    matcher: None,
-                    id: None,
-                    name: None,
-                    enabled: None,
-                },
+                HookInfo::v2("PostToolUse", "post", Some("write".into())),
+                HookInfo::v2("PreToolUse", "pre", None),
             ],
             scroll_offset: 0,
         };
@@ -291,14 +270,7 @@ mod tests {
     fn long_command_is_truncated_without_panic() {
         let long = "echo ".to_string() + &"x".repeat(500);
         let state = HooksPanelState {
-            hooks: vec![HookInfo {
-                trigger: "Stop".into(),
-                command: long,
-                matcher: None,
-                id: None,
-                name: None,
-                enabled: None,
-            }],
+            hooks: vec![HookInfo::v2("Stop", long, None)],
             scroll_offset: 0,
         };
         // Small terminal forces aggressive truncation
@@ -315,14 +287,7 @@ mod tests {
         // a distinguishable marker in the Command column, so users can see
         // there's a value there even if the trigger is mangled.
         let state = HooksPanelState {
-            hooks: vec![HookInfo {
-                trigger: "日本語トリガーテスト".into(),
-                command: "MARKER".into(),
-                matcher: None,
-                id: None,
-                name: None,
-                enabled: None,
-            }],
+            hooks: vec![HookInfo::v2("日本語トリガーテスト", "MARKER", None)],
             scroll_offset: 0,
         };
         let terminal = draw(&state, 100, 20);
@@ -342,22 +307,8 @@ mod tests {
         // right by several cells — this test catches that.
         let state = HooksPanelState {
             hooks: vec![
-                HookInfo {
-                    trigger: "Short".into(),
-                    command: "FIRST".into(),
-                    matcher: None,
-                    id: None,
-                    name: None,
-                    enabled: None,
-                },
-                HookInfo {
-                    trigger: "日本語テスト".into(),
-                    command: "SECOND".into(),
-                    matcher: None,
-                    id: None,
-                    name: None,
-                    enabled: None,
-                },
+                HookInfo::v2("Short", "FIRST", None),
+                HookInfo::v2("日本語テスト", "SECOND", None),
             ],
             scroll_offset: 0,
         };

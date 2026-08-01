@@ -103,22 +103,8 @@ fn picker_scene_state() -> PickerState {
 fn hooks_scene_state() -> HooksPanelState {
     HooksPanelState {
         hooks: vec![
-            HookInfo {
-                trigger: "agentSpawn".into(),
-                command: "echo spawn".into(),
-                matcher: None,
-                id: None,
-                name: None,
-                enabled: None,
-            },
-            HookInfo {
-                trigger: "userPromptSubmit".into(),
-                command: "lint".into(),
-                matcher: Some("*.rs".into()),
-                id: None,
-                name: None,
-                enabled: None,
-            },
+            HookInfo::v2("agentSpawn", "echo spawn", None),
+            HookInfo::v2("userPromptSubmit", "lint", Some("*.rs".into())),
         ],
         scroll_offset: 0,
     }

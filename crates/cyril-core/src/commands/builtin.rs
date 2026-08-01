@@ -298,7 +298,11 @@ impl Command for KasHooksCommand {
                 return Ok(CommandResult::system_message(format!(
                     "{reference:?} is ambiguous across {} hooks — use the full id:\n  {}",
                     candidates.len(),
-                    candidates.join("\n  ")
+                    candidates
+                        .iter()
+                        .map(crate::types::hook::HookId::as_str)
+                        .collect::<Vec<_>>()
+                        .join("\n  ")
                 )));
             }
         };

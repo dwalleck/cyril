@@ -2015,7 +2015,7 @@ async fn run_loop(
                             ))
                             .await
                             .map_err(|e| {
-                                tracing::error!(error = %e, hook_id, enabled, "hooks/setEnabled failed");
+                                tracing::error!(error = %e, hook_id = %hook_id, enabled, "hooks/setEnabled failed");
                                 Notification::BridgeError {
                                     operation: format!("hooks/setEnabled '{hook_id}'"),
                                     message: e.to_string(),
@@ -2029,7 +2029,7 @@ async fn run_loop(
                         // fenced; here we only map it onto the wire error.
                         crate::protocol::kas::hooks::interpret_set_enabled_reply(reply.0.get())
                             .map_err(|e| {
-                                tracing::warn!(error = %e, hook_id, enabled, "hooks/setEnabled did not confirm");
+                                tracing::warn!(error = %e, hook_id = %hook_id, enabled, "hooks/setEnabled did not confirm");
                                 Notification::BridgeError {
                                     operation: format!("hooks/setEnabled '{hook_id}'"),
                                     message: e.to_string(),

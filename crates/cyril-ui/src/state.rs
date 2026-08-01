@@ -4375,14 +4375,7 @@ mod tests {
     // --- Hooks panel tests ---
 
     fn sample_hook(trigger: &str, command: &str, matcher: Option<&str>) -> HookInfo {
-        HookInfo {
-            trigger: trigger.into(),
-            command: command.into(),
-            matcher: matcher.map(String::from),
-            id: None,
-            name: None,
-            enabled: None,
-        }
+        HookInfo::v2(trigger, command, matcher.map(String::from))
     }
 
     #[test]
@@ -4432,14 +4425,7 @@ mod tests {
     #[test]
     fn refresh_is_inert_while_the_panel_is_closed() {
         let mut state = UiState::new(10);
-        let changed = state.refresh_hooks_panel(vec![HookInfo {
-            trigger: "PreToolUse".into(),
-            command: "echo".into(),
-            matcher: None,
-            id: None,
-            name: None,
-            enabled: None,
-        }]);
+        let changed = state.refresh_hooks_panel(vec![HookInfo::v2("PreToolUse", "echo", None)]);
         assert!(!changed, "a closed panel reports no change");
         assert!(!state.has_hooks_panel(), "and must stay closed");
     }

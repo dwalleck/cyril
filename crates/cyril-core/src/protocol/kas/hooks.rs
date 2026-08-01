@@ -171,7 +171,10 @@ pub(crate) fn parse_wire_hooks(params: &serde_json::Value) -> Option<Vec<crate::
             // the hook file's own `matcher` field, which the wire projection
             // does not carry. `None` is the honest answer, not "".
             matcher: None,
-            id: entry.get("id").and_then(|i| i.as_str()).map(str::to_string),
+            id: entry
+                .get("id")
+                .and_then(|i| i.as_str())
+                .map(crate::types::hook::HookId::new),
             name: entry
                 .get("name")
                 .and_then(|n| n.as_str())
@@ -711,6 +714,7 @@ mod wire_hook_tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::types::hook::HookId;
 
     /// The `_kiro/hooks/didChange` payload captured live on kiro-cli 2.16.0 /
     /// KAS 0.27.8 (`experiments/conductor-spike/kas-v2hooks-2.16.0.jsonl`),
@@ -758,11 +762,11 @@ mod wire_hook_tests {
         // nested under `_meta` (not a top-level camelCase field, which does not
         // exist on the wire at all).
         assert_eq!(
-            hooks[0].id.as_deref(),
+            hooks[0].id.as_ref().map(HookId::as_str),
             Some("/tmp/kas-v2h/.kiro/hooks/audit.json#hook-0")
         );
         assert_ne!(
-            hooks[0].id.as_deref(),
+            hooks[0].id.as_ref().map(HookId::as_str),
             Some("cyril-audit-pre"),
             "id is not the name"
         );

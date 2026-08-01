@@ -1,5 +1,34 @@
 use serde::{Deserialize, Serialize};
 
+/// A KAS v2 hook's registry identifier: the composite
+/// `"<absolute file path>#hook-<n>"`, not a bare name.
+///
+/// A newtype rather than a `String` because a hook has **two** addressable
+/// strings — this id and its declared `name` — and only this one is accepted by
+/// `_kiro/hooks/setEnabled`, which rewrites a file on the user's disk.
+/// `SessionController::resolve_kas_hook_id` exists precisely to turn a name
+/// into one of these, which is the evidence that the two are confusable;
+/// carrying both as `String` leaves the distinction to convention.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct HookId(String);
+
+impl HookId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for HookId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 /// Metadata about a single hook configured in the agent, as returned by the
 /// `hooks` command's response at `data.hooks[]`.
 ///
@@ -43,7 +72,7 @@ pub struct HookInfo {
     /// `"<absolute file path>#hook-<n>"` — not a bare name, and the only
     /// value `_kiro/hooks/setEnabled` accepts.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
+    pub id: Option<HookId>,
 
     /// KAS v2 only: the hook's declared name, which is what a user will type
     /// to address it rather than the composite [`id`](Self::id).
@@ -55,6 +84,30 @@ pub struct HookInfo {
     /// displayed as if they were live.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
+}
+
+impl HookInfo {
+    /// A hook from the **v2** projection, which carries only these three fields.
+    ///
+    /// The KAS-only fields being `Option` means every v2 construction site would
+    /// otherwise spell out `id: None, name: None, enabled: None` — one type
+    /// serving two registries, with half its fields inert in each. This
+    /// constructor keeps that noise in one place, so adding a fourth KAS field
+    /// touches this file rather than every caller.
+    pub fn v2(
+        trigger: impl Into<String>,
+        command: impl Into<String>,
+        matcher: Option<String>,
+    ) -> Self {
+        Self {
+            trigger: trigger.into(),
+            command: command.into(),
+            matcher,
+            id: None,
+            name: None,
+            enabled: None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -101,14 +154,7 @@ mod tests {
 
     #[test]
     fn roundtrip_serialization_omits_null_matcher() {
-        let hook = HookInfo {
-            trigger: "Stop".into(),
-            command: "foo".into(),
-            matcher: None,
-            id: None,
-            name: None,
-            enabled: None,
-        };
+        let hook = HookInfo::v2("Stop", "foo", None);
         let json = serde_json::to_string(&hook).unwrap();
         // matcher should not appear in the output at all, not even as null
         assert!(!json.contains("matcher"));
