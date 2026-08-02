@@ -36,7 +36,16 @@ pub enum Direction {
 /// `C:\Users\foo\bar` becomes `/mnt/c/Users/foo/bar`
 /// `D:\project` becomes `/mnt/d/project`
 /// `\\?\C:\Users\foo` becomes `/mnt/c/Users/foo` (extended-length prefix stripped)
+/// `\\wsl$\<distro>\...` becomes `/...` when `<distro>` matches the process
+/// WSL distro (see [`resolve_wsl_distro`]).
 pub fn win_to_wsl(path: &Path) -> PathBuf {
+    win_to_wsl_in(path, process_wsl_distro())
+}
+
+/// The pre-UNC `win_to_wsl` behavior: drive letters, `\\?\` stripping, and the
+/// legacy backslash→slash conversion for everything else. Fallback for
+/// [`win_to_wsl_in`] on non-WSL inputs — never called for WSL UNC paths.
+fn legacy_win_to_wsl(path: &Path) -> PathBuf {
     let s = path.to_string_lossy();
     // Strip the \\?\ extended-length path prefix that canonicalize() produces on Windows.
     let s = s.strip_prefix(r"\\?\").unwrap_or(&s);
@@ -61,8 +70,45 @@ pub fn win_to_wsl(path: &Path) -> PathBuf {
 ///
 /// `/mnt/c/Users/foo/bar` becomes `C:\Users\foo\bar`
 /// `/mnt/d/project` becomes `D:\project`
+/// `/home/...` (any WSL-internal path) becomes `\\wsl$\<distro>\...` when the
+/// process WSL distro is known (see [`resolve_wsl_distro`]); unchanged otherwise.
 pub fn wsl_to_win(path: &str) -> PathBuf {
-    drive_mount_to_win(path).unwrap_or_else(|| PathBuf::from(path))
+    let distro = process_wsl_distro();
+    if cfg!(target_os = "windows")
+        && distro.is_none()
+        && path.starts_with('/')
+        && drive_mount_to_win(path).is_none()
+    {
+        // Once per process, not per callback: the untranslatable-path condition
+        // repeats for every fs/* call of a session.
+        static WARN_ONCE: std::sync::Once = std::sync::Once::new();
+        WARN_ONCE.call_once(|| {
+            tracing::warn!(
+                path = %path,
+                "WSL-internal path cannot be translated: no WSL distro configured \
+                 (set CYRIL_WSL_DISTRO or launch cyril from a \\\\wsl$ workspace)"
+            );
+        });
+    }
+    wsl_to_win_in(path, distro)
+}
+
+/// The WSL distro used by [`wsl_to_win`] / [`win_to_wsl`], resolved once per
+/// process from `CYRIL_WSL_DISTRO` and the process cwd. Always `None` off
+/// Windows — Linux translation stays a no-op (load-bearing: enforced by the
+/// `cfg!` below and fenced by `tests/win_wsl_wiring.rs`).
+fn process_wsl_distro() -> Option<&'static str> {
+    static DISTRO: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    DISTRO
+        .get_or_init(|| {
+            if !cfg!(target_os = "windows") {
+                return None;
+            }
+            let env = std::env::var("CYRIL_WSL_DISTRO").ok();
+            let cwd = std::env::current_dir().ok();
+            resolve_wsl_distro(env.as_deref(), cwd.as_deref())
+        })
+        .as_deref()
 }
 
 /// Convert a WSL path to a Windows path, translating WSL-internal paths to
@@ -104,7 +150,7 @@ pub fn wsl_to_win_in(path: &str, distro: Option<&str>) -> PathBuf {
 /// errors). A WSL UNC path that doesn't match (foreign distro, blank segment,
 /// or no distro configured) is returned UNCHANGED — never handed to the legacy
 /// generic-UNC branch, whose slash-flip would corrupt it. Non-WSL inputs fall
-/// back to [`win_to_wsl`]'s existing behavior (drive letters, `\\?\`, generic).
+/// back to [`legacy_win_to_wsl`] (drive letters, `\\?\`, generic).
 pub fn win_to_wsl_in(path: &Path, distro: Option<&str>) -> PathBuf {
     let s = path.to_string_lossy();
     if is_wsl_unc(&s) {
@@ -135,7 +181,7 @@ pub fn win_to_wsl_in(path: &Path, distro: Option<&str>) -> PathBuf {
         }
         return path.to_path_buf();
     }
-    win_to_wsl(path)
+    legacy_win_to_wsl(path)
 }
 
 /// `true` when `s` starts with a WSL UNC prefix (`\\wsl$\` or
@@ -213,14 +259,27 @@ fn drive_mount_to_win(path: &str) -> Option<PathBuf> {
 }
 
 /// Recursively translate paths in a JSON value.
-/// Looks for string values that look like paths and translates them.
+/// Looks for string values that look like paths and translates them, using
+/// the process WSL distro for `\\wsl$` UNC forms.
 pub fn translate_paths_in_json(value: &mut Value, direction: Direction) {
+    translate_paths_in_json_in(value, direction, process_wsl_distro());
+}
+
+/// As [`translate_paths_in_json`], with an explicit distro (testable off-Windows).
+///
+/// `WinToWsl` recognizes drive-letter strings AND WSL UNC strings (a string
+/// starting `\\wsl$\` is unambiguously a path). `WslToWin` deliberately stays
+/// drive-mount-only: a bare `/`-rooted JSON string can be file CONTENT
+/// (`"content": "/etc/hosts is..."`), and blind translation would corrupt
+/// writes — WSL-internal paths are translated only at the typed fs boundary
+/// (`to_native`), never heuristically.
+pub fn translate_paths_in_json_in(value: &mut Value, direction: Direction, distro: Option<&str>) {
     match value {
         Value::String(s) => {
             let translated = match direction {
                 Direction::WinToWsl => {
-                    if looks_like_windows_path(s) {
-                        win_to_wsl(Path::new(s.as_str()))
+                    if looks_like_windows_path(s) || is_wsl_unc(s) {
+                        win_to_wsl_in(Path::new(s.as_str()), distro)
                             .to_string_lossy()
                             .into_owned()
                     } else {
@@ -229,7 +288,7 @@ pub fn translate_paths_in_json(value: &mut Value, direction: Direction) {
                 }
                 Direction::WslToWin => {
                     if looks_like_wsl_mount_path(s) {
-                        wsl_to_win(s).to_string_lossy().into_owned()
+                        wsl_to_win_in(s, distro).to_string_lossy().into_owned()
                     } else {
                         return;
                     }
@@ -239,12 +298,12 @@ pub fn translate_paths_in_json(value: &mut Value, direction: Direction) {
         }
         Value::Array(arr) => {
             for item in arr {
-                translate_paths_in_json(item, direction);
+                translate_paths_in_json_in(item, direction, distro);
             }
         }
         Value::Object(map) => {
             for (_, v) in map.iter_mut() {
-                translate_paths_in_json(v, direction);
+                translate_paths_in_json_in(v, direction, distro);
             }
         }
         _ => {}
@@ -665,6 +724,45 @@ mod tests {
             resolve_wsl_distro(Some(" Ubuntu "), None),
             Some(" Ubuntu ".into())
         );
+    }
+
+    // ── JSON translation with WSL UNC awareness (cyril-8tq6, claim C7) ──
+
+    #[test]
+    fn json_win_to_wsl_unc() {
+        let mut val = serde_json::json!({
+            "path": r"\\wsl$\Ubuntu\home\u",
+            "alt": r"\\wsl.localhost\Ubuntu\x",
+            "drive": r"C:\Users\u",
+            "keep": r"\\server\share",
+            "foreign": r"\\wsl$\Debian\y",
+            "nested": [{ "p": r"\\wsl$\Ubuntu\tmp\f" }]
+        });
+        translate_paths_in_json_in(&mut val, Direction::WinToWsl, Some("Ubuntu"));
+        assert_eq!(val["path"], "/home/u");
+        assert_eq!(val["alt"], "/x");
+        assert_eq!(val["drive"], "/mnt/c/Users/u");
+        // Generic UNC is not path-shaped enough to translate — unchanged.
+        assert_eq!(val["keep"], r"\\server\share");
+        // Foreign distro passes through untranslated (exact-segment guard).
+        assert_eq!(val["foreign"], r"\\wsl$\Debian\y");
+        assert_eq!(val["nested"][0]["p"], "/tmp/f");
+    }
+
+    #[test]
+    fn json_wsl_to_win_ignores_bare_posix() {
+        // Content safety: even with a distro configured, a bare /-rooted JSON
+        // string may be file CONTENT and must never be translated. Only
+        // /mnt/<drive> strings translate in the WslToWin direction.
+        let mut val = serde_json::json!({
+            "path": "/mnt/c/f",
+            "content": "/etc/hosts is a file\n",
+            "posix": "/home/u"
+        });
+        translate_paths_in_json_in(&mut val, Direction::WslToWin, Some("Ubuntu"));
+        assert_eq!(val["path"], r"C:\f");
+        assert_eq!(val["content"], "/etc/hosts is a file\n");
+        assert_eq!(val["posix"], "/home/u");
     }
 
     #[test]
