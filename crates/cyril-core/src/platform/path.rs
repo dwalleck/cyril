@@ -1,3 +1,20 @@
+//! Agent↔native path translation across the Windows/WSL boundary.
+//!
+//! Two path families translate on Windows (no-ops on Linux):
+//!
+//! - **Drive mounts:** `/mnt/c/...` ↔ `C:\...`, unconditional.
+//! - **WSL-internal paths** (`/home/...`, `/tmp/...`, non-drive `/mnt`
+//!   entries): `/...` ↔ `\\wsl$\<distro>\...`, only when the process WSL
+//!   distro is known — [`resolve_wsl_distro`] runs once per process
+//!   (`CYRIL_WSL_DISTRO` env, else a `\\wsl$`-rooted cwd). Unknown distro
+//!   means passthrough: the pre-cyril-8tq6 behavior, failing downstream as an
+//!   honest NotFound rather than guessing a distro.
+//!
+//! UNC semantics follow Microsoft's own `wslpath` conformance tests
+//! (microsoft/WSL `test/linux/unit_tests/wslpath.c`): both `\\wsl$\` and
+//! `\\wsl.localhost\` accepted inbound, `\\wsl$` emitted, exact
+//! distro-segment matching. Probe evidence: `.cyril-8tq6/`.
+
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;

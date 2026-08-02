@@ -296,6 +296,19 @@ Agent text and tool calls commit to the message list in chronological order as t
 
 On Windows, all paths crossing the WSL boundary go through `win_to_wsl()` / `wsl_to_win()`. On Linux, path translation is a no-op.
 
+Two path families translate on Windows (cyril-8tq6):
+
+- **Drive mounts:** `/mnt/c/...` ↔ `C:\...` (unconditional).
+- **WSL-internal paths** (`/home/...`, `/tmp/...`, non-drive `/mnt` entries):
+  `/...` ↔ `\\wsl$\<distro>\...`, only when the WSL distro is known. Resolution
+  runs once per process: `CYRIL_WSL_DISTRO` env var wins; otherwise a process
+  cwd under `\\wsl$\` / `\\wsl.localhost\` donates its distro segment; otherwise
+  WSL-internal paths pass through unchanged (honest NotFound downstream) with a
+  one-time warning. Both UNC prefixes are accepted inbound; `\\wsl$` is emitted
+  (works on every WSL2 system). The distro segment must match exactly —
+  `\\wsl$\Ubuntu-other\...` never matches distro `Ubuntu` (Microsoft wslpath
+  conformance; see `.cyril-8tq6/` for the probe evidence).
+
 ## ACP Protocol Notes
 
 For the comprehensive protocol reference with example requests/responses, see **[docs/kiro-acp-protocol.md](docs/kiro-acp-protocol.md)**.
@@ -474,7 +487,7 @@ These are project invariants maintained from inception, not aspirations. Maintai
 
 - **Linux:** spawns `kiro-cli acp` directly; requires kiro-cli installed and on PATH
 - **Windows:** spawns `wsl kiro-cli acp`; requires WSL with kiro-cli installed and authenticated (`wsl kiro-cli login`)
-- Path translation (`C:\` ↔ `/mnt/c/`) is active only on Windows; on Linux it's a no-op
+- Path translation (`C:\` ↔ `/mnt/c/`, and `\\wsl$\<distro>\` ↔ WSL-internal `/home`-style paths when `CYRIL_WSL_DISTRO` or a `\\wsl$` cwd names the distro) is active only on Windows; on Linux it's a no-op
 - Terminal commands from the agent run natively on the host OS
 - Logs go to `cyril.log` in the working directory (append mode) to avoid TUI conflicts
 
