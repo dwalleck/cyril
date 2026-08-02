@@ -990,6 +990,14 @@ async fn run_loop(
     }
 
     tracing::info!("ACP bridge initialized");
+    // cyril-b4y4: state the bound engine's terminal-source shape once at bind
+    // time — turn mediation keys companion expectations off this fact, and a
+    // wire capture reads very differently knowing whether TWO terminals per
+    // turn are expected (KAS) or one (v2).
+    tracing::debug!(
+        emits_wire_turn_end = engine.emits_wire_turn_end(),
+        "engine terminal-source shape"
+    );
 
     // 5. Command loop
     let mut active_session_id: Option<acp::SessionId> = None;
