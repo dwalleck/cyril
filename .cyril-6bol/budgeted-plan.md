@@ -3,6 +3,10 @@
 Approved design: `.cyril-6bol/falsifiable-design.md`. Cheapest falsifier: expansion-aware probe/oracle `AGREEMENT` on 2026-08-01.
 
 Checkpoint revision (requester-approved 2026-08-01): strict KAS lint proved the original domain-only Slice 2 could not stand alone without dead production types. The coherent resolve-and-report seam therefore merges original Slices 2–4 and 7–9; it keeps their summed budgets and gates, and leaves rendering, launch construction, and execution as independent checkpoints.
+
+Final checkpoint revision (requester-approved 2026-08-02): strict KAS lint requires the crate-private renderer and launch-plan APIs to gain their production `terminal/create` caller in the same checkpoint. Original Slices 5, 6, and 10 therefore merge into Slice 5 with their summed budgets and all fixtures/oracles unchanged.
+
+Final budget accounting: the approved cyril-6bol checkpoint is 136 net production lines and 300 net test lines against the Slice 2 checkpoint, within the merged ≤150/≤300 limits. The operator-pipeline lifecycle fence discovered `cyril-2z9g`; its separately tracked fix adds 77 production lines and 29 test lines (including the bridge cancellation fence), within a local ≤80/≤30 bug-fix budget.
 Every slice ends in one conventional commit. “Prototype oracle” below means:
 
 ```sh
@@ -87,10 +91,10 @@ The prototype is a standalone empirical witness, not the Cyril executable. There
 **Preconditions / output:** Empty command is load-bearing and is rejected at runtime before rendering. Rendered command text is internal process data, never printed.
 
 **Verification:**
-- [ ] Renderer matrix unit tests pass
-- [ ] 64 KiB fixture remains within the O(n+b) budget
-- [ ] Expansion-aware prototype oracle agrees
-- [ ] TDD inversion: generic quote-all and unquote-all mutations each fail distinct assertions
+- [x] Renderer matrix unit tests pass
+- [x] 64 KiB fixture remains within the O(n+b) budget
+- [x] Expansion-aware prototype oracle agrees
+- [x] TDD inversion: generic quote-all and unquote-all mutations each fail distinct assertions
 
 ## Slice 6: Build profile-aware launch plans with exit fidelity
 
@@ -112,10 +116,10 @@ The prototype is a standalone empirical witness, not the Cyril executable. There
 **Preconditions / output:** “One profile startup” is enforced by one command construction and zero retry path. Shell stdout/stderr are terminal data; resolver/launch errors are diagnostics.
 
 **Verification:**
-- [ ] Launch-plan unit tests pass
-- [ ] Profile marker count is exactly 1; failure-side-effect count is exactly 1
-- [ ] Installed-shell exit-42 fixtures pass where available
-- [ ] Prototype oracle agrees; no retry/wall budget holds
+- [x] Launch-plan unit tests pass
+- [x] Profile marker count is exactly 1; failure-side-effect count is exactly 1
+- [x] Installed-shell exit-42 fixtures pass where available
+- [x] Prototype oracle agrees; no retry/wall budget holds
 
 ## Slice 10: Execute terminal requests through the bound shell
 
@@ -134,13 +138,13 @@ The prototype is a standalone empirical witness, not the Cyril executable. There
 **Files:**
 - `crates/cyril-core/src/protocol/kas/terminal_io.rs`
 
-**Preconditions / output:** Empty command runtime check is load-bearing and survives release builds. Terminal stdout/stderr/exit are ACP data; spawn/wait errors are ACP diagnostics. Existing tracked-child lifecycle is unchanged.
+**Preconditions / output:** Empty command runtime check is load-bearing and survives release builds. Terminal stdout/stderr/exit are ACP data; spawn/wait errors are ACP diagnostics. Existing terminal identifiers, output snapshots, and kill/release status contracts are retained; process ownership now covers the selected shell's full tree under `cyril-2z9g`.
 
 **Verification:**
-- [ ] Terminal unit/lifecycle tests pass
-- [ ] Every stress cell produces the prewritten error/output/status/marker result
-- [ ] Expansion-aware prototype oracle agrees
-- [ ] Create latency, env-loop, and renderer budgets hold
+- [x] Terminal unit/lifecycle tests pass
+- [x] Every stress cell produces the prewritten error/output/status/marker result
+- [x] Expansion-aware prototype oracle agrees
+- [x] Create latency, env-loop, and renderer budgets hold
 
 ## Plan self-review
 
@@ -162,7 +166,7 @@ No gaps. ACP replies and terminal stdout/stderr/status are data. Configuration/r
 
 ### Tracker references
 
-No deferrals appear in this plan. `cyril-1rpv` and `cyril-3lh8` remain named only in the approved design’s negative space and were verified during design.
+No design deferrals appear in this plan. `cyril-1rpv` and `cyril-3lh8` remain named only in the approved design’s negative space and were verified during design. Implementation exposed and fixed the separately tracked process-tree bug `cyril-2z9g`.
 
 ### Claim coverage
 

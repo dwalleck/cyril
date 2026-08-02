@@ -5116,25 +5116,33 @@ mod tests {
         // registry's child then runs to natural exit as an orphan (a 60s sleep =
         // 60s orphan; a child wedged on a full pipe never exits at all). The
         // loop's CancelRequest arm must reap the cancelled session's live
-        // terminals. The fixture: the agent answers the prompt by issuing
-        // `terminal/create` (the child writes its own pid, then sleeps) and
-        // parking; the test cancels and asserts the child dies. Alive is asserted
-        // BEFORE the cancel so the fence can't pass as a silent no-op.
+        // terminals. The fixture parks after creating a selected-shell pipeline
+        // whose left child writes its pid, then would write a delayed marker.
+        // Cancellation must reap that child and prevent the marker, not only kill
+        // the outer shell. Alive is asserted before cancel so this cannot pass as
+        // a silent no-op.
         use crate::protocol::kas::terminal_io::test_probe::{assert_process_dies, dead_or_zombie};
         let dir = tempfile::tempdir().expect("tempdir");
         let pidfile = dir.path().join("pid");
+        let marker = dir.path().join("marker");
         let script = Rc::new(RefCell::new(Script {
             block_prompt: true,
             create_terminal_cmd: Some((
                 "sh".into(),
-                vec!["-c".into(), "echo $$ > pid && exec sleep 60".into()],
+                vec![
+                    "-c".into(),
+                    "echo $$ > pid; sleep 1; touch marker".into(),
+                    "|".into(),
+                    "cat".into(),
+                ],
                 dir.path().to_path_buf(),
             )),
             ..Default::default()
         }));
-        with_harness(
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
-            move |sender, mut rx, _perm_rx, _gate, _loop| async move {
+            move |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
                 sender
                     .send(BridgeCommand::SendPrompt {
@@ -5148,7 +5156,7 @@ mod tests {
                 let pid = read_pid_within(&pidfile, 5).await;
                 assert!(
                     !dead_or_zombie(pid),
-                    "sleep 60 must be alive before the cancel"
+                    "pipeline child must be alive before the cancel"
                 );
                 sender.send(BridgeCommand::CancelRequest).await.unwrap();
                 assert_eq!(
@@ -5157,6 +5165,11 @@ mod tests {
                     "cancel resolved the parked turn as Cancelled"
                 );
                 assert_process_dies(pid).await;
+                tokio::time::sleep(Duration::from_millis(1500)).await;
+                assert!(
+                    !marker.exists(),
+                    "cancel must prevent the pipeline child's delayed marker"
+                );
             },
         )
         .await;

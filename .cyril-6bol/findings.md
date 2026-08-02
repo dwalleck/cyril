@@ -31,3 +31,7 @@ Probe and oracle agree item-by-item on the resolved shell/family, reconstructed 
 ## What I learned
 
 The actual ship-worktree environment has `$SHELL` unset even though `/usr/bin/bash` is runnable, so Unix fallback is a production path rather than a theoretical edge. Ordinary `shlex.join` quotes both `|` and `$NAME` as literals, so the syntax seam must recognize a closed operator set and pure family-valid environment-variable forms while continuing to quote every other token.
+
+## Implementation finding
+
+The original terminal lifecycle fences used a tail-exec-friendly `sh -c` command, so killing the tracked PID also killed the command. A selected-shell operator pipeline forced the outer shell to retain child processes and proved that `terminal/release` left the pipeline child alive long enough to write a delayed marker. The final implementation starts Unix terminals in a fresh process group, owns that group with the child, and terminates the tree on kill, release, cancellation, and owner drop. The native-Windows explicit cleanup path uses `taskkill.exe /T /F` before the existing direct-child fallback. Filed as `cyril-2z9g`; fixed in this branch by the `release_kills_child_and_frees_id` and `cancel_reaps_sessions_running_terminals` fences.

@@ -46,9 +46,10 @@ pub(crate) struct KiroClient {
     /// (cyril-3lh8); the registry stays the sole owner of process lifecycle.
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
-    /// Immutable KAS host-shell snapshot. `None` is the real v2 absence.
+    /// Immutable KAS host-shell snapshot shared with the terminal registry.
+    /// `None` is the real v2 absence.
     #[cfg(feature = "kas")]
-    host_shell: ResolvedHostShell,
+    host_shell: Option<std::rc::Rc<crate::protocol::kas::host_shell::HostShell>>,
     /// KAS-7 (cyril-jiyn): the hook registry serving `_kiro/hooks/*`, loaded
     /// once at construction from the workspace + global `.kiro/hooks` when the
     /// bound engine's hooks mode is `Host`. Empty otherwise (Kas mode runs
@@ -91,13 +92,17 @@ impl KiroClient {
             };
             std::rc::Rc::new(registry)
         };
+        #[cfg(feature = "kas")]
+        let host_shell = host_shell.map(std::rc::Rc::new);
         Self {
             notification_tx,
             permission_tx,
             tool_call_inputs: RefCell::new(HashMap::new()),
             engine,
             #[cfg(feature = "kas")]
-            terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new()),
+            terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
+                host_shell.clone(),
+            )),
             #[cfg(feature = "kas")]
             host_shell,
             #[cfg(feature = "kas")]

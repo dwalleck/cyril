@@ -78,6 +78,11 @@ pub(crate) struct HostShell {
     executable: PathBuf,
 }
 
+pub(crate) struct ShellCommand<'a> {
+    pub(crate) program: &'a Path,
+    pub(crate) args: Vec<String>,
+}
+
 impl HostShell {
     fn new(kind: ShellKind, executable: PathBuf) -> Self {
         Self { kind, executable }
@@ -97,6 +102,16 @@ impl HostShell {
         Self::new(ShellKind::Posix, PathBuf::from("/bin/sh"))
     }
 
+    #[cfg(test)]
+    pub(crate) fn test_posix_at(executable: impl Into<PathBuf>) -> Self {
+        Self::new(ShellKind::Posix, executable.into())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_fish_at(executable: impl Into<PathBuf>) -> Self {
+        Self::new(ShellKind::Fish, executable.into())
+    }
+
     pub(crate) fn wire_name(&self) -> &'static str {
         match self.kind {
             ShellKind::Posix => "posix",
@@ -104,6 +119,112 @@ impl HostShell {
             ShellKind::Pwsh | ShellKind::WindowsPowerShell => "powershell",
         }
     }
+
+    pub(crate) fn command(&self, command: &str, args: &[String]) -> ShellCommand<'_> {
+        let shell_args = match self.kind {
+            ShellKind::Posix | ShellKind::Fish => {
+                vec!["-l".into(), "-c".into(), self.render_command(command, args)]
+            }
+            ShellKind::Pwsh | ShellKind::WindowsPowerShell => {
+                let mut source = String::with_capacity(command.len() + 256);
+                source.push_str("$global:LASTEXITCODE = $null; ");
+                self.append_command(&mut source, command, args);
+                source.push_str("; $cyrilSuccess = $?; $cyrilExitCode = $LASTEXITCODE; if ($null -ne $cyrilExitCode) { exit $cyrilExitCode }; if ($cyrilSuccess) { exit 0 } else { exit 1 }");
+                vec![
+                    "-NoLogo".into(),
+                    "-NonInteractive".into(),
+                    "-Command".into(),
+                    source,
+                ]
+            }
+        };
+        ShellCommand {
+            program: &self.executable,
+            args: shell_args,
+        }
+    }
+
+    fn render_command(&self, command: &str, args: &[String]) -> String {
+        let mut rendered = String::with_capacity(command.len() + args.len() * 3);
+        self.append_command(&mut rendered, command, args);
+        rendered
+    }
+
+    fn append_command(&self, rendered: &mut String, command: &str, args: &[String]) {
+        let powershell = matches!(self.kind, ShellKind::Pwsh | ShellKind::WindowsPowerShell);
+        let mut command_position = powershell;
+        for token in std::iter::once(command).chain(args.iter().map(String::as_str)) {
+            if !rendered.is_empty() && !rendered.ends_with(' ') {
+                rendered.push(' ');
+            }
+            if is_operator(token) {
+                rendered.push_str(token);
+                command_position |= powershell && is_command_separator(token);
+            } else {
+                if command_position {
+                    rendered.push_str("& ");
+                    command_position = false;
+                }
+                if is_variable(self.kind, token) {
+                    rendered.push_str(token);
+                } else {
+                    push_quoted(rendered, self.kind, token);
+                }
+            }
+        }
+    }
+}
+
+fn is_operator(token: &str) -> bool {
+    matches!(
+        token,
+        "|" | ">" | ">>" | "<" | "&&" | "||" | ";" | "&" | "2>" | "2>>" | "2>&1"
+    )
+}
+
+fn is_command_separator(token: &str) -> bool {
+    matches!(token, "|" | "&&" | "||" | ";" | "&")
+}
+
+fn is_variable(kind: ShellKind, token: &str) -> bool {
+    let plain = token
+        .strip_prefix('$')
+        .filter(|value| !value.starts_with('{'));
+    let braced = token
+        .strip_prefix("${")
+        .and_then(|value| value.strip_suffix('}'));
+    match kind {
+        ShellKind::Posix => plain.or(braced).is_some_and(valid_name),
+        ShellKind::Fish => plain.is_some_and(valid_name),
+        ShellKind::Pwsh | ShellKind::WindowsPowerShell => token
+            .strip_prefix("$env:")
+            .or_else(|| braced.and_then(|value| value.strip_prefix("env:")))
+            .is_some_and(valid_name),
+    }
+}
+
+fn valid_name(name: &str) -> bool {
+    let mut bytes = name.bytes();
+    bytes
+        .next()
+        .is_some_and(|first| first.is_ascii_alphabetic() || first == b'_')
+        && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+}
+
+fn push_quoted(rendered: &mut String, kind: ShellKind, token: &str) {
+    rendered.push('\'');
+    let replacement = if matches!(kind, ShellKind::Posix | ShellKind::Fish) {
+        "'\\''"
+    } else {
+        "''"
+    };
+    for (index, part) in token.split('\'').enumerate() {
+        if index > 0 {
+            rendered.push_str(replacement);
+        }
+        rendered.push_str(part);
+    }
+    rendered.push('\'');
 }
 
 const MAX_PATH_ENTRIES: usize = 256;
@@ -491,6 +612,142 @@ mod tests {
                     &FakeHost::default(),
                 )),
                 format!("unsupported host shell `{configured}` on Windows")
+            );
+        }
+    }
+
+    fn shell(kind: ShellKind) -> HostShell {
+        HostShell::new(kind, PathBuf::from(format!("/test/{kind:?}")))
+    }
+
+    fn strings(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| (*value).to_string()).collect()
+    }
+
+    #[test]
+    fn renderer_preserves_literals_and_only_the_closed_syntax_set() {
+        let common = strings(&[
+            "two words",
+            "line\nbreak",
+            "a'b",
+            "雪",
+            "|",
+            ">",
+            ">>",
+            "<",
+            "&&",
+            "||",
+            ";",
+            "&",
+            "2>",
+            "2>>",
+            "2>&1",
+        ]);
+        assert_eq!(
+            shell(ShellKind::Posix).render_command("echo", &common),
+            "'echo' 'two words' 'line\nbreak' 'a'\\''b' '雪' | > >> < && || ; & 2> 2>> 2>&1"
+        );
+        assert_eq!(
+            shell(ShellKind::Pwsh).render_command("echo", &common),
+            "& 'echo' 'two words' 'line\nbreak' 'a''b' '雪' | > >> < && || ; & 2> 2>> 2>&1"
+        );
+    }
+
+    #[test]
+    fn renderer_expands_only_pure_family_valid_variables() {
+        let args = strings(&[
+            "$NAME",
+            "${NAME}",
+            "$env:NAME",
+            "${env:NAME}",
+            "prefix-$HOME",
+            "*.rs",
+            "$(whoami)",
+        ]);
+        assert_eq!(
+            shell(ShellKind::Posix).render_command("echo", &args),
+            "'echo' $NAME ${NAME} '$env:NAME' '${env:NAME}' 'prefix-$HOME' '*.rs' '$(whoami)'"
+        );
+        assert_eq!(
+            shell(ShellKind::Fish).render_command("echo", &args),
+            "'echo' $NAME '${NAME}' '$env:NAME' '${env:NAME}' 'prefix-$HOME' '*.rs' '$(whoami)'"
+        );
+        assert_eq!(
+            shell(ShellKind::WindowsPowerShell).render_command("echo", &args),
+            "& 'echo' '$NAME' '${NAME}' $env:NAME ${env:NAME} 'prefix-$HOME' '*.rs' '$(whoami)'"
+        );
+
+        let pipeline = strings(&["left", "|", "echo", "$env:NAME"]);
+        assert_eq!(
+            shell(ShellKind::Pwsh).render_command("echo", &pipeline),
+            "& 'echo' 'left' | & 'echo' $env:NAME"
+        );
+    }
+
+    #[test]
+    fn launch_plan_uses_one_profile_aware_shell_process() {
+        let args = strings(&["done"]);
+        let posix_shell = shell(ShellKind::Posix);
+        let posix = posix_shell.command("echo", &args);
+        assert_eq!(posix.args, strings(&["-l", "-c", "'echo' 'done'"]));
+        let fish_shell = shell(ShellKind::Fish);
+        let fish = fish_shell.command("echo", &args);
+        assert_eq!(fish.args, strings(&["-l", "-c", "'echo' 'done'"]));
+        for kind in [ShellKind::Pwsh, ShellKind::WindowsPowerShell] {
+            let host_shell = shell(kind);
+            let plan = host_shell.command("echo", &args);
+            assert_eq!(&plan.args[..3], ["-NoLogo", "-NonInteractive", "-Command"]);
+            assert!(plan.args[3].starts_with("$global:LASTEXITCODE = $null; & 'echo' 'done';"));
+            assert!(plan.args[3].contains("exit $cyrilExitCode"));
+            assert!(plan.args[3].contains("if ($cyrilSuccess) { exit 0 } else { exit 1 }"));
+        }
+    }
+
+    #[test]
+    fn renderer_handles_the_64_kib_token_ceiling_under_two_ms() {
+        let token = "x".repeat(255);
+        let args = vec![token; 256];
+        let started = std::time::Instant::now();
+        let rendered = shell(ShellKind::Posix).render_command("echo", &args);
+        let elapsed = started.elapsed();
+        assert_eq!(rendered.matches(' ').count(), 256);
+        assert!(
+            elapsed < std::time::Duration::from_millis(2),
+            "64 KiB render took {elapsed:?}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn installed_shells_preserve_external_exit_42() {
+        let dir = match tempfile::tempdir() {
+            Ok(dir) => dir,
+            Err(error) => panic!("create isolated shell home: {error}"),
+        };
+        let args = strings(&["-c", "exit 42"]);
+        for (kind, executable) in [
+            (ShellKind::Posix, "/bin/sh"),
+            (ShellKind::Fish, "/usr/bin/fish"),
+            (ShellKind::Pwsh, "/usr/bin/pwsh"),
+        ] {
+            if !Path::new(executable).exists() {
+                continue;
+            }
+            let host_shell = HostShell::new(kind, executable.into());
+            let plan = host_shell.command("sh", &args);
+            let status = match std::process::Command::new(plan.program)
+                .args(&plan.args)
+                .env("HOME", dir.path())
+                .env("XDG_CONFIG_HOME", dir.path())
+                .status()
+            {
+                Ok(status) => status,
+                Err(error) => panic!("run {kind:?} exit fixture: {error}"),
+            };
+            assert_eq!(
+                status.code(),
+                Some(42),
+                "{kind:?} must preserve external exit 42"
             );
         }
     }

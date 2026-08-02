@@ -37,8 +37,59 @@ use tokio::sync::Notify;
 /// A process-lifetime registry of live terminals, one per `KiroClient`
 /// (`!Send`, single bridge thread — no lock, mirroring `tool_call_inputs`).
 pub(crate) struct TerminalRegistry {
+    shell: Option<Rc<super::host_shell::HostShell>>,
     inner: RefCell<HashMap<acp::TerminalId, Entry>>,
     counter: Cell<u64>,
+}
+
+struct ProcessTree {
+    root_pid: Option<std::num::NonZeroU32>,
+}
+
+impl ProcessTree {
+    fn new(child_pid: Option<u32>) -> Self {
+        let root_pid = child_pid.and_then(std::num::NonZeroU32::new);
+        if root_pid.is_none() {
+            tracing::warn!("KAS terminal child pid unavailable; process-tree cleanup disabled");
+        }
+        Self { root_pid }
+    }
+
+    #[cfg(unix)]
+    fn kill_group(&mut self, operation: &str) {
+        let Some(root_pid) = self.root_pid.take() else {
+            return;
+        };
+        let Ok(pgid) = i32::try_from(root_pid.get()) else {
+            tracing::debug!(
+                root_pid = root_pid.get(),
+                operation,
+                "KAS terminal pid exceeds process-group range"
+            );
+            return;
+        };
+        match nix::sys::signal::killpg(
+            nix::unistd::Pid::from_raw(pgid),
+            nix::sys::signal::Signal::SIGKILL,
+        ) {
+            Ok(()) | Err(nix::errno::Errno::ESRCH) => {}
+            Err(error) => {
+                tracing::debug!(root_pid = root_pid.get(), error = %error, operation, "KAS terminal process-group kill failed");
+            }
+        }
+    }
+}
+
+#[cfg(unix)]
+impl Drop for ProcessTree {
+    fn drop(&mut self) {
+        self.kill_group("process owner dropped");
+    }
+}
+
+struct RunningChild {
+    child: Child,
+    process_tree: ProcessTree,
 }
 
 /// A tracked terminal. `Running` holds the spawned child until `wait`/`kill` takes
@@ -51,8 +102,8 @@ enum Entry {
         /// children by linear scan — the terminal id stays the primary key
         /// (cyril-3lh8).
         session_id: acp::SessionId,
-        /// The spawned child, `None` while an awaiting op has taken it out.
-        child: Option<Child>,
+        /// The process owner, `None` while an awaiting op has taken it out.
+        process: Option<RunningChild>,
         /// Kill signal for the in-flight owner. The rpc layer spawns every
         /// inbound request as its own concurrent task, so `kill`/`release` land
         /// WHILE a `wait` owns the child (KAS's command-timeout pattern does
@@ -69,12 +120,12 @@ enum Entry {
 
 /// Outcome of taking a terminal's child out of the registry for an awaiting op.
 enum Taken {
-    /// The live child, removed from its `Running` slot — caller awaits + reaps
-    /// it, watching the kill signal for a concurrent `kill`/`release`.
-    Child(Child, Rc<Notify>),
+    /// The live process owner, removed from its `Running` slot — caller awaits +
+    /// reaps it, watching the kill signal for a concurrent `kill`/`release`.
+    Child(RunningChild, Rc<Notify>),
     /// The terminal already exited; carries its cached status (for `wait`).
     AlreadyExited(acp::TerminalExitStatus),
-    /// Another op already took the child and is awaiting it. Carries the kill
+    /// Another op already took the process and is awaiting it. Carries the kill
     /// signal so `kill`/`release` can terminate the child through the in-flight
     /// owner instead of silently falling through (cyril-lw67) — with KAS's
     /// create→wait-immediately pattern, every kill arrives in this state.
@@ -82,22 +133,33 @@ enum Taken {
 }
 
 impl TerminalRegistry {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(shell: Option<Rc<super::host_shell::HostShell>>) -> Self {
         Self {
+            shell,
             inner: RefCell::new(HashMap::new()),
             counter: Cell::new(0),
         }
     }
 
-    /// Answer `terminal/create`: spawn `command` (piped stdout+stderr) in the
-    /// translated `cwd`, assign a process-unique `term-{n}` id, and return it
-    /// **immediately** — no await on exit (the non-blocking entry point). A spawn
-    /// failure (nonexistent command, missing cwd) returns `Err` (`-32603`), never
-    /// panics; a non-absolute `cwd` is rejected `-32602`.
+    /// Answer `terminal/create`: execute the reconstructed command through the
+    /// startup-bound host shell, assign a process-unique `term-{n}` id, and return
+    /// it **immediately**. Empty input and relative cwd return `-32602`; failure to
+    /// start the selected shell returns `-32603`. Inner command failures are shell
+    /// output/status and retain the terminal id.
     pub(crate) fn create(
         &self,
         req: &acp::CreateTerminalRequest,
     ) -> acp::Result<acp::CreateTerminalResponse> {
+        if req.command.is_empty() {
+            return Err(acp::Error::new(
+                -32602,
+                "terminal command must not be empty",
+            ));
+        }
+        let shell = self.shell.as_deref().ok_or_else(|| {
+            acp::Error::new(-32603, "KAS terminal callback has no resolved host shell")
+        })?;
+        let plan = shell.command(&req.command, &req.args);
         let cwd = match &req.cwd {
             // Reuse the fs host-io contract: absolute-or-`-32602`, then translate
             // (Windows `/mnt/c`→`C:\`; Linux no-op). Load-bearing: a relative cwd
@@ -105,8 +167,8 @@ impl TerminalRegistry {
             Some(p) => Some(super::host_io::to_native_checked(p)?),
             None => None,
         };
-        let mut cmd = tokio::process::Command::new(&req.command);
-        cmd.args(&req.args)
+        let mut cmd = tokio::process::Command::new(plan.program);
+        cmd.args(&plan.args)
             // stdin MUST be null, not the inherited default: the bridge's stdin is
             // cyril's TUI terminal. A KAS command that reads stdin (`cat`, `grep`
             // with no file, a REPL) would otherwise attach to that terminal —
@@ -131,7 +193,13 @@ impl TerminalRegistry {
         for e in &req.env {
             cmd.env(&e.name, &e.value);
         }
-        let child = cmd.spawn().map_err(|e| spawn_err(&req.command, e))?;
+        #[cfg(unix)]
+        cmd.process_group(0);
+        let child = cmd.spawn().map_err(|e| spawn_err(plan.program, e))?;
+        let process = RunningChild {
+            process_tree: ProcessTree::new(child.id()),
+            child,
+        };
 
         let n = self.counter.get().saturating_add(1);
         self.counter.set(n);
@@ -140,7 +208,7 @@ impl TerminalRegistry {
             id.clone(),
             Entry::Running {
                 session_id: req.session_id.clone(),
-                child: Some(child),
+                process: Some(process),
                 kill_signal: Rc::new(Notify::new()),
             },
         );
@@ -159,8 +227,8 @@ impl TerminalRegistry {
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
         // take_child drops the RefCell borrow before we await (the no-borrow-across-
         // await invariant). A sequential KAS never double-waits; InFlight is defensive.
-        let (child, kill_signal) = match self.take_child(&req.terminal_id)? {
-            Taken::Child(child, kill_signal) => (child, kill_signal),
+        let (process, kill_signal) = match self.take_child(&req.terminal_id)? {
+            Taken::Child(process, kill_signal) => (process, kill_signal),
             Taken::AlreadyExited(status) => {
                 return Ok(acp::WaitForTerminalExitResponse::new(status));
             }
@@ -171,7 +239,7 @@ impl TerminalRegistry {
                 ));
             }
         };
-        let out = match wait_with_output_killable(child, &kill_signal).await {
+        let out = match wait_with_output_killable(process, &kill_signal, &req.terminal_id).await {
             Ok(out) => out,
             // take_child left a Running(None) slot; a reap error must free it (not
             // leave the id wedged in a permanent InFlight state — a retried wait
@@ -217,15 +285,9 @@ impl TerminalRegistry {
         req: &acp::ReleaseTerminalRequest,
     ) -> acp::Result<acp::ReleaseTerminalResponse> {
         match self.take_child(&req.terminal_id)? {
-            Taken::Child(mut child, _) => {
-                // SIGKILL then reap. Without the wait the child is a zombie; tokio's
-                // Child does NOT kill/reap on drop. Output is discarded (id is freed).
-                // Both ops are best-effort (the child may have already exited), but a
-                // failure is logged, not swallowed (CLAUDE.md: no discarded Results).
-                if let Err(e) = child.start_kill() {
-                    tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: start_kill failed");
-                }
-                if let Err(e) = child.wait().await {
+            Taken::Child(mut process, _) => {
+                terminate_process_tree(&mut process, &req.terminal_id, "release").await;
+                if let Err(e) = process.child.wait().await {
                     tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: reap failed (possible zombie)");
                 }
             }
@@ -252,11 +314,9 @@ impl TerminalRegistry {
         req: &acp::KillTerminalRequest,
     ) -> acp::Result<acp::KillTerminalResponse> {
         match self.take_child(&req.terminal_id)? {
-            Taken::Child(mut child, _) => {
-                if let Err(e) = child.start_kill() {
-                    tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal kill: start_kill failed");
-                }
-                let out = match child.wait_with_output().await {
+            Taken::Child(mut process, _) => {
+                terminate_process_tree(&mut process, &req.terminal_id, "kill").await;
+                let out = match process.child.wait_with_output().await {
                     Ok(out) => out,
                     // take_child left a Running(None) slot; a reap error must free it
                     // (not leave the id wedged in a permanent InFlight state) before
@@ -337,9 +397,11 @@ impl TerminalRegistry {
             None => Err(unknown_terminal(id)),
             Some(Entry::Exited { status, .. }) => Ok(Taken::AlreadyExited(status.clone())),
             Some(Entry::Running {
-                child, kill_signal, ..
-            }) => Ok(match child.take() {
-                Some(child) => Taken::Child(child, Rc::clone(kill_signal)),
+                process,
+                kill_signal,
+                ..
+            }) => Ok(match process.take() {
+                Some(process) => Taken::Child(process, Rc::clone(kill_signal)),
                 None => Taken::InFlight(Rc::clone(kill_signal)),
             }),
         }
@@ -374,8 +436,9 @@ impl TerminalRegistry {
 /// cancel-safe, so selecting over it is sound. A `notify_one` sent before this
 /// task polls `notified()` is not lost — `Notify` stores the permit.
 async fn wait_with_output_killable(
-    mut child: Child,
+    mut process: RunningChild,
     kill_signal: &Notify,
+    terminal_id: &acp::TerminalId,
 ) -> std::io::Result<std::process::Output> {
     async fn drain(pipe: Option<impl tokio::io::AsyncRead + Unpin>) -> std::io::Result<Vec<u8>> {
         let mut buf = Vec::new();
@@ -384,21 +447,19 @@ async fn wait_with_output_killable(
         }
         Ok(buf)
     }
-    let stdout = child.stdout.take();
-    let stderr = child.stderr.take();
+    let stdout = process.child.stdout.take();
+    let stderr = process.child.stderr.take();
     let exit = async {
         tokio::select! {
-            res = child.wait() => return res,
+            res = process.child.wait() => return res,
             _ = kill_signal.notified() => {}
         }
         // Signaled by a concurrent kill/release: SIGKILL from the task that owns
         // the Child, then reap. start_kill on a child that already exited (but
         // is not yet reaped) is best-effort — logged, never fatal; the wait
         // below reaps either way.
-        if let Err(e) = child.start_kill() {
-            tracing::debug!(error = %e, "KAS terminal kill-signal: start_kill failed");
-        }
-        child.wait().await
+        terminate_process_tree(&mut process, terminal_id, "kill signal").await;
+        process.child.wait().await
     };
     let (status, stdout, stderr) = tokio::join!(exit, drain(stdout), drain(stderr));
     Ok(std::process::Output {
@@ -406,6 +467,38 @@ async fn wait_with_output_killable(
         stdout: stdout?,
         stderr: stderr?,
     })
+}
+
+async fn terminate_process_tree(
+    process: &mut RunningChild,
+    terminal_id: &acp::TerminalId,
+    operation: &str,
+) {
+    #[cfg(unix)]
+    process.process_tree.kill_group(operation);
+    #[cfg(windows)]
+    if let Some(root_pid) = process.process_tree.root_pid.take() {
+        let pid = root_pid.get().to_string();
+        let status = tokio::process::Command::new("taskkill.exe")
+            .args(["/PID", pid.as_str(), "/T", "/F"])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .await;
+        match status {
+            Ok(status) if status.success() => {}
+            Ok(status) => {
+                tracing::debug!(terminal_id = %terminal_id, ?status, operation, "KAS terminal taskkill returned failure");
+            }
+            Err(error) => {
+                tracing::debug!(terminal_id = %terminal_id, error = %error, operation, "KAS terminal taskkill failed");
+            }
+        }
+    }
+    if let Err(error) = process.child.start_kill() {
+        tracing::debug!(terminal_id = %terminal_id, error = %error, operation, "KAS terminal direct-child kill failed");
+    }
 }
 
 /// The (acp-stripped) method name for KAS's `_kiro/terminal/shell_type` host
@@ -459,13 +552,12 @@ fn unknown_terminal(id: &acp::TerminalId) -> acp::Error {
     acp::Error::new(-32602, format!("unknown terminal: {id}"))
 }
 
-/// Build a `-32603` error for a failed `terminal/create` spawn, logging the io
-/// error (NotFound vs PermissionDenied) so wire/exec drift is diagnosable —
-/// surface, don't swallow (CLAUDE.md). Distinct shape from `host_io::io_err`
-/// (a command string, not a path), so not a duplicate.
-fn spawn_err(command: &str, e: std::io::Error) -> acp::Error {
-    tracing::debug!(command = %command, error = %e, "KAS terminal spawn failed");
-    acp::Error::new(-32603, format!("spawn {command}: {e}"))
+/// Build a `-32603` error when the selected startup shell disappears or cannot
+/// spawn. Log the concrete executable and OS error so startup/execution races
+/// remain diagnosable.
+fn spawn_err(program: &std::path::Path, e: std::io::Error) -> acp::Error {
+    tracing::debug!(program = %program.display(), error = %e, "KAS terminal shell spawn failed");
+    acp::Error::new(-32603, format!("spawn {}: {e}", program.display()))
 }
 
 /// `-32603` for a failure while awaiting a terminal's exit (rare io error).
@@ -517,9 +609,26 @@ pub(crate) mod test_probe {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+    use super::super::host_shell::HostShell;
     #[cfg(unix)]
     use super::test_probe::{assert_process_dies, dead_or_zombie};
     use super::*;
+
+    fn registry(shell: HostShell) -> TerminalRegistry {
+        TerminalRegistry::new(Some(Rc::new(shell)))
+    }
+
+    fn test_registry() -> TerminalRegistry {
+        registry(HostShell::test_posix())
+    }
+
+    fn test_registry_at(executable: impl Into<std::path::PathBuf>) -> TerminalRegistry {
+        registry(HostShell::test_posix_at(executable))
+    }
+
+    fn test_fish_registry_at(executable: impl Into<std::path::PathBuf>) -> TerminalRegistry {
+        registry(HostShell::test_fish_at(executable))
+    }
 
     fn create_req(command: &str) -> acp::CreateTerminalRequest {
         acp::CreateTerminalRequest::new(acp::SessionId::new("s"), command)
@@ -533,12 +642,31 @@ mod tests {
     fn out_req(id: &acp::TerminalId) -> acp::TerminalOutputRequest {
         acp::TerminalOutputRequest::new(acp::SessionId::new("s"), id.clone())
     }
+    fn strings(values: &[&str]) -> Vec<String> {
+        values.iter().map(ToString::to_string).collect()
+    }
+    fn write(path: impl AsRef<std::path::Path>, content: &str) {
+        std::fs::write(path, content).unwrap();
+    }
+    const BASH_SUCCESS_PROFILE: &str = "printf PROFILE-OUT; printf x >> \"$CYRIL_PROFILE_MARKER\"; export CYRIL_FROM_PROFILE=visible\n";
+    const BASH_FAILURE_PROFILE: &str =
+        "printf PROFILE-FAIL; printf y >> \"$CYRIL_PROFILE_MARKER\"; exit 23\n";
+    const FISH_PROFILE: &str = "printf FISH-PROFILE; printf x >> \"$CYRIL_FISH_PROFILE_MARKER\"\n";
+    async fn run(
+        registry: &TerminalRegistry,
+        request: acp::CreateTerminalRequest,
+    ) -> (acp::TerminalExitStatus, String) {
+        let id = registry.create(&request).unwrap().terminal_id;
+        let status = registry.wait(&wait_req(&id)).await.unwrap().exit_status;
+        let output = registry.output(&out_req(&id)).unwrap().output;
+        (status, output)
+    }
 
     #[tokio::test]
     async fn create_assigns_unique_ids() {
         // Fixture A: two creates before any release must get DISTINCT ids.
         // Fails if ids derive from a constant/cwd-hash instead of the counter.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id1 = reg.create(&create_req("true")).unwrap().terminal_id;
         let id2 = reg.create(&create_req("true")).unwrap().terminal_id;
         assert_ne!(id1, id2, "concurrent terminals must get unique ids");
@@ -551,7 +679,7 @@ mod tests {
         // Fixture (C3): create must return the id IMMEDIATELY, without awaiting the
         // command's exit. Creating a `sleep 5` and returning in <500ms proves it;
         // a refactor that made create await wait_with_output would take ~5s -> fail.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let t0 = std::time::Instant::now();
         let id = reg.create(&sh("sleep 5")).unwrap().terminal_id;
         let elapsed = t0.elapsed();
@@ -570,7 +698,7 @@ mod tests {
         // With `.stdin(null())` cat exits promptly; a regression that dropped the
         // null (inherit) or used `piped()` without a writer would block forever, so
         // the 5s timeout guard fails. Guards the non-interactive-terminal invariant.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id = reg.create(&create_req("cat")).unwrap().terminal_id;
         let resp =
             tokio::time::timeout(std::time::Duration::from_secs(5), reg.wait(&wait_req(&id)))
@@ -587,21 +715,151 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_nonexistent_command_errors_not_panics() {
-        // Fixture B: a command that does not exist must return Err (spawn failure),
-        // never panic. Fails under `.spawn().unwrap()/.expect()`.
-        let reg = TerminalRegistry::new();
-        let err = reg
-            .create(&create_req("definitely-not-a-real-binary-xyz"))
-            .expect_err("nonexistent command must error");
-        assert!(err.message.contains("spawn"), "spawn failure, got {err:?}");
+    async fn nonexistent_inner_command_returns_id_and_native_failure() {
+        let reg = test_registry();
+        let (status, _) = run(&reg, create_req("definitely-not-a-real-binary-xyz")).await;
+        assert_ne!(status.exit_code, Some(0));
+    }
+
+    #[test]
+    fn empty_command_is_invalid_without_consuming_an_id() {
+        let reg = test_registry();
+        let error = reg
+            .create(&create_req(""))
+            .expect_err("empty command must be invalid");
+        assert_eq!(error.code, acp::ErrorCode::InvalidParams);
+        assert_eq!(reg.counter.get(), 0);
+    }
+
+    #[tokio::test]
+    async fn pipeline_literals_and_pure_environment_variables_use_shell_semantics() {
+        let reg = test_registry();
+        let pipeline =
+            create_req("printf").args(strings(&["%s", "two words", "|", "tr", "a-z", "A-Z"]));
+        let (_, output) = run(&reg, pipeline).await;
+        assert_eq!(output, "TWO WORDS");
+
+        let expansion = create_req("printf")
+            .args(vec!["%s\n".into(), "$CYRIL_SHELL_VALUE".into()])
+            .env(vec![acp::EnvVariable::new("CYRIL_SHELL_VALUE", "expanded")]);
+        let (_, output) = run(&reg, expansion).await;
+        assert_eq!(output, "expanded\n");
+
+        let dir = tempfile::tempdir().unwrap();
+        let redirection = create_req("printf")
+            .args(vec![
+                "%s".into(),
+                "redirected".into(),
+                ">".into(),
+                "result.txt".into(),
+            ])
+            .cwd(dir.path().to_path_buf());
+        run(&reg, redirection).await;
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("result.txt")).unwrap(),
+            "redirected"
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn bash_profile_loads_once_and_failure_does_not_retry() {
+        let bash = ["/usr/bin/bash", "/bin/bash"]
+            .into_iter()
+            .map(std::path::Path::new)
+            .find(|path| path.exists());
+        let Some(bash) = bash else {
+            return;
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let profile = dir.path().join(".bash_profile");
+        let profile_marker = dir.path().join("profile-marker");
+        let command_marker = dir.path().join("command-marker");
+        write(&profile, BASH_SUCCESS_PROFILE);
+        let environment = vec![
+            acp::EnvVariable::new("HOME", dir.path().to_string_lossy()),
+            acp::EnvVariable::new("CYRIL_PROFILE_MARKER", profile_marker.to_string_lossy()),
+            acp::EnvVariable::new("CYRIL_COMMAND_MARKER", command_marker.to_string_lossy()),
+        ];
+        let reg = test_registry_at(bash);
+        let success = create_req("printf")
+            .args(vec!["%s".into(), "$CYRIL_FROM_PROFILE".into()])
+            .env(environment.clone());
+        let (success_status, success_output) = run(&reg, success).await;
+        assert_eq!(success_status.exit_code, Some(0));
+        assert!(success_output.contains("PROFILE-OUTvisible"));
+        assert_eq!(std::fs::read_to_string(&profile_marker).unwrap(), "x");
+
+        write(&profile, BASH_FAILURE_PROFILE);
+        let failure = sh("printf command >> \"$CYRIL_COMMAND_MARKER\"").env(environment);
+        let (failure_status, failure_output) = run(&reg, failure).await;
+        assert_eq!(failure_status.exit_code, Some(23));
+        assert!(failure_output.contains("PROFILE-FAIL"));
+        assert_eq!(std::fs::read_to_string(&profile_marker).unwrap(), "xy");
+        assert!(!command_marker.exists());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn installed_fish_runs_literals_operators_variables_and_one_profile() {
+        let fish = std::path::Path::new("/usr/bin/fish");
+        if !fish.exists() {
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let config_dir = dir.path().join("fish");
+        std::fs::create_dir(&config_dir).unwrap();
+        write(config_dir.join("config.fish"), FISH_PROFILE);
+        let marker = dir.path().join("profile-marker");
+        let request = create_req("printf")
+            .args(strings(&[
+                "%s",
+                "two words",
+                "|",
+                "tr",
+                "a-z",
+                "A-Z",
+                ";",
+                "printf",
+                "%s",
+                "redirected",
+                ">",
+                "result.txt",
+                ";",
+                "printf",
+                "%s",
+                "$CYRIL_FISH_VALUE",
+            ]))
+            .env(vec![
+                acp::EnvVariable::new("XDG_CONFIG_HOME", dir.path().to_string_lossy()),
+                acp::EnvVariable::new("CYRIL_FISH_PROFILE_MARKER", marker.to_string_lossy()),
+                acp::EnvVariable::new("CYRIL_FISH_VALUE", "expanded"),
+            ])
+            .cwd(dir.path().to_path_buf());
+        let reg = test_fish_registry_at(fish);
+        let (status, output) = run(&reg, request).await;
+        assert_eq!(status.exit_code, Some(0));
+        assert_eq!(output, "FISH-PROFILETWO WORDSexpanded");
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("result.txt")).unwrap(),
+            "redirected"
+        );
+        assert_eq!(std::fs::read_to_string(marker).unwrap(), "x");
+    }
+    #[test]
+    fn missing_shell_snapshot_refuses_terminal_creation() {
+        let error = TerminalRegistry::new(None)
+            .create(&create_req("true"))
+            .expect_err("missing startup snapshot must fail closed");
+        assert_eq!(error.code, acp::ErrorCode::InternalError);
+        assert!(error.message.contains("no resolved host shell"));
     }
 
     #[tokio::test]
     async fn create_relative_cwd_rejected_absolute_error() {
         // Fixture C: a non-absolute cwd is rejected with the DISTINCT "must be
         // absolute" error — never silently run in the process cwd.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let req = create_req("echo").cwd(std::path::PathBuf::from("relative/x"));
         let err = reg.create(&req).expect_err("relative cwd must be rejected");
         assert!(
@@ -616,7 +874,7 @@ mod tests {
         // makes spawn fail (ENOENT). If cwd were IGNORED, `echo` would spawn fine in
         // the process cwd -> Ok -> this catches the bug. Distinct from C: a "spawn"
         // failure, not a "must be absolute" rejection.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let req = create_req("echo").cwd(std::path::PathBuf::from("/nonexistent-xyz-dir-9k2"));
         let err = reg.create(&req).expect_err("missing cwd must fail spawn");
         assert!(
@@ -630,7 +888,7 @@ mod tests {
         // Fixture E (the prove-it trap): the wait reply must serialize FLAT
         // {exitCode, signal}, NOT nested {exitStatus:{…}}. Fails if a resolver
         // hand-builds the nested shape the KAS-5a probe used.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id = reg.create(&sh("exit 42")).unwrap().terminal_id;
         let resp = reg.wait(&wait_req(&id)).await.unwrap();
         let json = serde_json::to_string(&resp).unwrap();
@@ -648,7 +906,7 @@ mod tests {
     async fn wait_reports_nonzero_exit_code() {
         // Fixture F: a command exiting 42 reports exitCode=Some(42), signal=None.
         // Fails under an exit_code(0) default.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id = reg.create(&sh("exit 42")).unwrap().terminal_id;
         let resp = reg.wait(&wait_req(&id)).await.unwrap();
         assert_eq!(resp.exit_status.exit_code, Some(42));
@@ -665,7 +923,7 @@ mod tests {
         // Fixture F2: a self-SIGKILLed command reports exitCode=None, signal=Some —
         // never exitCode:0 for a killed process. Exercises exit_status's signal arm
         // directly via a self-SIGKILL, independent of the kill resolver.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id = reg.create(&sh("kill -9 $$")).unwrap().terminal_id;
         let resp = reg.wait(&wait_req(&id)).await.unwrap();
         assert_eq!(resp.exit_status.exit_code, None, "signaled => no exit code");
@@ -679,7 +937,7 @@ mod tests {
         // contain both, and its wire reply must carry nested exitStatus.
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("marker.txt"), "CWD-OK").unwrap();
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         // `cat marker.txt` (relative) only finds the file if cwd is honored; then
         // echo to stderr proves stderr is captured too.
         let req = sh("cat marker.txt; echo ERRLINE 1>&2").cwd(dir.path().to_path_buf());
@@ -707,7 +965,7 @@ mod tests {
     async fn unknown_id_errors_not_panics() {
         // Fixture I: wait/output on a never-created id must Err (-32602), not panic.
         // Fails under `borrow().get(id).unwrap()`.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let ghost = acp::TerminalId::new("term-999");
         let we = reg
             .wait(&wait_req(&ghost))
@@ -736,16 +994,29 @@ mod tests {
 
     #[tokio::test]
     async fn release_kills_child_and_frees_id() {
-        // Fixture J: release must KILL a running child (not orphan it) AND free the
-        // id. `sh -c 'sleep 1; touch marker'` writes the marker only if it runs to
-        // completion; releasing kills `sh` before `touch`, so the marker stays
-        // ABSENT. A buggy release that drops the entry WITHOUT start_kill leaves sh
-        // running -> marker appears -> this fails. Also asserts the id is freed.
+        // The selected shell owns this pipeline. Releasing must kill its process
+        // tree, not only the outer login shell; otherwise the left-hand `sh`
+        // survives long enough to write the delayed marker.
         let dir = tempfile::tempdir().unwrap();
         let marker = dir.path().join("marker.txt");
-        let req = sh("sleep 1; touch marker.txt").cwd(dir.path().to_path_buf());
-        let reg = TerminalRegistry::new();
+        let ready = dir.path().join("pipeline-ready");
+        let req = create_req("sh")
+            .args(vec![
+                "-c".into(),
+                "echo ready > pipeline-ready; sleep 1; touch marker.txt".into(),
+                "|".into(),
+                "cat".into(),
+            ])
+            .cwd(dir.path().to_path_buf());
+        let reg = test_registry();
         let id = reg.create(&req).unwrap().terminal_id;
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            while !ready.exists() {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("pipeline child must start before release");
         reg.release(&release_req(&id)).await.unwrap();
         // Wait past the would-be touch time (sleep 1); if sh survived, it touches now.
         tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
@@ -768,7 +1039,7 @@ mod tests {
         // a later wait resolves with a signal status (fast, not a 30s natural wait)
         // and output still succeeds. A buggy kill==release would free the id ->
         // wait/output -> -32602.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id = reg
             .create(&create_req("sleep").args(vec!["30".into()]))
             .unwrap()
@@ -797,7 +1068,7 @@ mod tests {
     #[tokio::test]
     async fn release_kill_unknown_id_errors() {
         // Fixture L: release/kill on a never-created id -> -32602, no panic.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let ghost = acp::TerminalId::new("term-999");
         let re = reg
             .release(&release_req(&ghost))
@@ -821,7 +1092,7 @@ mod tests {
         // and the pending wait never resolves — the 5s timeout catches that hang.
         // The fix must actually terminate the child and let the pending wait
         // resolve with the killed status, keeping the id valid for `output`.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id = reg
             .create(&create_req("sleep").args(vec!["30".into()]))
             .unwrap()
@@ -863,7 +1134,7 @@ mod tests {
         // the pending wait completes: the old completion path unconditionally
         // re-inserted an Exited entry under the released id, resurrecting it and
         // leaking the entry + captured output for the life of the bridge.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id = reg
             .create(&create_req("sleep").args(vec!["30".into()]))
             .unwrap()
@@ -907,7 +1178,7 @@ mod tests {
         // Start the clock BEFORE join! so a thread-pinning std::process wait shows up
         // as the fast terminal taking ~2s. A RefCell borrow held across .await would
         // instead panic BorrowMutError when the second wait re-borrows — also caught.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let slow = reg.create(&sh("sleep 2")).unwrap().terminal_id;
         let fast = reg.create(&create_req("true")).unwrap().terminal_id;
         let (slow_wr, fast_wr) = (wait_req(&slow), wait_req(&fast));
@@ -932,8 +1203,9 @@ mod tests {
     fn pid_of(reg: &TerminalRegistry, id: &acp::TerminalId) -> u32 {
         match reg.inner.borrow().get(id) {
             Some(Entry::Running {
-                child: Some(child), ..
-            }) => child.id().expect("running child has an OS pid"),
+                process: Some(process),
+                ..
+            }) => process.child.id().expect("running child has an OS pid"),
             _ => panic!("terminal is not in the Running(Some) state"),
         }
     }
@@ -947,7 +1219,7 @@ mod tests {
         // the orphan queue but never signals it), so a live `sleep 60` outlives
         // cyril entirely. Dropping the registry while it holds the Child must
         // kill the process.
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id = reg
             .create(&create_req("sleep").args(vec!["60".into()]))
             .unwrap()
@@ -969,7 +1241,7 @@ mod tests {
         // registry. When the bridge dies mid-command, the LocalSet drop cancels
         // that task — dropping the future and the Child it owns. That drop must
         // kill the process too, or the in-flight command leaks past exit.
-        let reg = Rc::new(TerminalRegistry::new());
+        let reg = Rc::new(test_registry());
         let id = reg
             .create(&create_req("sleep").args(vec!["60".into()]))
             .unwrap()
@@ -991,8 +1263,8 @@ mod tests {
             .run_until(tokio::time::sleep(std::time::Duration::from_millis(100)))
             .await;
         match reg.inner.borrow().get(&id) {
-            Some(Entry::Running { child, .. }) => assert!(
-                child.is_none(),
+            Some(Entry::Running { process, .. }) => assert!(
+                process.is_none(),
                 "the spawned wait must have taken the child (in-flight state)"
             ),
             _ => panic!("terminal must still be Running while the wait is in flight"),
@@ -1023,7 +1295,7 @@ mod tests {
         // by the entry's session_id). KILL semantics, not release: the reaped id
         // stays valid — a later wait resolves with the signal status and output
         // still succeeds instead of erroring -32602 (KAS sends those late).
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let a = reg.create(&sleep_req("sess-a")).unwrap().terminal_id;
         let b = reg.create(&sleep_req("sess-b")).unwrap().terminal_id;
         let a_pid = pid_of(&reg, &a);
@@ -1061,7 +1333,7 @@ mod tests {
         // hold; it must terminate it through the owner via the kill signal
         // (the cyril-lw67 seam) so the pending wait resolves with the killed
         // status instead of hanging out the full sleep (5s timeout catches it).
-        let reg = TerminalRegistry::new();
+        let reg = test_registry();
         let id = reg.create(&sleep_req("sess-a")).unwrap().terminal_id;
         let pid = pid_of(&reg, &id);
         assert!(!dead_or_zombie(pid), "child must be alive before the reap");
