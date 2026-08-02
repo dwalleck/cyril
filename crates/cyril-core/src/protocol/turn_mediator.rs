@@ -477,6 +477,159 @@ mod tests {
         assert!(m.is_busy(), "turn#1 must be untouched by the absorb");
     }
 
+    /// REGRESSION FENCE (cyril-b4y4 C3/C4; closes cyril-ri8q via its option
+    /// (a) observation seam). The full probe scenario f1–f12, transcribed
+    /// from the pre-extraction capture `.cyril-b4y4/probes/oracle-output.txt`
+    /// — expectations come from the OLD code's observed behavior, not from
+    /// this implementation. Sync, no harness: this test running at all is
+    /// design claim C3.
+    ///
+    /// DISCRIMINATING POWER, by mutation (design C4): absorb-without-clear
+    /// (a71q falsifier M2) fails the f9→f10 pair — f10 would Absorb a second
+    /// time instead of releasing turn#3; release-before-absorb (M3) fails f9
+    /// itself — the dangling Wire expectation would clear live turn#3. Both
+    /// were previously signed blindness B16 ("the bridge cannot see whether
+    /// the ledger clears on absorption"); the Disposition seam is what makes
+    /// them assertable.
+    #[test]
+    fn mediator_matrix_all_dispositions() {
+        let s = "sess_fake-0";
+        let mut m = TurnMediator::new();
+
+        // Turn 1 — live-confirmed order: wire turn_end first (f1), then the
+        // synthesized twin (f2).
+        assert_eq!(
+            m.begin_turn(sid(s), true),
+            BeginTurn::Accepted(TurnId::new(0)),
+            "p1"
+        );
+        assert_eq!(
+            m.observe(&wire_end(s)),
+            Disposition::ForwardTurnComplete,
+            "f1"
+        );
+        assert_eq!(
+            m.observe(&stamped(0)),
+            Disposition::Absorb {
+                owner: TurnId::new(0),
+                first: (CompanionSource::Wire, StopReason::EndTurn),
+                second: (CompanionSource::Synthesized, StopReason::EndTurn),
+            },
+            "f2"
+        );
+
+        // Turn 2 — stale duplicate, foreign terminal, reverse order.
+        assert_eq!(
+            m.begin_turn(sid(s), true),
+            BeginTurn::Accepted(TurnId::new(1)),
+            "p2"
+        );
+        assert_eq!(
+            m.observe(&stamped(0)),
+            Disposition::DropStale {
+                stale: TurnId::new(0)
+            },
+            "f3"
+        );
+        // C5 fence: a foreign terminal forwards but is NOT a turn completion.
+        assert_eq!(
+            m.observe(&wire_end("sess_foreign")),
+            Disposition::Forward,
+            "f4"
+        );
+        assert!(
+            m.is_busy(),
+            "f4: the foreign terminal must not touch the main turn"
+        );
+        assert_eq!(
+            m.observe(&stamped(1)),
+            Disposition::ForwardTurnComplete,
+            "f5"
+        );
+        assert_eq!(
+            m.observe(&wire_end(s)),
+            Disposition::Absorb {
+                owner: TurnId::new(1),
+                first: (CompanionSource::Synthesized, StopReason::EndTurn),
+                second: (CompanionSource::Wire, StopReason::EndTurn),
+            },
+            "f6"
+        );
+        assert_eq!(m.observe(&wire_end(s)), Disposition::DropUnowned, "f7");
+
+        // Turn 3 + turn 4 — the absorb-first precedence block: turn#2's Wire
+        // expectation dangles on the SAME session as live turn#3.
+        assert_eq!(
+            m.begin_turn(sid(s), true),
+            BeginTurn::Accepted(TurnId::new(2)),
+            "p3"
+        );
+        assert_eq!(
+            m.observe(&stamped(2)),
+            Disposition::ForwardTurnComplete,
+            "f8"
+        );
+        assert_eq!(
+            m.begin_turn(sid(s), true),
+            BeginTurn::Accepted(TurnId::new(3)),
+            "p4"
+        );
+        assert_eq!(
+            m.observe(&wire_end(s)),
+            Disposition::Absorb {
+                owner: TurnId::new(2),
+                first: (CompanionSource::Synthesized, StopReason::EndTurn),
+                second: (CompanionSource::Wire, StopReason::EndTurn),
+            },
+            "f9 (M3: a release here means absorb-first is broken)"
+        );
+        assert!(m.is_busy(), "f9: live turn#3 must survive the absorb");
+        assert_eq!(
+            m.observe(&wire_end(s)),
+            Disposition::ForwardTurnComplete,
+            "f10 (M2: an Absorb here means f9 did not clear the ledger)"
+        );
+        assert_eq!(
+            m.observe(&RoutedNotification::global(end_turn())),
+            Disposition::DropUnowned,
+            "f11 (session-None scope, idle, only a Synthesized owed)"
+        );
+        assert_eq!(
+            m.begin_turn(sid(s), true),
+            BeginTurn::Accepted(TurnId::new(4)),
+            "p5"
+        );
+        assert_eq!(
+            m.observe(&stamped(3)),
+            Disposition::Absorb {
+                owner: TurnId::new(3),
+                first: (CompanionSource::Wire, StopReason::EndTurn),
+                second: (CompanionSource::Synthesized, StopReason::EndTurn),
+            },
+            "f12"
+        );
+        assert!(m.is_busy(), "f12: live turn#4 must survive the absorb");
+    }
+
+    /// Pins the one production-unreachable input shape (design step 2, out-of-
+    /// scope note): a session-less unstamped terminal WHILE a turn is live.
+    /// No producer emits it today — synthesis always stamps, `convert::kas`
+    /// always scopes — so this pins current behavior (foreign-shaped Forward)
+    /// rather than leaving a future producer to an accidental cell.
+    #[test]
+    fn global_unstamped_with_live_turn_is_pinned_forward() {
+        let mut m = TurnMediator::new();
+        assert_eq!(
+            m.begin_turn(sid("s"), true),
+            BeginTurn::Accepted(TurnId::new(0))
+        );
+        assert_eq!(
+            m.observe(&RoutedNotification::global(end_turn())),
+            Disposition::Forward
+        );
+        assert!(m.is_busy());
+    }
+
     /// Non-terminal notifications pass through untouched in every state.
     #[test]
     fn non_terminals_forward_untouched() {
