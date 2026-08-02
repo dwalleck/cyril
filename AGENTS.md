@@ -1,194 +1,515 @@
-# AGENTS.md — Cyril
+# CLAUDE.md
 
-> Cross-platform TUI client for [Kiro CLI](https://kiro.dev) via the [Agent Client Protocol (ACP)](https://agentclientprotocol.com). Alpha status.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-<!-- metadata: auto-generated 2026-04-11, see .agents/summary/ for detailed docs -->
+## What This Is
 
-## Workspace Layout
+*Cyril is the polished TUI for the Agent Client Protocol ecosystem.*
 
-Four-crate Rust workspace (Edition 2024, Rust ≥1.94.0):
+Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. Run any of 37+ registered agents — Claude, Cursor, Codex, Cline, Goose, Kiro, and more — through a single interface. Beneath the TUI, composable proxy stages add behaviors no agent ships natively: skill systems, transcript audit, organizational permission policies, persistent memory across sessions, multi-client observers. Vendor neutrality is a feature, not a roadmap; stages are how cyril compounds value over time.
+
+**Status:** Alpha. Today cyril works against Kiro CLI; vendor-neutral agent selection and the proxy-stage layer are in active development. The descriptive sections below document the current Kiro-focused implementation, not the long-term vision.
+
+**Direction:** see [`docs/ROADMAP.md`](docs/ROADMAP.md) for the phased path from current Kiro-focused implementation toward vendor-neutral platform status. New non-trivial work should land in a numbered phase from that document.
+
+## Build & Test Commands
+
+```sh
+cargo build                                                    # build all crates
+cargo check                                                    # type-check without linking (faster)
+cargo check --all-targets                                      # also covers examples and tests
+cargo run                                                      # run the cyril TUI binary
+cargo run --example test_bridge -- --agent-command kiro-cli acp  # end-to-end ACP smoke harness
+cargo test -p cyril-core                                       # run tests in the core crate
+cargo test -p cyril-core -- path                               # run only path-related tests
+```
+
+The project uses Rust 2024 edition, pinned to `1.94.0` via `rust-toolchain.toml`.
+
+```sh
+cargo fmt --check                    # verify formatting
+cargo clippy -- -D warnings          # lint — all warnings are errors
+```
+
+## Development Workflow
+
+### Verify After Every Logical Change
+
+When making multi-file Rust changes, always run `cargo test` and `cargo clippy -- -D warnings` after each logical change set before moving on. Never rely on IDE diagnostics alone — rust-analyzer state can be stale, especially after cross-crate changes or renames. If `cargo check` passes but your IDE shows errors, trust `cargo check`.
+
+### CI failure triage
+
+- CI uses `cargo nextest`, which **cancels on first failure** — one red test per job does NOT mean one defect. Later tests (alphabetically) never ran; fixing the visible failure can unmask a new wave on the next push. Before re-pushing a CI fix, statically audit for the next wave: `grep` the affected test modules for ungated spawns, real-env reads, and platform-specific assertions.
+- Tests that spawn a real process must be `#[cfg(unix)]` (if they assert POSIX semantics or spawn `/bin/sh`-family fixtures) or use a per-platform runnable fixture (see `HostShell::test_runnable_on_host`). Gate the helpers only they use too, or Windows builds get dead-code warnings.
+- Test doubles must not leak real environment: a fake host returning `std::env::current_dir()` broke the selection-matrix tests on Windows only (POSIX-style fixture paths like `/x` are *drive-relative* there and get joined onto the runner's real drive). Fully fake every probe; `Path` equality is component-wise, so a driveless fake cwd keeps expectations byte-identical cross-platform.
+- `cfg(windows)` code is **CI-verified only**: `cargo check --target x86_64-pc-windows-msvc` dies in the `libsqlite3-sys` C build (`lib.exe` not found). Mirror existing idioms exactly and let the Windows CI leg compile it.
+
+### Refactoring and Rewrites
+
+After any rewrite or large refactor, verify functional wiring end-to-end before declaring the work complete:
+
+- Event handlers are connected — notifications reach both `SessionController` and `UiState`
+- Streaming behavior works correctly (append, not replace) — test with a real `kiro-cli acp` session
+- All features from the previous version still function — check the key handling chain, overlays, and command dispatch
+- Cross-cutting concerns in `App` are preserved — picker wiring, model extraction, subagent routing
+
+### Subagent and Task Guidelines
+
+When using subagents for code changes:
+
+- **Non-overlapping file scopes** — each subagent must work on a distinct set of files. If two agents need to touch the same file, serialize them.
+- **Each agent validates its own work** — run `cargo test` and `cargo clippy` before finishing, not just after all agents complete.
+- **Verify completeness before moving on** — after each subagent finishes, check for unstaged files, incomplete implementations, and TODO comments left behind.
+- **Never weaken lint rules** — if a subagent disables `unsafe_code = "forbid"` or downgrades `unwrap_used = "deny"` to make its code compile, that is a bug to fix, not a shortcut to accept.
+
+### Parallel sessions — one worktree per session (cyril-4rc1)
+
+Concurrent Claude sessions MUST NOT share this checkout. When two sessions
+commit in the same working directory, commits land on whichever branch is
+checked out — a session's work "hitchhikes" onto another's branch, and the
+relocation rebases have dropped commits (happened 3×). Each concurrent session
+works in its own linked **git worktree** instead; git then refuses to check out
+one branch in two worktrees, so the collision is structurally impossible.
+
+Start a session's worktree and enter it:
+
+```sh
+dest=$(scripts/session-worktree.sh feat/cyril-xyz)   # create or reuse; prints the path
+cd "$dest"
+```
+
+The primary checkout (`~/repos/cyril`) is for **main-line commits only**
+(`chore(rivets)`, docs, merges). A tracked guard enforces this — enable it once
+per clone:
+
+```sh
+git config core.hooksPath .githooks   # activates .githooks/pre-commit
+```
+
+Once enabled, a feature-branch commit made in the primary checkout is refused
+with a pointer to the helper; feature commits inside a linked worktree pass
+untouched. Override in a pinch with `git commit --no-verify`. This git guard is
+separate from the Claude-Code `rustfmt` hook (a harness hook in
+`.claude/settings.json`); `.githooks/` is the repo's git-hooks directory.
+
+### Reverse Engineering
+
+When reverse-engineering Kiro CLI or similar tools, follow this priority order:
+
+1. **Application logs first** — check `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` and `~/.kiro/` for structured logs and SQLite databases
+2. **Bundled source extraction** — Kiro ships a bundled `tui.js` (React/Ink TUI) that contains TypeScript interfaces and protocol handling; extract and read it
+3. **Binary string extraction** — `strings` / symbol analysis on unstripped binaries as a last resort
+4. **Protocol tracing** — two ways to capture live ACP traffic: (a) Kiro-native — set `KIRO_ACP_RECORD_PATH=/path/trace.jsonl` and the TUI records every frame as `{ts, dir, msg}` JSONL (zero setup, captures a real session both directions); (b) the logging proxy at `experiments/kiro-proxy-rs/` (`KIRO_PROXY_LOG`) when you need to sit in cyril's own spawn path. Committed reference captures + inventory: `experiments/conductor-spike/{kas,v2}-live-session-trace-2.11.0.{jsonl,md}`; diff two captures with `diff-acp-wire.py`.
+5. **Embedded doc-manifest delta** — `kiro-cli-chat` embeds a build-time documentation index (`{generated_at, total_docs, documents[]}`, two manifests in 2.8.1) that is a *superset* of the public kiro.dev docs and leaks unannounced features (e.g. `voice-mode`/Whisper). Diff `documents[]` (by `path`+`title`+`validated`) against the prior release each audit; baseline + extractor output at `docs/kiro-docs-index-2.8.1*`. See the doc-manifest addendum in the wire-audit methodology.
+
+Check logs and databases before attempting binary analysis — they're more reliable and faster to work with.
+
+### Research archive
+
+Kiro binaries, tui.js bundles, and strings dumps live **outside the repo** at `~/.local/share/kiro-research/`:
 
 ```
-crates/
-  cyril/          # Binary — event loop, terminal I/O, rendering orchestration
-    src/
-      main.rs       # CLI parsing (clap), bridge spawn, tokio runtime
-      app.rs        # Event loop (tokio::select!), notification routing, command dispatch
-    tests/
-      event_routing.rs  # Integration tests for notification routing
-    examples/
-      test_bridge.rs    # Bridge testing utility
-
-  cyril-core/     # Library — protocol, types, commands, session management
-    src/
-      protocol/
-        bridge.rs     # BridgeHandle/BridgeSender channel pair, spawn_bridge(), bridge loop
-        client.rs     # KiroClient — implements acp::Client trait (!Send, bridge thread)
-        convert.rs    # Notification conversion layer (largest file — ACP → typed Notification)
-        transport.rs  # AgentProcess::spawn() — launches kiro-cli acp subprocess
-      commands/
-        mod.rs        # CommandRegistry, Command trait, CommandContext, CommandResult
-        builtin.rs    # help, clear, quit, new, load
-        subagent.rs   # spawn, kill, msg, sessions
-      types/          # Domain types: event, tool_call, session, subagent, command, config, etc.
-      session.rs      # SessionController — session metadata state machine
-      subagent.rs     # SubagentTracker — tracks subagent roster from list_update notifications
-      error.rs        # Error + ErrorKind enum
-      platform/
-        path.rs       # Windows ↔ WSL path translation (C:\ ↔ /mnt/c/)
-
-  cyril-ui/       # Library — UI state, rendering, widgets
-    src/
-      state.rs        # UiState — central state machine, implements TuiState trait
-      traits.rs       # TuiState (read-only renderer trait), Activity, ChatMessage, overlay types
-      render.rs       # Frame layout (panic-safe), widget orchestration
-      subagent_ui.rs  # SubagentUiState — per-subagent message streams, drill-in focus
-      stream_buffer.rs # Semantic-boundary streaming buffer
-      file_completer.rs # @-file autocomplete (async, .gitignore-aware)
-      highlight.rs    # Syntect-based syntax highlighting with a bounded cache
-      cache.rs        # Generic bounded cache (insertion-order, oldest-half eviction)
-      widgets/
-        chat.rs       # Message display, tool call diffs, subagent drill-in
-        markdown.rs   # pulldown-cmark → ratatui spans with syntax highlighting
-        input.rs      # Multi-line input with cursor + autocomplete overlay
-        toolbar.rs    # Top bar (session/mode/model) + bottom status bar (context/activity)
-        crew_panel.rs # Subagent status panel (max 6 rows + overflow)
-        hooks_panel.rs # Hooks overlay popup (three-column table)
-        picker.rs     # Fuzzy-filtered selection list (nucleo-matcher)
-        approval.rs   # Permission approval dialog
-
-  cyril-voice/    # Library — voice input (speech-to-text) engine
-    src/
-      lib.rs        # STT engine entry point
+~/.local/share/kiro-research/
+├── binaries/<ver>/      # kiro-cli, kiro-cli-chat, kiro-cli-term + BUILD-INFO
+├── tui-bundles/         # kiro-tui-<ver>.js + .sha256 sidecars
+└── strings/<ver>/       # *.strings dumps for old versions
 ```
+
+Why outside: binaries are 3.3 GB across versions and reproducible from the versioned S3 origin (`https://desktop-release.q.us-east-1.amazonaws.com/<ver>/kirocli-<arch>-linux.tar.zst`). `.gitignore` blocks `docs/kiro-binaries-*/` and `docs/kiro-tui-*.js*` to prevent accidental git addition.
+
+Small derived items (manual ACP captures, extracted system prompts, changelogs, schemas) stay in `docs/kiro-*` since they're version-controlled-friendly and load-bearing for tooling like `experiments/conductor-spike/diff_fields.py`.
+
+Tooling references the archive via `$HOME/.local/share/kiro-research/binaries/<ver>/...` — see `experiments/conductor-spike/conductor-wrapper-2.1.0.sh` for the pattern.
 
 ## Architecture
 
-### Bridge Pattern
+### Four-Crate Workspace
 
-The bridge connects the App to `kiro-cli acp` via three async channels:
-
-- **App → Bridge:** `BridgeCommand` (mpsc, cap 32) — prompts, session control, agent commands
-- **Bridge → App:** `RoutedNotification` (mpsc, cap 256) — agent output, tool calls, metadata
-- **Bridge → App:** `PermissionRequest` (mpsc, cap 16) — approval dialogs (oneshot response)
-
-`BridgeHandle.split()` yields a cloneable `BridgeSender` + two receivers for `tokio::select!`.
-
-### Notification Routing
-
-Every `RoutedNotification` carries `Option<SessionId>`:
-- `None` → global (bridge lifecycle, subagent list updates) → main pipeline
-- `Some(id)` matching main session → main state machines
-- `Some(id)` not matching → `SubagentUiState` (subagent stream)
-
-### State / Renderer Separation
-
-`UiState` implements `TuiState` (read-only trait). The renderer receives `&dyn TuiState` and cannot mutate state. Mutations happen only in the App event loop.
-
-### Command Registry
-
-Commands implement `Command` trait (`name`, `description`, `execute`). `CommandRegistry` stores `Arc<dyn Command>`, supports:
-- Builtin commands registered at startup
-- Agent commands dynamically registered from server-advertised `CommandsUpdated`
-- Subagent commands (`spawn`, `kill`, `msg`, `sessions`)
-- Alias resolution and deduplication
-
-`CommandResult` variants: `SystemMessage`, `ShowPicker`, `Dispatched`, `Quit`, `NotACommand`.
-
-### Event Loop Priority (biased `tokio::select!`)
-
-1. Terminal input (keyboard/mouse)
-2. Permission requests
-3. Notifications
-4. Redraw timer (adaptive: 33ms streaming → 500ms idle)
-
-## Rust Engineering Rules
-
-These are the non-negotiable conventions for this workspace. They take precedence over generic Rust habits.
-
-### Build, Test & Verify (run before declaring work done)
-A green build is necessary but not sufficient — run the full gate, not just `cargo build`:
-
-```bash
-cargo fmt --all                              # format (edition 2024)
-cargo clippy --workspace --all-targets -- -D warnings   # lints must be clean
-cargo test --workspace                       # unit + integration tests
+```
+crates/
+  cyril-core/     # Library — protocol, types, commands, session, platform
+  cyril-ui/       # Library — rendering, widgets, UI state (depends on cyril-core)
+  cyril-voice/    # Library — speech-to-text voice input engine; behind the default-off `voice` feature (ROADMAP CN2)
+  cyril/          # Binary — wires everything together, owns the event loop
 ```
 
-- Lints are CI-grade discipline even though no CI workflow exists yet: treat any clippy warning as a failure.
-- `unwrap_used = "deny"` and `expect_used = "warn"` are enforced workspace-wide (`Cargo.toml [workspace.lints]`). A clippy run surfaces violations.
-- When `cargo clippy --fix` rewrites files via the shell, formatting is reapplied by `.claude/hooks/cargo-fmt-after-clippy.sh` — do not hand-format around it.
+### Layer Responsibilities
 
-### Error Handling
-- `cyril-core` and `cyril-ui` each define their own `Error`/`ErrorKind` enums via `thiserror`. The binary crate uses `Box<dyn Error>` (and `anyhow`) only at the top level.
-- **Map external errors at the boundary.** Errors from `agent-client-protocol`, `serde_json`, `toml`, etc. get translated into a typed `ErrorKind` variant inside the module that calls them — they must not leak into a crate's public API.
-- Preserve the source chain: put inner errors in `#[source]` / `#[from]` fields rather than formatting them into a `String` early. Only flatten to a string at the outermost boundary where the chain is logged.
-- Prefer dedicated enum variants over `reason: String` sentinels when a caller might branch on the cause.
+Each crate has a clear responsibility and strict rules about what it must NOT do:
 
-### No `.unwrap()` / `.expect()` in production code (tests are exempt)
-- `unwrap_used = "deny"` makes `.unwrap()` a hard error outside tests. Handle the `None`/`Err` case with `?`, `match`, or a typed error.
-- `expect_used` is `warn` only because tests legitimately use `.expect()`. Do not introduce `.expect()` in non-test code.
-- Do not silence these with `#[allow(...)]` at the call site — fix the code. If a lint is genuinely wrong, change it in `[workspace.lints]` with a comment, not inline.
+**`cyril-core`** — Domain logic and protocol boundary.
+- **Owns:** Types (`types/`), ACP protocol bridge (`protocol/`), command registry (`commands/`), session state (`session.rs`), path translation (`platform/`), error types (`error.rs`)
+- **Responsibility:** Convert between ACP wire types and internal domain types. Generic ACP conversion lives in `convert/mod.rs`; v2 Kiro extensions (`kiro.dev/*`) in `convert/kiro.rs`; KAS extensions (`_kiro/*`, `session_info_update` kinds) in `convert/kas.rs`. The bridge runs on a dedicated `!Send` thread and communicates via typed channels.
+- **Must NOT:** Import any UI crate. Reference ratatui, crossterm, or any rendering concept. Know how content is displayed.
+- **Dependency rule:** Only crate that imports `agent-client-protocol`. No other crate may reference `acp::` types.
 
-### Parse, don't validate, at deserialization boundaries
-- Untrusted input — most importantly the raw ACP protocol messages decoded in `convert.rs` — should be turned into typed domain values as early as possible, not passed around as loose strings/`Value`s and re-checked later.
-- A free `validate_x(&T)` that nothing constructs is usually a missed newtype. Wrap the invariant in a type with a fallible constructor.
+**`cyril-ui`** — Rendering and UI state.
+- **Owns:** `UiState` (all mutable UI state), `TuiState` trait (read-only rendering interface), widgets (`widgets/`), markdown rendering, syntax highlighting, file completer, stream buffer
+- **Responsibility:** Given notifications, update UI state. Given `&dyn TuiState`, render frames. All rendering decisions live here.
+- **Must NOT:** Import `agent-client-protocol`. Know about ACP, JSON-RPC, or the bridge. Send commands to the bridge. Make async calls.
+- **Dependency rule:** Depends on `cyril-core` for types only — never `protocol::`.
 
-### Exhaustive matching over `_ =>` for protocol and error enums
-- When converting ACP messages (`convert.rs`) or projecting one error/event enum into another, match every variant explicitly. Avoid `_ => ...` catch-alls.
-- This makes a new ACP protocol variant a compile error that forces a conscious decision, instead of silently falling through. `convert.rs` is the file most likely to drift as `agent-client-protocol` is upgraded — exhaustiveness is the guardrail.
+**`cyril`** — Thin orchestrator binary.
+- **Owns:** `App` (event loop), CLI args, terminal setup, wiring between components
+- **Responsibility:** Wire `cyril-core` and `cyril-ui` together. Run the `tokio::select!` event loop. Dispatch key events through the layered handler. Route notifications to both `SessionController` and `UiState`. Handle cross-cutting concerns (opening pickers from `CommandOptionsReceived`, extracting model from `CommandExecuted`).
+- **Must NOT:** Contain business logic or protocol knowledge. Parse JSON responses (that's `cyril-core`'s job). Make rendering decisions (that's `cyril-ui`'s job).
 
-## Repo-Specific Patterns
+### Component Separation Within Crates
 
-### ACP Client (`!Send`)
-`KiroClient` implements `acp::Client` with `async_trait(?Send)` because it uses `RefCell<HashMap>` for tool call input caching. Lives exclusively in the bridge thread.
+The crate boundaries enforce dependency rules, but equally important is the separation **within** each crate. Each component has a single responsibility:
 
-### Notification Conversion (`convert.rs`)
-The largest file. Translates raw ACP protocol messages → typed `Notification` variants. Maintains a `tool_call_inputs` cache because permission requests arrive without `raw_input`. Most likely file to need changes when the ACP protocol evolves.
+**`SessionController`** (`cyril-core/session.rs`) — Pure state machine for session data.
+- `apply_notification(&Notification) -> bool` — updates session fields, returns whether state changed
+- No async. No side effects. No bridge access. No UI knowledge.
+- Owns: session ID, current mode, cached model, context usage, credit usage, agent commands
+- Testable by constructing a controller, applying notifications, and asserting field values.
 
-### Streaming Buffer
-`StreamBuffer` is designed to flush at semantic boundaries (newlines, code fences) or after a timeout. **It has no production consumer** — nothing constructs it, and the `[ui]` option that nominally configured its timeout was removed in cyril-nd4h once it turned out to configure nothing. Its fate is tracked at cyril-ell0.
+**`UiState`** (`cyril-ui/state.rs`) — Pure state machine for UI data.
+- `apply_notification(&Notification) -> bool` — updates UI fields, returns whether state changed
+- No async. No bridge access. Does not send commands or open pickers.
+- Owns: messages, streaming buffers, tool call index, input text/cursor, autocomplete, approval/picker overlays, activity state, subagent tracker, subagent UI streams
+- Subagent state is mutated via delegating methods (`apply_subagent_notification`, `apply_subagent_list_update`, `focus_subagent`, etc.) — callers never reach into the private `subagents` field.
+- Testable by constructing state, applying notifications, and asserting field values.
 
-### Panic-Safe Rendering
-`render::draw()` wraps the inner draw in `catch_unwind`. On panic, renders a fallback "Render error" message instead of crashing.
+**`CommandRegistry`** (`cyril-core/commands/mod.rs`) — Command dispatch.
+- `parse(&str) -> Option<(&dyn Command, &str)>` — finds the command, returns it with args
+- Commands get `CommandContext { session: &SessionController, bridge: &BridgeSender, subagent_tracker: Option<&SubagentTracker> }` — read-only session and tracker, write-only bridge. No UI state access.
+- Commands return `CommandResult` (SystemMessage/ShowPicker/Dispatched/Quit) — the App decides what to do with the result.
 
-## Config & Tooling
+**`App`** (`cyril/app.rs`) — Thin orchestrator. Owns all components but contains no business logic.
+- Routes notifications to both `SessionController` and `UiState`
+- Handles cross-cutting concerns: wiring `CommandOptionsReceived` to `show_picker()`, extracting model from `CommandExecuted`
+- The ONLY place where all components interact — if logic can live in a component, it should not be in App.
 
-### User Config
-`~/.config/cyril/config.toml` (TOML). Falls back to defaults if missing/invalid.
+**`convert/`** (`cyril-core/protocol/convert/`) — Directory module that imports both `acp::` and internal types. `mod.rs` handles generic ACP; `kiro.rs` handles Kiro-specific extensions.
+- All Kiro protocol quirks live in `kiro.rs`: subagent helpers, `kiro.dev/*` method dispatch, metadata parsing.
+- If a new Kiro deviation is discovered, handle it in `convert/kiro.rs` — never in `mod.rs`.
+- A second vendor (e.g. `convert/claude.rs`) would follow the same pattern.
 
-Key options: `ui.max_messages` (500), `ui.mouse_capture` (true), `agent.agent_name` ("kiro-cli").
+**`TuiState` trait** (`cyril-ui/traits.rs`) — Read-only rendering contract.
+- ~25 methods, all returning references or Copy types
+- The renderer receives `&dyn TuiState`, never `&App` or `&mut UiState`
+- Compile-time guarantee that rendering cannot mutate state
 
-Every `[ui]` key is consumed at `App::new`, which destructures `UiConfig` exhaustively — a new key that nothing reads fails to compile (cyril-nd4h). Unknown keys in an existing file are ignored, so options removed in a later release never break an old config.
+**`TrackedToolCall`** (`cyril-ui/traits.rs`) — Display-oriented wrapper around `cyril_core::types::ToolCall`.
+- Adds display logic: `primary_path()`, `command_text()` — these are presentation concerns, not data concerns
+- The core `ToolCall` carries data; `TrackedToolCall` interprets it for display
 
-### Git Hooks
-`.claude/hooks/rustfmt.sh` — runs `rustfmt --edition 2024` on staged `.rs` files before commit (a Claude-Code harness hook, wired in `.claude/settings.json`).
+### Data Flow
 
-`.githooks/pre-commit` — the cyril-4rc1 worktree guard: in the **primary** checkout it refuses a feature-branch commit (feature work belongs in a per-session worktree; parallel sessions collide in a shared checkout). Enable once per clone with `git config core.hooksPath .githooks`; bypass with `git commit --no-verify`. `.githooks/` is the repo's git-hooks directory (distinct from the harness hook above).
+```
+User input → CommandRegistry::parse() → Command::execute() → BridgeSender::send(BridgeCommand)
+                                                                    ↓ (mpsc channel)
+                                                              Bridge thread (dedicated OS thread)
+                                                                    ↓ (JSON-RPC over stdio)
+                                                              kiro-cli acp
+                                                                    ↓ (ACP callbacks)
+                                                              KiroClient (protocol/client.rs)
+                                                                    ↓ (mpsc channels)
+                                                    Notification / PermissionRequest
+                                                                    ↓
+App event loop (tokio::select!):
+  ├─ Notification → SessionController::apply_notification()
+  │               → UiState::apply_notification()
+  │               → cross-cutting handlers (CommandOptionsReceived, CommandExecuted, etc.)
+  ├─ PermissionRequest → UiState::show_approval()
+  └─ Terminal Event → layered key dispatch
+                                                                    ↓
+                                              ratatui render (adaptive frame rate)
+```
 
-### Parallel sessions
-Run each concurrent session in its own linked worktree — `dest=$(scripts/session-worktree.sh <branch>) && cd "$dest"` — never share the primary checkout. See CLAUDE.md → "Parallel sessions" for the full rationale.
+### Key Boundaries
 
-### Logging
-JSON-structured logs to `~/.config/cyril/cyril.log` via `tracing-subscriber`. Enable debug: `RUST_LOG=debug cargo run`.
+**Bridge thread (`protocol/bridge.rs`):** Runs `!Send` ACP types in a quarantined `current_thread` + `LocalSet` runtime. All communication is via three bounded mpsc channels: commands in, notifications out, permission requests out. The bridge MUST send a notification for every command it processes — including error cases — so the App never gets stuck.
 
-### Testing
-431 test functions. Unit tests in-file (`#[cfg(test)]`), integration tests in `tests/`. Uses `rstest` for fixtures, `insta` for snapshots, `tempfile` for temp dirs. `MockTuiState` in `traits.rs` for widget testing.
+**Conversion boundary (`protocol/convert/`):** Directory module that imports both `acp::` and internal types. `mod.rs` handles generic ACP; `kiro.rs` handles Kiro-specific extensions. No other file should import `acp::` types.
 
-### Key Dependencies
-- `agent-client-protocol` 0.10 — ACP trait + transport (critical, version-sensitive)
-- `ratatui` 0.30 — TUI framework (uses `unstable-rendered-line-info`)
-- `crossterm` 0.29 — terminal I/O (event-stream feature)
-- `syntect` 5 — syntax highlighting
-- `pulldown-cmark` 0.13 — markdown parsing
-- `similar` 2 — diff computation for tool call content
-- `nucleo-matcher` 0.3 — fuzzy matching for picker
+**TuiState trait (`cyril-ui/traits.rs`):** Read-only interface the renderer uses. Every method returns a reference or Copy type — compile-time guarantee that rendering cannot mutate state. The renderer receives `&dyn TuiState`, never `&App` or `&mut UiState`.
 
-## Detailed Documentation
+### Notification-Driven Architecture
 
-See `.agents/summary/index.md` for the full documentation index with query routing guidance.
+All agent interactions are notification-driven. Commands return immediately; results arrive as notifications:
 
-## Custom Instructions
-<!-- This section is for human and agent-maintained operational knowledge.
-     Add repo-specific conventions, gotchas, and workflow rules here.
-     This section is preserved exactly as-is when re-running codebase-summary. -->
+| User action | BridgeCommand | Notification back | App reacts |
+|---|---|---|---|
+| Send prompt | `SendPrompt` | `AgentMessage`, `ToolCallStarted`, `TurnCompleted` | Streams to chat |
+| `/new` | `NewSession` | `SessionCreated` | Updates session state |
+| `/model` (no args) | `QueryCommandOptions` | `CommandOptionsReceived` | Opens picker |
+| `/tools` | `ExecuteCommand` | `CommandExecuted` | Shows formatted response |
+| Picker confirms | `ExecuteCommand` | `CommandExecuted` | Shows confirmation |
+
+**The event loop must NEVER block on command execution.** Commands send a `BridgeCommand` and return `Dispatched`. Results come back asynchronously as notifications.
+
+### Subagent Support
+
+Kiro v1.29+ supports subagents — child sessions spawned from the main agent that run in parallel with their own tool access and message streams. Cyril observes, displays, and controls these via:
+
+> **KAS uses a different subagent model.** This whole section describes the **v1/v2** engine (`agent_crew` + `kiro.dev/subagent/list_update`, which `SubagentTracker`/`crew_panel` key off). The **KAS** engine sends **no `list_update`** — its subagents are plain `tool_call`s tagged `_meta.kiro.kind: "agent-subtask"`, grouped by `agentSubtaskId`, with an `OrchestrateSubAgent` fail-fast DAG tool (**correction:** the earlier "no loop" is stale — it ships a bounded `repeat` loop, `maxIterations` 1–20 + `stopCondition` + `onMaxIterations`, present at least since KAS 0.18.2 / kiro-cli 2.13.0. **LIVE-CONFIRMED 2026-08-01 on 2.16.0** (was static-only until then). The tool is **client-gated**: it only appears when `subagentOrchestration` is set in **`initialize._meta.kiro.settings`** (the `session/new` form does not work — the initialize form is what overrides the backend flag `prompts.ts` reads). Measured rawInput: `{task, stages[{name, role, prompt_template, depends_on?, inlineAgent?}], repeat?{maxIterations 1-20, stopCondition{containsText}, onMaxIterations continue|abort}}`. The tool_call also carries **`_meta.kiro.pipeline {groupId, stages[{name, role, status, dependsOn[], agentSubtaskId}]}`** — that is the render contract. **Rendering trap:** the pipeline meta has NO iteration counter, so across `repeat` iterations the same stage entry cycles running→completed→running→completed; only `agentSubtaskId` distinguishes iterations. See [docs/kiro-2.16.0-wire-audit.md](docs/kiro-2.16.0-wire-audit.md).** See [docs/kiro-2.14.1-wire-audit.md](docs/kiro-2.14.1-wire-audit.md)) and bundled verification agents (`semantic_reviewer`, `functional_task_alignment`). Rendering KAS crews needs a separate path — see ROADMAP KAS-3 and [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md).
+
+**Components:**
+
+- **`SubagentTracker`** (`cyril-core/src/subagent.rs`) — Pure state machine defined in `cyril-core`, held as a field inside `UiState` (cyril-ui). Tracks metadata from `kiro.dev/subagent/list_update` notifications: which subagents are active, their status, group, dependencies, and inbox counters. `apply_notification(&Notification) -> bool`, same pattern as `SessionController`.
+- **`SubagentUiState`** (`cyril-ui/src/subagent_ui.rs`) — Per-subagent message streams (`HashMap<SessionId, SubagentStream>`), drill-in focus state, and `any_active()` for frame rate. Each `SubagentStream` mirrors `UiState`'s streaming-text → committed-message pattern.
+- **`crew_panel`** widget (`cyril-ui/src/widgets/crew_panel.rs`) — Renders a bordered status bar with one row per subagent + pending stage. Clamps to `MAX_CREW_ROWS` with a `+N more` overflow indicator. Single source of truth for sizing via `height_for(state)`.
+
+**Notification routing via `RoutedNotification`:**
+
+Every session notification carries a `session_id` from the ACP envelope. The bridge → App channel carries `RoutedNotification { session_id: Option<SessionId>, notification: Notification }`. The App compares `session_id` against its main session and routes:
+
+- `None` or matches main → dispatched to `SessionController` + `UiState` (main pipeline)
+- Matches a known subagent in the tracker → dispatched to `UiState::apply_subagent_notification` (creates stream on first contact)
+- Unknown session → also routes to subagent stream (optimistic, in case `list_update` hasn't arrived yet)
+
+`SubagentListUpdated` is global — it updates both the tracker and `SubagentUiState::apply_list_update` (which marks removed streams terminated, preserving their history).
+
+**Slash commands** (`cyril-core/src/commands/subagent.rs`):
+
+- `/sessions` — lists active subagents and pending stages from the tracker
+- `/spawn <name> <task>` — sends `BridgeCommand::SpawnSession`
+- `/kill <name>` — looks up by `session_name` via `SubagentTracker::find_by_name()`, sends `BridgeCommand::TerminateSession`
+- `/msg <name> <text>` — same lookup, sends `BridgeCommand::SendMessage`
+
+Subagent commands need read access to `SubagentTracker`, so `CommandContext` carries `subagent_tracker: Option<&SubagentTracker>`. Tests that don't exercise subagent commands pass `None`.
+
+**Drill-in:** When a subagent is focused (`focus_subagent()`), `chat::render` swaps the main viewport for the focused subagent's stream with a `─── <name> [Esc] Back` header. `SubagentUiState::focus()` validates that the session has an active stream — returns `false` and logs a warning if not. Esc key exits drill-in before cancelling a busy session.
+
+**Frame rate:** When any subagent stream is actively streaming or running tools, `any_subagent_active()` returns `true` and the adaptive frame rate uses fast tick (50ms).
+
+### Key Handling Layers
+
+Input dispatch follows strict priority (each layer consumes or passes through):
+
+1. **Global shortcuts** (Ctrl+C, Ctrl+Q, Ctrl+M) — always active
+2. **Approval overlay** — consumes all keys if active, early return
+3. **Picker overlay** — consumes all keys if active, early return
+4. **Hooks panel overlay** — Esc closes, arrow/page keys scroll, all others consumed
+5. **Code panel overlay** — Esc closes, `r` refreshes, all others consumed
+6. **Autocomplete** — `handle_autocomplete_key()` returns `AutocompleteAction` enum (Consumed/Accepted/AcceptedAndSubmit/NotActive), early return unless NotActive
+7. **Normal input** — Enter submits, Esc cancels, other keys go to textarea
+
+Any new modal overlay must be added to both this chain and the mouse-scroll guard in `handle_terminal_event`.
+
+### Streaming Content Model
+
+Agent text and tool calls commit to the message list in chronological order as they arrive:
+
+- `AgentMessage` chunks accumulate in `streaming_text`
+- When `ToolCallStarted` arrives, flush `streaming_text` to a committed `AgentText` message, then commit the tool call to messages at that position
+- `ToolCallUpdated` updates the committed tool call in-place via `merge_update` (preserves content/locations from initial notification)
+- When `TurnCompleted` arrives, flush any remaining `streaming_text`
+- Result: messages list has `[AgentText, ToolCall, AgentText, ...]` in arrival order
+
+### Path Translation (`cyril-core/src/platform/path.rs`)
+
+On Windows, all paths crossing the WSL boundary go through `win_to_wsl()` / `wsl_to_win()`. On Linux, path translation is a no-op.
+
+Two path families translate on Windows (cyril-8tq6):
+
+- **Drive mounts:** `/mnt/c/...` ↔ `C:\...` (unconditional).
+- **WSL-internal paths** (`/home/...`, `/tmp/...`, non-drive `/mnt` entries):
+  `/...` ↔ `\\wsl$\<distro>\...`, only when the WSL distro is known. Resolution
+  runs once per process: `CYRIL_WSL_DISTRO` env var wins; otherwise a process
+  cwd under `\\wsl$\` / `\\wsl.localhost\` donates its distro segment; otherwise
+  WSL-internal paths pass through unchanged (honest NotFound downstream) with a
+  one-time warning. Both UNC prefixes are accepted inbound; `\\wsl$` is emitted
+  (works on every WSL2 system). The distro segment must match exactly —
+  `\\wsl$\Ubuntu-other\...` never matches distro `Ubuntu` (Microsoft wslpath
+  conformance; see `.cyril-8tq6/` for the probe evidence).
+
+## ACP Protocol Notes
+
+For the comprehensive protocol reference with example requests/responses, see **[docs/kiro-acp-protocol.md](docs/kiro-acp-protocol.md)**.
+
+> **⚠️ Two engines as of kiro-cli 2.7.1.** Everything in this section describes the **v1/v2 (Rust) engine** — cyril's current default (`kiro-cli acp`). 2.7.1 embeds a **second engine, KAS** (`acp --agent-engine kas` / hidden `chat --v3`), a TypeScript/LangGraph agent with its own **`_kiro/*` dialect** that differs on several points below. KAS is reachable over ACP today and is the strategic direction. Several v2-only claims in this section are **not** true for KAS — they're flagged inline. **Full KAS wire reference: [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md)** (auth contract, subagent/crew model, fs+terminal host callbacks, hooks, bundled agents, steering fileMatch, agent-config migration). **Authoritative `_kiro/*` type contract: [docs/kiro-kas-acp-covenant.md](docs/kiro-kas-acp-covenant.md)** — the curated `@kiro/acp-type-covenant` reference (full method catalog, `KiroClientMeta` handshake flags, `AgentSettings`, `session_info_update` union, host-callback signatures). **For any KAS `_kiro/*` question, read the covenant doc/package FIRST** — it is the wire contract; `@kiro/agent` is only the implementation, and reading it instead produced wrong conclusions. The KAS integration plan is **ROADMAP "KAS engine integration track" (KAS-1…6)**.
+
+- **Protocol**: JSON-RPC 2.0 over stdio (ACP v2025-01-01)
+- The `agent-client-protocol` crate (v0.10.2; schema `agent-client-protocol-schema` v0.11.2) from crates.io is the source of truth for ACP types. Actual type definitions live in the schema crate (transitive dependency). Note: `SessionUpdate` is a serde-tagged enum with no `#[serde(other)]` catch-all, so an unknown typed `session/update` variant hard-fails at deserialization before reaching `convert/`; the `_kiro.dev/*` / `_kiro/*` ext dialects ride the raw-JSON `ext_notification` path and are not subject to this.
+- Tool calls with `kind == ToolKind::Other` are "planning" steps from the agent and are filtered from display.
+- **Kiro logs**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux). Set `KIRO_LOG_LEVEL=debug` for verbose output.
+- **Wire format = binary × backend.** What kiro-cli emits depends on both the binary version and the AWS backend's current behavior. Same-day captures with different binaries isolate binary changes; same-binary captures across time isolate backend rollouts. Mixing the axes conflates both — the metering fields appearing on `_kiro.dev/metadata` between April and May 2026 was a backend rollout, not a binary change.
+- **Wire-format audit artifacts:** [`experiments/conductor-spike/`](experiments/conductor-spike/README.md) has same-day 2.1.0/2.2.0 baselines, the `diff_fields.py` structural differ, and reproducible wrapper scripts. Use these for any wire-format investigation rather than rebuilding from scratch.
+
+### Session Updates (`session/update`)
+
+Sent as `SessionNotification` containing a `SessionUpdate` enum. **Turn completion is signaled by the `session/prompt` response** (with `stop_reason: EndTurn`), not by a notification.
+
+Key variants: `AgentMessageChunk`, `AgentThoughtChunk`, `ToolCall`, `ToolCallUpdate`, `Plan`, `AvailableCommandsUpdate`, `CurrentModeUpdate`, `ConfigOptionUpdate`.
+
+### Tool Call Lifecycle
+
+Tool calls follow a three-phase lifecycle:
+1. `ToolCall` with `status: InProgress` — tool initiated
+2. `ToolCall` with `status: Pending` — title updated (e.g., "Reading file.rs:1"), awaiting permission if needed
+3. `ToolCallUpdate` with `status: Completed` — execution finished
+
+The agent may initiate multiple tool calls in parallel before waiting for permission responses.
+
+### Permission Requests (`session/request_permission`)
+
+A server-to-client request (has an `id`, expects a JSON-RPC response). The agent asks for permission before executing certain tools.
+
+- **File reads** do not require permission — they execute automatically
+- **Shell commands** require permission — options are typically `Yes(AllowOnce)`, `Always(AllowAlways)`, `No(RejectOnce)`
+- `AllowAlways` makes the agent remember the choice for the rest of the session
+
+### `session/cancel`
+
+A notification (fire-and-forget, no response expected). Cyril sends this on Esc when `is_busy`.
+
+### Kiro Extension Commands (`kiro.dev/commands/*`)
+
+**`commands/execute`** — The `command` field must be an object `{"command": "<name>", "args": {<args>}}` (a `TuiCommand` adjacently tagged enum), NOT a plain string. Sending a string crashes kiro-cli. Selection commands pass their value as `{"value": "<selected>"}` in args.
+
+**`commands/options`** — Query available options for selection commands. Options use `label` (not `name`) for display, plus `value`, `description`, `group`, and optional `current` boolean.
+
+**`commands/available`** — Notification sent after session creation with the full command list, tools, and MCP servers.
+
+**`metadata`** — Notification with `contextUsagePercentage` after each turn. Not in official docs.
+
+### `session/new` Response
+
+Includes more than just `session_id`:
+- `modes` — `SessionModeState` with `current_mode_id` and `available_modes` list (displayed in toolbar)
+- `config_options` — always `null` on the v1/v2 engine (`session/set_config_option` not implemented). **KAS populates it** (`mode`/`autopilot`/`contentCollection`) and `set_config_option` works there.
+
+### Methods NOT implemented by the v1/v2 engine (KAS differs — see the KAS audit)
+
+These hold for the default v1/v2 (Rust) engine. **KAS implements several of them** — verify against `docs/kiro-2.7.1-wire-audit.md` before assuming a method is unavailable when running `--agent-engine kas`.
+
+- `session/set_config_option` — v1/v2: "Method not found" (use `kiro.dev/commands/execute` with `model`). **KAS: works** (`{sessionId, configId, value}` → rebuilt `configOptions`).
+- `session/set_model` — behind unstable feature flag, not advertised in capabilities.
+- `session/fork`, `session/resume`, `session/list` — v1/v2: unstable, `sessionCapabilities: {}`. **KAS: `sessionCapabilities {list, fork}` are non-empty and functional.**
+
+## Adding New Features
+
+### New ACP event type
+1. Add a variant to the appropriate sub-enum in `event.rs` (`ProtocolEvent` for standard ACP, `ExtensionEvent` for Kiro-specific)
+2. Emit it from `KiroClient` in `protocol/client.rs` wrapped in `AppEvent::Protocol(...)` or `AppEvent::Extension(...)`
+3. Handle it in the matching `App::handle_*_event()` method in `app.rs`
+
+### New slash command
+1. Add the command name to `parse_command()` match in `commands.rs`
+2. Implement the handler as an associated function on `CommandExecutor` — take only what you need as parameters
+3. Call it from the `execute()` dispatch match
+
+### New session state
+1. Add a private field to `SessionContext` in `session.rs` with a getter and setter
+2. If the field has a cache invariant (like `cached_model`), maintain it in the setter
+3. Update from the appropriate event handler in `app.rs`
+
+### New UI component
+1. Create a module in `cyril/src/ui/` with a `State` struct and `render()` function
+2. Add the state to `App` in `app.rs`
+3. Call the render function from `App::render()`
+4. Handle input in `App::handle_key()` (overlay popups take priority — check approval/picker first)
+
+### Channel sends in spawned tasks
+Always use `CommandExecutor::send_or_log()` instead of `let _ = sender.send()`. Silent send failures can freeze the UI (e.g., `toolbar.is_busy` stuck true).
+
+## Design Principles
+
+### Make illegal states unrepresentable
+
+Use the type system to prevent bugs at compile time rather than catching them at runtime.
+
+**Use newtypes for domain identifiers.** `SessionId`, `ToolCallId` — never pass raw `String` where a typed ID is expected. Every field that carries a session or tool call identifier must use the newtype, not `String`.
+
+**Use `Option` for absent values, not sentinels.** Never use a concrete enum variant (like `ToolKind::Other`) or a magic value (like `0.0` or `""`) to mean "not specified." If a value may be absent, the type should be `Option<T>`. Sentinel values break `merge_update` patterns — you can't distinguish "explicitly set to X" from "not provided."
+
+**Guard partial updates.** When merging update fields into existing state, only overwrite fields the update actually provides. An update with an empty string for `name` means "name was not provided," not "set name to empty." Use guards like `if update.field.is_some()` or `if !update.field.is_empty()`.
+
+**Errors are not default values.** Never use `unwrap_or(0.0)`, `unwrap_or("")`, or `unwrap_or_default()` to handle parse failures or missing data. These hide real errors as plausible-looking defaults. Instead:
+- Return `None` / skip the notification if the data is genuinely optional
+- Return `Err` if the data is required
+- At minimum, log a warning before falling back
+
+**Bridge errors must notify the App.** Every failed bridge operation (`prompt`, `new_session`, `load_session`, `set_session_mode`) must send a notification back through the channel so the UI can recover. Logging alone is invisible to the user — the UI will get stuck in a transitional state.
+
+**`commit_streaming` flushes text on boundaries.** When a tool call starts, flush accumulated streaming text to a committed message first. This prevents text segments from concatenating across tool call boundaries. Content commits in chronological order — tool calls go into messages at the position where they arrived, not at the end.
+
+### Testing layers
+
+State tests verify data transitions. Render tests verify presentation. Both are needed:
+
+- **State lifecycle tests**: Apply a realistic sequence of notifications (text → tool call → update → turn complete) and verify committed messages contain all content in order.
+- **Render order tests**: Render to `TestBackend`, extract the buffer, assert character positions maintain chronological order.
+- **Merge tests**: Verify that partial updates preserve existing fields (content, locations, title, raw_input) when the update doesn't provide them.
+
+## Rust Code Standards
+
+### Workspace Safety Rails
+
+These are already configured — maintain them when adding crates or dependencies:
+
+- **Unsafe is forbidden** — `[workspace.lints.rust] unsafe_code = "forbid"` in root `Cargo.toml`
+- **Lint inheritance** — every member crate has `[lints] workspace = true`. Never override lints per-crate.
+- **Pinned toolchain** — `rust-toolchain.toml` locks the exact Rust version (`1.94.0`), not `"stable"`. `rust-version` in `[workspace.package]` mirrors it for downstream consumers.
+- **Minimal toolchain profile** — only `rustfmt` and `clippy` components. Don't add extras unless needed.
+- **Centralized versions** — all dependency versions live in `[workspace.dependencies]`. Member crates reference with `{ workspace = true }`, never specifying their own version.
+- **Explicit feature selection** — `default-features = false` then list only what you need (see `tokio`, `crossterm`, `pulldown-cmark` in the root `Cargo.toml` for examples).
+
+### Build Profiles
+
+Four profiles are configured — use the right one:
+
+- **`dev`**: `incremental = true`, `opt-level = 0` — fast compile cycles
+- **`test`**: `opt-level = 1` — tests run faster without full optimization penalty
+- **`release`**: `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"` — smallest, fastest binary
+- **`release-with-debug`**: inherits release but keeps `debug = 2`, `strip = "none"` — for production crash investigation
+
+### Code Discipline
+
+These are project invariants maintained from inception, not aspirations. Maintaining them is dramatically easier than retrofitting.
+
+- **Zero `.unwrap()` in non-test code** — enforced by `clippy::unwrap_used = "deny"` at the workspace level. Propagate with `?`, use `if let` / `match`, or return `Option`/`Result`. `.expect("reason")` is allowed (warning-level) for compile-time invariants like hardcoded regex.
+- **Zero `let _ =` discarded Results** — handle or propagate every `Result`. If truly best-effort, log the error: `if let Err(e) = operation { warn!(...) }`. Use `send_or_log()` for channel sends.
+- **Zero `#[allow(...)]` directives** — don't suppress warnings, fix them. When every warning is resolved, new compiler/clippy lints are immediately actionable signal, not buried in noise.
+- **Zero sentinel values** — covered in Design Principles under "Use `Option` for absent values." Restated here: never use magic values (`0.0`, `""`, a catch-all enum variant) to mean "absent."
+
+### Error Type Design
+
+- **Use `thiserror`** — `#[derive(Debug, thiserror::Error)]` for all error types. The workspace already depends on `thiserror`.
+- **Map external errors at the boundary** — convert library-specific errors into your domain's error variants in `convert/` or adapter code. Never leak third-party error types (like `acp::` errors) across crate boundaries.
+- **Structured error metadata** — error types should carry enough context to diagnose without a debugger (command attempted, response received, what went wrong).
+- **Accessor methods over `pub` fields** — expose error data through methods, not public struct fields. This lets you refactor internals without breaking callers.
+
+### Test Organization
+
+- **Unit tests colocated** — `#[cfg(test)] mod tests` in the same file as production code
+- **Integration tests in `tests/`** — each `.rs` file compiles as its own crate
+- **`tempfile::tempdir()` for isolation** — no hardcoded paths, automatic cleanup. The workspace already depends on `tempfile`.
+- **Fixture data as files** — `tests/fixtures/` with expected input/output pairs for complex scenarios
+- **Helper functions, not macros** — extract common test setup as plain functions
+- **Test error messages explicitly** — verify error wording with `assert_eq!(failure.to_string(), "expected message")` to catch regressions in user-facing errors
+- **Snapshot testing with `insta`** — use for complex output comparisons where exact string matching is brittle
+
+### Silent Failure Prevention
+
+- **Log before returning `None`** — if a function returns `Option` and the `None` path represents something going wrong (not just "not found"), log context at `debug!` or `warn!` level before returning.
+- **Return `Err` for invalid inputs, not empty collections** — `Ok(Vec::new())` when the input was malformed is misleading; it looks like success.
+- **Distinguish "missing" from "corrupt"** — a file that doesn't exist and a file that fails to parse are different failure modes. Don't collapse them with `.ok()?`.
+- **Audit `.ok()`, `filter_map(Result::ok)`, `let _ =`** — before using these, ask: "Does anyone need to know which failure mode this was?"
+
+## Platform Constraints
+
+- **Linux:** spawns `kiro-cli acp` directly; requires kiro-cli installed and on PATH
+- **Windows:** spawns `wsl kiro-cli acp`; requires WSL with kiro-cli installed and authenticated (`wsl kiro-cli login`)
+- Path translation (`C:\` ↔ `/mnt/c/`, and `\\wsl$\<distro>\` ↔ WSL-internal `/home`-style paths when `CYRIL_WSL_DISTRO` or a `\\wsl$` cwd names the distro) is active only on Windows; on Linux it's a no-op
+- Terminal commands from the agent run natively on the host OS
+- Logs go to `cyril.log` in the working directory (append mode) to avoid TUI conflicts
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in **Rivets**, the repo-local JSONL-backed tracker at `.rivets/issues.jsonl` (use the `rivets` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the canonical five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+
