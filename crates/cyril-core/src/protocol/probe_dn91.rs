@@ -12,7 +12,7 @@ use agent_client_protocol::{self as acp, Client as _};
 use tokio::sync::mpsc;
 
 use crate::protocol::client::{KiroClient, test_host_shell};
-use crate::protocol::engine::V2Engine;
+use crate::protocol::engine::{Engine as _, V2Engine};
 use crate::types::AgentEngine;
 
 #[derive(Debug, PartialEq)]
@@ -146,6 +146,73 @@ async fn v2_bound_client_answers_auth_fs_hooks_but_advertises_nothing() {
     // An UNKNOWN method still falls to the protocol-default null (dcc6 F15).
     let unknown = ext(&client, "kiro/unknown/dn91", serde_json::json!({})).await;
     assert_eq!(unknown, Disposition::NullDefault);
+}
+
+/// Probe slice 3 — the cheapest falsifier for the falsifiable-design claim C7
+/// (derived advertisement): today's four hand-written advertisement shapes
+/// must be EXACTLY reconstructible from (host_io presence, hooks direction,
+/// opaque settings extras). The expected value is a hand-assembled JSON
+/// literal (independent of the constructors under test); the settings object
+/// passes through opaquely since it is an engine extra, not adapter presence.
+/// A mismatch means some advertisement byte is NOT determined by the adapter
+/// set — and the derivation design would lose it.
+#[test]
+fn advertisement_is_fully_determined_by_presence_direction_extras() {
+    use crate::types::kas_hooks::KasHooksMode;
+
+    let caps_json = |mode: KasHooksMode| {
+        serde_json::to_value(
+            crate::protocol::engine::KasEngine { hooks_mode: mode }.client_capabilities(),
+        )
+        .unwrap()
+    };
+
+    // V2: presence all-absent, no extras → the empty capability object.
+    let v2 = serde_json::to_value(V2Engine.client_capabilities()).unwrap();
+    assert_eq!(
+        v2,
+        serde_json::to_value(acp::ClientCapabilities::new()).unwrap(),
+        "V2 must be byte-identical to the empty capability set"
+    );
+
+    for mode in [KasHooksMode::Off, KasHooksMode::Host, KasHooksMode::Kas] {
+        let actual = caps_json(mode);
+        // Opaque extra: the marshaled settings object (reads the user's
+        // cli.json — environment-dependent, so it is spliced, not predicted).
+        let settings = actual["_meta"]["kiro"]["settings"].clone();
+        assert!(settings.is_object(), "settings extra present under KAS");
+
+        let mut kiro = serde_json::Map::new();
+        kiro.insert("settings".into(), settings);
+        match mode {
+            KasHooksMode::Off => {}
+            KasHooksMode::Host => {
+                kiro.insert("hooks".into(), serde_json::json!({"enabled": true}));
+            }
+            KasHooksMode::Kas => {
+                kiro.insert(
+                    "hooks".into(),
+                    serde_json::json!({"enabled": true, "v2": true}),
+                );
+            }
+        }
+        let expected = serde_json::json!({
+            "fs": {
+                "readTextFile": true,
+                "writeTextFile": true,
+                "_meta": {"kiro": {
+                    "readFile": true, "writeFile": true, "stat": true,
+                    "readDirectory": true, "delete": true,
+                }},
+            },
+            "terminal": true,
+            "_meta": {"kiro": kiro},
+        });
+        assert_eq!(
+            actual, expected,
+            "KAS({mode:?}) advertisement must be exactly (host_io presence + hooks direction + settings extra)"
+        );
+    }
 }
 
 /// Probe slice 2 — the AC4 corner: `kas_hooks = "kas"` advertises hooks
