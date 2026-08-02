@@ -57,11 +57,17 @@ struct AuthReply {
     profile_arn: String,
 }
 
-/// The credential-store rows kiro-cli maintains in `data.sqlite3`: the IdC
-/// token JSON (snake_case fields; deleted on logout) and the active
-/// CodeWhisperer profile JSON (`{arn, profile_name}` — the token row stopped
-/// carrying `profile_arn`, so the `state` row is mandatory).
+/// The credential-store rows kiro-cli maintains in `data.sqlite3`. The token
+/// row is PER LOGIN METHOD (cyril-y14u): Builder-ID/IdC logins write
+/// `kirocli:odic:token`, social logins (`accountType: SocialGitHub/…`) write
+/// `kirocli:social:token` — both snake_case `{access_token, expires_at, …}`,
+/// deleted on logout; the social row additionally carries an inline
+/// `profile_arn`. The active CodeWhisperer profile JSON (`{arn,
+/// profile_name}`) lives in the `state` table and is preferred for the arn
+/// (the odic token row stopped carrying `profile_arn`); the social row's
+/// inline arn is the fallback when no state profile row exists.
 const TOKEN_ROW_SQL: &str = "SELECT value FROM auth_kv WHERE key = 'kirocli:odic:token'";
+const SOCIAL_TOKEN_ROW_SQL: &str = "SELECT value FROM auth_kv WHERE key = 'kirocli:social:token'";
 const PROFILE_ROW_SQL: &str = "SELECT value FROM state WHERE key = 'api.codewhisperer.profile'";
 
 /// Read kiro-cli's sqlite credential store into a reply. Synchronous
@@ -85,16 +91,46 @@ fn read_sqlite_store(db: &Path) -> Result<AuthReply, String> {
             .map_err(|e| format!("open kiro credential store: {e}"))?;
     conn.busy_timeout(std::time::Duration::from_millis(250))
         .map_err(|e| format!("set kiro credential store busy timeout: {e}"))?;
-    let row = |sql: &str, what: &str| -> Result<serde_json::Value, String> {
+    let opt_row = |sql: &str, what: &str| -> Result<Option<serde_json::Value>, String> {
         use rusqlite::OptionalExtension;
-        let raw = conn
-            .query_row(sql, [], |r| r.get::<_, String>(0))
+        conn.query_row(sql, [], |r| r.get::<_, String>(0))
             .optional()
             .map_err(|e| format!("query {what}: {e}"))?
-            .ok_or_else(|| format!("{what} row absent — logged out; {LOGIN_HINT}"))?;
-        serde_json::from_str(&raw).map_err(|e| format!("parse {what} row: {e}"))
+            .map(|raw| serde_json::from_str(&raw).map_err(|e| format!("parse {what} row: {e}")))
+            .transpose()
     };
-    let token = row(TOKEN_ROW_SQL, "kiro token")?;
+    // Per-login-method token rows (cyril-y14u): read both; absent-both is the
+    // logged-out shape. Both present (a login-method switch leftover): the
+    // freshest expiry wins — a stale leftover must not shadow the live
+    // credential, and an unparseable expiry loses to a parseable one
+    // (None < Some, fail safe).
+    let odic = opt_row(TOKEN_ROW_SQL, "kiro token")?;
+    let social = opt_row(SOCIAL_TOKEN_ROW_SQL, "kiro social token")?;
+    let token = match (odic, social) {
+        (None, None) => {
+            return Err(format!(
+                "kiro token row absent (no builder-id or social login) — logged out; {LOGIN_HINT}"
+            ));
+        }
+        (Some(t), None) | (None, Some(t)) => t,
+        (Some(o), Some(s)) => {
+            let exp = |t: &serde_json::Value| {
+                t.get("expires_at")
+                    .and_then(|x| x.as_str())
+                    .and_then(rfc3339_to_epoch)
+            };
+            let (chosen, name) = if exp(&s) > exp(&o) {
+                (s, "social")
+            } else {
+                (o, "builder-id")
+            };
+            tracing::debug!(
+                chosen = name,
+                "both kiro token rows present; serving the freshest expiry"
+            );
+            chosen
+        }
+    };
     let field = |k: &str| -> Result<String, String> {
         match token.get(k).and_then(|x| x.as_str()) {
             Some(s) if !s.is_empty() => Ok(s.to_string()),
@@ -103,13 +139,21 @@ fn read_sqlite_store(db: &Path) -> Result<AuthReply, String> {
     };
     let access_token = AccessToken(field("access_token")?);
     let expires_at = field("expires_at")?;
-    let profile = row(PROFILE_ROW_SQL, "kiro profile")?;
-    let profile_arn = match profile.get("arn").and_then(|x| x.as_str()) {
-        // Load-bearing: a reply with an absent/empty arn 400s at the backend
-        // ("profileArn is required"), so it is an error, not a default.
-        Some(s) if !s.is_empty() => s.to_string(),
-        _ => return Err("kiro profile row missing `arn`".to_string()),
-    };
+    // Load-bearing: a reply with an absent/empty arn 400s at the backend
+    // ("profileArn is required"), so it is an error, not a default. The state
+    // row is kiro's ACTIVE profile and wins; the token row's inline
+    // `profile_arn` (social logins) is the fallback.
+    let state_arn = opt_row(PROFILE_ROW_SQL, "kiro profile")?
+        .and_then(|p| p.get("arn").and_then(|x| x.as_str()).map(str::to_string))
+        .filter(|s| !s.is_empty());
+    let inline_arn = token
+        .get("profile_arn")
+        .and_then(|x| x.as_str())
+        .map(str::to_string)
+        .filter(|s| !s.is_empty());
+    let profile_arn = state_arn.or(inline_arn).ok_or_else(|| {
+        "kiro profile row missing `arn` (and no token-inline profile_arn)".to_string()
+    })?;
     Ok(AuthReply {
         access_token,
         expires_at,
@@ -314,6 +358,101 @@ mod tests {
         assert!(
             rfc3339_to_epoch(&reply.expires_at).is_some(),
             "9-digit subsecond must parse"
+        );
+    }
+
+    // cyril-y14u fence: a SOCIAL login (kirocli:social:token, no odic row) is
+    // served — shape verified against a live SocialGitHub store 2026-08-02.
+    // Fails against the pre-y14u reader, which knew only the odic row and
+    // reported a logged-in user as logged out.
+    #[test]
+    fn social_login_row_is_served() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = fixture_store(dir.path());
+        let conn = rusqlite::Connection::open(&db).unwrap();
+        conn.execute("DELETE FROM auth_kv WHERE key = 'kirocli:odic:token'", [])
+            .unwrap();
+        conn.execute(
+            "INSERT INTO auth_kv VALUES ('kirocli:social:token',
+              '{\"access_token\":\"AT-social\",\"expires_at\":\"2026-07-04T03:35:26.765158732Z\",\"refresh_token\":\"RT-never-read\",\"provider\":\"github\",\"profile_arn\":\"arn:aws:codewhisperer:us-east-1:1:profile/inline\"}')",
+            [],
+        )
+        .unwrap();
+        let reply = read_sqlite_store(&db).expect("social login is servable");
+        assert_eq!(reply.access_token.0, "AT-social");
+        // The state profile row is kiro's ACTIVE profile and wins over the
+        // token-inline arn when both exist.
+        assert_eq!(
+            reply.profile_arn,
+            "arn:aws:codewhisperer:us-east-1:1:profile/X"
+        );
+    }
+
+    // cyril-y14u fence: the state profile row absent → the social row's
+    // INLINE profile_arn is the fallback (a social-only machine may have no
+    // state profile row). An empty inline arn on top of no state row is still
+    // an error — never an empty profileArn (400 at the backend).
+    #[test]
+    fn social_inline_arn_is_the_fallback() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = fixture_store(dir.path());
+        let conn = rusqlite::Connection::open(&db).unwrap();
+        conn.execute("DELETE FROM auth_kv WHERE key = 'kirocli:odic:token'", [])
+            .unwrap();
+        conn.execute(
+            "DELETE FROM state WHERE key = 'api.codewhisperer.profile'",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO auth_kv VALUES ('kirocli:social:token',
+              '{\"access_token\":\"AT-social\",\"expires_at\":\"2026-07-04T03:35:26Z\",\"profile_arn\":\"arn:aws:codewhisperer:us-east-1:1:profile/inline\"}')",
+            [],
+        )
+        .unwrap();
+        let reply = read_sqlite_store(&db).expect("inline arn serves");
+        assert_eq!(
+            reply.profile_arn,
+            "arn:aws:codewhisperer:us-east-1:1:profile/inline"
+        );
+
+        conn.execute(
+            "UPDATE auth_kv SET value = '{\"access_token\":\"AT\",\"expires_at\":\"2026-07-04T03:35:26Z\"}'
+             WHERE key = 'kirocli:social:token'",
+            [],
+        )
+        .unwrap();
+        let err = read_sqlite_store(&db).unwrap_err();
+        assert!(err.contains("arn"), "empty-arn reply forbidden: {err}");
+    }
+
+    // cyril-y14u fence: BOTH token rows present (login-method switch
+    // leftover) → the freshest expiry is served; a stale leftover must not
+    // shadow the live credential. Designed to fail under prefer-odic-always.
+    #[test]
+    fn freshest_token_row_wins_when_both_present() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = fixture_store(dir.path()); // odic expires 2026-07-04
+        let conn = rusqlite::Connection::open(&db).unwrap();
+        conn.execute(
+            "INSERT INTO auth_kv VALUES ('kirocli:social:token',
+              '{\"access_token\":\"AT-social-fresher\",\"expires_at\":\"2027-01-01T00:00:00Z\"}')",
+            [],
+        )
+        .unwrap();
+        let reply = read_sqlite_store(&db).expect("servable");
+        assert_eq!(reply.access_token.0, "AT-social-fresher");
+
+        conn.execute(
+            "UPDATE auth_kv SET value = '{\"access_token\":\"AT-social-stale\",\"expires_at\":\"2020-01-01T00:00:00Z\"}'
+             WHERE key = 'kirocli:social:token'",
+            [],
+        )
+        .unwrap();
+        let reply = read_sqlite_store(&db).expect("servable");
+        assert_eq!(
+            reply.access_token.0, "AT-sqlite",
+            "the stale social leftover must not shadow the live odic row"
         );
     }
 

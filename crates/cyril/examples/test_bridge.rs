@@ -28,6 +28,17 @@ struct Cli {
         default_values_t = vec!["kiro-cli".to_string(), "acp".to_string()],
     )]
     agent_command: Vec<String>,
+
+    /// Which Kiro engine to bind (ADR-0001). `kas` needs a `--features kas`
+    /// build; the KAS free path discovers its own spawn command, so
+    /// `--agent-command` is ignored there (cyril-dn91 slice 7 live checks).
+    #[arg(long = "agent-engine", default_value = "v2")]
+    agent_engine: AgentEngine,
+
+    /// Override the Test-9 prompt — e.g. one that forces fs/terminal host
+    /// callbacks for a live KAS parity check.
+    #[arg(long = "prompt")]
+    prompt: Option<String>,
 }
 
 #[tokio::main]
@@ -48,7 +59,10 @@ async fn main() -> anyhow::Result<()> {
     let agent_command = cyril_core::types::AgentCommand::try_from_argv(cli.agent_command)?;
     let bridge = spawn_bridge(
         agent_command,
-        cyril_core::protocol::bridge::SpawnConfig::default(),
+        cyril_core::protocol::bridge::SpawnConfig {
+            engine: cli.agent_engine,
+            ..Default::default()
+        },
         cwd.clone(),
     )?;
     let (sender, mut notification_rx, mut permission_rx) = bridge.split();
@@ -198,10 +212,14 @@ async fn main() -> anyhow::Result<()> {
 
     // --- Test 9: Send a prompt to trigger UsageUpdate ---
     println!("--- [9] Sending prompt (checking for UsageUpdate) ---");
+    let prompt = cli
+        .prompt
+        .clone()
+        .unwrap_or_else(|| "Say hello in one word.".to_string());
     sender
         .send(BridgeCommand::SendPrompt {
             session_id: session_id.clone(),
-            content_blocks: vec!["Say hello in one word.".into()],
+            content_blocks: vec![prompt],
         })
         .await?;
     drain_notifications(
