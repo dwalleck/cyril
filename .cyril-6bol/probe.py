@@ -2,6 +2,7 @@
 """Probe one genuine KAS terminal/create request through the proposed Unix shell path."""
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import shutil
@@ -23,17 +24,23 @@ family = "fish" if Path(shell).name == "fish" else "posix"
 tokens = [params["command"], *params.get("args", [])]
 command = shlex.join(tokens)
 operators = {"|", ">", ">>", "<", "&&", "||"}
-operator_tokens = [*tokens, "|", "tr", "a-z", "A-Z"]
-operator_command = " ".join(
-    token if token in operators else shlex.quote(token) for token in operator_tokens
-)
+variable = re.compile(r"\$(?:[A-Za-z_][A-Za-z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})")
+def render(items):
+    return " ".join(
+        token if token in operators or variable.fullmatch(token) else shlex.quote(token)
+        for token in items
+    )
+operator_command = render([*tokens, "|", "tr", "a-z", "A-Z"])
+expansion_command = render([params["command"], "$CYRIL_SHELL_PROBE"])
 def run(source):
     return subprocess.run(
         [shell, "-lc", source], cwd=root, stdin=subprocess.DEVNULL,
+        env={**os.environ, "CYRIL_SHELL_PROBE": "expanded-42"},
         text=True, capture_output=True, check=False,
     )
 result = run(command)
 operator_result = run(operator_command)
+expansion_result = run(expansion_command)
 print(json.dumps({
     "source": str(fixture.relative_to(root)),
     "shell_env": env_shell or None,
@@ -47,4 +54,8 @@ print(json.dumps({
     "operator_stdout": operator_result.stdout,
     "operator_stderr": operator_result.stderr,
     "operator_exit": operator_result.returncode,
+    "expansion_command": expansion_command,
+    "expansion_stdout": expansion_result.stdout,
+    "expansion_stderr": expansion_result.stderr,
+    "expansion_exit": expansion_result.returncode,
 }, sort_keys=True))
