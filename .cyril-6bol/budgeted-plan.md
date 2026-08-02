@@ -7,6 +7,7 @@ Checkpoint revision (requester-approved 2026-08-01): strict KAS lint proved the 
 Final checkpoint revision (requester-approved 2026-08-02): strict KAS lint requires the crate-private renderer and launch-plan APIs to gain their production `terminal/create` caller in the same checkpoint. Original Slices 5, 6, and 10 therefore merge into Slice 5 with their summed budgets and all fixtures/oracles unchanged.
 
 Final budget accounting: the approved cyril-6bol checkpoint is 136 net production lines and 300 net test lines against the Slice 2 checkpoint, within the merged ≤150/≤300 limits. The operator-pipeline lifecycle fence discovered `cyril-2z9g`; its separately tracked fix adds 77 production lines and 29 test lines (including the bridge cancellation fence), within a local ≤80/≤30 bug-fix budget.
+Pre-PR review corrections add 40 net production lines and 119 net test lines against the completed checkpoint, within a local ≤45/≤120 review-fix budget. The production delta covers effective-access and absolute-path resolution, correct PowerShell status finalization, and one shared create-time output drain; the tests are the minimum regression fences for each reproduced failure.
 Every slice ends in one conventional commit. “Prototype oracle” below means:
 
 ```sh
@@ -166,7 +167,7 @@ No gaps. ACP replies and terminal stdout/stderr/status are data. Configuration/r
 
 ### Tracker references
 
-No design deferrals appear in this plan. `cyril-1rpv` and `cyril-3lh8` remain named only in the approved design’s negative space and were verified during design. Implementation exposed and fixed the separately tracked process-tree bug `cyril-2z9g`.
+No design deferrals appear in this plan. `cyril-1rpv` and `cyril-3lh8` remain named only in the approved design’s negative space and were verified during design. Implementation exposed and fixed the separately tracked process-tree bug `cyril-2z9g`; spec review absorbed the existing pre-wait pipe-drain issue `cyril-r3t6`; the final runtime smoke exposed and filed the unrelated one-shot prompt bug `cyril-0ffy`.
 
 ### Claim coverage
 

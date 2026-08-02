@@ -43,6 +43,7 @@ pub(crate) enum HostShellError {
 trait HostEnvironment {
     fn var_os(&self, name: &str) -> Option<OsString>;
     fn is_runnable(&self, path: &Path) -> bool;
+    fn current_dir(&self) -> Option<PathBuf>;
 }
 
 struct SystemHost;
@@ -61,12 +62,21 @@ impl HostEnvironment for SystemHost {
         }
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt as _;
-            metadata.permissions().mode() & 0o111 != 0
+            nix::unistd::access(path, nix::unistd::AccessFlags::X_OK).is_ok()
         }
         #[cfg(not(unix))]
         {
             true
+        }
+    }
+
+    fn current_dir(&self) -> Option<PathBuf> {
+        match std::env::current_dir() {
+            Ok(cwd) => Some(cwd),
+            Err(error) => {
+                tracing::warn!(%error, "cannot resolve relative host-shell PATH entry");
+                None
+            }
         }
     }
 }
@@ -126,10 +136,18 @@ impl HostShell {
                 vec!["-l".into(), "-c".into(), self.render_command(command, args)]
             }
             ShellKind::Pwsh | ShellKind::WindowsPowerShell => {
+                let compound = std::iter::once(command)
+                    .chain(args.iter().map(String::as_str))
+                    .any(is_operator);
                 let mut source = String::with_capacity(command.len() + 256);
                 source.push_str("$global:LASTEXITCODE = $null; ");
                 self.append_command(&mut source, command, args);
-                source.push_str("; $cyrilSuccess = $?; $cyrilExitCode = $LASTEXITCODE; if ($null -ne $cyrilExitCode) { exit $cyrilExitCode }; if ($cyrilSuccess) { exit 0 } else { exit 1 }");
+                source.push_str("; $cyrilSuccess = $?; ");
+                if compound {
+                    source.push_str("if ($cyrilSuccess) { exit 0 } else { exit 1 }");
+                } else {
+                    source.push_str("$cyrilExitCode = $LASTEXITCODE; if ($null -ne $cyrilExitCode) { exit $cyrilExitCode }; if ($cyrilSuccess) { exit 0 } else { exit 1 }");
+                }
                 vec![
                     "-NoLogo".into(),
                     "-NonInteractive".into(),
@@ -349,12 +367,20 @@ fn find_on_path(name: &OsStr, host: &impl HostEnvironment) -> Option<PathBuf> {
     std::env::split_paths(&host.var_os("PATH")?)
         .take(MAX_PATH_ENTRIES)
         .map(|directory| directory.join(name))
-        .find(|candidate| host.is_runnable(candidate))
+        .find_map(|candidate| {
+            host.is_runnable(&candidate).then(|| {
+                if candidate.is_absolute() {
+                    Some(candidate)
+                } else {
+                    host.current_dir().map(|cwd| cwd.join(candidate))
+                }
+            })?
+        })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{HostEnvironment, HostPlatform, HostShell, ShellKind, resolve_for};
+    use super::{HostEnvironment, HostPlatform, HostShell, ShellKind, SystemHost, resolve_for};
     use std::cell::Cell;
     use std::collections::{HashMap, HashSet};
     use std::ffi::OsString;
@@ -396,6 +422,10 @@ mod tests {
         fn is_runnable(&self, path: &Path) -> bool {
             self.probes.set(self.probes.get() + 1);
             self.runnable.contains(path)
+        }
+
+        fn current_dir(&self) -> Option<PathBuf> {
+            std::env::current_dir().ok()
         }
     }
 
@@ -616,6 +646,45 @@ mod tests {
         }
     }
 
+    #[test]
+    fn relative_path_entry_is_retained_as_an_absolute_snapshot() {
+        let host = FakeHost::default()
+            .path(&["relative-shells"])
+            .runnable("relative-shells/bash");
+        let expected = match std::env::current_dir() {
+            Ok(cwd) => cwd.join("relative-shells/bash"),
+            Err(error) => panic!("read test current directory: {error}"),
+        };
+
+        let shell = require_shell(resolve_for(HostPlatform::Unix, Some("bash"), &host));
+        assert_eq!(shell.executable, expected);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn system_host_checks_effective_execute_permission() {
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let dir = match tempfile::tempdir() {
+            Ok(dir) => dir,
+            Err(error) => panic!("create permission fixture: {error}"),
+        };
+        let candidate = dir.path().join("owner-cannot-execute");
+        if let Err(error) = std::fs::write(&candidate, "#!/bin/sh\n") {
+            panic!("write permission fixture: {error}");
+        }
+        if let Err(error) =
+            std::fs::set_permissions(&candidate, std::fs::Permissions::from_mode(0o001))
+        {
+            panic!("set permission fixture: {error}");
+        }
+
+        assert!(
+            !SystemHost.is_runnable(&candidate),
+            "an execute bit for another permission class does not make the file runnable"
+        );
+    }
+
     fn shell(kind: ShellKind) -> HostShell {
         HostShell::new(kind, PathBuf::from(format!("/test/{kind:?}")))
     }
@@ -701,6 +770,20 @@ mod tests {
             assert!(plan.args[3].contains("exit $cyrilExitCode"));
             assert!(plan.args[3].contains("if ($cyrilSuccess) { exit 0 } else { exit 1 }"));
         }
+    }
+
+    #[test]
+    fn powershell_operator_sequence_does_not_reuse_a_stale_native_exit_code() {
+        let args = strings(&["-c", "exit 42", ";", "Write-Output", "final-success"]);
+        let host_shell = shell(ShellKind::Pwsh);
+        let plan = host_shell.command("/bin/sh", &args);
+        let source = &plan.args[3];
+
+        assert!(
+            !source.contains("$cyrilExitCode"),
+            "a compound PowerShell statement must use its final `$?`, not a stale prior `$LASTEXITCODE`: {source}"
+        );
+        assert!(source.contains("if ($cyrilSuccess) { exit 0 } else { exit 1 }"));
     }
 
     #[test]

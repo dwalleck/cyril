@@ -9,14 +9,13 @@
 //! `.cyril-7bdu/host_callbacks_2.10.0.json`): bare ACP `terminal/{create,output,
 //! wait_for_exit,release,kill}`, every call carries `sessionId`, `cwd` absolute.
 //!
-//! **Lifecycle ("Option B"):** `create` spawns a piped child and returns the id
-//! immediately; `wait` moves the child out of the registry (dropping the `RefCell`
-//! borrow) and [`wait_with_output_killable`] drains both pipes *while* waiting —
-//! no pipe-buffer deadlock — while also watching the terminal's kill signal so a
-//! concurrent `kill`/`release` terminates the child through the task that owns it
-//! (cyril-lw67). The undrained-pipe window before `wait` is sub-ms (KAS calls
-//! `wait` immediately after `create`); the chatty-command risk if KAS ever
-//! delays `wait` is tracked **cyril-r3t6**.
+//! **Lifecycle:** `create` gives stdout and stderr the same OS pipe, starts one
+//! blocking-pool reader immediately, spawns the child, and returns the id.
+//! Sharing one pipe preserves cross-stream write order; draining from create
+//! prevents pipe-capacity deadlocks even if KAS delays or omits `wait`
+//! (`cyril-r3t6`). `wait` moves the child out of the registry (dropping the
+//! `RefCell` borrow), awaits it while watching the kill signal, then joins the
+//! reader and caches the chronological output.
 //!
 //! **Non-blocking invariant (ADR-0004): `wait`/`release`/`kill` MUST await
 //! `tokio::process`, never a thread-pinning `std::process` wait** (the bridge is a
@@ -30,7 +29,6 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use agent_client_protocol as acp;
-use tokio::io::AsyncReadExt as _;
 use tokio::process::Child;
 use tokio::sync::Notify;
 
@@ -90,6 +88,12 @@ impl Drop for ProcessTree {
 struct RunningChild {
     child: Child,
     process_tree: ProcessTree,
+    output_task: tokio::task::JoinHandle<std::io::Result<Vec<u8>>>,
+}
+
+struct CapturedOutput {
+    status: std::process::ExitStatus,
+    output: Vec<u8>,
 }
 
 /// A tracked terminal. `Running` holds the spawned child until `wait`/`kill` takes
@@ -167,6 +171,11 @@ impl TerminalRegistry {
             Some(p) => Some(super::host_io::to_native_checked(p)?),
             None => None,
         };
+        let (output_reader, output_writer) =
+            std::io::pipe().map_err(|e| output_capture_err(plan.program, e))?;
+        let stderr_writer = output_writer
+            .try_clone()
+            .map_err(|e| output_capture_err(plan.program, e))?;
         let mut cmd = tokio::process::Command::new(plan.program);
         cmd.args(&plan.args)
             // stdin MUST be null, not the inherited default: the bridge's stdin is
@@ -177,8 +186,10 @@ impl TerminalRegistry {
             // method, so these terminals are provably non-interactive; null gives an
             // immediate EOF.
             .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
+            // One OS pipe preserves stdout/stderr write order. The reader starts
+            // immediately below, before create returns (cyril-r3t6).
+            .stdout(output_writer)
+            .stderr(stderr_writer)
             // SIGKILL the child if its handle is dropped un-reaped (cyril-ba5x):
             // on Shutdown / bridge-thread death / app exit the LocalSet drops,
             // taking the registry (idle Child) and any pending wait future
@@ -196,9 +207,16 @@ impl TerminalRegistry {
         #[cfg(unix)]
         cmd.process_group(0);
         let child = cmd.spawn().map_err(|e| spawn_err(plan.program, e))?;
+        let output_task = tokio::task::spawn_blocking(move || {
+            let mut reader = output_reader;
+            let mut output = Vec::new();
+            std::io::Read::read_to_end(&mut reader, &mut output)?;
+            Ok(output)
+        });
         let process = RunningChild {
             process_tree: ProcessTree::new(child.id()),
             child,
+            output_task,
         };
 
         let n = self.counter.get().saturating_add(1);
@@ -219,8 +237,8 @@ impl TerminalRegistry {
     /// status. Reply is **FLAT** `{exitCode, signal}` (typed
     /// `WaitForTerminalExitResponse`, `#[serde(flatten)]`) — NOT nested
     /// `{exitStatus:{…}}` (the prove-it finding, `.cyril-ufie/PROVE-IT.md`).
-    /// Unknown id → `-32602`. Drains both pipes via `wait_with_output` so a chatty
-    /// command can't pipe-deadlock; awaits `tokio::process`, never `std::process`.
+    /// Unknown id → `-32602`. The create-time shared-pipe task drains output
+    /// continuously; this await joins it after the async child wait.
     pub(crate) async fn wait(
         &self,
         req: &acp::WaitForTerminalExitRequest,
@@ -251,15 +269,15 @@ impl TerminalRegistry {
             }
         };
         let status = exit_status(&out.status);
-        self.store_exited(&req.terminal_id, combine_output(&out), status.clone());
+        self.store_exited(&req.terminal_id, decode_output(&out.output), status.clone());
         Ok(acp::WaitForTerminalExitResponse::new(status))
     }
 
     /// Answer `terminal/output`: snapshot the terminal's current output + status
     /// **without** awaiting. Reply is `{output, truncated, exitStatus}` (nested
-    /// `exit_status`). `output` is the command's **combined stdout+stderr** once it
-    /// has exited; a still-`Running` terminal returns empty (Option B captures at
-    /// `wait`). Unknown id → `-32602`. `truncated` is always `false` (cyril-1rpv).
+    /// `exit_status`). `output` is the command's chronological stdout+stderr once
+    /// it has exited; a still-`Running` terminal returns empty. Unknown id →
+    /// `-32602`. `truncated` is always `false` (cyril-1rpv).
     pub(crate) fn output(
         &self,
         req: &acp::TerminalOutputRequest,
@@ -290,6 +308,9 @@ impl TerminalRegistry {
                 if let Err(e) = process.child.wait().await {
                     tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: reap failed (possible zombie)");
                 }
+                if let Err(e) = join_output(process.output_task).await {
+                    tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: output drain failed");
+                }
             }
             // A pending wait/kill owns the child; release can't SIGKILL a child it
             // doesn't hold, so it signals the owner to start_kill + reap
@@ -306,9 +327,9 @@ impl TerminalRegistry {
 
     /// Answer `terminal/kill`: terminate a running child but **keep the id valid** —
     /// a later `terminal_output`/`wait_for_terminal_exit` still resolves (KAS's
-    /// command-timeout pattern: kill, then read the partial output). Reaps via
-    /// `wait_with_output`, caching the captured output + signal status. Unknown id →
-    /// `-32602`.
+    /// command-timeout pattern: kill, then read the partial output). Reaps the
+    /// child and joins the create-time output task, caching output + signal status.
+    /// Unknown id → `-32602`.
     pub(crate) async fn kill(
         &self,
         req: &acp::KillTerminalRequest,
@@ -316,7 +337,7 @@ impl TerminalRegistry {
         match self.take_child(&req.terminal_id)? {
             Taken::Child(mut process, _) => {
                 terminate_process_tree(&mut process, &req.terminal_id, "kill").await;
-                let out = match process.child.wait_with_output().await {
+                let out = match wait_for_output(process).await {
                     Ok(out) => out,
                     // take_child left a Running(None) slot; a reap error must free it
                     // (not leave the id wedged in a permanent InFlight state) before
@@ -328,7 +349,7 @@ impl TerminalRegistry {
                 };
                 self.store_exited(
                     &req.terminal_id,
-                    combine_output(&out),
+                    decode_output(&out.output),
                     exit_status(&out.status),
                 );
             }
@@ -424,49 +445,38 @@ impl TerminalRegistry {
     }
 }
 
-/// Await a taken child's exit while draining both pipes (the `wait_with_output`
-/// contract — a chatty command can't pipe-buffer-deadlock) AND watching the
-/// terminal's kill signal. `kill`/`release` can land while a `wait` owns the
-/// child (the rpc layer spawns each inbound request as its own task); they
-/// can't `start_kill` a child they don't hold, so they notify the signal and
-/// THIS task — the owner — kills, then lets the wait resolve with the killed
-/// status (cyril-lw67). `wait_with_output` itself consumes the child, so it
-/// can't be combined with a kill hook; this reimplements its drain-while-wait
-/// shape with a `select!` on the exit. `tokio::process::Child::wait` is
-/// cancel-safe, so selecting over it is sound. A `notify_one` sent before this
-/// task polls `notified()` is not lost — `Notify` stores the permit.
+/// Await a taken child's exit while watching its kill signal, then join the
+/// create-time output reader. `kill`/`release` can land while a `wait` owns the
+/// child (the rpc layer spawns each inbound request as its own concurrent task);
+/// they notify the owner, which terminates and reaps the process tree. Child
+/// wait is cancel-safe, and `Notify` retains a permit sent before `notified()`.
 async fn wait_with_output_killable(
     mut process: RunningChild,
     kill_signal: &Notify,
     terminal_id: &acp::TerminalId,
-) -> std::io::Result<std::process::Output> {
-    async fn drain(pipe: Option<impl tokio::io::AsyncRead + Unpin>) -> std::io::Result<Vec<u8>> {
-        let mut buf = Vec::new();
-        if let Some(mut pipe) = pipe {
-            pipe.read_to_end(&mut buf).await?;
+) -> std::io::Result<CapturedOutput> {
+    let status = tokio::select! {
+        res = process.child.wait() => res?,
+        _ = kill_signal.notified() => {
+            terminate_process_tree(&mut process, terminal_id, "kill signal").await;
+            process.child.wait().await?
         }
-        Ok(buf)
-    }
-    let stdout = process.child.stdout.take();
-    let stderr = process.child.stderr.take();
-    let exit = async {
-        tokio::select! {
-            res = process.child.wait() => return res,
-            _ = kill_signal.notified() => {}
-        }
-        // Signaled by a concurrent kill/release: SIGKILL from the task that owns
-        // the Child, then reap. start_kill on a child that already exited (but
-        // is not yet reaped) is best-effort — logged, never fatal; the wait
-        // below reaps either way.
-        terminate_process_tree(&mut process, terminal_id, "kill signal").await;
-        process.child.wait().await
     };
-    let (status, stdout, stderr) = tokio::join!(exit, drain(stdout), drain(stderr));
-    Ok(std::process::Output {
-        status: status?,
-        stdout: stdout?,
-        stderr: stderr?,
-    })
+    let output = join_output(process.output_task).await?;
+    Ok(CapturedOutput { status, output })
+}
+
+async fn wait_for_output(mut process: RunningChild) -> std::io::Result<CapturedOutput> {
+    let status = process.child.wait().await?;
+    let output = join_output(process.output_task).await?;
+    Ok(CapturedOutput { status, output })
+}
+
+async fn join_output(
+    task: tokio::task::JoinHandle<std::io::Result<Vec<u8>>>,
+) -> std::io::Result<Vec<u8>> {
+    task.await
+        .map_err(|error| std::io::Error::other(format!("terminal output task failed: {error}")))?
 }
 
 async fn terminate_process_tree(
@@ -514,15 +524,10 @@ pub(crate) fn respond_shell_type(
     super::json_ext_response(&serde_json::json!({ "shellType": shell.wire_name() }))
 }
 
-/// Combine a finished command's stdout and stderr into one terminal stream,
-/// lossily decoding non-UTF-8 bytes (ACP `output` is a `String`). A real terminal
-/// interleaves both; capturing stdout-only would drop a command's error output.
-fn combine_output(out: &std::process::Output) -> String {
-    format!(
-        "{}{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr)
-    )
+/// Lossily decode the chronological shared-pipe bytes (ACP `output` is a
+/// `String`; invalid UTF-8 must not erase the rest of a command's output).
+fn decode_output(output: &[u8]) -> String {
+    String::from_utf8_lossy(output).into_owned()
 }
 
 /// Map an OS `ExitStatus` to ACP's `TerminalExitStatus`: a normal exit sets
@@ -530,6 +535,7 @@ fn combine_output(out: &std::process::Output) -> String {
 /// `exitCode` `None` — never reports `exitCode:0` for a killed process.
 fn exit_status(status: &std::process::ExitStatus) -> acp::TerminalExitStatus {
     let es = acp::TerminalExitStatus::new();
+
     let es = match status.code() {
         Some(code) => es.exit_code(code as u32),
         None => es,
@@ -552,6 +558,14 @@ fn unknown_terminal(id: &acp::TerminalId) -> acp::Error {
     acp::Error::new(-32602, format!("unknown terminal: {id}"))
 }
 
+/// Build a `-32603` error when the shared stdout/stderr pipe cannot be prepared.
+fn output_capture_err(program: &std::path::Path, e: std::io::Error) -> acp::Error {
+    tracing::debug!(program = %program.display(), error = %e, "KAS terminal output capture setup failed");
+    acp::Error::new(
+        -32603,
+        format!("prepare output capture for {}: {e}", program.display()),
+    )
+}
 /// Build a `-32603` error when the selected startup shell disappears or cannot
 /// spawn. Log the concrete executable and OS error so startup/execution races
 /// remain diagnosable.
@@ -691,6 +705,42 @@ mod tests {
         reg.release(&release_req(&id)).await.unwrap();
     }
 
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn create_drains_output_before_wait_arrives() {
+        let dir = tempfile::tempdir().unwrap();
+        let marker = dir.path().join("writer-finished");
+        let request = create_req("dd").args(vec![
+            "if=/dev/zero".into(),
+            "bs=131072".into(),
+            "count=1".into(),
+            "2>".into(),
+            "/dev/null".into(),
+            ";".into(),
+            "printf".into(),
+            "done".into(),
+            ">".into(),
+            marker.to_string_lossy().into_owned(),
+        ]);
+        let reg = test_registry();
+        let id = reg.create(&request).unwrap().terminal_id;
+
+        for _ in 0..100 {
+            if marker.exists() {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        assert!(
+            marker.exists(),
+            "the create-time reader must drain more than one pipe capacity before wait"
+        );
+
+        reg.wait(&wait_req(&id)).await.unwrap();
+        assert_eq!(reg.output(&out_req(&id)).unwrap().output.len(), 131_072);
+        reg.release(&release_req(&id)).await.unwrap();
+    }
+
     #[tokio::test]
     async fn create_closes_stdin_so_stdin_readers_dont_hang() {
         // Fixture (stdin): a command that reads stdin (`cat` with no file arg) must
@@ -797,6 +847,32 @@ mod tests {
         assert!(failure_output.contains("PROFILE-FAIL"));
         assert_eq!(std::fs::read_to_string(&profile_marker).unwrap(), "xy");
         assert!(!command_marker.exists());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn profile_stderr_precedes_later_command_stdout() {
+        let bash = ["/usr/bin/bash", "/bin/bash"]
+            .into_iter()
+            .map(std::path::Path::new)
+            .find(|path| path.exists());
+        let Some(bash) = bash else {
+            return;
+        };
+        let dir = tempfile::tempdir().unwrap();
+        write(
+            dir.path().join(".bash_profile"),
+            "printf PROFILE-STDERR >&2\n",
+        );
+        let request = create_req("printf")
+            .args(strings(&["COMMAND-STDOUT"]))
+            .env(vec![acp::EnvVariable::new(
+                "HOME",
+                dir.path().to_string_lossy(),
+            )]);
+        let (_, output) = run(&test_registry_at(bash), request).await;
+
+        assert_eq!(output, "PROFILE-STDERRCOMMAND-STDOUT");
     }
 
     #[cfg(unix)]
