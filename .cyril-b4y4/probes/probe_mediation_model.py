@@ -70,6 +70,19 @@ observe(None, S, "f6")        # wire turn_end second -> absorbed (Wire)
 observe(None, S, "f7")        # third terminal, nothing owed -> dropped silent
 send_prompt()                 # turn#2 accepted (ledger empty, guard clear)
 
+# --- extension: precedence cells the design's matrix stands on ---
+observe(2, S, "f8")           # stamped release -> Wire expectation dangles
+send_prompt()                 # turn#3 accepted on SAME session: M3 state --
+                              # dangling Wire companion on S + active turn on S
+observe(None, S, "f9")        # ABSORB-FIRST: eaten by turn#2's expectation,
+                              # must NOT release (or clear) active turn#3
+observe(None, S, "f10")       # companion gone -> NOW releases turn#3 by scope
+observe(None, None, "f11")    # global unstamped, idle, Synthesized owed:
+                              # no Wire match, no active -> dropped
+send_prompt()                 # turn#4 accepted
+observe(3, S, "f12")          # owner-keyed absorb of turn#3's synthesized twin
+                              # wins over stale-drop while turn#4 is active
+
 print("B4Y4-PROBE-BEGIN")
 print("\n".join(out))
 print("B4Y4-PROBE-END")

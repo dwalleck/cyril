@@ -1,10 +1,7 @@
     /// TEMPORARY b4y4 PROBE-ORACLE (not a fence; removed after capture).
-    /// Drives the REAL `run_loop` through the scenario in
-    /// `.cyril-b4y4/probes/probe_mediation_model.py` and emits `B4Y4-ORACLE`
-    /// lines for line-by-line comparison against the standalone model.
-    /// Absorb/stale/unowned are invisible on the notification channel
-    /// (cyril-ri8q), so a stderr tracing subscriber captures the loop's own
-    /// debug lines as the disposition labels.
+    /// Extended run: f1-f7 as captured 2026-08-02, plus f8-f12 — the
+    /// absorb-first precedence cells (dangling companion on the SAME session
+    /// as a live turn) and the global-unstamped drop.
     #[cfg(feature = "kas")]
     #[tokio::test]
     async fn b4y4_probe_oracle_scenario() {
@@ -134,6 +131,68 @@
                     .unwrap();
                 assert!(wait_for_prompt_count(&probe, 3, 5).await);
                 eprintln!("B4Y4-ORACLE PROMPT-ACCEPTED turn#2");
+
+                // f8: stamped release of turn#2 — Wire expectation dangles.
+                inbound.send(stamped(2)).await.unwrap();
+                match recv_notif(&mut rx, 5).await {
+                    Some(Notification::TurnCompleted { .. }) => {
+                        eprintln!("B4Y4-ORACLE f8: FORWARDED TurnCompleted");
+                    }
+                    other => panic!("f8: expected forwarded TurnCompleted, got {other:?}"),
+                }
+
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["four".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(wait_for_prompt_count(&probe, 4, 5).await);
+                eprintln!("B4Y4-ORACLE PROMPT-ACCEPTED turn#3");
+
+                // f9: ABSORB-FIRST precedence — the dangling Wire expectation
+                // (same session as live turn#3) eats this frame. A release here
+                // would forward a TurnCompleted and falsify the model.
+                inbound.send(wire_end(&sid)).await.unwrap();
+                inbound.send(marker(6)).await.unwrap();
+                expect_marker(recv_notif(&mut rx, 5).await, "marker-6", "f9");
+
+                // f10: companion gone — now this releases turn#3 by scope.
+                inbound.send(wire_end(&sid)).await.unwrap();
+                match recv_notif(&mut rx, 5).await {
+                    Some(Notification::TurnCompleted { .. }) => {
+                        eprintln!("B4Y4-ORACLE f10: FORWARDED TurnCompleted");
+                    }
+                    other => panic!("f10: expected forwarded TurnCompleted, got {other:?}"),
+                }
+
+                // f11: global unstamped terminal, idle, Synthesized owed —
+                // matches neither arm. Dropped.
+                inbound
+                    .send(RoutedNotification::global(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    }))
+                    .await
+                    .unwrap();
+                inbound.send(marker(7)).await.unwrap();
+                expect_marker(recv_notif(&mut rx, 5).await, "marker-7", "f11");
+
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["five".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(wait_for_prompt_count(&probe, 5, 5).await);
+                eprintln!("B4Y4-ORACLE PROMPT-ACCEPTED turn#4");
+
+                // f12: owner-keyed absorb of turn#3's synthesized twin wins
+                // over stale-drop while turn#4 is active.
+                inbound.send(stamped(3)).await.unwrap();
+                inbound.send(marker(8)).await.unwrap();
+                expect_marker(recv_notif(&mut rx, 5).await, "marker-8", "f12");
             },
         )
         .await;
