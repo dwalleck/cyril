@@ -5,7 +5,7 @@
 //! - **Drive mounts:** `/mnt/c/...` ↔ `C:\...`, unconditional.
 //! - **WSL-internal paths** (`/home/...`, `/tmp/...`, non-drive `/mnt`
 //!   entries): `/...` ↔ `\\wsl$\<distro>\...`, only when the process WSL
-//!   distro is known — [`resolve_wsl_distro`] runs once per process
+//!   distro is known — `resolve_wsl_distro` runs once per process
 //!   (`CYRIL_WSL_DISTRO` env, else a `\\wsl$`-rooted cwd). Unknown distro
 //!   means passthrough: the pre-cyril-8tq6 behavior, failing downstream as an
 //!   honest NotFound rather than guessing a distro.
@@ -54,14 +54,14 @@ pub enum Direction {
 /// `D:\project` becomes `/mnt/d/project`
 /// `\\?\C:\Users\foo` becomes `/mnt/c/Users/foo` (extended-length prefix stripped)
 /// `\\wsl$\<distro>\...` becomes `/...` when `<distro>` matches the process
-/// WSL distro (see [`resolve_wsl_distro`]).
+/// WSL distro (see `resolve_wsl_distro`).
 pub fn win_to_wsl(path: &Path) -> PathBuf {
-    win_to_wsl_in(path, process_wsl_distro())
+    win_to_wsl_with_distro(path, process_wsl_distro())
 }
 
 /// The pre-UNC `win_to_wsl` behavior: drive letters, `\\?\` stripping, and the
 /// legacy backslash→slash conversion for everything else. Fallback for
-/// [`win_to_wsl_in`] on non-WSL inputs — never called for WSL UNC paths.
+/// [`win_to_wsl_with_distro`] on non-WSL inputs — never called for WSL UNC paths.
 fn legacy_win_to_wsl(path: &Path) -> PathBuf {
     let s = path.to_string_lossy();
     // Strip the \\?\ extended-length path prefix that canonicalize() produces on Windows.
@@ -88,7 +88,7 @@ fn legacy_win_to_wsl(path: &Path) -> PathBuf {
 /// `/mnt/c/Users/foo/bar` becomes `C:\Users\foo\bar`
 /// `/mnt/d/project` becomes `D:\project`
 /// `/home/...` (any WSL-internal path) becomes `\\wsl$\<distro>\...` when the
-/// process WSL distro is known (see [`resolve_wsl_distro`]); unchanged otherwise.
+/// process WSL distro is known (see `resolve_wsl_distro`); unchanged otherwise.
 pub fn wsl_to_win(path: &str) -> PathBuf {
     let distro = process_wsl_distro();
     if cfg!(target_os = "windows")
@@ -107,7 +107,7 @@ pub fn wsl_to_win(path: &str) -> PathBuf {
             );
         });
     }
-    wsl_to_win_in(path, distro)
+    wsl_to_win_with_distro(path, distro)
 }
 
 /// The WSL distro used by [`wsl_to_win`] / [`win_to_wsl`], resolved once per
@@ -137,25 +137,30 @@ fn process_wsl_distro() -> Option<&'static str> {
 /// converted to `\` (root maps to a trailing `\`, matching `wslpath`).
 /// With no distro (`None`, or defensively `Some("")`) every non-drive path is
 /// returned unchanged — the pre-UNC behavior.
-pub fn wsl_to_win_in(path: &str, distro: Option<&str>) -> PathBuf {
+fn wsl_to_win_with_distro(path: &str, distro: Option<&str>) -> PathBuf {
     if let Some(win) = drive_mount_to_win(path) {
         return win;
     }
-    let distro = match distro {
-        // Load-bearing guard: an empty distro would silently emit
-        // `\\wsl$\<nothing>\...`, a path no host can open.
-        Some("") => {
-            tracing::debug!("WSL distro is an empty string; treating as unset");
-            None
-        }
-        d => d,
-    };
-    if let Some(d) = distro
+    if let Some(d) = nonempty_distro(distro)
         && path.starts_with('/')
     {
         return PathBuf::from(format!(r"\\wsl$\{d}{}", path.replace('/', "\\")));
     }
     PathBuf::from(path)
+}
+
+/// Treat `Some("")` as unset. Load-bearing guard: an empty distro would
+/// silently emit `\\wsl$\<nothing>\...` (forward) and can never name a real
+/// distro segment (reverse) — `resolve_wsl_distro` never produces one, but
+/// direct callers might.
+fn nonempty_distro(distro: Option<&str>) -> Option<&str> {
+    match distro {
+        Some("") => {
+            tracing::debug!("WSL distro is an empty string; treating as unset");
+            None
+        }
+        d => d,
+    }
 }
 
 /// Convert a Windows path to a WSL path, additionally mapping WSL UNC paths
@@ -168,20 +173,10 @@ pub fn wsl_to_win_in(path: &str, distro: Option<&str>) -> PathBuf {
 /// or no distro configured) is returned UNCHANGED — never handed to the legacy
 /// generic-UNC branch, whose slash-flip would corrupt it. Non-WSL inputs fall
 /// back to [`legacy_win_to_wsl`] (drive letters, `\\?\`, generic).
-pub fn win_to_wsl_in(path: &Path, distro: Option<&str>) -> PathBuf {
+fn win_to_wsl_with_distro(path: &Path, distro: Option<&str>) -> PathBuf {
     let s = path.to_string_lossy();
     if is_wsl_unc(&s) {
-        let distro = match distro {
-            // Same load-bearing guard as `wsl_to_win_in`: an empty distro must
-            // not match anything (and can't — segments are non-empty — but be
-            // explicit).
-            Some("") => {
-                tracing::debug!("WSL distro is an empty string; treating as unset");
-                None
-            }
-            d => d,
-        };
-        match distro {
+        match nonempty_distro(distro) {
             Some(d) => {
                 if let Some(posix) = wsl_unc_tail(&s, d) {
                     return posix;
@@ -214,16 +209,28 @@ const WSL_UNC_PREFIXES: [&str; 2] = [r"\\wsl.localhost\", r"\\wsl$\"];
 /// distro, blank segment, or not a WSL UNC path). The bare root forms
 /// (`\\wsl$\<d>` and `\\wsl$\<d>\`) map to `/`, matching wslpath.
 fn wsl_unc_tail(s: &str, distro: &str) -> Option<PathBuf> {
-    let rest = WSL_UNC_PREFIXES.iter().find_map(|p| s.strip_prefix(p))?;
-    let rest = rest.replace('\\', "/");
-    let (seg, tail) = match rest.find('/') {
-        Some(i) => (&rest[..i], &rest[i..]),
-        None => (rest.as_str(), ""),
-    };
+    let (seg, tail) = split_wsl_unc(s)?;
     if seg != distro {
         return None;
     }
-    Some(PathBuf::from(if tail.is_empty() { "/" } else { tail }))
+    Some(PathBuf::from(if tail.is_empty() {
+        "/".to_string()
+    } else {
+        tail
+    }))
+}
+
+/// Split a WSL UNC path into its distro segment and `/`-normalized tail
+/// (`""` for the bare root form `\\wsl$\<seg>`). `None` when `s` carries
+/// neither WSL UNC prefix. Shared by [`wsl_unc_tail`] (segment must then
+/// match) and [`resolve_wsl_distro`] (segment is the answer).
+fn split_wsl_unc(s: &str) -> Option<(String, String)> {
+    let rest = WSL_UNC_PREFIXES.iter().find_map(|p| s.strip_prefix(p))?;
+    let rest = rest.replace('\\', "/");
+    match rest.split_once('/') {
+        Some((seg, tail)) => Some((seg.to_string(), format!("/{tail}"))),
+        None => Some((rest, String::new())),
+    }
 }
 
 /// Resolve the WSL distro name used for `\\wsl$` UNC translation.
@@ -235,26 +242,24 @@ fn wsl_unc_tail(s: &str, distro: &str) -> Option<PathBuf> {
 /// An empty env value is treated as unset. The value is otherwise taken
 /// literally — no trimming — because a wrong name degrades to passthrough,
 /// the same failure mode as unset. The returned name is never empty.
-pub fn resolve_wsl_distro(env: Option<&str>, cwd: Option<&Path>) -> Option<String> {
+fn resolve_wsl_distro(env: Option<&str>, cwd: Option<&Path>) -> Option<String> {
     if let Some(e) = env
         && !e.is_empty()
     {
         return Some(e.to_string());
     }
     let cwd = cwd?.to_string_lossy();
-    let rest = WSL_UNC_PREFIXES.iter().find_map(|p| cwd.strip_prefix(p))?;
-    let rest = rest.replace('\\', "/");
-    let seg = rest.split('/').next().unwrap_or("");
+    let (seg, _tail) = split_wsl_unc(&cwd)?;
     if seg.is_empty() {
         tracing::debug!(cwd = %cwd, "WSL UNC cwd has a blank distro segment; no distro resolved");
         None
     } else {
-        Some(seg.to_string())
+        Some(seg)
     }
 }
 
 /// The `/mnt/<drive-letter>` translation shared by [`wsl_to_win`] and
-/// [`wsl_to_win_in`]. `None` when `path` is not a single-letter drive mount
+/// [`wsl_to_win_with_distro`]. `None` when `path` is not a single-letter drive mount
 /// (including WSL-internal `/mnt` entries like `/mnt/data` or bare `/mnt`).
 fn drive_mount_to_win(path: &str) -> Option<PathBuf> {
     if let Some(rest) = path.strip_prefix("/mnt/")
@@ -279,7 +284,7 @@ fn drive_mount_to_win(path: &str) -> Option<PathBuf> {
 /// Looks for string values that look like paths and translates them, using
 /// the process WSL distro for `\\wsl$` UNC forms.
 pub fn translate_paths_in_json(value: &mut Value, direction: Direction) {
-    translate_paths_in_json_in(value, direction, process_wsl_distro());
+    translate_paths_in_json_with_distro(value, direction, process_wsl_distro());
 }
 
 /// As [`translate_paths_in_json`], with an explicit distro (testable off-Windows).
@@ -290,13 +295,17 @@ pub fn translate_paths_in_json(value: &mut Value, direction: Direction) {
 /// (`"content": "/etc/hosts is..."`), and blind translation would corrupt
 /// writes — WSL-internal paths are translated only at the typed fs boundary
 /// (`to_native`), never heuristically.
-pub fn translate_paths_in_json_in(value: &mut Value, direction: Direction, distro: Option<&str>) {
+fn translate_paths_in_json_with_distro(
+    value: &mut Value,
+    direction: Direction,
+    distro: Option<&str>,
+) {
     match value {
         Value::String(s) => {
             let translated = match direction {
                 Direction::WinToWsl => {
                     if looks_like_windows_path(s) || is_wsl_unc(s) {
-                        win_to_wsl_in(Path::new(s.as_str()), distro)
+                        win_to_wsl_with_distro(Path::new(s.as_str()), distro)
                             .to_string_lossy()
                             .into_owned()
                     } else {
@@ -319,12 +328,12 @@ pub fn translate_paths_in_json_in(value: &mut Value, direction: Direction, distr
         }
         Value::Array(arr) => {
             for item in arr {
-                translate_paths_in_json_in(item, direction, distro);
+                translate_paths_in_json_with_distro(item, direction, distro);
             }
         }
         Value::Object(map) => {
             for (_, v) in map.iter_mut() {
-                translate_paths_in_json_in(v, direction, distro);
+                translate_paths_in_json_with_distro(v, direction, distro);
             }
         }
         _ => {}
@@ -483,7 +492,7 @@ mod tests {
         assert_eq!(val["normal"], "/mnt/d/project/src/main.rs");
     }
 
-    // ── wsl_to_win_in: WSL-internal → \\wsl$ UNC (cyril-8tq6, claims C2/C5) ──
+    // ── wsl_to_win_with_distro: WSL-internal → \\wsl$ UNC (cyril-8tq6, claims C2/C5) ──
     // Expected values follow Microsoft's own wslpath conformance tests
     // (microsoft/WSL test/linux/unit_tests/wslpath.c), \\wsl$ emission.
 
@@ -491,15 +500,15 @@ mod tests {
     fn wsl_internal_to_unc_home_tmp_root() {
         let d = Some("Ubuntu");
         assert_eq!(
-            wsl_to_win_in("/home/u/f.txt", d),
+            wsl_to_win_with_distro("/home/u/f.txt", d),
             PathBuf::from(r"\\wsl$\Ubuntu\home\u\f.txt")
         );
         assert_eq!(
-            wsl_to_win_in("/tmp/x", d),
+            wsl_to_win_with_distro("/tmp/x", d),
             PathBuf::from(r"\\wsl$\Ubuntu\tmp\x")
         );
         assert_eq!(
-            wsl_to_win_in("/root", d),
+            wsl_to_win_with_distro("/root", d),
             PathBuf::from(r"\\wsl$\Ubuntu\root")
         );
     }
@@ -507,9 +516,12 @@ mod tests {
     #[test]
     fn wsl_internal_to_unc_root_and_trailing_separator() {
         let d = Some("Ubuntu");
-        assert_eq!(wsl_to_win_in("/", d), PathBuf::from(r"\\wsl$\Ubuntu\"));
         assert_eq!(
-            wsl_to_win_in("/proc/1/", d),
+            wsl_to_win_with_distro("/", d),
+            PathBuf::from(r"\\wsl$\Ubuntu\")
+        );
+        assert_eq!(
+            wsl_to_win_with_distro("/proc/1/", d),
             PathBuf::from(r"\\wsl$\Ubuntu\proc\1\")
         );
     }
@@ -519,15 +531,15 @@ mod tests {
         let d = Some("Ubuntu");
         // Multi-char /mnt entries are WSL-internal, NOT drive "d"/"m".
         assert_eq!(
-            wsl_to_win_in("/mnt/data/x", d),
+            wsl_to_win_with_distro("/mnt/data/x", d),
             PathBuf::from(r"\\wsl$\Ubuntu\mnt\data\x")
         );
         assert_eq!(
-            wsl_to_win_in("/mnt", d),
+            wsl_to_win_with_distro("/mnt", d),
             PathBuf::from(r"\\wsl$\Ubuntu\mnt")
         );
         assert_eq!(
-            wsl_to_win_in("/mnt/", d),
+            wsl_to_win_with_distro("/mnt/", d),
             PathBuf::from(r"\\wsl$\Ubuntu\mnt\")
         );
     }
@@ -535,7 +547,7 @@ mod tests {
     #[test]
     fn wsl_internal_to_unc_drive_branch_still_wins() {
         assert_eq!(
-            wsl_to_win_in("/mnt/c/Users", Some("Ubuntu")),
+            wsl_to_win_with_distro("/mnt/c/Users", Some("Ubuntu")),
             PathBuf::from(r"C:\Users")
         );
     }
@@ -543,7 +555,7 @@ mod tests {
     #[test]
     fn wsl_internal_to_unc_unicode_and_spaces() {
         assert_eq!(
-            wsl_to_win_in("/home/ü ser/f x.txt", Some("Ubuntu")),
+            wsl_to_win_with_distro("/home/ü ser/f x.txt", Some("Ubuntu")),
             PathBuf::from(r"\\wsl$\Ubuntu\home\ü ser\f x.txt")
         );
     }
@@ -551,8 +563,11 @@ mod tests {
     #[test]
     fn wsl_internal_to_unc_relative_and_empty_unchanged() {
         let d = Some("Ubuntu");
-        assert_eq!(wsl_to_win_in("rel/path", d), PathBuf::from("rel/path"));
-        assert_eq!(wsl_to_win_in("", d), PathBuf::from(""));
+        assert_eq!(
+            wsl_to_win_with_distro("rel/path", d),
+            PathBuf::from("rel/path")
+        );
+        assert_eq!(wsl_to_win_with_distro("", d), PathBuf::from(""));
     }
 
     #[test]
@@ -565,33 +580,36 @@ mod tests {
             "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m/scratch.txt",
             "/home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m/summary.txt",
         ] {
-            assert_eq!(wsl_to_win_in(p, None), PathBuf::from(p));
-            assert_eq!(wsl_to_win_in(p, Some("")), PathBuf::from(p));
+            assert_eq!(wsl_to_win_with_distro(p, None), PathBuf::from(p));
+            assert_eq!(wsl_to_win_with_distro(p, Some("")), PathBuf::from(p));
         }
         // Drive translation is distro-independent.
-        assert_eq!(wsl_to_win_in("/mnt/c/x", None), PathBuf::from(r"C:\x"));
+        assert_eq!(
+            wsl_to_win_with_distro("/mnt/c/x", None),
+            PathBuf::from(r"C:\x")
+        );
     }
 
-    // ── win_to_wsl_in: \\wsl$ UNC → POSIX (cyril-8tq6, claims C3/C4/C5) ──
+    // ── win_to_wsl_with_distro: \\wsl$ UNC → POSIX (cyril-8tq6, claims C3/C4/C5) ──
 
     #[test]
     fn unc_to_wsl_both_prefixes_and_slash_kinds() {
         let d = Some("Ubuntu");
         assert_eq!(
-            win_to_wsl_in(Path::new(r"\\wsl$\Ubuntu\home\u"), d),
+            win_to_wsl_with_distro(Path::new(r"\\wsl$\Ubuntu\home\u"), d),
             PathBuf::from("/home/u")
         );
         assert_eq!(
-            win_to_wsl_in(Path::new(r"\\wsl.localhost\Ubuntu\proc\stat"), d),
+            win_to_wsl_with_distro(Path::new(r"\\wsl.localhost\Ubuntu\proc\stat"), d),
             PathBuf::from("/proc/stat")
         );
         assert_eq!(
-            win_to_wsl_in(Path::new(r"\\wsl$\Ubuntu/proc/stat"), d),
+            win_to_wsl_with_distro(Path::new(r"\\wsl$\Ubuntu/proc/stat"), d),
             PathBuf::from("/proc/stat")
         );
         // Mixed separators in the tail normalize too.
         assert_eq!(
-            win_to_wsl_in(Path::new(r"\\wsl$\Ubuntu\proc/stat"), d),
+            win_to_wsl_with_distro(Path::new(r"\\wsl$\Ubuntu\proc/stat"), d),
             PathBuf::from("/proc/stat")
         );
     }
@@ -600,11 +618,11 @@ mod tests {
     fn unc_to_wsl_root_forms() {
         let d = Some("Ubuntu");
         assert_eq!(
-            win_to_wsl_in(Path::new(r"\\wsl$\Ubuntu"), d),
+            win_to_wsl_with_distro(Path::new(r"\\wsl$\Ubuntu"), d),
             PathBuf::from("/")
         );
         assert_eq!(
-            win_to_wsl_in(Path::new(r"\\wsl$\Ubuntu\"), d),
+            win_to_wsl_with_distro(Path::new(r"\\wsl$\Ubuntu\"), d),
             PathBuf::from("/")
         );
     }
@@ -619,10 +637,10 @@ mod tests {
             r"\\wsl$\UbuntuX\foo",
             r"\\wsl$\",
         ] {
-            assert_eq!(win_to_wsl_in(Path::new(p), d), PathBuf::from(p));
+            assert_eq!(win_to_wsl_with_distro(Path::new(p), d), PathBuf::from(p));
         }
         assert_eq!(
-            win_to_wsl_in(Path::new(r"\\wsl.localhost\Ubuntu-other\foo"), d),
+            win_to_wsl_with_distro(Path::new(r"\\wsl.localhost\Ubuntu-other\foo"), d),
             PathBuf::from(r"\\wsl.localhost\Ubuntu-other\foo")
         );
     }
@@ -630,8 +648,11 @@ mod tests {
     #[test]
     fn no_distro_is_passthrough_reverse() {
         for p in [r"\\wsl$\Ubuntu\home\u", r"\\wsl.localhost\Ubuntu\x"] {
-            assert_eq!(win_to_wsl_in(Path::new(p), None), PathBuf::from(p));
-            assert_eq!(win_to_wsl_in(Path::new(p), Some("")), PathBuf::from(p));
+            assert_eq!(win_to_wsl_with_distro(Path::new(p), None), PathBuf::from(p));
+            assert_eq!(
+                win_to_wsl_with_distro(Path::new(p), Some("")),
+                PathBuf::from(p)
+            );
         }
     }
 
@@ -640,16 +661,16 @@ mod tests {
         let d = Some("Ubuntu");
         // Generic UNC keeps the pre-existing (legacy) forward-slash behavior.
         assert_eq!(
-            win_to_wsl_in(Path::new(r"\\server\share\f"), d),
+            win_to_wsl_with_distro(Path::new(r"\\server\share\f"), d),
             PathBuf::from("//server/share/f")
         );
         // Drive letters and \\?\ still translate as before.
         assert_eq!(
-            win_to_wsl_in(Path::new(r"C:\Users\u"), d),
+            win_to_wsl_with_distro(Path::new(r"C:\Users\u"), d),
             PathBuf::from("/mnt/c/Users/u")
         );
         assert_eq!(
-            win_to_wsl_in(Path::new(r"\\?\C:\Users\u"), d),
+            win_to_wsl_with_distro(Path::new(r"\\?\C:\Users\u"), d),
             PathBuf::from("/mnt/c/Users/u")
         );
     }
@@ -667,8 +688,8 @@ mod tests {
             "/",
             "/proc/1/",
         ] {
-            let unc = wsl_to_win_in(p, d);
-            let back = win_to_wsl_in(&unc, d);
+            let unc = wsl_to_win_with_distro(p, d);
+            let back = win_to_wsl_with_distro(&unc, d);
             assert_eq!(back, PathBuf::from(p), "round-trip failed for {p}");
         }
         // UNC → POSIX → UNC lands on the canonical \\wsl$ emission, from
@@ -677,8 +698,8 @@ mod tests {
             (r"\\wsl$\Ubuntu\home\u", r"\\wsl$\Ubuntu\home\u"),
             (r"\\wsl.localhost\Ubuntu\home\u", r"\\wsl$\Ubuntu\home\u"),
         ] {
-            let posix = win_to_wsl_in(Path::new(unc), d);
-            let again = wsl_to_win_in(&posix.to_string_lossy(), d);
+            let posix = win_to_wsl_with_distro(Path::new(unc), d);
+            let again = wsl_to_win_with_distro(&posix.to_string_lossy(), d);
             assert_eq!(again, PathBuf::from(canonical));
         }
     }
@@ -751,7 +772,7 @@ mod tests {
             "foreign": r"\\wsl$\Debian\y",
             "nested": [{ "p": r"\\wsl$\Ubuntu\tmp\f" }]
         });
-        translate_paths_in_json_in(&mut val, Direction::WinToWsl, Some("Ubuntu"));
+        translate_paths_in_json_with_distro(&mut val, Direction::WinToWsl, Some("Ubuntu"));
         assert_eq!(val["path"], "/home/u");
         assert_eq!(val["alt"], "/x");
         assert_eq!(val["drive"], "/mnt/c/Users/u");
@@ -773,7 +794,7 @@ mod tests {
             "posix": "/home/u",
             "non_drive_mnt": "/mnt/data/x"
         });
-        translate_paths_in_json_in(&mut val, Direction::WslToWin, Some("Ubuntu"));
+        translate_paths_in_json_with_distro(&mut val, Direction::WslToWin, Some("Ubuntu"));
         assert_eq!(val["path"], r"C:\f");
         assert_eq!(val["content"], "/etc/hosts is a file\n");
         assert_eq!(val["posix"], "/home/u");
