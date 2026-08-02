@@ -1744,6 +1744,7 @@ mod tests {
 
     fn metadata_frame(sid: &SessionId) -> Notification {
         Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(75.0)),
             metering: None,
             tokens: None,

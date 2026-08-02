@@ -118,6 +118,7 @@ fn picker_marks_active_row_exactly_once_for_effort() {
     let mut ui = UiState::new(500);
     // Effort reaches cyril the same way the toolbar gets it: a metadata frame.
     ui.apply_notification(&cyril_core::types::Notification::MetadataUpdated {
+        refusal: None,
         context_usage: None,
         metering: None,
         tokens: None,

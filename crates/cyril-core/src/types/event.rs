@@ -2,8 +2,8 @@ use crate::types::command::{CommandInfo, ConfigOption};
 use crate::types::message::{AgentMessage, AgentThought, UserMessage};
 use crate::types::plan::Plan;
 use crate::types::session::{
-    CompactionPhase, ContextBreakdown, ContextUsage, EffortUpdate, ModeId, ModelInfo, SessionId,
-    SessionMode, StopReason, TokenCounts, TurnMetering,
+    CompactionPhase, ContextBreakdown, ContextUsage, EffortUpdate, ModeId, ModelInfo, RefusalAlert,
+    SessionId, SessionMode, StopReason, TokenCounts, TurnMetering,
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 use crate::types::turn::TurnId;
@@ -99,6 +99,12 @@ pub enum Notification {
         /// time this notification reaches state machines, routing has already
         /// happened and this field is effectively just a tag.
         session_id: Option<SessionId>,
+        /// Model-refusal alert (Kiro 2.12.1+, cyril-h8zb): `Some` when the
+        /// frame carries a `refusal` object or `stopReason:"CONTENT_FILTERED"`
+        /// (Kiro's own consumer alerts on either signal — an OR, not an AND).
+        /// `None` on every other frame; absence means "no refusal", never
+        /// "refusal cleared".
+        refusal: Option<RefusalAlert>,
     },
     /// ACP `usage_update` session notification (unstable_session_usage).
     /// Carries absolute token counts rather than the percentage from
@@ -682,6 +688,7 @@ mod tests {
             duration_ms: None,
             effort: EffortUpdate::Set(EffortLevel::High),
             session_id: Some(SessionId::new("sess_1")),
+            refusal: None,
         };
         if let Notification::MetadataUpdated {
             context_usage,
@@ -690,6 +697,7 @@ mod tests {
             duration_ms,
             effort,
             session_id,
+            refusal,
         } = n
         {
             match context_usage {
@@ -701,6 +709,7 @@ mod tests {
             assert!(duration_ms.is_none());
             assert_eq!(effort, EffortUpdate::Set(EffortLevel::High));
             assert_eq!(session_id, Some(SessionId::new("sess_1")));
+            assert!(refusal.is_none());
         } else {
             panic!("wrong variant");
         }

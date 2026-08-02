@@ -424,6 +424,8 @@ impl UiState {
                 // Routing tag (cyril-fh06): the App has already diverted
                 // subagent-scoped frames before this state machine sees one.
                 session_id: _,
+                // Slice 5 (cyril-h8zb) consumes this into a system message.
+                refusal: _,
             } => {
                 // Retain-last: a frame that omits contextUsagePercentage
                 // (real 2.4.1 wire shape: duration/effort-only frames) means
@@ -4773,6 +4775,7 @@ mod tests {
 
         // A thinking turn reports effort.
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
@@ -4784,6 +4787,7 @@ mod tests {
 
         // A context-only frame mid-turn omits effort — must NOT clear it.
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(8.0)),
             metering: None,
             tokens: None,
@@ -4815,6 +4819,7 @@ mod tests {
         // turn the badge off mid-session and UiState must honor it.
         let mut state = UiState::new(500);
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: None,
             metering: None,
             tokens: None,
@@ -4824,6 +4829,7 @@ mod tests {
         });
         assert_eq!(state.effort(), Some(&EffortLevel::High));
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: None,
             metering: None,
             tokens: None,
@@ -4840,6 +4846,7 @@ mod tests {
         // must reach the toolbar instead of vanishing at the wire boundary.
         let mut state = UiState::new(500);
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: None,
             metering: None,
             tokens: None,
@@ -4873,6 +4880,7 @@ mod tests {
 
         let mut state = UiState::new(500);
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: None,
             metering: None,
             tokens: None,
@@ -4884,6 +4892,7 @@ mod tests {
 
         // `/effort none` — the badge must FOLLOW, not keep reading "high".
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: None,
             metering: None,
             tokens: None,
@@ -4905,6 +4914,7 @@ mod tests {
         // frames, the merged duration must survive (cyril-1gim).
         let mut state = UiState::new(500);
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: None,
             metering: None,
             tokens: None,
@@ -4913,6 +4923,7 @@ mod tests {
             session_id: None,
         });
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: None,
             metering: Some(TurnMetering::new(Some(0.018), None)),
             tokens: None,
@@ -4943,6 +4954,7 @@ mod tests {
         // toolbar context to 0.0%, while its metering/effort still apply.
         let mut state = UiState::new(500);
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(42.0)),
             metering: None,
             tokens: None,
@@ -4953,6 +4965,7 @@ mod tests {
         assert!((state.context_usage().unwrap_or(-1.0) - 42.0).abs() < f64::EPSILON);
 
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: None,
             metering: Some(TurnMetering::new(Some(0.018), Some(2281))),
             tokens: None,
@@ -4986,6 +4999,7 @@ mod tests {
         let mut state = UiState::new(500);
         state.set_current_model(Some("opus".into()));
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
@@ -5007,6 +5021,7 @@ mod tests {
 
         // Re-reporting the *same* model must not disturb a freshly-set level.
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(8.0)),
             metering: None,
             tokens: None,
@@ -5030,6 +5045,7 @@ mod tests {
         let mut state = UiState::new(500);
         state.set_current_model(Some("opus".into()));
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(7.5)),
             metering: None,
             tokens: None,
@@ -5054,6 +5070,7 @@ mod tests {
         let mut state = UiState::new(500);
 
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(50.0)),
             metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
@@ -5087,6 +5104,7 @@ mod tests {
         let mut state = UiState::new(500);
 
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(Some(0.01), None)),
             tokens: None,
@@ -5118,6 +5136,7 @@ mod tests {
 
         // Turn 1
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(Some(0.02), Some(1000))),
             tokens: None,
@@ -5131,6 +5150,7 @@ mod tests {
 
         // Turn 2
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(20.0)),
             metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
             tokens: None,
@@ -5151,6 +5171,7 @@ mod tests {
         let mut state = UiState::new(500);
 
         state.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(Some(0.05), Some(2000))),
             tokens: None,

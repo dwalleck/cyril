@@ -496,6 +496,8 @@ pub(crate) fn to_ext_notification(
                 tokens,
                 effort,
                 session_id,
+                // Slice 2b (cyril-h8zb) wires the actual refusal parse.
+                refusal: None,
             }))
         }
         "kiro.dev/compaction/status" => {

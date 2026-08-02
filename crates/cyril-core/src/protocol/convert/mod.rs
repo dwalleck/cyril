@@ -673,6 +673,7 @@ mod tests {
             duration_ms,
             effort,
             session_id,
+            refusal,
         })) = result
         {
             let ctx = context_usage.expect("context_usage should be present");
@@ -686,6 +687,7 @@ mod tests {
                 "no effort field => no change"
             );
             assert!(session_id.is_none(), "no sessionId field => None (global)");
+            assert!(refusal.is_none(), "plain frame carries no refusal");
         } else {
             panic!("expected MetadataUpdated");
         }
