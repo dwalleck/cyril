@@ -15,8 +15,103 @@
 //! Vocabulary is pinned in CONTEXT.md: "Turn owner", "Companion terminal",
 //! "Turn mediation".
 
-use crate::types::SessionId;
+use crate::types::event::{Notification, RoutedNotification};
 use crate::types::turn::{TurnAllocator, TurnId};
+use crate::types::{SessionId, StopReason};
+
+/// Which terminal source the mediator is still expecting for a released turn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CompanionSource {
+    /// The KAS wire `session_info_update{kind:"turn_end"}` — identity-free, so
+    /// it can only be matched by session.
+    Wire,
+    /// The completion the bridge synthesizes from the prompt RPC — carries its
+    /// owner, so it is matched by id.
+    Synthesized,
+}
+
+impl CompanionSource {
+    /// The other terminal source of the same turn — what a release still owes
+    /// after this one arrived.
+    fn counterpart(self) -> Self {
+        match self {
+            Self::Wire => Self::Synthesized,
+            Self::Synthesized => Self::Wire,
+        }
+    }
+}
+
+/// The one companion terminal still owed for a turn that already released
+/// (cyril-a71q C6; CONTEXT.md "Companion terminal").
+///
+/// A KAS turn has two terminal sources. The first to arrive releases the turn
+/// (first-source-wins, retained from cyril-j16p); the second is not a duplicate
+/// to be dropped blindly but an *expected* signal to be absorbed — absorbing is
+/// what lets both `{source, reason}` observations be recorded for cyril-pnwb
+/// instead of the second one being lost.
+///
+/// At most one entry exists at any time: registering a new expectation replaces
+/// a dangling one, so the ledger is bounded by construction rather than by a
+/// cleanup pass.
+#[derive(Debug)]
+struct Companion {
+    owner: TurnId,
+    session: SessionId,
+    awaiting: CompanionSource,
+    /// `{source, reason}` of the signal that already arrived. The second is
+    /// reported on absorption; no precedence between them is selected here —
+    /// that decision belongs to cyril-pnwb.
+    first: (CompanionSource, StopReason),
+}
+
+impl Companion {
+    /// The single registration site (design C8): a release leaves behind an
+    /// expectation for the arrived source's counterpart, with the arrival
+    /// recorded as evidence.
+    fn after_arrival(
+        owner: TurnId,
+        session: SessionId,
+        arrived: CompanionSource,
+        reason: StopReason,
+    ) -> Self {
+        Self {
+            owner,
+            session,
+            awaiting: arrived.counterpart(),
+            first: (arrived, reason),
+        }
+    }
+}
+
+/// What one observed notification means for the active turn (cyril-b4y4).
+///
+/// The three non-forward outcomes are distinct variants deliberately: absorb
+/// and drop both leave nothing on the notification channel, which is exactly
+/// the observational blindness cyril-ri8q filed — the variant IS the seam
+/// that makes them distinguishable.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum Disposition {
+    /// Pass through untouched — non-terminals, and terminals for sessions
+    /// other than the active turn's (their own consumer needs them).
+    Forward,
+    /// Pass through; the active turn released on this signal. The loop's
+    /// deferred-disconnect handling keys off this variant.
+    ForwardTurnComplete,
+    /// The expected companion terminal — consumed, not forwarded. Carries the
+    /// cyril-pnwb `{source, reason}` evidence pair for both signals.
+    Absorb {
+        owner: TurnId,
+        first: (CompanionSource, StopReason),
+        second: (CompanionSource, StopReason),
+    },
+    /// An owner-stamped terminal matching neither the companion ledger nor
+    /// the active turn — a stale duplicate. Dropped.
+    DropStale { stale: TurnId },
+    /// An identity-free terminal with no active turn and nothing owed.
+    /// Dropped — forwarding would make the App commit streaming and metering
+    /// a second time.
+    DropUnowned,
+}
 
 /// The turn currently occupying the bridge (cyril-a71q).
 ///
@@ -59,6 +154,9 @@ pub(crate) enum BeginTurn {
 pub(crate) struct TurnMediator {
     active: Option<ActiveTurn>,
     alloc: TurnAllocator,
+    /// cyril-a71q C6: at most ONE outstanding companion expectation. See
+    /// [`Companion`].
+    companion: Option<Companion>,
 }
 
 impl TurnMediator {
@@ -74,6 +172,7 @@ impl TurnMediator {
         Self {
             active: None,
             alloc,
+            companion: None,
         }
     }
 
@@ -111,6 +210,149 @@ impl TurnMediator {
     pub(crate) fn is_busy(&self) -> bool {
         self.active.is_some()
     }
+
+    /// What does this observed notification mean for the active turn?
+    ///
+    /// ABSORB-FIRST in both arms: checking the ledger before the active turn
+    /// is what makes single drift safe — a stale signal is absorbed by the
+    /// expectation it belongs to instead of clearing the newer turn
+    /// (cyril-a71q falsifier mutation M3 fails the other order; probe cell
+    /// f9). Non-terminal notifications pass through untouched.
+    pub(crate) fn observe(&mut self, routed: &RoutedNotification) -> Disposition {
+        let Notification::TurnCompleted {
+            stop_reason: reason,
+        } = routed.notification
+        else {
+            return Disposition::Forward;
+        };
+        match routed.turn {
+            // Owner-stamped: synthesized by the bridge itself, matched by id.
+            Some(id) => {
+                if let Some(d) =
+                    self.absorb_if(|c| c.awaiting == CompanionSource::Synthesized && c.owner == id)
+                {
+                    return d.second(CompanionSource::Synthesized, reason);
+                }
+                match self.active.as_ref() {
+                    Some(active) if active.owner == id => {
+                        // cyril-upjh: only a turn whose engine emits a wire
+                        // turn_end still owes one. Assigning None on the
+                        // other branch is the clear: the ledger must be
+                        // empty after a single-terminal release, or any
+                        // later unstamped completion for this session is
+                        // eaten as a phantom companion.
+                        self.companion = active.expects_wire_terminal.then(|| {
+                            Companion::after_arrival(
+                                active.owner,
+                                active.session.clone(),
+                                CompanionSource::Synthesized,
+                                reason,
+                            )
+                        });
+                        tracing::debug!(owner = %id, "turn completed");
+                        self.active = None;
+                        Disposition::ForwardTurnComplete
+                    }
+                    other => {
+                        tracing::debug!(
+                            stale_owner = %id,
+                            active = ?other.map(|t| t.owner),
+                            "dropping stale completion"
+                        );
+                        Disposition::DropStale { stale: id }
+                    }
+                }
+            }
+            // Identity-free: the KAS wire `turn_end`. The frame is
+            // `{kind, stopReason}` with no execution id — confirmed against
+            // the KAS emitter, not inferred. Matched by session.
+            None => {
+                if let Some(d) = self.absorb_if(|c| {
+                    c.awaiting == CompanionSource::Wire
+                        && routed.session_id.as_ref() == Some(&c.session)
+                }) {
+                    return d.second(CompanionSource::Wire, reason);
+                }
+                match self.active.as_ref() {
+                    // Scoped to the ACTIVE turn's own session -> release. The
+                    // synthesized twin is always still owed (every turn has a
+                    // prompt RPC), so this registration is unconditional.
+                    Some(active) if routed.session_id.as_ref() == Some(&active.session) => {
+                        self.companion = Some(Companion::after_arrival(
+                            active.owner,
+                            active.session.clone(),
+                            CompanionSource::Wire,
+                            reason,
+                        ));
+                        tracing::debug!(owner = %active.owner, "turn completed (wire turn_end)");
+                        self.active = None;
+                        Disposition::ForwardTurnComplete
+                    }
+                    // cyril-a71q C3: a FOREIGN session's terminal. Forward it
+                    // once so that session's own consumer (a subagent stream)
+                    // sees it, but touch nothing on the main turn — the
+                    // cross-session split-brain was this signal clearing the
+                    // main busy guard.
+                    Some(active) => {
+                        tracing::debug!(
+                            foreign = ?routed.session_id,
+                            active_owner = %active.owner,
+                            "forwarding foreign terminal; main turn untouched"
+                        );
+                        Disposition::Forward
+                    }
+                    // No active turn, nothing owed: a late or duplicate
+                    // terminal for a turn that already ended. Logged now
+                    // (cyril-b4y4 probe finding 1 — this was the one silent
+                    // disposition) and dropped.
+                    None => {
+                        tracing::debug!(
+                            scope = ?routed.session_id,
+                            "dropping unowned terminal — no active turn, nothing owed"
+                        );
+                        Disposition::DropUnowned
+                    }
+                }
+            }
+        }
+    }
+
+    /// The single absorb site (design C8): if the outstanding expectation
+    /// matches, consume it and report the evidence pair. The `second` half of
+    /// the pair is filled in by the caller via [`PendingAbsorb::second`] —
+    /// only the caller knows which source just arrived.
+    fn absorb_if(&mut self, matches: impl FnOnce(&Companion) -> bool) -> Option<PendingAbsorb> {
+        if self.companion.as_ref().is_some_and(matches) {
+            self.companion.take().map(|c| PendingAbsorb {
+                owner: c.owner,
+                first: c.first,
+            })
+        } else {
+            None
+        }
+    }
+}
+
+/// An absorb decision waiting for its second `{source, reason}` half.
+struct PendingAbsorb {
+    owner: TurnId,
+    first: (CompanionSource, StopReason),
+}
+
+impl PendingAbsorb {
+    fn second(self, source: CompanionSource, reason: StopReason) -> Disposition {
+        tracing::debug!(
+            owner = %self.owner,
+            first = ?self.first,
+            second = ?(source, reason),
+            "absorbed expected companion"
+        );
+        Disposition::Absorb {
+            owner: self.owner,
+            first: self.first,
+            second: (source, reason),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -121,6 +363,137 @@ mod tests {
 
     fn sid(s: &str) -> SessionId {
         SessionId::new(s)
+    }
+
+    fn end_turn() -> Notification {
+        Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        }
+    }
+
+    /// The KAS wire `turn_end` shape: identity-free, session-scoped.
+    fn wire_end(s: &str) -> RoutedNotification {
+        RoutedNotification::scoped(sid(s), end_turn())
+    }
+
+    /// The bridge-synthesized shape: owner-stamped, global scope.
+    fn stamped(n: u64) -> RoutedNotification {
+        RoutedNotification::global(end_turn()).with_turn(TurnId::new(n))
+    }
+
+    /// STRESS FIXTURE (plan S3b — the cyril-upjh phantom-companion cell,
+    /// probe f5/f7/f8 shapes): a stamped release leaves a Wire expectation
+    /// ONLY for a turn whose engine emits a wire turn_end. Buggy
+    /// implementation this fails under: unconditional registration, where a
+    /// single-terminal release leaves a session-keyed phantom that eats the
+    /// next unstamped completion.
+    #[test]
+    fn stamped_release_owes_wire_companion_only_when_expected() {
+        // Dual-terminal turn: the wire twin is still owed after release.
+        let mut kas = TurnMediator::new();
+        assert_eq!(
+            kas.begin_turn(sid("s"), true),
+            BeginTurn::Accepted(TurnId::new(0))
+        );
+        assert_eq!(kas.observe(&stamped(0)), Disposition::ForwardTurnComplete);
+        assert!(matches!(
+            kas.observe(&wire_end("s")),
+            Disposition::Absorb { .. }
+        ));
+
+        // Single-terminal turn: the ledger is empty after release, so the
+        // same unstamped frame is unowned, not a companion.
+        let mut v2 = TurnMediator::new();
+        assert_eq!(
+            v2.begin_turn(sid("s"), false),
+            BeginTurn::Accepted(TurnId::new(0))
+        );
+        assert_eq!(v2.observe(&stamped(0)), Disposition::ForwardTurnComplete);
+        assert_eq!(v2.observe(&wire_end("s")), Disposition::DropUnowned);
+    }
+
+    /// STRESS FIXTURE (plan S3c, probe f3): a stale stamp is dropped and the
+    /// live turn is untouched. Buggy implementation this fails under: the
+    /// original a71q defect — an id-blind "is anything running" release that
+    /// lets turn A's late completion clear turn B. Also carries the
+    /// post-release half of the S2 cancel-snapshot fixture.
+    #[test]
+    fn stale_stamp_never_clears_a_live_turn() {
+        let mut m = TurnMediator::new();
+        assert_eq!(
+            m.begin_turn(sid("a"), false),
+            BeginTurn::Accepted(TurnId::new(0))
+        );
+        assert_eq!(m.observe(&stamped(0)), Disposition::ForwardTurnComplete);
+        assert_eq!(
+            m.cancel_target(),
+            None,
+            "released turn leaves no cancel target"
+        );
+
+        assert_eq!(
+            m.begin_turn(sid("b"), false),
+            BeginTurn::Accepted(TurnId::new(1))
+        );
+        assert_eq!(
+            m.observe(&stamped(0)),
+            Disposition::DropStale {
+                stale: TurnId::new(0)
+            }
+        );
+        assert!(m.is_busy(), "the stale duplicate must not release turn#1");
+        assert_eq!(
+            m.cancel_target(),
+            Some(&sid("b")),
+            "cancel still targets the live turn's own session"
+        );
+    }
+
+    /// Probe f10+f12: owner-keyed absorb beats stale-drop while the NEXT turn
+    /// runs, and the evidence pair carries both `{source, reason}` halves in
+    /// arrival order (cyril-pnwb; design C9).
+    #[test]
+    fn owner_keyed_absorb_wins_over_stale_while_next_turn_runs() {
+        let mut m = TurnMediator::new();
+        assert_eq!(
+            m.begin_turn(sid("s"), true),
+            BeginTurn::Accepted(TurnId::new(0))
+        );
+        assert_eq!(m.observe(&wire_end("s")), Disposition::ForwardTurnComplete);
+        assert_eq!(
+            m.begin_turn(sid("s"), true),
+            BeginTurn::Accepted(TurnId::new(1))
+        );
+
+        assert_eq!(
+            m.observe(&stamped(0)),
+            Disposition::Absorb {
+                owner: TurnId::new(0),
+                first: (CompanionSource::Wire, StopReason::EndTurn),
+                second: (CompanionSource::Synthesized, StopReason::EndTurn),
+            },
+            "turn#0's synthesized twin is evidence, not a stale duplicate"
+        );
+        assert!(m.is_busy(), "turn#1 must be untouched by the absorb");
+    }
+
+    /// Non-terminal notifications pass through untouched in every state.
+    #[test]
+    fn non_terminals_forward_untouched() {
+        let note = || {
+            RoutedNotification::global(Notification::SystemNotify {
+                level: crate::types::event::SystemNotifyLevel::Info,
+                message: "marker".into(),
+            })
+        };
+        let mut m = TurnMediator::new();
+        assert_eq!(m.observe(&note()), Disposition::Forward);
+        assert_eq!(
+            m.begin_turn(sid("s"), true),
+            BeginTurn::Accepted(TurnId::new(0))
+        );
+        assert_eq!(m.observe(&note()), Disposition::Forward);
+        assert!(m.is_busy());
     }
 
     /// Probe cells p1–p2 (`.cyril-b4y4/probes/probe-output.txt`): a fresh
