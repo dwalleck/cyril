@@ -72,15 +72,15 @@ async fn v2_bound_client_answers_auth_fs_hooks_but_advertises_nothing() {
     assert!(!caps.fs.read_text_file && !caps.fs.write_text_file && !caps.terminal);
     assert!(caps.meta.is_none(), "V2 advertises no _meta.kiro");
 
-    // Execution side, same binding. AUTH: the responder RUNS (real-store read →
-    // token or store diagnostic; never method-not-found, never null).
+    // Execution side, same binding. AUTH: REFUSED since the dn91 auth gate —
+    // V2 installs no auth adapter (was: Answered, the characterized defect).
     let auth = ext(
         &client,
         crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD,
         serde_json::json!({}),
     )
     .await;
-    assert_eq!(auth, Disposition::Answered, "auth responder runs under V2");
+    assert_eq!(auth, Disposition::Refused, "auth refused under V2 (C1)");
 
     // TYPED FS: the override resolves and returns real file content.
     let read = client

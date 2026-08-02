@@ -33,8 +33,11 @@ use crate::types::{AgentEngine, Notification};
 /// a type-system fact rather than a convention.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Adapters {
-    // The `auth` family field (Option<AuthAdapter>) lands with its consumer,
-    // the auth dispatch gate — an unread field is dead code under -D warnings.
+    /// Inbound `_kiro/auth/getAccessToken`. Auth has no capability
+    /// advertisement (KAS initiates the callback unconditionally under
+    /// `--auth=acp-callback`); the adapter gates execution only.
+    #[cfg(feature = "kas")]
+    pub(crate) auth: Option<AuthAdapter>,
     /// Bare-ACP typed fs/terminal callbacks, the `_kiro/fs/*` dialect, and
     /// `_kiro/terminal/shell_type`.
     #[cfg(feature = "kas")]
@@ -49,10 +52,19 @@ impl Adapters {
     /// construct, and `V2Engine`'s answer.
     pub(crate) const NONE: Self = Self {
         #[cfg(feature = "kas")]
+        auth: None,
+        #[cfg(feature = "kas")]
         host_io: None,
         hooks: HooksAdapter::None,
     };
 }
+
+/// Marker: the engine answers `_kiro/auth/getAccessToken` from the host
+/// credential store. Unit today; the g9vt mediator may grow it into a real
+/// interface.
+#[cfg(feature = "kas")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct AuthAdapter;
 
 /// Marker: the engine delegates file I/O and shell execution to cyril's
 /// host-io/terminal responders.
@@ -286,6 +298,7 @@ impl Engine for KasEngine {
     fn adapters(&self) -> Adapters {
         use crate::types::kas_hooks::KasHooksMode;
         Adapters {
+            auth: Some(AuthAdapter),
             host_io: Some(HostIoAdapter),
             hooks: match self.hooks_mode {
                 KasHooksMode::Off => HooksAdapter::None,

@@ -298,12 +298,14 @@ impl acp::Client for KiroClient {
 
     /// Handle incoming server→client ext REQUESTS. KAS-1/dcc6 answers
     /// `_kiro/auth/getAccessToken` (both KAS spawn modes run
-    /// `--auth=acp-callback`) from kiro-cli's sqlite credential store; every
-    /// other ext request gets the protocol default. v2 never sends this, and
-    /// the cfg-split keeps the credential code out of a default build
-    /// (ADR-0002). cyril-l7tw C11: an auth-callback failure ALSO surfaces to
-    /// the App as a BridgeError — the JSON-RPC error alone travels to KAS,
-    /// which fails the turn while the user sees nothing actionable.
+    /// `--auth=acp-callback`) from kiro-cli's sqlite credential store when the
+    /// bound engine installs the Auth adapter (cyril-dn91) — an engine without
+    /// one is refused with method-not-found. Unrecognized ext requests get the
+    /// protocol default. The cfg-split keeps the credential code out of a
+    /// default build (ADR-0002). cyril-l7tw C11: an auth-callback failure ALSO
+    /// surfaces to the App as a BridgeError — the JSON-RPC error alone travels
+    /// to KAS, which fails the turn while the user sees nothing actionable;
+    /// refusals are exempt (dn91 C13).
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         let method = args.method.to_string();
         let result = self.handle_ext_request(args).await;
@@ -400,6 +402,12 @@ impl KiroClient {
             return;
         }
         let Err(e) = result else { return };
+        // A refusal is not an auth failure: the bound engine installs no auth
+        // adapter (cyril-dn91 C13), so there is nothing actionable for the
+        // user — only responder errors surface as BridgeError.
+        if e.code == acp::ErrorCode::MethodNotFound {
+            return;
+        }
         let mut message = e.message.clone();
         // LOGIN_HINT is the single owner of the remediation wording — the
         // responder's own diagnostics embed it, so this check can't drift.
@@ -429,6 +437,9 @@ impl KiroClient {
     #[cfg(feature = "kas")]
     async fn handle_ext_request(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         if args.method.as_ref() == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
+            if self.engine.adapters().auth.is_none() {
+                return refuse_unadapted(args.method.as_ref());
+            }
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
@@ -492,6 +503,19 @@ fn parse_ext_params(args: &acp::ExtRequest) -> serde_json::Value {
             serde_json::Value::Null
         }
     }
+}
+
+/// Refuse a host callback whose family the bound engine installs no adapter
+/// for (cyril-dn91, ADR-0001 amendment): JSON-RPC method-not-found — never the
+/// protocol-default null, which the agent reads as success-with-empty-result.
+/// Generic so both ext requests and typed `acp::Client` overrides share it.
+#[cfg(feature = "kas")]
+fn refuse_unadapted<T>(method: &str) -> acp::Result<T> {
+    tracing::debug!(
+        method,
+        "host callback refused: bound engine installs no adapter for this family"
+    );
+    Err(acp::Error::method_not_found())
 }
 
 /// The ACP protocol default for an unhandled ext request: a `null` result.
@@ -670,6 +694,68 @@ mod tests {
 
     fn kas_client() -> KiroClient {
         kas_client_with_shell(test_host_shell(crate::types::AgentEngine::Kas))
+    }
+
+    /// A V2-bound client in a kas-feature build — the cyril-dn91 defect
+    /// configuration. Returns the notification receiver so refusal side
+    /// effects (or their required absence) are observable.
+    fn v2_bound_client() -> (KiroClient, mpsc::Receiver<RoutedNotification>) {
+        let (ntx, nrx) = mpsc::channel(4);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::V2Engine),
+            test_host_shell(crate::types::AgentEngine::V2),
+            std::path::Path::new("/tmp"),
+        );
+        (client, nrx)
+    }
+
+    // cyril-dn91 C1 fence: a V2-bound client (kas build) REFUSES
+    // getAccessToken with JSON-RPC method-not-found — not the protocol-default
+    // null (agent reads that as success), not a responder/store error. Fails
+    // against the pre-dn91 ungated arm, which ran the store read under V2.
+    #[tokio::test]
+    async fn v2_refuses_auth_callback() {
+        let (client, _nrx) = v2_bound_client();
+        let params = serde_json::value::RawValue::from_string("{}".to_string())
+            .unwrap()
+            .into();
+        let err = client
+            .ext_method(acp::ExtRequest::new(
+                crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD,
+                params,
+            ))
+            .await
+            .expect_err("V2 installs no auth adapter — must refuse, not answer");
+        assert_eq!(
+            err.code,
+            acp::ErrorCode::MethodNotFound,
+            "refusal must be method-not-found, got: {err:?}"
+        );
+    }
+
+    // cyril-dn91 C13 fence: the refusal travels the same ext_method path as
+    // real auth failures, but must NOT emit BridgeError("auth") — a refusal is
+    // not actionable. Fails under the plausible buggy impl: gate added inside
+    // handle_ext_request with notify_if_auth_failure left untouched.
+    #[tokio::test]
+    async fn auth_refusal_emits_no_bridge_error() {
+        let (client, mut nrx) = v2_bound_client();
+        let params = serde_json::value::RawValue::from_string("{}".to_string())
+            .unwrap()
+            .into();
+        let _ = client
+            .ext_method(acp::ExtRequest::new(
+                crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD,
+                params,
+            ))
+            .await;
+        assert!(
+            nrx.try_recv().is_err(),
+            "a refusal must not surface as a BridgeError"
+        );
     }
 
     fn kas_client_with_shell(shell: ResolvedHostShell) -> KiroClient {
