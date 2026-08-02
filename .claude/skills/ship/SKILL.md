@@ -90,9 +90,25 @@ skill only sequences them.
    decision. Wait for explicit approval. Do not start the plan on a hedge
    ("looks fine I guess") — ask for a real yes, and apply any requested
    changes to the design first.
-4. `/gilfoyle:budgeted-plan` — slices with claims/oracles/fixtures/budgets.
+4. **Glossary reconciliation.** The approved design is where domain terms
+   crystallise, and the write trigger must sit on this path — `CONTEXT.md`
+   went six ADRs stale (0005–0010, backfilled 2026-08-02) because term
+   *resolution* flowed through this pipeline while term *recording* lived
+   only in skills the pipeline never invokes. Diff the design's vocabulary
+   against `CONTEXT.md` (and `CONTEXT-MAP.md` contexts where present):
+   - the design coins or resolves a term, or an ADR written this run
+     introduces one → add/amend the entry now, in `/domain-modeling`
+     format (tight definition + `_Avoid_` list);
+   - the design uses a term in conflict with an existing entry → resolve
+     the collision now (rename in the design or amend the glossary), not
+     at review;
+   - nothing new → say "glossary: no new terms" in one line and move on;
+     never invent entries to have something to write.
+   Commit glossary changes on the branch (`docs: ...`) so the PR carries
+   the vocabulary with the code it names.
+5. `/gilfoyle:budgeted-plan` — slices with claims/oracles/fixtures/budgets.
    Commit it.
-5. `/gilfoyle:checkpointed-build` — one commit per slice, all gates per
+6. `/gilfoyle:checkpointed-build` — one commit per slice, all gates per
    slice, STOP on drift per that skill's rules (drift stops surface to the
    user; they are not this skill's to adjudicate).
 
@@ -103,6 +119,12 @@ Verify each finding before applying (the reviewer can be wrong in both
 directions); commit fixes as their own conventional commits. Doing this
 pre-PR means the PR opens already-reviewed instead of collecting bot
 churn.
+
+Backstop the step-4 glossary reconciliation here: if the branch adds or
+amends an ADR, or the diff introduces a new domain noun, `CONTEXT.md`
+must change in the same PR — or the "glossary: no new terms" call from
+step 4 must still hold against the *built* code, which sometimes coins
+vocabulary the design didn't.
 
 ## 4. Open the PR
 
