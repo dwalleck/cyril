@@ -1864,6 +1864,41 @@ mod tests {
         assert!(app.ui_state.streaming_text().is_empty());
     }
 
+    #[test]
+    fn post_session_main_scoped_frame_updates_main() {
+        let main = SessionId::new("sess_main");
+        let mut app = test_app();
+
+        app.handle_notification(RoutedNotification::global(Notification::SessionCreated {
+            session_id: main.clone(),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        }));
+
+        let deferred = app.handle_notification(RoutedNotification::scoped(
+            main.clone(),
+            metadata_frame(&main),
+        ));
+
+        assert!(deferred.is_empty(), "a metadata frame defers no commands");
+        assert_eq!(
+            app.session.context_usage().map(ContextUsage::percentage),
+            Some(75.0),
+            "a main-scoped frame must update the main SessionController"
+        );
+        assert_eq!(
+            app.ui_state.context_usage(),
+            Some(75.0),
+            "a main-scoped frame must update the main UiState"
+        );
+        assert!(
+            !app.ui_state.subagent_ui().streams().contains_key(&main),
+            "the main session id must not create a subagent stream"
+        );
+    }
+
     // cyril-bm1j Slice 9 / claims C1, C2: submit routing truth table.
     #[test]
     fn classify_submit_truth_table() {
