@@ -357,50 +357,6 @@ impl Command for AgentCommand {
     }
 }
 
-/// Parse a `kiro.dev/commands/options` response into `CommandOption`s.
-///
-/// Handles two response shapes:
-/// - Object with `"options"` array: `{"options": [...]}`
-/// - Bare array: `[...]`
-pub(crate) fn parse_options_response(response: &serde_json::Value) -> Vec<CommandOption> {
-    let options_arr = response
-        .get("options")
-        .and_then(|v| v.as_array())
-        .or_else(|| response.as_array());
-
-    let Some(opts) = options_arr else {
-        return Vec::new();
-    };
-
-    opts.iter()
-        .filter_map(|opt| {
-            let value = opt.get("value").and_then(|v| v.as_str())?.to_string();
-            let label = opt
-                .get("label")
-                .or_else(|| opt.get("name"))
-                .and_then(|v| v.as_str())
-                .unwrap_or(&value)
-                .to_string();
-            let description = opt
-                .get("description")
-                .and_then(|v| v.as_str())
-                .map(String::from);
-            let group = opt.get("group").and_then(|v| v.as_str()).map(String::from);
-            let is_current = opt
-                .get("current")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            Some(CommandOption {
-                label,
-                value,
-                description,
-                group,
-                is_current,
-            })
-        })
-        .collect()
-}
-
 #[cfg(test)]
 #[expect(clippy::unwrap_used)]
 #[expect(clippy::expect_used)]
@@ -786,86 +742,6 @@ mod tests {
         assert!(registry.parse("/quit").is_some());
         assert!(registry.parse("/q").is_some());
         assert!(registry.parse("/new").is_some());
-    }
-
-    // --- parse_options_response tests ---
-
-    #[test]
-    fn parse_options_response_with_options_key() {
-        let response = serde_json::json!({
-            "options": [
-                {"value": "claude-sonnet", "label": "Claude Sonnet", "description": "Fast", "current": true},
-                {"value": "claude-haiku", "label": "Claude Haiku"}
-            ]
-        });
-        let opts = parse_options_response(&response);
-        assert_eq!(opts.len(), 2);
-        assert_eq!(opts[0].value, "claude-sonnet");
-        assert_eq!(opts[0].label, "Claude Sonnet");
-        assert_eq!(opts[0].description.as_deref(), Some("Fast"));
-        assert!(opts[0].is_current);
-        assert!(!opts[1].is_current);
-    }
-
-    #[test]
-    fn parse_options_response_bare_array() {
-        let response = serde_json::json!([
-            {"value": "auto", "label": "auto"}
-        ]);
-        let opts = parse_options_response(&response);
-        assert_eq!(opts.len(), 1);
-        assert_eq!(opts[0].value, "auto");
-    }
-
-    #[test]
-    fn parse_options_response_empty() {
-        let response = serde_json::json!({});
-        let opts = parse_options_response(&response);
-        assert!(opts.is_empty());
-    }
-
-    #[test]
-    fn parse_options_response_label_fallback_to_value() {
-        let response = serde_json::json!({
-            "options": [{"value": "claude-sonnet"}]
-        });
-        let opts = parse_options_response(&response);
-        assert_eq!(opts[0].label, "claude-sonnet");
-    }
-
-    #[test]
-    fn parse_options_response_label_fallback_to_name() {
-        let response = serde_json::json!({
-            "options": [{"value": "sonnet", "name": "Claude Sonnet"}]
-        });
-        let opts = parse_options_response(&response);
-        assert_eq!(opts[0].label, "Claude Sonnet");
-    }
-
-    #[test]
-    fn parse_options_response_skips_entries_without_value() {
-        let response = serde_json::json!({
-            "options": [
-                {"label": "No value field"},
-                {"value": "valid", "label": "Valid"}
-            ]
-        });
-        let opts = parse_options_response(&response);
-        assert_eq!(opts.len(), 1);
-        assert_eq!(opts[0].value, "valid");
-    }
-
-    #[test]
-    fn parse_options_response_with_groups() {
-        let response = serde_json::json!({
-            "options": [
-                {"value": "sonnet", "label": "Sonnet", "group": "Anthropic"},
-                {"value": "haiku", "label": "Haiku", "group": "Anthropic"}
-            ]
-        });
-        let opts = parse_options_response(&response);
-        assert_eq!(opts[0].group.as_deref(), Some("Anthropic"));
-        assert_eq!(opts[1].group.as_deref(), Some("Anthropic"));
     }
 
     // --- AgentCommand execution tests ---

@@ -1427,7 +1427,7 @@ async fn run_loop(
                 {
                     Ok(response) => match parse_response(&response.0) {
                         Ok(value) => {
-                            let options = crate::commands::parse_options_response(&value);
+                            let options = super::convert::kiro::parse_options_response(&value);
                             if notify_or_closed(
                                 &channels.notification_tx,
                                 Notification::CommandOptionsReceived { command, options },
