@@ -151,6 +151,126 @@ async fn v2_bound_client_refuses_every_unadapted_family() {
     assert_eq!(unknown, Disposition::NullDefault);
 }
 
+/// cyril-dn91 C9 (+C14; C8's regression net): ONE walk over every engine
+/// constructible in this build proving advertisement and execution
+/// reachability TOGETHER (AC3 — separate tests of those two facts are
+/// explicitly insufficient). Per family, the advertised bit (serialized
+/// handshake capabilities) must equal the answers-bit (a real client call's
+/// disposition) — two independent observation channels. Expectations are
+/// derived per engine from its own data, not hardcoded per-engine tables, so
+/// a future engine or mode inherits coverage. Any desync a hand-written
+/// capability override could introduce (C8) fails its named cell here.
+#[tokio::test]
+async fn adapter_matrix_advertise_iff_answer() {
+    use crate::protocol::engine::{Engine, KasEngine, client_capabilities};
+    use crate::types::kas_hooks::KasHooksMode;
+
+    let engines: Vec<(&str, std::rc::Rc<dyn Engine>)> = vec![
+        ("v2", std::rc::Rc::new(V2Engine)),
+        (
+            "kas-off",
+            std::rc::Rc::new(KasEngine {
+                hooks_mode: KasHooksMode::Off,
+            }),
+        ),
+        (
+            "kas-host",
+            std::rc::Rc::new(KasEngine {
+                hooks_mode: KasHooksMode::Host,
+            }),
+        ),
+        (
+            "kas-kas",
+            std::rc::Rc::new(KasEngine {
+                hooks_mode: KasHooksMode::Kas,
+            }),
+        ),
+    ];
+
+    for (name, engine) in engines {
+        let adapters = engine.adapters();
+        let caps = client_capabilities(engine.as_ref());
+        let caps_json = serde_json::to_value(&caps).unwrap();
+
+        let (ntx, _nrx) = mpsc::channel(8);
+        let (ptx, _prx) = mpsc::channel(1);
+        let dir = tempfile::tempdir().unwrap();
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            engine.clone(),
+            test_host_shell(engine.kind()),
+            dir.path(),
+        );
+
+        // FS: advertised read capability == a real read answers.
+        let f = dir.path().join("m.txt");
+        std::fs::write(&f, "x").unwrap();
+        let fs_answers = client
+            .read_text_file(acp::ReadTextFileRequest::new(acp::SessionId::new("s"), &f))
+            .await
+            .is_ok();
+        assert_eq!(
+            caps.fs.read_text_file, fs_answers,
+            "[{name}] fs: advertised != answers"
+        );
+
+        // TERMINAL: advertised == shell_type answers.
+        let term = ext(
+            &client,
+            "kiro/terminal/shell_type",
+            serde_json::json!({"sessionId": "s"}),
+        )
+        .await;
+        assert_eq!(
+            caps.terminal,
+            term == Disposition::Answered,
+            "[{name}] terminal: advertised != answers"
+        );
+
+        // HOOKS, per direction (AC4): an inbound-serving advertisement is the
+        // hooks key WITHOUT the v2 flag; `{enabled, v2}` is an outbound-client
+        // declaration and must NOT be served inbound.
+        let hooks_meta = caps_json.pointer("/_meta/kiro/hooks").cloned();
+        let inbound_advertised = matches!(&hooks_meta, Some(h) if h.get("v2").is_none());
+        let list = ext(
+            &client,
+            crate::protocol::kas::hooks::LIST_METHOD,
+            serde_json::json!({"trigger": "promptSubmit"}),
+        )
+        .await;
+        assert_eq!(
+            inbound_advertised,
+            list == Disposition::Answered,
+            "[{name}] hooks: inbound advertisement != inbound serving"
+        );
+
+        // AUTH: no advertisement bit exists on the wire (KAS calls it
+        // unconditionally under --auth=acp-callback) — execution must follow
+        // the adapter instead.
+        let auth = ext(
+            &client,
+            crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD,
+            serde_json::json!({}),
+        )
+        .await;
+        assert_eq!(
+            adapters.auth.is_some(),
+            auth == Disposition::Answered,
+            "[{name}] auth: adapter != answers"
+        );
+
+        // C14: methods outside the five families stay protocol-default null
+        // under EVERY engine — the refusal net must not become refuse-by-default.
+        let unknown = ext(&client, "kiro/unknown/matrix", serde_json::json!({})).await;
+        assert_eq!(
+            unknown,
+            Disposition::NullDefault,
+            "[{name}] unknown methods keep the null default (dcc6 F15)"
+        );
+    }
+}
+
 /// Probe slice 3 — the cheapest falsifier for the falsifiable-design claim C7
 /// (derived advertisement): today's four hand-written advertisement shapes
 /// must be EXACTLY reconstructible from (host_io presence, hooks direction,
