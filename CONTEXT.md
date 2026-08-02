@@ -116,13 +116,17 @@ _Avoid_: proxy (that's a proxy stage), protocol thread
 A server-to-client ACP request or control notification through which the running agent asks Cyril, acting as the host, to provide a decision or capability such as permission, authentication, file I/O, terminal control, or hooks.
 _Avoid_: client callback, host request (excludes control notifications), tool call
 
+**Capability adapter (adapter set)**:
+The bound engine's declaration, as data, of which host-callback families it installs — Auth, Host I/O (file + terminal), Hooks (`Engine::adapters()`, ADR-0001 amendment). Inbound capability advertisement is derived from the set, and a family with no adapter is refused with JSON-RPC method-not-found — never answered with the protocol-default null. One set is bound per agent-subprocess lifetime.
+_Avoid_: capability sub-trait (the withdrawn `as_*` accessor design), responder (that's the code answering a callback, not its availability), feature gate (cargo features gate what links; adapters gate what answers)
+
 **Fs dialect**:
 The file-operation callback family in force for one operation — Kiro's extended `_kiro/fs/*` or bare ACP `fs/*`. Selected per operation, not per session.
 _Avoid_: fs protocol, fs mode
 
 **Hook generation**:
-One of KAS's two hook execution models — hooks run by cyril as host callbacks, or by the agent's own registry. A session gets exactly one; they do not compose.
-_Avoid_: hooks mode (cyril's config knob), hooks v2 (a wire flag, not a name)
+One of KAS's two hook execution models — hooks run by cyril as host callbacks, or by the agent's own registry. A session gets exactly one; they do not compose. Cyril-side, the Hooks capability adapter names its side of the bidirectional `_kiro/hooks/*` surface a **direction**: **Inbound** (cyril serves list/execute/sessionStart host-side), **Outbound** (agent runs its own registry; cyril only advertises `{enabled, v2}`), or none.
+_Avoid_: hooks mode (cyril's config knob), hooks v2 (a wire flag, not a name), bidirectional adapter (say which direction)
 
 ### Proxy platform
 
