@@ -782,6 +782,76 @@ mod tests {
         }
     }
 
+    /// Pull the refusal field out of a parsed `kiro.dev/metadata` result.
+    fn refusal_of(
+        result: crate::Result<Option<Notification>>,
+    ) -> Option<crate::types::RefusalAlert> {
+        match result {
+            Ok(Some(Notification::MetadataUpdated { refusal, .. })) => refusal,
+            other => panic!("expected MetadataUpdated, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_refusal_full() {
+        // Design claim #1 (cyril-h8zb): full refusal object, subfields
+        // preserved verbatim. stopReason is deliberately NOT
+        // CONTENT_FILTERED — the object alone must alert (kills an
+        // AND-instead-of-OR implementation).
+        let params = serde_json::json!({
+            "refusal": {
+                "category": "unsafe",
+                "explanation": "blocked by policy",
+                "recommendedModel": "claude-opus"
+            },
+            "stopReason": "end_turn"
+        });
+        let alert = refusal_of(to_ext_notification("kiro.dev/metadata", &params))
+            .expect("refusal object must produce an alert");
+        assert_eq!(alert.category(), Some("unsafe"));
+        assert_eq!(alert.explanation(), Some("blocked by policy"));
+        assert_eq!(alert.recommended_model(), Some("claude-opus"));
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_refusal_absent_unchanged() {
+        // Design claim #2 (cyril-h8zb): no refusal key + benign stopReason
+        // => None (shapes a and b). Kills construct-alert-on-every-frame.
+        let plain = serde_json::json!({"contextUsagePercentage": 7.5});
+        assert_eq!(
+            refusal_of(to_ext_notification("kiro.dev/metadata", &plain)),
+            None
+        );
+        let benign = serde_json::json!({"contextUsagePercentage": 7.5, "stopReason": "end_turn"});
+        assert_eq!(
+            refusal_of(to_ext_notification("kiro.dev/metadata", &benign)),
+            None
+        );
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_content_filtered_no_object() {
+        // Design claim #3 (cyril-h8zb): bare CONTENT_FILTERED alerts with
+        // every subfield absent (Kiro's OR-condition, carved 2.15.0 tui.js).
+        let params = serde_json::json!({"stopReason": "CONTENT_FILTERED"});
+        let alert = refusal_of(to_ext_notification("kiro.dev/metadata", &params))
+            .expect("bare CONTENT_FILTERED must alert");
+        assert_eq!(alert.category(), None);
+        assert_eq!(alert.explanation(), None);
+        assert_eq!(alert.recommended_model(), None);
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_content_filtered_case_exact() {
+        // The wire literal is exact — lowercase must NOT match (kills a
+        // case-insensitive comparison; the backend emits the SCREAMING form).
+        let params = serde_json::json!({"stopReason": "content_filtered"});
+        assert_eq!(
+            refusal_of(to_ext_notification("kiro.dev/metadata", &params)),
+            None
+        );
+    }
+
     #[test]
     fn to_ext_notification_metadata_refusal_and_stop_reason_not_flagged() {
         // refusal {category, explanation, recommendedModel} and stopReason are

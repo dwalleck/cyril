@@ -489,6 +489,68 @@ pub(crate) fn to_ext_notification(
                 }
             }
 
+            // Model-refusal alert (Kiro 2.12.1+, cyril-h8zb). Kiro's own
+            // consumer alerts on `refusal || stopReason === "CONTENT_FILTERED"`
+            // — an OR: a bare CONTENT_FILTERED stopReason with no refusal
+            // object still alerts (fallback text downstream). The stopReason
+            // literal is exact (case-sensitive); wire keys are provisional
+            // until the first live refusal capture (cyril-pz51). JSON `null`
+            // for the object or a subfield means "not provided" (Kiro's own
+            // `r?.field` / `?? fallback` chain treats null and undefined
+            // identically), so null is absent, not corrupt.
+            let content_filtered = match params.get("stopReason") {
+                None => false,
+                Some(v) if v.is_null() => false,
+                Some(v) => match v.as_str() {
+                    Some(s) => s == "CONTENT_FILTERED",
+                    None => {
+                        tracing::warn!(
+                            value = ?v,
+                            "kiro.dev/metadata `stopReason` present but not a string, ignoring"
+                        );
+                        false
+                    }
+                },
+            };
+            let bare_alert = || RefusalAlert::from_parts(None, None, None);
+            let refusal = match params.get("refusal") {
+                None => content_filtered.then(bare_alert),
+                Some(v) if v.is_null() => content_filtered.then(bare_alert),
+                Some(v) => match v.as_object() {
+                    Some(map) => {
+                        let str_field = |key: &str| match map.get(key) {
+                            None => None,
+                            Some(f) if f.is_null() => None,
+                            Some(f) => match f.as_str() {
+                                Some(s) => Some(s.to_string()),
+                                None => {
+                                    tracing::warn!(
+                                        key,
+                                        value = ?f,
+                                        "kiro.dev/metadata `refusal` subfield not a string, ignoring"
+                                    );
+                                    None
+                                }
+                            },
+                        };
+                        Some(RefusalAlert::from_parts(
+                            str_field("category"),
+                            str_field("explanation"),
+                            str_field("recommendedModel"),
+                        ))
+                    }
+                    None => {
+                        // Corrupt object: the alert-worthiness of the frame
+                        // still stands if stopReason independently says so.
+                        tracing::warn!(
+                            value = ?v,
+                            "kiro.dev/metadata `refusal` present but not an object, ignoring"
+                        );
+                        content_filtered.then(bare_alert)
+                    }
+                },
+            };
+
             Ok(Some(Notification::MetadataUpdated {
                 context_usage,
                 metering,
@@ -496,8 +558,7 @@ pub(crate) fn to_ext_notification(
                 tokens,
                 effort,
                 session_id,
-                // Slice 2b (cyril-h8zb) wires the actual refusal parse.
-                refusal: None,
+                refusal,
             }))
         }
         "kiro.dev/compaction/status" => {
