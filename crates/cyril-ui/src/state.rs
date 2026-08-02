@@ -4801,6 +4801,54 @@ mod tests {
     }
 
     #[test]
+    fn advertised_none_effort_replaces_a_stale_level_instead_of_sticking() {
+        // cyril-8yka. GPT-family models advertise "none" as a REAL level, not a
+        // degenerate one: 2.16.0's KAS `config_option_update` ships
+        // effortLevels ["none","low","medium","high","xhigh","max"] for the GPT
+        // models, and the account default on session/new is GPT-family — so a
+        // fresh session can sit on a ladder that includes it.
+        //
+        // The reported failure was a closed `EffortLevel` dropping "none" to
+        // `None`, which the sticky rule then read as "this frame omitted
+        // effort" and left the toolbar on the PREVIOUS level. `Other(String)`
+        // plus the tri-state `EffortUpdate` (cyril-1gim) already close that;
+        // this fence pins the behaviour so narrowing either one cannot silently
+        // reopen it. It is the sentinel/absent conflation CLAUDE.md warns about
+        // under "Use `Option` for absent values, not sentinels".
+        assert_eq!(
+            EffortLevel::from_wire("none"),
+            Some(EffortLevel::Other("none".into())),
+            "an advertised level must parse, not fall through to None"
+        );
+
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Set(EffortLevel::High),
+            session_id: None,
+        });
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
+
+        // `/effort none` — the badge must FOLLOW, not keep reading "high".
+        state.apply_notification(&Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Set(EffortLevel::Other("none".into())),
+            session_id: None,
+        });
+        assert_eq!(
+            state.effort(),
+            Some(&EffortLevel::Other("none".into())),
+            "effort=none is a real level, not a no-update"
+        );
+    }
+
+    #[test]
     fn duration_merge_is_order_independent() {
         // Credits frames and duration/effort-only frames interleave (real
         // 2.4.1 shape). When the credits frame lands AFTER the duration-only
