@@ -324,31 +324,40 @@ impl App {
             self.redraw_needed = true;
         }
 
-        // Route session-scoped notifications: if the source session_id is
-        // a known subagent, route to SubagentUiState and return early.
-        // If session_id is None or matches the main session, fall through.
+        // Route session-scoped notifications. `classify_notification_route` is
+        // total over its three inputs, so this match has no routing decision of
+        // its own to make — cyril-tglp was exactly such a decision (an extra
+        // `&& self.session.id().is_some()`) leaking back into the caller and
+        // re-admitting an unattributable frame to the main pipeline.
         if let Some(ref sid) = session_id {
-            let is_main = classify_notification_route(Some(sid), self.session.id())
-                == NotificationRoute::Main;
-            if !is_main && self.ui_state.subagent_tracker().is_subagent(sid) {
-                self.ui_state
-                    .apply_subagent_notification(sid, &notification);
-                self.redraw_needed = true;
-                return Vec::new();
-            }
-            if !is_main && self.session.id().is_some() {
-                // Session ID doesn't match main and isn't a known subagent.
-                // This can happen if a subagent notification arrives before
-                // the corresponding SubagentListUpdated. Route it optimistically —
-                // the stream will be created on first contact.
-                tracing::debug!(
-                    session_id = sid.as_str(),
-                    "notification for unknown session, routing to subagent stream"
-                );
-                self.ui_state
-                    .apply_subagent_notification(sid, &notification);
-                self.redraw_needed = true;
-                return Vec::new();
+            let tracked = self.ui_state.subagent_tracker().is_subagent(sid);
+            match classify_notification_route(Some(sid), self.session.id(), tracked) {
+                NotificationRoute::Subagent => {
+                    if !tracked {
+                        // Not main, but no SubagentListUpdated has named it yet.
+                        // Route optimistically — the stream is created on first
+                        // contact and the list_update reconciles it later.
+                        tracing::debug!(
+                            session_id = sid.as_str(),
+                            "notification for unknown session, routing to subagent stream"
+                        );
+                    }
+                    self.ui_state
+                        .apply_subagent_notification(sid, &notification);
+                    self.redraw_needed = true;
+                    return Vec::new();
+                }
+                NotificationRoute::Drop => {
+                    // `warn!`, not `debug!`: no shipped engine produces this
+                    // ordering, so a line here means the wire contract moved.
+                    tracing::warn!(
+                        session_id = sid.as_str(),
+                        "scoped notification arrived before any main session exists; \
+                         unattributable, dropping (cyril-tglp)"
+                    );
+                    return Vec::new();
+                }
+                NotificationRoute::Main => {}
             }
         }
 
@@ -959,7 +968,7 @@ impl App {
     }
 }
 
-/// Where a session-scoped notification belongs (cyril-a71q C7).
+/// Where a session-scoped notification belongs (cyril-a71q C7, cyril-tglp).
 ///
 /// Extracted as a pure function so the routing rule is testable without building
 /// an `App` — the same shape as `classify_submit`. The rule decides whether a
@@ -971,11 +980,25 @@ enum NotificationRoute {
     Main,
     /// A different session: apply to that subagent's stream, main untouched.
     Subagent,
+    /// Unattributable — discard. Scoped to a session that nothing has yet
+    /// identified, while no main session exists to compare it against. See the
+    /// drop-vs-buffer rationale on `classify_notification_route`.
+    Drop,
 }
 
+/// Classify a session-scoped notification. Total over its three inputs so the
+/// caller keeps no routing decision of its own: cyril-tglp was precisely such a
+/// leftover decision, an `&& self.session.id().is_some()` in `handle_notification`
+/// that re-admitted an unattributable frame to the main pipeline while this
+/// function had already classified it as not-main.
+///
+/// `tracked_subagent` means "a `kiro.dev/subagent/list_update` has already named
+/// this session id as a subagent". It is load-bearing only when `main` is
+/// unknown — once main is known, "scoped and not main" is decidable without it.
 fn classify_notification_route(
     scope: Option<&SessionId>,
     main: Option<&SessionId>,
+    tracked_subagent: bool,
 ) -> NotificationRoute {
     match (scope, main) {
         // Unscoped -> global lifecycle event, nothing to compare against.
@@ -986,12 +1009,29 @@ fn classify_notification_route(
         // subagent is already tracked only decides which stream receives it, not
         // whether main is spared; both paths spare main.
         (Some(_), Some(_)) => NotificationRoute::Subagent,
-        // Scoped while no main session id is known yet. NOT main: the caller's
-        // two guards then decide -- a tracked subagent gets its stream, anything
-        // else falls through. Collapsing this to Main silently rerouted a tracked
-        // subagent's frames into main state when they arrived before
-        // SessionCreated.
-        (Some(_), None) => NotificationRoute::Subagent,
+        // Scoped while no main session id is known yet, but a list_update has
+        // already proven this id is a subagent. Attributable, so it gets its
+        // stream. Collapsing this to Main silently rerouted a tracked subagent's
+        // frames into main state when they arrived before SessionCreated.
+        (Some(_), None) if tracked_subagent => NotificationRoute::Subagent,
+        // Scoped, no main session, and nothing has named the id: genuinely
+        // UNATTRIBUTABLE. It may be a subagent whose list_update is still in
+        // flight, or the main session's own first frame racing SessionCreated —
+        // and the two are indistinguishable from here.
+        //
+        // DROP, not buffer, and not "guess subagent" (cyril-tglp):
+        //  - Guessing subagent keys a stream by an id that may turn out to BE
+        //    main, leaving a phantom stream that the crew panel (which reads the
+        //    tracker, not the streams) never renders.
+        //  - Buffering needs a bounded queue plus a replay trigger on
+        //    SessionCreated: new state and new lifecycle logic inside a
+        //    deliberately thin orchestrator, to recover frames from an ordering
+        //    no shipped engine produces — both scoped producers, `ToolCallChunk`
+        //    and `MetadataUpdated`, follow session creation.
+        //  - Dropping forfeits at most one currently-unreachable frame and says
+        //    so at `warn!`, so an engine that ever does produce this ordering
+        //    surfaces as a log line rather than as corrupted main state.
+        (Some(_), None) => NotificationRoute::Drop,
     }
 }
 
@@ -1641,35 +1681,221 @@ mod tests {
         let foreign = SessionId::new("sess_foreign");
 
         // Unscoped -> global lifecycle event; nothing to compare against.
+        // Trackedness is irrelevant here, so both settings are asserted.
+        for tracked in [false, true] {
+            assert_eq!(
+                classify_notification_route(None, Some(&main), tracked),
+                NotificationRoute::Main
+            );
+            // Scoped to the main session -> main.
+            assert_eq!(
+                classify_notification_route(Some(&main), Some(&main), tracked),
+                NotificationRoute::Main
+            );
+            // THE CLAIM: a foreign session's terminal must not reach main state.
+            assert_eq!(
+                classify_notification_route(Some(&foreign), Some(&main), tracked),
+                NotificationRoute::Subagent,
+                "a foreign terminal must never touch main -- the cross-session split-brain"
+            );
+        }
+        // Scoped while no main session is known, but a list_update has already
+        // named it: attributable, so it still reaches its own stream.
         assert_eq!(
-            classify_notification_route(None, Some(&main)),
-            NotificationRoute::Main
-        );
-        // Scoped to the main session -> main.
-        assert_eq!(
-            classify_notification_route(Some(&main), Some(&main)),
-            NotificationRoute::Main
-        );
-        // THE CLAIM: a foreign session's terminal must not reach main state.
-        assert_eq!(
-            classify_notification_route(Some(&foreign), Some(&main)),
-            NotificationRoute::Subagent,
-            "a foreign terminal must never touch main -- the cross-session split-brain"
-        );
-        // Scoped while no main session is known: NOT main. The caller's guards
-        // then route a tracked subagent to its stream and let anything else fall
-        // through -- exactly what the pre-extraction `unwrap_or(false)` did.
-        assert_eq!(
-            classify_notification_route(Some(&foreign), None),
+            classify_notification_route(Some(&foreign), None, true),
             NotificationRoute::Subagent,
             "no main session yet must not mean 'main' -- that reroutes a tracked \
              subagent's frames into main state"
         );
+        // cyril-tglp: same, but nothing has named the id. Unattributable ->
+        // dropped. Returning Main here is the defect; returning Subagent would
+        // key a stream by an id that may yet turn out to BE main.
+        assert_eq!(
+            classify_notification_route(Some(&foreign), None, false),
+            NotificationRoute::Drop,
+            "an unidentified scope with no main session is unattributable, not main"
+        );
         // Adversarial: equal ids that are distinct objects still compare as main.
         assert_eq!(
-            classify_notification_route(Some(&SessionId::new("sess_main")), Some(&main)),
+            classify_notification_route(Some(&SessionId::new("sess_main")), Some(&main), false),
             NotificationRoute::Main,
             "identity is by value, not by pointer"
+        );
+    }
+
+    // ── cyril-tglp: a scoped frame that predates the main session ────────────
+    //
+    // STRESS FIXTURE. The bug class is "a routing guard that admits a frame to
+    // MAIN state by accident". A one-sided test is the trap here: asserting
+    // only that the pre-session frame is dropped passes against an
+    // implementation that drops *every* scoped frame, and asserting only the
+    // post-session cases passes against the pre-fix code. So all three
+    // reachable shapes are exercised, and only the first one is the sentinel
+    // (it fails against pre-fix code, where `&& self.session.id().is_some()`
+    // let an untracked pre-session frame fall through to main).
+    fn test_app() -> App {
+        App::new(
+            BridgeHandle::for_tests(),
+            &config::UiConfig::default(),
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+        )
+    }
+
+    fn metadata_frame(sid: &SessionId) -> Notification {
+        Notification::MetadataUpdated {
+            context_usage: Some(ContextUsage::new(75.0)),
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Unchanged,
+            session_id: Some(sid.clone()),
+        }
+    }
+
+    #[test]
+    fn pre_session_scoped_frame_spares_main() {
+        let foreign = SessionId::new("sess_foreign");
+        let mut app = test_app();
+        assert!(
+            app.session.id().is_none(),
+            "precondition: no main session has been created yet"
+        );
+
+        let deferred = app.handle_notification(RoutedNotification::scoped(
+            foreign.clone(),
+            metadata_frame(&foreign),
+        ));
+
+        assert!(deferred.is_empty(), "a dropped frame defers no commands");
+        assert!(
+            app.session.context_usage().is_none(),
+            "a scoped frame arriving before SessionCreated must not mutate the \
+             main SessionController -- it is not attributable to main"
+        );
+        assert!(
+            app.ui_state.context_usage().is_none(),
+            "...nor the main UiState: the toolbar would show a foreign \
+             session's context usage as if it were the user's"
+        );
+        assert!(
+            !app.ui_state.subagent_ui().streams().contains_key(&foreign),
+            "and it must not be guessed into a subagent stream either -- the id \
+             may yet turn out to BE main, which would key a phantom stream by \
+             the main session id"
+        );
+    }
+
+    #[test]
+    fn pre_session_tracked_subagent_frame_still_streams() {
+        let tracked = SessionId::new("sess_tracked");
+        let mut app = test_app();
+
+        // list_update is global — it lands before any main session exists.
+        app.handle_notification(RoutedNotification::global(
+            Notification::SubagentListUpdated {
+                subagents: vec![SubagentInfo::new(
+                    tracked.clone(),
+                    "reviewer",
+                    "semantic_reviewer",
+                    "review the diff",
+                    SubagentStatus::Working { message: None },
+                )],
+                pending_stages: Vec::new(),
+            },
+        ));
+        assert!(app.session.id().is_none(), "precondition: still no main");
+
+        app.handle_notification(RoutedNotification::scoped(
+            tracked.clone(),
+            Notification::AgentMessage(AgentMessage {
+                text: "subagent output".into(),
+                is_streaming: true,
+            }),
+        ));
+
+        // The cyril-a71q behavior this fix must NOT overcorrect away: a
+        // list_update has already proven this id is a subagent, so its frames
+        // are attributable even with no main session.
+        let stream = app
+            .ui_state
+            .subagent_ui()
+            .streams()
+            .get(&tracked)
+            .expect("a tracked subagent's pre-session frames still reach its stream");
+        assert_eq!(stream.streaming_text(), "subagent output");
+        assert!(
+            app.ui_state.streaming_text().is_empty(),
+            "and main is still spared"
+        );
+    }
+
+    #[test]
+    fn post_session_untracked_frame_still_streams_optimistically() {
+        let main = SessionId::new("sess_main");
+        let foreign = SessionId::new("sess_foreign");
+        let mut app = test_app();
+
+        app.handle_notification(RoutedNotification::global(Notification::SessionCreated {
+            session_id: main.clone(),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        }));
+
+        app.handle_notification(RoutedNotification::scoped(
+            foreign.clone(),
+            Notification::AgentMessage(AgentMessage {
+                text: "racing list_update".into(),
+                is_streaming: true,
+            }),
+        ));
+
+        // Once main is known, "scoped and not main" is decidable: the frame is
+        // definitively foreign, so the optimistic stream stays.
+        let stream = app
+            .ui_state
+            .subagent_ui()
+            .streams()
+            .get(&foreign)
+            .expect("an untracked frame with main known still streams optimistically");
+        assert_eq!(stream.streaming_text(), "racing list_update");
+        assert!(app.ui_state.streaming_text().is_empty());
+    }
+
+    #[test]
+    fn post_session_main_scoped_frame_updates_main() {
+        let main = SessionId::new("sess_main");
+        let mut app = test_app();
+
+        app.handle_notification(RoutedNotification::global(Notification::SessionCreated {
+            session_id: main.clone(),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        }));
+
+        let deferred = app.handle_notification(RoutedNotification::scoped(
+            main.clone(),
+            metadata_frame(&main),
+        ));
+
+        assert!(deferred.is_empty(), "a metadata frame defers no commands");
+        assert_eq!(
+            app.session.context_usage().map(ContextUsage::percentage),
+            Some(75.0),
+            "a main-scoped frame must update the main SessionController"
+        );
+        assert_eq!(
+            app.ui_state.context_usage(),
+            Some(75.0),
+            "a main-scoped frame must update the main UiState"
+        );
+        assert!(
+            !app.ui_state.subagent_ui().streams().contains_key(&main),
+            "the main session id must not create a subagent stream"
         );
     }
 
