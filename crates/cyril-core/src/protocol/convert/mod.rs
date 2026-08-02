@@ -839,6 +839,14 @@ mod tests {
         assert_eq!(alert.category(), None);
         assert_eq!(alert.explanation(), None);
         assert_eq!(alert.recommended_model(), None);
+
+        // Issue addendum (2.12.3): "refusal" is a first-class stopReason zod
+        // literal — tolerated alongside CONTENT_FILTERED (review fix).
+        let params = serde_json::json!({"stopReason": "refusal"});
+        assert!(
+            refusal_of(to_ext_notification("kiro.dev/metadata", &params)).is_some(),
+            "bare stopReason 'refusal' must alert"
+        );
     }
 
     #[test]

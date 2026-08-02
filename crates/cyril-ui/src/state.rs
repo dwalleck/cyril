@@ -119,6 +119,24 @@ pub struct UiState {
     max_messages: usize,
 }
 
+/// Build the user-facing refusal system message (cyril-h8zb): the wire's
+/// explanation verbatim when present, else a fallback naming cyril's own
+/// commands (`/model`, `/new` — cyril has no `/rewind`, unlike Kiro's
+/// fallback), with a recommendation sentence appended when the wire names a
+/// model. The exact strings are fenced contracts (design claim #8).
+fn refusal_message(alert: &cyril_core::types::RefusalAlert) -> String {
+    let base = match alert.explanation() {
+        Some(e) => e.to_string(),
+        None => "The model couldn't process this request. Try a different \
+                 model with /model or start a new session with /new."
+            .to_string(),
+    };
+    match alert.recommended_model() {
+        Some(m) => format!("{base} Recommended model: {m} (switch with /model)."),
+        None => base,
+    }
+}
+
 impl TuiState for UiState {
     fn theme(&self) -> Theme {
         self.theme
@@ -478,22 +496,9 @@ impl UiState {
                     self.pending_refusal = true;
                     if !self.refusal_alerted_this_turn {
                         self.refusal_alerted_this_turn = true;
-                        let base = match alert.explanation() {
-                            Some(e) => e.to_string(),
-                            None => "The model couldn't process this request. \
-                                     Try a different model with /model or start \
-                                     a new session with /new."
-                                .to_string(),
-                        };
-                        let message = match alert.recommended_model() {
-                            Some(m) => {
-                                format!("{base} Recommended model: {m} (switch with /model).")
-                            }
-                            None => base,
-                        };
                         self.flush_streaming_agent_text();
                         self.flush_streaming_thought();
-                        self.add_system_message(message);
+                        self.add_system_message(refusal_message(alert));
                     }
                 }
                 true
@@ -535,17 +540,11 @@ impl UiState {
                 self.commit_streaming();
                 // Reconcile (cyril-h8zb): refusal metadata + ambiguous ACP
                 // EndTurn => the render-path summary reads Refusal, so the
-                // toolbar's existing "Refused" chip fires. Explicit outcomes
-                // (Cancelled, MaxTokens, …) always win. Same rule as
-                // SessionController; both summaries must agree.
+                // toolbar's existing "Refused" chip fires. The rule lives on
+                // StopReason so this and SessionController cannot drift.
                 let refused = std::mem::take(&mut self.pending_refusal);
                 self.refusal_alerted_this_turn = false;
-                let stop_reason =
-                    if refused && *stop_reason == cyril_core::types::StopReason::EndTurn {
-                        cyril_core::types::StopReason::Refusal
-                    } else {
-                        *stop_reason
-                    };
+                let stop_reason = stop_reason.reconcile_refusal(refused);
                 self.last_turn = Some(cyril_core::types::TurnSummary::new(
                     stop_reason,
                     self.pending_tokens.take(),

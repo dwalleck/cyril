@@ -609,6 +609,23 @@ pub enum StopReason {
     Cancelled,
 }
 
+impl StopReason {
+    /// Reconcile the ACP-reported stop reason with the turn's refusal
+    /// metadata (cyril-h8zb): a refusal-bearing turn that ACP labeled with
+    /// the ambiguous `EndTurn` was in fact refused. Explicit outcomes
+    /// (`Cancelled`, `MaxTokens`, …) always win, and `Refusal` is
+    /// idempotent. Defined once here so the twin turn summaries
+    /// (`SessionController` and `UiState`) cannot drift.
+    #[must_use]
+    pub fn reconcile_refusal(self, refused: bool) -> Self {
+        if refused && self == Self::EndTurn {
+            Self::Refusal
+        } else {
+            self
+        }
+    }
+}
+
 /// Atomic summary of a completed turn.
 ///
 /// Assembled by `SessionController` when `TurnCompleted` arrives: the
@@ -674,6 +691,33 @@ mod tests {
         let id = SessionId::new("sess_1");
         map.insert(id.clone(), 42);
         assert_eq!(map.get(&SessionId::new("sess_1")), Some(&42));
+    }
+
+    #[test]
+    fn stop_reason_reconcile_refusal_end_turn_only() {
+        // The single definition both turn summaries share: only the
+        // ambiguous EndTurn flips; explicit outcomes and the no-refusal
+        // path are identity.
+        assert_eq!(
+            StopReason::EndTurn.reconcile_refusal(true),
+            StopReason::Refusal
+        );
+        assert_eq!(
+            StopReason::EndTurn.reconcile_refusal(false),
+            StopReason::EndTurn
+        );
+        assert_eq!(
+            StopReason::Cancelled.reconcile_refusal(true),
+            StopReason::Cancelled
+        );
+        assert_eq!(
+            StopReason::MaxTokens.reconcile_refusal(true),
+            StopReason::MaxTokens
+        );
+        assert_eq!(
+            StopReason::Refusal.reconcile_refusal(true),
+            StopReason::Refusal
+        );
     }
 
     #[test]

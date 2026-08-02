@@ -21,6 +21,11 @@ extended, zero new notification variants, zero bridge/routing changes:
    a `refusal` object OR `stopReason == "CONTENT_FILTERED"` (Kiro's own OR-condition); `None`
    otherwise. A non-object `refusal` value warns and falls back to the stopReason check alone.
    `refusal`/`stopReason` leave the ignore-list; the unknown-key debug log behavior is unchanged.
+   **Review amendment:** `stopReason == "refusal"` is tolerated as a second alert-worthy literal,
+   restoring the issue's 2.12.3 addendum instruction ("tolerate stopReason 'refusal'") that the
+   original claim 3 silently narrowed — the literal is a first-class zod stopReason on the
+   KAS/`_kiro` side and unambiguous if it ever reaches a v2 metadata frame (fenced in
+   `to_ext_notification_metadata_content_filtered_no_object`).
 3. **`MetadataUpdated`** gains `refusal: Option<RefusalAlert>` — rides the existing routing
    (cyril-fh06 sessionId scoping untouched, so subagent refusal frames never reach main state).
 4. **`SessionController` AND `UiState`** — both buffer `pending_refusal: bool` from

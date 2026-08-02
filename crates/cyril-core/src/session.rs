@@ -259,16 +259,10 @@ impl SessionController {
             }
             Notification::TurnCompleted { stop_reason } => {
                 // Reconcile (cyril-h8zb): metadata refusal + ambiguous ACP
-                // EndTurn => the turn was refused. Explicit outcomes win —
-                // a user cancel or token cap is not a refusal even when a
-                // refusal frame arrived. std::mem::take resets the flag so
-                // it can't leak into the next turn.
+                // EndTurn => the turn was refused. std::mem::take resets the
+                // flag so it can't leak into the next turn.
                 let refused = std::mem::take(&mut self.pending_refusal);
-                let stop_reason = if refused && *stop_reason == StopReason::EndTurn {
-                    StopReason::Refusal
-                } else {
-                    *stop_reason
-                };
+                let stop_reason = stop_reason.reconcile_refusal(refused);
                 self.last_turn = Some(TurnSummary::new(
                     stop_reason,
                     self.pending_tokens.take(),
