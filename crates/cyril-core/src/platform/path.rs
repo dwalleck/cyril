@@ -163,6 +163,33 @@ fn wsl_unc_tail(s: &str, distro: &str) -> Option<PathBuf> {
     Some(PathBuf::from(if tail.is_empty() { "/" } else { tail }))
 }
 
+/// Resolve the WSL distro name used for `\\wsl$` UNC translation.
+///
+/// Precedence: a non-empty `env` value (the `CYRIL_WSL_DISTRO` variable) wins;
+/// otherwise a `cwd` sitting under a WSL UNC prefix donates its distro segment
+/// (cyril launched *from* the WSL-native workspace); otherwise `None`.
+///
+/// An empty env value is treated as unset. The value is otherwise taken
+/// literally — no trimming — because a wrong name degrades to passthrough,
+/// the same failure mode as unset. The returned name is never empty.
+pub fn resolve_wsl_distro(env: Option<&str>, cwd: Option<&Path>) -> Option<String> {
+    if let Some(e) = env
+        && !e.is_empty()
+    {
+        return Some(e.to_string());
+    }
+    let cwd = cwd?.to_string_lossy();
+    let rest = WSL_UNC_PREFIXES.iter().find_map(|p| cwd.strip_prefix(p))?;
+    let rest = rest.replace('\\', "/");
+    let seg = rest.split('/').next().unwrap_or("");
+    if seg.is_empty() {
+        tracing::debug!(cwd = %cwd, "WSL UNC cwd has a blank distro segment; no distro resolved");
+        None
+    } else {
+        Some(seg.to_string())
+    }
+}
+
 /// The `/mnt/<drive-letter>` translation shared by [`wsl_to_win`] and
 /// [`wsl_to_win_in`]. `None` when `path` is not a single-letter drive mount
 /// (including WSL-internal `/mnt` entries like `/mnt/data` or bare `/mnt`).
@@ -582,6 +609,62 @@ mod tests {
             let again = wsl_to_win_in(&posix.to_string_lossy(), d);
             assert_eq!(again, PathBuf::from(canonical));
         }
+    }
+
+    // ── resolve_wsl_distro (cyril-8tq6, claim C6) ──
+
+    #[test]
+    fn resolve_distro_env_wins_over_cwd() {
+        assert_eq!(
+            resolve_wsl_distro(Some("Ubuntu"), None),
+            Some("Ubuntu".into())
+        );
+        assert_eq!(
+            resolve_wsl_distro(Some("Ubuntu"), Some(Path::new(r"\\wsl$\Debian\home\u"))),
+            Some("Ubuntu".into())
+        );
+    }
+
+    #[test]
+    fn resolve_distro_cwd_derivation_both_prefixes() {
+        assert_eq!(
+            resolve_wsl_distro(None, Some(Path::new(r"\\wsl$\Debian\home\u"))),
+            Some("Debian".into())
+        );
+        assert_eq!(
+            resolve_wsl_distro(None, Some(Path::new(r"\\wsl.localhost\Debian\home\u"))),
+            Some("Debian".into())
+        );
+        // Root cwd with no tail, and a forward-slash tail.
+        assert_eq!(
+            resolve_wsl_distro(None, Some(Path::new(r"\\wsl$\Ubuntu"))),
+            Some("Ubuntu".into())
+        );
+        assert_eq!(
+            resolve_wsl_distro(None, Some(Path::new(r"\\wsl$\Ubuntu/sub"))),
+            Some("Ubuntu".into())
+        );
+    }
+
+    #[test]
+    fn resolve_distro_none_paths() {
+        assert_eq!(resolve_wsl_distro(None, None), None);
+        // Empty env is unset; a drive cwd derives nothing.
+        assert_eq!(
+            resolve_wsl_distro(Some(""), Some(Path::new(r"C:\Users\u"))),
+            None
+        );
+        // Blank distro segment resolves nothing.
+        assert_eq!(resolve_wsl_distro(None, Some(Path::new(r"\\wsl$\"))), None);
+    }
+
+    #[test]
+    fn resolve_distro_env_taken_literally() {
+        // No trimming: a wrong name degrades to passthrough, same as unset.
+        assert_eq!(
+            resolve_wsl_distro(Some(" Ubuntu "), None),
+            Some(" Ubuntu ".into())
+        );
     }
 
     #[test]
