@@ -122,6 +122,27 @@ impl HostShell {
         Self::new(ShellKind::Fish, executable.into())
     }
 
+    /// Fixture for tests that actually SPAWN the shell: `/bin/sh` does not
+    /// exist on Windows, so those tests need a per-platform executable while
+    /// routing/serialization tests keep the stable `test_posix` fixture.
+    #[cfg(test)]
+    pub(crate) fn test_runnable_on_host() -> Self {
+        if cfg!(windows) {
+            let windir = std::env::var_os("WINDIR")
+                .map_or_else(|| PathBuf::from("C:\\Windows"), PathBuf::from);
+            Self::new(
+                ShellKind::WindowsPowerShell,
+                windir
+                    .join("System32")
+                    .join("WindowsPowerShell")
+                    .join("v1.0")
+                    .join("powershell.exe"),
+            )
+        } else {
+            Self::test_posix()
+        }
+    }
+
     pub(crate) fn wire_name(&self) -> &'static str {
         match self.kind {
             ShellKind::Posix => "posix",
@@ -131,14 +152,24 @@ impl HostShell {
     }
 
     pub(crate) fn command(&self, command: &str, args: &[String]) -> ShellCommand<'_> {
+        let compound = std::iter::once(command)
+            .chain(args.iter().map(String::as_str))
+            .any(is_operator);
         let shell_args = match self.kind {
             ShellKind::Posix | ShellKind::Fish => {
-                vec!["-l".into(), "-c".into(), self.render_command(command, args)]
+                let mut source = self.render_command(command, args);
+                if !compound {
+                    // A shell that stays resident (dash, unlike bash's tail-call
+                    // exec) reaps a fatally-signaled command and folds the signal
+                    // into exit 128+N, losing `signal` from the wait reply. `exec`
+                    // runs after `-l` profile load, so the simple command inherits
+                    // the shell's PID and its termination signal survives;
+                    // operator compounds need the shell to stay resident.
+                    source.insert_str(0, "exec ");
+                }
+                vec!["-l".into(), "-c".into(), source]
             }
             ShellKind::Pwsh | ShellKind::WindowsPowerShell => {
-                let compound = std::iter::once(command)
-                    .chain(args.iter().map(String::as_str))
-                    .any(is_operator);
                 let mut source = String::with_capacity(command.len() + 256);
                 source.push_str("$global:LASTEXITCODE = $null; ");
                 self.append_command(&mut source, command, args);
@@ -758,10 +789,10 @@ mod tests {
         let args = strings(&["done"]);
         let posix_shell = shell(ShellKind::Posix);
         let posix = posix_shell.command("echo", &args);
-        assert_eq!(posix.args, strings(&["-l", "-c", "'echo' 'done'"]));
+        assert_eq!(posix.args, strings(&["-l", "-c", "exec 'echo' 'done'"]));
         let fish_shell = shell(ShellKind::Fish);
         let fish = fish_shell.command("echo", &args);
-        assert_eq!(fish.args, strings(&["-l", "-c", "'echo' 'done'"]));
+        assert_eq!(fish.args, strings(&["-l", "-c", "exec 'echo' 'done'"]));
         for kind in [ShellKind::Pwsh, ShellKind::WindowsPowerShell] {
             let host_shell = shell(kind);
             let plan = host_shell.command("echo", &args);
@@ -769,6 +800,24 @@ mod tests {
             assert!(plan.args[3].starts_with("$global:LASTEXITCODE = $null; & 'echo' 'done';"));
             assert!(plan.args[3].contains("exit $cyrilExitCode"));
             assert!(plan.args[3].contains("if ($cyrilSuccess) { exit 0 } else { exit 1 }"));
+        }
+    }
+
+    #[test]
+    fn simple_unix_commands_exec_replace_the_shell_for_signal_fidelity() {
+        // CI regression on ubuntu: dash (`/bin/sh`) stays resident where bash
+        // tail-call execs, so an inner SIGKILL surfaced as exitCode 137 instead
+        // of the wait reply's `signal`. Simple commands must exec-replace the
+        // shell; operator compounds must keep it resident.
+        for kind in [ShellKind::Posix, ShellKind::Fish] {
+            let host_shell = shell(kind);
+            let simple = host_shell.command("sh", &strings(&["-c", "kill -9 $$"]));
+            assert_eq!(
+                simple.args,
+                strings(&["-l", "-c", "exec 'sh' '-c' 'kill -9 $$'"])
+            );
+            let compound = host_shell.command("echo", &strings(&["hi", "|", "cat"]));
+            assert_eq!(compound.args, strings(&["-l", "-c", "'echo' 'hi' | 'cat'"]));
         }
     }
 

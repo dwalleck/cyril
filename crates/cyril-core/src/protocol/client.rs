@@ -680,13 +680,17 @@ mod tests {
     }
 
     fn kas_client() -> KiroClient {
+        kas_client_with_shell(test_host_shell(crate::types::AgentEngine::Kas))
+    }
+
+    fn kas_client_with_shell(shell: ResolvedHostShell) -> KiroClient {
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
         KiroClient::new(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
+            shell,
             std::path::Path::new("/tmp"),
         )
     }
@@ -941,8 +945,12 @@ mod tests {
     async fn create_terminal_override_reaches_registry() {
         // KAS-5b fixture M: a KAS `terminal/create` reaches KiroClient's typed
         // override (NOT the acp default `method_not_found`) and returns an id.
-        // Fails if the override is missing/miswired.
-        let client = kas_client();
+        // Fails if the override is missing/miswired. `create` spawns the shell
+        // for real, so it needs the per-platform runnable fixture — the
+        // `/bin/sh` routing fixture does not exist on Windows.
+        let client = kas_client_with_shell(Some(
+            crate::protocol::kas::host_shell::HostShell::test_runnable_on_host(),
+        ));
         let resp = client
             .create_terminal(acp::CreateTerminalRequest::new(
                 acp::SessionId::new("s"),
