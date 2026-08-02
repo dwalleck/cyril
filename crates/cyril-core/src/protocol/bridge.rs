@@ -833,16 +833,43 @@ struct Companion {
 
 /// The turn currently occupying the bridge (cyril-a71q).
 ///
-/// Holds the per-turn `owner` identity plus the session the turn was dispatched
-/// against. `session` is deliberately a snapshot: `active_session_id` can be
-/// retargeted mid-turn by a `NewSession`/`LoadSession`, and cancel must still
-/// reach the turn that is actually running.
+/// Holds the per-turn `owner` identity, the engine the turn was dispatched
+/// against, and the session it was dispatched on. `session` is deliberately a
+/// snapshot: `active_session_id` can be retargeted mid-turn by a
+/// `NewSession`/`LoadSession`, and cancel must still reach the turn that is
+/// actually running.
 ///
 /// Fully-qualified path because the `acp` alias in this file is function-scoped.
 #[derive(Debug)]
 struct ActiveTurn {
     owner: TurnId,
+    /// The engine this turn ran under (cyril-upjh). Bound once per bridge
+    /// (ADR-0001), so it cannot differ per turn — it is carried on the record
+    /// anyway because the release decision reads *the turn's* properties, and a
+    /// release that consulted the loop's engine handle instead would silently
+    /// become wrong the day an engine is rebound.
+    engine: AgentEngine,
     session: agent_client_protocol::SessionId,
+}
+
+impl ActiveTurn {
+    /// Does releasing this turn still owe a wire companion (cyril-upjh)?
+    ///
+    /// Only KAS has two terminal sources per turn — an identity-free wire
+    /// `turn_end` and the bridge-synthesized prompt completion — so only a KAS
+    /// release can still be owed the other one. A v2 turn has exactly one
+    /// terminal source, so its release owes nothing and must leave the ledger
+    /// empty.
+    ///
+    /// This gates the `Wire` expectation specifically, not companions in
+    /// general: a `Wire` entry is matched by SESSION (the frame carries no
+    /// identity), so a dangling one absorbs any later unstamped completion for
+    /// that session as a phantom companion — costing the turn that is actually
+    /// running its release. The mirror-image `Synthesized` expectation is
+    /// matched by OWNER and is therefore self-limiting.
+    fn owes_wire_companion(&self) -> bool {
+        self.engine == AgentEngine::Kas
+    }
 }
 
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
@@ -1142,6 +1169,7 @@ async fn run_loop(
                 });
                 active_turn = Some(ActiveTurn {
                     owner: turn_owner,
+                    engine: engine.kind(),
                     session: acp_session_id,
                 });
                 // O(n) over live handles with n <= 2 in the researched ordering
@@ -2107,7 +2135,15 @@ async fn run_loop(
                             // (2) owns the active turn -> release
                             match active_turn.as_ref() {
                                 Some(active) if active.owner == id => {
-                                    companion = Some(Companion {
+                                    // cyril-upjh: KAS-ONLY, per cyril-a71q's
+                                    // mediation policy. A v2 release owes no
+                                    // companion, and leaving a session-keyed
+                                    // `Wire` entry behind would let any later
+                                    // unstamped completion be absorbed as a
+                                    // phantom for this ALREADY-released turn.
+                                    // Assigning None is the clear: the ledger
+                                    // must be empty after a v2 release.
+                                    companion = active.owes_wire_companion().then(|| Companion {
                                         owner: active.owner,
                                         session: active.session.clone(),
                                         awaiting: CompanionSource::Wire,
@@ -2828,6 +2864,14 @@ mod tests {
         /// Session ids the agent was asked to cancel, in order. Lets a test assert
         /// WHICH session a CancelRequest targeted (cyril-84ca cancel-retarget fence).
         cancelled_sessions: Vec<String>,
+        /// The loop's INTERNAL inbound sender, populated by the harness
+        /// (cyril-upjh). An injection seam for frames the fake agent cannot
+        /// produce through a converter — specifically an identity-free
+        /// `TurnCompleted` under the v2 engine, which today only
+        /// `convert::kas` emits. That frame is what turns the companion
+        /// ledger's dangling `Wire` entry from latent into harmful, so it is
+        /// the only way to observe the ledger, which is a `run_loop` local.
+        inbound: Option<mpsc::Sender<RoutedNotification>>,
         /// When set, `prompt` issues a server->client `terminal/create` with this
         /// `(command, args, cwd)` BEFORE parking — models a KAS turn mid-shell-
         /// command so the cancel-orphan fence can observe the spawned child
@@ -3099,6 +3143,10 @@ mod tests {
                 let (handle, channels) = create_channel_pair();
                 let (inbound_tx, inbound_rx) =
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
+                // cyril-upjh injection seam: hand the test the loop's internal
+                // sender through the script it already holds, so no existing
+                // harness caller's closure signature changes.
+                script.borrow_mut().inbound = Some(inbound_tx.clone());
                 let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
                 let client = KiroClient::new(
                     inbound_tx.clone(),
@@ -3231,6 +3279,20 @@ mod tests {
     async fn wait_for_received(probe: &Rc<RefCell<Script>>, marker: &str, secs: u64) -> bool {
         for _ in 0..(secs * 100) {
             if probe.borrow().received.iter().any(|m| m == marker) {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        false
+    }
+
+    /// Poll until the agent has received at least `n` prompts, yielding between
+    /// checks; returns false after `secs`. [`wait_for_received`] cannot express
+    /// this — its `"prompt"` marker stays satisfied by the FIRST prompt forever
+    /// after, so it says nothing about a LATER turn having been dispatched.
+    async fn wait_for_prompt_count(probe: &Rc<RefCell<Script>>, n: usize, secs: u64) -> bool {
+        for _ in 0..(secs * 100) {
+            if probe.borrow().prompt_count >= n {
                 return true;
             }
             tokio::time::sleep(Duration::from_millis(10)).await;
@@ -4538,6 +4600,147 @@ mod tests {
             },
         )
         .await;
+    }
+
+    #[tokio::test]
+    /// REGRESSION FENCE (cyril-upjh). A **v2** turn's release must leave the
+    /// companion ledger EMPTY.
+    ///
+    /// Companions exist because a KAS turn has TWO terminal sources; a v2 turn
+    /// has one. cyril-a71q's mediation policy says so ("register the wire
+    /// companion expectation — KAS ONLY"), but `ActiveTurn` carried no engine,
+    /// so the registration was unconditional and every v2 release left a
+    /// session-keyed `Wire` expectation behind that nothing on the v2 wire can
+    /// ever match.
+    ///
+    /// That is latent, not live: only `convert::kas` emits an identity-free
+    /// `TurnCompleted` today, so under v2 the entry is merely replaced by the
+    /// next release. It turns harmful the moment ANY v2 path emits an unstamped
+    /// completion — a new converter arm, a synthesized recovery frame — because
+    /// a `Wire` expectation is matched by SESSION, not by owner: the frame is
+    /// absorbed as the companion of a turn that already released, and the turn
+    /// actually running never releases at all.
+    ///
+    /// The ledger is a `run_loop` local, so it is observed the only way it is
+    /// observable — by feeding the mediator exactly that frame and asserting it
+    /// releases the ACTIVE turn instead of being eaten by the phantom. The
+    /// asymmetry is the point: the mirror-image `Synthesized` expectation is
+    /// keyed by OWNER and so is self-limiting, which is why only the `Wire` one
+    /// is gated.
+    async fn v2_release_leaves_companion_ledger_empty() {
+        let script = Rc::new(RefCell::new(Script::default()));
+        let probe = script.clone();
+        with_harness(
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                let sid = start_session(&sender, &mut rx).await;
+
+                // Turn 1 — an ordinary v2 turn, released by its own owner-stamped
+                // completion. THIS is the release under test; everything after it
+                // exists to read the ledger it left behind.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["one".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+
+                // Turn 2 parks, so it is unambiguously the active turn when the
+                // identity-free completion lands. Waiting on the agent's prompt
+                // COUNT (not the command send) is what proves the loop processed
+                // the dispatch — the injection rides a different channel and could
+                // otherwise be serviced first.
+                probe.borrow_mut().block_prompt = true;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["two".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_prompt_count(&probe, 2, 5).await,
+                    "turn 2 must be dispatched before the injection"
+                );
+
+                // The frame a future v2 path might emit: a completion with no owner,
+                // scoped to this session.
+                let inbound = probe
+                    .borrow()
+                    .inbound
+                    .clone()
+                    .expect("harness populated the inbound seam");
+                inbound
+                    .send(RoutedNotification::scoped(
+                        sid.clone(),
+                        Notification::TurnCompleted {
+                            stop_reason: StopReason::EndTurn,
+                        },
+                    ))
+                    .await
+                    .unwrap();
+
+                let mut released = false;
+                while let Some(n) = recv_notif(&mut rx, 5).await {
+                    if matches!(n, Notification::TurnCompleted { .. }) {
+                        released = true;
+                        break;
+                    }
+                }
+                assert!(
+                    released,
+                    "turn 2 must be released by the identity-free completion — a \
+                 dangling Wire expectation from turn 1 absorbed it instead"
+                );
+
+                // COUNTER-ASSERTION: releasing is not enough, the busy guard must
+                // have cleared too. A turn eaten by the phantom stays active and
+                // this third prompt is rejected with a BridgeError instead of
+                // reaching the agent.
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["three".into()],
+                    })
+                    .await
+                    .unwrap();
+                assert!(
+                    wait_for_prompt_count(&probe, 3, 5).await,
+                    "the next turn is accepted — turn 2's release really cleared the guard"
+                );
+            },
+        )
+        .await;
+    }
+
+    #[test]
+    /// The engine×wire-companion matrix (cyril-upjh), asserted on the rule
+    /// itself rather than through the loop.
+    ///
+    /// `v2_release_leaves_companion_ledger_empty` fences the v2 half
+    /// behaviourally, but the KAS half has no behavioural fence available:
+    /// absorbing a companion and dropping an unowned terminal both `continue`
+    /// with nothing forwarded, so they are observationally identical on the
+    /// notification channel (cyril-a71q's own signed blindness B14/B16). A gate
+    /// mutated to a blanket `false` would therefore pass every KAS fixture.
+    /// This is the guard that fails instead — and it runs in the default build,
+    /// where no KAS turn can be driven at all.
+    fn wire_companion_is_owed_only_under_kas() {
+        let turn_on = |engine| ActiveTurn {
+            owner: TurnId::new(1),
+            engine,
+            session: agent_client_protocol::SessionId::new("sess_fake-0"),
+        };
+        assert!(
+            turn_on(AgentEngine::Kas).owes_wire_companion(),
+            "a KAS turn has two terminal sources — its release still owes the wire one"
+        );
+        assert!(
+            !turn_on(AgentEngine::V2).owes_wire_companion(),
+            "a v2 turn has one terminal source — its release must leave the ledger empty"
+        );
     }
 
     #[cfg(feature = "kas")]
