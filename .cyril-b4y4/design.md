@@ -191,17 +191,18 @@ worried about is not taken).
    consumer-less capability sub-traits (engine.rs:12 rule) —
    `emits_wire_turn_end` lands WITH its consumer.
 
-## Open decisions for the pause
+## Decisions (approved at the design pause, 2026-08-02)
 
-1. **Scope**: pure-state-machine scope as designed (trio + observe +
-   begin/cancel/busy), vs the review's wider cut (prompt tasks, shutdown,
-   disconnect ordering). Design recommends narrow; negative-space #3 is the
-   rationale; AC5 is still satisfied because the ADR amendment happens
-   regardless.
-2. **Engine method name**: `emits_wire_turn_end()` (wire-fact phrasing) vs
-   `dual_turn_terminals()`. Design recommends the former — it names the
-   observable, not the count.
-3. **Manual fences**: C6's grep, C8, C11 are review-time structural checks,
-   not CI tests. Skill requires explicit approval for `manual`.
-4. **ri8q disposition**: this design implements ri8q option (a) (observation
-   seam). Close ri8q with this PR, or leave open pending its own review?
+1. **Scope**: pure-state-machine scope APPROVED (trio + observe +
+   begin/cancel/busy). Prompt tasks, shutdown, disconnect ordering stay in
+   run_loop; B17 remains a signed blindness. AC5 satisfied via the ADR
+   amendment regardless.
+2. **Engine method name**: `emits_wire_turn_end()` APPROVED.
+3. **Manual fences**: C6-grep / C8 / C11 as review-time manual checks
+   APPROVED; results recorded in the PR body.
+4. **ri8q**: CLOSE with this PR — the mediator matrix test is the
+   behavioural coverage ri8q asked for (its option (a) seam).
+
+Glossary reconciliation (ship step 4): CONTEXT.md gained **Turn owner**,
+**Companion terminal**, and **Turn mediation** (the latter disambiguating
+"mediator" from ADR-0004's host-callback mediator). Turn-end entry unchanged.

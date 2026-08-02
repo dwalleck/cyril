@@ -64,6 +64,18 @@ _Avoid_: exchange, round-trip, response
 The signal that a turn has completed. Which wire event carries it differs per engine, so only the bound engine may declare a turn over.
 _Avoid_: prompt response (v2's carrier, not the concept), end of stream
 
+**Turn owner**:
+The per-turn identity (`TurnId`) allocated when the bridge accepts a prompt, never reused for the life of the agent subprocess. Terminals the bridge synthesizes itself are stamped with the owner; wire terminals are identity-free and resolved by session.
+_Avoid_: turn id (when you mean the concept rather than the type), sequence number, session (not per-turn unique)
+
+**Companion terminal**:
+Under KAS every turn ends with two terminal signals — the wire turn_end and the synthesized prompt response. Whichever arrives second is the companion: an expected signal to absorb, recording its `{source, reason}` evidence, not a duplicate to drop. At most one companion expectation is outstanding at any time.
+_Avoid_: duplicate completion (it is expected, not anomalous), echo
+
+**Turn mediation**:
+The bridge policy deciding what each inbound notification does to the active turn — forward it, release the turn, absorb a companion, or drop it (stale or unowned). Owned by the `TurnMediator` state machine inside the bridge; distinct from the bridge's host-callback mediation (ADR-0004), which gates the opposite direction.
+_Avoid_: mediator (unqualified — collides with the host-callback mediator), dedup (absorption records evidence; only the stale/unowned cases drop)
+
 ### Agents & engines
 
 **Vendor**:
