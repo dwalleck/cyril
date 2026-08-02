@@ -1,0 +1,24 @@
+
+running 1 test
+PASS resolve [env only] env=Some("Ubuntu") cwd=None -> Some("Ubuntu")
+PASS resolve [cwd only (compat prefix)] env=None cwd=Some("\\\\wsl$\\Debian\\home\\u") -> Some("Debian")
+PASS resolve [cwd only (canonical)] env=None cwd=Some("\\\\wsl.localhost\\Debian\\home\\u") -> Some("Debian")
+PASS resolve [both -> env wins] env=Some("Ubuntu") cwd=Some("\\\\wsl$\\Debian\\home\\u") -> Some("Ubuntu")
+PASS resolve [neither] env=None cwd=None -> None
+PASS resolve [empty env treated unset; drive cwd] env=Some("") cwd=Some("C:\\Users\\u") -> None
+PASS resolve [UNC root cwd, no tail] env=None cwd=Some("\\\\wsl$\\Ubuntu") -> Some("Ubuntu")
+PASS to_win_compat / -> \\wsl$\Ubuntu\
+PASS to_win_compat /root -> \\wsl$\Ubuntu\root
+PASS to_win_compat /proc/stat -> \\wsl$\Ubuntu\proc\stat
+PASS to_win_compat /proc/1/ -> \\wsl$\Ubuntu\proc\1\
+PASS to_win_compat /home/dwalleck/.claude/tmp/kas-5-fsterm-cpyeva4m/summary.txt -> \\wsl$\Ubuntu\home\dwalleck\.claude\tmp\kas-5-fsterm-cpyeva4m\summary.txt
+PASS passthru \\wsl.localhost\Ubuntu-other\foo -> \\wsl.localhost\Ubuntu-other\foo
+PASS passthru \\wsl$\UbuntuX\foo -> \\wsl$\UbuntuX\foo
+PASS passthru \\wsl$\ -> \\wsl$\
+PASS passthru \\server\share\file.txt -> \\server\share\file.txt
+PASS passthru C:\Users\u -> C:\Users\u
+probe2: 0 FAIL
+test probe2 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
