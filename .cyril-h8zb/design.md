@@ -23,13 +23,17 @@ extended, zero new notification variants, zero bridge/routing changes:
    `refusal`/`stopReason` leave the ignore-list; the unknown-key debug log behavior is unchanged.
 3. **`MetadataUpdated`** gains `refusal: Option<RefusalAlert>` — rides the existing routing
    (cyril-fh06 sessionId scoping untouched, so subagent refusal frames never reach main state).
-4. **`SessionController`** — buffers `pending_refusal: bool` from `MetadataUpdated` (same
-   take-at-turn pattern as `pending_tokens`); at `TurnCompleted`, when the buffered flag is set
-   AND the ACP stop reason is `EndTurn`, the `TurnSummary` records `Refusal` instead — the
-   toolbar then shows the existing red "Refused" chip. `Cancelled`/`MaxTokens`/`MaxTurnRequests`
-   are never overridden (they are real, distinct outcomes); `Refusal` is idempotent.
-   Safety premise probed: the only production reader of `TurnSummary::stop_reason` is
-   `toolbar.rs:181` (display) — no control flow keys off it.
+4. **`SessionController` AND `UiState`** — both buffer `pending_refusal: bool` from
+   `MetadataUpdated` (same take-at-turn pattern as `pending_tokens`); at `TurnCompleted`, when
+   the buffered flag is set AND the ACP stop reason is `EndTurn`, the `TurnSummary` records
+   `Refusal` instead — the toolbar then shows the existing red "Refused" chip.
+   `Cancelled`/`MaxTokens`/`MaxTurnRequests` are never overridden (they are real, distinct
+   outcomes); `Refusal` is idempotent. **Build-time correction (slice 5):** the toolbar reads
+   *UiState's* `last_turn`, which UiState assembles independently in its own `TurnCompleted`
+   arm — so the reconcile lives in both state machines, keeping the two summaries in agreement.
+   The original text named only SessionController; the approved outcome (red chip) dictated the
+   UiState half. Safety premise probed: the only production reader of
+   `TurnSummary::stop_reason` is `toolbar.rs:181` (display) — no control flow keys off it.
 5. **`UiState`** — on `MetadataUpdated` with `Some(refusal)`, commit ONE system chat message at
    arrival (not at turn end — see cyril-9akh ordering race) guarded by a
    `refusal_alerted_this_turn` flag; the flag resets on `TurnCompleted` and on `SessionCreated`.

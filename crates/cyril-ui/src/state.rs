@@ -66,6 +66,15 @@ pub struct UiState {
     session_cost: cyril_core::types::SessionCost,
     pending_tokens: Option<cyril_core::types::TokenCounts>,
     pending_metering: Option<cyril_core::types::TurnMetering>,
+    /// A refusal alert was already committed to chat this turn (cyril-h8zb).
+    /// Kiro's own consumer renders only the first `model_refusal` event;
+    /// per-turn scope is the approved conservative reading. Reset at
+    /// `TurnCompleted` and on session change/disconnect.
+    refusal_alerted_this_turn: bool,
+    /// A refusal-bearing metadata frame arrived this turn (cyril-h8zb).
+    /// Mirrors `SessionController::pending_refusal` — the toolbar reads
+    /// UiState's `last_turn`, so the render-path summary must reconcile too.
+    pending_refusal: bool,
 
     // Subagent streams and tracker (private — mutated via delegating methods)
     subagents: crate::subagent_ui::SubagentUiState,
@@ -297,6 +306,8 @@ impl UiState {
             session_cost: cyril_core::types::SessionCost::new(),
             pending_tokens: None,
             pending_metering: None,
+            refusal_alerted_this_turn: false,
+            pending_refusal: false,
             subagents: crate::subagent_ui::SubagentUiState::new(),
             subagent_tracker: cyril_core::subagent::SubagentTracker::new(),
             approval: None,
@@ -424,8 +435,7 @@ impl UiState {
                 // Routing tag (cyril-fh06): the App has already diverted
                 // subagent-scoped frames before this state machine sees one.
                 session_id: _,
-                // Slice 5 (cyril-h8zb) consumes this into a system message.
-                refusal: _,
+                refusal,
             } => {
                 // Retain-last: a frame that omits contextUsagePercentage
                 // (real 2.4.1 wire shape: duration/effort-only frames) means
@@ -455,6 +465,36 @@ impl UiState {
                     EffortUpdate::Unchanged => {}
                     EffortUpdate::Clear => self.effort = None,
                     EffortUpdate::Set(level) => self.effort = Some(level.clone()),
+                }
+                // Model-refusal alert (cyril-h8zb): commit the system message
+                // at frame arrival, not at turn end — TurnCompleted can race
+                // ahead of late notifications (cyril-9akh), and the probe
+                // showed the refusal frame lands just before the prompt
+                // response. One alert per turn (Kiro's own consumer dedupes
+                // to the first event). Streaming text flushes first so the
+                // message commits in chronological order (add_steer_echo
+                // idiom).
+                if let Some(alert) = refusal {
+                    self.pending_refusal = true;
+                    if !self.refusal_alerted_this_turn {
+                        self.refusal_alerted_this_turn = true;
+                        let base = match alert.explanation() {
+                            Some(e) => e.to_string(),
+                            None => "The model couldn't process this request. \
+                                     Try a different model with /model or start \
+                                     a new session with /new."
+                                .to_string(),
+                        };
+                        let message = match alert.recommended_model() {
+                            Some(m) => {
+                                format!("{base} Recommended model: {m} (switch with /model).")
+                            }
+                            None => base,
+                        };
+                        self.flush_streaming_agent_text();
+                        self.flush_streaming_thought();
+                        self.add_system_message(message);
+                    }
                 }
                 true
             }
@@ -493,8 +533,21 @@ impl UiState {
             }
             Notification::TurnCompleted { stop_reason } => {
                 self.commit_streaming();
+                // Reconcile (cyril-h8zb): refusal metadata + ambiguous ACP
+                // EndTurn => the render-path summary reads Refusal, so the
+                // toolbar's existing "Refused" chip fires. Explicit outcomes
+                // (Cancelled, MaxTokens, …) always win. Same rule as
+                // SessionController; both summaries must agree.
+                let refused = std::mem::take(&mut self.pending_refusal);
+                self.refusal_alerted_this_turn = false;
+                let stop_reason =
+                    if refused && *stop_reason == cyril_core::types::StopReason::EndTurn {
+                        cyril_core::types::StopReason::Refusal
+                    } else {
+                        *stop_reason
+                    };
                 self.last_turn = Some(cyril_core::types::TurnSummary::new(
-                    *stop_reason,
+                    stop_reason,
                     self.pending_tokens.take(),
                     self.pending_metering.take(),
                 ));
@@ -538,6 +591,8 @@ impl UiState {
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
+                self.refusal_alerted_this_turn = false;
+                self.pending_refusal = false;
                 // A dead connection has no live context — clear the scalar and the
                 // KAS breakdown bars so the toolbar stops showing a stale
                 // `Context: N%` and 5-label bar as if the session were alive.
@@ -738,6 +793,11 @@ impl UiState {
                 // (cross-session mis-attribution). The old steers can never drain
                 // here, so mark them Cleared.
                 self.flip_queued_steer_echoes(SteerEchoStatus::Cleared, false);
+                // Per-turn refusal state is per-session by extension
+                // (cyril-h8zb): a refusal buffered in the old session must not
+                // dedupe-suppress or mislabel the new session's first turn.
+                self.refusal_alerted_this_turn = false;
+                self.pending_refusal = false;
                 self.add_system_message(format!("Session created: {}", session_id.as_str()));
                 // If the active mode carries a Kiro-specific welcome message
                 // (e.g. kiro_planner's "Transform any idea..."), surface it.
@@ -3723,6 +3783,159 @@ mod tests {
         state.add_system_message("Welcome".into());
         assert_eq!(state.messages().len(), 1);
         assert!(matches!(state.messages()[0].kind(), ChatMessageKind::System(t) if t == "Welcome"));
+    }
+
+    /// Metadata frame carrying only a refusal alert (cyril-h8zb fences).
+    fn refusal_frame(explanation: Option<&str>, recommended: Option<&str>) -> Notification {
+        Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Unchanged,
+            session_id: None,
+            refusal: Some(cyril_core::types::RefusalAlert::from_parts(
+                None,
+                explanation.map(str::to_string),
+                recommended.map(str::to_string),
+            )),
+        }
+    }
+
+    fn system_message_count(state: &UiState, needle: &str) -> usize {
+        state
+            .messages()
+            .iter()
+            .filter(|m| matches!(m.kind(), ChatMessageKind::System(t) if t.contains(needle)))
+            .count()
+    }
+
+    #[test]
+    fn refusal_alert_dedupes_within_turn_resets_on_turn_end() {
+        // Design claim #7 (cyril-h8zb): first refusal frame of a turn commits
+        // ONE system message; repeats add nothing (kills no-dedupe spam); the
+        // next turn alerts again (kills never-resets).
+        let mut state = UiState::new(500);
+        state.apply_notification(&refusal_frame(Some("blocked"), None));
+        state.apply_notification(&refusal_frame(Some("blocked"), None));
+        assert_eq!(
+            system_message_count(&state, "blocked"),
+            1,
+            "second refusal frame in the same turn must not spam"
+        );
+
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        state.apply_notification(&refusal_frame(Some("blocked"), None));
+        assert_eq!(
+            system_message_count(&state, "blocked"),
+            2,
+            "a refusal in the next turn must alert again"
+        );
+    }
+
+    #[test]
+    fn refusal_alert_message_wording() {
+        // Design claim #8 (cyril-h8zb): the four wording cells are exact
+        // contracts (approved at the design pause). Fallback names /model and
+        // /new — cyril has no /rewind, unlike Kiro's own fallback.
+        const FALLBACK: &str = "The model couldn't process this request. Try a different model \
+                                with /model or start a new session with /new.";
+        let cases: &[(Option<&str>, Option<&str>, String)] = &[
+            (
+                Some("blocked by policy"),
+                None,
+                "blocked by policy".to_string(),
+            ),
+            (None, None, FALLBACK.to_string()),
+            (
+                Some("blocked by policy"),
+                Some("claude-opus"),
+                "blocked by policy Recommended model: claude-opus (switch with /model)."
+                    .to_string(),
+            ),
+            (
+                None,
+                Some("claude-opus"),
+                format!("{FALLBACK} Recommended model: claude-opus (switch with /model)."),
+            ),
+        ];
+        for (explanation, recommended, expected) in cases {
+            let mut state = UiState::new(500);
+            state.apply_notification(&refusal_frame(*explanation, *recommended));
+            let last = state.messages().last().expect("alert committed");
+            assert!(
+                matches!(last.kind(), ChatMessageKind::System(t) if t == expected),
+                "wording for ({explanation:?}, {recommended:?}): got {:?}, want {expected:?}",
+                last.kind()
+            );
+        }
+    }
+
+    #[test]
+    fn refusal_alert_reset_on_session_created() {
+        // Session swap must clear both the dedupe flag and the buffered
+        // reconcile bit — the new session's first turn starts clean.
+        let mut state = UiState::new(500);
+        state.apply_notification(&refusal_frame(Some("blocked"), None));
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        state.apply_notification(&refusal_frame(Some("blocked"), None));
+        assert_eq!(
+            system_message_count(&state, "blocked"),
+            2,
+            "new session must not inherit the dedupe flag"
+        );
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            state.last_turn().expect("summary").stop_reason(),
+            StopReason::Refusal,
+            "the new session's own refusal must still reconcile"
+        );
+    }
+
+    #[test]
+    fn refusal_reconciles_render_turn_summary() {
+        // Design claim #9, render path (cyril-h8zb): the toolbar reads
+        // UiState's TurnSummary — it must reconcile exactly like
+        // SessionController's. Explicit Cancelled always wins; the flag
+        // never leaks into the following turn.
+        let mut state = UiState::new(500);
+        state.apply_notification(&refusal_frame(Some("blocked"), None));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            state.last_turn().expect("summary").stop_reason(),
+            StopReason::Refusal
+        );
+
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            state.last_turn().expect("summary").stop_reason(),
+            StopReason::EndTurn,
+            "flag must not survive the turn boundary"
+        );
+
+        state.apply_notification(&refusal_frame(Some("blocked"), None));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::Cancelled,
+        });
+        assert_eq!(
+            state.last_turn().expect("summary").stop_reason(),
+            StopReason::Cancelled,
+            "an explicit user cancel is not a refusal"
+        );
     }
 
     #[test]
