@@ -8,6 +8,11 @@ pub(crate) mod identity;
 /// the `kas` cargo feature (ADR-0002); a default build links none of it.
 #[cfg(feature = "kas")]
 pub(crate) mod kas;
+/// prove-it probe for cyril-dn91 (engine-vs-feature gating of host callbacks).
+/// Characterization tests — see the module doc; repurposed into regression
+/// fences by the cyril-dn91 build.
+#[cfg(all(test, feature = "kas"))]
+mod probe_dn91;
 pub(crate) mod transport;
 /// Turn mediation (cyril-b4y4): the pure state machine behind the bridge
 /// `run_loop`'s turn ownership — busy-guard, owner allocation, terminal

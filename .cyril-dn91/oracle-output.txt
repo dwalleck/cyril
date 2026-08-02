@@ -1,0 +1,33 @@
+== typed acp::Client overrides (cfg kas) ==
+321:    async fn read_text_file(
+333:    async fn write_text_file(
+343:    async fn create_terminal(
+354:    async fn wait_for_terminal_exit(
+364:    async fn terminal_output(
+373:    async fn release_terminal(
+382:    async fn kill_terminal(
+== ext-request arms in handle_ext_request ==
+EXECUTE_METHOD
+GET_ACCESS_TOKEN_METHOD
+LIST_METHOD
+op_for_method
+SESSION_START_METHOD
+SHELL_TYPE_METHOD
+== _kiro/fs ops table (each is an advertised+dispatched method) ==
+8
+"kiro/fs/delete"
+"kiro/fs/read_directory"
+"kiro/fs/read_file"
+"kiro/fs/stat"
+"kiro/fs/write_file"
+== control-notification arms in ext_notification ==
+      1 CANCEL_METHOD
+      1 DID_CHANGE_METHOD
+== engine consults inside dispatch paths ==
+engine consults in dispatch bodies (comments excluded): 0
+== engine consults elsewhere in client.rs (for contrast) ==
+17:pub(crate) fn test_host_shell(engine: crate::types::AgentEngine) -> ResolvedHostShell {
+41:    engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
+68:        engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
+79:            let registry = if engine.hooks_mode() == KasHooksMode::Host {
+187:            self.engine.convert_session_update(&args, &inputs)
