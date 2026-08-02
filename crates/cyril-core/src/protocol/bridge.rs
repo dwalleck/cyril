@@ -4607,6 +4607,143 @@ mod tests {
     // `turn_mediator::tests::stamped_release_owes_wire_companion_only_when_expected`
     // (the ledger consequence, absorb-vs-drop now directly observable).
 
+    /// REGRESSION FENCE (cyril-b4y4 C1): the prove-it probe scenario f1–f12,
+    /// driven through the REAL `run_loop` — promoted verbatim from the
+    /// pre-extraction oracle capture (`.cyril-b4y4/probes/oracle-output.txt`,
+    /// 2026-08-02, baseline commit 981276c) minus its tracing/eprintln
+    /// scaffolding. Expectations are the OLD inline policy's observed
+    /// behavior; this fence is what proves the extracted mediator kept it.
+    ///
+    /// Mechanics: every prompt parks (`block_prompt`), so ALL terminal frames
+    /// are injected through the cyril-upjh inbound seam in a deterministic
+    /// order. `SystemNotify` markers ride the same FIFO channel, so "the
+    /// marker arrived first" proves the frame before it was processed and NOT
+    /// forwarded — absorb/stale/unowned outcomes are otherwise invisible on
+    /// this channel (their per-disposition fences live in
+    /// `turn_mediator::tests::mediator_matrix_all_dispositions`).
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn turn_mediation_probe_scenario() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                let inbound = probe.borrow().inbound.clone().expect("seam");
+                let wire_end = |sid: &crate::types::SessionId| {
+                    RoutedNotification::scoped(
+                        sid.clone(),
+                        Notification::TurnCompleted {
+                            stop_reason: StopReason::EndTurn,
+                        },
+                    )
+                };
+                let stamped = |n: u64| {
+                    RoutedNotification::global(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    })
+                    .with_turn(TurnId::new(n))
+                };
+                let marker = |n: u32| {
+                    RoutedNotification::global(Notification::SystemNotify {
+                        level: crate::types::event::SystemNotifyLevel::Info,
+                        message: format!("marker-{n}"),
+                    })
+                };
+                let expect_absorbed_or_dropped =
+                    |got: Option<Notification>, want: &str, label: &str| match got {
+                        Some(Notification::SystemNotify { message, .. }) if message == want => {}
+                        other => panic!(
+                            "{label}: expected {want} first (frame not forwarded), got {other:?}"
+                        ),
+                    };
+                let expect_forwarded = |got: Option<Notification>, label: &str| {
+                    assert!(
+                        matches!(got, Some(Notification::TurnCompleted { .. })),
+                        "{label}: expected a forwarded TurnCompleted"
+                    );
+                };
+                let prompt = |text: &str| BridgeCommand::SendPrompt {
+                    session_id: sid.clone(),
+                    content_blocks: vec![text.into()],
+                };
+
+                // Turn 1 — live-confirmed order: wire turn_end (f1) releases,
+                // the synthesized twin (f2) is absorbed.
+                sender.send(prompt("one")).await.unwrap();
+                assert!(wait_for_prompt_count(&probe, 1, 5).await, "p1");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f1");
+                inbound.send(stamped(0)).await.unwrap();
+                inbound.send(marker(2)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-2", "f2");
+
+                // Turn 2 — stale drop, foreign forward, reverse order.
+                sender.send(prompt("two")).await.unwrap();
+                assert!(wait_for_prompt_count(&probe, 2, 5).await, "p2");
+                inbound.send(stamped(0)).await.unwrap();
+                inbound.send(marker(3)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-3", "f3");
+                inbound
+                    .send(RoutedNotification::scoped(
+                        crate::types::SessionId::new("sess_foreign"),
+                        Notification::TurnCompleted {
+                            stop_reason: StopReason::EndTurn,
+                        },
+                    ))
+                    .await
+                    .unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f4");
+                inbound.send(stamped(1)).await.unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f5");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                inbound.send(marker(4)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-4", "f6");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                inbound.send(marker(5)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-5", "f7");
+
+                // Turns 3+4 — absorb-first precedence: turn#2's dangling Wire
+                // expectation shares live turn#3's session. A TurnCompleted
+                // instead of marker-6 at f9 means the mediator released the
+                // live turn — absorb-first is broken (mutation M3).
+                sender.send(prompt("three")).await.unwrap();
+                assert!(wait_for_prompt_count(&probe, 3, 5).await, "p3");
+                inbound.send(stamped(2)).await.unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f8");
+                sender.send(prompt("four")).await.unwrap();
+                assert!(wait_for_prompt_count(&probe, 4, 5).await, "p4");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                inbound.send(marker(6)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-6", "f9");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f10");
+                inbound
+                    .send(RoutedNotification::global(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    }))
+                    .await
+                    .unwrap();
+                inbound.send(marker(7)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-7", "f11");
+                sender.send(prompt("five")).await.unwrap();
+                assert!(
+                    wait_for_prompt_count(&probe, 5, 5).await,
+                    "p5: f10's release must have cleared the guard"
+                );
+                inbound.send(stamped(3)).await.unwrap();
+                inbound.send(marker(8)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-8", "f12");
+            },
+        )
+        .await;
+    }
+
     #[cfg(feature = "kas")]
     #[tokio::test]
     /// STRESS FIXTURE (plan slice 5). Claims C1/C6: the companion ledger holds at
