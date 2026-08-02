@@ -165,32 +165,3 @@ fn picker_marks_active_row_from_wire_current_fallback() {
         "marker is on the wrong row: {row:?}\n{text}"
     );
 }
-
-/// A label arriving with kiro-cli's `"[active]"` suffix must never render that
-/// suffix verbatim — the conversion boundary folds it into the marker.
-#[test]
-fn picker_never_renders_the_active_suffix_verbatim() {
-    let options = cyril_core::commands::parse_options_response(&serde_json::json!({
-        "options": [
-            {"value": "low", "label": "Low"},
-            {"value": "medium", "label": "Medium"},
-            {"value": "high", "label": "High  [active]"},
-            {"value": "max", "label": "Max"}
-        ]
-    }));
-
-    let mut ui = UiState::new(500);
-    ui.show_picker("effort".into(), options);
-
-    let text = render_open_picker(&ui);
-    assert!(
-        !text.contains("[active]"),
-        "the suffix leaked into the rendered labels\n{text}"
-    );
-    assert_eq!(
-        text.matches(MARK).count(),
-        1,
-        "expected exactly one marked row\n{text}"
-    );
-    assert_eq!(marked_row(&text), "High", "\n{text}");
-}

@@ -557,8 +557,17 @@ impl UiState {
                 self.current_mode = Some(mode_id.as_str().to_string());
                 true
             }
-            Notification::AgentSwitched { name, welcome, .. } => {
+            Notification::AgentSwitched {
+                name,
+                welcome,
+                model,
+                ..
+            } => {
                 self.current_mode = Some(name.clone());
+                // Agent switches are model-state boundaries. An absent model
+                // means the new agent has no known model, never "keep the old
+                // agent's model".
+                self.set_current_model(model.clone());
                 if let Some(msg) = welcome {
                     self.add_system_message(format!("Switched to {name}: {msg}"));
                 } else {
@@ -696,9 +705,9 @@ impl UiState {
             } => {
                 self.session_label = Some(session_id.as_str().to_string());
                 self.current_mode = current_mode.as_ref().map(|m| m.as_str().to_string());
-                if let Some(model) = current_model {
-                    self.current_model = Some(model.clone());
-                }
+                // Session creation is likewise a model-state boundary: None
+                // must clear the prior session's model rather than retain it.
+                self.set_current_model(current_model.clone());
                 // Effort is per-session and re-reported by the new session's
                 // metadata; reset so a prior session's level doesn't linger.
                 self.effort = None;
@@ -6043,5 +6052,85 @@ mod tests {
         state.set_current_model(Some("model-from-the-future".into()));
         state.show_picker("model".into(), vec![live_model_option("auto")]);
         assert!(marked_values(&state).is_empty());
+    }
+
+    #[test]
+    fn picker_does_not_reuse_model_from_previous_session() {
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("old-model".into()));
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("new-session"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        let mut options = vec![
+            live_model_option("old-model"),
+            live_model_option("new-model"),
+        ];
+        options[1].is_current = true;
+
+        state.show_picker("model".into(), options);
+
+        assert_eq!(marked_values(&state), vec!["new-model".to_string()]);
+    }
+
+    #[test]
+    fn picker_uses_model_and_effort_from_switched_agent() {
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("old-model".into()));
+        state.effort = Some(EffortLevel::High);
+        state.apply_notification(&Notification::AgentSwitched {
+            name: "new-agent".into(),
+            welcome: None,
+            previous_agent: Some("old-agent".into()),
+            model: Some("new-model".into()),
+        });
+
+        let mut model_options = vec![
+            live_model_option("old-model"),
+            live_model_option("new-model"),
+        ];
+        model_options[1].is_current = true;
+        state.show_picker("model".into(), model_options);
+        assert_eq!(marked_values(&state), vec!["new-model".to_string()]);
+
+        let effort_options = vec![
+            CommandOption {
+                label: "High".into(),
+                value: "high".into(),
+                description: None,
+                group: None,
+                is_current: false,
+            },
+            CommandOption {
+                label: "Medium".into(),
+                value: "medium".into(),
+                description: None,
+                group: None,
+                is_current: true,
+            },
+        ];
+        state.show_picker("effort".into(), effort_options);
+        assert_eq!(marked_values(&state), vec!["medium".to_string()]);
+    }
+
+    #[test]
+    fn picker_does_not_reuse_model_when_switched_agent_omits_model() {
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("old-model".into()));
+        state.apply_notification(&Notification::AgentSwitched {
+            name: "new-agent".into(),
+            welcome: None,
+            previous_agent: Some("old-agent".into()),
+            model: None,
+        });
+        let mut options = vec![live_model_option("old-model"), live_model_option("auto")];
+        options[1].is_current = true;
+
+        state.show_picker("model".into(), options);
+
+        assert_eq!(marked_values(&state), vec!["auto".to_string()]);
     }
 }
