@@ -8,6 +8,8 @@ Every slice ends in one conventional commit. “Prototype oracle” below means:
 diff <(.cyril-6bol/probe.py | jq -S .) <(.cyril-6bol/oracle.sh | jq -S .)
 ```
 
+The prototype is a standalone empirical witness, not the Cyril executable. Therefore every slice also builds `cyril` with the KAS feature and runs its named regression fence against compiled production code; the standalone comparison revalidates the independent premise. Both are required for the checkpointed binary/oracle gate.
+
 ## Slice 1: Preserve shell configuration for semantic validation
 
 **Claim:** C1/C10 — `[agent] shell` is absent or an exact external string; unknown strings survive TOML parsing so only KAS startup validates them, while wrong-typed TOML keeps the established whole-file fallback.
@@ -185,15 +187,15 @@ diff <(.cyril-6bol/probe.py | jq -S .) <(.cyril-6bol/oracle.sh | jq -S .)
 - [ ] Prototype oracle agrees
 - [ ] No loop or wall increase
 
-## Slice 8: Gate KAS startup and bind the resolved shell to KasEngine
+## Slice 8: Gate KAS startup and carry one resolved snapshot
 
-**Claim:** C1/C4/C10 — KAS resolves before channels/thread/process and constructs `KasEngine` only with the resulting shell; V2 performs zero host-shell probes.
+**Claim:** C1/C4/C10 — KAS resolves before channels/thread/process and passes one immutable `Some(HostShell)` into KiroClient; V2 passes the real `None` absence and performs zero host-shell probes.
 
-**Oracle:** Fake agent marker file plus a counting `HostEnvironment`; engine kind/capability output remains the existing independent witness.
+**Oracle:** Fake agent marker file, counting `HostEnvironment`, and a KiroClient pairing assertion independent of resolver branches.
 
 **Stress fixture:** Invalid KAS value and unavailable explicit shell must return `InvalidConfig` with zero host thread/agent markers; valid KAS probes exactly once; V2 with `cmd` probes zero times and reaches its in-process handshake unchanged.
 
-**Code budget:** ≤50 production lines per file and ≤80 test lines total.
+**Code budget:** ≤50 production lines per file and ≤140 mechanical test/callsite lines total.
 
 **Loop budget:** Resolver bounds are Slice 3/4; startup adds no loop. Exactly one resolver call per KAS bridge.
 
@@ -201,25 +203,25 @@ diff <(.cyril-6bol/probe.py | jq -S .) <(.cyril-6bol/oracle.sh | jq -S .)
 
 **Files:**
 - `crates/cyril-core/src/protocol/bridge.rs`
-- `crates/cyril-core/src/protocol/engine.rs`
+- `crates/cyril-core/src/protocol/client.rs`
 
-**Preconditions / output:** KasEngine’s host-shell precondition is enforced structurally by its constructor/field; no `Option` or sentinel shell exists inside KasEngine. `InvalidConfig` is returned to the process startup caller.
+**Preconditions / output:** The private resolved-startup constructor is the only production producer of the engine/`Option<HostShell>` pair; KAS failure returns `InvalidConfig`, while V2 absence is represented by `None`, never a magic shell.
 
 **Verification:**
-- [ ] Bridge/engine unit and harness tests pass
-- [ ] Invalid KAS creates zero markers; valid KAS resolver count is 1; V2 count is 0
+- [ ] Bridge/client unit and harness tests pass
+- [ ] Invalid KAS creates zero markers; valid KAS resolver count is 1 and client shell is `Some`; V2 count is 0 and client shell is `None`
 - [ ] Prototype oracle agrees
 - [ ] Startup wall and probe budgets hold
 
 ## Slice 9: Share one shell snapshot across client response and registry
 
-**Claim:** C4/C5/C8 — KiroClient obtains the bound KasEngine shell once, constructs the terminal registry with it, and both ext response and terminal create cross that registry seam.
+**Claim:** C4/C5/C8 — KiroClient’s immutable host shell supplies the ext response and is passed into terminal create, while the terminal registry retains sole ownership of process lifecycle.
 
 **Oracle:** Capture the serialized ext response and spawned executable/argv from one registry; compare both against the original `(path, token)` tuple retained by the test.
 
-**Stress fixture:** Resolve a fake shell, mutate the fake environment/PATH afterward, then route `_kiro/terminal/shell_type` and create a terminal. Expected: original token and executable remain; V2 ext request remains method-not-found/disabled.
+**Stress fixture:** Resolve a fake shell, mutate the fake environment/PATH afterward, then route `_kiro/terminal/shell_type` and create a terminal. Expected: original token and executable remain; V2’s absent shell refuses the KAS callbacks.
 
-**Code budget:** ≤45 production lines per file and ≤75 test lines total.
+**Code budget:** ≤45 production lines per file and ≤120 test/callsite lines total.
 
 **Loop budget:** No new loops; one `Rc` clone and one immutable shell clone at bridge construction.
 
@@ -229,7 +231,7 @@ diff <(.cyril-6bol/probe.py | jq -S .) <(.cyril-6bol/oracle.sh | jq -S .)
 - `crates/cyril-core/src/protocol/client.rs`
 - `crates/cyril-core/src/protocol/kas/terminal_io.rs`
 
-**Preconditions / output:** A terminal callback requires a KAS engine with a bound shell; the engine variant makes that load-bearing precondition representable without a sentinel. ACP responses are data; impossible callback mismatches return ACP errors.
+**Preconditions / output:** KAS terminal callbacks require `Some(&HostShell)` and enforce that at runtime with an ACP refusal; `None` is the valid V2 absence. ACP responses are data.
 
 **Verification:**
 - [ ] Client and registry unit tests pass
@@ -274,7 +276,7 @@ No gaps. Each slice names a plausible failing implementation: serde erasure, tok
 
 ### Doc-comment preconditions
 
-No gaps. Runnable shell selection and empty command are load-bearing runtime checks. KasEngine construction encodes the bound-shell invariant. Profile-once is enforced by a single launch path with no retry. Sanity-only assumptions are not presented as caller preconditions.
+No gaps. Runnable shell selection and empty command are load-bearing runtime checks. The private startup constructor and callback guards enforce the engine/shell pairing; `None` means V2 absence rather than a sentinel. Profile-once is enforced by a single launch path with no retry. Sanity-only assumptions are not presented as caller preconditions.
 
 ### Output targets
 
