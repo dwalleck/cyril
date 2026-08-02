@@ -852,20 +852,57 @@ mod tests {
         );
     }
 
+    /// Log-capture writer (cyril-1gim idiom, hoisted for the refusal fences).
+    #[derive(Clone, Default)]
+    struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+    impl std::io::Write for CaptureWriter {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().expect("capture lock").extend_from_slice(buf);
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
+        type Writer = CaptureWriter;
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    /// Run `f` under a DEBUG-level capture subscriber; return its result and
+    /// the captured log text.
+    fn with_captured_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
+        let capture = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .with_writer(capture.clone())
+            .finish();
+        let result = tracing::subscriber::with_default(subscriber, f);
+        let logs =
+            String::from_utf8(capture.0.lock().expect("capture lock").clone()).expect("utf8 logs");
+        (result, logs)
+    }
+
     #[test]
     fn to_ext_notification_metadata_refusal_and_stop_reason_not_flagged() {
-        // refusal {category, explanation, recommendedModel} and stopReason are
-        // known-but-ignored (both stay with cyril-h8zb). They must parse
-        // without tripping the unknown-key debug log.
+        // refusal and stopReason are recognized-and-parsed (cyril-h8zb); they
+        // must never trip the unknown-key debug log reserved for genuine
+        // backend additions (cyril-1gim).
         let params = serde_json::json!({
             "contextUsagePercentage": 7.5,
             "refusal": {"category": "unsafe", "explanation": "blocked", "recommendedModel": "claude-opus"},
             "stopReason": "CONTENT_FILTERED"
         });
-        let result = to_ext_notification("kiro.dev/metadata", &params);
+        let (result, logs) =
+            with_captured_logs(|| to_ext_notification("kiro.dev/metadata", &params));
+        assert!(refusal_of(result).is_some(), "refusal must parse");
         assert!(
-            result.is_ok(),
-            "known-but-ignored fields must not fail parsing"
+            !logs.contains("unrecognized top-level field"),
+            "refusal/stopReason must not be flagged unknown; captured: {logs}"
         );
     }
 
@@ -873,43 +910,195 @@ mod tests {
     fn to_ext_notification_metadata_unknown_key_logged() {
         // A backend addition to kiro.dev/metadata must land visibly: the
         // unrecognized top-level key is named in a debug log (cyril-1gim).
-        #[derive(Clone, Default)]
-        struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
-
-        impl std::io::Write for CaptureWriter {
-            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-                self.0.lock().expect("capture lock").extend_from_slice(buf);
-                Ok(buf.len())
-            }
-            fn flush(&mut self) -> std::io::Result<()> {
-                Ok(())
-            }
-        }
-
-        impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
-            type Writer = CaptureWriter;
-            fn make_writer(&'a self) -> Self::Writer {
-                self.clone()
-            }
-        }
-
-        let capture = CaptureWriter::default();
-        let subscriber = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::DEBUG)
-            .with_writer(capture.clone())
-            .finish();
         let params =
             serde_json::json!({"contextUsagePercentage": 7.5, "brandNewField": {"nested": 42}});
-        let result = tracing::subscriber::with_default(subscriber, || {
-            to_ext_notification("kiro.dev/metadata", &params)
-        });
+        let (result, logs) =
+            with_captured_logs(|| to_ext_notification("kiro.dev/metadata", &params));
         assert!(result.is_ok());
-        let logs =
-            String::from_utf8(capture.0.lock().expect("capture lock").clone()).expect("utf8 logs");
         assert!(
             logs.contains("brandNewField"),
             "unknown key must be named in the debug log; captured: {logs}"
         );
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_refusal_partial_matrix() {
+        // Design claim #4 (cyril-h8zb): each present, non-empty, string-typed
+        // subfield is preserved; everything else is None; no panic. The empty
+        // object still alerts (JS `if(r||…)` — `{}` is truthy).
+        type PartialCase = (
+            serde_json::Value,
+            Option<&'static str>,
+            Option<&'static str>,
+            Option<&'static str>,
+        );
+        let cases: &[PartialCase] = &[
+            (
+                serde_json::json!({"explanation": "why"}),
+                None,
+                Some("why"),
+                None,
+            ),
+            (
+                serde_json::json!({"category": "unsafe"}),
+                Some("unsafe"),
+                None,
+                None,
+            ),
+            (
+                serde_json::json!({"recommendedModel": "m1"}),
+                None,
+                None,
+                Some("m1"),
+            ),
+            (serde_json::json!({}), None, None, None),
+            (serde_json::json!({"explanation": ""}), None, None, None),
+            (
+                serde_json::json!({"explanation": null, "category": "c"}),
+                Some("c"),
+                None,
+                None,
+            ),
+        ];
+        for (obj, category, explanation, recommended) in cases {
+            let params = serde_json::json!({"refusal": obj});
+            let alert = refusal_of(to_ext_notification("kiro.dev/metadata", &params))
+                .unwrap_or_else(|| panic!("refusal object {obj} must alert"));
+            assert_eq!(alert.category(), *category, "category for {obj}");
+            assert_eq!(alert.explanation(), *explanation, "explanation for {obj}");
+            assert_eq!(
+                alert.recommended_model(),
+                *recommended,
+                "recommendedModel for {obj}"
+            );
+        }
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_refusal_corrupt_object() {
+        // Design claim #5 (cyril-h8zb), shapes i and j: a non-object refusal
+        // warns and is ignored — but alert-worthiness via CONTENT_FILTERED
+        // survives independently (kills corrupt-aborts-the-branch).
+        let alone = serde_json::json!({"refusal": 5});
+        let (result, logs) =
+            with_captured_logs(|| to_ext_notification("kiro.dev/metadata", &alone));
+        assert_eq!(
+            refusal_of(result),
+            None,
+            "corrupt refusal alone must not alert"
+        );
+        assert!(
+            logs.contains("not an object"),
+            "corrupt refusal must warn; captured: {logs}"
+        );
+
+        let with_stop = serde_json::json!({"refusal": "x", "stopReason": "CONTENT_FILTERED"});
+        let alert = refusal_of(to_ext_notification("kiro.dev/metadata", &with_stop))
+            .expect("CONTENT_FILTERED must still alert past a corrupt refusal");
+        assert_eq!(alert.explanation(), None);
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_refusal_corrupt_subfield_and_stop_reason() {
+        // Design claim #5 (cyril-h8zb), shapes h and k: a wrong-typed subfield
+        // warns and drops to None while siblings survive; a wrong-typed
+        // stopReason warns and is treated as absent.
+        let params = serde_json::json!({"refusal": {"explanation": 42, "category": "unsafe"}});
+        let (result, logs) =
+            with_captured_logs(|| to_ext_notification("kiro.dev/metadata", &params));
+        let alert = refusal_of(result).expect("object with corrupt subfield still alerts");
+        assert_eq!(
+            alert.category(),
+            Some("unsafe"),
+            "sibling subfield survives"
+        );
+        assert_eq!(alert.explanation(), None, "corrupt subfield drops to None");
+        assert!(
+            logs.contains("subfield not a string"),
+            "must warn; captured: {logs}"
+        );
+
+        let bad_stop = serde_json::json!({"stopReason": 17});
+        let (result, logs) =
+            with_captured_logs(|| to_ext_notification("kiro.dev/metadata", &bad_stop));
+        assert_eq!(
+            refusal_of(result),
+            None,
+            "corrupt stopReason is absent, not alert"
+        );
+        assert!(logs.contains("not a string"), "must warn; captured: {logs}");
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_refusal_preserves_existing_fields() {
+        // Design claim #6 / AC1 (cyril-h8zb): a refusal-bearing kitchen-sink
+        // frame parses every sibling field identically to the refusal-free
+        // control (kills parse-order/consumption bugs).
+        let control = serde_json::json!({
+            "sessionId": "sub-1",
+            "contextUsagePercentage": 42.5,
+            "meteringUsage": [{"unit": "credit", "unitPlural": "credits", "value": 0.018}],
+            "turnDurationMs": 1948,
+            "inputTokens": 100, "outputTokens": 50, "cachedTokens": 25,
+            "effort": "high"
+        });
+        let mut with_refusal = control.clone();
+        with_refusal["refusal"] = serde_json::json!(
+            {"category": "unsafe", "explanation": "blocked", "recommendedModel": "claude-opus"}
+        );
+        with_refusal["stopReason"] = serde_json::json!("CONTENT_FILTERED");
+
+        let assert_siblings = |params: &serde_json::Value, want_refusal: bool| {
+            let result = to_ext_notification("kiro.dev/metadata", params);
+            if let Ok(Some(Notification::MetadataUpdated {
+                context_usage,
+                metering,
+                tokens,
+                duration_ms,
+                effort,
+                session_id,
+                refusal,
+            })) = result
+            {
+                let ctx = context_usage.expect("context present");
+                assert!((ctx.percentage() - 42.5).abs() < f64::EPSILON);
+                let m = metering.expect("metering present");
+                assert!((m.credits().expect("credits") - 0.018).abs() < 0.001);
+                assert_eq!(m.duration_ms(), Some(1948));
+                assert_eq!(duration_ms, Some(1948));
+                let t = tokens.expect("tokens present");
+                assert_eq!((t.input(), t.output(), t.cached()), (100, 50, Some(25)));
+                assert_eq!(effort, EffortUpdate::Set(crate::types::EffortLevel::High));
+                assert_eq!(session_id, Some(SessionId::new("sub-1")));
+                assert_eq!(refusal.is_some(), want_refusal);
+            } else {
+                panic!("expected MetadataUpdated, got {result:?}");
+            }
+        };
+        assert_siblings(&control, false);
+        assert_siblings(&with_refusal, true);
+    }
+
+    #[test]
+    fn to_ext_notification_metadata_refusal_keeps_session_scope() {
+        // Design claim #11 (cyril-h8zb): the sessionId routing tag survives
+        // alongside a refusal — a subagent refusal frame stays divertible.
+        let params = serde_json::json!({
+            "sessionId": "subagent-7",
+            "refusal": {"explanation": "blocked"}
+        });
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        if let Ok(Some(Notification::MetadataUpdated {
+            session_id,
+            refusal,
+            ..
+        })) = result
+        {
+            assert_eq!(session_id, Some(SessionId::new("subagent-7")));
+            assert!(refusal.is_some());
+        } else {
+            panic!("expected MetadataUpdated, got {result:?}");
+        }
     }
 
     #[test]
