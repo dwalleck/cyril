@@ -342,6 +342,9 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::ReadTextFileRequest,
     ) -> acp::Result<acp::ReadTextFileResponse> {
+        if self.engine.adapters().host_io.is_none() {
+            return refuse_unadapted("fs/read_text_file");
+        }
         crate::protocol::kas::host_io::read_text_file(&args).await
     }
 
@@ -354,6 +357,11 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::WriteTextFileRequest,
     ) -> acp::Result<acp::WriteTextFileResponse> {
+        // Refusal precedes the responder — no filesystem side effect may
+        // occur for an un-adaptered engine (cyril-dn91 C2).
+        if self.engine.adapters().host_io.is_none() {
+            return refuse_unadapted("fs/write_text_file");
+        }
         crate::protocol::kas::host_io::write_text_file(&args).await
     }
 
@@ -364,6 +372,9 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::CreateTerminalRequest,
     ) -> acp::Result<acp::CreateTerminalResponse> {
+        if self.engine.adapters().host_io.is_none() {
+            return refuse_unadapted("terminal/create");
+        }
         self.terminals.create(&args)
     }
 
@@ -375,6 +386,9 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::WaitForTerminalExitRequest,
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
+        if self.engine.adapters().host_io.is_none() {
+            return refuse_unadapted("terminal/wait_for_exit");
+        }
         self.terminals.wait(&args).await
     }
 
@@ -385,6 +399,9 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::TerminalOutputRequest,
     ) -> acp::Result<acp::TerminalOutputResponse> {
+        if self.engine.adapters().host_io.is_none() {
+            return refuse_unadapted("terminal/output");
+        }
         self.terminals.output(&args)
     }
 
@@ -394,6 +411,9 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::ReleaseTerminalRequest,
     ) -> acp::Result<acp::ReleaseTerminalResponse> {
+        if self.engine.adapters().host_io.is_none() {
+            return refuse_unadapted("terminal/release");
+        }
         self.terminals.release(&args).await
     }
 
@@ -403,6 +423,9 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::KillTerminalRequest,
     ) -> acp::Result<acp::KillTerminalResponse> {
+        if self.engine.adapters().host_io.is_none() {
+            return refuse_unadapted("terminal/kill");
+        }
         self.terminals.kill(&args).await
     }
 }
@@ -461,6 +484,9 @@ impl KiroClient {
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
+            if self.engine.adapters().host_io.is_none() {
+                return refuse_unadapted(args.method.as_ref());
+            }
             return self.terminals.respond_shell_type();
         }
         // Inbound hooks serving (list/executeHook/sessionStart) requires the
@@ -504,6 +530,9 @@ impl KiroClient {
         {
             use crate::protocol::kas::kiro_fs;
             if let Some(op) = kiro_fs::op_for_method(args.method.as_ref()) {
+                if self.engine.adapters().host_io.is_none() {
+                    return refuse_unadapted(args.method.as_ref());
+                }
                 return kiro_fs::dispatch(op, &parse_ext_params(&args)).await;
             }
         }
@@ -970,6 +999,140 @@ mod tests {
         assert!(
             !f.exists(),
             "delete must actually reach the filesystem — the side effect IS the wiring proof"
+        );
+    }
+
+    // cyril-dn91 C2 fence: typed fs callbacks refuse under V2 with
+    // method-not-found — and the write refusal precedes any filesystem side
+    // effect (the gate-after-side-effect bug this fixture is designed to
+    // fail under).
+    #[tokio::test]
+    async fn v2_refuses_typed_fs() {
+        let (client, _nrx) = v2_bound_client();
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("x.txt");
+        std::fs::write(&f, "seed").unwrap();
+
+        let err = client
+            .read_text_file(acp::ReadTextFileRequest::new(acp::SessionId::new("s"), &f))
+            .await
+            .expect_err("V2 installs no host_io adapter — read must refuse");
+        assert_eq!(err.code, acp::ErrorCode::MethodNotFound);
+
+        let target = dir.path().join("must-not-exist.txt");
+        let err = client
+            .write_text_file(acp::WriteTextFileRequest::new(
+                acp::SessionId::new("s"),
+                &target,
+                "boom",
+            ))
+            .await
+            .expect_err("write must refuse");
+        assert_eq!(err.code, acp::ErrorCode::MethodNotFound);
+        assert!(
+            !target.exists(),
+            "refusal must precede the write side effect"
+        );
+    }
+
+    // cyril-dn91 C3 fence: every `_kiro/fs/*` op refuses under V2, walked over
+    // FS_OPS — the same table the advertisement derives from, so a gate
+    // missing on any one arm fails its named op, and a sixth op added later is
+    // fenced automatically. The delete target must survive its refusal.
+    #[tokio::test]
+    async fn v2_refuses_kiro_fs_all_ops() {
+        use crate::protocol::kas::kiro_fs;
+
+        let (client, _nrx) = v2_bound_client();
+        let dir = tempfile::tempdir().unwrap();
+        for op in kiro_fs::FS_OPS {
+            let f = dir.path().join(format!("{}.txt", op.flag));
+            std::fs::write(&f, "seed").unwrap();
+            let params = serde_json::json!({"sessionId": "s", "path": f, "content": "seed"});
+            let raw = serde_json::value::RawValue::from_string(params.to_string()).unwrap();
+            match client
+                .ext_method(acp::ExtRequest::new(op.method, raw.into()))
+                .await
+            {
+                Err(e) => assert_eq!(
+                    e.code,
+                    acp::ErrorCode::MethodNotFound,
+                    "{} must refuse with method-not-found",
+                    op.wire
+                ),
+                Ok(resp) => panic!("{} must refuse, got body {}", op.wire, resp.0.get()),
+            }
+            assert!(
+                f.exists(),
+                "{}: refusal must precede any side effect",
+                op.flag
+            );
+        }
+    }
+
+    // cyril-dn91 C4 fence: the whole terminal family refuses under V2 with
+    // method-not-found — NOT the registry's "no resolved host shell" responder
+    // error (the pre-dn91 indirect gate), and not only on the ext arm: each
+    // typed override is gated individually, so an ext-arm-only gate fails
+    // here.
+    #[tokio::test]
+    async fn v2_refuses_terminal_family() {
+        let (client, _nrx) = v2_bound_client();
+        let sid = || acp::SessionId::new("s");
+        let tid = acp::TerminalId::new("term-x");
+
+        let assert_refused = |err: acp::Error, what: &str| {
+            assert_eq!(err.code, acp::ErrorCode::MethodNotFound, "{what}: {err:?}");
+            assert_ne!(
+                err.message, "KAS terminal callback has no resolved host shell",
+                "{what} must refuse at the adapter gate, not the shell registry"
+            );
+        };
+        assert_refused(
+            client
+                .create_terminal(acp::CreateTerminalRequest::new(sid(), "true"))
+                .await
+                .expect_err("create refused"),
+            "terminal/create",
+        );
+        assert_refused(
+            client
+                .wait_for_terminal_exit(acp::WaitForTerminalExitRequest::new(sid(), tid.clone()))
+                .await
+                .expect_err("wait refused"),
+            "terminal/wait_for_exit",
+        );
+        assert_refused(
+            client
+                .terminal_output(acp::TerminalOutputRequest::new(sid(), tid.clone()))
+                .await
+                .expect_err("output refused"),
+            "terminal/output",
+        );
+        assert_refused(
+            client
+                .release_terminal(acp::ReleaseTerminalRequest::new(sid(), tid.clone()))
+                .await
+                .expect_err("release refused"),
+            "terminal/release",
+        );
+        assert_refused(
+            client
+                .kill_terminal(acp::KillTerminalRequest::new(sid(), tid))
+                .await
+                .expect_err("kill refused"),
+            "terminal/kill",
+        );
+
+        let params = serde_json::value::RawValue::from_string("{\"sessionId\":\"s\"}".to_string())
+            .unwrap()
+            .into();
+        assert_refused(
+            client
+                .ext_method(acp::ExtRequest::new("kiro/terminal/shell_type", params))
+                .await
+                .expect_err("shell_type refused"),
+            "shell_type",
         );
     }
 

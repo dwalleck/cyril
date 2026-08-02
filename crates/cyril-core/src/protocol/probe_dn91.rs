@@ -1,10 +1,11 @@
-//! prove-it probe (cyril-dn91): in a `--features kas` build with **V2Engine**
-//! bound, which handled host callbacks answer vs refuse?
+//! prove-it probe → regression fences (cyril-dn91): in a `--features kas`
+//! build, host-callback availability follows the BOUND ENGINE's adapter set.
 //!
-//! CHARACTERIZATION of today's behavior — these assertions document the defect
-//! (feature-gated, not engine-gated dispatch) and are inverted to refusals by
-//! the cyril-dn91 build slices. Oracle: `.cyril-dn91/oracle.sh` (source-text
-//! census of engine consults on dispatch paths — independent mechanism).
+//! Began as characterization tests documenting the defect (feature-gated, not
+//! engine-gated dispatch — a V2-bound client answered auth/fs/hooks and
+//! executed wire commands); each build slice inverted its family's rows, and
+//! the module now fences the refusal contract end-to-end. Original probe
+//! evidence + oracle: `.cyril-dn91/` (findings.md, oracle.sh).
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -61,7 +62,7 @@ async fn ext(client: &KiroClient, method: &str, params: serde_json::Value) -> Di
 }
 
 #[tokio::test]
-async fn v2_bound_client_answers_auth_fs_hooks_but_advertises_nothing() {
+async fn v2_bound_client_refuses_every_unadapted_family() {
     let dir = tempfile::tempdir().unwrap();
     let f = dir.path().join("p.txt");
     std::fs::write(&f, "dn91").unwrap();
@@ -82,13 +83,15 @@ async fn v2_bound_client_answers_auth_fs_hooks_but_advertises_nothing() {
     .await;
     assert_eq!(auth, Disposition::Refused, "auth refused under V2 (C1)");
 
-    // TYPED FS: the override resolves and returns real file content.
+    // TYPED FS: REFUSED since the dn91 host-io gate (was: returned real file
+    // content under V2, the characterized defect).
     let read = client
         .read_text_file(acp::ReadTextFileRequest::new(acp::SessionId::new("s"), &f))
-        .await;
-    assert_eq!(read.expect("fs override answers under V2").content, "dn91");
+        .await
+        .expect_err("typed fs read refused under V2 (C2)");
+    assert_eq!(read.code, acp::ErrorCode::MethodNotFound);
 
-    // _kiro/fs/* dialect: stat answers an object.
+    // _kiro/fs/* dialect: REFUSED (was: stat answered an object).
     let stat = ext(
         &client,
         crate::protocol::kas::kiro_fs::STAT_METHOD,
@@ -97,8 +100,8 @@ async fn v2_bound_client_answers_auth_fs_hooks_but_advertises_nothing() {
     .await;
     assert_eq!(
         stat,
-        Disposition::Answered,
-        "_kiro/fs/stat answers under V2"
+        Disposition::Refused,
+        "_kiro/fs/stat refused under V2 (C3)"
     );
 
     // HOOKS: REFUSED since the dn91 hooks gate — V2 has no hooks capability
@@ -128,8 +131,9 @@ async fn v2_bound_client_answers_auth_fs_hooks_but_advertises_nothing() {
         "executeHook refused under V2 (C5)"
     );
 
-    // TERMINAL: the one family with an (indirect) engine gate today — V2 gets no
-    // host shell, so the responder itself refuses. Distinct shape from -32601.
+    // TERMINAL: now refused at the ADAPTER gate with -32601 (was: the one
+    // family with an indirect engine gate — the registry's host-shell-None
+    // responder error, a different wire shape).
     let shell = ext(
         &client,
         "kiro/terminal/shell_type",
@@ -138,8 +142,8 @@ async fn v2_bound_client_answers_auth_fs_hooks_but_advertises_nothing() {
     .await;
     assert_eq!(
         shell,
-        Disposition::Answered,
-        "refusal comes from the responder (host-shell None), not method-not-found"
+        Disposition::Refused,
+        "shell_type refused at the adapter gate under V2 (C4)"
     );
 
     // An UNKNOWN method still falls to the protocol-default null (dcc6 F15).
