@@ -47,11 +47,14 @@ pub(crate) struct KiroClient {
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
     /// KAS-7 (cyril-jiyn): the hook registry serving `_kiro/hooks/*`, loaded
-    /// once at construction from the workspace + global `.kiro/hooks` when the
-    /// bound engine's hooks mode is `Host`. Empty otherwise (Kas mode runs
-    /// hooks agent-side; v2/Off advertise none).
+    /// once at construction from the workspace + global `.kiro/hooks`.
+    /// `Some` iff the bound engine's Hooks adapter direction is `Inbound`
+    /// (cyril-dn91 C10) — Outbound runs hooks agent-side and v2/Off have no
+    /// hooks capability, and neither gets an empty-registry stand-in (the
+    /// sentinel the no-sentinel rule forbids). Registry presence IS the
+    /// inbound-serving gate consulted by the dispatch arms.
     #[cfg(feature = "kas")]
-    hooks: std::rc::Rc<crate::protocol::kas::hooks::HookRegistry>,
+    hooks: Option<std::rc::Rc<crate::protocol::kas::hooks::HookRegistry>>,
     /// Session workspace, the cwd for hook command execution (cyril-jiyn).
     #[cfg(feature = "kas")]
     cwd: std::path::PathBuf,
@@ -74,19 +77,16 @@ impl KiroClient {
         #[cfg(not(feature = "kas"))]
         let _ = host_shell;
         #[cfg(feature = "kas")]
-        let hooks = {
-            use crate::types::kas_hooks::KasHooksMode;
-            let registry = if engine.hooks_mode() == KasHooksMode::Host {
+        let hooks = match engine.adapters().hooks {
+            crate::protocol::engine::HooksAdapter::Inbound => Some(std::rc::Rc::new(
                 crate::protocol::kas::hooks::HookRegistry::load(
                     cwd,
                     crate::kiro_agent_config::home_dir()
                         .map(|h| h.join(".kiro"))
                         .as_deref(),
-                )
-            } else {
-                crate::protocol::kas::hooks::HookRegistry::default()
-            };
-            std::rc::Rc::new(registry)
+                ),
+            )),
+            _ => None,
         };
         Self {
             notification_tx,
@@ -221,12 +221,30 @@ impl acp::Client for KiroClient {
         #[cfg(feature = "kas")]
         {
             if args.method.as_ref() == crate::protocol::kas::hooks::CANCEL_METHOD {
+                // Cancel aborts an in-flight INBOUND hook op — ops only exist
+                // when cyril serves hooks (cyril-dn91 C12 prose; the gate
+                // mirrors the executeHook arm's).
+                if self.hooks.is_none() {
+                    tracing::debug!("hooks/cancel dropped: no inbound hooks adapter");
+                    return Ok(());
+                }
                 if let Some(op_id) = params.get("operationId").and_then(|o| o.as_str()) {
                     self.hook_ops.cancel(op_id);
                 }
                 return Ok(());
             }
             if args.method.as_ref() == crate::protocol::kas::hooks::DID_CHANGE_METHOD {
+                // didChange is meaningful in EITHER hooks direction (Inbound:
+                // on-disk edit note, cyril-2adk; Outbound: KAS pushes its full
+                // new registry, cyril-gk17) — but an engine with no hooks
+                // capability gets no HooksChanged surface (cyril-dn91 C12).
+                if matches!(
+                    self.engine.adapters().hooks,
+                    crate::protocol::engine::HooksAdapter::None
+                ) {
+                    tracing::debug!("hooks/didChange dropped: engine has no hooks capability");
+                    return Ok(());
+                }
                 // Under `kas_hooks = "kas"` the notification carries KAS's FULL
                 // new registry, so cyril can refresh what it shows without
                 // asking (cyril-gk17). Under `"host"` cyril owns the registry
@@ -445,11 +463,22 @@ impl KiroClient {
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
             return self.terminals.respond_shell_type();
         }
+        // Inbound hooks serving (list/executeHook/sessionStart) requires the
+        // Inbound registry — its presence IS the direction gate (cyril-dn91
+        // C5/C10). Outbound advertises hooks but serves nothing inbound;
+        // executeHook especially must not run wire-supplied commands without
+        // an Inbound adapter.
         if args.method.as_ref() == crate::protocol::kas::hooks::LIST_METHOD {
+            let Some(hooks) = &self.hooks else {
+                return refuse_unadapted(args.method.as_ref());
+            };
             let params = parse_ext_params(&args);
-            return self.hooks.respond_list(&params);
+            return hooks.respond_list(&params);
         }
         if args.method.as_ref() == crate::protocol::kas::hooks::EXECUTE_METHOD {
+            if self.hooks.is_none() {
+                return refuse_unadapted(args.method.as_ref());
+            }
             let params = parse_ext_params(&args);
             return crate::protocol::kas::hooks::respond_execute(
                 &params,
@@ -459,8 +488,10 @@ impl KiroClient {
             .await;
         }
         if args.method.as_ref() == crate::protocol::kas::hooks::SESSION_START_METHOD {
-            return crate::protocol::kas::hooks::respond_session_start(&self.hooks, &self.cwd)
-                .await;
+            let Some(hooks) = &self.hooks else {
+                return refuse_unadapted(args.method.as_ref());
+            };
+            return crate::protocol::kas::hooks::respond_session_start(hooks, &self.cwd).await;
         }
         // cyril-kf2g: the `_kiro/fs/*` superset dialect, selected by the
         // `fs._meta.kiro` capabilities this engine advertises. Both the
@@ -940,6 +971,94 @@ mod tests {
             !f.exists(),
             "delete must actually reach the filesystem — the side effect IS the wiring proof"
         );
+    }
+
+    // cyril-dn91 C10 fence: the hook registry exists iff the Hooks direction
+    // is Inbound — no empty-registry stand-in for Outbound/Off (the sentinel
+    // ADR-0001's amendment forbids). Fails under the keep-always-constructing
+    // impl.
+    #[test]
+    fn registry_present_iff_inbound() {
+        use crate::types::kas_hooks::KasHooksMode;
+
+        let client_for = |mode| {
+            let (ntx, _nrx) = mpsc::channel(1);
+            let (ptx, _prx) = mpsc::channel(1);
+            KiroClient::new(
+                ntx,
+                ptx,
+                std::rc::Rc::new(crate::protocol::engine::KasEngine { hooks_mode: mode }),
+                test_host_shell(crate::types::AgentEngine::Kas),
+                std::path::Path::new("/tmp"),
+            )
+        };
+        assert!(
+            client_for(KasHooksMode::Host).hooks.is_some(),
+            "Inbound loads a registry"
+        );
+        assert!(
+            client_for(KasHooksMode::Kas).hooks.is_none(),
+            "Outbound gets NO registry"
+        );
+        assert!(
+            client_for(KasHooksMode::Off).hooks.is_none(),
+            "Off gets NO registry"
+        );
+        let (v2, _nrx) = v2_bound_client();
+        assert!(v2.hooks.is_none(), "V2 gets NO registry");
+    }
+
+    // cyril-dn91 C12 fence: didChange carrying a full registry payload must
+    // NOT surface HooksChanged when the bound engine has no hooks capability.
+    // Fails against the pre-dn91 ungated arm (which forwarded it under V2);
+    // the Outbound cell proves the gate is direction-shaped, not
+    // registry-presence-shaped (Outbound has no registry but DOES get
+    // HooksChanged, cyril-gk17).
+    #[tokio::test]
+    async fn did_change_gated_by_hooks_direction() {
+        let payload = serde_json::json!({"hooks": [
+            {"id": "k:h", "name": "h", "trigger": "UserPromptSubmit", "enabled": true}
+        ]});
+
+        let (v2, mut v2_rx) = v2_bound_client();
+        let raw = serde_json::value::RawValue::from_string(payload.to_string()).unwrap();
+        v2.ext_notification(acp::ExtNotification::new(
+            crate::protocol::kas::hooks::DID_CHANGE_METHOD,
+            raw.into(),
+        ))
+        .await
+        .unwrap();
+        assert!(
+            v2_rx.try_recv().is_err(),
+            "no-hooks engine must not surface HooksChanged"
+        );
+
+        let (ntx, mut kas_rx) = mpsc::channel(4);
+        let (ptx, _prx) = mpsc::channel(1);
+        let outbound = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Kas,
+            }),
+            test_host_shell(crate::types::AgentEngine::Kas),
+            std::path::Path::new("/tmp"),
+        );
+        let raw = serde_json::value::RawValue::from_string(payload.to_string()).unwrap();
+        outbound
+            .ext_notification(acp::ExtNotification::new(
+                crate::protocol::kas::hooks::DID_CHANGE_METHOD,
+                raw.into(),
+            ))
+            .await
+            .unwrap();
+        match kas_rx.try_recv() {
+            Ok(routed) => assert!(
+                matches!(routed.notification, Notification::HooksChanged { .. }),
+                "Outbound still surfaces HooksChanged"
+            ),
+            Err(_) => panic!("Outbound didChange must still surface HooksChanged (cyril-gk17)"),
+        }
     }
 
     // cyril-jiyn claim 12 fence: the _kiro/hooks/didChange notification is

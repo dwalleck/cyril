@@ -101,32 +101,31 @@ async fn v2_bound_client_answers_auth_fs_hooks_but_advertises_nothing() {
         "_kiro/fs/stat answers under V2"
     );
 
-    // HOOKS: list serves (empty) registry; executeHook RUNS an arbitrary wire
-    // command (exitCode 0 in the body proves execution, not just dispatch).
+    // HOOKS: REFUSED since the dn91 hooks gate — V2 has no hooks capability
+    // (was: list served the empty registry and executeHook RAN wire commands,
+    // the characterized defect).
     let list = ext(
         &client,
         crate::protocol::kas::hooks::LIST_METHOD,
         serde_json::json!({"trigger": "promptSubmit"}),
     )
     .await;
-    assert_eq!(list, Disposition::Answered, "hooks/list answers under V2");
-    let raw = serde_json::value::RawValue::from_string(
-        serde_json::json!({"hookId": "h", "hookName": "p", "command": "echo dn91-probe",
-            "sessionId": "s", "userPrompt": ""})
-        .to_string(),
-    )
-    .unwrap();
-    let exec = client
-        .ext_method(acp::ExtRequest::new(
-            crate::protocol::kas::hooks::EXECUTE_METHOD,
-            raw.into(),
-        ))
-        .await
-        .unwrap();
-    let body: serde_json::Value = serde_json::from_str(exec.0.get()).unwrap();
     assert_eq!(
-        body["exitCode"], 0,
-        "executeHook RAN the command under V2: {body}"
+        list,
+        Disposition::Refused,
+        "hooks/list refused under V2 (C5)"
+    );
+    let exec = ext(
+        &client,
+        crate::protocol::kas::hooks::EXECUTE_METHOD,
+        serde_json::json!({"hookId": "h", "hookName": "p", "command": "echo dn91-probe",
+            "sessionId": "s", "userPrompt": ""}),
+    )
+    .await;
+    assert_eq!(
+        exec,
+        Disposition::Refused,
+        "executeHook refused under V2 (C5)"
     );
 
     // TERMINAL: the one family with an (indirect) engine gate today — V2 gets no
@@ -221,7 +220,7 @@ fn advertisement_is_fully_determined_by_presence_direction_extras() {
 /// SERVES: list answers `{hooks: []}` and executeHook runs an arbitrary wire
 /// command — there is no direction gate, only the registry's emptiness.
 #[tokio::test]
-async fn kas_outbound_hooks_mode_still_serves_inbound_execution() {
+async fn kas_outbound_hooks_mode_refuses_inbound_serving() {
     let dir = tempfile::tempdir().unwrap();
     let (ntx, _nrx) = mpsc::channel(4);
     let (ptx, _prx) = mpsc::channel(1);
@@ -241,10 +240,18 @@ async fn kas_outbound_hooks_mode_still_serves_inbound_execution() {
         serde_json::json!({"trigger": "promptSubmit"}),
     )
     .await;
-    assert_eq!(list, Disposition::Answered, "empty registry SERVES inbound");
+    assert_eq!(
+        list,
+        Disposition::Refused,
+        "Outbound advertises hooks but serves nothing inbound (C5/AC4)"
+    );
 
+    // executeHook must refuse BEFORE any execution: the command would create
+    // a file, and the file must not exist afterwards (gate-after-execute bug).
+    let marker = dir.path().join("dn91-must-not-exist");
     let raw = serde_json::value::RawValue::from_string(
-        serde_json::json!({"hookId": "h", "hookName": "p", "command": "echo dn91-kas-mode",
+        serde_json::json!({"hookId": "h", "hookName": "p",
+            "command": format!("touch {}", marker.display()),
             "sessionId": "s", "userPrompt": ""})
         .to_string(),
     )
@@ -254,11 +261,10 @@ async fn kas_outbound_hooks_mode_still_serves_inbound_execution() {
             crate::protocol::kas::hooks::EXECUTE_METHOD,
             raw.into(),
         ))
-        .await
-        .unwrap();
-    let body: serde_json::Value = serde_json::from_str(exec.0.get()).unwrap();
-    assert_eq!(
-        body["exitCode"], 0,
-        "outbound-only hooks mode still EXECUTES inbound commands: {body}"
+        .await;
+    assert_eq!(classify(&exec), Disposition::Refused, "execute refused");
+    assert!(
+        !marker.exists(),
+        "refusal must precede execution — no side effect"
     );
 }

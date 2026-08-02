@@ -166,15 +166,6 @@ pub(crate) trait Engine {
         None
     }
 
-    /// The decided hooks host mode (cyril-jiyn, KAS-7). Only `Host` makes the
-    /// client load and serve a hook registry; v2 never has `_meta.kiro`
-    /// capabilities, so it reports `Off`. Gated to the `kas` feature — the
-    /// only caller is the KAS-only hook-registry construction.
-    #[cfg(feature = "kas")]
-    fn hooks_mode(&self) -> crate::types::kas_hooks::KasHooksMode {
-        crate::types::kas_hooks::KasHooksMode::Off
-    }
-
     /// Does this engine stream a wire `turn_end` in addition to the prompt
     /// response? (cyril-b4y4)
     ///
@@ -275,10 +266,6 @@ pub(crate) struct KasEngine {
 impl Engine for KasEngine {
     fn kind(&self) -> AgentEngine {
         AgentEngine::Kas
-    }
-
-    fn hooks_mode(&self) -> crate::types::kas_hooks::KasHooksMode {
-        self.hooks_mode
     }
 
     /// KAS ends every turn with BOTH terminals — the streamed
