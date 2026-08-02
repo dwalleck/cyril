@@ -37,6 +37,13 @@ cargo clippy -- -D warnings          # lint — all warnings are errors
 
 When making multi-file Rust changes, always run `cargo test` and `cargo clippy -- -D warnings` after each logical change set before moving on. Never rely on IDE diagnostics alone — rust-analyzer state can be stale, especially after cross-crate changes or renames. If `cargo check` passes but your IDE shows errors, trust `cargo check`.
 
+### CI failure triage
+
+- CI uses `cargo nextest`, which **cancels on first failure** — one red test per job does NOT mean one defect. Later tests (alphabetically) never ran; fixing the visible failure can unmask a new wave on the next push. Before re-pushing a CI fix, statically audit for the next wave: `grep` the affected test modules for ungated spawns, real-env reads, and platform-specific assertions.
+- Tests that spawn a real process must be `#[cfg(unix)]` (if they assert POSIX semantics or spawn `/bin/sh`-family fixtures) or use a per-platform runnable fixture (see `HostShell::test_runnable_on_host`). Gate the helpers only they use too, or Windows builds get dead-code warnings.
+- Test doubles must not leak real environment: a fake host returning `std::env::current_dir()` broke the selection-matrix tests on Windows only (POSIX-style fixture paths like `/x` are *drive-relative* there and get joined onto the runner's real drive). Fully fake every probe; `Path` equality is component-wise, so a driveless fake cwd keeps expectations byte-identical cross-platform.
+- `cfg(windows)` code is **CI-verified only**: `cargo check --target x86_64-pc-windows-msvc` dies in the `libsqlite3-sys` C build (`lib.exe` not found). Mirror existing idioms exactly and let the Windows CI leg compile it.
+
 ### Refactoring and Rewrites
 
 After any rewrite or large refactor, verify functional wiring end-to-end before declaring the work complete:
