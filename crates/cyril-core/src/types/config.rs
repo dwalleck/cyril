@@ -48,6 +48,12 @@ pub struct AgentConfig {
     /// = "free"` (default, zero-credential direct spawn) or `"wrapper"`
     /// (`kiro-cli acp --agent-engine v3` + the auth responder). Ignored for v2.
     pub kas_spawn: KasSpawn,
+    /// Host shell used for KAS terminal callbacks. `None` and `"auto"` both
+    /// request host detection; the bridge validates supported string values at
+    /// KAS startup so an unknown value remains available for an exact diagnostic.
+    /// Ignored by v2.
+    #[serde(default)]
+    pub shell: Option<String>,
     /// What identity cyril presents as `clientInfo.name` (cyril-df5l,
     /// ADR-0008, superseding ADR-0006). TOML `present_as = "kiro-cli"`
     /// (default: the CLI persona) or `"cyril"` (opt out to KAS's
@@ -77,6 +83,7 @@ impl Default for AgentConfig {
             extra_args: Vec::new(),
             engine: AgentEngine::default(),
             kas_spawn: KasSpawn::default(),
+            shell: None,
             present_as: None,
             kas_hooks: KasHooksMode::default(),
         }
@@ -165,6 +172,36 @@ mouse_capture = false
         assert!(config.extra_args.is_empty());
     }
 
+    #[test]
+    fn shell_strings_survive_for_semantic_validation() {
+        for value in [
+            "auto",
+            "bash",
+            "fish",
+            "pwsh",
+            "powershell",
+            "cmd",
+            "future-shell",
+        ] {
+            let source = format!("[agent]\nshell = \"{value}\"\n");
+            let config: Config = toml::from_str(&source).unwrap();
+            assert_eq!(config.agent.shell.as_deref(), Some(value));
+        }
+
+        let config: Config = toml::from_str("[agent]\n").unwrap();
+        assert_eq!(config.agent.shell, None);
+    }
+
+    #[test]
+    fn wrong_typed_shell_falls_back_to_whole_file_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "[ui]\nmax_messages = 1000\n[agent]\nshell = 7\n").unwrap();
+
+        let config = Config::load_from_path(&path);
+        assert_eq!(config.ui.max_messages, 500);
+        assert_eq!(config.agent.shell, None);
+    }
     #[test]
     fn config_default() {
         let config = Config::default();

@@ -156,12 +156,14 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
 /// from `[agent]` config through `spawn_bridge` — bundling them means the
 /// next knob is one field, not another signature ripple across every
 /// caller.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct SpawnConfig {
     /// Which Kiro engine to drive (ADR-0001; bound for the bridge's life).
     pub engine: AgentEngine,
     /// KAS launch shape (free | wrapper); ignored for v2 (cyril-evwh).
     pub kas_spawn: KasSpawn,
+    /// Host shell selection for KAS terminal callbacks; ignored for v2.
+    pub shell: Option<String>,
     /// The `clientInfo` identity presented at initialize (ADR-0006).
     pub present_as: Option<PresentAs>,
     /// Which hook model runs on the KAS engine (cyril-jiyn, KAS-7); ignored
@@ -181,6 +183,10 @@ pub fn spawn_bridge(
     config: SpawnConfig,
     cwd: PathBuf,
 ) -> crate::Result<BridgeHandle> {
+    // Resolve load-bearing KAS host configuration before creating channels,
+    // the bridge thread, or the agent process. V2 returns the real absence and
+    // performs no shell/environment probes.
+    let host_shell = resolve_host_shell(&config)?;
     let (handle, channels) = create_channel_pair();
     // Cloned before `channels` is moved into the thread so that fail-stop
     // paths can still emit a final disconnect notification.
@@ -197,7 +203,7 @@ pub fn spawn_bridge(
                 Ok(rt) => {
                     let local = tokio::task::LocalSet::new();
                     let reason = local.block_on(&rt, async move {
-                        match run_bridge(&agent_command, config, &cwd, channels).await {
+                        match run_bridge(&agent_command, config, &cwd, channels, host_shell).await {
                             Ok(()) => None,
                             Err(e) => {
                                 tracing::error!(error = %e, "bridge terminated with error");
@@ -479,7 +485,7 @@ fn tail_excerpt(snapshot: &[String]) -> Option<String> {
 /// (ADR-0002) — a default build reports that the feature is required rather than
 /// linking any KAS code. Pure — unit-testable without a subprocess, and the
 /// single place the engine-to-`AgentEngine` mapping lives.
-fn engine_for(config: SpawnConfig) -> Result<std::rc::Rc<dyn Engine>, String> {
+fn engine_for(config: &SpawnConfig) -> Result<std::rc::Rc<dyn Engine>, String> {
     match config.engine {
         AgentEngine::V2 => Ok(std::rc::Rc::new(V2Engine)),
         #[cfg(feature = "kas")]
@@ -489,6 +495,34 @@ fn engine_for(config: SpawnConfig) -> Result<std::rc::Rc<dyn Engine>, String> {
         #[cfg(not(feature = "kas"))]
         AgentEngine::Kas => Err("KAS engine requires a build with --features kas".to_string()),
     }
+}
+
+#[cfg(feature = "kas")]
+fn resolve_host_shell(
+    config: &SpawnConfig,
+) -> crate::Result<crate::protocol::client::ResolvedHostShell> {
+    match config.engine {
+        AgentEngine::V2 => Ok(None),
+        AgentEngine::Kas => {
+            crate::protocol::kas::host_shell::HostShell::resolve(config.shell.as_deref())
+                .map(Some)
+                .map_err(|source| {
+                    crate::Error::with_source(
+                        crate::ErrorKind::InvalidConfig {
+                            detail: source.to_string(),
+                        },
+                        source,
+                    )
+                })
+        }
+    }
+}
+
+#[cfg(not(feature = "kas"))]
+fn resolve_host_shell(
+    _config: &SpawnConfig,
+) -> crate::Result<crate::protocol::client::ResolvedHostShell> {
+    Ok(crate::protocol::client::ResolvedHostShell)
 }
 
 /// Resolve the subprocess command to spawn for the bound engine + KAS spawn
@@ -531,6 +565,7 @@ async fn run_bridge(
     config: SpawnConfig,
     cwd: &std::path::Path,
     channels: BridgeChannels,
+    host_shell: crate::protocol::client::ResolvedHostShell,
 ) -> crate::Result<()> {
     use agent_client_protocol as acp;
     use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
@@ -541,7 +576,7 @@ async fn run_bridge(
     // 0. Engine gate (KAS-0, ADR-0001): bind the one engine the bridge uses for
     //    its life BEFORE spawning the subprocess, so an unavailable engine
     //    refuses cleanly (a disconnect notice, no panic) without spawning anything.
-    let engine = match engine_for(config) {
+    let engine = match engine_for(&config) {
         Ok(engine) => engine,
         Err(reason) => {
             notify_or_closed(
@@ -582,7 +617,7 @@ async fn run_bridge(
     // FORWARDS them to the App without awaiting resolution — the response flows
     // back on the request's embedded `responder` oneshot, bypassing the loop.
     let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone(), cwd);
+    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone(), host_shell, cwd);
     // cyril-3lh8: grab the shared terminal-registry handle BEFORE the connection
     // takes ownership of the client — run_loop's CancelRequest arm reaps with it.
     #[cfg(feature = "kas")]
@@ -2385,9 +2420,74 @@ mod tests {
     #[test]
     fn engine_for_v2_ok() {
         assert!(
-            engine_for(SpawnConfig::default()).is_ok(),
+            engine_for(&SpawnConfig::default()).is_ok(),
             "v2 selects an engine"
         );
+    }
+
+    #[test]
+    fn spawn_config_clone_preserves_raw_shell_values() {
+        for raw in [None, Some("auto"), Some("future-shell")] {
+            let expected = raw.map(str::to_string);
+            let config = SpawnConfig {
+                shell: expected.clone(),
+                ..SpawnConfig::default()
+            };
+            assert_eq!(config.clone().shell, expected);
+        }
+    }
+
+    #[cfg(feature = "kas")]
+    #[test]
+    fn v2_ignores_shell_configuration_and_keeps_real_absence() {
+        let shell = resolve_host_shell(&SpawnConfig {
+            engine: AgentEngine::V2,
+            shell: Some("cmd".into()),
+            ..SpawnConfig::default()
+        })
+        .expect("v2 shell resolution cannot fail");
+        assert!(shell.is_none());
+    }
+
+    #[cfg(all(feature = "kas", unix))]
+    #[test]
+    fn invalid_kas_shell_fails_before_bridge_thread_or_agent_process() {
+        use std::error::Error as _;
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let dir = tempfile::tempdir().unwrap();
+        let marker = dir.path().join("agent-started");
+        let script = dir.path().join("agent.sh");
+        std::fs::write(&script, "#!/bin/sh\ntouch agent-started\n").unwrap();
+        let mut permissions = std::fs::metadata(&script).unwrap().permissions();
+        permissions.set_mode(0o700);
+        std::fs::set_permissions(&script, permissions).unwrap();
+
+        let result = spawn_bridge(
+            AgentCommand::new(script.to_string_lossy().into_owned()),
+            SpawnConfig {
+                engine: AgentEngine::Kas,
+                kas_spawn: KasSpawn::Wrapper,
+                shell: Some("future-shell".into()),
+                ..SpawnConfig::default()
+            },
+            dir.path().to_path_buf(),
+        );
+        std::thread::sleep(Duration::from_millis(50));
+
+        let err = match result {
+            Err(err) => err,
+            Ok(_) => panic!("invalid shell must fail synchronously"),
+        };
+        assert_eq!(
+            err.to_string(),
+            "invalid configuration: unsupported host shell `future-shell` on Unix"
+        );
+        assert_eq!(
+            err.source().map(ToString::to_string).as_deref(),
+            Some("unsupported host shell `future-shell` on Unix")
+        );
+        assert!(!marker.exists(), "agent process must not start");
     }
 
     // l7tw C7 (unit form; the live form is the logged-out kiro-cli run in
@@ -2797,7 +2897,7 @@ mod tests {
     #[test]
     fn engine_for_kas_ok_under_feature() {
         assert!(
-            engine_for(SpawnConfig {
+            engine_for(&SpawnConfig {
                 engine: AgentEngine::Kas,
                 ..SpawnConfig::default()
             })
@@ -2811,7 +2911,7 @@ mod tests {
     #[cfg(not(feature = "kas"))]
     #[test]
     fn engine_for_kas_unavailable_without_feature() {
-        match engine_for(SpawnConfig {
+        match engine_for(&SpawnConfig {
             engine: AgentEngine::Kas,
             ..SpawnConfig::default()
         }) {
@@ -3152,6 +3252,7 @@ mod tests {
                     inbound_tx.clone(),
                     req_tx,
                     engine.clone(),
+                    crate::protocol::client::test_host_shell(engine.kind()),
                     &std::env::temp_dir(),
                 );
                 // cyril-3lh8: mirror run_bridge — the loop shares the client's
@@ -3501,8 +3602,13 @@ mod tests {
                 let (notif_tx, _notif_rx) =
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
                 let (req_tx, _req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-                let client =
-                    KiroClient::new(notif_tx, req_tx, Rc::new(V2Engine), &std::env::temp_dir());
+                let client = KiroClient::new(
+                    notif_tx,
+                    req_tx,
+                    Rc::new(V2Engine),
+                    crate::protocol::client::test_host_shell(AgentEngine::V2),
+                    &std::env::temp_dir(),
+                );
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);
                 let (cr, cw) = tokio::io::split(c_io);
                 let (conn, io_task) =
@@ -5010,25 +5116,33 @@ mod tests {
         // registry's child then runs to natural exit as an orphan (a 60s sleep =
         // 60s orphan; a child wedged on a full pipe never exits at all). The
         // loop's CancelRequest arm must reap the cancelled session's live
-        // terminals. The fixture: the agent answers the prompt by issuing
-        // `terminal/create` (the child writes its own pid, then sleeps) and
-        // parking; the test cancels and asserts the child dies. Alive is asserted
-        // BEFORE the cancel so the fence can't pass as a silent no-op.
+        // terminals. The fixture parks after creating a selected-shell pipeline
+        // whose left child writes its pid, then would write a delayed marker.
+        // Cancellation must reap that child and prevent the marker, not only kill
+        // the outer shell. Alive is asserted before cancel so this cannot pass as
+        // a silent no-op.
         use crate::protocol::kas::terminal_io::test_probe::{assert_process_dies, dead_or_zombie};
         let dir = tempfile::tempdir().expect("tempdir");
         let pidfile = dir.path().join("pid");
+        let marker = dir.path().join("marker");
         let script = Rc::new(RefCell::new(Script {
             block_prompt: true,
             create_terminal_cmd: Some((
                 "sh".into(),
-                vec!["-c".into(), "echo $$ > pid && exec sleep 60".into()],
+                vec![
+                    "-c".into(),
+                    "echo $$ > pid; sleep 1; touch marker".into(),
+                    "|".into(),
+                    "cat".into(),
+                ],
                 dir.path().to_path_buf(),
             )),
             ..Default::default()
         }));
-        with_harness(
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
             script,
-            move |sender, mut rx, _perm_rx, _gate, _loop| async move {
+            move |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
                 let sid = start_session(&sender, &mut rx).await;
                 sender
                     .send(BridgeCommand::SendPrompt {
@@ -5042,7 +5156,7 @@ mod tests {
                 let pid = read_pid_within(&pidfile, 5).await;
                 assert!(
                     !dead_or_zombie(pid),
-                    "sleep 60 must be alive before the cancel"
+                    "pipeline child must be alive before the cancel"
                 );
                 sender.send(BridgeCommand::CancelRequest).await.unwrap();
                 assert_eq!(
@@ -5051,6 +5165,11 @@ mod tests {
                     "cancel resolved the parked turn as Cancelled"
                 );
                 assert_process_dies(pid).await;
+                tokio::time::sleep(Duration::from_millis(1500)).await;
+                assert!(
+                    !marker.exists(),
+                    "cancel must prevent the pipeline child's delayed marker"
+                );
             },
         )
         .await;
