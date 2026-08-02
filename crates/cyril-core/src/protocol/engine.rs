@@ -43,6 +43,22 @@ pub(crate) trait Engine {
         crate::types::kas_hooks::KasHooksMode::Off
     }
 
+    /// Does this engine stream a wire `turn_end` in addition to the prompt
+    /// response? (cyril-b4y4)
+    ///
+    /// Terminal-source authority is an Engine fact (CONTEXT.md "Turn-end"):
+    /// only the bound engine may declare a turn over, and turn mediation asks
+    /// this question instead of matching on `kind()` — the enum-match pattern
+    /// ADR-0001 rejected. `true` means every turn ends with TWO terminal
+    /// signals, so a release still owes the companion terminal; `false` means
+    /// the prompt response is the sole terminal and the companion ledger must
+    /// stay empty after release (cyril-upjh).
+    ///
+    /// Deliberately no default: an engine that inherits the wrong answer here
+    /// either freezes turns (missing companion) or eats live ones (phantom
+    /// companion). Each engine answers explicitly.
+    fn emits_wire_turn_end(&self) -> bool;
+
     /// Convert a standard `session/update` notification to an internal one.
     /// Returns `None` for updates this engine does not surface to the UI.
     fn convert_session_update(
@@ -73,6 +89,12 @@ impl Engine for V2Engine {
 
     fn client_capabilities(&self) -> acp::ClientCapabilities {
         acp::ClientCapabilities::new()
+    }
+
+    /// v2's sole terminal is the prompt response — no wire `turn_end`
+    /// (`convert::kas` is the only unstamped-terminal producer).
+    fn emits_wire_turn_end(&self) -> bool {
+        false
     }
 
     fn convert_session_update(
@@ -122,6 +144,14 @@ impl Engine for KasEngine {
 
     fn hooks_mode(&self) -> crate::types::kas_hooks::KasHooksMode {
         self.hooks_mode
+    }
+
+    /// KAS ends every turn with BOTH terminals — the streamed
+    /// `session_info_update → turn_end` first, the prompt response 0–1 ms
+    /// behind (live-confirmed 2026-08-01 on 2.16.0, turn-end-ordering
+    /// captures). A release therefore still owes the companion terminal.
+    fn emits_wire_turn_end(&self) -> bool {
+        true
     }
 
     fn client_capabilities(&self) -> acp::ClientCapabilities {
@@ -175,6 +205,25 @@ mod tests {
 
     use super::*;
     use serde_json::json;
+
+    /// REGRESSION FENCE (cyril-b4y4 C6, engine half; supersedes the engine
+    /// side of cyril-upjh's `wire_companion_is_owed_only_under_kas`).
+    /// Terminal-source shape is an Engine fact: KAS streams a wire `turn_end`
+    /// alongside the prompt response; v2's prompt response is the sole
+    /// terminal. Both engines asserted in ONE test so a trait default that
+    /// silently made them identical fails here.
+    #[test]
+    fn terminal_source_matrix() {
+        assert!(
+            !V2Engine.emits_wire_turn_end(),
+            "a v2 turn has one terminal source — its release owes no companion"
+        );
+        #[cfg(feature = "kas")]
+        assert!(
+            KasEngine::default().emits_wire_turn_end(),
+            "a KAS turn has two terminal sources — its release still owes the wire one"
+        );
+    }
 
     #[test]
     fn v2_client_capabilities_match_handshake_default() {

@@ -5,6 +5,7 @@ use tokio::sync::mpsc;
 
 use crate::protocol::convert::session_created_from_response;
 use crate::protocol::engine::{Engine, V2Engine};
+use crate::protocol::turn_mediator::{BeginTurn, Disposition, TurnMediator};
 use crate::types::StopReason;
 use crate::types::agent_command::AgentCommand;
 use crate::types::agent_engine::AgentEngine;
@@ -12,7 +13,6 @@ use crate::types::event::{BridgeCommand, Notification, PermissionRequest, Routed
 use crate::types::kas_hooks::KasHooksMode;
 use crate::types::kas_spawn::KasSpawn;
 use crate::types::present_as::PresentAs;
-use crate::types::turn::{TurnAllocator, TurnId};
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -820,93 +820,6 @@ pub(crate) fn client_info(
         .title("Cyril".to_string())
 }
 
-/// Does a routed notification's scope name this ACP session?
-///
-/// The envelope carries cyril's `SessionId`; the active record carries the
-/// `agent_client_protocol` one. Compared as strings because they are distinct
-/// newtypes over the same wire value.
-fn scope_is(
-    routed: Option<&crate::types::session::SessionId>,
-    session: &agent_client_protocol::SessionId,
-) -> bool {
-    routed.is_some_and(|s| s.as_str() == session.0.as_ref())
-}
-
-/// Which terminal source the mediator is still expecting for a released turn.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CompanionSource {
-    /// The KAS wire `session_info_update{kind:"turn_end"}` — identity-free, so
-    /// it can only be matched by session.
-    Wire,
-    /// The completion the bridge synthesizes from the prompt RPC — carries its
-    /// owner, so it is matched by id.
-    Synthesized,
-}
-
-/// The one companion signal still owed for a turn that already released
-/// (cyril-a71q C6).
-///
-/// A KAS turn has two terminal sources. The first to arrive releases the turn
-/// (first-source-wins, retained from cyril-j16p); the second is not a duplicate
-/// to be dropped blindly but an *expected* signal to be absorbed — absorbing is
-/// what lets both `{source, reason}` observations be recorded for cyril-pnwb
-/// instead of the second one being lost.
-///
-/// At most one entry exists at any time: registering a new expectation replaces
-/// a dangling one, so the ledger is bounded by construction rather than by a
-/// cleanup pass.
-#[derive(Debug)]
-struct Companion {
-    owner: TurnId,
-    session: agent_client_protocol::SessionId,
-    awaiting: CompanionSource,
-    /// `{source, reason}` of the signal that already arrived. The second is
-    /// logged on absorption; no precedence between them is selected here —
-    /// that decision belongs to cyril-pnwb.
-    first: (CompanionSource, StopReason),
-}
-
-/// The turn currently occupying the bridge (cyril-a71q).
-///
-/// Holds the per-turn `owner` identity, the engine the turn was dispatched
-/// against, and the session it was dispatched on. `session` is deliberately a
-/// snapshot: `active_session_id` can be retargeted mid-turn by a
-/// `NewSession`/`LoadSession`, and cancel must still reach the turn that is
-/// actually running.
-///
-/// Fully-qualified path because the `acp` alias in this file is function-scoped.
-#[derive(Debug)]
-struct ActiveTurn {
-    owner: TurnId,
-    /// The engine this turn ran under (cyril-upjh). Bound once per bridge
-    /// (ADR-0001), so it cannot differ per turn — it is carried on the record
-    /// anyway because the release decision reads *the turn's* properties, and a
-    /// release that consulted the loop's engine handle instead would silently
-    /// become wrong the day an engine is rebound.
-    engine: AgentEngine,
-    session: agent_client_protocol::SessionId,
-}
-
-impl ActiveTurn {
-    /// Does releasing this turn still owe a wire companion (cyril-upjh)?
-    ///
-    /// Only KAS has two terminal sources per turn — an identity-free wire
-    /// `turn_end` and the bridge-synthesized prompt completion — so only a KAS
-    /// release can still be owed the other one. A v2 turn has exactly one
-    /// terminal source, so its release owes nothing and must leave the ledger
-    /// empty.
-    ///
-    /// This gates the `Wire` expectation specifically, not companions in
-    /// general: a `Wire` entry is matched by SESSION (the frame carries no
-    /// identity), so a dangling one absorbs any later unstamped completion for
-    /// that session as a phantom companion — costing the turn that is actually
-    /// running its release. The mirror-image `Synthesized` expectation is
-    /// matched by OWNER and is therefore self-limiting.
-    fn owes_wire_companion(&self) -> bool {
-        self.engine == AgentEngine::Kas
-    }
-}
-
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
 /// tests can drive it against an in-process fake agent (no `kiro-cli`
 /// subprocess). `conn` is `Rc` so a prompt future can be driven off this loop
@@ -990,6 +903,14 @@ async fn run_loop(
     }
 
     tracing::info!("ACP bridge initialized");
+    // cyril-b4y4: state the bound engine's terminal-source shape once at bind
+    // time — turn mediation keys companion expectations off this fact, and a
+    // wire capture reads very differently knowing whether TWO terminals per
+    // turn are expected (KAS) or one (v2).
+    tracing::debug!(
+        emits_wire_turn_end = engine.emits_wire_turn_end(),
+        "engine terminal-source shape"
+    );
 
     // 5. Command loop
     let mut active_session_id: Option<acp::SessionId> = None;
@@ -1011,27 +932,19 @@ async fn run_loop(
     // "turns whose prompt RPC has not resolved yet, plus the active one";
     // finished handles are pruned on each dispatch.
     let mut prompt_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
-    // The session whose turn is in flight — at most one (ADR-0004). Set on
-    // SendPrompt, cleared when the loop OBSERVES that turn's `TurnCompleted` on
-    // the internal channel (engine-agnostic: v2 synthesizes it from the prompt
-    // response, KAS from `session_info_update->turn_end`). Drives the busy-guard
-    // and the CancelRequest target — a mid-turn NewSession can retarget
-    // `active_session_id`, so cancel must use this, not that.
+    // Turn ownership policy (cyril-b4y4): busy-guard, owner allocation,
+    // terminal dispositions, and the companion ledger live in the mediator —
+    // a pure state machine, unit-fenced in `turn_mediator.rs`. The loop stays
+    // the single place terminals are OBSERVED (ADR-0004); the mediator owns
+    // what an observation MEANS. Engine-agnostic by construction: the
+    // terminal-source shape is snapshotted per dispatch from
+    // `Engine::emits_wire_turn_end()`.
     //
-    // NB (cyril-j16p / KAS-2a): under KAS a prompt task may outlive `turn_end`,
-    // so this record and `prompt_tasks` intentionally diverge there; in v2 they
-    // clear together (the prompt resolves AT turn-end). Do not re-merge them.
-    // cyril-a71q: the active turn is now a RECORD, not just a session id. The
-    // session alone is not per-turn unique, so a late completion from turn A
-    // matched a newly-started turn B and wrongly cleared it. `owner` is the
-    // per-turn identity that makes them distinguishable; `session` is captured
-    // at dispatch and is IMMUTABLE for the turn's lifetime -- a mid-turn
-    // NewSession/LoadSession retargets `active_session_id`, and cancel must
-    // still reach the turn that is actually running.
-    let mut active_turn: Option<ActiveTurn> = None;
-    let mut turn_alloc = TurnAllocator::new();
-    // cyril-a71q C6: at most ONE outstanding companion expectation. See `Companion`.
-    let mut companion: Option<Companion> = None;
+    // NB (cyril-j16p / KAS-2a): under KAS a prompt task may outlive its
+    // turn's release, so the mediator's active turn and `prompt_tasks`
+    // intentionally diverge there; in v2 they clear together (the prompt
+    // resolves AT turn-end). Do not re-merge them.
+    let mut mediator = TurnMediator::new();
     // cyril-l7tw C4: set when the io watcher reports the connection dead while
     // a turn is in flight. The disconnect is DEFERRED until the loop observes
     // that turn's TurnCompleted (the prompt task's Err arm delivers a
@@ -1108,42 +1021,41 @@ async fn run_loop(
                 session_id,
                 content_blocks,
             } => {
-                // cyril-84ca / ADR-0004: at most one turn in flight. A SendPrompt
-                // arriving while a turn runs must NOT start a second conn.prompt()
-                // (two concurrent turns on one session is undefined); reject it with
-                // a BridgeError. `active_turn` clears when the loop observes this
-                // turn's TurnCompleted, so the next turn is then allowed.
-                if active_turn.is_some() {
-                    if notify_or_closed(
-                        &channels.notification_tx,
-                        Notification::BridgeError {
-                            operation: "prompt".into(),
-                            message: "a turn is already in progress".into(),
-                        },
-                    )
-                    .await
-                    {
-                        break;
+                // cyril-84ca / ADR-0004: at most one turn in flight; cyril-a71q
+                // C8: the owner is allocated BEFORE dispatch and fails closed
+                // at exhaustion. Both guards live in the mediator (cyril-b4y4);
+                // the mediator's active turn clears when the loop observes this
+                // turn's TurnCompleted, so the next turn is then allowed. The
+                // terminal-source snapshot comes from the bound engine — the
+                // one authority on how its turns end (CONTEXT.md "Turn-end").
+                let turn_owner = match
+                    mediator.begin_turn(session_id.clone(), engine.emits_wire_turn_end())
+                {
+                    BeginTurn::Accepted(owner) => owner,
+                    refused => {
+                        let message = match refused {
+                            BeginTurn::Busy => "a turn is already in progress",
+                            // `Accepted` is unreachable here (caught by the arm
+                            // above); spelled out rather than `_` so a future
+                            // `BeginTurn` variant fails to compile instead of
+                            // silently reading as exhaustion (pre-PR review).
+                            BeginTurn::Exhausted | BeginTurn::Accepted(_) => {
+                                "turn identity space exhausted"
+                            }
+                        };
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::BridgeError {
+                                operation: "prompt".into(),
+                                message: message.into(),
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
+                        continue;
                     }
-                    continue;
-                }
-                // cyril-a71q C8: allocate this turn's owner BEFORE dispatch. The
-                // allocator fails closed at u64 exhaustion rather than reissuing a
-                // live owner; refuse the turn instead of running one whose
-                // completions could match somebody else's.
-                let Some(turn_owner) = turn_alloc.allocate() else {
-                    if notify_or_closed(
-                        &channels.notification_tx,
-                        Notification::BridgeError {
-                            operation: "prompt".into(),
-                            message: "turn identity space exhausted".into(),
-                        },
-                    )
-                    .await
-                    {
-                        break;
-                    }
-                    continue;
                 };
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 let prompt: Vec<acp::ContentBlock> = content_blocks
@@ -1202,11 +1114,6 @@ async fn run_loop(
                         tracing::debug!(error = %e, "TurnCompleted send failed (App gone)");
                     }
                 });
-                active_turn = Some(ActiveTurn {
-                    owner: turn_owner,
-                    engine: engine.kind(),
-                    session: acp_session_id,
-                });
                 // O(n) over live handles with n <= 2 in the researched ordering
                 // (a turn's response follows its turn_end within ~1ms, so at most
                 // one released-but-unresolved task coexists with the active one).
@@ -1220,14 +1127,16 @@ async fn run_loop(
                 prompt_tasks.push(handle);
             }
             BridgeCommand::CancelRequest => {
-                // cyril-84ca / ADR-0004: prefer the in-flight turn's own session.
-                // The loop is free during a turn, so a mid-turn NewSession/LoadSession
-                // can retarget `active_session_id`; cancel must still hit the running
-                // turn. Fall back to `active_session_id` when no turn is in flight.
-                let cancel_target = active_turn
-                    .as_ref()
-                    .map(|t| &t.session)
-                    .or(active_session_id.as_ref());
+                // cyril-84ca / ADR-0004: prefer the in-flight turn's own session
+                // (the mediator's dispatch-time snapshot). The loop is free
+                // during a turn, so a mid-turn NewSession/LoadSession can
+                // retarget `active_session_id`; cancel must still hit the
+                // running turn. Fall back to `active_session_id` when no turn
+                // is in flight.
+                let cancel_target = mediator
+                    .cancel_target()
+                    .map(|s| acp::SessionId::new(s.as_str()))
+                    .or_else(|| active_session_id.clone());
                 if let Some(session_id) = cancel_target {
                     if let Err(e) = conn
                         .cancel(acp::CancelNotification::new(session_id.clone()))
@@ -1243,7 +1152,7 @@ async fn run_loop(
                     // `terminal/output`/`release`. Cancel-only: reaping at
                     // turn-end could race an in-flight release.
                     #[cfg(feature = "kas")]
-                    terminals.reap_session(session_id).await;
+                    terminals.reap_session(&session_id).await;
                 } else {
                     tracing::warn!("cancel requested but no active session");
                 }
@@ -2122,146 +2031,21 @@ async fn run_loop(
                 } // match cmd
             } // select! command branch
             Some(routed) = inbound_rx.recv() => {
-                // ADR-0004 single-mediator forward: observe TurnCompleted to clear
-                // the busy flag, then forward to the App. The loop is the one place
-                // turn-end is observed.
-                //
-                // KAS-2a (cyril-j16p) Slice 2 — idempotent completion: a KAS turn
-                // emits BOTH a `session_info_update`->`turn_end` (converted to
-                // TurnCompleted by the engine) AND a prompt response (synthesized
-                // into TurnCompleted by the off-loop task), in either order; v2
-                // emits exactly one. Clear and forward only the FIRST per turn —
-                // drop a TurnCompleted that arrives when no turn is in flight, so
-                // the App commits streaming/metering once and a non-returning
-                // prompt response can't freeze the turn (turn_end completes it).
-                // (Residual: a stale duplicate arriving after a NEW same-session
-                // turn started would need per-turn identity — cyril-a71q.)
-                let mut completed_turn = false;
-                if let Notification::TurnCompleted { stop_reason: reason } = routed.notification {
-                    // cyril-a71q C1: mediate by OWNER, not by "is anything running".
-                    // The old guard cleared whatever turn happened to be active, so
-                    // turn A's late prompt response released turn B.
-                    //
-                    // One `if let` rather than `matches!` + a second match with an
-                    // `unreachable!` arm: the pair re-tested the same value and left
-                    // a production panic in the hot notification path, which a later
-                    // refactor could make reachable.
-                    // ABSORB-FIRST. Checking the ledger before the active turn is
-                    // what makes single drift safe: a stale signal is absorbed by
-                    // the expectation it belongs to instead of clearing the newer
-                    // turn (falsifier mutation M3 fails the other order).
-                    match routed.turn {
-                        Some(id) => {
-                            // (1) the synthesized companion this turn still owed
-                            let absorbed = companion.as_ref().is_some_and(|c| {
-                                c.awaiting == CompanionSource::Synthesized && c.owner == id
-                            });
-                            if absorbed {
-                                if let Some(c) = companion.take() {
-                                    tracing::debug!(
-                                        owner = %c.owner,
-                                        first = ?c.first,
-                                        second = ?(CompanionSource::Synthesized, reason),
-                                        "absorbed expected companion"
-                                    );
-                                }
-                                continue;
-                            }
-                            // (2) owns the active turn -> release
-                            match active_turn.as_ref() {
-                                Some(active) if active.owner == id => {
-                                    // cyril-upjh: KAS-ONLY, per cyril-a71q's
-                                    // mediation policy. A v2 release owes no
-                                    // companion, and leaving a session-keyed
-                                    // `Wire` entry behind would let any later
-                                    // unstamped completion be absorbed as a
-                                    // phantom for this ALREADY-released turn.
-                                    // Assigning None is the clear: the ledger
-                                    // must be empty after a v2 release.
-                                    companion = active.owes_wire_companion().then(|| Companion {
-                                        owner: active.owner,
-                                        session: active.session.clone(),
-                                        awaiting: CompanionSource::Wire,
-                                        first: (CompanionSource::Synthesized, reason),
-                                    });
-                                    tracing::debug!(owner = %id, "turn completed");
-                                    active_turn = None;
-                                    completed_turn = true;
-                                }
-                                // (3) stale
-                                other => {
-                                    tracing::debug!(
-                                        stale_owner = %id,
-                                        active = ?other.map(|t| t.owner),
-                                        "dropping stale completion"
-                                    );
-                                    continue;
-                                }
-                            }
-                        }
-                        None => {
-                            // Identity-free: the KAS wire `turn_end`. The frame is
-                            // {kind, stopReason} with no execution id -- confirmed
-                            // against the KAS emitter, not inferred. Matched by
-                            // session.
-                            let absorbed = companion.as_ref().is_some_and(|c| {
-                                c.awaiting == CompanionSource::Wire
-                                    && scope_is(routed.session_id.as_ref(), &c.session)
-                            });
-                            if absorbed {
-                                if let Some(c) = companion.take() {
-                                    tracing::debug!(
-                                        owner = %c.owner,
-                                        first = ?c.first,
-                                        second = ?(CompanionSource::Wire, reason),
-                                        "absorbed expected companion"
-                                    );
-                                }
-                                continue;
-                            }
-                            match active_turn.as_ref() {
-                                // Scoped to the ACTIVE turn's own session -> release.
-                                Some(active)
-                                    if scope_is(routed.session_id.as_ref(), &active.session) =>
-                                {
-                                    companion = Some(Companion {
-                                        owner: active.owner,
-                                        session: active.session.clone(),
-                                        awaiting: CompanionSource::Synthesized,
-                                        first: (CompanionSource::Wire, reason),
-                                    });
-                                    tracing::debug!(
-                                        owner = %active.owner,
-                                        "turn completed (wire turn_end)"
-                                    );
-                                    active_turn = None;
-                                    completed_turn = true;
-                                }
-                                // cyril-a71q C3: a FOREIGN session's terminal. Forward
-                                // it once so that session's own consumer (a subagent
-                                // stream) sees it, but touch nothing on the main
-                                // turn -- the cross-session split-brain was this
-                                // signal clearing the main busy guard.
-                                Some(active) => {
-                                    tracing::debug!(
-                                        foreign = ?routed.session_id,
-                                        active_owner = %active.owner,
-                                        "forwarding foreign terminal; main turn untouched"
-                                    );
-                                }
-                                // No active turn: a late or duplicate terminal for a
-                                // turn that already ended. DROP it -- forwarding
-                                // would make the App commit streaming and metering a
-                                // second time. spec.md:242 ("Empty set (no active
-                                // turn) | Drop an unowned ... terminal observation
-                                // unless it matches a dangling companion
-                                // expectation") and design C3; the dangling-companion
-                                // case is already handled by the absorb check above.
-                                None => continue,
-                            }
-                        }
-                    }
-                }
+                // ADR-0004 single-observer forward: the loop is the one place
+                // turn-end is observed; what an observation MEANS — release,
+                // absorb, stale/unowned drop, foreign pass-through — is the
+                // mediator's policy (cyril-b4y4), unit-fenced in
+                // `turn_mediator.rs` (`mediator_matrix_all_dispositions`).
+                // Silent outcomes `continue`: forwarding an absorbed or
+                // dropped terminal would make the App commit streaming and
+                // metering a second time.
+                let completed_turn = match mediator.observe(&routed) {
+                    Disposition::Absorb { .. }
+                    | Disposition::DropStale { .. }
+                    | Disposition::DropUnowned => continue,
+                    Disposition::ForwardTurnComplete => true,
+                    Disposition::Forward => false,
+                };
                 if channels.notification_tx.send(routed).await.is_err() {
                     break; // App dropped the notification channel.
                 }
@@ -2289,7 +2073,7 @@ async fn run_loop(
                     tracing::warn!("io watcher dropped without a reason");
                     "agent connection closed unexpectedly".into()
                 });
-                if active_turn.is_some() {
+                if mediator.is_busy() {
                     // Defer: let the in-flight turn's BridgeError+TurnCompleted
                     // (already en route via the inbound channel) reach the App
                     // first; the inbound arm below emits the disconnect after
@@ -2332,6 +2116,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::types::turn::TurnId;
 
     // cyril-nd4h: `for_tests()` exists only to make `App` constructible in unit
     // tests, and its doc comment promises there is no bridge behind it. Fence
@@ -4821,32 +4606,148 @@ mod tests {
         .await;
     }
 
-    #[test]
-    /// The engine×wire-companion matrix (cyril-upjh), asserted on the rule
-    /// itself rather than through the loop.
+    // cyril-upjh's `wire_companion_is_owed_only_under_kas` lived here until
+    // cyril-b4y4 dissolved `ActiveTurn::owes_wire_companion` into the
+    // mediator. Its two halves are fenced at the new seams:
+    // `engine::tests::terminal_source_matrix` (the engine fact) and
+    // `turn_mediator::tests::stamped_release_owes_wire_companion_only_when_expected`
+    // (the ledger consequence, absorb-vs-drop now directly observable).
+
+    /// REGRESSION FENCE (cyril-b4y4 C1): the prove-it probe scenario f1–f12,
+    /// driven through the REAL `run_loop` — promoted verbatim from the
+    /// pre-extraction oracle capture (`.cyril-b4y4/probes/oracle-output.txt`,
+    /// 2026-08-02, baseline commit 981276c) minus its tracing/eprintln
+    /// scaffolding. Expectations are the OLD inline policy's observed
+    /// behavior; this fence is what proves the extracted mediator kept it.
     ///
-    /// `v2_release_leaves_companion_ledger_empty` fences the v2 half
-    /// behaviourally, but the KAS half has no behavioural fence available:
-    /// absorbing a companion and dropping an unowned terminal both `continue`
-    /// with nothing forwarded, so they are observationally identical on the
-    /// notification channel (cyril-a71q's own signed blindness B14/B16). A gate
-    /// mutated to a blanket `false` would therefore pass every KAS fixture.
-    /// This is the guard that fails instead — and it runs in the default build,
-    /// where no KAS turn can be driven at all.
-    fn wire_companion_is_owed_only_under_kas() {
-        let turn_on = |engine| ActiveTurn {
-            owner: TurnId::new(1),
-            engine,
-            session: agent_client_protocol::SessionId::new("sess_fake-0"),
-        };
-        assert!(
-            turn_on(AgentEngine::Kas).owes_wire_companion(),
-            "a KAS turn has two terminal sources — its release still owes the wire one"
-        );
-        assert!(
-            !turn_on(AgentEngine::V2).owes_wire_companion(),
-            "a v2 turn has one terminal source — its release must leave the ledger empty"
-        );
+    /// Mechanics: every prompt parks (`block_prompt`), so ALL terminal frames
+    /// are injected through the cyril-upjh inbound seam in a deterministic
+    /// order. `SystemNotify` markers ride the same FIFO channel, so "the
+    /// marker arrived first" proves the frame before it was processed and NOT
+    /// forwarded — absorb/stale/unowned outcomes are otherwise invisible on
+    /// this channel (their per-disposition fences live in
+    /// `turn_mediator::tests::mediator_matrix_all_dispositions`).
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn turn_mediation_probe_scenario() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine::default()),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                let inbound = probe.borrow().inbound.clone().expect("seam");
+                let wire_end = |sid: &crate::types::SessionId| {
+                    RoutedNotification::scoped(
+                        sid.clone(),
+                        Notification::TurnCompleted {
+                            stop_reason: StopReason::EndTurn,
+                        },
+                    )
+                };
+                let stamped = |n: u64| {
+                    RoutedNotification::global(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    })
+                    .with_turn(TurnId::new(n))
+                };
+                let marker = |n: u32| {
+                    RoutedNotification::global(Notification::SystemNotify {
+                        level: crate::types::event::SystemNotifyLevel::Info,
+                        message: format!("marker-{n}"),
+                    })
+                };
+                let expect_absorbed_or_dropped =
+                    |got: Option<Notification>, want: &str, label: &str| match got {
+                        Some(Notification::SystemNotify { message, .. }) if message == want => {}
+                        other => panic!(
+                            "{label}: expected {want} first (frame not forwarded), got {other:?}"
+                        ),
+                    };
+                let expect_forwarded = |got: Option<Notification>, label: &str| {
+                    assert!(
+                        matches!(got, Some(Notification::TurnCompleted { .. })),
+                        "{label}: expected a forwarded TurnCompleted"
+                    );
+                };
+                let prompt = |text: &str| BridgeCommand::SendPrompt {
+                    session_id: sid.clone(),
+                    content_blocks: vec![text.into()],
+                };
+
+                // Turn 1 — live-confirmed order: wire turn_end (f1) releases,
+                // the synthesized twin (f2) is absorbed.
+                sender.send(prompt("one")).await.unwrap();
+                assert!(wait_for_prompt_count(&probe, 1, 5).await, "p1");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f1");
+                inbound.send(stamped(0)).await.unwrap();
+                inbound.send(marker(2)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-2", "f2");
+
+                // Turn 2 — stale drop, foreign forward, reverse order.
+                sender.send(prompt("two")).await.unwrap();
+                assert!(wait_for_prompt_count(&probe, 2, 5).await, "p2");
+                inbound.send(stamped(0)).await.unwrap();
+                inbound.send(marker(3)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-3", "f3");
+                inbound
+                    .send(RoutedNotification::scoped(
+                        crate::types::SessionId::new("sess_foreign"),
+                        Notification::TurnCompleted {
+                            stop_reason: StopReason::EndTurn,
+                        },
+                    ))
+                    .await
+                    .unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f4");
+                inbound.send(stamped(1)).await.unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f5");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                inbound.send(marker(4)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-4", "f6");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                inbound.send(marker(5)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-5", "f7");
+
+                // Turns 3+4 — absorb-first precedence: turn#2's dangling Wire
+                // expectation shares live turn#3's session. A TurnCompleted
+                // instead of marker-6 at f9 means the mediator released the
+                // live turn — absorb-first is broken (mutation M3).
+                sender.send(prompt("three")).await.unwrap();
+                assert!(wait_for_prompt_count(&probe, 3, 5).await, "p3");
+                inbound.send(stamped(2)).await.unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f8");
+                sender.send(prompt("four")).await.unwrap();
+                assert!(wait_for_prompt_count(&probe, 4, 5).await, "p4");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                inbound.send(marker(6)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-6", "f9");
+                inbound.send(wire_end(&sid)).await.unwrap();
+                expect_forwarded(recv_notif(&mut rx, 5).await, "f10");
+                inbound
+                    .send(RoutedNotification::global(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    }))
+                    .await
+                    .unwrap();
+                inbound.send(marker(7)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-7", "f11");
+                sender.send(prompt("five")).await.unwrap();
+                assert!(
+                    wait_for_prompt_count(&probe, 5, 5).await,
+                    "p5: f10's release must have cleared the guard"
+                );
+                inbound.send(stamped(3)).await.unwrap();
+                inbound.send(marker(8)).await.unwrap();
+                expect_absorbed_or_dropped(recv_notif(&mut rx, 5).await, "marker-8", "f12");
+            },
+        )
+        .await;
     }
 
     #[cfg(feature = "kas")]

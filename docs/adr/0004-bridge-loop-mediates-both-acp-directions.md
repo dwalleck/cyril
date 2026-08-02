@@ -154,3 +154,56 @@ Constraints carried forward, unchanged in force:
   ADR's* turn-completion section. Landing it first keeps ADR-0004 to one
   coherent amendment instead of two on overlapping ground, and lands this
   mediator in a `run_loop` that has already shed its inline turn policy.
+  *(Landed 2026-08-02 — see the turn-mediation amendment below.)*
+
+## Amendment: turn-completion policy extracted to `TurnMediator` (2026-08-02)
+
+**This deepens the Decision's first bullet rather than changing it.** The loop
+remains the single place terminals are *observed*; what an observation *means*
+now lives in one type. Recorded by [cyril-b4y4](../../.rivets); design and
+probe evidence in `.cyril-b4y4/`.
+
+### What replaced `turn_in_flight`
+
+The Decision's `turn_in_flight: Option<SessionId>` is two generations stale:
+cyril-a71q made it an owner-stamped record (`ActiveTurn`) so a late completion
+could not clear a newer same-session turn, and this amendment moves the record
+— plus the owner allocator and the companion ledger — into
+`protocol/turn_mediator.rs` (`pub(crate)`, a pure synchronous state machine in
+the `SessionController` mold). The loop's notification arm reduces to one
+call: `TurnMediator::observe(&RoutedNotification) → Disposition` — forward,
+forward-with-turn-complete, absorb the companion terminal, or drop
+(stale/unowned). The busy-guard, owner allocation (fail-closed at
+exhaustion), and cancel-target snapshot are `begin_turn` / `cancel_target` /
+`is_busy` on the same type. Vocabulary: CONTEXT.md "Turn mediation",
+"Turn owner", "Companion terminal" — *turn mediation* is distinct from this
+ADR's host-callback mediator; both live behind the bridge.
+
+### Terminal-source authority is an Engine fact
+
+Which wire event ends a turn belongs to the bound engine (CONTEXT.md
+"Turn-end"): the mediator never matches on an engine kind (the pattern
+[ADR-0001](0001-kiro-engine-trait.md) rejected). `Engine::emits_wire_turn_end()`
+— KAS `true`, v2 `false`, no trait default — is snapshotted per dispatch onto
+the turn record, and gates only the *wire* companion expectation a release
+leaves behind (cyril-upjh's phantom-companion rule, now unit-fenced).
+
+### Explicitly retained
+
+- **Early conversion of both raw terminal sources into the pre-mediation
+  `TurnCompleted` marker** (this ADR's original design; the 2026-07-30
+  review's amber box asked whether the extraction would reopen it — it does
+  not). Producers are unchanged: the off-loop prompt task stamps its owner;
+  `convert::kas` maps `turn_end` identity-free.
+- **Single-observer forwarding**: dispositions are decided synchronously in
+  the notification arm; nothing else consumes the internal channel.
+- The cyril-pnwb evidence trail: absorption reports both terminals'
+  `{source, reason}` pairs (now on the `Disposition::Absorb` payload, not
+  just a log line); precedence between them remains cyril-pnwb's decision.
+
+### Verification
+
+`turn_mediator::tests::mediator_matrix_all_dispositions` (sync, no harness —
+the observability cyril-ri8q asked for) plus the loop-level
+`turn_mediation_probe_scenario`, whose expectations are transcribed from the
+pre-extraction capture `.cyril-b4y4/probes/oracle-output.txt`.
