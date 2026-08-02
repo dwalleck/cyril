@@ -946,4 +946,74 @@ probe-kas-workflow-repeat-watch-2.16.0.py <bin> kas-repeat-watch-<ver>.jsonl
 
 # doc manifest
 extract_doc_manifest.py <bin> docs/kiro-docs-index-<ver>
+
+# ADDENDUM: v2 /voice ACP command behavior + gate (free, no turn)
+probe-v2-voice-acp-2.16.0.py <bin> v2-voice-2.16.0.jsonl
+```
+
+## Addendum (2026-08-01) — the test-mode `/voice` command, followed up
+
+The flag sweep above noted `/voice` appearing as a 25th advertised command under
+`KIRO_TEST_MODE` and parked it as "pre-existing, identical on 2.15.0". Following up
+(`probe-v2-voice-acp-2.16.0.py` + binary/bundle archaeology) reframes the voice picture the
+project had on record:
+
+- **The advertised entry**: `{"name": "/voice", "description": "Voice input mode for hands-free
+  interaction", "meta": {"subcommands": ["start", "stop", "status"]}}`.
+- **The gate is advertise-only.** `kiro.dev/commands/execute` with `{"command": "voice"}` is
+  answered identically with and without `KIRO_TEST_MODE` — the handler is always wired on the
+  ACP path; the flag only controls whether it is listed. Every shape and subcommand returns
+  `{"success": false, "message": "Voice mode is not supported on this platform"}` — a clean
+  structured refusal, no crash, so cyril needs nothing defensive here.
+- **"Platform" means the Linux build, and always has.** The Linux `kiro-cli-chat` contains zero
+  Whisper inference machinery at 2.8.1 *and* 2.16.0 (no onnxruntime tokens, no model/tokenizer
+  markers), and no binary of the three (`kiro-cli`, `kiro-cli-chat`, `kiro-cli-term`) parses a
+  `voice` subcommand. tui.js's local spawn path (`kiro-cli voice --ptt`, via
+  `KIRO_CHAT_CLI_BIN`) is dead code on Linux. This corrects the earlier 2.8.1 voice audit, which
+  inferred a functional local path on Linux from strings evidence (the "~2919 `ort` symbols"
+  claim was substring contamination — sort/port/abort).
+- **Verified on the Windows-native build: the engine is really there.** Downloaded the 2.16.0
+  MSI (sha256-matched against `prod.download.cli.kiro.dev/stable/latest/manifest.json`,
+  extracted `kiro-cli.exe` with `msiextract`): **2,419 onnxruntime tokens** (statically linked
+  `ort`, build paths `D:\a\ort-artifacts\...`), compiled-in `voice.rs` / `voice_handler.rs` /
+  **`voice_serve.rs`**, and the "Voice mode is not supported on this platform" string is
+  **absent entirely** — the refusal is the Linux stub's message, not a shared runtime check.
+  This is a per-platform `cfg` split: Linux ships a stub; Windows (and macOS) ship the engine,
+  including the `voice-serve` server side.
+- **Two hidden, auth-gated router subcommands missed by every prior audit** (present since
+  **2.6.0**): `voice-cloud-setup` — "Set up voice mode for a cloud desktop" — and `voice-serve`
+  — "Start a voice recording server". tui.js's remote-path error message ties them together:
+  "Voice server not reachable. Run `kiro-cli voice-cloud-setup <hostname>` on your local
+  machine first." The intended topology: the machine with the microphone runs `voice-serve`
+  (the plain-HTTP `POST /voice/record/stream` SSE server tui.js consumes via
+  `KIRO_VOICE_SERVER_URL`), and a cloud desktop's Kiro connects to it. On Linux both
+  subcommands **dead-forward**: the router accepts them (auth precheck runs first) and forwards
+  to `kiro-cli-chat`, which rejects them as unrecognized — verified logged-in on 2.16.0. Prior
+  "voice is FROZEN" re-checks (2.11.0, 2.13.0) grepped a fixed vocabulary of known tokens and
+  so could never see these — a fixed-vocabulary blind spot to avoid in future audits.
+- **Kiro instruments voice over ACP.** The telemetry enum blob
+  `V1V2ACPLocalWhisperRemoteServerSlashCommandPTTContinuousVoiceStandalone` names **ACP** as a
+  voice-frontend dimension alongside V1/V2/Standalone — the intent for voice-over-ACP exists
+  even though the Linux handler refuses today. (The apparent `LocalWhisper` 2→1 string drop at
+  2.15.0 is an LTO re-glue artifact in an MCP/elicitation type blob, not a removal — same class
+  of artifact as 2.11.0's phantom `voiceShare`.)
+
+**Cyril impact:** cyril is a native Windows app; its current WSL spawn of `kiro-cli` is a legacy
+stopgap from before Kiro shipped a Windows binary, and the ROADMAP explicitly declares that
+mission obsolete — native-any-OS spawn is the direction. That splits the voice picture by spawn
+path, not by "cyril's platform matrix": through the WSL (Linux-binary) path Kiro voice is a
+structured refusal, but a native-Windows cyril spawning `kiro-cli.exe acp` talks to a build that
+carries the full voice engine — so if the rollout flag flips (or under `KIRO_TEST_MODE`), `/voice
+start|stop|status` over ACP plausibly *works* there (unverified at runtime; needs a Windows
+host). CN2 (`cyril-voice`) remains justified for Linux and for non-Kiro agents, and gains an
+interop target: Kiro's remote-voice wire contract (`POST ${url}/voice/record/stream` SSE +
+`/voice/record/stop`) is plain HTTP with a real server implementation (`voice-serve`) on
+desktop builds — a cyril transcriber speaking that contract could serve both ecosystems.
+**Open probe for the Windows track:** on a Windows host, run `kiro-cli.exe acp` with
+`KIRO_TEST_MODE=true` and execute `/voice start` — if it streams, cyril gets voice-over-ACP on
+native Windows for free.
+
+```sh
+# (reproduction for this addendum)
+probe-v2-voice-acp-2.16.0.py ~/.local/share/kiro-research/binaries/2.16.0/kiro-cli-chat v2-voice-2.16.0.jsonl
 ```
