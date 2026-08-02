@@ -577,6 +577,51 @@ fn marker() -> crate::theme::Theme {
     crate::traits::test_support::marker_theme()
 }
 
+/// cyril-h8zb design claim #12: after a full refusal lifecycle on the REAL
+/// `UiState` (not a mock), the chat viewport renders the explanation as a
+/// system message and the toolbar renders "Refused" — kills
+/// committed-but-not-rendered and reconcile-not-reaching-the-toolbar.
+#[test]
+fn refusal_alert_renders_in_chat_and_toolbar() {
+    use cyril_core::types::{EffortUpdate, Notification, RefusalAlert, StopReason};
+
+    let mut state = crate::state::UiState::new(500);
+    state.apply_notification(&Notification::MetadataUpdated {
+        context_usage: None,
+        metering: None,
+        tokens: None,
+        duration_ms: None,
+        effort: EffortUpdate::Unchanged,
+        session_id: None,
+        refusal: Some(RefusalAlert::from_parts(
+            None,
+            Some("blocked by policy".to_string()),
+            None,
+        )),
+    });
+    state.apply_notification(&Notification::TurnCompleted {
+        stop_reason: StopReason::EndTurn,
+    });
+
+    let chat = draw(80, 10, |frame| {
+        crate::widgets::chat::render(frame, frame.area(), &state, &marker());
+    });
+    assert!(
+        buffer_text(&chat).contains("blocked by policy"),
+        "explanation must reach the chat viewport; got:\n{}",
+        buffer_text(&chat)
+    );
+
+    let bar = draw(80, 1, |frame| {
+        crate::widgets::toolbar::render_status_bar(frame, frame.area(), &state, &marker());
+    });
+    assert!(
+        buffer_text(&bar).contains("Refused"),
+        "reconciled EndTurn must surface as Refused in the toolbar; got:\n{}",
+        buffer_text(&bar)
+    );
+}
+
 /// cyril-dij8 C3: under the pairwise-distinct marker theme every toolbar
 /// element renders its MAPPED role's marker color. The element→role table
 /// is hand-pinned from the design mapping, not read from render output.
