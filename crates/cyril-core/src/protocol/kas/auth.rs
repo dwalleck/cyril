@@ -114,12 +114,23 @@ fn read_sqlite_store(db: &Path) -> Result<AuthReply, String> {
         }
         (Some(t), None) | (None, Some(t)) => t,
         (Some(o), Some(s)) => {
-            let exp = |t: &serde_json::Value| {
-                t.get("expires_at")
-                    .and_then(|x| x.as_str())
-                    .and_then(rfc3339_to_epoch)
+            // Log-before-None: a PRESENT but unparseable expiry is corrupt,
+            // not missing — without the breadcrumb, a malformed live
+            // credential silently losing the tiebreak is undiagnosable.
+            let exp = |t: &serde_json::Value, which: &str| {
+                let stamp = t.get("expires_at").and_then(|x| x.as_str());
+                let parsed = stamp.and_then(rfc3339_to_epoch);
+                if stamp.is_some() && parsed.is_none() {
+                    tracing::debug!(
+                        row = which,
+                        "token-row tiebreak: expires_at present but unparseable; row loses"
+                    );
+                }
+                parsed
             };
-            let (chosen, name) = if exp(&s) > exp(&o) {
+            // Equal or both-unparseable expiries prefer builder-id — the
+            // pre-y14u behavior, kept deterministic rather than meaningful.
+            let (chosen, name) = if exp(&s, "social") > exp(&o, "builder-id") {
                 (s, "social")
             } else {
                 (o, "builder-id")

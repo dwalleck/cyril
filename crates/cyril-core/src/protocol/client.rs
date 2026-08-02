@@ -116,6 +116,18 @@ impl KiroClient {
     ) -> std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry> {
         std::rc::Rc::clone(&self.terminals)
     }
+
+    /// Gate a Host I/O family callback on the bound engine's adapter
+    /// (cyril-dn91): `Err(method_not_found)` with the refusal breadcrumb when
+    /// absent. One helper for all ten call sites, so a future host-io method
+    /// cannot forget the gate's shape.
+    #[cfg(feature = "kas")]
+    fn require_host_io(&self, method: &str) -> acp::Result<()> {
+        if self.engine.adapters().host_io.is_none() {
+            return refuse_unadapted(method);
+        }
+        Ok(())
+    }
 }
 
 #[async_trait(?Send)]
@@ -342,9 +354,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::ReadTextFileRequest,
     ) -> acp::Result<acp::ReadTextFileResponse> {
-        if self.engine.adapters().host_io.is_none() {
-            return refuse_unadapted("fs/read_text_file");
-        }
+        self.require_host_io("fs/read_text_file")?;
         crate::protocol::kas::host_io::read_text_file(&args).await
     }
 
@@ -359,9 +369,7 @@ impl acp::Client for KiroClient {
     ) -> acp::Result<acp::WriteTextFileResponse> {
         // Refusal precedes the responder — no filesystem side effect may
         // occur for an un-adaptered engine (cyril-dn91 C2).
-        if self.engine.adapters().host_io.is_none() {
-            return refuse_unadapted("fs/write_text_file");
-        }
+        self.require_host_io("fs/write_text_file")?;
         crate::protocol::kas::host_io::write_text_file(&args).await
     }
 
@@ -372,9 +380,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::CreateTerminalRequest,
     ) -> acp::Result<acp::CreateTerminalResponse> {
-        if self.engine.adapters().host_io.is_none() {
-            return refuse_unadapted("terminal/create");
-        }
+        self.require_host_io("terminal/create")?;
         self.terminals.create(&args)
     }
 
@@ -386,9 +392,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::WaitForTerminalExitRequest,
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
-        if self.engine.adapters().host_io.is_none() {
-            return refuse_unadapted("terminal/wait_for_exit");
-        }
+        self.require_host_io("terminal/wait_for_exit")?;
         self.terminals.wait(&args).await
     }
 
@@ -399,9 +403,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::TerminalOutputRequest,
     ) -> acp::Result<acp::TerminalOutputResponse> {
-        if self.engine.adapters().host_io.is_none() {
-            return refuse_unadapted("terminal/output");
-        }
+        self.require_host_io("terminal/output")?;
         self.terminals.output(&args)
     }
 
@@ -411,9 +413,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::ReleaseTerminalRequest,
     ) -> acp::Result<acp::ReleaseTerminalResponse> {
-        if self.engine.adapters().host_io.is_none() {
-            return refuse_unadapted("terminal/release");
-        }
+        self.require_host_io("terminal/release")?;
         self.terminals.release(&args).await
     }
 
@@ -423,9 +423,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::KillTerminalRequest,
     ) -> acp::Result<acp::KillTerminalResponse> {
-        if self.engine.adapters().host_io.is_none() {
-            return refuse_unadapted("terminal/kill");
-        }
+        self.require_host_io("terminal/kill")?;
         self.terminals.kill(&args).await
     }
 }
@@ -484,9 +482,7 @@ impl KiroClient {
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
-            if self.engine.adapters().host_io.is_none() {
-                return refuse_unadapted(args.method.as_ref());
-            }
+            self.require_host_io(args.method.as_ref())?;
             return self.terminals.respond_shell_type();
         }
         // Inbound hooks serving (list/executeHook/sessionStart) requires the
@@ -530,9 +526,7 @@ impl KiroClient {
         {
             use crate::protocol::kas::kiro_fs;
             if let Some(op) = kiro_fs::op_for_method(args.method.as_ref()) {
-                if self.engine.adapters().host_io.is_none() {
-                    return refuse_unadapted(args.method.as_ref());
-                }
+                self.require_host_io(args.method.as_ref())?;
                 return kiro_fs::dispatch(op, &parse_ext_params(&args)).await;
             }
         }

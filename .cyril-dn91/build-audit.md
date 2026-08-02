@@ -21,6 +21,12 @@ configs), clippy `-D warnings` (both), fmt, probe fences, budgets (all vacuous
    (both rows read; freshest-expiry wins when both present; state-profile arn
    preferred, token-inline arn fallback; 3 new fences). test_bridge gained
    `--agent-engine` and `--prompt` (test-side).
+   *y14u's suggested "accountType FIRST" direction was considered and
+   rejected*: accountType is not in the credential store (it would need a
+   `kiro-cli user whoami` subprocess or additional state parsing), while both
+   token rows are already in hand; freshest-expiry-wins is deterministic,
+   fenced (`freshest_token_row_wins_when_both_present`), and addresses the
+   same leftover-shadowing risk. Recorded per pre-PR review finding P2.
 
 ## Slice-6 non-vacuity mutation check
 

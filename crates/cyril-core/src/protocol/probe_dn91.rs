@@ -215,6 +215,39 @@ async fn adapter_matrix_advertise_iff_answer() {
             "[{name}] fs: advertised != answers"
         );
 
+        // FS write: pair the OTHER bare-ACP fs bit with execution too (AC3 at
+        // advertised-bit granularity, pre-PR review finding P1).
+        let wf = dir.path().join("m-out.txt");
+        let write_answers = client
+            .write_text_file(acp::WriteTextFileRequest::new(
+                acp::SessionId::new("s"),
+                &wf,
+                "w",
+            ))
+            .await
+            .is_ok();
+        assert_eq!(
+            caps.fs.write_text_file, write_answers,
+            "[{name}] fs write: advertised != answers"
+        );
+
+        // The `_kiro/fs/*` dialect flags (fs._meta.kiro, FS_OPS-derived):
+        // stat as the representative — per-op dispatch pairing is
+        // `every_advertised_fs_flag_is_dispatched`.
+        let dialect_advertised =
+            caps_json.pointer("/fs/_meta/kiro/stat") == Some(&serde_json::Value::Bool(true));
+        let stat = ext(
+            &client,
+            crate::protocol::kas::kiro_fs::STAT_METHOD,
+            serde_json::json!({"sessionId": "s", "path": f}),
+        )
+        .await;
+        assert_eq!(
+            dialect_advertised,
+            stat == Disposition::Answered,
+            "[{name}] fs dialect: advertised != answers"
+        );
+
         // TERMINAL: advertised == shell_type answers.
         let term = ext(
             &client,
