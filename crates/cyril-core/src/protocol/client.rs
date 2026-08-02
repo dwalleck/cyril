@@ -8,6 +8,25 @@ use tokio::sync::mpsc;
 use crate::protocol::convert;
 use crate::types::*;
 
+#[cfg(feature = "kas")]
+pub(crate) type ResolvedHostShell = Option<crate::protocol::kas::host_shell::HostShell>;
+#[cfg(not(feature = "kas"))]
+pub(crate) struct ResolvedHostShell;
+
+#[cfg(test)]
+pub(crate) fn test_host_shell(engine: crate::types::AgentEngine) -> ResolvedHostShell {
+    #[cfg(feature = "kas")]
+    {
+        (engine == crate::types::AgentEngine::Kas)
+            .then(crate::protocol::kas::host_shell::HostShell::test_posix)
+    }
+    #[cfg(not(feature = "kas"))]
+    {
+        let _ = engine;
+        ResolvedHostShell
+    }
+}
+
 /// The central ACP Client implementation for the bridge thread.
 ///
 /// Lives in the `!Send` bridge thread and uses `RefCell<HashMap>` for
@@ -27,6 +46,9 @@ pub(crate) struct KiroClient {
     /// (cyril-3lh8); the registry stays the sole owner of process lifecycle.
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
+    /// Immutable KAS host-shell snapshot. `None` is the real v2 absence.
+    #[cfg(feature = "kas")]
+    host_shell: ResolvedHostShell,
     /// KAS-7 (cyril-jiyn): the hook registry serving `_kiro/hooks/*`, loaded
     /// once at construction from the workspace + global `.kiro/hooks` when the
     /// bound engine's hooks mode is `Host`. Empty otherwise (Kas mode runs
@@ -47,10 +69,13 @@ impl KiroClient {
         notification_tx: mpsc::Sender<RoutedNotification>,
         permission_tx: mpsc::Sender<PermissionRequest>,
         engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
+        host_shell: ResolvedHostShell,
         cwd: &std::path::Path,
     ) -> Self {
         #[cfg(not(feature = "kas"))]
         let _ = cwd; // hooks registry (the only cwd consumer) is kas-only
+        #[cfg(not(feature = "kas"))]
+        let _ = host_shell;
         #[cfg(feature = "kas")]
         let hooks = {
             use crate::types::kas_hooks::KasHooksMode;
@@ -73,6 +98,8 @@ impl KiroClient {
             engine,
             #[cfg(feature = "kas")]
             terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new()),
+            #[cfg(feature = "kas")]
+            host_shell,
             #[cfg(feature = "kas")]
             hooks,
             #[cfg(feature = "kas")]
@@ -408,7 +435,10 @@ impl KiroClient {
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
-            return crate::protocol::kas::terminal_io::respond_shell_type();
+            let shell = self.host_shell.as_ref().ok_or_else(|| {
+                acp::Error::new(-32603, "KAS terminal callback has no resolved host shell")
+            })?;
+            return crate::protocol::kas::terminal_io::respond_shell_type(shell);
         }
         if args.method.as_ref() == crate::protocol::kas::hooks::LIST_METHOD {
             let params = parse_ext_params(&args);
@@ -510,6 +540,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            test_host_shell(crate::types::AgentEngine::Kas),
             std::path::Path::new("/tmp"),
         );
         let err: acp::Result<acp::ExtResponse> =
@@ -541,6 +572,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            test_host_shell(crate::types::AgentEngine::Kas),
             std::path::Path::new("/tmp"),
         );
         let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(
@@ -573,6 +605,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            test_host_shell(crate::types::AgentEngine::Kas),
             std::path::Path::new("/tmp"),
         );
         let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(-32603, "boom"));
@@ -602,6 +635,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            test_host_shell(crate::types::AgentEngine::Kas),
             std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
@@ -624,6 +658,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            test_host_shell(crate::types::AgentEngine::Kas),
             std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
@@ -646,6 +681,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            test_host_shell(crate::types::AgentEngine::Kas),
             std::path::Path::new("/tmp"),
         )
     }
@@ -679,6 +715,7 @@ mod tests {
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
                 hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
             }),
+            test_host_shell(crate::types::AgentEngine::Kas),
             dir.path(),
         );
 
@@ -720,6 +757,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            test_host_shell(crate::types::AgentEngine::Kas),
             dir.path(),
         );
 
@@ -784,6 +822,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            test_host_shell(crate::types::AgentEngine::Kas),
             dir.path(),
         );
         let call = async |method: &'static str, params: serde_json::Value| {
@@ -853,6 +892,7 @@ mod tests {
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
                 hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
             }),
+            test_host_shell(crate::types::AgentEngine::Kas),
             dir.path(),
         );
 
@@ -923,10 +963,30 @@ mod tests {
             .ext_method(acp::ExtRequest::new("kiro/terminal/shell_type", params))
             .await
             .expect("shell_type routes");
-        assert!(
-            resp.0.get().contains("shellType"),
-            "ext reply must carry shellType, got {}",
-            resp.0.get()
+        assert_eq!(resp.0.get(), r#"{"shellType":"posix"}"#);
+    }
+
+    #[tokio::test]
+    async fn shell_type_refuses_a_missing_kas_snapshot() {
+        let (ntx, _nrx) = mpsc::channel(1);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
+            None,
+            std::path::Path::new("/tmp"),
+        );
+        let params = serde_json::value::RawValue::from_string("{}".to_string())
+            .unwrap()
+            .into();
+        let err = client
+            .ext_method(acp::ExtRequest::new("kiro/terminal/shell_type", params))
+            .await
+            .expect_err("missing KAS shell snapshot must be refused");
+        assert_eq!(
+            err.message,
+            "KAS terminal callback has no resolved host shell"
         );
     }
 }
@@ -954,6 +1014,7 @@ mod metadata_routing_tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
+            test_host_shell(crate::types::AgentEngine::V2),
             std::path::Path::new("/tmp"),
         )
     }

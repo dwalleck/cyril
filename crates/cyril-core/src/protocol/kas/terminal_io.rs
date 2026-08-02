@@ -413,17 +413,12 @@ async fn wait_with_output_killable(
 /// `kiro/...` form — same convention as [`super::auth::GET_ACCESS_TOKEN_METHOD`].
 pub(crate) const SHELL_TYPE_METHOD: &str = "kiro/terminal/shell_type";
 
-/// Answer `_kiro/terminal/shell_type`: report the host shell so KAS parses and
-/// formats commands for it. Returns `bash` — the KAS host is Unix/WSL and
-/// bash-family semantics are near-universal there; this is the value the 2.10.0
-/// prove-it turn replied and KAS accepted. The precise per-user shell is a hint,
-/// not load-bearing (KAS sends commands pre-split into `{command, args}` that cyril
-/// runs directly), so it is a constant, not env-sniffed.
-pub(crate) fn respond_shell_type() -> acp::Result<acp::ExtResponse> {
-    let body = serde_json::json!({ "shellType": "bash" });
-    let raw = serde_json::value::RawValue::from_string(body.to_string())
-        .map_err(|e| acp::Error::new(-32603, format!("serialize shell_type reply: {e}")))?;
-    Ok(acp::ExtResponse::new(raw.into()))
+/// Answer `_kiro/terminal/shell_type` from the same immutable shell snapshot
+/// used for terminal execution.
+pub(crate) fn respond_shell_type(
+    shell: &super::host_shell::HostShell,
+) -> acp::Result<acp::ExtResponse> {
+    super::json_ext_response(&serde_json::json!({ "shellType": shell.wire_name() }))
 }
 
 /// Combine a finished command's stdout and stderr into one terminal stream,
@@ -726,16 +721,10 @@ mod tests {
     }
 
     #[test]
-    fn shell_type_reply_carries_shelltype() {
-        // Fixture N (value half): the shell_type reply is `{shellType: "bash"}` —
-        // the value the prove-it turn used and KAS accepted.
-        let resp = respond_shell_type().unwrap();
-        let json = resp.0.get();
-        assert!(
-            json.contains("shellType"),
-            "reply must carry shellType: {json}"
-        );
-        assert!(json.contains("bash"), "shellType value is bash: {json}");
+    fn shell_type_reply_uses_the_resolved_normalized_family() {
+        let shell = super::super::host_shell::HostShell::test_posix();
+        let resp = respond_shell_type(&shell).unwrap();
+        assert_eq!(resp.0.get(), r#"{"shellType":"posix"}"#);
     }
 
     fn release_req(id: &acp::TerminalId) -> acp::ReleaseTerminalRequest {

@@ -2,6 +2,7 @@
 
 Approved design: `.cyril-6bol/falsifiable-design.md`. Cheapest falsifier: expansion-aware probe/oracle `AGREEMENT` on 2026-08-01.
 
+Checkpoint revision (requester-approved 2026-08-01): strict KAS lint proved the original domain-only Slice 2 could not stand alone without dead production types. The coherent resolve-and-report seam therefore merges original Slices 2–4 and 7–9; it keeps their summed budgets and gates, and leaves rendering, launch construction, and execution as independent checkpoints.
 Every slice ends in one conventional commit. “Prototype oracle” below means:
 
 ```sh
@@ -30,86 +31,41 @@ The prototype is a standalone empirical witness, not the Cyril executable. There
 **Preconditions / output:** The semantic validator’s “string input” precondition is enforced by serde type checking; invalid type uses the existing runtime fallback. Config warnings remain diagnostics through tracing, not stdout data.
 
 **Verification:**
-- [ ] Config unit tests pass
-- [ ] Stress table returns the expected `Option<String>` / fallback cells
-- [ ] Prototype oracle agrees
-- [ ] Loop and wall budgets hold
+- [x] Config unit tests pass
+- [x] Stress table returns the expected `Option<String>` / fallback cells
+- [x] Prototype oracle agrees
+- [x] Loop and wall budgets hold
 
-## Slice 2: Define the closed shell domain and wire vocabulary
+## Slice 2: Resolve and report one immutable host shell
 
-**Claim:** C5 — POSIX, fish, PowerShell 7, and Windows PowerShell are the only resolved kinds and map to exactly `posix`, `fish`, or `powershell`.
+**Claim:** C1–C5/C10 — KAS validates the raw configured value before channels/thread/process, resolves exactly one runnable Unix or Windows shell, and uses the retained snapshot to emit only `posix`, `fish`, or `powershell`; V2 keeps the real `None` absence and performs no host-shell work.
 
-**Oracle:** Hand-authored KAS normalized-token table from the signed spec and issue evidence.
+**Oracle:** Hand-authored Unix/Windows expected-path matrices and KAS normalized-token table from the signed spec, plus a fake agent marker and serialized ext response independent of the resolver branches.
 
-**Stress fixture:** Enumerate every kind and assert the full list of emitted tokens equals `[(posix,posix),(fish,fish),(pwsh,powershell),(powershell,powershell)]`; assert no `bash`/`cmd` token.
+**Stress fixture:** Enumerate all four kinds and every automatic/explicit platform branch: absent/empty/stale/unknown Unix `$SHELL`, spaces/Unicode, bounded PATH Bash, pwsh PATH/Program Files priority, signaled+runnable Windows PowerShell, poisoned `COMSPEC`, invalid/wrong-platform config, invalid KAS pre-thread failure, V2 absence, missing callback snapshot, and exact response JSON.
 
-**Code budget:** ≤45 production lines and ≤35 test lines.
+**Code budget:** ≤355 production lines and ≤480 test/callsite lines across the merged original slice budgets.
 
-**Loop budget:** No production loops. Test enumeration is O(4).
+**Loop budget:** PATH lookup is O(p), `p ≤ 256`, with no nested loops; fixed Windows probes add at most two metadata calls. One resolver call per KAS bridge and zero per V2 bridge.
 
-**Wall budget:** No I/O or always-on phase.
+**Wall budget:** One KAS startup resolution, ≤250 ms on local paths; invalid KAS returns before thread/process creation; V2 adds zero resolver wall time. No polling or re-resolution.
 
 **Files:**
 - `crates/cyril-core/src/protocol/kas/host_shell.rs` (new)
 - `crates/cyril-core/src/protocol/kas/mod.rs`
+- `crates/cyril-core/src/protocol/kas/terminal_io.rs`
+- `crates/cyril-core/src/protocol/client.rs`
+- `crates/cyril-core/src/protocol/bridge.rs`
+- `crates/cyril/src/main.rs`
 
-**Preconditions / output:** Kind construction stays private; callers receive only a resolved `HostShell`. Wire names are data returned to the ACP serializer.
-
-**Verification:**
-- [ ] Host-shell unit tests pass
-- [ ] Wire matrix emits the three exact normalized tokens
-- [ ] Prototype oracle agrees
-- [ ] Loop and wall budgets hold
-
-## Slice 3: Resolve Unix shells from a substitutable host seam
-
-**Claim:** C2 — automatic Unix resolution uses a supported runnable `$SHELL`, otherwise runnable PATH Bash; explicit Bash/fish is platform-checked and never substituted.
-
-**Oracle:** Expected-path table written from the signed Unix decision matrix, independent of resolver branches.
-
-**Stress fixture:** Fake host cases: `$SHELL` unset/empty; runnable `/bin/zsh`; runnable path containing spaces/Unicode; stale `/bin/fish`; unknown `/bin/nu`; PATH Bash present/absent; explicit Bash/fish present/absent; explicit PowerShell. Expected paths/tokens/errors are fixed before implementation.
-
-**Code budget:** ≤50 production lines and ≤70 table-test lines.
-
-**Loop budget:** PATH lookup O(p) metadata probes, `p ≤ 256` entries at production scale, so ≤256 startup syscalls and O(256) comparisons once per KAS startup. No nested loops.
-
-**Wall budget:** One startup resolution; ≤250 ms on local host paths in the stress harness. No polling.
-
-**Files:**
-- `crates/cyril-core/src/protocol/kas/host_shell.rs`
-
-**Preconditions / output:** Executable availability is load-bearing and gets a runtime probe; stale paths cannot produce a resolved shell. Errors are diagnostics carried in `HostShellError`.
+**Preconditions / output:** Kind construction stays private. Executable availability is a runtime correctness probe. `PSModulePath` only permits probing Windows PowerShell; it is not proof. The startup seam is the only production producer of `Option<HostShell>`; callback absence is refused. Resolution failures carry `HostShellError` as the source of `InvalidConfig`.
 
 **Verification:**
-- [ ] Unix resolution unit tests pass
-- [ ] Full adversarial Unix matrix matches the oracle table
-- [ ] Prototype oracle agrees
-- [ ] PATH loop stays ≤256 probes in the counting fake
-
-## Slice 4: Resolve Windows PowerShell without COMSPEC
-
-**Claim:** C3 — native Windows resolution is PATH pwsh → Program Files pwsh → signaled+runnable Windows PowerShell → error; cmd/COMSPEC and Unix shells never resolve.
-
-**Oracle:** Explicit Windows expected-path table plus production-source search proving the resolver contains zero `COMSPEC` reads.
-
-**Stress fixture:** Fake Windows host with: both pwsh locations; Program Files only; `PSModulePath` plus runnable Windows PowerShell; signal without executable; PowerShell executable without signal; only cmd plus poisoned `COMSPEC`; no shells; each explicit value and missing executable.
-
-**Code budget:** ≤50 production lines and ≤80 table-test lines.
-
-**Loop budget:** One PATH scan O(p), `p ≤ 256`; two fixed-location probes; ≤258 startup metadata probes, below 10³ syscalls. Environment lookups are O(1).
-
-**Wall budget:** One startup resolution; ≤250 ms in the counting fake. No polling.
-
-**Files:**
-- `crates/cyril-core/src/protocol/kas/host_shell.rs`
-
-**Preconditions / output:** `PSModulePath` is evidence to try Windows PowerShell, not proof of executability; the executable probe is a runtime correctness check. Resolution errors are diagnostics.
-
-**Verification:**
-- [ ] Windows resolution unit tests pass on every host through the fake seam
-- [ ] Poisoned COMSPEC fixture still errors
-- [ ] Production resolver source has zero COMSPEC reads
-- [ ] Prototype oracle agrees and probe-count budget holds
+- [x] Full fake Unix and Windows matrices match fixed paths/kinds/errors
+- [x] PATH search stops at 256 probes and production selection has zero `COMSPEC` reads
+- [x] Invalid KAS creates no thread/agent marker; V2 carries `None`
+- [x] Ext routing serializes the retained normalized family exactly
+- [x] Strict KAS tests/clippy, default full gate, prototype oracle, and wall/loop budgets pass
 
 ## Slice 5: Render literal, operator, and pure-variable tokens
 
@@ -161,84 +117,6 @@ The prototype is a standalone empirical witness, not the Cyril executable. There
 - [ ] Installed-shell exit-42 fixtures pass where available
 - [ ] Prototype oracle agrees; no retry/wall budget holds
 
-## Slice 7: Carry raw shell configuration to bridge startup
-
-**Claim:** C1/C10 — the binary passes `[agent] shell` into `SpawnConfig`; default/struct-update callers remain absent, and V2 treats every value as inert.
-
-**Oracle:** Exhaustive `AgentConfig` consumption in `main` plus a hand comparison of `SpawnConfig::default()` and explicit values.
-
-**Stress fixture:** Build `SpawnConfig` with absent, auto, and invalid strings; clone it across the spawn seam; assert no value is dropped. Compile every integration smoke struct literal using `..Default::default()`.
-
-**Code budget:** ≤20 production lines and ≤35 test lines.
-
-**Loop budget:** No new loops.
-
-**Wall budget:** No new work beyond moving one optional startup string.
-
-**Files:**
-- `crates/cyril/src/main.rs`
-- `crates/cyril-core/src/protocol/bridge.rs`
-
-**Preconditions / output:** No value-level validation occurs in `main`; bridge startup owns semantic errors. Existing startup errors remain stderr/returned diagnostics.
-
-**Verification:**
-- [ ] Main/core compile all targets
-- [ ] SpawnConfig propagation fixture preserves each raw value
-- [ ] Prototype oracle agrees
-- [ ] No loop or wall increase
-
-## Slice 8: Gate KAS startup and carry one resolved snapshot
-
-**Claim:** C1/C4/C10 — KAS resolves before channels/thread/process and passes one immutable `Some(HostShell)` into KiroClient; V2 passes the real `None` absence and performs zero host-shell probes.
-
-**Oracle:** Fake agent marker file, counting `HostEnvironment`, and a KiroClient pairing assertion independent of resolver branches.
-
-**Stress fixture:** Invalid KAS value and unavailable explicit shell must return `InvalidConfig` with zero host thread/agent markers; valid KAS probes exactly once; V2 with `cmd` probes zero times and reaches its in-process handshake unchanged.
-
-**Code budget:** ≤50 production lines per file and ≤140 mechanical test/callsite lines total.
-
-**Loop budget:** Resolver bounds are Slice 3/4; startup adds no loop. Exactly one resolver call per KAS bridge.
-
-**Wall budget:** Invalid KAS returns before thread creation; valid KAS adds ≤250 ms once; V2 adds 0 resolver wall time.
-
-**Files:**
-- `crates/cyril-core/src/protocol/bridge.rs`
-- `crates/cyril-core/src/protocol/client.rs`
-
-**Preconditions / output:** The private resolved-startup constructor is the only production producer of the engine/`Option<HostShell>` pair; KAS failure returns `InvalidConfig`, while V2 absence is represented by `None`, never a magic shell.
-
-**Verification:**
-- [ ] Bridge/client unit and harness tests pass
-- [ ] Invalid KAS creates zero markers; valid KAS resolver count is 1 and client shell is `Some`; V2 count is 0 and client shell is `None`
-- [ ] Prototype oracle agrees
-- [ ] Startup wall and probe budgets hold
-
-## Slice 9: Share one shell snapshot across client response and registry
-
-**Claim:** C4/C5/C8 — KiroClient’s immutable host shell supplies the ext response and is passed into terminal create, while the terminal registry retains sole ownership of process lifecycle.
-
-**Oracle:** Capture the serialized ext response and spawned executable/argv from one registry; compare both against the original `(path, token)` tuple retained by the test.
-
-**Stress fixture:** Resolve a fake shell, mutate the fake environment/PATH afterward, then route `_kiro/terminal/shell_type` and create a terminal. Expected: original token and executable remain; V2’s absent shell refuses the KAS callbacks.
-
-**Code budget:** ≤45 production lines per file and ≤120 test/callsite lines total.
-
-**Loop budget:** No new loops; one `Rc` clone and one immutable shell clone at bridge construction.
-
-**Wall budget:** No re-resolution; response is serialization-only and create adds no discovery I/O.
-
-**Files:**
-- `crates/cyril-core/src/protocol/client.rs`
-- `crates/cyril-core/src/protocol/kas/terminal_io.rs`
-
-**Preconditions / output:** KAS terminal callbacks require `Some(&HostShell)` and enforce that at runtime with an ACP refusal; `None` is the valid V2 absence. ACP responses are data.
-
-**Verification:**
-- [ ] Client and registry unit tests pass
-- [ ] Environment-poison snapshot fixture retains original path/token
-- [ ] Prototype oracle agrees
-- [ ] Zero resolver calls after startup
-
 ## Slice 10: Execute terminal requests through the bound shell
 
 **Claim:** C6/C7/C8/C9 — terminal create rejects empty input, uses the shell command plan, and preserves existing lifecycle while adding native operators, pure variable expansion, profile behavior, and native failure status.
@@ -288,4 +166,4 @@ No deferrals appear in this plan. `cyril-1rpv` and `cyril-3lh8` remain named onl
 
 ### Claim coverage
 
-No gaps: C1 → slices 1/7/8; C2 → 3; C3 → 4; C4 → 8/9; C5 → 2/9; C6 → 5/10; C7 → 6/10; C8 → 9/10; C9 → 6/10; C10 → 1/7/8.
+No gaps: C1 → slices 1/2; C2–C5 → 2; C6 → 5/10; C7 → 6/10; C8 → 2/10; C9 → 6/10; C10 → 1/2.

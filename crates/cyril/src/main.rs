@@ -57,6 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cyril_core::protocol::bridge::SpawnConfig {
             engine: agent_engine,
             kas_spawn: config.agent.kas_spawn,
+            shell: config.agent.shell,
             present_as: config.agent.present_as,
             kas_hooks: config.agent.kas_hooks,
         },
