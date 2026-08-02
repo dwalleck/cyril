@@ -9,8 +9,7 @@ pub(crate) mod identity;
 #[cfg(feature = "kas")]
 pub(crate) mod kas;
 pub(crate) mod transport;
-/// Turn mediation (cyril-b4y4). Test-only until slice 5 wires it into the
-/// bridge `run_loop` — the module's first production consumer — keeping the
-/// zero-`#[allow]` rule intact while the state machine is built and fenced.
-#[cfg(test)]
+/// Turn mediation (cyril-b4y4): the pure state machine behind the bridge
+/// `run_loop`'s turn ownership — busy-guard, owner allocation, terminal
+/// dispositions, companion ledger. See CONTEXT.md "Turn mediation".
 pub(crate) mod turn_mediator;
