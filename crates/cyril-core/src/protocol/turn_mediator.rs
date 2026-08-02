@@ -41,6 +41,16 @@ impl CompanionSource {
     }
 }
 
+/// One terminal signal's observation — which source arrived, carrying what
+/// stop reason. The cyril-pnwb evidence unit: an absorption reports two of
+/// these (first arrival, then the companion) and deliberately selects no
+/// precedence between them — that decision belongs to cyril-pnwb.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct TerminalEvidence {
+    pub(crate) source: CompanionSource,
+    pub(crate) reason: StopReason,
+}
+
 /// The one companion terminal still owed for a turn that already released
 /// (cyril-a71q C6; CONTEXT.md "Companion terminal").
 ///
@@ -58,10 +68,9 @@ struct Companion {
     owner: TurnId,
     session: SessionId,
     awaiting: CompanionSource,
-    /// `{source, reason}` of the signal that already arrived. The second is
-    /// reported on absorption; no precedence between them is selected here —
-    /// that decision belongs to cyril-pnwb.
-    first: (CompanionSource, StopReason),
+    /// Evidence of the signal that already arrived; its counterpart is
+    /// reported alongside it on absorption.
+    first: TerminalEvidence,
 }
 
 impl Companion {
@@ -78,7 +87,10 @@ impl Companion {
             owner,
             session,
             awaiting: arrived.counterpart(),
-            first: (arrived, reason),
+            first: TerminalEvidence {
+                source: arrived,
+                reason,
+            },
         }
     }
 }
@@ -101,8 +113,8 @@ pub(crate) enum Disposition {
     /// cyril-pnwb `{source, reason}` evidence pair for both signals.
     Absorb {
         owner: TurnId,
-        first: (CompanionSource, StopReason),
-        second: (CompanionSource, StopReason),
+        first: TerminalEvidence,
+        second: TerminalEvidence,
     },
     /// An owner-stamped terminal matching neither the companion ledger nor
     /// the active turn — a stale duplicate. Dropped.
@@ -336,21 +348,22 @@ impl TurnMediator {
 /// An absorb decision waiting for its second `{source, reason}` half.
 struct PendingAbsorb {
     owner: TurnId,
-    first: (CompanionSource, StopReason),
+    first: TerminalEvidence,
 }
 
 impl PendingAbsorb {
     fn second(self, source: CompanionSource, reason: StopReason) -> Disposition {
+        let second = TerminalEvidence { source, reason };
         tracing::debug!(
             owner = %self.owner,
             first = ?self.first,
-            second = ?(source, reason),
+            second = ?second,
             "absorbed expected companion"
         );
         Disposition::Absorb {
             owner: self.owner,
             first: self.first,
-            second: (source, reason),
+            second,
         }
     }
 }
@@ -368,6 +381,15 @@ mod tests {
     fn end_turn() -> Notification {
         Notification::TurnCompleted {
             stop_reason: StopReason::EndTurn,
+        }
+    }
+
+    /// Every fixture terminal carries `EndTurn`, so evidence asserts only
+    /// vary by source.
+    fn ev(source: CompanionSource) -> TerminalEvidence {
+        TerminalEvidence {
+            source,
+            reason: StopReason::EndTurn,
         }
     }
 
@@ -469,8 +491,8 @@ mod tests {
             m.observe(&stamped(0)),
             Disposition::Absorb {
                 owner: TurnId::new(0),
-                first: (CompanionSource::Wire, StopReason::EndTurn),
-                second: (CompanionSource::Synthesized, StopReason::EndTurn),
+                first: ev(CompanionSource::Wire),
+                second: ev(CompanionSource::Synthesized),
             },
             "turn#0's synthesized twin is evidence, not a stale duplicate"
         );
@@ -512,8 +534,8 @@ mod tests {
             m.observe(&stamped(0)),
             Disposition::Absorb {
                 owner: TurnId::new(0),
-                first: (CompanionSource::Wire, StopReason::EndTurn),
-                second: (CompanionSource::Synthesized, StopReason::EndTurn),
+                first: ev(CompanionSource::Wire),
+                second: ev(CompanionSource::Synthesized),
             },
             "f2"
         );
@@ -550,8 +572,8 @@ mod tests {
             m.observe(&wire_end(s)),
             Disposition::Absorb {
                 owner: TurnId::new(1),
-                first: (CompanionSource::Synthesized, StopReason::EndTurn),
-                second: (CompanionSource::Wire, StopReason::EndTurn),
+                first: ev(CompanionSource::Synthesized),
+                second: ev(CompanionSource::Wire),
             },
             "f6"
         );
@@ -578,8 +600,8 @@ mod tests {
             m.observe(&wire_end(s)),
             Disposition::Absorb {
                 owner: TurnId::new(2),
-                first: (CompanionSource::Synthesized, StopReason::EndTurn),
-                second: (CompanionSource::Wire, StopReason::EndTurn),
+                first: ev(CompanionSource::Synthesized),
+                second: ev(CompanionSource::Wire),
             },
             "f9 (M3: a release here means absorb-first is broken)"
         );
@@ -603,8 +625,8 @@ mod tests {
             m.observe(&stamped(3)),
             Disposition::Absorb {
                 owner: TurnId::new(3),
-                first: (CompanionSource::Wire, StopReason::EndTurn),
-                second: (CompanionSource::Synthesized, StopReason::EndTurn),
+                first: ev(CompanionSource::Wire),
+                second: ev(CompanionSource::Synthesized),
             },
             "f12"
         );

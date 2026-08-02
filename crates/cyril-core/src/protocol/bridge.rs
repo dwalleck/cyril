@@ -1035,7 +1035,13 @@ async fn run_loop(
                     refused => {
                         let message = match refused {
                             BeginTurn::Busy => "a turn is already in progress",
-                            _ => "turn identity space exhausted",
+                            // `Accepted` is unreachable here (caught by the arm
+                            // above); spelled out rather than `_` so a future
+                            // `BeginTurn` variant fails to compile instead of
+                            // silently reading as exhaustion (pre-PR review).
+                            BeginTurn::Exhausted | BeginTurn::Accepted(_) => {
+                                "turn identity space exhausted"
+                            }
                         };
                         if notify_or_closed(
                             &channels.notification_tx,

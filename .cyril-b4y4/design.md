@@ -11,8 +11,11 @@ Extract `run_loop`'s inline turn-ownership policy — the `active_turn` /
 `turn_alloc` / `companion` locals and the ~140-line notification-arm decision
 (bridge.rs:2124-2281) plus the SendPrompt gate (1116-1147), cancel targeting
 (1227-1230), and the io-death busy probe (2292) — into a pure, sync,
-unit-testable `TurnMediator` type. Behavior-preserving except one additive
-delta: the unowned drop gains a debug log line (probe finding 1).
+unit-testable `TurnMediator` type. Behavior-preserving except two additive
+log-only deltas: the unowned drop gains a debug line (probe finding 1), and
+the bridge logs the bound engine's terminal-source shape once at bind time
+(slice 1's production caller for `emits_wire_turn_end`; flagged by pre-PR
+spec review as initially undeclared — declared here).
 
 ## Architecture and placement (step 2c)
 
