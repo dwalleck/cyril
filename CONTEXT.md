@@ -10,6 +10,16 @@ Cyril is a polished terminal interface for the Agent Client Protocol (ACP) ecosy
 The percentage of an agent session's available context window that has been consumed. Higher values mean less context remains.
 _Avoid_: context remaining, context left
 
+### Presentation
+
+**Semantic theme**:
+A named mapping from semantic color roles to concrete colors (e.g. `cyril-dark`) that widgets consume; widgets never choose colors directly.
+_Avoid_: palette, color scheme, skin
+
+**Color mode**:
+A terminal's color capability tier — truecolor, ansi256, ansi16, or none. The selected theme is projected into the color mode; theme and capability are separate axes.
+_Avoid_: color depth, theme (when you mean capability)
+
 ### Agent orchestration
 
 **Subagent**:
@@ -26,7 +36,33 @@ _Avoid_: pending stage
 
 **Pending stage**:
 Planned crew work that has not yet started a subagent session.
-_Avoid_: waiting member, queued subagent
+_Avoid_: waiting member, queued subagent, stage (unqualified)
+
+**Pipeline stage**:
+One node of a KAS agent-subtask DAG: named, role-tagged, dependency-ordered work the agent orchestrates within a turn.
+_Avoid_: stage (unqualified), workflow step (that runs as a peer session, not under a DAG tool call)
+
+### Sessions & turns
+
+**Session**:
+One conversation context with an agent, identified by a `SessionId`. A single agent subprocess can host several at once.
+_Avoid_: chat, conversation, thread
+
+**Peer session**:
+A session running alongside the main session as an equal rather than as delegated work under it; KAS workflow steps run as peer sessions.
+_Avoid_: sibling session, secondary session, subagent (delegated work with a parent)
+
+**Session mode**:
+The agent-side operating mode of a session — Kiro's vibe/spec axis, KAS's plan / bug-fix / quick-spec family. An axis of the session, not of the engine.
+_Avoid_: mode (unqualified)
+
+**Turn**:
+One round of agent activity: from a submitted prompt until the agent stops and control returns to the user.
+_Avoid_: exchange, round-trip, response
+
+**Turn-end**:
+The signal that a turn has completed. Which wire event carries it differs per engine, so only the bound engine may declare a turn over.
+_Avoid_: prompt response (v2's carrier, not the concept), end of stream
 
 ### Agents & engines
 
@@ -34,9 +70,13 @@ _Avoid_: waiting member, queued subagent
 An agent provider selectable from the ACP registry — Kiro, Claude, Codex, Goose, and others. The unit the agent picker and registry reason about.
 _Avoid_: provider, backend (when you mean the vendor), agent (reserve "agent" for the running process)
 
+**Agent**:
+The running agent process cyril drives over ACP — for Kiro, one `kiro-cli acp` subprocess. A vendor ships it; an engine is the implementation inside it.
+_Avoid_: assistant, bot, model (the LLM an agent calls)
+
 **Engine**:
 A Kiro-internal agent implementation — **v2** (the Rust engine, `kiro.dev/*` / `_kiro.dev/*` wire dialect) or **KAS** (the TypeScript/LangGraph engine, `_kiro/*` dialect). Engine is an axis *within* the Kiro vendor: both engines share the `kiro-cli` binary, the `~/.kiro` auth store and session storage, and Kiro's slash-command/mode heritage, differing mainly in wire dialect and lifecycle. Cyril binds one engine at agent-subprocess spawn (startup): the bridge runs one `kiro-cli acp [--agent-engine kas]` process and holds one engine for its life, so every session on that process shares it. Switching engines means a new subprocess.
-_Avoid_: mode (means something else in Kiro — vibe/spec), version (v2/v3 are engines, not release versions), variant
+_Avoid_: mode (that's a session mode — vibe/spec), version (v2/v3 are engines, not release versions), variant
 
 **v2**:
 The Kiro engine cyril drives today (`kiro-cli acp`, default). Rust, `sacp`-based, `kiro.dev/*` dialect.
@@ -46,6 +86,34 @@ _Avoid_: rust engine, classic, legacy
 The Kiro TypeScript/LangGraph engine, embedded as of kiro-cli 2.7.1, reached over `kiro-cli acp --agent-engine kas`. `_kiro/*` dialect; host supplies auth; can call fs/terminal callbacks; uses the `agent-subtask` subagent model.
 _Avoid_: v3 (it's the user-facing TUI alias `--v3`, but the engine is KAS), TypeScript engine
 
+**Wire dialect**:
+The extension-method family an engine speaks — `kiro.dev/*` for v2, `_kiro/*` for KAS.
+_Avoid_: protocol (that's ACP itself), extension namespace
+
+**Persona**:
+The client identity cyril presents to the agent at the handshake; agent-side behavior (system-prompt voice, feature briefings) keys off it.
+_Avoid_: impersonation, client name, identity (unqualified)
+
+### Host integration
+
+**Bridge**:
+The single mediation point between cyril and the agent subprocess. It owns the ACP connection for the subprocess's life; every message in either direction crosses it.
+_Avoid_: proxy (that's a proxy stage), protocol thread
+
 **Host callback**:
 A server-to-client ACP request or control notification through which the running agent asks Cyril, acting as the host, to provide a decision or capability such as permission, authentication, file I/O, terminal control, or hooks.
 _Avoid_: client callback, host request (excludes control notifications), tool call
+
+**Fs dialect**:
+The file-operation callback family in force for one operation — Kiro's extended `_kiro/fs/*` or bare ACP `fs/*`. Selected per operation, not per session.
+_Avoid_: fs protocol, fs mode
+
+**Hook generation**:
+One of KAS's two hook execution models — hooks run by cyril as host callbacks, or by the agent's own registry. A session gets exactly one; they do not compose.
+_Avoid_: hooks mode (cyril's config knob), hooks v2 (a wire flag, not a name)
+
+### Proxy platform
+
+**Proxy stage**:
+A composable layer on the path between cyril and an agent that observes or transforms ACP traffic to add behavior the agent lacks — skills, audit, policy, memory.
+_Avoid_: stage (unqualified), middleware, plugin, interceptor
