@@ -25,6 +25,12 @@ pub struct SessionController {
     session_cost: SessionCost,
     pending_tokens: Option<TokenCounts>,
     pending_metering: Option<TurnMetering>,
+    /// A `MetadataUpdated` frame this turn carried a refusal alert
+    /// (cyril-h8zb). Taken at `TurnCompleted` — when set and the ACP stop
+    /// reason is the ambiguous `EndTurn`, the turn summary records `Refusal`
+    /// instead, so the toolbar's existing "Refused" chip fires. Explicit
+    /// outcomes (`Cancelled`, `MaxTokens`, …) are never overridden.
+    pending_refusal: bool,
     last_turn: Option<TurnSummary>,
     // Queue steering (Kiro 2.7.0+; ROADMAP K1a). Set on a -32601 from
     // `_session/steer` and remembered for the session; reset on a new session.
@@ -56,6 +62,7 @@ impl SessionController {
             session_cost: SessionCost::new(),
             pending_tokens: None,
             pending_metering: None,
+            pending_refusal: false,
             last_turn: None,
             steering_unsupported: false,
             kas_hooks: Vec::new(),
@@ -202,6 +209,7 @@ impl SessionController {
                 metering,
                 tokens,
                 duration_ms,
+                refusal,
                 // `effort` is display-only; tracked in UiState for the toolbar,
                 // not in session command-context. Intentionally ignored here.
                 ..
@@ -223,6 +231,10 @@ impl SessionController {
                     *duration_ms,
                 );
                 self.pending_tokens = tokens.clone();
+                // Sticky within the turn: any refusal-bearing frame marks the
+                // turn refused; later refusal-free frames must not clear it
+                // (|=, not =). Taken at TurnCompleted (cyril-h8zb).
+                self.pending_refusal |= refusal.is_some();
                 true
             }
             Notification::ConfigOptionsUpdated(options) => {
@@ -246,8 +258,13 @@ impl SessionController {
                 true
             }
             Notification::TurnCompleted { stop_reason } => {
+                // Reconcile (cyril-h8zb): metadata refusal + ambiguous ACP
+                // EndTurn => the turn was refused. std::mem::take resets the
+                // flag so it can't leak into the next turn.
+                let refused = std::mem::take(&mut self.pending_refusal);
+                let stop_reason = stop_reason.reconcile_refusal(refused);
                 self.last_turn = Some(TurnSummary::new(
-                    *stop_reason,
+                    stop_reason,
                     self.pending_tokens.take(),
                     self.pending_metering.take(),
                 ));
@@ -278,6 +295,7 @@ impl SessionController {
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
+                self.pending_refusal = false;
                 self.steering_unsupported = false;
                 self.status = SessionStatus::Active;
                 true
@@ -324,6 +342,7 @@ impl SessionController {
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
+                self.pending_refusal = false;
                 // A dead connection has no live context — clear it so a consumer
                 // doesn't read a stale value as current (mirrors UiState).
                 self.context_usage = None;
@@ -450,6 +469,7 @@ mod tests {
     fn metadata_updated_stores_context_usage() {
         let mut ctrl = SessionController::new();
         let changed = ctrl.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(75.0)),
             metering: None,
             tokens: None,
@@ -489,6 +509,7 @@ mod tests {
 
         // Turn 1: MetadataUpdated + TurnCompleted
         ctrl.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(5.0)),
             metering: Some(TurnMetering::new(Some(0.018), Some(1948))),
             tokens: None,
@@ -502,6 +523,7 @@ mod tests {
 
         // Turn 2: MetadataUpdated + TurnCompleted
         ctrl.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(6.0)),
             metering: Some(TurnMetering::new(Some(0.042), Some(5200))),
             tokens: None,
@@ -553,6 +575,7 @@ mod tests {
         ctrl.set_status(SessionStatus::Busy);
 
         ctrl.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(50.0)),
             metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
@@ -581,6 +604,7 @@ mod tests {
     fn turn_summary_cleared_on_new_session() {
         let mut ctrl = SessionController::new();
         ctrl.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(Some(0.01), None)),
             tokens: None,
@@ -603,6 +627,107 @@ mod tests {
         assert!(
             ctrl.last_turn().is_none(),
             "TurnSummary cleared on new session"
+        );
+    }
+
+    /// Metadata frame carrying only a refusal alert (cyril-h8zb fences).
+    fn refusal_frame() -> Notification {
+        Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Unchanged,
+            session_id: None,
+            refusal: Some(crate::types::RefusalAlert::from_parts(
+                None,
+                Some("blocked".to_string()),
+                None,
+            )),
+        }
+    }
+
+    #[test]
+    fn refusal_metadata_reconciles_end_turn_only() {
+        // Design claim #9 (cyril-h8zb): refusal + ambiguous EndTurn => the
+        // summary reads Refusal; an explicit Cancelled is NEVER overridden
+        // (kills a blanket override); Refusal stays Refusal (idempotent).
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&refusal_frame());
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            ctrl.last_turn().expect("summary").stop_reason(),
+            StopReason::Refusal,
+            "refusal metadata + EndTurn must reconcile to Refusal"
+        );
+
+        ctrl.apply_notification(&refusal_frame());
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::Cancelled,
+        });
+        assert_eq!(
+            ctrl.last_turn().expect("summary").stop_reason(),
+            StopReason::Cancelled,
+            "an explicit user cancel is not a refusal"
+        );
+
+        ctrl.apply_notification(&refusal_frame());
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::Refusal,
+        });
+        assert_eq!(
+            ctrl.last_turn().expect("summary").stop_reason(),
+            StopReason::Refusal
+        );
+    }
+
+    #[test]
+    fn refusal_flag_does_not_leak_into_next_turn() {
+        // Design claim #9 (cyril-h8zb): the buffered flag is taken at
+        // TurnCompleted — a clean turn after a refused one must read EndTurn
+        // (kills read-without-reset).
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&refusal_frame());
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            ctrl.last_turn().expect("summary").stop_reason(),
+            StopReason::Refusal
+        );
+
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            ctrl.last_turn().expect("summary").stop_reason(),
+            StopReason::EndTurn,
+            "flag must not survive the turn boundary"
+        );
+    }
+
+    #[test]
+    fn refusal_flag_cleared_on_session_lifecycle() {
+        // Same hygiene as pending_tokens/pending_metering: a refusal buffered
+        // mid-turn must not mislabel the next session's first turn.
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&refusal_frame());
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("s2"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            ctrl.last_turn().expect("summary").stop_reason(),
+            StopReason::EndTurn,
+            "session swap must clear the buffered refusal"
         );
     }
 
@@ -643,6 +768,7 @@ mod tests {
 
         // Turn 1
         ctrl.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(Some(0.01), None)),
             tokens: Some(TokenCounts::new(100, 50, None)),
@@ -660,6 +786,7 @@ mod tests {
 
         // Turn 2
         ctrl.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(20.0)),
             metering: Some(TurnMetering::new(Some(0.05), Some(5000))),
             tokens: Some(TokenCounts::new(800, 400, Some(200))),
@@ -767,6 +894,7 @@ mod tests {
     fn session_created_resets_cost() {
         let mut ctrl = SessionController::new();
         ctrl.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
             metering: Some(TurnMetering::new(Some(0.05), Some(2000))),
             tokens: None,
@@ -797,6 +925,7 @@ mod tests {
         // the new session, so a prior session's value must not linger.
         let mut ctrl = SessionController::new();
         ctrl.apply_notification(&Notification::MetadataUpdated {
+            refusal: None,
             context_usage: Some(ContextUsage::new(75.0)),
             metering: None,
             tokens: None,

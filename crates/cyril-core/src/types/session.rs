@@ -547,6 +547,53 @@ impl TokenCounts {
     }
 }
 
+/// Model-refusal alert carried by a `MetadataUpdated` frame (Kiro 2.12.1+,
+/// cyril-h8zb). Constructed when the frame carries a `refusal` object or a
+/// `stopReason` of `"CONTENT_FILTERED"` — Kiro's own consumer alerts on
+/// either signal (carved 2.15.0 tui.js handler; wire keys are provisional
+/// until the first live refusal capture, cyril-pz51).
+///
+/// Every field is optional on the wire, and none is ever `Some("")` here:
+/// `from_parts` normalizes empty strings to `None` (the wire's "not
+/// provided"), so the render layer's explanation-vs-fallback choice keys
+/// off `is_some()` alone.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RefusalAlert {
+    category: Option<String>,
+    explanation: Option<String>,
+    recommended_model: Option<String>,
+}
+
+impl RefusalAlert {
+    /// Build an alert from raw wire strings, dropping empty values.
+    pub fn from_parts(
+        category: Option<String>,
+        explanation: Option<String>,
+        recommended_model: Option<String>,
+    ) -> Self {
+        let normalize = |s: Option<String>| s.filter(|v| !v.is_empty());
+        Self {
+            category: normalize(category),
+            explanation: normalize(explanation),
+            recommended_model: normalize(recommended_model),
+        }
+    }
+
+    /// Backend refusal category (e.g. a content-policy class). Carried for
+    /// logging; never rendered (Kiro's own TUI doesn't display it either).
+    pub fn category(&self) -> Option<&str> {
+        self.category.as_deref()
+    }
+
+    pub fn explanation(&self) -> Option<&str> {
+        self.explanation.as_deref()
+    }
+
+    pub fn recommended_model(&self) -> Option<&str> {
+        self.recommended_model.as_deref()
+    }
+}
+
 /// Reason the agent stopped processing a prompt turn.
 ///
 /// We define our own enum rather than reusing `acp::StopReason` so that
@@ -562,6 +609,23 @@ pub enum StopReason {
     Cancelled,
 }
 
+impl StopReason {
+    /// Reconcile the ACP-reported stop reason with the turn's refusal
+    /// metadata (cyril-h8zb): a refusal-bearing turn that ACP labeled with
+    /// the ambiguous `EndTurn` was in fact refused. Explicit outcomes
+    /// (`Cancelled`, `MaxTokens`, …) always win, and `Refusal` is
+    /// idempotent. Defined once here so the twin turn summaries
+    /// (`SessionController` and `UiState`) cannot drift.
+    #[must_use]
+    pub fn reconcile_refusal(self, refused: bool) -> Self {
+        if refused && self == Self::EndTurn {
+            Self::Refusal
+        } else {
+            self
+        }
+    }
+}
+
 /// Atomic summary of a completed turn.
 ///
 /// Assembled by `SessionController` when `TurnCompleted` arrives: the
@@ -569,10 +633,6 @@ pub enum StopReason {
 /// and `metering` were buffered from the preceding `MetadataUpdated`
 /// notification. Grouping them prevents the renderer from ever seeing
 /// token counts from turn N paired with a stop reason from turn N-1.
-///
-/// NOTE: `stop_reason` is not yet extracted from the `session/prompt` response.
-/// The bridge currently hardcodes `StopReason::EndTurn` for all outcomes.
-/// Task #2 in the protocol parity backlog will wire the real value.
 #[derive(Debug, Clone)]
 pub struct TurnSummary {
     stop_reason: StopReason,
@@ -631,6 +691,70 @@ mod tests {
         let id = SessionId::new("sess_1");
         map.insert(id.clone(), 42);
         assert_eq!(map.get(&SessionId::new("sess_1")), Some(&42));
+    }
+
+    #[test]
+    fn stop_reason_reconcile_refusal_end_turn_only() {
+        // The single definition both turn summaries share: only the
+        // ambiguous EndTurn flips; explicit outcomes and the no-refusal
+        // path are identity.
+        assert_eq!(
+            StopReason::EndTurn.reconcile_refusal(true),
+            StopReason::Refusal
+        );
+        assert_eq!(
+            StopReason::EndTurn.reconcile_refusal(false),
+            StopReason::EndTurn
+        );
+        assert_eq!(
+            StopReason::Cancelled.reconcile_refusal(true),
+            StopReason::Cancelled
+        );
+        assert_eq!(
+            StopReason::MaxTokens.reconcile_refusal(true),
+            StopReason::MaxTokens
+        );
+        assert_eq!(
+            StopReason::Refusal.reconcile_refusal(true),
+            StopReason::Refusal
+        );
+    }
+
+    #[test]
+    fn refusal_alert_from_parts_preserves_nonempty_fields() {
+        let alert = RefusalAlert::from_parts(
+            Some("unsafe".to_string()),
+            Some("blocked by policy".to_string()),
+            Some("claude-opus".to_string()),
+        );
+        assert_eq!(alert.category(), Some("unsafe"));
+        assert_eq!(alert.explanation(), Some("blocked by policy"));
+        assert_eq!(alert.recommended_model(), Some("claude-opus"));
+    }
+
+    #[test]
+    fn refusal_alert_from_parts_normalizes_empty_strings_to_none() {
+        // Stress fixture (plan slice 1): a `Some("")` surviving construction
+        // would later select the wrong explanation-vs-fallback branch. Empty
+        // string is the wire's "not provided" — it must become `None`.
+        let alert = RefusalAlert::from_parts(
+            Some(String::new()),
+            Some("x".to_string()),
+            Some(String::new()),
+        );
+        assert_eq!(alert.category(), None);
+        assert_eq!(alert.explanation(), Some("x"));
+        assert_eq!(alert.recommended_model(), None);
+    }
+
+    #[test]
+    fn refusal_alert_all_absent_is_representable() {
+        // The bare-CONTENT_FILTERED wire shape carries no refusal object at
+        // all; the alert still exists with every field absent.
+        let alert = RefusalAlert::from_parts(None, None, None);
+        assert_eq!(alert.category(), None);
+        assert_eq!(alert.explanation(), None);
+        assert_eq!(alert.recommended_model(), None);
     }
 
     #[test]

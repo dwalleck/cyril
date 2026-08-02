@@ -460,9 +460,10 @@ pub(crate) fn to_ext_notification(
             // credits figure is what the toolbar shows), turnDurationMs,
             // effort, and the legacy inputTokens/outputTokens/cachedTokens
             // (unconfirmed-on-wire on the v2 path; those names are the KAS
-            // normalizer's legacy fallbacks — kept, not trusted). Explicitly
-            // ignored here (belong to cyril-h8zb): refusal
-            // {category, explanation, recommendedModel} and stopReason. Any
+            // normalizer's legacy fallbacks — kept, not trusted). refusal
+            // {category, explanation, recommendedModel} and stopReason are
+            // parsed into the RefusalAlert below (cyril-h8zb) and stay in
+            // this known-key list so the unknown-key log stays quiet. Any
             // OTHER top-level key is a backend addition — logged at debug so
             // a field lands visibly with zero binary change (the metering
             // fields and the 2.12.1 refusal object both arrived this way).
@@ -489,6 +490,71 @@ pub(crate) fn to_ext_notification(
                 }
             }
 
+            // Model-refusal alert (Kiro 2.12.1+, cyril-h8zb). Kiro's own
+            // consumer alerts on `refusal || stopReason === "CONTENT_FILTERED"`
+            // — an OR: a bare CONTENT_FILTERED stopReason with no refusal
+            // object still alerts (fallback text downstream). "refusal" is
+            // also tolerated per the issue's 2.12.3 addendum (a first-class
+            // stopReason zod literal there; unambiguous if it ever reaches a
+            // v2 metadata frame). Literals are exact (case-sensitive); wire
+            // keys are provisional until the first live refusal capture
+            // (cyril-pz51). JSON `null` for the object or a subfield means
+            // "not provided" (Kiro's own `r?.field` / `?? fallback` chain
+            // treats null and undefined identically), so null is absent,
+            // not corrupt.
+            let content_filtered = match params.get("stopReason") {
+                None => false,
+                Some(v) if v.is_null() => false,
+                Some(v) => match v.as_str() {
+                    Some(s) => s == "CONTENT_FILTERED" || s == "refusal",
+                    None => {
+                        tracing::warn!(
+                            value = ?v,
+                            "kiro.dev/metadata `stopReason` present but not a string, ignoring"
+                        );
+                        false
+                    }
+                },
+            };
+            let bare_alert = || RefusalAlert::from_parts(None, None, None);
+            let refusal = match params.get("refusal") {
+                None => content_filtered.then(bare_alert),
+                Some(v) if v.is_null() => content_filtered.then(bare_alert),
+                Some(v) => match v.as_object() {
+                    Some(map) => {
+                        let str_field = |key: &str| match map.get(key) {
+                            None => None,
+                            Some(f) if f.is_null() => None,
+                            Some(f) => match f.as_str() {
+                                Some(s) => Some(s.to_string()),
+                                None => {
+                                    tracing::warn!(
+                                        key,
+                                        value = ?f,
+                                        "kiro.dev/metadata `refusal` subfield not a string, ignoring"
+                                    );
+                                    None
+                                }
+                            },
+                        };
+                        Some(RefusalAlert::from_parts(
+                            str_field("category"),
+                            str_field("explanation"),
+                            str_field("recommendedModel"),
+                        ))
+                    }
+                    None => {
+                        // Corrupt object: the alert-worthiness of the frame
+                        // still stands if stopReason independently says so.
+                        tracing::warn!(
+                            value = ?v,
+                            "kiro.dev/metadata `refusal` present but not an object, ignoring"
+                        );
+                        content_filtered.then(bare_alert)
+                    }
+                },
+            };
+
             Ok(Some(Notification::MetadataUpdated {
                 context_usage,
                 metering,
@@ -496,6 +562,7 @@ pub(crate) fn to_ext_notification(
                 tokens,
                 effort,
                 session_id,
+                refusal,
             }))
         }
         "kiro.dev/compaction/status" => {

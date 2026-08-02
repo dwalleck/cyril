@@ -108,6 +108,7 @@ fn context_usage_flows_to_both() {
     let mut session = SessionController::new();
 
     let notification = Notification::MetadataUpdated {
+        refusal: None,
         context_usage: Some(ContextUsage::new(85.0)),
         metering: None,
         tokens: None,
