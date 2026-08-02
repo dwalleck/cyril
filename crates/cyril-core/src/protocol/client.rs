@@ -46,10 +46,6 @@ pub(crate) struct KiroClient {
     /// (cyril-3lh8); the registry stays the sole owner of process lifecycle.
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
-    /// Immutable KAS host-shell snapshot shared with the terminal registry.
-    /// `None` is the real v2 absence.
-    #[cfg(feature = "kas")]
-    host_shell: Option<std::rc::Rc<crate::protocol::kas::host_shell::HostShell>>,
     /// KAS-7 (cyril-jiyn): the hook registry serving `_kiro/hooks/*`, loaded
     /// once at construction from the workspace + global `.kiro/hooks` when the
     /// bound engine's hooks mode is `Host`. Empty otherwise (Kas mode runs
@@ -92,8 +88,6 @@ impl KiroClient {
             };
             std::rc::Rc::new(registry)
         };
-        #[cfg(feature = "kas")]
-        let host_shell = host_shell.map(std::rc::Rc::new);
         Self {
             notification_tx,
             permission_tx,
@@ -101,10 +95,8 @@ impl KiroClient {
             engine,
             #[cfg(feature = "kas")]
             terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
-                host_shell.clone(),
+                host_shell.map(std::rc::Rc::new),
             )),
-            #[cfg(feature = "kas")]
-            host_shell,
             #[cfg(feature = "kas")]
             hooks,
             #[cfg(feature = "kas")]
@@ -440,10 +432,7 @@ impl KiroClient {
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
-            let shell = self.host_shell.as_ref().ok_or_else(|| {
-                acp::Error::new(-32603, "KAS terminal callback has no resolved host shell")
-            })?;
-            return crate::protocol::kas::terminal_io::respond_shell_type(shell);
+            return self.terminals.respond_shell_type();
         }
         if args.method.as_ref() == crate::protocol::kas::hooks::LIST_METHOD {
             let params = parse_ext_params(&args);

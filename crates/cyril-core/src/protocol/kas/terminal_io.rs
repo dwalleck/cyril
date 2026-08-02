@@ -160,9 +160,7 @@ impl TerminalRegistry {
                 "terminal command must not be empty",
             ));
         }
-        let shell = self.shell.as_deref().ok_or_else(|| {
-            acp::Error::new(-32603, "KAS terminal callback has no resolved host shell")
-        })?;
+        let shell = self.shell.as_deref().ok_or_else(no_host_shell)?;
         let plan = shell.command(&req.command, &req.args);
         let cwd = match &req.cwd {
             // Reuse the fs host-io contract: absolute-or-`-32602`, then translate
@@ -207,6 +205,12 @@ impl TerminalRegistry {
         #[cfg(unix)]
         cmd.process_group(0);
         let child = cmd.spawn().map_err(|e| spawn_err(plan.program, e))?;
+        // `cmd` still holds the parent-side pipe-writer fds (`Command` keeps
+        // Stdio values alive inside itself): the drain below reaches EOF only
+        // once every writer is closed, so drop `cmd` NOW rather than relying on
+        // scope-end. An early return or lifetime extension between spawn and
+        // drop would wedge the blocking reader and hang every later `wait`.
+        drop(cmd);
         let output_task = tokio::task::spawn_blocking(move || {
             let mut reader = output_reader;
             let mut output = Vec::new();
@@ -231,6 +235,14 @@ impl TerminalRegistry {
             },
         );
         Ok(acp::CreateTerminalResponse::new(id))
+    }
+
+    /// Answer `_kiro/terminal/shell_type` from the same immutable shell
+    /// snapshot `create` executes through — the registry is the sole owner,
+    /// so responder/executor agreement is structural.
+    pub(crate) fn respond_shell_type(&self) -> acp::Result<acp::ExtResponse> {
+        let shell = self.shell.as_deref().ok_or_else(no_host_shell)?;
+        super::json_ext_response(&serde_json::json!({ "shellType": shell.wire_name() }))
     }
 
     /// Answer `terminal/wait_for_exit`: await the command's exit and return its
@@ -516,12 +528,10 @@ async fn terminate_process_tree(
 /// `kiro/...` form — same convention as [`super::auth::GET_ACCESS_TOKEN_METHOD`].
 pub(crate) const SHELL_TYPE_METHOD: &str = "kiro/terminal/shell_type";
 
-/// Answer `_kiro/terminal/shell_type` from the same immutable shell snapshot
-/// used for terminal execution.
-pub(crate) fn respond_shell_type(
-    shell: &super::host_shell::HostShell,
-) -> acp::Result<acp::ExtResponse> {
-    super::json_ext_response(&serde_json::json!({ "shellType": shell.wire_name() }))
+/// The single refusal for any KAS terminal callback arriving without a
+/// startup-resolved shell — one owner (the registry), one message.
+fn no_host_shell() -> acp::Error {
+    acp::Error::new(-32603, "KAS terminal callback has no resolved host shell")
 }
 
 /// Lossily decode the chronological shared-pipe bytes (ACP `output` is a
@@ -1094,9 +1104,19 @@ mod tests {
 
     #[test]
     fn shell_type_reply_uses_the_resolved_normalized_family() {
-        let shell = super::super::host_shell::HostShell::test_posix();
-        let resp = respond_shell_type(&shell).unwrap();
+        let resp = test_registry().respond_shell_type().unwrap();
         assert_eq!(resp.0.get(), r#"{"shellType":"posix"}"#);
+    }
+
+    #[test]
+    fn shell_type_refuses_without_a_resolved_shell() {
+        let err = TerminalRegistry::new(None)
+            .respond_shell_type()
+            .expect_err("no snapshot must refuse");
+        assert_eq!(
+            err.message,
+            "KAS terminal callback has no resolved host shell"
+        );
     }
 
     fn release_req(id: &acp::TerminalId) -> acp::ReleaseTerminalRequest {

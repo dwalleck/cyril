@@ -339,22 +339,31 @@ fn resolve_windows(
             host.is_runnable(&candidate).then_some(candidate)
         })
     };
-    let windows_powershell = || {
+    let powershell_executable = || {
+        find_on_path(OsStr::new("powershell.exe"), host).or_else(|| {
+            let candidate = PathBuf::from(host.var_os("WINDIR")?)
+                .join("System32")
+                .join("WindowsPowerShell")
+                .join("v1.0")
+                .join("powershell.exe");
+            host.is_runnable(&candidate).then_some(candidate)
+        })
+    };
+    let auto_windows_powershell = || {
+        // `PSModulePath` is the AUTO-detection availability signal only; an
+        // explicit `powershell` choice needs nothing beyond a runnable
+        // executable (spec: "native Windows accepts runnable pwsh or
+        // powershell").
         host.var_os("PSModulePath").filter(|v| !v.is_empty())?;
-        let candidate = PathBuf::from(host.var_os("WINDIR")?)
-            .join("System32")
-            .join("WindowsPowerShell")
-            .join("v1.0")
-            .join("powershell.exe");
-        host.is_runnable(&candidate).then_some(candidate)
+        powershell_executable()
     };
 
     let resolved = match configured {
         "auto" => pwsh()
             .map(|path| (ShellKind::Pwsh, path))
-            .or_else(|| windows_powershell().map(|path| (ShellKind::WindowsPowerShell, path))),
+            .or_else(|| auto_windows_powershell().map(|path| (ShellKind::WindowsPowerShell, path))),
         "pwsh" => pwsh().map(|path| (ShellKind::Pwsh, path)),
-        "powershell" => windows_powershell().map(|path| (ShellKind::WindowsPowerShell, path)),
+        "powershell" => powershell_executable().map(|path| (ShellKind::WindowsPowerShell, path)),
         other => {
             return Err(HostShellError::Unsupported {
                 configured: other.to_string(),
@@ -648,6 +657,40 @@ mod tests {
             &windows_ps,
             ShellKind::WindowsPowerShell,
             "/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+        );
+
+        // Explicit `powershell` needs only a runnable executable — no
+        // PSModulePath signal (that gate is auto-only) — found on PATH first,
+        // then at the WINDIR standard location.
+        let explicit_ps_path = FakeHost::default()
+            .path(&["/path"])
+            .var("WINDIR", "/Windows")
+            .runnable("/path/powershell.exe")
+            .runnable("/Windows/System32/WindowsPowerShell/v1.0/powershell.exe");
+        assert_shell(
+            HostPlatform::Windows,
+            Some("powershell"),
+            &explicit_ps_path,
+            ShellKind::WindowsPowerShell,
+            "/path/powershell.exe",
+        );
+        let explicit_ps_windir = FakeHost::default()
+            .var("WINDIR", "/Windows")
+            .runnable("/Windows/System32/WindowsPowerShell/v1.0/powershell.exe");
+        assert_shell(
+            HostPlatform::Windows,
+            Some("powershell"),
+            &explicit_ps_windir,
+            ShellKind::WindowsPowerShell,
+            "/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+        );
+        assert_eq!(
+            error_message(resolve_for(
+                HostPlatform::Windows,
+                Some("powershell"),
+                &FakeHost::default().var("PSModulePath", "signaled"),
+            )),
+            "configured host shell `powershell` is not runnable on Windows"
         );
 
         for host in [
