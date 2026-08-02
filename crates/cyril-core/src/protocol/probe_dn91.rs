@@ -12,7 +12,7 @@ use agent_client_protocol::{self as acp, Client as _};
 use tokio::sync::mpsc;
 
 use crate::protocol::client::{KiroClient, test_host_shell};
-use crate::protocol::engine::{Engine as _, V2Engine};
+use crate::protocol::engine::V2Engine;
 use crate::types::AgentEngine;
 
 #[derive(Debug, PartialEq)]
@@ -68,7 +68,7 @@ async fn v2_bound_client_answers_auth_fs_hooks_but_advertises_nothing() {
     let client = v2_client_in_kas_build(dir.path());
 
     // Advertisement side: V2 advertises NO capabilities at all.
-    let caps = crate::protocol::engine::Engine::client_capabilities(&V2Engine);
+    let caps = crate::protocol::engine::client_capabilities(&V2Engine);
     assert!(!caps.fs.read_text_file && !caps.fs.write_text_file && !caps.terminal);
     assert!(caps.meta.is_none(), "V2 advertises no _meta.kiro");
 
@@ -161,14 +161,14 @@ fn advertisement_is_fully_determined_by_presence_direction_extras() {
     use crate::types::kas_hooks::KasHooksMode;
 
     let caps_json = |mode: KasHooksMode| {
-        serde_json::to_value(
-            crate::protocol::engine::KasEngine { hooks_mode: mode }.client_capabilities(),
-        )
+        serde_json::to_value(crate::protocol::engine::client_capabilities(
+            &crate::protocol::engine::KasEngine { hooks_mode: mode },
+        ))
         .unwrap()
     };
 
     // V2: presence all-absent, no extras → the empty capability object.
-    let v2 = serde_json::to_value(V2Engine.client_capabilities()).unwrap();
+    let v2 = serde_json::to_value(crate::protocol::engine::client_capabilities(&V2Engine)).unwrap();
     assert_eq!(
         v2,
         serde_json::to_value(acp::ClientCapabilities::new()).unwrap(),

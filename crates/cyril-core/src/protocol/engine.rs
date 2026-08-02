@@ -8,10 +8,11 @@
 //! `V2Engine` (a behavior-identical port of today's `convert::` calls); KAS-1
 //! adds `KasEngine` behind the `kas` cargo feature (ADR-0002) for the
 //! free-path direct spawn.
-//! Optional capability sub-traits (`AuthResponder`≈KAS-1 Part B, `HostIo`≈KAS-5,
-//! …), queried through defaulted `as_*` accessors, land **with their first
-//! consumer** — a consumer-less stub would be dead code under the workspace's
-//! `-D warnings`.
+//! Host-callback availability is declared by the engine's **capability
+//! adapter set** ([`Adapters`], ADR-0001 amendment, cyril-dn91): dispatch
+//! consults it, and inbound advertisement is derived from it by the
+//! [`client_capabilities`] free function — engines cannot hand-write (and
+//! therefore cannot desynchronize) their advertised capability set.
 
 use std::collections::HashMap;
 
@@ -20,19 +21,138 @@ use agent_client_protocol as acp;
 use crate::protocol::convert;
 use crate::types::{AgentEngine, Notification};
 
+/// The bound engine's capability-adapter set (ADR-0001 amendment): which
+/// host-callback families this engine installs. `KiroClient` dispatch consults
+/// it — a family with no adapter is refused with JSON-RPC method-not-found,
+/// never the protocol-default null — and [`client_capabilities`] derives the
+/// inbound advertisement from the same datum.
+///
+/// The presence fields exist only under the `kas` cargo feature (the
+/// `InternalChannels` cfg-field precedent): a default build **cannot
+/// construct** presence, making ADR-0002's "default build links no KAS code"
+/// a type-system fact rather than a convention.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Adapters {
+    // The `auth` family field (Option<AuthAdapter>) lands with its consumer,
+    // the auth dispatch gate — an unread field is dead code under -D warnings.
+    /// Bare-ACP typed fs/terminal callbacks, the `_kiro/fs/*` dialect, and
+    /// `_kiro/terminal/shell_type`.
+    #[cfg(feature = "kas")]
+    pub(crate) host_io: Option<HostIoAdapter>,
+    /// Per-direction hooks (ADR-0010) — the one family where cyril is both
+    /// server and client of the same method names.
+    pub(crate) hooks: HooksAdapter,
+}
+
+impl Adapters {
+    /// The all-absent set — the only value a default (non-kas) build can
+    /// construct, and `V2Engine`'s answer.
+    pub(crate) const NONE: Self = Self {
+        #[cfg(feature = "kas")]
+        host_io: None,
+        hooks: HooksAdapter::None,
+    };
+}
+
+/// Marker: the engine delegates file I/O and shell execution to cyril's
+/// host-io/terminal responders.
+#[cfg(feature = "kas")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct HostIoAdapter;
+
+/// Which side of the bidirectional `_kiro/hooks/*` surface cyril occupies
+/// (CONTEXT.md "Hook generation"; ADR-0010). Not a bool pair: `Outbound`
+/// advertises `{enabled, v2}` with NO inbound serving, and must not be
+/// reconciled by an empty inbound registry (the sentinel the no-sentinel rule
+/// forbids).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum HooksAdapter {
+    /// No hooks capability (v2; KAS with `kas_hooks = "off"`).
+    None,
+    /// cyril serves `list`/`executeHook`/`sessionStart` host-side
+    /// (`kas_hooks = "host"`).
+    #[cfg(feature = "kas")]
+    Inbound,
+    /// The agent runs its own registry; cyril only advertises
+    /// (`kas_hooks = "kas"`).
+    #[cfg(feature = "kas")]
+    Outbound,
+}
+
+/// Derive the handshake capability set from the engine's adapters — the ONLY
+/// constructor of inbound advertisement (ADR-0001 amendment). Presence comes
+/// from [`Engine::adapters`]; engines contribute only the opaque
+/// `_meta.kiro.settings` extra, nested under a fixed key so it cannot collide
+/// with presence-derived keys.
+pub(crate) fn client_capabilities(engine: &dyn Engine) -> acp::ClientCapabilities {
+    let adapters = engine.adapters();
+    let mut caps = acp::ClientCapabilities::new();
+
+    #[cfg(feature = "kas")]
+    if adapters.host_io.is_some() {
+        // cyril-kf2g: the `_kiro/fs/*` dialect gate is `fs._meta.kiro`, NOT
+        // top-level `_meta.kiro`; the flags derive from `kiro_fs::FS_OPS`.
+        caps = caps
+            .fs(acp::FileSystemCapabilities::default()
+                .read_text_file(true)
+                .write_text_file(true)
+                .meta(super::kas::kiro_fs::capabilities_meta()))
+            .terminal(true);
+    }
+
+    let mut kiro = serde_json::Map::new();
+    if let Some(settings) = engine.settings_extra() {
+        kiro.insert("settings".to_string(), settings);
+    }
+    match adapters.hooks {
+        HooksAdapter::None => {}
+        #[cfg(feature = "kas")]
+        HooksAdapter::Inbound => {
+            kiro.insert("hooks".to_string(), serde_json::json!({ "enabled": true }));
+        }
+        #[cfg(feature = "kas")]
+        HooksAdapter::Outbound => {
+            kiro.insert(
+                "hooks".to_string(),
+                serde_json::json!({ "enabled": true, "v2": true }),
+            );
+        }
+    }
+    if !kiro.is_empty() {
+        let mut meta = acp::Meta::new();
+        meta.insert("kiro".to_string(), serde_json::Value::Object(kiro));
+        caps = caps.meta(meta);
+    }
+    caps
+}
+
 /// A Kiro agent engine — **v2** (Rust, `kiro.dev/*` dialect) or **KAS**
 /// (`_kiro/*`). The core surface is small (ADR-0001): convert the two wire
-/// notification dialects and declare capabilities. Optional capability
-/// sub-traits arrive as defaulted `as_*` accessors with their first consumer
-/// (KAS-1, cyril-evwh) — not stubbed empty in KAS-0.
+/// notification dialects and declare the capability-adapter set
+/// ([`Adapters`]) from which advertisement is derived. (The original ADR's
+/// `as_*` capability accessors were withdrawn by its 2026-07-30 amendment —
+/// the adapter set replaces them.)
 pub(crate) trait Engine {
     /// Which [`AgentEngine`] this impl embodies — the bound identity the
     /// handshake fingerprint verifies the wire against (cyril-6iek,
     /// `protocol::fingerprint`).
     fn kind(&self) -> AgentEngine;
 
-    /// Client capabilities advertised at the ACP `initialize` handshake.
-    fn client_capabilities(&self) -> acp::ClientCapabilities;
+    /// The capability-adapter set this engine installs (ADR-0001 amendment,
+    /// cyril-dn91). Dispatch consults it; [`client_capabilities`] derives the
+    /// handshake advertisement from it. Deliberately no default: an engine
+    /// that inherits the wrong set either refuses live callbacks (missing
+    /// adapter) or answers surfaces it cannot back (phantom adapter). Each
+    /// engine answers explicitly.
+    fn adapters(&self) -> Adapters;
+
+    /// The opaque `_meta.kiro.settings` object attached to the handshake
+    /// advertisement, if any. Content-only: presence keys are derived from
+    /// [`Engine::adapters`] and cannot be smuggled here (the extra nests under
+    /// a fixed `settings` key).
+    fn settings_extra(&self) -> Option<serde_json::Value> {
+        None
+    }
 
     /// The decided hooks host mode (cyril-jiyn, KAS-7). Only `Host` makes the
     /// client load and serve a hook registry; v2 never has `_meta.kiro`
@@ -87,8 +207,11 @@ impl Engine for V2Engine {
         AgentEngine::V2
     }
 
-    fn client_capabilities(&self) -> acp::ClientCapabilities {
-        acp::ClientCapabilities::new()
+    /// v2 installs no capability adapters: it keeps the standard permission
+    /// path and never sends host callbacks (client.rs:23-24), so a kas-feature
+    /// build bound to v2 refuses them (cyril-dn91).
+    fn adapters(&self) -> Adapters {
+        Adapters::NONE
     }
 
     /// v2's sole terminal is the prompt response — no wire `turn_end`
@@ -154,24 +277,28 @@ impl Engine for KasEngine {
         true
     }
 
-    fn client_capabilities(&self) -> acp::ClientCapabilities {
-        // KAS-5a (cyril-7bdu): advertise fs read+write; KAS-5b (cyril-ufie):
-        // advertise terminal — so KAS routes file I/O and shell execution back to
-        // cyril's host-io/terminal responders. v2 stays empty (V2Engine).
-        // cyril-nhzw: attach `_meta.kiro.settings` (AgentSettings marshaled from the
-        // user's kiro-cli cli.json) so KAS honors the same feature flags v2 would.
-        // cyril-kf2g: `fs._meta.kiro` selects the `_kiro/fs/*` superset dialect —
-        // paginated reads plus stat/read_directory/delete, which have no bare-ACP
-        // equivalent and otherwise never reach cyril at all. The bare read/write
-        // flags stay advertised: they are the fallback if a future KAS drops a
-        // Kiro flag, and dropping them would strand those ops in-process.
-        acp::ClientCapabilities::new()
-            .fs(acp::FileSystemCapabilities::default()
-                .read_text_file(true)
-                .write_text_file(true)
-                .meta(super::kas::kiro_fs::capabilities_meta()))
-            .terminal(true)
-            .meta(super::kas::settings::kiro_client_meta(self.hooks_mode))
+    /// KAS installs auth (KAS-1, cyril-evwh) and host I/O (KAS-5a/5b,
+    /// cyril-7bdu/cyril-ufie) — delegating file I/O and shell execution to
+    /// cyril's responders — plus the hooks direction its `hooks_mode` decides
+    /// (cyril-jiyn, ADR-0010). The bare-ACP fs read/write flags this derives
+    /// stay advertised alongside the `_kiro/fs/*` dialect: they are the
+    /// fallback if a future KAS drops a Kiro flag (cyril-kf2g).
+    fn adapters(&self) -> Adapters {
+        use crate::types::kas_hooks::KasHooksMode;
+        Adapters {
+            host_io: Some(HostIoAdapter),
+            hooks: match self.hooks_mode {
+                KasHooksMode::Off => HooksAdapter::None,
+                KasHooksMode::Host => HooksAdapter::Inbound,
+                KasHooksMode::Kas => HooksAdapter::Outbound,
+            },
+        }
+    }
+
+    /// cyril-nhzw: `_meta.kiro.settings` (AgentSettings marshaled from the
+    /// user's kiro-cli cli.json) so KAS honors the same feature flags v2 would.
+    fn settings_extra(&self) -> Option<serde_json::Value> {
+        Some(super::kas::settings::settings_extra_value())
     }
 
     fn convert_session_update(
@@ -225,12 +352,43 @@ mod tests {
         );
     }
 
+    // cyril-dn91 slice 1 stress fixture: the mode→direction mapping matrix.
+    // All three cells asserted — the swapped-arms bug (Host↔Kas) type-checks
+    // fine — plus the V2 cell exercised under `--features kas` (the dn91 trap:
+    // a cfg-keyed implementation would give V2 adapters here).
+    #[cfg(feature = "kas")]
+    #[test]
+    fn adapters_mapping_matrix() {
+        use crate::types::kas_hooks::KasHooksMode;
+
+        assert_eq!(
+            V2Engine.adapters(),
+            Adapters::NONE,
+            "V2 installs no adapters even in a kas build"
+        );
+        let hooks_of = |mode| KasEngine { hooks_mode: mode }.adapters().hooks;
+        assert_eq!(hooks_of(KasHooksMode::Off), HooksAdapter::None);
+        assert_eq!(hooks_of(KasHooksMode::Host), HooksAdapter::Inbound);
+        assert_eq!(hooks_of(KasHooksMode::Kas), HooksAdapter::Outbound);
+        assert!(
+            KasEngine::default().adapters().host_io.is_some(),
+            "KAS installs host I/O"
+        );
+    }
+
+    // The default-build cell of the same matrix: Adapters::NONE is the only
+    // constructible value without the kas feature (presence fields cfg'd out).
+    #[test]
+    fn v2_adapters_are_none_in_every_build() {
+        assert_eq!(V2Engine.adapters(), Adapters::NONE);
+    }
+
     #[test]
     fn v2_client_capabilities_match_handshake_default() {
         // Parity with the old hardcoded handshake (bridge.rs:320): V2Engine must
         // advertise the SAME empty capabilities, or the init request changes.
         assert_eq!(
-            format!("{:?}", V2Engine.client_capabilities()),
+            format!("{:?}", client_capabilities(&V2Engine)),
             format!("{:?}", acp::ClientCapabilities::new()),
         );
     }
@@ -242,7 +400,7 @@ mod tests {
         // terminal (go-live), so KAS delegates shell execution to cyril's terminal
         // responders. Stress fixture: V2Engine must STILL be empty — designed to fail
         // if the KAS caps body is copy-pasted into V2 (the parity-break bug).
-        let caps = KasEngine::default().client_capabilities();
+        let caps = client_capabilities(&KasEngine::default());
         assert!(
             caps.fs.read_text_file,
             "KAS must advertise fs.read_text_file"
@@ -256,7 +414,7 @@ mod tests {
             "KAS must advertise terminal (KAS-5b go-live, cyril-ufie)"
         );
         assert_eq!(
-            format!("{:?}", V2Engine.client_capabilities()),
+            format!("{:?}", client_capabilities(&V2Engine)),
             format!("{:?}", acp::ClientCapabilities::new()),
             "V2Engine must stay empty (no fs/terminal caps leaked from the KAS path)"
         );
@@ -273,7 +431,7 @@ mod tests {
     #[cfg(feature = "kas")]
     #[test]
     fn kas_advertises_kiro_fs_dialect_nested_under_fs() {
-        let caps = KasEngine::default().client_capabilities();
+        let caps = client_capabilities(&KasEngine::default());
 
         let fs_meta =
             serde_json::to_value(caps.fs.meta.as_ref().expect("fs._meta present")).unwrap();
@@ -306,7 +464,7 @@ mod tests {
 
         // Parity-break guard: V2 advertises no fs capability at all, so it
         // cannot acquire an fs._meta by copy-paste.
-        assert!(V2Engine.client_capabilities().fs.meta.is_none());
+        assert!(client_capabilities(&V2Engine).fs.meta.is_none());
     }
 
     // cyril-jiyn claim 2 fence: the mode×engine advertisement matrix. The V2
@@ -321,7 +479,7 @@ mod tests {
         use crate::types::kas_hooks::KasHooksMode;
 
         let hooks_json = |mode: KasHooksMode| -> Option<serde_json::Value> {
-            let caps = KasEngine { hooks_mode: mode }.client_capabilities();
+            let caps = client_capabilities(&KasEngine { hooks_mode: mode });
             let meta = serde_json::to_value(caps.meta.expect("KAS meta present")).unwrap();
             meta.get("kiro").and_then(|k| k.get("hooks")).cloned()
         };
@@ -345,7 +503,7 @@ mod tests {
         // V2-engine cells: no _meta at all regardless of the knob — bound-engine
         // keying, exercised in the kas-feature build (the dn91 trap fence).
         assert!(
-            V2Engine.client_capabilities().meta.is_none(),
+            client_capabilities(&V2Engine).meta.is_none(),
             "V2Engine advertises no _meta.kiro whatever the knob says"
         );
     }
@@ -356,7 +514,7 @@ mod tests {
         // cyril-nhzw claim 1: KasEngine attaches `_meta.kiro.settings` (an
         // AgentSettings object); V2Engine attaches no `_meta`. Stress fixture: the
         // parity-break bug (KAS meta leaking into V2) fails the v2 assertion.
-        let kas = KasEngine::default().client_capabilities();
+        let kas = client_capabilities(&KasEngine::default());
         let settings = kas
             .meta
             .as_ref()
@@ -373,7 +531,7 @@ mod tests {
             "KAS settings must carry subagentOrchestration"
         );
         assert!(
-            V2Engine.client_capabilities().meta.is_none(),
+            client_capabilities(&V2Engine).meta.is_none(),
             "V2Engine must attach no _meta"
         );
     }
