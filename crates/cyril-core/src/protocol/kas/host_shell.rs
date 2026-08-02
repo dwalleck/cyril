@@ -456,7 +456,10 @@ mod tests {
         }
 
         fn current_dir(&self) -> Option<PathBuf> {
-            std::env::current_dir().ok()
+            // Fully fake: the real cwd would donate its drive on Windows
+            // (`/fallback/bash` is drive-relative there), turning the
+            // platform-parameterized matrix fixtures into `D:\fallback\bash`.
+            Some(PathBuf::from("/fake-cwd"))
         }
     }
 
@@ -682,10 +685,7 @@ mod tests {
         let host = FakeHost::default()
             .path(&["relative-shells"])
             .runnable("relative-shells/bash");
-        let expected = match std::env::current_dir() {
-            Ok(cwd) => cwd.join("relative-shells/bash"),
-            Err(error) => panic!("read test current directory: {error}"),
-        };
+        let expected = PathBuf::from("/fake-cwd/relative-shells/bash");
 
         let shell = require_shell(resolve_for(HostPlatform::Unix, Some("bash"), &host));
         assert_eq!(shell.executable, expected);

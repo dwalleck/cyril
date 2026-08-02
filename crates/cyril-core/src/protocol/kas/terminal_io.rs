@@ -632,10 +632,15 @@ mod tests {
         TerminalRegistry::new(Some(Rc::new(shell)))
     }
 
+    // The `/bin/sh` fixture: any test that actually SPAWNS through this
+    // registry must be `#[cfg(unix)]` (pre-spawn error paths stay portable).
+    // Windows lifecycle coverage runs through the runnable PowerShell fixture
+    // in `windows_powershell_lifecycle_smoke`.
     fn test_registry() -> TerminalRegistry {
         registry(HostShell::test_posix())
     }
 
+    #[cfg(unix)]
     fn test_registry_at(executable: impl Into<std::path::PathBuf>) -> TerminalRegistry {
         registry(HostShell::test_posix_at(executable))
     }
@@ -647,6 +652,7 @@ mod tests {
     fn create_req(command: &str) -> acp::CreateTerminalRequest {
         acp::CreateTerminalRequest::new(acp::SessionId::new("s"), command)
     }
+    #[cfg(unix)]
     fn sh(script: &str) -> acp::CreateTerminalRequest {
         create_req("sh").args(vec!["-c".to_string(), script.to_string()])
     }
@@ -656,15 +662,20 @@ mod tests {
     fn out_req(id: &acp::TerminalId) -> acp::TerminalOutputRequest {
         acp::TerminalOutputRequest::new(acp::SessionId::new("s"), id.clone())
     }
+    #[cfg(unix)]
     fn strings(values: &[&str]) -> Vec<String> {
         values.iter().map(ToString::to_string).collect()
     }
+    #[cfg(unix)]
     fn write(path: impl AsRef<std::path::Path>, content: &str) {
         std::fs::write(path, content).unwrap();
     }
+    #[cfg(unix)]
     const BASH_SUCCESS_PROFILE: &str = "printf PROFILE-OUT; printf x >> \"$CYRIL_PROFILE_MARKER\"; export CYRIL_FROM_PROFILE=visible\n";
+    #[cfg(unix)]
     const BASH_FAILURE_PROFILE: &str =
         "printf PROFILE-FAIL; printf y >> \"$CYRIL_PROFILE_MARKER\"; exit 23\n";
+    #[cfg(unix)]
     const FISH_PROFILE: &str = "printf FISH-PROFILE; printf x >> \"$CYRIL_FISH_PROFILE_MARKER\"\n";
     async fn run(
         registry: &TerminalRegistry,
@@ -676,6 +687,7 @@ mod tests {
         (status, output)
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn create_assigns_unique_ids() {
         // Fixture A: two creates before any release must get DISTINCT ids.
@@ -688,6 +700,7 @@ mod tests {
         assert_eq!(id2.to_string(), "term-2");
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn create_returns_before_command_exits() {
         // Fixture (C3): create must return the id IMMEDIATELY, without awaiting the
@@ -741,6 +754,7 @@ mod tests {
         reg.release(&release_req(&id)).await.unwrap();
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn create_closes_stdin_so_stdin_readers_dont_hang() {
         // Fixture (stdin): a command that reads stdin (`cat` with no file arg) must
@@ -764,6 +778,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn nonexistent_inner_command_returns_id_and_native_failure() {
         let reg = test_registry();
@@ -781,6 +796,7 @@ mod tests {
         assert_eq!(reg.counter.get(), 0);
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn pipeline_literals_and_pure_environment_variables_use_shell_semantics() {
         let reg = test_registry();
@@ -944,6 +960,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn create_honors_cwd_missing_dir_errors() {
         // Fixture D: spawn `echo` with an absolute-but-nonexistent cwd. current_dir
@@ -959,6 +976,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn wait_reply_is_flat_not_nested() {
         // Fixture E (the prove-it trap): the wait reply must serialize FLAT
@@ -978,6 +996,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn wait_reports_nonzero_exit_code() {
         // Fixture F: a command exiting 42 reports exitCode=Some(42), signal=None.
@@ -1006,6 +1025,25 @@ mod tests {
         assert_eq!(resp.exit_status.signal.as_deref(), Some("9"), "SIGKILL=9");
     }
 
+    // Windows counterpart of the unix lifecycle fixtures above: the runnable
+    // PowerShell fixture must create, capture output, and preserve a native
+    // non-zero exit code through the same wait/output path.
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn windows_powershell_lifecycle_smoke() {
+        let reg = registry(HostShell::test_runnable_on_host());
+        let echo = create_req("Write-Output").args(vec!["windows-smoke".to_string()]);
+        let (status, output) = run(&reg, echo).await;
+        assert_eq!(status.exit_code, Some(0));
+        assert!(output.contains("windows-smoke"), "got {output:?}");
+
+        let nonzero =
+            create_req("powershell.exe").args(vec!["-Command".to_string(), "exit 3".to_string()]);
+        let (status, _) = run(&reg, nonzero).await;
+        assert_eq!(status.exit_code, Some(3), "native exit code must survive");
+    }
+
+    #[cfg(unix)]
     #[tokio::test]
     async fn output_honors_cwd_and_combines_stdout_stderr() {
         // Fixture G+H: run in a tmp cwd (proves the command EXECUTES there, not just
@@ -1068,6 +1106,7 @@ mod tests {
         acp::KillTerminalRequest::new(acp::SessionId::new("s"), id.clone())
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn release_kills_child_and_frees_id() {
         // The selected shell owns this pipeline. Releasing must kill its process
@@ -1109,6 +1148,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn kill_terminates_but_keeps_id() {
         // Fixture K: kill must terminate a running child but KEEP the id valid —
@@ -1158,6 +1198,7 @@ mod tests {
         assert!(ke.message.contains("unknown terminal"), "got {ke:?}");
     }
 
+    #[cfg(unix)]
     #[tokio::test(flavor = "current_thread")]
     async fn kill_during_pending_wait_terminates_child() {
         // Fixture (cyril-lw67, kill half): the acp rpc layer spawns every inbound
@@ -1201,6 +1242,7 @@ mod tests {
             .expect("killed id keeps a valid output");
     }
 
+    #[cfg(unix)]
     #[tokio::test(flavor = "current_thread")]
     async fn release_during_pending_wait_frees_id() {
         // Fixture (cyril-lw67, release half): release arriving while a wait owns
@@ -1247,6 +1289,7 @@ mod tests {
         assert!(we.message.contains("unknown terminal"), "got {we:?}");
     }
 
+    #[cfg(unix)]
     #[tokio::test(flavor = "current_thread")]
     async fn slow_wait_does_not_starve_runtime() {
         // Fixture P (C12 — the non-blocking invariant): on a SINGLE-THREADED runtime
