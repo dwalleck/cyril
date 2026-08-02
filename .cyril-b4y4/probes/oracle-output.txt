@@ -1,0 +1,17 @@
+B4Y4-ORACLE PROMPT-ACCEPTED turn#0
+2026-08-02T20:32:23.894591Z DEBUG cyril_core::protocol::bridge: turn completed (wire turn_end) owner=turn#0
+B4Y4-ORACLE f1: FORWARDED TurnCompleted
+2026-08-02T20:32:23.894627Z DEBUG cyril_core::protocol::bridge: absorbed expected companion owner=turn#0 first=(Wire, EndTurn) second=(Synthesized, EndTurn)
+B4Y4-ORACLE f2: NOT-FORWARDED (marker-2 arrived first)
+B4Y4-ORACLE PROMPT-ACCEPTED turn#1
+2026-08-02T20:32:23.905781Z DEBUG cyril_core::protocol::bridge: dropping stale completion stale_owner=turn#0 active=Some(TurnId(1))
+B4Y4-ORACLE f3: NOT-FORWARDED (marker-3 arrived first)
+2026-08-02T20:32:23.905800Z DEBUG cyril_core::protocol::bridge: forwarding foreign terminal; main turn untouched foreign=Some(SessionId("sess_foreign")) active_owner=turn#1
+B4Y4-ORACLE f4: FORWARDED TurnCompleted (foreign)
+2026-08-02T20:32:23.905813Z DEBUG cyril_core::protocol::bridge: turn completed owner=turn#1
+B4Y4-ORACLE f5: FORWARDED TurnCompleted
+2026-08-02T20:32:23.905821Z DEBUG cyril_core::protocol::bridge: absorbed expected companion owner=turn#1 first=(Synthesized, EndTurn) second=(Wire, EndTurn)
+B4Y4-ORACLE f6: NOT-FORWARDED (marker-4 arrived first)
+B4Y4-ORACLE f7: NOT-FORWARDED (marker-5 arrived first)
+B4Y4-ORACLE PROMPT-ACCEPTED turn#2
+test protocol::bridge::tests::b4y4_probe_oracle_scenario ... ok

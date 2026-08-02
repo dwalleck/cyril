@@ -1,0 +1,12 @@
+B4Y4-PROBE-BEGIN
+PROMPT-ACCEPTED turn#0
+f1: RELEASE-BY-SCOPE turn#0 FORWARD
+f2: ABSORB synthesized turn#0
+PROMPT-ACCEPTED turn#1
+f3: DROP-STALE turn#0
+f4: FORWARD-FOREIGN sess_foreign main-untouched
+f5: RELEASE-BY-OWNER turn#1 FORWARD
+f6: ABSORB wire sess_fake-0
+f7: DROP-UNOWNED sess_fake-0
+PROMPT-ACCEPTED turn#2
+B4Y4-PROBE-END
