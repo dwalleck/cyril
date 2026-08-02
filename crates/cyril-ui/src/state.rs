@@ -1790,8 +1790,49 @@ impl UiState {
 
     // --- Picker dialog methods ---
 
+    /// The value cyril believes is active for the picker named `title`.
+    ///
+    /// The picker's title *is* the command name (`show_picker` is called with
+    /// `Notification::CommandOptionsReceived.command`, and `picker_confirm`
+    /// hands it back as the command to execute), so it doubles as the key for
+    /// this lookup. Returns `None` for any other picker — nothing to join on.
+    fn active_option_value(&self, title: &str) -> Option<&str> {
+        match title {
+            "model" => self.current_model.as_deref(),
+            "effort" => self.effort.as_ref().map(EffortLevel::as_str),
+            _ => None,
+        }
+    }
+
     /// Show a picker dialog with the given title and options.
-    pub fn show_picker(&mut self, title: String, options: Vec<CommandOption>) {
+    ///
+    /// Marks the row matching cyril's own current value (cyril-imjx).
+    /// kiro-cli 2.14.2 never sends `current` on `/model` options and encodes
+    /// it into the `/effort` label only after an in-session change, so the
+    /// wire alone leaves the picker unmarked. Cyril already tracks both values
+    /// for the toolbar, so the join happens here rather than on the wire.
+    ///
+    /// Precedence: cyril's own value wins when it names an option in the list
+    /// — it reflects the last `commands/execute` cyril made, so it is fresher
+    /// than a stale `current` flag. Otherwise whatever the agent sent survives
+    /// untouched, which keeps agents that DO send `current` working.
+    pub fn show_picker(&mut self, title: String, mut options: Vec<CommandOption>) {
+        if let Some(active) = self.active_option_value(&title) {
+            match options.iter().position(|o| o.value == active) {
+                Some(idx) => {
+                    for (i, opt) in options.iter_mut().enumerate() {
+                        opt.is_current = i == idx;
+                    }
+                }
+                None => tracing::debug!(
+                    picker = %title,
+                    active,
+                    "current value is absent from the option list; \
+                     falling back to whatever the agent marked"
+                ),
+            }
+        }
+
         let filtered_indices: Vec<usize> = (0..options.len()).collect();
         self.picker = Some(PickerState {
             title,
@@ -5887,5 +5928,120 @@ mod tests {
             state.messages()[1].kind(),
             ChatMessageKind::ToolCall(_)
         ));
+    }
+
+    // --- cyril-imjx: picker active-row marker ---
+    //
+    // kiro-cli 2.14.2 never sends `current` on `/model` options and only
+    // encodes it into the `/effort` LABEL (`"High  [active]"`) after an
+    // in-session change. Cyril already knows both values (they drive the
+    // toolbar), so `show_picker` joins the option list against its own state.
+    // Live shapes are from `experiments/conductor-spike/trace-2.4.1-tui-recorder.jsonl`.
+
+    /// Live `/model` option: `{value,label,description,group}`, no `current`.
+    fn live_model_option(id: &str) -> CommandOption {
+        CommandOption {
+            label: id.to_string(),
+            value: id.to_string(),
+            description: Some(format!("The {id} model")),
+            group: Some("1.30x credits".into()),
+            is_current: false,
+        }
+    }
+
+    fn marked_values(state: &UiState) -> Vec<String> {
+        state
+            .picker()
+            .map(|p| {
+                p.options
+                    .iter()
+                    .filter(|o| o.is_current)
+                    .map(|o| o.value.clone())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    #[test]
+    fn picker_marks_active_row_from_current_model() {
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("claude-opus-4.7".into()));
+        state.show_picker(
+            "model".into(),
+            vec![
+                live_model_option("auto"),
+                live_model_option("claude-opus-4.7"),
+                live_model_option("claude-haiku-4.5"),
+            ],
+        );
+        assert_eq!(
+            marked_values(&state),
+            vec!["claude-opus-4.7".to_string()],
+            "the session's current model must be the single marked row"
+        );
+    }
+
+    #[test]
+    fn picker_marks_active_row_from_effort_on_a_fresh_session() {
+        let mut state = UiState::new(500);
+        state.effort = Some(EffortLevel::High);
+        // Fresh session: no option carries `[active]` and none carries `current`.
+        state.show_picker(
+            "effort".into(),
+            vec![
+                CommandOption {
+                    label: "Low".into(),
+                    value: "low".into(),
+                    description: None,
+                    group: None,
+                    is_current: false,
+                },
+                CommandOption {
+                    label: "High".into(),
+                    value: "high".into(),
+                    description: None,
+                    group: None,
+                    is_current: false,
+                },
+            ],
+        );
+        assert_eq!(
+            marked_values(&state),
+            vec!["high".to_string()],
+            "the session's effort level must be the single marked row"
+        );
+    }
+
+    #[test]
+    fn picker_marks_active_row_keeps_wire_current_as_fallback() {
+        // An agent that DOES send `current` still marks correctly, even when
+        // cyril has no value of its own to join against.
+        let mut state = UiState::new(500);
+        assert!(state.current_model.is_none(), "no own value to join on");
+        let mut opts = vec![live_model_option("auto"), live_model_option("glm-5")];
+        opts[1].is_current = true;
+        state.show_picker("model".into(), opts);
+        assert_eq!(marked_values(&state), vec!["glm-5".to_string()]);
+    }
+
+    #[test]
+    fn picker_marks_active_row_overrides_a_stale_wire_current() {
+        // Own state wins over the wire, and marks EXACTLY one row.
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("glm-5".into()));
+        let mut opts = vec![live_model_option("auto"), live_model_option("glm-5")];
+        opts[0].is_current = true;
+        state.show_picker("model".into(), opts);
+        assert_eq!(marked_values(&state), vec!["glm-5".to_string()]);
+    }
+
+    #[test]
+    fn picker_marks_active_row_marks_nothing_when_the_value_is_absent() {
+        // Current model not in the list (version skew): mark nothing rather
+        // than guess.
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("model-from-the-future".into()));
+        state.show_picker("model".into(), vec![live_model_option("auto")]);
+        assert!(marked_values(&state).is_empty());
     }
 }
