@@ -1,55 +1,53 @@
 # Domain Docs
 
 How the engineering skills should consume this repo's domain documentation when
-exploring the codebase. **cyril is a single-context repo.**
+exploring the codebase. Cyril uses a **single-context** layout.
 
 ## Before exploring, read these
 
-- **`CONTEXT.md`** at the repo root — the project's domain glossary and
-  language. This exists today.
-- **`docs/adr/`** — Architecture Decision Records that touch the area you're
-  about to work in. This directory does not exist yet; it's the conventional
-  place ADRs will land when decisions get recorded (see `/grill-with-docs`).
+- **`CONTEXT.md`** at the repo root — the canonical domain glossary.
+- **`docs/adr/`** — read ADRs that touch the area about to be changed.
 
-If `docs/adr/` (or any of these) doesn't exist, **proceed silently**. Don't flag
-its absence; don't suggest creating it upfront. The producer skill
-(`/grill-with-docs`) creates ADRs lazily when decisions actually get resolved.
+If either location does not exist, proceed silently. Do not suggest creating it
+upfront. The `/domain-modeling` skill, reached through `/grill-with-docs` and
+`/improve-codebase-architecture`, creates domain records lazily when terms or
+decisions are resolved.
 
 ## File structure
 
-Single-context repo (this repo):
-
-```
+```text
 /
-├── CONTEXT.md          ← exists
-├── docs/adr/           ← conventional location for ADRs (not yet created)
-│   ├── 0001-....md
-│   └── 0002-....md
-└── crates/             ← cyril-core, cyril-ui, cyril
+├── CONTEXT.md
+├── docs/
+│   └── adr/
+│       ├── 0001-kiro-engine-trait.md
+│       └── ...
+└── crates/
+    ├── cyril/
+    ├── cyril-core/
+    ├── cyril-ui/
+    └── cyril-voice/
 ```
 
-> A multi-context layout (a root `CONTEXT-MAP.md` pointing at per-context
-> `CONTEXT.md` files under `src/<context>/`) is *not* in use here. If cyril ever
-> splits into independently-documented contexts, switch this doc to that model.
+A multi-context layout using a root `CONTEXT-MAP.md` and per-context
+`CONTEXT.md` files is not in use.
 
 ## Use the glossary's vocabulary
 
-When your output names a domain concept (in an issue title, a refactor proposal,
-a hypothesis, a test name), use the term as defined in `CONTEXT.md`. Don't drift
-to synonyms the glossary explicitly avoids.
+When output names a domain concept—in an issue title, refactor proposal,
+hypothesis, or test name—use the term defined in `CONTEXT.md`. Do not drift to
+synonyms the glossary explicitly avoids.
 
-If the concept you need isn't in the glossary yet, that's a signal — either
-you're inventing language the project doesn't use (reconsider) or there's a real
-gap (note it for `/grill-with-docs`).
+If a needed concept is absent, reconsider whether the term belongs to this
+domain. If the gap is real, note it for `/domain-modeling`.
 
-> Note: cyril also carries a large body of protocol/architecture documentation
-> in `CLAUDE.md` and `docs/` (ACP wire audits, the ROADMAP, KAS covenant). Treat
-> those as authoritative for protocol behavior; `CONTEXT.md` is the domain
-> glossary.
+Cyril also carries protocol and architecture documentation in `CLAUDE.md` and
+`docs/`. Treat those files as authoritative for protocol behavior;
+`CONTEXT.md` remains the canonical domain glossary.
 
 ## Flag ADR conflicts
 
-If your output contradicts an existing ADR, surface it explicitly rather than
-silently overriding:
+If proposed work contradicts an existing ADR, surface the conflict explicitly
+rather than silently overriding it:
 
 > _Contradicts ADR-0007 (...) — but worth reopening because…_

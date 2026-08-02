@@ -45,3 +45,7 @@ _Avoid_: rust engine, classic, legacy
 **KAS** (Kiro Agent Server):
 The Kiro TypeScript/LangGraph engine, embedded as of kiro-cli 2.7.1, reached over `kiro-cli acp --agent-engine kas`. `_kiro/*` dialect; host supplies auth; can call fs/terminal callbacks; uses the `agent-subtask` subagent model.
 _Avoid_: v3 (it's the user-facing TUI alias `--v3`, but the engine is KAS), TypeScript engine
+
+**Host callback**:
+A server-to-client ACP request or control notification through which the running agent asks Cyril, acting as the host, to provide a decision or capability such as permission, authentication, file I/O, terminal control, or hooks.
+_Avoid_: client callback, host request (excludes control notifications), tool call

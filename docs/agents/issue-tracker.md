@@ -1,102 +1,103 @@
-# Issue tracker: rivets
+# Issue tracker: Rivets
 
-Issues, PRDs, and implementation tickets for this repo live in **rivets**, a
-local Rust-based issue tracker with JSONL storage. The CLI is `rivets`
-(installed at `~/.cargo/bin/rivets`). Storage is on-disk and in-repo — no
-network round-trips, no GitHub.
+Issues, PRDs, and implementation tickets for this repo live in **Rivets**, a
+local Rust-based issue tracker with JSONL storage. Use the `rivets` CLI.
+Storage is on-disk and in-repo; GitHub Issues is not the source of truth.
 
-> **First-time setup:** this repo is not yet a rivets repository. Run
-> `rivets init` once at the repo root before creating issues. Confirm with
-> `rivets info`.
+The repository is initialized with:
+
+- Database: `.rivets/issues.jsonl`
+- Configuration: `.rivets/config.yaml`
+- Issue prefix: `cyril`
 
 ## Core model
 
-- **Issue IDs** look like `rivets-abc`. Commands that act on issues take one or
-  more IDs space-separated (e.g. `rivets update rivets-abc rivets-def -s closed`).
+- **Issue IDs** look like `cyril-abc`. Commands that act on issues take one or
+  more IDs space-separated.
 - **Status** state machine: `open → in_progress → blocked → closed`
   (`rivets reopen` brings a closed issue back).
-- **Priority**: `0`=critical, `1`=high, `2`=medium (default), `3`=low, `4`=backlog.
-- **Type**: `bug`, `feature`, `task` (default), `epic`, `chore`.
-- **Labels**: free-form, comma-separated — this is where triage roles live
-  (see `triage-labels.md`). Triage roles are labels, *not* the status field.
+- **Priority**: `0`=critical, `1`=high, `2`=medium (default), `3`=low,
+  `4`=backlog.
+- **Kind**: `bug`, `feature`, `task` (default), `epic`, `chore`.
+- **Labels**: free-form, comma-separated. Triage roles are labels, not the
+  status field; see `triage-labels.md`.
 - **Dependencies**: typed relationships — `blocks`, `related`, `parent-child`,
-  `discovered-from`.
-- Every command accepts `--json` for programmatic use — prefer it when a skill
-  needs to parse output rather than show it to a human.
+  and `discovered-from`.
+- Prefer `--json` when a skill needs to parse output. Use `-y` for
+  non-interactive mutations.
 
-## When a skill says "create an issue" / "publish to the issue tracker"
+## When a skill says "create an issue" or "publish to the issue tracker"
 
 ```sh
-rivets create --title "<title>" \
-  -t <bug|feature|task|epic|chore> \
+rivets create --json -y \
+  --title "<title>" \
+  -k <bug|feature|task|epic|chore> \
   -p <0-4> \
   -l "needs-triage" \
   -D "<description>" \
   --acceptance "<acceptance criteria>"
 ```
 
-For a PRD or epic, use `-t epic` and link child issues with
-`--deps "parent-child:<epic-id>"` (or `rivets dep add` after the fact). Record
-an upstream/external link (a GitHub URL, a ROADMAP phase) with `--external-ref`.
+For a PRD or epic, use `-k epic` and link child issues with
+`--deps "parent-child:<epic-id>"`, or use `rivets dep add` afterward. Record an
+upstream link or ROADMAP phase with `--external-ref`.
 
-## ROADMAP traceability (convention)
+## ROADMAP traceability
 
-Every issue derived from [`docs/ROADMAP.md`](../ROADMAP.md) **must** carry its
-milestone id in `--external-ref`, formatted `ROADMAP:<milestone-id>` — e.g.
-`ROADMAP:KAS-2a`, `ROADMAP:K1b`. This is the durable link between a ticket and
-the roadmap, and it makes coverage queryable: the set of milestones that have
-issues is exactly the `ROADMAP:` external-refs in the tracker.
+Every issue derived from [`docs/ROADMAP.md`](../ROADMAP.md) must carry its
+milestone ID in `--external-ref`, formatted `ROADMAP:<milestone-id>` — for
+example, `ROADMAP:KAS-2a` or `ROADMAP:K1b`.
 
-**Coverage check** — "which ROADMAP milestones don't have issues yet?" is the
-universe (milestone headers in ROADMAP.md) minus the filed set:
-
-```sh
-# filed: milestones that have an issue
-rivets list --json | python3 -c "import json,sys; \
-  [print(i['external_ref']) for i in json.load(sys.stdin) \
-   if str(i.get('external_ref','')).startswith('ROADMAP:')]" | sort -u
-# universe: milestone headers
-grep -oE '### (KAS-[0-9a-d]+|K[0-9]|Phase [0-9])' docs/ROADMAP.md | sed 's/### //' | sort -u
-```
-
-Milestones deferred rather than filed individually live as checklist items in a
-**tail epic** (`-t epic`); that epic is the worklist for the next breakdown pass,
-so nothing is silently dropped.
+Milestones deferred rather than filed individually live as checklist items in
+a **tail epic** (`-k epic`). That epic is the worklist for the next breakdown
+pass, so nothing is silently dropped.
 
 ## When a skill says "fetch the relevant ticket"
 
 ```sh
-rivets show <issue-id>          # human-readable
-rivets show <issue-id> --json   # for parsing
+rivets show <issue-id>
+rivets show <issue-id> --json
 ```
 
 The user will normally pass the issue ID directly.
 
-## When a skill says "find work that's ready" / "AFK-ready"
+## When a skill says "find ready work" or "AFK-ready"
 
 ```sh
-rivets ready                    # unblocked issues, ordered by priority
-rivets list -l ready-for-agent  # AFK-ready (see triage-labels.md)
+rivets ready
+rivets list -l ready-for-agent
 ```
 
 ## Triage and status transitions
 
-- Apply or change a triage role:
-  `rivets label add <label> <issue-id>` / `rivets label remove <label> <issue-id>`
-  (label first; multiple issues via `--ids <id> <id>...`).
-- Move status: `rivets update <issue-id> -s in_progress` (or `blocked`).
-- Close: `rivets close <issue-id> -r "<reason>"`. Reopen: `rivets reopen <issue-id>`.
+Apply or remove a triage role:
 
-See `triage-labels.md` for the canonical role → label mapping.
+```sh
+rivets label add <label> <issue-id>
+rivets label remove <label> <issue-id>
+```
+
+For multiple issues, use `--ids <issue-id> <issue-id>...`.
+
+Move status or close an issue:
+
+```sh
+rivets update <issue-id> -s in_progress
+rivets update <issue-id> -s blocked
+rivets close <issue-id> -r "<reason>"
+rivets reopen <issue-id>
+```
+
+See `triage-labels.md` for the canonical role-to-label mapping.
 
 ## Useful queries
 
 ```sh
-rivets list -s open             # all open issues
-rivets list -t bug              # filter by type
-rivets list -l needs-triage     # filter by triage label
-rivets blocked                  # issues blocked by dependencies
-rivets stale                    # issues that have gone quiet
-rivets stats                    # project statistics
-rivets dep tree <issue-id>      # dependency tree for an issue
+rivets list -s open
+rivets list -k bug
+rivets list -l needs-triage
+rivets blocked
+rivets stale
+rivets stats
+rivets dep tree <issue-id>
 ```
