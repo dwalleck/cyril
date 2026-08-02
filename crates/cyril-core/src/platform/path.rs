@@ -304,10 +304,14 @@ pub fn translate_paths_in_json_in(value: &mut Value, direction: Direction, distr
                     }
                 }
                 Direction::WslToWin => {
-                    if looks_like_wsl_mount_path(s) {
-                        wsl_to_win_in(s, distro).to_string_lossy().into_owned()
-                    } else {
-                        return;
+                    // Gate on the drive translation itself so the eligible set
+                    // and the translated set are the same code: non-drive
+                    // `/mnt/*` strings (e.g. `/mnt/data/x`) and every other
+                    // `/`-rooted string stay untouched — they may be file
+                    // CONTENT, and this direction never emits `\\wsl$` UNC.
+                    match drive_mount_to_win(s) {
+                        Some(win) => win.to_string_lossy().into_owned(),
+                        None => return,
                     }
                 }
             };
@@ -334,14 +338,6 @@ fn looks_like_windows_path(s: &str) -> bool {
         && s.as_bytes()[0].is_ascii_alphabetic()
         && s.as_bytes()[1] == b':'
         && (s.as_bytes()[2] == b'\\' || s.as_bytes()[2] == b'/')
-}
-
-fn looks_like_wsl_mount_path(s: &str) -> bool {
-    if let Some(rest) = s.strip_prefix("/mnt/") {
-        !rest.is_empty() && rest.as_bytes()[0].is_ascii_alphabetic()
-    } else {
-        false
-    }
 }
 
 #[cfg(test)]
@@ -774,12 +770,17 @@ mod tests {
         let mut val = serde_json::json!({
             "path": "/mnt/c/f",
             "content": "/etc/hosts is a file\n",
-            "posix": "/home/u"
+            "posix": "/home/u",
+            "non_drive_mnt": "/mnt/data/x"
         });
         translate_paths_in_json_in(&mut val, Direction::WslToWin, Some("Ubuntu"));
         assert_eq!(val["path"], r"C:\f");
         assert_eq!(val["content"], "/etc/hosts is a file\n");
         assert_eq!(val["posix"], "/home/u");
+        // A non-drive /mnt string is NOT a drive mount and must never become
+        // \\wsl$ UNC in the JSON direction (review fix: the old heuristic
+        // admitted any alphabetic /mnt/* string).
+        assert_eq!(val["non_drive_mnt"], "/mnt/data/x");
     }
 
     #[test]
