@@ -152,6 +152,17 @@ impl HostShell {
     }
 
     pub(crate) fn command(&self, command: &str, args: &[String]) -> ShellCommand<'_> {
+        if args.is_empty() {
+            // KAS ≥0.27 (kiro-cli 2.16.0) sends `terminal/create` with the WHOLE
+            // command line in `command` and no `args` at all — the string is
+            // already shell source (docs/kiro-2.16.0-wire-audit.md: "a correct
+            // host runs the string through a shell when `args` is absent").
+            // Per-token quoting collapsed it into one argv word — a file
+            // literally named "/bin/echo cb93-ok" (cyril-cb93). Pass it to the
+            // shell verbatim instead. Earlier KAS versions send the tokenized
+            // `command` + `args` shape, which keeps the quoting path below.
+            return self.command_line(command);
+        }
         let compound = std::iter::once(command)
             .chain(args.iter().map(String::as_str))
             .any(is_operator);
@@ -177,13 +188,46 @@ impl HostShell {
                 if compound {
                     source.push_str("if ($cyrilSuccess) { exit 0 } else { exit 1 }");
                 } else {
-                    source.push_str("$cyrilExitCode = $LASTEXITCODE; if ($null -ne $cyrilExitCode) { exit $cyrilExitCode }; if ($cyrilSuccess) { exit 0 } else { exit 1 }");
+                    source.push_str(PWSH_NATIVE_EXIT);
                 }
                 vec![
                     "-NoLogo".into(),
                     "-NonInteractive".into(),
                     "-Command".into(),
                     source,
+                ]
+            }
+        };
+        ShellCommand {
+            program: &self.executable,
+            args: shell_args,
+        }
+    }
+
+    /// Launch plan for the full-command-line wire shape (`args` absent): the
+    /// source runs through the shell verbatim. No `exec` prefix — raw source
+    /// may be an operator compound (`a && b`), and `exec` would replace the
+    /// shell at the first command, dropping the rest; signal fidelity yields
+    /// to correctness here (the tokenized path keeps its `exec` treatment).
+    fn command_line(&self, source: &str) -> ShellCommand<'_> {
+        let shell_args = match self.kind {
+            ShellKind::Posix | ShellKind::Fish => {
+                vec!["-l".into(), "-c".into(), source.to_string()]
+            }
+            ShellKind::Pwsh | ShellKind::WindowsPowerShell => {
+                // Same exit scaffold as the simple tokenized path: a raw line
+                // overwhelmingly ends in a native command, so prefer its
+                // `$LASTEXITCODE` over collapsing every exit to 0/1.
+                let mut script = String::with_capacity(source.len() + 256);
+                script.push_str("$global:LASTEXITCODE = $null; ");
+                script.push_str(source);
+                script.push_str("; $cyrilSuccess = $?; ");
+                script.push_str(PWSH_NATIVE_EXIT);
+                vec![
+                    "-NoLogo".into(),
+                    "-NonInteractive".into(),
+                    "-Command".into(),
+                    script,
                 ]
             }
         };
@@ -223,6 +267,10 @@ impl HostShell {
         }
     }
 }
+
+/// PowerShell epilogue that surfaces a native command's exit code, falling
+/// back to `$?` when no native command ran (`$LASTEXITCODE` still `$null`).
+const PWSH_NATIVE_EXIT: &str = "$cyrilExitCode = $LASTEXITCODE; if ($null -ne $cyrilExitCode) { exit $cyrilExitCode }; if ($cyrilSuccess) { exit 0 } else { exit 1 }";
 
 fn is_operator(token: &str) -> bool {
     matches!(
@@ -843,6 +891,43 @@ mod tests {
             assert!(plan.args[3].starts_with("$global:LASTEXITCODE = $null; & 'echo' 'done';"));
             assert!(plan.args[3].contains("exit $cyrilExitCode"));
             assert!(plan.args[3].contains("if ($cyrilSuccess) { exit 0 } else { exit 1 }"));
+        }
+    }
+
+    #[test]
+    fn full_command_line_with_empty_args_is_shell_source_not_one_quoted_token() {
+        // KAS ≥0.27 sends the whole command line in `command` with no `args`
+        // (docs/kiro-2.16.0-wire-audit.md). Quoting it per-token would make it
+        // ONE argv word — a file literally named "sh -c 'exit 3'" (cyril-cb93).
+        // Empty args therefore means: the string is already shell source; pass
+        // it through verbatim.
+        let no_args: Vec<String> = Vec::new();
+        assert_eq!(
+            shell(ShellKind::Posix)
+                .command("sh -c 'exit 3'", &no_args)
+                .args,
+            strings(&["-l", "-c", "sh -c 'exit 3'"])
+        );
+        assert_eq!(
+            shell(ShellKind::Fish)
+                .command("/bin/echo cb93-ok", &no_args)
+                .args,
+            strings(&["-l", "-c", "/bin/echo cb93-ok"])
+        );
+        for kind in [ShellKind::Pwsh, ShellKind::WindowsPowerShell] {
+            let host_shell = shell(kind);
+            let plan = host_shell.command("cmd /c \"exit 3\"", &no_args);
+            assert_eq!(&plan.args[..3], ["-NoLogo", "-NonInteractive", "-Command"]);
+            assert!(
+                plan.args[3].starts_with("$global:LASTEXITCODE = $null; cmd /c \"exit 3\";"),
+                "raw source must be embedded verbatim, not re-quoted: {}",
+                plan.args[3]
+            );
+            assert!(
+                plan.args[3].contains("exit $cyrilExitCode"),
+                "a raw line usually ends in a native command; preserve its exit code: {}",
+                plan.args[3]
+            );
         }
     }
 
