@@ -808,6 +808,31 @@ mod tests {
 
     #[cfg(unix)]
     #[tokio::test]
+    async fn full_command_line_with_empty_args_executes_via_shell() {
+        // Live KAS ≥0.27 (kiro-cli 2.16.0) sends `terminal/create` as ONE shell
+        // string with no `args` at all — `{"command":"sh -c 'exit 3'","cwd":…}`
+        // (docs/kiro-2.16.0-wire-audit.md, "terminal/create sends the command as
+        // a single shell string"). Per-token quoting collapsed that line into a
+        // single argv word, so the shell looked for a file literally named
+        // "/bin/echo cb93-ok" and every live run_command failed (cyril-cb93).
+        // Empty `args` means the command IS shell source; run it as such.
+        let reg = test_registry();
+
+        let (status, output) = run(&reg, create_req("printf '%s\\n' cb93-ok")).await;
+        assert_eq!(status.exit_code, Some(0), "output: {output:?}");
+        assert_eq!(output, "cb93-ok\n");
+
+        let (status, output) = run(&reg, create_req("/bin/echo cb93-ok")).await;
+        assert_eq!(status.exit_code, Some(0), "output: {output:?}");
+        assert_eq!(output, "cb93-ok\n");
+
+        // The live probe shape: the inner exit code must survive verbatim.
+        let (status, _) = run(&reg, create_req("sh -c 'exit 3'")).await;
+        assert_eq!(status.exit_code, Some(3));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
     async fn pipeline_literals_and_pure_environment_variables_use_shell_semantics() {
         let reg = test_registry();
         let pipeline =
