@@ -877,7 +877,9 @@ async fn run_loop(
     }
     let init_request = acp::InitializeRequest::new(acp::ProtocolVersion::V1)
         .client_info(client_info(effective))
-        .client_capabilities(engine.client_capabilities());
+        .client_capabilities(crate::protocol::engine::client_capabilities(
+            engine.as_ref(),
+        ));
 
     let init_response: acp::InitializeResponse =
         conn.initialize(init_request).await.map_err(|e| {

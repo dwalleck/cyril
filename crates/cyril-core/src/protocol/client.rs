@@ -47,11 +47,14 @@ pub(crate) struct KiroClient {
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
     /// KAS-7 (cyril-jiyn): the hook registry serving `_kiro/hooks/*`, loaded
-    /// once at construction from the workspace + global `.kiro/hooks` when the
-    /// bound engine's hooks mode is `Host`. Empty otherwise (Kas mode runs
-    /// hooks agent-side; v2/Off advertise none).
+    /// once at construction from the workspace + global `.kiro/hooks`.
+    /// `Some` iff the bound engine's Hooks adapter direction is `Inbound`
+    /// (cyril-dn91 C10) — Outbound runs hooks agent-side and v2/Off have no
+    /// hooks capability, and neither gets an empty-registry stand-in (the
+    /// sentinel the no-sentinel rule forbids). Registry presence IS the
+    /// inbound-serving gate consulted by the dispatch arms.
     #[cfg(feature = "kas")]
-    hooks: std::rc::Rc<crate::protocol::kas::hooks::HookRegistry>,
+    hooks: Option<std::rc::Rc<crate::protocol::kas::hooks::HookRegistry>>,
     /// Session workspace, the cwd for hook command execution (cyril-jiyn).
     #[cfg(feature = "kas")]
     cwd: std::path::PathBuf,
@@ -74,19 +77,16 @@ impl KiroClient {
         #[cfg(not(feature = "kas"))]
         let _ = host_shell;
         #[cfg(feature = "kas")]
-        let hooks = {
-            use crate::types::kas_hooks::KasHooksMode;
-            let registry = if engine.hooks_mode() == KasHooksMode::Host {
+        let hooks = match engine.adapters().hooks {
+            crate::protocol::engine::HooksAdapter::Inbound => Some(std::rc::Rc::new(
                 crate::protocol::kas::hooks::HookRegistry::load(
                     cwd,
                     crate::kiro_agent_config::home_dir()
                         .map(|h| h.join(".kiro"))
                         .as_deref(),
-                )
-            } else {
-                crate::protocol::kas::hooks::HookRegistry::default()
-            };
-            std::rc::Rc::new(registry)
+                ),
+            )),
+            _ => None,
         };
         Self {
             notification_tx,
@@ -115,6 +115,18 @@ impl KiroClient {
         &self,
     ) -> std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry> {
         std::rc::Rc::clone(&self.terminals)
+    }
+
+    /// Gate a Host I/O family callback on the bound engine's adapter
+    /// (cyril-dn91): `Err(method_not_found)` with the refusal breadcrumb when
+    /// absent. One helper for all ten call sites, so a future host-io method
+    /// cannot forget the gate's shape.
+    #[cfg(feature = "kas")]
+    fn require_host_io(&self, method: &str) -> acp::Result<()> {
+        if self.engine.adapters().host_io.is_none() {
+            return refuse_unadapted(method);
+        }
+        Ok(())
     }
 }
 
@@ -221,12 +233,30 @@ impl acp::Client for KiroClient {
         #[cfg(feature = "kas")]
         {
             if args.method.as_ref() == crate::protocol::kas::hooks::CANCEL_METHOD {
+                // Cancel aborts an in-flight INBOUND hook op — ops only exist
+                // when cyril serves hooks (cyril-dn91 C12 prose; the gate
+                // mirrors the executeHook arm's).
+                if self.hooks.is_none() {
+                    tracing::debug!("hooks/cancel dropped: no inbound hooks adapter");
+                    return Ok(());
+                }
                 if let Some(op_id) = params.get("operationId").and_then(|o| o.as_str()) {
                     self.hook_ops.cancel(op_id);
                 }
                 return Ok(());
             }
             if args.method.as_ref() == crate::protocol::kas::hooks::DID_CHANGE_METHOD {
+                // didChange is meaningful in EITHER hooks direction (Inbound:
+                // on-disk edit note, cyril-2adk; Outbound: KAS pushes its full
+                // new registry, cyril-gk17) — but an engine with no hooks
+                // capability gets no HooksChanged surface (cyril-dn91 C12).
+                if matches!(
+                    self.engine.adapters().hooks,
+                    crate::protocol::engine::HooksAdapter::None
+                ) {
+                    tracing::debug!("hooks/didChange dropped: engine has no hooks capability");
+                    return Ok(());
+                }
                 // Under `kas_hooks = "kas"` the notification carries KAS's FULL
                 // new registry, so cyril can refresh what it shows without
                 // asking (cyril-gk17). Under `"host"` cyril owns the registry
@@ -298,12 +328,14 @@ impl acp::Client for KiroClient {
 
     /// Handle incoming server→client ext REQUESTS. KAS-1/dcc6 answers
     /// `_kiro/auth/getAccessToken` (both KAS spawn modes run
-    /// `--auth=acp-callback`) from kiro-cli's sqlite credential store; every
-    /// other ext request gets the protocol default. v2 never sends this, and
-    /// the cfg-split keeps the credential code out of a default build
-    /// (ADR-0002). cyril-l7tw C11: an auth-callback failure ALSO surfaces to
-    /// the App as a BridgeError — the JSON-RPC error alone travels to KAS,
-    /// which fails the turn while the user sees nothing actionable.
+    /// `--auth=acp-callback`) from kiro-cli's sqlite credential store when the
+    /// bound engine installs the Auth adapter (cyril-dn91) — an engine without
+    /// one is refused with method-not-found. Unrecognized ext requests get the
+    /// protocol default. The cfg-split keeps the credential code out of a
+    /// default build (ADR-0002). cyril-l7tw C11: an auth-callback failure ALSO
+    /// surfaces to the App as a BridgeError — the JSON-RPC error alone travels
+    /// to KAS, which fails the turn while the user sees nothing actionable;
+    /// refusals are exempt (dn91 C13).
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         let method = args.method.to_string();
         let result = self.handle_ext_request(args).await;
@@ -322,6 +354,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::ReadTextFileRequest,
     ) -> acp::Result<acp::ReadTextFileResponse> {
+        self.require_host_io("fs/read_text_file")?;
         crate::protocol::kas::host_io::read_text_file(&args).await
     }
 
@@ -334,6 +367,9 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::WriteTextFileRequest,
     ) -> acp::Result<acp::WriteTextFileResponse> {
+        // Refusal precedes the responder — no filesystem side effect may
+        // occur for an un-adaptered engine (cyril-dn91 C2).
+        self.require_host_io("fs/write_text_file")?;
         crate::protocol::kas::host_io::write_text_file(&args).await
     }
 
@@ -344,6 +380,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::CreateTerminalRequest,
     ) -> acp::Result<acp::CreateTerminalResponse> {
+        self.require_host_io("terminal/create")?;
         self.terminals.create(&args)
     }
 
@@ -355,6 +392,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::WaitForTerminalExitRequest,
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
+        self.require_host_io("terminal/wait_for_exit")?;
         self.terminals.wait(&args).await
     }
 
@@ -365,6 +403,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::TerminalOutputRequest,
     ) -> acp::Result<acp::TerminalOutputResponse> {
+        self.require_host_io("terminal/output")?;
         self.terminals.output(&args)
     }
 
@@ -374,6 +413,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::ReleaseTerminalRequest,
     ) -> acp::Result<acp::ReleaseTerminalResponse> {
+        self.require_host_io("terminal/release")?;
         self.terminals.release(&args).await
     }
 
@@ -383,6 +423,7 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::KillTerminalRequest,
     ) -> acp::Result<acp::KillTerminalResponse> {
+        self.require_host_io("terminal/kill")?;
         self.terminals.kill(&args).await
     }
 }
@@ -400,6 +441,12 @@ impl KiroClient {
             return;
         }
         let Err(e) = result else { return };
+        // A refusal is not an auth failure: the bound engine installs no auth
+        // adapter (cyril-dn91 C13), so there is nothing actionable for the
+        // user — only responder errors surface as BridgeError.
+        if e.code == acp::ErrorCode::MethodNotFound {
+            return;
+        }
         let mut message = e.message.clone();
         // LOGIN_HINT is the single owner of the remediation wording — the
         // responder's own diagnostics embed it, so this check can't drift.
@@ -429,16 +476,31 @@ impl KiroClient {
     #[cfg(feature = "kas")]
     async fn handle_ext_request(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         if args.method.as_ref() == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
+            if self.engine.adapters().auth.is_none() {
+                return refuse_unadapted(args.method.as_ref());
+            }
             return crate::protocol::kas::auth::respond_get_access_token().await;
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
+            self.require_host_io(args.method.as_ref())?;
             return self.terminals.respond_shell_type();
         }
+        // Inbound hooks serving (list/executeHook/sessionStart) requires the
+        // Inbound registry — its presence IS the direction gate (cyril-dn91
+        // C5/C10). Outbound advertises hooks but serves nothing inbound;
+        // executeHook especially must not run wire-supplied commands without
+        // an Inbound adapter.
         if args.method.as_ref() == crate::protocol::kas::hooks::LIST_METHOD {
+            let Some(hooks) = &self.hooks else {
+                return refuse_unadapted(args.method.as_ref());
+            };
             let params = parse_ext_params(&args);
-            return self.hooks.respond_list(&params);
+            return hooks.respond_list(&params);
         }
         if args.method.as_ref() == crate::protocol::kas::hooks::EXECUTE_METHOD {
+            if self.hooks.is_none() {
+                return refuse_unadapted(args.method.as_ref());
+            }
             let params = parse_ext_params(&args);
             return crate::protocol::kas::hooks::respond_execute(
                 &params,
@@ -448,8 +510,10 @@ impl KiroClient {
             .await;
         }
         if args.method.as_ref() == crate::protocol::kas::hooks::SESSION_START_METHOD {
-            return crate::protocol::kas::hooks::respond_session_start(&self.hooks, &self.cwd)
-                .await;
+            let Some(hooks) = &self.hooks else {
+                return refuse_unadapted(args.method.as_ref());
+            };
+            return crate::protocol::kas::hooks::respond_session_start(hooks, &self.cwd).await;
         }
         // cyril-kf2g: the `_kiro/fs/*` superset dialect, selected by the
         // `fs._meta.kiro` capabilities this engine advertises. Both the
@@ -462,6 +526,7 @@ impl KiroClient {
         {
             use crate::protocol::kas::kiro_fs;
             if let Some(op) = kiro_fs::op_for_method(args.method.as_ref()) {
+                self.require_host_io(args.method.as_ref())?;
                 return kiro_fs::dispatch(op, &parse_ext_params(&args)).await;
             }
         }
@@ -492,6 +557,19 @@ fn parse_ext_params(args: &acp::ExtRequest) -> serde_json::Value {
             serde_json::Value::Null
         }
     }
+}
+
+/// Refuse a host callback whose family the bound engine installs no adapter
+/// for (cyril-dn91, ADR-0001 amendment): JSON-RPC method-not-found — never the
+/// protocol-default null, which the agent reads as success-with-empty-result.
+/// Generic so both ext requests and typed `acp::Client` overrides share it.
+#[cfg(feature = "kas")]
+fn refuse_unadapted<T>(method: &str) -> acp::Result<T> {
+    tracing::debug!(
+        method,
+        "host callback refused: bound engine installs no adapter for this family"
+    );
+    Err(acp::Error::method_not_found())
 }
 
 /// The ACP protocol default for an unhandled ext request: a `null` result.
@@ -670,6 +748,68 @@ mod tests {
 
     fn kas_client() -> KiroClient {
         kas_client_with_shell(test_host_shell(crate::types::AgentEngine::Kas))
+    }
+
+    /// A V2-bound client in a kas-feature build — the cyril-dn91 defect
+    /// configuration. Returns the notification receiver so refusal side
+    /// effects (or their required absence) are observable.
+    fn v2_bound_client() -> (KiroClient, mpsc::Receiver<RoutedNotification>) {
+        let (ntx, nrx) = mpsc::channel(4);
+        let (ptx, _prx) = mpsc::channel(1);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::V2Engine),
+            test_host_shell(crate::types::AgentEngine::V2),
+            std::path::Path::new("/tmp"),
+        );
+        (client, nrx)
+    }
+
+    // cyril-dn91 C1 fence: a V2-bound client (kas build) REFUSES
+    // getAccessToken with JSON-RPC method-not-found — not the protocol-default
+    // null (agent reads that as success), not a responder/store error. Fails
+    // against the pre-dn91 ungated arm, which ran the store read under V2.
+    #[tokio::test]
+    async fn v2_refuses_auth_callback() {
+        let (client, _nrx) = v2_bound_client();
+        let params = serde_json::value::RawValue::from_string("{}".to_string())
+            .unwrap()
+            .into();
+        let err = client
+            .ext_method(acp::ExtRequest::new(
+                crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD,
+                params,
+            ))
+            .await
+            .expect_err("V2 installs no auth adapter — must refuse, not answer");
+        assert_eq!(
+            err.code,
+            acp::ErrorCode::MethodNotFound,
+            "refusal must be method-not-found, got: {err:?}"
+        );
+    }
+
+    // cyril-dn91 C13 fence: the refusal travels the same ext_method path as
+    // real auth failures, but must NOT emit BridgeError("auth") — a refusal is
+    // not actionable. Fails under the plausible buggy impl: gate added inside
+    // handle_ext_request with notify_if_auth_failure left untouched.
+    #[tokio::test]
+    async fn auth_refusal_emits_no_bridge_error() {
+        let (client, mut nrx) = v2_bound_client();
+        let params = serde_json::value::RawValue::from_string("{}".to_string())
+            .unwrap()
+            .into();
+        let _ = client
+            .ext_method(acp::ExtRequest::new(
+                crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD,
+                params,
+            ))
+            .await;
+        assert!(
+            nrx.try_recv().is_err(),
+            "a refusal must not surface as a BridgeError"
+        );
     }
 
     fn kas_client_with_shell(shell: ResolvedHostShell) -> KiroClient {
@@ -854,6 +994,228 @@ mod tests {
             !f.exists(),
             "delete must actually reach the filesystem — the side effect IS the wiring proof"
         );
+    }
+
+    // cyril-dn91 C2 fence: typed fs callbacks refuse under V2 with
+    // method-not-found — and the write refusal precedes any filesystem side
+    // effect (the gate-after-side-effect bug this fixture is designed to
+    // fail under).
+    #[tokio::test]
+    async fn v2_refuses_typed_fs() {
+        let (client, _nrx) = v2_bound_client();
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("x.txt");
+        std::fs::write(&f, "seed").unwrap();
+
+        let err = client
+            .read_text_file(acp::ReadTextFileRequest::new(acp::SessionId::new("s"), &f))
+            .await
+            .expect_err("V2 installs no host_io adapter — read must refuse");
+        assert_eq!(err.code, acp::ErrorCode::MethodNotFound);
+
+        let target = dir.path().join("must-not-exist.txt");
+        let err = client
+            .write_text_file(acp::WriteTextFileRequest::new(
+                acp::SessionId::new("s"),
+                &target,
+                "boom",
+            ))
+            .await
+            .expect_err("write must refuse");
+        assert_eq!(err.code, acp::ErrorCode::MethodNotFound);
+        assert!(
+            !target.exists(),
+            "refusal must precede the write side effect"
+        );
+    }
+
+    // cyril-dn91 C3 fence: every `_kiro/fs/*` op refuses under V2, walked over
+    // FS_OPS — the same table the advertisement derives from, so a gate
+    // missing on any one arm fails its named op, and a sixth op added later is
+    // fenced automatically. The delete target must survive its refusal.
+    #[tokio::test]
+    async fn v2_refuses_kiro_fs_all_ops() {
+        use crate::protocol::kas::kiro_fs;
+
+        let (client, _nrx) = v2_bound_client();
+        let dir = tempfile::tempdir().unwrap();
+        for op in kiro_fs::FS_OPS {
+            let f = dir.path().join(format!("{}.txt", op.flag));
+            std::fs::write(&f, "seed").unwrap();
+            let params = serde_json::json!({"sessionId": "s", "path": f, "content": "seed"});
+            let raw = serde_json::value::RawValue::from_string(params.to_string()).unwrap();
+            match client
+                .ext_method(acp::ExtRequest::new(op.method, raw.into()))
+                .await
+            {
+                Err(e) => assert_eq!(
+                    e.code,
+                    acp::ErrorCode::MethodNotFound,
+                    "{} must refuse with method-not-found",
+                    op.wire
+                ),
+                Ok(resp) => panic!("{} must refuse, got body {}", op.wire, resp.0.get()),
+            }
+            assert!(
+                f.exists(),
+                "{}: refusal must precede any side effect",
+                op.flag
+            );
+        }
+    }
+
+    // cyril-dn91 C4 fence: the whole terminal family refuses under V2 with
+    // method-not-found — NOT the registry's "no resolved host shell" responder
+    // error (the pre-dn91 indirect gate), and not only on the ext arm: each
+    // typed override is gated individually, so an ext-arm-only gate fails
+    // here.
+    #[tokio::test]
+    async fn v2_refuses_terminal_family() {
+        let (client, _nrx) = v2_bound_client();
+        let sid = || acp::SessionId::new("s");
+        let tid = acp::TerminalId::new("term-x");
+
+        let assert_refused = |err: acp::Error, what: &str| {
+            assert_eq!(err.code, acp::ErrorCode::MethodNotFound, "{what}: {err:?}");
+            assert_ne!(
+                err.message, "KAS terminal callback has no resolved host shell",
+                "{what} must refuse at the adapter gate, not the shell registry"
+            );
+        };
+        assert_refused(
+            client
+                .create_terminal(acp::CreateTerminalRequest::new(sid(), "true"))
+                .await
+                .expect_err("create refused"),
+            "terminal/create",
+        );
+        assert_refused(
+            client
+                .wait_for_terminal_exit(acp::WaitForTerminalExitRequest::new(sid(), tid.clone()))
+                .await
+                .expect_err("wait refused"),
+            "terminal/wait_for_exit",
+        );
+        assert_refused(
+            client
+                .terminal_output(acp::TerminalOutputRequest::new(sid(), tid.clone()))
+                .await
+                .expect_err("output refused"),
+            "terminal/output",
+        );
+        assert_refused(
+            client
+                .release_terminal(acp::ReleaseTerminalRequest::new(sid(), tid.clone()))
+                .await
+                .expect_err("release refused"),
+            "terminal/release",
+        );
+        assert_refused(
+            client
+                .kill_terminal(acp::KillTerminalRequest::new(sid(), tid))
+                .await
+                .expect_err("kill refused"),
+            "terminal/kill",
+        );
+
+        let params = serde_json::value::RawValue::from_string("{\"sessionId\":\"s\"}".to_string())
+            .unwrap()
+            .into();
+        assert_refused(
+            client
+                .ext_method(acp::ExtRequest::new("kiro/terminal/shell_type", params))
+                .await
+                .expect_err("shell_type refused"),
+            "shell_type",
+        );
+    }
+
+    // cyril-dn91 C10 fence: the hook registry exists iff the Hooks direction
+    // is Inbound — no empty-registry stand-in for Outbound/Off (the sentinel
+    // ADR-0001's amendment forbids). Fails under the keep-always-constructing
+    // impl.
+    #[test]
+    fn registry_present_iff_inbound() {
+        use crate::types::kas_hooks::KasHooksMode;
+
+        let client_for = |mode| {
+            let (ntx, _nrx) = mpsc::channel(1);
+            let (ptx, _prx) = mpsc::channel(1);
+            KiroClient::new(
+                ntx,
+                ptx,
+                std::rc::Rc::new(crate::protocol::engine::KasEngine { hooks_mode: mode }),
+                test_host_shell(crate::types::AgentEngine::Kas),
+                std::path::Path::new("/tmp"),
+            )
+        };
+        assert!(
+            client_for(KasHooksMode::Host).hooks.is_some(),
+            "Inbound loads a registry"
+        );
+        assert!(
+            client_for(KasHooksMode::Kas).hooks.is_none(),
+            "Outbound gets NO registry"
+        );
+        assert!(
+            client_for(KasHooksMode::Off).hooks.is_none(),
+            "Off gets NO registry"
+        );
+        let (v2, _nrx) = v2_bound_client();
+        assert!(v2.hooks.is_none(), "V2 gets NO registry");
+    }
+
+    // cyril-dn91 C12 fence: didChange carrying a full registry payload must
+    // NOT surface HooksChanged when the bound engine has no hooks capability.
+    // Fails against the pre-dn91 ungated arm (which forwarded it under V2);
+    // the Outbound cell proves the gate is direction-shaped, not
+    // registry-presence-shaped (Outbound has no registry but DOES get
+    // HooksChanged, cyril-gk17).
+    #[tokio::test]
+    async fn did_change_gated_by_hooks_direction() {
+        let payload = serde_json::json!({"hooks": [
+            {"id": "k:h", "name": "h", "trigger": "UserPromptSubmit", "enabled": true}
+        ]});
+
+        let (v2, mut v2_rx) = v2_bound_client();
+        let raw = serde_json::value::RawValue::from_string(payload.to_string()).unwrap();
+        v2.ext_notification(acp::ExtNotification::new(
+            crate::protocol::kas::hooks::DID_CHANGE_METHOD,
+            raw.into(),
+        ))
+        .await
+        .unwrap();
+        assert!(
+            v2_rx.try_recv().is_err(),
+            "no-hooks engine must not surface HooksChanged"
+        );
+
+        let (ntx, mut kas_rx) = mpsc::channel(4);
+        let (ptx, _prx) = mpsc::channel(1);
+        let outbound = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Kas,
+            }),
+            test_host_shell(crate::types::AgentEngine::Kas),
+            std::path::Path::new("/tmp"),
+        );
+        let raw = serde_json::value::RawValue::from_string(payload.to_string()).unwrap();
+        outbound
+            .ext_notification(acp::ExtNotification::new(
+                crate::protocol::kas::hooks::DID_CHANGE_METHOD,
+                raw.into(),
+            ))
+            .await
+            .unwrap();
+        match kas_rx.try_recv() {
+            Ok(routed) => assert!(
+                matches!(routed.notification, Notification::HooksChanged { .. }),
+                "Outbound still surfaces HooksChanged"
+            ),
+            Err(_) => panic!("Outbound didChange must still surface HooksChanged (cyril-gk17)"),
+        }
     }
 
     // cyril-jiyn claim 12 fence: the _kiro/hooks/didChange notification is
