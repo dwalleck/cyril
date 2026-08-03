@@ -13,6 +13,11 @@ pub(crate) mod kas;
 /// fences by the cyril-dn91 build.
 #[cfg(all(test, feature = "kas"))]
 mod probe_dn91;
+/// cyril-g9vt cheapest design falsifier (C13) — the uninhabited-channel arm
+/// pattern the mediator ingress relies on. Test-only, BOTH feature configs
+/// (the default build is the point).
+#[cfg(test)]
+mod probe_g9vt_c13;
 pub(crate) mod transport;
 /// Turn mediation (cyril-b4y4): the pure state machine behind the bridge
 /// `run_loop`'s turn ownership — busy-guard, owner allocation, terminal
