@@ -15,7 +15,14 @@
 //! prevents pipe-capacity deadlocks even if KAS delays or omits `wait`
 //! (`cyril-r3t6`). `wait` moves the child out of the registry (dropping the
 //! `RefCell` borrow), awaits it while watching the kill signal, then joins the
-//! reader and caches the chronological output.
+//! reader and caches the chronological output. That join is **bounded**: the
+//! drain reaches EOF only when every writer fd on the shared pipe closes, and a
+//! clean-exiting command can leave a background child holding one (`sh -c
+//! "sleep 3 & printf done"`) — after [`POST_EXIT_DRAIN_GRACE`] the reply
+//! snapshots what has been drained so far instead of waiting out the orphan
+//! (`cyril-ho7o`). Dropping the process owner then SIGKILLs the leftover
+//! process group, so the abandoned drain still reaches EOF promptly; only a
+//! new-session (`setsid`) escapee can pin it past that.
 //!
 //! **Non-blocking invariant (ADR-0004): `wait`/`release`/`kill` MUST await
 //! `tokio::process`, never a thread-pinning `std::process` wait** (the bridge is a
@@ -27,10 +34,23 @@
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use agent_client_protocol as acp;
 use tokio::process::Child;
 use tokio::sync::Notify;
+
+/// How long after the child has been reaped the drain reader may keep waiting
+/// for EOF before the reply snapshots what has been read so far (cyril-ho7o).
+/// EOF requires EVERY writer fd on the shared pipe to close, and a
+/// clean-exiting command can leave a background child holding one — an
+/// unbounded join would hold the `wait`/`kill`/`release` reply hostage for the
+/// orphan's lifetime (measured 3.00s for a 3s daemon vs a 1.9ms child wait).
+/// The grace only bites when such a holder exists; a normal EOF resolves the
+/// join immediately. Generous enough for the blocking-pool reader to flush the
+/// residual pipe contents (at most one pipe capacity) under CI load, and
+/// invisible next to KAS's 60s command budget.
+const POST_EXIT_DRAIN_GRACE: std::time::Duration = std::time::Duration::from_millis(500);
 
 /// A process-lifetime registry of live terminals, one per `KiroClient`
 /// (`!Send`, single bridge thread — no lock, mirroring `tool_call_inputs`).
@@ -88,7 +108,14 @@ impl Drop for ProcessTree {
 struct RunningChild {
     child: Child,
     process_tree: ProcessTree,
-    output_task: tokio::task::JoinHandle<std::io::Result<Vec<u8>>>,
+    /// The create-time drain reader: appends into `output` until pipe EOF.
+    /// `Ok(())` is EOF; `Err` is a read failure.
+    output_task: tokio::task::JoinHandle<std::io::Result<()>>,
+    /// Chronological stdout+stderr bytes drained so far, shared with
+    /// `output_task` so [`join_output`] can snapshot the partial output when a
+    /// backgrounded pipe holder keeps EOF away past the post-exit grace
+    /// (cyril-ho7o). `std::sync` because the drain runs on the blocking pool.
+    output: Arc<Mutex<Vec<u8>>>,
 }
 
 struct CapturedOutput {
@@ -209,18 +236,31 @@ impl TerminalRegistry {
         // Stdio values alive inside itself): the drain below reaches EOF only
         // once every writer is closed, so drop `cmd` NOW rather than relying on
         // scope-end. An early return or lifetime extension between spawn and
-        // drop would wedge the blocking reader and hang every later `wait`.
+        // drop would wedge the blocking reader — every later `wait` would burn
+        // its full post-exit grace and snapshot instead of joining a clean EOF.
         drop(cmd);
+        let output = Arc::new(Mutex::new(Vec::new()));
+        let drain = Arc::clone(&output);
+        // Read in chunks and publish each one immediately: the shared buffer is
+        // what lets join_output snapshot mid-drain (a read_to_end into a task-
+        // local Vec would make partial output unobservable, cyril-ho7o).
         let output_task = tokio::task::spawn_blocking(move || {
             let mut reader = output_reader;
-            let mut output = Vec::new();
-            std::io::Read::read_to_end(&mut reader, &mut output)?;
-            Ok(output)
+            let mut chunk = [0u8; 8192];
+            loop {
+                match std::io::Read::read(&mut reader, &mut chunk) {
+                    Ok(0) => return Ok(()),
+                    Ok(n) => lock_output(&drain).extend_from_slice(&chunk[..n]),
+                    Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+                    Err(e) => return Err(e),
+                }
+            }
         });
         let process = RunningChild {
             process_tree: ProcessTree::new(child.id()),
             child,
             output_task,
+            output,
         };
 
         let n = self.counter.get().saturating_add(1);
@@ -250,7 +290,10 @@ impl TerminalRegistry {
     /// `WaitForTerminalExitResponse`, `#[serde(flatten)]`) — NOT nested
     /// `{exitStatus:{…}}` (the prove-it finding, `.cyril-ufie/PROVE-IT.md`).
     /// Unknown id → `-32602`. The create-time shared-pipe task drains output
-    /// continuously; this await joins it after the async child wait.
+    /// continuously; this await joins it after the async child wait, bounded by
+    /// [`POST_EXIT_DRAIN_GRACE`] once the child is reaped — a clean-exiting
+    /// command that daemonized a pipe holder must not delay the reply
+    /// (cyril-ho7o); past the grace the reply snapshots the drained output.
     pub(crate) async fn wait(
         &self,
         req: &acp::WaitForTerminalExitRequest,
@@ -320,7 +363,7 @@ impl TerminalRegistry {
                 if let Err(e) = process.child.wait().await {
                     tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: reap failed (possible zombie)");
                 }
-                if let Err(e) = join_output(process.output_task).await {
+                if let Err(e) = join_output(process, &req.terminal_id).await {
                     tracing::debug!(terminal_id = %req.terminal_id, error = %e, "KAS terminal release: output drain failed");
                 }
             }
@@ -349,7 +392,7 @@ impl TerminalRegistry {
         match self.take_child(&req.terminal_id)? {
             Taken::Child(mut process, _) => {
                 terminate_process_tree(&mut process, &req.terminal_id, "kill").await;
-                let out = match wait_for_output(process).await {
+                let out = match wait_for_output(process, &req.terminal_id).await {
                     Ok(out) => out,
                     // take_child left a Running(None) slot; a reap error must free it
                     // (not leave the id wedged in a permanent InFlight state) before
@@ -474,21 +517,61 @@ async fn wait_with_output_killable(
             process.child.wait().await?
         }
     };
-    let output = join_output(process.output_task).await?;
+    let output = join_output(process, terminal_id).await?;
     Ok(CapturedOutput { status, output })
 }
 
-async fn wait_for_output(mut process: RunningChild) -> std::io::Result<CapturedOutput> {
+async fn wait_for_output(
+    mut process: RunningChild,
+    terminal_id: &acp::TerminalId,
+) -> std::io::Result<CapturedOutput> {
     let status = process.child.wait().await?;
-    let output = join_output(process.output_task).await?;
+    let output = join_output(process, terminal_id).await?;
     Ok(CapturedOutput { status, output })
 }
 
+/// Join the create-time drain **bounded**, consuming the reaped child's owner:
+/// pipe EOF requires every writer fd to close, and an already-exited command
+/// can leave a background child holding one — waiting for EOF unconditionally
+/// held the wait reply hostage for the orphan's lifetime (cyril-ho7o). Wait up
+/// to [`POST_EXIT_DRAIN_GRACE`] for EOF (the common case: no holder, immediate
+/// join, complete output), then snapshot what the drain has read so far and
+/// abandon the task. `process` drops on return, and `ProcessTree`'s drop
+/// SIGKILLs the leftover process group — closing the straggler's fds so the
+/// abandoned drain still reaches EOF and returns its blocking-pool thread;
+/// only a new-session (`setsid`) escapee can pin it longer.
 async fn join_output(
-    task: tokio::task::JoinHandle<std::io::Result<Vec<u8>>>,
+    process: RunningChild,
+    terminal_id: &acp::TerminalId,
 ) -> std::io::Result<Vec<u8>> {
-    task.await
-        .map_err(|error| std::io::Error::other(format!("terminal output task failed: {error}")))?
+    match tokio::time::timeout(POST_EXIT_DRAIN_GRACE, process.output_task).await {
+        Ok(joined) => {
+            joined.map_err(|error| {
+                std::io::Error::other(format!("terminal output task failed: {error}"))
+            })??;
+            // EOF: the drain finished, nobody else appends — take, don't clone.
+            Ok(std::mem::take(&mut *lock_output(&process.output)))
+        }
+        Err(_elapsed) => {
+            let snapshot = lock_output(&process.output).clone();
+            tracing::debug!(
+                terminal_id = %terminal_id,
+                grace = ?POST_EXIT_DRAIN_GRACE,
+                bytes = snapshot.len(),
+                "KAS terminal drain still open after exit (backgrounded pipe holder); snapshotting partial output"
+            );
+            Ok(snapshot)
+        }
+    }
+}
+
+/// Lock the shared drain buffer, recovering from a poisoned lock: the drain
+/// holds it only across `extend_from_slice`, so a panic there still leaves
+/// every previously published chunk intact — exactly the snapshot contract.
+fn lock_output(output: &Mutex<Vec<u8>>) -> std::sync::MutexGuard<'_, Vec<u8>> {
+    output
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 async fn terminate_process_tree(
@@ -1033,6 +1116,46 @@ mod tests {
         let resp = reg.wait(&wait_req(&id)).await.unwrap();
         assert_eq!(resp.exit_status.exit_code, None, "signaled => no exit code");
         assert_eq!(resp.exit_status.signal.as_deref(), Some("9"), "SIGKILL=9");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn wait_reply_not_held_hostage_by_daemonized_pipe_holder() {
+        // Fixture (cyril-ho7o): a CLEAN-exiting command that leaves a background
+        // child holding the shared output pipe (`sleep 3 & printf done`) must not
+        // delay the wait reply until that orphan closes the pipe. The drain
+        // reaches EOF only when every writer fd closes, so an unbounded post-exit
+        // join blocks for the daemon's whole window (measured: child.wait()
+        // 1.9ms, read_to_end 3.00s — cyril-6bol). kill/release recover via the
+        // process-tree kill; the clean path needs the bounded post-exit grace.
+        // The 1500ms bound is generous (grace + scheduling) but well under the
+        // 3s daemon window, so the stall cannot pass. The reply must still carry
+        // the clean exit and the snapshot must contain the pre-exit output.
+        let reg = test_registry();
+        let id = reg
+            .create(&sh("sleep 3 & printf done"))
+            .unwrap()
+            .terminal_id;
+        let t0 = std::time::Instant::now();
+        let resp = reg
+            .wait(&wait_req(&id))
+            .await
+            .expect("wait resolves for a clean exit");
+        let elapsed = t0.elapsed();
+        assert!(
+            elapsed < std::time::Duration::from_millis(1500),
+            "wait reply held hostage by the daemonized pipe holder (took {elapsed:?})"
+        );
+        assert_eq!(
+            resp.exit_status.exit_code,
+            Some(0),
+            "the command itself exited cleanly"
+        );
+        let output = reg.output(&out_req(&id)).unwrap().output;
+        assert!(
+            output.contains("done"),
+            "snapshot must carry the pre-exit output, got {output:?}"
+        );
     }
 
     // Windows counterpart of the unix lifecycle fixtures above: the runnable
