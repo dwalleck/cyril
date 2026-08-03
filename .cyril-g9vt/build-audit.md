@@ -78,4 +78,10 @@ diagnosed, drain relocated, live re-run PASSES with identical behavior to main.
 - The mid-RPC-callback deadlock (fixed in-branch) is a general property of any
   loop-issued RPC that can trigger a host callback — documented at the drain
   construction so a future maintainer keeps the drain off the loop. No separate
-  ticket: the fix is complete and fenced by the live check.
+  ticket: the fix is complete; the live parity check is its authoritative
+  evidence (the in-process harness smoke test cannot reproduce the real
+  subprocess's loop-blocking, so it does not fence non-vacuity).
+- Pre-PR review (`.cyril-g9vt/pre-pr-review.md`): the mediator's cancel/shutdown
+  seam has no production opt-in yet (hooks cancel via HookOps, terminals via
+  the registry). Filed **cyril-740a** to wire the first family; bridge.rs
+  comments made honest in the meantime.

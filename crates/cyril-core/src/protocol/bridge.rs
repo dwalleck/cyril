@@ -1235,9 +1235,13 @@ async fn run_loop(
                     // turn-end could race an in-flight release.
                     #[cfg(feature = "kas")]
                     terminals.reap_session(&session_id).await;
-                    // cyril-g9vt: sweep the session's in-flight cancellable
-                    // host callbacks too — their dispatch futures wind down
-                    // and dropped replies surface "aborted" at the acp tasks.
+                    // cyril-g9vt: sweep the session's in-flight host callbacks
+                    // that opt into MEDIATOR cancellation via `cancel_key`.
+                    // Today no production family does (hooks cancel through
+                    // HookOps above; terminals reap via the registry), so this
+                    // is a no-op waiting for its first opt-in family
+                    // (cyril-3ald hooks-onto-mediator, filed) — the machinery
+                    // is unit-fenced and the seam the design mandates.
                     host_mediator
                         .borrow_mut()
                         .cancel_scope(&crate::types::SessionId::new(session_id.to_string()));
@@ -2114,9 +2118,12 @@ async fn run_loop(
                 for handle in prompt_tasks.drain(..) {
                     handle.abort();
                 }
-                // cyril-g9vt C8: signal every in-flight host callback; their
-                // dispatch futures wind down (kill_on_drop reaps children) and
-                // dropped replies surface "aborted" at the acp tasks.
+                // cyril-g9vt C8: signal every in-flight host callback that opted
+                // into mediator cancellation. No production family does yet
+                // (see the CancelRequest arm), so this signals nothing today;
+                // in-flight dispatch futures are instead reaped when the
+                // LocalSet tears down at run_loop return (kill_on_drop on their
+                // children). Kept as the shutdown seam the design mandates.
                 host_mediator.borrow_mut().shutdown();
                 break;
             }
@@ -2897,6 +2904,14 @@ mod tests {
         /// below once both resolve.
         #[cfg(all(feature = "kas", unix))]
         ext_concurrency_probe: bool,
+        /// cyril-g9vt slice-9 regression fence: when set, `new_session`
+        /// issues a `_kiro/terminal/shell_type` host callback and AWAITS it
+        /// before returning the session — modelling KAS's mid-`new_session`
+        /// `getAccessToken`. With an in-`run_loop` drain this deadlocks (the
+        /// loop is blocked on new_session and can't drain the host channel);
+        /// the dedicated drain task resolves it off-loop.
+        #[cfg(all(feature = "kas", unix))]
+        callback_during_new_session: bool,
         #[cfg(all(feature = "kas", unix))]
         ext_probe_timings: Option<(Duration, Duration)>,
     }
@@ -2953,6 +2968,28 @@ mod tests {
             } else {
                 format!("fake-{n}")
             };
+            #[cfg(all(feature = "kas", unix))]
+            {
+                let fire = self.script.borrow().callback_during_new_session;
+                // Clone the conn OUT of the RefCell before any await — a Ref
+                // held across .await is unsound (mirrors the prompt path).
+                let conn = self.agent_conn.borrow().clone();
+                if let (true, Some(conn)) = (fire, conn) {
+                    use acp::Client as _;
+                    let raw = serde_json::value::RawValue::from_string(
+                        serde_json::json!({"sessionId": id}).to_string(),
+                    )
+                    .expect("probe params");
+                    // AWAIT it — models KAS's mid-new_session getAccessToken; the
+                    // dedicated drain resolves it off-loop so new_session returns.
+                    let _ = conn
+                        .ext_method(acp::ExtRequest::new(
+                            "_kiro/terminal/shell_type",
+                            raw.into(),
+                        ))
+                        .await;
+                }
+            }
             Ok(acp::NewSessionResponse::new(acp::SessionId::new(id)))
         }
         async fn prompt(&self, a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
@@ -3676,6 +3713,55 @@ mod tests {
                     fast < Duration::from_millis(400),
                     "fast callback must resolve while the slow one is pending \
                      (concurrent resolution): fast={fast:?} slow={slow:?}"
+                );
+            },
+        )
+        .await;
+    }
+
+    // cyril-g9vt slice-9 SMOKE TEST: a KAS host callback issued DURING
+    // new_session (KAS does exactly this with getAccessToken) resolves and the
+    // session still completes. NB this is NOT the deadlock's non-vacuity fence
+    // — the in-process duplex harness does not reproduce the real subprocess's
+    // loop-blocking, so removing the drain does not make it fail here. The
+    // AUTHORITATIVE deadlock evidence is the live parity check (.cyril-g9vt/
+    // build-audit.md, slice 9): baseline main created the session, the in-loop
+    // drain hung it, the dedicated drain restored it. This test guards the
+    // end-to-end mid-new_session composition against everyday breakage.
+    #[cfg(all(feature = "kas", unix))]
+    #[tokio::test]
+    async fn callback_during_new_session_completes() {
+        let script = Rc::new(RefCell::new(Script {
+            callback_during_new_session: true,
+            ..Script::default()
+        }));
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            script,
+            |sender, mut rx, _perm, _gate, _loop_handle, _kill| async move {
+                sender
+                    .send(BridgeCommand::NewSession {
+                        cwd: std::env::temp_dir(),
+                    })
+                    .await
+                    .unwrap();
+                // A deadlocked drain never lets new_session return; bound the
+                // wait so the fence fails fast instead of hanging CI.
+                let created = tokio::time::timeout(Duration::from_secs(5), async {
+                    while let Some(n) = recv_notif(&mut rx, 5).await {
+                        if matches!(n, Notification::SessionCreated { .. }) {
+                            return true;
+                        }
+                    }
+                    false
+                })
+                .await;
+                assert_eq!(
+                    created,
+                    Ok(true),
+                    "SessionCreated must arrive — the mid-new_session callback                      resolved off the loop (no deadlock)"
                 );
             },
         )

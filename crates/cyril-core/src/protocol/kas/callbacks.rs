@@ -305,64 +305,55 @@ pub(crate) struct DispatchCtx {
     pub(crate) cwd: std::path::PathBuf,
 }
 
+/// Enqueue `notify` (if any) BEFORE sending the typed reply — the ADR-0004
+/// failure-ordering `finish()` owns the order; this is the shared tail every
+/// request-kind arm ends with. A dead responder (the acp task already gone) is
+/// logged under the callback's `kind`, never a panic (design C7).
+async fn resolve<T>(
+    ctx: &DispatchCtx,
+    kind: &'static str,
+    notify: Option<crate::types::Notification>,
+    reply: Reply<T>,
+    result: acp::Result<T>,
+) {
+    finish(&ctx.notify_tx, notify, move || {
+        if reply.send(result).is_err() {
+            tracing::debug!(kind, "callback reply dropped (responder gone)");
+        }
+    })
+    .await;
+}
+
 /// Resolve one accepted callback against the adapter-side responders. The
 /// match is exhaustive over the CURRENT variant set — a family cannot reach
-/// the channel before its cutover slice constructs it.
+/// the channel before its cutover slice constructs it. Request-kind arms end
+/// in [`resolve`]; the two control arms (cancel, didChange) have no reply.
 pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
+    let kind = cb.kind();
     match cb {
         HostCallback::CreateTerminal { req, reply } => {
-            let result = ctx.terminals.create(&req);
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("terminal/create reply dropped (responder gone)");
-                }
-            })
-            .await;
+            let r = ctx.terminals.create(&req);
+            resolve(ctx, kind, None, reply, r).await;
         }
         HostCallback::WaitForTerminalExit { req, reply } => {
-            let result = ctx.terminals.wait(&req).await;
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("terminal/wait_for_exit reply dropped (responder gone)");
-                }
-            })
-            .await;
+            let r = ctx.terminals.wait(&req).await;
+            resolve(ctx, kind, None, reply, r).await;
         }
         HostCallback::TerminalOutput { req, reply } => {
-            let result = ctx.terminals.output(&req);
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("terminal/output reply dropped (responder gone)");
-                }
-            })
-            .await;
+            let r = ctx.terminals.output(&req);
+            resolve(ctx, kind, None, reply, r).await;
         }
         HostCallback::ReleaseTerminal { req, reply } => {
-            let result = ctx.terminals.release(&req).await;
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("terminal/release reply dropped (responder gone)");
-                }
-            })
-            .await;
+            let r = ctx.terminals.release(&req).await;
+            resolve(ctx, kind, None, reply, r).await;
         }
         HostCallback::KillTerminal { req, reply } => {
-            let result = ctx.terminals.kill(&req).await;
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("terminal/kill reply dropped (responder gone)");
-                }
-            })
-            .await;
+            let r = ctx.terminals.kill(&req).await;
+            resolve(ctx, kind, None, reply, r).await;
         }
         HostCallback::ShellType { reply, .. } => {
-            let result = ctx.terminals.respond_shell_type();
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("shell_type reply dropped (responder gone)");
-                }
-            })
-            .await;
+            let r = ctx.terminals.respond_shell_type();
+            resolve(ctx, kind, None, reply, r).await;
         }
         HostCallback::HooksList {
             trigger,
@@ -378,19 +369,14 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
             }
             // Presence checked at the client before sending; a None here would
             // be a caller bug, so refuse rather than silently serve nothing.
-            let result = match &ctx.hooks {
+            let r = match &ctx.hooks {
                 Some(h) => h.respond_list(&serde_json::Value::Object(params)),
                 None => Err(acp::Error::method_not_found()),
             };
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("hooks/list reply dropped (responder gone)");
-                }
-            })
-            .await;
+            resolve(ctx, kind, None, reply, r).await;
         }
         HostCallback::HooksExecute { args, reply } => {
-            let result = match serde_json::to_value(&args) {
+            let r = match serde_json::to_value(&args) {
                 Ok(params) => {
                     crate::protocol::kas::hooks::respond_execute(&params, &ctx.cwd, &ctx.hook_ops)
                         .await
@@ -400,25 +386,40 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
                     format!("re-serialize executeHook params: {e}"),
                 )),
             };
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("executeHook reply dropped (responder gone)");
-                }
-            })
-            .await;
+            resolve(ctx, kind, None, reply, r).await;
         }
         HostCallback::HooksSessionStart { reply } => {
-            let result = match &ctx.hooks {
+            let r = match &ctx.hooks {
                 Some(h) => crate::protocol::kas::hooks::respond_session_start(h, &ctx.cwd).await,
                 None => Err(acp::Error::method_not_found()),
             };
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("sessionStart reply dropped (responder gone)");
-                }
-            })
-            .await;
+            resolve(ctx, kind, None, reply, r).await;
         }
+        HostCallback::ReadTextFile { req, reply } => {
+            let r = crate::protocol::kas::host_io::read_text_file(&req).await;
+            resolve(ctx, kind, None, reply, r).await;
+        }
+        HostCallback::WriteTextFile { req, reply } => {
+            let r = crate::protocol::kas::host_io::write_text_file(&req).await;
+            resolve(ctx, kind, None, reply, r).await;
+        }
+        HostCallback::KiroFs { args, reply } => {
+            let op = args.op();
+            let r = match args.to_params() {
+                Ok(params) => crate::protocol::kas::kiro_fs::dispatch(op, &params).await,
+                Err(e) => Err(acp::Error::new(
+                    -32603,
+                    format!("re-serialize {} params: {e}", op.wire),
+                )),
+            };
+            resolve(ctx, kind, None, reply, r).await;
+        }
+        HostCallback::GetAccessToken { reply } => {
+            let r = crate::protocol::kas::auth::respond_get_access_token().await;
+            let notify = r.as_ref().err().and_then(auth_failure_notification);
+            resolve(ctx, kind, notify, reply, r).await;
+        }
+        // Control notifications — no reply channel.
         HostCallback::HooksCancel { operation_id } => {
             ctx.hook_ops.cancel(&operation_id);
         }
@@ -438,50 +439,6 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
                 "KAS hooks changed on disk; host-registry reload deferred (cyril-2adk)"
             ),
         },
-        HostCallback::ReadTextFile { req, reply } => {
-            let result = crate::protocol::kas::host_io::read_text_file(&req).await;
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("fs/read_text_file reply dropped (responder gone)");
-                }
-            })
-            .await;
-        }
-        HostCallback::WriteTextFile { req, reply } => {
-            let result = crate::protocol::kas::host_io::write_text_file(&req).await;
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("fs/write_text_file reply dropped (responder gone)");
-                }
-            })
-            .await;
-        }
-        HostCallback::KiroFs { args, reply } => {
-            let op = args.op();
-            let result = match args.to_params() {
-                Ok(params) => crate::protocol::kas::kiro_fs::dispatch(op, &params).await,
-                Err(e) => Err(acp::Error::new(
-                    -32603,
-                    format!("re-serialize {} params: {e}", op.wire),
-                )),
-            };
-            finish(&ctx.notify_tx, None, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!(wire = op.wire, "kiro_fs reply dropped (responder gone)");
-                }
-            })
-            .await;
-        }
-        HostCallback::GetAccessToken { reply } => {
-            let result = crate::protocol::kas::auth::respond_get_access_token().await;
-            let notify = result.as_ref().err().and_then(auth_failure_notification);
-            finish(&ctx.notify_tx, notify, move || {
-                if reply.send(result).is_err() {
-                    tracing::debug!("getAccessToken reply dropped (responder gone)");
-                }
-            })
-            .await;
-        }
     }
 }
 

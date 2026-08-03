@@ -30,9 +30,9 @@ pub(crate) fn test_host_tx() -> mpsc::Sender<HostCallbackItem> {
 }
 
 /// Inline mediation for client unit tests (cyril-g9vt): a background thread
-/// drains the host channel through the REAL accept + `spawn_host_job`
-/// concurrent-resolution pair, so migrated fences keep their concurrency and
-/// notification-observation behavior. Dispatch notifications are dropped.
+/// drains the host channel through the REAL accept + `spawn_local` concurrent
+/// resolution (mirroring `run_loop`'s dedicated drain task), so migrated
+/// fences keep their concurrency and notification-observation behavior.
 #[cfg(all(test, feature = "kas"))]
 pub(crate) fn spawn_test_mediation(shell: ResolvedHostShell) -> mpsc::Sender<HostCallbackItem> {
     let (ntx, nrx) = mpsc::channel(16);
@@ -312,7 +312,11 @@ impl acp::Client for KiroClient {
             if args.method.as_ref() == crate::protocol::kas::hooks::CANCEL_METHOD {
                 // Cancel targets an inbound hook op — only meaningful when
                 // cyril serves hooks (dn91 C10). No adapter → drop.
-                if self.hooks_direction_is_none() || !self.serves_inbound_hooks() {
+                // Cancel targets an inbound hook op — only meaningful when
+                // cyril serves hooks inbound (dn91 C10). `serves_inbound_hooks`
+                // is false for every non-Inbound direction (incl. None), so it
+                // alone is the gate.
+                if !self.serves_inbound_hooks() {
                     tracing::debug!("hooks/cancel dropped: no inbound hooks adapter");
                     return Ok(());
                 }
@@ -398,8 +402,9 @@ impl acp::Client for KiroClient {
     /// async host-io resolver. Only present under `kas` — v2 advertises no fs caps
     /// (KasEngine, Slice 1), so a v2 agent never calls this. Resolution runs in the
     /// acp connection's per-request `spawn_local` task (`rpc.rs:272`), off the
-    /// bridge loop and non-blocking via async `tokio::fs` (ADR-0004 invariant). The
-    /// loop-mediation gate seam is deferred to its first consumer (cyril-g9vt).
+    /// bridge loop and non-blocking (ADR-0004 invariant). Since cyril-g9vt the
+    /// request is parsed to a typed callback and CROSSES the host-callback
+    /// mediation seam; the host_io responder runs on the dispatch side.
     #[cfg(feature = "kas")]
     async fn read_text_file(
         &self,

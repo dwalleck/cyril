@@ -152,13 +152,17 @@ pub(crate) fn op_for_method(method: &str) -> Option<&'static FsOp> {
     FS_OPS.iter().find(|op| op.method == method)
 }
 
-/// The table row for an op kind. Every kind has exactly one row (the census
-/// fence walks FS_OPS), so the lookup is total.
+/// The table row for an op kind — a TOTAL match (no unwrap/expect/panic/
+/// fallback). The index mapping mirrors `FS_OPS`'s declaration order, fenced
+/// by [`tests::op_for_kind_indices_match_fs_ops`].
 pub(crate) fn op_for_kind(kind: FsOpKind) -> &'static FsOp {
-    FS_OPS
-        .iter()
-        .find(|op| op.kind == kind)
-        .unwrap_or_else(|| unreachable!("FS_OPS carries every FsOpKind"))
+    match kind {
+        FsOpKind::ReadFile => &FS_OPS[0],
+        FsOpKind::WriteFile => &FS_OPS[1],
+        FsOpKind::Stat => &FS_OPS[2],
+        FsOpKind::ReadDirectory => &FS_OPS[3],
+        FsOpKind::Delete => &FS_OPS[4],
+    }
 }
 
 /// The five operations in one place.
@@ -663,6 +667,22 @@ mod tests {
 
     use super::*;
     use serde_json::json;
+
+    // cyril-g9vt: op_for_kind's indexed match mirrors FS_OPS's declaration
+    // order — fence the two against drift (reordering FS_OPS without updating
+    // the match would silently return the wrong op).
+    #[test]
+    fn op_for_kind_indices_match_fs_ops() {
+        for op in FS_OPS {
+            assert_eq!(
+                op_for_kind(op.kind).method,
+                op.method,
+                "op_for_kind({:?}) must return the FS_OPS row for {}",
+                op.kind,
+                op.wire
+            );
+        }
+    }
 
     /// The response's JSON body — asserting on the payload the agent parses,
     /// not on cyril's in-memory value, so a serialization mistake is caught.
