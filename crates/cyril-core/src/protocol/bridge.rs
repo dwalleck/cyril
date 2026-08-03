@@ -862,7 +862,7 @@ async fn run_loop(
         mut inbound_rx,
         mut req_rx,
         mut io_done,
-        mut host_rx,
+        host_rx,
         ..
     } = internal;
     use acp::Agent;
@@ -968,33 +968,65 @@ async fn run_loop(
     // intentionally diverge there; in v2 they clear together (the prompt
     // resolves AT turn-end). Do not re-merge them.
     let mut mediator = TurnMediator::new();
-    // Host-callback mediation (cyril-g9vt, ADR-0004 amendment): lifecycle
-    // state machine + the adapter-side dispatch context. Shared Rc: the loop
-    // accepts; spawned resolution tasks complete/get-cancelled through it.
+    // Host-callback mediation (cyril-g9vt, ADR-0004 amendment): the lifecycle
+    // state machine, shared so `run_loop`'s CancelRequest/Shutdown arms can
+    // sweep it while a DEDICATED drain task owns acceptance + resolution. The
+    // drain MUST be its own task, not a `run_loop` select! arm: `run_loop`
+    // blocks on `conn.*.await` inside command arms (new_session, prompt), and
+    // KAS issues `getAccessToken` DURING new_session — an in-loop drain would
+    // deadlock (new_session waits for the auth reply; the auth reply needs the
+    // loop to drain; the loop is blocked on new_session). Live-caught, slice 9.
     let host_mediator = std::rc::Rc::new(std::cell::RefCell::new(
         crate::protocol::host_mediator::HostMediator::new(),
     ));
     #[cfg(feature = "kas")]
-    #[cfg(feature = "kas")]
-    let host_ctx = std::rc::Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
-        notify_tx: inbound_tx.clone(),
-        terminals: std::rc::Rc::clone(&terminals),
-        hooks: match engine.adapters().hooks {
-            crate::protocol::engine::HooksAdapter::Inbound => Some(std::rc::Rc::new(
-                crate::protocol::kas::hooks::HookRegistry::load(
-                    &cwd,
-                    crate::kiro_agent_config::home_dir()
-                        .map(|h| h.join(".kiro"))
-                        .as_deref(),
-                ),
-            )),
-            _ => None,
-        },
-        hook_ops: crate::protocol::kas::hooks::HookOps::default(),
-        cwd: cwd.to_path_buf(),
-    });
+    {
+        let host_ctx = std::rc::Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
+            notify_tx: inbound_tx.clone(),
+            terminals: std::rc::Rc::clone(&terminals),
+            hooks: match engine.adapters().hooks {
+                crate::protocol::engine::HooksAdapter::Inbound => Some(std::rc::Rc::new(
+                    crate::protocol::kas::hooks::HookRegistry::load(
+                        &cwd,
+                        crate::kiro_agent_config::home_dir()
+                            .map(|h| h.join(".kiro"))
+                            .as_deref(),
+                    ),
+                )),
+                _ => None,
+            },
+            hook_ops: crate::protocol::kas::hooks::HookOps::default(),
+            cwd: cwd.to_path_buf(),
+        });
+        let drain_mediator = std::rc::Rc::clone(&host_mediator);
+        // The drain task runs concurrently with `run_loop` on the same
+        // LocalSet; it accepts in channel order and spawns each resolution
+        // off itself (spawn_host_job), so a host callback issued mid-command
+        // resolves without waiting for the command RPC to finish.
+        tokio::task::spawn_local(async move {
+            let mut host_rx = host_rx;
+            while let Some(cb) = host_rx.recv().await {
+                match drain_mediator.borrow_mut().accept(cb) {
+                    crate::protocol::host_mediator::Accept::Spawn(job) => {
+                        spawn_host_job(job, &drain_mediator, &host_ctx);
+                    }
+                    crate::protocol::host_mediator::Accept::Consumed => {}
+                }
+            }
+        });
+    }
     #[cfg(not(feature = "kas"))]
-    let host_ctx = ();
+    {
+        // Default build: the item is uninhabited, so `recv()` can only ever
+        // resolve to `None` (channel close). The single await + exhaustive
+        // match over the never-arriving item is the ADR-0002 compile proof.
+        let mut host_rx = host_rx;
+        tokio::task::spawn_local(async move {
+            if let Some(cb) = host_rx.recv().await {
+                match cb {}
+            }
+        });
+    }
     // cyril-l7tw C4: set when the io watcher reports the connection dead while
     // a turn is in flight. The disconnect is DEFERRED until the loop observes
     // that turn's TurnCompleted (the prompt task's Err arm delivers a
@@ -2155,19 +2187,6 @@ async fn run_loop(
                     break;
                 }
             }
-            Some(cb) = host_rx.recv() => {
-                // Host-callback mediation (cyril-g9vt): ordered acceptance
-                // HERE — channel order, registration before any resolution —
-                // then concurrent resolution off the loop. The arm only
-                // delegates; policy lives in `host_mediator` + the
-                // adapter-side dispatch. The loop NEVER awaits resolution.
-                match host_mediator.borrow_mut().accept(cb) {
-                    crate::protocol::host_mediator::Accept::Spawn(job) => {
-                        spawn_host_job(job, &host_mediator, &host_ctx);
-                    }
-                    crate::protocol::host_mediator::Accept::Consumed => {}
-                }
-            }
             Some(req) = req_rx.recv() => {
                 // ADR-0004 non-blocking forward: hand the server->client request to
                 // the App and return immediately. The loop NEVER awaits the response
@@ -2217,24 +2236,6 @@ fn spawn_host_job(
         }
         mediator.borrow_mut().complete(id);
     });
-}
-
-/// Default build: the callback item is uninhabited — a job can never exist,
-/// and the exhaustively-empty match proves it (ADR-0002; C13 fence pattern).
-/// The body mirrors the kas path's lifecycle surface (cancel probe, then
-/// completion bookkeeping) so the mediator's resolution API is identically
-/// exercised by both builds' arms, dead at runtime here by construction.
-#[cfg(not(feature = "kas"))]
-fn spawn_host_job(
-    job: crate::protocol::host_mediator::Job<crate::protocol::client::HostCallbackItem>,
-    mediator: &std::rc::Rc<std::cell::RefCell<crate::protocol::host_mediator::HostMediator>>,
-    _ctx: &(),
-) {
-    let id = job.id;
-    if job.cancelled.is_none() {
-        mediator.borrow_mut().complete(id);
-    }
-    match job.callback {}
 }
 
 #[cfg(test)]

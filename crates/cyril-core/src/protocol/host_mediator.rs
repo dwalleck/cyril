@@ -17,18 +17,12 @@ use std::collections::HashMap;
 use crate::types::SessionId;
 
 /// The default (non-kas) build's channel item: uninhabited, so the host
-/// channel and the `run_loop` arm compile while NO callback traffic can exist
-/// (ADR-0002; the `probe_g9vt_c13` fence pattern). The `CallbackMeta` impl is
-/// vacuously exhaustive.
+/// channel and the drain task compile while NO callback traffic can exist
+/// (ADR-0002; the `probe_g9vt_c13` fence pattern). It needs no `CallbackMeta`
+/// impl — the default-build drain matches it exhaustively (`match cb {}`)
+/// rather than accepting it, since a value can never arrive.
 #[cfg(not(feature = "kas"))]
 pub(crate) enum NeverCallback {}
-
-#[cfg(not(feature = "kas"))]
-impl CallbackMeta for NeverCallback {
-    fn kind(&self) -> &'static str {
-        match *self {}
-    }
-}
 
 /// Resolve one callback outcome with the ADR-0004 failure ordering: the
 /// user-visible notification is enqueued BEFORE the agent-facing reply
@@ -73,6 +67,7 @@ impl CancelKey {
 
 /// The metadata contract between the mediator and a callback type — the ONLY
 /// capability knowledge the mediator has (design C12).
+#[cfg(any(test, feature = "kas"))]
 pub(crate) trait CallbackMeta {
     /// `Some(key)` when this envelope is a CONTROL that aborts previously
     /// accepted work, rather than new work itself.
@@ -93,6 +88,7 @@ pub(crate) trait CallbackMeta {
 
 /// What the caller must do after [`HostMediator::accept`] — the whole policy
 /// surface, so the `run_loop` arm stays a delegation.
+#[cfg(any(test, feature = "kas"))]
 #[derive(Debug)]
 pub(crate) enum Accept<C> {
     /// New work: registered (id minted; cancel signal wired when the callback
@@ -104,6 +100,7 @@ pub(crate) enum Accept<C> {
 }
 
 /// A registered unit of work travelling to the spawned resolution task.
+#[cfg(any(test, feature = "kas"))]
 #[derive(Debug)]
 pub(crate) struct Job<C> {
     pub(crate) callback: C,
@@ -128,6 +125,7 @@ struct Entry {
 /// unit tests drive every transition with no async harness (design C1).
 #[derive(Default)]
 pub(crate) struct HostMediator {
+    #[cfg(any(test, feature = "kas"))]
     next_id: u64,
     in_flight: HashMap<JobId, Entry>,
 }
@@ -140,6 +138,7 @@ impl HostMediator {
     /// Accept one envelope in channel order. Registration happens HERE —
     /// before any resolution work — so a later control can always target
     /// already-accepted work (ADR-0004 "ordered acceptance").
+    #[cfg(any(test, feature = "kas"))]
     pub(crate) fn accept<C: CallbackMeta>(&mut self, callback: C) -> Accept<C> {
         if let Some(key) = callback.cancels() {
             let target = self.in_flight.iter().find_map(|(id, e)| match &e.cancel {
@@ -197,6 +196,7 @@ impl HostMediator {
     /// Resolution finished (successfully, erroneously, or via responder drop):
     /// forget the lifecycle entry. Tolerates an id already removed by a
     /// cancel — that race is expected, not an error.
+    #[cfg(any(test, feature = "kas"))]
     pub(crate) fn complete(&mut self, id: JobId) {
         self.in_flight.remove(&id);
     }
