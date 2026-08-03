@@ -763,6 +763,237 @@ mod tests {
         kas_client_with_shell(test_host_shell(crate::types::AgentEngine::Kas))
     }
 
+    // cyril-g9vt C11/AC5 end-to-end census: every handled wire method reaches
+    // its family responder THROUGH the mediation seam — no variant is answered
+    // directly, none refused. A fully-adaptered (Host) KAS client with a real
+    // mediation seam drives one representative per method; the assertion is
+    // "crossed and answered" (a typed non-refusal outcome), which fails if a
+    // family were left on the direct path (refused: nothing wired) or dropped.
+    // Walked from WIRE_METHODS so a 20th method added without a mediated path
+    // fails here. Complements slice 2's static count fence.
+    #[tokio::test]
+    async fn every_handled_variant_crosses_the_mediator() {
+        use agent_client_protocol::Client as _;
+
+        let dir = tempfile::tempdir().unwrap();
+        let hooks_dir = dir.path().join(".kiro/hooks");
+        std::fs::create_dir_all(&hooks_dir).unwrap();
+        std::fs::write(
+            hooks_dir.join("h.json"),
+            r#"{"version":"v1","hooks":[{"name":"g","trigger":"UserPromptSubmit",
+                "action":{"type":"command","command":"echo hi"}}]}"#,
+        )
+        .unwrap();
+        let f = dir.path().join("probe.txt");
+        std::fs::write(&f, "data").unwrap();
+
+        let (ntx, _nrx) = mpsc::channel(8);
+        let (ptx, _prx) = mpsc::channel(1);
+        let (mntx, _mnrx) = mpsc::channel(8);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            spawn_test_mediation_at(
+                Some(crate::protocol::kas::host_shell::HostShell::test_runnable_on_host()),
+                dir.path().to_path_buf(),
+                true,
+                mntx,
+            ),
+            dir.path(),
+        );
+
+        // A method is "crossed and answered" when its call returns without a
+        // method-not-found refusal (Ok, or a responder-specific error — both
+        // prove the callback reached a responder, not the null default).
+        let answered = |r: &acp::Result<acp::ExtResponse>| !matches!(r, Err(e) if e.code == acp::ErrorCode::MethodNotFound);
+        let ext = async |method: &'static str, params: serde_json::Value| {
+            let raw = serde_json::value::RawValue::from_string(params.to_string()).unwrap();
+            client
+                .ext_method(acp::ExtRequest::new(method, raw.into()))
+                .await
+        };
+
+        let sid = || acp::SessionId::new("s");
+        let mut seen: std::collections::HashSet<&'static str> = std::collections::HashSet::new();
+
+        // auth
+        assert!(
+            answered(&ext("kiro/auth/getAccessToken", serde_json::json!({})).await),
+            "auth crossed"
+        );
+        seen.insert("auth/getAccessToken");
+
+        // typed fs
+        assert!(
+            client
+                .read_text_file(acp::ReadTextFileRequest::new(sid(), &f))
+                .await
+                .is_ok(),
+            "fs read crossed"
+        );
+        seen.insert("fs/read_text_file");
+        assert!(
+            client
+                .write_text_file(acp::WriteTextFileRequest::new(
+                    sid(),
+                    dir.path().join("w.txt"),
+                    "x"
+                ))
+                .await
+                .is_ok(),
+            "fs write crossed"
+        );
+        seen.insert("fs/write_text_file");
+
+        // _kiro/fs/*
+        for (wire, method) in [
+            ("_kiro/fs/read_file", "kiro/fs/read_file"),
+            ("_kiro/fs/write_file", "kiro/fs/write_file"),
+            ("_kiro/fs/stat", "kiro/fs/stat"),
+            ("_kiro/fs/read_directory", "kiro/fs/read_directory"),
+            ("_kiro/fs/delete", "kiro/fs/delete"),
+        ] {
+            let target = dir.path().join(format!("{}.x", wire.replace('/', "_")));
+            std::fs::write(&target, "y").unwrap();
+            assert!(
+                answered(
+                    &ext(
+                        method,
+                        serde_json::json!({"sessionId":"s","path":target,"content":"y"})
+                    )
+                    .await
+                ),
+                "{wire} crossed"
+            );
+            seen.insert(wire);
+        }
+
+        // terminal typed + shell_type
+        assert!(
+            client
+                .create_terminal(acp::CreateTerminalRequest::new(sid(), "true"))
+                .await
+                .is_ok(),
+            "terminal/create crossed"
+        );
+        seen.insert("terminal/create");
+        let tid = acp::TerminalId::new("term-1");
+        assert!(
+            answered(
+                &client
+                    .wait_for_terminal_exit(acp::WaitForTerminalExitRequest::new(
+                        sid(),
+                        tid.clone()
+                    ))
+                    .await
+                    .map(|r| {
+                        acp::ExtResponse::new(
+                            serde_json::value::RawValue::from_string(
+                                serde_json::to_string(&r.exit_status).unwrap(),
+                            )
+                            .unwrap()
+                            .into(),
+                        )
+                    })
+            ),
+            "terminal/wait_for_exit crossed"
+        );
+        seen.insert("terminal/wait_for_exit");
+        assert!(
+            client
+                .terminal_output(acp::TerminalOutputRequest::new(sid(), tid.clone()))
+                .await
+                .is_ok(),
+            "terminal/output crossed"
+        );
+        seen.insert("terminal/output");
+        assert!(
+            client
+                .kill_terminal(acp::KillTerminalRequest::new(sid(), tid.clone()))
+                .await
+                .is_ok(),
+            "terminal/kill crossed"
+        );
+        seen.insert("terminal/kill");
+        assert!(
+            client
+                .release_terminal(acp::ReleaseTerminalRequest::new(sid(), tid))
+                .await
+                .is_ok(),
+            "terminal/release crossed"
+        );
+        seen.insert("terminal/release");
+        assert!(
+            answered(
+                &ext(
+                    "kiro/terminal/shell_type",
+                    serde_json::json!({"sessionId":"s"})
+                )
+                .await
+            ),
+            "shell_type crossed"
+        );
+        seen.insert("_kiro/terminal/shell_type");
+
+        // hooks requests
+        assert!(
+            answered(
+                &ext(
+                    "kiro/hooks/list",
+                    serde_json::json!({"trigger":"promptSubmit"})
+                )
+                .await
+            ),
+            "hooks/list crossed"
+        );
+        seen.insert("_kiro/hooks/list");
+        assert!(
+            answered(
+                &ext(
+                    "kiro/hooks/executeHook",
+                    serde_json::json!({"command":"true","sessionId":"s","userPrompt":""})
+                )
+                .await
+            ),
+            "executeHook crossed"
+        );
+        seen.insert("_kiro/hooks/executeHook");
+        assert!(
+            answered(&ext("kiro/hooks/sessionStart", serde_json::json!({})).await),
+            "sessionStart crossed"
+        );
+        seen.insert("_kiro/hooks/sessionStart");
+
+        // hooks controls (notifications: reaching them cleanly = crossed)
+        for method in ["kiro/hooks/cancel", "kiro/hooks/didChange"] {
+            let raw = serde_json::value::RawValue::from_string(
+                serde_json::json!({"operationId":"o"}).to_string(),
+            )
+            .unwrap();
+            client
+                .ext_notification(acp::ExtNotification::new(method, raw.into()))
+                .await
+                .unwrap();
+        }
+        seen.insert("_kiro/hooks/cancel");
+        seen.insert("_kiro/hooks/didChange");
+
+        // Every census entry was exercised — a new WIRE_METHODS row without a
+        // path here fails this set-equality.
+        let census: std::collections::HashSet<&'static str> =
+            crate::protocol::kas::callbacks::WIRE_METHODS
+                .iter()
+                .copied()
+                .collect();
+        assert_eq!(
+            seen, census,
+            "every handled wire method crosses the mediator"
+        );
+    }
+
     /// A V2-bound client in a kas-feature build — the cyril-dn91 defect
     /// configuration. Returns the notification receiver so refusal side
     /// effects (or their required absence) are observable.

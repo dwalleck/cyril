@@ -338,6 +338,38 @@ mod tests {
         assert!(r2.recv().unwrap());
     }
 
+    // Design C5: bounded, lossless ingress — at capacity N, N+k callbacks all
+    // get accepted (none dropped) as the consumer drains; producers await
+    // capacity. A try_send/drop impl would lose the overflow. Modelled at the
+    // channel+accept layer: fill a cap-2 channel with 5 awaited sends racing a
+    // drainer, and assert all 5 accept in order.
+    #[tokio::test]
+    async fn backpressure_awaits_capacity_losslessly() {
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<u32>(2);
+        let producer = tokio::spawn(async move {
+            for i in 0..5u32 {
+                tx.send(i).await.unwrap(); // awaits capacity — never drops
+            }
+        });
+        let mut m = HostMediator::new();
+        let mut accepted = Vec::new();
+        while let Some(i) = rx.recv().await {
+            match m.accept(Cb::cancellable("terminal/create", &i.to_string())) {
+                Accept::Spawn(job) => {
+                    accepted.push(i);
+                    m.complete(job.id);
+                }
+                Accept::Consumed => unreachable!(),
+            }
+        }
+        producer.await.unwrap();
+        assert_eq!(
+            accepted,
+            vec![0, 1, 2, 3, 4],
+            "all 5 accepted in order, none dropped"
+        );
+    }
+
     // Design C2 substrate / stress (a) register-after-return: the cancel
     // signal must fire for a job whose resolution has NOT been polled at all —
     // registration lives inside accept, not in the spawned task.
