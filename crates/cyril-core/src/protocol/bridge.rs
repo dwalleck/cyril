@@ -2766,6 +2766,14 @@ mod tests {
         /// the orphan-on-cancel wire shape.
         #[cfg(all(feature = "kas", unix))]
         create_terminal_cmd: Option<(String, Vec<String>, std::path::PathBuf)>,
+        /// cyril-g9vt prove-it probe: when set, `prompt` fires TWO server->client
+        /// ext requests CONCURRENTLY (slow `_kiro/hooks/executeHook` + fast
+        /// `_kiro/terminal/shell_type`) and records `(slow_elapsed, fast_elapsed)`
+        /// below once both resolve.
+        #[cfg(all(feature = "kas", unix))]
+        ext_concurrency_probe: bool,
+        #[cfg(all(feature = "kas", unix))]
+        ext_probe_timings: Option<(Duration, Duration)>,
     }
 
     struct FakeAgent {
@@ -2855,6 +2863,67 @@ mod tests {
                             }))
                             .expect("chunk notification");
                         conn.session_notification(note).await.expect("send chunk");
+                    }
+                }
+            }
+            #[cfg(all(feature = "kas", unix))]
+            {
+                // cyril-g9vt prove-it probe: two concurrent server->client ext
+                // requests through the REAL connection — the ADR-0004
+                // amendment's non-blocking premise, runtime-verified. Method
+                // names are passed UNPREFIXED: the acp crate prepends the `_`
+                // escape on the wire and the receiver strips exactly one (the
+                // probe's first run proved this by double-prefixing and
+                // landing both calls on the protocol-default null).
+                let run_probe = self.script.borrow().ext_concurrency_probe;
+                if run_probe {
+                    use acp::Client as _;
+                    let conn = self.agent_conn.borrow().clone();
+                    if let Some(conn) = conn {
+                        let raw =
+                            |v: serde_json::Value| -> std::sync::Arc<serde_json::value::RawValue> {
+                                serde_json::value::RawValue::from_string(v.to_string())
+                                    .expect("probe params")
+                                    .into()
+                            };
+                        let slow_req = acp::ExtRequest::new(
+                            "kiro/hooks/executeHook",
+                            raw(serde_json::json!({
+                                "hookId": "h", "hookName": "slow", "command": "sleep 1",
+                                "sessionId": a.session_id.to_string(), "userPrompt": ""})),
+                        );
+                        let fast_req = acp::ExtRequest::new(
+                            "kiro/terminal/shell_type",
+                            raw(serde_json::json!({"sessionId": a.session_id.to_string()})),
+                        );
+                        let t0 = std::time::Instant::now();
+                        let slow_f = async {
+                            let r = conn.ext_method(slow_req).await;
+                            (r, t0.elapsed())
+                        };
+                        let fast_f = async {
+                            let r = conn.ext_method(fast_req).await;
+                            (r, t0.elapsed())
+                        };
+                        let ((slow_r, slow_t), (fast_r, fast_t)) = tokio::join!(slow_f, fast_f);
+                        // Non-null bodies REQUIRED: Ok(null) is the unhandled
+                        // protocol default (the first probe run false-passed
+                        // through it with a double-underscored method name).
+                        let body = |r: &acp::Result<acp::ExtResponse>| -> serde_json::Value {
+                            serde_json::from_str(r.as_ref().expect("resolves").0.get())
+                                .expect("json body")
+                        };
+                        assert!(
+                            body(&slow_r).get("exitCode").is_some(),
+                            "slow executeHook must reach the responder, got {:?}",
+                            body(&slow_r)
+                        );
+                        assert!(
+                            body(&fast_r).get("shellType").is_some(),
+                            "fast shell_type must reach the responder, got {:?}",
+                            body(&fast_r)
+                        );
+                        self.script.borrow_mut().ext_probe_timings = Some((slow_t, fast_t));
                     }
                 }
             }
@@ -3425,6 +3494,60 @@ mod tests {
                 println!("l7tw falsifier: io task completed with {io_result:?}");
             })
             .await;
+    }
+
+    // ── cyril-g9vt prove-it probe ─────────────────────────────────────────
+    /// PROBE (cyril-g9vt): the ADR-0004 amendment's non-blocking premise at the
+    /// REAL connection layer — two server->client host callbacks issued
+    /// concurrently by the agent resolve CONCURRENTLY (per-request task spawn
+    /// inside the acp crate; oracle: `.cyril-g9vt/oracle-acp-rpc.txt`, an
+    /// independent source census of the dispatch path). A slow callback must
+    /// not serialize a fast one — the constraint the mediator must PRESERVE
+    /// (ordered acceptance, concurrent resolution). Also end-to-end-validates
+    /// the `_kiro/*` → `kiro/*` leading-underscore strip through the wire.
+    #[cfg(all(feature = "kas", unix))]
+    #[tokio::test]
+    async fn probe_g9vt_concurrent_callback_resolution() {
+        let script = Rc::new(RefCell::new(Script {
+            ext_concurrency_probe: true,
+            emit_turn_end: true,
+            ..Script::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            script,
+            |sender, mut rx, _perm, _gate, _loop_handle, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["p".into()],
+                    })
+                    .await
+                    .unwrap();
+                // The turn completes only after prompt() awaited both callbacks.
+                while let Some(n) = recv_notif(&mut rx, 10).await {
+                    if matches!(n, Notification::TurnCompleted { .. }) {
+                        break;
+                    }
+                }
+                let (slow, fast) = probe.borrow().ext_probe_timings.expect("probe ran");
+                eprintln!("probe_g9vt: slow={slow:?} fast={fast:?}");
+                assert!(
+                    slow >= Duration::from_millis(900),
+                    "slow hook actually slept: {slow:?}"
+                );
+                assert!(
+                    fast < Duration::from_millis(400),
+                    "fast callback must resolve while the slow one is pending \
+                     (concurrent resolution): fast={fast:?} slow={slow:?}"
+                );
+            },
+        )
+        .await;
     }
 
     #[tokio::test]
