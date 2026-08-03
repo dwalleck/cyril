@@ -46,6 +46,7 @@ fn v2_client_in_kas_build(cwd: &std::path::Path) -> KiroClient {
         ptx,
         std::rc::Rc::new(V2Engine),
         test_host_shell(AgentEngine::V2),
+        crate::protocol::client::test_host_tx(),
         cwd,
     )
 }
@@ -200,6 +201,7 @@ async fn adapter_matrix_advertise_iff_answer() {
             ptx,
             engine.clone(),
             test_host_shell(engine.kind()),
+            crate::protocol::client::test_host_tx(),
             dir.path(),
         );
 
@@ -388,6 +390,7 @@ async fn kas_outbound_hooks_mode_refuses_inbound_serving() {
             hooks_mode: crate::types::kas_hooks::KasHooksMode::Kas,
         }),
         test_host_shell(AgentEngine::Kas),
+        crate::protocol::client::test_host_tx(),
         dir.path(),
     );
 

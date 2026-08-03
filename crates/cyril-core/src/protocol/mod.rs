@@ -4,11 +4,9 @@ pub(crate) mod convert;
 pub(crate) mod engine;
 pub(crate) mod fingerprint;
 /// Host-callback mediation (cyril-g9vt): the pure state machine behind the
-/// bridge `run_loop`'s host-callback arm. Test-staged until its first
-/// production consumer (the slice-3 loop wiring) promotes it, per the repo's
-/// staged-module rule.
-#[cfg(test)]
-mod host_mediator;
+/// bridge `run_loop`'s host-callback arm. See CONTEXT.md "Host-callback
+/// mediation".
+pub(crate) mod host_mediator;
 pub(crate) mod identity;
 /// KAS-engine support (free-path spawn discovery, auth responder). Gated behind
 /// the `kas` cargo feature (ADR-0002); a default build links none of it.

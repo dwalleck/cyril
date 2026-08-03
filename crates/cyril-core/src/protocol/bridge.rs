@@ -130,6 +130,11 @@ pub(crate) struct BridgeChannels {
     pub permission_tx: mpsc::Sender<PermissionRequest>,
 }
 
+/// Host-callback mediation ingress bound (cyril-g9vt design C5): small — the
+/// agent rarely has more than a handful of callbacks in flight; a full
+/// channel parks producers, never drops.
+const HOST_CAPACITY: usize = 16;
+
 /// Create a matched pair of BridgeHandle + BridgeChannels.
 pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     let (command_tx, command_rx) = mpsc::channel(COMMAND_CAPACITY);
@@ -617,7 +622,18 @@ async fn run_bridge(
     // FORWARDS them to the App without awaiting resolution — the response flows
     // back on the request's embedded `responder` oneshot, bypassing the loop.
     let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone(), host_shell, cwd);
+    // Host-callback mediation ingress (cyril-g9vt): bounded and lossless —
+    // acp request tasks await capacity; the loop accepts in channel order.
+    let (host_tx, host_rx) =
+        mpsc::channel::<crate::protocol::client::HostCallbackItem>(HOST_CAPACITY);
+    let client = KiroClient::new(
+        inbound_tx.clone(),
+        req_tx,
+        engine.clone(),
+        host_shell,
+        host_tx,
+        cwd,
+    );
     // cyril-3lh8: grab the shared terminal-registry handle BEFORE the connection
     // takes ownership of the client — run_loop's CancelRequest arm reaps with it.
     #[cfg(feature = "kas")]
@@ -682,6 +698,7 @@ async fn run_bridge(
             inbound_rx,
             req_rx,
             io_done: io_done_rx,
+            host_rx,
             #[cfg(feature = "kas")]
             terminals,
         },
@@ -709,6 +726,10 @@ struct InternalChannels {
     inbound_rx: mpsc::Receiver<RoutedNotification>,
     req_rx: mpsc::Receiver<PermissionRequest>,
     io_done: tokio::sync::oneshot::Receiver<String>,
+    /// Host-callback mediation ingress (cyril-g9vt): typed callbacks in wire
+    /// order. Un-gated — the item type is uninhabited in a default build, so
+    /// the arm compiles while no traffic can exist (ADR-0002).
+    host_rx: mpsc::Receiver<crate::protocol::client::HostCallbackItem>,
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
@@ -842,6 +863,7 @@ async fn run_loop(
         mut inbound_rx,
         mut req_rx,
         mut io_done,
+        mut host_rx,
         ..
     } = internal;
     use acp::Agent;
@@ -947,6 +969,18 @@ async fn run_loop(
     // intentionally diverge there; in v2 they clear together (the prompt
     // resolves AT turn-end). Do not re-merge them.
     let mut mediator = TurnMediator::new();
+    // Host-callback mediation (cyril-g9vt, ADR-0004 amendment): lifecycle
+    // state machine + the adapter-side dispatch context. Shared Rc: the loop
+    // accepts; spawned resolution tasks complete/get-cancelled through it.
+    let host_mediator = std::rc::Rc::new(std::cell::RefCell::new(
+        crate::protocol::host_mediator::HostMediator::new(),
+    ));
+    #[cfg(feature = "kas")]
+    let host_ctx = std::rc::Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
+        notify_tx: inbound_tx.clone(),
+    });
+    #[cfg(not(feature = "kas"))]
+    let host_ctx = ();
     // cyril-l7tw C4: set when the io watcher reports the connection dead while
     // a turn is in flight. The disconnect is DEFERRED until the loop observes
     // that turn's TurnCompleted (the prompt task's Err arm delivers a
@@ -1155,6 +1189,12 @@ async fn run_loop(
                     // turn-end could race an in-flight release.
                     #[cfg(feature = "kas")]
                     terminals.reap_session(&session_id).await;
+                    // cyril-g9vt: sweep the session's in-flight cancellable
+                    // host callbacks too — their dispatch futures wind down
+                    // and dropped replies surface "aborted" at the acp tasks.
+                    host_mediator
+                        .borrow_mut()
+                        .cancel_scope(&crate::types::SessionId::new(session_id.to_string()));
                 } else {
                     tracing::warn!("cancel requested but no active session");
                 }
@@ -2028,6 +2068,10 @@ async fn run_loop(
                 for handle in prompt_tasks.drain(..) {
                     handle.abort();
                 }
+                // cyril-g9vt C8: signal every in-flight host callback; their
+                // dispatch futures wind down (kill_on_drop reaps children) and
+                // dropped replies surface "aborted" at the acp tasks.
+                host_mediator.borrow_mut().shutdown();
                 break;
             }
                 } // match cmd
@@ -2097,6 +2141,19 @@ async fn run_loop(
                     break;
                 }
             }
+            Some(cb) = host_rx.recv() => {
+                // Host-callback mediation (cyril-g9vt): ordered acceptance
+                // HERE — channel order, registration before any resolution —
+                // then concurrent resolution off the loop. The arm only
+                // delegates; policy lives in `host_mediator` + the
+                // adapter-side dispatch. The loop NEVER awaits resolution.
+                match host_mediator.borrow_mut().accept(cb) {
+                    crate::protocol::host_mediator::Accept::Spawn(job) => {
+                        spawn_host_job(job, &host_mediator, &host_ctx);
+                    }
+                    crate::protocol::host_mediator::Accept::Consumed => {}
+                }
+            }
             Some(req) = req_rx.recv() => {
                 // ADR-0004 non-blocking forward: hand the server->client request to
                 // the App and return immediately. The loop NEVER awaits the response
@@ -2111,6 +2168,59 @@ async fn run_loop(
     } // loop
 
     Ok(())
+}
+
+/// Spawn one accepted host-callback job off the loop (cyril-g9vt): race its
+/// cancel signal against the adapter-side dispatch, then clear the lifecycle
+/// entry. On cancel the dispatch future is DROPPED — `kill_on_drop` reaps any
+/// children and the dropped reply surfaces "host callback aborted" at the acp
+/// request task (side-effect-free abort for un-polled work, design C2).
+#[cfg(feature = "kas")]
+fn spawn_host_job(
+    job: crate::protocol::host_mediator::Job<crate::protocol::client::HostCallbackItem>,
+    mediator: &std::rc::Rc<std::cell::RefCell<crate::protocol::host_mediator::HostMediator>>,
+    ctx: &std::rc::Rc<crate::protocol::kas::callbacks::DispatchCtx>,
+) {
+    let mediator = std::rc::Rc::clone(mediator);
+    let ctx = std::rc::Rc::clone(ctx);
+    let crate::protocol::host_mediator::Job {
+        callback,
+        id,
+        cancelled,
+    } = job;
+    tokio::task::spawn_local(async move {
+        match cancelled {
+            Some(cancel) => {
+                tokio::select! {
+                    biased;
+                    _ = cancel => {
+                        tracing::debug!("host callback aborted by cancel");
+                    }
+                    () = crate::protocol::kas::callbacks::dispatch(callback, &ctx) => {}
+                }
+            }
+            None => crate::protocol::kas::callbacks::dispatch(callback, &ctx).await,
+        }
+        mediator.borrow_mut().complete(id);
+    });
+}
+
+/// Default build: the callback item is uninhabited — a job can never exist,
+/// and the exhaustively-empty match proves it (ADR-0002; C13 fence pattern).
+/// The body mirrors the kas path's lifecycle surface (cancel probe, then
+/// completion bookkeeping) so the mediator's resolution API is identically
+/// exercised by both builds' arms, dead at runtime here by construction.
+#[cfg(not(feature = "kas"))]
+fn spawn_host_job(
+    job: crate::protocol::host_mediator::Job<crate::protocol::client::HostCallbackItem>,
+    mediator: &std::rc::Rc<std::cell::RefCell<crate::protocol::host_mediator::HostMediator>>,
+    _ctx: &(),
+) {
+    let id = job.id;
+    if job.cancelled.is_none() {
+        mediator.borrow_mut().complete(id);
+    }
+    match job.callback {}
 }
 
 #[cfg(test)]
@@ -3104,11 +3214,14 @@ mod tests {
                 // harness caller's closure signature changes.
                 script.borrow_mut().inbound = Some(inbound_tx.clone());
                 let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
+                let (host_tx, host_rx) =
+                    mpsc::channel::<crate::protocol::client::HostCallbackItem>(HOST_CAPACITY);
                 let client = KiroClient::new(
                     inbound_tx.clone(),
                     req_tx,
                     engine.clone(),
                     crate::protocol::client::test_host_shell(engine.kind()),
+                    host_tx,
                     &std::env::temp_dir(),
                 );
                 // cyril-3lh8: mirror run_bridge — the loop shares the client's
@@ -3166,6 +3279,7 @@ mod tests {
                         inbound_rx,
                         req_rx,
                         io_done: io_done_rx,
+                        host_rx,
                         #[cfg(feature = "kas")]
                         terminals,
                     },
@@ -3463,6 +3577,7 @@ mod tests {
                     req_tx,
                     Rc::new(V2Engine),
                     crate::protocol::client::test_host_shell(AgentEngine::V2),
+                    crate::protocol::client::test_host_tx(),
                     &std::env::temp_dir(),
                 );
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);

@@ -16,6 +16,39 @@ use std::collections::HashMap;
 
 use crate::types::SessionId;
 
+/// The default (non-kas) build's channel item: uninhabited, so the host
+/// channel and the `run_loop` arm compile while NO callback traffic can exist
+/// (ADR-0002; the `probe_g9vt_c13` fence pattern). The `CallbackMeta` impl is
+/// vacuously exhaustive.
+#[cfg(not(feature = "kas"))]
+pub(crate) enum NeverCallback {}
+
+#[cfg(not(feature = "kas"))]
+impl CallbackMeta for NeverCallback {
+    fn kind(&self) -> &'static str {
+        match *self {}
+    }
+}
+
+/// Resolve one callback outcome with the ADR-0004 failure ordering: the
+/// user-visible notification is enqueued BEFORE the agent-facing reply
+/// resolves (design C6). The mediator owns this ORDER; dispatch supplies the
+/// parts. Bounded-lossless: the notification send awaits capacity off the
+/// loop (this runs inside the spawned resolution task, never on `run_loop`).
+#[cfg(feature = "kas")]
+pub(crate) async fn finish(
+    notify_tx: &tokio::sync::mpsc::Sender<crate::types::RoutedNotification>,
+    notify: Option<crate::types::Notification>,
+    resolve: impl FnOnce(),
+) {
+    if let Some(n) = notify
+        && notify_tx.send(n.into()).await.is_err()
+    {
+        tracing::debug!("callback notification dropped (bridge closing)");
+    }
+    resolve();
+}
+
 /// Scoped cancellation key: `(kind, id)`. The kind component is load-bearing
 /// for correctness — a bare-id key would let one family's cancel abort a
 /// stranger's same-id operation — so scoping is enforced by this TYPE, not by
@@ -27,6 +60,9 @@ pub(crate) struct CancelKey {
 }
 
 impl CancelKey {
+    /// Test-staged until the hooks cutover slice re-lands its production
+    /// callers (execute registration + the cancel control).
+    #[cfg(test)]
     pub(crate) fn new(kind: &'static str, id: impl Into<String>) -> Self {
         Self {
             kind,
@@ -197,7 +233,9 @@ impl HostMediator {
         }
     }
 
-    /// In-flight count — seam-test observability (design C7).
+    /// In-flight count — seam-test observability (design C7). Test-only:
+    /// production code never inspects the table, it only transitions it.
+    #[cfg(test)]
     pub(crate) fn in_flight(&self) -> usize {
         self.in_flight.len()
     }
@@ -265,6 +303,39 @@ mod tests {
             Accept::Spawn(j) => j,
             Accept::Consumed => panic!("expected Spawn"),
         }
+    }
+
+    // Design C6 (the mediator-owned half): finish() enqueues the notification
+    // BEFORE the reply resolves — the resolve closure observes the
+    // notification already on the channel. The resolve-then-notify mutation
+    // fails this by construction.
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn finish_notifies_before_resolving() {
+        let (ntx, mut nrx) = tokio::sync::mpsc::channel(4);
+        let (seen_tx, seen_rx) = std::sync::mpsc::channel();
+        finish(
+            &ntx,
+            Some(crate::types::Notification::BridgeError {
+                operation: "auth".into(),
+                message: "boom".into(),
+            }),
+            move || {
+                // At resolve time the notification MUST already be enqueued.
+                seen_tx.send(nrx.try_recv().is_ok()).unwrap();
+            },
+        )
+        .await;
+        assert!(
+            seen_rx.recv().unwrap(),
+            "notification must precede the reply resolution"
+        );
+
+        // No notification → resolve still runs (the reply-only outcome).
+        let (ntx2, _nrx2) = tokio::sync::mpsc::channel(1);
+        let (t2, r2) = std::sync::mpsc::channel();
+        finish(&ntx2, None, move || t2.send(true).unwrap()).await;
+        assert!(r2.recv().unwrap());
     }
 
     // Design C2 substrate / stress (a) register-after-return: the cancel
