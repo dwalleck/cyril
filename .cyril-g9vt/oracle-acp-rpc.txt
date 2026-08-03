@@ -1,0 +1,23 @@
+== oracle: acp 0.10.2 source census (independent of the runtime probe) ==
+
+-- lib.rs ext_method encode (agent->client): the crate PREPENDS the '_' escape --
+213:                format!("_{}", args.method),
+221:            format!("_{}", args.method),
+
+-- lib.rs decode_request: receiver strips exactly ONE leading underscore --
+274:                if let Some(custom_method) = method.strip_prefix('_') {
+294:                if let Some(custom_method) = method.strip_prefix('_') {
+594:                if let Some(custom_method) = method.strip_prefix('_') {
+614:                if let Some(custom_method) = method.strip_prefix('_') {
+
+-- rpc.rs: per-incoming-request task spawn (the concurrency mechanism) --
+55:        spawn: impl Fn(LocalBoxFuture<'static, ()>) + 'static,
+83:        Self::handle_incoming(outgoing_tx.clone(), incoming_rx, handler, spawn);
+260:        spawn: impl Fn(LocalBoxFuture<'static, ()>) + 'static,
+262:        let spawn = Rc::new(spawn);
+264:        spawn({
+265:            let spawn = spawn.clone();
+272:                            spawn(
+274:                                    let result = handler.handle_request(request).await;
+286:                            spawn(
+329:    fn handle_request(

@@ -116,6 +116,10 @@ _Avoid_: proxy (that's a proxy stage), protocol thread
 A server-to-client ACP request or control notification through which the running agent asks Cyril, acting as the host, to provide a decision or capability such as permission, authentication, file I/O, terminal control, or hooks.
 _Avoid_: client callback, host request (excludes control notifications), tool call
 
+**Host-callback mediation**:
+The bridge seam every handled host callback crosses (ADR-0004 amendment): KiroClient parses the ACP payload into a typed callback, the `HostMediator` state machine **accepts** it — registering its lifecycle in channel order, before any work — and its **resolution** runs concurrently off the loop against the capability adapter set, with a failing callback's user-visible notification enqueued before the agent sees the error. Acceptance is ordered; resolution is not. A family with no adapter is refused at parse time and never crosses.
+_Avoid_: mediator (unqualified — collides with the turn mediator), interception (that's a proxy-stage concern layered on this seam), dispatch (reserve for the adapter-side resolve step)
+
 **Capability adapter (adapter set)**:
 The bound engine's declaration, as data, of which host-callback families it installs — Auth, Host I/O (file + terminal), Hooks (`Engine::adapters()`, ADR-0001 amendment). Inbound capability advertisement is derived from the set, and a family with no adapter is refused with JSON-RPC method-not-found — never answered with the protocol-default null. One set is bound per agent-subprocess lifetime.
 _Avoid_: capability sub-trait (the withdrawn `as_*` accessor design), responder (that's the code answering a callback, not its availability), feature gate (cargo features gate what links; adapters gate what answers)

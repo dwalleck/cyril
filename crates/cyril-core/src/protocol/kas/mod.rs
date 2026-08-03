@@ -12,6 +12,9 @@
 use agent_client_protocol as acp;
 
 pub(crate) mod auth;
+/// Typed host callbacks + adapter-side dispatch for the mediation seam
+/// (cyril-g9vt).
+pub(crate) mod callbacks;
 pub(crate) mod discovery;
 pub(crate) mod hooks;
 pub(crate) mod host_io;

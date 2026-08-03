@@ -13,7 +13,92 @@ pub(crate) type ResolvedHostShell = Option<crate::protocol::kas::host_shell::Hos
 #[cfg(not(feature = "kas"))]
 pub(crate) struct ResolvedHostShell;
 
+/// The host-callback mediation channel item (cyril-g9vt). In a default build
+/// the item is uninhabited, so the channel exists but no traffic can — and
+/// this alias lives HERE (not in `host_mediator`) so the mediator module
+/// never names a kas type (design C12).
+#[cfg(feature = "kas")]
+pub(crate) type HostCallbackItem = crate::protocol::kas::callbacks::HostCallback;
+#[cfg(not(feature = "kas"))]
+pub(crate) type HostCallbackItem = crate::protocol::host_mediator::NeverCallback;
+
+/// A dangling mediation sender for tests whose paths never mediate
+/// (refusal/parse tests); handled-path tests use [`spawn_test_mediation`].
 #[cfg(test)]
+pub(crate) fn test_host_tx() -> mpsc::Sender<HostCallbackItem> {
+    mpsc::channel(4).0
+}
+
+/// Inline mediation for client unit tests (cyril-g9vt): a background thread
+/// drains the host channel through the REAL accept + `spawn_local` concurrent
+/// resolution (mirroring `run_loop`'s dedicated drain task), so migrated
+/// fences keep their concurrency and notification-observation behavior.
+#[cfg(all(test, feature = "kas"))]
+pub(crate) fn spawn_test_mediation(shell: ResolvedHostShell) -> mpsc::Sender<HostCallbackItem> {
+    let (ntx, nrx) = mpsc::channel(16);
+    std::mem::forget(nrx); // keep finish()'s sends deliverable
+    spawn_test_mediation_at(shell, std::path::PathBuf::from("/tmp"), false, ntx)
+}
+
+/// Like [`spawn_test_mediation`] but with an explicit cwd, hooks loading, and
+/// a caller-owned notify channel (so tests can observe HooksChanged and auth
+/// BridgeError). When `load_hooks` is set the mediation thread loads a
+/// Host-mode registry from `<cwd>/.kiro` — inside the thread, since the !Send
+/// registry cannot cross the spawn. Resolution is concurrent (spawn_local per
+/// job), mirroring the real loop.
+#[cfg(all(test, feature = "kas"))]
+pub(crate) fn spawn_test_mediation_at(
+    shell: ResolvedHostShell,
+    cwd: std::path::PathBuf,
+    load_hooks: bool,
+    notify_tx: mpsc::Sender<RoutedNotification>,
+) -> mpsc::Sender<HostCallbackItem> {
+    use crate::protocol::host_mediator::{Accept, HostMediator};
+    let (tx, mut rx) = mpsc::channel::<HostCallbackItem>(16);
+    std::thread::spawn(move || {
+        let rt = match tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        {
+            Ok(rt) => rt,
+            Err(e) => {
+                tracing::error!(error = %e, "test mediation runtime failed to build");
+                return;
+            }
+        };
+        let local = tokio::task::LocalSet::new();
+        local.block_on(&rt, async move {
+            let mediator = std::rc::Rc::new(std::cell::RefCell::new(HostMediator::new()));
+            let ctx = std::rc::Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
+                notify_tx,
+                terminals: std::rc::Rc::new(
+                    crate::protocol::kas::terminal_io::TerminalRegistry::new(
+                        shell.map(std::rc::Rc::new),
+                    ),
+                ),
+                hooks: load_hooks.then(|| {
+                    std::rc::Rc::new(crate::protocol::kas::hooks::HookRegistry::load(&cwd, None))
+                }),
+                hook_ops: crate::protocol::kas::hooks::HookOps::default(),
+                cwd,
+            });
+            while let Some(cb) = rx.recv().await {
+                if let Accept::Spawn(job) = mediator.borrow_mut().accept(cb) {
+                    let mediator = std::rc::Rc::clone(&mediator);
+                    let ctx = std::rc::Rc::clone(&ctx);
+                    let id = job.id;
+                    tokio::task::spawn_local(async move {
+                        crate::protocol::kas::callbacks::dispatch(job.callback, &ctx).await;
+                        mediator.borrow_mut().complete(id);
+                    });
+                }
+            }
+        });
+    });
+    tx
+}
+
+#[cfg(all(test, feature = "kas"))]
 pub(crate) fn test_host_shell(engine: crate::types::AgentEngine) -> ResolvedHostShell {
     #[cfg(feature = "kas")]
     {
@@ -39,29 +124,13 @@ pub(crate) struct KiroClient {
     /// The bound engine (ADR-0001): all wire→internal conversion dispatches
     /// through it, so v2 and KAS share this client unchanged.
     engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
-    /// KAS-5b (cyril-ufie): live `terminal/*` host-callback registry. KAS-only —
-    /// v2 advertises no `terminal` capability, so the overrides never fire there.
-    /// `Rc` so the bridge loop shares the SAME registry (same `LocalSet` thread)
-    /// and its CancelRequest arm can reap a cancelled session's live terminals
-    /// (cyril-3lh8); the registry stays the sole owner of process lifecycle.
+    /// Ingress to the bridge's host-callback mediation seam (cyril-g9vt):
+    /// parsed, typed callbacks cross here in wire order and this client
+    /// awaits each callback's typed reply. Bounded — a full channel makes the
+    /// acp request task await capacity (lossless backpressure). kas-only:
+    /// a default build constructs no callbacks (the item is uninhabited).
     #[cfg(feature = "kas")]
-    terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
-    /// KAS-7 (cyril-jiyn): the hook registry serving `_kiro/hooks/*`, loaded
-    /// once at construction from the workspace + global `.kiro/hooks`.
-    /// `Some` iff the bound engine's Hooks adapter direction is `Inbound`
-    /// (cyril-dn91 C10) — Outbound runs hooks agent-side and v2/Off have no
-    /// hooks capability, and neither gets an empty-registry stand-in (the
-    /// sentinel the no-sentinel rule forbids). Registry presence IS the
-    /// inbound-serving gate consulted by the dispatch arms.
-    #[cfg(feature = "kas")]
-    hooks: Option<std::rc::Rc<crate::protocol::kas::hooks::HookRegistry>>,
-    /// Session workspace, the cwd for hook command execution (cyril-jiyn).
-    #[cfg(feature = "kas")]
-    cwd: std::path::PathBuf,
-    /// In-flight hook operations, so `_kiro/hooks/cancel` can abort one
-    /// (cyril-jiyn).
-    #[cfg(feature = "kas")]
-    hook_ops: crate::protocol::kas::hooks::HookOps,
+    host_tx: mpsc::Sender<HostCallbackItem>,
 }
 
 impl KiroClient {
@@ -69,52 +138,33 @@ impl KiroClient {
         notification_tx: mpsc::Sender<RoutedNotification>,
         permission_tx: mpsc::Sender<PermissionRequest>,
         engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
-        host_shell: ResolvedHostShell,
+        host_tx: mpsc::Sender<HostCallbackItem>,
         cwd: &std::path::Path,
     ) -> Self {
+        let _ = cwd; // the hooks registry (its only consumer) is loop-side now
         #[cfg(not(feature = "kas"))]
-        let _ = cwd; // hooks registry (the only cwd consumer) is kas-only
-        #[cfg(not(feature = "kas"))]
-        let _ = host_shell;
-        #[cfg(feature = "kas")]
-        let hooks = match engine.adapters().hooks {
-            crate::protocol::engine::HooksAdapter::Inbound => Some(std::rc::Rc::new(
-                crate::protocol::kas::hooks::HookRegistry::load(
-                    cwd,
-                    crate::kiro_agent_config::home_dir()
-                        .map(|h| h.join(".kiro"))
-                        .as_deref(),
-                ),
-            )),
-            _ => None,
-        };
+        let _ = host_tx; // no callback can exist to send (uninhabited item)
         Self {
             notification_tx,
             permission_tx,
             tool_call_inputs: RefCell::new(HashMap::new()),
             engine,
             #[cfg(feature = "kas")]
-            terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
-                host_shell.map(std::rc::Rc::new),
-            )),
-            #[cfg(feature = "kas")]
-            hooks,
-            #[cfg(feature = "kas")]
-            cwd: cwd.to_path_buf(),
-            #[cfg(feature = "kas")]
-            hook_ops: crate::protocol::kas::hooks::HookOps::default(),
+            host_tx,
         }
     }
 
-    /// cyril-3lh8: hand the bridge loop a shared handle to the terminal
-    /// registry, grabbed BEFORE the ACP connection takes ownership of the
-    /// client. The loop only triggers `reap_session` from its CancelRequest
-    /// arm — the registry remains the sole owner of process lifecycle.
+    /// Send one typed callback across the mediation seam. A closed channel
+    /// means the bridge loop is gone — surfaced as a JSON-RPC error, never a
+    /// silent drop.
     #[cfg(feature = "kas")]
-    pub(crate) fn terminals(
-        &self,
-    ) -> std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry> {
-        std::rc::Rc::clone(&self.terminals)
+    async fn send_host(&self, cb: HostCallbackItem) -> acp::Result<()> {
+        self.host_tx.send(cb).await.map_err(|_| {
+            acp::Error::new(
+                -32603,
+                "host-callback mediation unavailable (bridge closing)",
+            )
+        })
     }
 
     /// Gate a Host I/O family callback on the bound engine's adapter
@@ -127,6 +177,27 @@ impl KiroClient {
             return refuse_unadapted(method);
         }
         Ok(())
+    }
+
+    /// Whether the bound engine serves hooks INBOUND (`kas_hooks = "host"`):
+    /// the client-side gate before sending an inbound hook request/control.
+    /// The registry itself lives loop-side (dispatch ctx, cyril-g9vt).
+    #[cfg(feature = "kas")]
+    fn serves_inbound_hooks(&self) -> bool {
+        matches!(
+            self.engine.adapters().hooks,
+            crate::protocol::engine::HooksAdapter::Inbound
+        )
+    }
+
+    /// Whether the bound engine has NO hooks capability at all (v2 / Off): a
+    /// didChange for such an engine gets no HooksChanged surface (dn91 C12).
+    #[cfg(feature = "kas")]
+    fn hooks_direction_is_none(&self) -> bool {
+        matches!(
+            self.engine.adapters().hooks,
+            crate::protocol::engine::HooksAdapter::None
+        )
     }
 }
 
@@ -230,56 +301,46 @@ impl acp::Client for KiroClient {
         // than converted to a UI notification: `cancel` aborts an in-flight
         // hook by operationId; `didChange` announces on-disk hook edits (no
         // hot-reload in v1 — cyril-2adk — so it is logged, not acted on).
+        // KAS-7 hooks CONTROL notifications (cyril-jiyn) now cross the
+        // host-callback mediation seam (cyril-g9vt): the direction/presence
+        // gates stay HERE (a dropped control never sends), and the surviving
+        // controls are handled by the mediated dispatch — cancel signals the
+        // HookOps mechanism, didChange emits HooksChanged.
         #[cfg(feature = "kas")]
         {
+            use crate::protocol::kas::callbacks::HostCallback;
             if args.method.as_ref() == crate::protocol::kas::hooks::CANCEL_METHOD {
-                // Cancel aborts an in-flight INBOUND hook op — ops only exist
-                // when cyril serves hooks (cyril-dn91 C12 prose; the gate
-                // mirrors the executeHook arm's).
-                if self.hooks.is_none() {
+                // Cancel targets an inbound hook op — only meaningful when
+                // cyril serves hooks (dn91 C10). No adapter → drop.
+                // Cancel targets an inbound hook op — only meaningful when
+                // cyril serves hooks inbound (dn91 C10). `serves_inbound_hooks`
+                // is false for every non-Inbound direction (incl. None), so it
+                // alone is the gate.
+                if !self.serves_inbound_hooks() {
                     tracing::debug!("hooks/cancel dropped: no inbound hooks adapter");
                     return Ok(());
                 }
                 if let Some(op_id) = params.get("operationId").and_then(|o| o.as_str()) {
-                    self.hook_ops.cancel(op_id);
+                    self.send_host(HostCallback::HooksCancel {
+                        operation_id: op_id.to_owned(),
+                    })
+                    .await?;
                 }
                 return Ok(());
             }
             if args.method.as_ref() == crate::protocol::kas::hooks::DID_CHANGE_METHOD {
-                // didChange is meaningful in EITHER hooks direction (Inbound:
-                // on-disk edit note, cyril-2adk; Outbound: KAS pushes its full
-                // new registry, cyril-gk17) — but an engine with no hooks
-                // capability gets no HooksChanged surface (cyril-dn91 C12).
-                if matches!(
-                    self.engine.adapters().hooks,
-                    crate::protocol::engine::HooksAdapter::None
-                ) {
+                // didChange is meaningful in EITHER hooks direction, but an
+                // engine with no hooks capability gets no HooksChanged surface
+                // (dn91 C12). The payload's `hooks` array (present under `kas`,
+                // absent under `host`) rides the typed control.
+                if self.hooks_direction_is_none() {
                     tracing::debug!("hooks/didChange dropped: engine has no hooks capability");
                     return Ok(());
                 }
-                // Under `kas_hooks = "kas"` the notification carries KAS's FULL
-                // new registry, so cyril can refresh what it shows without
-                // asking (cyril-gk17). Under `"host"` cyril owns the registry
-                // and the payload has no `hooks` array — reloading cyril's own
-                // on-disk registry is a different job, still cyril-2adk.
-                match crate::protocol::kas::hooks::parse_wire_hooks(&params) {
-                    Some(hooks) => {
-                        tracing::debug!(count = hooks.len(), "KAS hook registry changed");
-                        if self
-                            .notification_tx
-                            .send(Notification::HooksChanged { hooks }.into())
-                            .await
-                            .is_err()
-                        {
-                            tracing::debug!("HooksChanged send failed (bridge closing)");
-                        }
-                    }
-                    None => {
-                        tracing::info!(
-                            "KAS hooks changed on disk; host-registry reload deferred (cyril-2adk)"
-                        );
-                    }
-                }
+                self.send_host(HostCallback::HooksDidChange {
+                    hooks: crate::protocol::kas::hooks::parse_wire_hooks(&params),
+                })
+                .await?;
                 return Ok(());
             }
         }
@@ -326,36 +387,36 @@ impl acp::Client for KiroClient {
         Ok(())
     }
 
-    /// Handle incoming server→client ext REQUESTS. KAS-1/dcc6 answers
-    /// `_kiro/auth/getAccessToken` (both KAS spawn modes run
-    /// `--auth=acp-callback`) from kiro-cli's sqlite credential store when the
-    /// bound engine installs the Auth adapter (cyril-dn91) — an engine without
-    /// one is refused with method-not-found. Unrecognized ext requests get the
-    /// protocol default. The cfg-split keeps the credential code out of a
-    /// default build (ADR-0002). cyril-l7tw C11: an auth-callback failure ALSO
-    /// surfaces to the App as a BridgeError — the JSON-RPC error alone travels
-    /// to KAS, which fails the turn while the user sees nothing actionable;
-    /// refusals are exempt (dn91 C13).
+    /// Handle incoming server→client ext REQUESTS. Handled families are
+    /// parsed to typed callbacks and cross the host-callback mediation seam
+    /// (cyril-g9vt); un-adaptered families are refused at parse time
+    /// (cyril-dn91); unrecognized ext requests get the protocol default. The
+    /// cfg-split keeps KAS code out of a default build (ADR-0002). The l7tw
+    /// C11 auth-failure notification now rides the dispatch outcome, ordered
+    /// by the mediator (`host_mediator::finish`).
     async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
-        let method = args.method.to_string();
-        let result = self.handle_ext_request(args).await;
-        self.notify_if_auth_failure(&method, &result).await;
-        result
+        self.handle_ext_request(args).await
     }
 
     /// KAS-5a (cyril-7bdu): answer `fs/read_text_file` by reading the file via the
     /// async host-io resolver. Only present under `kas` — v2 advertises no fs caps
     /// (KasEngine, Slice 1), so a v2 agent never calls this. Resolution runs in the
     /// acp connection's per-request `spawn_local` task (`rpc.rs:272`), off the
-    /// bridge loop and non-blocking via async `tokio::fs` (ADR-0004 invariant). The
-    /// loop-mediation gate seam is deferred to its first consumer (cyril-g9vt).
+    /// bridge loop and non-blocking (ADR-0004 invariant). Since cyril-g9vt the
+    /// request is parsed to a typed callback and CROSSES the host-callback
+    /// mediation seam; the host_io responder runs on the dispatch side.
     #[cfg(feature = "kas")]
     async fn read_text_file(
         &self,
         args: acp::ReadTextFileRequest,
     ) -> acp::Result<acp::ReadTextFileResponse> {
         self.require_host_io("fs/read_text_file")?;
-        crate::protocol::kas::host_io::read_text_file(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::ReadTextFile { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5a (cyril-7bdu): answer `fs/write_text_file` via the async host-io
@@ -370,7 +431,12 @@ impl acp::Client for KiroClient {
         // Refusal precedes the responder — no filesystem side effect may
         // occur for an un-adaptered engine (cyril-dn91 C2).
         self.require_host_io("fs/write_text_file")?;
-        crate::protocol::kas::host_io::write_text_file(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::WriteTextFile { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b (cyril-ufie): answer `terminal/create` by spawning the command in the
@@ -381,7 +447,12 @@ impl acp::Client for KiroClient {
         args: acp::CreateTerminalRequest,
     ) -> acp::Result<acp::CreateTerminalResponse> {
         self.require_host_io("terminal/create")?;
-        self.terminals.create(&args)
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::CreateTerminal { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b: answer `terminal/wait_for_exit` by awaiting the command via
@@ -393,7 +464,12 @@ impl acp::Client for KiroClient {
         args: acp::WaitForTerminalExitRequest,
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
         self.require_host_io("terminal/wait_for_exit")?;
-        self.terminals.wait(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::WaitForTerminalExit { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b: answer `terminal/output` with a non-blocking snapshot of the
@@ -404,7 +480,12 @@ impl acp::Client for KiroClient {
         args: acp::TerminalOutputRequest,
     ) -> acp::Result<acp::TerminalOutputResponse> {
         self.require_host_io("terminal/output")?;
-        self.terminals.output(&args)
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::TerminalOutput { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b: answer `terminal/release` — kill + reap the child and free the id.
@@ -414,7 +495,12 @@ impl acp::Client for KiroClient {
         args: acp::ReleaseTerminalRequest,
     ) -> acp::Result<acp::ReleaseTerminalResponse> {
         self.require_host_io("terminal/release")?;
-        self.terminals.release(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::ReleaseTerminal { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b: answer `terminal/kill` — terminate the child but keep the id valid.
@@ -424,96 +510,101 @@ impl acp::Client for KiroClient {
         args: acp::KillTerminalRequest,
     ) -> acp::Result<acp::KillTerminalResponse> {
         self.require_host_io("terminal/kill")?;
-        self.terminals.kill(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::KillTerminal { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 }
 
 impl KiroClient {
-    /// cyril-l7tw C11: when the `getAccessToken` responder fails, tell the App
-    /// (BridgeError, operation "auth") in addition to the JSON-RPC error that
-    /// travels back to KAS. The responder's messages already carry the
-    /// actionable `kiro-cli login` hint (kas/auth.rs); the hint is appended
-    /// only when absent so it is never doubled. Failures of OTHER ext methods
-    /// stay out of scope — their unhandled-default path is not an error.
-    #[cfg(feature = "kas")]
-    async fn notify_if_auth_failure(&self, method: &str, result: &acp::Result<acp::ExtResponse>) {
-        if method != crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
-            return;
-        }
-        let Err(e) = result else { return };
-        // A refusal is not an auth failure: the bound engine installs no auth
-        // adapter (cyril-dn91 C13), so there is nothing actionable for the
-        // user — only responder errors surface as BridgeError.
-        if e.code == acp::ErrorCode::MethodNotFound {
-            return;
-        }
-        let mut message = e.message.clone();
-        // LOGIN_HINT is the single owner of the remediation wording — the
-        // responder's own diagnostics embed it, so this check can't drift.
-        let hint = crate::protocol::kas::auth::LOGIN_HINT;
-        if !message.contains(hint) {
-            message.push_str(&format!(" — {hint} and retry"));
-        }
-        let note = Notification::BridgeError {
-            operation: "auth".into(),
-            message,
-        };
-        if self.notification_tx.send(note.into()).await.is_err() {
-            tracing::debug!("auth BridgeError send failed (bridge closing)");
-        }
-    }
-
-    /// Default build: no KAS, no auth callback, nothing to surface.
-    #[cfg(not(feature = "kas"))]
-    async fn notify_if_auth_failure(&self, _method: &str, _result: &acp::Result<acp::ExtResponse>) {
-    }
-
     // `#[cfg]` blocks (not a `cfg!(...)` runtime branch) are required: the `kas`
-    // module — and thus `kas::auth::respond_get_access_token` — does not exist in
-    // a default build, so a single body referencing it would fail to compile.
-    /// Route an ext request (`_kiro/*`): KAS-1 `getAccessToken`, KAS-5b
-    /// `terminal/shell_type`.
+    // module — and thus the typed callback enum — does not exist in a default
+    // build, so a single body referencing it would fail to compile.
+    /// Route an ext request (`_kiro/*`): KAS-1 `getAccessToken` (mediated),
+    /// KAS-5b `terminal/shell_type`.
     #[cfg(feature = "kas")]
     async fn handle_ext_request(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
         if args.method.as_ref() == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
             if self.engine.adapters().auth.is_none() {
                 return refuse_unadapted(args.method.as_ref());
             }
-            return crate::protocol::kas::auth::respond_get_access_token().await;
+            let (reply, rx) = tokio::sync::oneshot::channel();
+            self.send_host(crate::protocol::kas::callbacks::HostCallback::GetAccessToken { reply })
+                .await?;
+            return await_reply(rx).await;
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
             self.require_host_io(args.method.as_ref())?;
-            return self.terminals.respond_shell_type();
+            let session_id = parse_ext_params(&args)
+                .get("sessionId")
+                .and_then(|v| v.as_str())
+                .map(str::to_owned);
+            let (reply, rx) = tokio::sync::oneshot::channel();
+            self.send_host(crate::protocol::kas::callbacks::HostCallback::ShellType {
+                session_id,
+                reply,
+            })
+            .await?;
+            return await_reply(rx).await;
         }
         // Inbound hooks serving (list/executeHook/sessionStart) requires the
         // Inbound registry — its presence IS the direction gate (cyril-dn91
         // C5/C10). Outbound advertises hooks but serves nothing inbound;
         // executeHook especially must not run wire-supplied commands without
         // an Inbound adapter.
+        // Inbound hooks serving requires the Inbound registry (dn91 C5/C10):
+        // its absence refuses at parse time; a callback that crosses has passed
+        // the gate. The registry now lives loop-side (dispatch ctx).
         if args.method.as_ref() == crate::protocol::kas::hooks::LIST_METHOD {
-            let Some(hooks) = &self.hooks else {
-                return refuse_unadapted(args.method.as_ref());
-            };
-            let params = parse_ext_params(&args);
-            return hooks.respond_list(&params);
-        }
-        if args.method.as_ref() == crate::protocol::kas::hooks::EXECUTE_METHOD {
-            if self.hooks.is_none() {
+            if !self.serves_inbound_hooks() {
                 return refuse_unadapted(args.method.as_ref());
             }
             let params = parse_ext_params(&args);
-            return crate::protocol::kas::hooks::respond_execute(
-                &params,
-                &self.cwd,
-                &self.hook_ops,
+            let (reply, rx) = tokio::sync::oneshot::channel();
+            self.send_host(crate::protocol::kas::callbacks::HostCallback::HooksList {
+                trigger: params
+                    .get("trigger")
+                    .and_then(|t| t.as_str())
+                    .map(str::to_owned),
+                tool_id: params
+                    .get("toolId")
+                    .and_then(|t| t.as_str())
+                    .map(str::to_owned),
+                reply,
+            })
+            .await?;
+            return await_reply(rx).await;
+        }
+        if args.method.as_ref() == crate::protocol::kas::hooks::EXECUTE_METHOD {
+            if !self.serves_inbound_hooks() {
+                return refuse_unadapted(args.method.as_ref());
+            }
+            let parsed =
+                crate::protocol::kas::callbacks::HooksExecuteArgs::parse(&parse_ext_params(&args))
+                    .map_err(|e| acp::Error::new(-32602, e))?;
+            let (reply, rx) = tokio::sync::oneshot::channel();
+            self.send_host(
+                crate::protocol::kas::callbacks::HostCallback::HooksExecute {
+                    args: parsed,
+                    reply,
+                },
             )
-            .await;
+            .await?;
+            return await_reply(rx).await;
         }
         if args.method.as_ref() == crate::protocol::kas::hooks::SESSION_START_METHOD {
-            let Some(hooks) = &self.hooks else {
+            if !self.serves_inbound_hooks() {
                 return refuse_unadapted(args.method.as_ref());
-            };
-            return crate::protocol::kas::hooks::respond_session_start(hooks, &self.cwd).await;
+            }
+            let (reply, rx) = tokio::sync::oneshot::channel();
+            self.send_host(
+                crate::protocol::kas::callbacks::HostCallback::HooksSessionStart { reply },
+            )
+            .await?;
+            return await_reply(rx).await;
         }
         // cyril-kf2g: the `_kiro/fs/*` superset dialect, selected by the
         // `fs._meta.kiro` capabilities this engine advertises. Both the
@@ -524,10 +615,20 @@ impl KiroClient {
         // successful empty result. Fenced by
         // `every_advertised_fs_flag_is_dispatched`.
         {
-            use crate::protocol::kas::kiro_fs;
+            use crate::protocol::kas::{callbacks, kiro_fs};
             if let Some(op) = kiro_fs::op_for_method(args.method.as_ref()) {
                 self.require_host_io(args.method.as_ref())?;
-                return kiro_fs::dispatch(op, &parse_ext_params(&args)).await;
+                // Typed parse at the seam (cyril-g9vt): malformed params on a
+                // HANDLED family are a wire error, not the old Null fallback.
+                let parsed = callbacks::KiroFsArgs::parse(op, &parse_ext_params(&args))
+                    .map_err(|e| acp::Error::new(-32602, e))?;
+                let (reply, rx) = tokio::sync::oneshot::channel();
+                self.send_host(callbacks::HostCallback::KiroFs {
+                    args: parsed,
+                    reply,
+                })
+                .await?;
+                return await_reply(rx).await;
             }
         }
         // The bare-ACP fs/terminal lifecycle host callbacks are TYPED acp::Client
@@ -572,6 +673,20 @@ fn refuse_unadapted<T>(method: &str) -> acp::Result<T> {
     Err(acp::Error::method_not_found())
 }
 
+/// Await a mediated callback's typed reply. A dropped responder means the
+/// resolution was aborted (cancel, shutdown, or a resolution-task fault) —
+/// surfaced as a JSON-RPC error, never a hang or a silent default.
+#[cfg(feature = "kas")]
+async fn await_reply<T>(rx: tokio::sync::oneshot::Receiver<acp::Result<T>>) -> acp::Result<T> {
+    match rx.await {
+        Ok(result) => result,
+        Err(_) => {
+            tracing::debug!("host callback aborted before resolution");
+            Err(acp::Error::new(-32603, "host callback aborted"))
+        }
+    }
+}
+
 /// The ACP protocol default for an unhandled ext request: a `null` result.
 fn default_ext_response() -> acp::Result<acp::ExtResponse> {
     Ok(acp::ExtResponse::new(
@@ -599,103 +714,6 @@ mod tests {
     use super::*;
     use agent_client_protocol::Client as _;
 
-    // cyril-l7tw C11 fence: a failed getAccessToken callback emits
-    // BridgeError("auth", <responder message + login hint>) on the internal
-    // channel — deterministic (constructed Err, no sqlite store involved;
-    // injectable store wiring is cyril-5db7). Catches the pre-l7tw behavior:
-    // error swallowed into the JSON-RPC reply alone.
-    #[tokio::test]
-    async fn auth_callback_err_emits_bridge_error() {
-        let (ntx, mut nrx) = mpsc::channel(4);
-        let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
-            ntx,
-            ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
-            std::path::Path::new("/tmp"),
-        );
-        let err: acp::Result<acp::ExtResponse> =
-            Err(acp::Error::new(-32603, "sqlite store locked"));
-        client
-            .notify_if_auth_failure(crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD, &err)
-            .await;
-        let routed = nrx.try_recv().expect("BridgeError emitted");
-        match routed.notification {
-            Notification::BridgeError { operation, message } => {
-                assert_eq!(operation, "auth");
-                assert!(message.contains("sqlite store locked"), "got: {message}");
-                assert!(
-                    message.contains("kiro-cli login"),
-                    "actionable hint present, got: {message}"
-                );
-            }
-            other => panic!("expected BridgeError, got {other:?}"),
-        }
-    }
-
-    // l7tw C11 stress: the responder's own messages already carry the login
-    // hint (kas/auth.rs) — it must not be doubled.
-    #[tokio::test]
-    async fn auth_hint_not_doubled() {
-        let (ntx, mut nrx) = mpsc::channel(4);
-        let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
-            ntx,
-            ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
-            std::path::Path::new("/tmp"),
-        );
-        let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(
-            -32603,
-            "kiro token expired; run `kiro-cli login`",
-        ));
-        client
-            .notify_if_auth_failure(crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD, &err)
-            .await;
-        let routed = nrx.try_recv().expect("BridgeError emitted");
-        match routed.notification {
-            Notification::BridgeError { message, .. } => {
-                assert_eq!(
-                    message.matches("kiro-cli login").count(),
-                    1,
-                    "hint appears exactly once, got: {message}"
-                );
-            }
-            other => panic!("expected BridgeError, got {other:?}"),
-        }
-    }
-
-    // l7tw C11 scope check + C12-kas: a NON-auth ext failure emits nothing,
-    // and a SUCCESSFUL auth callback emits nothing.
-    #[tokio::test]
-    async fn non_auth_ext_err_emits_nothing() {
-        let (ntx, mut nrx) = mpsc::channel(4);
-        let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
-            ntx,
-            ptx,
-            std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
-            std::path::Path::new("/tmp"),
-        );
-        let err: acp::Result<acp::ExtResponse> = Err(acp::Error::new(-32603, "boom"));
-        client
-            .notify_if_auth_failure("kiro/some/other_method", &err)
-            .await;
-        client
-            .notify_if_auth_failure(
-                crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD,
-                &default_ext_response(),
-            )
-            .await;
-        assert!(
-            nrx.try_recv().is_err(),
-            "neither non-auth failures nor auth successes emit BridgeError"
-        );
-    }
-
     #[tokio::test]
     async fn read_text_file_override_returns_content() {
         // KAS-5a / claim C2 fence: a KAS `fs/read_text_file` reaches KiroClient's
@@ -707,7 +725,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
@@ -730,7 +748,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
@@ -750,6 +768,237 @@ mod tests {
         kas_client_with_shell(test_host_shell(crate::types::AgentEngine::Kas))
     }
 
+    // cyril-g9vt C11/AC5 end-to-end census: every handled wire method reaches
+    // its family responder THROUGH the mediation seam — no variant is answered
+    // directly, none refused. A fully-adaptered (Host) KAS client with a real
+    // mediation seam drives one representative per method; the assertion is
+    // "crossed and answered" (a typed non-refusal outcome), which fails if a
+    // family were left on the direct path (refused: nothing wired) or dropped.
+    // Walked from WIRE_METHODS so a 20th method added without a mediated path
+    // fails here. Complements slice 2's static count fence.
+    #[tokio::test]
+    async fn every_handled_variant_crosses_the_mediator() {
+        use agent_client_protocol::Client as _;
+
+        let dir = tempfile::tempdir().unwrap();
+        let hooks_dir = dir.path().join(".kiro/hooks");
+        std::fs::create_dir_all(&hooks_dir).unwrap();
+        std::fs::write(
+            hooks_dir.join("h.json"),
+            r#"{"version":"v1","hooks":[{"name":"g","trigger":"UserPromptSubmit",
+                "action":{"type":"command","command":"echo hi"}}]}"#,
+        )
+        .unwrap();
+        let f = dir.path().join("probe.txt");
+        std::fs::write(&f, "data").unwrap();
+
+        let (ntx, _nrx) = mpsc::channel(8);
+        let (ptx, _prx) = mpsc::channel(1);
+        let (mntx, _mnrx) = mpsc::channel(8);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            spawn_test_mediation_at(
+                Some(crate::protocol::kas::host_shell::HostShell::test_runnable_on_host()),
+                dir.path().to_path_buf(),
+                true,
+                mntx,
+            ),
+            dir.path(),
+        );
+
+        // A method is "crossed and answered" when its call returns without a
+        // method-not-found refusal (Ok, or a responder-specific error — both
+        // prove the callback reached a responder, not the null default).
+        let answered = |r: &acp::Result<acp::ExtResponse>| !matches!(r, Err(e) if e.code == acp::ErrorCode::MethodNotFound);
+        let ext = async |method: &'static str, params: serde_json::Value| {
+            let raw = serde_json::value::RawValue::from_string(params.to_string()).unwrap();
+            client
+                .ext_method(acp::ExtRequest::new(method, raw.into()))
+                .await
+        };
+
+        let sid = || acp::SessionId::new("s");
+        let mut seen: std::collections::HashSet<&'static str> = std::collections::HashSet::new();
+
+        // auth
+        assert!(
+            answered(&ext("kiro/auth/getAccessToken", serde_json::json!({})).await),
+            "auth crossed"
+        );
+        seen.insert("auth/getAccessToken");
+
+        // typed fs
+        assert!(
+            client
+                .read_text_file(acp::ReadTextFileRequest::new(sid(), &f))
+                .await
+                .is_ok(),
+            "fs read crossed"
+        );
+        seen.insert("fs/read_text_file");
+        assert!(
+            client
+                .write_text_file(acp::WriteTextFileRequest::new(
+                    sid(),
+                    dir.path().join("w.txt"),
+                    "x"
+                ))
+                .await
+                .is_ok(),
+            "fs write crossed"
+        );
+        seen.insert("fs/write_text_file");
+
+        // _kiro/fs/*
+        for (wire, method) in [
+            ("_kiro/fs/read_file", "kiro/fs/read_file"),
+            ("_kiro/fs/write_file", "kiro/fs/write_file"),
+            ("_kiro/fs/stat", "kiro/fs/stat"),
+            ("_kiro/fs/read_directory", "kiro/fs/read_directory"),
+            ("_kiro/fs/delete", "kiro/fs/delete"),
+        ] {
+            let target = dir.path().join(format!("{}.x", wire.replace('/', "_")));
+            std::fs::write(&target, "y").unwrap();
+            assert!(
+                answered(
+                    &ext(
+                        method,
+                        serde_json::json!({"sessionId":"s","path":target,"content":"y"})
+                    )
+                    .await
+                ),
+                "{wire} crossed"
+            );
+            seen.insert(wire);
+        }
+
+        // terminal typed + shell_type
+        assert!(
+            client
+                .create_terminal(acp::CreateTerminalRequest::new(sid(), "true"))
+                .await
+                .is_ok(),
+            "terminal/create crossed"
+        );
+        seen.insert("terminal/create");
+        let tid = acp::TerminalId::new("term-1");
+        assert!(
+            answered(
+                &client
+                    .wait_for_terminal_exit(acp::WaitForTerminalExitRequest::new(
+                        sid(),
+                        tid.clone()
+                    ))
+                    .await
+                    .map(|r| {
+                        acp::ExtResponse::new(
+                            serde_json::value::RawValue::from_string(
+                                serde_json::to_string(&r.exit_status).unwrap(),
+                            )
+                            .unwrap()
+                            .into(),
+                        )
+                    })
+            ),
+            "terminal/wait_for_exit crossed"
+        );
+        seen.insert("terminal/wait_for_exit");
+        assert!(
+            client
+                .terminal_output(acp::TerminalOutputRequest::new(sid(), tid.clone()))
+                .await
+                .is_ok(),
+            "terminal/output crossed"
+        );
+        seen.insert("terminal/output");
+        assert!(
+            client
+                .kill_terminal(acp::KillTerminalRequest::new(sid(), tid.clone()))
+                .await
+                .is_ok(),
+            "terminal/kill crossed"
+        );
+        seen.insert("terminal/kill");
+        assert!(
+            client
+                .release_terminal(acp::ReleaseTerminalRequest::new(sid(), tid))
+                .await
+                .is_ok(),
+            "terminal/release crossed"
+        );
+        seen.insert("terminal/release");
+        assert!(
+            answered(
+                &ext(
+                    "kiro/terminal/shell_type",
+                    serde_json::json!({"sessionId":"s"})
+                )
+                .await
+            ),
+            "shell_type crossed"
+        );
+        seen.insert("_kiro/terminal/shell_type");
+
+        // hooks requests
+        assert!(
+            answered(
+                &ext(
+                    "kiro/hooks/list",
+                    serde_json::json!({"trigger":"promptSubmit"})
+                )
+                .await
+            ),
+            "hooks/list crossed"
+        );
+        seen.insert("_kiro/hooks/list");
+        assert!(
+            answered(
+                &ext(
+                    "kiro/hooks/executeHook",
+                    serde_json::json!({"command":"true","sessionId":"s","userPrompt":""})
+                )
+                .await
+            ),
+            "executeHook crossed"
+        );
+        seen.insert("_kiro/hooks/executeHook");
+        assert!(
+            answered(&ext("kiro/hooks/sessionStart", serde_json::json!({})).await),
+            "sessionStart crossed"
+        );
+        seen.insert("_kiro/hooks/sessionStart");
+
+        // hooks controls (notifications: reaching them cleanly = crossed)
+        for method in ["kiro/hooks/cancel", "kiro/hooks/didChange"] {
+            let raw = serde_json::value::RawValue::from_string(
+                serde_json::json!({"operationId":"o"}).to_string(),
+            )
+            .unwrap();
+            client
+                .ext_notification(acp::ExtNotification::new(method, raw.into()))
+                .await
+                .unwrap();
+        }
+        seen.insert("_kiro/hooks/cancel");
+        seen.insert("_kiro/hooks/didChange");
+
+        // Every census entry was exercised — a new WIRE_METHODS row without a
+        // path here fails this set-equality.
+        let census: std::collections::HashSet<&'static str> =
+            crate::protocol::kas::callbacks::WIRE_METHODS
+                .iter()
+                .copied()
+                .collect();
+        assert_eq!(
+            seen, census,
+            "every handled wire method crosses the mediator"
+        );
+    }
+
     /// A V2-bound client in a kas-feature build — the cyril-dn91 defect
     /// configuration. Returns the notification receiver so refusal side
     /// effects (or their required absence) are observable.
@@ -760,7 +1009,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
-            test_host_shell(crate::types::AgentEngine::V2),
+            test_host_tx(),
             std::path::Path::new("/tmp"),
         );
         (client, nrx)
@@ -815,11 +1064,14 @@ mod tests {
     fn kas_client_with_shell(shell: ResolvedHostShell) -> KiroClient {
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
+        // The shell now belongs to the mediation side (the registry lives in
+        // the dispatch ctx since slice 5); hooks paths stay direct and simply
+        // never send.
         KiroClient::new(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            shell,
+            spawn_test_mediation(shell),
             std::path::Path::new("/tmp"),
         )
     }
@@ -847,13 +1099,21 @@ mod tests {
 
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
+        let (mediation_ntx, _mnrx) = mpsc::channel(4);
         let client = KiroClient::new(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
                 hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
             }),
-            test_host_shell(crate::types::AgentEngine::Kas),
+            // The registry now lives loop-side; the mediation seam loads it
+            // from the SAME tempdir cwd.
+            spawn_test_mediation_at(
+                test_host_shell(crate::types::AgentEngine::Kas),
+                dir.path().to_path_buf(),
+                true,
+                mediation_ntx,
+            ),
             dir.path(),
         );
 
@@ -895,7 +1155,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             dir.path(),
         );
 
@@ -960,7 +1220,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             dir.path(),
         );
         let call = async |method: &'static str, params: serde_json::Value| {
@@ -1130,39 +1390,39 @@ mod tests {
         );
     }
 
-    // cyril-dn91 C10 fence: the hook registry exists iff the Hooks direction
-    // is Inbound — no empty-registry stand-in for Outbound/Off (the sentinel
-    // ADR-0001's amendment forbids). Fails under the keep-always-constructing
-    // impl.
+    // cyril-dn91 C10 fence, cyril-g9vt form: inbound hooks serving is gated by
+    // the Hooks direction being Inbound — the single predicate BOTH the client
+    // send-gate and the loop-side ctx registry construction key on (bridge.rs
+    // builds the registry `Some` iff this holds; no empty-registry stand-in
+    // for Outbound/Off — the sentinel ADR-0001's amendment forbids). The
+    // registry moved loop-side (cyril-g9vt), so presence is asserted through
+    // its governing predicate; the served-vs-refused behavior itself is fenced
+    // by `hooks_list_ext_request_routes_to_registry` (Host serves) and
+    // `kas_outbound_hooks_mode_refuses_inbound_serving` (Outbound refuses).
     #[test]
-    fn registry_present_iff_inbound() {
+    fn inbound_serving_gated_by_direction() {
         use crate::types::kas_hooks::KasHooksMode;
 
-        let client_for = |mode| {
+        let gate_for = |mode| {
             let (ntx, _nrx) = mpsc::channel(1);
             let (ptx, _prx) = mpsc::channel(1);
             KiroClient::new(
                 ntx,
                 ptx,
                 std::rc::Rc::new(crate::protocol::engine::KasEngine { hooks_mode: mode }),
-                test_host_shell(crate::types::AgentEngine::Kas),
+                test_host_tx(),
                 std::path::Path::new("/tmp"),
             )
+            .serves_inbound_hooks()
         };
+        assert!(gate_for(KasHooksMode::Host), "Inbound serves");
         assert!(
-            client_for(KasHooksMode::Host).hooks.is_some(),
-            "Inbound loads a registry"
+            !gate_for(KasHooksMode::Kas),
+            "Outbound does not serve inbound"
         );
-        assert!(
-            client_for(KasHooksMode::Kas).hooks.is_none(),
-            "Outbound gets NO registry"
-        );
-        assert!(
-            client_for(KasHooksMode::Off).hooks.is_none(),
-            "Off gets NO registry"
-        );
+        assert!(!gate_for(KasHooksMode::Off), "Off does not serve");
         let (v2, _nrx) = v2_bound_client();
-        assert!(v2.hooks.is_none(), "V2 gets NO registry");
+        assert!(!v2.serves_inbound_hooks(), "V2 does not serve");
     }
 
     // cyril-dn91 C12 fence: didChange carrying a full registry payload must
@@ -1192,13 +1452,21 @@ mod tests {
 
         let (ntx, mut kas_rx) = mpsc::channel(4);
         let (ptx, _prx) = mpsc::channel(1);
+        // HooksChanged now travels the mediation seam's notify channel (in the
+        // real bridge: inbound → run_loop → App). Point it at the SAME
+        // receiver so this unit test observes the Outbound emission.
         let outbound = KiroClient::new(
-            ntx,
+            ntx.clone(),
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
                 hooks_mode: crate::types::kas_hooks::KasHooksMode::Kas,
             }),
-            test_host_shell(crate::types::AgentEngine::Kas),
+            spawn_test_mediation_at(
+                test_host_shell(crate::types::AgentEngine::Kas),
+                std::path::PathBuf::from("/tmp"),
+                false,
+                ntx,
+            ),
             std::path::Path::new("/tmp"),
         );
         let raw = serde_json::value::RawValue::from_string(payload.to_string()).unwrap();
@@ -1209,12 +1477,14 @@ mod tests {
             ))
             .await
             .unwrap();
-        match kas_rx.try_recv() {
-            Ok(routed) => assert!(
+        // The seam resolves on a background thread, so await (with a bound)
+        // rather than try_recv.
+        match tokio::time::timeout(std::time::Duration::from_secs(2), kas_rx.recv()).await {
+            Ok(Some(routed)) => assert!(
                 matches!(routed.notification, Notification::HooksChanged { .. }),
                 "Outbound still surfaces HooksChanged"
             ),
-            Err(_) => panic!("Outbound didChange must still surface HooksChanged (cyril-gk17)"),
+            _ => panic!("Outbound didChange must still surface HooksChanged (cyril-gk17)"),
         }
     }
 
@@ -1252,7 +1522,7 @@ mod tests {
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
                 hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
             }),
-            test_host_shell(crate::types::AgentEngine::Kas),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             dir.path(),
         );
 
@@ -1338,7 +1608,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            None,
+            spawn_test_mediation(None),
             std::path::Path::new("/tmp"),
         );
         let params = serde_json::value::RawValue::from_string("{}".to_string())
@@ -1378,7 +1648,7 @@ mod metadata_routing_tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
-            test_host_shell(crate::types::AgentEngine::V2),
+            test_host_tx(),
             std::path::Path::new("/tmp"),
         )
     }

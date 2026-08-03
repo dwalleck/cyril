@@ -12,7 +12,7 @@
 use agent_client_protocol::{self as acp, Client as _};
 use tokio::sync::mpsc;
 
-use crate::protocol::client::{KiroClient, test_host_shell};
+use crate::protocol::client::KiroClient;
 use crate::protocol::engine::V2Engine;
 use crate::types::AgentEngine;
 
@@ -45,7 +45,7 @@ fn v2_client_in_kas_build(cwd: &std::path::Path) -> KiroClient {
         ntx,
         ptx,
         std::rc::Rc::new(V2Engine),
-        test_host_shell(AgentEngine::V2),
+        crate::protocol::client::test_host_tx(),
         cwd,
     )
 }
@@ -194,12 +194,21 @@ async fn adapter_matrix_advertise_iff_answer() {
 
         let (ntx, _nrx) = mpsc::channel(8);
         let (ptx, _prx) = mpsc::channel(1);
+        let (mntx, _mnrx) = mpsc::channel(8);
         let dir = tempfile::tempdir().unwrap();
+        // The mediation seam loads an (empty) hooks registry from the tempdir,
+        // so a Host-mode engine's inbound list SERVES `{hooks:[]}`; engines
+        // that don't serve inbound refuse at the client gate before dispatch.
         let client = KiroClient::new(
             ntx,
             ptx,
             engine.clone(),
-            test_host_shell(engine.kind()),
+            crate::protocol::client::spawn_test_mediation_at(
+                crate::protocol::client::test_host_shell(AgentEngine::Kas),
+                dir.path().to_path_buf(),
+                true,
+                mntx,
+            ),
             dir.path(),
         );
 
@@ -387,7 +396,9 @@ async fn kas_outbound_hooks_mode_refuses_inbound_serving() {
         std::rc::Rc::new(crate::protocol::engine::KasEngine {
             hooks_mode: crate::types::kas_hooks::KasHooksMode::Kas,
         }),
-        test_host_shell(AgentEngine::Kas),
+        crate::protocol::client::spawn_test_mediation(crate::protocol::client::test_host_shell(
+            AgentEngine::Kas,
+        )),
         dir.path(),
     );
 

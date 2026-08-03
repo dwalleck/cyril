@@ -130,6 +130,11 @@ pub(crate) struct BridgeChannels {
     pub permission_tx: mpsc::Sender<PermissionRequest>,
 }
 
+/// Host-callback mediation ingress bound (cyril-g9vt design C5): small — the
+/// agent rarely has more than a handful of callbacks in flight; a full
+/// channel parks producers, never drops.
+const HOST_CAPACITY: usize = 16;
+
 /// Create a matched pair of BridgeHandle + BridgeChannels.
 pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     let (command_tx, command_rx) = mpsc::channel(COMMAND_CAPACITY);
@@ -617,11 +622,21 @@ async fn run_bridge(
     // FORWARDS them to the App without awaiting resolution — the response flows
     // back on the request's embedded `responder` oneshot, bypassing the loop.
     let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
-    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone(), host_shell, cwd);
-    // cyril-3lh8: grab the shared terminal-registry handle BEFORE the connection
-    // takes ownership of the client — run_loop's CancelRequest arm reaps with it.
+    // Host-callback mediation ingress (cyril-g9vt): bounded and lossless —
+    // acp request tasks await capacity; the loop accepts in channel order.
+    let (host_tx, host_rx) =
+        mpsc::channel::<crate::protocol::client::HostCallbackItem>(HOST_CAPACITY);
+    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone(), host_tx, cwd);
+    // cyril-g9vt slice 5: the terminal registry is constructed HERE and lives
+    // loop-side (threaded via InternalChannels into the dispatch ctx) — the
+    // cyril-3lh8 "grab it out of the client" escape is gone. Still the sole
+    // owner of process lifecycle; CancelRequest reaps through it.
     #[cfg(feature = "kas")]
-    let terminals = client.terminals();
+    let terminals = std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
+        host_shell.map(std::rc::Rc::new),
+    ));
+    #[cfg(not(feature = "kas"))]
+    let _ = host_shell;
 
     // 3. Create the ACP connection.
     //    ClientSideConnection::new returns (conn, io_task).
@@ -682,6 +697,7 @@ async fn run_bridge(
             inbound_rx,
             req_rx,
             io_done: io_done_rx,
+            host_rx,
             #[cfg(feature = "kas")]
             terminals,
         },
@@ -709,6 +725,10 @@ struct InternalChannels {
     inbound_rx: mpsc::Receiver<RoutedNotification>,
     req_rx: mpsc::Receiver<PermissionRequest>,
     io_done: tokio::sync::oneshot::Receiver<String>,
+    /// Host-callback mediation ingress (cyril-g9vt): typed callbacks in wire
+    /// order. Un-gated — the item type is uninhabited in a default build, so
+    /// the arm compiles while no traffic can exist (ADR-0002).
+    host_rx: mpsc::Receiver<crate::protocol::client::HostCallbackItem>,
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
@@ -842,6 +862,7 @@ async fn run_loop(
         mut inbound_rx,
         mut req_rx,
         mut io_done,
+        host_rx,
         ..
     } = internal;
     use acp::Agent;
@@ -947,6 +968,65 @@ async fn run_loop(
     // intentionally diverge there; in v2 they clear together (the prompt
     // resolves AT turn-end). Do not re-merge them.
     let mut mediator = TurnMediator::new();
+    // Host-callback mediation (cyril-g9vt, ADR-0004 amendment): the lifecycle
+    // state machine, shared so `run_loop`'s CancelRequest/Shutdown arms can
+    // sweep it while a DEDICATED drain task owns acceptance + resolution. The
+    // drain MUST be its own task, not a `run_loop` select! arm: `run_loop`
+    // blocks on `conn.*.await` inside command arms (new_session, prompt), and
+    // KAS issues `getAccessToken` DURING new_session — an in-loop drain would
+    // deadlock (new_session waits for the auth reply; the auth reply needs the
+    // loop to drain; the loop is blocked on new_session). Live-caught, slice 9.
+    let host_mediator = std::rc::Rc::new(std::cell::RefCell::new(
+        crate::protocol::host_mediator::HostMediator::new(),
+    ));
+    #[cfg(feature = "kas")]
+    {
+        let host_ctx = std::rc::Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
+            notify_tx: inbound_tx.clone(),
+            terminals: std::rc::Rc::clone(&terminals),
+            hooks: match engine.adapters().hooks {
+                crate::protocol::engine::HooksAdapter::Inbound => Some(std::rc::Rc::new(
+                    crate::protocol::kas::hooks::HookRegistry::load(
+                        &cwd,
+                        crate::kiro_agent_config::home_dir()
+                            .map(|h| h.join(".kiro"))
+                            .as_deref(),
+                    ),
+                )),
+                _ => None,
+            },
+            hook_ops: crate::protocol::kas::hooks::HookOps::default(),
+            cwd: cwd.to_path_buf(),
+        });
+        let drain_mediator = std::rc::Rc::clone(&host_mediator);
+        // The drain task runs concurrently with `run_loop` on the same
+        // LocalSet; it accepts in channel order and spawns each resolution
+        // off itself (spawn_host_job), so a host callback issued mid-command
+        // resolves without waiting for the command RPC to finish.
+        tokio::task::spawn_local(async move {
+            let mut host_rx = host_rx;
+            while let Some(cb) = host_rx.recv().await {
+                match drain_mediator.borrow_mut().accept(cb) {
+                    crate::protocol::host_mediator::Accept::Spawn(job) => {
+                        spawn_host_job(job, &drain_mediator, &host_ctx);
+                    }
+                    crate::protocol::host_mediator::Accept::Consumed => {}
+                }
+            }
+        });
+    }
+    #[cfg(not(feature = "kas"))]
+    {
+        // Default build: the item is uninhabited, so `recv()` can only ever
+        // resolve to `None` (channel close). The single await + exhaustive
+        // match over the never-arriving item is the ADR-0002 compile proof.
+        let mut host_rx = host_rx;
+        tokio::task::spawn_local(async move {
+            if let Some(cb) = host_rx.recv().await {
+                match cb {}
+            }
+        });
+    }
     // cyril-l7tw C4: set when the io watcher reports the connection dead while
     // a turn is in flight. The disconnect is DEFERRED until the loop observes
     // that turn's TurnCompleted (the prompt task's Err arm delivers a
@@ -1155,6 +1235,16 @@ async fn run_loop(
                     // turn-end could race an in-flight release.
                     #[cfg(feature = "kas")]
                     terminals.reap_session(&session_id).await;
+                    // cyril-g9vt: sweep the session's in-flight host callbacks
+                    // that opt into MEDIATOR cancellation via `cancel_key`.
+                    // Today no production family does (hooks cancel through
+                    // HookOps above; terminals reap via the registry), so this
+                    // is a no-op waiting for its first opt-in family
+                    // (cyril-3ald hooks-onto-mediator, filed) — the machinery
+                    // is unit-fenced and the seam the design mandates.
+                    host_mediator
+                        .borrow_mut()
+                        .cancel_scope(&crate::types::SessionId::new(session_id.to_string()));
                 } else {
                     tracing::warn!("cancel requested but no active session");
                 }
@@ -2028,6 +2118,13 @@ async fn run_loop(
                 for handle in prompt_tasks.drain(..) {
                     handle.abort();
                 }
+                // cyril-g9vt C8: signal every in-flight host callback that opted
+                // into mediator cancellation. No production family does yet
+                // (see the CancelRequest arm), so this signals nothing today;
+                // in-flight dispatch futures are instead reaped when the
+                // LocalSet tears down at run_loop return (kill_on_drop on their
+                // children). Kept as the shutdown seam the design mandates.
+                host_mediator.borrow_mut().shutdown();
                 break;
             }
                 } // match cmd
@@ -2111,6 +2208,41 @@ async fn run_loop(
     } // loop
 
     Ok(())
+}
+
+/// Spawn one accepted host-callback job off the loop (cyril-g9vt): race its
+/// cancel signal against the adapter-side dispatch, then clear the lifecycle
+/// entry. On cancel the dispatch future is DROPPED — `kill_on_drop` reaps any
+/// children and the dropped reply surfaces "host callback aborted" at the acp
+/// request task (side-effect-free abort for un-polled work, design C2).
+#[cfg(feature = "kas")]
+fn spawn_host_job(
+    job: crate::protocol::host_mediator::Job<crate::protocol::client::HostCallbackItem>,
+    mediator: &std::rc::Rc<std::cell::RefCell<crate::protocol::host_mediator::HostMediator>>,
+    ctx: &std::rc::Rc<crate::protocol::kas::callbacks::DispatchCtx>,
+) {
+    let mediator = std::rc::Rc::clone(mediator);
+    let ctx = std::rc::Rc::clone(ctx);
+    let crate::protocol::host_mediator::Job {
+        callback,
+        id,
+        cancelled,
+    } = job;
+    tokio::task::spawn_local(async move {
+        match cancelled {
+            Some(cancel) => {
+                tokio::select! {
+                    biased;
+                    _ = cancel => {
+                        tracing::debug!("host callback aborted by cancel");
+                    }
+                    () = crate::protocol::kas::callbacks::dispatch(callback, &ctx) => {}
+                }
+            }
+            None => crate::protocol::kas::callbacks::dispatch(callback, &ctx).await,
+        }
+        mediator.borrow_mut().complete(id);
+    });
 }
 
 #[cfg(test)]
@@ -2766,6 +2898,22 @@ mod tests {
         /// the orphan-on-cancel wire shape.
         #[cfg(all(feature = "kas", unix))]
         create_terminal_cmd: Option<(String, Vec<String>, std::path::PathBuf)>,
+        /// cyril-g9vt prove-it probe: when set, `prompt` fires TWO server->client
+        /// ext requests CONCURRENTLY (slow `_kiro/hooks/executeHook` + fast
+        /// `_kiro/terminal/shell_type`) and records `(slow_elapsed, fast_elapsed)`
+        /// below once both resolve.
+        #[cfg(all(feature = "kas", unix))]
+        ext_concurrency_probe: bool,
+        /// cyril-g9vt slice-9 regression fence: when set, `new_session`
+        /// issues a `_kiro/terminal/shell_type` host callback and AWAITS it
+        /// before returning the session — modelling KAS's mid-`new_session`
+        /// `getAccessToken`. With an in-`run_loop` drain this deadlocks (the
+        /// loop is blocked on new_session and can't drain the host channel);
+        /// the dedicated drain task resolves it off-loop.
+        #[cfg(all(feature = "kas", unix))]
+        callback_during_new_session: bool,
+        #[cfg(all(feature = "kas", unix))]
+        ext_probe_timings: Option<(Duration, Duration)>,
     }
 
     struct FakeAgent {
@@ -2820,6 +2968,28 @@ mod tests {
             } else {
                 format!("fake-{n}")
             };
+            #[cfg(all(feature = "kas", unix))]
+            {
+                let fire = self.script.borrow().callback_during_new_session;
+                // Clone the conn OUT of the RefCell before any await — a Ref
+                // held across .await is unsound (mirrors the prompt path).
+                let conn = self.agent_conn.borrow().clone();
+                if let (true, Some(conn)) = (fire, conn) {
+                    use acp::Client as _;
+                    let raw = serde_json::value::RawValue::from_string(
+                        serde_json::json!({"sessionId": id}).to_string(),
+                    )
+                    .expect("probe params");
+                    // AWAIT it — models KAS's mid-new_session getAccessToken; the
+                    // dedicated drain resolves it off-loop so new_session returns.
+                    let _ = conn
+                        .ext_method(acp::ExtRequest::new(
+                            "_kiro/terminal/shell_type",
+                            raw.into(),
+                        ))
+                        .await;
+                }
+            }
             Ok(acp::NewSessionResponse::new(acp::SessionId::new(id)))
         }
         async fn prompt(&self, a: acp::PromptRequest) -> acp::Result<acp::PromptResponse> {
@@ -2855,6 +3025,67 @@ mod tests {
                             }))
                             .expect("chunk notification");
                         conn.session_notification(note).await.expect("send chunk");
+                    }
+                }
+            }
+            #[cfg(all(feature = "kas", unix))]
+            {
+                // cyril-g9vt prove-it probe: two concurrent server->client ext
+                // requests through the REAL connection — the ADR-0004
+                // amendment's non-blocking premise, runtime-verified. Method
+                // names are passed UNPREFIXED: the acp crate prepends the `_`
+                // escape on the wire and the receiver strips exactly one (the
+                // probe's first run proved this by double-prefixing and
+                // landing both calls on the protocol-default null).
+                let run_probe = self.script.borrow().ext_concurrency_probe;
+                if run_probe {
+                    use acp::Client as _;
+                    let conn = self.agent_conn.borrow().clone();
+                    if let Some(conn) = conn {
+                        let raw =
+                            |v: serde_json::Value| -> std::sync::Arc<serde_json::value::RawValue> {
+                                serde_json::value::RawValue::from_string(v.to_string())
+                                    .expect("probe params")
+                                    .into()
+                            };
+                        let slow_req = acp::ExtRequest::new(
+                            "kiro/hooks/executeHook",
+                            raw(serde_json::json!({
+                                "hookId": "h", "hookName": "slow", "command": "sleep 1",
+                                "sessionId": a.session_id.to_string(), "userPrompt": ""})),
+                        );
+                        let fast_req = acp::ExtRequest::new(
+                            "kiro/terminal/shell_type",
+                            raw(serde_json::json!({"sessionId": a.session_id.to_string()})),
+                        );
+                        let t0 = std::time::Instant::now();
+                        let slow_f = async {
+                            let r = conn.ext_method(slow_req).await;
+                            (r, t0.elapsed())
+                        };
+                        let fast_f = async {
+                            let r = conn.ext_method(fast_req).await;
+                            (r, t0.elapsed())
+                        };
+                        let ((slow_r, slow_t), (fast_r, fast_t)) = tokio::join!(slow_f, fast_f);
+                        // Non-null bodies REQUIRED: Ok(null) is the unhandled
+                        // protocol default (the first probe run false-passed
+                        // through it with a double-underscored method name).
+                        let body = |r: &acp::Result<acp::ExtResponse>| -> serde_json::Value {
+                            serde_json::from_str(r.as_ref().expect("resolves").0.get())
+                                .expect("json body")
+                        };
+                        assert!(
+                            body(&slow_r).get("exitCode").is_some(),
+                            "slow executeHook must reach the responder, got {:?}",
+                            body(&slow_r)
+                        );
+                        assert!(
+                            body(&fast_r).get("shellType").is_some(),
+                            "fast shell_type must reach the responder, got {:?}",
+                            body(&fast_r)
+                        );
+                        self.script.borrow_mut().ext_probe_timings = Some((slow_t, fast_t));
                     }
                 }
             }
@@ -3035,17 +3266,23 @@ mod tests {
                 // harness caller's closure signature changes.
                 script.borrow_mut().inbound = Some(inbound_tx.clone());
                 let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
+                let (host_tx, host_rx) =
+                    mpsc::channel::<crate::protocol::client::HostCallbackItem>(HOST_CAPACITY);
                 let client = KiroClient::new(
                     inbound_tx.clone(),
                     req_tx,
                     engine.clone(),
-                    crate::protocol::client::test_host_shell(engine.kind()),
+                    host_tx,
                     &std::env::temp_dir(),
                 );
-                // cyril-3lh8: mirror run_bridge — the loop shares the client's
-                // terminal registry so CancelRequest can reap.
+                // cyril-g9vt slice 5: mirror run_bridge — the registry is
+                // constructed loop-side, not grabbed from the client.
                 #[cfg(feature = "kas")]
-                let terminals = client.terminals();
+                let terminals =
+                    std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
+                        crate::protocol::client::test_host_shell(engine.kind())
+                            .map(std::rc::Rc::new),
+                    ));
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);
                 let (cr, cw) = tokio::io::split(c_io);
                 let (ar, aw) = tokio::io::split(a_io);
@@ -3097,6 +3334,7 @@ mod tests {
                         inbound_rx,
                         req_rx,
                         io_done: io_done_rx,
+                        host_rx,
                         #[cfg(feature = "kas")]
                         terminals,
                     },
@@ -3393,7 +3631,7 @@ mod tests {
                     notif_tx,
                     req_tx,
                     Rc::new(V2Engine),
-                    crate::protocol::client::test_host_shell(AgentEngine::V2),
+                    crate::protocol::client::test_host_tx(),
                     &std::env::temp_dir(),
                 );
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);
@@ -3425,6 +3663,109 @@ mod tests {
                 println!("l7tw falsifier: io task completed with {io_result:?}");
             })
             .await;
+    }
+
+    // ── cyril-g9vt prove-it probe ─────────────────────────────────────────
+    /// PROBE (cyril-g9vt): the ADR-0004 amendment's non-blocking premise at the
+    /// REAL connection layer — two server->client host callbacks issued
+    /// concurrently by the agent resolve CONCURRENTLY (per-request task spawn
+    /// inside the acp crate; oracle: `.cyril-g9vt/oracle-acp-rpc.txt`, an
+    /// independent source census of the dispatch path). A slow callback must
+    /// not serialize a fast one — the constraint the mediator must PRESERVE
+    /// (ordered acceptance, concurrent resolution). Also end-to-end-validates
+    /// the `_kiro/*` → `kiro/*` leading-underscore strip through the wire.
+    #[cfg(all(feature = "kas", unix))]
+    #[tokio::test]
+    async fn probe_g9vt_concurrent_callback_resolution() {
+        let script = Rc::new(RefCell::new(Script {
+            ext_concurrency_probe: true,
+            emit_turn_end: true,
+            ..Script::default()
+        }));
+        let probe = script.clone();
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            script,
+            |sender, mut rx, _perm, _gate, _loop_handle, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid,
+                        content_blocks: vec!["p".into()],
+                    })
+                    .await
+                    .unwrap();
+                // The turn completes only after prompt() awaited both callbacks.
+                while let Some(n) = recv_notif(&mut rx, 10).await {
+                    if matches!(n, Notification::TurnCompleted { .. }) {
+                        break;
+                    }
+                }
+                let (slow, fast) = probe.borrow().ext_probe_timings.expect("probe ran");
+                eprintln!("probe_g9vt: slow={slow:?} fast={fast:?}");
+                assert!(
+                    slow >= Duration::from_millis(900),
+                    "slow hook actually slept: {slow:?}"
+                );
+                assert!(
+                    fast < Duration::from_millis(400),
+                    "fast callback must resolve while the slow one is pending \
+                     (concurrent resolution): fast={fast:?} slow={slow:?}"
+                );
+            },
+        )
+        .await;
+    }
+
+    // cyril-g9vt slice-9 SMOKE TEST: a KAS host callback issued DURING
+    // new_session (KAS does exactly this with getAccessToken) resolves and the
+    // session still completes. NB this is NOT the deadlock's non-vacuity fence
+    // — the in-process duplex harness does not reproduce the real subprocess's
+    // loop-blocking, so removing the drain does not make it fail here. The
+    // AUTHORITATIVE deadlock evidence is the live parity check (.cyril-g9vt/
+    // build-audit.md, slice 9): baseline main created the session, the in-loop
+    // drain hung it, the dedicated drain restored it. This test guards the
+    // end-to-end mid-new_session composition against everyday breakage.
+    #[cfg(all(feature = "kas", unix))]
+    #[tokio::test]
+    async fn callback_during_new_session_completes() {
+        let script = Rc::new(RefCell::new(Script {
+            callback_during_new_session: true,
+            ..Script::default()
+        }));
+        with_engine_harness(
+            Rc::new(crate::protocol::engine::KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+            }),
+            script,
+            |sender, mut rx, _perm, _gate, _loop_handle, _kill| async move {
+                sender
+                    .send(BridgeCommand::NewSession {
+                        cwd: std::env::temp_dir(),
+                    })
+                    .await
+                    .unwrap();
+                // A deadlocked drain never lets new_session return; bound the
+                // wait so the fence fails fast instead of hanging CI.
+                let created = tokio::time::timeout(Duration::from_secs(5), async {
+                    while let Some(n) = recv_notif(&mut rx, 5).await {
+                        if matches!(n, Notification::SessionCreated { .. }) {
+                            return true;
+                        }
+                    }
+                    false
+                })
+                .await;
+                assert_eq!(
+                    created,
+                    Ok(true),
+                    "SessionCreated must arrive — the mid-new_session callback                      resolved off the loop (no deadlock)"
+                );
+            },
+        )
+        .await;
     }
 
     #[tokio::test]

@@ -152,6 +152,19 @@ pub(crate) fn op_for_method(method: &str) -> Option<&'static FsOp> {
     FS_OPS.iter().find(|op| op.method == method)
 }
 
+/// The table row for an op kind — a TOTAL match (no unwrap/expect/panic/
+/// fallback). The index mapping mirrors `FS_OPS`'s declaration order, fenced
+/// by [`tests::op_for_kind_indices_match_fs_ops`].
+pub(crate) fn op_for_kind(kind: FsOpKind) -> &'static FsOp {
+    match kind {
+        FsOpKind::ReadFile => &FS_OPS[0],
+        FsOpKind::WriteFile => &FS_OPS[1],
+        FsOpKind::Stat => &FS_OPS[2],
+        FsOpKind::ReadDirectory => &FS_OPS[3],
+        FsOpKind::Delete => &FS_OPS[4],
+    }
+}
+
 /// The five operations in one place.
 ///
 /// Three sites have to move together — the advertisement
@@ -225,11 +238,11 @@ const MAX_READ_SIZE: u64 = 10 * 1024 * 1024;
 /// `{sessionId, path}` — the shape shared by `stat`, `read_directory`, and
 /// `delete`. `session_id` is carried (not skipped) so every audit line can name
 /// the session that caused the side effect.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PathParams {
-    session_id: String,
-    path: std::path::PathBuf,
+pub(crate) struct PathParams {
+    pub(crate) session_id: String,
+    pub(crate) path: std::path::PathBuf,
     /// Documented by the covenant as `{path, recursive?}`, but **never sent** by
     /// the 2.16.0 `KiroDeleteAdapter`, which posts `{sessionId, path}` only. Read
     /// anyway so a future agent that starts sending it is honored rather than
@@ -239,51 +252,51 @@ struct PathParams {
 
 /// `_kiro/fs/read_file` params. `line`/`limit` are omitted by the adapter when
 /// null, so `Option` here means genuinely absent — not "0".
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ReadFileParams {
-    session_id: String,
-    path: std::path::PathBuf,
-    line: Option<usize>,
-    limit: Option<usize>,
+pub(crate) struct ReadFileParams {
+    pub(crate) session_id: String,
+    pub(crate) path: std::path::PathBuf,
+    pub(crate) line: Option<usize>,
+    pub(crate) limit: Option<usize>,
 }
 
 /// `_kiro/fs/write_file` params. The optional range rides in
 /// `_meta.kiro.range`, which is why `meta` is modeled rather than ignored.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-struct WriteFileParams {
-    session_id: String,
-    path: std::path::PathBuf,
-    content: String,
+pub(crate) struct WriteFileParams {
+    pub(crate) session_id: String,
+    pub(crate) path: std::path::PathBuf,
+    pub(crate) content: String,
     #[serde(rename = "_meta")]
-    meta: Option<WriteMeta>,
+    pub(crate) meta: Option<WriteMeta>,
 }
 
-#[derive(Debug, Deserialize)]
-struct WriteMeta {
-    kiro: Option<WriteKiroMeta>,
+#[derive(Debug, Deserialize, serde::Serialize)]
+pub(crate) struct WriteMeta {
+    pub(crate) kiro: Option<WriteKiroMeta>,
 }
 
-#[derive(Debug, Deserialize)]
-struct WriteKiroMeta {
-    range: Option<Range>,
+#[derive(Debug, Deserialize, serde::Serialize)]
+pub(crate) struct WriteKiroMeta {
+    pub(crate) range: Option<Range>,
 }
 
 /// An LSP-style range: **0-based** lines and **UTF-16** character offsets.
 /// Every level is optional because the reference splice reads it through
 /// optional chaining (`range.start?.line ?? 0`), so `{}` is a legal range
 /// meaning "the whole file".
-#[derive(Debug, Default, Deserialize)]
-struct Range {
-    start: Option<Position>,
-    end: Option<Position>,
+#[derive(Debug, Default, Deserialize, serde::Serialize)]
+pub(crate) struct Range {
+    pub(crate) start: Option<Position>,
+    pub(crate) end: Option<Position>,
 }
 
-#[derive(Debug, Default, Deserialize)]
-struct Position {
-    line: Option<usize>,
-    character: Option<usize>,
+#[derive(Debug, Default, Deserialize, serde::Serialize)]
+pub(crate) struct Position {
+    pub(crate) line: Option<usize>,
+    pub(crate) character: Option<usize>,
 }
 
 /// Parse ext params into `T`, mapping a shape mismatch to `-32602` (invalid
@@ -654,6 +667,22 @@ mod tests {
 
     use super::*;
     use serde_json::json;
+
+    // cyril-g9vt: op_for_kind's indexed match mirrors FS_OPS's declaration
+    // order — fence the two against drift (reordering FS_OPS without updating
+    // the match would silently return the wrong op).
+    #[test]
+    fn op_for_kind_indices_match_fs_ops() {
+        for op in FS_OPS {
+            assert_eq!(
+                op_for_kind(op.kind).method,
+                op.method,
+                "op_for_kind({:?}) must return the FS_OPS row for {}",
+                op.kind,
+                op.wire
+            );
+        }
+    }
 
     /// The response's JSON body — asserting on the payload the agent parses,
     /// not on cyril's in-memory value, so a serialization mistake is caught.
