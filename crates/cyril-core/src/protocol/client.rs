@@ -35,27 +35,52 @@ pub(crate) fn test_host_tx() -> mpsc::Sender<HostCallbackItem> {
 /// tests'. Notifications the dispatch emits are dropped (tests that assert
 /// them run at the harness level).
 #[cfg(all(test, feature = "kas"))]
-pub(crate) fn spawn_test_mediation() -> mpsc::Sender<HostCallbackItem> {
+pub(crate) fn spawn_test_mediation(shell: ResolvedHostShell) -> mpsc::Sender<HostCallbackItem> {
     let (tx, mut rx) = mpsc::channel::<HostCallbackItem>(16);
     let (ntx, nrx) = mpsc::channel(16);
     std::mem::forget(nrx); // keep finish()'s sends deliverable
-    tokio::spawn(async move {
-        let mut mediator = crate::protocol::host_mediator::HostMediator::new();
-        let ctx = crate::protocol::kas::callbacks::DispatchCtx { notify_tx: ntx };
-        while let Some(cb) = rx.recv().await {
-            match mediator.accept(cb) {
-                crate::protocol::host_mediator::Accept::Spawn(job) => {
-                    crate::protocol::kas::callbacks::dispatch(job.callback, &ctx).await;
-                    mediator.complete(job.id);
-                }
-                crate::protocol::host_mediator::Accept::Consumed => {}
+    // A dedicated thread with its own current-thread runtime: the dispatch
+    // ctx (terminal registry) is !Send and stays thread-local here, while the
+    // channel ITEM is Send — so test bodies need no LocalSet of their own.
+    std::thread::spawn(move || {
+        let rt = match tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        {
+            Ok(rt) => rt,
+            Err(e) => {
+                // Test-support thread: a runtime-build failure here starves the
+                // test into its own timeout with this line as the breadcrumb.
+                tracing::error!(error = %e, "test mediation runtime failed to build");
+                return;
             }
-        }
+        };
+        let local = tokio::task::LocalSet::new();
+        local.block_on(&rt, async move {
+            let mut mediator = crate::protocol::host_mediator::HostMediator::new();
+            let ctx = crate::protocol::kas::callbacks::DispatchCtx {
+                notify_tx: ntx,
+                terminals: std::rc::Rc::new(
+                    crate::protocol::kas::terminal_io::TerminalRegistry::new(
+                        shell.map(std::rc::Rc::new),
+                    ),
+                ),
+            };
+            while let Some(cb) = rx.recv().await {
+                match mediator.accept(cb) {
+                    crate::protocol::host_mediator::Accept::Spawn(job) => {
+                        crate::protocol::kas::callbacks::dispatch(job.callback, &ctx).await;
+                        mediator.complete(job.id);
+                    }
+                    crate::protocol::host_mediator::Accept::Consumed => {}
+                }
+            }
+        });
     });
     tx
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "kas"))]
 pub(crate) fn test_host_shell(engine: crate::types::AgentEngine) -> ResolvedHostShell {
     #[cfg(feature = "kas")]
     {
@@ -81,13 +106,6 @@ pub(crate) struct KiroClient {
     /// The bound engine (ADR-0001): all wire→internal conversion dispatches
     /// through it, so v2 and KAS share this client unchanged.
     engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
-    /// KAS-5b (cyril-ufie): live `terminal/*` host-callback registry. KAS-only —
-    /// v2 advertises no `terminal` capability, so the overrides never fire there.
-    /// `Rc` so the bridge loop shares the SAME registry (same `LocalSet` thread)
-    /// and its CancelRequest arm can reap a cancelled session's live terminals
-    /// (cyril-3lh8); the registry stays the sole owner of process lifecycle.
-    #[cfg(feature = "kas")]
-    terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
     /// KAS-7 (cyril-jiyn): the hook registry serving `_kiro/hooks/*`, loaded
     /// once at construction from the workspace + global `.kiro/hooks`.
     /// `Some` iff the bound engine's Hooks adapter direction is `Inbound`
@@ -118,14 +136,11 @@ impl KiroClient {
         notification_tx: mpsc::Sender<RoutedNotification>,
         permission_tx: mpsc::Sender<PermissionRequest>,
         engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
-        host_shell: ResolvedHostShell,
         host_tx: mpsc::Sender<HostCallbackItem>,
         cwd: &std::path::Path,
     ) -> Self {
         #[cfg(not(feature = "kas"))]
         let _ = cwd; // hooks registry (the only cwd consumer) is kas-only
-        #[cfg(not(feature = "kas"))]
-        let _ = host_shell;
         #[cfg(not(feature = "kas"))]
         let _ = host_tx; // no callback can exist to send (uninhabited item)
         #[cfg(feature = "kas")]
@@ -145,10 +160,6 @@ impl KiroClient {
             permission_tx,
             tool_call_inputs: RefCell::new(HashMap::new()),
             engine,
-            #[cfg(feature = "kas")]
-            terminals: std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
-                host_shell.map(std::rc::Rc::new),
-            )),
             #[cfg(feature = "kas")]
             hooks,
             #[cfg(feature = "kas")]
@@ -171,17 +182,6 @@ impl KiroClient {
                 "host-callback mediation unavailable (bridge closing)",
             )
         })
-    }
-
-    /// cyril-3lh8: hand the bridge loop a shared handle to the terminal
-    /// registry, grabbed BEFORE the ACP connection takes ownership of the
-    /// client. The loop only triggers `reap_session` from its CancelRequest
-    /// arm — the registry remains the sole owner of process lifecycle.
-    #[cfg(feature = "kas")]
-    pub(crate) fn terminals(
-        &self,
-    ) -> std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry> {
-        std::rc::Rc::clone(&self.terminals)
     }
 
     /// Gate a Host I/O family callback on the bound engine's adapter
@@ -452,7 +452,12 @@ impl acp::Client for KiroClient {
         args: acp::CreateTerminalRequest,
     ) -> acp::Result<acp::CreateTerminalResponse> {
         self.require_host_io("terminal/create")?;
-        self.terminals.create(&args)
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::CreateTerminal { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b: answer `terminal/wait_for_exit` by awaiting the command via
@@ -464,7 +469,12 @@ impl acp::Client for KiroClient {
         args: acp::WaitForTerminalExitRequest,
     ) -> acp::Result<acp::WaitForTerminalExitResponse> {
         self.require_host_io("terminal/wait_for_exit")?;
-        self.terminals.wait(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::WaitForTerminalExit { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b: answer `terminal/output` with a non-blocking snapshot of the
@@ -475,7 +485,12 @@ impl acp::Client for KiroClient {
         args: acp::TerminalOutputRequest,
     ) -> acp::Result<acp::TerminalOutputResponse> {
         self.require_host_io("terminal/output")?;
-        self.terminals.output(&args)
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::TerminalOutput { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b: answer `terminal/release` — kill + reap the child and free the id.
@@ -485,7 +500,12 @@ impl acp::Client for KiroClient {
         args: acp::ReleaseTerminalRequest,
     ) -> acp::Result<acp::ReleaseTerminalResponse> {
         self.require_host_io("terminal/release")?;
-        self.terminals.release(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::ReleaseTerminal { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b: answer `terminal/kill` — terminate the child but keep the id valid.
@@ -495,7 +515,12 @@ impl acp::Client for KiroClient {
         args: acp::KillTerminalRequest,
     ) -> acp::Result<acp::KillTerminalResponse> {
         self.require_host_io("terminal/kill")?;
-        self.terminals.kill(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::KillTerminal { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 }
 
@@ -518,7 +543,17 @@ impl KiroClient {
         }
         if args.method.as_ref() == crate::protocol::kas::terminal_io::SHELL_TYPE_METHOD {
             self.require_host_io(args.method.as_ref())?;
-            return self.terminals.respond_shell_type();
+            let session_id = parse_ext_params(&args)
+                .get("sessionId")
+                .and_then(|v| v.as_str())
+                .map(str::to_owned);
+            let (reply, rx) = tokio::sync::oneshot::channel();
+            self.send_host(crate::protocol::kas::callbacks::HostCallback::ShellType {
+                session_id,
+                reply,
+            })
+            .await?;
+            return await_reply(rx).await;
         }
         // Inbound hooks serving (list/executeHook/sessionStart) requires the
         // Inbound registry — its presence IS the direction gate (cyril-dn91
@@ -669,8 +704,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
-            spawn_test_mediation(),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
@@ -693,8 +727,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
-            spawn_test_mediation(),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
@@ -724,7 +757,6 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
-            test_host_shell(crate::types::AgentEngine::V2),
             test_host_tx(),
             std::path::Path::new("/tmp"),
         );
@@ -780,12 +812,14 @@ mod tests {
     fn kas_client_with_shell(shell: ResolvedHostShell) -> KiroClient {
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
+        // The shell now belongs to the mediation side (the registry lives in
+        // the dispatch ctx since slice 5); hooks paths stay direct and simply
+        // never send.
         KiroClient::new(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            shell,
-            test_host_tx(),
+            spawn_test_mediation(shell),
             std::path::Path::new("/tmp"),
         )
     }
@@ -819,7 +853,6 @@ mod tests {
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
                 hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
             }),
-            test_host_shell(crate::types::AgentEngine::Kas),
             test_host_tx(),
             dir.path(),
         );
@@ -862,8 +895,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
-            spawn_test_mediation(),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             dir.path(),
         );
 
@@ -928,8 +960,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            test_host_shell(crate::types::AgentEngine::Kas),
-            spawn_test_mediation(),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             dir.path(),
         );
         let call = async |method: &'static str, params: serde_json::Value| {
@@ -1114,7 +1145,6 @@ mod tests {
                 ntx,
                 ptx,
                 std::rc::Rc::new(crate::protocol::engine::KasEngine { hooks_mode: mode }),
-                test_host_shell(crate::types::AgentEngine::Kas),
                 test_host_tx(),
                 std::path::Path::new("/tmp"),
             )
@@ -1168,7 +1198,6 @@ mod tests {
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
                 hooks_mode: crate::types::kas_hooks::KasHooksMode::Kas,
             }),
-            test_host_shell(crate::types::AgentEngine::Kas),
             test_host_tx(),
             std::path::Path::new("/tmp"),
         );
@@ -1223,8 +1252,7 @@ mod tests {
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
                 hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
             }),
-            test_host_shell(crate::types::AgentEngine::Kas),
-            test_host_tx(),
+            spawn_test_mediation(test_host_shell(crate::types::AgentEngine::Kas)),
             dir.path(),
         );
 
@@ -1310,8 +1338,7 @@ mod tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
-            None,
-            test_host_tx(),
+            spawn_test_mediation(None),
             std::path::Path::new("/tmp"),
         );
         let params = serde_json::value::RawValue::from_string("{}".to_string())
@@ -1351,7 +1378,6 @@ mod metadata_routing_tests {
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
-            test_host_shell(crate::types::AgentEngine::V2),
             test_host_tx(),
             std::path::Path::new("/tmp"),
         )

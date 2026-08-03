@@ -626,18 +626,17 @@ async fn run_bridge(
     // acp request tasks await capacity; the loop accepts in channel order.
     let (host_tx, host_rx) =
         mpsc::channel::<crate::protocol::client::HostCallbackItem>(HOST_CAPACITY);
-    let client = KiroClient::new(
-        inbound_tx.clone(),
-        req_tx,
-        engine.clone(),
-        host_shell,
-        host_tx,
-        cwd,
-    );
-    // cyril-3lh8: grab the shared terminal-registry handle BEFORE the connection
-    // takes ownership of the client — run_loop's CancelRequest arm reaps with it.
+    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone(), host_tx, cwd);
+    // cyril-g9vt slice 5: the terminal registry is constructed HERE and lives
+    // loop-side (threaded via InternalChannels into the dispatch ctx) — the
+    // cyril-3lh8 "grab it out of the client" escape is gone. Still the sole
+    // owner of process lifecycle; CancelRequest reaps through it.
     #[cfg(feature = "kas")]
-    let terminals = client.terminals();
+    let terminals = std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
+        host_shell.map(std::rc::Rc::new),
+    ));
+    #[cfg(not(feature = "kas"))]
+    let _ = host_shell;
 
     // 3. Create the ACP connection.
     //    ClientSideConnection::new returns (conn, io_task).
@@ -978,6 +977,7 @@ async fn run_loop(
     #[cfg(feature = "kas")]
     let host_ctx = std::rc::Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
         notify_tx: inbound_tx.clone(),
+        terminals: std::rc::Rc::clone(&terminals),
     });
     #[cfg(not(feature = "kas"))]
     let host_ctx = ();
@@ -3220,14 +3220,17 @@ mod tests {
                     inbound_tx.clone(),
                     req_tx,
                     engine.clone(),
-                    crate::protocol::client::test_host_shell(engine.kind()),
                     host_tx,
                     &std::env::temp_dir(),
                 );
-                // cyril-3lh8: mirror run_bridge — the loop shares the client's
-                // terminal registry so CancelRequest can reap.
+                // cyril-g9vt slice 5: mirror run_bridge — the registry is
+                // constructed loop-side, not grabbed from the client.
                 #[cfg(feature = "kas")]
-                let terminals = client.terminals();
+                let terminals =
+                    std::rc::Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
+                        crate::protocol::client::test_host_shell(engine.kind())
+                            .map(std::rc::Rc::new),
+                    ));
                 let (c_io, a_io) = tokio::io::duplex(64 * 1024);
                 let (cr, cw) = tokio::io::split(c_io);
                 let (ar, aw) = tokio::io::split(a_io);
@@ -3576,7 +3579,6 @@ mod tests {
                     notif_tx,
                     req_tx,
                     Rc::new(V2Engine),
-                    crate::protocol::client::test_host_shell(AgentEngine::V2),
                     crate::protocol::client::test_host_tx(),
                     &std::env::temp_dir(),
                 );

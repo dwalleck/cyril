@@ -45,6 +45,36 @@ pub(crate) enum HostCallback {
         args: KiroFsArgs,
         reply: Reply<acp::ExtResponse>,
     },
+    /// `terminal/create` (KAS-5b).
+    CreateTerminal {
+        req: acp::CreateTerminalRequest,
+        reply: Reply<acp::CreateTerminalResponse>,
+    },
+    /// `terminal/wait_for_exit`.
+    WaitForTerminalExit {
+        req: acp::WaitForTerminalExitRequest,
+        reply: Reply<acp::WaitForTerminalExitResponse>,
+    },
+    /// `terminal/output`.
+    TerminalOutput {
+        req: acp::TerminalOutputRequest,
+        reply: Reply<acp::TerminalOutputResponse>,
+    },
+    /// `terminal/release`.
+    ReleaseTerminal {
+        req: acp::ReleaseTerminalRequest,
+        reply: Reply<acp::ReleaseTerminalResponse>,
+    },
+    /// `terminal/kill`.
+    KillTerminal {
+        req: acp::KillTerminalRequest,
+        reply: Reply<acp::KillTerminalResponse>,
+    },
+    /// `_kiro/terminal/shell_type`.
+    ShellType {
+        session_id: Option<String>,
+        reply: Reply<acp::ExtResponse>,
+    },
 }
 
 /// `_kiro/fs/*` per-op typed params, reusing the structs `kiro_fs` already
@@ -132,6 +162,12 @@ impl HostCallback {
             Self::ReadTextFile { reply, .. } => send(kind, reply, err),
             Self::WriteTextFile { reply, .. } => send(kind, reply, err),
             Self::KiroFs { reply, .. } => send(kind, reply, err),
+            Self::CreateTerminal { reply, .. } => send(kind, reply, err),
+            Self::WaitForTerminalExit { reply, .. } => send(kind, reply, err),
+            Self::TerminalOutput { reply, .. } => send(kind, reply, err),
+            Self::ReleaseTerminal { reply, .. } => send(kind, reply, err),
+            Self::KillTerminal { reply, .. } => send(kind, reply, err),
+            Self::ShellType { reply, .. } => send(kind, reply, err),
         }
     }
 }
@@ -151,6 +187,14 @@ impl CallbackMeta for HostCallback {
             Self::GetAccessToken { .. } | Self::KiroFs { .. } => None,
             Self::ReadTextFile { req, .. } => Some(sid(&req.session_id)),
             Self::WriteTextFile { req, .. } => Some(sid(&req.session_id)),
+            Self::CreateTerminal { req, .. } => Some(sid(&req.session_id)),
+            Self::WaitForTerminalExit { req, .. } => Some(sid(&req.session_id)),
+            Self::TerminalOutput { req, .. } => Some(sid(&req.session_id)),
+            Self::ReleaseTerminal { req, .. } => Some(sid(&req.session_id)),
+            Self::KillTerminal { req, .. } => Some(sid(&req.session_id)),
+            Self::ShellType { session_id, .. } => {
+                session_id.as_ref().map(|s| SessionId::new(s.clone()))
+            }
         }
     }
 
@@ -160,6 +204,12 @@ impl CallbackMeta for HostCallback {
             Self::ReadTextFile { .. } => "fs/read_text_file",
             Self::WriteTextFile { .. } => "fs/write_text_file",
             Self::KiroFs { args, .. } => args.op().wire,
+            Self::CreateTerminal { .. } => "terminal/create",
+            Self::WaitForTerminalExit { .. } => "terminal/wait_for_exit",
+            Self::TerminalOutput { .. } => "terminal/output",
+            Self::ReleaseTerminal { .. } => "terminal/release",
+            Self::KillTerminal { .. } => "terminal/kill",
+            Self::ShellType { .. } => "_kiro/terminal/shell_type",
         }
     }
 }
@@ -171,6 +221,11 @@ pub(crate) struct DispatchCtx {
     /// The bridge's internal notification sender — [`finish`]'s ordering
     /// channel for user-visible callback failures.
     pub(crate) notify_tx: tokio::sync::mpsc::Sender<crate::types::RoutedNotification>,
+    /// The terminal registry (KAS-5b), loop-side since cyril-g9vt slice 5 —
+    /// constructed in `run_bridge` and owned by the dispatch context, deleting
+    /// the cyril-3lh8 escape (the `Rc` formerly grabbed out of `KiroClient`).
+    /// Still the sole owner of process lifecycle.
+    pub(crate) terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
 
 /// Resolve one accepted callback against the adapter-side responders. The
@@ -178,6 +233,60 @@ pub(crate) struct DispatchCtx {
 /// the channel before its cutover slice constructs it.
 pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
     match cb {
+        HostCallback::CreateTerminal { req, reply } => {
+            let result = ctx.terminals.create(&req);
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("terminal/create reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::WaitForTerminalExit { req, reply } => {
+            let result = ctx.terminals.wait(&req).await;
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("terminal/wait_for_exit reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::TerminalOutput { req, reply } => {
+            let result = ctx.terminals.output(&req);
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("terminal/output reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::ReleaseTerminal { req, reply } => {
+            let result = ctx.terminals.release(&req).await;
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("terminal/release reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::KillTerminal { req, reply } => {
+            let result = ctx.terminals.kill(&req).await;
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("terminal/kill reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::ShellType { reply, .. } => {
+            let result = ctx.terminals.respond_shell_type();
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("shell_type reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
         HostCallback::ReadTextFile { req, reply } => {
             let result = crate::protocol::kas::host_io::read_text_file(&req).await;
             finish(&ctx.notify_tx, None, move || {
