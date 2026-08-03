@@ -227,9 +227,9 @@ const MAX_READ_SIZE: u64 = 10 * 1024 * 1024;
 /// the session that caused the side effect.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct PathParams {
-    session_id: String,
-    path: std::path::PathBuf,
+pub(crate) struct PathParams {
+    pub(crate) session_id: String,
+    pub(crate) path: std::path::PathBuf,
     /// Documented by the covenant as `{path, recursive?}`, but **never sent** by
     /// the 2.16.0 `KiroDeleteAdapter`, which posts `{sessionId, path}` only. Read
     /// anyway so a future agent that starts sending it is honored rather than
@@ -241,33 +241,33 @@ struct PathParams {
 /// null, so `Option` here means genuinely absent — not "0".
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct ReadFileParams {
-    session_id: String,
-    path: std::path::PathBuf,
-    line: Option<usize>,
-    limit: Option<usize>,
+pub(crate) struct ReadFileParams {
+    pub(crate) session_id: String,
+    pub(crate) path: std::path::PathBuf,
+    pub(crate) line: Option<usize>,
+    pub(crate) limit: Option<usize>,
 }
 
 /// `_kiro/fs/write_file` params. The optional range rides in
 /// `_meta.kiro.range`, which is why `meta` is modeled rather than ignored.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct WriteFileParams {
-    session_id: String,
-    path: std::path::PathBuf,
-    content: String,
+pub(crate) struct WriteFileParams {
+    pub(crate) session_id: String,
+    pub(crate) path: std::path::PathBuf,
+    pub(crate) content: String,
     #[serde(rename = "_meta")]
-    meta: Option<WriteMeta>,
+    pub(crate) meta: Option<WriteMeta>,
 }
 
 #[derive(Debug, Deserialize)]
-struct WriteMeta {
-    kiro: Option<WriteKiroMeta>,
+pub(crate) struct WriteMeta {
+    pub(crate) kiro: Option<WriteKiroMeta>,
 }
 
 #[derive(Debug, Deserialize)]
-struct WriteKiroMeta {
-    range: Option<Range>,
+pub(crate) struct WriteKiroMeta {
+    pub(crate) range: Option<Range>,
 }
 
 /// An LSP-style range: **0-based** lines and **UTF-16** character offsets.
@@ -275,15 +275,15 @@ struct WriteKiroMeta {
 /// optional chaining (`range.start?.line ?? 0`), so `{}` is a legal range
 /// meaning "the whole file".
 #[derive(Debug, Default, Deserialize)]
-struct Range {
-    start: Option<Position>,
-    end: Option<Position>,
+pub(crate) struct Range {
+    pub(crate) start: Option<Position>,
+    pub(crate) end: Option<Position>,
 }
 
 #[derive(Debug, Default, Deserialize)]
-struct Position {
-    line: Option<usize>,
-    character: Option<usize>,
+pub(crate) struct Position {
+    pub(crate) line: Option<usize>,
+    pub(crate) character: Option<usize>,
 }
 
 /// Parse ext params into `T`, mapping a shape mismatch to `-32602` (invalid
