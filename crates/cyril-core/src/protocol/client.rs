@@ -23,10 +23,36 @@ pub(crate) type HostCallbackItem = crate::protocol::kas::callbacks::HostCallback
 pub(crate) type HostCallbackItem = crate::protocol::host_mediator::NeverCallback;
 
 /// A dangling mediation sender for tests whose paths never mediate
-/// (refusal/parse tests); handled-path tests use the inline mediation seam.
+/// (refusal/parse tests); handled-path tests use [`spawn_test_mediation`].
 #[cfg(test)]
 pub(crate) fn test_host_tx() -> mpsc::Sender<HostCallbackItem> {
     mpsc::channel(4).0
+}
+
+/// Inline mediation for client unit tests (cyril-g9vt): a background consumer
+/// drains the host channel through the REAL accept/dispatch pair, resolving
+/// serially — concurrency is the harness seam tests' subject, not the unit
+/// tests'. Notifications the dispatch emits are dropped (tests that assert
+/// them run at the harness level).
+#[cfg(all(test, feature = "kas"))]
+pub(crate) fn spawn_test_mediation() -> mpsc::Sender<HostCallbackItem> {
+    let (tx, mut rx) = mpsc::channel::<HostCallbackItem>(16);
+    let (ntx, nrx) = mpsc::channel(16);
+    std::mem::forget(nrx); // keep finish()'s sends deliverable
+    tokio::spawn(async move {
+        let mut mediator = crate::protocol::host_mediator::HostMediator::new();
+        let ctx = crate::protocol::kas::callbacks::DispatchCtx { notify_tx: ntx };
+        while let Some(cb) = rx.recv().await {
+            match mediator.accept(cb) {
+                crate::protocol::host_mediator::Accept::Spawn(job) => {
+                    crate::protocol::kas::callbacks::dispatch(job.callback, &ctx).await;
+                    mediator.complete(job.id);
+                }
+                crate::protocol::host_mediator::Accept::Consumed => {}
+            }
+        }
+    });
+    tx
 }
 
 #[cfg(test)]
@@ -390,7 +416,12 @@ impl acp::Client for KiroClient {
         args: acp::ReadTextFileRequest,
     ) -> acp::Result<acp::ReadTextFileResponse> {
         self.require_host_io("fs/read_text_file")?;
-        crate::protocol::kas::host_io::read_text_file(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::ReadTextFile { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5a (cyril-7bdu): answer `fs/write_text_file` via the async host-io
@@ -405,7 +436,12 @@ impl acp::Client for KiroClient {
         // Refusal precedes the responder — no filesystem side effect may
         // occur for an un-adaptered engine (cyril-dn91 C2).
         self.require_host_io("fs/write_text_file")?;
-        crate::protocol::kas::host_io::write_text_file(&args).await
+        let (reply, rx) = tokio::sync::oneshot::channel();
+        self.send_host(
+            crate::protocol::kas::callbacks::HostCallback::WriteTextFile { req: args, reply },
+        )
+        .await?;
+        await_reply(rx).await
     }
 
     /// KAS-5b (cyril-ufie): answer `terminal/create` by spawning the command in the
@@ -523,10 +559,20 @@ impl KiroClient {
         // successful empty result. Fenced by
         // `every_advertised_fs_flag_is_dispatched`.
         {
-            use crate::protocol::kas::kiro_fs;
+            use crate::protocol::kas::{callbacks, kiro_fs};
             if let Some(op) = kiro_fs::op_for_method(args.method.as_ref()) {
                 self.require_host_io(args.method.as_ref())?;
-                return kiro_fs::dispatch(op, &parse_ext_params(&args)).await;
+                // Typed parse at the seam (cyril-g9vt): malformed params on a
+                // HANDLED family are a wire error, not the old Null fallback.
+                let parsed = callbacks::KiroFsArgs::parse(op, &parse_ext_params(&args))
+                    .map_err(|e| acp::Error::new(-32602, e))?;
+                let (reply, rx) = tokio::sync::oneshot::channel();
+                self.send_host(callbacks::HostCallback::KiroFs {
+                    args: parsed,
+                    reply,
+                })
+                .await?;
+                return await_reply(rx).await;
             }
         }
         // The bare-ACP fs/terminal lifecycle host callbacks are TYPED acp::Client
@@ -624,7 +670,7 @@ mod tests {
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
             test_host_shell(crate::types::AgentEngine::Kas),
-            test_host_tx(),
+            spawn_test_mediation(),
             std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
@@ -648,7 +694,7 @@ mod tests {
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
             test_host_shell(crate::types::AgentEngine::Kas),
-            test_host_tx(),
+            spawn_test_mediation(),
             std::path::Path::new("/tmp"),
         );
         let dir = tempfile::tempdir().unwrap();
@@ -817,7 +863,7 @@ mod tests {
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
             test_host_shell(crate::types::AgentEngine::Kas),
-            test_host_tx(),
+            spawn_test_mediation(),
             dir.path(),
         );
 
@@ -883,7 +929,7 @@ mod tests {
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
             test_host_shell(crate::types::AgentEngine::Kas),
-            test_host_tx(),
+            spawn_test_mediation(),
             dir.path(),
         );
         let call = async |method: &'static str, params: serde_json::Value| {

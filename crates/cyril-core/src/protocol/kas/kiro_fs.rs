@@ -152,6 +152,15 @@ pub(crate) fn op_for_method(method: &str) -> Option<&'static FsOp> {
     FS_OPS.iter().find(|op| op.method == method)
 }
 
+/// The table row for an op kind. Every kind has exactly one row (the census
+/// fence walks FS_OPS), so the lookup is total.
+pub(crate) fn op_for_kind(kind: FsOpKind) -> &'static FsOp {
+    FS_OPS
+        .iter()
+        .find(|op| op.kind == kind)
+        .unwrap_or_else(|| unreachable!("FS_OPS carries every FsOpKind"))
+}
+
 /// The five operations in one place.
 ///
 /// Three sites have to move together — the advertisement
@@ -225,7 +234,7 @@ const MAX_READ_SIZE: u64 = 10 * 1024 * 1024;
 /// `{sessionId, path}` — the shape shared by `stat`, `read_directory`, and
 /// `delete`. `session_id` is carried (not skipped) so every audit line can name
 /// the session that caused the side effect.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PathParams {
     pub(crate) session_id: String,
@@ -239,7 +248,7 @@ pub(crate) struct PathParams {
 
 /// `_kiro/fs/read_file` params. `line`/`limit` are omitted by the adapter when
 /// null, so `Option` here means genuinely absent — not "0".
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ReadFileParams {
     pub(crate) session_id: String,
@@ -250,7 +259,7 @@ pub(crate) struct ReadFileParams {
 
 /// `_kiro/fs/write_file` params. The optional range rides in
 /// `_meta.kiro.range`, which is why `meta` is modeled rather than ignored.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct WriteFileParams {
     pub(crate) session_id: String,
@@ -260,12 +269,12 @@ pub(crate) struct WriteFileParams {
     pub(crate) meta: Option<WriteMeta>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 pub(crate) struct WriteMeta {
     pub(crate) kiro: Option<WriteKiroMeta>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 pub(crate) struct WriteKiroMeta {
     pub(crate) range: Option<Range>,
 }
@@ -274,13 +283,13 @@ pub(crate) struct WriteKiroMeta {
 /// Every level is optional because the reference splice reads it through
 /// optional chaining (`range.start?.line ?? 0`), so `{}` is a legal range
 /// meaning "the whole file".
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, serde::Serialize)]
 pub(crate) struct Range {
     pub(crate) start: Option<Position>,
     pub(crate) end: Option<Position>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, serde::Serialize)]
 pub(crate) struct Position {
     pub(crate) line: Option<usize>,
     pub(crate) character: Option<usize>,

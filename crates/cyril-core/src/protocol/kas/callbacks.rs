@@ -15,6 +15,7 @@
 use agent_client_protocol as acp;
 
 use crate::protocol::host_mediator::{CallbackMeta, CancelKey, finish};
+use crate::protocol::kas::kiro_fs;
 use crate::types::SessionId;
 
 /// The typed reply channel for one request-kind callback: the acp-side
@@ -29,6 +30,85 @@ pub(crate) type Reply<T> = tokio::sync::oneshot::Sender<acp::Result<T>>;
 pub(crate) enum HostCallback {
     /// `_kiro/auth/getAccessToken` (KAS-1).
     GetAccessToken { reply: Reply<acp::ExtResponse> },
+    /// Bare-ACP `fs/read_text_file` (KAS-5a) — already typed by the acp layer.
+    ReadTextFile {
+        req: acp::ReadTextFileRequest,
+        reply: Reply<acp::ReadTextFileResponse>,
+    },
+    /// Bare-ACP `fs/write_text_file` (KAS-5a).
+    WriteTextFile {
+        req: acp::WriteTextFileRequest,
+        reply: Reply<acp::WriteTextFileResponse>,
+    },
+    /// One `_kiro/fs/*` dialect op (cyril-kf2g), params parsed per op.
+    KiroFs {
+        args: KiroFsArgs,
+        reply: Reply<acp::ExtResponse>,
+    },
+}
+
+/// `_kiro/fs/*` per-op typed params, reusing the structs `kiro_fs` already
+/// deserializes with (single owner of the field knowledge). Dispatch
+/// re-serializes them for the untouched responder signatures — a validated
+/// struct's round-trip cannot fail, so the double-parse is shape-safe.
+#[derive(Debug)]
+pub(crate) enum KiroFsArgs {
+    ReadFile(kiro_fs::ReadFileParams),
+    WriteFile(kiro_fs::WriteFileParams),
+    Stat(kiro_fs::PathParams),
+    ReadDirectory(kiro_fs::PathParams),
+    Delete(kiro_fs::PathParams),
+}
+
+impl KiroFsArgs {
+    /// Parse one dialect op's params into its typed form. `Err` carries the
+    /// serde diagnostic — the caller maps it to invalid-params (never the old
+    /// `parse_ext_params` Null fallback: for a HANDLED family, unparseable
+    /// params are a wire error, not an empty request).
+    pub(crate) fn parse(
+        op: &'static kiro_fs::FsOp,
+        params: &serde_json::Value,
+    ) -> Result<Self, String> {
+        let fail = |e: serde_json::Error| format!("parse {} params: {e}", op.wire);
+        Ok(match op.kind {
+            kiro_fs::FsOpKind::ReadFile => {
+                Self::ReadFile(serde_json::from_value(params.clone()).map_err(fail)?)
+            }
+            kiro_fs::FsOpKind::WriteFile => {
+                Self::WriteFile(serde_json::from_value(params.clone()).map_err(fail)?)
+            }
+            kiro_fs::FsOpKind::Stat => {
+                Self::Stat(serde_json::from_value(params.clone()).map_err(fail)?)
+            }
+            kiro_fs::FsOpKind::ReadDirectory => {
+                Self::ReadDirectory(serde_json::from_value(params.clone()).map_err(fail)?)
+            }
+            kiro_fs::FsOpKind::Delete => {
+                Self::Delete(serde_json::from_value(params.clone()).map_err(fail)?)
+            }
+        })
+    }
+
+    fn op(&self) -> &'static kiro_fs::FsOp {
+        let kind = match self {
+            Self::ReadFile(_) => kiro_fs::FsOpKind::ReadFile,
+            Self::WriteFile(_) => kiro_fs::FsOpKind::WriteFile,
+            Self::Stat(_) => kiro_fs::FsOpKind::Stat,
+            Self::ReadDirectory(_) => kiro_fs::FsOpKind::ReadDirectory,
+            Self::Delete(_) => kiro_fs::FsOpKind::Delete,
+        };
+        kiro_fs::op_for_kind(kind)
+    }
+
+    /// Re-serialize for the untouched `kiro_fs::dispatch(op, &Value)`
+    /// signature (see the type doc).
+    fn to_params(&self) -> Result<serde_json::Value, serde_json::Error> {
+        match self {
+            Self::ReadFile(p) => serde_json::to_value(p),
+            Self::WriteFile(p) => serde_json::to_value(p),
+            Self::Stat(p) | Self::ReadDirectory(p) | Self::Delete(p) => serde_json::to_value(p),
+        }
+    }
 }
 
 impl HostCallback {
@@ -49,6 +129,9 @@ impl HostCallback {
         let kind = self.kind();
         match self {
             Self::GetAccessToken { reply } => send(kind, reply, err),
+            Self::ReadTextFile { reply, .. } => send(kind, reply, err),
+            Self::WriteTextFile { reply, .. } => send(kind, reply, err),
+            Self::KiroFs { reply, .. } => send(kind, reply, err),
         }
     }
 }
@@ -63,14 +146,20 @@ impl CallbackMeta for HostCallback {
     }
 
     fn scope(&self) -> Option<SessionId> {
+        let sid = |s: &acp::SessionId| SessionId::new(s.to_string());
         match self {
-            Self::GetAccessToken { .. } => None,
+            Self::GetAccessToken { .. } | Self::KiroFs { .. } => None,
+            Self::ReadTextFile { req, .. } => Some(sid(&req.session_id)),
+            Self::WriteTextFile { req, .. } => Some(sid(&req.session_id)),
         }
     }
 
     fn kind(&self) -> &'static str {
         match self {
             Self::GetAccessToken { .. } => "auth/getAccessToken",
+            Self::ReadTextFile { .. } => "fs/read_text_file",
+            Self::WriteTextFile { .. } => "fs/write_text_file",
+            Self::KiroFs { args, .. } => args.op().wire,
         }
     }
 }
@@ -89,6 +178,40 @@ pub(crate) struct DispatchCtx {
 /// the channel before its cutover slice constructs it.
 pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
     match cb {
+        HostCallback::ReadTextFile { req, reply } => {
+            let result = crate::protocol::kas::host_io::read_text_file(&req).await;
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("fs/read_text_file reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::WriteTextFile { req, reply } => {
+            let result = crate::protocol::kas::host_io::write_text_file(&req).await;
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("fs/write_text_file reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::KiroFs { args, reply } => {
+            let op = args.op();
+            let result = match args.to_params() {
+                Ok(params) => crate::protocol::kas::kiro_fs::dispatch(op, &params).await,
+                Err(e) => Err(acp::Error::new(
+                    -32603,
+                    format!("re-serialize {} params: {e}", op.wire),
+                )),
+            };
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!(wire = op.wire, "kiro_fs reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
         HostCallback::GetAccessToken { reply } => {
             let result = crate::protocol::kas::auth::respond_get_access_token().await;
             let notify = result.as_ref().err().and_then(auth_failure_notification);
@@ -184,6 +307,7 @@ mod tests {
                     .send(Ok(acp::ExtResponse::new(body.into())))
                     .expect("receiver alive");
             }
+            other => panic!("wrong variant: {other:?}"),
         }
         let got = rx.await.expect("reply delivered").expect("ok reply");
         assert_eq!(got.0.get(), "{\"ok\":true}");

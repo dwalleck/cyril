@@ -201,7 +201,7 @@ async fn adapter_matrix_advertise_iff_answer() {
             ptx,
             engine.clone(),
             test_host_shell(engine.kind()),
-            crate::protocol::client::test_host_tx(),
+            crate::protocol::client::spawn_test_mediation(),
             dir.path(),
         );
 
@@ -390,7 +390,7 @@ async fn kas_outbound_hooks_mode_refuses_inbound_serving() {
             hooks_mode: crate::types::kas_hooks::KasHooksMode::Kas,
         }),
         test_host_shell(AgentEngine::Kas),
-        crate::protocol::client::test_host_tx(),
+        crate::protocol::client::spawn_test_mediation(),
         dir.path(),
     );
 
