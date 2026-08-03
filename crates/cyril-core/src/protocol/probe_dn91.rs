@@ -194,13 +194,20 @@ async fn adapter_matrix_advertise_iff_answer() {
 
         let (ntx, _nrx) = mpsc::channel(8);
         let (ptx, _prx) = mpsc::channel(1);
+        let (mntx, _mnrx) = mpsc::channel(8);
         let dir = tempfile::tempdir().unwrap();
+        // The mediation seam loads an (empty) hooks registry from the tempdir,
+        // so a Host-mode engine's inbound list SERVES `{hooks:[]}`; engines
+        // that don't serve inbound refuse at the client gate before dispatch.
         let client = KiroClient::new(
             ntx,
             ptx,
             engine.clone(),
-            crate::protocol::client::spawn_test_mediation(
+            crate::protocol::client::spawn_test_mediation_at(
                 crate::protocol::client::test_host_shell(AgentEngine::Kas),
+                dir.path().to_path_buf(),
+                true,
+                mntx,
             ),
             dir.path(),
         );

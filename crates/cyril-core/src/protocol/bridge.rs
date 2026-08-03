@@ -975,9 +975,23 @@ async fn run_loop(
         crate::protocol::host_mediator::HostMediator::new(),
     ));
     #[cfg(feature = "kas")]
+    #[cfg(feature = "kas")]
     let host_ctx = std::rc::Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
         notify_tx: inbound_tx.clone(),
         terminals: std::rc::Rc::clone(&terminals),
+        hooks: match engine.adapters().hooks {
+            crate::protocol::engine::HooksAdapter::Inbound => Some(std::rc::Rc::new(
+                crate::protocol::kas::hooks::HookRegistry::load(
+                    &cwd,
+                    crate::kiro_agent_config::home_dir()
+                        .map(|h| h.join(".kiro"))
+                        .as_deref(),
+                ),
+            )),
+            _ => None,
+        },
+        hook_ops: crate::protocol::kas::hooks::HookOps::default(),
+        cwd: cwd.to_path_buf(),
     });
     #[cfg(not(feature = "kas"))]
     let host_ctx = ();

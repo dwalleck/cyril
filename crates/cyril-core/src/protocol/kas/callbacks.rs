@@ -75,6 +75,57 @@ pub(crate) enum HostCallback {
         session_id: Option<String>,
         reply: Reply<acp::ExtResponse>,
     },
+    /// `_kiro/hooks/list {trigger, toolId?}`. A missing trigger is preserved
+    /// as `None` — the responder replies empty (not an error).
+    HooksList {
+        trigger: Option<String>,
+        tool_id: Option<String>,
+        reply: Reply<acp::ExtResponse>,
+    },
+    /// `_kiro/hooks/executeHook`. Cancellation stays with the existing
+    /// `HookOps` mechanism (the CANCEL control signals it), so this is NOT
+    /// mediator-cancellable.
+    HooksExecute {
+        args: HooksExecuteArgs,
+        reply: Reply<acp::ExtResponse>,
+    },
+    /// `_kiro/hooks/sessionStart`.
+    HooksSessionStart { reply: Reply<acp::ExtResponse> },
+    /// CONTROL `_kiro/hooks/cancel {operationId}` — signals the HookOps
+    /// mechanism; no reply.
+    HooksCancel { operation_id: String },
+    /// CONTROL `_kiro/hooks/didChange` — under `kas` hook generation carries
+    /// the agent's full new registry (parsed, cyril-gk17); under `host` the
+    /// payload has no hooks array (`None`). No reply; emits HooksChanged.
+    HooksDidChange {
+        hooks: Option<Vec<crate::types::HookInfo>>,
+    },
+}
+
+/// `executeHook` typed params. Semantic defaults (missing command → exit 127
+/// reply, missing userPrompt → empty with a warn) stay with the responder;
+/// re-serialized in dispatch for `respond_execute`'s raw-params signature.
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct HooksExecuteArgs {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) command: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) user_prompt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) timeout: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) operation_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) session_id: Option<String>,
+}
+
+impl HooksExecuteArgs {
+    /// Parse executeHook params at the seam. `Err` on malformed input (a
+    /// handled family — not the old Null fallback).
+    pub(crate) fn parse(params: &serde_json::Value) -> Result<Self, String> {
+        serde_json::from_value(params.clone()).map_err(|e| format!("parse executeHook params: {e}"))
+    }
 }
 
 /// `_kiro/fs/*` per-op typed params, reusing the structs `kiro_fs` already
@@ -168,6 +219,10 @@ impl HostCallback {
             Self::ReleaseTerminal { reply, .. } => send(kind, reply, err),
             Self::KillTerminal { reply, .. } => send(kind, reply, err),
             Self::ShellType { reply, .. } => send(kind, reply, err),
+            Self::HooksList { reply, .. } => send(kind, reply, err),
+            Self::HooksExecute { reply, .. } => send(kind, reply, err),
+            Self::HooksSessionStart { reply } => send(kind, reply, err),
+            Self::HooksCancel { .. } | Self::HooksDidChange { .. } => {}
         }
     }
 }
@@ -195,6 +250,13 @@ impl CallbackMeta for HostCallback {
             Self::ShellType { session_id, .. } => {
                 session_id.as_ref().map(|s| SessionId::new(s.clone()))
             }
+            Self::HooksExecute { args, .. } => {
+                args.session_id.as_ref().map(|s| SessionId::new(s.clone()))
+            }
+            Self::HooksList { .. }
+            | Self::HooksSessionStart { .. }
+            | Self::HooksCancel { .. }
+            | Self::HooksDidChange { .. } => None,
         }
     }
 
@@ -210,6 +272,11 @@ impl CallbackMeta for HostCallback {
             Self::ReleaseTerminal { .. } => "terminal/release",
             Self::KillTerminal { .. } => "terminal/kill",
             Self::ShellType { .. } => "_kiro/terminal/shell_type",
+            Self::HooksList { .. } => "_kiro/hooks/list",
+            Self::HooksExecute { .. } => "_kiro/hooks/executeHook",
+            Self::HooksSessionStart { .. } => "_kiro/hooks/sessionStart",
+            Self::HooksCancel { .. } => "_kiro/hooks/cancel",
+            Self::HooksDidChange { .. } => "_kiro/hooks/didChange",
         }
     }
 }
@@ -226,6 +293,16 @@ pub(crate) struct DispatchCtx {
     /// the cyril-3lh8 escape (the `Rc` formerly grabbed out of `KiroClient`).
     /// Still the sole owner of process lifecycle.
     pub(crate) terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
+    /// The hooks registry (KAS-7), loop-side since cyril-g9vt slice 6 —
+    /// `Some` iff the bound engine's Hooks direction is Inbound. Presence is
+    /// the inbound-serving gate the client checks before sending (dn91 C10);
+    /// a callback that reaches dispatch has already passed it.
+    pub(crate) hooks: Option<std::rc::Rc<crate::protocol::kas::hooks::HookRegistry>>,
+    /// In-flight hook ops for CANCEL (cyril-jiyn) — the mechanism the CANCEL
+    /// control signals; executeHook stays non-mediator-cancellable.
+    pub(crate) hook_ops: crate::protocol::kas::hooks::HookOps,
+    /// Session workspace, the cwd for hook command execution.
+    pub(crate) cwd: std::path::PathBuf,
 }
 
 /// Resolve one accepted callback against the adapter-side responders. The
@@ -287,6 +364,80 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
             })
             .await;
         }
+        HostCallback::HooksList {
+            trigger,
+            tool_id,
+            reply,
+        } => {
+            let mut params = serde_json::Map::new();
+            if let Some(t) = trigger {
+                params.insert("trigger".into(), t.into());
+            }
+            if let Some(t) = tool_id {
+                params.insert("toolId".into(), t.into());
+            }
+            // Presence checked at the client before sending; a None here would
+            // be a caller bug, so refuse rather than silently serve nothing.
+            let result = match &ctx.hooks {
+                Some(h) => h.respond_list(&serde_json::Value::Object(params)),
+                None => Err(acp::Error::method_not_found()),
+            };
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("hooks/list reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::HooksExecute { args, reply } => {
+            let result = match serde_json::to_value(&args) {
+                Ok(params) => {
+                    crate::protocol::kas::hooks::respond_execute(&params, &ctx.cwd, &ctx.hook_ops)
+                        .await
+                }
+                Err(e) => Err(acp::Error::new(
+                    -32603,
+                    format!("re-serialize executeHook params: {e}"),
+                )),
+            };
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("executeHook reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::HooksSessionStart { reply } => {
+            let result = match &ctx.hooks {
+                Some(h) => crate::protocol::kas::hooks::respond_session_start(h, &ctx.cwd).await,
+                None => Err(acp::Error::method_not_found()),
+            };
+            finish(&ctx.notify_tx, None, move || {
+                if reply.send(result).is_err() {
+                    tracing::debug!("sessionStart reply dropped (responder gone)");
+                }
+            })
+            .await;
+        }
+        HostCallback::HooksCancel { operation_id } => {
+            ctx.hook_ops.cancel(&operation_id);
+        }
+        HostCallback::HooksDidChange { hooks } => match hooks {
+            Some(hooks) => {
+                tracing::debug!(count = hooks.len(), "KAS hook registry changed");
+                if ctx
+                    .notify_tx
+                    .send(crate::types::Notification::HooksChanged { hooks }.into())
+                    .await
+                    .is_err()
+                {
+                    tracing::debug!("HooksChanged send failed (bridge closing)");
+                }
+            }
+            None => tracing::info!(
+                "KAS hooks changed on disk; host-registry reload deferred (cyril-2adk)"
+            ),
+        },
         HostCallback::ReadTextFile { req, reply } => {
             let result = crate::protocol::kas::host_io::read_text_file(&req).await;
             finish(&ctx.notify_tx, None, move || {
