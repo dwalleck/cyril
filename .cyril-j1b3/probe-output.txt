@@ -1,0 +1,4 @@
+id=tooluse_noNwrVWVoDcrdvOGkNORCt path=/home/dwalleck/.claude/tmp/kas-modes-_6u0t5c1/.kiro/specs/add-function-wrong-operator/.config.kiro text_bytes=111
+id=tooluse_5SYFCs7mFDEjEyrbplcUnm path=/home/dwalleck/.claude/tmp/kas-modes-_6u0t5c1/.kiro/specs/add-function-wrong-operator/bugfix.md text_bytes=1124
+id=tooluse_JxZQmqSO4pesvGrkI8H52X path=/home/dwalleck/.claude/tmp/kas-modes-_6u0t5c1/.kiro/specs/add-function-wrong-operator/design.md text_bytes=6761
+id=tooluse_rgFpEWPtIEWhGZ04oyReIf path=/home/dwalleck/.claude/tmp/kas-modes-_6u0t5c1/.kiro/specs/add-function-wrong-operator/tasks.md text_bytes=3739

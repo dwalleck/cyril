@@ -9,6 +9,9 @@ use crate::types::*;
 pub(crate) mod kas;
 pub(crate) mod kiro;
 #[cfg(test)]
+#[path = "../../../../../.cyril-j1b3/probe.rs"]
+mod probe_j1b3;
+#[cfg(test)]
 mod probe_qo13;
 
 pub(crate) fn to_tool_kind(kind: agent_client_protocol::ToolKind) -> ToolKind {
