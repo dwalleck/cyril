@@ -610,6 +610,13 @@ async fn run_bridge(
             return Ok(());
         }
     };
+    // Bind the process agent location from the RESOLVED spawn command
+    // (cyril-jxmv): after the engine match, so v2 / KAS-free / KAS-wrapper
+    // all bind through this single site, and before the spawn, so even a
+    // failed exec leaves the location bound. Deliberately NOT inside
+    // `AgentProcess::spawn`: terminal_io reuses that for terminal
+    // processes, which must never rebind the agent's location.
+    crate::platform::path::bind_agent_location(spawn_command.program());
     let process = AgentProcess::spawn(&spawn_command, cwd).await?;
 
     // 2. Create the KiroClient that dispatches conversion through the bound engine.
@@ -2809,6 +2816,39 @@ mod tests {
             }
             other => panic!("expected BridgeDisconnected, got {other:?}"),
         }
+    }
+
+    // cyril-jxmv C8: run_bridge binds the agent location from the RESOLVED
+    // spawn command BEFORE the exec attempt — a failed spawn still leaves
+    // the wsl-launcher classification bound. Uses a missing path whose
+    // basename is the launcher, so exec fails on every platform while the
+    // classification is still Wsl. (Isolation note: asserts the process
+    // global; nextest's process-per-test keeps this airtight, and the only
+    // other real-spawn test binds Native, so a plain `cargo test`
+    // interleave would surface loudly here, not silently pass.)
+    #[tokio::test]
+    async fn spawn_binds_agent_location_before_exec() {
+        let cmd = AgentCommand::try_from_argv(vec![
+            "/cyril-jxmv-no-such-dir/wsl.exe".to_string(),
+            "kiro-cli".to_string(),
+        ])
+        .expect("argv");
+        let handle = spawn_bridge(cmd, SpawnConfig::default(), std::env::temp_dir())
+            .expect("bridge thread spawns");
+        let (_sender, mut rx, _perm) = handle.split();
+        let routed = tokio::time::timeout(Duration::from_secs(10), rx.recv())
+            .await
+            .expect("notification within 10s of spawn failure")
+            .expect("channel open");
+        assert!(
+            matches!(routed.notification, Notification::BridgeDisconnected { .. }),
+            "spawn of a missing binary must disconnect"
+        );
+        assert_eq!(
+            crate::platform::path::agent_location(),
+            Some(crate::platform::path::AgentLocation::Wsl),
+            "location must be bound from the resolved program before exec"
+        );
     }
 
     // KAS-1 C4 (gate-on): under `--features kas`, Kas resolves to the KasEngine.
