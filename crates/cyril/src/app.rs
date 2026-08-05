@@ -57,6 +57,12 @@ pub struct App {
     /// the engine only changes capture state in response to commands, so this
     /// optimistic model tracks it exactly; see the V1b note in `handle_voice_event`.
     voice_active: bool,
+    /// One-shot `--prompt` text awaiting the initial session (cyril-0ffy).
+    /// Set by `create_initial_session`, consumed (`take()`) by the first
+    /// main-routed `SessionCreated` in `handle_notification` — so the agent
+    /// receives exactly one `session/prompt` and a later `/new` never replays
+    /// it. `None` for interactive startup.
+    startup_prompt: Option<String>,
 }
 
 impl App {
@@ -111,6 +117,7 @@ impl App {
             cwd,
             voice: spawn_voice_engine(),
             voice_active: false,
+            startup_prompt: None,
         }
     }
 
@@ -135,7 +142,23 @@ impl App {
         self.ui_state.set_mouse_captured(captured);
     }
 
-    pub async fn create_initial_session(&mut self, cwd: PathBuf) {
+    /// Kick off the initial session. `oneshot_prompt` is the parsed `--prompt`
+    /// value (cyril-0ffy): held until the session is ready and then submitted
+    /// exactly once via the deferred-command path in `handle_notification`.
+    /// `None` (interactive startup) submits nothing. The parameter — rather
+    /// than a setter — makes `main()` decide about `cli.prompt` at the call
+    /// site; it cannot silently go back to being parsed-but-unread.
+    pub async fn create_initial_session(&mut self, cwd: PathBuf, oneshot_prompt: Option<String>) {
+        self.startup_prompt = match oneshot_prompt {
+            Some(text) if text.is_empty() => {
+                // Mirror `submit_input`'s empty-input early return: an empty
+                // prompt would be a pointless turn, but dropping user intent
+                // silently is worse than saying so.
+                tracing::warn!("--prompt is empty; nothing will be submitted");
+                None
+            }
+            other => other,
+        };
         self.ui_state
             .add_system_message("Connecting to agent...".into());
 
@@ -453,6 +476,44 @@ impl App {
         // are special-cased; all other commands fall through to the generic
         // command-output path. See `dispatch_command_executed` for the rules.
         let mut deferred_commands: Vec<BridgeCommand> = Vec::new();
+
+        // One-shot `--prompt` (cyril-0ffy): the initial session is ready, so
+        // submit the startup prompt. Deferred through the same bridge-command
+        // path as `/code` follow-ups — the run loop sends it, marks the session
+        // Busy on success, and surfaces an advisory on failure — so the event
+        // loop never blocks and the agent receives exactly one `session/prompt`
+        // (`take()` empties the slot; a later `/new` finds it `None`).
+        if matches!(notification, Notification::SessionCreated { .. })
+            && self.startup_prompt.is_some()
+        {
+            match self.session.id().cloned() {
+                Some(session_id) => {
+                    if let Some(text) = self.startup_prompt.take() {
+                        // UX parity with a typed submit (`submit_input`'s idle
+                        // path): the transcript shows the prompt and the
+                        // toolbar shows Sending.
+                        self.ui_state.add_user_message(&text);
+                        self.ui_state.set_activity(Activity::Sending);
+                        deferred_commands.push(BridgeCommand::SendPrompt {
+                            session_id,
+                            content_blocks: vec![text],
+                        });
+                    }
+                }
+                None => {
+                    // Unreachable in practice: SessionController sets its id
+                    // unconditionally when applying SessionCreated. If that
+                    // invariant ever breaks, the prompt stays pending (not
+                    // taken) and submits on the next SessionCreated — log so
+                    // the broken invariant is visible rather than silent.
+                    tracing::warn!(
+                        "SessionCreated applied but no session id is known; \
+                         one-shot --prompt held for the next session"
+                    );
+                }
+            }
+        }
+
         if let Notification::CommandExecuted {
             ref command,
             ref response,
@@ -1619,6 +1680,7 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use cyril_ui::traits::ChatMessageKind;
 
     // ── cyril-nd4h: ui.mouse_capture is actually honored (claims C1, C2) ──────
     //
@@ -1897,6 +1959,103 @@ mod tests {
         assert!(
             !app.ui_state.subagent_ui().streams().contains_key(&main),
             "the main session id must not create a subagent stream"
+        );
+    }
+
+    // ── cyril-0ffy: the one-shot `--prompt` submits after session ready ──────
+    //
+    // STRESS FIXTURE: both reachable startup shapes plus the replay edge. A
+    // startup carrying `--prompt TEXT` must defer exactly one SendPrompt with
+    // TEXT once the initial session is ready, and never again on a later
+    // SessionCreated (`/new`). A bare startup must defer nothing. The first
+    // test is the sentinel: it fails against pre-fix code, where `Cli::prompt`
+    // was parsed and then dropped on the floor — startup had no seam that
+    // could accept it, so the process sat idle.
+
+    fn session_created_frame(sid: &SessionId) -> RoutedNotification {
+        RoutedNotification::global(Notification::SessionCreated {
+            session_id: sid.clone(),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        })
+    }
+
+    /// The `SendPrompt` payloads among `deferred`, as (session_id, blocks).
+    fn sent_prompts(deferred: &[BridgeCommand]) -> Vec<(&SessionId, &[String])> {
+        deferred
+            .iter()
+            .filter_map(|cmd| match cmd {
+                BridgeCommand::SendPrompt {
+                    session_id,
+                    content_blocks,
+                } => Some((session_id, content_blocks.as_slice())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn oneshot_prompt_submitted_after_session_ready() {
+        let main = SessionId::new("sess_main");
+        let mut app = test_app();
+        // Startup the way main() wires it: session creation carries the parsed
+        // `--prompt` value. The test handle has no bridge behind it, so the
+        // NewSession send fails harmlessly; SessionCreated is then fed by hand
+        // exactly as the notification loop would deliver it.
+        app.create_initial_session(
+            PathBuf::from("/tmp"),
+            Some("run the requested smoke".into()),
+        )
+        .await;
+
+        let deferred = app.handle_notification(session_created_frame(&main));
+
+        let prompts = sent_prompts(&deferred);
+        assert_eq!(
+            prompts.len(),
+            1,
+            "exactly one SendPrompt once the initial session is ready"
+        );
+        assert_eq!(
+            prompts[0].0, &main,
+            "the one-shot targets the session just created"
+        );
+        assert_eq!(
+            prompts[0].1,
+            ["run the requested smoke".to_string()],
+            "the one-shot carries the --prompt text as its only content block"
+        );
+        // UX parity with a typed submit: the text appears as a user message.
+        assert!(
+            app.ui_state.messages().iter().any(
+                |m| matches!(m.kind(), ChatMessageKind::UserText(t) if t == "run the requested smoke")
+            ),
+            "the one-shot prompt must show in the transcript like a typed prompt"
+        );
+
+        // A later session (e.g. `/new`) must NOT replay the one-shot.
+        let second = SessionId::new("sess_second");
+        let deferred = app.handle_notification(session_created_frame(&second));
+        assert!(
+            sent_prompts(&deferred).is_empty(),
+            "the one-shot submits exactly once — a later SessionCreated must not replay it"
+        );
+    }
+
+    #[tokio::test]
+    async fn startup_without_prompt_submits_nothing() {
+        let main = SessionId::new("sess_main");
+        let mut app = test_app();
+        app.create_initial_session(PathBuf::from("/tmp"), None)
+            .await;
+
+        let deferred = app.handle_notification(session_created_frame(&main));
+
+        assert!(
+            sent_prompts(&deferred).is_empty(),
+            "interactive startup (no --prompt) must submit nothing"
         );
     }
 
