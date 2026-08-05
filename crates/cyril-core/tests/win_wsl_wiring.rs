@@ -84,13 +84,20 @@ fn env_override_wiring_via_child_process() {
 /// spawn command BEFORE the exec attempt — a failed spawn still leaves the
 /// wsl-launcher classification bound. The missing path carries the launcher
 /// basename, so exec fails on every platform while the classification is
-/// still Wsl. Lives in this binary because it asserts the process-global
-/// atomic: every in-process writer here binds Wsl too, so no thread
-/// interleave under plain `cargo test` can flip the asserted value
+/// still Wsl. Runs as a child fence: `bind_agent_location` reads the real
+/// `CYRIL_AGENT_LOCATION`, so an ambient override on the runner (a dev
+/// machine exporting `native`) would flip the asserted classification —
+/// `run_child` scrubs it. Child isolation also keeps the process-global
+/// atomic away from every in-process writer under both test runners
 /// (bridge.rs's own real-spawn test binds Native, which is why the fence
 /// does not live there).
 #[tokio::test]
 async fn bridge_spawn_binds_agent_location_before_exec() {
+    const MARKER: &str = "CYRIL_JXMV_BIND_BEFORE_EXEC_CHILD";
+    if std::env::var(MARKER).is_err() {
+        run_child("bridge_spawn_binds_agent_location_before_exec", MARKER, &[]);
+        return;
+    }
     let cmd = AgentCommand::try_from_argv(vec![
         "/cyril-jxmv-no-such-dir/wsl.exe".to_string(),
         "kiro-cli".to_string(),
