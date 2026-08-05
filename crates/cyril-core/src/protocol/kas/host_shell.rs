@@ -62,7 +62,17 @@ impl HostEnvironment for SystemHost {
         }
         #[cfg(unix)]
         {
-            nix::unistd::access(path, nix::unistd::AccessFlags::X_OK).is_ok()
+            // AT_EACCESS checks the EFFECTIVE uid/gid — the identity that
+            // `Command::spawn` executes with — where plain `access(2)` checks
+            // the REAL uid/gid (cyril-jwi5). `faccessat` is the portable
+            // spelling; `eaccess(2)` exists only on Linux/FreeBSD.
+            nix::unistd::faccessat(
+                nix::fcntl::AT_FDCWD,
+                path,
+                nix::unistd::AccessFlags::X_OK,
+                nix::fcntl::AtFlags::AT_EACCESS,
+            )
+            .is_ok()
         }
         #[cfg(not(unix))]
         {
@@ -786,6 +796,18 @@ mod tests {
     #[test]
     fn system_host_checks_effective_execute_permission() {
         use std::os::unix::fs::PermissionsExt as _;
+
+        if nix::unistd::geteuid().is_root() {
+            // Root bypasses permission-bit checks under both `access(2)` and
+            // `faccessat(AT_EACCESS)`: any execute bit satisfies X_OK. The
+            // owner-cannot-execute fixture below is meaningless with euid 0
+            // (e.g. a root CI container or a rootless user namespace).
+            eprintln!(
+                "skipping owner-cannot-execute fixture: euid is 0 and root \
+                 bypasses permission bits"
+            );
+            return;
+        }
 
         let dir = match tempfile::tempdir() {
             Ok(dir) => dir,
