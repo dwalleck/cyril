@@ -19,6 +19,64 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+/// Where the spawned agent process lives relative to cyril's filesystem
+/// (cyril-jxmv). Resolved once per spawn from the *resolved* spawn command —
+/// the argv actually spawned, after engine resolution — not the CLI
+/// `--agent-command`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgentLocation {
+    /// Same filesystem as cyril — path translation is a no-op.
+    Native,
+    /// Inside a WSL distro — paths translate at the Windows/WSL boundary.
+    Wsl,
+}
+
+/// Resolve the agent location from the `CYRIL_AGENT_LOCATION` override and
+/// the resolved spawn command's program.
+///
+/// Precedence: an env value of `native` or `wsl` (ASCII case-insensitive)
+/// wins outright; empty is unset (the [`nonempty_distro`] precedent); any
+/// other value logs a warning and falls back to launcher detection. The
+/// heuristic classifies `Wsl` exactly when `program` names the Windows WSL
+/// launcher (see [`is_wsl_launcher`]).
+pub fn resolve_agent_location(env: Option<&str>, program: &str) -> AgentLocation {
+    match env {
+        Some(v) if v.eq_ignore_ascii_case("native") => return AgentLocation::Native,
+        Some(v) if v.eq_ignore_ascii_case("wsl") => return AgentLocation::Wsl,
+        Some("") | None => {}
+        Some(v) => {
+            tracing::warn!(
+                value = %v,
+                "CYRIL_AGENT_LOCATION is neither \"native\" nor \"wsl\"; \
+                 falling back to spawn-command detection"
+            );
+        }
+    }
+    if is_wsl_launcher(program) {
+        AgentLocation::Wsl
+    } else {
+        AgentLocation::Native
+    }
+}
+
+/// `true` when `program` names the Windows WSL launcher — basename `wsl`,
+/// optionally with an `.exe` suffix, any ASCII casing, bare or as a full
+/// path. Exact-match only: `wslkiro`, `wsl2`, `my-wsl-wrapper.exe` are not
+/// the launcher. The value is taken literally (no trimming — the
+/// `CYRIL_WSL_DISTRO` precedent: a wrong name degrades to a wrong-but-
+/// explicit classification, same as any other non-launcher program).
+///
+/// The basename is split manually on BOTH separators rather than via
+/// `Path::file_name`, which would split `C:\...\wsl.exe` on Windows but
+/// return the whole string on Linux — cross-platform-divergent detection
+/// would be untestable on Linux CI (the cyril-xi4a lesson).
+fn is_wsl_launcher(program: &str) -> bool {
+    let base = program.rsplit(['/', '\\']).next().unwrap_or(program);
+    let base = base.to_ascii_lowercase();
+    let base = base.strip_suffix(".exe").unwrap_or(&base);
+    base == "wsl"
+}
+
 /// Translate an agent-provided path to the native filesystem path.
 /// On Windows (WSL bridge), converts `/mnt/c/...` to `C:\...`.
 /// On Linux (direct), returns the path unchanged.
@@ -352,6 +410,62 @@ fn looks_like_windows_path(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── resolve_agent_location (cyril-jxmv, claims C4/C5) ──
+    // The heuristic table mirrors .cyril-jxmv/falsifier-c4c6.py row for row;
+    // expected values come from the Microsoft launcher ground truth
+    // (System32\wsl.exe, CreateProcess .exe append, NTFS case-insensitivity).
+
+    #[test]
+    fn agent_location_heuristic_table() {
+        use AgentLocation::{Native, Wsl};
+        let cases = [
+            ("kiro-cli", Native),
+            ("kiro-cli.exe", Native),
+            ("wsl", Wsl),
+            ("wsl.exe", Wsl),
+            ("WSL.EXE", Wsl),
+            (r"C:\Windows\System32\wsl.exe", Wsl),
+            (r"c:\windows\system32\WSL.exe", Wsl),
+            ("/usr/bin/node", Native),
+            (r"C:\Program Files\nodejs\node.exe", Native),
+            ("sh", Native),
+            ("wslkiro", Native),
+            ("my-wsl-wrapper.exe", Native),
+            ("wsl2", Native),
+            ("wsl ", Native), // literal, no trim (CYRIL_WSL_DISTRO precedent)
+        ];
+        for (program, expect) in cases {
+            assert_eq!(
+                resolve_agent_location(None, program),
+                expect,
+                "heuristic misclassified {program:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn agent_location_env_override_wins() {
+        use AgentLocation::{Native, Wsl};
+        // Override beats the heuristic in both directions.
+        assert_eq!(resolve_agent_location(Some("wsl"), "kiro-cli"), Wsl);
+        assert_eq!(resolve_agent_location(Some("native"), "wsl"), Native);
+        // ASCII case-insensitive.
+        assert_eq!(resolve_agent_location(Some("WSL"), "kiro-cli"), Wsl);
+        assert_eq!(resolve_agent_location(Some("Native"), "wsl"), Native);
+    }
+
+    #[test]
+    fn agent_location_env_empty_and_invalid_fall_back() {
+        use AgentLocation::{Native, Wsl};
+        // Empty = unset (nonempty_distro precedent): heuristic decides.
+        assert_eq!(resolve_agent_location(Some(""), "wsl"), Wsl);
+        assert_eq!(resolve_agent_location(Some(""), "kiro-cli"), Native);
+        // Invalid values warn and fall back to the heuristic — never a
+        // silent sentinel default (the buggy impl this fence catches).
+        assert_eq!(resolve_agent_location(Some("banana"), "wsl"), Wsl);
+        assert_eq!(resolve_agent_location(Some("banana"), "kiro-cli"), Native);
+    }
 
     #[test]
     fn test_win_to_wsl_c_drive() {
