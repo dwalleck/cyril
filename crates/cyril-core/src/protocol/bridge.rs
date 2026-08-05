@@ -610,6 +610,13 @@ async fn run_bridge(
             return Ok(());
         }
     };
+    // Bind the process agent location from the RESOLVED spawn command
+    // (cyril-jxmv): after the engine match, so v2 / KAS-free / KAS-wrapper
+    // all bind through this single site, and before the spawn, so even a
+    // failed exec leaves the location bound. Deliberately NOT inside
+    // `AgentProcess::spawn`: terminal_io reuses that for terminal
+    // processes, which must never rebind the agent's location.
+    crate::platform::path::bind_agent_location(spawn_command.program());
     let process = AgentProcess::spawn(&spawn_command, cwd).await?;
 
     // 2. Create the KiroClient that dispatches conversion through the bound engine.
@@ -2810,6 +2817,12 @@ mod tests {
             other => panic!("expected BridgeDisconnected, got {other:?}"),
         }
     }
+
+    // cyril-jxmv C8's fence — run_bridge binds the agent location before the
+    // exec attempt — lives in tests/win_wsl_wiring.rs: it asserts the
+    // process-global location atomic, and every in-process writer in that
+    // binary binds Wsl, so no `cargo test` thread interleave can flip the
+    // asserted value (this module's real-spawn test binds Native).
 
     // KAS-1 C4 (gate-on): under `--features kas`, Kas resolves to the KasEngine.
     #[cfg(feature = "kas")]

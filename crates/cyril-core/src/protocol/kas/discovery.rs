@@ -403,6 +403,27 @@ mod tests {
         assert_eq!(args[3], "--auth=acp-callback");
     }
 
+    // cyril-jxmv C6: the KAS free path REPLACES the CLI argv, so the agent
+    // location derived from the resolved command is Native even when the
+    // user's `--agent-command` routed through the WSL launcher. Deriving
+    // from the pre-resolve argv is the buggy implementation this catches.
+    #[test]
+    fn kas_free_resolved_command_classifies_native() {
+        use crate::platform::path::{AgentLocation, resolve_agent_location};
+        let path = OsString::from("/usr/bin");
+        let exists = exists_set(&[&default_server(), &node("/usr/bin")]);
+        let cmd = resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists)
+            .expect("all preconditions present");
+        assert_eq!(
+            resolve_agent_location(None, cmd.program()),
+            AgentLocation::Native,
+            "resolved node argv must classify Native"
+        );
+        // The pre-resolve CLI program would have classified Wsl — the
+        // divergence that makes the placement claim non-vacuous.
+        assert_eq!(resolve_agent_location(None, "wsl"), AgentLocation::Wsl);
+    }
+
     // C3a: server missing while node IS present → Server, NOT Node (the
     // wrong-missing-item bug: checking node first / reporting the wrong path).
     #[test]
