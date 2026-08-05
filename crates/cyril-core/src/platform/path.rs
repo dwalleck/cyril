@@ -98,6 +98,15 @@ static AGENT_LOCATION: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8
 pub fn bind_agent_location(program: &str) {
     let env = std::env::var("CYRIL_AGENT_LOCATION").ok();
     let location = resolve_agent_location(env.as_deref(), program);
+    set_agent_location(location);
+    tracing::info!(program = %program, ?location, "agent location bound");
+}
+
+/// Bind the process agent location directly, bypassing env and launcher
+/// detection. [`bind_agent_location`] is the production entry point; this
+/// is the seam for wiring fences (`tests/win_wsl_wiring.rs`) that need a
+/// deterministic location regardless of the test environment.
+pub fn set_agent_location(location: AgentLocation) {
     AGENT_LOCATION.store(
         match location {
             AgentLocation::Native => 1,
@@ -105,7 +114,6 @@ pub fn bind_agent_location(program: &str) {
         },
         std::sync::atomic::Ordering::Relaxed,
     );
-    tracing::info!(program = %program, ?location, "agent location bound");
 }
 
 /// The bound agent location; `None` when no spawn has bound one yet.
