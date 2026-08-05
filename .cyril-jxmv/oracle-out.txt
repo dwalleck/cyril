@@ -1,0 +1,7 @@
+OUT|C:\Users\u\repos\proj|/mnt/c/Users/u/repos/proj
+OUT|C:\|/mnt/c
+OUT|D:\data|/mnt/d/data
+OUT|\\?\C:\Users\u\repos\proj|/mnt/c/Users/u/repos/proj
+IN|C:\Users\u\repos\proj\file.rs|C:\Users\u\repos\proj\file.rs
+IN|C:/Users/u/x.txt|C:/Users/u/x.txt
+IN|D:\data\f|D:\data\f
