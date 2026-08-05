@@ -132,6 +132,10 @@ _Avoid_: fs protocol, fs mode
 One of KAS's two hook execution models — hooks run by cyril as host callbacks, or by the agent's own registry. A session gets exactly one; they do not compose. Cyril-side, the Hooks capability adapter names its side of the bidirectional `_kiro/hooks/*` surface a **direction**: **Inbound** (cyril serves list/execute/sessionStart host-side), **Outbound** (agent runs its own registry; cyril only advertises `{enabled, v2}`), or none.
 _Avoid_: hooks mode (cyril's config knob), hooks v2 (a wire flag, not a name), bidirectional adapter (say which direction)
 
+**Approval preview**:
+The stable, request-time view of the tracked tool call a permission request refers to, joined only by exact session and tool-call identity. A missing, malformed, cross-session, or out-of-order join is shown as unavailable while the approval choices remain actionable.
+_Avoid_: tool-call cache, live preview, permission content
+
 ### Proxy platform
 
 **Proxy stage**:
