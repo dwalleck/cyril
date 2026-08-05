@@ -92,9 +92,10 @@ static AGENT_LOCATION: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8
 /// Bind the process agent location from the resolved spawn command's
 /// `program`, consulting the `CYRIL_AGENT_LOCATION` override — the only
 /// read of that variable in the workspace (fenced by
-/// `env_var_confined_to_platform_path`). Called by `AgentProcess::spawn`
-/// before the exec attempt, so every spawn path — v2, KAS free, KAS
-/// wrapper, examples — binds it by construction.
+/// `env_var_confined_to_platform_path`). Called by `run_bridge` after
+/// engine resolution and before the exec attempt — deliberately NOT by
+/// `AgentProcess::spawn`, which terminal_io reuses for terminal processes
+/// that must never rebind the agent's location.
 pub fn bind_agent_location(program: &str) {
     let env = std::env::var("CYRIL_AGENT_LOCATION").ok();
     let location = resolve_agent_location(env.as_deref(), program);
