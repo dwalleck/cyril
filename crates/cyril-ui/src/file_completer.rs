@@ -12,12 +12,20 @@ pub struct FileCompleter {
     root: PathBuf,
     files: HashSet<String>,
     file_list: Vec<String>,
+    /// `Some(reason)` when loading the file list failed (cyril-2mfa) — e.g. the
+    /// cwd is not a git repository or git is not installed. `None` means the
+    /// completer loaded fine, even if it holds zero files: "loaded empty" and
+    /// "load failed" are distinct states and must not be inferred from
+    /// `file_list.is_empty()`.
+    unavailable_reason: Option<String>,
 }
 
 impl FileCompleter {
     /// Load files from git in the given working directory.
     ///
-    /// Returns an empty completer if git is not available or the command fails.
+    /// If git is not available or the command fails, returns an
+    /// [unavailable](Self::unavailable) completer carrying the failure reason
+    /// so the UI can tell the user why @-completion yields nothing.
     pub async fn load(cwd: &Path) -> Self {
         match Self::run_git_ls_files(cwd).await {
             Ok(file_list) => {
@@ -26,18 +34,46 @@ impl FileCompleter {
             }
             Err(err) => {
                 tracing::warn!("Failed to load git files for completion: {err}");
-                Self::empty()
+                // Collapse whitespace so multi-line git stderr renders as a
+                // single chat line.
+                let reason = err
+                    .to_string()
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                Self::unavailable(reason)
             }
         }
     }
 
     /// Create an empty completer with no files.
+    ///
+    /// This is a *successfully loaded* completer that happens to know no files
+    /// — for a failed load, use [`FileCompleter::unavailable`] instead.
     pub fn empty() -> Self {
         Self {
             root: PathBuf::new(),
             files: HashSet::new(),
             file_list: Vec::new(),
+            unavailable_reason: None,
         }
+    }
+
+    /// Create a completer whose file list could not be loaded, carrying the
+    /// human-readable reason (cyril-2mfa).
+    pub fn unavailable(reason: String) -> Self {
+        Self {
+            root: PathBuf::new(),
+            files: HashSet::new(),
+            file_list: Vec::new(),
+            unavailable_reason: Some(reason),
+        }
+    }
+
+    /// Why the file list could not be loaded, or `None` if it loaded fine
+    /// (possibly with zero files).
+    pub fn unavailable_reason(&self) -> Option<&str> {
+        self.unavailable_reason.as_deref()
     }
 
     /// Create a completer from an explicit list of file paths (useful for testing).
@@ -52,6 +88,7 @@ impl FileCompleter {
             root,
             files,
             file_list,
+            unavailable_reason: None,
         }
     }
 
@@ -95,7 +132,8 @@ impl FileCompleter {
             .args(["ls-files"])
             .current_dir(cwd)
             .output()
-            .await?;
+            .await
+            .map_err(|err| std::io::Error::other(format!("failed to run git: {err}")))?;
 
         if !output.status.success() {
             return Err(std::io::Error::other(format!(
@@ -181,6 +219,42 @@ mod tests {
         let completer = FileCompleter::empty();
         assert!(completer.suggest("main", 5).is_empty());
         assert!(!completer.contains("anything"));
+    }
+
+    // --- availability tests (bug class: silently empty completion) ---
+
+    #[test]
+    fn unavailable_carries_reason_and_suggests_nothing() {
+        let completer = FileCompleter::unavailable("not a git repository".into());
+        assert_eq!(completer.unavailable_reason(), Some("not a git repository"));
+        assert!(completer.suggest("main", 5).is_empty());
+        assert!(!completer.contains("anything"));
+    }
+
+    #[test]
+    fn empty_completer_is_available() {
+        // "Loaded with zero files" is NOT a failure — no reason present.
+        assert_eq!(FileCompleter::empty().unavailable_reason(), None);
+    }
+
+    #[test]
+    fn from_files_completer_is_available() {
+        let completer = FileCompleter::from_files(vec!["src/main.rs".into()]);
+        assert_eq!(completer.unavailable_reason(), None);
+    }
+
+    #[tokio::test]
+    async fn load_outside_git_repo_is_unavailable_with_reason() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let completer = FileCompleter::load(dir.path()).await;
+        let reason = completer
+            .unavailable_reason()
+            .expect("load in a non-git dir must report unavailability");
+        assert!(!reason.is_empty());
+        assert!(
+            !reason.contains('\n'),
+            "reason must be a single line for chat display, got: {reason:?}"
+        );
     }
 
     #[test]
