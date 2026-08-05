@@ -44,6 +44,9 @@ pub struct UiState {
     autocomplete_suggestions: Vec<Suggestion>,
     autocomplete_selected: Option<usize>,
     file_completer: Option<FileCompleter>,
+    /// Whether the one-time "@-file completion unavailable" notice has already
+    /// been shown (cyril-2mfa). Surfaced on the first @-trigger, not at startup.
+    completion_unavailable_notified: bool,
     command_info: Vec<(String, Option<String>)>,
 
     // Session info (projected by App from SessionController)
@@ -310,6 +313,7 @@ impl UiState {
             autocomplete_suggestions: Vec::new(),
             autocomplete_selected: None,
             file_completer: None,
+            completion_unavailable_notified: false,
             command_info: Vec::new(),
             activity: Activity::Idle,
             activity_since: None,
@@ -1604,18 +1608,30 @@ impl UiState {
                 && !query.contains(' ')
                 && let Some(ref completer) = self.file_completer
             {
-                let suggestions: Vec<Suggestion> = completer
-                    .suggest(query, 10)
-                    .into_iter()
-                    .map(|path| Suggestion {
-                        text: format!("@{path}"),
-                        description: None,
-                    })
-                    .collect();
-                if !suggestions.is_empty() {
-                    self.autocomplete_suggestions = suggestions;
-                    self.autocomplete_selected = Some(0);
-                    return;
+                if let Some(reason) = completer.unavailable_reason() {
+                    // cyril-2mfa: the completer failed to load (not a git
+                    // repository, git missing, ...). Tell the user ONCE, at the
+                    // moment the silence would otherwise bite. A completer that
+                    // loaded fine with zero files never takes this path.
+                    if !self.completion_unavailable_notified {
+                        let notice = format!("@-file completion unavailable: {reason}");
+                        self.completion_unavailable_notified = true;
+                        self.add_system_message(notice);
+                    }
+                } else {
+                    let suggestions: Vec<Suggestion> = completer
+                        .suggest(query, 10)
+                        .into_iter()
+                        .map(|path| Suggestion {
+                            text: format!("@{path}"),
+                            description: None,
+                        })
+                        .collect();
+                    if !suggestions.is_empty() {
+                        self.autocomplete_suggestions = suggestions;
+                        self.autocomplete_selected = Some(0);
+                        return;
+                    }
                 }
             }
         }
@@ -6413,5 +6429,86 @@ mod tests {
         state.show_picker("model".into(), options);
 
         assert_eq!(marked_values(&state), vec!["auto".to_string()]);
+    }
+
+    // --- @-completion availability fences (bug class: silently empty completion) ---
+
+    const UNAVAILABLE_NEEDLE: &str = "@-file completion unavailable";
+
+    /// End-to-end repro: loading the completer in a non-git cwd fails, and the
+    /// FIRST time the user actually triggers @-completion, exactly one system
+    /// message explains why nothing appears. Repeated triggers never add a
+    /// second notice.
+    #[tokio::test]
+    async fn completion_unavailable_notice_shown_once() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let completer = FileCompleter::load(dir.path()).await;
+
+        let mut state = UiState::new(500);
+        state.set_file_completer(completer);
+        assert_eq!(
+            system_message_count(&state, UNAVAILABLE_NEEDLE),
+            0,
+            "no notice before the user triggers @-completion"
+        );
+
+        state.insert_text("@x");
+        assert_eq!(
+            system_message_count(&state, UNAVAILABLE_NEEDLE),
+            1,
+            "first @-trigger with a failed completer must surface one notice"
+        );
+        assert!(
+            state.autocomplete_suggestions().is_empty(),
+            "an unavailable completer must not offer suggestions"
+        );
+
+        // Further triggers — extending the query and starting a fresh @ token —
+        // must not repeat the notice.
+        state.insert_text("y");
+        state.insert_text(" @z");
+        assert_eq!(
+            system_message_count(&state, UNAVAILABLE_NEEDLE),
+            1,
+            "the unavailability notice must appear exactly once"
+        );
+    }
+
+    /// A git repo where `git ls-files` SUCCEEDS with zero files is NOT a
+    /// failure: loaded-empty must never trigger the unavailability notice.
+    #[tokio::test]
+    async fn no_notice_when_git_repo_empty() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let status = std::process::Command::new("git")
+            .args(["init", "--quiet"])
+            .current_dir(dir.path())
+            .status()
+            .expect("spawn git init");
+        assert!(status.success(), "git init failed");
+
+        let completer = FileCompleter::load(dir.path()).await;
+        let mut state = UiState::new(500);
+        state.set_file_completer(completer);
+
+        state.insert_text("@x");
+        assert_eq!(
+            system_message_count(&state, UNAVAILABLE_NEEDLE),
+            0,
+            "an empty-but-successful git repo must not be reported as unavailable"
+        );
+    }
+
+    /// A completer that loaded fine keeps completing silently — no notice.
+    #[test]
+    fn no_notice_when_completer_has_files() {
+        let mut state = UiState::new(500);
+        state.set_file_completer(FileCompleter::from_files(vec!["src/main.rs".into()]));
+
+        state.insert_text("@main");
+        assert!(
+            !state.autocomplete_suggestions().is_empty(),
+            "a loaded completer must keep suggesting"
+        );
+        assert_eq!(system_message_count(&state, UNAVAILABLE_NEEDLE), 0);
     }
 }
