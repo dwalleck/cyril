@@ -44,9 +44,13 @@ tempfile = "3"
 # KAS auth source (cyril-dcc6): read-only access to kiro-cli's data.sqlite3.
 # `bundled` compiles its own libsqlite3 — hermetic, no system-lib skew.
 rusqlite = { version = "0.39", default-features = false, features = ["bundled"] }
-# Process-group kill and effective-access checks for KAS host executables. Safe
+# Process-group kill (`signal`) and effective-uid execute checks for KAS host
+# executables — `fs` provides `faccessat(AT_FDCWD, .., AT_EACCESS)`, which
+# checks the EFFECTIVE uid/gid (what `spawn` runs as), unlike real-uid
+# `access(2)` (cyril-jwi5). `user` provides `geteuid` for the tests' root-skip
+# guard (root passes any-execute-bit checks even with AT_EACCESS). Safe
 # wrappers — `unsafe_code = "forbid"` governs OUR code, not dependencies.
-nix = { version = "0.31", default-features = false, features = ["fs", "signal"] }
+nix = { version = "0.31", default-features = false, features = ["fs", "signal", "user"] }
 
 [profile.dev]
 incremental = true
