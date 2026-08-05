@@ -21,6 +21,8 @@ use std::path::{Path, PathBuf};
 use cyril_core::platform::path::{
     AgentLocation, agent_location, bind_agent_location, set_agent_location, to_agent, to_native,
 };
+use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
+use cyril_core::types::{AgentCommand, Notification};
 
 /// Re-run `test_name` in a child process with `envs` set and the location
 /// env vars scrubbed (the fences control their own state). Panics if the
@@ -75,6 +77,40 @@ fn env_override_wiring_via_child_process() {
         "env_override_wiring_via_child_process",
         MARKER,
         &[("CYRIL_AGENT_LOCATION", "native")],
+    );
+}
+
+/// cyril-jxmv C8: `run_bridge` binds the agent location from the RESOLVED
+/// spawn command BEFORE the exec attempt — a failed spawn still leaves the
+/// wsl-launcher classification bound. The missing path carries the launcher
+/// basename, so exec fails on every platform while the classification is
+/// still Wsl. Lives in this binary because it asserts the process-global
+/// atomic: every in-process writer here binds Wsl too, so no thread
+/// interleave under plain `cargo test` can flip the asserted value
+/// (bridge.rs's own real-spawn test binds Native, which is why the fence
+/// does not live there).
+#[tokio::test]
+async fn bridge_spawn_binds_agent_location_before_exec() {
+    let cmd = AgentCommand::try_from_argv(vec![
+        "/cyril-jxmv-no-such-dir/wsl.exe".to_string(),
+        "kiro-cli".to_string(),
+    ])
+    .expect("argv");
+    let handle = spawn_bridge(cmd, SpawnConfig::default(), std::env::temp_dir())
+        .expect("bridge thread spawns");
+    let (_sender, mut rx, _perm) = handle.split();
+    let routed = tokio::time::timeout(std::time::Duration::from_secs(10), rx.recv())
+        .await
+        .expect("notification within 10s of spawn failure")
+        .expect("channel open");
+    assert!(
+        matches!(routed.notification, Notification::BridgeDisconnected { .. }),
+        "spawn of a missing binary must disconnect"
+    );
+    assert_eq!(
+        agent_location(),
+        Some(AgentLocation::Wsl),
+        "location must be bound from the resolved program before exec"
     );
 }
 

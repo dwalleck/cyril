@@ -2818,38 +2818,11 @@ mod tests {
         }
     }
 
-    // cyril-jxmv C8: run_bridge binds the agent location from the RESOLVED
-    // spawn command BEFORE the exec attempt — a failed spawn still leaves
-    // the wsl-launcher classification bound. Uses a missing path whose
-    // basename is the launcher, so exec fails on every platform while the
-    // classification is still Wsl. (Isolation note: asserts the process
-    // global; nextest's process-per-test keeps this airtight, and the only
-    // other real-spawn test binds Native, so a plain `cargo test`
-    // interleave would surface loudly here, not silently pass.)
-    #[tokio::test]
-    async fn spawn_binds_agent_location_before_exec() {
-        let cmd = AgentCommand::try_from_argv(vec![
-            "/cyril-jxmv-no-such-dir/wsl.exe".to_string(),
-            "kiro-cli".to_string(),
-        ])
-        .expect("argv");
-        let handle = spawn_bridge(cmd, SpawnConfig::default(), std::env::temp_dir())
-            .expect("bridge thread spawns");
-        let (_sender, mut rx, _perm) = handle.split();
-        let routed = tokio::time::timeout(Duration::from_secs(10), rx.recv())
-            .await
-            .expect("notification within 10s of spawn failure")
-            .expect("channel open");
-        assert!(
-            matches!(routed.notification, Notification::BridgeDisconnected { .. }),
-            "spawn of a missing binary must disconnect"
-        );
-        assert_eq!(
-            crate::platform::path::agent_location(),
-            Some(crate::platform::path::AgentLocation::Wsl),
-            "location must be bound from the resolved program before exec"
-        );
-    }
+    // cyril-jxmv C8's fence — run_bridge binds the agent location before the
+    // exec attempt — lives in tests/win_wsl_wiring.rs: it asserts the
+    // process-global location atomic, and every in-process writer in that
+    // binary binds Wsl, so no `cargo test` thread interleave can flip the
+    // asserted value (this module's real-spawn test binds Native).
 
     // KAS-1 C4 (gate-on): under `--features kas`, Kas resolves to the KasEngine.
     #[cfg(feature = "kas")]
