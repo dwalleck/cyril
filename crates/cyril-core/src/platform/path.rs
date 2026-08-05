@@ -1,6 +1,13 @@
 //! Agent↔native path translation across the Windows/WSL boundary.
 //!
-//! Two path families translate on Windows (no-ops on Linux):
+//! Translation is active only when BOTH hold (cyril-jxmv): the host is
+//! Windows, AND the bound [`AgentLocation`] is [`AgentLocation::Wsl`] —
+//! resolved per spawn from the resolved spawn command (`wsl` launcher
+//! detection, `CYRIL_AGENT_LOCATION` override). A native Windows agent
+//! (default `kiro-cli acp` → kiro-cli.exe) gets identity passthrough
+//! exactly like Linux.
+//!
+//! Two path families translate when the gate is active (no-ops otherwise):
 //!
 //! - **Drive mounts:** `/mnt/c/...` ↔ `C:\...`, unconditional.
 //! - **WSL-internal paths** (`/home/...`, `/tmp/...`, non-drive `/mnt`
@@ -77,11 +84,71 @@ fn is_wsl_launcher(program: &str) -> bool {
     base == "wsl"
 }
 
+/// Process-global agent location: 0 = unset, 1 = native, 2 = wsl.
+/// An atomic, not a `OnceLock` like the distro: last-spawn-wins, so a
+/// respawned bridge carrying a different agent command rebinds cleanly.
+static AGENT_LOCATION: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+/// Bind the process agent location from the resolved spawn command's
+/// `program`, consulting the `CYRIL_AGENT_LOCATION` override — the only
+/// read of that variable in the workspace (fenced by
+/// `env_var_confined_to_platform_path`). Called by `AgentProcess::spawn`
+/// before the exec attempt, so every spawn path — v2, KAS free, KAS
+/// wrapper, examples — binds it by construction.
+pub fn bind_agent_location(program: &str) {
+    let env = std::env::var("CYRIL_AGENT_LOCATION").ok();
+    let location = resolve_agent_location(env.as_deref(), program);
+    AGENT_LOCATION.store(
+        match location {
+            AgentLocation::Native => 1,
+            AgentLocation::Wsl => 2,
+        },
+        std::sync::atomic::Ordering::Relaxed,
+    );
+    tracing::info!(program = %program, ?location, "agent location bound");
+}
+
+/// The bound agent location; `None` when no spawn has bound one yet.
+pub fn agent_location() -> Option<AgentLocation> {
+    match AGENT_LOCATION.load(std::sync::atomic::Ordering::Relaxed) {
+        1 => Some(AgentLocation::Native),
+        2 => Some(AgentLocation::Wsl),
+        _ => None,
+    }
+}
+
+/// The gate decision, pure and testable off-Windows: translation applies
+/// only on a Windows host with a WSL-located agent. `None` (unset — no
+/// spawn has bound a location; reachable only from tests or a translation
+/// call before any spawn) behaves as `Native`: identity is the do-no-harm
+/// default and matches the shipped native default agent command. Logged
+/// once per process at debug when consulted unset on Windows.
+fn translation_active(host_is_windows: bool, location: Option<AgentLocation>) -> bool {
+    if !host_is_windows {
+        return false;
+    }
+    match location {
+        Some(AgentLocation::Wsl) => true,
+        Some(AgentLocation::Native) => false,
+        None => {
+            static WARN_ONCE: std::sync::Once = std::sync::Once::new();
+            WARN_ONCE.call_once(|| {
+                tracing::debug!(
+                    "translation idle: no agent location bound (no spawn yet); treating as native"
+                );
+            });
+            false
+        }
+    }
+}
+
 /// Translate an agent-provided path to the native filesystem path.
-/// On Windows (WSL bridge), converts `/mnt/c/...` to `C:\...`.
-/// On Linux (direct), returns the path unchanged.
+/// On a Windows host with a WSL-located agent, converts `/mnt/c/...` to
+/// `C:\...` (and `\\wsl$` per the distro rules). In every other
+/// configuration — Linux host, native Windows agent, or no location bound —
+/// returns the path unchanged.
 pub fn to_native(path: &Path) -> PathBuf {
-    if cfg!(target_os = "windows") {
+    if translation_active(cfg!(target_os = "windows"), agent_location()) {
         wsl_to_win(&path.to_string_lossy())
     } else {
         path.to_path_buf()
@@ -89,10 +156,11 @@ pub fn to_native(path: &Path) -> PathBuf {
 }
 
 /// Translate a native filesystem path to an agent-compatible path.
-/// On Windows (WSL bridge), converts `C:\...` to `/mnt/c/...`.
-/// On Linux (direct), returns the path unchanged.
+/// On a Windows host with a WSL-located agent, converts `C:\...` to
+/// `/mnt/c/...`. In every other configuration — Linux host, native Windows
+/// agent, or no location bound — returns the path unchanged.
 pub fn to_agent(path: &Path) -> PathBuf {
-    if cfg!(target_os = "windows") {
+    if translation_active(cfg!(target_os = "windows"), agent_location()) {
         win_to_wsl(path)
     } else {
         path.to_path_buf()
@@ -341,6 +409,10 @@ fn drive_mount_to_win(path: &str) -> Option<PathBuf> {
 /// Recursively translate paths in a JSON value.
 /// Looks for string values that look like paths and translates them, using
 /// the process WSL distro for `\\wsl$` UNC forms.
+///
+/// This helper applies translation mechanics unconditionally — the
+/// agent-location gate (cyril-jxmv) lives in [`to_native`] / [`to_agent`],
+/// and no production code currently calls this function.
 pub fn translate_paths_in_json(value: &mut Value, direction: Direction) {
     translate_paths_in_json_with_distro(value, direction, process_wsl_distro());
 }
@@ -465,6 +537,87 @@ mod tests {
         // silent sentinel default (the buggy impl this fence catches).
         assert_eq!(resolve_agent_location(Some("banana"), "wsl"), Wsl);
         assert_eq!(resolve_agent_location(Some("banana"), "kiro-cli"), Native);
+    }
+
+    // ── translation_active gate matrix (cyril-jxmv, claims C1/C3/C7) ──
+
+    #[test]
+    fn gate_matrix_only_windows_wsl_activates() {
+        use AgentLocation::{Native, Wsl};
+        // The full 6-cell matrix: exactly one cell is active. The
+        // (windows, None) cell catches a default-Wsl regression (today's
+        // bug surviving); the (linux, Some(Wsl)) cell catches a gate that
+        // dropped the host-OS term.
+        assert!(translation_active(true, Some(Wsl)));
+        assert!(!translation_active(true, Some(Native)));
+        assert!(!translation_active(true, None));
+        assert!(!translation_active(false, Some(Wsl)));
+        assert!(!translation_active(false, Some(Native)));
+        assert!(!translation_active(false, None));
+    }
+
+    // ── CYRIL_AGENT_LOCATION confinement (cyril-jxmv, claim C9) ──
+
+    /// The env var is read in exactly one place: this module. Walks every
+    /// crate's `src/` tree (production code; `tests/` integration binaries
+    /// legitimately SET the var for child processes). Oracle: filesystem
+    /// contents, independent of any cyril code path.
+    #[test]
+    fn env_var_confined_to_platform_path() {
+        let crates_root = match Path::new(env!("CARGO_MANIFEST_DIR")).parent() {
+            Some(p) => p.to_path_buf(),
+            None => panic!("CARGO_MANIFEST_DIR has no parent"),
+        };
+        let mut src_roots = Vec::new();
+        let entries = match std::fs::read_dir(&crates_root) {
+            Ok(e) => e,
+            Err(e) => panic!("read_dir {}: {e}", crates_root.display()),
+        };
+        for entry in entries {
+            let Ok(entry) = entry else {
+                panic!("unreadable dir entry under {}", crates_root.display())
+            };
+            let src = entry.path().join("src");
+            if src.is_dir() {
+                src_roots.push(src);
+            }
+        }
+        assert!(
+            src_roots.len() >= 3,
+            "expected the workspace crates under {}; found {}",
+            crates_root.display(),
+            src_roots.len()
+        );
+        let mut offenders = Vec::new();
+        while let Some(dir) = src_roots.pop() {
+            let entries = match std::fs::read_dir(&dir) {
+                Ok(e) => e,
+                Err(e) => panic!("read_dir {}: {e}", dir.display()),
+            };
+            for entry in entries {
+                let Ok(entry) = entry else {
+                    panic!("unreadable dir entry under {}", dir.display())
+                };
+                let path = entry.path();
+                if path.is_dir() {
+                    src_roots.push(path);
+                } else if path.extension().is_some_and(|x| x == "rs")
+                    && !path.ends_with("platform/path.rs")
+                {
+                    let content = match std::fs::read_to_string(&path) {
+                        Ok(c) => c,
+                        Err(e) => panic!("read {}: {e}", path.display()),
+                    };
+                    if content.contains("CYRIL_AGENT_LOCATION") {
+                        offenders.push(path);
+                    }
+                }
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "CYRIL_AGENT_LOCATION must be read only in platform/path.rs; found in {offenders:?}"
+        );
     }
 
     #[test]
