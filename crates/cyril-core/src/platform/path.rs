@@ -92,12 +92,25 @@ static AGENT_LOCATION: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8
 /// Bind the process agent location from the resolved spawn command's
 /// `program`, consulting the `CYRIL_AGENT_LOCATION` override — the only
 /// read of that variable in the workspace (fenced by
-/// `env_var_confined_to_platform_path`). Called by `run_bridge` after
-/// engine resolution and before the exec attempt — deliberately NOT by
-/// `AgentProcess::spawn`, which terminal_io reuses for terminal processes
-/// that must never rebind the agent's location.
+/// `env_var_confined_to_platform_path`). A non-Unicode value warns and
+/// falls back to launcher detection, same as any other invalid value —
+/// missing and corrupt are distinct failure modes. Called by `run_bridge`
+/// after engine resolution and before the exec attempt — deliberately NOT
+/// by `AgentProcess::spawn`, which terminal_io reuses for terminal
+/// processes that must never rebind the agent's location.
 pub fn bind_agent_location(program: &str) {
-    let env = std::env::var("CYRIL_AGENT_LOCATION").ok();
+    let env = match std::env::var("CYRIL_AGENT_LOCATION") {
+        Ok(v) => Some(v),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(std::env::VarError::NotUnicode(raw)) => {
+            tracing::warn!(
+                value = ?raw,
+                "CYRIL_AGENT_LOCATION is not valid Unicode; \
+                 falling back to spawn-command detection"
+            );
+            None
+        }
+    };
     let location = resolve_agent_location(env.as_deref(), program);
     set_agent_location(location);
     tracing::info!(program = %program, ?location, "agent location bound");

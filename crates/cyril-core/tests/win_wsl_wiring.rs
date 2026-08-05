@@ -25,9 +25,10 @@ use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
 use cyril_core::types::{AgentCommand, Notification};
 
 /// Re-run `test_name` in a child process with `envs` set and the location
-/// env vars scrubbed (the fences control their own state). Panics if the
-/// child's assertions fail.
-fn run_child(test_name: &str, marker: &str, envs: &[(&str, &str)]) {
+/// env vars scrubbed (the fences control their own state). Values are
+/// `OsStr` so a fence can inject non-Unicode bytes. Panics if the child's
+/// assertions fail.
+fn run_child(test_name: &str, marker: &str, envs: &[(&str, &std::ffi::OsStr)]) {
     let exe = std::env::current_exe().expect("current_exe");
     let mut cmd = std::process::Command::new(exe);
     cmd.args([test_name, "--exact", "--nocapture"])
@@ -76,7 +77,35 @@ fn env_override_wiring_via_child_process() {
     run_child(
         "env_override_wiring_via_child_process",
         MARKER,
-        &[("CYRIL_AGENT_LOCATION", "native")],
+        &[("CYRIL_AGENT_LOCATION", std::ffi::OsStr::new("native"))],
+    );
+}
+
+/// A non-Unicode `CYRIL_AGENT_LOCATION` must not panic and must fall back
+/// to launcher detection with a warning, like any other invalid value
+/// (missing vs corrupt stay distinct — CLAUDE.md Silent Failure
+/// Prevention). The child binds the `wsl` launcher under invalid-UTF-8
+/// bytes and still classifies Wsl — an override misread as `native` would
+/// flip it, and a panicking read would fail the child outright. Unix-only:
+/// Windows env blocks are UTF-16, so invalid-UTF-8 bytes cannot be
+/// constructed there.
+#[cfg(unix)]
+#[test]
+fn env_non_unicode_falls_back_via_child_process() {
+    use std::os::unix::ffi::OsStrExt;
+    const MARKER: &str = "CYRIL_JXMV_NON_UNICODE_CHILD";
+    if std::env::var(MARKER).is_ok() {
+        bind_agent_location("wsl");
+        assert_eq!(agent_location(), Some(AgentLocation::Wsl));
+        return;
+    }
+    run_child(
+        "env_non_unicode_falls_back_via_child_process",
+        MARKER,
+        &[(
+            "CYRIL_AGENT_LOCATION",
+            std::ffi::OsStr::from_bytes(b"nat\xffive"),
+        )],
     );
 }
 
@@ -161,7 +190,7 @@ mod windows {
         run_child(
             "windows::env_distro_wiring_via_child_process",
             MARKER,
-            &[("CYRIL_WSL_DISTRO", "Ubuntu")],
+            &[("CYRIL_WSL_DISTRO", std::ffi::OsStr::new("Ubuntu"))],
         );
     }
 
