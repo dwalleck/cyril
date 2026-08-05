@@ -128,6 +128,10 @@ _Avoid_: capability sub-trait (the withdrawn `as_*` accessor design), responder 
 The file-operation callback family in force for one operation — Kiro's extended `_kiro/fs/*` or bare ACP `fs/*`. Selected per operation, not per session.
 _Avoid_: fs protocol, fs mode
 
+**Agent location**:
+Which side of the Windows/WSL filesystem boundary the spawned agent process lives on — **native** (same filesystem as cyril; path translation off) or **wsl** (inside a WSL distro; paths translate at the boundary). Resolved once per spawn from the *resolved* spawn command (the argv actually spawned, after engine resolution — not the CLI `--agent-command`), overridable via `CYRIL_AGENT_LOCATION`. Moot on non-Windows hosts, where translation is always a no-op.
+_Avoid_: agent platform, agent OS (the boundary is a filesystem fact, not an OS version), translation mode (names the effect, not the fact), WSL mode
+
 **Hook generation**:
 One of KAS's two hook execution models — hooks run by cyril as host callbacks, or by the agent's own registry. A session gets exactly one; they do not compose. Cyril-side, the Hooks capability adapter names its side of the bidirectional `_kiro/hooks/*` surface a **direction**: **Inbound** (cyril serves list/execute/sessionStart host-side), **Outbound** (agent runs its own registry; cyril only advertises `{enabled, v2}`), or none.
 _Avoid_: hooks mode (cyril's config knob), hooks v2 (a wire flag, not a name), bidirectional adapter (say which direction)
