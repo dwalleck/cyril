@@ -64,6 +64,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cwd.clone(),
     )?;
 
+    // Bound outside the async block: `cli` is already partially moved (cwd,
+    // agent_command), and an async block would capture the whole struct.
+    let oneshot_prompt = cli.prompt;
+
     // Build and run TUI
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -80,8 +84,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         let mut app = app::App::new(bridge, &config.ui, cwd.clone(), hooks_source);
 
-        // Create initial session
-        app.create_initial_session(cwd).await;
+        // Create initial session; a parsed `--prompt` rides along and is
+        // submitted once the session is ready (cyril-0ffy).
+        app.create_initial_session(cwd, oneshot_prompt).await;
 
         // Initialize terminal
         let mut terminal = ratatui::init();
