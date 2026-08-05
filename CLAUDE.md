@@ -301,9 +301,18 @@ Agent text and tool calls commit to the message list in chronological order as t
 
 ### Path Translation (`cyril-core/src/platform/path.rs`)
 
-On Windows, all paths crossing the WSL boundary go through `win_to_wsl()` / `wsl_to_win()`. On Linux, path translation is a no-op.
+Translation is keyed on the **agent location**, not just cyril's OS
+(cyril-jxmv): active only when the host is Windows AND the spawned agent
+lives inside WSL. The location is bound once per spawn in `run_bridge`, from
+the *resolved* spawn command (post engine resolution — a KAS-free spawn is
+`node`, native, even if `--agent-command` said `wsl`): program basename
+`wsl`/`wsl.exe` (any casing, bare or full path) ⇒ WSL, anything else ⇒
+native. `CYRIL_AGENT_LOCATION=native|wsl` overrides the detection (for
+wrapper scripts that invoke wsl internally). A native Windows agent — the
+default `kiro-cli acp` resolves to kiro-cli.exe — gets identity passthrough
+exactly like Linux, where translation is always a no-op.
 
-Two path families translate on Windows (cyril-8tq6):
+When active, two path families translate (cyril-8tq6):
 
 - **Drive mounts:** `/mnt/c/...` ↔ `C:\...` (unconditional).
 - **WSL-internal paths** (`/home/...`, `/tmp/...`, non-drive `/mnt` entries):
@@ -494,7 +503,7 @@ These are project invariants maintained from inception, not aspirations. Maintai
 
 - **Linux:** spawns `kiro-cli acp` directly; requires kiro-cli installed and on PATH
 - **Windows:** spawns `wsl kiro-cli acp`; requires WSL with kiro-cli installed and authenticated (`wsl kiro-cli login`)
-- Path translation (`C:\` ↔ `/mnt/c/`, and `\\wsl$\<distro>\` ↔ WSL-internal `/home`-style paths when `CYRIL_WSL_DISTRO` or a `\\wsl$` cwd names the distro) is active only on Windows; on Linux it's a no-op
+- Path translation (`C:\` ↔ `/mnt/c/`, and `\\wsl$\<distro>\` ↔ WSL-internal `/home`-style paths when `CYRIL_WSL_DISTRO` or a `\\wsl$` cwd names the distro) is active only on Windows **with a WSL-located agent** — a `wsl`-launcher spawn command or `CYRIL_AGENT_LOCATION=wsl` (cyril-jxmv); a native Windows agent gets untouched paths, and on Linux it's a no-op
 - Terminal commands from the agent run natively on the host OS
 - Logs go to `cyril.log` in the working directory (append mode) to avoid TUI conflicts
 

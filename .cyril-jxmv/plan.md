@@ -10,6 +10,14 @@ decisions as recommended. One placement amendment made at planning time
 > `test_bridge` example, and every future caller by construction — a strict
 > superset of the design's run_bridge claim, with ordering (bound before
 > exec) guaranteed structurally. The design's Forbidden rules are unchanged.
+>
+> **REVERTED during slice 4** (audit trail, not deleted): impact analysis
+> found a second production caller of `AgentProcess::spawn` —
+> `terminal_io::TerminalRegistry::create` (KAS terminal host callback) —
+> which would rebind the location from every terminal command's program
+> mid-session, clobbering a WSL binding. The approved design's original
+> placement (`run_bridge`, after `resolve_spawn_command`, before spawn)
+> shipped instead. Slice 4's commit message carries the caller list.
 
 Gates per slice (all must pass before the slice commits):
 `cargo nextest run` · `cargo clippy --all-targets -- -D warnings` ·

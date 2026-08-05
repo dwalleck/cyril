@@ -148,6 +148,14 @@ conditionality: translation active only for `wsl`-launcher spawn commands or
 `CYRIL_AGENT_LOCATION=wsl`; native Windows agents = passthrough like Linux.
 Worded to complement, not preempt, cyril-duz0's broader doc fixes.
 
+## Build-time note (slice 4)
+
+The plan briefly amended C8's bind site to `AgentProcess::spawn`; impact
+analysis during the build falsified that (terminal_io reuses
+`AgentProcess` for KAS terminal processes, which must never rebind the
+agent's location) and the design's original `run_bridge` placement shipped.
+See `.cyril-jxmv/plan.md` and the slice 4 commit for the caller evidence.
+
 ## Open decisions for approval
 
 1. **Env var name/shape**: `CYRIL_AGENT_LOCATION=native|wsl` (recommended —
