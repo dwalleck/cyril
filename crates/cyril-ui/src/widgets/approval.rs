@@ -29,6 +29,69 @@ fn window_start(selected: usize, total: usize, visible: usize) -> usize {
     }
 }
 
+/// Max body lines in the approval preview (cyril-j1b3). Five matches the
+/// chat widget's tool-output cap; the diff renderer applies its own 20-line
+/// cap, so a diff-heavy preview is truncated before this budget matters.
+const MAX_PREVIEW_LINES: usize = 5;
+
+/// Build the approval-preview block from the joined tool-call snapshot.
+///
+/// Order: path line (when the tracked call resolves one), then diff content
+/// (the existing diff projection, with its own line cap), else the raw-input
+/// `text`/`content` payload capped at [`MAX_PREVIEW_LINES`]. A snapshot with
+/// no displayable payload yields a single `Preview unavailable` line — the
+/// degraded-but-actionable contract from cyril-j1b3's spec: the operator
+/// still sees the request's own title/message and every option.
+fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
+    let tc = &state.tool_call;
+    let mut lines: Vec<Line<'a>> = Vec::new();
+
+    if let Some(path) = tc.primary_path() {
+        lines.push(Line::styled(
+            format!("  {path}"),
+            Style::default().fg(theme.text_secondary),
+        ));
+    }
+
+    let has_diff = tc
+        .content()
+        .iter()
+        .any(|c| matches!(c, cyril_core::types::ToolCallContent::Diff { .. }));
+    if has_diff {
+        super::chat::render_diff_lines(&mut lines, tc, theme);
+        return lines;
+    }
+
+    if let Some(raw) = tc.raw_input()
+        && let Some(text) = raw
+            .get("text")
+            .or_else(|| raw.get("content"))
+            .and_then(|v| v.as_str())
+    {
+        let total = text.lines().count();
+        for line in text.lines().take(MAX_PREVIEW_LINES) {
+            lines.push(Line::styled(
+                format!("    {line}"),
+                Style::default().fg(theme.subdued),
+            ));
+        }
+        if total > MAX_PREVIEW_LINES {
+            lines.push(Line::styled(
+                format!("    ...{} more lines", total - MAX_PREVIEW_LINES),
+                Style::default().fg(theme.subdued),
+            ));
+        }
+    }
+
+    if lines.is_empty() {
+        lines.push(Line::styled(
+            "  Preview unavailable",
+            Style::default().fg(theme.subdued),
+        ));
+    }
+    lines
+}
+
 fn render_option_phase(
     frame: &mut Frame,
     area: Rect,
@@ -36,10 +99,22 @@ fn render_option_phase(
     state: &ApprovalState,
     theme: &Theme,
 ) {
+    // Preview block (cyril-j1b3): the joined tool-call snapshot is rendered
+    // above the options so a KAS stub permission request still shows the
+    // file path and proposed content. Budget: 1 path line + up to
+    // MAX_PREVIEW_LINES of body + blanks; clamped below when space is tight.
+    let preview = preview_lines(state, theme);
     // options.len() is a handful of user-facing choices; the sum stays far
     // below u16::MAX, so try_from is infallible and the saturation is
     // defensive, not an error default (same pattern as the picker).
-    let desired_height = u16::try_from(state.options.len().saturating_add(6)).unwrap_or(u16::MAX);
+    let desired_height = u16::try_from(
+        state
+            .options
+            .len()
+            .saturating_add(preview.len())
+            .saturating_add(6),
+    )
+    .unwrap_or(u16::MAX);
     let Some(popup_area) = super::modal::place(area, input_top, 60, desired_height) else {
         return; // no rows above the input can hold the popup
     };
@@ -48,13 +123,20 @@ fn render_option_phase(
 
     // Inner rows inside the borders decide how much chrome fits: with 2+
     // rows the message keeps its line, with 3+ the blank separator returns,
-    // and options get the rest (always at least one row — the selection).
+    // then the preview, and options get the rest (always at least one row —
+    // the selection). Preview rows are dropped first under clamping: the
+    // dialog must stay actionable even when the preview cannot fit.
     let inner = usize::from(popup_area.height.saturating_sub(2));
-    let (show_message, show_blank, option_rows) = match inner {
-        0 => (false, false, 0),
-        1 => (false, false, 1),
-        2 => (true, false, 1),
-        n => (true, true, n - 2),
+    let (show_message, show_blank, preview_rows, option_rows) = match inner {
+        0 => (false, false, 0, 0),
+        1 => (false, false, 0, 1),
+        2 => (true, false, 0, 1),
+        3 => (true, true, 0, 1),
+        n => {
+            let remaining = n - 2; // message + blank accounted
+            let preview_rows = preview.len().min(remaining.saturating_sub(1));
+            (true, true, preview_rows, remaining - preview_rows)
+        }
     };
 
     let mut lines: Vec<Line> = Vec::new();
@@ -65,6 +147,10 @@ fn render_option_phase(
         ));
     }
     if show_blank {
+        lines.push(Line::default());
+    }
+    lines.extend(preview.into_iter().take(preview_rows));
+    if preview_rows > 0 {
         lines.push(Line::default());
     }
 
@@ -212,13 +298,13 @@ mod tests {
         phase: ApprovalPhase,
     ) -> ApprovalState {
         ApprovalState {
-            tool_call: cyril_core::types::ToolCall::new(
+            tool_call: crate::traits::TrackedToolCall::new(cyril_core::types::ToolCall::new(
                 cyril_core::types::ToolCallId::new("tc_1"),
                 "echo hello".into(),
                 cyril_core::types::ToolKind::Execute,
                 cyril_core::types::ToolCallStatus::Pending,
                 None,
-            ),
+            )),
             message: "Allow execution?".into(),
             options,
             trust_options,
@@ -401,5 +487,129 @@ mod tests {
             !text.contains("Allow execution?"),
             "message should be dropped"
         );
+    }
+
+    // ---------- cyril-j1b3: joined approval preview ----------
+
+    use cyril_core::types::{ToolCall, ToolCallContent, ToolCallStatus, ToolKind};
+
+    fn approval_for_tool_call(tc: ToolCall) -> ApprovalState {
+        ApprovalState {
+            tool_call: crate::traits::TrackedToolCall::new(tc),
+            message: "Write File".into(),
+            options: vec![option("accept", "Allow"), option("reject", "Deny")],
+            trust_options: vec![],
+            selected: 0,
+            phase: ApprovalPhase::SelectOption,
+            responder: tokio::sync::oneshot::channel().0,
+        }
+    }
+
+    /// C3 fence: a KAS Write File snapshot (rawInput {path, text}, no diff
+    /// content yet) renders the path and the proposed text above the options.
+    #[test]
+    fn renders_joined_preview() {
+        let tc = ToolCall::new(
+            cyril_core::types::ToolCallId::new("tooluse_x"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({
+                "path": "/tmp/specs/bug fix.md",
+                "text": "# Héllo\nsecond line\nthird line"
+            })),
+        );
+        let state = approval_for_tool_call(tc);
+        let terminal = render_at(&state, 90, 30, 30);
+        let text = buffer_text(&terminal);
+        assert!(
+            text.contains("/tmp/specs/bug fix.md"),
+            "path missing (unicode/spaces fixture):\n{text}"
+        );
+        assert!(text.contains("# Héllo"), "first text line missing:\n{text}");
+        assert!(
+            text.contains("third line"),
+            "last text line missing:\n{text}"
+        );
+        assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
+    }
+
+    /// C3 bounds fence: 6-line raw-input text shows exactly 5 lines plus the
+    /// omission marker; a 21-line diff is truncated by the diff renderer's
+    /// own 20-line cap. Both must leave the options visible.
+    #[test]
+    fn bounds_preview() {
+        let six_lines = (1..=6)
+            .map(|i| format!("line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let tc = ToolCall::new(
+            cyril_core::types::ToolCallId::new("tooluse_text"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": "/tmp/a.md", "text": six_lines})),
+        );
+        let state = approval_for_tool_call(tc);
+        let terminal = render_at(&state, 90, 40, 40);
+        let text = buffer_text(&terminal);
+        assert!(text.contains("line 5"), "fifth line missing:\n{text}");
+        assert!(
+            !text.contains("line 6"),
+            "sixth line must be capped:\n{text}"
+        );
+        assert!(
+            text.contains("...1 more lines"),
+            "omission marker missing:\n{text}"
+        );
+        assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
+
+        let big_diff = (1..=21)
+            .map(|i| format!("new line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let tc = ToolCall::new(
+            cyril_core::types::ToolCallId::new("tooluse_diff"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_content(vec![ToolCallContent::Diff {
+            path: "/tmp/b.md".into(),
+            old_text: None,
+            new_text: big_diff,
+        }]);
+        let state = approval_for_tool_call(tc);
+        let terminal = render_at(&state, 90, 60, 60);
+        let text = buffer_text(&terminal);
+        assert!(text.contains("/tmp/b.md"), "diff path missing:\n{text}");
+        assert!(
+            text.contains("..."),
+            "diff truncation marker missing:\n{text}"
+        );
+        assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
+    }
+
+    /// C4 fence: a stub with no path, no raw input, and no content renders
+    /// the degraded marker while every option stays actionable.
+    #[test]
+    fn degraded_preview_keeps_options() {
+        let tc = ToolCall::new(
+            cyril_core::types::ToolCallId::new("tooluse_stub"),
+            "Write File".into(),
+            ToolKind::Other,
+            ToolCallStatus::Pending,
+            None,
+        );
+        let state = approval_for_tool_call(tc);
+        let terminal = render_at(&state, 80, 24, 24);
+        let text = buffer_text(&terminal);
+        assert!(
+            text.contains("Preview unavailable"),
+            "degraded marker missing:\n{text}"
+        );
+        assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
+        assert!(text.contains("Deny"), "second option must stay:\n{text}");
     }
 }

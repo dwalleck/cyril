@@ -489,13 +489,13 @@ mod tests {
         };
 
         let approval = ApprovalState {
-            tool_call: ToolCall::new(
+            tool_call: crate::traits::TrackedToolCall::new(ToolCall::new(
                 ToolCallId::new("tc"),
                 "cmd".into(),
                 ToolKind::Execute,
                 ToolCallStatus::Pending,
                 None,
-            ),
+            )),
             message: "Allow?".into(),
             options: vec![PermissionOption {
                 id: PermissionOptionId::new("a"),

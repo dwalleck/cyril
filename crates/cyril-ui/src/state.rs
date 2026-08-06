@@ -1339,7 +1339,7 @@ impl UiState {
     /// Show an approval dialog from a permission request.
     pub fn show_approval(&mut self, request: PermissionRequest) {
         self.approval = Some(ApprovalState {
-            tool_call: request.tool_call,
+            tool_call: TrackedToolCall::new(request.tool_call),
             message: request.message,
             options: request.options,
             trust_options: request.trust_options,
