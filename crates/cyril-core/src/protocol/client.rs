@@ -1,11 +1,9 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
-
 use agent_client_protocol as acp;
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
 use crate::protocol::convert;
+use crate::protocol::tool_call_ledger::ToolCallLedger;
 use crate::types::*;
 
 #[cfg(feature = "kas")]
@@ -114,13 +112,14 @@ pub(crate) fn test_host_shell(engine: crate::types::AgentEngine) -> ResolvedHost
 
 /// The central ACP Client implementation for the bridge thread.
 ///
-/// Lives in the `!Send` bridge thread and uses `RefCell<HashMap>` for
-/// caching tool call `raw_input`. Permission requests arrive without
-/// `raw_input`, so the client looks it up from this cache.
+/// Lives in the `!Send` bridge thread and keeps a session-scoped tool-call
+/// ledger for approval previews. KAS permission requests arrive as stubs, so
+/// the client clones the exact request-time snapshot from the earlier tracked
+/// notification.
 pub(crate) struct KiroClient {
     notification_tx: mpsc::Sender<RoutedNotification>,
     permission_tx: mpsc::Sender<PermissionRequest>,
-    tool_call_inputs: RefCell<HashMap<String, serde_json::Value>>,
+    tool_call_ledger: ToolCallLedger,
     /// The bound engine (ADR-0001): all wire→internal conversion dispatches
     /// through it, so v2 and KAS share this client unchanged.
     engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
@@ -147,7 +146,7 @@ impl KiroClient {
         Self {
             notification_tx,
             permission_tx,
-            tool_call_inputs: RefCell::new(HashMap::new()),
+            tool_call_ledger: ToolCallLedger::new(),
             engine,
             #[cfg(feature = "kas")]
             host_tx,
@@ -207,8 +206,24 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::RequestPermissionRequest,
     ) -> acp::Result<acp::RequestPermissionResponse> {
-        let tool_call =
-            convert::to_tool_call_from_permission(&args, &self.tool_call_inputs.borrow());
+        let session_id = SessionId::new(args.session_id.to_string());
+        let tool_call_id = ToolCallId::new(args.tool_call.tool_call_id.to_string());
+        let tool_call = if tool_call_id.as_str().is_empty() {
+            tracing::warn!(
+                session_id = %session_id,
+                "permission request has an empty toolCallId; approval preview unavailable"
+            );
+            convert::to_tool_call_from_permission(&args)
+        } else if let Some(snapshot) = self.tool_call_ledger.snapshot(&session_id, &tool_call_id) {
+            snapshot
+        } else {
+            tracing::warn!(
+                session_id = %session_id,
+                tool_call_id = %tool_call_id,
+                "permission request has no matching tracked tool call; approval preview unavailable"
+            );
+            convert::to_tool_call_from_permission(&args)
+        };
         let options = convert::to_permission_options(&args);
         let message = convert::extract_permission_message(&args);
         let trust_options = convert::extract_trust_options(&args);
@@ -263,17 +278,17 @@ impl acp::Client for KiroClient {
             _ => {}
         }
 
-        convert::cache_tool_call_input(&args, &self.tool_call_inputs);
-
-        let notification = {
-            let inputs = self.tool_call_inputs.borrow();
-            self.engine.convert_session_update(&args, &inputs)
-        };
-        if let Some(notification) = notification {
+        let session_id = SessionId::new(args.session_id.to_string());
+        let converted = self.engine.convert_session_update(&args);
+        if let Some(Notification::ToolCallStarted(tc) | Notification::ToolCallUpdated(tc)) =
+            &converted
+        {
+            self.tool_call_ledger.merge(session_id.clone(), tc);
+        }
+        if let Some(notification) = converted {
             // Every session notification carries the session_id from the
             // envelope. The App routes based on whether this matches the main
             // session or a known subagent.
-            let session_id = SessionId::new(args.session_id.to_string());
             let routed = RoutedNotification::scoped(session_id, notification);
             self.notification_tx
                 .send(routed)

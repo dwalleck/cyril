@@ -581,7 +581,7 @@ mod tests {
     #[test]
     fn kas_engine_routes_turn_end_to_completion() {
         let (_v, sn) = load("session_info_update_turn_end.json");
-        let n = KasEngine::default().convert_session_update(&sn, &HashMap::new());
+        let n = KasEngine::default().convert_session_update(&sn);
         assert!(matches!(
             n,
             Some(Notification::TurnCompleted {
@@ -595,7 +595,7 @@ mod tests {
         // Slice 1 must NOT break text rendering: non-turn_end updates delegate
         // to the generic converter (agent_message_chunk -> AgentMessage).
         let (_v, sn) = load("agent_message_chunk.json");
-        let n = KasEngine::default().convert_session_update(&sn, &HashMap::new());
+        let n = KasEngine::default().convert_session_update(&sn);
         assert!(
             matches!(n, Some(Notification::AgentMessage(_))),
             "agent_message_chunk must still render via the generic path, got {n:?}"

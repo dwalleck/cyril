@@ -22,6 +22,7 @@ mod probe_dn91;
 /// (the default build is the point).
 #[cfg(test)]
 mod probe_g9vt_c13;
+pub(crate) mod tool_call_ledger;
 pub(crate) mod transport;
 /// Turn mediation (cyril-b4y4): the pure state machine behind the bridge
 /// `run_loop`'s turn ownership — busy-guard, owner allocation, terminal

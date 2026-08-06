@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
-
 use agent_client_protocol as acp;
 
 use crate::types::*;
@@ -110,24 +107,18 @@ pub(crate) fn to_tool_call_status(status: agent_client_protocol::ToolCallStatus)
     }
 }
 
-pub(crate) fn to_tool_call(
-    acp_call: &agent_client_protocol::ToolCall,
-    cached_inputs: &std::collections::HashMap<String, serde_json::Value>,
-) -> ToolCall {
+pub(crate) fn to_tool_call(acp_call: &agent_client_protocol::ToolCall) -> ToolCall {
     let id_str = acp_call.tool_call_id.to_string();
 
     let content = convert_tool_call_content(&acp_call.content);
     let locations = convert_tool_call_locations(&acp_call.locations);
 
     ToolCall::new(
-        ToolCallId::new(id_str.clone()),
+        ToolCallId::new(id_str),
         acp_call.title.clone(),
         to_tool_kind(acp_call.kind),
         to_tool_call_status(acp_call.status),
-        cached_inputs
-            .get(&id_str)
-            .cloned()
-            .or_else(|| acp_call.raw_input.clone()),
+        acp_call.raw_input.clone(),
     )
     .with_content(content)
     .with_locations(locations)
@@ -167,13 +158,7 @@ fn convert_tool_call_locations(acp_locations: &[acp::ToolCallLocation]) -> Vec<T
         .collect()
 }
 
-/// Build a `ToolCall` from the `ToolCallUpdate` inside a permission request,
-/// enriching it with cached `raw_input` when the update doesn't carry one.
-pub(crate) fn to_tool_call_from_permission(
-    args: &acp::RequestPermissionRequest,
-    cached: &HashMap<String, serde_json::Value>,
-) -> ToolCall {
-    let update = &args.tool_call;
+pub(crate) fn to_tool_call_update(update: &agent_client_protocol::ToolCallUpdate) -> ToolCall {
     let id_str = update.tool_call_id.to_string();
     let title = update.fields.title.clone().unwrap_or_default();
     let kind = update
@@ -186,10 +171,7 @@ pub(crate) fn to_tool_call_from_permission(
         .status
         .map(to_tool_call_status)
         .unwrap_or(ToolCallStatus::Pending);
-    let raw_input = cached
-        .get(&id_str)
-        .cloned()
-        .or_else(|| update.fields.raw_input.clone());
+    let raw_input = update.fields.raw_input.clone();
 
     let content = update
         .fields
@@ -208,6 +190,13 @@ pub(crate) fn to_tool_call_from_permission(
         .with_content(content)
         .with_locations(locations)
         .with_raw_output(update.fields.raw_output.clone())
+}
+
+/// Build a `ToolCall` from the `ToolCallUpdate` inside a permission request.
+/// KAS sends this as a stub (no `raw_input`); callers needing the full
+/// payload must join through the client's session-scoped ledger instead.
+pub(crate) fn to_tool_call_from_permission(args: &acp::RequestPermissionRequest) -> ToolCall {
+    to_tool_call_update(&args.tool_call)
 }
 
 /// Convert ACP permission options to our internal representation.
@@ -351,37 +340,10 @@ pub(crate) fn from_permission_response(
     acp::RequestPermissionResponse::new(outcome)
 }
 
-/// Cache `raw_input` from tool call and tool call update notifications,
-/// keyed by tool call ID. Permission requests arrive without `raw_input`,
-/// so the client looks it up from this cache.
-pub(crate) fn cache_tool_call_input(
-    args: &acp::SessionNotification,
-    cache: &RefCell<HashMap<String, serde_json::Value>>,
-) {
-    match &args.update {
-        acp::SessionUpdate::ToolCall(tc) => {
-            if let Some(ref raw_input) = tc.raw_input {
-                cache
-                    .borrow_mut()
-                    .insert(tc.tool_call_id.to_string(), raw_input.clone());
-            }
-        }
-        acp::SessionUpdate::ToolCallUpdate(update) => {
-            if let Some(ref raw_input) = update.fields.raw_input {
-                cache
-                    .borrow_mut()
-                    .insert(update.tool_call_id.to_string(), raw_input.clone());
-            }
-        }
-        _ => {}
-    }
-}
-
 /// Convert an ACP `SessionNotification` to our internal `Notification`.
 /// Returns `None` for update types we don't surface to the UI.
 pub(crate) fn session_update_to_notification(
     args: &acp::SessionNotification,
-    cached_inputs: &HashMap<String, serde_json::Value>,
 ) -> Option<Notification> {
     match &args.update {
         acp::SessionUpdate::UserMessageChunk(chunk) => {
@@ -413,47 +375,9 @@ pub(crate) fn session_update_to_notification(
                 None
             }
         }
-        acp::SessionUpdate::ToolCall(tc) => Some(Notification::ToolCallStarted(to_tool_call(
-            tc,
-            cached_inputs,
-        ))),
+        acp::SessionUpdate::ToolCall(tc) => Some(Notification::ToolCallStarted(to_tool_call(tc))),
         acp::SessionUpdate::ToolCallUpdate(update) => {
-            let id_str = update.tool_call_id.to_string();
-            let title = update.fields.title.clone().unwrap_or_default();
-            let kind = update
-                .fields
-                .kind
-                .map(to_tool_kind)
-                .unwrap_or(ToolKind::Other);
-            let status = update
-                .fields
-                .status
-                .map(to_tool_call_status)
-                .unwrap_or(ToolCallStatus::Pending);
-            let raw_input = cached_inputs
-                .get(&id_str)
-                .cloned()
-                .or_else(|| update.fields.raw_input.clone());
-
-            let content = update
-                .fields
-                .content
-                .as_deref()
-                .map(convert_tool_call_content)
-                .unwrap_or_default();
-            let locations = update
-                .fields
-                .locations
-                .as_deref()
-                .map(convert_tool_call_locations)
-                .unwrap_or_default();
-
-            Some(Notification::ToolCallUpdated(
-                ToolCall::new(ToolCallId::new(id_str), title, kind, status, raw_input)
-                    .with_content(content)
-                    .with_locations(locations)
-                    .with_raw_output(update.fields.raw_output.clone()),
-            ))
+            Some(Notification::ToolCallUpdated(to_tool_call_update(update)))
         }
         acp::SessionUpdate::Plan(plan) => {
             let entries = plan
@@ -1390,32 +1314,30 @@ mod tests {
     }
 
     #[test]
-    fn to_tool_call_uses_cached_input_when_available() {
+    fn to_tool_call_carries_frame_raw_input() {
         let acp_call = agent_client_protocol::ToolCall::new("tc_1", "Read file")
             .kind(agent_client_protocol::ToolKind::Read)
             .status(agent_client_protocol::ToolCallStatus::InProgress)
             .raw_input(serde_json::json!({"path": "original.rs"}));
 
-        let mut cached = std::collections::HashMap::new();
-        cached.insert("tc_1".to_string(), serde_json::json!({"path": "cached.rs"}));
-
-        let result = to_tool_call(&acp_call, &cached);
+        let result = to_tool_call(&acp_call);
         assert_eq!(result.id().as_str(), "tc_1");
         assert_eq!(
             result.raw_input(),
-            Some(&serde_json::json!({"path": "cached.rs"}))
+            Some(&serde_json::json!({"path": "original.rs"}))
         );
     }
 
     #[test]
-    fn to_tool_call_falls_back_to_raw_input() {
-        let acp_call = agent_client_protocol::ToolCall::new("tc_2", "Execute command")
-            .kind(agent_client_protocol::ToolKind::Execute)
-            .status(agent_client_protocol::ToolCallStatus::Completed)
-            .raw_input(serde_json::json!({"cmd": "ls"}));
-
-        let cached = std::collections::HashMap::new();
-        let result = to_tool_call(&acp_call, &cached);
+    fn to_tool_call_update_carries_frame_raw_input() {
+        let update = agent_client_protocol::ToolCallUpdate::new(
+            "tc_2",
+            agent_client_protocol::ToolCallUpdateFields::new()
+                .kind(agent_client_protocol::ToolKind::Execute)
+                .status(agent_client_protocol::ToolCallStatus::Completed)
+                .raw_input(serde_json::json!({"cmd": "ls"})),
+        );
+        let result = to_tool_call_update(&update);
         assert_eq!(result.raw_input(), Some(&serde_json::json!({"cmd": "ls"})));
     }
 
@@ -1983,52 +1905,6 @@ mod tests {
     fn convert_tool_call_locations_empty() {
         let result = convert_tool_call_locations(&[]);
         assert!(result.is_empty());
-    }
-
-    // --- cache_tool_call_input tests ---
-
-    #[test]
-    fn cache_tool_call_input_from_tool_call() {
-        let cache = RefCell::new(HashMap::new());
-        let tc = acp::ToolCall::new("tc_1", "Read file")
-            .raw_input(serde_json::json!({"path": "test.rs"}));
-        let notification = acp::SessionNotification::new(
-            acp::SessionId::new("sess"),
-            acp::SessionUpdate::ToolCall(tc),
-        );
-        cache_tool_call_input(&notification, &cache);
-        let borrowed = cache.borrow();
-        assert!(borrowed.contains_key("tc_1"));
-        assert_eq!(borrowed["tc_1"], serde_json::json!({"path": "test.rs"}));
-    }
-
-    #[test]
-    fn cache_tool_call_input_ignores_non_tool_updates() {
-        let cache = RefCell::new(HashMap::new());
-        let chunk = acp::ContentChunk::new(acp::ContentBlock::from("hello"));
-        let notification = acp::SessionNotification::new(
-            acp::SessionId::new("sess"),
-            acp::SessionUpdate::AgentMessageChunk(chunk),
-        );
-        cache_tool_call_input(&notification, &cache);
-        assert!(cache.borrow().is_empty());
-    }
-
-    #[test]
-    fn cache_tool_call_input_from_tool_call_update() {
-        let cache = RefCell::new(HashMap::new());
-        let update = acp::ToolCallUpdate::new(
-            "tc_2",
-            acp::ToolCallUpdateFields::new().raw_input(serde_json::json!({"cmd": "ls"})),
-        );
-        let notification = acp::SessionNotification::new(
-            acp::SessionId::new("sess"),
-            acp::SessionUpdate::ToolCallUpdate(update),
-        );
-        cache_tool_call_input(&notification, &cache);
-        let borrowed = cache.borrow();
-        assert!(borrowed.contains_key("tc_2"));
-        assert_eq!(borrowed["tc_2"], serde_json::json!({"cmd": "ls"}));
     }
 
     #[test]

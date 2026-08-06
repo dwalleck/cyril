@@ -53,7 +53,7 @@ use tokio::sync::Notify;
 const POST_EXIT_DRAIN_GRACE: std::time::Duration = std::time::Duration::from_millis(500);
 
 /// A process-lifetime registry of live terminals, one per `KiroClient`
-/// (`!Send`, single bridge thread — no lock, mirroring `tool_call_inputs`).
+/// (`!Send`, single bridge thread — no lock, mirroring `ToolCallLedger`).
 pub(crate) struct TerminalRegistry {
     shell: Option<Rc<super::host_shell::HostShell>>,
     inner: RefCell<HashMap<acp::TerminalId, Entry>>,
