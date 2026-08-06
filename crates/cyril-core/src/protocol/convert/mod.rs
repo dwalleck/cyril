@@ -6,7 +6,6 @@ use crate::types::*;
 pub(crate) mod kas;
 pub(crate) mod kiro;
 #[cfg(test)]
-#[path = "../../../../../.cyril-j1b3/probe.rs"]
 mod probe_j1b3;
 #[cfg(test)]
 mod probe_qo13;

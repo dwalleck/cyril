@@ -208,14 +208,21 @@ impl acp::Client for KiroClient {
     ) -> acp::Result<acp::RequestPermissionResponse> {
         let session_id = SessionId::new(args.session_id.to_string());
         let tool_call_id = ToolCallId::new(args.tool_call.tool_call_id.to_string());
-        let tool_call = if tool_call_id.as_str().is_empty() {
+        let joinable = !session_id.as_str().is_empty() && !tool_call_id.as_str().is_empty();
+        let tool_call = if !joinable {
             tracing::warn!(
                 session_id = %session_id,
-                "permission request has an empty toolCallId; approval preview unavailable"
+                tool_call_id = %tool_call_id,
+                "permission request has an empty sessionId or toolCallId; approval preview unavailable"
             );
             convert::to_tool_call_from_permission(&args)
         } else if let Some(snapshot) = self.tool_call_ledger.snapshot(&session_id, &tool_call_id) {
-            snapshot
+            // Fill rule (cyril-j1b3 spec decision #4): the tracked snapshot is
+            // authoritative; request-stub fields fill only what the snapshot
+            // lacks. A snapshot that somehow has no title keeps the request's.
+            let mut from_request = convert::to_tool_call_from_permission(&args);
+            from_request.merge_update(&snapshot);
+            from_request
         } else {
             tracing::warn!(
                 session_id = %session_id,
@@ -279,11 +286,23 @@ impl acp::Client for KiroClient {
         }
 
         let session_id = SessionId::new(args.session_id.to_string());
+        // Wire-level presence for the ledger merge: an initial `tool_call`
+        // always carries kind/status; a `tool_call_update` may omit them, and
+        // the converted ToolCall has already collapsed the absence to
+        // defaults — so capture presence here, before conversion.
+        let (kind_present, status_present) = match &args.update {
+            acp::SessionUpdate::ToolCall(_) => (true, true),
+            acp::SessionUpdate::ToolCallUpdate(update) => {
+                (update.fields.kind.is_some(), update.fields.status.is_some())
+            }
+            _ => (false, false),
+        };
         let converted = self.engine.convert_session_update(&args);
         if let Some(Notification::ToolCallStarted(tc) | Notification::ToolCallUpdated(tc)) =
             &converted
         {
-            self.tool_call_ledger.merge(session_id.clone(), tc);
+            self.tool_call_ledger
+                .merge(session_id.clone(), tc, kind_present, status_present);
         }
         if let Some(notification) = converted {
             // Every session notification carries the session_id from the

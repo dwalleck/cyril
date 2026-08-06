@@ -38,10 +38,17 @@ fn probe_kas_write_permission_join() {
                 let sn: acp::SessionNotification = serde_json::from_value(params.clone())
                     .expect("tool call frame must parse as acp notification");
                 let session = SessionId::new(sn.session_id.to_string());
+                let (kind_present, status_present) = match &sn.update {
+                    acp::SessionUpdate::ToolCall(_) => (true, true),
+                    acp::SessionUpdate::ToolCallUpdate(update) => {
+                        (update.fields.kind.is_some(), update.fields.status.is_some())
+                    }
+                    _ => (false, false),
+                };
                 match super::session_update_to_notification(&sn) {
                     Some(crate::types::Notification::ToolCallStarted(tc))
                     | Some(crate::types::Notification::ToolCallUpdated(tc)) => {
-                        ledger.merge(session, &tc);
+                        ledger.merge(session, &tc, kind_present, status_present);
                     }
                     other => panic!("tool call frame must convert, got {other:?}"),
                 }
@@ -82,5 +89,11 @@ fn probe_kas_write_permission_join() {
         env!("CARGO_MANIFEST_DIR"),
         "/../../.cyril-j1b3/probe-output.txt"
     );
-    std::fs::write(output_path, output.join("\n") + "\n").expect("probe output must be writable");
+    let recorded = std::fs::read_to_string(output_path)
+        .expect("committed probe recording must exist (run oracle.py to re-derive)");
+    assert_eq!(
+        output.join("\n") + "\n",
+        recorded,
+        "joined rows must match the committed recording (oracle: .cyril-j1b3/oracle.py)"
+    );
 }

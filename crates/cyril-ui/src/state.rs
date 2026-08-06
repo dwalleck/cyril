@@ -5709,6 +5709,67 @@ mod tests {
         );
     }
 
+    /// cyril-j1b3 spec snapshot-stability fence: a ToolCallUpdated applied to
+    /// the session AFTER the approval is shown must not mutate the pending
+    /// approval's preview — the operator decides against a request-time
+    /// snapshot, not a live view.
+    #[test]
+    fn approval_snapshot_stable_under_later_update() {
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionRequest,
+            ToolCall, ToolCallId, ToolCallStatus, ToolKind,
+        };
+
+        let (tx, _rx) = tokio::sync::oneshot::channel();
+        let req = PermissionRequest {
+            tool_call: ToolCall::new(
+                ToolCallId::new("tc-snap"),
+                "Write File".into(),
+                ToolKind::Write,
+                ToolCallStatus::Pending,
+                Some(serde_json::json!({"path": "a.md", "text": "original"})),
+            ),
+            message: "Write File".into(),
+            options: vec![PermissionOption {
+                id: PermissionOptionId::new("accept"),
+                label: "Allow".into(),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            }],
+            trust_options: Vec::new(),
+            responder: tx,
+        };
+        let mut state = UiState::new(500);
+        state.show_approval(req);
+
+        // A later update mutating the tracked call in the message list...
+        state.apply_notification(&cyril_core::types::Notification::ToolCallStarted(
+            ToolCall::new(
+                ToolCallId::new("tc-snap"),
+                "Write File".into(),
+                ToolKind::Write,
+                ToolCallStatus::InProgress,
+                Some(serde_json::json!({"path": "a.md", "text": "original"})),
+            ),
+        ));
+        state.apply_notification(&cyril_core::types::Notification::ToolCallUpdated(
+            ToolCall::new(
+                ToolCallId::new("tc-snap"),
+                "Write File".into(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                Some(serde_json::json!({"path": "a.md", "text": "REPLACED"})),
+            ),
+        ));
+
+        let approval = state.approval.as_ref().expect("approval still active");
+        assert_eq!(
+            approval.tool_call.raw_input(),
+            Some(&serde_json::json!({"path": "a.md", "text": "original"})),
+            "approval preview must keep the request-time snapshot"
+        );
+    }
+
     #[test]
     fn approval_confirm_reject_always_sends_its_option_id() {
         use cyril_core::types::{PermissionOption, PermissionOptionKind};

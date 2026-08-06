@@ -21,14 +21,23 @@ impl ToolCallLedger {
         }
     }
 
-    /// Merge one converted tool call into the session-scoped snapshot. The
-    /// same non-empty merge semantics apply whether the update originated from
-    /// an initial `tool_call` frame or a later `tool_call_update`.
-    pub(crate) fn merge(&self, session_id: SessionId, update: &ToolCall) {
+    /// Merge one converted tool call into the session-scoped snapshot.
+    /// `kind_present`/`status_present` carry wire-level presence from the
+    /// originating frame: KAS omits `kind` on `tool_call_update`s, and an
+    /// unconditional overwrite would downgrade a tracked `Write` to `Other`.
+    pub(crate) fn merge(
+        &self,
+        session_id: SessionId,
+        update: &ToolCall,
+        kind_present: bool,
+        status_present: bool,
+    ) {
         let key = (session_id, update.id().clone());
         let mut calls = self.calls.borrow_mut();
         match calls.get_mut(&key) {
-            Some(existing) => existing.merge_update(update),
+            Some(existing) => {
+                existing.merge_update_with_presence(update, kind_present, status_present)
+            }
             None => {
                 calls.insert(key, update.clone());
             }
@@ -87,6 +96,8 @@ mod tests {
         ledger.merge(
             SessionId::new("one"),
             &call("tc", "first", ToolCallStatus::Pending, None),
+            true,
+            true,
         );
         ledger.merge(
             SessionId::new("two"),
@@ -96,6 +107,8 @@ mod tests {
                 ToolCallStatus::Completed,
                 Some(serde_json::json!({"path": "two.py"})),
             ),
+            true,
+            true,
         );
 
         let first = ledger
@@ -131,18 +144,28 @@ mod tests {
                 ToolCallStatus::InProgress,
                 Some(serde_json::json!({"path": "a.py", "text": "new"})),
             ),
+            true,
+            true,
         );
+        // Model the KAS wire shape: the update omits `kind`, which the
+        // converter collapses to `Other`; presence=false must preserve the
+        // tracked `Write` kind rather than downgrade it.
         let partial = ToolCall::new(
             id.clone(),
             String::new(),
-            ToolKind::Write,
+            ToolKind::Other,
             ToolCallStatus::Pending,
             None,
         );
-        ledger.merge(session.clone(), &partial);
+        ledger.merge(session.clone(), &partial, false, true);
 
         let snapshot = ledger.snapshot(&session, &id).expect("merged snapshot");
         assert_eq!(snapshot.title(), "Write File");
+        assert_eq!(
+            snapshot.kind(),
+            ToolKind::Write,
+            "absent kind on the wire must not downgrade the tracked kind"
+        );
         assert_eq!(
             snapshot.raw_input(),
             Some(&serde_json::json!({"path": "a.py", "text": "new"}))

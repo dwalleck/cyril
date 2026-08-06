@@ -45,6 +45,7 @@ const MAX_PREVIEW_LINES: usize = 5;
 fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
     let tc = &state.tool_call;
     let mut lines: Vec<Line<'a>> = Vec::new();
+    let mut has_body = false;
 
     if let Some(path) = tc.primary_path() {
         lines.push(Line::styled(
@@ -62,34 +63,61 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
         return lines;
     }
 
-    if let Some(raw) = tc.raw_input()
-        && let Some(text) = raw
+    if let Some(raw) = tc.raw_input() {
+        match raw
             .get("text")
             .or_else(|| raw.get("content"))
             .and_then(|v| v.as_str())
-    {
-        let total = text.lines().count();
-        for line in text.lines().take(MAX_PREVIEW_LINES) {
-            lines.push(Line::styled(
-                format!("    {line}"),
-                Style::default().fg(theme.subdued),
-            ));
-        }
-        if total > MAX_PREVIEW_LINES {
-            lines.push(Line::styled(
-                format!("    ...{} more lines", total - MAX_PREVIEW_LINES),
-                Style::default().fg(theme.subdued),
-            ));
+        {
+            Some(text) => {
+                has_body = true;
+                let total = text.lines().count();
+                for line in text.lines().take(MAX_PREVIEW_LINES) {
+                    lines.push(Line::styled(
+                        format!("    {line}"),
+                        Style::default().fg(theme.subdued),
+                    ));
+                }
+                if total > MAX_PREVIEW_LINES {
+                    lines.push(Line::styled(
+                        format!("    ...{} more lines", total - MAX_PREVIEW_LINES),
+                        Style::default().fg(theme.subdued),
+                    ));
+                }
+            }
+            None => {
+                // raw_input present but text/content absent or non-string:
+                // do not coerce arbitrary values (cyril-j1b3 spec) — log the
+                // malformed shape and fall through to the degraded marker.
+                tracing::warn!(
+                    tool_call_id = %tc.id(),
+                    raw_input_shape = %shape_of(raw),
+                    "approval preview raw_input has no string text/content field"
+                );
+            }
         }
     }
 
-    if lines.is_empty() {
+    if !has_body {
         lines.push(Line::styled(
             "  Preview unavailable",
             Style::default().fg(theme.subdued),
         ));
     }
     lines
+}
+
+/// One-word JSON shape tag for the malformed-raw_input log (never the value
+/// itself, which can carry file contents).
+fn shape_of(v: &serde_json::Value) -> &'static str {
+    match v {
+        serde_json::Value::Object(_) => "object",
+        serde_json::Value::Array(_) => "array",
+        serde_json::Value::String(_) => "string",
+        serde_json::Value::Number(_) => "number",
+        serde_json::Value::Bool(_) => "bool",
+        serde_json::Value::Null => "null",
+    }
 }
 
 fn render_option_phase(
@@ -611,5 +639,32 @@ mod tests {
         );
         assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
         assert!(text.contains("Deny"), "second option must stay:\n{text}");
+    }
+
+    /// C4 malformed-payload fence: raw_input present but `text` non-string —
+    /// the path still renders (it is valid) but the degraded marker must
+    /// appear instead of coercing the value.
+    #[test]
+    fn malformed_raw_input_shows_marker_beside_path() {
+        let tc = ToolCall::new(
+            cyril_core::types::ToolCallId::new("tooluse_bad"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": "/tmp/ok.md", "text": 42})),
+        );
+        let state = approval_for_tool_call(tc);
+        let terminal = render_at(&state, 80, 24, 24);
+        let text = buffer_text(&terminal);
+        assert!(text.contains("/tmp/ok.md"), "path missing:\n{text}");
+        assert!(
+            text.contains("Preview unavailable"),
+            "malformed payload must show the marker:\n{text}"
+        );
+        assert!(
+            !text.contains("42"),
+            "non-string text must not be coerced:\n{text}"
+        );
+        assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
     }
 }
