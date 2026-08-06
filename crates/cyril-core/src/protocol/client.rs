@@ -1818,3 +1818,125 @@ mod metadata_routing_tests {
         );
     }
 }
+
+/// cyril-j1b3 client-level integration fences: a `tool_call` notification
+/// followed by a stub `session/request_permission` must forward an approval
+/// carrying the joined snapshot; a cross-session ID must NOT join.
+#[cfg(test)]
+mod approval_join_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use agent_client_protocol::Client as _;
+
+    fn v2_client() -> (
+        KiroClient,
+        mpsc::Receiver<RoutedNotification>,
+        mpsc::Receiver<PermissionRequest>,
+    ) {
+        let (ntx, nrx) = mpsc::channel(8);
+        let (ptx, prx) = mpsc::channel(4);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::V2Engine),
+            test_host_tx(),
+            std::path::Path::new("/tmp"),
+        );
+        (client, nrx, prx)
+    }
+
+    fn write_tool_call(session: &str, id: &str, path: &str) -> acp::SessionNotification {
+        serde_json::from_value(serde_json::json!({
+            "sessionId": session,
+            "update": {
+                "sessionUpdate": "tool_call",
+                "toolCallId": id,
+                "title": "Write File",
+                "kind": "edit",
+                "status": "in_progress",
+                "rawInput": {"path": path, "text": "proposed body"}
+            }
+        }))
+        .expect("tool_call frame parses")
+    }
+
+    fn stub_permission(session: &'static str, id: &'static str) -> acp::RequestPermissionRequest {
+        acp::RequestPermissionRequest::new(
+            session,
+            acp::ToolCallUpdate::new(
+                id,
+                acp::ToolCallUpdateFields::new()
+                    .title("Write File")
+                    .status(acp::ToolCallStatus::Pending),
+            ),
+            vec![acp::PermissionOption::new(
+                "accept",
+                "Allow",
+                acp::PermissionOptionKind::AllowOnce,
+            )],
+        )
+    }
+
+    /// Drive `request_permission` (which awaits the operator) concurrently
+    /// with the permission-channel recv, answering Cancel and returning the
+    /// forwarded request's tool call for assertions.
+    async fn forward_permission(
+        client: &KiroClient,
+        req: acp::RequestPermissionRequest,
+        prx: &mut mpsc::Receiver<PermissionRequest>,
+    ) -> crate::types::ToolCall {
+        let pending = client.request_permission(req);
+        tokio::pin!(pending);
+        let forwarded = tokio::select! {
+            got = prx.recv() => got.expect("a permission request"),
+            res = &mut pending => panic!("request resolved before the App answered: {res:?}"),
+        };
+        let PermissionRequest {
+            tool_call,
+            responder,
+            ..
+        } = forwarded;
+        responder
+            .send(PermissionResponse::Cancel)
+            .expect("responder open");
+        pending.await.expect("request_permission resolves");
+        tool_call
+    }
+
+    #[tokio::test]
+    async fn permission_request_joins_tracked_tool_call() {
+        let (client, _nrx, mut prx) = v2_client();
+        client
+            .session_notification(write_tool_call("sess-a", "tc-1", "/work/one.md"))
+            .await
+            .unwrap();
+
+        let tool_call =
+            forward_permission(&client, stub_permission("sess-a", "tc-1"), &mut prx).await;
+        assert_eq!(
+            tool_call.raw_input(),
+            Some(&serde_json::json!({"path": "/work/one.md", "text": "proposed body"})),
+            "approval preview must carry the tracked raw_input"
+        );
+    }
+
+    #[tokio::test]
+    async fn permission_request_does_not_join_across_sessions() {
+        let (client, _nrx, mut prx) = v2_client();
+        client
+            .session_notification(write_tool_call("sess-a", "tc-1", "/work/one.md"))
+            .await
+            .unwrap();
+
+        // Same toolCallId, DIFFERENT session — must not join.
+        let tool_call =
+            forward_permission(&client, stub_permission("sess-b", "tc-1"), &mut prx).await;
+        assert!(
+            tool_call.raw_input().is_none(),
+            "cross-session toolCallId must not join: {:?}",
+            tool_call.raw_input()
+        );
+        assert_eq!(tool_call.title(), "Write File");
+    }
+}

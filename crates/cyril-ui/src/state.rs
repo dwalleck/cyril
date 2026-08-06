@@ -5641,6 +5641,74 @@ mod tests {
         }
     }
 
+    // ---------- approval snapshot independence (cyril-j1b3 C5) ----------
+
+    /// Two permission requests for the same toolCallId get independent
+    /// snapshots and responders: confirming the second must not resolve the
+    /// first, and a mutation between them must not leak across.
+    #[test]
+    fn approval_snapshot_is_independent() {
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionRequest,
+            PermissionResponse, ToolCall, ToolCallId, ToolCallStatus, ToolKind,
+        };
+
+        fn request(
+            title: &str,
+            raw: serde_json::Value,
+        ) -> (
+            PermissionRequest,
+            tokio::sync::oneshot::Receiver<PermissionResponse>,
+        ) {
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            let req = PermissionRequest {
+                tool_call: ToolCall::new(
+                    ToolCallId::new("shared-id"),
+                    title.into(),
+                    ToolKind::Write,
+                    ToolCallStatus::Pending,
+                    Some(raw),
+                ),
+                message: title.into(),
+                options: vec![PermissionOption {
+                    id: PermissionOptionId::new("accept"),
+                    label: "Allow".into(),
+                    kind: PermissionOptionKind::AllowOnce,
+                    is_destructive: false,
+                }],
+                trust_options: Vec::new(),
+                responder: tx,
+            };
+            (req, rx)
+        }
+
+        // First approval: shown, then displaced by the second request (the UI
+        // holds one approval at a time — the displaced request's responder
+        // drops, which is the observable "independent responder" half).
+        let (req1, rx1) = request("first", serde_json::json!({"path": "one.md"}));
+        let (req2, rx2) = request("second", serde_json::json!({"path": "two.md"}));
+        let mut state = UiState::new(500);
+        state.show_approval(req1);
+        state.show_approval(req2);
+
+        let approval = state.approval.as_ref().expect("second approval active");
+        assert_eq!(approval.message, "second");
+        assert_eq!(
+            approval.tool_call.raw_input(),
+            Some(&serde_json::json!({"path": "two.md"})),
+            "the second request's snapshot must be its own"
+        );
+        state.approval_confirm();
+        assert!(
+            matches!(rx2.blocking_recv(), Ok(PermissionResponse::Selected { .. })),
+            "second responder resolved"
+        );
+        assert!(
+            rx1.blocking_recv().is_err(),
+            "first responder was dropped with its displaced request — no cross-talk"
+        );
+    }
+
     #[test]
     fn approval_confirm_reject_always_sends_its_option_id() {
         use cyril_core::types::{PermissionOption, PermissionOptionKind};
