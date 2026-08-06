@@ -91,6 +91,9 @@ fn probe_kas_write_permission_join() {
     );
     let recorded = std::fs::read_to_string(output_path)
         .expect("committed probe recording must exist (run oracle.py to re-derive)");
+    // Git may hand the recording back with CRLF on Windows runners; the
+    // content comparison is on rows, not bytes.
+    let recorded = recorded.replace("\r\n", "\n");
     assert_eq!(
         output.join("\n") + "\n",
         recorded,
