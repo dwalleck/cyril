@@ -188,7 +188,6 @@ fn parse_bucket(bucket: Option<&serde_json::Value>) -> Option<ContextBucket> {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-    use std::collections::HashMap;
     use std::path::Path;
 
     use serde_json::json;
