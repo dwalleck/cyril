@@ -14,6 +14,22 @@ not "the gate exists". ADR-0009 records which callback *dialect* cyril answers
 bidirectional — under `kas_hooks = "kas"` the agent, not cyril, executes them,
 which inverts this ADR's assumption for that one family.
 
+**Revisit fired and resolved 2026-08-08 — the deferral holds, and is stronger.**
+This ADR named **stable workflow orchestration** as one of two surviving,
+non-subsumed justifications for the proxy stack, to be revisited post-KAS.
+kiro-cli 2.16.0 shipped a workflow engine in KAS (`_kiro/workflow/*`: a real DAG
+scheduler with `step`/`sequence`/`repeat`/`parallel`/`watch` nodes, persisted
+runs, resume). Probed live 2026-08-08
+(`experiments/conductor-spike/probe-kas-workflow-gateoff-2.16.0.py`): cyril can
+create **and execute** a client-authored DAG, and receive its full lifecycle
+event stream, over its **existing single stdio ACP link** — no wire
+interposition, no `sacp` dependency, no conductor. So the justification is not
+triggered; it is largely **discharged by the vendor** for the single-vendor case.
+What survives of it is narrower: **cross-vendor** orchestration (stage 1 on Kiro,
+stage 2 on Claude), where `_message/send` is unavailable and cyril must relay —
+and that is blocked on Phases 3/4 regardless. See [ADR-0011](0011-ungated-client-driven-workflow-control-plane.md)
+for how cyril drives that engine, and the ROADMAP **W track**.
+
 ## Context
 
 The platform vision (Mission, Phase 2, Phase 5) frames cyril's differentiating value as **composable proxy stages** built on `sacp-proxy`/`sacp-conductor` — a separate process in the JSON-RPC path that observes/rewrites the wire. But the KAS integration work surfaced a second interception mechanism: KAS delegates file I/O, shell execution, and hooks to the **host** via ACP callbacks, making cyril itself the executor and therefore the natural audit/gate/transform point — with no `sacp` dependency and structured (typed) requests instead of parsed-from-stream messages.

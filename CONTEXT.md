@@ -42,6 +42,20 @@ _Avoid_: waiting member, queued subagent, stage (unqualified)
 One node of a KAS agent-subtask DAG: named, role-tagged, dependency-ordered work the agent orchestrates within a turn.
 _Avoid_: stage (unqualified), workflow step (that runs as a peer session, not under a DAG tool call)
 
+### Workflows
+
+**Recipe**:
+The definition of a workflow — a named plan of nodes with declared inputs, before any execution of it exists.
+_Avoid_: workflow (unqualified), template, workflow file
+
+**Workflow run**:
+One execution of a recipe, identified by a workflow id. A run is a workspace-scoped, persisted object: it outlives the session that started it and the cyril process that watched it, and can be listed, resumed, and re-attached to later.
+_Avoid_: workflow (unqualified), job, pipeline
+
+**Workflow step**:
+A node of a run that executes as a peer session rather than as delegated work under a parent.
+_Avoid_: subagent, stage, pipeline stage (that is the DAG-tool-call model)
+
 ### Sessions & turns
 
 **Session**:

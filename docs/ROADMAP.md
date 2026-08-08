@@ -31,7 +31,13 @@ That last row is currently empty. The polished-TUI-for-the-ACP-registry niche ha
 
 Update `README.md` and `CLAUDE.md` to use the canonical tagline and elaboration paragraph above. Update the GitHub repository description to match. Establishes the framing every subsequent decision defers to.
 
-### Phase 1 — Transport refactor + Kiro extension boundary
+### Phase 1 — Transport refactor + Kiro extension boundary ✅
+
+**Status:** complete (recognised 2026-08-08 during the W-track grilling; the work
+landed incrementally and the phase was never marked). Evidence per bullet:
+`main.rs:29` takes `agent_command: Vec<String>` through `AgentCommand::try_from_argv`;
+Kiro extension parsing lives in `convert/kiro.rs` (+ `convert/kas.rs`); README carries
+no WSL-only line. Residual doc drift elsewhere is tracked on **cyril-duz0**, not here.
 
 **Estimate:** 1–2 weeks.
 **Depends on:** Phase 0.
@@ -367,6 +373,53 @@ KAS hooks are a **host-callback** model, and cyril is the host. Verified live (`
 **Tolerated notifications — surface opportunistically (the `debug!` arm keeps them non-fatal):** `powers/items_changed`, `progressive_context/items_changed`, `system/notify`, `_kiro/sessions/changed` (the multi-client observer roster — feeds the session-level-workflow direction), `tools/didChange`.
 
 **Conscious exclusions (restated):** `session/{compact,export,history,context,delete,rename}` and the full `spec/*` workflow stay KAS-7 non-goals; `customAgent/{not_found,config_error}` ride the Phase-5 client-agent-injection work, not this track.
+
+## Workflow track (W)
+
+Cyril's multi-session orchestration story. Separate from the KAS track because the
+substrate is vendor-neutral even though the first engine driven is Kiro's: peer-session
+routing, a run state machine, a queued-and-attributed approval path and run-lifetime
+modelling are all reused if cyril ever drives its own DAGs. Filing them under a KAS
+milestone is how peer sessions got confused with subagents in the first place.
+
+Scoped by the 2026-08-08 grilling. Decisions: [ADR-0011](adr/0011-ungated-client-driven-workflow-control-plane.md)
+(ungated, client-owned control plane); vocabulary in `CONTEXT.md` § Workflows;
+wire reference [`docs/kiro-2.16.0-wire-audit.md`](kiro-2.16.0-wire-audit.md).
+
+### W1 — Drive Kiro's workflow engine
+
+**Depends on:** KAS-2a (shipped). **Not** blocked on KAS-3 — workflow steps are peer
+sessions and deliberately do not ride `SubagentTracker`.
+
+- **No gate.** Cyril never sets `workflows.enabled`; `_kiro/workflow/*` routes without it
+  (live-verified through `invoke`, ADR-0011). The five agent-facing workflow tools are
+  never registered, so the model cannot launch a run.
+- **Event modelling** — the 9 lifecycle events as a pure `cyril-core` state machine, keyed
+  on `(workflowId, nodePath)`. The six consumer hazards are the spec. Three live captures
+  are committed, so this is offline, zero-credit TDD. **cyril-6beh**.
+- **Peer-session routing** — a workflow-owned session registry fed by `node_start.sessionId`,
+  and a third `NotificationRoute` so step frames stop landing in `SubagentUiState`. **cyril-jxfu**.
+- **Run lifetime: reattach on demand.** A run is a persisted, workspace-scoped object that
+  outlives the session and the process. `/workflow list` calls `_kiro/workflow/list` with
+  explicit `workspacePaths` (omitting them returns `-32603`) and attaches; the emitter's
+  flush-on-subscribe buffer means a late attach still receives the run's opening. No startup
+  probe in v1.
+- **Native control plane** — cyril's own `/workflow run|list|status|cancel|resume|attach`.
+  Kiro's four advertised commands are suppressed from autocomplete rather than proxied.
+- **Approvals queue + attribution** — parallel branches raise concurrent permission requests;
+  today the single `approval` slot silently discards one and carries no session id. In scope,
+  because `parallel` is one of only three node types the bundled recipes use.
+
+**Non-goals:** model-launched runs (that means flipping the gate — a separate, deliberate
+decision); proxying Kiro's four slash commands; cyril executing DAGs itself (that is W2).
+
+### W2 — Cross-vendor orchestration (unscheduled)
+
+The surviving, non-subsumed half of ADR-0003's workflow justification: stage 1 on Kiro,
+stage 2 on Claude. Kiro's engine orchestrates only Kiro sessions, and `_message/send` does
+not cross vendors, so cyril must own scheduling and relaying — the session-level engine
+described in `project_cyril_session_level_workflows` (`SpawnSession`/`PromptSession`/`AwaitAll`
+in pure Rust). Blocked on Phases 3/4; W1's substrate is the down payment.
 
 ## Vendor-neutral client features (candidates)
 

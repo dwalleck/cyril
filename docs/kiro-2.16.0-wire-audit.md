@@ -1017,3 +1017,50 @@ native Windows for free.
 # (reproduction for this addendum)
 probe-v2-voice-acp-2.16.0.py ~/.local/share/kiro-research/binaries/2.16.0/kiro-cli-chat v2-voice-2.16.0.jsonl
 ```
+
+## Addendum (2026-08-08) — the workflow gate governs the TOOLS, not the methods
+
+This audit's "The gate — opt-in, surfaced on the wire" section reads
+`resolveWorkflows()` as the switch for the workflow feature, and every workflow probe in
+this audit flipped it ON before calling anything. That left one question unasked: is the
+**method dispatch** gated, or only the five agent-facing tools?
+
+Only the tools. `probe-kas-workflow-gateoff-2.16.0.py` runs an A/B on one connection with
+**no** workflow settings at `initialize` *or* `session/new` (arm A) against the known-good
+gate-on arm (arm B). Capture: `logs/kas-workflow-gateoff-2.16.0.jsonl`.
+
+| Method | arm A — `workflowsEnabled: false` | arm B — control |
+|---|---|---|
+| `_kiro/workflow/listRecipes` | OK, 7 recipes | OK, 7 recipes |
+| `_kiro/workflow/list` | OK, 0 runs | OK, 0 runs |
+| `_kiro/workflow/listWatchHandlers` | OK, 2 handlers | OK, 2 handlers |
+| `_kiro/workflow/new` | OK, minted a `workflowId` | OK, minted a `workflowId` |
+| `_kiro/workflow/invoke` | **`{status: "running"}` → `run_complete status="completed"`** | not needed |
+
+The gate-off `invoke` also delivered the **full lifecycle stream to the gate-off parent** —
+`run_start`, `node_start` ×2 (the documented double-emit, reproduced), `node_complete`,
+`run_complete` — and created its step as a **peer session** (one distinct `sessionId` on
+`session/update`, and it was not the parent). So discovery, authoring, execution *and*
+progress reporting are all ungated.
+
+What the gate actually buys is the surface listed in the settings sweep: the five
+agent-facing tools (`run_workflow`, `inspect_workflow`, `update_workflow`,
+`validate_workflow`, `save_workflow_definition`) and the four slash commands. In other
+words it decides whether the **model** can start a run, not whether a **client** can.
+
+**Not verified:** the ten remaining mutating verbs (`cancel`, `pause`, `resume`,
+`resumeAll`, `retry`, `load`, `delete`, `update`). `invoke` was the load-bearing one.
+
+**Methodology note.** The audit's own gate section calls flipping gates "the single most
+productive lane" — every large finding came from flipping one. This finding came from
+deliberately *not* flipping one. A gate that turns on two things at once will read as
+mandatory for both until someone tests them separately.
+
+**cyril consequence:** cyril never sets `workflows.enabled` —
+[ADR-0011](adr/0011-ungated-client-driven-workflow-control-plane.md), ROADMAP **W track**.
+
+```sh
+# free through phase 2; phase 3 (invoke) costs one trivial turn
+probe-kas-workflow-gateoff-2.16.0.py ~/.local/share/kiro-research/binaries/2.16.0/kiro-cli-chat \
+    logs/kas-workflow-gateoff-2.16.0.jsonl
+```
