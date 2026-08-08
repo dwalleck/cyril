@@ -1,11 +1,9 @@
-use std::cell::RefCell;
-use std::collections::HashMap;
-
 use agent_client_protocol as acp;
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
 use crate::protocol::convert;
+use crate::protocol::tool_call_ledger::ToolCallLedger;
 use crate::types::*;
 
 #[cfg(feature = "kas")]
@@ -114,13 +112,14 @@ pub(crate) fn test_host_shell(engine: crate::types::AgentEngine) -> ResolvedHost
 
 /// The central ACP Client implementation for the bridge thread.
 ///
-/// Lives in the `!Send` bridge thread and uses `RefCell<HashMap>` for
-/// caching tool call `raw_input`. Permission requests arrive without
-/// `raw_input`, so the client looks it up from this cache.
+/// Lives in the `!Send` bridge thread and keeps a session-scoped tool-call
+/// ledger for approval previews. KAS permission requests arrive as stubs, so
+/// the client clones the exact request-time snapshot from the earlier tracked
+/// notification.
 pub(crate) struct KiroClient {
     notification_tx: mpsc::Sender<RoutedNotification>,
     permission_tx: mpsc::Sender<PermissionRequest>,
-    tool_call_inputs: RefCell<HashMap<String, serde_json::Value>>,
+    tool_call_ledger: ToolCallLedger,
     /// The bound engine (ADR-0001): all wire→internal conversion dispatches
     /// through it, so v2 and KAS share this client unchanged.
     engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
@@ -147,7 +146,7 @@ impl KiroClient {
         Self {
             notification_tx,
             permission_tx,
-            tool_call_inputs: RefCell::new(HashMap::new()),
+            tool_call_ledger: ToolCallLedger::new(),
             engine,
             #[cfg(feature = "kas")]
             host_tx,
@@ -207,8 +206,31 @@ impl acp::Client for KiroClient {
         &self,
         args: acp::RequestPermissionRequest,
     ) -> acp::Result<acp::RequestPermissionResponse> {
-        let tool_call =
-            convert::to_tool_call_from_permission(&args, &self.tool_call_inputs.borrow());
+        let session_id = SessionId::new(args.session_id.to_string());
+        let tool_call_id = ToolCallId::new(args.tool_call.tool_call_id.to_string());
+        let joinable = !session_id.as_str().is_empty() && !tool_call_id.as_str().is_empty();
+        let tool_call = if !joinable {
+            tracing::warn!(
+                session_id = %session_id,
+                tool_call_id = %tool_call_id,
+                "permission request has an empty sessionId or toolCallId; approval preview unavailable"
+            );
+            convert::to_tool_call_from_permission(&args)
+        } else if let Some(snapshot) = self.tool_call_ledger.snapshot(&session_id, &tool_call_id) {
+            // Fill rule (cyril-j1b3 spec decision #4): the tracked snapshot is
+            // authoritative; request-stub fields fill only what the snapshot
+            // lacks. A snapshot that somehow has no title keeps the request's.
+            let mut from_request = convert::to_tool_call_from_permission(&args);
+            from_request.merge_update(&snapshot);
+            from_request
+        } else {
+            tracing::warn!(
+                session_id = %session_id,
+                tool_call_id = %tool_call_id,
+                "permission request has no matching tracked tool call; approval preview unavailable"
+            );
+            convert::to_tool_call_from_permission(&args)
+        };
         let options = convert::to_permission_options(&args);
         let message = convert::extract_permission_message(&args);
         let trust_options = convert::extract_trust_options(&args);
@@ -263,17 +285,29 @@ impl acp::Client for KiroClient {
             _ => {}
         }
 
-        convert::cache_tool_call_input(&args, &self.tool_call_inputs);
-
-        let notification = {
-            let inputs = self.tool_call_inputs.borrow();
-            self.engine.convert_session_update(&args, &inputs)
+        let session_id = SessionId::new(args.session_id.to_string());
+        // Wire-level presence for the ledger merge: an initial `tool_call`
+        // always carries kind/status; a `tool_call_update` may omit them, and
+        // the converted ToolCall has already collapsed the absence to
+        // defaults — so capture presence here, before conversion.
+        let (kind_present, status_present) = match &args.update {
+            acp::SessionUpdate::ToolCall(_) => (true, true),
+            acp::SessionUpdate::ToolCallUpdate(update) => {
+                (update.fields.kind.is_some(), update.fields.status.is_some())
+            }
+            _ => (false, false),
         };
-        if let Some(notification) = notification {
+        let converted = self.engine.convert_session_update(&args);
+        if let Some(Notification::ToolCallStarted(tc) | Notification::ToolCallUpdated(tc)) =
+            &converted
+        {
+            self.tool_call_ledger
+                .merge(session_id.clone(), tc, kind_present, status_present);
+        }
+        if let Some(notification) = converted {
             // Every session notification carries the session_id from the
             // envelope. The App routes based on whether this matches the main
             // session or a known subagent.
-            let session_id = SessionId::new(args.session_id.to_string());
             let routed = RoutedNotification::scoped(session_id, notification);
             self.notification_tx
                 .send(routed)
@@ -1801,5 +1835,127 @@ mod metadata_routing_tests {
             (usage - 13.5).abs() < f64::EPSILON,
             "global metadata frame must apply to main, got {usage}"
         );
+    }
+}
+
+/// cyril-j1b3 client-level integration fences: a `tool_call` notification
+/// followed by a stub `session/request_permission` must forward an approval
+/// carrying the joined snapshot; a cross-session ID must NOT join.
+#[cfg(test)]
+mod approval_join_tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use agent_client_protocol::Client as _;
+
+    fn v2_client() -> (
+        KiroClient,
+        mpsc::Receiver<RoutedNotification>,
+        mpsc::Receiver<PermissionRequest>,
+    ) {
+        let (ntx, nrx) = mpsc::channel(8);
+        let (ptx, prx) = mpsc::channel(4);
+        let client = KiroClient::new(
+            ntx,
+            ptx,
+            std::rc::Rc::new(crate::protocol::engine::V2Engine),
+            test_host_tx(),
+            std::path::Path::new("/tmp"),
+        );
+        (client, nrx, prx)
+    }
+
+    fn write_tool_call(session: &str, id: &str, path: &str) -> acp::SessionNotification {
+        serde_json::from_value(serde_json::json!({
+            "sessionId": session,
+            "update": {
+                "sessionUpdate": "tool_call",
+                "toolCallId": id,
+                "title": "Write File",
+                "kind": "edit",
+                "status": "in_progress",
+                "rawInput": {"path": path, "text": "proposed body"}
+            }
+        }))
+        .expect("tool_call frame parses")
+    }
+
+    fn stub_permission(session: &'static str, id: &'static str) -> acp::RequestPermissionRequest {
+        acp::RequestPermissionRequest::new(
+            session,
+            acp::ToolCallUpdate::new(
+                id,
+                acp::ToolCallUpdateFields::new()
+                    .title("Write File")
+                    .status(acp::ToolCallStatus::Pending),
+            ),
+            vec![acp::PermissionOption::new(
+                "accept",
+                "Allow",
+                acp::PermissionOptionKind::AllowOnce,
+            )],
+        )
+    }
+
+    /// Drive `request_permission` (which awaits the operator) concurrently
+    /// with the permission-channel recv, answering Cancel and returning the
+    /// forwarded request's tool call for assertions.
+    async fn forward_permission(
+        client: &KiroClient,
+        req: acp::RequestPermissionRequest,
+        prx: &mut mpsc::Receiver<PermissionRequest>,
+    ) -> crate::types::ToolCall {
+        let pending = client.request_permission(req);
+        tokio::pin!(pending);
+        let forwarded = tokio::select! {
+            got = prx.recv() => got.expect("a permission request"),
+            res = &mut pending => panic!("request resolved before the App answered: {res:?}"),
+        };
+        let PermissionRequest {
+            tool_call,
+            responder,
+            ..
+        } = forwarded;
+        responder
+            .send(PermissionResponse::Cancel)
+            .expect("responder open");
+        pending.await.expect("request_permission resolves");
+        tool_call
+    }
+
+    #[tokio::test]
+    async fn permission_request_joins_tracked_tool_call() {
+        let (client, _nrx, mut prx) = v2_client();
+        client
+            .session_notification(write_tool_call("sess-a", "tc-1", "/work/one.md"))
+            .await
+            .unwrap();
+
+        let tool_call =
+            forward_permission(&client, stub_permission("sess-a", "tc-1"), &mut prx).await;
+        assert_eq!(
+            tool_call.raw_input(),
+            Some(&serde_json::json!({"path": "/work/one.md", "text": "proposed body"})),
+            "approval preview must carry the tracked raw_input"
+        );
+    }
+
+    #[tokio::test]
+    async fn permission_request_does_not_join_across_sessions() {
+        let (client, _nrx, mut prx) = v2_client();
+        client
+            .session_notification(write_tool_call("sess-a", "tc-1", "/work/one.md"))
+            .await
+            .unwrap();
+
+        // Same toolCallId, DIFFERENT session — must not join.
+        let tool_call =
+            forward_permission(&client, stub_permission("sess-b", "tc-1"), &mut prx).await;
+        assert!(
+            tool_call.raw_input().is_none(),
+            "cross-session toolCallId must not join: {:?}",
+            tool_call.raw_input()
+        );
+        assert_eq!(tool_call.title(), "Write File");
     }
 }

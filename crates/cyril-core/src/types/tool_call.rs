@@ -149,11 +149,29 @@ impl ToolCall {
     /// Always overwrites `kind` and `status`. Conditionally overwrites `title`,
     /// `raw_input`, `content`, and `locations` only when the update carries non-empty values.
     pub fn merge_update(&mut self, update: &ToolCall) {
+        self.merge_update_with_presence(update, true, true);
+    }
+
+    /// Merge an update whose wire frame may have omitted `kind`/`status`.
+    /// `kind_present`/`status_present` carry the wire-level presence so an
+    /// absent field does not downgrade the tracked values — KAS omits `kind`
+    /// on `tool_call_update` frames, and an unconditional overwrite would
+    /// corrupt `Write` into `Other` (cyril-j1b3 review F2).
+    pub fn merge_update_with_presence(
+        &mut self,
+        update: &ToolCall,
+        kind_present: bool,
+        status_present: bool,
+    ) {
         if !update.title.is_empty() {
             self.title = update.title.clone();
         }
-        self.kind = update.kind;
-        self.status = update.status;
+        if kind_present {
+            self.kind = update.kind;
+        }
+        if status_present {
+            self.status = update.status;
+        }
         if update.raw_input.is_some() {
             self.raw_input = update.raw_input.clone();
         }

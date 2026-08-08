@@ -568,66 +568,66 @@ approval-option	6	7	 	Reset	Reset	NONE
 approval-option	7	7	 	Reset	Reset	NONE
 approval-option	8	7	 	Reset	Reset	NONE
 approval-option	9	7	 	Reset	Reset	NONE
-approval-option	10	7	 	Reset	Reset	NONE
-approval-option	11	7	 	Reset	Reset	NONE
-approval-option	12	7	 	Reset	Reset	NONE
-approval-option	13	7	 	Reset	Reset	NONE
-approval-option	14	7	 	Reset	Reset	NONE
-approval-option	15	7	 	Reset	Reset	NONE
-approval-option	16	7	 	Reset	Reset	NONE
-approval-option	17	7	 	Reset	Reset	NONE
-approval-option	18	7	 	Reset	Reset	NONE
-approval-option	19	7	 	Reset	Reset	NONE
-approval-option	20	7	 	Reset	Reset	NONE
-approval-option	21	7	 	Reset	Reset	NONE
-approval-option	22	7	 	Reset	Reset	NONE
-approval-option	23	7	 	Reset	Reset	NONE
-approval-option	24	7	 	Reset	Reset	NONE
-approval-option	25	7	 	Reset	Reset	NONE
-approval-option	26	7	 	Reset	Reset	NONE
-approval-option	27	7	 	Reset	Reset	NONE
-approval-option	28	7	 	Reset	Reset	NONE
-approval-option	29	7	 	Reset	Reset	NONE
-approval-option	30	7	 	Reset	Reset	NONE
-approval-option	31	7	 	Reset	Reset	NONE
-approval-option	32	7	 	Reset	Reset	NONE
-approval-option	33	7	 	Reset	Reset	NONE
-approval-option	34	7	 	Reset	Reset	NONE
-approval-option	35	7	 	Reset	Reset	NONE
-approval-option	36	7	 	Reset	Reset	NONE
-approval-option	37	7	 	Reset	Reset	NONE
-approval-option	38	7	 	Reset	Reset	NONE
-approval-option	39	7	 	Reset	Reset	NONE
-approval-option	40	7	 	Reset	Reset	NONE
-approval-option	41	7	 	Reset	Reset	NONE
-approval-option	42	7	 	Reset	Reset	NONE
-approval-option	43	7	 	Reset	Reset	NONE
-approval-option	44	7	 	Reset	Reset	NONE
-approval-option	45	7	 	Reset	Reset	NONE
-approval-option	46	7	 	Reset	Reset	NONE
-approval-option	47	7	 	Reset	Reset	NONE
-approval-option	48	7	 	Reset	Reset	NONE
-approval-option	49	7	 	Reset	Reset	NONE
-approval-option	50	7	 	Reset	Reset	NONE
-approval-option	51	7	 	Reset	Reset	NONE
-approval-option	52	7	 	Reset	Reset	NONE
-approval-option	53	7	 	Reset	Reset	NONE
-approval-option	54	7	 	Reset	Reset	NONE
-approval-option	55	7	 	Reset	Reset	NONE
-approval-option	56	7	 	Reset	Reset	NONE
-approval-option	57	7	 	Reset	Reset	NONE
-approval-option	58	7	 	Reset	Reset	NONE
-approval-option	59	7	 	Reset	Reset	NONE
-approval-option	60	7	 	Reset	Reset	NONE
-approval-option	61	7	 	Reset	Reset	NONE
-approval-option	62	7	 	Reset	Reset	NONE
-approval-option	63	7	 	Reset	Reset	NONE
-approval-option	64	7	 	Reset	Reset	NONE
-approval-option	65	7	 	Reset	Reset	NONE
-approval-option	66	7	 	Reset	Reset	NONE
-approval-option	67	7	 	Reset	Reset	NONE
-approval-option	68	7	 	Reset	Reset	NONE
-approval-option	69	7	 	Reset	Reset	NONE
+approval-option	10	7	┌	Rgb(215, 186, 125)	Reset	NONE
+approval-option	11	7	 	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	12	7	P	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	13	7	e	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	14	7	r	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	15	7	m	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	16	7	i	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	17	7	s	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	18	7	s	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	19	7	i	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	20	7	o	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	21	7	n	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	22	7	 	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	23	7	R	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	24	7	e	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	25	7	q	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	26	7	u	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	27	7	i	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	28	7	r	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	29	7	e	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	30	7	d	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	31	7	 	Rgb(215, 186, 125)	Reset	BOLD
+approval-option	32	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	33	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	34	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	35	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	36	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	37	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	38	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	39	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	40	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	41	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	42	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	43	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	44	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	45	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	46	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	47	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	48	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	49	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	50	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	51	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	52	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	53	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	54	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	55	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	56	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	57	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	58	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	59	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	60	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	61	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	62	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	63	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	64	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	65	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	66	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	67	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	68	7	─	Rgb(215, 186, 125)	Reset	NONE
+approval-option	69	7	┐	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	7	 	Reset	Reset	NONE
 approval-option	71	7	 	Reset	Reset	NONE
 approval-option	72	7	 	Reset	Reset	NONE
@@ -648,66 +648,66 @@ approval-option	6	8	 	Reset	Reset	NONE
 approval-option	7	8	 	Reset	Reset	NONE
 approval-option	8	8	 	Reset	Reset	NONE
 approval-option	9	8	 	Reset	Reset	NONE
-approval-option	10	8	┌	Rgb(215, 186, 125)	Reset	NONE
-approval-option	11	8	 	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	12	8	P	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	13	8	e	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	14	8	r	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	15	8	m	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	16	8	i	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	17	8	s	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	18	8	s	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	19	8	i	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	20	8	o	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	21	8	n	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	22	8	 	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	23	8	R	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	24	8	e	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	25	8	q	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	26	8	u	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	27	8	i	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	28	8	r	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	29	8	e	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	30	8	d	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	31	8	 	Rgb(215, 186, 125)	Reset	BOLD
-approval-option	32	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	33	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	34	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	35	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	36	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	37	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	38	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	39	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	40	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	41	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	42	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	43	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	44	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	45	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	46	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	47	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	48	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	49	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	50	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	51	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	52	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	53	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	54	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	55	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	56	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	57	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	58	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	59	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	60	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	61	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	62	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	63	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	64	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	65	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	66	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	67	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	68	8	─	Rgb(215, 186, 125)	Reset	NONE
-approval-option	69	8	┐	Rgb(215, 186, 125)	Reset	NONE
+approval-option	10	8	│	Rgb(215, 186, 125)	Reset	NONE
+approval-option	11	8	A	Rgb(215, 186, 125)	Reset	NONE
+approval-option	12	8	l	Rgb(215, 186, 125)	Reset	NONE
+approval-option	13	8	l	Rgb(215, 186, 125)	Reset	NONE
+approval-option	14	8	o	Rgb(215, 186, 125)	Reset	NONE
+approval-option	15	8	w	Rgb(215, 186, 125)	Reset	NONE
+approval-option	16	8	 	Rgb(215, 186, 125)	Reset	NONE
+approval-option	17	8	e	Rgb(215, 186, 125)	Reset	NONE
+approval-option	18	8	x	Rgb(215, 186, 125)	Reset	NONE
+approval-option	19	8	e	Rgb(215, 186, 125)	Reset	NONE
+approval-option	20	8	c	Rgb(215, 186, 125)	Reset	NONE
+approval-option	21	8	u	Rgb(215, 186, 125)	Reset	NONE
+approval-option	22	8	t	Rgb(215, 186, 125)	Reset	NONE
+approval-option	23	8	i	Rgb(215, 186, 125)	Reset	NONE
+approval-option	24	8	o	Rgb(215, 186, 125)	Reset	NONE
+approval-option	25	8	n	Rgb(215, 186, 125)	Reset	NONE
+approval-option	26	8	?	Rgb(215, 186, 125)	Reset	NONE
+approval-option	27	8	 	Reset	Reset	NONE
+approval-option	28	8	 	Reset	Reset	NONE
+approval-option	29	8	 	Reset	Reset	NONE
+approval-option	30	8	 	Reset	Reset	NONE
+approval-option	31	8	 	Reset	Reset	NONE
+approval-option	32	8	 	Reset	Reset	NONE
+approval-option	33	8	 	Reset	Reset	NONE
+approval-option	34	8	 	Reset	Reset	NONE
+approval-option	35	8	 	Reset	Reset	NONE
+approval-option	36	8	 	Reset	Reset	NONE
+approval-option	37	8	 	Reset	Reset	NONE
+approval-option	38	8	 	Reset	Reset	NONE
+approval-option	39	8	 	Reset	Reset	NONE
+approval-option	40	8	 	Reset	Reset	NONE
+approval-option	41	8	 	Reset	Reset	NONE
+approval-option	42	8	 	Reset	Reset	NONE
+approval-option	43	8	 	Reset	Reset	NONE
+approval-option	44	8	 	Reset	Reset	NONE
+approval-option	45	8	 	Reset	Reset	NONE
+approval-option	46	8	 	Reset	Reset	NONE
+approval-option	47	8	 	Reset	Reset	NONE
+approval-option	48	8	 	Reset	Reset	NONE
+approval-option	49	8	 	Reset	Reset	NONE
+approval-option	50	8	 	Reset	Reset	NONE
+approval-option	51	8	 	Reset	Reset	NONE
+approval-option	52	8	 	Reset	Reset	NONE
+approval-option	53	8	 	Reset	Reset	NONE
+approval-option	54	8	 	Reset	Reset	NONE
+approval-option	55	8	 	Reset	Reset	NONE
+approval-option	56	8	 	Reset	Reset	NONE
+approval-option	57	8	 	Reset	Reset	NONE
+approval-option	58	8	 	Reset	Reset	NONE
+approval-option	59	8	 	Reset	Reset	NONE
+approval-option	60	8	 	Reset	Reset	NONE
+approval-option	61	8	 	Reset	Reset	NONE
+approval-option	62	8	 	Reset	Reset	NONE
+approval-option	63	8	 	Reset	Reset	NONE
+approval-option	64	8	 	Reset	Reset	NONE
+approval-option	65	8	 	Reset	Reset	NONE
+approval-option	66	8	 	Reset	Reset	NONE
+approval-option	67	8	 	Reset	Reset	NONE
+approval-option	68	8	 	Reset	Reset	NONE
+approval-option	69	8	│	Rgb(215, 186, 125)	Reset	NONE
 approval-option	70	8	 	Reset	Reset	NONE
 approval-option	71	8	 	Reset	Reset	NONE
 approval-option	72	8	 	Reset	Reset	NONE
@@ -729,22 +729,22 @@ approval-option	7	9	 	Reset	Reset	NONE
 approval-option	8	9	 	Reset	Reset	NONE
 approval-option	9	9	 	Reset	Reset	NONE
 approval-option	10	9	│	Rgb(215, 186, 125)	Reset	NONE
-approval-option	11	9	A	Rgb(215, 186, 125)	Reset	NONE
-approval-option	12	9	l	Rgb(215, 186, 125)	Reset	NONE
-approval-option	13	9	l	Rgb(215, 186, 125)	Reset	NONE
-approval-option	14	9	o	Rgb(215, 186, 125)	Reset	NONE
-approval-option	15	9	w	Rgb(215, 186, 125)	Reset	NONE
-approval-option	16	9	 	Rgb(215, 186, 125)	Reset	NONE
-approval-option	17	9	e	Rgb(215, 186, 125)	Reset	NONE
-approval-option	18	9	x	Rgb(215, 186, 125)	Reset	NONE
-approval-option	19	9	e	Rgb(215, 186, 125)	Reset	NONE
-approval-option	20	9	c	Rgb(215, 186, 125)	Reset	NONE
-approval-option	21	9	u	Rgb(215, 186, 125)	Reset	NONE
-approval-option	22	9	t	Rgb(215, 186, 125)	Reset	NONE
-approval-option	23	9	i	Rgb(215, 186, 125)	Reset	NONE
-approval-option	24	9	o	Rgb(215, 186, 125)	Reset	NONE
-approval-option	25	9	n	Rgb(215, 186, 125)	Reset	NONE
-approval-option	26	9	?	Rgb(215, 186, 125)	Reset	NONE
+approval-option	11	9	 	Reset	Reset	NONE
+approval-option	12	9	 	Reset	Reset	NONE
+approval-option	13	9	 	Reset	Reset	NONE
+approval-option	14	9	 	Reset	Reset	NONE
+approval-option	15	9	 	Reset	Reset	NONE
+approval-option	16	9	 	Reset	Reset	NONE
+approval-option	17	9	 	Reset	Reset	NONE
+approval-option	18	9	 	Reset	Reset	NONE
+approval-option	19	9	 	Reset	Reset	NONE
+approval-option	20	9	 	Reset	Reset	NONE
+approval-option	21	9	 	Reset	Reset	NONE
+approval-option	22	9	 	Reset	Reset	NONE
+approval-option	23	9	 	Reset	Reset	NONE
+approval-option	24	9	 	Reset	Reset	NONE
+approval-option	25	9	 	Reset	Reset	NONE
+approval-option	26	9	 	Reset	Reset	NONE
 approval-option	27	9	 	Reset	Reset	NONE
 approval-option	28	9	 	Reset	Reset	NONE
 approval-option	29	9	 	Reset	Reset	NONE
@@ -809,27 +809,27 @@ approval-option	7	10	 	Reset	Reset	NONE
 approval-option	8	10	 	Reset	Reset	NONE
 approval-option	9	10	 	Reset	Reset	NONE
 approval-option	10	10	│	Rgb(215, 186, 125)	Reset	NONE
-approval-option	11	10	 	Reset	Reset	NONE
-approval-option	12	10	 	Reset	Reset	NONE
-approval-option	13	10	 	Reset	Reset	NONE
-approval-option	14	10	 	Reset	Reset	NONE
-approval-option	15	10	 	Reset	Reset	NONE
-approval-option	16	10	 	Reset	Reset	NONE
-approval-option	17	10	 	Reset	Reset	NONE
-approval-option	18	10	 	Reset	Reset	NONE
-approval-option	19	10	 	Reset	Reset	NONE
-approval-option	20	10	 	Reset	Reset	NONE
-approval-option	21	10	 	Reset	Reset	NONE
-approval-option	22	10	 	Reset	Reset	NONE
-approval-option	23	10	 	Reset	Reset	NONE
-approval-option	24	10	 	Reset	Reset	NONE
-approval-option	25	10	 	Reset	Reset	NONE
-approval-option	26	10	 	Reset	Reset	NONE
-approval-option	27	10	 	Reset	Reset	NONE
-approval-option	28	10	 	Reset	Reset	NONE
-approval-option	29	10	 	Reset	Reset	NONE
-approval-option	30	10	 	Reset	Reset	NONE
-approval-option	31	10	 	Reset	Reset	NONE
+approval-option	11	10	 	Rgb(128, 128, 128)	Reset	NONE
+approval-option	12	10	 	Rgb(128, 128, 128)	Reset	NONE
+approval-option	13	10	P	Rgb(128, 128, 128)	Reset	NONE
+approval-option	14	10	r	Rgb(128, 128, 128)	Reset	NONE
+approval-option	15	10	e	Rgb(128, 128, 128)	Reset	NONE
+approval-option	16	10	v	Rgb(128, 128, 128)	Reset	NONE
+approval-option	17	10	i	Rgb(128, 128, 128)	Reset	NONE
+approval-option	18	10	e	Rgb(128, 128, 128)	Reset	NONE
+approval-option	19	10	w	Rgb(128, 128, 128)	Reset	NONE
+approval-option	20	10	 	Rgb(128, 128, 128)	Reset	NONE
+approval-option	21	10	u	Rgb(128, 128, 128)	Reset	NONE
+approval-option	22	10	n	Rgb(128, 128, 128)	Reset	NONE
+approval-option	23	10	a	Rgb(128, 128, 128)	Reset	NONE
+approval-option	24	10	v	Rgb(128, 128, 128)	Reset	NONE
+approval-option	25	10	a	Rgb(128, 128, 128)	Reset	NONE
+approval-option	26	10	i	Rgb(128, 128, 128)	Reset	NONE
+approval-option	27	10	l	Rgb(128, 128, 128)	Reset	NONE
+approval-option	28	10	a	Rgb(128, 128, 128)	Reset	NONE
+approval-option	29	10	b	Rgb(128, 128, 128)	Reset	NONE
+approval-option	30	10	l	Rgb(128, 128, 128)	Reset	NONE
+approval-option	31	10	e	Rgb(128, 128, 128)	Reset	NONE
 approval-option	32	10	 	Reset	Reset	NONE
 approval-option	33	10	 	Reset	Reset	NONE
 approval-option	34	10	 	Reset	Reset	NONE
@@ -889,18 +889,18 @@ approval-option	7	11	 	Reset	Reset	NONE
 approval-option	8	11	 	Reset	Reset	NONE
 approval-option	9	11	 	Reset	Reset	NONE
 approval-option	10	11	│	Rgb(215, 186, 125)	Reset	NONE
-approval-option	11	11	▸	White	Rgb(50, 50, 70)	BOLD
-approval-option	12	11	 	White	Rgb(50, 50, 70)	BOLD
-approval-option	13	11	A	White	Rgb(50, 50, 70)	BOLD
-approval-option	14	11	l	White	Rgb(50, 50, 70)	BOLD
-approval-option	15	11	l	White	Rgb(50, 50, 70)	BOLD
-approval-option	16	11	o	White	Rgb(50, 50, 70)	BOLD
-approval-option	17	11	w	White	Rgb(50, 50, 70)	BOLD
-approval-option	18	11	 	White	Rgb(50, 50, 70)	BOLD
-approval-option	19	11	O	White	Rgb(50, 50, 70)	BOLD
-approval-option	20	11	n	White	Rgb(50, 50, 70)	BOLD
-approval-option	21	11	c	White	Rgb(50, 50, 70)	BOLD
-approval-option	22	11	e	White	Rgb(50, 50, 70)	BOLD
+approval-option	11	11	 	Reset	Reset	NONE
+approval-option	12	11	 	Reset	Reset	NONE
+approval-option	13	11	 	Reset	Reset	NONE
+approval-option	14	11	 	Reset	Reset	NONE
+approval-option	15	11	 	Reset	Reset	NONE
+approval-option	16	11	 	Reset	Reset	NONE
+approval-option	17	11	 	Reset	Reset	NONE
+approval-option	18	11	 	Reset	Reset	NONE
+approval-option	19	11	 	Reset	Reset	NONE
+approval-option	20	11	 	Reset	Reset	NONE
+approval-option	21	11	 	Reset	Reset	NONE
+approval-option	22	11	 	Reset	Reset	NONE
 approval-option	23	11	 	Reset	Reset	NONE
 approval-option	24	11	 	Reset	Reset	NONE
 approval-option	25	11	 	Reset	Reset	NONE
@@ -969,18 +969,18 @@ approval-option	7	12	 	Reset	Reset	NONE
 approval-option	8	12	 	Reset	Reset	NONE
 approval-option	9	12	 	Reset	Reset	NONE
 approval-option	10	12	│	Rgb(215, 186, 125)	Reset	NONE
-approval-option	11	12	 	Gray	Reset	NONE
-approval-option	12	12	 	Gray	Reset	NONE
-approval-option	13	12	R	Gray	Reset	NONE
-approval-option	14	12	e	Gray	Reset	NONE
-approval-option	15	12	j	Gray	Reset	NONE
-approval-option	16	12	e	Gray	Reset	NONE
-approval-option	17	12	c	Gray	Reset	NONE
-approval-option	18	12	t	Gray	Reset	NONE
-approval-option	19	12	 	Reset	Reset	NONE
-approval-option	20	12	 	Reset	Reset	NONE
-approval-option	21	12	 	Reset	Reset	NONE
-approval-option	22	12	 	Reset	Reset	NONE
+approval-option	11	12	▸	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	12	12	 	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	13	12	A	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	14	12	l	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	15	12	l	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	16	12	o	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	17	12	w	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	18	12	 	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	19	12	O	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	20	12	n	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	21	12	c	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
+approval-option	22	12	e	Rgb(255, 255, 255)	Rgb(50, 50, 70)	BOLD
 approval-option	23	12	 	Reset	Reset	NONE
 approval-option	24	12	 	Reset	Reset	NONE
 approval-option	25	12	 	Reset	Reset	NONE
@@ -1049,14 +1049,14 @@ approval-option	7	13	 	Reset	Reset	NONE
 approval-option	8	13	 	Reset	Reset	NONE
 approval-option	9	13	 	Reset	Reset	NONE
 approval-option	10	13	│	Rgb(215, 186, 125)	Reset	NONE
-approval-option	11	13	 	Reset	Reset	NONE
-approval-option	12	13	 	Reset	Reset	NONE
-approval-option	13	13	 	Reset	Reset	NONE
-approval-option	14	13	 	Reset	Reset	NONE
-approval-option	15	13	 	Reset	Reset	NONE
-approval-option	16	13	 	Reset	Reset	NONE
-approval-option	17	13	 	Reset	Reset	NONE
-approval-option	18	13	 	Reset	Reset	NONE
+approval-option	11	13	 	Rgb(192, 192, 192)	Reset	NONE
+approval-option	12	13	 	Rgb(192, 192, 192)	Reset	NONE
+approval-option	13	13	R	Rgb(192, 192, 192)	Reset	NONE
+approval-option	14	13	e	Rgb(192, 192, 192)	Reset	NONE
+approval-option	15	13	j	Rgb(192, 192, 192)	Reset	NONE
+approval-option	16	13	e	Rgb(192, 192, 192)	Reset	NONE
+approval-option	17	13	c	Rgb(192, 192, 192)	Reset	NONE
+approval-option	18	13	t	Rgb(192, 192, 192)	Reset	NONE
 approval-option	19	13	 	Reset	Reset	NONE
 approval-option	20	13	 	Reset	Reset	NONE
 approval-option	21	13	 	Reset	Reset	NONE
