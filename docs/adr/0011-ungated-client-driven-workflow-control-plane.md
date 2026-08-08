@@ -68,6 +68,27 @@ method KAS does not implement.
   construction (v2-only dispatch under KAS), and it puts the model back in the
   control plane.
 
+## What is unchanged by this decision
+
+Nothing about the engine or the authoring format moves. Workflows remain **KAS-only**
+(the 2.16.0 dark-flag sweep found no workflow surface on the v2 Rust engine even with
+`KIRO_TEST_MODE`), so W1 ships only when cyril is running KAS — today behind the
+default-off `kas` cargo feature, and not the default engine.
+
+Recipes remain `.kiro/workflows/<name>.workflow.json`, and the `kiro-workflow-authoring`
+skill remains the authoring reference. Verified gate-off 2026-08-08
+(`probe-kas-workflow-diskrecipe-gateoff-2.16.0.py`, capture
+`logs/kas-workflow-diskrecipe-2.16.0.jsonl`):
+
+- a workspace `.workflow.json` appears in `listRecipes` alongside the seven
+  `bundled://` recipes, with `source` = its absolute path;
+- `_kiro/workflow/new {workflowPath}` — the **file** form, not just the inline
+  `{workflow: {...}}` object — accepts it and mints a `workflowId`;
+- the `.workflow.json` suffix is genuinely enforced: a plain `.json` sibling is ignored.
+
+So both ways of handing the engine a workflow work with the gate off: a file path, or an
+inline DAG object.
+
 ## Consequences
 
 - Cyril must **suppress the four workflow commands from autocomplete** if they
@@ -79,9 +100,17 @@ method KAS does not implement.
   **not** individually verified gate-off. `invoke` was the load-bearing one and it
   passed; treat a `-32601`/`-32603` from any other verb as "re-probe the gate",
   not as a cyril bug.
-- Users who want the model to launch workflows conversationally cannot, by
-  design. If that becomes a wanted feature it is an opt-in that flips the gate,
-  and it should be a separate, deliberate decision rather than a default.
+- **The real cost, stated plainly: the model loses two abilities.** It cannot
+  *launch* a run (`run_workflow`), and it cannot *author* one through the engine's
+  own tool (`save_workflow_definition` / `validate_workflow`). Authoring itself is
+  not lost — a user, the `kiro-workflow-authoring` skill, or cyril can write the
+  `.workflow.json`, and `_kiro/workflow/new` **is** the engine's validation path
+  (it validates including agent resolution, and costs nothing until `invoke`), so
+  cyril can offer validation ungated. What is lost is "ask Kiro in-session to write
+  and register me a workflow" as a first-class tool call; the model can still write
+  the file with ordinary `fs_write`, just without the dedicated tool's checks.
+  If that trade stops being worth it, the fix is an opt-in that flips the gate —
+  a separate, deliberate decision, not a default.
 - This is a **deliberate deviation from the documented gate**. Anyone reading
   Kiro's engine source will conclude the gate is required; the table above is why
   it is not. Do not "fix" this by enabling workflows.

@@ -1064,3 +1064,19 @@ mandatory for both until someone tests them separately.
 probe-kas-workflow-gateoff-2.16.0.py ~/.local/share/kiro-research/binaries/2.16.0/kiro-cli-chat \
     logs/kas-workflow-gateoff-2.16.0.jsonl
 ```
+
+### Disk-loaded recipes are ungated too (2026-08-08)
+
+The gate-off table above used an **inline** workflow object. The documented authoring path
+is a file, so `probe-kas-workflow-diskrecipe-gateoff-2.16.0.py` checks that separately
+(capture `logs/kas-workflow-diskrecipe-2.16.0.jsonl`; free — no `invoke`). With
+`workflowsEnabled: false`:
+
+- a workspace `.kiro/workflows/<name>.workflow.json` appears in `listRecipes` as an 8th
+  entry beside the seven `bundled://` ones, with `source` = its **absolute path**;
+- `_kiro/workflow/new {workflowPath}` accepts the file and mints a `workflowId`;
+- the `.workflow.json` suffix is enforced — a plain `.json` sibling in the same directory
+  is ignored, not loaded.
+
+So neither authoring form depends on the gate. Note this also contradicts the
+`kiro-workflow-authoring` skill, which still states the gate is required.
