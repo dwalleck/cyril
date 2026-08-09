@@ -1,0 +1,199 @@
+{
+ "inputSchema": {
+  "json": {
+   "type": "object",
+   "properties": {
+    "command": {
+     "type": "string",
+     "enum": [
+      "create",
+      "complete",
+      "add",
+      "remove",
+      "list"
+     ],
+     "description": "The command to run. Allowed options are `create`, `complete`, `add`, `remove`, and `list`. Call `list` without arguments to see a list of all current tasks."
+    },
+    "tasks": {
+     "anyOf": [
+      {
+       "anyOf": [
+        {
+         "not": {}
+        },
+        {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "task_description": {
+            "type": "string",
+            "description": "The main task description"
+           },
+           "details": {
+            "type": "string",
+            "description": "Optional detailed information about the task"
+           }
+          },
+          "required": [
+           "task_description"
+          ],
+          "additionalProperties": false
+         }
+        }
+       ]
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "Required parameter of `create` command containing the list of DISTINCT tasks to be added to the task list."
+    },
+    "task_list_description": {
+     "anyOf": [
+      {
+       "anyOf": [
+        {
+         "not": {}
+        },
+        {
+         "type": "string"
+        }
+       ]
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "Required parameter of `create` command containing a BRIEF summary of the task list being created. The summary should be detailed enough to refer to without knowing the problem context beforehand."
+    },
+    "completed_task_ids": {
+     "anyOf": [
+      {
+       "anyOf": [
+        {
+         "not": {}
+        },
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        }
+       ]
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "Required parameter of `complete` command containing the IDs of EVERY completed task. Each task should be marked as completed IMMEDIATELY after it is finished."
+    },
+    "context_update": {
+     "anyOf": [
+      {
+       "anyOf": [
+        {
+         "not": {}
+        },
+        {
+         "type": "string"
+        }
+       ]
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "Required parameter of `complete` command containing important task context. Use this command to track important information about the task AND information about files you have read."
+    },
+    "modified_files": {
+     "anyOf": [
+      {
+       "anyOf": [
+        {
+         "not": {}
+        },
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        }
+       ]
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "Optional parameter of `complete` command containing a list of paths of files that were modified during the task. This is useful for tracking file changes that are important to the task."
+    },
+    "new_tasks": {
+     "anyOf": [
+      {
+       "anyOf": [
+        {
+         "not": {}
+        },
+        {
+         "type": "array",
+         "items": {
+          "$ref": "#/properties/tasks/anyOf/0/anyOf/1/items"
+         }
+        }
+       ]
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "Required parameter of `add` command containing a list of new tasks to be added to the task list."
+    },
+    "new_description": {
+     "anyOf": [
+      {
+       "anyOf": [
+        {
+         "not": {}
+        },
+        {
+         "type": "string"
+        }
+       ]
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "Optional parameter of `add` and `remove` containing a new task list description. Use this when the updated set of tasks significantly change the goal or overall procedure of the task list."
+    },
+    "remove_task_ids": {
+     "anyOf": [
+      {
+       "anyOf": [
+        {
+         "not": {}
+        },
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        }
+       ]
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "description": "Required parameter of `remove` command containing the IDs of tasks to remove."
+    }
+   },
+   "required": [
+    "command"
+   ],
+   "additionalProperties": false
+  }
+ },
+ "name": "todo_list",
+ "description": "A tool for creating a task list and keeping track of tasks. This tool should be requested EVERY time the user gives you a task that will take multiple steps. A task list should be made BEFORE executing any steps. Steps should be marked off AS YOU COMPLETE THEM. DO NOT display your own tasks or task list AT ANY POINT; this is done for you. Complete the tasks in the same order that you provide them. If the user tells you to skip a step, DO NOT mark it as completed."
+}

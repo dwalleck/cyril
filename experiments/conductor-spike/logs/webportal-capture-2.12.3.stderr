@@ -1,0 +1,27 @@
+[INFO] Auth: default token file
+[INFO] acp.remote_sessions.enabled {"endpoint":"http://127.0.0.1:44491"}
+[INFO] [KiroAgent] MCP subsystem initialized
+[WARN] Error: @smithy/core/cbor - truncating BigInt(2476803273935316258) to 2476803273935316500 with loss of precision.
+    at demote (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:135947:18)
+    at decodeCount (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:135843:14)
+    at decodeUtf8String (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:135685:18)
+    at decode (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:135584:14)
+    at Object.deserialize (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:136273:16)
+    at CborShapeDeserializer.read (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:136446:28)
+    at AwsSmithyRpcV2CborProtocol.deserializeResponse (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:128932:58)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:120902:24
+    at async file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:130900:22
+[ERROR] Error handling request {"jsonrpc":"2.0","id":2,"method":"_kiro/sourceProviders/list","params":{}} {"code":-32000,"message":"Source provider catalog error: listProviders: length 2476803273935316500 greater than remaining buf len.\n  Deserialization error: to see the raw response, inspect the hidden field {error}.$response on this object."}
+[WARN] Error: @smithy/core/cbor - truncating BigInt(2476803273935316258) to 2476803273935316500 with loss of precision.
+    at demote (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:135947:18)
+    at decodeCount (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:135843:14)
+    at decodeUtf8String (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:135685:18)
+    at decode (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:135584:14)
+    at Object.deserialize (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:136273:16)
+    at CborShapeDeserializer.read (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:136446:28)
+    at AwsSmithyRpcV2CborProtocol.deserializeResponse (file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:128932:58)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:120902:24
+    at async file:///home/dwalleck/.local/share/kiro-cli/kas/2.12.3-88626245111dbd9b989283efb86e749253c66b1f84e1e4a04f99c9fc634c95dc/node_modules/@kiro/agent/dist/server/acp-server.js:130900:22
+[ERROR] Error handling request {"jsonrpc":"2.0","id":3,"method":"_kiro/sourceProviders/listResources","params":{"providerType":"GITHUB"}} {"code":-32000,"message":"Source provider catalog error: listResources: length 2476803273935316500 greater than remaining buf len.\n  Deserialization error: to see the raw response, inspect the hidden field {error}.$response on this object."}
