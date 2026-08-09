@@ -208,17 +208,22 @@ fn render_option_phase(
     }
 
     let title = match session_attribution {
-        Some(session) => format!(" Permission Required — {session} "),
-        None => " Permission Required ".to_owned(),
+        Some(session) => Span::styled(
+            format!(" Permission Required — {session} "),
+            Style::default()
+                .fg(theme.emphasis)
+                .add_modifier(Modifier::BOLD),
+        ),
+        None => Span::styled(
+            " Permission Required ",
+            Style::default()
+                .fg(theme.emphasis)
+                .add_modifier(Modifier::BOLD),
+        ),
     };
     let popup = Paragraph::new(lines).block(
         Block::default()
-            .title(Span::styled(
-                title,
-                Style::default()
-                    .fg(theme.emphasis)
-                    .add_modifier(Modifier::BOLD),
-            ))
+            .title(title)
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.emphasis)),
     );
@@ -305,17 +310,22 @@ fn render_trust_phase(
     }
 
     let title = match session_attribution {
-        Some(session) => format!(" Always Allow — Choose Scope — {session} "),
-        None => " Always Allow — Choose Scope ".to_owned(),
+        Some(session) => Span::styled(
+            format!(" Always Allow — Choose Scope — {session} "),
+            Style::default()
+                .fg(theme.accent_quinary)
+                .add_modifier(Modifier::BOLD),
+        ),
+        None => Span::styled(
+            " Always Allow — Choose Scope ",
+            Style::default()
+                .fg(theme.accent_quinary)
+                .add_modifier(Modifier::BOLD),
+        ),
     };
     let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
         Block::default()
-            .title(Span::styled(
-                title,
-                Style::default()
-                    .fg(theme.accent_quinary)
-                    .add_modifier(Modifier::BOLD),
-            ))
+            .title(title)
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.accent_quinary)),
     );
