@@ -368,6 +368,9 @@ fn print_notification(n: &Notification) {
         Notification::TurnCompleted { .. } => {
             println!("  [TurnCompleted]");
         }
+        Notification::Workflow(event) => {
+            println!("  [Workflow] {}", event.method_name());
+        }
         Notification::BridgeDisconnected { reason } => {
             println!("  [BridgeDisconnected] {reason}");
         }

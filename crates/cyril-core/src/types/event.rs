@@ -7,6 +7,7 @@ use crate::types::session::{
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 use crate::types::turn::TurnId;
+use crate::types::workflow::WorkflowEvent;
 
 /// KAS `_kiro/system/notify` severity level (KAS 0.17.2+).
 /// Currently `info` and `warning`; the `Unknown` arm captures future levels
@@ -304,6 +305,10 @@ pub enum Notification {
         /// Present for `runCommand` hooks that reported one.
         exit_code: Option<i64>,
     },
+
+    /// KAS workflow lifecycle frame. Boxed so unrelated notifications retain
+    /// the enum's pre-workflow stack footprint.
+    Workflow(Box<WorkflowEvent>),
 
     // Lifecycle
     SessionCreated {
@@ -635,16 +640,67 @@ mod turn_stamp_tests {
 mod tests {
     use super::*;
     use crate::types::tool_call::{ToolCallId, ToolCallStatus, ToolKind};
+    use crate::types::{
+        WorkflowId, WorkflowNodeId, WorkflowNodePath, WorkflowNodeStartDetails,
+        WorkflowNodeStarted, WorkflowNodeType,
+    };
 
     fn assert_send<T: Send>() {}
     fn assert_sync<T: Sync>() {}
     fn assert_clone<T: Clone>() {}
+    fn must_succeed<T, E: std::fmt::Debug>(result: Result<T, E>, context: &str) -> T {
+        match result {
+            Ok(value) => value,
+            Err(error) => panic!("{context}: {error:?}"),
+        }
+    }
 
     #[test]
     fn notification_is_send_sync_clone() {
         assert_send::<Notification>();
         assert_sync::<Notification>();
         assert_clone::<Notification>();
+    }
+
+    #[test]
+    fn workflow_notification_is_pointer_sized_and_owned() {
+        assert_eq!(
+            std::mem::size_of::<Box<WorkflowEvent>>(),
+            std::mem::size_of::<usize>()
+        );
+
+        let workflow_id = must_succeed(
+            WorkflowId::try_from("workflow".to_owned()),
+            "non-empty workflow id",
+        );
+        let node_id = must_succeed(
+            WorkflowNodeId::try_from("node".to_owned()),
+            "non-empty node id",
+        );
+        let node_path = must_succeed(
+            WorkflowNodePath::try_new(&workflow_id, vec!["workflow".to_owned(), "node".to_owned()]),
+            "canonical node path",
+        );
+        let details = WorkflowNodeStartDetails::new()
+            .with_agent_name("agent".to_owned())
+            .with_session_id(SessionId::new("session"))
+            .with_prompt("prompt".to_owned())
+            .with_iteration(u32::MAX)
+            .with_branch_id("branch".to_owned());
+        let notification = Notification::Workflow(Box::new(WorkflowEvent::NodeStarted(
+            WorkflowNodeStarted::new(
+                workflow_id,
+                node_id,
+                node_path,
+                WorkflowNodeType::Step,
+                details,
+            ),
+        )));
+
+        assert!(matches!(
+            notification,
+            Notification::Workflow(event) if event.method_name() == "node_start"
+        ));
     }
 
     #[test]

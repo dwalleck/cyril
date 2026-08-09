@@ -109,14 +109,14 @@ Complexity notation is parametric because the signed spec accepts large strings/
 
 ## Slice 3A: Box Notification and update exhaustive neutral consumer
 
-**Claim:** C3/C12 — the boxed core boundary compiles atomically while the existing exhaustive `UiState` consumer gains only the required explicit no-op arm.
-**Oracle:** Box-size equality, pre-change unrelated notification outputs, and exact UI before/after state hashes.
-**Stress fixture:** Box the maximal event as `Notification::Workflow`, require `size_of::<Box<WorkflowEvent>>() == size_of::<usize>()`, call `UiState::apply_notification` directly with it, and construct 10,000 unrelated notifications. Expected: workflow returns false with byte-identical UI state; unrelated outputs/discriminants stay unchanged. The compile-only arm destructures no workflow payload, imports no workflow type, and stores no workflow state; SessionController's existing wildcard remains unchanged. App is still the only production receiver.
+**Claim:** C3/C12 — the boxed core boundary compiles atomically while the existing exhaustive `UiState` consumer gains only the required explicit no-op arm and the exhaustive smoke harness labels the workflow method.
+**Oracle:** Box-size equality, pre-change unrelated notification outputs, a populated observable UI-state fingerprint, and the source-level no-op arm (which has no mutation expression).
+**Stress fixture:** Box the maximal event as `Notification::Workflow`, require `size_of::<Box<WorkflowEvent>>() == size_of::<usize>()`, call `UiState::apply_notification` directly with it, and construct 10,000 unrelated notifications. Expected: workflow returns false with its populated UI-state fingerprint unchanged; unrelated outputs/discriminants stay unchanged. The compile-only arm destructures no workflow payload, imports no workflow type, and stores no workflow state; `SessionController`'s existing wildcard remains unchanged. App is still the only production receiver.
 **Loop budget:** One allocation only when constructing a workflow notification; UI no-op O(1).
 **Wall budget:** <=100 ms for 10,001 direct consumer calls.
-**Files:** `crates/cyril-core/src/types/event.rs`, `crates/cyril-ui/src/state.rs`.
+**Files:** `crates/cyril-core/src/types/event.rs`, `crates/cyril-ui/src/state.rs`, `crates/cyril/examples/test_bridge.rs`.
 
-**Verification:** boxed-shape and `workflow_notification_is_ui_noop` tests pass in default/KAS builds; every exhaustive match compiles; structural fence proves no UI workflow state/type dependency.
+**Verification:** boxed-shape and `workflow_notification_is_ui_noop` tests pass in default/KAS builds; every exhaustive match compiles; the smoke harness reports the event method; structural fence proves no UI workflow state/type dependency.
 
 ## Slice 4: Run opening/completion adapter
 

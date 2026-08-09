@@ -968,6 +968,9 @@ impl UiState {
                 self.add_system_message(text);
                 true
             }
+            // Workflow lifecycle is owned outside UiState. This consumer must
+            // not inspect or retain the payload.
+            Notification::Workflow(_) => false,
             // Handled by the App via `refresh_hooks_panel`, not here
             // (cyril-gk17). It must NOT open the panel — it arrives unprompted
             // whenever KAS sees a hook file change — and this method cannot
@@ -2169,6 +2172,76 @@ mod tests {
         assert_eq!(state.activity(), Activity::Idle);
         assert!(!state.should_quit());
         assert_eq!(state.steering_queued(), 0);
+    }
+
+    #[test]
+    fn workflow_notification_is_ui_noop() {
+        let workflow_id =
+            WorkflowId::try_from("workflow".to_owned()).expect("non-empty workflow id");
+        let node_id = WorkflowNodeId::try_from("node".to_owned()).expect("non-empty node id");
+        let node_path =
+            WorkflowNodePath::try_new(&workflow_id, vec!["workflow".to_owned(), "node".to_owned()])
+                .expect("canonical node path");
+        let details = WorkflowNodeStartDetails::new()
+            .with_agent_name("agent".to_owned())
+            .with_session_id(SessionId::new("session"))
+            .with_prompt("prompt".repeat(1024))
+            .with_iteration(u32::MAX)
+            .with_branch_id("branch".to_owned());
+        let notification = Notification::Workflow(Box::new(WorkflowEvent::NodeStarted(
+            WorkflowNodeStarted::new(
+                workflow_id,
+                node_id,
+                node_path,
+                WorkflowNodeType::Step,
+                details,
+            ),
+        )));
+
+        let mut state = UiState::new(500);
+        state.input_text = "preserve input".to_owned();
+        state.streaming_text = "preserve stream".to_owned();
+        state.set_activity(Activity::Sending);
+        let before = (
+            state.messages.len(),
+            state.messages_version,
+            state.input_text.clone(),
+            state.streaming_text.clone(),
+            state.activity,
+            state.quit_requested,
+        );
+
+        assert!(!state.apply_notification(&notification));
+        assert_eq!(
+            (
+                state.messages.len(),
+                state.messages_version,
+                state.input_text.clone(),
+                state.streaming_text.clone(),
+                state.activity,
+                state.quit_requested,
+            ),
+            before
+        );
+
+        let expected_discriminant = std::mem::discriminant(&Notification::CommandsUpdated {
+            commands: Vec::new(),
+            prompts: Vec::new(),
+        });
+        let started = Instant::now();
+        for _ in 0..10_000 {
+            let unrelated = Notification::CommandsUpdated {
+                commands: Vec::new(),
+                prompts: Vec::new(),
+            };
+            assert_eq!(std::mem::discriminant(&unrelated), expected_discriminant);
+            assert!(!state.apply_notification(&unrelated));
+        }
+        assert!(
+            started.elapsed() <= Duration::from_millis(100),
+            "10,001 direct notification calls exceeded 100 ms: {:?}",
+            started.elapsed()
+        );
     }
 
     // cyril-nd4h claim C4. Once `ui.mouse_capture` is honored, startup state is

@@ -1410,20 +1410,53 @@ impl WorkflowEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn must_succeed<T, E: std::fmt::Debug>(result: Result<T, E>, context: &str) -> T {
+        match result {
+            Ok(value) => value,
+            Err(error) => panic!("{context}: {error:?}"),
+        }
+    }
+
+    fn must_fail<T: std::fmt::Debug, E>(result: Result<T, E>, context: &str) -> E {
+        match result {
+            Ok(value) => panic!("{context}: unexpected value {value:?}"),
+            Err(error) => error,
+        }
+    }
+
+    fn must_exist<T>(value: Option<T>, context: &str) -> T {
+        match value {
+            Some(value) => value,
+            None => panic!("{context}"),
+        }
+    }
+
+    fn load_manifest() -> serde_json::Value {
+        must_succeed(
+            serde_json::from_str(include_str!("../../../../.cyril-6beh/oracle-manifest.json")),
+            "oracle manifest is valid JSON",
+        )
+    }
 
     #[test]
     fn workflow_identifier_string_matrix() {
         let accepted = ["id", "識別子", "with space", "#", "/", "\\"];
         for raw in accepted {
-            let workflow = WorkflowId::try_from(raw.to_owned()).expect("non-empty workflow id");
-            let node = WorkflowNodeId::try_from(raw.to_owned()).expect("non-empty node id");
+            let workflow = must_succeed(
+                WorkflowId::try_from(raw.to_owned()),
+                "non-empty workflow id",
+            );
+            let node = must_succeed(
+                WorkflowNodeId::try_from(raw.to_owned()),
+                "non-empty node id",
+            );
             assert_eq!(workflow.as_str(), raw);
             assert_eq!(node.as_str(), raw);
         }
 
         let large = "x".repeat(65_536);
         let pointer = large.as_ptr();
-        let workflow = WorkflowId::try_from(large).expect("large workflow id");
+        let workflow = must_succeed(WorkflowId::try_from(large), "large workflow id");
         assert_eq!(workflow.as_str().as_ptr(), pointer);
         assert_eq!(workflow.as_str().len(), 65_536);
         assert!(WorkflowId::try_from(String::new()).is_err());
@@ -1432,12 +1465,11 @@ mod tests {
 
     #[test]
     fn workflow_enum_domain_matrix() {
-        let manifest: serde_json::Value =
-            serde_json::from_str(include_str!("../../../../.cyril-6beh/oracle-manifest.json"))
-                .expect("oracle manifest is valid JSON");
-        let domains = manifest["enum_domains"]
-            .as_object()
-            .expect("enum_domains is an object");
+        let manifest = load_manifest();
+        let domains = must_exist(
+            manifest["enum_domains"].as_object(),
+            "enum_domains is an object",
+        );
 
         assert_domain(
             domains,
@@ -1559,7 +1591,7 @@ mod tests {
 
         let sequence = WorkflowNodeDescriptor::sequence(node_id("sequence"), vec![step.clone()]);
         assert_eq!(sequence.node_type(), WorkflowNodeType::Sequence);
-        assert_eq!(sequence.children(), [step.clone()]);
+        assert_eq!(sequence.children(), std::slice::from_ref(&step));
 
         let repeat = WorkflowNodeDescriptor::repeat(
             node_id("repeat"),
@@ -1597,9 +1629,7 @@ mod tests {
         assert!(watch.stop_condition().is_none());
         assert!(watch.stop_when().is_none());
 
-        let manifest: serde_json::Value =
-            serde_json::from_str(include_str!("../../../../.cyril-6beh/oracle-manifest.json"))
-                .expect("oracle manifest is valid JSON");
+        let manifest = load_manifest();
         let projection = serde_json::json!({
             "step": {
                 "required": ["nodeId", "type", "agentName"],
@@ -1734,9 +1764,7 @@ mod tests {
 
     #[test]
     fn workflow_snapshot_manifest_field_matrix() {
-        let manifest: serde_json::Value =
-            serde_json::from_str(include_str!("../../../../.cyril-6beh/oracle-manifest.json"))
-                .expect("oracle manifest is valid JSON");
+        let manifest = load_manifest();
         assert_eq!(
             manifest["snapshot_owned_run_fields"],
             serde_json::json!([
@@ -1896,7 +1924,7 @@ mod tests {
         assert_eq!(run_started.workflow_id(), &workflow_id);
         assert_eq!(run_started.workflow_name(), "recipe");
         assert_eq!(run_started.inputs(), &serde_json::json!({"input": 1}));
-        assert_eq!(run_started.node_tree(), [descriptor.clone()]);
+        assert_eq!(run_started.node_tree(), std::slice::from_ref(&descriptor));
         assert_eq!(
             run_started.parent_session_id().map(SessionId::as_str),
             Some("parent")
@@ -1999,12 +2027,14 @@ mod tests {
         assert_eq!(paused.pause_reason(), "run reason");
 
         let snapshot = completed_snapshot(workflow_id.clone());
-        let run_completed = WorkflowRunCompleted::new(
-            workflow_id.clone(),
-            WorkflowCompletionStatus::Completed,
-            snapshot,
-        )
-        .expect("matching completion status");
+        let run_completed = must_succeed(
+            WorkflowRunCompleted::new(
+                workflow_id.clone(),
+                WorkflowCompletionStatus::Completed,
+                snapshot,
+            ),
+            "matching completion status",
+        );
         assert_eq!(run_completed.workflow_id(), &workflow_id);
         assert_eq!(run_completed.status(), WorkflowCompletionStatus::Completed);
         assert_eq!(run_completed.final_state().workflow_id(), &workflow_id);
@@ -2056,12 +2086,14 @@ mod tests {
     #[test]
     fn workflow_run_completion_rejects_status_mismatch() {
         let workflow_id = workflow_id("workflow");
-        let error = WorkflowRunCompleted::new(
-            workflow_id.clone(),
-            WorkflowCompletionStatus::Failed,
-            completed_snapshot(workflow_id),
-        )
-        .expect_err("mismatched completion status must fail");
+        let error = must_fail(
+            WorkflowRunCompleted::new(
+                workflow_id.clone(),
+                WorkflowCompletionStatus::Failed,
+                completed_snapshot(workflow_id),
+            ),
+            "mismatched completion status must fail",
+        );
         assert_eq!(
             error.to_string(),
             "workflow completion status `failed` does not match final snapshot status `completed`"
@@ -2161,9 +2193,7 @@ mod tests {
 
     #[test]
     fn workflow_event_field_inventory_matches_manifest() {
-        let manifest: serde_json::Value =
-            serde_json::from_str(include_str!("../../../../.cyril-6beh/oracle-manifest.json"))
-                .expect("oracle manifest is valid JSON");
+        let manifest = load_manifest();
         let projection = serde_json::json!({
             "run_start": {
                 "required": ["workflowId", "workflowName", "inputs", "nodeTree"],
@@ -2212,8 +2242,10 @@ mod tests {
             WorkflowNodePath::try_new(&workflow_id, Vec::new()),
             Err(WorkflowNodePathError::Empty)
         );
-        let mismatch = WorkflowNodePath::try_new(&workflow_id, vec!["other".to_owned()])
-            .expect_err("wrong root must fail");
+        let mismatch = must_fail(
+            WorkflowNodePath::try_new(&workflow_id, vec!["other".to_owned()]),
+            "wrong root must fail",
+        );
         assert_eq!(
             mismatch.to_string(),
             "workflow node path root `other` does not match workflow id `workflow`"
@@ -2223,38 +2255,46 @@ mod tests {
             Err(WorkflowNodePathError::EmptySegment { index: 1 })
         );
 
-        let root = WorkflowNodePath::try_new(&workflow_id, vec!["workflow".to_owned()])
-            .expect("root-only path is valid");
+        let root = must_succeed(
+            WorkflowNodePath::try_new(&workflow_id, vec!["workflow".to_owned()]),
+            "root-only path is valid",
+        );
         assert_eq!(root.segments(), ["workflow"]);
 
         let large = "x".repeat(65_536);
         let pointer = large.as_ptr();
-        let path = WorkflowNodePath::try_new(
-            &workflow_id,
-            vec![
-                "workflow".to_owned(),
-                "識別子 with space #".to_owned(),
-                large,
-            ],
-        )
-        .expect("non-empty opaque segments are valid");
+        let path = must_succeed(
+            WorkflowNodePath::try_new(
+                &workflow_id,
+                vec![
+                    "workflow".to_owned(),
+                    "識別子 with space #".to_owned(),
+                    large,
+                ],
+            ),
+            "non-empty opaque segments are valid",
+        );
         assert_eq!(path.segments()[2].as_ptr(), pointer);
     }
 
     fn workflow_path(workflow_id: &WorkflowId, segments: &[&str]) -> WorkflowNodePath {
-        WorkflowNodePath::try_new(
-            workflow_id,
-            segments
-                .iter()
-                .map(|segment| (*segment).to_owned())
-                .collect(),
+        must_succeed(
+            WorkflowNodePath::try_new(
+                workflow_id,
+                segments
+                    .iter()
+                    .map(|segment| (*segment).to_owned())
+                    .collect(),
+            ),
+            "valid workflow path",
         )
-        .expect("valid workflow path")
     }
 
     fn completed_snapshot(workflow_id: WorkflowId) -> WorkflowSnapshot {
-        let root_id =
-            WorkflowNodeId::try_from(workflow_id.as_str().to_owned()).expect("valid root node id");
+        let root_id = must_succeed(
+            WorkflowNodeId::try_from(workflow_id.as_str().to_owned()),
+            "valid root node id",
+        );
         WorkflowSnapshot::new(
             workflow_id,
             "recipe".to_owned(),
@@ -2274,11 +2314,11 @@ mod tests {
     }
 
     fn workflow_id(value: &str) -> WorkflowId {
-        WorkflowId::try_from(value.to_owned()).expect("valid workflow id")
+        must_succeed(WorkflowId::try_from(value.to_owned()), "valid workflow id")
     }
 
     fn node_id(value: &str) -> WorkflowNodeId {
-        WorkflowNodeId::try_from(value.to_owned()).expect("valid node id")
+        must_succeed(WorkflowNodeId::try_from(value.to_owned()), "valid node id")
     }
 
     fn descriptor_count(nodes: &[WorkflowNodeDescriptor]) -> usize {
@@ -2302,11 +2342,9 @@ mod tests {
         name: &str,
         actual: &[&str],
     ) {
-        let expected = domains[name]
-            .as_array()
-            .expect("enum domain is an array")
+        let expected = must_exist(domains[name].as_array(), "enum domain is an array")
             .iter()
-            .map(|value| value.as_str().expect("enum value is a string"))
+            .map(|value| must_exist(value.as_str(), "enum value is a string"))
             .collect::<Vec<_>>();
         assert_eq!(actual, expected);
     }
