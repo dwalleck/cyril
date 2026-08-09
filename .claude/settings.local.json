@@ -24,7 +24,10 @@
       "Bash(gh pr *)",
       "Bash(echo \"---exit $?---\")",
       "Bash(python3 -c ' *)",
-      "Bash(rivets show *)"
+      "Bash(rivets show *)",
+      "Bash(git merge *)",
+      "Bash(echo \"MERGE_EXIT=$?\")",
+      "Read(//tmp/**)"
     ]
   }
 }

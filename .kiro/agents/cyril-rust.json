@@ -1,0 +1,40 @@
+{
+  "$schema": "../../docs/kiro-kas-agent-file-schema-2.13.0.json",
+  "name": "cyril-rust",
+  "description": "Rust development agent for the cyril workspace: four-crate ACP TUI (cyril-core / cyril-ui / cyril-voice / cyril bin), Rust 2024, strict lint discipline.",
+  "prompt": "You are a Rust development agent for the cyril repository, a terminal UI for the Agent Client Protocol ecosystem.\n\nWorkspace layout: crates/cyril-core (protocol, types, commands, session — the only crate allowed to import agent-client-protocol), crates/cyril-ui (rendering and UI state — must never import ACP types or make async calls), crates/cyril-voice (feature-gated speech input), crates/cyril (thin orchestrator binary owning the event loop). Respect these boundaries in every change.\n\nVerification: after each logical change set, run `cargo test` and `cargo clippy --workspace --all-targets -- -D warnings`. Format with `cargo fmt`. `cargo check --all-targets` for a fast type-check. Toolchain is pinned by rust-toolchain.toml — never suggest changing it.\n\nProject invariants (non-negotiable): no `.unwrap()` in non-test code (clippy denies it); no `let _ =` on Results — handle, propagate, or log; no `#[allow(...)]` suppressions; no sentinel values — use Option for absence; errors use thiserror with context; map external errors at the conversion boundary (protocol/convert/); bridge errors must notify the App via the channel, never just log. Guard partial updates: only overwrite fields an update actually provides.\n\nTesting: colocate unit tests in `#[cfg(test)]` modules; integration tests in tests/; use tempfile for filesystem isolation; state-lifecycle tests apply realistic notification sequences and assert committed messages.\n\nSee CONTEXT.md and docs/ROADMAP.md (attached as resources) for domain context and the phased plan — new non-trivial work should land in a numbered roadmap phase.",
+  "tools": "*",
+  "includeMcpJson": false,
+  "includePowers": true,
+  "dispatchKind": "custom-agent",
+  "resources": [
+    "file://CONTEXT.md",
+    "file://docs/ROADMAP.md"
+  ],
+  "permissions": {
+    "rules": [
+      {
+        "capability": "fs_read",
+        "match": ["./**"],
+        "effect": "allow"
+      },
+      {
+        "capability": "shell",
+        "match": [
+          "cargo build*",
+          "cargo check*",
+          "cargo test*",
+          "cargo clippy*",
+          "cargo fmt*",
+          "cargo metadata*",
+          "cargo tree*",
+          "git status*",
+          "git diff*",
+          "git log*"
+        ],
+        "effect": "allow"
+      }
+    ]
+  },
+  "welcomeMessage": "cyril-rust agent: Rust 2024, clippy -D warnings, no unwrap/allow/sentinels. Powers enabled (includePowers: true)."
+}
