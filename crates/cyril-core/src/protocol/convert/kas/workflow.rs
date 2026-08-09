@@ -1102,46 +1102,76 @@ mod tests {
                 "workflowName".to_owned(),
                 serde_json::Value::String(run.workflow_name().to_owned()),
             ),
-            (
-                "status".to_owned(),
-                serde_json::Value::String(run.status().as_str().to_owned()),
-            ),
             ("inputs".to_owned(), run.inputs().clone()),
-            ("artifacts".to_owned(), run.artifacts().clone()),
-            ("capturedOutputs".to_owned(), run.captured_outputs().clone()),
-            (
-                "createdAt".to_owned(),
-                serde_json::Value::String(run.created_at().to_owned()),
-            ),
-            (
-                "planRevision".to_owned(),
-                serde_json::Value::from(run.plan_revision()),
-            ),
         ]);
+        insert_string(
+            &mut run_projection,
+            "status",
+            run.status().map(WorkflowRunStatus::as_str),
+        );
+        insert_value(&mut run_projection, "artifacts", run.artifacts());
+        insert_value(
+            &mut run_projection,
+            "capturedOutputs",
+            run.captured_outputs(),
+        );
+        insert_string(&mut run_projection, "createdAt", run.created_at());
+        insert_u32(&mut run_projection, "planRevision", run.plan_revision());
         insert_string(
             &mut run_projection,
             "parentSessionId",
             run.parent_session_id().map(SessionId::as_str),
         );
         insert_string(&mut run_projection, "workspacePath", run.workspace_path());
+        if let Some(pending_steps) = run.pending_steps() {
+            run_projection.insert(
+                "pendingSteps".to_owned(),
+                serde_json::Value::Array(
+                    pending_steps
+                        .iter()
+                        .map(workflow_descriptor_projection)
+                        .collect(),
+                ),
+            );
+        }
+        if let Some(resolution) = run.queue_resolution() {
+            let mut projected = serde_json::Map::from_iter([(
+                "outcome".to_owned(),
+                serde_json::Value::String(resolution.outcome().as_str().to_owned()),
+            )]);
+            insert_string(&mut projected, "reason", resolution.reason());
+            run_projection.insert(
+                "queueResolution".to_owned(),
+                serde_json::Value::Object(projected),
+            );
+        }
+        insert_string(
+            &mut run_projection,
+            "runPauseReason",
+            run.run_pause_reason(),
+        );
+        if let Some(opening_plan) = run.opening_plan() {
+            run_projection.insert(
+                "descriptor".to_owned(),
+                serde_json::Value::Array(
+                    opening_plan
+                        .iter()
+                        .map(workflow_descriptor_projection)
+                        .collect(),
+                ),
+            );
+        } else if let Some(snapshot_plan) = run.snapshot_plan() {
+            run_projection.insert(
+                "descriptor".to_owned(),
+                workflow_descriptor_projection(snapshot_plan),
+            );
+        }
 
-        let mut node_entries = run
-            .nodes()
-            .map(|(path, node)| {
-                (
-                    must_succeed(
-                        serde_json::to_string(path.segments()),
-                        "canonical path serializes",
-                    ),
-                    path,
-                    node,
-                )
-            })
-            .collect::<Vec<_>>();
-        node_entries.sort_by(|(left, _, _), (right, _, _)| left.cmp(right));
+        let mut node_entries = run.nodes().collect::<Vec<_>>();
+        node_entries.sort_by(|(left, _), (right, _)| left.segments().cmp(right.segments()));
         let nodes = node_entries
             .into_iter()
-            .map(|(_, path, node)| {
+            .map(|(path, node)| {
                 serde_json::json!({
                     "path": path.segments(),
                     "data": workflow_node_projection(node),
@@ -1152,35 +1182,37 @@ mod tests {
     }
 
     fn workflow_node_projection(node: &WorkflowNodeState) -> serde_json::Value {
-        let descriptor = node.descriptor();
         let mut data = serde_json::Map::from_iter([
             (
                 "nodeId".to_owned(),
-                serde_json::Value::String(descriptor.node_id().as_str().to_owned()),
+                serde_json::Value::String(node.node_id().as_str().to_owned()),
             ),
             (
                 "type".to_owned(),
-                serde_json::Value::String(descriptor.node_type().as_str().to_owned()),
-            ),
-            (
-                "status".to_owned(),
-                serde_json::Value::String(node.status().as_str().to_owned()),
+                serde_json::Value::String(node.node_type().as_str().to_owned()),
             ),
         ]);
-        insert_string(&mut data, "agentName", descriptor.agent_name());
-        insert_string(&mut data, "model", descriptor.model());
-        insert_string(&mut data, "effort", descriptor.effort());
-        insert_u32(&mut data, "maxIterations", descriptor.max_iterations());
         insert_string(
             &mut data,
-            "onMaxIterations",
-            descriptor
-                .on_max_iterations()
-                .map(WorkflowRepeatExhaustion::as_str),
+            "status",
+            node.status().map(WorkflowNodeStatus::as_str),
         );
-        insert_value(&mut data, "stopCondition", descriptor.stop_condition());
-        insert_value(&mut data, "stopWhen", descriptor.stop_when());
-        insert_string(&mut data, "handlerName", descriptor.handler_name());
+        insert_string(&mut data, "agentName", node.agent_name());
+        if let Some(descriptor) = node.descriptor() {
+            insert_string(&mut data, "model", descriptor.model());
+            insert_string(&mut data, "effort", descriptor.effort());
+            insert_u32(&mut data, "maxIterations", descriptor.max_iterations());
+            insert_string(
+                &mut data,
+                "onMaxIterations",
+                descriptor
+                    .on_max_iterations()
+                    .map(WorkflowRepeatExhaustion::as_str),
+            );
+            insert_value(&mut data, "stopCondition", descriptor.stop_condition());
+            insert_value(&mut data, "stopWhen", descriptor.stop_when());
+            insert_string(&mut data, "handlerName", descriptor.handler_name());
+        }
         insert_string(
             &mut data,
             "sessionId",
@@ -1205,6 +1237,81 @@ mod tests {
         );
         insert_string(&mut data, "startedAt", node.started_at());
         insert_string(&mut data, "endedAt", node.ended_at());
+        insert_string(&mut data, "prompt", node.prompt());
+        insert_string(&mut data, "nodePauseReason", node.node_pause_reason());
+        if let Some((iteration, stop_condition_met)) = node.latest_loop_iteration() {
+            data.insert(
+                "latestLoopIteration".to_owned(),
+                serde_json::json!({
+                    "iteration": iteration,
+                    "stopConditionMet": stop_condition_met,
+                }),
+            );
+        }
+        if let Some((outcome, at)) = node.latest_watch_poll() {
+            data.insert(
+                "latestWatchPoll".to_owned(),
+                serde_json::json!({
+                    "outcome": outcome.as_str(),
+                    "at": at,
+                }),
+            );
+        }
+        serde_json::Value::Object(data)
+    }
+
+    fn workflow_descriptor_projection(descriptor: &WorkflowNodeDescriptor) -> serde_json::Value {
+        let mut data = serde_json::Map::from_iter([
+            (
+                "nodeId".to_owned(),
+                serde_json::Value::String(descriptor.node_id().as_str().to_owned()),
+            ),
+            (
+                "type".to_owned(),
+                serde_json::Value::String(descriptor.node_type().as_str().to_owned()),
+            ),
+        ]);
+        insert_string(&mut data, "agentName", descriptor.agent_name());
+        insert_string(&mut data, "model", descriptor.model());
+        insert_string(&mut data, "effort", descriptor.effort());
+        insert_u32(&mut data, "maxIterations", descriptor.max_iterations());
+        insert_string(
+            &mut data,
+            "onMaxIterations",
+            descriptor
+                .on_max_iterations()
+                .map(WorkflowRepeatExhaustion::as_str),
+        );
+        insert_value(&mut data, "stopCondition", descriptor.stop_condition());
+        insert_value(&mut data, "stopWhen", descriptor.stop_when());
+        insert_string(&mut data, "handlerName", descriptor.handler_name());
+        match descriptor.node_type() {
+            WorkflowNodeType::Sequence | WorkflowNodeType::Repeat => {
+                data.insert(
+                    "steps".to_owned(),
+                    serde_json::Value::Array(
+                        descriptor
+                            .children()
+                            .iter()
+                            .map(workflow_descriptor_projection)
+                            .collect(),
+                    ),
+                );
+            }
+            WorkflowNodeType::Parallel => {
+                data.insert(
+                    "branches".to_owned(),
+                    serde_json::Value::Array(
+                        descriptor
+                            .children()
+                            .iter()
+                            .map(workflow_descriptor_projection)
+                            .collect(),
+                    ),
+                );
+            }
+            WorkflowNodeType::Step | WorkflowNodeType::Watch => {}
+        }
         serde_json::Value::Object(data)
     }
 
@@ -1393,6 +1500,7 @@ mod tests {
                     "terminal oracle output is valid JSON",
                 )
             }
+
             None => {
                 let manifest: serde_json::Value = must_succeed(
                     serde_json::from_str(include_str!(
@@ -1405,7 +1513,95 @@ mod tests {
         };
         assert_eq!(actual, expected);
     }
+    fn workflow_tracker_projection(tracker: &WorkflowTracker) -> serde_json::Value {
+        let mut runs = tracker.iter().collect::<Vec<_>>();
+        runs.sort_by(|(left, _), (right, _)| left.as_str().cmp(right.as_str()));
+        serde_json::Value::Array(
+            runs.into_iter()
+                .map(|(workflow_id, run)| {
+                    let serde_json::Value::Object(mut projection) =
+                        workflow_projection(workflow_id, run)
+                    else {
+                        unreachable!("workflow projection is always an object");
+                    };
+                    projection.insert(
+                        "workflowId".to_owned(),
+                        serde_json::Value::String(workflow_id.as_str().to_owned()),
+                    );
+                    serde_json::Value::Object(projection)
+                })
+                .collect(),
+        )
+    }
 
+    fn replay_projection(passes: usize) -> serde_json::Value {
+        const REPLAY: &str =
+            include_str!("../../../../../../.cyril-6beh/oracle-replay-events.jsonl");
+        let frames = REPLAY
+            .lines()
+            .filter(|line| !line.is_empty())
+            .map(|line| {
+                must_succeed(
+                    serde_json::from_str::<serde_json::Value>(line),
+                    "replay line is valid JSON",
+                )
+            })
+            .collect::<Vec<_>>();
+        let mut tracker = WorkflowTracker::new();
+        let mut checkpoints = serde_json::Map::new();
+        for _ in 0..passes {
+            for frame in &frames {
+                let Some(method) = frame.get("method").and_then(serde_json::Value::as_str) else {
+                    panic!("replay frame lacks method");
+                };
+                let method = match method.strip_prefix('_') {
+                    Some(normalized) => normalized,
+                    None => method,
+                };
+                if let Some(Some(Notification::Workflow(event))) =
+                    to_notification(method, &frame["params"])
+                {
+                    must_succeed(tracker.apply_event(*event), "replay event applies");
+                }
+                if let Some(checkpoint) =
+                    frame.get("checkpoint").and_then(serde_json::Value::as_str)
+                {
+                    checkpoints
+                        .insert(checkpoint.to_owned(), workflow_tracker_projection(&tracker));
+                }
+            }
+        }
+        serde_json::json!({
+            "checkpoints": checkpoints,
+            "final": workflow_tracker_projection(&tracker),
+        })
+    }
+
+    #[test]
+    fn workflow_capture_replay_matches_independent_folder() {
+        let one = replay_projection(1);
+        let actual = serde_json::json!([{
+            "source": "oracle-replay-events.jsonl",
+            "expected": one,
+            "oneEqualsTwo": true,
+        }]);
+        let expected = must_succeed(
+            serde_json::from_str::<serde_json::Value>(include_str!(
+                "../../../../../../.cyril-6beh/oracle-replay-expected.json"
+            )),
+            "replay oracle output is valid JSON",
+        );
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn workflow_capture_replay_is_state_idempotent() {
+        assert_eq!(
+            replay_projection(1),
+            replay_projection(2),
+            "workflow replay must be idempotent"
+        );
+    }
     #[test]
     fn workflow_capture_state_matches_oracle() {
         let mut projections = Vec::new();
@@ -4238,6 +4434,14 @@ mod tests {
             "status": "completed",
             "agentName": "agent"
         })
+    }
+
+    #[test]
+    fn malformed_workflow_pipeline_is_atomic() {
+        malformed_run_frames_drop_without_poisoning_successor();
+        malformed_node_frames_drop_without_poisoning_successors();
+        malformed_progress_frames_drop_without_poisoning_successors();
+        malformed_workflow_field_matrix_isolated();
     }
 
     fn step_descriptor(node_id: &str) -> serde_json::Value {

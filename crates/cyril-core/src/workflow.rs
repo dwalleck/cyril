@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use crate::types::workflow::WorkflowNodeSnapshotParts;
 use crate::types::{
     SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId,
-    WorkflowNodeDescriptor, WorkflowNodePath, WorkflowNodePathError, WorkflowNodeSnapshot,
-    WorkflowNodeStatus, WorkflowQueueResolution, WorkflowRunCompleted, WorkflowRunStatus,
-    WorkflowSnapshot, WorkflowWatchOutcome,
+    WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
+    WorkflowNodeSnapshot, WorkflowNodeStatus, WorkflowNodeType, WorkflowQueueResolution,
+    WorkflowRunCompleted, WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot,
+    WorkflowWatchOutcome,
 };
 
 /// State-application failure that leaves the tracker byte-for-byte unchanged.
@@ -39,11 +40,21 @@ impl WorkflowStateError {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+enum WorkflowNodeIdentity {
+    Opening {
+        node_id: WorkflowNodeId,
+        node_type: WorkflowNodeType,
+        agent_name: Option<String>,
+    },
+    Snapshot(WorkflowNodeDescriptor),
+}
+
 /// Immutable read model for one canonical runtime node.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkflowNodeState {
-    descriptor: WorkflowNodeDescriptor,
-    status: WorkflowNodeStatus,
+    identity: WorkflowNodeIdentity,
+    status: Option<WorkflowNodeStatus>,
     session_id: Option<SessionId>,
     artifacts: Option<serde_json::Value>,
     captured_output: Option<serde_json::Value>,
@@ -77,8 +88,8 @@ impl WorkflowNodeState {
             ended_at,
         ) = parts.into_values();
         Self {
-            descriptor,
-            status,
+            identity: WorkflowNodeIdentity::Snapshot(descriptor),
+            status: Some(status),
             session_id,
             artifacts,
             captured_output,
@@ -96,13 +107,73 @@ impl WorkflowNodeState {
         }
     }
 
-    /// Returns the snapshot-authored descriptor.
-    pub fn descriptor(&self) -> &WorkflowNodeDescriptor {
-        &self.descriptor
+    fn from_opening(
+        node_id: WorkflowNodeId,
+        node_type: WorkflowNodeType,
+        agent_name: Option<String>,
+        session_id: Option<SessionId>,
+        prompt: Option<String>,
+        iteration: Option<u32>,
+        branch_id: Option<String>,
+    ) -> Self {
+        Self {
+            identity: WorkflowNodeIdentity::Opening {
+                node_id,
+                node_type,
+                agent_name,
+            },
+            status: None,
+            session_id,
+            artifacts: None,
+            captured_output: None,
+            failure_reason: None,
+            iteration,
+            branch_id,
+            completion_signal: None,
+            completion_signal_source: None,
+            started_at: None,
+            ended_at: None,
+            prompt,
+            node_pause_reason: None,
+            latest_loop_iteration: None,
+            latest_watch_poll: None,
+        }
     }
 
-    /// Returns the snapshot-authored status.
-    pub fn status(&self) -> WorkflowNodeStatus {
+    /// Returns the snapshot-authored descriptor after snapshot reconciliation.
+    pub fn descriptor(&self) -> Option<&WorkflowNodeDescriptor> {
+        match &self.identity {
+            WorkflowNodeIdentity::Opening { .. } => None,
+            WorkflowNodeIdentity::Snapshot(descriptor) => Some(descriptor),
+        }
+    }
+
+    /// Returns the exact node identifier from either opening or snapshot state.
+    pub fn node_id(&self) -> &WorkflowNodeId {
+        match &self.identity {
+            WorkflowNodeIdentity::Opening { node_id, .. } => node_id,
+            WorkflowNodeIdentity::Snapshot(descriptor) => descriptor.node_id(),
+        }
+    }
+
+    /// Returns the structural node type from either opening or snapshot state.
+    pub fn node_type(&self) -> WorkflowNodeType {
+        match &self.identity {
+            WorkflowNodeIdentity::Opening { node_type, .. } => *node_type,
+            WorkflowNodeIdentity::Snapshot(descriptor) => descriptor.node_type(),
+        }
+    }
+
+    /// Returns the opening or snapshot-authored step agent when supplied.
+    pub fn agent_name(&self) -> Option<&str> {
+        match &self.identity {
+            WorkflowNodeIdentity::Opening { agent_name, .. } => agent_name.as_deref(),
+            WorkflowNodeIdentity::Snapshot(descriptor) => descriptor.agent_name(),
+        }
+    }
+
+    /// Returns the snapshot-authored status when this node has been snapshotted.
+    pub fn status(&self) -> Option<WorkflowNodeStatus> {
         self.status
     }
 
@@ -183,16 +254,19 @@ impl WorkflowNodeState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkflowRun {
     workflow_name: String,
-    status: WorkflowRunStatus,
+    status: Option<WorkflowRunStatus>,
     inputs: serde_json::Value,
-    artifacts: serde_json::Value,
-    captured_outputs: serde_json::Value,
-    created_at: String,
-    plan_revision: u32,
+    artifacts: Option<serde_json::Value>,
+    captured_outputs: Option<serde_json::Value>,
+    created_at: Option<String>,
+    plan_revision: Option<u32>,
     parent_session_id: Option<SessionId>,
     workspace_path: Option<String>,
+    opening_plan: Option<Vec<WorkflowNodeDescriptor>>,
+    snapshot_plan: Option<WorkflowNodeDescriptor>,
     nodes: HashMap<WorkflowNodePath, WorkflowNodeState>,
-    pending_steps: Vec<WorkflowNodeDescriptor>,
+    node_index: HashMap<WorkflowNodeId, Vec<WorkflowNodePath>>,
+    pending_steps: Option<Vec<WorkflowNodeDescriptor>>,
     queue_resolution: Option<WorkflowQueueResolution>,
     run_pause_reason: Option<String>,
 }
@@ -203,8 +277,8 @@ impl WorkflowRun {
         &self.workflow_name
     }
 
-    /// Returns the authoritative run status.
-    pub fn status(&self) -> WorkflowRunStatus {
+    /// Returns the authoritative run status after a persisted snapshot arrives.
+    pub fn status(&self) -> Option<WorkflowRunStatus> {
         self.status
     }
 
@@ -213,23 +287,23 @@ impl WorkflowRun {
         &self.inputs
     }
 
-    /// Returns opaque run artifacts.
-    pub fn artifacts(&self) -> &serde_json::Value {
-        &self.artifacts
+    /// Returns opaque run artifacts after a persisted snapshot arrives.
+    pub fn artifacts(&self) -> Option<&serde_json::Value> {
+        self.artifacts.as_ref()
     }
 
-    /// Returns opaque captured outputs.
-    pub fn captured_outputs(&self) -> &serde_json::Value {
-        &self.captured_outputs
+    /// Returns opaque captured outputs after a persisted snapshot arrives.
+    pub fn captured_outputs(&self) -> Option<&serde_json::Value> {
+        self.captured_outputs.as_ref()
     }
 
-    /// Returns the opaque creation timestamp.
-    pub fn created_at(&self) -> &str {
-        &self.created_at
+    /// Returns the opaque creation timestamp after a persisted snapshot arrives.
+    pub fn created_at(&self) -> Option<&str> {
+        self.created_at.as_deref()
     }
 
-    /// Returns the persisted plan revision.
-    pub fn plan_revision(&self) -> u32 {
+    /// Returns the persisted plan revision after a persisted snapshot arrives.
+    pub fn plan_revision(&self) -> Option<u32> {
         self.plan_revision
     }
 
@@ -243,9 +317,19 @@ impl WorkflowRun {
         self.workspace_path.as_deref()
     }
 
-    /// Returns the currently pending workflow descriptors.
-    pub fn pending_steps(&self) -> &[WorkflowNodeDescriptor] {
-        &self.pending_steps
+    /// Returns the opening descriptor forest until a persisted snapshot replaces it.
+    pub fn opening_plan(&self) -> Option<&[WorkflowNodeDescriptor]> {
+        self.opening_plan.as_deref()
+    }
+
+    /// Returns the persisted root descriptor after a snapshot replaces the opening plan.
+    pub fn snapshot_plan(&self) -> Option<&WorkflowNodeDescriptor> {
+        self.snapshot_plan.as_ref()
+    }
+
+    /// Returns the currently pending workflow descriptors after a queue update.
+    pub fn pending_steps(&self) -> Option<&[WorkflowNodeDescriptor]> {
+        self.pending_steps.as_deref()
     }
 
     /// Returns the most recent queue acknowledgement when supplied.
@@ -267,6 +351,30 @@ impl WorkflowRun {
     pub fn nodes(&self) -> impl ExactSizeIterator<Item = (&WorkflowNodePath, &WorkflowNodeState)> {
         self.nodes.iter()
     }
+
+    fn index_node(&mut self, node_id: WorkflowNodeId, path: WorkflowNodePath) {
+        self.node_index.entry(node_id).or_default().push(path);
+    }
+
+    fn move_index(
+        &mut self,
+        previous_id: &WorkflowNodeId,
+        current_id: WorkflowNodeId,
+        path: &WorkflowNodePath,
+    ) {
+        let remove_bucket = if let Some(paths) = self.node_index.get_mut(previous_id) {
+            if let Some(index) = paths.iter().position(|candidate| candidate == path) {
+                paths.swap_remove(index);
+            }
+            paths.is_empty()
+        } else {
+            false
+        };
+        if remove_bucket {
+            self.node_index.remove(previous_id);
+        }
+        self.index_node(current_id, path.clone());
+    }
 }
 
 /// Pure state machine for workspace-persisted workflow runs.
@@ -281,7 +389,26 @@ impl WorkflowTracker {
         Self::default()
     }
 
-    /// Validates, canonicalizes, and applies a complete persisted snapshot.
+    /// Applies one workflow lifecycle event to persisted state.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error without changing state when an accepted
+    /// completion snapshot fails canonical validation.
+    pub fn apply_event(&mut self, event: WorkflowEvent) -> Result<bool, WorkflowStateError> {
+        match event {
+            WorkflowEvent::RunStarted(opening) => self.apply_opening(opening),
+            WorkflowEvent::NodeStarted(started) => Ok(self.apply_node_started(started)),
+            WorkflowEvent::NodeCompleted(completed) => Ok(self.apply_node_completed(completed)),
+            WorkflowEvent::NodePaused(paused) => Ok(self.apply_node_paused(paused)),
+            WorkflowEvent::LoopIteration(iteration) => Ok(self.apply_loop_iteration(iteration)),
+            WorkflowEvent::WatchPoll(poll) => Ok(self.apply_watch_poll(poll)),
+            WorkflowEvent::Paused(paused) => Ok(self.apply_paused(paused)),
+            WorkflowEvent::RunCompleted(completion) => self.apply_completion(completion),
+            WorkflowEvent::StepsQueued(queued) => Ok(self.apply_steps_queued(queued)),
+        }
+    }
+    /// Applies one complete persisted snapshot.
     ///
     /// Missing and active runs accept every valid snapshot status. A terminal
     /// run accepts only another direct snapshot with the same terminal status.
@@ -298,12 +425,13 @@ impl WorkflowTracker {
         let workflow_id = snapshot.workflow_id().clone();
         let incoming_status = snapshot.status();
         if let Some(current) = self.runs.get(&workflow_id)
-            && is_terminal(current.status)
-            && current.status != incoming_status
+            && let Some(current_status) = current.status
+            && is_terminal(Some(current_status))
+            && current_status != incoming_status
         {
             return Err(WorkflowStateError::TerminalSnapshotConflict {
                 workflow_id,
-                current: current.status,
+                current: current_status,
                 incoming: incoming_status,
             });
         }
@@ -314,15 +442,192 @@ impl WorkflowTracker {
 
     /// Applies one workflow lifecycle event to persisted state.
     ///
-    /// # Errors
-    ///
-    /// Returns a structured error without changing state when an accepted
-    /// completion snapshot fails canonical validation.
-    pub fn apply_event(&mut self, event: WorkflowEvent) -> Result<bool, WorkflowStateError> {
-        match event {
-            WorkflowEvent::RunCompleted(completion) => self.apply_completion(completion),
-            _ => Ok(false),
+    fn apply_node_started(&mut self, started: crate::types::WorkflowNodeStarted) -> bool {
+        let (workflow_id, node_id, node_path, node_type, details) = started.into_parts();
+        let Some(run) = self.active_run_mut(&workflow_id, "node_start") else {
+            return false;
+        };
+        let (agent_name, session_id, prompt, iteration, branch_id) = details.into_values();
+        let Some(node) = run.nodes.get_mut(&node_path) else {
+            let node = WorkflowNodeState::from_opening(
+                node_id, node_type, agent_name, session_id, prompt, iteration, branch_id,
+            );
+            let index_id = node.node_id().clone();
+            run.nodes.insert(node_path.clone(), node);
+            run.index_node(index_id, node_path);
+            return true;
+        };
+        let moved_index =
+            (node.node_id() != &node_id).then(|| (node.node_id().clone(), node_id.clone()));
+        let mut changed = match &mut node.identity {
+            WorkflowNodeIdentity::Opening {
+                node_id: current_id,
+                node_type: current_type,
+                agent_name: current_agent,
+            } => {
+                let mut changed = replace(current_id, node_id);
+                changed |= replace(current_type, node_type);
+                changed |= replace_if_some(current_agent, agent_name);
+                changed
+            }
+            WorkflowNodeIdentity::Snapshot(descriptor) => {
+                let preserved_agent = match agent_name {
+                    Some(agent_name) => Some(agent_name),
+                    None => descriptor.agent_name().map(str::to_owned),
+                };
+                node.identity = WorkflowNodeIdentity::Opening {
+                    node_id,
+                    node_type,
+                    agent_name: preserved_agent,
+                };
+                true
+            }
+        };
+        changed |= replace_if_some(&mut node.session_id, session_id);
+        changed |= replace_if_some(&mut node.prompt, prompt);
+        changed |= replace_if_some(&mut node.iteration, iteration);
+        changed |= replace_if_some(&mut node.branch_id, branch_id);
+        if let Some((previous_id, current_id)) = moved_index {
+            run.move_index(&previous_id, current_id, &node_path);
         }
+        changed
+    }
+
+    fn apply_node_completed(&mut self, completed: crate::types::WorkflowNodeCompleted) -> bool {
+        let (workflow_id, _node_id, node_path, status, details) = completed.into_parts();
+        let Some(run) = self.active_run_mut(&workflow_id, "node_complete") else {
+            return false;
+        };
+        let Some(node) = run.nodes.get_mut(&node_path) else {
+            warn_ignored(&workflow_id, "node_complete", "unknown_node");
+            return false;
+        };
+        let (artifacts, captured_output, failure_reason, signal, signal_source) =
+            details.into_values();
+        let mut changed = replace(&mut node.status, Some(status));
+        changed |= replace_if_some(&mut node.artifacts, artifacts);
+        changed |= replace_if_some(&mut node.captured_output, captured_output);
+        changed |= replace_if_some(&mut node.failure_reason, failure_reason);
+        changed |= replace_if_some(&mut node.completion_signal, signal);
+        changed |= replace_if_some(&mut node.completion_signal_source, signal_source);
+        changed
+    }
+
+    fn apply_node_paused(&mut self, paused: crate::types::WorkflowNodePaused) -> bool {
+        let (workflow_id, _node_id, node_path, reason) = paused.into_parts();
+        let Some(run) = self.active_run_mut(&workflow_id, "node_paused") else {
+            return false;
+        };
+        let Some(node) = run.nodes.get_mut(&node_path) else {
+            warn_ignored(&workflow_id, "node_paused", "unknown_node");
+            return false;
+        };
+        replace(&mut node.status, Some(WorkflowNodeStatus::Paused))
+            | replace(&mut node.node_pause_reason, Some(reason))
+    }
+
+    fn apply_loop_iteration(&mut self, iteration: crate::types::WorkflowLoopIteration) -> bool {
+        let (workflow_id, loop_id, value, stop_condition_met) = iteration.into_parts();
+        let Some(run) = self.active_run_mut(&workflow_id, "loop_iteration") else {
+            return false;
+        };
+        let Some(paths) = run.node_index.get(&loop_id) else {
+            warn_ignored(&workflow_id, "loop_iteration", "unknown_node");
+            return false;
+        };
+        let mut matches = paths.iter().filter(|path| {
+            run.nodes
+                .get(*path)
+                .is_some_and(|node| node.node_type() == WorkflowNodeType::Repeat)
+        });
+        let Some(path) = matches.next().cloned() else {
+            warn_ignored(&workflow_id, "loop_iteration", "unknown_node");
+            return false;
+        };
+        if matches.next().is_some() {
+            warn_ignored(&workflow_id, "loop_iteration", "ambiguous_repeat");
+            return false;
+        }
+        let Some(node) = run.nodes.get_mut(&path) else {
+            unreachable!("an indexed workflow path remains present in the node map");
+        };
+        replace(
+            &mut node.latest_loop_iteration,
+            Some((value, stop_condition_met)),
+        )
+    }
+    fn apply_watch_poll(&mut self, poll: crate::types::WorkflowWatchPoll) -> bool {
+        let (workflow_id, _node_id, node_path, outcome, at) = poll.into_parts();
+        let Some(run) = self.active_run_mut(&workflow_id, "watch_poll") else {
+            return false;
+        };
+        let Some(node) = run.nodes.get_mut(&node_path) else {
+            warn_ignored(&workflow_id, "watch_poll", "unknown_node");
+            return false;
+        };
+        replace(&mut node.latest_watch_poll, Some((outcome, at)))
+    }
+
+    fn apply_paused(&mut self, paused: crate::types::WorkflowPaused) -> bool {
+        let (workflow_id, reason) = paused.into_parts();
+        let Some(run) = self.active_run_mut(&workflow_id, "paused") else {
+            return false;
+        };
+        replace(&mut run.status, Some(WorkflowRunStatus::Paused))
+            | replace(&mut run.run_pause_reason, Some(reason))
+    }
+
+    fn apply_steps_queued(&mut self, queued: crate::types::WorkflowStepsQueued) -> bool {
+        let (workflow_id, pending_steps, resolution) = queued.into_parts();
+        let Some(run) = self.active_run_mut(&workflow_id, "steps_queued") else {
+            return false;
+        };
+        match resolution {
+            Some(resolution) => replace(&mut run.queue_resolution, Some(resolution)),
+            None => replace(&mut run.pending_steps, Some(pending_steps)),
+        }
+    }
+
+    fn active_run_mut(
+        &mut self,
+        workflow_id: &WorkflowId,
+        event_kind: &str,
+    ) -> Option<&mut WorkflowRun> {
+        let Some(run) = self.runs.get_mut(workflow_id) else {
+            warn_ignored(workflow_id, event_kind, "unknown_run");
+            return None;
+        };
+        if is_terminal(run.status) {
+            warn_ignored(workflow_id, event_kind, "post_terminal_event");
+            return None;
+        }
+        Some(run)
+    }
+
+    fn apply_opening(&mut self, opening: WorkflowRunStarted) -> Result<bool, WorkflowStateError> {
+        let (workflow_id, workflow_name, inputs, opening_plan, parent_session_id) =
+            opening.into_parts();
+        if let Some(current) = self.runs.get(&workflow_id) {
+            if is_terminal(current.status) {
+                return self.replace_if_changed(
+                    workflow_id,
+                    sparse_opening_run(workflow_name, inputs, opening_plan, parent_session_id),
+                );
+            }
+            let exact_repeat = current.workflow_name == workflow_name
+                && current.inputs == inputs
+                && current.parent_session_id == parent_session_id
+                && current.opening_plan.as_ref() == Some(&opening_plan);
+            if exact_repeat {
+                return Ok(false);
+            }
+            warn_ignored(&workflow_id, "run_start", "active_run_start_conflict");
+            return Ok(false);
+        }
+        self.replace_if_changed(
+            workflow_id,
+            sparse_opening_run(workflow_name, inputs, opening_plan, parent_session_id),
+        )
     }
 
     fn apply_completion(
@@ -394,10 +699,25 @@ impl WorkflowTracker {
     }
 }
 
-fn is_terminal(status: WorkflowRunStatus) -> bool {
+fn replace<T: PartialEq>(target: &mut T, incoming: T) -> bool {
+    if *target == incoming {
+        return false;
+    }
+    *target = incoming;
+    true
+}
+
+fn replace_if_some<T: PartialEq>(target: &mut Option<T>, incoming: Option<T>) -> bool {
+    match incoming {
+        Some(incoming) => replace(target, Some(incoming)),
+        None => false,
+    }
+}
+
+fn is_terminal(status: Option<WorkflowRunStatus>) -> bool {
     matches!(
         status,
-        WorkflowRunStatus::Completed | WorkflowRunStatus::Failed | WorkflowRunStatus::Aborted
+        Some(WorkflowRunStatus::Completed | WorkflowRunStatus::Failed | WorkflowRunStatus::Aborted)
     )
 }
 
@@ -413,6 +733,15 @@ fn warn_ignored(workflow_id: &WorkflowId, event_kind: &str, reason: &str) {
 fn canonicalize_snapshot(
     snapshot: WorkflowSnapshot,
 ) -> Result<(WorkflowId, WorkflowRun), WorkflowStateError> {
+    enum SnapshotTask {
+        Visit(WorkflowNodeSnapshot, WorkflowNodePath),
+        Finish(
+            WorkflowNodeSnapshotParts,
+            WorkflowNodePath,
+            Vec<WorkflowNodePath>,
+        ),
+    }
+
     let (
         workflow_id,
         workflow_name,
@@ -429,41 +758,102 @@ fn canonicalize_snapshot(
     let root_path = WorkflowNodePath::try_new(&workflow_id, vec![workflow_id.as_str().to_owned()])
         .map_err(|source| WorkflowStateError::InvalidCanonicalPath { source })?;
     let mut nodes = HashMap::new();
-    let mut stack = vec![(root, root_path)];
-    while let Some((node, path)) = stack.pop() {
-        let mut parts = node.into_parts();
-        let children = parts.take_children();
-        for child in children.into_iter().rev() {
-            let segment = canonical_child_segment(parts.descriptor(), &child);
-            let mut segments = path.segments().to_vec();
-            segments.push(segment);
-            let child_path = WorkflowNodePath::try_new(&workflow_id, segments)
-                .map_err(|source| WorkflowStateError::InvalidCanonicalPath { source })?;
-            stack.push((child, child_path));
-        }
-        let state = WorkflowNodeState::from_snapshot(parts);
-        if nodes.insert(path.clone(), state).is_some() {
-            return Err(WorkflowStateError::DuplicateCanonicalPath { path });
+    let mut descriptors = HashMap::new();
+    let mut node_index: HashMap<WorkflowNodeId, Vec<WorkflowNodePath>> = HashMap::new();
+    let mut stack = vec![SnapshotTask::Visit(root, root_path.clone())];
+    while let Some(task) = stack.pop() {
+        match task {
+            SnapshotTask::Visit(node, path) => {
+                let mut parts = node.into_parts();
+                let children = parts.take_children();
+                let mut child_paths = Vec::with_capacity(children.len());
+                let mut child_tasks = Vec::with_capacity(children.len());
+                for child in children {
+                    let segment = canonical_child_segment(parts.descriptor(), &child);
+                    let mut segments = path.segments().to_vec();
+                    segments.push(segment);
+                    let child_path = WorkflowNodePath::try_new(&workflow_id, segments)
+                        .map_err(|source| WorkflowStateError::InvalidCanonicalPath { source })?;
+                    child_paths.push(child_path.clone());
+                    child_tasks.push(SnapshotTask::Visit(child, child_path));
+                }
+                stack.push(SnapshotTask::Finish(parts, path, child_paths));
+                stack.extend(child_tasks.into_iter().rev());
+            }
+            SnapshotTask::Finish(parts, path, child_paths) => {
+                let child_descriptors = child_paths
+                    .into_iter()
+                    .map(|child_path| {
+                        let Some(descriptor) = descriptors.remove(&child_path) else {
+                            unreachable!("child descriptors finish before their parent");
+                        };
+                        descriptor
+                    })
+                    .collect();
+                let descriptor = parts
+                    .descriptor()
+                    .clone()
+                    .with_runtime_children(child_descriptors);
+                let state = WorkflowNodeState::from_snapshot(parts);
+                let node_id = state.node_id().clone();
+                if nodes.insert(path.clone(), state).is_some() {
+                    return Err(WorkflowStateError::DuplicateCanonicalPath { path });
+                }
+                node_index.entry(node_id).or_default().push(path.clone());
+                descriptors.insert(path, descriptor);
+            }
         }
     }
+    let Some(snapshot_plan) = descriptors.remove(&root_path) else {
+        unreachable!("the root descriptor is assembled by a non-empty snapshot");
+    };
     Ok((
         workflow_id,
         WorkflowRun {
             workflow_name,
-            status,
+            status: Some(status),
             inputs,
-            artifacts,
-            captured_outputs,
-            created_at,
-            plan_revision,
+            artifacts: Some(artifacts),
+            captured_outputs: Some(captured_outputs),
+            created_at: Some(created_at),
+            plan_revision: Some(plan_revision),
             parent_session_id,
             workspace_path,
-            pending_steps: Vec::new(),
+            opening_plan: None,
+            snapshot_plan: Some(snapshot_plan),
+            pending_steps: None,
             queue_resolution: None,
             run_pause_reason: None,
             nodes,
+            node_index,
         },
     ))
+}
+
+fn sparse_opening_run(
+    workflow_name: String,
+    inputs: serde_json::Value,
+    opening_plan: Vec<WorkflowNodeDescriptor>,
+    parent_session_id: Option<SessionId>,
+) -> WorkflowRun {
+    WorkflowRun {
+        workflow_name,
+        status: None,
+        inputs,
+        artifacts: None,
+        captured_outputs: None,
+        created_at: None,
+        plan_revision: None,
+        parent_session_id,
+        workspace_path: None,
+        opening_plan: Some(opening_plan),
+        snapshot_plan: None,
+        nodes: HashMap::new(),
+        node_index: HashMap::new(),
+        pending_steps: None,
+        queue_resolution: None,
+        run_pause_reason: None,
+    }
 }
 
 fn canonical_child_segment(
@@ -493,10 +883,13 @@ mod tests {
 
     use super::*;
     use crate::types::{
-        WorkflowCompletionStatus, WorkflowNodeDescriptor, WorkflowNodePath, WorkflowNodeSnapshot,
-        WorkflowNodeStatus, WorkflowNodeType, WorkflowQueueOutcome, WorkflowRepeatExhaustion,
-        WorkflowRunCompleted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
-        WorkflowSnapshotMetadata,
+        SessionId, WorkflowCompletionStatus, WorkflowLoopIteration, WorkflowNodeCompleted,
+        WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodePath,
+        WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails, WorkflowNodeStarted,
+        WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused, WorkflowQueueOutcome,
+        WorkflowRepeatExhaustion, WorkflowRunCompleted, WorkflowRunStarted, WorkflowRunStatus,
+        WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued,
+        WorkflowWatchPoll,
     };
     fn workflow_id(value: &str) -> WorkflowId {
         match WorkflowId::try_from(value.to_owned()) {
@@ -602,18 +995,21 @@ mod tests {
             workflow_id(id),
             WorkflowRun {
                 workflow_name: name.to_owned(),
-                status: WorkflowRunStatus::Running,
+                status: Some(WorkflowRunStatus::Running),
                 inputs: serde_json::Value::Null,
-                artifacts: serde_json::Value::Null,
-                captured_outputs: serde_json::Value::Null,
-                created_at: String::new(),
-                plan_revision: 0,
+                artifacts: None,
+                captured_outputs: None,
+                created_at: None,
+                plan_revision: None,
                 parent_session_id: None,
                 workspace_path: None,
-                pending_steps: Vec::new(),
+                opening_plan: None,
+                snapshot_plan: None,
+                pending_steps: None,
                 queue_resolution: None,
                 run_pause_reason: None,
                 nodes: HashMap::new(),
+                node_index: HashMap::new(),
             },
         );
         assert!(previous.is_none(), "test seed must not replace a run");
@@ -814,7 +1210,7 @@ mod tests {
                 Some(state) => state,
                 None => panic!("repeat child missing at {path:?}"),
             };
-            assert_eq!(state.descriptor().node_id().as_str(), child_id);
+            assert_eq!(state.node_id().as_str(), child_id);
             assert_eq!(
                 state.iteration(),
                 control["iteration"].as_u64().map(|value| value as u32)
@@ -908,7 +1304,8 @@ mod tests {
                 let before = tracker.get(&workflow_id("workflow")).cloned();
                 let result =
                     tracker.apply_snapshot(snapshot_with_status("workflow", incoming, "after"));
-                if prior.is_some_and(is_terminal) && prior != Some(incoming) {
+                if prior.is_some_and(|status| is_terminal(Some(status))) && prior != Some(incoming)
+                {
                     assert!(matches!(
                         result,
                         Err(WorkflowStateError::TerminalSnapshotConflict { .. })
@@ -920,7 +1317,7 @@ mod tests {
                         tracker
                             .get(&workflow_id("workflow"))
                             .map(WorkflowRun::status),
-                        Some(incoming)
+                        Some(Some(incoming))
                     );
                 }
             }
@@ -942,13 +1339,13 @@ mod tests {
                 let result = tracker.apply_event(completion(snapshot_with_status(
                     "workflow", incoming, "after",
                 )));
-                if prior.is_some_and(|status| !is_terminal(status)) {
+                if prior.is_some_and(|status| !is_terminal(Some(status))) {
                     assert_eq!(result, Ok(true));
                     assert_eq!(
                         tracker
                             .get(&workflow_id("workflow"))
                             .map(WorkflowRun::status),
-                        Some(incoming)
+                        Some(Some(incoming))
                     );
                 } else {
                     assert_eq!(result, Ok(false));
@@ -1004,7 +1401,7 @@ mod tests {
                     tracker
                         .get(&workflow_id("workflow"))
                         .map(WorkflowRun::status),
-                    Some(terminal)
+                    Some(Some(terminal))
                 );
             }
         }
@@ -1135,12 +1532,12 @@ mod tests {
         let Some(run) = tracker.runs.get_mut(&workflow_id) else {
             panic!("rich snapshot did not seed");
         };
-        run.pending_steps = vec![WorkflowNodeDescriptor::step(
+        run.pending_steps = Some(vec![WorkflowNodeDescriptor::step(
             node_id("pending"),
             "agent".to_owned(),
             None,
             None,
-        )];
+        )]);
         run.queue_resolution = Some(WorkflowQueueResolution::new(
             WorkflowQueueOutcome::Applied,
             Some("accepted".to_owned()),
@@ -1180,7 +1577,7 @@ mod tests {
         };
         assert!(run.parent_session_id().is_none());
         assert!(run.workspace_path().is_none());
-        assert_eq!(run.pending_steps().len(), 1);
+        assert_eq!(run.pending_steps().map(<[_]>::len), Some(1));
         assert_eq!(
             run.queue_resolution().map(WorkflowQueueResolution::outcome),
             Some(WorkflowQueueOutcome::Applied)
@@ -1238,6 +1635,985 @@ mod tests {
                 "latestLoopIteration",
                 "latestWatchPoll"
             ])
+        );
+    }
+    #[test]
+    fn active_run_start_conflict_presence_matrix() {
+        fn opening(
+            name: &str,
+            inputs: serde_json::Value,
+            tree: Vec<WorkflowNodeDescriptor>,
+            parent: Option<SessionId>,
+        ) -> WorkflowEvent {
+            WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                workflow_id("workflow"),
+                name.to_owned(),
+                inputs,
+                tree,
+                parent,
+            ))
+        }
+
+        let base_tree = vec![WorkflowNodeDescriptor::step(
+            node_id("step"),
+            "agent".to_owned(),
+            None,
+            None,
+        )];
+        let base = opening(
+            "recipe",
+            serde_json::json!({"seed": 1}),
+            base_tree.clone(),
+            None,
+        );
+        let conflicts = [
+            opening(
+                "other",
+                serde_json::json!({"seed": 1}),
+                base_tree.clone(),
+                None,
+            ),
+            opening(
+                "recipe",
+                serde_json::json!({"seed": 2}),
+                base_tree.clone(),
+                None,
+            ),
+            opening("recipe", serde_json::json!({"seed": 1}), Vec::new(), None),
+            opening(
+                "recipe",
+                serde_json::json!({"seed": 1}),
+                base_tree.clone(),
+                Some(SessionId::new("parent")),
+            ),
+        ];
+        for conflict in conflicts {
+            let mut tracker = WorkflowTracker::new();
+            assert_eq!(tracker.apply_event(base.clone()), Ok(true));
+            assert_eq!(tracker.apply_event(base.clone()), Ok(false));
+            let before = tracker.get(&workflow_id("workflow")).cloned();
+            assert_eq!(tracker.apply_event(conflict), Ok(false));
+            assert_eq!(tracker.get(&workflow_id("workflow")), before.as_ref());
+            assert_eq!(tracker.iter().len(), 1);
+        }
+
+        let parent_base = opening(
+            "recipe",
+            serde_json::json!({"seed": 1}),
+            base_tree.clone(),
+            Some(SessionId::new("parent-a")),
+        );
+        for conflict in [
+            opening(
+                "recipe",
+                serde_json::json!({"seed": 1}),
+                base_tree.clone(),
+                None,
+            ),
+            opening(
+                "recipe",
+                serde_json::json!({"seed": 1}),
+                base_tree,
+                Some(SessionId::new("parent-b")),
+            ),
+        ] {
+            let mut tracker = WorkflowTracker::new();
+            assert_eq!(tracker.apply_event(parent_base.clone()), Ok(true));
+            let before = tracker.get(&workflow_id("workflow")).cloned();
+            assert_eq!(tracker.apply_event(conflict), Ok(false));
+            assert_eq!(tracker.get(&workflow_id("workflow")), before.as_ref());
+        }
+    }
+    #[test]
+    fn node_start_merge_presence_matrix() {
+        let id = workflow_id("workflow");
+        let path = node_path(&id, &["workflow", "node"]);
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("old"),
+                path.clone(),
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new()
+                    .with_agent_name("agent-a".to_owned())
+                    .with_session_id(SessionId::new("session-a"))
+                    .with_prompt("prompt-a".to_owned())
+                    .with_iteration(3)
+                    .with_branch_id("branch-a".to_owned()),
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("new"),
+                path.clone(),
+                WorkflowNodeType::Watch,
+                WorkflowNodeStartDetails::new(),
+            ))),
+            Ok(true)
+        );
+        let Some(node) = tracker.get(&id).and_then(|run| run.node(&path)) else {
+            panic!("merged node missing");
+        };
+        assert_eq!(node.node_id().as_str(), "new");
+        assert_eq!(node.node_type(), WorkflowNodeType::Watch);
+        assert_eq!(node.agent_name(), Some("agent-a"));
+        assert_eq!(node.session_id().map(SessionId::as_str), Some("session-a"));
+        assert_eq!(node.prompt(), Some("prompt-a"));
+        assert_eq!(node.iteration(), Some(3));
+        assert_eq!(node.branch_id(), Some("branch-a"));
+    }
+
+    #[test]
+    fn node_complete_merge_presence_matrix() {
+        let id = workflow_id("workflow");
+        let path = node_path(&id, &["workflow", "node"]);
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("node"),
+                path.clone(),
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new(),
+            ))),
+            Ok(true)
+        );
+        let details = WorkflowNodeCompletionDetails::new()
+            .with_artifacts(serde_json::json!({"artifact": 1}))
+            .with_captured_output(serde_json::json!({"output": 2}))
+            .with_failure_reason("first".to_owned())
+            .with_completion_signal(WorkflowCompletionSignal::Success)
+            .with_completion_signal_source(WorkflowCompletionSignalSource::SendMessage);
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::NodeCompleted(WorkflowNodeCompleted::new(
+                id.clone(),
+                node_id("node"),
+                path.clone(),
+                WorkflowNodeStatus::Failed,
+                details,
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::NodeCompleted(WorkflowNodeCompleted::new(
+                id.clone(),
+                node_id("ignored-on-path-update"),
+                path.clone(),
+                WorkflowNodeStatus::Completed,
+                WorkflowNodeCompletionDetails::new(),
+            ))),
+            Ok(true)
+        );
+        let Some(node) = tracker.get(&id).and_then(|run| run.node(&path)) else {
+            panic!("completed node missing");
+        };
+        assert_eq!(node.status(), Some(WorkflowNodeStatus::Completed));
+        assert_eq!(node.artifacts(), Some(&serde_json::json!({"artifact": 1})));
+        assert_eq!(
+            node.captured_output(),
+            Some(&serde_json::json!({"output": 2}))
+        );
+        assert_eq!(node.failure_reason(), Some("first"));
+        assert_eq!(
+            node.completion_signal(),
+            Some(WorkflowCompletionSignal::Success)
+        );
+        assert_eq!(
+            node.completion_signal_source(),
+            Some(WorkflowCompletionSignalSource::SendMessage)
+        );
+    }
+
+    #[test]
+    fn node_index_bucket_cardinality_matrix() {
+        let id = workflow_id("workflow");
+        let first_path = node_path(&id, &["workflow", "first"]);
+        let second_path = node_path(&id, &["workflow", "second"]);
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        for path in [&first_path, &second_path] {
+            assert_eq!(
+                tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                    id.clone(),
+                    node_id("shared"),
+                    path.clone(),
+                    WorkflowNodeType::Step,
+                    WorkflowNodeStartDetails::new(),
+                ))),
+                Ok(true)
+            );
+        }
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("moved"),
+                first_path.clone(),
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new(),
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("run missing");
+        };
+        assert_eq!(
+            run.node_index.get(&node_id("shared")),
+            Some(&vec![second_path])
+        );
+        assert_eq!(
+            run.node_index.get(&node_id("moved")),
+            Some(&vec![first_path])
+        );
+    }
+    #[test]
+    fn queue_resolution_and_pending_matrix() {
+        let id = workflow_id("workflow");
+        let pending =
+            WorkflowNodeDescriptor::step(node_id("pending"), "agent".to_owned(), None, None);
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                vec![pending.clone()],
+                None,
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                Vec::new(),
+                Some(WorkflowQueueResolution::new(
+                    WorkflowQueueOutcome::Applied,
+                    Some("approved".to_owned()),
+                )),
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("queued run missing");
+        };
+        assert_eq!(run.pending_steps(), Some(std::slice::from_ref(&pending)));
+        assert_eq!(
+            run.queue_resolution().map(WorkflowQueueResolution::outcome),
+            Some(WorkflowQueueOutcome::Applied)
+        );
+        assert_eq!(
+            run.queue_resolution()
+                .and_then(WorkflowQueueResolution::reason),
+            Some("approved")
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("cleared run missing");
+        };
+        assert_eq!(run.pending_steps(), Some(&[][..]));
+        assert_eq!(
+            run.queue_resolution().map(WorkflowQueueResolution::outcome),
+            Some(WorkflowQueueOutcome::Applied)
+        );
+    }
+
+    #[test]
+    fn workflow_progress_fields_are_independent_and_current() {
+        let id = workflow_id("workflow");
+        let repeat_path = node_path(&id, &["workflow", "repeat"]);
+        let watch_path = node_path(&id, &["workflow", "watch"]);
+        let step_path = node_path(&id, &["workflow", "step"]);
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        for (node, path, node_type) in [
+            ("repeat", repeat_path.clone(), WorkflowNodeType::Repeat),
+            ("watch", watch_path.clone(), WorkflowNodeType::Watch),
+            ("step", step_path.clone(), WorkflowNodeType::Step),
+        ] {
+            assert_eq!(
+                tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                    id.clone(),
+                    node_id(node),
+                    path,
+                    node_type,
+                    WorkflowNodeStartDetails::new(),
+                ))),
+                Ok(true)
+            );
+        }
+        for event in [
+            WorkflowEvent::Paused(WorkflowPaused::new(id.clone(), "operator".to_owned())),
+            WorkflowEvent::NodePaused(WorkflowNodePaused::new(
+                id.clone(),
+                node_id("step"),
+                step_path.clone(),
+                "review".to_owned(),
+            )),
+            WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+                id.clone(),
+                node_id("repeat"),
+                1,
+                false,
+            )),
+            WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+                id.clone(),
+                node_id("repeat"),
+                2,
+                true,
+            )),
+            WorkflowEvent::WatchPoll(WorkflowWatchPoll::new(
+                id.clone(),
+                node_id("watch"),
+                watch_path.clone(),
+                WorkflowWatchOutcome::NewActivity,
+                "t1".to_owned(),
+            )),
+            WorkflowEvent::WatchPoll(WorkflowWatchPoll::new(
+                id.clone(),
+                node_id("watch"),
+                watch_path.clone(),
+                WorkflowWatchOutcome::Idle,
+                "t2".to_owned(),
+            )),
+        ] {
+            assert_eq!(tracker.apply_event(event), Ok(true));
+        }
+        let Some(run) = tracker.get(&id) else {
+            panic!("progress run missing");
+        };
+        assert_eq!(run.status(), Some(WorkflowRunStatus::Paused));
+        assert_eq!(run.run_pause_reason(), Some("operator"));
+        assert_eq!(
+            run.node(&step_path)
+                .and_then(WorkflowNodeState::node_pause_reason),
+            Some("review")
+        );
+        assert_eq!(
+            run.node(&repeat_path)
+                .and_then(WorkflowNodeState::latest_loop_iteration),
+            Some((2, true))
+        );
+        assert_eq!(
+            run.node(&watch_path)
+                .and_then(WorkflowNodeState::latest_watch_poll),
+            Some((WorkflowWatchOutcome::Idle, "t2"))
+        );
+    }
+    #[test]
+    fn unknown_workflow_event_matrix_no_placeholders() {
+        let id = workflow_id("unknown");
+        let path = node_path(&id, &["unknown", "node"]);
+        let events = [
+            WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("node"),
+                path.clone(),
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new(),
+            )),
+            WorkflowEvent::NodeCompleted(WorkflowNodeCompleted::new(
+                id.clone(),
+                node_id("node"),
+                path.clone(),
+                WorkflowNodeStatus::Completed,
+                WorkflowNodeCompletionDetails::new(),
+            )),
+            WorkflowEvent::NodePaused(WorkflowNodePaused::new(
+                id.clone(),
+                node_id("node"),
+                path.clone(),
+                "pause".to_owned(),
+            )),
+            WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+                id.clone(),
+                node_id("node"),
+                1,
+                false,
+            )),
+            WorkflowEvent::WatchPoll(WorkflowWatchPoll::new(
+                id.clone(),
+                node_id("node"),
+                path,
+                WorkflowWatchOutcome::Idle,
+                "t1".to_owned(),
+            )),
+            WorkflowEvent::Paused(WorkflowPaused::new(id.clone(), "pause".to_owned())),
+            completion(snapshot_with_status(
+                "unknown",
+                WorkflowRunStatus::Completed,
+                "terminal",
+            )),
+            WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(id, Vec::new(), None)),
+        ];
+        let mut tracker = WorkflowTracker::new();
+        for event in events {
+            assert_eq!(tracker.apply_event(event), Ok(false));
+            assert_eq!(tracker.iter().len(), 0);
+        }
+    }
+
+    #[test]
+    fn unknown_node_update_matrix_no_placeholders() {
+        let id = workflow_id("workflow");
+        let path = node_path(&id, &["workflow", "missing"]);
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        for event in [
+            WorkflowEvent::NodeCompleted(WorkflowNodeCompleted::new(
+                id.clone(),
+                node_id("missing"),
+                path.clone(),
+                WorkflowNodeStatus::Completed,
+                WorkflowNodeCompletionDetails::new(),
+            )),
+            WorkflowEvent::NodePaused(WorkflowNodePaused::new(
+                id.clone(),
+                node_id("missing"),
+                path.clone(),
+                "pause".to_owned(),
+            )),
+            WorkflowEvent::WatchPoll(WorkflowWatchPoll::new(
+                id.clone(),
+                node_id("missing"),
+                path,
+                WorkflowWatchOutcome::Idle,
+                "t1".to_owned(),
+            )),
+            WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+                id.clone(),
+                node_id("missing"),
+                1,
+                false,
+            )),
+        ] {
+            assert_eq!(tracker.apply_event(event), Ok(false));
+            assert_eq!(tracker.get(&id).map(|run| run.nodes().len()), Some(0));
+        }
+    }
+
+    #[test]
+    fn loop_lookup_filters_type_and_rejects_ambiguity() {
+        let id = workflow_id("workflow");
+        let step_path = node_path(&id, &["workflow", "step"]);
+        let first_repeat_path = node_path(&id, &["workflow", "repeat-a"]);
+        let second_repeat_path = node_path(&id, &["workflow", "repeat-b"]);
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        for (path, node_type) in [
+            (step_path, WorkflowNodeType::Step),
+            (first_repeat_path.clone(), WorkflowNodeType::Repeat),
+        ] {
+            assert_eq!(
+                tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                    id.clone(),
+                    node_id("shared"),
+                    path,
+                    node_type,
+                    WorkflowNodeStartDetails::new(),
+                ))),
+                Ok(true)
+            );
+        }
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+                id.clone(),
+                node_id("shared"),
+                1,
+                false
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker
+                .get(&id)
+                .and_then(|run| run.node(&first_repeat_path))
+                .and_then(WorkflowNodeState::latest_loop_iteration),
+            Some((1, false))
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("shared"),
+                second_repeat_path.clone(),
+                WorkflowNodeType::Repeat,
+                WorkflowNodeStartDetails::new(),
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+                id.clone(),
+                node_id("shared"),
+                2,
+                true
+            ))),
+            Ok(false)
+        );
+        assert_eq!(
+            tracker
+                .get(&id)
+                .and_then(|run| run.node(&first_repeat_path))
+                .and_then(WorkflowNodeState::latest_loop_iteration),
+            Some((1, false))
+        );
+        assert_eq!(
+            tracker
+                .get(&id)
+                .and_then(|run| run.node(&second_repeat_path))
+                .and_then(WorkflowNodeState::latest_loop_iteration),
+            None
+        );
+    }
+    #[test]
+    fn workflow_completion_metadata_never_controls_status() {
+        let run_statuses = [
+            WorkflowRunStatus::Paused,
+            WorkflowRunStatus::Completed,
+            WorkflowRunStatus::Failed,
+            WorkflowRunStatus::Aborted,
+        ];
+        let node_statuses = [
+            WorkflowNodeStatus::Pending,
+            WorkflowNodeStatus::Running,
+            WorkflowNodeStatus::Paused,
+            WorkflowNodeStatus::Completed,
+            WorkflowNodeStatus::Failed,
+            WorkflowNodeStatus::Aborted,
+            WorkflowNodeStatus::Skipped,
+        ];
+        let signals = [
+            None,
+            Some(WorkflowCompletionSignal::Success),
+            Some(WorkflowCompletionSignal::NeedInput),
+            Some(WorkflowCompletionSignal::Error),
+        ];
+        let sources = [
+            None,
+            Some(WorkflowCompletionSignalSource::SendMessage),
+            Some(WorkflowCompletionSignalSource::StatusUpdate),
+        ];
+        for run_status in run_statuses {
+            for node_status in node_statuses {
+                for signal in signals {
+                    for source in sources {
+                        let mut child = WorkflowNodeSnapshot::new(
+                            WorkflowNodeDescriptor::step(
+                                node_id("child"),
+                                "agent".to_owned(),
+                                None,
+                                None,
+                            ),
+                            node_status,
+                            Vec::new(),
+                        );
+                        if let Some(signal) = signal {
+                            child = child.with_completion_signal(signal);
+                        }
+                        if let Some(source) = source {
+                            child = child.with_completion_signal_source(source);
+                        }
+                        let snapshot = WorkflowSnapshot::new(
+                            workflow_id("workflow"),
+                            "recipe".to_owned(),
+                            run_status,
+                            WorkflowSnapshotData::new(
+                                serde_json::json!({}),
+                                serde_json::json!({}),
+                                serde_json::json!({}),
+                            ),
+                            WorkflowNodeSnapshot::new(
+                                WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
+                                WorkflowNodeStatus::Running,
+                                vec![child],
+                            ),
+                            WorkflowSnapshotMetadata::new("created".to_owned(), 0),
+                        );
+                        let mut tracker = WorkflowTracker::new();
+                        assert_eq!(tracker.apply_snapshot(snapshot), Ok(true));
+                        let id = workflow_id("workflow");
+                        let path = node_path(&id, &["workflow", "child"]);
+                        let Some(run) = tracker.get(&id) else {
+                            panic!("metadata run missing");
+                        };
+                        assert_eq!(run.status(), Some(run_status));
+                        let Some(node) = run.node(&path) else {
+                            panic!("metadata node missing");
+                        };
+                        assert_eq!(node.status(), Some(node_status));
+                        assert_eq!(node.completion_signal(), signal);
+                        assert_eq!(node.completion_signal_source(), source);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn post_terminal_event_matrix_is_absorbing() {
+        for status in [
+            WorkflowRunStatus::Completed,
+            WorkflowRunStatus::Failed,
+            WorkflowRunStatus::Aborted,
+        ] {
+            let id = workflow_id("workflow");
+            let path = node_path(&id, &["workflow", "before"]);
+            let events = [
+                WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                    id.clone(),
+                    node_id("new"),
+                    path.clone(),
+                    WorkflowNodeType::Step,
+                    WorkflowNodeStartDetails::new(),
+                )),
+                WorkflowEvent::NodeCompleted(WorkflowNodeCompleted::new(
+                    id.clone(),
+                    node_id("before"),
+                    path.clone(),
+                    WorkflowNodeStatus::Completed,
+                    WorkflowNodeCompletionDetails::new(),
+                )),
+                WorkflowEvent::NodePaused(WorkflowNodePaused::new(
+                    id.clone(),
+                    node_id("before"),
+                    path.clone(),
+                    "pause".to_owned(),
+                )),
+                WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+                    id.clone(),
+                    node_id("before"),
+                    1,
+                    false,
+                )),
+                WorkflowEvent::WatchPoll(WorkflowWatchPoll::new(
+                    id.clone(),
+                    node_id("before"),
+                    path,
+                    WorkflowWatchOutcome::Idle,
+                    "t1".to_owned(),
+                )),
+                WorkflowEvent::Paused(WorkflowPaused::new(id.clone(), "pause".to_owned())),
+                WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(id.clone(), Vec::new(), None)),
+                completion(snapshot_with_status("workflow", status, "conflict")),
+            ];
+            for event in events {
+                let original = snapshot_with_status("workflow", status, "before");
+                let mut tracker = WorkflowTracker::new();
+                assert_eq!(tracker.apply_snapshot(original), Ok(true));
+                let before = tracker.get(&id).cloned();
+                assert_eq!(tracker.apply_event(event), Ok(false));
+                assert_eq!(tracker.get(&id), before.as_ref());
+            }
+            let exact = snapshot_with_status("workflow", status, "exact");
+            let mut tracker = WorkflowTracker::new();
+            assert_eq!(tracker.apply_snapshot(exact.clone()), Ok(true));
+            let before = tracker.get(&id).cloned();
+            assert_eq!(tracker.apply_event(completion(exact)), Ok(false));
+            assert_eq!(tracker.get(&id), before.as_ref());
+        }
+    }
+    #[test]
+    fn retry_opening_clears_full_prior_incarnation() {
+        let id = workflow_id("workflow");
+        let old_path = node_path(&id, &["workflow", "old"]);
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_snapshot(snapshot_with_status(
+                "workflow",
+                WorkflowRunStatus::Completed,
+                "old",
+            )),
+            Ok(true)
+        );
+        let Some(old) = tracker.runs.get_mut(&id) else {
+            panic!("old incarnation missing");
+        };
+        old.pending_steps = Some(vec![WorkflowNodeDescriptor::step(
+            node_id("pending"),
+            "agent".to_owned(),
+            None,
+            None,
+        )]);
+        old.queue_resolution = Some(WorkflowQueueResolution::new(
+            WorkflowQueueOutcome::Applied,
+            Some("approved".to_owned()),
+        ));
+        old.run_pause_reason = Some("pause".to_owned());
+        let Some(old_node) = old.nodes.get_mut(&old_path) else {
+            panic!("old node missing");
+        };
+        old_node.prompt = Some("old prompt".to_owned());
+        old_node.node_pause_reason = Some("old pause".to_owned());
+        old_node.latest_loop_iteration = Some((9, true));
+        old_node.latest_watch_poll = Some((WorkflowWatchOutcome::Idle, "old".to_owned()));
+
+        let new_tree = vec![WorkflowNodeDescriptor::step(
+            node_id("fresh"),
+            "fresh-agent".to_owned(),
+            None,
+            None,
+        )];
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "new-recipe".to_owned(),
+                serde_json::json!({"new": true}),
+                new_tree.clone(),
+                Some(SessionId::new("new-parent")),
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("new incarnation missing");
+        };
+        assert_eq!(run.workflow_name(), "new-recipe");
+        assert_eq!(run.inputs(), &serde_json::json!({"new": true}));
+        assert_eq!(
+            run.parent_session_id().map(SessionId::as_str),
+            Some("new-parent")
+        );
+        assert_eq!(run.opening_plan(), Some(new_tree.as_slice()));
+        assert!(run.status().is_none());
+        assert!(run.artifacts().is_none());
+        assert!(run.captured_outputs().is_none());
+        assert!(run.created_at().is_none());
+        assert!(run.plan_revision().is_none());
+        assert!(run.workspace_path().is_none());
+        assert!(run.snapshot_plan().is_none());
+        assert!(run.pending_steps().is_none());
+        assert!(run.queue_resolution().is_none());
+        assert!(run.run_pause_reason().is_none());
+        assert_eq!(run.nodes().len(), 0);
+        assert!(run.node_index.is_empty());
+    }
+
+    #[test]
+    fn post_terminal_run_start_replaces_incarnation() {
+        for status in [
+            WorkflowRunStatus::Completed,
+            WorkflowRunStatus::Failed,
+            WorkflowRunStatus::Aborted,
+        ] {
+            let id = workflow_id("workflow");
+            let mut tracker = WorkflowTracker::new();
+            assert_eq!(
+                tracker.apply_snapshot(snapshot_with_status("workflow", status, "old")),
+                Ok(true)
+            );
+            assert_eq!(
+                tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                    id.clone(),
+                    "new".to_owned(),
+                    serde_json::json!({"incarnation": 2}),
+                    Vec::new(),
+                    None,
+                ))),
+                Ok(true)
+            );
+            let Some(run) = tracker.get(&id) else {
+                panic!("replacement incarnation missing");
+            };
+            assert_eq!(run.workflow_name(), "new");
+            assert_eq!(run.status(), None);
+            assert_eq!(run.nodes().len(), 0);
+        }
+    }
+    #[test]
+    fn workflow_tracker_scale_and_isolation() {
+        fn fnv1a(rows: &[String]) -> u64 {
+            let mut digest = 0xcbf2_9ce4_8422_2325_u64;
+            for byte in rows.iter().flat_map(|row| row.as_bytes()) {
+                digest ^= u64::from(*byte);
+                digest = digest.wrapping_mul(0x0000_0100_0000_01b3);
+            }
+            digest
+        }
+
+        let manifest: serde_json::Value =
+            match serde_json::from_str(include_str!("../../../.cyril-6beh/oracle-manifest.json")) {
+                Ok(value) => value,
+                Err(error) => panic!("workflow manifest is invalid: {error}"),
+            };
+        let runs = manifest["scale"]["runs"].as_u64().unwrap_or_else(|| {
+            panic!("scale.runs must be an integer");
+        }) as usize;
+        let nodes_per_run = manifest["scale"]["nodes_per_run"]
+            .as_u64()
+            .unwrap_or_else(|| {
+                panic!("scale.nodes_per_run must be an integer");
+            }) as usize;
+        let events_per_node = manifest["scale"]["events_per_node"]
+            .as_u64()
+            .unwrap_or_else(|| {
+                panic!("scale.events_per_node must be an integer");
+            }) as usize;
+        let started = Instant::now();
+        let mut tracker = WorkflowTracker::new();
+        let mut event_count = 0_usize;
+        for run_index in 0..runs {
+            let workflow_name = format!("workflow-{run_index}");
+            let id = workflow_id(&workflow_name);
+            assert_eq!(
+                tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                    id.clone(),
+                    "recipe".to_owned(),
+                    serde_json::json!({}),
+                    Vec::new(),
+                    None,
+                ))),
+                Ok(true)
+            );
+            for node_index in 0..nodes_per_run {
+                let node_name = format!("node-{node_index}");
+                let path = node_path(&id, &[workflow_name.as_str(), node_name.as_str()]);
+                for repeat in 0..events_per_node {
+                    assert_eq!(
+                        tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                            id.clone(),
+                            node_id(&node_name),
+                            path.clone(),
+                            WorkflowNodeType::Step,
+                            WorkflowNodeStartDetails::new(),
+                        ))),
+                        Ok(repeat == 0)
+                    );
+                    event_count += 1;
+                }
+            }
+        }
+        assert_eq!(
+            event_count,
+            manifest["scale"]["events"].as_u64().unwrap_or_else(|| {
+                panic!("scale.events must be an integer");
+            }) as usize
+        );
+        assert_eq!(tracker.iter().len(), runs);
+        let node_count = tracker
+            .iter()
+            .map(|(_, run)| run.nodes().len())
+            .sum::<usize>();
+        assert_eq!(node_count, runs * nodes_per_run);
+        let mut rows = tracker
+            .iter()
+            .flat_map(|(workflow_id, run)| {
+                run.nodes().map(move |(path, node)| {
+                    format!(
+                        "{}|{}|{}|{}\n",
+                        workflow_id.as_str(),
+                        path.segments().join("/"),
+                        node.node_id().as_str(),
+                        node.node_type().as_str()
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+        rows.sort_unstable();
+        assert_eq!(fnv1a(&rows), 0x34b8_4227_7d78_e315);
+        assert!(
+            started.elapsed() <= Duration::from_secs(5),
+            "163,840-event isolation fixture exceeded 5 s"
+        );
+
+        let large = "x".repeat(65_536);
+        let large_id = workflow_id(&large);
+        let large_path = node_path(&large_id, &[large.as_str(), large.as_str()]);
+        let mut large_tracker = WorkflowTracker::new();
+        assert_eq!(
+            large_tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                large_id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        let large_started = Instant::now();
+        assert_eq!(
+            large_tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                large_id,
+                node_id(&large),
+                large_path,
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new(),
+            ))),
+            Ok(true)
+        );
+        assert!(
+            large_started.elapsed() <= Duration::from_millis(50),
+            "64 KiB workflow/node/path event exceeded 50 ms"
         );
     }
 }

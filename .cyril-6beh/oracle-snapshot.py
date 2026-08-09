@@ -46,6 +46,15 @@ def wrapper_iteration(parent, child):
     return iteration
 
 
+def descriptor(node):
+    result = select_fields(node, DESCRIPTOR_FIELDS)
+    children = node.get("children")
+    if children is not None:
+        key = "branches" if node["type"] == "parallel" else "steps"
+        result[key] = [descriptor(child) for child in children]
+    return result
+
+
 def project(path):
     frames = [json.loads(line) for line in path.read_text().splitlines() if line]
     completions = [
@@ -73,7 +82,8 @@ def project(path):
 
     walk(state["root"], (workflow_id,))
     run = select_fields(state, RUN_FIELDS)
-    entries.sort(key=lambda entry: json.dumps(entry["path"], ensure_ascii=False))
+    run["descriptor"] = descriptor(state["root"])
+    entries.sort(key=lambda entry: entry["path"])
     return {"run": run, "nodes": entries}
 
 

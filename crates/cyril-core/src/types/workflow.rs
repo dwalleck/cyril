@@ -398,6 +398,40 @@ impl WorkflowNodeDescriptor {
             _ => None,
         }
     }
+    /// Replaces structural children while preserving this validated descriptor kind and metadata.
+    pub(crate) fn with_runtime_children(self, children: Vec<Self>) -> Self {
+        let Self { node_id, kind } = self;
+        let kind = match kind {
+            WorkflowNodeDescriptorKind::Sequence { .. } => {
+                WorkflowNodeDescriptorKind::Sequence { steps: children }
+            }
+            WorkflowNodeDescriptorKind::Repeat {
+                max_iterations,
+                on_max_iterations,
+                stop_condition,
+                stop_when,
+                ..
+            } => WorkflowNodeDescriptorKind::Repeat {
+                steps: children,
+                max_iterations,
+                on_max_iterations,
+                stop_condition,
+                stop_when,
+            },
+            WorkflowNodeDescriptorKind::Parallel { .. } => {
+                WorkflowNodeDescriptorKind::Parallel { branches: children }
+            }
+            leaf @ (WorkflowNodeDescriptorKind::Step { .. }
+            | WorkflowNodeDescriptorKind::Watch { .. }) => {
+                debug_assert!(
+                    children.is_empty(),
+                    "leaf workflow node has runtime children"
+                );
+                leaf
+            }
+        };
+        Self { node_id, kind }
+    }
 }
 
 /// Snapshot-owned runtime state for one workflow node.
@@ -419,7 +453,6 @@ pub struct WorkflowNodeSnapshot {
 }
 
 /// Owned node-snapshot fields consumed by the workflow state module.
-#[cfg(feature = "kas")]
 pub(crate) struct WorkflowNodeSnapshotParts {
     descriptor: WorkflowNodeDescriptor,
     status: WorkflowNodeStatus,
@@ -436,7 +469,6 @@ pub(crate) struct WorkflowNodeSnapshotParts {
     ended_at: Option<String>,
 }
 
-#[cfg(feature = "kas")]
 pub(crate) type WorkflowNodeSnapshotValues = (
     WorkflowNodeDescriptor,
     WorkflowNodeStatus,
@@ -452,7 +484,6 @@ pub(crate) type WorkflowNodeSnapshotValues = (
     Option<String>,
 );
 
-#[cfg(feature = "kas")]
 impl WorkflowNodeSnapshotParts {
     pub(crate) fn descriptor(&self) -> &WorkflowNodeDescriptor {
         &self.descriptor
@@ -630,7 +661,6 @@ impl WorkflowNodeSnapshot {
     }
 
     /// Moves every field into the workflow state canonicalizer.
-    #[cfg(feature = "kas")]
     pub(crate) fn into_parts(self) -> WorkflowNodeSnapshotParts {
         WorkflowNodeSnapshotParts {
             descriptor: self.descriptor,
@@ -727,7 +757,6 @@ pub struct WorkflowSnapshot {
     metadata: WorkflowSnapshotMetadata,
 }
 /// Owned snapshot fields consumed by the workflow state module.
-#[cfg(feature = "kas")]
 pub(crate) struct WorkflowSnapshotParts {
     workflow_id: WorkflowId,
     workflow_name: String,
@@ -742,7 +771,6 @@ pub(crate) struct WorkflowSnapshotParts {
     workspace_path: Option<String>,
 }
 
-#[cfg(feature = "kas")]
 pub(crate) type WorkflowSnapshotValues = (
     WorkflowId,
     String,
@@ -757,7 +785,6 @@ pub(crate) type WorkflowSnapshotValues = (
     Option<String>,
 );
 
-#[cfg(feature = "kas")]
 impl WorkflowSnapshotParts {
     pub(crate) fn into_values(self) -> WorkflowSnapshotValues {
         (
@@ -852,7 +879,6 @@ impl WorkflowSnapshot {
     }
 
     /// Moves every field into the workflow state canonicalizer.
-    #[cfg(feature = "kas")]
     pub(crate) fn into_parts(self) -> WorkflowSnapshotParts {
         WorkflowSnapshotParts {
             workflow_id: self.workflow_id,
@@ -927,6 +953,14 @@ pub struct WorkflowNodeStartDetails {
     branch_id: Option<String>,
 }
 
+pub(crate) type WorkflowNodeStartValues = (
+    Option<String>,
+    Option<SessionId>,
+    Option<String>,
+    Option<u32>,
+    Option<String>,
+);
+
 impl WorkflowNodeStartDetails {
     /// Constructs an event detail set with every optional field absent.
     pub fn new() -> Self {
@@ -987,6 +1021,17 @@ impl WorkflowNodeStartDetails {
     pub fn branch_id(&self) -> Option<&str> {
         self.branch_id.as_deref()
     }
+
+    /// Moves every opening detail into the workflow state machine.
+    pub(crate) fn into_values(self) -> WorkflowNodeStartValues {
+        (
+            self.agent_name,
+            self.session_id,
+            self.prompt,
+            self.iteration,
+            self.branch_id,
+        )
+    }
 }
 
 /// Optional fields carried by a `node_complete` event.
@@ -998,6 +1043,14 @@ pub struct WorkflowNodeCompletionDetails {
     completion_signal: Option<WorkflowCompletionSignal>,
     completion_signal_source: Option<WorkflowCompletionSignalSource>,
 }
+
+pub(crate) type WorkflowNodeCompletionValues = (
+    Option<serde_json::Value>,
+    Option<serde_json::Value>,
+    Option<String>,
+    Option<WorkflowCompletionSignal>,
+    Option<WorkflowCompletionSignalSource>,
+);
 
 impl WorkflowNodeCompletionDetails {
     /// Constructs an event detail set with every optional field absent.
@@ -1059,6 +1112,17 @@ impl WorkflowNodeCompletionDetails {
     pub fn completion_signal_source(&self) -> Option<WorkflowCompletionSignalSource> {
         self.completion_signal_source
     }
+
+    /// Moves every completion field into the workflow state machine.
+    pub(crate) fn into_values(self) -> WorkflowNodeCompletionValues {
+        (
+            self.artifacts,
+            self.captured_output,
+            self.failure_reason,
+            self.completion_signal,
+            self.completion_signal_source,
+        )
+    }
 }
 
 /// Opening data from `run_start`.
@@ -1070,6 +1134,14 @@ pub struct WorkflowRunStarted {
     node_tree: Vec<WorkflowNodeDescriptor>,
     parent_session_id: Option<SessionId>,
 }
+
+pub(crate) type WorkflowRunStartedParts = (
+    WorkflowId,
+    String,
+    serde_json::Value,
+    Vec<WorkflowNodeDescriptor>,
+    Option<SessionId>,
+);
 
 impl WorkflowRunStarted {
     /// Constructs a complete run-opening event.
@@ -1113,6 +1185,17 @@ impl WorkflowRunStarted {
     pub fn parent_session_id(&self) -> Option<&SessionId> {
         self.parent_session_id.as_ref()
     }
+
+    /// Moves every opening field into the workflow state machine.
+    pub(crate) fn into_parts(self) -> WorkflowRunStartedParts {
+        (
+            self.workflow_id,
+            self.workflow_name,
+            self.inputs,
+            self.node_tree,
+            self.parent_session_id,
+        )
+    }
 }
 
 /// Runtime node opening from `node_start`.
@@ -1124,6 +1207,14 @@ pub struct WorkflowNodeStarted {
     node_type: WorkflowNodeType,
     details: WorkflowNodeStartDetails,
 }
+
+pub(crate) type WorkflowNodeStartedParts = (
+    WorkflowId,
+    WorkflowNodeId,
+    WorkflowNodePath,
+    WorkflowNodeType,
+    WorkflowNodeStartDetails,
+);
 
 impl WorkflowNodeStarted {
     /// Constructs a node-opening event.
@@ -1167,6 +1258,17 @@ impl WorkflowNodeStarted {
     pub fn details(&self) -> &WorkflowNodeStartDetails {
         &self.details
     }
+
+    /// Moves every node-opening field into the workflow state machine.
+    pub(crate) fn into_parts(self) -> WorkflowNodeStartedParts {
+        (
+            self.workflow_id,
+            self.node_id,
+            self.node_path,
+            self.node_type,
+            self.details,
+        )
+    }
 }
 
 /// Runtime node update from `node_complete`.
@@ -1178,6 +1280,14 @@ pub struct WorkflowNodeCompleted {
     status: WorkflowNodeStatus,
     details: WorkflowNodeCompletionDetails,
 }
+
+pub(crate) type WorkflowNodeCompletedParts = (
+    WorkflowId,
+    WorkflowNodeId,
+    WorkflowNodePath,
+    WorkflowNodeStatus,
+    WorkflowNodeCompletionDetails,
+);
 
 impl WorkflowNodeCompleted {
     /// Constructs a node-completion update.
@@ -1220,6 +1330,17 @@ impl WorkflowNodeCompleted {
     /// Returns optional node-completion details.
     pub fn details(&self) -> &WorkflowNodeCompletionDetails {
         &self.details
+    }
+
+    /// Moves every node-completion field into the workflow state machine.
+    pub(crate) fn into_parts(self) -> WorkflowNodeCompletedParts {
+        (
+            self.workflow_id,
+            self.node_id,
+            self.node_path,
+            self.status,
+            self.details,
+        )
     }
 }
 
@@ -1267,6 +1388,11 @@ impl WorkflowNodePaused {
     pub fn reason(&self) -> &str {
         &self.reason
     }
+
+    /// Moves every node-pause field into the workflow state machine.
+    pub(crate) fn into_parts(self) -> (WorkflowId, WorkflowNodeId, WorkflowNodePath, String) {
+        (self.workflow_id, self.node_id, self.node_path, self.reason)
+    }
 }
 
 /// Latest repeat progress from `loop_iteration`.
@@ -1312,6 +1438,16 @@ impl WorkflowLoopIteration {
     /// Reports whether the repeat's stop condition matched.
     pub fn stop_condition_met(&self) -> bool {
         self.stop_condition_met
+    }
+
+    /// Moves every loop-progress field into the workflow state machine.
+    pub(crate) fn into_parts(self) -> (WorkflowId, WorkflowNodeId, u32, bool) {
+        (
+            self.workflow_id,
+            self.loop_id,
+            self.iteration,
+            self.stop_condition_met,
+        )
     }
 }
 
@@ -1367,6 +1503,25 @@ impl WorkflowWatchPoll {
     pub fn at(&self) -> &str {
         &self.at
     }
+
+    /// Moves every watch-progress field into the workflow state machine.
+    pub(crate) fn into_parts(
+        self,
+    ) -> (
+        WorkflowId,
+        WorkflowNodeId,
+        WorkflowNodePath,
+        WorkflowWatchOutcome,
+        String,
+    ) {
+        (
+            self.workflow_id,
+            self.node_id,
+            self.node_path,
+            self.outcome,
+            self.at,
+        )
+    }
 }
 
 /// Run pause from `paused`.
@@ -1393,6 +1548,11 @@ impl WorkflowPaused {
     /// Returns the opaque pause reason.
     pub fn pause_reason(&self) -> &str {
         &self.pause_reason
+    }
+
+    /// Moves every run-pause field into the workflow state machine.
+    pub(crate) fn into_parts(self) -> (WorkflowId, String) {
+        (self.workflow_id, self.pause_reason)
     }
 }
 
@@ -1463,7 +1623,6 @@ impl WorkflowRunCompleted {
     }
 
     /// Moves the authoritative final snapshot into the workflow state machine.
-    #[cfg(feature = "kas")]
     pub(crate) fn into_final_state(self) -> WorkflowSnapshot {
         *self.final_state
     }
@@ -1529,6 +1688,17 @@ impl WorkflowStepsQueued {
     pub fn resolution(&self) -> Option<&WorkflowQueueResolution> {
         self.resolution.as_ref()
     }
+
+    /// Moves every queue field into the workflow state machine.
+    pub(crate) fn into_parts(
+        self,
+    ) -> (
+        WorkflowId,
+        Vec<WorkflowNodeDescriptor>,
+        Option<WorkflowQueueResolution>,
+    ) {
+        (self.workflow_id, self.pending_steps, self.resolution)
+    }
 }
 
 /// One of KAS's nine workflow lifecycle notifications.
@@ -1558,6 +1728,21 @@ impl WorkflowEvent {
             Self::Paused(_) => "paused",
             Self::RunCompleted(_) => "run_complete",
             Self::StepsQueued(_) => "steps_queued",
+        }
+    }
+
+    /// Returns the persisted workflow identifier carried by this event.
+    pub fn workflow_id(&self) -> &WorkflowId {
+        match self {
+            Self::RunStarted(event) => event.workflow_id(),
+            Self::NodeStarted(event) => event.workflow_id(),
+            Self::NodeCompleted(event) => event.workflow_id(),
+            Self::NodePaused(event) => event.workflow_id(),
+            Self::LoopIteration(event) => event.workflow_id(),
+            Self::WatchPoll(event) => event.workflow_id(),
+            Self::Paused(event) => event.workflow_id(),
+            Self::RunCompleted(event) => event.workflow_id(),
+            Self::StepsQueued(event) => event.workflow_id(),
         }
     }
 }
