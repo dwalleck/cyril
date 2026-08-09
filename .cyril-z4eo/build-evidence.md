@@ -10,3 +10,12 @@
 - **Budget:** no new loop, allocation, lookup, syscall, wait, or render work; the already-owned `SessionId` moves into the request.
 - **Regression fence:** `approval_join_tests` passes for exact same-session and cross-session origins.
 - **Full gates:** 1,234 default nextest tests passed (1 skipped); 1,468 KAS nextest tests passed (5 skipped); default and KAS all-target Clippy passed with `-D warnings`; fmt and default/KAS doctests passed.
+
+## Slice 2 — FIFO permission ownership
+
+- **RED:** `approval_snapshot_is_independent` observed active message `second` instead of `first` after two `show_approval` calls.
+- **GREEN:** the reversed cyril-j1b3 fence resolves request 1, leaves request 2 pending, promotes request 2, then resolves it without cross-talk.
+- **Stress:** `approval_queue_resolves_all_responders_in_order` enqueues 64 requests with repeated session/tool ids and unique messages/options/raw inputs. It exercises immediate selection, phase-1 Esc, invalid selection, two dropped receivers, and AllowAlways enter/back/re-enter/confirm; every open future receiver remains pending until its head turn.
+- **Oracle:** the runtime probe uses repeated identities and independent payloads; the static oracle requires `push_back`, `front`, `pop_front`, and trust-phase `push_front`. Both emitted `head1=first`, first `selected`, second `pending`, `head2=second`.
+- **Budget:** production queue access is limited to `VecDeque::{push_back, front, front_mut, pop_front, push_front, is_empty}`. No queue scan, syscall, wait, or per-frame work proportional to queue depth exists; each operator event is $O(1)$.
+- **Full gates:** 1,235 default nextest tests passed (1 skipped); 1,469 KAS nextest tests passed (5 skipped); default and KAS all-target Clippy passed with `-D warnings`; fmt and default/KAS doctests passed.

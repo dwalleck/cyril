@@ -9,13 +9,13 @@ use tokio::sync::oneshot;
 fn request(label: &str) -> (PermissionRequest, oneshot::Receiver<PermissionResponse>) {
     let (responder, receiver) = oneshot::channel();
     let request = PermissionRequest {
-        session_id: SessionId::new("main"),
+        session_id: SessionId::new("repeated-session"),
         tool_call: ToolCall::new(
-            ToolCallId::new(label),
+            ToolCallId::new("repeated-tool"),
             label.to_owned(),
             ToolKind::Execute,
             ToolCallStatus::Pending,
-            None,
+            Some(serde_json::json!({"label": label})),
         ),
         message: label.to_owned(),
         options: vec![PermissionOption {

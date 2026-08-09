@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
-"""Predict the two-request outcome by inspecting ownership operations, not running UiState."""
+"""Predict FIFO ownership from source operations without running UiState."""
+from collections import deque
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 source = (root / "crates/cyril-ui/src/state.rs").read_text()
-show_start = source.index("    pub fn show_approval")
-show_end = source.index("\n    }", show_start)
-show_body = source[show_start:show_end]
-confirm_start = source.index("    pub fn approval_confirm")
-confirm_end = source.index("\n    }", confirm_start)
-confirm_body = source[confirm_start:confirm_end]
+required_operations = (
+    "approvals: VecDeque<ApprovalState>",
+    "self.approvals.push_back(ApprovalState",
+    "self.approvals.front()",
+    "self.approvals.pop_front()?",
+    "self.approvals.push_front(approval)",
+)
+missing = [operation for operation in required_operations if operation not in source]
+if missing:
+    raise SystemExit(f"implementation no longer matches FIFO ownership model: {missing}")
 
-overwrites_slot = "self.approval = Some(ApprovalState" in show_body
-consumes_slot = "self.approval.take()?" in confirm_body
-if not (overwrites_slot and consumes_slot):
-    raise SystemExit("implementation no longer matches the single-slot ownership model")
+model = deque(["first", "second"])
+head1 = model[0]
+first = model.popleft()
+first_state = "selected" if first == "first" else "wrong"
+second_state = "pending" if model[0] == "second" else "wrong"
 
-print("head1=second")
-print("first_after_resolution=closed")
-print("second_after_resolution=selected")
-print("head2=none")
+print(f"head1={head1}")
+print(f"first_after_resolution={first_state}")
+print(f"second_after_resolution={second_state}")
+print(f"head2={model[0]}")
