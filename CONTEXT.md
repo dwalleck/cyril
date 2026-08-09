@@ -66,6 +66,10 @@ _Avoid_: chat, conversation, thread
 A session running alongside the main session as an equal rather than as delegated work under it; KAS workflow steps run as peer sessions.
 _Avoid_: sibling session, secondary session, subagent (delegated work with a parent)
 
+**Permission approval**:
+An operator decision requested by one session before the agent may perform a gated action. Concurrent approvals retain their originating session and are presented in arrival order; only the current approval accepts input.
+_Avoid_: confirmation (unqualified), approval slot, permission prompt
+
 **Session mode**:
 The agent-side operating mode of a session — Kiro's vibe/spec axis, KAS's plan / bug-fix / quick-spec family. An axis of the session, not of the engine.
 _Avoid_: mode (unqualified)
