@@ -6,7 +6,7 @@ Given two live `PermissionRequest` values shown before either is resolved, which
 
 ## Probe
 
-`.cyril-z4eo/probe.rs` calls the public `UiState::show_approval` and `approval_confirm` APIs with two production-shape requests and real Tokio oneshot responders. `.cyril-z4eo/run-probe.sh` compiles it as a temporary `cyril-ui` example against the actual workspace.
+At the immutable prototype checkpoint `955a1a3`, `.cyril-z4eo/probe.rs` calls the public `UiState::show_approval` and `approval_confirm` APIs with two production-shape requests and real Tokio oneshot responders. `.cyril-z4eo/run-probe.sh` compiles it as a temporary `cyril-ui` example against the actual workspace. The live probe later evolves with the implementation; recover this exact version with `git show 955a1a3:.cyril-z4eo/probe.rs`.
 
 Observed output:
 
@@ -19,9 +19,9 @@ head2=none
 
 ## Oracle
 
-`.cyril-z4eo/oracle.py` independently inspects the ownership operations in `state.rs`: `show_approval` assigns directly into the single slot and `approval_confirm` takes that slot. From those operations it predicts the visible head and both oneshot states without calling `UiState`.
+At checkpoint `955a1a3`, `.cyril-z4eo/oracle.py` independently inspects the ownership operations in `state.rs`: `show_approval` assigns directly into the single slot and `approval_confirm` takes that slot. From those operations it predicts the visible head and both oneshot states without calling `UiState`. Recover it with `git show 955a1a3:.cyril-z4eo/oracle.py`.
 
-Oracle output was byte-for-byte identical to the probe output:
+At that checkpoint, oracle output was byte-for-byte identical to the probe output:
 
 ```text
 head1=second
@@ -32,7 +32,7 @@ head2=none
 
 ## Agreement
 
-Probe and oracle agree on all four observations. The current implementation is LIFO replacement, not FIFO presentation: request 2 destroys request 1's only sender, request 1 closes without a human decision, request 2 resolves, and no request remains.
+At prototype checkpoint `955a1a3`, probe and oracle agree on all four observations. The pre-fix implementation is LIFO replacement, not FIFO presentation: request 2 destroys request 1's only sender, request 1 closes without a human decision, request 2 resolves, and no request remains. Post-fix oracle evolution and agreement are recorded separately in `build-evidence.md`.
 
 ## What I learned
 
