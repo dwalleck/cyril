@@ -7,9 +7,21 @@
 //! response — and map it to [`Notification::TurnCompleted`].
 
 use agent_client_protocol as acp;
+mod workflow;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
+/// Convert an exact normalized KAS workflow extension method.
+///
+/// Outer `None` means the method is not a workflow lifecycle method and the
+/// engine should continue through its existing extension converter. Inner
+/// `None` means the method was recognized but malformed, warned, and dropped.
+pub(crate) fn workflow_to_notification(
+    method: &str,
+    params: &serde_json::Value,
+) -> Option<Option<Notification>> {
+    workflow::to_notification(method, params)
+}
 
 /// Convert a KAS `session_info_update` to an internal notification.
 ///
@@ -606,8 +618,8 @@ mod tests {
         // KAS-2a (cyril-j16p) Slice 3 — unknown-variant tolerance: an
         // unrecognised `_kiro/*` frame (arriving as `kiro/*` once the acp crate
         // strips the leading underscore) drops to `Ok(None)` — no error, no hang.
-        // KasEngine delegates ext frames to the v2 `kiro::` handler, whose
-        // unknown-variant arm owns this; this fences the KAS engine path.
+        // Non-workflow names continue to the existing Kiro extension handler;
+        // its unknown-variant arm owns this and fences the fallback path.
         let r = KasEngine::default().convert_ext_notification("kiro/does/not/exist", &json!({}));
         assert!(
             matches!(r, Ok(None)),

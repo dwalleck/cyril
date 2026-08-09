@@ -238,9 +238,9 @@ impl Engine for V2Engine {
 /// `convert_session_update` maps the `session_info_update` → `turn_end`
 /// lifecycle frame to `TurnCompleted` (the KAS turn-completion signal, in place
 /// of v2's prompt response) and delegates every other `session/update` — agent
-/// text, tool calls — to the generic `convert::` fns. `convert_ext_notification`
-/// still delegates to the v2 `kiro::` handler, so unrecognized `_kiro/*` frames
-/// fall to the existing unknown-variant drop (dormant until KAS-2b).
+/// text and tool calls — to the generic `convert::` functions. Exact normalized
+/// `kiro/workflow/*` lifecycle methods route through the KAS-only workflow
+/// adapter; every other extension keeps the existing Kiro conversion path.
 /// Advertises `fs` read+write (KAS-5a, cyril-7bdu) and `terminal` (KAS-5b,
 /// cyril-ufie) capabilities so KAS delegates file I/O and shell execution to
 /// cyril's host-io responders instead of running them in-process.
@@ -308,6 +308,9 @@ impl Engine for KasEngine {
         method: &str,
         params: &serde_json::Value,
     ) -> crate::Result<Option<Notification>> {
+        if let Some(notification) = convert::kas::workflow_to_notification(method, params) {
+            return Ok(notification);
+        }
         convert::kiro::to_ext_notification(method, params)
     }
 }
@@ -574,6 +577,38 @@ mod tests {
         assert!(
             matches!(r, Ok(Some(crate::types::Notification::RateLimited { .. }))),
             "KasEngine must route rate_limit to RateLimited, got {r:?}"
+        );
+    }
+
+    #[cfg(feature = "kas")]
+    #[test]
+    fn kas_alone_routes_normalized_workflow_extensions() {
+        let params = json!({
+            "workflowId": "workflow",
+            "workflowName": "recipe",
+            "inputs": {},
+            "nodeTree": [{"nodeId": "step", "type": "step", "agentName": "agent"}]
+        });
+        let kas = KasEngine::default().convert_ext_notification("kiro/workflow/run_start", &params);
+        assert!(
+            matches!(
+                kas,
+                Ok(Some(crate::types::Notification::Workflow(event)))
+                    if event.method_name() == "run_start"
+            ),
+            "KAS must route the normalized workflow method"
+        );
+
+        let v2 = V2Engine.convert_ext_notification("kiro/workflow/run_start", &params);
+        assert!(
+            matches!(v2, Ok(None)),
+            "V2 must preserve the pre-workflow unknown-extension result, got {v2:?}"
+        );
+        let raw =
+            KasEngine::default().convert_ext_notification("_kiro/workflow/run_start", &params);
+        assert!(
+            matches!(raw, Ok(None)),
+            "raw underscore spelling must not bypass ACP normalization, got {raw:?}"
         );
     }
 }

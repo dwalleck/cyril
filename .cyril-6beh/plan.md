@@ -125,7 +125,7 @@ Complexity notation is parametric because the signed spec accepts large strings/
 **Stress fixture:** Field-rich opening; failed/aborted captures; 256-node/depth-10 final snapshot; one missing field, wrong type, and outer/final mismatch followed by valid input. Expected valid variants preserve all data; invalid rows warn/drop; successor converts; terminal counts equal 2/2.
 **Loop budget:** O(J+H), one pass over the provided `Value` plus owned output construction; no whole-value clone or syscall. The 1 MiB/256-node/depth-10 case is measured, not enforced.
 **Wall budget:** <=50 ms for the representative 1 MiB/256-node/depth-10 frame in opt-level-1 tests; accepted larger inputs remain linear in `J+H`.
-**Files:** `crates/cyril-core/src/protocol/convert/kas.rs`, `crates/cyril-core/src/protocol/convert/kas/workflow.rs` (new).
+**Files:** `crates/cyril-core/src/protocol/convert/kas.rs`, `crates/cyril-core/src/protocol/convert/kas/workflow.rs` (new), `crates/cyril-core/src/protocol/engine.rs` (KAS-only dispatch; discovered exhaustive engine seam).
 
 **Verification:** run adapter fences pass; `.cyril-6beh/compare-oracles.sh terminal` passes; largest-frame measurement meets budget.
 
