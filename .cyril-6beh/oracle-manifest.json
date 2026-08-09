@@ -1,0 +1,349 @@
+{
+  "version": 1,
+  "methods": [
+    "kiro/workflow/run_start",
+    "kiro/workflow/node_start",
+    "kiro/workflow/node_complete",
+    "kiro/workflow/node_paused",
+    "kiro/workflow/loop_iteration",
+    "kiro/workflow/watch_poll",
+    "kiro/workflow/paused",
+    "kiro/workflow/run_complete",
+    "kiro/workflow/steps_queued"
+  ],
+  "method_controls": {
+    "normalized_kas": {
+      "inputs": [
+        "kiro/workflow/run_start",
+        "kiro/workflow/node_start",
+        "kiro/workflow/node_complete",
+        "kiro/workflow/node_paused",
+        "kiro/workflow/loop_iteration",
+        "kiro/workflow/watch_poll",
+        "kiro/workflow/paused",
+        "kiro/workflow/run_complete",
+        "kiro/workflow/steps_queued"
+      ],
+      "expected": "workflow_event"
+    },
+    "raw_underscore_kas": {
+      "inputs": [
+        "_kiro/workflow/run_start",
+        "_kiro/workflow/node_start",
+        "_kiro/workflow/node_complete",
+        "_kiro/workflow/node_paused",
+        "_kiro/workflow/loop_iteration",
+        "_kiro/workflow/watch_poll",
+        "_kiro/workflow/paused",
+        "_kiro/workflow/run_complete",
+        "_kiro/workflow/steps_queued"
+      ],
+      "expected": "not_workflow_event"
+    },
+    "normalized_v2": "not_workflow_event",
+    "default_build": "workflow_module_absent_and_prior_unknown_extension_result",
+    "prefix_near_miss": {
+      "input": "kiro/workflow/run_started",
+      "expected": "not_workflow_event"
+    },
+    "unrelated_kas": {
+      "input": "kiro/session/context",
+      "expected": "unchanged_existing_result"
+    },
+    "superseded_metadata_facade": {
+      "transport": "session/update user_message_chunk",
+      "notificationKind": "workflow-progress",
+      "messageIdPrefix": "wf-progress-",
+      "expected": "unchanged_user_message"
+    }
+  },
+  "fields": {
+    "run_start": {
+      "required": ["workflowId", "workflowName", "inputs", "nodeTree"],
+      "optional": ["parentSessionId"]
+    },
+    "node_start": {
+      "required": ["workflowId", "nodeId", "nodePath", "type"],
+      "optional": ["agentName", "sessionId", "prompt", "iteration", "branchId"]
+    },
+    "node_complete": {
+      "required": ["workflowId", "nodeId", "nodePath", "status"],
+      "optional": ["artifacts", "capturedOutput", "failureReason", "completionSignal", "completionSignalSource"]
+    },
+    "node_paused": {
+      "required": ["workflowId", "nodeId", "nodePath", "reason"],
+      "optional": []
+    },
+    "loop_iteration": {
+      "required": ["workflowId", "loopId", "iteration", "stopConditionMet"],
+      "optional": []
+    },
+    "watch_poll": {
+      "required": ["workflowId", "nodeId", "nodePath", "outcome", "at"],
+      "optional": []
+    },
+    "paused": {
+      "required": ["workflowId", "pauseReason"],
+      "optional": []
+    },
+    "run_complete": {
+      "required": ["workflowId", "status", "finalState"],
+      "optional": []
+    },
+    "steps_queued": {
+      "required": ["workflowId", "pendingSteps"],
+      "optional": ["resolution"]
+    }
+  },
+  "descriptor_fields": {
+    "step": {
+      "required": ["nodeId", "type", "agentName"],
+      "optional": ["model", "effort"]
+    },
+    "sequence": {
+      "required": ["nodeId", "type", "steps"],
+      "optional": []
+    },
+    "repeat": {
+      "required": ["nodeId", "type", "steps", "maxIterations", "onMaxIterations"],
+      "optional": ["stopCondition", "stopWhen"]
+    },
+    "parallel": {
+      "required": ["nodeId", "type", "branches"],
+      "optional": []
+    },
+    "watch": {
+      "required": ["nodeId", "type", "handlerName"],
+      "optional": []
+    }
+  },
+  "enum_domains": {
+    "snapshot_run_status": ["running", "paused", "completed", "failed", "aborted"],
+    "completion_status": ["paused", "completed", "failed", "aborted"],
+    "node_status": ["pending", "running", "paused", "completed", "failed", "aborted", "skipped"],
+    "node_type": ["step", "sequence", "repeat", "parallel", "watch"],
+    "watch_outcome": ["new-activity", "idle", "idle-timeout", "terminal-state"],
+    "queue_outcome": ["applied", "rejected", "dropped"],
+    "completion_signal": ["success", "need_input", "error"],
+    "completion_source": ["send_message", "status_update"],
+    "repeat_exhaustion": ["pause", "abort"]
+  },
+  "identifier_cases": {
+    "accepted": ["id", "識別子", "with space", "#", "/", "\\", "large-65536-bytes"],
+    "rejected": [""]
+  },
+  "opaque_json_cases": [
+    "null",
+    "false",
+    "true",
+    "i64_min",
+    "u64_max",
+    "finite_fraction",
+    "empty_string",
+    "ascii_string",
+    "unicode_string",
+    "spaced_string",
+    "large_string",
+    "empty_array",
+    "single_array",
+    "multi_array",
+    "duplicate_array",
+    "empty_object",
+    "single_object",
+    "multi_object",
+    "empty_key",
+    "unicode_key",
+    "spaced_key",
+    "large_key",
+    "nested_array_object",
+    "duplicate_raw_key_last_wins"
+  ],
+  "required_shape_families": [
+    "node_descriptors",
+    "enum_domains",
+    "opaque_json",
+    "scalar_strings",
+    "identifiers",
+    "optional_presence",
+    "collections",
+    "duplicate_raw_keys",
+    "numeric_and_node_paths",
+    "workspace_paths",
+    "typed_unknown_extras",
+    "duplicate_canonical_paths",
+    "completion_status_mismatches"
+  ],
+  "shape_boundary_outcomes": {
+    "node_descriptors": "known_preserve_unknown_enum_reject",
+    "enum_domains": "known_preserve_unknown_reject",
+    "opaque_json": "preserve_exact_resolved_value",
+    "scalar_strings": "string_preserve_wrong_type_reject",
+    "identifiers": "nonempty_preserve_empty_reject",
+    "optional_presence": "absent_or_valid_preserve_invalid_reject",
+    "collections": "preserve_order_and_duplicates",
+    "duplicate_raw_keys": "preserve_serde_json_last_value",
+    "numeric_and_node_paths": "in_domain_preserve_out_of_range_reject",
+    "workspace_paths": "preserve_opaque",
+    "typed_unknown_extras": "ignore_extra_preserve_known_fields",
+    "duplicate_canonical_paths": "converter_preserve_then_state_reject_atomically",
+    "completion_status_mismatches": "converter_reject"
+  },
+  "repeat_controls": [
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "iteration": 2, "wrapper": true},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "wrapper": false},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "iteration": 3, "wrapper": false},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "step", "iteration": 2, "wrapper": false},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#x", "type": "sequence", "iteration": 0, "wrapper": false},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#二", "type": "sequence", "iteration": 2, "wrapper": false},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#02", "type": "sequence", "iteration": 2, "wrapper": false},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "literal#2", "type": "sequence", "iteration": 2, "wrapper": false}
+  ],
+  "snapshot_transition_rules": {
+    "direct_missing": "seed",
+    "direct_active_any_valid_status": "reconcile",
+    "direct_terminal_same_status": "reconcile",
+    "direct_terminal_nonterminal_or_different_terminal": "TerminalSnapshotConflict",
+    "completion_missing": "warn_unchanged",
+    "completion_active_valid_completion_status": "reconcile",
+    "completion_terminal_exact_duplicate": "unchanged",
+    "completion_terminal_non_exact": "warn_unchanged"
+  },
+  "snapshot_owned_run_fields": [
+    "workflowName", "status", "inputs", "artifacts", "capturedOutputs", "createdAt", "planRevision", "parentSessionId", "workspacePath", "root"
+  ],
+  "snapshot_owned_node_fields": [
+    "descriptor", "status", "sessionId", "artifacts", "capturedOutput", "failureReason", "iteration", "branchId", "completionSignal", "completionSignalSource", "startedAt", "endedAt"
+  ],
+  "event_only_fields": [
+    "prompt", "pendingSteps", "queueResolution", "runPauseReason", "nodePauseReason", "latestLoopIteration", "latestWatchPoll"
+  ],
+  "unknown_run_events": [
+    "node_start", "node_complete", "node_paused", "loop_iteration", "watch_poll", "paused", "run_complete", "steps_queued"
+  ],
+  "unknown_node_events": ["node_complete", "node_paused", "watch_poll", "loop_iteration"],
+  "post_terminal_events": [
+    "node_start", "node_complete", "node_paused", "loop_iteration", "watch_poll", "paused", "run_complete", "steps_queued"
+  ],
+  "queue_rules": {
+    "without_resolution": "replace_pending",
+    "with_resolution": "preserve_pending_and_record_ack",
+    "array_cardinalities": ["empty", "nonempty"],
+    "reason_presence": ["absent", "present"]
+  },
+  "node_index_rules": {
+    "changed_id": "move_only_changed_path",
+    "shared_old_bucket": "preserve_old_peers",
+    "occupied_new_bucket": "preserve_new_peers",
+    "same_id_step_and_repeat": "resolve_unique_repeat",
+    "same_id_two_repeats": "warn_unchanged"
+  },
+  "node_merge_matrix": {
+    "node_start": {
+      "always_replace": ["nodeId", "type"],
+      "must_not_synthesize": ["status"],
+      "replace_when_present_preserve_when_absent": ["agentName", "sessionId", "prompt", "iteration", "branchId"],
+      "preserve_unrelated": ["artifacts", "capturedOutput", "failureReason", "completionSignal", "completionSignalSource", "nodePauseReason", "latestLoopIteration", "latestWatchPoll"]
+    },
+    "node_complete": {
+      "always_replace": ["status"],
+      "replace_when_present_preserve_when_absent": ["artifacts", "capturedOutput", "failureReason", "completionSignal", "completionSignalSource"],
+      "preserve_unrelated": ["agentName", "sessionId", "prompt", "iteration", "branchId", "nodePauseReason", "latestLoopIteration", "latestWatchPoll"]
+    },
+    "changed_node_id": {
+      "remove": "changed_path_from_old_bucket_only",
+      "insert": "changed_path_into_new_bucket",
+      "preserve": ["old_bucket_peers", "new_bucket_peers", "node_cardinality"]
+    }
+  },
+  "progress_permutation_table": {
+    "events": {
+      "run_pause": {"runPauseReason": "operator"},
+      "node_pause": {"path": ["wf", "step"], "nodePauseReason": "need-human"},
+      "loop_false": {"path": ["wf", "loop"], "latestLoopIteration": {"iteration": 0, "stopConditionMet": false}},
+      "loop_true": {"path": ["wf", "loop"], "latestLoopIteration": {"iteration": 1, "stopConditionMet": true}},
+      "watch_first": {"path": ["wf", "watch"], "latestWatchPoll": {"outcome": "new-activity", "at": "t1"}},
+      "watch_second": {"path": ["wf", "watch"], "latestWatchPoll": {"outcome": "idle-timeout", "at": "t2"}}
+    },
+    "orders": [
+      ["run_pause", "node_pause", "loop_false", "watch_first", "loop_true", "watch_second"],
+      ["watch_first", "loop_false", "node_pause", "run_pause", "watch_second", "loop_true"]
+    ],
+    "expected": {
+      "runPauseReason": "operator",
+      "nodePauseReason": "need-human",
+      "latestLoopIteration": {"iteration": 1, "stopConditionMet": true},
+      "latestWatchPoll": {"outcome": "idle-timeout", "at": "t2"},
+      "rawHistoryEntries": 0
+    }
+  },
+  "replay_oracle": {
+    "fixture": "oracle-replay-events.jsonl",
+    "methods": ["run_start", "node_start", "node_complete", "node_paused", "loop_iteration", "watch_poll", "paused", "run_complete", "steps_queued"],
+    "checkpoints": ["opening", "node_opening", "event_only", "terminal", "after_retry"],
+    "live_captures": ["terminal-failed-2.16.2.jsonl", "terminal-aborted-2.16.2.jsonl", "kas-repeat-watch-2.16.0.jsonl"],
+    "passes": [1, 2],
+    "expected": "one_and_two_complete_sorted_projections_equal",
+    "after_retry_forbidden_fields": ["pendingSteps", "queueResolution", "runPauseReason", "nodePauseReason", "latestLoopIteration", "latestWatchPoll"],
+    "after_retry_node_ids": ["wf_oracle", "new"]
+  },
+  "retry_reset_fields": [
+    "runtimeNodes", "nodeIdIndex", "pendingSteps", "queueResolution", "runPauseReason", "nodePauseReason", "latestLoopIteration", "latestWatchPoll", "completionMetadata", "terminalFlag"
+  ],
+  "active_opening_rules": {
+    "absent_status": "remain_absent_until_authoritative_event",
+    "exact_duplicate": "unchanged",
+    "conflicts": ["workflowName", "inputs", "nodeTree", "parentSessionId"],
+    "parent_session_transitions": ["none_to_some", "some_to_none", "some_to_changed_some"],
+    "conflict_result": "warn_unchanged"
+  },
+  "completion_metadata_matrix": {
+    "run_statuses": ["paused", "completed", "failed", "aborted"],
+    "node_statuses": ["pending", "running", "paused", "completed", "failed", "aborted", "skipped"],
+    "signals": [null, "success", "need_input", "error"],
+    "sources": [null, "send_message", "status_update"],
+    "expected": "preserve_status_and_derive_liveness_from_run_status_only"
+  },
+  "warning_schemas": {
+    "converter_rejection": {
+      "level": "WARN",
+      "message": "malformed workflow notification",
+      "required_fields": ["method", "field_path", "error_kind", "error"],
+      "optional_fields": [],
+      "test_row_context": ["case_id"],
+      "error_kinds": ["missing_required", "wrong_type", "invalid_enum", "invalid_value", "status_mismatch"]
+    },
+    "state_rejection": {
+      "level": "WARN",
+      "message": "workflow event ignored",
+      "required_fields": ["workflow_id", "event_kind", "reason"],
+      "optional_fields": ["node_path", "node_id"],
+      "reasons": [
+        "active_run_start_conflict",
+        "unknown_run",
+        "unknown_node",
+        "ambiguous_repeat",
+        "post_terminal_event",
+        "terminal_completion_conflict"
+      ]
+    },
+    "app_state_error": {
+      "level": "WARN",
+      "message": "workflow state application failed",
+      "required_fields": ["workflow_id", "event_kind", "error_kind", "error"],
+      "optional_fields": [],
+      "error_kinds": ["duplicate_canonical_path", "terminal_snapshot_conflict"]
+    }
+  },
+  "scale": {
+    "runs": 64,
+    "nodes_per_run": 256,
+    "events_per_node": 10,
+    "events": 163840,
+    "expected_runs": 64,
+    "expected_nodes": 16384,
+    "raw_history_entries": 0,
+    "ordinary_lookup_bound": {"run": 1, "node": 1, "id_bucket": 0},
+    "pathless_lookup_bound": {"run": 1, "node": 0, "id_bucket": 1}
+  },
+  "terminal_counts": {"failed": 2, "aborted": 2}
+}
