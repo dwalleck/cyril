@@ -12,7 +12,7 @@ use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
 use cyril_core::types::*;
 use cyril_ui::state::{AutocompleteAction, UiState};
-use cyril_ui::traits::{Activity, TuiState};
+use cyril_ui::traits::{Activity, TuiState, approval_origin_label};
 
 use cyril_core::types::code_panel::CodeCommandResponse;
 
@@ -200,14 +200,18 @@ impl App {
                 // Priority 1: Terminal input
                 Some(event) = event_stream.next() => {
                     match event {
-                        Ok(event) => self.handle_terminal_event(event).await?,
+                        Ok(event) => {
+                            self.handle_terminal_event_batch(event, || {
+                                match event_stream.next().now_or_never().flatten() {
+                                    Some(Ok(event)) => Some(event),
+                                    _ => None,
+                                }
+                            })
+                            .await?;
+                        }
                         Err(e) => {
                             tracing::error!(error = %e, "terminal event error");
                         }
-                    }
-                    // Drain remaining buffered input
-                    while let Some(Ok(event)) = event_stream.next().now_or_never().flatten() {
-                        self.handle_terminal_event(event).await?;
                     }
                 }
 
@@ -563,6 +567,25 @@ impl App {
         deferred_commands
     }
 
+    /// Handle one terminal event plus buffered followers. An active approval is
+    /// an input-batch boundary: its terminal key can synchronously promote the
+    /// next request, which must be drawn before another key can act on it.
+    async fn handle_terminal_event_batch(
+        &mut self,
+        event: Event,
+        mut next_buffered: impl FnMut() -> Option<Event>,
+    ) -> cyril_core::Result<()> {
+        let approval_was_active = self.ui_state.has_approval();
+        self.handle_terminal_event(event).await?;
+        if approval_was_active {
+            return Ok(());
+        }
+        while let Some(event) = next_buffered() {
+            self.handle_terminal_event(event).await?;
+        }
+        Ok(())
+    }
+
     async fn handle_terminal_event(&mut self, event: Event) -> cyril_core::Result<()> {
         match event {
             Event::Key(key) => self.handle_key(key).await?,
@@ -700,10 +723,20 @@ impl App {
             KeyCode::Up => self.ui_state.approval_select_prev(),
             KeyCode::Down => self.ui_state.approval_select_next(),
             KeyCode::Enter => {
-                // A confirmed trust tier (phase 2) returns the chosen option so
-                // we can persist it across sessions to the active agent's config.
-                if let Some(trust) = self.ui_state.approval_confirm() {
-                    self.persist_trust_grant(&trust);
+                // A confirmed trust tier carries its approval origin. Only a
+                // valid main-session id may write the active agent's durable
+                // config; an empty wire id is retained for provenance but is
+                // never authority.
+                if let Some((origin, trust)) = self.ui_state.approval_confirm() {
+                    if !origin.as_str().is_empty() && self.session.id() == Some(&origin) {
+                        self.persist_trust_grant(&trust);
+                    } else {
+                        let origin = approval_origin_label(&origin);
+                        self.ui_state.add_system_message(format!(
+                            "Trust remains session-scoped for {origin}; it was not saved to the \
+                             main agent's config."
+                        ));
+                    }
                 }
             }
             KeyCode::Esc => self.ui_state.approval_cancel(),
@@ -1802,6 +1835,220 @@ mod tests {
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
         )
+    }
+
+    fn trust_request(
+        session_id: &str,
+    ) -> (
+        PermissionRequest,
+        tokio::sync::oneshot::Receiver<PermissionResponse>,
+    ) {
+        let (responder, receiver) = tokio::sync::oneshot::channel();
+        (
+            PermissionRequest {
+                session_id: SessionId::new(session_id),
+                tool_call: ToolCall::new(
+                    ToolCallId::new(format!("tool-{session_id}")),
+                    "echo safe".into(),
+                    ToolKind::Execute,
+                    ToolCallStatus::Pending,
+                    None,
+                ),
+                message: "Allow command?".into(),
+                options: vec![PermissionOption {
+                    id: PermissionOptionId::new("always"),
+                    label: "Always".into(),
+                    kind: PermissionOptionKind::AllowAlways,
+                    is_destructive: false,
+                }],
+                trust_options: vec![TrustOption {
+                    label: "Full command".into(),
+                    display: "echo safe".into(),
+                    setting_key: "allowedCommands".into(),
+                    patterns: vec!["echo safe".into()],
+                }],
+                responder,
+            },
+            receiver,
+        )
+    }
+    #[tokio::test]
+    async fn buffered_input_stops_before_promoted_approval() {
+        let mut app = test_app();
+        let (mut first, mut first_response) = trust_request("first");
+        let (mut second, mut second_response) = trust_request("second");
+        first.trust_options.clear();
+        second.trust_options.clear();
+        app.ui_state.show_approval(first);
+        app.ui_state.show_approval(second);
+
+        let enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+        let mut buffered = Some(Event::Key(enter));
+        app.handle_terminal_event_batch(Event::Key(enter), || buffered.take())
+            .await
+            .expect("approval input batch");
+
+        assert!(buffered.is_some(), "buffered input must wait for redraw");
+        assert!(matches!(
+            first_response.try_recv(),
+            Ok(PermissionResponse::Selected { .. })
+        ));
+        assert!(matches!(
+            second_response.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+        assert_eq!(
+            app.ui_state
+                .approval()
+                .expect("second approval promoted")
+                .session_id,
+            SessionId::new("second")
+        );
+    }
+
+    #[test]
+    fn foreign_approval_trust_is_not_persisted_to_main_agent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config_dir = tmp.path().join(".kiro").join("agents");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let config_path = config_dir.join("myagent.json");
+        let original = br#"{"unrelated":{"keep":true}}"#;
+        std::fs::write(&config_path, original).unwrap();
+
+        let mut app = App::new(
+            BridgeHandle::for_tests(),
+            &config::UiConfig::default(),
+            tmp.path().to_path_buf(),
+            cyril_core::commands::HooksCommandSource::Agent,
+        );
+        let main_id = SessionId::new("main-session");
+        app.session
+            .set_session(main_id.clone(), SessionStatus::Active);
+        app.session.apply_notification(&Notification::ModeChanged {
+            mode_id: ModeId::new("myagent"),
+        });
+
+        let (foreign, foreign_response) = trust_request("peer-session");
+        let (main, main_response) = trust_request(main_id.as_str());
+        app.ui_state.show_approval(foreign);
+        app.ui_state.show_approval(main);
+
+        let enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+        app.handle_approval_key(enter);
+        app.handle_approval_key(enter);
+        assert!(matches!(
+            foreign_response.blocking_recv(),
+            Ok(PermissionResponse::Selected {
+                trust_option: Some(label),
+                ..
+            }) if label == "Full command"
+        ));
+        assert_eq!(
+            std::fs::read(&config_path).unwrap(),
+            original,
+            "foreign approval must not write the main agent config"
+        );
+        assert!(app.ui_state.messages().iter().any(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::System(text)
+                    if text.contains("session-scoped") && text.contains("peer-session")
+            )
+        }));
+
+        app.handle_approval_key(enter);
+        app.handle_approval_key(enter);
+        assert!(matches!(
+            main_response.blocking_recv(),
+            Ok(PermissionResponse::Selected { .. })
+        ));
+        let persisted: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&config_path).unwrap()).unwrap();
+        assert_eq!(persisted["unrelated"]["keep"], true);
+        assert_eq!(
+            persisted["toolsSettings"]["execute_bash"]["allowedCommands"],
+            serde_json::json!(["echo safe"])
+        );
+    }
+
+    #[test]
+    fn pre_main_approval_trust_is_session_scoped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config_dir = tmp.path().join(".kiro").join("agents");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let config_path = config_dir.join("myagent.json");
+        let original = b"{}";
+        std::fs::write(&config_path, original).unwrap();
+
+        let mut app = App::new(
+            BridgeHandle::for_tests(),
+            &config::UiConfig::default(),
+            tmp.path().to_path_buf(),
+            cyril_core::commands::HooksCommandSource::Agent,
+        );
+        app.session.apply_notification(&Notification::ModeChanged {
+            mode_id: ModeId::new("myagent"),
+        });
+        let (request, response) = trust_request("early-session");
+        app.ui_state.show_approval(request);
+
+        let enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+        app.handle_approval_key(enter);
+        app.handle_approval_key(enter);
+
+        assert!(matches!(
+            response.blocking_recv(),
+            Ok(PermissionResponse::Selected { .. })
+        ));
+        assert_eq!(std::fs::read(&config_path).unwrap(), original);
+        assert!(app.ui_state.messages().iter().any(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::System(text)
+                    if text.contains("session-scoped") && text.contains("early-session")
+            )
+        }));
+    }
+
+    #[test]
+    fn empty_origin_cannot_authorize_main_config_persistence() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config_dir = tmp.path().join(".kiro").join("agents");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let config_path = config_dir.join("myagent.json");
+        let original = b"{}";
+        std::fs::write(&config_path, original).unwrap();
+
+        let mut app = App::new(
+            BridgeHandle::for_tests(),
+            &config::UiConfig::default(),
+            tmp.path().to_path_buf(),
+            cyril_core::commands::HooksCommandSource::Agent,
+        );
+        app.session
+            .set_session(SessionId::new(""), SessionStatus::Active);
+        app.session.apply_notification(&Notification::ModeChanged {
+            mode_id: ModeId::new("myagent"),
+        });
+        let (request, response) = trust_request("");
+        app.ui_state.show_approval(request);
+
+        let enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+        app.handle_approval_key(enter);
+        app.handle_approval_key(enter);
+
+        assert!(matches!(
+            response.blocking_recv(),
+            Ok(PermissionResponse::Selected { .. })
+        ));
+        assert_eq!(std::fs::read(&config_path).unwrap(), original);
+        assert!(app.ui_state.messages().iter().any(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::System(text)
+                    if text.contains("session-scoped") && text.contains("unknown session")
+            )
+        }));
     }
 
     fn metadata_frame(sid: &SessionId) -> Notification {

@@ -414,6 +414,7 @@ pub struct TrustOption {
 /// NOT Clone — owns a oneshot sender for the response.
 #[derive(Debug)]
 pub struct PermissionRequest {
+    pub session_id: SessionId,
     pub tool_call: ToolCall,
     pub message: String,
     pub options: Vec<PermissionOption>,

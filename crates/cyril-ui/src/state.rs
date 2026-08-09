@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
 
 use crossterm::event::{KeyCode, KeyEvent};
@@ -53,6 +53,7 @@ pub struct UiState {
     activity: Activity,
     activity_since: Option<Instant>,
     session_label: Option<String>,
+    main_session_id: Option<SessionId>,
     current_mode: Option<String>,
     current_model: Option<String>,
     /// Thinking-effort level for the toolbar (Kiro 2.5.0+). Sticky: only
@@ -84,7 +85,7 @@ pub struct UiState {
     subagent_tracker: cyril_core::subagent::SubagentTracker,
 
     // Overlays
-    approval: Option<ApprovalState>,
+    approvals: VecDeque<ApprovalState>,
     picker: Option<PickerState>,
     hooks_panel: Option<HooksPanelState>,
     code_panel: Option<cyril_core::types::CodePanelData>,
@@ -198,6 +199,9 @@ impl TuiState for UiState {
     fn session_label(&self) -> Option<&str> {
         self.session_label.as_deref()
     }
+    fn main_session_id(&self) -> Option<&SessionId> {
+        self.main_session_id.as_ref()
+    }
 
     fn current_mode(&self) -> Option<&str> {
         self.current_mode.as_deref()
@@ -244,7 +248,7 @@ impl TuiState for UiState {
     }
 
     fn approval(&self) -> Option<&ApprovalState> {
-        self.approval.as_ref()
+        self.approvals.front()
     }
 
     fn picker(&self) -> Option<&PickerState> {
@@ -318,6 +322,7 @@ impl UiState {
             activity: Activity::Idle,
             activity_since: None,
             session_label: None,
+            main_session_id: None,
             current_mode: None,
             current_model: None,
             effort: None,
@@ -332,7 +337,7 @@ impl UiState {
             pending_refusal: false,
             subagents: crate::subagent_ui::SubagentUiState::new(),
             subagent_tracker: cyril_core::subagent::SubagentTracker::new(),
-            approval: None,
+            approvals: VecDeque::new(),
             picker: None,
             hooks_panel: None,
             code_panel: None,
@@ -764,6 +769,7 @@ impl UiState {
                 available_models: _,
             } => {
                 self.session_label = Some(session_id.as_str().to_string());
+                self.main_session_id = Some(session_id.clone());
                 self.current_mode = current_mode.as_ref().map(|m| m.as_str().to_string());
                 // Session creation is likewise a model-state boundary: None
                 // must clear the prior session's model rather than retain it.
@@ -1340,9 +1346,10 @@ impl UiState {
         self.quit_requested = true;
     }
 
-    /// Show an approval dialog from a permission request.
+    /// Queue an approval dialog from a permission request.
     pub fn show_approval(&mut self, request: PermissionRequest) {
-        self.approval = Some(ApprovalState {
+        self.approvals.push_back(ApprovalState {
+            session_id: request.session_id,
             tool_call: TrackedToolCall::new(request.tool_call),
             message: request.message,
             options: request.options,
@@ -1387,7 +1394,7 @@ impl UiState {
 
     /// Check if there is an active approval dialog.
     pub fn has_approval(&self) -> bool {
-        self.approval.is_some()
+        !self.approvals.is_empty()
     }
 
     /// Check if there is an active picker dialog.
@@ -1747,7 +1754,7 @@ impl UiState {
 
     /// Move approval selection to the previous option.
     pub fn approval_select_prev(&mut self) {
-        if let Some(ref mut approval) = self.approval
+        if let Some(approval) = self.approvals.front_mut()
             && approval.selected > 0
         {
             approval.selected -= 1;
@@ -1756,7 +1763,7 @@ impl UiState {
 
     /// Move approval selection to the next option.
     pub fn approval_select_next(&mut self) {
-        if let Some(ref mut approval) = self.approval {
+        if let Some(approval) = self.approvals.front_mut() {
             let max = match approval.phase {
                 ApprovalPhase::SelectOption => approval.options.len(),
                 ApprovalPhase::SelectTrust { .. } => approval.trust_options.len(),
@@ -1774,14 +1781,16 @@ impl UiState {
     /// response immediately.
     ///
     /// In phase 2 (SelectTrust): sends AllowAlways with the selected trust
-    /// option label and **returns the chosen `TrustOption`** so the caller (App)
-    /// can persist the grant to the active agent's config for cross-session
-    /// trust. Returns `None` in every other case (phase-2 transition, immediate
-    /// allow/reject, no active dialog).
-    pub fn approval_confirm(&mut self) -> Option<cyril_core::types::TrustOption> {
-        // Take ownership upfront. Only the phase-2 transition puts the dialog
-        // back; every other path consumes it to send a response.
-        let mut approval = self.approval.take()?;
+    /// option label and **returns the originating `SessionId` with the chosen
+    /// `TrustOption`** so the caller (App) can decide whether the grant belongs
+    /// to the active agent's durable config. Returns `None` in every other case
+    /// (phase-2 transition, immediate allow/reject, no active dialog).
+    pub fn approval_confirm(
+        &mut self,
+    ) -> Option<(cyril_core::types::SessionId, cyril_core::types::TrustOption)> {
+        // Pop ownership upfront. Only the phase-2 transition restores the same
+        // request at the front; terminal paths expose the next queued request.
+        let mut approval = self.approvals.pop_front()?;
 
         match approval.phase.clone() {
             ApprovalPhase::SelectOption => {
@@ -1793,12 +1802,13 @@ impl UiState {
                     Some((PermissionOptionKind::AllowAlways, chosen_option_id))
                         if !approval.trust_options.is_empty() =>
                     {
-                        // Transition to phase 2 — restore the dialog, advanced.
+                        // Transition to phase 2 — restore this request at the
+                        // front so later requests cannot overtake it.
                         // The phase carries the picked id: `selected` will
                         // re-index trust_options from here on.
                         approval.phase = ApprovalPhase::SelectTrust { chosen_option_id };
                         approval.selected = 0;
-                        self.approval = Some(approval);
+                        self.approvals.push_front(approval);
                     }
                     Some((_, option_id)) => {
                         // The reply names the exact picked option — KAS
@@ -1842,14 +1852,14 @@ impl UiState {
                         "approval response dropped — agent receiver no longer listening"
                     );
                 }
-                chosen
+                chosen.map(|trust| (approval.session_id, trust))
             }
         }
     }
 
     /// Cancel the approval dialog or go back from phase 2 to phase 1.
     pub fn approval_cancel(&mut self) {
-        if let Some(ref mut approval) = self.approval
+        if let Some(approval) = self.approvals.front_mut()
             && let ApprovalPhase::SelectTrust { chosen_option_id } = &approval.phase
         {
             // Go back to phase 1, restoring the cursor to the exact option the
@@ -1865,7 +1875,7 @@ impl UiState {
             approval.selected = restored;
             return;
         }
-        if let Some(approval) = self.approval.take() {
+        if let Some(approval) = self.approvals.pop_front() {
             // Same rationale as approval_confirm: a dropped receiver means the
             // request was already cancelled upstream; log at debug level.
             if approval.responder.send(PermissionResponse::Cancel).is_err() {
@@ -5635,6 +5645,7 @@ mod tests {
             None,
         );
         let req = cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
             tool_call,
             message: "Allow?".into(),
             options,
@@ -5659,9 +5670,8 @@ mod tests {
 
     // ---------- approval snapshot independence (cyril-j1b3 C5) ----------
 
-    /// Two permission requests for the same toolCallId get independent
-    /// snapshots and responders: confirming the second must not resolve the
-    /// first, and a mutation between them must not leak across.
+    /// Two permission requests for the same toolCallId retain independent
+    /// snapshots and responders while the UI resolves them in arrival order.
     #[test]
     fn approval_snapshot_is_independent() {
         use cyril_core::types::{
@@ -5678,6 +5688,7 @@ mod tests {
         ) {
             let (tx, rx) = tokio::sync::oneshot::channel();
             let req = PermissionRequest {
+                session_id: cyril_core::types::SessionId::new("main"),
                 tool_call: ToolCall::new(
                     ToolCallId::new("shared-id"),
                     title.into(),
@@ -5698,31 +5709,192 @@ mod tests {
             (req, rx)
         }
 
-        // First approval: shown, then displaced by the second request (the UI
-        // holds one approval at a time — the displaced request's responder
-        // drops, which is the observable "independent responder" half).
         let (req1, rx1) = request("first", serde_json::json!({"path": "one.md"}));
-        let (req2, rx2) = request("second", serde_json::json!({"path": "two.md"}));
+        let (req2, mut rx2) = request("second", serde_json::json!({"path": "two.md"}));
         let mut state = UiState::new(500);
         state.show_approval(req1);
         state.show_approval(req2);
-
-        let approval = state.approval.as_ref().expect("second approval active");
+        let approval = state.approvals.front().expect("first approval active");
+        assert_eq!(approval.message, "first");
+        assert_eq!(
+            approval.tool_call.raw_input(),
+            Some(&serde_json::json!({"path": "one.md"})),
+            "the first request's snapshot must remain at the head"
+        );
+        state.approval_confirm();
+        assert!(
+            matches!(rx1.blocking_recv(), Ok(PermissionResponse::Selected { .. })),
+            "first responder resolved"
+        );
+        assert!(
+            matches!(
+                rx2.try_recv(),
+                Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+            ),
+            "second responder remains pending"
+        );
+        let approval = state.approvals.front().expect("second approval active");
         assert_eq!(approval.message, "second");
         assert_eq!(
             approval.tool_call.raw_input(),
             Some(&serde_json::json!({"path": "two.md"})),
-            "the second request's snapshot must be its own"
+            "the second request's snapshot must remain independent"
         );
         state.approval_confirm();
         assert!(
             matches!(rx2.blocking_recv(), Ok(PermissionResponse::Selected { .. })),
             "second responder resolved"
         );
-        assert!(
-            rx1.blocking_recv().is_err(),
-            "first responder was dropped with its displaced request — no cross-talk"
-        );
+        assert!(!state.has_approval());
+    }
+
+    #[test]
+    fn approval_terminal_paths_promote_next_request() {
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionRequest,
+            PermissionResponse, SessionId, ToolCall, ToolCallId, ToolCallStatus, ToolKind,
+            TrustOption,
+        };
+
+        let mut state = UiState::new(500);
+        let mut receivers = VecDeque::new();
+        for index in 0..64 {
+            let (responder, receiver) = tokio::sync::oneshot::channel();
+            let option_id = PermissionOptionId::new(format!("option-{index}"));
+            let allow_always = index == 3;
+            state.show_approval(PermissionRequest {
+                session_id: SessionId::new("repeated-session"),
+                tool_call: ToolCall::new(
+                    ToolCallId::new("repeated-tool"),
+                    format!("tool-{index}"),
+                    ToolKind::Execute,
+                    ToolCallStatus::Pending,
+                    Some(serde_json::json!({"index": index})),
+                ),
+                message: format!("request-{index}"),
+                options: vec![PermissionOption {
+                    id: option_id,
+                    label: format!("option-{index}"),
+                    kind: if allow_always {
+                        PermissionOptionKind::AllowAlways
+                    } else {
+                        PermissionOptionKind::AllowOnce
+                    },
+                    is_destructive: false,
+                }],
+                trust_options: allow_always
+                    .then(|| TrustOption {
+                        label: "Full command".into(),
+                        display: "tool".into(),
+                        setting_key: "allowedCommands".into(),
+                        patterns: vec!["tool".into()],
+                    })
+                    .into_iter()
+                    .collect(),
+                responder,
+            });
+            if matches!(index, 10 | 20) {
+                drop(receiver);
+                receivers.push_back(None);
+            } else {
+                receivers.push_back(Some(receiver));
+            }
+        }
+
+        for index in 0..64 {
+            for pending in receivers.iter_mut().filter_map(Option::as_mut) {
+                assert!(matches!(
+                    pending.try_recv(),
+                    Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+                ));
+            }
+            let receiver = receivers.pop_front().expect("receiver slot");
+            let expected_id = PermissionOptionId::new(format!("option-{index}"));
+            let approval = state.approvals.front().expect("queued approval active");
+            assert_eq!(approval.message, format!("request-{index}"));
+            assert_eq!(approval.options[0].id, expected_id);
+            assert_eq!(
+                approval.tool_call.raw_input(),
+                Some(&serde_json::json!({"index": index}))
+            );
+
+            let expected = match index {
+                1 => {
+                    state.approval_cancel();
+                    PermissionResponse::Cancel
+                }
+                2 => {
+                    state
+                        .approvals
+                        .front_mut()
+                        .expect("invalid-selection approval")
+                        .selected = usize::MAX;
+                    state.approval_confirm();
+                    PermissionResponse::Cancel
+                }
+                3 => {
+                    state.approval_confirm();
+                    assert_eq!(
+                        state.approvals.front().expect("trust phase").message,
+                        "request-3"
+                    );
+                    state.approval_cancel();
+                    assert_eq!(
+                        state
+                            .approvals
+                            .front()
+                            .expect("restored option phase")
+                            .message,
+                        "request-3"
+                    );
+                    state.approval_confirm();
+                    let (origin, chosen) = state.approval_confirm().expect("chosen trust option");
+                    assert_eq!(origin, SessionId::new("repeated-session"));
+                    assert_eq!(chosen.label, "Full command");
+                    PermissionResponse::Selected {
+                        option_id: expected_id,
+                        trust_option: Some("Full command".into()),
+                    }
+                }
+                _ if index % 2 == 0 => {
+                    state.approval_confirm();
+                    PermissionResponse::Selected {
+                        option_id: expected_id,
+                        trust_option: None,
+                    }
+                }
+                _ => {
+                    state.approval_cancel();
+                    PermissionResponse::Cancel
+                }
+            };
+
+            if let Some(receiver) = receiver {
+                let actual = receiver.blocking_recv().expect("open responder resolved");
+                match (actual, expected) {
+                    (PermissionResponse::Cancel, PermissionResponse::Cancel) => {}
+                    (
+                        PermissionResponse::Selected {
+                            option_id: actual_id,
+                            trust_option: actual_trust,
+                        },
+                        PermissionResponse::Selected {
+                            option_id: expected_id,
+                            trust_option: expected_trust,
+                        },
+                    ) => {
+                        assert_eq!(actual_id, expected_id);
+                        assert_eq!(actual_trust, expected_trust);
+                    }
+                    (actual, expected) => {
+                        panic!("unexpected response: actual={actual:?}, expected={expected:?}");
+                    }
+                }
+            }
+        }
+
+        assert!(receivers.is_empty());
+        assert!(!state.has_approval());
     }
 
     /// cyril-j1b3 spec snapshot-stability fence: a ToolCallUpdated applied to
@@ -5738,6 +5910,7 @@ mod tests {
 
         let (tx, _rx) = tokio::sync::oneshot::channel();
         let req = PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
             tool_call: ToolCall::new(
                 ToolCallId::new("tc-snap"),
                 "Write File".into(),
@@ -5777,8 +5950,7 @@ mod tests {
                 Some(serde_json::json!({"path": "a.md", "text": "REPLACED"})),
             ),
         ));
-
-        let approval = state.approval.as_ref().expect("approval still active");
+        let approval = state.approvals.front().expect("approval still active");
         assert_eq!(
             approval.tool_call.raw_input(),
             Some(&serde_json::json!({"path": "a.md", "text": "original"})),
@@ -5908,7 +6080,11 @@ mod tests {
         // Force the selector out of bounds — simulates a refactor regression
         // where the selector drifts past options.len(). The handler should
         // log a warn and emit Cancel rather than panic or send an AllowOnce.
-        state.approval.as_mut().expect("approval present").selected = 99;
+        state
+            .approvals
+            .front_mut()
+            .expect("approval present")
+            .selected = 99;
         state.approval_confirm();
 
         let response = rx.blocking_recv().expect("responder fired");
@@ -5931,6 +6107,7 @@ mod tests {
             None,
         );
         let req = cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
             tool_call,
             message: "Allow?".into(),
             options,
@@ -5938,6 +6115,67 @@ mod tests {
             responder: tx,
         };
         (req, rx)
+    }
+
+    #[test]
+    fn approval_trust_phase_keeps_queue_head_until_confirmed() {
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionResponse,
+            TrustOption,
+        };
+
+        let (first, mut first_response) = make_approval_request_with_trust(
+            vec![PermissionOption {
+                id: PermissionOptionId::new("always"),
+                label: "Always".into(),
+                kind: PermissionOptionKind::AllowAlways,
+                is_destructive: false,
+            }],
+            vec![TrustOption {
+                label: "Full command".into(),
+                display: "echo hi".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec!["echo hi".into()],
+            }],
+        );
+        let (mut second, mut second_response) = make_approval_request(vec![PermissionOption {
+            id: PermissionOptionId::new("once"),
+            label: "Once".into(),
+            kind: PermissionOptionKind::AllowOnce,
+            is_destructive: false,
+        }]);
+        second.message = "second".into();
+
+        let mut state = UiState::new(500);
+        state.show_approval(first);
+        state.show_approval(second);
+        state.approval_confirm();
+        assert!(matches!(
+            state.approval().expect("first approval active").phase,
+            ApprovalPhase::SelectTrust { .. }
+        ));
+        state.approval_cancel();
+        assert_eq!(
+            state.approval().expect("first approval restored").message,
+            "Allow?"
+        );
+        state.approval_confirm();
+        let (origin, trust) = state.approval_confirm().expect("trust confirmed");
+
+        assert_eq!(origin, SessionId::new("main"));
+        assert_eq!(trust.label, "Full command");
+        assert!(matches!(
+            first_response.try_recv(),
+            Ok(PermissionResponse::Selected { .. })
+        ));
+        assert!(matches!(
+            second_response.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+        assert_eq!(
+            state.approval().expect("second approval promoted").message,
+            "second"
+        );
     }
 
     #[test]
@@ -5963,8 +6201,7 @@ mod tests {
         state.show_approval(req);
         state.approval_confirm(); // should NOT send — transitions to phase 2
 
-        assert!(state.has_approval());
-        let approval = state.approval.as_ref().expect("still active");
+        let approval = state.approvals.front().expect("still active");
         assert!(
             matches!(&approval.phase, ApprovalPhase::SelectTrust { chosen_option_id } if chosen_option_id.as_str() == "always"),
             "phase 2 must carry the phase-1 pick, got {:?}",
@@ -6006,9 +6243,11 @@ mod tests {
         state.approval_select_next(); // select "Base command"
         let persisted = state.approval_confirm(); // send + return chosen tier
 
-        // The full chosen TrustOption is returned so App can persist its
-        // patterns to the agent config (setting_key + patterns, not just label).
-        let persisted = persisted.expect("phase-2 confirm returns the chosen tier");
+        // The exact origin and full chosen TrustOption are returned so App can
+        // guard durable persistence and retain setting_key + patterns.
+        let (origin, persisted) =
+            persisted.expect("phase-2 confirm returns the origin and chosen tier");
+        assert_eq!(origin, cyril_core::types::SessionId::new("main"));
         assert_eq!(persisted.label, "Base command");
         assert_eq!(persisted.setting_key, "allowedCommands");
         assert_eq!(persisted.patterns, vec!["echo( .*)?".to_string()]);
@@ -6129,14 +6368,14 @@ mod tests {
         state.show_approval(req);
         state.approval_confirm(); // → phase 2
         assert!(matches!(
-            state.approval.as_ref().expect("active").phase,
+            state.approvals.front().expect("active").phase,
             ApprovalPhase::SelectTrust { .. }
         ));
 
         state.approval_cancel(); // should go back, not dismiss
         assert!(state.has_approval());
         assert_eq!(
-            state.approval.as_ref().expect("active").phase,
+            state.approvals.front().expect("active").phase,
             ApprovalPhase::SelectOption
         );
     }
@@ -6175,8 +6414,7 @@ mod tests {
         state.approval_select_next(); // move cursor to AllowAlways (index 1)
         state.approval_confirm(); // → phase 2 (selected reset to 0 for the tier list)
         state.approval_cancel(); // back to phase 1
-
-        let approval = state.approval.as_ref().expect("active");
+        let approval = state.approvals.front().expect("active");
         assert_eq!(approval.phase, ApprovalPhase::SelectOption);
         assert_eq!(approval.selected, 1, "cursor should return to AllowAlways");
     }

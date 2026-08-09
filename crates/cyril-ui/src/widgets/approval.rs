@@ -9,12 +9,33 @@ use crate::traits::{ApprovalPhase, ApprovalState};
 /// `input_top` is the absolute row of the input box's top border; the popup
 /// is placed by [`super::modal::place`] so it never covers the input
 /// (cyril-a14l C7) and windows its selection when clamped (C8).
-pub fn render(frame: &mut Frame, area: Rect, input_top: u16, state: &ApprovalState, theme: &Theme) {
+pub fn render(
+    frame: &mut Frame,
+    area: Rect,
+    input_top: u16,
+    state: &ApprovalState,
+    session_attribution: Option<&str>,
+    theme: &Theme,
+) {
     match state.phase {
-        ApprovalPhase::SelectOption => render_option_phase(frame, area, input_top, state, theme),
-        ApprovalPhase::SelectTrust { .. } => {
-            render_trust_phase(frame, area, input_top, state, theme)
+        ApprovalPhase::SelectOption => {
+            render_option_phase(frame, area, input_top, state, session_attribution, theme)
         }
+        ApprovalPhase::SelectTrust { .. } => {
+            render_trust_phase(frame, area, input_top, state, session_attribution, theme)
+        }
+    }
+}
+
+fn attribution_title<'a>(
+    base: &'a str,
+    session_attribution: Option<&str>,
+    color: Color,
+) -> Span<'a> {
+    let style = Style::default().fg(color).add_modifier(Modifier::BOLD);
+    match session_attribution {
+        Some(session) => Span::styled(format!("{base}— {session} "), style),
+        None => Span::styled(base, style),
     }
 }
 
@@ -125,6 +146,7 @@ fn render_option_phase(
     area: Rect,
     input_top: u16,
     state: &ApprovalState,
+    session_attribution: Option<&str>,
     theme: &Theme,
 ) {
     // Preview block (cyril-j1b3): the joined tool-call snapshot is rendered
@@ -197,14 +219,10 @@ fn render_option_phase(
         lines.push(Line::styled(format!("{prefix}{}", opt.label), style));
     }
 
+    let title = attribution_title(" Permission Required ", session_attribution, theme.emphasis);
     let popup = Paragraph::new(lines).block(
         Block::default()
-            .title(Span::styled(
-                " Permission Required ",
-                Style::default()
-                    .fg(theme.emphasis)
-                    .add_modifier(Modifier::BOLD),
-            ))
+            .title(title)
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.emphasis)),
     );
@@ -217,6 +235,7 @@ fn render_trust_phase(
     area: Rect,
     input_top: u16,
     state: &ApprovalState,
+    session_attribution: Option<&str>,
     theme: &Theme,
 ) {
     // Each trust option: label line + display line + blank = 3 lines, plus
@@ -289,14 +308,14 @@ fn render_trust_phase(
         lines.push(Line::default());
     }
 
+    let title = attribution_title(
+        " Always Allow — Choose Scope ",
+        session_attribution,
+        theme.accent_quinary,
+    );
     let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
         Block::default()
-            .title(Span::styled(
-                " Always Allow — Choose Scope ",
-                Style::default()
-                    .fg(theme.accent_quinary)
-                    .add_modifier(Modifier::BOLD),
-            ))
+            .title(title)
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.accent_quinary)),
     );
@@ -326,6 +345,7 @@ mod tests {
         phase: ApprovalPhase,
     ) -> ApprovalState {
         ApprovalState {
+            session_id: cyril_core::types::SessionId::new("main"),
             tool_call: crate::traits::TrackedToolCall::new(cyril_core::types::ToolCall::new(
                 cyril_core::types::ToolCallId::new("tc_1"),
                 "echo hello".into(),
@@ -369,9 +389,28 @@ mod tests {
         height: u16,
         input_top: u16,
     ) -> Terminal<TestBackend> {
+        render_at_with_attribution(state, width, height, input_top, None)
+    }
+
+    fn render_at_with_attribution(
+        state: &ApprovalState,
+        width: u16,
+        height: u16,
+        input_top: u16,
+        session_attribution: Option<&str>,
+    ) -> Terminal<TestBackend> {
         let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("test terminal");
         terminal
-            .draw(|frame| render(frame, frame.area(), input_top, state, &theme()))
+            .draw(|frame| {
+                render(
+                    frame,
+                    frame.area(),
+                    input_top,
+                    state,
+                    session_attribution,
+                    &theme(),
+                );
+            })
             .expect("draw");
         terminal
     }
@@ -484,6 +523,38 @@ mod tests {
         }
     }
 
+    #[test]
+    fn renders_foreign_session_in_both_phases_without_displacing_selection() {
+        let option_state = approval_with(
+            vec![option("y", "Yes"), option("n", "No")],
+            vec![],
+            1,
+            ApprovalPhase::SelectOption,
+        );
+        let option_terminal = render_at_with_attribution(&option_state, 80, 24, 24, Some("peer-α"));
+        let option_text = buffer_text(&option_terminal);
+        assert!(option_text.contains("Permission Required — peer-α"));
+
+        let trust_state = approval_with(
+            vec![option("always", "Always Allow")],
+            vec![trust_option("Full command", "echo hello")],
+            0,
+            ApprovalPhase::SelectTrust {
+                chosen_option_id: cyril_core::types::PermissionOptionId::new("always"),
+            },
+        );
+        let trust_terminal = render_at_with_attribution(&trust_state, 80, 24, 24, Some("peer-α"));
+        let trust_text = buffer_text(&trust_terminal);
+        assert!(trust_text.contains("Always Allow — Choose Scope — peer-α"));
+
+        let long_origin = "x".repeat(256);
+        let option_clamped =
+            render_at_with_attribution(&option_state, 24, 16, 4, Some(&long_origin));
+        assert!(buffer_text(&option_clamped).contains("▸ No"));
+        let trust_clamped = render_at_with_attribution(&trust_state, 24, 16, 4, Some(&long_origin));
+        assert!(buffer_text(&trust_clamped).contains("▸ Full command"));
+    }
+
     /// place() empty-rect contract: no region → nothing rendered, no panic.
     #[test]
     fn empty_region_renders_nothing() {
@@ -523,6 +594,7 @@ mod tests {
 
     fn approval_for_tool_call(tc: ToolCall) -> ApprovalState {
         ApprovalState {
+            session_id: cyril_core::types::SessionId::new("main"),
             tool_call: crate::traits::TrackedToolCall::new(tc),
             message: "Write File".into(),
             options: vec![option("accept", "Allow"), option("reject", "Deny")],

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use cyril_core::types::{CommandOption, EffortLevel, HookInfo, Plan, VoiceStatus};
+use cyril_core::types::{CommandOption, EffortLevel, HookInfo, Plan, SessionId, VoiceStatus};
 
 use crate::theme::Theme;
 
@@ -41,6 +41,9 @@ pub trait TuiState {
     // Session info (projected from SessionController)
     fn activity(&self) -> Activity;
     fn session_label(&self) -> Option<&str>;
+    /// Typed identity of the main session. Keep identity decisions on this
+    /// value; `session_label()` is presentation text.
+    fn main_session_id(&self) -> Option<&SessionId>;
     fn current_mode(&self) -> Option<&str>;
     fn current_model(&self) -> Option<&str>;
     /// Current thinking-effort level, if a thinking model is active and the
@@ -67,6 +70,31 @@ pub trait TuiState {
     fn session_cost(&self) -> &cyril_core::types::SessionCost;
 
     // Overlays
+    /// Return a shared view of the active approval only.
+    ///
+    /// Queue order is private to [`crate::state::UiState`]; external callers
+    /// cannot reorder it:
+    ///
+    /// ```compile_fail,E0616
+    /// use cyril_ui::state::UiState;
+    ///
+    /// let mut state = UiState::new(16);
+    /// state.approvals.clear();
+    /// ```
+    ///
+    /// The shared view also cannot consume its owned responder:
+    ///
+    /// ```compile_fail,E0507
+    /// use cyril_core::types::PermissionResponse;
+    /// use cyril_ui::traits::TuiState;
+    ///
+    /// fn cancel(state: &dyn TuiState) {
+    ///     let Some(approval) = state.approval() else {
+    ///         return;
+    ///     };
+    ///     drop(approval.responder.send(PermissionResponse::Cancel));
+    /// }
+    /// ```
     fn approval(&self) -> Option<&ApprovalState>;
     fn picker(&self) -> Option<&PickerState>;
     fn hooks_panel(&self) -> Option<&HooksPanelState>;
@@ -397,10 +425,22 @@ pub enum ApprovalPhase {
         chosen_option_id: cyril_core::types::PermissionOptionId,
     },
 }
+/// User-facing label for an approval's exact wire-origin session id.
+///
+/// An empty id is invalid but can still arrive from the untrusted ACP
+/// boundary. Preserve it in the domain type and project it honestly here.
+pub fn approval_origin_label(origin: &SessionId) -> &str {
+    if origin.as_str().is_empty() {
+        "unknown session"
+    } else {
+        origin.as_str()
+    }
+}
 
 /// Permission approval dialog state.
 #[derive(Debug)]
 pub struct ApprovalState {
+    pub session_id: cyril_core::types::SessionId,
     pub tool_call: TrackedToolCall,
     pub message: String,
     pub options: Vec<cyril_core::types::PermissionOption>,
@@ -493,6 +533,7 @@ pub mod test_support {
         pub autocomplete_selected: Option<usize>,
         pub activity: Activity,
         pub session_label: Option<String>,
+        pub main_session_id: Option<SessionId>,
         pub current_mode: Option<String>,
         pub current_model: Option<String>,
         pub effort: Option<EffortLevel>,
@@ -532,6 +573,7 @@ pub mod test_support {
                 autocomplete_selected: None,
                 activity: Activity::Idle,
                 session_label: None,
+                main_session_id: None,
                 current_mode: None,
                 current_model: None,
                 effort: None,
@@ -597,6 +639,9 @@ pub mod test_support {
         }
         fn session_label(&self) -> Option<&str> {
             self.session_label.as_deref()
+        }
+        fn main_session_id(&self) -> Option<&SessionId> {
+            self.main_session_id.as_ref()
         }
         fn current_mode(&self) -> Option<&str> {
             self.current_mode.as_deref()
@@ -677,6 +722,18 @@ mod tests {
     #[test]
     fn tui_state_is_object_safe() {
         fn _assert_object_safe(_: &dyn TuiState) {}
+    }
+
+    #[test]
+    fn approval_origin_label_preserves_valid_ids_and_names_empty_ids() {
+        assert_eq!(
+            approval_origin_label(&SessionId::new("peer-session")),
+            "peer-session"
+        );
+        assert_eq!(
+            approval_origin_label(&SessionId::new("")),
+            "unknown session"
+        );
     }
 
     #[test]
