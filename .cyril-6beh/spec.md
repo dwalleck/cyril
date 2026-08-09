@@ -80,10 +80,15 @@ Cyril will convert KAS's nine plain JSON-RPC `_kiro/workflow/*` lifecycle notifi
 - **When**: the event is applied.
 - **Then**: final state is reconciled, the run remains nonterminal and eligible for later events, and the model does not tear down or freeze it.
 
-### Make terminal completion absorbing
+### Make terminal completion absorbing within an incarnation
 - **Given**: `run_complete` with `completed`, `failed`, or `aborted`.
 - **When**: the event is applied.
-- **Then**: final state is reconciled and the run becomes terminal. Exact duplicate terminal frames are idempotent; later non-duplicate events warn and are ignored.
+- **Then**: final state is reconciled and that incarnation becomes terminal. Exact duplicate terminal frames are idempotent; later non-duplicate events other than `run_start` warn and are ignored.
+
+### Start a new incarnation from a post-terminal opening
+- **Given**: a terminal run and a later `run_start` with the same `workflowId`, as emitted after Kiro's workflow retry control.
+- **When**: the opening is applied.
+- **Then**: the model atomically replaces the prior runtime state, descriptors, queue/progress/completion fields, and terminal flag with the new active incarnation under the same persisted workflow id. No prior-incarnation history is retained.
 
 ### Isolate interleaved runs
 - **Given**: lifecycle frames for 64 workflow ids are arbitrarily interleaved and reuse identical node paths across runs.
@@ -95,6 +100,7 @@ Cyril will convert KAS's nine plain JSON-RPC `_kiro/workflow/*` lifecycle notifi
 - **Lifecycle coverage**: 9/9 documented lifecycle methods have typed payloads and deterministic converter fixtures, measured by core fixture tests.
 - **Live-shape coverage**: all workflow lifecycle frames in the committed 2.16.0 and 2.16.2 captures parse without loss of documented fields, measured by offline capture replay. `node_paused` remains explicitly source-verified rather than live-observed.
 - **Terminal evidence**: one fresh Kiro 2.16.2 workflow run emits `run_complete.status = "failed"` and one emits `run_complete.status = "aborted"`, measured in committed credential-redacted JSONL captures before design approval. Source-derived fixtures cover node `failed`, `aborted`, and `skipped` statuses.
+- **Retry evidence**: the committed 2.16.2 aborted capture's post-terminal same-id `run_start` begins a fresh incarnation and its second lifecycle reaches terminal state without stale nodes or fields from the first incarnation, measured by offline capture replay.
 - **Replay determinism**: 2/2 consecutive replays of the same capture produce byte-equivalent canonical state; the second replay introduces 0 duplicate runs and 0 duplicate nodes, measured by probe/oracle comparison.
 - **Scale isolation**: 64 runs × 256 nodes × 10 node events = 163,840 interleaved node events produce exact oracle-equal state with 0 dropped valid events and 0 cross-run mutations, measured by a deterministic stress fixture.
 - **Regression fence**: 100% of existing non-workflow KAS conversion tests retain their prior outputs, measured by the cyril-core test suite with and without `kas`.
@@ -109,6 +115,8 @@ Cyril will convert KAS's nine plain JSON-RPC `_kiro/workflow/*` lifecycle notifi
 | Node `failed`, `aborted`, `skipped` lack live captures | Use source-derived deterministic fixtures; no separate live node-status gate. | Representative run-level failure and abort are sufficient. |
 | Optional field absent | Preserve existing `Some` data on partial merge; otherwise keep `None`. | Missing is not a sentinel update. |
 | Required field malformed | Warn and drop only the frame; state remains unchanged. | External data cannot create illegal domain state or kill the ACP connection. |
+| Workflow or node identifier string | Reject empty; preserve every non-empty value byte-for-byte, including Unicode, spaces, and `#`. | Ids are opaque equality keys; format restrictions not present in Kiro's contract would reject future valid ids. |
+| Workspace path string | Require the documented field where its enclosing shape requires it, but preserve its value opaquely, including empty, relative, absolute, Unicode, and spaced forms. | This issue never resolves or accesses the agent-reported path, so host path semantics and canonicalization would be false validation. |
 | Unknown workflow method | Preserve existing unknown-extension handling. | Forward compatibility remains outside this nine-method model. |
 | Event precedes `run_start` | Warn and ignore; do not create a partial run. | Kiro's buffered subscription contract guarantees the opening first. |
 | Node update precedes declaration/start | Warn and ignore; do not create a placeholder node. | Canonical nodes must have a valid descriptor or snapshot origin. |
@@ -116,7 +124,7 @@ Cyril will convert KAS's nine plain JSON-RPC `_kiro/workflow/*` lifecycle notifi
 | Conflicting repeated supplied field | Latest present value wins until the run is terminal. | Kiro deliberately re-emits partial `node_start` data. |
 | Same node path in different runs | Scope identity by workflow id. | `nodePath` is stable only within a run. |
 | `run_complete.status = paused` | Reconcile the snapshot but remain nonterminal. | Live evidence shows paused completion is resumable. |
-| Event after terminal run | Exact terminal duplicate is unchanged; any other event warns and is ignored. | Terminal statuses trigger emitter unsubscribe. |
+| Event after terminal run | Exact terminal duplicate is unchanged; a same-id `run_start` atomically starts a fresh active incarnation; any other event warns and is ignored. | Live 2.16.2 retry reuses the persisted workflow id and emits a new opening. |
 | Empty `pendingSteps` with resolution | Preserve pending steps and record resolution separately. | The empty array is an acknowledgement form, not “drained.” |
 | Run pause without node pause | Update only run pause state. | `paused` and `node_paused` are independently emitted. |
 | Node pause without run pause | Update only the node. | No state is synthesized from an absent event. |
@@ -124,7 +132,7 @@ Cyril will convert KAS's nine plain JSON-RPC `_kiro/workflow/*` lifecycle notifi
 | Full snapshot with `loop#N` wrappers | Canonicalize to streamed `iter-N` paths atomically. | Downstream consumers receive one identity scheme. |
 | Unknown extra JSON field | Ignore the extra field while parsing all known fields. | Additive Kiro fields must not break known event handling. |
 | Interleaved concurrent runs | Apply by keyed workflow/node lookup; never scan or mutate unrelated runs. | Parallel workflows are a primary W1 use case. |
-| Retry or replay | Guarded merges and absorbing terminals make replay state-idempotent. | Reattachment can flush previously seen opening events. |
+| Retry or replay | A post-terminal `run_start` replaces current state as a new incarnation; within an incarnation, guarded merges and absorbing terminals make replay state-idempotent. | Reattachment can replay frames, while Kiro retry deliberately reopens the same persisted id. |
 | Time zones and DST | Preserve wire timestamps; perform no local calendar arithmetic. | Lifecycle ordering comes from frame order, not wall-clock conversion. |
 | Permissions, authentication, tenancy, deletion | No state behavior in this issue. | These are control-plane or workspace-lifetime concerns outside protocol folding. |
 
@@ -170,14 +178,16 @@ This change does NOT include:
 | 10 | What happens for a malformed known payload? | Warn and drop only that frame. | Isolate external-data failure without poisoning the connection. |
 | 11 | Does an acknowledgement clear pending steps? | No; preserve the queue and record resolution. | Empty `pendingSteps` is an overloaded acknowledgement form. |
 | 12 | Do run and node pause imply each other? | No; keep them independent. | Live evidence proves they are not paired. |
-| 13 | Can a terminal run transition again? | No; terminal state is absorbing. | The emitter unsubscribes on terminal completion. |
+| 13 | Can a terminal run transition again? | Only a later `run_start` may atomically replace it as a new incarnation under the same workflow id; every other non-duplicate event is ignored. | The requester chose to represent Kiro 2.16.2 retry, which reuses the id and emits a fresh opening. |
 | 14 | What scale is guaranteed? | 64 runs × 256 nodes × 10 events/node. | Fences parallel isolation and repeated merges. |
 | 15 | Is full history retained? | No; retain canonical current state only. | Avoid memory growth and duplicate reattach history. |
 | 16 | Is full-snapshot ingestion part of this issue? | Yes; one canonical ingestion path serves `new`, `list/load`, and `finalState`. | Prevent a second state path in cyril-0qe6. |
+| 17 | Which identifier strings are valid? | Any non-empty workflow/node id is valid and opaque; empty is malformed. | Canonical maps need a real key, but Kiro declares no prefix/character grammar. |
+| 18 | What path semantics apply to `workspacePath`? | None; preserve the provided string opaquely, whether empty, relative, or absolute. | No filesystem operation occurs in this protocol/state issue. |
 
 ## Sign-off
 
-> Cyril will model all nine KAS workflow lifecycle events as canonical current state, use one snapshot-reconciliation path, treat status as authoritative, merge repeats idempotently, isolate malformed or unattributable frames, and keep terminal runs absorbing. Source-derived fixtures are sufficient for `node_paused` and node terminal variants; fresh Kiro 2.16.2 captures of one failed run and one aborted run are mandatory before design. Commands, routing, UI, gating, persistence, and full event history remain out of scope. The deterministic scale fence is 64 runs × 256 nodes × 10 events.
+> Cyril will model all nine KAS workflow lifecycle events as canonical current state, use one snapshot-reconciliation path, treat status as authoritative, merge repeats idempotently, isolate malformed or unattributable frames, and keep each run incarnation absorbing after terminal completion. A later same-id `run_start` is the sole reset: it atomically replaces prior runtime state as a new active incarnation so Kiro retry remains observable. Workflow/node ids reject only empty strings; workspace paths remain opaque strings with no filesystem semantics. Source-derived fixtures are sufficient for `node_paused` and node terminal variants; fresh Kiro 2.16.2 captures of one failed run and one aborted run are mandatory before design. Commands, routing, UI, gating, persistence, and full event history remain out of scope. The deterministic scale fence is 64 runs × 256 nodes × 10 events.
 
 The requester agreed: "Yes, I agree"
 
