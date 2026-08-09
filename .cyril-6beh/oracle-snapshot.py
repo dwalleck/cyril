@@ -5,6 +5,25 @@ import json
 import sys
 from pathlib import Path
 
+MANIFEST = json.loads(
+    (Path(__file__).with_name("oracle-manifest.json")).read_text(encoding="utf-8")
+)
+RUN_FIELDS = {"workflowId"} | (
+    set(MANIFEST["snapshot_owned_run_fields"]) - {"root"}
+)
+DESCRIPTOR_FIELDS = {
+    field
+    for shape in MANIFEST["descriptor_fields"].values()
+    for field in shape["required"] + shape["optional"]
+} - {"steps", "branches"}
+NODE_FIELDS = DESCRIPTOR_FIELDS | (
+    set(MANIFEST["snapshot_owned_node_fields"]) - {"descriptor"}
+)
+
+
+def select_fields(value, fields):
+    return {key: item for key, item in value.items() if key in fields}
+
 
 def frame_body(frame):
     parsed = frame.get("parsed")
@@ -45,7 +64,7 @@ def project(path):
         if node_path in seen:
             raise SystemExit(f"duplicate canonical path: {node_path!r}")
         seen.add(node_path)
-        data = {key: value for key, value in node.items() if key != "children"}
+        data = select_fields(node, NODE_FIELDS)
         entries.append({"path": list(node_path), "data": data})
         for child in node.get("children", []):
             iteration = wrapper_iteration(node, child)
@@ -53,7 +72,7 @@ def project(path):
             walk(child, (*node_path, segment))
 
     walk(state["root"], (workflow_id,))
-    run = {key: value for key, value in state.items() if key != "root"}
+    run = select_fields(state, RUN_FIELDS)
     entries.sort(key=lambda entry: json.dumps(entry["path"], ensure_ascii=False))
     return {"run": run, "nodes": entries}
 
