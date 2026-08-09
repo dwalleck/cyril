@@ -4,7 +4,8 @@ use crate::types::workflow::WorkflowNodeSnapshotParts;
 use crate::types::{
     SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId,
     WorkflowNodeDescriptor, WorkflowNodePath, WorkflowNodePathError, WorkflowNodeSnapshot,
-    WorkflowNodeStatus, WorkflowRunCompleted, WorkflowRunStatus, WorkflowSnapshot,
+    WorkflowNodeStatus, WorkflowQueueResolution, WorkflowRunCompleted, WorkflowRunStatus,
+    WorkflowSnapshot, WorkflowWatchOutcome,
 };
 
 /// State-application failure that leaves the tracker byte-for-byte unchanged.
@@ -53,6 +54,10 @@ pub struct WorkflowNodeState {
     completion_signal_source: Option<WorkflowCompletionSignalSource>,
     started_at: Option<String>,
     ended_at: Option<String>,
+    prompt: Option<String>,
+    node_pause_reason: Option<String>,
+    latest_loop_iteration: Option<(u32, bool)>,
+    latest_watch_poll: Option<(WorkflowWatchOutcome, String)>,
 }
 
 impl WorkflowNodeState {
@@ -84,6 +89,10 @@ impl WorkflowNodeState {
             completion_signal_source,
             started_at,
             ended_at,
+            prompt: None,
+            node_pause_reason: None,
+            latest_loop_iteration: None,
+            latest_watch_poll: None,
         }
     }
 
@@ -146,6 +155,28 @@ impl WorkflowNodeState {
     pub fn ended_at(&self) -> Option<&str> {
         self.ended_at.as_deref()
     }
+
+    /// Returns the most recent node-start prompt when supplied.
+    pub fn prompt(&self) -> Option<&str> {
+        self.prompt.as_deref()
+    }
+
+    /// Returns the latest node-specific pause reason.
+    pub fn node_pause_reason(&self) -> Option<&str> {
+        self.node_pause_reason.as_deref()
+    }
+
+    /// Returns the latest repeat iteration and exact stop-condition outcome.
+    pub fn latest_loop_iteration(&self) -> Option<(u32, bool)> {
+        self.latest_loop_iteration
+    }
+
+    /// Returns the latest watch outcome and opaque observation timestamp.
+    pub fn latest_watch_poll(&self) -> Option<(WorkflowWatchOutcome, &str)> {
+        self.latest_watch_poll
+            .as_ref()
+            .map(|(outcome, at)| (*outcome, at.as_str()))
+    }
 }
 
 /// Immutable read model for one persisted workflow run.
@@ -161,6 +192,9 @@ pub struct WorkflowRun {
     parent_session_id: Option<SessionId>,
     workspace_path: Option<String>,
     nodes: HashMap<WorkflowNodePath, WorkflowNodeState>,
+    pending_steps: Vec<WorkflowNodeDescriptor>,
+    queue_resolution: Option<WorkflowQueueResolution>,
+    run_pause_reason: Option<String>,
 }
 
 impl WorkflowRun {
@@ -207,6 +241,21 @@ impl WorkflowRun {
     /// Returns the opaque workspace path when supplied.
     pub fn workspace_path(&self) -> Option<&str> {
         self.workspace_path.as_deref()
+    }
+
+    /// Returns the currently pending workflow descriptors.
+    pub fn pending_steps(&self) -> &[WorkflowNodeDescriptor] {
+        &self.pending_steps
+    }
+
+    /// Returns the most recent queue acknowledgement when supplied.
+    pub fn queue_resolution(&self) -> Option<&WorkflowQueueResolution> {
+        self.queue_resolution.as_ref()
+    }
+
+    /// Returns the latest run-level pause reason.
+    pub fn run_pause_reason(&self) -> Option<&str> {
+        self.run_pause_reason.as_deref()
     }
 
     /// Returns one node by exact canonical path.
@@ -258,7 +307,8 @@ impl WorkflowTracker {
                 incoming: incoming_status,
             });
         }
-        let (workflow_id, run) = canonicalize_snapshot(snapshot)?;
+        let (workflow_id, mut run) = canonicalize_snapshot(snapshot)?;
+        self.preserve_event_only(&workflow_id, &mut run);
         self.replace_if_changed(workflow_id, run)
     }
 
@@ -285,7 +335,8 @@ impl WorkflowTracker {
             return Ok(false);
         };
         let terminal = is_terminal(current.status);
-        let (snapshot_id, incoming) = canonicalize_snapshot(completion.into_final_state())?;
+        let (snapshot_id, mut incoming) = canonicalize_snapshot(completion.into_final_state())?;
+        self.preserve_event_only(&workflow_id, &mut incoming);
         if terminal {
             if current == &incoming {
                 return Ok(false);
@@ -294,6 +345,30 @@ impl WorkflowTracker {
             return Ok(false);
         }
         self.replace_if_changed(snapshot_id, incoming)
+    }
+
+    fn preserve_event_only(&self, workflow_id: &WorkflowId, incoming: &mut WorkflowRun) {
+        let Some(current) = self.runs.get(workflow_id) else {
+            return;
+        };
+        incoming.pending_steps.clone_from(&current.pending_steps);
+        incoming
+            .queue_resolution
+            .clone_from(&current.queue_resolution);
+        incoming
+            .run_pause_reason
+            .clone_from(&current.run_pause_reason);
+        for (path, node) in &mut incoming.nodes {
+            let Some(previous) = current.nodes.get(path) else {
+                continue;
+            };
+            node.prompt.clone_from(&previous.prompt);
+            node.node_pause_reason
+                .clone_from(&previous.node_pause_reason);
+            node.latest_loop_iteration = previous.latest_loop_iteration;
+            node.latest_watch_poll
+                .clone_from(&previous.latest_watch_poll);
+        }
     }
 
     fn replace_if_changed(
@@ -383,6 +458,9 @@ fn canonicalize_snapshot(
             plan_revision,
             parent_session_id,
             workspace_path,
+            pending_steps: Vec::new(),
+            queue_resolution: None,
+            run_pause_reason: None,
             nodes,
         },
     ))
@@ -416,8 +494,9 @@ mod tests {
     use super::*;
     use crate::types::{
         WorkflowCompletionStatus, WorkflowNodeDescriptor, WorkflowNodePath, WorkflowNodeSnapshot,
-        WorkflowNodeStatus, WorkflowNodeType, WorkflowRepeatExhaustion, WorkflowRunCompleted,
-        WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata,
+        WorkflowNodeStatus, WorkflowNodeType, WorkflowQueueOutcome, WorkflowRepeatExhaustion,
+        WorkflowRunCompleted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
+        WorkflowSnapshotMetadata,
     };
     fn workflow_id(value: &str) -> WorkflowId {
         match WorkflowId::try_from(value.to_owned()) {
@@ -531,6 +610,9 @@ mod tests {
                 plan_revision: 0,
                 parent_session_id: None,
                 workspace_path: None,
+                pending_steps: Vec::new(),
+                queue_resolution: None,
+                run_pause_reason: None,
                 nodes: HashMap::new(),
             },
         );
@@ -1009,5 +1091,153 @@ mod tests {
         let mut tracker = WorkflowTracker::new();
         assert_eq!(tracker.apply_snapshot(snapshot.clone()), Ok(true));
         assert_eq!(tracker.apply_event(completion(snapshot)), Ok(false));
+    }
+
+    #[test]
+    fn snapshot_field_ownership_matrix() {
+        let workflow_id = workflow_id("workflow");
+        let child_path = node_path(&workflow_id, &["workflow", "step"]);
+        let rich_child = WorkflowNodeSnapshot::new(
+            WorkflowNodeDescriptor::step(node_id("step"), "agent".to_owned(), None, None),
+            WorkflowNodeStatus::Running,
+            Vec::new(),
+        )
+        .with_session_id(SessionId::new("session"))
+        .with_artifacts(serde_json::json!({"artifact": true}))
+        .with_captured_output(serde_json::json!({"output": true}))
+        .with_failure_reason("reason".to_owned())
+        .with_iteration(7)
+        .with_branch_id("branch".to_owned())
+        .with_completion_signal(WorkflowCompletionSignal::Success)
+        .with_completion_signal_source(WorkflowCompletionSignalSource::SendMessage)
+        .with_started_at("start".to_owned())
+        .with_ended_at("end".to_owned());
+        let rich = WorkflowSnapshot::new(
+            workflow_id.clone(),
+            "recipe".to_owned(),
+            WorkflowRunStatus::Running,
+            WorkflowSnapshotData::new(
+                serde_json::json!({"input": true}),
+                serde_json::json!({"artifact": true}),
+                serde_json::json!({"output": true}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
+                WorkflowNodeStatus::Running,
+                vec![rich_child],
+            ),
+            WorkflowSnapshotMetadata::new("created".to_owned(), 1)
+                .with_parent_session_id(SessionId::new("parent"))
+                .with_workspace_path("/workspace".to_owned()),
+        );
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(tracker.apply_snapshot(rich), Ok(true));
+        let Some(run) = tracker.runs.get_mut(&workflow_id) else {
+            panic!("rich snapshot did not seed");
+        };
+        run.pending_steps = vec![WorkflowNodeDescriptor::step(
+            node_id("pending"),
+            "agent".to_owned(),
+            None,
+            None,
+        )];
+        run.queue_resolution = Some(WorkflowQueueResolution::new(
+            WorkflowQueueOutcome::Applied,
+            Some("accepted".to_owned()),
+        ));
+        run.run_pause_reason = Some("operator".to_owned());
+        let Some(node) = run.nodes.get_mut(&child_path) else {
+            panic!("rich child missing");
+        };
+        node.prompt = Some("prompt".to_owned());
+        node.node_pause_reason = Some("need-human".to_owned());
+        node.latest_loop_iteration = Some((2, true));
+        node.latest_watch_poll = Some((WorkflowWatchOutcome::Idle, "t1".to_owned()));
+
+        let sparse = WorkflowSnapshot::new(
+            workflow_id.clone(),
+            "recipe".to_owned(),
+            WorkflowRunStatus::Running,
+            WorkflowSnapshotData::new(
+                serde_json::json!({"input": false}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
+                WorkflowNodeStatus::Running,
+                vec![WorkflowNodeSnapshot::new(
+                    WorkflowNodeDescriptor::step(node_id("step"), "agent".to_owned(), None, None),
+                    WorkflowNodeStatus::Running,
+                    Vec::new(),
+                )],
+            ),
+            WorkflowSnapshotMetadata::new("created-2".to_owned(), 2),
+        );
+        assert_eq!(tracker.apply_snapshot(sparse), Ok(true));
+        let Some(run) = tracker.get(&workflow_id) else {
+            panic!("reconciled run missing");
+        };
+        assert!(run.parent_session_id().is_none());
+        assert!(run.workspace_path().is_none());
+        assert_eq!(run.pending_steps().len(), 1);
+        assert_eq!(
+            run.queue_resolution().map(WorkflowQueueResolution::outcome),
+            Some(WorkflowQueueOutcome::Applied)
+        );
+        assert_eq!(run.run_pause_reason(), Some("operator"));
+        let Some(node) = run.node(&child_path) else {
+            panic!("reconciled child missing");
+        };
+        assert!(node.session_id().is_none());
+        assert!(node.artifacts().is_none());
+        assert!(node.captured_output().is_none());
+        assert!(node.failure_reason().is_none());
+        assert!(node.iteration().is_none());
+        assert!(node.branch_id().is_none());
+        assert!(node.completion_signal().is_none());
+        assert!(node.completion_signal_source().is_none());
+        assert!(node.started_at().is_none());
+        assert!(node.ended_at().is_none());
+        assert_eq!(node.prompt(), Some("prompt"));
+        assert_eq!(node.node_pause_reason(), Some("need-human"));
+        assert_eq!(node.latest_loop_iteration(), Some((2, true)));
+        assert_eq!(
+            node.latest_watch_poll(),
+            Some((WorkflowWatchOutcome::Idle, "t1"))
+        );
+
+        let manifest: serde_json::Value =
+            match serde_json::from_str(include_str!("../../../.cyril-6beh/oracle-manifest.json")) {
+                Ok(value) => value,
+                Err(error) => panic!("oracle manifest is invalid: {error}"),
+            };
+        assert_eq!(
+            manifest["snapshot_owned_run_fields"],
+            serde_json::json!([
+                "workflowName",
+                "status",
+                "inputs",
+                "artifacts",
+                "capturedOutputs",
+                "createdAt",
+                "planRevision",
+                "parentSessionId",
+                "workspacePath",
+                "root"
+            ])
+        );
+        assert_eq!(
+            manifest["event_only_fields"],
+            serde_json::json!([
+                "prompt",
+                "pendingSteps",
+                "queueResolution",
+                "runPauseReason",
+                "nodePauseReason",
+                "latestLoopIteration",
+                "latestWatchPoll"
+            ])
+        );
     }
 }
