@@ -14,8 +14,6 @@
 //! [`client_capabilities`] free function — engines cannot hand-write (and
 //! therefore cannot desynchronize) their advertised capability set.
 
-use std::collections::HashMap;
-
 use agent_client_protocol as acp;
 
 use crate::protocol::convert;
@@ -184,11 +182,7 @@ pub(crate) trait Engine {
 
     /// Convert a standard `session/update` notification to an internal one.
     /// Returns `None` for updates this engine does not surface to the UI.
-    fn convert_session_update(
-        &self,
-        args: &acp::SessionNotification,
-        cached_inputs: &HashMap<String, serde_json::Value>,
-    ) -> Option<Notification>;
+    fn convert_session_update(&self, args: &acp::SessionNotification) -> Option<Notification>;
 
     /// Convert an engine-dialect ext notification (v2: `kiro.dev/*`) to an
     /// internal one. `Err` on a malformed-but-recognized frame; `Ok(None)` for
@@ -223,12 +217,8 @@ impl Engine for V2Engine {
         false
     }
 
-    fn convert_session_update(
-        &self,
-        args: &acp::SessionNotification,
-        cached_inputs: &HashMap<String, serde_json::Value>,
-    ) -> Option<Notification> {
-        convert::session_update_to_notification(args, cached_inputs)
+    fn convert_session_update(&self, args: &acp::SessionNotification) -> Option<Notification> {
+        convert::session_update_to_notification(args)
     }
 
     fn convert_ext_notification(
@@ -301,11 +291,7 @@ impl Engine for KasEngine {
         Some(super::kas::settings::settings_extra_value())
     }
 
-    fn convert_session_update(
-        &self,
-        args: &acp::SessionNotification,
-        cached_inputs: &HashMap<String, serde_json::Value>,
-    ) -> Option<Notification> {
+    fn convert_session_update(&self, args: &acp::SessionNotification) -> Option<Notification> {
         // KAS-2a (cyril-j16p) Slice 1: the `turn_end` lifecycle frame is a
         // KAS-specific `session_info_update` sub-kind that drives turn
         // completion (v2 derives it from the prompt response instead). All
@@ -314,7 +300,7 @@ impl Engine for KasEngine {
         if let acp::SessionUpdate::SessionInfoUpdate(siu) = &args.update {
             return convert::kas::session_info_to_notification(siu);
         }
-        convert::session_update_to_notification(args, cached_inputs)
+        convert::session_update_to_notification(args)
     }
 
     fn convert_ext_notification(
@@ -542,8 +528,6 @@ mod tests {
     // path (e.g. stubs `convert_ext_notification` to `None` or to the generic fn).
     #[test]
     fn v2_routes_generic_and_ext_identically() {
-        let cache = HashMap::new();
-
         // Generic: agent_message_chunk -> AgentMessage.
         let generic = acp::SessionNotification::new(
             acp::SessionId::new("sess"),
@@ -551,8 +535,8 @@ mod tests {
                 "hello",
             ))),
         );
-        let via_engine = V2Engine.convert_session_update(&generic, &cache);
-        let direct = convert::session_update_to_notification(&generic, &cache);
+        let via_engine = V2Engine.convert_session_update(&generic);
+        let direct = convert::session_update_to_notification(&generic);
         assert_eq!(
             format!("{via_engine:?}"),
             format!("{direct:?}"),

@@ -36,13 +36,13 @@ fn approval_state(option_count: usize) -> ApprovalState {
         ToolCallStatus, ToolKind,
     };
     ApprovalState {
-        tool_call: ToolCall::new(
+        tool_call: crate::traits::TrackedToolCall::new(ToolCall::new(
             ToolCallId::new("fence"),
             "Run `cargo test`".into(),
             ToolKind::Execute,
             ToolCallStatus::Pending,
             None,
-        ),
+        )),
         message: "Allow cargo test?".into(),
         options: (0..option_count)
             .map(|index| PermissionOption {

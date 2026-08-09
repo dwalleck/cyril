@@ -420,7 +420,7 @@ fn compute_diff_summary(tc: &TrackedToolCall) -> Option<(usize, usize)> {
 
 /// Render actual diff lines with line numbers for edit operations.
 /// Uses the `similar` crate for proper diff computation with context lines.
-fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
+pub(crate) fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
     use similar::{ChangeTag, TextDiff};
 
     const MAX_DIFF_LINES: usize = 20;

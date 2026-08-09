@@ -13,7 +13,9 @@ use cyril_core::types::{
     TrustOption,
 };
 use cyril_ui::theme::{ColorMode, Theme, ThemeId, resolve};
-use cyril_ui::traits::{ApprovalPhase, ApprovalState, HooksPanelState, PickerState};
+use cyril_ui::traits::{
+    ApprovalPhase, ApprovalState, HooksPanelState, PickerState, TrackedToolCall,
+};
 use cyril_ui::widgets::{approval, code_panel, hooks_panel, picker};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
@@ -30,13 +32,13 @@ const SCENE_H: u16 = 24;
 
 fn approval_state(trust_phase: bool) -> ApprovalState {
     ApprovalState {
-        tool_call: ToolCall::new(
+        tool_call: TrackedToolCall::new(ToolCall::new(
             ToolCallId::new("tc_1"),
             "echo hello".into(),
             ToolKind::Execute,
             ToolCallStatus::Pending,
             None,
-        ),
+        )),
         message: "Allow execution?".into(),
         options: vec![
             PermissionOption {
@@ -364,17 +366,20 @@ fn distinct_styled_tuples(rows: &[String]) -> std::collections::BTreeSet<String>
 fn generate_baseline() {
     let rows = all_scene_rows();
     let tuples = distinct_styled_tuples(&rows);
+    // 31 since cyril-j1b3: the approval-option scene gained the preview
+    // section (subdued "Preview unavailable" row on a stub tool call).
     assert_eq!(
         tuples.len(),
-        30,
-        "scene set must exercise all 30 frozen legacy tuples, got {}",
+        31,
+        "scene set must exercise all 31 frozen legacy tuples, got {}",
         tuples.len()
     );
     std::fs::write(BASELINE, rows.join("\n") + "\n")
         .unwrap_or_else(|e| panic!("write baseline TSV: {e}"));
 }
 
-/// C11 fence: the committed baseline exercises the full 30-tuple inventory.
+/// C11 fence: the committed baseline exercises the full 31-tuple inventory
+/// (30 pre-cyril-j1b3 + the approval preview's subdued row).
 #[test]
 fn baseline_covers_inventory() {
     let path = Path::new(BASELINE);
@@ -386,8 +391,8 @@ fn baseline_covers_inventory() {
     let rows: Vec<String> = text.lines().map(str::to_owned).collect();
     assert_eq!(
         distinct_styled_tuples(&rows).len(),
-        30,
-        "committed baseline no longer covers the 30-tuple legacy inventory"
+        31,
+        "committed baseline no longer covers the 31-tuple legacy inventory"
     );
 }
 
@@ -402,14 +407,15 @@ fn baseline_equivalence_approval_trust() {
 }
 
 /// C4: approval consumes exactly its mapped roles — option phase: emphasis
-/// (20) + text (5) + text_secondary (30) on selection bg (4); trust phase
-/// adds accent_quinary (23) and subdued (24).
+/// (20) + text (5) + text_secondary (30) on selection bg (4), plus subdued
+/// (24) for the cyril-j1b3 preview section; trust phase adds accent_quinary
+/// (23) and subdued (24).
 #[test]
 fn marker_wiring_approval() {
     let (fgs, bgs) = marker_footprint("approval-option");
     assert_eq!(
         fgs,
-        vec!["Indexed(20)", "Indexed(30)", "Indexed(5)"],
+        vec!["Indexed(20)", "Indexed(24)", "Indexed(30)", "Indexed(5)"],
         "approval-option fg roles"
     );
     assert_eq!(bgs, vec!["Indexed(4)"], "approval-option bg roles");
