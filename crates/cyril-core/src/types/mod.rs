@@ -47,9 +47,13 @@ pub use tool_call::{
 pub use turn::{TurnAllocator, TurnId};
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{
-    WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowCompletionStatus,
-    WorkflowEnumParseError, WorkflowId, WorkflowIdentifierError, WorkflowNodeDescriptor,
-    WorkflowNodeId, WorkflowNodeSnapshot, WorkflowNodeStatus, WorkflowNodeType,
-    WorkflowQueueOutcome, WorkflowRepeatExhaustion, WorkflowRunStatus, WorkflowSnapshot,
-    WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowWatchOutcome,
+    WorkflowCompletionMismatchError, WorkflowCompletionSignal, WorkflowCompletionSignalSource,
+    WorkflowCompletionStatus, WorkflowEnumParseError, WorkflowEvent, WorkflowId,
+    WorkflowIdentifierError, WorkflowLoopIteration, WorkflowNodeCompleted,
+    WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
+    WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails,
+    WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
+    WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatExhaustion, WorkflowRunCompleted,
+    WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
+    WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
 };
