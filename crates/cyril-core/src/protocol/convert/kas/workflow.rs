@@ -9,12 +9,13 @@ use serde::de::DeserializeOwned;
 use crate::types::{
     Notification, SessionId, WorkflowCompletionMismatchError, WorkflowCompletionSignal,
     WorkflowCompletionSignalSource, WorkflowCompletionStatus, WorkflowEvent, WorkflowId,
-    WorkflowIdentifierError, WorkflowNodeCompleted, WorkflowNodeCompletionDetails,
-    WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
-    WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails, WorkflowNodeStarted,
-    WorkflowNodeStatus, WorkflowNodeType, WorkflowRepeatExhaustion, WorkflowRunCompleted,
+    WorkflowIdentifierError, WorkflowLoopIteration, WorkflowNodeCompleted,
+    WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
+    WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails,
+    WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
+    WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatExhaustion, WorkflowRunCompleted,
     WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
-    WorkflowSnapshotMetadata,
+    WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
 };
 
 /// Distinguishes an absent optional field from a present non-null value.
@@ -169,6 +170,48 @@ struct WireNodePaused {
     node_id: String,
     node_path: Vec<String>,
     reason: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireLoopIteration {
+    workflow_id: String,
+    loop_id: String,
+    iteration: u32,
+    stop_condition_met: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireWatchPoll {
+    workflow_id: String,
+    node_id: String,
+    node_path: Vec<String>,
+    outcome: WireWatchOutcome,
+    at: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WirePaused {
+    workflow_id: String,
+    pause_reason: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireStepsQueued {
+    workflow_id: String,
+    pending_steps: Vec<WireNodeDescriptor>,
+    #[serde(default)]
+    resolution: OptionalField<WireQueueResolution>,
+}
+
+#[derive(Deserialize)]
+struct WireQueueResolution {
+    outcome: WireQueueOutcome,
+    #[serde(default)]
+    reason: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
@@ -348,6 +391,26 @@ enum WireCompletionSignalSource {
     StatusUpdate,
 }
 
+#[derive(Clone, Copy, Deserialize)]
+enum WireWatchOutcome {
+    #[serde(rename = "new-activity")]
+    NewActivity,
+    #[serde(rename = "idle")]
+    Idle,
+    #[serde(rename = "idle-timeout")]
+    IdleTimeout,
+    #[serde(rename = "terminal-state")]
+    TerminalState,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum WireQueueOutcome {
+    Applied,
+    Rejected,
+    Dropped,
+}
+
 /// Returns `None` when `method` is not owned by this adapter. For an exact
 /// workflow method, returns `Some(Some(notification))` on success or
 /// `Some(None)` after warning and dropping malformed input.
@@ -360,7 +423,11 @@ pub(super) fn to_notification(
         "kiro/workflow/node_start" => parse_node_started(params),
         "kiro/workflow/node_complete" => parse_node_completed(params),
         "kiro/workflow/node_paused" => parse_node_paused(params),
+        "kiro/workflow/loop_iteration" => parse_loop_iteration(params),
+        "kiro/workflow/watch_poll" => parse_watch_poll(params),
+        "kiro/workflow/paused" => parse_paused(params),
         "kiro/workflow/run_complete" => parse_run_completed(params),
+        "kiro/workflow/steps_queued" => parse_steps_queued(params),
         _ => return None,
     };
 
@@ -461,6 +528,54 @@ fn parse_node_paused(params: &serde_json::Value) -> Result<WorkflowEvent, Workfl
         node_id(wire.node_id)?,
         node_path,
         wire.reason,
+    )))
+}
+
+fn parse_loop_iteration(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
+    let wire: WireLoopIteration = deserialize(params)?;
+    Ok(WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+        workflow_id(wire.workflow_id, "workflowId")?,
+        loop_id(wire.loop_id)?,
+        wire.iteration,
+        wire.stop_condition_met,
+    )))
+}
+
+fn parse_watch_poll(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
+    let wire: WireWatchPoll = deserialize(params)?;
+    let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
+    let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
+    Ok(WorkflowEvent::WatchPoll(WorkflowWatchPoll::new(
+        workflow_id,
+        node_id(wire.node_id)?,
+        node_path,
+        wire.outcome.into(),
+        wire.at,
+    )))
+}
+
+fn parse_paused(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
+    let wire: WirePaused = deserialize(params)?;
+    Ok(WorkflowEvent::Paused(WorkflowPaused::new(
+        workflow_id(wire.workflow_id, "workflowId")?,
+        wire.pause_reason,
+    )))
+}
+
+fn parse_steps_queued(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
+    let wire: WireStepsQueued = deserialize(params)?;
+    let pending_steps = wire
+        .pending_steps
+        .into_iter()
+        .map(WireNodeDescriptor::try_into_domain)
+        .collect::<Result<Vec<_>, _>>()?;
+    let resolution = wire.resolution.into_option().map(|resolution| {
+        WorkflowQueueResolution::new(resolution.outcome.into(), resolution.reason.into_option())
+    });
+    Ok(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+        workflow_id(wire.workflow_id, "workflowId")?,
+        pending_steps,
+        resolution,
     )))
 }
 
@@ -665,6 +780,13 @@ fn node_id(value: String) -> Result<WorkflowNodeId, WorkflowAdapterError> {
     })
 }
 
+fn loop_id(value: String) -> Result<WorkflowNodeId, WorkflowAdapterError> {
+    WorkflowNodeId::try_from(value).map_err(|source| WorkflowAdapterError::InvalidNodeId {
+        field: "loopId",
+        source,
+    })
+}
+
 impl WireNodeType {
     fn as_str(self) -> &'static str {
         match self {
@@ -745,6 +867,26 @@ impl From<WireCompletionSignal> for WorkflowCompletionSignal {
     }
 }
 
+impl From<WireWatchOutcome> for WorkflowWatchOutcome {
+    fn from(value: WireWatchOutcome) -> Self {
+        match value {
+            WireWatchOutcome::NewActivity => Self::NewActivity,
+            WireWatchOutcome::Idle => Self::Idle,
+            WireWatchOutcome::IdleTimeout => Self::IdleTimeout,
+            WireWatchOutcome::TerminalState => Self::TerminalState,
+        }
+    }
+}
+
+impl From<WireQueueOutcome> for WorkflowQueueOutcome {
+    fn from(value: WireQueueOutcome) -> Self {
+        match value {
+            WireQueueOutcome::Applied => Self::Applied,
+            WireQueueOutcome::Rejected => Self::Rejected,
+            WireQueueOutcome::Dropped => Self::Dropped,
+        }
+    }
+}
 impl From<WireCompletionSignalSource> for WorkflowCompletionSignalSource {
     fn from(value: WireCompletionSignalSource) -> Self {
         match value {
@@ -1392,6 +1534,262 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn progress_pause_and_queue_fields_match_manifest_domains() {
+        for (iteration, stop_condition_met) in [(0, false), (u32::MAX, true)] {
+            let params = serde_json::json!({
+                "workflowId": "workflow",
+                "loopId": "loop",
+                "iteration": iteration,
+                "stopConditionMet": stop_condition_met
+            });
+            let WorkflowEvent::LoopIteration(progress) = event(
+                to_notification("kiro/workflow/loop_iteration", &params),
+                "loop_iteration",
+            ) else {
+                panic!("expected loop_iteration");
+            };
+            assert_eq!(progress.loop_id().as_str(), "loop");
+            assert_eq!(progress.iteration(), iteration);
+            assert_eq!(progress.stop_condition_met(), stop_condition_met);
+        }
+
+        for outcome in ["new-activity", "idle", "idle-timeout", "terminal-state"] {
+            let params = serde_json::json!({
+                "workflowId": "workflow",
+                "nodeId": "watch",
+                "nodePath": ["workflow", "watch"],
+                "outcome": outcome,
+                "at": "t 2"
+            });
+            let WorkflowEvent::WatchPoll(poll) = event(
+                to_notification("kiro/workflow/watch_poll", &params),
+                "watch_poll",
+            ) else {
+                panic!("expected watch_poll");
+            };
+            assert_eq!(poll.outcome().as_str(), outcome);
+            assert_eq!(poll.at(), "t 2");
+            assert_eq!(poll.node_path().segments(), ["workflow", "watch"]);
+        }
+
+        for pause_reason in ["", "等待 human"] {
+            let params = serde_json::json!({
+                "workflowId": "workflow",
+                "pauseReason": pause_reason
+            });
+            let WorkflowEvent::Paused(paused) =
+                event(to_notification("kiro/workflow/paused", &params), "paused")
+            else {
+                panic!("expected paused");
+            };
+            assert_eq!(paused.pause_reason(), pause_reason);
+        }
+
+        let empty = serde_json::json!({
+            "workflowId": "workflow",
+            "pendingSteps": []
+        });
+        let WorkflowEvent::StepsQueued(empty) = event(
+            to_notification("kiro/workflow/steps_queued", &empty),
+            "empty steps_queued",
+        ) else {
+            panic!("expected steps_queued");
+        };
+        assert!(empty.pending_steps().is_empty());
+        assert!(empty.resolution().is_none());
+
+        let descriptors = serde_json::json!([
+            {
+                "nodeId": "repeat",
+                "type": "repeat",
+                "steps": [{
+                    "nodeId": "step",
+                    "type": "step",
+                    "agentName": "agent"
+                }],
+                "maxIterations": 1,
+                "onMaxIterations": "pause",
+                "stopCondition": null,
+                "stopWhen": {"done": false}
+            },
+            {
+                "nodeId": "watch",
+                "type": "watch",
+                "handlerName": "files"
+            }
+        ]);
+        for outcome in ["applied", "rejected", "dropped"] {
+            for reason in [None, Some("")] {
+                let resolution = match reason {
+                    Some(reason) => serde_json::json!({"outcome": outcome, "reason": reason}),
+                    None => serde_json::json!({"outcome": outcome}),
+                };
+                let params = serde_json::json!({
+                    "workflowId": "workflow",
+                    "pendingSteps": descriptors,
+                    "resolution": resolution
+                });
+                let WorkflowEvent::StepsQueued(queued) = event(
+                    to_notification("kiro/workflow/steps_queued", &params),
+                    "resolved steps_queued",
+                ) else {
+                    panic!("expected resolved steps_queued");
+                };
+                assert_eq!(queued.pending_steps().len(), 2);
+                let resolution = match queued.resolution() {
+                    Some(value) => value,
+                    None => panic!("expected queue resolution"),
+                };
+                assert_eq!(resolution.outcome().as_str(), outcome);
+                assert_eq!(resolution.reason(), reason);
+                assert_eq!(
+                    queued.pending_steps()[0].stop_condition(),
+                    Some(&serde_json::Value::Null)
+                );
+                assert_eq!(
+                    queued.pending_steps()[0].stop_when(),
+                    Some(&serde_json::json!({"done": false}))
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn progress_and_queue_scale_budgets_hold() {
+        let minimal = serde_json::json!({
+            "workflowId": "workflow",
+            "loopId": "loop",
+            "iteration": 0,
+            "stopConditionMet": false
+        });
+        let started = Instant::now();
+        for _ in 0..100_000 {
+            assert!(matches!(
+                to_notification("kiro/workflow/loop_iteration", &minimal),
+                Some(Some(Notification::Workflow(_)))
+            ));
+        }
+        let fixed_elapsed = started.elapsed();
+        assert!(
+            fixed_elapsed <= Duration::from_millis(100),
+            "100,000 minimal progress frames exceeded 100 ms: {fixed_elapsed:?}"
+        );
+
+        let mut chain = step_descriptor("chain-step");
+        chain["agentName"] = serde_json::Value::String("x".repeat(1_048_576));
+        for level in (1..=9).rev() {
+            chain = serde_json::json!({
+                "nodeId": format!("chain-{level}"),
+                "type": "sequence",
+                "steps": [chain]
+            });
+        }
+        let mut pending_steps = Vec::with_capacity(247);
+        pending_steps.push(chain);
+        pending_steps.extend((0..246).map(|index| step_descriptor(&format!("wide-{index}"))));
+        let params = serde_json::json!({
+            "workflowId": "workflow",
+            "pendingSteps": pending_steps,
+            "resolution": {"outcome": "applied", "reason": "ok"}
+        });
+        let started = Instant::now();
+        let WorkflowEvent::StepsQueued(queued) = event(
+            to_notification("kiro/workflow/steps_queued", &params),
+            "large steps_queued",
+        ) else {
+            panic!("expected large steps_queued");
+        };
+        let queue_elapsed = started.elapsed();
+        assert_eq!(
+            queued
+                .pending_steps()
+                .iter()
+                .map(descriptor_count)
+                .sum::<usize>(),
+            256
+        );
+        assert_eq!(
+            queued.pending_steps().iter().map(descriptor_depth).max(),
+            Some(10)
+        );
+        assert!(
+            queue_elapsed <= Duration::from_millis(50),
+            "1 MiB/256-step/depth-10 queue conversion exceeded 50 ms: {queue_elapsed:?}"
+        );
+    }
+
+    #[test]
+    fn malformed_progress_frames_drop_without_poisoning_successors() {
+        let malformed = [
+            (
+                "kiro/workflow/loop_iteration",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "loopId": "",
+                    "iteration": 0,
+                    "stopConditionMet": false
+                }),
+            ),
+            (
+                "kiro/workflow/loop_iteration",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "loopId": "loop",
+                    "iteration": -1,
+                    "stopConditionMet": false
+                }),
+            ),
+            (
+                "kiro/workflow/watch_poll",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "nodeId": "watch",
+                    "nodePath": ["workflow", "watch"],
+                    "outcome": "unknown",
+                    "at": "t"
+                }),
+            ),
+            (
+                "kiro/workflow/paused",
+                serde_json::json!({
+                    "workflowId": "workflow"
+                }),
+            ),
+            (
+                "kiro/workflow/steps_queued",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "pendingSteps": [],
+                    "resolution": null
+                }),
+            ),
+            (
+                "kiro/workflow/steps_queued",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "pendingSteps": [{"nodeId": "node", "type": "unknown"}]
+                }),
+            ),
+        ];
+        for (method, params) in malformed {
+            assert!(
+                matches!(to_notification(method, &params), Some(None)),
+                "{method} malformed input must warn and drop"
+            );
+        }
+
+        let valid = serde_json::json!({
+            "workflowId": "workflow",
+            "pendingSteps": [],
+            "resolution": {"outcome": "dropped", "reason": ""}
+        });
+        assert!(matches!(
+            to_notification("kiro/workflow/steps_queued", &valid),
+            Some(Some(Notification::Workflow(_)))
+        ));
+    }
+
     fn completed_snapshot(workflow_id: &str, status: &str) -> serde_json::Value {
         serde_json::json!({
             "workflowId": workflow_id,
@@ -1418,6 +1816,27 @@ mod tests {
             "status": "completed",
             "agentName": "agent"
         })
+    }
+
+    fn step_descriptor(node_id: &str) -> serde_json::Value {
+        serde_json::json!({
+            "nodeId": node_id,
+            "type": "step",
+            "agentName": "agent"
+        })
+    }
+
+    fn descriptor_count(node: &WorkflowNodeDescriptor) -> usize {
+        1 + node.children().iter().map(descriptor_count).sum::<usize>()
+    }
+
+    fn descriptor_depth(node: &WorkflowNodeDescriptor) -> usize {
+        1 + node
+            .children()
+            .iter()
+            .map(descriptor_depth)
+            .max()
+            .unwrap_or(0)
     }
 
     fn snapshot_node_count(node: &WorkflowNodeSnapshot) -> usize {
