@@ -48,7 +48,8 @@ pub use turn::{TurnAllocator, TurnId};
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{
     WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowCompletionStatus,
-    WorkflowEnumParseError, WorkflowId, WorkflowIdentifierError, WorkflowNodeId,
-    WorkflowNodeStatus, WorkflowNodeType, WorkflowQueueOutcome, WorkflowRepeatExhaustion,
-    WorkflowRunStatus, WorkflowWatchOutcome,
+    WorkflowEnumParseError, WorkflowId, WorkflowIdentifierError, WorkflowNodeDescriptor,
+    WorkflowNodeId, WorkflowNodeSnapshot, WorkflowNodeStatus, WorkflowNodeType,
+    WorkflowQueueOutcome, WorkflowRepeatExhaustion, WorkflowRunStatus, WorkflowSnapshot,
+    WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowWatchOutcome,
 };
