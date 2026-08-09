@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use crate::types::workflow::WorkflowNodeSnapshotParts;
 use crate::types::{
-    SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowId,
+    SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId,
     WorkflowNodeDescriptor, WorkflowNodePath, WorkflowNodePathError, WorkflowNodeSnapshot,
-    WorkflowNodeStatus, WorkflowRunStatus, WorkflowSnapshot,
+    WorkflowNodeStatus, WorkflowRunCompleted, WorkflowRunStatus, WorkflowSnapshot,
 };
 
 /// State-application failure that leaves the tracker byte-for-byte unchanged.
@@ -16,6 +16,15 @@ pub enum WorkflowStateError {
     /// A canonical path could not satisfy the path-domain invariant.
     #[error("invalid canonical workflow node path: {source}")]
     InvalidCanonicalPath { source: WorkflowNodePathError },
+    /// A direct snapshot cannot reopen or change a terminal incarnation.
+    #[error(
+        "terminal workflow `{workflow_id}` cannot reconcile snapshot status `{incoming}` from `{current}`"
+    )]
+    TerminalSnapshotConflict {
+        workflow_id: WorkflowId,
+        current: WorkflowRunStatus,
+        incoming: WorkflowRunStatus,
+    },
 }
 
 impl WorkflowStateError {
@@ -24,6 +33,7 @@ impl WorkflowStateError {
         match self {
             Self::DuplicateCanonicalPath { .. } => "duplicate_canonical_path",
             Self::InvalidCanonicalPath { .. } => "invalid_canonical_path",
+            Self::TerminalSnapshotConflict { .. } => "terminal_snapshot_conflict",
         }
     }
 }
@@ -224,15 +234,73 @@ impl WorkflowTracker {
 
     /// Validates, canonicalizes, and applies a complete persisted snapshot.
     ///
+    /// Missing and active runs accept every valid snapshot status. A terminal
+    /// run accepts only another direct snapshot with the same terminal status.
+    ///
     /// # Errors
     ///
-    /// Returns a structured error without changing the tracker when two nodes
-    /// map to the same canonical path or a path violates its domain invariant.
+    /// Returns a structured error without changing the tracker when nodes map
+    /// to the same canonical path, a path violates its domain invariant, or a
+    /// direct snapshot conflicts with an existing terminal incarnation.
     pub fn apply_snapshot(
         &mut self,
         snapshot: WorkflowSnapshot,
     ) -> Result<bool, WorkflowStateError> {
+        let workflow_id = snapshot.workflow_id().clone();
+        let incoming_status = snapshot.status();
+        if let Some(current) = self.runs.get(&workflow_id)
+            && is_terminal(current.status)
+            && current.status != incoming_status
+        {
+            return Err(WorkflowStateError::TerminalSnapshotConflict {
+                workflow_id,
+                current: current.status,
+                incoming: incoming_status,
+            });
+        }
         let (workflow_id, run) = canonicalize_snapshot(snapshot)?;
+        self.replace_if_changed(workflow_id, run)
+    }
+
+    /// Applies one workflow lifecycle event to persisted state.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error without changing state when an accepted
+    /// completion snapshot fails canonical validation.
+    pub fn apply_event(&mut self, event: WorkflowEvent) -> Result<bool, WorkflowStateError> {
+        match event {
+            WorkflowEvent::RunCompleted(completion) => self.apply_completion(completion),
+            _ => Ok(false),
+        }
+    }
+
+    fn apply_completion(
+        &mut self,
+        completion: WorkflowRunCompleted,
+    ) -> Result<bool, WorkflowStateError> {
+        let workflow_id = completion.workflow_id().clone();
+        let Some(current) = self.runs.get(&workflow_id) else {
+            warn_ignored(&workflow_id, "run_complete", "unknown_run");
+            return Ok(false);
+        };
+        let terminal = is_terminal(current.status);
+        let (snapshot_id, incoming) = canonicalize_snapshot(completion.into_final_state())?;
+        if terminal {
+            if current == &incoming {
+                return Ok(false);
+            }
+            warn_ignored(&workflow_id, "run_complete", "terminal_completion_conflict");
+            return Ok(false);
+        }
+        self.replace_if_changed(snapshot_id, incoming)
+    }
+
+    fn replace_if_changed(
+        &mut self,
+        workflow_id: WorkflowId,
+        run: WorkflowRun,
+    ) -> Result<bool, WorkflowStateError> {
         if self.runs.get(&workflow_id) == Some(&run) {
             return Ok(false);
         }
@@ -249,6 +317,22 @@ impl WorkflowTracker {
     pub fn iter(&self) -> impl ExactSizeIterator<Item = (&WorkflowId, &WorkflowRun)> {
         self.runs.iter()
     }
+}
+
+fn is_terminal(status: WorkflowRunStatus) -> bool {
+    matches!(
+        status,
+        WorkflowRunStatus::Completed | WorkflowRunStatus::Failed | WorkflowRunStatus::Aborted
+    )
+}
+
+fn warn_ignored(workflow_id: &WorkflowId, event_kind: &str, reason: &str) {
+    tracing::warn!(
+        workflow_id = workflow_id.as_str(),
+        event_kind,
+        reason,
+        "workflow event ignored"
+    );
 }
 
 fn canonicalize_snapshot(
@@ -331,9 +415,9 @@ mod tests {
 
     use super::*;
     use crate::types::{
-        WorkflowNodeDescriptor, WorkflowNodePath, WorkflowNodeSnapshot, WorkflowNodeStatus,
-        WorkflowNodeType, WorkflowRepeatExhaustion, WorkflowRunStatus, WorkflowSnapshot,
-        WorkflowSnapshotData, WorkflowSnapshotMetadata,
+        WorkflowCompletionStatus, WorkflowNodeDescriptor, WorkflowNodePath, WorkflowNodeSnapshot,
+        WorkflowNodeStatus, WorkflowNodeType, WorkflowRepeatExhaustion, WorkflowRunCompleted,
+        WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata,
     };
     fn workflow_id(value: &str) -> WorkflowId {
         match WorkflowId::try_from(value.to_owned()) {
@@ -383,6 +467,55 @@ mod tests {
             root,
             WorkflowSnapshotMetadata::new("created".to_owned(), 1),
         )
+    }
+
+    fn snapshot_with_status(
+        workflow_id: &str,
+        status: WorkflowRunStatus,
+        marker: &str,
+    ) -> WorkflowSnapshot {
+        let node_status = match status {
+            WorkflowRunStatus::Running => WorkflowNodeStatus::Running,
+            WorkflowRunStatus::Paused => WorkflowNodeStatus::Paused,
+            WorkflowRunStatus::Completed => WorkflowNodeStatus::Completed,
+            WorkflowRunStatus::Failed => WorkflowNodeStatus::Failed,
+            WorkflowRunStatus::Aborted => WorkflowNodeStatus::Aborted,
+        };
+        WorkflowSnapshot::new(
+            self::workflow_id(workflow_id),
+            format!("recipe-{marker}"),
+            status,
+            WorkflowSnapshotData::new(
+                serde_json::json!({"marker": marker}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(node_id(workflow_id), Vec::new()),
+                node_status,
+                vec![WorkflowNodeSnapshot::new(
+                    WorkflowNodeDescriptor::step(node_id(marker), "agent".to_owned(), None, None),
+                    node_status,
+                    Vec::new(),
+                )],
+            ),
+            WorkflowSnapshotMetadata::new(format!("created-{marker}"), 1),
+        )
+    }
+
+    fn completion(snapshot: WorkflowSnapshot) -> WorkflowEvent {
+        let workflow_id = snapshot.workflow_id().clone();
+        let status = match snapshot.status() {
+            WorkflowRunStatus::Running => panic!("running is not a completion status"),
+            WorkflowRunStatus::Paused => WorkflowCompletionStatus::Paused,
+            WorkflowRunStatus::Completed => WorkflowCompletionStatus::Completed,
+            WorkflowRunStatus::Failed => WorkflowCompletionStatus::Failed,
+            WorkflowRunStatus::Aborted => WorkflowCompletionStatus::Aborted,
+        };
+        match WorkflowRunCompleted::new(workflow_id, status, snapshot) {
+            Ok(completion) => WorkflowEvent::RunCompleted(completion),
+            Err(error) => panic!("valid completion fixture rejected: {error}"),
+        }
     }
 
     fn seed(tracker: &mut WorkflowTracker, id: &str, name: &str) {
@@ -670,5 +803,211 @@ mod tests {
             Err(WorkflowStateError::DuplicateCanonicalPath { .. })
         ));
         assert_eq!(tracker.get(&workflow_id("workflow")), before.as_ref());
+    }
+
+    #[test]
+    fn snapshot_entrypoint_status_matrix() {
+        let statuses = [
+            WorkflowRunStatus::Running,
+            WorkflowRunStatus::Paused,
+            WorkflowRunStatus::Completed,
+            WorkflowRunStatus::Failed,
+            WorkflowRunStatus::Aborted,
+        ];
+        for prior in [None].into_iter().chain(statuses.map(Some)) {
+            for incoming in statuses {
+                let mut tracker = WorkflowTracker::new();
+                if let Some(prior) = prior {
+                    assert_eq!(
+                        tracker.apply_snapshot(snapshot_with_status("workflow", prior, "before")),
+                        Ok(true)
+                    );
+                }
+                let before = tracker.get(&workflow_id("workflow")).cloned();
+                let result =
+                    tracker.apply_snapshot(snapshot_with_status("workflow", incoming, "after"));
+                if prior.is_some_and(is_terminal) && prior != Some(incoming) {
+                    assert!(matches!(
+                        result,
+                        Err(WorkflowStateError::TerminalSnapshotConflict { .. })
+                    ));
+                    assert_eq!(tracker.get(&workflow_id("workflow")), before.as_ref());
+                } else {
+                    assert_eq!(result, Ok(true));
+                    assert_eq!(
+                        tracker
+                            .get(&workflow_id("workflow"))
+                            .map(WorkflowRun::status),
+                        Some(incoming)
+                    );
+                }
+            }
+        }
+
+        for prior in [None].into_iter().chain(statuses.map(Some)) {
+            for incoming in statuses
+                .into_iter()
+                .filter(|status| *status != WorkflowRunStatus::Running)
+            {
+                let mut tracker = WorkflowTracker::new();
+                if let Some(prior) = prior {
+                    assert_eq!(
+                        tracker.apply_snapshot(snapshot_with_status("workflow", prior, "before")),
+                        Ok(true)
+                    );
+                }
+                let before = tracker.get(&workflow_id("workflow")).cloned();
+                let result = tracker.apply_event(completion(snapshot_with_status(
+                    "workflow", incoming, "after",
+                )));
+                if prior.is_some_and(|status| !is_terminal(status)) {
+                    assert_eq!(result, Ok(true));
+                    assert_eq!(
+                        tracker
+                            .get(&workflow_id("workflow"))
+                            .map(WorkflowRun::status),
+                        Some(incoming)
+                    );
+                } else {
+                    assert_eq!(result, Ok(false));
+                    assert_eq!(tracker.get(&workflow_id("workflow")), before.as_ref());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn snapshot_entry_paths_are_equivalent() {
+        let mut direct = WorkflowTracker::new();
+        let mut completion_path = WorkflowTracker::new();
+        for tracker in [&mut direct, &mut completion_path] {
+            assert_eq!(
+                tracker.apply_snapshot(snapshot_with_status(
+                    "workflow",
+                    WorkflowRunStatus::Running,
+                    "before",
+                )),
+                Ok(true)
+            );
+        }
+        let terminal = snapshot_with_status("workflow", WorkflowRunStatus::Completed, "terminal");
+        assert_eq!(direct.apply_snapshot(terminal.clone()), Ok(true));
+        assert_eq!(completion_path.apply_event(completion(terminal)), Ok(true));
+        assert_eq!(
+            direct.get(&workflow_id("workflow")),
+            completion_path.get(&workflow_id("workflow"))
+        );
+    }
+
+    #[test]
+    fn active_snapshot_can_become_terminal() {
+        for prior in [WorkflowRunStatus::Running, WorkflowRunStatus::Paused] {
+            for terminal in [
+                WorkflowRunStatus::Completed,
+                WorkflowRunStatus::Failed,
+                WorkflowRunStatus::Aborted,
+            ] {
+                let mut tracker = WorkflowTracker::new();
+                assert_eq!(
+                    tracker.apply_snapshot(snapshot_with_status("workflow", prior, "before")),
+                    Ok(true)
+                );
+                assert_eq!(
+                    tracker.apply_event(completion(snapshot_with_status(
+                        "workflow", terminal, "after",
+                    ))),
+                    Ok(true)
+                );
+                assert_eq!(
+                    tracker
+                        .get(&workflow_id("workflow"))
+                        .map(WorkflowRun::status),
+                    Some(terminal)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn invalid_snapshot_is_atomic() {
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_snapshot(snapshot_with_status(
+                "workflow",
+                WorkflowRunStatus::Running,
+                "before",
+            )),
+            Ok(true)
+        );
+        let before = tracker.get(&workflow_id("workflow")).cloned();
+        let duplicate = WorkflowNodeSnapshot::new(
+            WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
+            WorkflowNodeStatus::Running,
+            vec![
+                WorkflowNodeSnapshot::new(
+                    WorkflowNodeDescriptor::step(node_id("same"), "a".to_owned(), None, None),
+                    WorkflowNodeStatus::Running,
+                    Vec::new(),
+                ),
+                WorkflowNodeSnapshot::new(
+                    WorkflowNodeDescriptor::step(node_id("same"), "b".to_owned(), None, None),
+                    WorkflowNodeStatus::Running,
+                    Vec::new(),
+                ),
+            ],
+        );
+        let invalid = WorkflowSnapshot::new(
+            workflow_id("workflow"),
+            "invalid".to_owned(),
+            WorkflowRunStatus::Running,
+            WorkflowSnapshotData::new(
+                serde_json::json!({}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            duplicate,
+            WorkflowSnapshotMetadata::new("created".to_owned(), 0),
+        );
+        assert!(matches!(
+            tracker.apply_snapshot(invalid),
+            Err(WorkflowStateError::DuplicateCanonicalPath { .. })
+        ));
+        assert_eq!(tracker.get(&workflow_id("workflow")), before.as_ref());
+    }
+
+    #[test]
+    fn terminal_snapshot_conflict_is_atomic() {
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_snapshot(snapshot_with_status(
+                "workflow",
+                WorkflowRunStatus::Completed,
+                "before",
+            )),
+            Ok(true)
+        );
+        let before = tracker.get(&workflow_id("workflow")).cloned();
+        let result = tracker.apply_snapshot(snapshot_with_status(
+            "workflow",
+            WorkflowRunStatus::Running,
+            "after",
+        ));
+        assert!(matches!(
+            result,
+            Err(WorkflowStateError::TerminalSnapshotConflict {
+                current: WorkflowRunStatus::Completed,
+                incoming: WorkflowRunStatus::Running,
+                ..
+            })
+        ));
+        assert_eq!(tracker.get(&workflow_id("workflow")), before.as_ref());
+    }
+
+    #[test]
+    fn exact_terminal_completion_is_idempotent() {
+        let snapshot = snapshot_with_status("workflow", WorkflowRunStatus::Completed, "terminal");
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(tracker.apply_snapshot(snapshot.clone()), Ok(true));
+        assert_eq!(tracker.apply_event(completion(snapshot)), Ok(false));
     }
 }

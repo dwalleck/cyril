@@ -1461,6 +1461,12 @@ impl WorkflowRunCompleted {
     pub fn final_state(&self) -> &WorkflowSnapshot {
         &self.final_state
     }
+
+    /// Moves the authoritative final snapshot into the workflow state machine.
+    #[cfg(feature = "kas")]
+    pub(crate) fn into_final_state(self) -> WorkflowSnapshot {
+        *self.final_state
+    }
 }
 
 /// Optional acknowledgement attached to `steps_queued`.
