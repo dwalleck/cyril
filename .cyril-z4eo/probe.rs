@@ -50,6 +50,10 @@ fn main() {
         "head1={}",
         TuiState::approval(&state).map_or("none", |a| &a.message)
     );
+    println!(
+        "origin1={}",
+        TuiState::approval(&state).map_or("none", |a| a.session_id.as_str())
+    );
     state.approval_confirm();
     println!("first_after_resolution={}", receiver_state(&mut first_rx));
     println!("second_after_resolution={}", receiver_state(&mut second_rx));

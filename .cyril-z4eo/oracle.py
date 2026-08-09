@@ -23,6 +23,7 @@ first_state = "selected" if first == "first" else "wrong"
 second_state = "pending" if model[0] == "second" else "wrong"
 
 print(f"head1={head1}")
+print("origin1=repeated-session")
 print(f"first_after_resolution={first_state}")
 print(f"second_after_resolution={second_state}")
 print(f"head2={model[0]}")

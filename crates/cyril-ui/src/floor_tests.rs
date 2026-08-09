@@ -36,6 +36,7 @@ fn approval_state(option_count: usize) -> ApprovalState {
         ToolCallStatus, ToolKind,
     };
     ApprovalState {
+        session_id: cyril_core::types::SessionId::new("main"),
         tool_call: crate::traits::TrackedToolCall::new(ToolCall::new(
             ToolCallId::new("fence"),
             "Run `cargo test`".into(),
@@ -361,7 +362,9 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
     let overlay_variants: Vec<(&str, OverlayMutator)> = vec![
         (
             "approval-select",
-            Box::new(|state: &mut MockTuiState| state.approval = Some(approval_state(3))),
+            Box::new(|state: &mut MockTuiState| {
+                state.approval = Some(approval_state(3));
+            }),
         ),
         (
             "approval-trust",
@@ -446,6 +449,7 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
                 messages: chat_messages(6),
                 input_text: input_text.into(),
                 input_cursor: input_text.len(),
+                session_label: Some("main".into()),
                 ..Default::default()
             };
             let base = render_frame(&base_state, width, height)?;
@@ -458,6 +462,7 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
                     messages: chat_messages(6),
                     input_text: input_text.into(),
                     input_cursor: input_text.len(),
+                    session_label: Some("main".into()),
                     ..Default::default()
                 };
                 mutate(&mut state);
@@ -812,6 +817,7 @@ fn no_fallback_size_sweep() -> anyhow::Result<()> {
             input_text: "reply".into(),
             input_cursor: 5,
             approval: Some(approval_state(3)),
+            session_label: Some("main".into()),
             ..Default::default()
         },
     ];
@@ -865,6 +871,7 @@ fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
         input_text: "reply".into(),
         input_cursor: "reply".len(),
         approval: Some(approval_state(3)),
+        session_label: Some("main".into()),
         ..Default::default()
     };
     insta::assert_debug_snapshot!("roomy_approval_80x24", render_frame(&approval, 80, 24)?);

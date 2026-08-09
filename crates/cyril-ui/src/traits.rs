@@ -401,6 +401,7 @@ pub enum ApprovalPhase {
 /// Permission approval dialog state.
 #[derive(Debug)]
 pub struct ApprovalState {
+    pub session_id: cyril_core::types::SessionId,
     pub tool_call: TrackedToolCall,
     pub message: String,
     pub options: Vec<cyril_core::types::PermissionOption>,

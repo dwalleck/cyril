@@ -1343,6 +1343,7 @@ impl UiState {
     /// Queue an approval dialog from a permission request.
     pub fn show_approval(&mut self, request: PermissionRequest) {
         self.approvals.push_back(ApprovalState {
+            session_id: request.session_id,
             tool_call: TrackedToolCall::new(request.tool_call),
             message: request.message,
             options: request.options,

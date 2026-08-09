@@ -124,7 +124,16 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
 
     // Overlays (rendered on top)
     if let Some(approval) = state.approval() {
-        crate::widgets::approval::render(frame, area, input_area.y, approval, &theme);
+        let origin = approval.session_id.as_str();
+        let attribution = match state.session_label() {
+            Some(main) if main == origin => None,
+            _ => Some(if origin.is_empty() {
+                "unknown session"
+            } else {
+                origin
+            }),
+        };
+        crate::widgets::approval::render(frame, area, input_area.y, approval, attribution, &theme);
     }
     if let Some(picker) = state.picker() {
         crate::widgets::picker::render(frame, area, input_area.y, picker, &theme);
@@ -489,6 +498,7 @@ mod tests {
         };
 
         let approval = ApprovalState {
+            session_id: cyril_core::types::SessionId::new("main"),
             tool_call: crate::traits::TrackedToolCall::new(ToolCall::new(
                 ToolCallId::new("tc"),
                 "cmd".into(),
@@ -568,6 +578,64 @@ mod tests {
             }
             assert!(saw_signature, "{name}: signature marker role never painted");
         }
+        Ok(())
+    }
+
+    #[test]
+    fn approval_attribution_tracks_current_main_session() -> anyhow::Result<()> {
+        use crate::traits::{ApprovalPhase, ApprovalState, TrackedToolCall};
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, SessionId, ToolCall,
+            ToolCallId, ToolCallStatus, ToolKind,
+        };
+
+        let approval = ApprovalState {
+            session_id: SessionId::new("peer-α"),
+            tool_call: TrackedToolCall::new(ToolCall::new(
+                ToolCallId::new("tc"),
+                "cmd".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Pending,
+                None,
+            )),
+            message: "Allow?".into(),
+            options: vec![PermissionOption {
+                id: PermissionOptionId::new("allow"),
+                label: "Allow".into(),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            }],
+            trust_options: vec![],
+            selected: 0,
+            phase: ApprovalPhase::SelectOption,
+            responder: tokio::sync::oneshot::channel().0,
+        };
+        let mut state = MockTuiState {
+            session_label: Some("peer-α".into()),
+            approval: Some(approval),
+            ..MockTuiState::default()
+        };
+
+        let text = |state: &MockTuiState| -> anyhow::Result<String> {
+            Ok(render_buffer(state)?
+                .content()
+                .iter()
+                .map(|cell| cell.symbol())
+                .collect())
+        };
+        assert!(!text(&state)?.contains("Permission Required — peer-α"));
+        state.session_label = Some("main".into());
+        assert!(text(&state)?.contains("Permission Required — peer-α"));
+        state.session_label = None;
+        assert!(text(&state)?.contains("Permission Required — peer-α"));
+        let Some(approval) = state.approval.as_mut() else {
+            panic!("approval fixture missing");
+        };
+        approval.session_id = SessionId::new("");
+        assert!(
+            text(&state)?.contains("Permission Required — unknown session"),
+            "empty origin must render an honest modal attribution"
+        );
         Ok(())
     }
 

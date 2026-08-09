@@ -5,7 +5,7 @@ expression: "render_frame(&approval, 80, 24)?"
 Buffer {
     area: Rect { x: 0, y: 0, width: 80, height: 24 },
     content: [
-        "No session                                                                      ",
+        "main                                                                            ",
         "  chat-1                                                                       ▲",
         "                                                                               █",
         "You:                                                                           █",
@@ -31,8 +31,8 @@ Buffer {
         "cyril                                                                           ",
     ],
     styles: [
-        x: 0, y: 0, fg: Indexed(24), bg: Indexed(2), underline: Reset, modifier: NONE,
-        x: 10, y: 0, fg: Reset, bg: Indexed(2), underline: Reset, modifier: NONE,
+        x: 0, y: 0, fg: Indexed(5), bg: Indexed(2), underline: Reset, modifier: BOLD,
+        x: 4, y: 0, fg: Reset, bg: Indexed(2), underline: Reset, modifier: NONE,
         x: 0, y: 1, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,
         x: 0, y: 3, fg: Indexed(10), bg: Reset, underline: Reset, modifier: BOLD,
         x: 4, y: 3, fg: Reset, bg: Reset, underline: Reset, modifier: NONE,

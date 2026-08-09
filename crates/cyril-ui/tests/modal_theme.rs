@@ -32,6 +32,7 @@ const SCENE_H: u16 = 24;
 
 fn approval_state(trust_phase: bool) -> ApprovalState {
     ApprovalState {
+        session_id: cyril_core::types::SessionId::new("main"),
         tool_call: TrackedToolCall::new(ToolCall::new(
             ToolCallId::new("tc_1"),
             "echo hello".into(),
@@ -186,13 +187,13 @@ fn scene(name: &str, theme: &Theme) -> Vec<String> {
         "approval-option" => {
             let st = approval_state(false);
             scene_rows(name, |f| {
-                approval::render(f, f.area(), f.area().height, &st, theme)
+                approval::render(f, f.area(), f.area().height, &st, None, theme)
             })
         }
         "approval-trust" => {
             let st = approval_state(true);
             scene_rows(name, |f| {
-                approval::render(f, f.area(), f.area().height, &st, theme)
+                approval::render(f, f.area(), f.area().height, &st, None, theme)
             })
         }
         "picker" => {
