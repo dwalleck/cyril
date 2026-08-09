@@ -9,9 +9,12 @@ use serde::de::DeserializeOwned;
 use crate::types::{
     Notification, SessionId, WorkflowCompletionMismatchError, WorkflowCompletionSignal,
     WorkflowCompletionSignalSource, WorkflowCompletionStatus, WorkflowEvent, WorkflowId,
-    WorkflowIdentifierError, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodeSnapshot,
-    WorkflowNodeStatus, WorkflowRepeatExhaustion, WorkflowRunCompleted, WorkflowRunStarted,
-    WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata,
+    WorkflowIdentifierError, WorkflowNodeCompleted, WorkflowNodeCompletionDetails,
+    WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
+    WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails, WorkflowNodeStarted,
+    WorkflowNodeStatus, WorkflowNodeType, WorkflowRepeatExhaustion, WorkflowRunCompleted,
+    WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
+    WorkflowSnapshotMetadata,
 };
 
 /// Distinguishes an absent optional field from a present non-null value.
@@ -49,6 +52,27 @@ impl<T> OptionalField<T> {
     }
 }
 
+/// Optional opaque JSON where explicit `null` is valid data, not absence.
+#[derive(Debug, Default)]
+struct OptionalValue(OptionalField<serde_json::Value>);
+
+impl<'de> Deserialize<'de> for OptionalValue {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        serde_json::Value::deserialize(deserializer)
+            .map(OptionalField::Present)
+            .map(Self)
+    }
+}
+
+impl OptionalValue {
+    fn into_option(self) -> Option<serde_json::Value> {
+        self.0.into_option()
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 enum WorkflowAdapterError {
     #[error("malformed workflow payload: {0}")]
@@ -65,6 +89,8 @@ enum WorkflowAdapterError {
         #[source]
         source: WorkflowIdentifierError,
     },
+    #[error(transparent)]
+    InvalidNodePath(#[from] WorkflowNodePathError),
     #[error("{node_type} node is missing required `{field}`")]
     MissingNodeField {
         node_type: &'static str,
@@ -98,6 +124,54 @@ struct WireRunCompleted {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireNodeStarted {
+    workflow_id: String,
+    node_id: String,
+    node_path: Vec<String>,
+    #[serde(rename = "type")]
+    node_type: WireNodeType,
+    #[serde(default)]
+    agent_name: OptionalField<String>,
+    #[serde(default)]
+    session_id: OptionalField<String>,
+    #[serde(default)]
+    prompt: OptionalField<String>,
+    #[serde(default)]
+    iteration: OptionalField<u32>,
+    #[serde(default)]
+    branch_id: OptionalField<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireNodeCompleted {
+    workflow_id: String,
+    node_id: String,
+    node_path: Vec<String>,
+    status: WireNodeStatus,
+    #[serde(default)]
+    artifacts: OptionalValue,
+    #[serde(default)]
+    captured_output: OptionalValue,
+    #[serde(default)]
+    failure_reason: OptionalField<String>,
+    #[serde(default)]
+    completion_signal: OptionalField<WireCompletionSignal>,
+    #[serde(default)]
+    completion_signal_source: OptionalField<WireCompletionSignalSource>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireNodePaused {
+    workflow_id: String,
+    node_id: String,
+    node_path: Vec<String>,
+    reason: String,
+}
+
+#[derive(Deserialize)]
 #[serde(tag = "type")]
 enum WireNodeDescriptor {
     #[serde(rename = "step")]
@@ -127,9 +201,9 @@ enum WireNodeDescriptor {
         #[serde(rename = "onMaxIterations")]
         on_max_iterations: WireRepeatExhaustion,
         #[serde(rename = "stopCondition", default)]
-        stop_condition: OptionalField<serde_json::Value>,
+        stop_condition: OptionalValue,
         #[serde(rename = "stopWhen", default)]
-        stop_when: OptionalField<serde_json::Value>,
+        stop_when: OptionalValue,
     },
     #[serde(rename = "parallel")]
     Parallel {
@@ -184,17 +258,17 @@ struct WireNodeSnapshot {
     #[serde(default)]
     on_max_iterations: OptionalField<WireRepeatExhaustion>,
     #[serde(default)]
-    stop_condition: OptionalField<serde_json::Value>,
+    stop_condition: OptionalValue,
     #[serde(default)]
-    stop_when: OptionalField<serde_json::Value>,
+    stop_when: OptionalValue,
     #[serde(default)]
     handler_name: OptionalField<String>,
     #[serde(default)]
     session_id: OptionalField<String>,
     #[serde(default)]
-    artifacts: OptionalField<serde_json::Value>,
+    artifacts: OptionalValue,
     #[serde(default)]
-    captured_output: OptionalField<serde_json::Value>,
+    captured_output: OptionalValue,
     #[serde(default)]
     failure_reason: OptionalField<String>,
     #[serde(default)]
@@ -283,6 +357,9 @@ pub(super) fn to_notification(
 ) -> Option<Option<Notification>> {
     let event = match method {
         "kiro/workflow/run_start" => parse_run_started(params),
+        "kiro/workflow/node_start" => parse_node_started(params),
+        "kiro/workflow/node_complete" => parse_node_completed(params),
+        "kiro/workflow/node_paused" => parse_node_paused(params),
         "kiro/workflow/run_complete" => parse_run_completed(params),
         _ => return None,
     };
@@ -314,6 +391,76 @@ fn parse_run_started(params: &serde_json::Value) -> Result<WorkflowEvent, Workfl
         wire.inputs,
         node_tree,
         wire.parent_session_id.into_option().map(SessionId::new),
+    )))
+}
+
+fn parse_node_started(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
+    let wire: WireNodeStarted = deserialize(params)?;
+    let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
+    let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
+    let mut details = WorkflowNodeStartDetails::new();
+    if let Some(agent_name) = wire.agent_name.into_option() {
+        details = details.with_agent_name(agent_name);
+    }
+    if let Some(session_id) = wire.session_id.into_option() {
+        details = details.with_session_id(SessionId::new(session_id));
+    }
+    if let Some(prompt) = wire.prompt.into_option() {
+        details = details.with_prompt(prompt);
+    }
+    if let Some(iteration) = wire.iteration.into_option() {
+        details = details.with_iteration(iteration);
+    }
+    if let Some(branch_id) = wire.branch_id.into_option() {
+        details = details.with_branch_id(branch_id);
+    }
+    Ok(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+        workflow_id,
+        node_id(wire.node_id)?,
+        node_path,
+        wire.node_type.into(),
+        details,
+    )))
+}
+
+fn parse_node_completed(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
+    let wire: WireNodeCompleted = deserialize(params)?;
+    let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
+    let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
+    let mut details = WorkflowNodeCompletionDetails::new();
+    if let Some(artifacts) = wire.artifacts.into_option() {
+        details = details.with_artifacts(artifacts);
+    }
+    if let Some(captured_output) = wire.captured_output.into_option() {
+        details = details.with_captured_output(captured_output);
+    }
+    if let Some(failure_reason) = wire.failure_reason.into_option() {
+        details = details.with_failure_reason(failure_reason);
+    }
+    if let Some(completion_signal) = wire.completion_signal.into_option() {
+        details = details.with_completion_signal(completion_signal.into());
+    }
+    if let Some(source) = wire.completion_signal_source.into_option() {
+        details = details.with_completion_signal_source(source.into());
+    }
+    Ok(WorkflowEvent::NodeCompleted(WorkflowNodeCompleted::new(
+        workflow_id,
+        node_id(wire.node_id)?,
+        node_path,
+        wire.status.into(),
+        details,
+    )))
+}
+
+fn parse_node_paused(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
+    let wire: WireNodePaused = deserialize(params)?;
+    let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
+    let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
+    Ok(WorkflowEvent::NodePaused(WorkflowNodePaused::new(
+        workflow_id,
+        node_id(wire.node_id)?,
+        node_path,
+        wire.reason,
     )))
 }
 
@@ -526,6 +673,18 @@ impl WireNodeType {
             Self::Repeat => "repeat",
             Self::Parallel => "parallel",
             Self::Watch => "watch",
+        }
+    }
+}
+
+impl From<WireNodeType> for WorkflowNodeType {
+    fn from(value: WireNodeType) -> Self {
+        match value {
+            WireNodeType::Step => Self::Step,
+            WireNodeType::Sequence => Self::Sequence,
+            WireNodeType::Repeat => Self::Repeat,
+            WireNodeType::Parallel => Self::Parallel,
+            WireNodeType::Watch => Self::Watch,
         }
     }
 }
@@ -918,6 +1077,319 @@ mod tests {
             elapsed <= Duration::from_millis(50),
             "1 MiB/256-node/depth-10 conversion exceeded 50 ms: {elapsed:?}"
         );
+    }
+
+    #[test]
+    fn node_start_preserves_type_and_optional_presence() {
+        for (wire_type, expected) in [
+            ("step", WorkflowNodeType::Step),
+            ("sequence", WorkflowNodeType::Sequence),
+            ("repeat", WorkflowNodeType::Repeat),
+            ("parallel", WorkflowNodeType::Parallel),
+            ("watch", WorkflowNodeType::Watch),
+        ] {
+            let params = serde_json::json!({
+                "workflowId": "workflow",
+                "nodeId": "node",
+                "nodePath": ["workflow", "node"],
+                "type": wire_type
+            });
+            let WorkflowEvent::NodeStarted(started) = event(
+                to_notification("kiro/workflow/node_start", &params),
+                "minimal node_start",
+            ) else {
+                panic!("expected node_start");
+            };
+            assert_eq!(started.node_type(), expected);
+            assert_eq!(started.node_path().segments(), ["workflow", "node"]);
+            assert!(started.details().agent_name().is_none());
+            assert!(started.details().session_id().is_none());
+            assert!(started.details().prompt().is_none());
+            assert!(started.details().iteration().is_none());
+            assert!(started.details().branch_id().is_none());
+        }
+
+        let first = serde_json::json!({
+            "workflowId": "workflow",
+            "nodeId": "node",
+            "nodePath": ["workflow", "node"],
+            "type": "step",
+            "agentName": ""
+        });
+        let second = serde_json::json!({
+            "workflowId": "workflow",
+            "nodeId": "node",
+            "nodePath": ["workflow", "node"],
+            "type": "step",
+            "agentName": "",
+            "sessionId": "",
+            "prompt": "識別子 with space",
+            "iteration": 0,
+            "branchId": ""
+        });
+        let WorkflowEvent::NodeStarted(first) = event(
+            to_notification("kiro/workflow/node_start", &first),
+            "first node_start",
+        ) else {
+            panic!("expected first node_start");
+        };
+        let WorkflowEvent::NodeStarted(second) = event(
+            to_notification("kiro/workflow/node_start", &second),
+            "second node_start",
+        ) else {
+            panic!("expected second node_start");
+        };
+        assert!(first.details().session_id().is_none());
+        assert_eq!(second.details().agent_name(), Some(""));
+        assert_eq!(
+            second.details().session_id().map(SessionId::as_str),
+            Some("")
+        );
+        assert_eq!(second.details().prompt(), Some("識別子 with space"));
+        assert_eq!(second.details().iteration(), Some(0));
+        assert_eq!(second.details().branch_id(), Some(""));
+    }
+
+    #[test]
+    fn node_completion_and_pause_preserve_every_documented_field() {
+        for status in [
+            "pending",
+            "running",
+            "paused",
+            "completed",
+            "failed",
+            "aborted",
+            "skipped",
+        ] {
+            let params = serde_json::json!({
+                "workflowId": "workflow",
+                "nodeId": "node",
+                "nodePath": ["workflow", "iter-2", "node"],
+                "status": status,
+                "artifacts": null,
+                "capturedOutput": {"nested": [1, 1]},
+                "failureReason": "",
+                "completionSignal": "need_input",
+                "completionSignalSource": "send_message"
+            });
+            let WorkflowEvent::NodeCompleted(completed) = event(
+                to_notification("kiro/workflow/node_complete", &params),
+                "node_complete",
+            ) else {
+                panic!("expected node_complete");
+            };
+            assert_eq!(completed.status().as_str(), status);
+            assert_eq!(
+                completed.node_path().segments(),
+                ["workflow", "iter-2", "node"]
+            );
+            assert_eq!(
+                completed.details().artifacts(),
+                Some(&serde_json::Value::Null)
+            );
+            assert_eq!(
+                completed.details().captured_output(),
+                Some(&serde_json::json!({"nested": [1, 1]}))
+            );
+            assert_eq!(completed.details().failure_reason(), Some(""));
+            assert_eq!(
+                completed.details().completion_signal(),
+                Some(WorkflowCompletionSignal::NeedInput)
+            );
+            assert_eq!(
+                completed.details().completion_signal_source(),
+                Some(WorkflowCompletionSignalSource::SendMessage)
+            );
+        }
+
+        let paused = serde_json::json!({
+            "workflowId": "workflow",
+            "nodeId": "node",
+            "nodePath": ["workflow", "node"],
+            "reason": "等待 human"
+        });
+        let WorkflowEvent::NodePaused(paused) = event(
+            to_notification("kiro/workflow/node_paused", &paused),
+            "node_paused",
+        ) else {
+            panic!("expected node_paused");
+        };
+        assert_eq!(paused.reason(), "等待 human");
+    }
+
+    #[test]
+    fn node_path_validation_and_scale_budgets_hold() {
+        let minimal = serde_json::json!({
+            "workflowId": "workflow",
+            "nodeId": "node",
+            "nodePath": ["workflow", "node"],
+            "type": "step"
+        });
+        let started = Instant::now();
+        for _ in 0..10_000 {
+            assert!(matches!(
+                to_notification("kiro/workflow/node_start", &minimal),
+                Some(Some(Notification::Workflow(_)))
+            ));
+        }
+        let batch_elapsed = started.elapsed();
+        assert!(
+            batch_elapsed <= Duration::from_millis(100),
+            "10,000 minimal node frames exceeded 100 ms: {batch_elapsed:?}"
+        );
+
+        let large_workflow = format!("識別子 {}", "w".repeat(65_536));
+        let large_node = format!("node {}", "n".repeat(65_536));
+        let large_segment = format!("path {}", "p".repeat(65_536));
+        let large = serde_json::json!({
+            "workflowId": large_workflow,
+            "nodeId": large_node,
+            "nodePath": [large_workflow, large_segment],
+            "type": "watch",
+            "prompt": "x".repeat(65_536)
+        });
+        let started = Instant::now();
+        let WorkflowEvent::NodeStarted(large_event) = event(
+            to_notification("kiro/workflow/node_start", &large),
+            "large node_start",
+        ) else {
+            panic!("expected large node_start");
+        };
+        let large_elapsed = started.elapsed();
+        assert_eq!(large_event.workflow_id().as_str(), large_workflow);
+        assert_eq!(large_event.node_id().as_str(), large_node);
+        assert_eq!(large_event.node_path().segments()[1], large_segment);
+        assert!(
+            large_elapsed <= Duration::from_millis(50),
+            "64 KiB node frame exceeded 50 ms: {large_elapsed:?}"
+        );
+
+        let empty_path = serde_json::json!({
+            "workflowId": "workflow",
+            "nodeId": "node",
+            "nodePath": [],
+            "type": "step"
+        });
+        let wrong_root = serde_json::json!({
+            "workflowId": "workflow",
+            "nodeId": "node",
+            "nodePath": ["other", "node"],
+            "type": "step"
+        });
+        assert!(matches!(
+            to_notification("kiro/workflow/node_start", &empty_path),
+            Some(None)
+        ));
+        assert!(matches!(
+            to_notification("kiro/workflow/node_start", &wrong_root),
+            Some(None)
+        ));
+        assert!(matches!(
+            to_notification("kiro/workflow/node_start", &minimal),
+            Some(Some(Notification::Workflow(_)))
+        ));
+    }
+
+    #[test]
+    fn malformed_node_frames_drop_without_poisoning_successors() {
+        let malformed = [
+            (
+                "kiro/workflow/node_start",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "nodeId": "",
+                    "nodePath": ["workflow", "node"],
+                    "type": "step"
+                }),
+            ),
+            (
+                "kiro/workflow/node_start",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "nodeId": "node",
+                    "nodePath": ["workflow", "node"],
+                    "type": "unknown"
+                }),
+            ),
+            (
+                "kiro/workflow/node_start",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "nodeId": "node",
+                    "nodePath": ["workflow", "node"],
+                    "type": "step",
+                    "agentName": null
+                }),
+            ),
+            (
+                "kiro/workflow/node_complete",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "nodeId": "node",
+                    "nodePath": ["workflow", "node"],
+                    "status": "unknown"
+                }),
+            ),
+            (
+                "kiro/workflow/node_paused",
+                serde_json::json!({
+                    "workflowId": "workflow",
+                    "nodeId": "node",
+                    "nodePath": ["workflow", "node"]
+                }),
+            ),
+        ];
+        for (method, params) in malformed {
+            assert!(
+                matches!(to_notification(method, &params), Some(None)),
+                "{method} malformed input must warn and drop"
+            );
+        }
+
+        let duplicate: serde_json::Value = match serde_json::from_str(
+            r#"{
+                "workflowId":"workflow",
+                "nodeId":"node",
+                "nodePath":["wrong","node"],
+                "nodePath":["workflow","node"],
+                "type":"step",
+                "agentName":"first",
+                "agentName":"second",
+                "futureField":{"ignored":true}
+            }"#,
+        ) {
+            Ok(value) => value,
+            Err(error) => panic!("duplicate-key fixture is invalid: {error}"),
+        };
+        let WorkflowEvent::NodeStarted(started) = event(
+            to_notification("kiro/workflow/node_start", &duplicate),
+            "duplicate node_start",
+        ) else {
+            panic!("expected duplicate node_start");
+        };
+        assert_eq!(started.node_path().segments(), ["workflow", "node"]);
+        assert_eq!(started.details().agent_name(), Some("second"));
+
+        let completion = serde_json::json!({
+            "workflowId": "workflow",
+            "nodeId": "node",
+            "nodePath": ["workflow", "node"],
+            "status": "completed"
+        });
+        let paused = serde_json::json!({
+            "workflowId": "workflow",
+            "nodeId": "node",
+            "nodePath": ["workflow", "node"],
+            "reason": ""
+        });
+        assert!(matches!(
+            to_notification("kiro/workflow/node_complete", &completion),
+            Some(Some(Notification::Workflow(_)))
+        ));
+        assert!(matches!(
+            to_notification("kiro/workflow/node_paused", &paused),
+            Some(Some(Notification::Workflow(_)))
+        ));
     }
 
     fn completed_snapshot(workflow_id: &str, status: &str) -> serde_json::Value {

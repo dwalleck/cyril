@@ -134,7 +134,7 @@ Complexity notation is parametric because the signed spec accepts large strings/
 **Claim:** Valid-input C3 subset — `node_start`, `node_complete`, and `node_paused` convert every documented field and contextual status.
 **Oracle:** Manifest node method fields, node-status domain, and literal expected variants independent of serde structs.
 **Stress fixture:** Double node start without/with session; all start optional fields; completion with each node status and completion optional; paused reason; Unicode/large strings and path segments. Expected exact typed fields; no absent option becomes a sentinel.
-**Loop budget:** O(J+H) per frame; one path allocation and average one hash-table bucket probe, no state-map scan or syscall.
+**Loop budget:** O(J+H) per frame; one path allocation plus one linear validation of its supplied segments, no state-map scan or syscall.
 **Wall budget:** <=100 ms for 10,000 minimal frames and <=50 ms for a frame containing 64 KiB ids/path segments.
 **Files:** `crates/cyril-core/src/protocol/convert/kas/workflow.rs`.
 
