@@ -39,3 +39,9 @@
 - **Budget:** App performs one typed-id comparison. Foreign/pre-main paths skip the persistence adapter entirely; the main path retains its existing single read/merge/atomic-write behavior.
 - **Plan adaptation:** the App integration fixture required the existing workspace `tempfile` dependency as a `cyril` dev-dependency; this adds one package edge to `Cargo.lock` but no runtime dependency or new locked package.
 - **Full gates:** 1,239 default nextest tests passed (1 skipped); 1,473 KAS nextest tests passed (5 skipped); default and KAS all-target Clippy passed with `-D warnings`; fmt and default/KAS doctests passed.
+
+## Pre-PR review corrections
+
+- **Standards:** historical prototype findings now pin commit `955a1a3`; unattributed modal titles borrow static strings instead of allocating every frame.
+- **Spec:** two external `compile_fail` doctests fence E0616 private queue access and E0507 responder consumption through `TuiState::approval()`.
+- **Final gates:** 1,239 default nextest tests passed (1 skipped); 1,473 KAS nextest tests passed (5 skipped); default and KAS all-target Clippy passed with `-D warnings`; fmt passed; default and KAS doctests each executed both compile-fail fences successfully.
