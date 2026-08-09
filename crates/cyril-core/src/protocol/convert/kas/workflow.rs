@@ -74,10 +74,35 @@ impl OptionalValue {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WorkflowErrorKind {
+    MissingRequired,
+    WrongType,
+    InvalidEnum,
+    InvalidValue,
+    StatusMismatch,
+}
+
+impl WorkflowErrorKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::MissingRequired => "missing_required",
+            Self::WrongType => "wrong_type",
+            Self::InvalidEnum => "invalid_enum",
+            Self::InvalidValue => "invalid_value",
+            Self::StatusMismatch => "status_mismatch",
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 enum WorkflowAdapterError {
-    #[error("malformed workflow payload: {0}")]
-    Malformed(#[from] serde_json::Error),
+    #[error("{error}")]
+    MalformedField {
+        field_path: String,
+        error_kind: WorkflowErrorKind,
+        error: String,
+    },
     #[error("invalid `{field}`: {source}")]
     InvalidWorkflowId {
         field: &'static str,
@@ -103,6 +128,31 @@ enum WorkflowAdapterError {
     SnapshotWorkflowMismatch { outer: String, final_id: String },
     #[error(transparent)]
     CompletionMismatch(#[from] WorkflowCompletionMismatchError),
+}
+
+impl WorkflowAdapterError {
+    fn field_path(&self) -> &str {
+        match self {
+            Self::MalformedField { field_path, .. } => field_path,
+            Self::InvalidWorkflowId { field, .. } | Self::InvalidNodeId { field, .. } => field,
+            Self::InvalidNodePath(_) => "nodePath",
+            Self::MissingNodeField { field, .. } => field,
+            Self::SnapshotWorkflowMismatch { .. } => "finalState.workflowId",
+            Self::CompletionMismatch(_) => "status",
+        }
+    }
+
+    fn error_kind(&self) -> WorkflowErrorKind {
+        match self {
+            Self::MalformedField { error_kind, .. } => *error_kind,
+            Self::InvalidWorkflowId { .. }
+            | Self::InvalidNodeId { .. }
+            | Self::InvalidNodePath(_) => WorkflowErrorKind::InvalidValue,
+            Self::MissingNodeField { .. } => WorkflowErrorKind::MissingRequired,
+            Self::SnapshotWorkflowMismatch { .. } => WorkflowErrorKind::InvalidValue,
+            Self::CompletionMismatch(_) => WorkflowErrorKind::StatusMismatch,
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -436,8 +486,10 @@ pub(super) fn to_notification(
         Err(error) => {
             tracing::warn!(
                 method,
+                field_path = error.field_path(),
+                error_kind = error.error_kind().as_str(),
                 error = %error,
-                "malformed KAS workflow lifecycle notification; dropped"
+                "malformed workflow notification"
             );
             None
         }
@@ -598,7 +650,51 @@ fn parse_run_completed(params: &serde_json::Value) -> Result<WorkflowEvent, Work
 }
 
 fn deserialize<T: DeserializeOwned>(value: &serde_json::Value) -> Result<T, WorkflowAdapterError> {
-    T::deserialize(value).map_err(WorkflowAdapterError::Malformed)
+    let result: Result<T, _> = serde_path_to_error::deserialize(value);
+    result.map_err(|error| {
+        let message = error.inner().to_string();
+        let field_path = serde_field_path(error.path().to_string(), &message);
+        WorkflowAdapterError::MalformedField {
+            field_path,
+            error_kind: classify_serde_error(&message),
+            error: message,
+        }
+    })
+}
+
+fn serde_field_path(mut path: String, message: &str) -> String {
+    if path == "." {
+        path.clear();
+    }
+    if let Some(field) = missing_field_name(message) {
+        if !path.is_empty() {
+            path.push('.');
+        }
+        path.push_str(field);
+    }
+    if path.is_empty() {
+        "$".to_owned()
+    } else {
+        path
+    }
+}
+
+fn missing_field_name(message: &str) -> Option<&str> {
+    message
+        .strip_prefix("missing field `")
+        .and_then(|rest| rest.split_once('`').map(|(field, _)| field))
+}
+
+fn classify_serde_error(message: &str) -> WorkflowErrorKind {
+    if message.starts_with("missing field `") {
+        WorkflowErrorKind::MissingRequired
+    } else if message.starts_with("unknown variant `") {
+        WorkflowErrorKind::InvalidEnum
+    } else if message.starts_with("invalid type:") {
+        WorkflowErrorKind::WrongType
+    } else {
+        WorkflowErrorKind::InvalidValue
+    }
 }
 
 impl WireNodeDescriptor {
@@ -898,6 +994,8 @@ impl From<WireCompletionSignalSource> for WorkflowCompletionSignalSource {
 
 #[cfg(test)]
 mod tests {
+    use std::io::{self, Write};
+    use std::sync::{Arc, Mutex};
     use std::time::{Duration, Instant};
 
     use super::*;
@@ -919,6 +1017,56 @@ mod tests {
             Some(Some(Notification::Workflow(event))) => *event,
             other => panic!("{context}: expected workflow notification, got {other:?}"),
         }
+    }
+
+    #[derive(Clone, Default)]
+    struct CaptureWriter(Arc<Mutex<Vec<u8>>>);
+
+    impl Write for CaptureWriter {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            let mut output = self
+                .0
+                .lock()
+                .map_err(|error| io::Error::other(error.to_string()))?;
+            output.extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
+        type Writer = Self;
+
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    fn capture_rejection(
+        method: &str,
+        params: &serde_json::Value,
+    ) -> (Option<Option<Notification>>, serde_json::Value) {
+        let capture = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .json()
+            .with_current_span(false)
+            .with_span_list(false)
+            .with_writer(capture.clone())
+            .finish();
+        let result =
+            tracing::subscriber::with_default(subscriber, || to_notification(method, params));
+        let bytes = match capture.0.lock() {
+            Ok(output) => output.clone(),
+            Err(error) => panic!("workflow warning capture lock poisoned: {error}"),
+        };
+        let log = must_succeed(
+            serde_json::from_slice(&bytes),
+            "workflow warning must be one JSON event",
+        );
+        (result, log)
     }
 
     fn capture_params(source: &str, expected_status: &str) -> serde_json::Value {
@@ -1788,6 +1936,656 @@ mod tests {
             to_notification("kiro/workflow/steps_queued", &valid),
             Some(Some(Notification::Workflow(_)))
         ));
+    }
+
+    struct MalformedCase {
+        id: String,
+        method: String,
+        params: serde_json::Value,
+        field_path: String,
+        error_kind: &'static str,
+    }
+
+    #[test]
+    fn malformed_workflow_field_matrix_isolated() {
+        let started = Instant::now();
+        let manifest: serde_json::Value = must_succeed(
+            serde_json::from_str(include_str!(
+                "../../../../../../.cyril-6beh/oracle-manifest.json"
+            )),
+            "workflow oracle manifest is valid JSON",
+        );
+        let field_contracts = must_object(&manifest["fields"], "manifest fields");
+        let descriptor_contracts = must_object(&manifest["descriptor_fields"], "descriptor fields");
+        let mut cases = Vec::new();
+
+        for (event_kind, contract) in field_contracts {
+            let method = format!("kiro/workflow/{event_kind}");
+            let required = must_array(&contract["required"], "required event fields");
+            for field in required {
+                let field = must_string(field, "required event field");
+                let mut params = valid_payload(&method);
+                let removed = must_object_mut(&mut params, "event payload").remove(field);
+                assert!(
+                    removed.is_some(),
+                    "manifest required field must exist in baseline: {event_kind}.{field}"
+                );
+                cases.push(MalformedCase {
+                    id: format!("{event_kind}.missing.{field}"),
+                    method: method.clone(),
+                    params,
+                    field_path: field.to_owned(),
+                    error_kind: "missing_required",
+                });
+            }
+        }
+
+        for (node_type, contract) in descriptor_contracts {
+            let required = must_array(&contract["required"], "required descriptor fields");
+            for field in required {
+                let field = must_string(field, "required descriptor field");
+                let mut params = descriptor_event_payload(valid_descriptor(node_type));
+                let descriptor = first_descriptor_mut(&mut params);
+                let removed = descriptor.remove(field);
+                assert!(
+                    removed.is_some(),
+                    "manifest descriptor field must exist in baseline: {node_type}.{field}"
+                );
+                cases.push(MalformedCase {
+                    id: format!("descriptor.{node_type}.missing.{field}"),
+                    method: "kiro/workflow/run_start".to_owned(),
+                    params,
+                    field_path: format!("nodeTree[0].{field}"),
+                    error_kind: "missing_required",
+                });
+            }
+        }
+
+        for (method, field, optional) in [
+            ("kiro/workflow/run_start", "workflowId", false),
+            ("kiro/workflow/run_start", "workflowName", false),
+            ("kiro/workflow/run_start", "parentSessionId", true),
+            ("kiro/workflow/node_start", "workflowId", false),
+            ("kiro/workflow/node_start", "nodeId", false),
+            ("kiro/workflow/node_start", "agentName", true),
+            ("kiro/workflow/node_start", "sessionId", true),
+            ("kiro/workflow/node_start", "prompt", true),
+            ("kiro/workflow/node_start", "branchId", true),
+            ("kiro/workflow/node_complete", "workflowId", false),
+            ("kiro/workflow/node_complete", "nodeId", false),
+            ("kiro/workflow/node_complete", "failureReason", true),
+            ("kiro/workflow/node_paused", "workflowId", false),
+            ("kiro/workflow/node_paused", "nodeId", false),
+            ("kiro/workflow/node_paused", "reason", false),
+            ("kiro/workflow/loop_iteration", "workflowId", false),
+            ("kiro/workflow/loop_iteration", "loopId", false),
+            ("kiro/workflow/watch_poll", "workflowId", false),
+            ("kiro/workflow/watch_poll", "nodeId", false),
+            ("kiro/workflow/watch_poll", "at", false),
+            ("kiro/workflow/paused", "workflowId", false),
+            ("kiro/workflow/paused", "pauseReason", false),
+            ("kiro/workflow/run_complete", "workflowId", false),
+            ("kiro/workflow/steps_queued", "workflowId", false),
+        ] {
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::Bool(false),
+                "wrong_type",
+            );
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::Null,
+                if optional {
+                    "invalid_value"
+                } else {
+                    "wrong_type"
+                },
+            );
+        }
+
+        for (method, field) in [
+            ("kiro/workflow/run_start", "nodeTree"),
+            ("kiro/workflow/node_start", "nodePath"),
+            ("kiro/workflow/node_complete", "nodePath"),
+            ("kiro/workflow/node_paused", "nodePath"),
+            ("kiro/workflow/watch_poll", "nodePath"),
+            ("kiro/workflow/run_complete", "finalState"),
+            ("kiro/workflow/steps_queued", "pendingSteps"),
+        ] {
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::Bool(false),
+                "wrong_type",
+            );
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::Null,
+                "wrong_type",
+            );
+        }
+
+        for (method, field, optional) in [
+            ("kiro/workflow/node_start", "iteration", true),
+            ("kiro/workflow/loop_iteration", "iteration", false),
+        ] {
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::String("zero".to_owned()),
+                "wrong_type",
+            );
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::Null,
+                if optional {
+                    "invalid_value"
+                } else {
+                    "wrong_type"
+                },
+            );
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::json!(-1),
+                "invalid_value",
+            );
+        }
+        for value in [serde_json::json!("false"), serde_json::Value::Null] {
+            push_top_case(
+                &mut cases,
+                "kiro/workflow/loop_iteration",
+                "stopConditionMet",
+                value,
+                "wrong_type",
+            );
+        }
+
+        for (method, field, optional) in [
+            ("kiro/workflow/node_start", "type", false),
+            ("kiro/workflow/node_complete", "status", false),
+            ("kiro/workflow/watch_poll", "outcome", false),
+            ("kiro/workflow/run_complete", "status", false),
+            ("kiro/workflow/node_complete", "completionSignal", true),
+            (
+                "kiro/workflow/node_complete",
+                "completionSignalSource",
+                true,
+            ),
+        ] {
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::String("unknown".to_owned()),
+                "invalid_enum",
+            );
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::Bool(false),
+                "wrong_type",
+            );
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::Null,
+                if optional {
+                    "invalid_value"
+                } else {
+                    "wrong_type"
+                },
+            );
+        }
+
+        push_top_case(
+            &mut cases,
+            "kiro/workflow/steps_queued",
+            "resolution",
+            serde_json::Value::Bool(false),
+            "wrong_type",
+        );
+        push_top_case(
+            &mut cases,
+            "kiro/workflow/steps_queued",
+            "resolution",
+            serde_json::Value::Null,
+            "invalid_value",
+        );
+        for (path, value, error_kind) in [
+            (
+                "resolution.outcome",
+                serde_json::Value::String("unknown".to_owned()),
+                "invalid_enum",
+            ),
+            (
+                "resolution.outcome",
+                serde_json::Value::Bool(false),
+                "wrong_type",
+            ),
+            ("resolution.outcome", serde_json::Value::Null, "wrong_type"),
+            (
+                "resolution.reason",
+                serde_json::Value::Bool(false),
+                "wrong_type",
+            ),
+            (
+                "resolution.reason",
+                serde_json::Value::Null,
+                "invalid_value",
+            ),
+        ] {
+            let mut params = valid_payload("kiro/workflow/steps_queued");
+            set_nested_field(&mut params, path, value);
+            cases.push(MalformedCase {
+                id: format!("steps_queued.{path}.{error_kind}"),
+                method: "kiro/workflow/steps_queued".to_owned(),
+                params,
+                field_path: path.to_owned(),
+                error_kind,
+            });
+        }
+
+        for node_type in ["step", "sequence", "repeat", "parallel", "watch"] {
+            for (field, value, error_kind) in descriptor_bad_fields(node_type) {
+                let mut params = descriptor_event_payload(valid_descriptor(node_type));
+                first_descriptor_mut(&mut params).insert(field.to_owned(), value);
+                cases.push(MalformedCase {
+                    id: format!("descriptor.{node_type}.{field}.{error_kind}"),
+                    method: "kiro/workflow/run_start".to_owned(),
+                    params,
+                    field_path: if field == "type" {
+                        "nodeTree[0].type".to_owned()
+                    } else {
+                        "nodeTree[0]".to_owned()
+                    },
+                    error_kind,
+                });
+            }
+        }
+
+        for (method, field) in [
+            ("kiro/workflow/run_start", "workflowId"),
+            ("kiro/workflow/node_start", "workflowId"),
+            ("kiro/workflow/node_start", "nodeId"),
+            ("kiro/workflow/node_complete", "workflowId"),
+            ("kiro/workflow/node_complete", "nodeId"),
+            ("kiro/workflow/node_paused", "workflowId"),
+            ("kiro/workflow/node_paused", "nodeId"),
+            ("kiro/workflow/loop_iteration", "workflowId"),
+            ("kiro/workflow/loop_iteration", "loopId"),
+            ("kiro/workflow/watch_poll", "workflowId"),
+            ("kiro/workflow/watch_poll", "nodeId"),
+            ("kiro/workflow/paused", "workflowId"),
+            ("kiro/workflow/run_complete", "workflowId"),
+            ("kiro/workflow/steps_queued", "workflowId"),
+        ] {
+            push_top_case(
+                &mut cases,
+                method,
+                field,
+                serde_json::Value::String(String::new()),
+                "invalid_value",
+            );
+        }
+
+        let mut wrong_path = valid_payload("kiro/workflow/node_start");
+        set_top_field(
+            &mut wrong_path,
+            "nodePath",
+            serde_json::json!(["other", "node"]),
+        );
+        cases.push(MalformedCase {
+            id: "node_start.nodePath.invalid_root".to_owned(),
+            method: "kiro/workflow/node_start".to_owned(),
+            params: wrong_path,
+            field_path: "nodePath".to_owned(),
+            error_kind: "invalid_value",
+        });
+        let mut mismatch = valid_payload("kiro/workflow/run_complete");
+        set_top_field(
+            &mut mismatch,
+            "status",
+            serde_json::Value::String("failed".to_owned()),
+        );
+        cases.push(MalformedCase {
+            id: "run_complete.status.status_mismatch".to_owned(),
+            method: "kiro/workflow/run_complete".to_owned(),
+            params: mismatch,
+            field_path: "status".to_owned(),
+            error_kind: "status_mismatch",
+        });
+
+        assert!(cases.len() >= 120, "malformed matrix unexpectedly narrowed");
+        for case in cases {
+            let (result, log) = capture_rejection(&case.method, &case.params);
+            assert!(
+                matches!(result, Some(None)),
+                "{}: malformed row must drop",
+                case.id
+            );
+            assert_eq!(log["level"], "WARN", "{}: warning level", case.id);
+            let fields = must_object(&log["fields"], "captured warning fields");
+            let mut field_names = fields.keys().map(String::as_str).collect::<Vec<_>>();
+            field_names.sort_unstable();
+            assert_eq!(
+                field_names,
+                ["error", "error_kind", "field_path", "message", "method"],
+                "{}: warning field set",
+                case.id
+            );
+            assert_eq!(
+                fields["message"], "malformed workflow notification",
+                "{}: warning message",
+                case.id
+            );
+            assert_eq!(fields["method"], case.method, "{}: method", case.id);
+            assert_eq!(
+                fields["field_path"], case.field_path,
+                "{}: field path",
+                case.id
+            );
+            assert_eq!(
+                fields["error_kind"], case.error_kind,
+                "{}: error kind",
+                case.id
+            );
+            assert!(
+                fields["error"]
+                    .as_str()
+                    .is_some_and(|error| !error.is_empty()),
+                "{}: error text",
+                case.id
+            );
+            assert!(
+                matches!(
+                    to_notification(&case.method, &valid_payload(&case.method)),
+                    Some(Some(Notification::Workflow(_)))
+                ),
+                "{}: valid successor must convert",
+                case.id
+            );
+        }
+        assert!(
+            started.elapsed() <= Duration::from_secs(5),
+            "malformed matrix exceeded 5 seconds"
+        );
+    }
+
+    fn valid_payload(method: &str) -> serde_json::Value {
+        match method {
+            "kiro/workflow/run_start" => serde_json::json!({
+                "workflowId": "workflow",
+                "workflowName": "recipe",
+                "inputs": null,
+                "nodeTree": [valid_descriptor("step")],
+                "parentSessionId": ""
+            }),
+            "kiro/workflow/node_start" => serde_json::json!({
+                "workflowId": "workflow",
+                "nodeId": "node",
+                "nodePath": ["workflow", "node"],
+                "type": "step",
+                "agentName": "",
+                "sessionId": "",
+                "prompt": "",
+                "iteration": 0,
+                "branchId": ""
+            }),
+            "kiro/workflow/node_complete" => serde_json::json!({
+                "workflowId": "workflow",
+                "nodeId": "node",
+                "nodePath": ["workflow", "node"],
+                "status": "completed",
+                "artifacts": null,
+                "capturedOutput": null,
+                "failureReason": "",
+                "completionSignal": "success",
+                "completionSignalSource": "send_message"
+            }),
+            "kiro/workflow/node_paused" => serde_json::json!({
+                "workflowId": "workflow",
+                "nodeId": "node",
+                "nodePath": ["workflow", "node"],
+                "reason": ""
+            }),
+            "kiro/workflow/loop_iteration" => serde_json::json!({
+                "workflowId": "workflow",
+                "loopId": "loop",
+                "iteration": 0,
+                "stopConditionMet": false
+            }),
+            "kiro/workflow/watch_poll" => serde_json::json!({
+                "workflowId": "workflow",
+                "nodeId": "watch",
+                "nodePath": ["workflow", "watch"],
+                "outcome": "idle",
+                "at": ""
+            }),
+            "kiro/workflow/paused" => serde_json::json!({
+                "workflowId": "workflow",
+                "pauseReason": ""
+            }),
+            "kiro/workflow/run_complete" => serde_json::json!({
+                "workflowId": "workflow",
+                "status": "completed",
+                "finalState": completed_snapshot("workflow", "completed")
+            }),
+            "kiro/workflow/steps_queued" => serde_json::json!({
+                "workflowId": "workflow",
+                "pendingSteps": [],
+                "resolution": {"outcome": "applied", "reason": ""}
+            }),
+            other => panic!("no valid workflow payload for {other}"),
+        }
+    }
+
+    fn valid_descriptor(node_type: &str) -> serde_json::Value {
+        match node_type {
+            "step" => serde_json::json!({
+                "nodeId": "node",
+                "type": "step",
+                "agentName": "",
+                "model": "",
+                "effort": ""
+            }),
+            "sequence" => serde_json::json!({
+                "nodeId": "node",
+                "type": "sequence",
+                "steps": []
+            }),
+            "repeat" => serde_json::json!({
+                "nodeId": "node",
+                "type": "repeat",
+                "steps": [],
+                "maxIterations": 0,
+                "onMaxIterations": "pause",
+                "stopCondition": null,
+                "stopWhen": null
+            }),
+            "parallel" => serde_json::json!({
+                "nodeId": "node",
+                "type": "parallel",
+                "branches": []
+            }),
+            "watch" => serde_json::json!({
+                "nodeId": "node",
+                "type": "watch",
+                "handlerName": ""
+            }),
+            other => panic!("unknown descriptor fixture type {other}"),
+        }
+    }
+
+    fn descriptor_event_payload(descriptor: serde_json::Value) -> serde_json::Value {
+        serde_json::json!({
+            "workflowId": "workflow",
+            "workflowName": "recipe",
+            "inputs": {},
+            "nodeTree": [descriptor]
+        })
+    }
+
+    fn descriptor_bad_fields(
+        node_type: &str,
+    ) -> Vec<(&'static str, serde_json::Value, &'static str)> {
+        let mut fields = vec![
+            ("nodeId", serde_json::Value::Bool(false), "wrong_type"),
+            ("nodeId", serde_json::Value::Null, "wrong_type"),
+            (
+                "type",
+                serde_json::Value::String("unknown".to_owned()),
+                "invalid_enum",
+            ),
+            ("type", serde_json::Value::Bool(false), "wrong_type"),
+            ("type", serde_json::Value::Null, "wrong_type"),
+        ];
+        match node_type {
+            "step" => fields.extend([
+                ("agentName", serde_json::Value::Bool(false), "wrong_type"),
+                ("agentName", serde_json::Value::Null, "wrong_type"),
+                ("model", serde_json::Value::Bool(false), "wrong_type"),
+                ("model", serde_json::Value::Null, "invalid_value"),
+                ("effort", serde_json::Value::Bool(false), "wrong_type"),
+                ("effort", serde_json::Value::Null, "invalid_value"),
+            ]),
+            "sequence" => fields.extend([
+                ("steps", serde_json::Value::Bool(false), "wrong_type"),
+                ("steps", serde_json::Value::Null, "wrong_type"),
+            ]),
+            "repeat" => fields.extend([
+                ("steps", serde_json::Value::Bool(false), "wrong_type"),
+                ("steps", serde_json::Value::Null, "wrong_type"),
+                (
+                    "maxIterations",
+                    serde_json::Value::String("zero".to_owned()),
+                    "wrong_type",
+                ),
+                ("maxIterations", serde_json::Value::Null, "wrong_type"),
+                ("maxIterations", serde_json::json!(-1), "invalid_value"),
+                (
+                    "onMaxIterations",
+                    serde_json::Value::String("unknown".to_owned()),
+                    "invalid_enum",
+                ),
+                (
+                    "onMaxIterations",
+                    serde_json::Value::Bool(false),
+                    "wrong_type",
+                ),
+                ("onMaxIterations", serde_json::Value::Null, "wrong_type"),
+            ]),
+            "parallel" => fields.extend([
+                ("branches", serde_json::Value::Bool(false), "wrong_type"),
+                ("branches", serde_json::Value::Null, "wrong_type"),
+            ]),
+            "watch" => fields.extend([
+                ("handlerName", serde_json::Value::Bool(false), "wrong_type"),
+                ("handlerName", serde_json::Value::Null, "wrong_type"),
+            ]),
+            other => panic!("unknown descriptor fixture type {other}"),
+        }
+        fields
+    }
+
+    fn push_top_case(
+        cases: &mut Vec<MalformedCase>,
+        method: &str,
+        field: &str,
+        value: serde_json::Value,
+        error_kind: &'static str,
+    ) {
+        let mut params = valid_payload(method);
+        set_top_field(&mut params, field, value);
+        let event_kind = method.rsplit('/').next().unwrap_or(method);
+        cases.push(MalformedCase {
+            id: format!("{event_kind}.{field}.{error_kind}"),
+            method: method.to_owned(),
+            params,
+            field_path: field.to_owned(),
+            error_kind,
+        });
+    }
+
+    fn set_top_field(params: &mut serde_json::Value, field: &str, value: serde_json::Value) {
+        must_object_mut(params, "event payload").insert(field.to_owned(), value);
+    }
+
+    fn set_nested_field(params: &mut serde_json::Value, path: &str, value: serde_json::Value) {
+        let (parent, field) = match path.split_once('.') {
+            Some(parts) => parts,
+            None => panic!("nested field path lacks separator: {path}"),
+        };
+        let parent_value = match must_object_mut(params, "event payload").get_mut(parent) {
+            Some(value) => value,
+            None => panic!("nested parent does not exist: {parent}"),
+        };
+        must_object_mut(parent_value, parent).insert(field.to_owned(), value);
+    }
+
+    fn first_descriptor_mut(
+        params: &mut serde_json::Value,
+    ) -> &mut serde_json::Map<String, serde_json::Value> {
+        let node_tree = match must_object_mut(params, "event payload").get_mut("nodeTree") {
+            Some(value) => value,
+            None => panic!("descriptor event lacks nodeTree"),
+        };
+        let descriptors = match node_tree.as_array_mut() {
+            Some(value) => value,
+            None => panic!("descriptor nodeTree is not an array"),
+        };
+        let first = match descriptors.first_mut() {
+            Some(value) => value,
+            None => panic!("descriptor nodeTree is empty"),
+        };
+        must_object_mut(first, "descriptor")
+    }
+
+    fn must_object<'a>(
+        value: &'a serde_json::Value,
+        context: &str,
+    ) -> &'a serde_json::Map<String, serde_json::Value> {
+        match value.as_object() {
+            Some(object) => object,
+            None => panic!("{context}: expected object"),
+        }
+    }
+
+    fn must_object_mut<'a>(
+        value: &'a mut serde_json::Value,
+        context: &str,
+    ) -> &'a mut serde_json::Map<String, serde_json::Value> {
+        match value.as_object_mut() {
+            Some(object) => object,
+            None => panic!("{context}: expected mutable object"),
+        }
+    }
+
+    fn must_array<'a>(value: &'a serde_json::Value, context: &str) -> &'a [serde_json::Value] {
+        match value.as_array() {
+            Some(array) => array,
+            None => panic!("{context}: expected array"),
+        }
+    }
+
+    fn must_string<'a>(value: &'a serde_json::Value, context: &str) -> &'a str {
+        match value.as_str() {
+            Some(string) => string,
+            None => panic!("{context}: expected string"),
+        }
     }
 
     fn completed_snapshot(workflow_id: &str, status: &str) -> serde_json::Value {
