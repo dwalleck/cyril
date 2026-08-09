@@ -67,6 +67,31 @@ pub trait TuiState {
     fn session_cost(&self) -> &cyril_core::types::SessionCost;
 
     // Overlays
+    /// Return a shared view of the active approval only.
+    ///
+    /// Queue order is private to [`crate::state::UiState`]; external callers
+    /// cannot reorder it:
+    ///
+    /// ```compile_fail,E0616
+    /// use cyril_ui::state::UiState;
+    ///
+    /// let mut state = UiState::new(16);
+    /// state.approvals.clear();
+    /// ```
+    ///
+    /// The shared view also cannot consume its owned responder:
+    ///
+    /// ```compile_fail,E0507
+    /// use cyril_core::types::PermissionResponse;
+    /// use cyril_ui::traits::TuiState;
+    ///
+    /// fn cancel(state: &dyn TuiState) {
+    ///     let Some(approval) = state.approval() else {
+    ///         return;
+    ///     };
+    ///     drop(approval.responder.send(PermissionResponse::Cancel));
+    /// }
+    /// ```
     fn approval(&self) -> Option<&ApprovalState>;
     fn picker(&self) -> Option<&PickerState>;
     fn hooks_panel(&self) -> Option<&HooksPanelState>;
