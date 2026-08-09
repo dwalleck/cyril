@@ -45,3 +45,13 @@
 - **Standards:** historical prototype findings now pin commit `955a1a3`; unattributed modal titles borrow static strings instead of allocating every frame.
 - **Spec:** two external `compile_fail` doctests fence E0616 private queue access and E0507 responder consumption through `TuiState::approval()`.
 - **Final gates:** 1,239 default nextest tests passed (1 skipped); 1,473 KAS nextest tests passed (5 skipped); default and KAS all-target Clippy passed with `-D warnings`; fmt passed; default and KAS doctests each executed both compile-fail fences successfully.
+
+## Post-PR review feedback
+
+- **Assessment:** all eleven findings/observations were verified independently and recorded in `review-decisions.md` rows 6–16. Accepted/modified: typed main-session identity, shared invalid-origin presentation, non-empty persistence authority, one modal-title helper, an approval input-batch boundary, exact named lifecycle fences, and the truncated comment. Rejected with evidence: moving the co-located privacy fences, wrapping one conventional result pair in a public type, removing the necessary trust-persistence guard, removing the title allocation fix, and removing the approved compile fences.
+- **Input safety:** `buffered_input_stops_before_promoted_approval` feeds Enter plus a buffered Enter to two immediate approvals. Request 1 resolves, request 2 is promoted but remains pending, and the buffered event is left for the outer loop after redraw.
+- **Identity:** render compares `ApprovalState::session_id` with typed `TuiState::main_session_id`, independently of the human-facing toolbar label. A shared `approval_origin_label` projects an invalid empty id as `unknown session`; an empty origin cannot authorize main-config persistence even if the main controller also contains an empty id.
+- **Focused fences:** 22 `cyril-ui` approval tests passed; the App buffered-input and empty-origin tests passed; the session-created integration test passed.
+- **Runtime oracle:** `.cyril-z4eo/run-probe.sh` and `.cyril-z4eo/oracle.py` both emitted `head1=first`, `origin1=repeated-session`, first `selected`, second `pending`, and `head2=second`.
+- **Full gates:** 1,243 default nextest tests passed (1 skipped); 1,477 KAS nextest tests passed (5 skipped); default and KAS all-target Clippy passed with `-D warnings`; fmt passed; default and KAS doctests each passed both compile-fail fences.
+- **Post-fix recheck:** the parallel Spec recheck passed. The Standards recheck found one empty-main/empty-origin equality corner that suppressed honest attribution; render now requires a non-empty approval origin before omitting attribution, and the render fence exercises equal empty ids.

@@ -13,10 +13,11 @@ The prove-it prototype established the current failure: two `show_approval` call
 3. FIFO order is the order in which `App` receives permission-channel items and calls `show_approval`. No timestamp or cross-producer fairness layer is added.
 4. A terminal response removes the front: immediate option selection, trust-tier confirmation, invalid/empty selection falling back to `Cancel`, or phase-1 Esc cancellation. A failed responder send is still terminal and also removes the front.
 5. Entering trust selection and Esc from trust selection back to option selection are non-terminal; both keep the same front request and do not expose the next request.
-6. Every `ApprovalState` retains its typed originating `SessionId`. At render time, the current `TuiState::session_label()` is compared with the active approval: equality omits attribution, inequality or an unknown main id displays the origin, and an invalid empty id renders as `unknown session` rather than a blank title. Re-evaluating each frame keeps queued attribution correct if the main session changes.
+6. Every `ApprovalState` retains its typed originating `SessionId`. At render time, the current `TuiState::main_session_id()` is compared with the active approval: equality omits attribution, inequality or an unknown main id displays the origin, and an invalid empty id renders as `unknown session` rather than a blank title. `session_label()` remains presentation-only. Re-evaluating each frame keeps queued attribution correct if the main session changes.
 7. Duplicate session ids or tool-call ids do not deduplicate requests. Every request owns its request-time `TrackedToolCall` snapshot and responder and occupies one FIFO position.
 8. The queue is process-local UI state. Dropping `UiState` closes all remaining responders as part of application teardown; this change does not invent persistence for live ACP request futures.
 9. Trust confirmation returns the originating `SessionId` with the chosen `TrustOption`. `App` persists only a main-origin grant; a foreign-origin grant receives the correct wire response but is explicitly reported as session-scoped instead of being written into the main agent's config. Durable foreign-session persistence is tracked by `cyril-ufld`.
+10. An active approval is an input-batch boundary. After one terminal event acts on it, `App` redraws the promoted head before processing buffered terminal events; a queued keystroke cannot confirm an approval the operator has not seen.
 
 ## Input shapes
 
@@ -58,10 +59,10 @@ The subtractive move removes the `UiState` invariant “at most one permission a
 
 - Every approval mutator addressed the only approval. The replacement invariant is that every mutator addresses only `VecDeque::front_mut()` or an owned `pop_front()` value.
 - Rendering could expose at most one approval. This still holds because `TuiState::approval()` returns only `front()`.
-- A terminal response left no approval. This no longer holds; callers may immediately observe the next head. `App` does not assume emptiness after confirm/cancel, and render/key dispatch already query `has_approval()` each event/frame.
+- A terminal response left no approval. This no longer holds; callers may immediately observe the next head. `App` does not assume emptiness after confirm/cancel, while its terminal-input batch stops after acting on an approval so the promoted head is drawn before another key can reach it.
 - A trust-phase transition restored the single owned approval. It must now restore the same item at the front, never append it behind later requests.
 - Request-time preview snapshots could not cross-talk. Queue entries retain whole `ApprovalState` values, so the cyril-j1b3 snapshot-stability invariant remains per entry.
-- The single slot never had to survive a main-session identity change. Each queued item now retains its origin, and the render path compares it with the current main label instead of freezing a main/foreign decision at enqueue time.
+- The single slot never had to survive a main-session identity change. Each queued item now retains its origin, and the render path compares it with the current typed main id instead of freezing a main/foreign decision at enqueue time or treating the toolbar label as identity.
 - Trust confirmation previously returned only a `TrustOption`, implicitly attributing every persistence side effect to the main session. The enriched result preserves the popped head's origin so `App` can reject that false attribution.
 
 No other modal becomes concurrent or changes priority: approval remains the highest-priority overlay and only its front entry participates in that policy.
@@ -82,11 +83,11 @@ Owns approval lifecycle. Replace the private slot with `VecDeque`, move each req
 
 ### `cyril-ui::traits`, `render`, and `widgets::approval`
 
-`ApprovalState` owns the exact originating `SessionId`. `TuiState::approval()` remains the read-only rendering seam and exposes only the current head. `render` compares that origin with the current `TuiState::session_label()` on every frame and passes optional attribution to the widget. The widget adds the foreign id (or `unknown session` for an invalid empty id) to both option and trust-phase overlay titles; it does not inspect session trackers or workflow registries.
+`ApprovalState` owns the exact originating `SessionId`. `TuiState::approval()` remains the read-only rendering seam and exposes only the current head. `TuiState::main_session_id()` exposes typed identity separately from the display-only `session_label()`. `render` compares the two typed ids on every frame and passes optional attribution to the widget. The widget adds the foreign id (or `unknown session` for an invalid empty id) to both option and trust-phase overlay titles; it does not inspect session trackers or workflow registries.
 
 ### `cyril::App`
 
-Consumes an origin-bearing trust-confirmation result. It preserves existing persistence for a grant whose origin equals `SessionController::id()`. A foreign or pre-main origin is not written to the main agent config; App reports that only the wire/session-scoped grant was applied. This is the one cross-component attribution decision because App alone owns both `SessionController` and the persistence adapter.
+Consumes an origin-bearing trust-confirmation result. It preserves existing persistence only for a non-empty grant origin equal to `SessionController::id()`. A foreign, pre-main, or invalid empty origin is not written to the main agent config; App reports that only the wire/session-scoped grant was applied. Its terminal-input batching also stops after an event acts on an approval, forcing a redraw before any buffered event can reach a promoted request. These are cross-component attribution/input decisions because App alone owns the session controller, persistence adapter, event source, and draw loop.
 
 ### Forbidden placements
 
@@ -107,6 +108,7 @@ Consumes an origin-bearing trust-confirmation result. It preserves existing pers
 7. Empty and single-request behavior remains compatible with the existing public UI interface and option/trust response semantics.
 8. Queue mutation stays private to `UiState`; external code receives only an immutable reference to the active head, so `App`, render, and key dispatch cannot reorder entries or consume responders directly.
 9. Trust confirmation preserves its originating session: main-origin grants keep existing persistence, while foreign/pre-main grants never write into the main agent config.
+10. A terminal input event can act on at most one approval before the promoted head is drawn.
 
 ## Falsification
 
@@ -117,10 +119,11 @@ Consumes an origin-bearing trust-confirmation result. It preserves existing pers
 | 3 | FIFO snapshots/responders | Show requests 1 and 2 with distinct messages/raw inputs, resolve twice, and record heads plus both receiver values; head 2 before resolution 1, a closed receiver, or crossed snapshot falsifies | Explicit expected sequence `first → second → empty` and per-request payloads | 2 min | pending | rewrite `state::tests::approval_snapshot_is_independent` as FIFO regression |
 | 4 | Trust transition retains head | Queue a second request, enter trust phase on the first, Esc back, re-enter, confirm; any visible second request before final confirm or wrong option id falsifies | The selected phase-1 id and fixed event sequence in the fixture | 3 min | pending | `state::tests::approval_trust_phase_keeps_queue_head_until_confirmed` |
 | 5 | Every terminal path promotes | Exercise phase-1 Esc, invalid selection, and an already-closed receiver with a second queued request; any second head not exposed after each case falsifies its named subcase | Receiver state plus the literal second message for each table-driven case | 4 min | pending | `state::tests::approval_terminal_paths_promote_next_request` |
-| 6 | Attribution is foreign-only, exact, and current | Render main, peer, pre-main, Unicode, empty-id, and main-session-replacement cases in both phases; missing peer/pre-main labels, a main label, changed Unicode text, stale classification after replacement, or a blank empty-id title falsifies a named case | Literal fixture ids, the explicit `unknown session` fallback, and rendered buffer text | 4 min | pending | `render::tests::approval_attribution_tracks_current_main_session` plus `widgets::approval::tests::renders_foreign_session_in_both_phases` |
+| 6 | Attribution is foreign-only, exact, typed, and current | Render main, peer, pre-main, Unicode, empty-id, humanized-display-label, and main-session-replacement cases in both phases; missing peer/pre-main labels, a main label, changed Unicode text, label-driven identity, stale classification after replacement, or a blank empty-id title falsifies a named case | Literal fixture ids, the explicit `unknown session` fallback, and rendered buffer text | 4 min | pending | `render::tests::approval_attribution_tracks_current_main_session` plus `widgets::approval::tests::renders_foreign_session_in_both_phases` |
 | 7 | Empty/single behavior remains | Run existing approval state/widget tests and focused compatibility cases after storage changes; any changed response id/trust label, preview, or empty getter falsifies the relevant test | Existing accepted test fixtures from cyril-qo13 and cyril-j1b3 | 5 min | pending | existing approval test modules plus a new empty-queue assertion |
 | 8 | Queue stays behind the UI seam | Compile a negative probe from outside `cyril-ui::state` that attempts to reorder the private queue and consume a responder through `TuiState::approval()`; either operation compiling falsifies the placement | Expected Rust privacy/move diagnostics for the two literal forbidden operations | 5 min | pending | private `UiState` field plus immutable `TuiState::approval() -> Option<&ApprovalState>` make actual external mutation a compile error |
 | 9 | Trust persistence respects origin | Confirm the same trust tier once from main and once from a foreign session; a missing main write, any foreign write, or an origin-less confirmation result falsifies a named case | Literal request origins plus isolated temp agent-config contents before/after each case | 5 min | pending | `app::tests::foreign_approval_trust_is_not_persisted_to_main_agent` and existing main persistence tests |
+| 10 | Buffered input stops at an approval boundary | Queue two immediate approvals, provide Enter plus a buffered Enter, and assert only request 1 resolves while request 2 is promoted and remains pending | Literal two-event batch and independent responder states | 2 min | **passed** | `app::tests::buffered_input_stops_before_promoted_approval` |
 
 ### Cheapest falsifier result
 
@@ -146,6 +149,7 @@ The typed wire id is already computed inside `request_permission` and remains in
 | 7 | Change exact option-id/trust semantics while refactoring storage, or report an empty queue as active. |
 | 8 | Expose `VecDeque` through `TuiState`, move queue mutation into `App`, or add a second queue-control interface. |
 | 9 | Drop the origin from `approval_confirm`, compare the wrong id, or call `persist_trust_grant` for every confirmed foreign grant. |
+| 10 | Drain buffered terminal events after an event resolves an approval, allowing the same batch to act on the promoted head before redraw. |
 
 ## Negative space
 
@@ -153,6 +157,7 @@ The typed wire id is already computed inside `request_permission` and remains in
 - General modal lifecycle/priority consolidation is tracked by `cyril-kbgo`; approval remains on the existing highest-priority modal path.
 - KAS consent-scope and v2 trust-option response-shape work is tracked by `cyril-gn07` and `cyril-sive`; response conversion is unchanged here.
 - Durable persistence into a foreign session's owning agent config is tracked by `cyril-ufld`; this change prevents the known-wrong main-config write and reports the grant as session-scoped.
+- Approval queue depth is not rendered. A count does not prevent blind confirmation; the input-batch boundary guarantees presentation without adding unapproved modal UI.
 - Approval persistence across process teardown is not part of a live ACP request contract: the underlying responder future dies with the process, so persisting only the visual queue would create an unanswerable prompt.
 - No proactive pruning or new capacity policy is introduced for responders that close while queued. Existing terminal-send logging remains the observable failure path, and FIFO presentation remains deterministic.
 
@@ -160,5 +165,6 @@ The typed wire id is already computed inside `request_permission` and remains in
 
 - Storage: one `VecDeque<ApprovalState>`; $O(1)$ enqueue, head access, and promotion.
 - Per-request memory: exactly one existing `ApprovalState`; no copied tool payload or responder.
-- Interface growth: one `SessionId` field on each of `PermissionRequest` and `ApprovalState`; `approval_confirm` enriches its existing optional trust result with the origin; no new public method.
-- Rendering: one optional session-id title fragment for the active head only; queued items do no render work.
+- Interface growth: one `SessionId` field on each of `PermissionRequest` and `ApprovalState`, one typed `main_session_id()` method on the rendering trait, and one shared origin-label projection; `approval_confirm` enriches its existing optional trust result with the origin.
+- Rendering: one typed id comparison and optional session-id title fragment for the active head only; queued items do no render work. Main-origin titles remain borrowed and allocation-free.
+- Input: approval events deliberately stop buffered-input draining, adding at most one redraw between distinct approvals and no queue-depth scan, syscall, or async wait.

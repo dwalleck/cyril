@@ -818,6 +818,7 @@ fn no_fallback_size_sweep() -> anyhow::Result<()> {
             input_cursor: 5,
             approval: Some(approval_state(3)),
             session_label: Some("main".into()),
+            main_session_id: Some(cyril_core::types::SessionId::new("main")),
             ..Default::default()
         },
     ];
@@ -872,6 +873,7 @@ fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
         input_cursor: "reply".len(),
         approval: Some(approval_state(3)),
         session_label: Some("main".into()),
+        main_session_id: Some(cyril_core::types::SessionId::new("main")),
         ..Default::default()
     };
     insta::assert_debug_snapshot!("roomy_approval_80x24", render_frame(&approval, 80, 24)?);

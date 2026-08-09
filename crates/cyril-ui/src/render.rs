@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::widgets::Paragraph;
 
-use crate::traits::TuiState;
+use crate::traits::{TuiState, approval_origin_label};
 
 /// Draw the full TUI frame. Panic-safe wrapper with fallback rendering.
 pub fn draw(frame: &mut Frame, state: &dyn TuiState) {
@@ -124,14 +124,13 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
 
     // Overlays (rendered on top)
     if let Some(approval) = state.approval() {
-        let origin = approval.session_id.as_str();
-        let attribution = match state.session_label() {
-            Some(main) if main == origin => None,
-            _ => Some(if origin.is_empty() {
-                "unknown session"
-            } else {
-                origin
-            }),
+        let attribution = match state.main_session_id() {
+            Some(main)
+                if !approval.session_id.as_str().is_empty() && main == &approval.session_id =>
+            {
+                None
+            }
+            _ => Some(approval_origin_label(&approval.session_id)),
         };
         crate::widgets::approval::render(frame, area, input_area.y, approval, attribution, &theme);
     }
@@ -611,7 +610,8 @@ mod tests {
             responder: tokio::sync::oneshot::channel().0,
         };
         let mut state = MockTuiState {
-            session_label: Some("peer-α".into()),
+            session_label: Some("humanized peer label".into()),
+            main_session_id: Some(SessionId::new("peer-α")),
             approval: Some(approval),
             ..MockTuiState::default()
         };
@@ -624,17 +624,19 @@ mod tests {
                 .collect())
         };
         assert!(!text(&state)?.contains("Permission Required — peer-α"));
-        state.session_label = Some("main".into());
+        state.session_label = Some("peer-α".into());
+        state.main_session_id = Some(SessionId::new("main"));
         assert!(text(&state)?.contains("Permission Required — peer-α"));
-        state.session_label = None;
+        state.main_session_id = None;
         assert!(text(&state)?.contains("Permission Required — peer-α"));
+        state.main_session_id = Some(SessionId::new(""));
         let Some(approval) = state.approval.as_mut() else {
             panic!("approval fixture missing");
         };
         approval.session_id = SessionId::new("");
         assert!(
             text(&state)?.contains("Permission Required — unknown session"),
-            "empty origin must render an honest modal attribution"
+            "an empty origin must stay attributed even when the main id is also empty"
         );
         Ok(())
     }

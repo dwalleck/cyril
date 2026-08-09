@@ -53,6 +53,7 @@ pub struct UiState {
     activity: Activity,
     activity_since: Option<Instant>,
     session_label: Option<String>,
+    main_session_id: Option<SessionId>,
     current_mode: Option<String>,
     current_model: Option<String>,
     /// Thinking-effort level for the toolbar (Kiro 2.5.0+). Sticky: only
@@ -198,6 +199,9 @@ impl TuiState for UiState {
     fn session_label(&self) -> Option<&str> {
         self.session_label.as_deref()
     }
+    fn main_session_id(&self) -> Option<&SessionId> {
+        self.main_session_id.as_ref()
+    }
 
     fn current_mode(&self) -> Option<&str> {
         self.current_mode.as_deref()
@@ -318,6 +322,7 @@ impl UiState {
             activity: Activity::Idle,
             activity_since: None,
             session_label: None,
+            main_session_id: None,
             current_mode: None,
             current_model: None,
             effort: None,
@@ -764,6 +769,7 @@ impl UiState {
                 available_models: _,
             } => {
                 self.session_label = Some(session_id.as_str().to_string());
+                self.main_session_id = Some(session_id.clone());
                 self.current_mode = current_mode.as_ref().map(|m| m.as_str().to_string());
                 // Session creation is likewise a model-state boundary: None
                 // must clear the prior session's model rather than retain it.
@@ -5743,7 +5749,7 @@ mod tests {
     }
 
     #[test]
-    fn approval_queue_resolves_all_responders_in_order() {
+    fn approval_terminal_paths_promote_next_request() {
         use cyril_core::types::{
             PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionRequest,
             PermissionResponse, SessionId, ToolCall, ToolCallId, ToolCallStatus, ToolKind,
@@ -6073,6 +6079,7 @@ mod tests {
         state.show_approval(req);
         // Force the selector out of bounds — simulates a refactor regression
         // where the selector drifts past options.len(). The handler should
+        // log a warn and emit Cancel rather than panic or send an AllowOnce.
         state
             .approvals
             .front_mut()
@@ -6108,6 +6115,67 @@ mod tests {
             responder: tx,
         };
         (req, rx)
+    }
+
+    #[test]
+    fn approval_trust_phase_keeps_queue_head_until_confirmed() {
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionResponse,
+            TrustOption,
+        };
+
+        let (first, mut first_response) = make_approval_request_with_trust(
+            vec![PermissionOption {
+                id: PermissionOptionId::new("always"),
+                label: "Always".into(),
+                kind: PermissionOptionKind::AllowAlways,
+                is_destructive: false,
+            }],
+            vec![TrustOption {
+                label: "Full command".into(),
+                display: "echo hi".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec!["echo hi".into()],
+            }],
+        );
+        let (mut second, mut second_response) = make_approval_request(vec![PermissionOption {
+            id: PermissionOptionId::new("once"),
+            label: "Once".into(),
+            kind: PermissionOptionKind::AllowOnce,
+            is_destructive: false,
+        }]);
+        second.message = "second".into();
+
+        let mut state = UiState::new(500);
+        state.show_approval(first);
+        state.show_approval(second);
+        state.approval_confirm();
+        assert!(matches!(
+            state.approval().expect("first approval active").phase,
+            ApprovalPhase::SelectTrust { .. }
+        ));
+        state.approval_cancel();
+        assert_eq!(
+            state.approval().expect("first approval restored").message,
+            "Allow?"
+        );
+        state.approval_confirm();
+        let (origin, trust) = state.approval_confirm().expect("trust confirmed");
+
+        assert_eq!(origin, SessionId::new("main"));
+        assert_eq!(trust.label, "Full command");
+        assert!(matches!(
+            first_response.try_recv(),
+            Ok(PermissionResponse::Selected { .. })
+        ));
+        assert!(matches!(
+            second_response.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+        assert_eq!(
+            state.approval().expect("second approval promoted").message,
+            "second"
+        );
     }
 
     #[test]

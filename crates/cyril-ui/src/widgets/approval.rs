@@ -27,6 +27,18 @@ pub fn render(
     }
 }
 
+fn attribution_title<'a>(
+    base: &'a str,
+    session_attribution: Option<&str>,
+    color: Color,
+) -> Span<'a> {
+    let style = Style::default().fg(color).add_modifier(Modifier::BOLD);
+    match session_attribution {
+        Some(session) => Span::styled(format!("{base}— {session} "), style),
+        None => Span::styled(base, style),
+    }
+}
+
 /// Center-scroll window start: keeps `selected` near the middle, clamped so
 /// the window never starts before 0 or runs past the end. Mirrors the
 /// suggestions widget's windowing so selection behavior feels uniform.
@@ -207,20 +219,7 @@ fn render_option_phase(
         lines.push(Line::styled(format!("{prefix}{}", opt.label), style));
     }
 
-    let title = match session_attribution {
-        Some(session) => Span::styled(
-            format!(" Permission Required — {session} "),
-            Style::default()
-                .fg(theme.emphasis)
-                .add_modifier(Modifier::BOLD),
-        ),
-        None => Span::styled(
-            " Permission Required ",
-            Style::default()
-                .fg(theme.emphasis)
-                .add_modifier(Modifier::BOLD),
-        ),
-    };
+    let title = attribution_title(" Permission Required ", session_attribution, theme.emphasis);
     let popup = Paragraph::new(lines).block(
         Block::default()
             .title(title)
@@ -309,20 +308,11 @@ fn render_trust_phase(
         lines.push(Line::default());
     }
 
-    let title = match session_attribution {
-        Some(session) => Span::styled(
-            format!(" Always Allow — Choose Scope — {session} "),
-            Style::default()
-                .fg(theme.accent_quinary)
-                .add_modifier(Modifier::BOLD),
-        ),
-        None => Span::styled(
-            " Always Allow — Choose Scope ",
-            Style::default()
-                .fg(theme.accent_quinary)
-                .add_modifier(Modifier::BOLD),
-        ),
-    };
+    let title = attribution_title(
+        " Always Allow — Choose Scope ",
+        session_attribution,
+        theme.accent_quinary,
+    );
     let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
         Block::default()
             .title(title)

@@ -296,6 +296,7 @@ fn session_created_activates_both_controllers() {
 
     // UI should show the session label
     assert_eq!(ui.session_label(), Some("sess_123"));
+    assert_eq!(ui.main_session_id(), Some(&SessionId::new("sess_123")));
 }
 
 #[test]
