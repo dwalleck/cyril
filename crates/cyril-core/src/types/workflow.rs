@@ -418,6 +418,68 @@ pub struct WorkflowNodeSnapshot {
     ended_at: Option<String>,
 }
 
+/// Owned node-snapshot fields consumed by the workflow state module.
+#[cfg(feature = "kas")]
+pub(crate) struct WorkflowNodeSnapshotParts {
+    descriptor: WorkflowNodeDescriptor,
+    status: WorkflowNodeStatus,
+    children: Vec<WorkflowNodeSnapshot>,
+    session_id: Option<SessionId>,
+    artifacts: Option<serde_json::Value>,
+    captured_output: Option<serde_json::Value>,
+    failure_reason: Option<String>,
+    iteration: Option<u32>,
+    branch_id: Option<String>,
+    completion_signal: Option<WorkflowCompletionSignal>,
+    completion_signal_source: Option<WorkflowCompletionSignalSource>,
+    started_at: Option<String>,
+    ended_at: Option<String>,
+}
+
+#[cfg(feature = "kas")]
+pub(crate) type WorkflowNodeSnapshotValues = (
+    WorkflowNodeDescriptor,
+    WorkflowNodeStatus,
+    Option<SessionId>,
+    Option<serde_json::Value>,
+    Option<serde_json::Value>,
+    Option<String>,
+    Option<u32>,
+    Option<String>,
+    Option<WorkflowCompletionSignal>,
+    Option<WorkflowCompletionSignalSource>,
+    Option<String>,
+    Option<String>,
+);
+
+#[cfg(feature = "kas")]
+impl WorkflowNodeSnapshotParts {
+    pub(crate) fn descriptor(&self) -> &WorkflowNodeDescriptor {
+        &self.descriptor
+    }
+
+    pub(crate) fn take_children(&mut self) -> Vec<WorkflowNodeSnapshot> {
+        std::mem::take(&mut self.children)
+    }
+
+    pub(crate) fn into_values(self) -> WorkflowNodeSnapshotValues {
+        (
+            self.descriptor,
+            self.status,
+            self.session_id,
+            self.artifacts,
+            self.captured_output,
+            self.failure_reason,
+            self.iteration,
+            self.branch_id,
+            self.completion_signal,
+            self.completion_signal_source,
+            self.started_at,
+            self.ended_at,
+        )
+    }
+}
+
 impl WorkflowNodeSnapshot {
     /// Constructs a node snapshot without optional runtime fields.
     pub fn new(
@@ -566,6 +628,26 @@ impl WorkflowNodeSnapshot {
     pub fn ended_at(&self) -> Option<&str> {
         self.ended_at.as_deref()
     }
+
+    /// Moves every field into the workflow state canonicalizer.
+    #[cfg(feature = "kas")]
+    pub(crate) fn into_parts(self) -> WorkflowNodeSnapshotParts {
+        WorkflowNodeSnapshotParts {
+            descriptor: self.descriptor,
+            status: self.status,
+            children: self.children,
+            session_id: self.session_id,
+            artifacts: self.artifacts,
+            captured_output: self.captured_output,
+            failure_reason: self.failure_reason,
+            iteration: self.iteration,
+            branch_id: self.branch_id,
+            completion_signal: self.completion_signal,
+            completion_signal_source: self.completion_signal_source,
+            started_at: self.started_at,
+            ended_at: self.ended_at,
+        }
+    }
 }
 
 /// Opaque recipe inputs and outputs carried by a full workflow snapshot.
@@ -644,6 +726,55 @@ pub struct WorkflowSnapshot {
     root: WorkflowNodeSnapshot,
     metadata: WorkflowSnapshotMetadata,
 }
+/// Owned snapshot fields consumed by the workflow state module.
+#[cfg(feature = "kas")]
+pub(crate) struct WorkflowSnapshotParts {
+    workflow_id: WorkflowId,
+    workflow_name: String,
+    status: WorkflowRunStatus,
+    inputs: serde_json::Value,
+    artifacts: serde_json::Value,
+    captured_outputs: serde_json::Value,
+    root: WorkflowNodeSnapshot,
+    created_at: String,
+    plan_revision: u32,
+    parent_session_id: Option<SessionId>,
+    workspace_path: Option<String>,
+}
+
+#[cfg(feature = "kas")]
+pub(crate) type WorkflowSnapshotValues = (
+    WorkflowId,
+    String,
+    WorkflowRunStatus,
+    serde_json::Value,
+    serde_json::Value,
+    serde_json::Value,
+    WorkflowNodeSnapshot,
+    String,
+    u32,
+    Option<SessionId>,
+    Option<String>,
+);
+
+#[cfg(feature = "kas")]
+impl WorkflowSnapshotParts {
+    pub(crate) fn into_values(self) -> WorkflowSnapshotValues {
+        (
+            self.workflow_id,
+            self.workflow_name,
+            self.status,
+            self.inputs,
+            self.artifacts,
+            self.captured_outputs,
+            self.root,
+            self.created_at,
+            self.plan_revision,
+            self.parent_session_id,
+            self.workspace_path,
+        )
+    }
+}
 
 impl WorkflowSnapshot {
     /// Constructs a complete, wire-neutral snapshot.
@@ -718,6 +849,24 @@ impl WorkflowSnapshot {
     /// Returns the opaque workspace path when supplied.
     pub fn workspace_path(&self) -> Option<&str> {
         self.metadata.workspace_path()
+    }
+
+    /// Moves every field into the workflow state canonicalizer.
+    #[cfg(feature = "kas")]
+    pub(crate) fn into_parts(self) -> WorkflowSnapshotParts {
+        WorkflowSnapshotParts {
+            workflow_id: self.workflow_id,
+            workflow_name: self.workflow_name,
+            status: self.status,
+            inputs: self.data.inputs,
+            artifacts: self.data.artifacts,
+            captured_outputs: self.data.captured_outputs,
+            root: self.root,
+            created_at: self.metadata.created_at,
+            plan_revision: self.metadata.plan_revision,
+            parent_session_id: self.metadata.parent_session_id,
+            workspace_path: self.metadata.workspace_path,
+        }
     }
 }
 

@@ -999,6 +999,7 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::*;
+    use crate::workflow::{WorkflowNodeState, WorkflowRun, WorkflowTracker};
 
     const FAILED_CAPTURE: &str =
         include_str!("../../../../../../.cyril-6beh/terminal-failed-2.16.2.jsonl");
@@ -1070,6 +1071,7 @@ mod tests {
     }
 
     fn capture_params(source: &str, expected_status: &str) -> serde_json::Value {
+        let mut matched = None;
         for line in source.lines() {
             let frame: serde_json::Value =
                 must_succeed(serde_json::from_str(line), "capture line is valid JSON");
@@ -1081,10 +1083,159 @@ mod tests {
                     .and_then(serde_json::Value::as_str)
                     == Some(expected_status)
             {
-                return envelope["params"].clone();
+                matched = Some(envelope["params"].clone());
             }
         }
-        panic!("capture contains no {expected_status} run_complete");
+        let Some(params) = matched else {
+            panic!("capture contains no {expected_status} run_complete");
+        };
+        params
+    }
+
+    fn workflow_projection(workflow_id: &WorkflowId, run: &WorkflowRun) -> serde_json::Value {
+        let mut run_projection = serde_json::Map::from_iter([
+            (
+                "workflowId".to_owned(),
+                serde_json::Value::String(workflow_id.as_str().to_owned()),
+            ),
+            (
+                "workflowName".to_owned(),
+                serde_json::Value::String(run.workflow_name().to_owned()),
+            ),
+            (
+                "status".to_owned(),
+                serde_json::Value::String(run.status().as_str().to_owned()),
+            ),
+            ("inputs".to_owned(), run.inputs().clone()),
+            ("artifacts".to_owned(), run.artifacts().clone()),
+            ("capturedOutputs".to_owned(), run.captured_outputs().clone()),
+            (
+                "createdAt".to_owned(),
+                serde_json::Value::String(run.created_at().to_owned()),
+            ),
+            (
+                "planRevision".to_owned(),
+                serde_json::Value::from(run.plan_revision()),
+            ),
+        ]);
+        insert_string(
+            &mut run_projection,
+            "parentSessionId",
+            run.parent_session_id().map(SessionId::as_str),
+        );
+        insert_string(&mut run_projection, "workspacePath", run.workspace_path());
+
+        let mut node_entries = run
+            .nodes()
+            .map(|(path, node)| {
+                (
+                    must_succeed(
+                        serde_json::to_string(path.segments()),
+                        "canonical path serializes",
+                    ),
+                    path,
+                    node,
+                )
+            })
+            .collect::<Vec<_>>();
+        node_entries.sort_by(|(left, _, _), (right, _, _)| left.cmp(right));
+        let nodes = node_entries
+            .into_iter()
+            .map(|(_, path, node)| {
+                serde_json::json!({
+                    "path": path.segments(),
+                    "data": workflow_node_projection(node),
+                })
+            })
+            .collect::<Vec<_>>();
+        serde_json::json!({"run": run_projection, "nodes": nodes})
+    }
+
+    fn workflow_node_projection(node: &WorkflowNodeState) -> serde_json::Value {
+        let descriptor = node.descriptor();
+        let mut data = serde_json::Map::from_iter([
+            (
+                "nodeId".to_owned(),
+                serde_json::Value::String(descriptor.node_id().as_str().to_owned()),
+            ),
+            (
+                "type".to_owned(),
+                serde_json::Value::String(descriptor.node_type().as_str().to_owned()),
+            ),
+            (
+                "status".to_owned(),
+                serde_json::Value::String(node.status().as_str().to_owned()),
+            ),
+        ]);
+        insert_string(&mut data, "agentName", descriptor.agent_name());
+        insert_string(&mut data, "model", descriptor.model());
+        insert_string(&mut data, "effort", descriptor.effort());
+        insert_u32(&mut data, "maxIterations", descriptor.max_iterations());
+        insert_string(
+            &mut data,
+            "onMaxIterations",
+            descriptor
+                .on_max_iterations()
+                .map(WorkflowRepeatExhaustion::as_str),
+        );
+        insert_value(&mut data, "stopCondition", descriptor.stop_condition());
+        insert_value(&mut data, "stopWhen", descriptor.stop_when());
+        insert_string(&mut data, "handlerName", descriptor.handler_name());
+        insert_string(
+            &mut data,
+            "sessionId",
+            node.session_id().map(SessionId::as_str),
+        );
+        insert_value(&mut data, "artifacts", node.artifacts());
+        insert_value(&mut data, "capturedOutput", node.captured_output());
+        insert_string(&mut data, "failureReason", node.failure_reason());
+        insert_u32(&mut data, "iteration", node.iteration());
+        insert_string(&mut data, "branchId", node.branch_id());
+        insert_string(
+            &mut data,
+            "completionSignal",
+            node.completion_signal()
+                .map(WorkflowCompletionSignal::as_str),
+        );
+        insert_string(
+            &mut data,
+            "completionSignalSource",
+            node.completion_signal_source()
+                .map(WorkflowCompletionSignalSource::as_str),
+        );
+        insert_string(&mut data, "startedAt", node.started_at());
+        insert_string(&mut data, "endedAt", node.ended_at());
+        serde_json::Value::Object(data)
+    }
+
+    fn insert_string(
+        object: &mut serde_json::Map<String, serde_json::Value>,
+        key: &str,
+        value: Option<&str>,
+    ) {
+        if let Some(value) = value {
+            object.insert(key.to_owned(), serde_json::Value::String(value.to_owned()));
+        }
+    }
+
+    fn insert_u32(
+        object: &mut serde_json::Map<String, serde_json::Value>,
+        key: &str,
+        value: Option<u32>,
+    ) {
+        if let Some(value) = value {
+            object.insert(key.to_owned(), serde_json::Value::from(value));
+        }
+    }
+
+    fn insert_value(
+        object: &mut serde_json::Map<String, serde_json::Value>,
+        key: &str,
+        value: Option<&serde_json::Value>,
+    ) {
+        if let Some(value) = value {
+            object.insert(key.to_owned(), value.clone());
+        }
     }
 
     #[test]
@@ -1255,6 +1406,44 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
+    #[test]
+    fn workflow_capture_state_matches_oracle() {
+        let mut projections = Vec::new();
+        for (source, expected_status) in [(FAILED_CAPTURE, "failed"), (ABORTED_CAPTURE, "aborted")]
+        {
+            let params = capture_params(source, expected_status);
+            let WorkflowEvent::RunCompleted(completion) = event(
+                to_notification("kiro/workflow/run_complete", &params),
+                "captured run_complete",
+            ) else {
+                panic!("captured terminal frame converted to the wrong event");
+            };
+            let workflow_id = completion.workflow_id().clone();
+            let mut tracker = WorkflowTracker::new();
+            must_succeed(
+                tracker.apply_snapshot(completion.final_state().clone()),
+                "captured final snapshot canonicalizes",
+            );
+            let Some(run) = tracker.get(&workflow_id) else {
+                panic!("canonicalized capture is retrievable");
+            };
+            projections.push(workflow_projection(&workflow_id, run));
+        }
+        let actual = serde_json::Value::Array(projections);
+        let expected_text = match std::env::var_os("CYRIL_WORKFLOW_ORACLE_EXPECTED") {
+            Some(path) => must_succeed(
+                std::fs::read_to_string(path),
+                "snapshot oracle output is readable",
+            ),
+            None => include_str!("../../../../../../.cyril-6beh/oracle-snapshot-expected.json")
+                .to_owned(),
+        };
+        let expected = must_succeed(
+            serde_json::from_str::<serde_json::Value>(&expected_text),
+            "snapshot oracle output is valid JSON",
+        );
+        assert_eq!(actual, expected);
+    }
     #[test]
     fn malformed_run_frames_drop_without_poisoning_successor() {
         let valid_opening = serde_json::json!({
