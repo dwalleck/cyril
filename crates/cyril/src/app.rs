@@ -700,10 +700,22 @@ impl App {
             KeyCode::Up => self.ui_state.approval_select_prev(),
             KeyCode::Down => self.ui_state.approval_select_next(),
             KeyCode::Enter => {
-                // A confirmed trust tier (phase 2) returns the chosen option so
-                // we can persist it across sessions to the active agent's config.
-                if let Some(trust) = self.ui_state.approval_confirm() {
-                    self.persist_trust_grant(&trust);
+                // A confirmed trust tier carries its approval origin. Only the
+                // main session may write the active agent's durable config.
+                if let Some((origin, trust)) = self.ui_state.approval_confirm() {
+                    if self.session.id() == Some(&origin) {
+                        self.persist_trust_grant(&trust);
+                    } else {
+                        let origin = if origin.as_str().is_empty() {
+                            "unknown session"
+                        } else {
+                            origin.as_str()
+                        };
+                        self.ui_state.add_system_message(format!(
+                            "Trust remains session-scoped for {origin}; it was not saved to the \
+                             main agent's config."
+                        ));
+                    }
                 }
             }
             KeyCode::Esc => self.ui_state.approval_cancel(),
@@ -1802,6 +1814,146 @@ mod tests {
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
         )
+    }
+
+    fn trust_request(
+        session_id: &str,
+    ) -> (
+        PermissionRequest,
+        tokio::sync::oneshot::Receiver<PermissionResponse>,
+    ) {
+        let (responder, receiver) = tokio::sync::oneshot::channel();
+        (
+            PermissionRequest {
+                session_id: SessionId::new(session_id),
+                tool_call: ToolCall::new(
+                    ToolCallId::new(format!("tool-{session_id}")),
+                    "echo safe".into(),
+                    ToolKind::Execute,
+                    ToolCallStatus::Pending,
+                    None,
+                ),
+                message: "Allow command?".into(),
+                options: vec![PermissionOption {
+                    id: PermissionOptionId::new("always"),
+                    label: "Always".into(),
+                    kind: PermissionOptionKind::AllowAlways,
+                    is_destructive: false,
+                }],
+                trust_options: vec![TrustOption {
+                    label: "Full command".into(),
+                    display: "echo safe".into(),
+                    setting_key: "allowedCommands".into(),
+                    patterns: vec!["echo safe".into()],
+                }],
+                responder,
+            },
+            receiver,
+        )
+    }
+
+    #[test]
+    fn foreign_approval_trust_is_not_persisted_to_main_agent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config_dir = tmp.path().join(".kiro").join("agents");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let config_path = config_dir.join("myagent.json");
+        let original = br#"{"unrelated":{"keep":true}}"#;
+        std::fs::write(&config_path, original).unwrap();
+
+        let mut app = App::new(
+            BridgeHandle::for_tests(),
+            &config::UiConfig::default(),
+            tmp.path().to_path_buf(),
+            cyril_core::commands::HooksCommandSource::Agent,
+        );
+        let main_id = SessionId::new("main-session");
+        app.session
+            .set_session(main_id.clone(), SessionStatus::Active);
+        app.session.apply_notification(&Notification::ModeChanged {
+            mode_id: ModeId::new("myagent"),
+        });
+
+        let (foreign, foreign_response) = trust_request("peer-session");
+        let (main, main_response) = trust_request(main_id.as_str());
+        app.ui_state.show_approval(foreign);
+        app.ui_state.show_approval(main);
+
+        let enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+        app.handle_approval_key(enter);
+        app.handle_approval_key(enter);
+        assert!(matches!(
+            foreign_response.blocking_recv(),
+            Ok(PermissionResponse::Selected {
+                trust_option: Some(label),
+                ..
+            }) if label == "Full command"
+        ));
+        assert_eq!(
+            std::fs::read(&config_path).unwrap(),
+            original,
+            "foreign approval must not write the main agent config"
+        );
+        assert!(app.ui_state.messages().iter().any(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::System(text)
+                    if text.contains("session-scoped") && text.contains("peer-session")
+            )
+        }));
+
+        app.handle_approval_key(enter);
+        app.handle_approval_key(enter);
+        assert!(matches!(
+            main_response.blocking_recv(),
+            Ok(PermissionResponse::Selected { .. })
+        ));
+        let persisted: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&config_path).unwrap()).unwrap();
+        assert_eq!(persisted["unrelated"]["keep"], true);
+        assert_eq!(
+            persisted["toolsSettings"]["execute_bash"]["allowedCommands"],
+            serde_json::json!(["echo safe"])
+        );
+    }
+
+    #[test]
+    fn pre_main_approval_trust_is_session_scoped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config_dir = tmp.path().join(".kiro").join("agents");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let config_path = config_dir.join("myagent.json");
+        let original = b"{}";
+        std::fs::write(&config_path, original).unwrap();
+
+        let mut app = App::new(
+            BridgeHandle::for_tests(),
+            &config::UiConfig::default(),
+            tmp.path().to_path_buf(),
+            cyril_core::commands::HooksCommandSource::Agent,
+        );
+        app.session.apply_notification(&Notification::ModeChanged {
+            mode_id: ModeId::new("myagent"),
+        });
+        let (request, response) = trust_request("early-session");
+        app.ui_state.show_approval(request);
+
+        let enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+        app.handle_approval_key(enter);
+        app.handle_approval_key(enter);
+
+        assert!(matches!(
+            response.blocking_recv(),
+            Ok(PermissionResponse::Selected { .. })
+        ));
+        assert_eq!(std::fs::read(&config_path).unwrap(), original);
+        assert!(app.ui_state.messages().iter().any(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::System(text)
+                    if text.contains("session-scoped") && text.contains("early-session")
+            )
+        }));
     }
 
     fn metadata_frame(sid: &SessionId) -> Notification {

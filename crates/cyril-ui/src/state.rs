@@ -1775,11 +1775,13 @@ impl UiState {
     /// response immediately.
     ///
     /// In phase 2 (SelectTrust): sends AllowAlways with the selected trust
-    /// option label and **returns the chosen `TrustOption`** so the caller (App)
-    /// can persist the grant to the active agent's config for cross-session
-    /// trust. Returns `None` in every other case (phase-2 transition, immediate
-    /// allow/reject, no active dialog).
-    pub fn approval_confirm(&mut self) -> Option<cyril_core::types::TrustOption> {
+    /// option label and **returns the originating `SessionId` with the chosen
+    /// `TrustOption`** so the caller (App) can decide whether the grant belongs
+    /// to the active agent's durable config. Returns `None` in every other case
+    /// (phase-2 transition, immediate allow/reject, no active dialog).
+    pub fn approval_confirm(
+        &mut self,
+    ) -> Option<(cyril_core::types::SessionId, cyril_core::types::TrustOption)> {
         // Pop ownership upfront. Only the phase-2 transition restores the same
         // request at the front; terminal paths expose the next queued request.
         let mut approval = self.approvals.pop_front()?;
@@ -1844,7 +1846,7 @@ impl UiState {
                         "approval response dropped — agent receiver no longer listening"
                     );
                 }
-                chosen
+                chosen.map(|trust| (approval.session_id, trust))
             }
         }
     }
@@ -5840,7 +5842,8 @@ mod tests {
                         "request-3"
                     );
                     state.approval_confirm();
-                    let chosen = state.approval_confirm().expect("chosen trust option");
+                    let (origin, chosen) = state.approval_confirm().expect("chosen trust option");
+                    assert_eq!(origin, SessionId::new("repeated-session"));
                     assert_eq!(chosen.label, "Full command");
                     PermissionResponse::Selected {
                         option_id: expected_id,
@@ -6172,9 +6175,11 @@ mod tests {
         state.approval_select_next(); // select "Base command"
         let persisted = state.approval_confirm(); // send + return chosen tier
 
-        // The full chosen TrustOption is returned so App can persist its
-        // patterns to the agent config (setting_key + patterns, not just label).
-        let persisted = persisted.expect("phase-2 confirm returns the chosen tier");
+        // The exact origin and full chosen TrustOption are returned so App can
+        // guard durable persistence and retain setting_key + patterns.
+        let (origin, persisted) =
+            persisted.expect("phase-2 confirm returns the origin and chosen tier");
+        assert_eq!(origin, cyril_core::types::SessionId::new("main"));
         assert_eq!(persisted.label, "Base command");
         assert_eq!(persisted.setting_key, "allowedCommands");
         assert_eq!(persisted.patterns, vec!["echo( .*)?".to_string()]);

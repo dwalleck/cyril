@@ -29,3 +29,13 @@
 - **Oracle:** the repeated-id runtime probe now exposes `origin1=repeated-session`; the independent static oracle emits the same line and still agrees on FIFO ownership.
 - **Budget:** render compares one active `SessionId` to one current label. Queued entries are not traversed or copied; title construction is $O(L)$ for the active attribution only, with no I/O or async work.
 - **Full gates:** 1,237 default nextest tests passed (1 skipped); 1,471 KAS nextest tests passed (5 skipped); default and KAS all-target Clippy passed with `-D warnings`; fmt and default/KAS doctests passed.
+
+## Slice 4 — trust persistence origin guard
+
+- **Impact analysis:** rust-analyzer found one production `approval_confirm` consumer (`App::handle_approval_key`) plus state tests. The existing method now returns one `(SessionId, TrustOption)` pair; no parallel API or reconstructed identity was added.
+- **RED:** `foreign_approval_trust_is_not_persisted_to_main_agent` observed the foreign grant rewriting `<cwd>/.kiro/agents/myagent.json`.
+- **GREEN/stress:** a foreign approval followed by an identical main approval resolves both wire responders in FIFO order. Foreign config bytes remain exact and a session-scoped notice names `peer-session`; main confirmation adds exactly `echo safe` and preserves unrelated JSON. A separate pre-main case also leaves config bytes exact and names `early-session`.
+- **Oracle/smoke:** the public-API runtime probe and independent static FIFO oracle still agree, including exact `origin1=repeated-session`.
+- **Budget:** App performs one typed-id comparison. Foreign/pre-main paths skip the persistence adapter entirely; the main path retains its existing single read/merge/atomic-write behavior.
+- **Plan adaptation:** the App integration fixture required the existing workspace `tempfile` dependency as a `cyril` dev-dependency; this adds one package edge to `Cargo.lock` but no runtime dependency or new locked package.
+- **Full gates:** 1,239 default nextest tests passed (1 skipped); 1,473 KAS nextest tests passed (5 skipped); default and KAS all-target Clippy passed with `-D warnings`; fmt and default/KAS doctests passed.
