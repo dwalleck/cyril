@@ -2188,10 +2188,11 @@ mod tests {
                 "invalid_value",
             ),
         ] {
+            let value_kind = json_value_kind(&value);
             let mut params = valid_payload("kiro/workflow/steps_queued");
             set_nested_field(&mut params, path, value);
             cases.push(MalformedCase {
-                id: format!("steps_queued.{path}.{error_kind}"),
+                id: format!("steps_queued.{path}.{error_kind}.{value_kind}"),
                 method: "kiro/workflow/steps_queued".to_owned(),
                 params,
                 field_path: path.to_owned(),
@@ -2201,10 +2202,11 @@ mod tests {
 
         for node_type in ["step", "sequence", "repeat", "parallel", "watch"] {
             for (field, value, error_kind) in descriptor_bad_fields(node_type) {
+                let value_kind = json_value_kind(&value);
                 let mut params = descriptor_event_payload(valid_descriptor(node_type));
                 first_descriptor_mut(&mut params).insert(field.to_owned(), value);
                 cases.push(MalformedCase {
-                    id: format!("descriptor.{node_type}.{field}.{error_kind}"),
+                    id: format!("descriptor.{node_type}.{field}.{error_kind}.{value_kind}"),
                     method: "kiro/workflow/run_start".to_owned(),
                     params,
                     field_path: if field == "type" {
@@ -2269,7 +2271,11 @@ mod tests {
             error_kind: "status_mismatch",
         });
 
-        assert!(cases.len() >= 120, "malformed matrix unexpectedly narrowed");
+        assert_eq!(cases.len(), 205, "malformed matrix row-set drift");
+        let mut case_ids = cases.iter().map(|case| case.id.clone()).collect::<Vec<_>>();
+        case_ids.sort_unstable();
+        case_ids.dedup();
+        assert_eq!(case_ids.len(), 205, "malformed case ids must be unique");
         for case in cases {
             let (result, log) = capture_rejection(&case.method, &case.params);
             assert!(
@@ -2508,16 +2514,28 @@ mod tests {
         value: serde_json::Value,
         error_kind: &'static str,
     ) {
+        let value_kind = json_value_kind(&value);
         let mut params = valid_payload(method);
         set_top_field(&mut params, field, value);
         let event_kind = method.rsplit('/').next().unwrap_or(method);
         cases.push(MalformedCase {
-            id: format!("{event_kind}.{field}.{error_kind}"),
+            id: format!("{event_kind}.{field}.{error_kind}.{value_kind}"),
             method: method.to_owned(),
             params,
             field_path: field.to_owned(),
             error_kind,
         });
+    }
+
+    fn json_value_kind(value: &serde_json::Value) -> &'static str {
+        match value {
+            serde_json::Value::Null => "null",
+            serde_json::Value::Bool(_) => "boolean",
+            serde_json::Value::Number(_) => "number",
+            serde_json::Value::String(_) => "string",
+            serde_json::Value::Array(_) => "array",
+            serde_json::Value::Object(_) => "object",
+        }
     }
 
     fn set_top_field(params: &mut serde_json::Value, field: &str, value: serde_json::Value) {
@@ -2585,6 +2603,1423 @@ mod tests {
         match value.as_str() {
             Some(string) => string,
             None => panic!("{context}: expected string"),
+        }
+    }
+
+    fn workflow_manifest() -> serde_json::Value {
+        must_succeed(
+            serde_json::from_str(include_str!(
+                "../../../../../../.cyril-6beh/oracle-manifest.json"
+            )),
+            "workflow oracle manifest",
+        )
+    }
+
+    fn set_nested_snapshot_node_status(snapshot: &mut serde_json::Value, status: &str) {
+        let root = match must_object_mut(snapshot, "snapshot").get_mut("root") {
+            Some(value) => value,
+            None => panic!("snapshot root is absent"),
+        };
+        must_object_mut(root, "snapshot root").insert(
+            "status".to_owned(),
+            serde_json::Value::String(status.to_owned()),
+        );
+    }
+
+    fn opaque_json_values() -> Vec<(&'static str, serde_json::Value)> {
+        let large_key = "k".repeat(65_536);
+        let mut large_key_object = serde_json::Map::new();
+        large_key_object.insert(large_key, serde_json::Value::String("value".to_owned()));
+        let duplicate_resolved = must_succeed(
+            serde_json::from_str(r#"{"same": 1, "same": 2}"#),
+            "duplicate opaque object",
+        );
+        vec![
+            ("null", serde_json::Value::Null),
+            ("false", serde_json::Value::Bool(false)),
+            ("true", serde_json::Value::Bool(true)),
+            ("i64_min", serde_json::json!(i64::MIN)),
+            ("u64_max", serde_json::json!(u64::MAX)),
+            ("finite_fraction", serde_json::json!(1.25)),
+            ("empty_string", serde_json::Value::String(String::new())),
+            (
+                "ascii_string",
+                serde_json::Value::String("ascii".to_owned()),
+            ),
+            (
+                "unicode_string",
+                serde_json::Value::String("文字列".to_owned()),
+            ),
+            (
+                "spaced_string",
+                serde_json::Value::String(" with space ".to_owned()),
+            ),
+            (
+                "large_string",
+                serde_json::Value::String("x".repeat(1_048_576)),
+            ),
+            ("empty_array", serde_json::json!([])),
+            ("single_array", serde_json::json!([1])),
+            ("multi_array", serde_json::json!([1, 2, 3])),
+            ("duplicate_array", serde_json::json!([1, 1])),
+            ("empty_object", serde_json::json!({})),
+            ("single_object", serde_json::json!({"one": 1})),
+            ("multi_object", serde_json::json!({"one": 1, "two": 2})),
+            ("empty_key", serde_json::json!({"": "value"})),
+            ("unicode_key", serde_json::json!({"鍵": "value"})),
+            ("spaced_key", serde_json::json!({" key ": "value"})),
+            ("large_key", serde_json::Value::Object(large_key_object)),
+            (
+                "nested_array_object",
+                serde_json::json!([{"nested": [true, null, {"value": 1}]}]),
+            ),
+            ("duplicate_raw_key_last_wins", duplicate_resolved),
+        ]
+    }
+
+    #[test]
+    fn workflow_oracle_manifest_matches_binary() {
+        let manifest = workflow_manifest();
+        assert_eq!(manifest["version"], 1);
+
+        let methods = must_array(&manifest["methods"], "manifest methods")
+            .iter()
+            .map(|value| must_string(value, "manifest method"))
+            .collect::<Vec<_>>();
+        let actual_methods = methods
+            .iter()
+            .map(|method| {
+                event(to_notification(method, &valid_payload(method)), method).method_name()
+            })
+            .collect::<Vec<_>>();
+        let expected_event_kinds = methods
+            .iter()
+            .map(|method| method.rsplit('/').next().unwrap_or(method))
+            .collect::<Vec<_>>();
+        assert_eq!(actual_methods, expected_event_kinds);
+
+        let families = must_array(
+            &manifest["required_shape_families"],
+            "required shape families",
+        )
+        .iter()
+        .map(|value| must_string(value, "shape family"))
+        .collect::<Vec<_>>();
+        let outcomes = must_object(
+            &manifest["shape_boundary_outcomes"],
+            "shape boundary outcomes",
+        );
+        assert_eq!(families.len(), 13);
+        assert_eq!(outcomes.len(), families.len());
+        for family in families {
+            assert!(
+                outcomes.contains_key(family),
+                "shape family lacks an expected outcome: {family}"
+            );
+        }
+
+        let expected_domains = [
+            (
+                "snapshot_run_status",
+                &["running", "paused", "completed", "failed", "aborted"][..],
+            ),
+            (
+                "completion_status",
+                &["paused", "completed", "failed", "aborted"][..],
+            ),
+            (
+                "node_status",
+                &[
+                    "pending",
+                    "running",
+                    "paused",
+                    "completed",
+                    "failed",
+                    "aborted",
+                    "skipped",
+                ][..],
+            ),
+            (
+                "node_type",
+                &["step", "sequence", "repeat", "parallel", "watch"][..],
+            ),
+            (
+                "watch_outcome",
+                &["new-activity", "idle", "idle-timeout", "terminal-state"][..],
+            ),
+            ("queue_outcome", &["applied", "rejected", "dropped"][..]),
+            ("completion_signal", &["success", "need_input", "error"][..]),
+            ("completion_source", &["send_message", "status_update"][..]),
+            ("repeat_exhaustion", &["pause", "abort"][..]),
+        ];
+        let domains = must_object(&manifest["enum_domains"], "enum domains");
+        assert_eq!(domains.len(), expected_domains.len());
+        for (name, expected) in expected_domains {
+            let actual = must_array(&domains[name], name)
+                .iter()
+                .map(|value| must_string(value, name))
+                .collect::<Vec<_>>();
+            assert_eq!(actual, expected, "enum domain drift: {name}");
+        }
+
+        let warning = must_object(
+            &manifest["warning_schemas"]["converter_rejection"],
+            "converter warning schema",
+        );
+        assert_eq!(warning["level"], "WARN");
+        assert_eq!(warning["message"], "malformed workflow notification");
+        let warning_fields = must_array(&warning["required_fields"], "warning required fields")
+            .iter()
+            .map(|value| must_string(value, "warning field"))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            warning_fields,
+            ["method", "field_path", "error_kind", "error"]
+        );
+
+        let fields = must_object(&manifest["fields"], "event field contracts");
+        for (event_kind, contract) in fields {
+            let method = format!("kiro/workflow/{event_kind}");
+            for field in must_array(&contract["optional"], "optional event fields") {
+                let field = must_string(field, "optional event field");
+                let mut params = valid_payload(&method);
+                let removed = must_object_mut(&mut params, "event payload").remove(field);
+                assert!(
+                    removed.is_some(),
+                    "optional baseline field missing: {event_kind}.{field}"
+                );
+                assert!(
+                    matches!(
+                        to_notification(&method, &params),
+                        Some(Some(Notification::Workflow(_)))
+                    ),
+                    "optional field omission rejected: {event_kind}.{field}"
+                );
+            }
+        }
+        let descriptor_fields =
+            must_object(&manifest["descriptor_fields"], "descriptor field contracts");
+        for (node_type, contract) in descriptor_fields {
+            for field in must_array(&contract["optional"], "optional descriptor fields") {
+                let field = must_string(field, "optional descriptor field");
+                let mut params = descriptor_event_payload(valid_descriptor(node_type));
+                let removed = first_descriptor_mut(&mut params).remove(field);
+                assert!(
+                    removed.is_some(),
+                    "optional descriptor baseline field missing: {node_type}.{field}"
+                );
+                assert!(
+                    matches!(
+                        to_notification("kiro/workflow/run_start", &params),
+                        Some(Some(Notification::Workflow(_)))
+                    ),
+                    "optional descriptor omission rejected: {node_type}.{field}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn workflow_node_descriptor_shape_matrix() {
+        let types = ["step", "sequence", "repeat", "parallel", "watch"];
+        let mut params = valid_payload("kiro/workflow/run_start");
+        set_top_field(
+            &mut params,
+            "nodeTree",
+            serde_json::Value::Array(types.iter().map(|kind| valid_descriptor(kind)).collect()),
+        );
+        let started = match event(
+            to_notification("kiro/workflow/run_start", &params),
+            "descriptor shape matrix",
+        ) {
+            WorkflowEvent::RunStarted(started) => started,
+            other => panic!("expected run_start, got {other:?}"),
+        };
+        let actual_types = started
+            .node_tree()
+            .iter()
+            .map(|descriptor| descriptor.node_type().as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(actual_types, types);
+        assert_eq!(started.node_tree()[0].agent_name(), Some(""));
+        assert_eq!(started.node_tree()[0].model(), Some(""));
+        assert_eq!(started.node_tree()[0].effort(), Some(""));
+        assert_eq!(started.node_tree()[2].max_iterations(), Some(0));
+        assert_eq!(
+            started.node_tree()[2]
+                .on_max_iterations()
+                .map(WorkflowRepeatExhaustion::as_str),
+            Some("pause")
+        );
+        assert_eq!(started.node_tree()[4].handler_name(), Some(""));
+
+        let recursive = serde_json::json!({
+            "nodeId": "root",
+            "type": "sequence",
+            "steps": [{
+                "nodeId": "loop",
+                "type": "repeat",
+                "steps": [{
+                    "nodeId": "parallel",
+                    "type": "parallel",
+                    "branches": [
+                        valid_descriptor("step"),
+                        valid_descriptor("watch")
+                    ]
+                }],
+                "maxIterations": 2,
+                "onMaxIterations": "abort"
+            }]
+        });
+        let recursive_started = match event(
+            to_notification(
+                "kiro/workflow/run_start",
+                &descriptor_event_payload(recursive),
+            ),
+            "recursive descriptor",
+        ) {
+            WorkflowEvent::RunStarted(started) => started,
+            other => panic!("expected run_start, got {other:?}"),
+        };
+        assert_eq!(descriptor_count(&recursive_started.node_tree()[0]), 5);
+        assert_eq!(descriptor_depth(&recursive_started.node_tree()[0]), 4);
+
+        let mut unknown = descriptor_event_payload(valid_descriptor("step"));
+        first_descriptor_mut(&mut unknown).insert(
+            "type".to_owned(),
+            serde_json::Value::String("unknown".to_owned()),
+        );
+        assert!(matches!(
+            to_notification("kiro/workflow/run_start", &unknown),
+            Some(None)
+        ));
+    }
+
+    #[test]
+    fn workflow_enum_domain_matrix() {
+        for node_type in ["step", "sequence", "repeat", "parallel", "watch"] {
+            let mut params = valid_payload("kiro/workflow/node_start");
+            set_top_field(
+                &mut params,
+                "type",
+                serde_json::Value::String(node_type.to_owned()),
+            );
+            let actual = match event(
+                to_notification("kiro/workflow/node_start", &params),
+                "node type",
+            ) {
+                WorkflowEvent::NodeStarted(started) => started.node_type().as_str(),
+                other => panic!("expected node_start, got {other:?}"),
+            };
+            assert_eq!(actual, node_type);
+        }
+        for status in [
+            "pending",
+            "running",
+            "paused",
+            "completed",
+            "failed",
+            "aborted",
+            "skipped",
+        ] {
+            let mut params = valid_payload("kiro/workflow/node_complete");
+            set_top_field(
+                &mut params,
+                "status",
+                serde_json::Value::String(status.to_owned()),
+            );
+            let actual = match event(
+                to_notification("kiro/workflow/node_complete", &params),
+                "node status",
+            ) {
+                WorkflowEvent::NodeCompleted(completed) => completed.status().as_str(),
+                other => panic!("expected node_complete, got {other:?}"),
+            };
+            assert_eq!(actual, status);
+        }
+        for outcome in ["new-activity", "idle", "idle-timeout", "terminal-state"] {
+            let mut params = valid_payload("kiro/workflow/watch_poll");
+            set_top_field(
+                &mut params,
+                "outcome",
+                serde_json::Value::String(outcome.to_owned()),
+            );
+            let actual = match event(
+                to_notification("kiro/workflow/watch_poll", &params),
+                "watch outcome",
+            ) {
+                WorkflowEvent::WatchPoll(poll) => poll.outcome().as_str(),
+                other => panic!("expected watch_poll, got {other:?}"),
+            };
+            assert_eq!(actual, outcome);
+        }
+        for outcome in ["applied", "rejected", "dropped"] {
+            let mut params = valid_payload("kiro/workflow/steps_queued");
+            set_nested_field(
+                &mut params,
+                "resolution.outcome",
+                serde_json::Value::String(outcome.to_owned()),
+            );
+            let actual = match event(
+                to_notification("kiro/workflow/steps_queued", &params),
+                "queue outcome",
+            ) {
+                WorkflowEvent::StepsQueued(queued) => queued
+                    .resolution()
+                    .map(WorkflowQueueResolution::outcome)
+                    .map(WorkflowQueueOutcome::as_str),
+                other => panic!("expected steps_queued, got {other:?}"),
+            };
+            assert_eq!(actual, Some(outcome));
+        }
+        for signal in ["success", "need_input", "error"] {
+            let mut params = valid_payload("kiro/workflow/node_complete");
+            set_top_field(
+                &mut params,
+                "completionSignal",
+                serde_json::Value::String(signal.to_owned()),
+            );
+            let actual = match event(
+                to_notification("kiro/workflow/node_complete", &params),
+                "completion signal",
+            ) {
+                WorkflowEvent::NodeCompleted(completed) => completed
+                    .details()
+                    .completion_signal()
+                    .map(WorkflowCompletionSignal::as_str),
+                other => panic!("expected node_complete, got {other:?}"),
+            };
+            assert_eq!(actual, Some(signal));
+        }
+        for source in ["send_message", "status_update"] {
+            let mut params = valid_payload("kiro/workflow/node_complete");
+            set_top_field(
+                &mut params,
+                "completionSignalSource",
+                serde_json::Value::String(source.to_owned()),
+            );
+            let actual = match event(
+                to_notification("kiro/workflow/node_complete", &params),
+                "completion source",
+            ) {
+                WorkflowEvent::NodeCompleted(completed) => completed
+                    .details()
+                    .completion_signal_source()
+                    .map(WorkflowCompletionSignalSource::as_str),
+                other => panic!("expected node_complete, got {other:?}"),
+            };
+            assert_eq!(actual, Some(source));
+        }
+        for exhaustion in ["pause", "abort"] {
+            let mut descriptor = valid_descriptor("repeat");
+            must_object_mut(&mut descriptor, "repeat descriptor").insert(
+                "onMaxIterations".to_owned(),
+                serde_json::Value::String(exhaustion.to_owned()),
+            );
+            let started = match event(
+                to_notification(
+                    "kiro/workflow/run_start",
+                    &descriptor_event_payload(descriptor),
+                ),
+                "repeat exhaustion",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            assert_eq!(
+                started.node_tree()[0]
+                    .on_max_iterations()
+                    .map(WorkflowRepeatExhaustion::as_str),
+                Some(exhaustion)
+            );
+        }
+
+        for status in ["running", "paused", "completed", "failed", "aborted"] {
+            let mut snapshot = completed_snapshot("workflow", status);
+            set_nested_snapshot_node_status(&mut snapshot, status);
+            let wire: WireSnapshot = must_succeed(deserialize(&snapshot), "snapshot enum");
+            let snapshot = must_succeed(wire.try_into_domain(), "snapshot domain");
+            assert_eq!(snapshot.status().as_str(), status);
+        }
+        for status in ["paused", "completed", "failed", "aborted"] {
+            let mut params = valid_payload("kiro/workflow/run_complete");
+            set_top_field(
+                &mut params,
+                "status",
+                serde_json::Value::String(status.to_owned()),
+            );
+            set_top_field(
+                &mut params,
+                "finalState",
+                completed_snapshot("workflow", status),
+            );
+            let actual = match event(
+                to_notification("kiro/workflow/run_complete", &params),
+                "completion status",
+            ) {
+                WorkflowEvent::RunCompleted(completed) => completed.status().as_str(),
+                other => panic!("expected run_complete, got {other:?}"),
+            };
+            assert_eq!(actual, status);
+        }
+    }
+
+    #[test]
+    fn workflow_arbitrary_json_shape_matrix() {
+        let manifest = workflow_manifest();
+        let expected_names = must_array(&manifest["opaque_json_cases"], "opaque JSON cases")
+            .iter()
+            .map(|value| must_string(value, "opaque case"))
+            .collect::<Vec<_>>();
+        let values = opaque_json_values();
+        assert_eq!(
+            values.iter().map(|(name, _)| *name).collect::<Vec<_>>(),
+            expected_names
+        );
+        for (name, value) in values {
+            let mut params = valid_payload("kiro/workflow/run_start");
+            set_top_field(&mut params, "inputs", value.clone());
+            let actual = match event(to_notification("kiro/workflow/run_start", &params), name) {
+                WorkflowEvent::RunStarted(started) => started.inputs().clone(),
+                other => panic!("{name}: expected run_start, got {other:?}"),
+            };
+            assert_eq!(actual, value, "{name}: run inputs");
+
+            let mut params = valid_payload("kiro/workflow/node_complete");
+            set_top_field(&mut params, "artifacts", value.clone());
+            set_top_field(&mut params, "capturedOutput", value.clone());
+            let completed = match event(
+                to_notification("kiro/workflow/node_complete", &params),
+                name,
+            ) {
+                WorkflowEvent::NodeCompleted(completed) => completed,
+                other => panic!("{name}: expected node_complete, got {other:?}"),
+            };
+            assert_eq!(completed.details().artifacts(), Some(&value));
+            assert_eq!(completed.details().captured_output(), Some(&value));
+
+            let mut descriptor = valid_descriptor("repeat");
+            let descriptor_object = must_object_mut(&mut descriptor, "repeat descriptor");
+            descriptor_object.insert("stopCondition".to_owned(), value.clone());
+            descriptor_object.insert("stopWhen".to_owned(), value.clone());
+            let started = match event(
+                to_notification(
+                    "kiro/workflow/run_start",
+                    &descriptor_event_payload(descriptor),
+                ),
+                name,
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("{name}: expected run_start, got {other:?}"),
+            };
+            assert_eq!(started.node_tree()[0].stop_condition(), Some(&value));
+            assert_eq!(started.node_tree()[0].stop_when(), Some(&value));
+        }
+
+        let mut nested = serde_json::Value::String("x".repeat(1_048_576));
+        for index in 0..32 {
+            nested = serde_json::json!({format!("level-{index}"): nested});
+        }
+        let mut params = valid_payload("kiro/workflow/run_start");
+        set_top_field(&mut params, "inputs", nested.clone());
+        let started_at = Instant::now();
+        let actual = match event(
+            to_notification("kiro/workflow/run_start", &params),
+            "depth-32 opaque JSON",
+        ) {
+            WorkflowEvent::RunStarted(started) => started.inputs().clone(),
+            other => panic!("expected run_start, got {other:?}"),
+        };
+        assert_eq!(actual, nested);
+        assert!(
+            started_at.elapsed() <= Duration::from_millis(50),
+            "1 MiB depth-32 opaque conversion exceeded 50 ms"
+        );
+    }
+
+    #[test]
+    fn workflow_scalar_string_matrix() {
+        let large = "x".repeat(65_536);
+        for value in ["", "plain", "識別", " with space ", large.as_str()] {
+            let mut params = valid_payload("kiro/workflow/run_start");
+            set_top_field(
+                &mut params,
+                "workflowName",
+                serde_json::Value::String(value.to_owned()),
+            );
+            let started = match event(
+                to_notification("kiro/workflow/run_start", &params),
+                "workflow name",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            assert_eq!(started.workflow_name(), value);
+
+            let mut params = valid_payload("kiro/workflow/node_start");
+            for field in ["agentName", "prompt", "branchId"] {
+                set_top_field(
+                    &mut params,
+                    field,
+                    serde_json::Value::String(value.to_owned()),
+                );
+            }
+            let started = match event(
+                to_notification("kiro/workflow/node_start", &params),
+                "node strings",
+            ) {
+                WorkflowEvent::NodeStarted(started) => started,
+                other => panic!("expected node_start, got {other:?}"),
+            };
+            assert_eq!(started.details().agent_name(), Some(value));
+            assert_eq!(started.details().prompt(), Some(value));
+            assert_eq!(started.details().branch_id(), Some(value));
+
+            let mut params = valid_payload("kiro/workflow/node_paused");
+            set_top_field(
+                &mut params,
+                "reason",
+                serde_json::Value::String(value.to_owned()),
+            );
+            let paused = match event(
+                to_notification("kiro/workflow/node_paused", &params),
+                "node pause reason",
+            ) {
+                WorkflowEvent::NodePaused(paused) => paused,
+                other => panic!("expected node_paused, got {other:?}"),
+            };
+            assert_eq!(paused.reason(), value);
+
+            let mut descriptor = valid_descriptor("step");
+            let descriptor_object = must_object_mut(&mut descriptor, "step descriptor");
+            for field in ["agentName", "model", "effort"] {
+                descriptor_object.insert(
+                    field.to_owned(),
+                    serde_json::Value::String(value.to_owned()),
+                );
+            }
+            let descriptor_started = match event(
+                to_notification(
+                    "kiro/workflow/run_start",
+                    &descriptor_event_payload(descriptor),
+                ),
+                "descriptor strings",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            let descriptor = &descriptor_started.node_tree()[0];
+            assert_eq!(descriptor.agent_name(), Some(value));
+            assert_eq!(descriptor.model(), Some(value));
+            assert_eq!(descriptor.effort(), Some(value));
+        }
+    }
+
+    #[test]
+    fn workflow_identifier_string_matrix() {
+        let manifest = workflow_manifest();
+        let accepted = must_array(
+            &manifest["identifier_cases"]["accepted"],
+            "accepted identifier cases",
+        )
+        .iter()
+        .map(|value| must_string(value, "accepted identifier case"))
+        .collect::<Vec<_>>();
+        assert_eq!(
+            accepted,
+            [
+                "id",
+                "識別子",
+                "with space",
+                "#",
+                "/",
+                "\\",
+                "large-65536-bytes"
+            ]
+        );
+
+        let large = "i".repeat(65_536);
+        for case in accepted {
+            let value = if case == "large-65536-bytes" {
+                large.as_str()
+            } else {
+                case
+            };
+            let started_at = Instant::now();
+
+            let mut params = valid_payload("kiro/workflow/paused");
+            set_top_field(
+                &mut params,
+                "workflowId",
+                serde_json::Value::String(value.to_owned()),
+            );
+            let paused = match event(
+                to_notification("kiro/workflow/paused", &params),
+                "workflow identifier",
+            ) {
+                WorkflowEvent::Paused(paused) => paused,
+                other => panic!("expected paused, got {other:?}"),
+            };
+            assert_eq!(paused.workflow_id().as_str(), value);
+
+            let mut params = valid_payload("kiro/workflow/loop_iteration");
+            set_top_field(
+                &mut params,
+                "loopId",
+                serde_json::Value::String(value.to_owned()),
+            );
+            let iteration = match event(
+                to_notification("kiro/workflow/loop_iteration", &params),
+                "node identifier",
+            ) {
+                WorkflowEvent::LoopIteration(iteration) => iteration,
+                other => panic!("expected loop_iteration, got {other:?}"),
+            };
+            assert_eq!(iteration.loop_id().as_str(), value);
+
+            let mut descriptor = valid_descriptor("step");
+            must_object_mut(&mut descriptor, "descriptor").insert(
+                "nodeId".to_owned(),
+                serde_json::Value::String(value.to_owned()),
+            );
+            let started = match event(
+                to_notification(
+                    "kiro/workflow/run_start",
+                    &descriptor_event_payload(descriptor),
+                ),
+                "descriptor identifier",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            assert_eq!(started.node_tree()[0].node_id().as_str(), value);
+
+            let mut snapshot = completed_snapshot("workflow", "completed");
+            set_top_field(
+                &mut snapshot,
+                "workflowId",
+                serde_json::Value::String(value.to_owned()),
+            );
+            let wire: WireSnapshot =
+                must_succeed(deserialize(&snapshot), "snapshot identifier wire");
+            let snapshot = must_succeed(wire.try_into_domain(), "snapshot identifier domain");
+            assert_eq!(snapshot.workflow_id().as_str(), value);
+
+            if case == "large-65536-bytes" {
+                assert!(
+                    started_at.elapsed() <= Duration::from_millis(50),
+                    "64 KiB identifier conversions exceeded 50 ms"
+                );
+            }
+        }
+
+        let rejected = must_array(
+            &manifest["identifier_cases"]["rejected"],
+            "rejected identifier cases",
+        );
+        assert_eq!(rejected, &[serde_json::Value::String(String::new())]);
+        for (method, field) in [
+            ("kiro/workflow/paused", "workflowId"),
+            ("kiro/workflow/loop_iteration", "loopId"),
+        ] {
+            let mut params = valid_payload(method);
+            set_top_field(&mut params, field, serde_json::Value::String(String::new()));
+            assert!(
+                matches!(to_notification(method, &params), Some(None)),
+                "empty identifier accepted: {method}.{field}"
+            );
+        }
+        let mut descriptor = valid_descriptor("step");
+        must_object_mut(&mut descriptor, "descriptor").insert(
+            "nodeId".to_owned(),
+            serde_json::Value::String(String::new()),
+        );
+        assert!(matches!(
+            to_notification(
+                "kiro/workflow/run_start",
+                &descriptor_event_payload(descriptor)
+            ),
+            Some(None)
+        ));
+        let empty_snapshot = completed_snapshot("", "completed");
+        let wire: WireSnapshot = must_succeed(
+            deserialize(&empty_snapshot),
+            "empty snapshot identifier wire",
+        );
+        assert!(wire.try_into_domain().is_err());
+    }
+
+    #[test]
+    fn workflow_optional_field_presence_matrix() {
+        for present in [false, true] {
+            let mut params = valid_payload("kiro/workflow/run_start");
+            if !present {
+                let removed = must_object_mut(&mut params, "run_start").remove("parentSessionId");
+                assert!(removed.is_some());
+            }
+            let started = match event(
+                to_notification("kiro/workflow/run_start", &params),
+                "run_start optional",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            assert_eq!(started.parent_session_id().is_some(), present);
+
+            let mut params = valid_payload("kiro/workflow/steps_queued");
+            if !present {
+                let removed = must_object_mut(&mut params, "steps_queued").remove("resolution");
+                assert!(removed.is_some());
+            }
+            let queued = match event(
+                to_notification("kiro/workflow/steps_queued", &params),
+                "queue optional",
+            ) {
+                WorkflowEvent::StepsQueued(queued) => queued,
+                other => panic!("expected steps_queued, got {other:?}"),
+            };
+            assert_eq!(queued.resolution().is_some(), present);
+        }
+
+        let start_fields = ["agentName", "sessionId", "prompt", "iteration", "branchId"];
+        for mask in 0..(1_u32 << start_fields.len()) {
+            let mut params = valid_payload("kiro/workflow/node_start");
+            for (index, field) in start_fields.iter().enumerate() {
+                if mask & (1 << index) == 0 {
+                    let removed = must_object_mut(&mut params, "node_start").remove(*field);
+                    assert!(removed.is_some());
+                }
+            }
+            let started = match event(
+                to_notification("kiro/workflow/node_start", &params),
+                "node_start optional mask",
+            ) {
+                WorkflowEvent::NodeStarted(started) => started,
+                other => panic!("expected node_start, got {other:?}"),
+            };
+            let actual = [
+                started.details().agent_name().is_some(),
+                started.details().session_id().is_some(),
+                started.details().prompt().is_some(),
+                started.details().iteration().is_some(),
+                started.details().branch_id().is_some(),
+            ];
+            for (index, value) in actual.into_iter().enumerate() {
+                assert_eq!(value, mask & (1 << index) != 0);
+            }
+        }
+
+        let completion_fields = [
+            "artifacts",
+            "capturedOutput",
+            "failureReason",
+            "completionSignal",
+            "completionSignalSource",
+        ];
+        for mask in 0..(1_u32 << completion_fields.len()) {
+            let mut params = valid_payload("kiro/workflow/node_complete");
+            for (index, field) in completion_fields.iter().enumerate() {
+                if mask & (1 << index) == 0 {
+                    let removed = must_object_mut(&mut params, "node_complete").remove(*field);
+                    assert!(removed.is_some());
+                }
+            }
+            let completed = match event(
+                to_notification("kiro/workflow/node_complete", &params),
+                "node_complete optional mask",
+            ) {
+                WorkflowEvent::NodeCompleted(completed) => completed,
+                other => panic!("expected node_complete, got {other:?}"),
+            };
+            let actual = [
+                completed.details().artifacts().is_some(),
+                completed.details().captured_output().is_some(),
+                completed.details().failure_reason().is_some(),
+                completed.details().completion_signal().is_some(),
+                completed.details().completion_signal_source().is_some(),
+            ];
+            for (index, value) in actual.into_iter().enumerate() {
+                assert_eq!(value, mask & (1 << index) != 0);
+            }
+        }
+
+        for mask in 0..4 {
+            let mut step = valid_descriptor("step");
+            let step_object = must_object_mut(&mut step, "step descriptor");
+            if mask & 1 == 0 {
+                let removed = step_object.remove("model");
+                assert!(removed.is_some());
+            }
+            if mask & 2 == 0 {
+                let removed = step_object.remove("effort");
+                assert!(removed.is_some());
+            }
+            let started = match event(
+                to_notification("kiro/workflow/run_start", &descriptor_event_payload(step)),
+                "step optional mask",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            assert_eq!(started.node_tree()[0].model().is_some(), mask & 1 != 0);
+            assert_eq!(started.node_tree()[0].effort().is_some(), mask & 2 != 0);
+
+            let mut repeat = valid_descriptor("repeat");
+            let repeat_object = must_object_mut(&mut repeat, "repeat descriptor");
+            if mask & 1 == 0 {
+                let removed = repeat_object.remove("stopCondition");
+                assert!(removed.is_some());
+            }
+            if mask & 2 == 0 {
+                let removed = repeat_object.remove("stopWhen");
+                assert!(removed.is_some());
+            }
+            let started = match event(
+                to_notification("kiro/workflow/run_start", &descriptor_event_payload(repeat)),
+                "repeat optional mask",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            assert_eq!(
+                started.node_tree()[0].stop_condition().is_some(),
+                mask & 1 != 0
+            );
+            assert_eq!(started.node_tree()[0].stop_when().is_some(), mask & 2 != 0);
+        }
+
+        let optional_snapshot_fields = ["parentSessionId", "workspacePath"];
+        let optional_node_fields = [
+            "sessionId",
+            "artifacts",
+            "capturedOutput",
+            "failureReason",
+            "iteration",
+            "branchId",
+            "completionSignal",
+            "completionSignalSource",
+            "startedAt",
+            "endedAt",
+        ];
+        for field in optional_snapshot_fields {
+            for present in [false, true] {
+                let mut snapshot = completed_snapshot("workflow", "completed");
+                if present {
+                    set_top_field(
+                        &mut snapshot,
+                        field,
+                        serde_json::Value::String(String::new()),
+                    );
+                }
+                let wire: WireSnapshot =
+                    must_succeed(deserialize(&snapshot), "snapshot optional field");
+                let snapshot = must_succeed(wire.try_into_domain(), "snapshot optional domain");
+                let actual = match field {
+                    "parentSessionId" => snapshot.parent_session_id().is_some(),
+                    "workspacePath" => snapshot.workspace_path().is_some(),
+                    other => panic!("unknown snapshot optional field {other}"),
+                };
+                assert_eq!(actual, present);
+            }
+        }
+        for field in optional_node_fields {
+            for present in [false, true] {
+                let mut snapshot = completed_snapshot("workflow", "completed");
+                let root = match must_object_mut(&mut snapshot, "snapshot").get_mut("root") {
+                    Some(value) => value,
+                    None => panic!("snapshot root absent"),
+                };
+                if present {
+                    let value = match field {
+                        "iteration" => serde_json::json!(0),
+                        "artifacts" | "capturedOutput" => serde_json::Value::Null,
+                        "completionSignal" => serde_json::Value::String("success".to_owned()),
+                        "completionSignalSource" => {
+                            serde_json::Value::String("send_message".to_owned())
+                        }
+                        _ => serde_json::Value::String(String::new()),
+                    };
+                    must_object_mut(root, "snapshot root").insert(field.to_owned(), value);
+                }
+                let wire: WireSnapshot =
+                    must_succeed(deserialize(&snapshot), "node optional field");
+                let snapshot = must_succeed(wire.try_into_domain(), "node optional domain");
+                let node = snapshot.root();
+                let actual = match field {
+                    "sessionId" => node.session_id().is_some(),
+                    "artifacts" => node.artifacts().is_some(),
+                    "capturedOutput" => node.captured_output().is_some(),
+                    "failureReason" => node.failure_reason().is_some(),
+                    "iteration" => node.iteration().is_some(),
+                    "branchId" => node.branch_id().is_some(),
+                    "completionSignal" => node.completion_signal().is_some(),
+                    "completionSignalSource" => node.completion_signal_source().is_some(),
+                    "startedAt" => node.started_at().is_some(),
+                    "endedAt" => node.ended_at().is_some(),
+                    other => panic!("unknown node optional field {other}"),
+                };
+                assert_eq!(actual, present, "snapshot root optional {field}");
+            }
+        }
+    }
+
+    #[test]
+    fn workflow_collection_shape_matrix() {
+        for descriptors in [
+            Vec::new(),
+            vec![step_descriptor("one")],
+            vec![
+                step_descriptor("one"),
+                step_descriptor("two"),
+                step_descriptor("one"),
+            ],
+        ] {
+            let mut params = valid_payload("kiro/workflow/run_start");
+            set_top_field(
+                &mut params,
+                "nodeTree",
+                serde_json::Value::Array(descriptors.clone()),
+            );
+            let started = match event(
+                to_notification("kiro/workflow/run_start", &params),
+                "nodeTree cardinality",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            let actual = started
+                .node_tree()
+                .iter()
+                .map(|descriptor| descriptor.node_id().as_str())
+                .collect::<Vec<_>>();
+            let expected = descriptors
+                .iter()
+                .map(|descriptor| {
+                    must_string(
+                        &must_object(descriptor, "descriptor")["nodeId"],
+                        "descriptor nodeId",
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(actual, expected);
+        }
+
+        let mut path_params = valid_payload("kiro/workflow/node_start");
+        set_top_field(
+            &mut path_params,
+            "nodePath",
+            serde_json::json!(["workflow", "same", "same"]),
+        );
+        let started = match event(
+            to_notification("kiro/workflow/node_start", &path_params),
+            "duplicate path segments",
+        ) {
+            WorkflowEvent::NodeStarted(started) => started,
+            other => panic!("expected node_start, got {other:?}"),
+        };
+        assert_eq!(
+            started.node_path().segments(),
+            &["workflow", "same", "same"]
+        );
+
+        let mut queue_params = valid_payload("kiro/workflow/steps_queued");
+        set_top_field(
+            &mut queue_params,
+            "pendingSteps",
+            serde_json::json!([
+                step_descriptor("one"),
+                step_descriptor("two"),
+                step_descriptor("one")
+            ]),
+        );
+        let queued = match event(
+            to_notification("kiro/workflow/steps_queued", &queue_params),
+            "pendingSteps order",
+        ) {
+            WorkflowEvent::StepsQueued(queued) => queued,
+            other => panic!("expected steps_queued, got {other:?}"),
+        };
+        assert_eq!(
+            queued
+                .pending_steps()
+                .iter()
+                .map(|descriptor| descriptor.node_id().as_str())
+                .collect::<Vec<_>>(),
+            ["one", "two", "one"]
+        );
+
+        let duplicate_canonical = serde_json::json!({
+            "nodeId": "root",
+            "type": "sequence",
+            "steps": [
+                step_descriptor("duplicate"),
+                step_descriptor("duplicate")
+            ]
+        });
+        let started = match event(
+            to_notification(
+                "kiro/workflow/run_start",
+                &descriptor_event_payload(duplicate_canonical),
+            ),
+            "duplicate canonical paths",
+        ) {
+            WorkflowEvent::RunStarted(started) => started,
+            other => panic!("expected run_start, got {other:?}"),
+        };
+        assert_eq!(descriptor_count(&started.node_tree()[0]), 3);
+        assert_eq!(
+            started.node_tree()[0].children()[0].node_id(),
+            started.node_tree()[0].children()[1].node_id()
+        );
+
+        let nodes = (0..256)
+            .map(|index| step_descriptor(&format!("node-{index}")))
+            .collect::<Vec<_>>();
+        let mut large = valid_payload("kiro/workflow/run_start");
+        set_top_field(&mut large, "nodeTree", serde_json::Value::Array(nodes));
+        let started_at = Instant::now();
+        let started = match event(
+            to_notification("kiro/workflow/run_start", &large),
+            "256-node collection",
+        ) {
+            WorkflowEvent::RunStarted(started) => started,
+            other => panic!("expected run_start, got {other:?}"),
+        };
+        assert_eq!(started.node_tree().len(), 256);
+        assert!(
+            started_at.elapsed() <= Duration::from_millis(50),
+            "256-node conversion exceeded 50 ms"
+        );
+    }
+
+    #[test]
+    fn workflow_duplicate_raw_json_key_last_wins() {
+        let params: serde_json::Value = must_succeed(
+            serde_json::from_str(
+                r#"{
+                    "workflowId": "",
+                    "workflowId": "workflow",
+                    "workflowName": "first",
+                    "workflowName": "last",
+                    "inputs": {"value": 1, "value": 2},
+                    "inputs": {"chosen": true},
+                    "nodeTree": [{
+                        "nodeId": "step",
+                        "type": "step",
+                        "agentName": "first",
+                        "agentName": "last"
+                    }]
+                }"#,
+            ),
+            "duplicate raw run_start",
+        );
+        let started = match event(
+            to_notification("kiro/workflow/run_start", &params),
+            "duplicate raw run_start",
+        ) {
+            WorkflowEvent::RunStarted(started) => started,
+            other => panic!("expected run_start, got {other:?}"),
+        };
+        assert_eq!(started.workflow_id().as_str(), "workflow");
+        assert_eq!(started.workflow_name(), "last");
+        assert_eq!(started.inputs(), &serde_json::json!({"chosen": true}));
+        assert_eq!(started.node_tree()[0].agent_name(), Some("last"));
+
+        let params: serde_json::Value = must_succeed(
+            serde_json::from_str(
+                r#"{
+                    "workflowId": "workflow",
+                    "nodeId": "node",
+                    "nodePath": ["wrong", "node"],
+                    "nodePath": ["workflow", "node"],
+                    "status": "failed",
+                    "status": "completed",
+                    "artifacts": {"first": true},
+                    "artifacts": {"last": true}
+                }"#,
+            ),
+            "duplicate raw node_complete",
+        );
+        let completed = match event(
+            to_notification("kiro/workflow/node_complete", &params),
+            "duplicate raw node_complete",
+        ) {
+            WorkflowEvent::NodeCompleted(completed) => completed,
+            other => panic!("expected node_complete, got {other:?}"),
+        };
+        assert_eq!(completed.status(), WorkflowNodeStatus::Completed);
+        assert_eq!(
+            completed.details().artifacts(),
+            Some(&serde_json::json!({"last": true}))
+        );
+    }
+
+    #[test]
+    fn workflow_numeric_and_path_boundaries() {
+        for iteration in [0_u32, u32::MAX] {
+            let mut params = valid_payload("kiro/workflow/node_start");
+            set_top_field(&mut params, "iteration", serde_json::json!(iteration));
+            let started = match event(
+                to_notification("kiro/workflow/node_start", &params),
+                "node iteration",
+            ) {
+                WorkflowEvent::NodeStarted(started) => started,
+                other => panic!("expected node_start, got {other:?}"),
+            };
+            assert_eq!(started.details().iteration(), Some(iteration));
+
+            let mut params = valid_payload("kiro/workflow/loop_iteration");
+            set_top_field(&mut params, "iteration", serde_json::json!(iteration));
+            let progress = match event(
+                to_notification("kiro/workflow/loop_iteration", &params),
+                "loop iteration",
+            ) {
+                WorkflowEvent::LoopIteration(progress) => progress,
+                other => panic!("expected loop_iteration, got {other:?}"),
+            };
+            assert_eq!(progress.iteration(), iteration);
+
+            let mut descriptor = valid_descriptor("repeat");
+            must_object_mut(&mut descriptor, "repeat descriptor")
+                .insert("maxIterations".to_owned(), serde_json::json!(iteration));
+            let started = match event(
+                to_notification(
+                    "kiro/workflow/run_start",
+                    &descriptor_event_payload(descriptor),
+                ),
+                "repeat max iterations",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            assert_eq!(started.node_tree()[0].max_iterations(), Some(iteration));
+
+            let mut snapshot = completed_snapshot("workflow", "completed");
+            set_top_field(&mut snapshot, "planRevision", serde_json::json!(iteration));
+            let wire: WireSnapshot = must_succeed(deserialize(&snapshot), "plan revision boundary");
+            let snapshot = must_succeed(wire.try_into_domain(), "plan revision domain");
+            assert_eq!(snapshot.plan_revision(), iteration);
+        }
+
+        for invalid in [
+            serde_json::json!(-1),
+            serde_json::json!(u64::from(u32::MAX) + 1),
+        ] {
+            for (method, field) in [
+                ("kiro/workflow/node_start", "iteration"),
+                ("kiro/workflow/loop_iteration", "iteration"),
+            ] {
+                let mut params = valid_payload(method);
+                set_top_field(&mut params, field, invalid.clone());
+                assert!(
+                    matches!(to_notification(method, &params), Some(None)),
+                    "out-of-range integer accepted: {method}.{field}"
+                );
+            }
+            let mut descriptor = valid_descriptor("repeat");
+            must_object_mut(&mut descriptor, "repeat descriptor")
+                .insert("maxIterations".to_owned(), invalid.clone());
+            assert!(matches!(
+                to_notification(
+                    "kiro/workflow/run_start",
+                    &descriptor_event_payload(descriptor)
+                ),
+                Some(None)
+            ));
+            let mut snapshot = completed_snapshot("workflow", "completed");
+            set_top_field(&mut snapshot, "planRevision", invalid);
+            assert!(deserialize::<WireSnapshot>(&snapshot).is_err());
+        }
+
+        let large_segment = "p".repeat(65_536);
+        for path in [
+            vec!["workflow".to_owned()],
+            vec!["workflow".to_owned(), "node".to_owned()],
+            vec!["workflow".to_owned(), "節".to_owned(), "#".to_owned()],
+            vec!["workflow".to_owned(), large_segment.clone()],
+        ] {
+            let mut params = valid_payload("kiro/workflow/node_start");
+            set_top_field(&mut params, "nodePath", serde_json::json!(path));
+            let started_at = Instant::now();
+            let started = match event(
+                to_notification("kiro/workflow/node_start", &params),
+                "valid node path",
+            ) {
+                WorkflowEvent::NodeStarted(started) => started,
+                other => panic!("expected node_start, got {other:?}"),
+            };
+            assert_eq!(started.node_path().segments(), path);
+            if path.last().is_some_and(|segment| segment.len() == 65_536) {
+                assert!(
+                    started_at.elapsed() <= Duration::from_millis(50),
+                    "64 KiB path segment conversion exceeded 50 ms"
+                );
+            }
+        }
+
+        for invalid in [
+            serde_json::json!([]),
+            serde_json::json!(["wrong", "node"]),
+            serde_json::json!(["workflow", ""]),
+            serde_json::json!(["workflow", false]),
+            serde_json::Value::Bool(false),
+            serde_json::Value::Null,
+            serde_json::Value::String("workflow/node".to_owned()),
+        ] {
+            let mut params = valid_payload("kiro/workflow/node_start");
+            set_top_field(&mut params, "nodePath", invalid);
+            assert!(matches!(
+                to_notification("kiro/workflow/node_start", &params),
+                Some(None)
+            ));
+        }
+    }
+
+    #[test]
+    fn workflow_workspace_path_is_opaque() {
+        let large = "w".repeat(65_536);
+        for path in [
+            "",
+            "/home/user/work",
+            r"C:\work\recipe",
+            r"\\wsl$\Distro\home\user",
+            "相対/路徑",
+            " with space ",
+            large.as_str(),
+        ] {
+            let mut final_state = completed_snapshot("workflow", "completed");
+            set_top_field(
+                &mut final_state,
+                "workspacePath",
+                serde_json::Value::String(path.to_owned()),
+            );
+            let mut params = valid_payload("kiro/workflow/run_complete");
+            set_top_field(&mut params, "finalState", final_state);
+            let started_at = Instant::now();
+            let completed = match event(
+                to_notification("kiro/workflow/run_complete", &params),
+                "workspace path",
+            ) {
+                WorkflowEvent::RunCompleted(completed) => completed,
+                other => panic!("expected run_complete, got {other:?}"),
+            };
+            assert_eq!(completed.final_state().workspace_path(), Some(path));
+            if path.len() == 65_536 {
+                assert!(
+                    started_at.elapsed() <= Duration::from_millis(50),
+                    "64 KiB workspace path conversion exceeded 50 ms"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn workflow_typed_unknown_extra_is_ignored() {
+        let unknown = serde_json::json!({
+            "nested": [null, false, {"deep": "value"}],
+            "large": "x".repeat(65_536)
+        });
+        for method in [
+            "kiro/workflow/run_start",
+            "kiro/workflow/node_start",
+            "kiro/workflow/node_complete",
+            "kiro/workflow/node_paused",
+            "kiro/workflow/loop_iteration",
+            "kiro/workflow/watch_poll",
+            "kiro/workflow/paused",
+            "kiro/workflow/run_complete",
+            "kiro/workflow/steps_queued",
+        ] {
+            let baseline = event(to_notification(method, &valid_payload(method)), method);
+            let mut params = valid_payload(method);
+            set_top_field(&mut params, "futureField", unknown.clone());
+            let with_extra = event(to_notification(method, &params), method);
+            assert_eq!(with_extra, baseline, "top-level typed extra: {method}");
+        }
+
+        for node_type in ["step", "sequence", "repeat", "parallel", "watch"] {
+            let baseline = event(
+                to_notification(
+                    "kiro/workflow/run_start",
+                    &descriptor_event_payload(valid_descriptor(node_type)),
+                ),
+                node_type,
+            );
+            let mut descriptor = valid_descriptor(node_type);
+            must_object_mut(&mut descriptor, "descriptor")
+                .insert("futureField".to_owned(), unknown.clone());
+            let with_extra = event(
+                to_notification(
+                    "kiro/workflow/run_start",
+                    &descriptor_event_payload(descriptor),
+                ),
+                node_type,
+            );
+            assert_eq!(with_extra, baseline, "descriptor typed extra: {node_type}");
+        }
+
+        let baseline = valid_payload("kiro/workflow/run_complete");
+        let baseline_event = event(
+            to_notification("kiro/workflow/run_complete", &baseline),
+            "snapshot baseline",
+        );
+        let mut with_extra = baseline;
+        let final_state = match must_object_mut(&mut with_extra, "completion").get_mut("finalState")
+        {
+            Some(value) => value,
+            None => panic!("completion lacks finalState"),
+        };
+        set_top_field(final_state, "futureField", unknown.clone());
+        let root = match must_object_mut(final_state, "snapshot").get_mut("root") {
+            Some(value) => value,
+            None => panic!("snapshot lacks root"),
+        };
+        set_top_field(root, "futureField", unknown);
+        let with_extra_event = event(
+            to_notification("kiro/workflow/run_complete", &with_extra),
+            "snapshot extras",
+        );
+        assert_eq!(with_extra_event, baseline_event);
+    }
+
+    #[test]
+    fn workflow_run_complete_status_mismatch_rejected() {
+        let completion_statuses = ["paused", "completed", "failed", "aborted"];
+        let snapshot_statuses = ["running", "paused", "completed", "failed", "aborted"];
+        for completion in completion_statuses {
+            for snapshot in snapshot_statuses {
+                let mut params = valid_payload("kiro/workflow/run_complete");
+                set_top_field(
+                    &mut params,
+                    "status",
+                    serde_json::Value::String(completion.to_owned()),
+                );
+                set_top_field(
+                    &mut params,
+                    "finalState",
+                    completed_snapshot("workflow", snapshot),
+                );
+                let matches = completion == snapshot;
+                if matches {
+                    let completed = match event(
+                        to_notification("kiro/workflow/run_complete", &params),
+                        "matching completion",
+                    ) {
+                        WorkflowEvent::RunCompleted(completed) => completed,
+                        other => panic!("expected run_complete, got {other:?}"),
+                    };
+                    assert_eq!(completed.status().as_str(), completion);
+                    assert_eq!(completed.final_state().status().as_str(), snapshot);
+                } else {
+                    let (result, log) = capture_rejection("kiro/workflow/run_complete", &params);
+                    assert!(matches!(result, Some(None)));
+                    assert_eq!(log["level"], "WARN");
+                    assert_eq!(log["fields"]["method"], "kiro/workflow/run_complete");
+                    assert_eq!(log["fields"]["field_path"], "status");
+                    assert_eq!(log["fields"]["error_kind"], "status_mismatch");
+                    assert_eq!(log["fields"]["message"], "malformed workflow notification");
+                }
+            }
         }
     }
 
