@@ -1,6 +1,6 @@
 use cyril_core::types::{
     PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionRequest,
-    PermissionResponse, ToolCall, ToolCallId, ToolCallStatus, ToolKind,
+    PermissionResponse, SessionId, ToolCall, ToolCallId, ToolCallStatus, ToolKind,
 };
 use cyril_ui::state::UiState;
 use cyril_ui::traits::TuiState;
@@ -9,6 +9,7 @@ use tokio::sync::oneshot;
 fn request(label: &str) -> (PermissionRequest, oneshot::Receiver<PermissionResponse>) {
     let (responder, receiver) = oneshot::channel();
     let request = PermissionRequest {
+        session_id: SessionId::new("main"),
         tool_call: ToolCall::new(
             ToolCallId::new(label),
             label.to_owned(),

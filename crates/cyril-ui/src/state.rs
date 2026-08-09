@@ -5635,6 +5635,7 @@ mod tests {
             None,
         );
         let req = cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
             tool_call,
             message: "Allow?".into(),
             options,
@@ -5678,6 +5679,7 @@ mod tests {
         ) {
             let (tx, rx) = tokio::sync::oneshot::channel();
             let req = PermissionRequest {
+                session_id: cyril_core::types::SessionId::new("main"),
                 tool_call: ToolCall::new(
                     ToolCallId::new("shared-id"),
                     title.into(),
@@ -5738,6 +5740,7 @@ mod tests {
 
         let (tx, _rx) = tokio::sync::oneshot::channel();
         let req = PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
             tool_call: ToolCall::new(
                 ToolCallId::new("tc-snap"),
                 "Write File".into(),
@@ -5931,6 +5934,7 @@ mod tests {
             None,
         );
         let req = cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
             tool_call,
             message: "Allow?".into(),
             options,

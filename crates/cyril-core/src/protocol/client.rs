@@ -238,6 +238,7 @@ impl acp::Client for KiroClient {
         let (responder_tx, responder_rx) = tokio::sync::oneshot::channel();
 
         let request = PermissionRequest {
+            session_id,
             tool_call,
             message,
             options,
@@ -1899,12 +1900,12 @@ mod approval_join_tests {
 
     /// Drive `request_permission` (which awaits the operator) concurrently
     /// with the permission-channel recv, answering Cancel and returning the
-    /// forwarded request's tool call for assertions.
+    /// forwarded request's session id and tool call for assertions.
     async fn forward_permission(
         client: &KiroClient,
         req: acp::RequestPermissionRequest,
         prx: &mut mpsc::Receiver<PermissionRequest>,
-    ) -> crate::types::ToolCall {
+    ) -> (SessionId, crate::types::ToolCall) {
         let pending = client.request_permission(req);
         tokio::pin!(pending);
         let forwarded = tokio::select! {
@@ -1912,6 +1913,7 @@ mod approval_join_tests {
             res = &mut pending => panic!("request resolved before the App answered: {res:?}"),
         };
         let PermissionRequest {
+            session_id,
             tool_call,
             responder,
             ..
@@ -1920,7 +1922,7 @@ mod approval_join_tests {
             .send(PermissionResponse::Cancel)
             .expect("responder open");
         pending.await.expect("request_permission resolves");
-        tool_call
+        (session_id, tool_call)
     }
 
     #[tokio::test]
@@ -1931,8 +1933,9 @@ mod approval_join_tests {
             .await
             .unwrap();
 
-        let tool_call =
+        let (session_id, tool_call) =
             forward_permission(&client, stub_permission("sess-a", "tc-1"), &mut prx).await;
+        assert_eq!(session_id, SessionId::new("sess-a"));
         assert_eq!(
             tool_call.raw_input(),
             Some(&serde_json::json!({"path": "/work/one.md", "text": "proposed body"})),
@@ -1949,8 +1952,9 @@ mod approval_join_tests {
             .unwrap();
 
         // Same toolCallId, DIFFERENT session — must not join.
-        let tool_call =
+        let (session_id, tool_call) =
             forward_permission(&client, stub_permission("sess-b", "tc-1"), &mut prx).await;
+        assert_eq!(session_id, SessionId::new("sess-b"));
         assert!(
             tool_call.raw_input().is_none(),
             "cross-session toolCallId must not join: {:?}",
