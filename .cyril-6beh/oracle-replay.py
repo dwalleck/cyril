@@ -2,6 +2,7 @@
 """Independently fold KAS workflow JSONL into deterministic current-state views."""
 
 import copy
+import re
 import json
 import sys
 from pathlib import Path
@@ -68,19 +69,21 @@ def descriptor_tree(value):
     return descriptor(value)
 
 
+# Verbatim port of the KAS reference flattener (H1n, kiro-cli-chat 2.16.0):
+# a present iteration wins outright; otherwise a trailing #<ascii-digits>
+# rewrites with the digits verbatim; child type and parent id never consulted.
+WRAPPER_SUFFIX = re.compile(r"#([0-9]+)$")
+
+
 def wrapper_segment(parent, child):
-    node_id = child["nodeId"]
-    prefix = f"{parent['nodeId']}#"
-    suffix = node_id[len(prefix) :] if node_id.startswith(prefix) else ""
-    if (
-        parent.get("type") == "repeat"
-        and child.get("type") == "sequence"
-        and suffix.isdigit()
-        and str(int(suffix)) == suffix
-        and child.get("iteration") == int(suffix)
-    ):
-        return f"iter-{suffix}"
-    return node_id
+    if parent.get("type") == "repeat":
+        iteration = child.get("iteration")
+        if iteration is not None:
+            return f"iter-{iteration}"
+        match = WRAPPER_SUFFIX.search(child["nodeId"])
+        if match is not None:
+            return f"iter-{match.group(1)}"
+    return child["nodeId"]
 
 
 def flatten(root, workflow_id):

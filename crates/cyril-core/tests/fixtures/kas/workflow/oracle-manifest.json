@@ -193,14 +193,15 @@
     "completion_status_mismatches": "converter_reject"
   },
   "repeat_controls": [
-    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "iteration": 2, "wrapper": true},
-    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "wrapper": false},
-    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "iteration": 3, "wrapper": false},
-    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "step", "iteration": 2, "wrapper": false},
-    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#x", "type": "sequence", "iteration": 0, "wrapper": false},
-    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#二", "type": "sequence", "iteration": 2, "wrapper": false},
-    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#02", "type": "sequence", "iteration": 2, "wrapper": false},
-    {"parentType": "repeat", "parentId": "loop", "nodeId": "literal#2", "type": "sequence", "iteration": 2, "wrapper": false}
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "iteration": 2, "segment": "iter-2"},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "segment": "iter-2"},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "iteration": 3, "segment": "iter-3"},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#2", "type": "step", "iteration": 2, "segment": "iter-2"},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#x", "type": "sequence", "segment": "loop#x"},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#二", "type": "sequence", "segment": "loop#二"},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "loop#02", "type": "sequence", "segment": "iter-02"},
+    {"parentType": "repeat", "parentId": "loop", "nodeId": "literal#2", "type": "sequence", "segment": "iter-2"},
+    {"parentType": "sequence", "parentId": "loop", "nodeId": "loop#2", "type": "sequence", "iteration": 2, "segment": "loop#2"}
   ],
   "snapshot_transition_rules": {
     "direct_missing": "seed",

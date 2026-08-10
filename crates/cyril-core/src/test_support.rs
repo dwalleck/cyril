@@ -1,17 +1,21 @@
 //! Shared test scaffolding for cyril-core's test modules and — behind the
 //! `test-support` feature — the test suites of downstream crates.
 //!
-//! Nothing here is production code: the module only compiles under
-//! `cfg(test)` or when a dependent crate's `[dev-dependencies]` opts in via
-//! the `test-support` feature.
+//! Nothing here is production code: the module compiles only under
+//! `cfg(test)` or when a dependent crate enables the `test-support` feature —
+//! intended from `[dev-dependencies]` only; a `[dependencies]` entry could
+//! technically enable it too (cargo features are additive), so treat any
+//! non-dev enablement as a review error.
 
 use std::io;
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 
 static TRACING_CAPTURE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
-/// Serializes tests that install a tracing capture subscriber, so
-/// concurrently running tests never interleave their captured output.
+/// Serializes tests that install a tracing capture subscriber. Belt and
+/// braces: `tracing::subscriber::with_default` is thread-scoped (the only
+/// installer these suites use), so interleaving requires a future test to
+/// install globally — this lock keeps that mistake from corrupting captures.
 /// Recovers from poisoning — a panicking test must not cascade.
 pub fn tracing_capture_lock() -> MutexGuard<'static, ()> {
     match TRACING_CAPTURE_LOCK.lock() {

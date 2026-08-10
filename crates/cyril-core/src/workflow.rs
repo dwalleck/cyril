@@ -7,10 +7,11 @@ use crate::types::workflow::{
 };
 use crate::types::{
     SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId,
-    WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
-    WorkflowNodeSnapshot, WorkflowNodeStatus, WorkflowNodeType, WorkflowQueueResolution,
-    WorkflowRunCompleted, WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot,
-    WorkflowWatchOutcome,
+    WorkflowLoopIteration, WorkflowNodeCompleted, WorkflowNodeDescriptor, WorkflowNodeId,
+    WorkflowNodePath, WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot,
+    WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
+    WorkflowQueueResolution, WorkflowRunCompleted, WorkflowRunStarted, WorkflowRunStatus,
+    WorkflowSnapshot, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
 };
 
 /// State-application failure that leaves the tracker byte-for-byte unchanged.
@@ -97,8 +98,12 @@ impl WorkflowNodeState {
             ended_at,
             watch_cursor,
             watch_terminal,
-            ..
+            children,
         } = parts;
+        debug_assert!(
+            children.is_empty(),
+            "from_snapshot expects the caller to have taken children for recursion"
+        );
         Self {
             identity: WorkflowNodeIdentity::Snapshot {
                 descriptor,
@@ -305,6 +310,15 @@ pub struct WorkflowRun {
     run_pause_reason: Option<String>,
 }
 
+/// The authority behind a run's current node plan (see [`WorkflowRun::plan`]).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WorkflowPlan<'run> {
+    /// Declared by `run_start`; no persisted snapshot has reconciled yet.
+    Opening(&'run [WorkflowNodeDescriptor]),
+    /// Authored by the latest reconciled snapshot's root descriptor.
+    Snapshot(&'run WorkflowNodeDescriptor),
+}
+
 impl WorkflowRun {
     /// Returns the recipe name for this run.
     pub fn workflow_name(&self) -> &str {
@@ -349,6 +363,16 @@ impl WorkflowRun {
     /// Returns the opaque workspace path when supplied.
     pub fn workspace_path(&self) -> Option<&str> {
         self.workspace_path.as_deref()
+    }
+
+    /// Returns the current node plan, naming which authority supplied it —
+    /// the single seam for "has a snapshot reconciled yet?" so consumers
+    /// never have to learn the pairing between the individual accessors.
+    pub fn plan(&self) -> Option<WorkflowPlan<'_>> {
+        if let Some(snapshot_plan) = self.snapshot_plan.as_ref() {
+            return Some(WorkflowPlan::Snapshot(snapshot_plan));
+        }
+        self.opening_plan.as_deref().map(WorkflowPlan::Opening)
     }
 
     /// Returns the opening descriptor forest until a persisted snapshot replaces it.
@@ -445,6 +469,7 @@ impl WorkflowTracker {
             WorkflowEvent::StepsQueued(queued) => Ok(self.apply_steps_queued(queued)),
         }
     }
+
     /// Applies one complete persisted snapshot.
     ///
     /// Missing and active runs accept every valid snapshot status. A terminal
@@ -478,7 +503,12 @@ impl WorkflowTracker {
     }
 
     /// Applies one `node_start` event to its active run.
-    fn apply_node_started(&mut self, started: crate::types::WorkflowNodeStarted) -> bool {
+    ///
+    /// Merge-not-append (wire-audit hazard 2): `node_start` fires twice per
+    /// step node — the re-emit carries `sessionId` — and the emission count is
+    /// not fixed (the resume path skips the re-emit). Present fields replace,
+    /// absent fields preserve, and a node is never duplicated.
+    fn apply_node_started(&mut self, started: WorkflowNodeStarted) -> bool {
         let WorkflowNodeStartedParts {
             workflow_id,
             node_id,
@@ -558,7 +588,7 @@ impl WorkflowTracker {
         changed
     }
 
-    fn apply_node_completed(&mut self, completed: crate::types::WorkflowNodeCompleted) -> bool {
+    fn apply_node_completed(&mut self, completed: WorkflowNodeCompleted) -> bool {
         let WorkflowNodeCompletedParts {
             workflow_id,
             node_path,
@@ -589,7 +619,7 @@ impl WorkflowTracker {
         changed
     }
 
-    fn apply_node_paused(&mut self, paused: crate::types::WorkflowNodePaused) -> bool {
+    fn apply_node_paused(&mut self, paused: WorkflowNodePaused) -> bool {
         let (workflow_id, _node_id, node_path, reason, _parent_session_id) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "node_paused") else {
             return false;
@@ -603,7 +633,7 @@ impl WorkflowTracker {
             | replace(&mut node.node_pause_reason, Some(reason))
     }
 
-    fn apply_loop_iteration(&mut self, iteration: crate::types::WorkflowLoopIteration) -> bool {
+    fn apply_loop_iteration(&mut self, iteration: WorkflowLoopIteration) -> bool {
         let (workflow_id, loop_id, value, stop_condition_met, _parent_session_id) =
             iteration.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "loop_iteration") else {
@@ -630,14 +660,23 @@ impl WorkflowTracker {
         }
         tally_node_lookup();
         let Some(node) = run.nodes.get_mut(&path) else {
-            unreachable!("an indexed workflow path remains present in the node map");
+            // Structurally impossible today — the immutable probe above found
+            // this path — but an index-maintenance regression must degrade to
+            // a warned no-op, not panic the TUI on a wire frame.
+            debug_assert!(
+                false,
+                "indexed workflow path {path:?} missing from the node map"
+            );
+            warn_ignored(&workflow_id, "loop_iteration", "index_desync");
+            return false;
         };
         replace(
             &mut node.latest_loop_iteration,
             Some((value, stop_condition_met)),
         )
     }
-    fn apply_watch_poll(&mut self, poll: crate::types::WorkflowWatchPoll) -> bool {
+
+    fn apply_watch_poll(&mut self, poll: WorkflowWatchPoll) -> bool {
         let (workflow_id, _node_id, node_path, outcome, at, _parent_session_id) = poll.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "watch_poll") else {
             return false;
@@ -650,7 +689,7 @@ impl WorkflowTracker {
         replace(&mut node.latest_watch_poll, Some((outcome, at)))
     }
 
-    fn apply_paused(&mut self, paused: crate::types::WorkflowPaused) -> bool {
+    fn apply_paused(&mut self, paused: WorkflowPaused) -> bool {
         let (workflow_id, reason, _parent_session_id) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "paused") else {
             return false;
@@ -659,7 +698,11 @@ impl WorkflowTracker {
             | replace(&mut run.run_pause_reason, Some(reason))
     }
 
-    fn apply_steps_queued(&mut self, queued: crate::types::WorkflowStepsQueued) -> bool {
+    /// A resolution-bearing frame is an acknowledgement only (D33, wire-audit
+    /// hazard 3): its `pendingSteps` array — populated or empty — is discarded
+    /// and the current pending descriptors survive. Only a resolution-free
+    /// frame replaces pending work; an empty list there does not mean drained.
+    fn apply_steps_queued(&mut self, queued: WorkflowStepsQueued) -> bool {
         let (workflow_id, pending_steps, resolution, _parent_session_id) = queued.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "steps_queued") else {
             return false;
@@ -815,6 +858,9 @@ fn opening_plan_matches(run: &WorkflowRun, incoming: &[WorkflowNodeDescriptor]) 
     }
 }
 
+/// `Paused` is deliberately non-terminal (wire-audit hazard 1): `run_complete`
+/// arrives with status `paused` on repeat exhaustion, and treating that
+/// arrival as end-of-run tears down a live, resumable workflow.
 fn is_terminal(status: Option<WorkflowRunStatus>) -> bool {
     matches!(
         status,
@@ -957,30 +1003,46 @@ fn sparse_opening_run(
     }
 }
 
+/// Canonical path segment for a snapshot child — a verbatim port of the KAS
+/// reference flattener (`H1n` in `kiro-cli-chat` 2.16.0, carved from the
+/// binary):
+///
+/// ```js
+/// function H1n(e,n){if(n){if(e.iteration!==void 0)return`iter-${e.iteration}`;
+///   let t=/#(\d+)$/.exec(e.nodeId)?.[1];if(t!==void 0)return`iter-${t}`}return e.nodeId}
+/// ```
+///
+/// `n` is exactly "parent is a repeat". A present `iteration` wins outright;
+/// otherwise a trailing `#<ascii-digits>` rewrites with the digits verbatim
+/// (leading zeros preserved — `#007` → `iter-007`); the child's type and the
+/// parent's node id are never consulted. Anything narrower orphans repeat
+/// subtrees whose streamed `nodePath` says `iter-N` (2026-08-09 review,
+/// finding CR1, superseding the D21 discriminator).
 fn canonical_child_segment(
     parent: &WorkflowNodeDescriptor,
     child: &WorkflowNodeSnapshot,
 ) -> String {
     let child_id = child.descriptor().node_id().as_str();
-    if parent.node_type() == crate::types::WorkflowNodeType::Repeat
-        && child.descriptor().node_type() == crate::types::WorkflowNodeType::Sequence
-    {
-        let mut prefix = parent.node_id().as_str().to_owned();
-        prefix.push('#');
-        if let Some(suffix) = child_id.strip_prefix(&prefix)
-            && let Ok(parsed) = suffix.parse::<u32>()
-            && suffix == parsed.to_string()
-            && child.iteration() == Some(parsed)
+    if parent.node_type() == WorkflowNodeType::Repeat {
+        if let Some(iteration) = child.iteration() {
+            return format!("iter-{iteration}");
+        }
+        if let Some((_, digits)) = child_id.rsplit_once('#')
+            && !digits.is_empty()
+            && digits.bytes().all(|byte| byte.is_ascii_digit())
         {
-            return format!("iter-{parsed}");
+            return format!("iter-{digits}");
         }
     }
     child_id.to_owned()
 }
 
 /// Test-only per-event lookup telemetry (design decision D4): result equality
-/// cannot distinguish a keyed lookup from a full-map scan, so the apply paths
-/// count their map read-lookups and the scale fence bounds them per event.
+/// cannot distinguish a keyed lookup from a full-map scan, so the two fenced
+/// event shapes — ordinary `node_start` and pathless `loop_iteration` — tally
+/// their map read-lookups and the scale fence bounds them per event. Bulk
+/// paths (openings, snapshots, completions) are deliberately untallied; add
+/// tallies before fencing any further shape.
 #[cfg(test)]
 mod lookup_telemetry {
     use std::cell::Cell;
@@ -1048,6 +1110,7 @@ mod tests {
         WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued,
         WorkflowWatchPoll,
     };
+
     fn workflow_id(value: &str) -> WorkflowId {
         match WorkflowId::try_from(value.to_owned()) {
             Ok(id) => id,
@@ -1055,8 +1118,8 @@ mod tests {
         }
     }
 
-    fn node_id(value: &str) -> crate::types::WorkflowNodeId {
-        match crate::types::WorkflowNodeId::try_from(value.to_owned()) {
+    fn node_id(value: &str) -> WorkflowNodeId {
+        match WorkflowNodeId::try_from(value.to_owned()) {
             Ok(id) => id,
             Err(error) => panic!("invalid node id fixture: {error}"),
         }
@@ -1314,7 +1377,7 @@ mod tests {
             Some(controls) => controls,
             None => panic!("repeat controls are not an array"),
         };
-        assert_eq!(controls.len(), 8);
+        assert_eq!(controls.len(), 9);
         for (index, control) in controls.iter().enumerate() {
             let child_id = match control["nodeId"].as_str() {
                 Some(value) => value,
@@ -1338,8 +1401,8 @@ mod tests {
             if let Some(iteration) = control["iteration"].as_u64() {
                 child = child.with_iteration(iteration as u32);
             }
-            let repeat = WorkflowNodeSnapshot::new(
-                WorkflowNodeDescriptor::repeat(
+            let parent_descriptor = match control["parentType"].as_str() {
+                Some("repeat") => WorkflowNodeDescriptor::repeat(
                     node_id("loop"),
                     Vec::new(),
                     4,
@@ -1347,13 +1410,18 @@ mod tests {
                     None,
                     None,
                 ),
+                Some("sequence") => WorkflowNodeDescriptor::sequence(node_id("loop"), Vec::new()),
+                other => panic!("unexpected repeat control parent type {other:?}"),
+            };
+            let parent = WorkflowNodeSnapshot::new(
+                parent_descriptor,
                 WorkflowNodeStatus::Completed,
                 vec![child],
             );
             let root = WorkflowNodeSnapshot::new(
                 WorkflowNodeDescriptor::sequence(node_id("root"), Vec::new()),
                 WorkflowNodeStatus::Completed,
-                vec![repeat],
+                vec![parent],
             );
             let workflow = format!("workflow-{index}");
             let workflow_id = workflow_id(&workflow);
@@ -1366,20 +1434,11 @@ mod tests {
                 Some(run) => run,
                 None => panic!("repeat snapshot did not seed"),
             };
-            let wrapper = control["wrapper"].as_bool() == Some(true);
-            let child_segment = if wrapper {
-                let iteration = match control["iteration"].as_u64() {
-                    Some(value) => value,
-                    None => panic!("wrapper control lacks iteration"),
-                };
-                format!("iter-{iteration}")
-            } else {
-                child_id.to_owned()
+            let child_segment = match control["segment"].as_str() {
+                Some(value) => value,
+                None => panic!("repeat control lacks its expected segment"),
             };
-            let path = node_path(
-                &workflow_id,
-                &[workflow.as_str(), "loop", child_segment.as_str()],
-            );
+            let path = node_path(&workflow_id, &[workflow.as_str(), "loop", child_segment]);
             let state = match run.node(&path) {
                 Some(state) => state,
                 None => panic!("repeat child missing at {path:?}"),
@@ -1830,6 +1889,7 @@ mod tests {
             ])
         );
     }
+
     #[test]
     fn active_run_start_conflict_presence_matrix() {
         fn opening(
@@ -2030,6 +2090,7 @@ mod tests {
             "exact replay must not warn as a conflict, got:\n{logs}"
         );
     }
+
     #[test]
     fn node_start_merge_presence_matrix() {
         let id = workflow_id("workflow");
@@ -2203,6 +2264,7 @@ mod tests {
             Some(&vec![first_path])
         );
     }
+
     #[test]
     fn queue_resolution_and_pending_matrix() {
         let id = workflow_id("workflow");
@@ -2360,6 +2422,7 @@ mod tests {
             Some((WorkflowWatchOutcome::Idle, "t2"))
         );
     }
+
     #[test]
     fn unknown_workflow_event_matrix_no_placeholders() {
         let id = workflow_id("unknown");
@@ -2556,6 +2619,7 @@ mod tests {
             None
         );
     }
+
     #[test]
     fn workflow_completion_metadata_never_controls_status() {
         let run_statuses = [
@@ -2714,6 +2778,7 @@ mod tests {
             );
         }
     }
+
     #[test]
     fn retry_opening_clears_full_prior_incarnation() {
         let id = workflow_id("workflow");
@@ -2790,6 +2855,49 @@ mod tests {
     }
 
     #[test]
+    fn workflow_plan_names_its_authority() {
+        let id = workflow_id("workflow");
+        let tree = vec![WorkflowNodeDescriptor::step(
+            node_id("step"),
+            "agent".to_owned(),
+            None,
+            None,
+        )];
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                tree.clone(),
+                None,
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("opening did not seed");
+        };
+        assert_eq!(run.plan(), Some(WorkflowPlan::Opening(tree.as_slice())));
+
+        assert_eq!(
+            tracker.apply_snapshot(snapshot_with_status(
+                "workflow",
+                WorkflowRunStatus::Running,
+                "snap"
+            )),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("snapshot did not reconcile");
+        };
+        let Some(WorkflowPlan::Snapshot(descriptor)) = run.plan() else {
+            panic!("snapshot must own the plan, got {:?}", run.plan());
+        };
+        assert_eq!(Some(descriptor), run.snapshot_plan());
+        assert_eq!(run.opening_plan(), None);
+    }
+
+    #[test]
     fn post_terminal_run_start_replaces_incarnation() {
         for status in [
             WorkflowRunStatus::Completed,
@@ -2820,6 +2928,7 @@ mod tests {
             assert_eq!(run.nodes().len(), 0);
         }
     }
+
     #[test]
     fn workflow_tracker_scale_and_isolation() {
         fn fnv1a(rows: &[String]) -> u64 {
@@ -2960,9 +3069,12 @@ mod tests {
             );
             lookup_telemetry::reset();
             assert_eq!(
-                tracker.apply_event(WorkflowEvent::LoopIteration(
-                    crate::types::WorkflowLoopIteration::new(id, node_id(loop_name), 1, false)
-                )),
+                tracker.apply_event(WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+                    id,
+                    node_id(loop_name),
+                    1,
+                    false
+                ))),
                 Ok(true)
             );
             let counts = lookup_telemetry::counts();

@@ -157,7 +157,10 @@ impl WorkflowAdapterError {
             Self::InvalidWorkflowId { field, .. } | Self::InvalidNodeId { field, .. } => field,
             Self::InvalidNodePath(_) => "nodePath",
             Self::SnapshotWorkflowMismatch { .. } => "finalState.workflowId",
-            Self::CompletionMismatch(_) => "status",
+            Self::CompletionMismatch(WorkflowCompletionMismatchError::Status { .. }) => "status",
+            Self::CompletionMismatch(WorkflowCompletionMismatchError::WorkflowId { .. }) => {
+                "finalState.workflowId"
+            }
         }
     }
 
@@ -168,7 +171,12 @@ impl WorkflowAdapterError {
             | Self::InvalidNodeId { .. }
             | Self::InvalidNodePath(_)
             | Self::SnapshotWorkflowMismatch { .. } => WorkflowErrorKind::InvalidValue,
-            Self::CompletionMismatch(_) => WorkflowErrorKind::StatusMismatch,
+            Self::CompletionMismatch(WorkflowCompletionMismatchError::Status { .. }) => {
+                WorkflowErrorKind::StatusMismatch
+            }
+            Self::CompletionMismatch(WorkflowCompletionMismatchError::WorkflowId { .. }) => {
+                WorkflowErrorKind::InvalidValue
+            }
         }
     }
 }
@@ -427,7 +435,18 @@ pub(crate) fn to_notification(method: &str, params: &serde_json::Value) -> Workf
         "kiro/workflow/paused" => parse_paused(params),
         "kiro/workflow/run_complete" => parse_run_completed(params),
         "kiro/workflow/steps_queued" => parse_steps_queued(params),
-        _ => return WorkflowFrameOutcome::NotWorkflow,
+        _ => {
+            // An unknown member of the recognized family is vendor drift — a
+            // tenth lifecycle kind would otherwise vanish into the generic
+            // unknown-extension debug! at default log level.
+            if method.starts_with("kiro/workflow/") {
+                tracing::warn!(
+                    method,
+                    "unrecognized workflow lifecycle method; not converted"
+                );
+            }
+            return WorkflowFrameOutcome::NotWorkflow;
+        }
     };
 
     match event {
@@ -466,7 +485,6 @@ fn parse_node_started(params: &serde_json::Value) -> Result<WorkflowEvent, Workf
     let wire: WireNodeStarted = deserialize(params)?;
     let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
     let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
-    let parent_session_id = wire.parent_session_id.into_option().map(SessionId::new);
     let mut details = WorkflowNodeStartDetails::new();
     if let Some(agent_name) = wire.agent_name.into_option() {
         details = details.with_agent_name(agent_name);
@@ -490,7 +508,7 @@ fn parse_node_started(params: &serde_json::Value) -> Result<WorkflowEvent, Workf
         wire.node_type.0,
         details,
     );
-    if let Some(parent_session_id) = parent_session_id {
+    if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
     }
     Ok(WorkflowEvent::NodeStarted(event))
@@ -500,7 +518,6 @@ fn parse_node_completed(params: &serde_json::Value) -> Result<WorkflowEvent, Wor
     let wire: WireNodeCompleted = deserialize(params)?;
     let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
     let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
-    let parent_session_id = wire.parent_session_id.into_option().map(SessionId::new);
     let mut details = WorkflowNodeCompletionDetails::new();
     if let Some(artifacts) = wire.artifacts.into_option() {
         details = details.with_artifacts(artifacts);
@@ -524,7 +541,7 @@ fn parse_node_completed(params: &serde_json::Value) -> Result<WorkflowEvent, Wor
         wire.status.0,
         details,
     );
-    if let Some(parent_session_id) = parent_session_id {
+    if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
     }
     Ok(WorkflowEvent::NodeCompleted(event))
@@ -1373,6 +1390,7 @@ mod tests {
         };
         assert_eq!(actual, expected);
     }
+
     fn workflow_tracker_projection(tracker: &WorkflowTracker) -> serde_json::Value {
         let mut runs = tracker.iter().collect::<Vec<_>>();
         runs.sort_by(|(left, _), (right, _)| left.as_str().cmp(right.as_str()));
@@ -1484,6 +1502,7 @@ mod tests {
             );
         }
     }
+
     #[test]
     fn workflow_capture_state_matches_oracle() {
         let mut projections = Vec::new();
@@ -1523,6 +1542,85 @@ mod tests {
             "snapshot oracle output is valid JSON",
         );
         assert_eq!(actual, expected);
+    }
+
+    /// Depth fences (2026-08-09 review, test finding 3). (a) Near the
+    /// serde_json 128-depth parse cap, deeply nested descriptor and snapshot
+    /// trees convert cleanly — the recursive deserialize → domain → drop
+    /// chain must not overflow. (b) A depth bomb never reaches this layer as
+    /// nesting: `serde_json::from_str` fails at the cap and the client
+    /// substitutes `Value::Null` params — so whole-params `Null` and scalar
+    /// params on a workflow method must warn-and-drop, not panic.
+    #[test]
+    fn workflow_frames_survive_depth_extremes() {
+        let mut descriptor = serde_json::json!({
+            "nodeId": "leaf", "type": "step", "agentName": "agent"
+        });
+        let mut snapshot_node = serde_json::json!({
+            "nodeId": "leaf", "type": "step", "status": "completed"
+        });
+        for depth in 0..119 {
+            descriptor = serde_json::json!({
+                "nodeId": format!("seq-{depth}"), "type": "sequence", "steps": [descriptor]
+            });
+            snapshot_node = serde_json::json!({
+                "nodeId": format!("seq-{depth}"), "type": "sequence",
+                "status": "completed", "children": [snapshot_node]
+            });
+        }
+        let opening = serde_json::json!({
+            "workflowId": "deep",
+            "workflowName": "deep-recipe",
+            "inputs": {},
+            "nodeTree": [descriptor]
+        });
+        let WorkflowEvent::RunStarted(started) = event(
+            to_notification("kiro/workflow/run_start", &opening),
+            "near-cap descriptor tree converts",
+        ) else {
+            panic!("deep opening converted to the wrong event");
+        };
+        let mut declared = started.node_tree();
+        let mut declared_depth = 1;
+        while let Some(child) = declared.first().map(WorkflowNodeDescriptor::children) {
+            if child.is_empty() {
+                break;
+            }
+            declared = child;
+            declared_depth += 1;
+        }
+        assert_eq!(declared_depth, 120, "no descriptor level may be lost");
+
+        let completion = serde_json::json!({
+            "workflowId": "deep",
+            "status": "completed",
+            "finalState": {
+                "workflowId": "deep", "workflowName": "deep-recipe",
+                "status": "completed", "inputs": {}, "artifacts": {},
+                "capturedOutputs": {}, "createdAt": "created", "planRevision": 1,
+                "root": snapshot_node
+            }
+        });
+        let WorkflowEvent::RunCompleted(completed) = event(
+            to_notification("kiro/workflow/run_complete", &completion),
+            "near-cap snapshot tree converts",
+        ) else {
+            panic!("deep completion converted to the wrong event");
+        };
+        let mut tracker = WorkflowTracker::new();
+        must_succeed(
+            tracker.apply_snapshot(completed.final_state().clone()),
+            "near-cap snapshot canonicalizes",
+        );
+
+        for params in [serde_json::Value::Null, serde_json::json!("truncated")] {
+            let (result, log) = capture_rejection("kiro/workflow/run_start", &params);
+            assert!(
+                matches!(result, WorkflowFrameOutcome::Dropped),
+                "depth-bomb artifact params must warn and drop, got {result:?}"
+            );
+            assert_eq!(log["level"], "WARN");
+        }
     }
 
     /// REGRESSION FENCE (2026-08-09 review, finding S1): the step descriptor
@@ -2304,9 +2402,91 @@ mod tests {
         error_kind: &'static str,
     }
 
-    #[test]
-    fn malformed_workflow_field_matrix_isolated() {
-        let started = Instant::now();
+    /// Wire shape of one snapshot-node field, for generating its malformed
+    /// rows. Consumes the manifest's `snapshot_node_fields` oracle — an
+    /// unclassified name panics so a manifest addition forces new rows.
+    enum SnapshotFieldShape {
+        RequiredString,
+        RequiredEnum,
+        OptionalString,
+        OptionalU32,
+        OptionalEnum,
+        OptionalChildren,
+        Opaque,
+    }
+
+    fn snapshot_field_shape(field: &str) -> SnapshotFieldShape {
+        match field {
+            "nodeId" => SnapshotFieldShape::RequiredString,
+            "type" | "status" => SnapshotFieldShape::RequiredEnum,
+            "agentName" | "modelId" | "effortLevel" | "sessionId" | "failureReason"
+            | "branchId" | "startedAt" | "endedAt" => SnapshotFieldShape::OptionalString,
+            "maxIterations" | "iteration" => SnapshotFieldShape::OptionalU32,
+            "onMaxIterations" | "completionSignal" | "completionSignalSource" => {
+                SnapshotFieldShape::OptionalEnum
+            }
+            "children" => SnapshotFieldShape::OptionalChildren,
+            "stopCondition" | "stopWhen" | "artifacts" | "capturedOutput" | "watchCursor"
+            | "watchTerminal" => SnapshotFieldShape::Opaque,
+            other => panic!("unclassified snapshot node field `{other}` — add its malformed rows"),
+        }
+    }
+
+    /// Valid `run_complete` payload whose snapshot root carries one nested
+    /// child — the two injection sites for the snapshot-node malformed rows.
+    fn nested_completion_params() -> serde_json::Value {
+        serde_json::json!({
+            "workflowId": "workflow",
+            "status": "completed",
+            "finalState": {
+                "workflowId": "workflow",
+                "workflowName": "recipe",
+                "status": "completed",
+                "inputs": {},
+                "artifacts": {},
+                "capturedOutputs": {},
+                "createdAt": "created",
+                "planRevision": 1,
+                "root": {
+                    "nodeId": "workflow",
+                    "type": "sequence",
+                    "status": "completed",
+                    "children": [{
+                        "nodeId": "child",
+                        "type": "step",
+                        "status": "completed",
+                        "agentName": "agent"
+                    }]
+                }
+            }
+        })
+    }
+
+    fn snapshot_site_mut(
+        params: &mut serde_json::Value,
+        nested: bool,
+    ) -> &mut serde_json::Map<String, serde_json::Value> {
+        let pointer = if nested {
+            "/finalState/root/children/0"
+        } else {
+            "/finalState/root"
+        };
+        match params
+            .pointer_mut(pointer)
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            Some(site) => site,
+            None => panic!("snapshot injection site {pointer} missing from baseline"),
+        }
+    }
+
+    /// Builds every malformed row the matrix fence asserts on: manifest-driven
+    /// required-field omissions (event, descriptor, and snapshot-node at both
+    /// the root and a nested child) followed by the hand-listed wrong-type,
+    /// null, unknown-enum, empty-identifier, and mismatch rows. Kept apart
+    /// from the fence itself so the row-set and the expectations it must meet
+    /// stay separately readable.
+    fn malformed_cases() -> Vec<MalformedCase> {
         let manifest: serde_json::Value = must_succeed(
             serde_json::from_str(include_str!(
                 "../../../../tests/fixtures/kas/workflow/oracle-manifest.json"
@@ -2356,6 +2536,134 @@ mod tests {
                     field_path: format!("nodeTree[0].{field}"),
                     error_kind: "missing_required",
                 });
+            }
+        }
+
+        // Snapshot-node rows (2026-08-09 review, test finding 1): the
+        // manifest's `snapshot_node_fields` oracle drives malformed injection
+        // at BOTH the snapshot root and a nested child — the recursive site
+        // no other family reaches.
+        let snapshot_required = must_array(
+            &manifest["snapshot_node_fields"]["required"],
+            "required snapshot node fields",
+        );
+        let snapshot_optional = must_array(
+            &manifest["snapshot_node_fields"]["optional"],
+            "optional snapshot node fields",
+        );
+        for nested in [false, true] {
+            let prefix = if nested {
+                "finalState.root.children[0]"
+            } else {
+                "finalState.root"
+            };
+            let site = if nested { "child" } else { "root" };
+            let push_case = |cases: &mut Vec<MalformedCase>,
+                             kind: &str,
+                             field: &str,
+                             mutate: Option<serde_json::Value>,
+                             error_kind: &'static str| {
+                let mut params = nested_completion_params();
+                match mutate {
+                    Some(value) => {
+                        snapshot_site_mut(&mut params, nested).insert(field.to_owned(), value);
+                    }
+                    None => {
+                        let removed = snapshot_site_mut(&mut params, nested).remove(field);
+                        assert!(
+                            removed.is_some(),
+                            "manifest snapshot field must exist in baseline: {site}.{field}"
+                        );
+                    }
+                }
+                cases.push(MalformedCase {
+                    id: format!("snapshot.{site}.{kind}.{field}"),
+                    method: "kiro/workflow/run_complete".to_owned(),
+                    params,
+                    field_path: format!("{prefix}.{field}"),
+                    error_kind,
+                });
+            };
+            for field in snapshot_required {
+                let field = must_string(field, "required snapshot node field");
+                push_case(&mut cases, "missing", field, None, "missing_required");
+                push_case(
+                    &mut cases,
+                    "wrong_type",
+                    field,
+                    Some(serde_json::Value::Bool(false)),
+                    "wrong_type",
+                );
+                if matches!(
+                    snapshot_field_shape(field),
+                    SnapshotFieldShape::RequiredEnum
+                ) {
+                    push_case(
+                        &mut cases,
+                        "unknown_enum",
+                        field,
+                        Some(serde_json::json!("nope")),
+                        "invalid_enum",
+                    );
+                }
+            }
+            for field in snapshot_optional {
+                let field = must_string(field, "optional snapshot node field");
+                match snapshot_field_shape(field) {
+                    SnapshotFieldShape::OptionalString | SnapshotFieldShape::OptionalU32 => {
+                        push_case(
+                            &mut cases,
+                            "wrong_type",
+                            field,
+                            Some(serde_json::Value::Bool(false)),
+                            "wrong_type",
+                        );
+                        push_case(
+                            &mut cases,
+                            "null",
+                            field,
+                            Some(serde_json::Value::Null),
+                            "invalid_value",
+                        );
+                    }
+                    SnapshotFieldShape::OptionalEnum => {
+                        push_case(
+                            &mut cases,
+                            "unknown_enum",
+                            field,
+                            Some(serde_json::json!("nope")),
+                            "invalid_enum",
+                        );
+                        push_case(
+                            &mut cases,
+                            "null",
+                            field,
+                            Some(serde_json::Value::Null),
+                            "invalid_value",
+                        );
+                    }
+                    SnapshotFieldShape::OptionalChildren => {
+                        push_case(
+                            &mut cases,
+                            "wrong_type",
+                            field,
+                            Some(serde_json::Value::Bool(false)),
+                            "wrong_type",
+                        );
+                        push_case(
+                            &mut cases,
+                            "null",
+                            field,
+                            Some(serde_json::Value::Null),
+                            "invalid_value",
+                        );
+                    }
+                    // Opaque JSON accepts every value including null (D18).
+                    SnapshotFieldShape::Opaque => {}
+                    SnapshotFieldShape::RequiredString | SnapshotFieldShape::RequiredEnum => {
+                        panic!("required snapshot field `{field}` listed as optional")
+                    }
+                }
             }
         }
 
@@ -2628,12 +2936,18 @@ mod tests {
             field_path: "status".to_owned(),
             error_kind: "status_mismatch",
         });
+        cases
+    }
 
-        assert_eq!(cases.len(), 205, "malformed matrix row-set drift");
+    #[test]
+    fn malformed_workflow_field_matrix_isolated() {
+        let started = Instant::now();
+        let cases = malformed_cases();
+        assert_eq!(cases.len(), 277, "malformed matrix row-set drift");
         let mut case_ids = cases.iter().map(|case| case.id.clone()).collect::<Vec<_>>();
         case_ids.sort_unstable();
         case_ids.dedup();
-        assert_eq!(case_ids.len(), 205, "malformed case ids must be unique");
+        assert_eq!(case_ids.len(), 277, "malformed case ids must be unique");
         for case in cases {
             let (result, log) = capture_rejection(&case.method, &case.params);
             assert!(

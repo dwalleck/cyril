@@ -118,6 +118,14 @@ macro_rules! workflow_enum {
                 formatter.write_str(self.as_str())
             }
         }
+
+        impl std::str::FromStr for $name {
+            type Err = WorkflowEnumParseError;
+
+            fn from_str(value: &str) -> Result<Self, WorkflowEnumParseError> {
+                Self::try_from(value)
+            }
+        }
     };
 }
 
@@ -134,6 +142,10 @@ workflow_enum! {
 
 workflow_enum! {
     /// Status carried by a `run_complete` lifecycle event.
+    ///
+    /// `Paused` is a member on purpose (wire-audit hazard 1): `run_complete`
+    /// does NOT mean the run finished — repeat exhaustion emits it with
+    /// status `paused`, and only `completed`/`failed`/`aborted` are terminal.
     pub enum WorkflowCompletionStatus as "workflow completion status" {
         Paused => "paused",
         Completed => "completed",
@@ -457,6 +469,7 @@ impl WorkflowNodeDescriptor {
             _ => None,
         }
     }
+
     /// Replaces structural children while preserving this validated descriptor kind and metadata.
     pub(crate) fn with_runtime_children(self, children: Vec<Self>) -> Self {
         let Self { node_id, kind } = self;
@@ -758,6 +771,21 @@ impl WorkflowSnapshotData {
             captured_outputs,
         }
     }
+
+    /// Returns the opaque recipe inputs.
+    pub fn inputs(&self) -> &serde_json::Value {
+        &self.inputs
+    }
+
+    /// Returns the opaque run artifacts.
+    pub fn artifacts(&self) -> &serde_json::Value {
+        &self.artifacts
+    }
+
+    /// Returns the opaque captured outputs.
+    pub fn captured_outputs(&self) -> &serde_json::Value {
+        &self.captured_outputs
+    }
 }
 
 /// Persisted metadata carried by a full workflow snapshot.
@@ -813,6 +841,7 @@ pub struct WorkflowSnapshot {
     root: WorkflowNodeSnapshot,
     metadata: WorkflowSnapshotMetadata,
 }
+
 /// Owned snapshot fields consumed by the workflow state module.
 pub(crate) struct WorkflowSnapshotParts {
     pub(crate) workflow_id: WorkflowId,
@@ -962,10 +991,32 @@ impl WorkflowNodePath {
         }
         Ok(Self(segments.into_boxed_slice()))
     }
+
     /// Returns every canonical path segment in order.
     pub fn segments(&self) -> &[String] {
         &self.0
     }
+}
+
+impl fmt::Display for WorkflowNodePath {
+    /// Slash-joined canonical form. Display-only: segments may themselves
+    /// contain `/`, so this rendering is not parseable back into segments.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.0.join("/"))
+    }
+}
+
+/// Debug-build guard for the path–workflow binding: [`WorkflowNodePath::try_new`]
+/// validates the root against a workflow id but the path does not retain the
+/// binding, so a node-addressed event could otherwise pair run B's id with a
+/// path rooted in run A and store a node under the wrong run (2026-08-09
+/// review, type-design finding 1).
+fn debug_assert_path_binding(workflow_id: &WorkflowId, node_path: &WorkflowNodePath) {
+    debug_assert_eq!(
+        node_path.segments().first().map(String::as_str),
+        Some(workflow_id.as_str()),
+        "node path root must name the event's workflow"
+    );
 }
 
 /// Optional fields carried by a `node_start` event.
@@ -1258,6 +1309,7 @@ impl WorkflowNodeStarted {
         node_type: WorkflowNodeType,
         details: WorkflowNodeStartDetails,
     ) -> Self {
+        debug_assert_path_binding(&workflow_id, &node_path);
         Self {
             workflow_id,
             node_id,
@@ -1349,6 +1401,7 @@ impl WorkflowNodeCompleted {
         status: WorkflowNodeStatus,
         details: WorkflowNodeCompletionDetails,
     ) -> Self {
+        debug_assert_path_binding(&workflow_id, &node_path);
         Self {
             workflow_id,
             node_id,
@@ -1424,6 +1477,7 @@ impl WorkflowNodePaused {
         node_path: WorkflowNodePath,
         reason: String,
     ) -> Self {
+        debug_assert_path_binding(&workflow_id, &node_path);
         Self {
             workflow_id,
             node_id,
@@ -1574,6 +1628,7 @@ impl WorkflowWatchPoll {
         outcome: WorkflowWatchOutcome,
         at: String,
     ) -> Self {
+        debug_assert_path_binding(&workflow_id, &node_path);
         Self {
             workflow_id,
             node_id,
@@ -1689,12 +1744,24 @@ impl WorkflowPaused {
 
 /// Error returned when `run_complete` contradicts its final snapshot.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error(
-    "workflow completion status `{completion}` does not match final snapshot status `{snapshot}`"
-)]
-pub struct WorkflowCompletionMismatchError {
-    completion: WorkflowCompletionStatus,
-    snapshot: WorkflowRunStatus,
+pub enum WorkflowCompletionMismatchError {
+    /// The event status disagrees with the snapshot's run status.
+    #[error(
+        "workflow completion status `{completion}` does not match final snapshot status `{snapshot}`"
+    )]
+    Status {
+        completion: WorkflowCompletionStatus,
+        snapshot: WorkflowRunStatus,
+    },
+    /// The event's workflow id disagrees with the snapshot's workflow id —
+    /// admitting it would let a completion read one run and write another
+    /// (2026-08-09 review, finding CR2; state rule D31 forbids completion
+    /// events seeding runs).
+    #[error("workflow completion id `{completion}` does not match final snapshot id `{snapshot}`")]
+    WorkflowId {
+        completion: WorkflowId,
+        snapshot: WorkflowId,
+    },
 }
 
 /// Reconciled run result from `run_complete`.
@@ -1707,12 +1774,19 @@ pub struct WorkflowRunCompleted {
 }
 
 impl WorkflowRunCompleted {
-    /// Constructs a completion after verifying status agreement.
+    /// Constructs a completion after verifying workflow-id and status
+    /// agreement with the final snapshot.
     pub fn new(
         workflow_id: WorkflowId,
         status: WorkflowCompletionStatus,
         final_state: WorkflowSnapshot,
     ) -> Result<Self, WorkflowCompletionMismatchError> {
+        if final_state.workflow_id() != &workflow_id {
+            return Err(WorkflowCompletionMismatchError::WorkflowId {
+                completion: workflow_id,
+                snapshot: final_state.workflow_id().clone(),
+            });
+        }
         let matches = matches!(
             (status, final_state.status()),
             (WorkflowCompletionStatus::Paused, WorkflowRunStatus::Paused)
@@ -1727,7 +1801,7 @@ impl WorkflowRunCompleted {
                 )
         );
         if !matches {
-            return Err(WorkflowCompletionMismatchError {
+            return Err(WorkflowCompletionMismatchError::Status {
                 completion: status,
                 snapshot: final_state.status(),
             });
@@ -2633,6 +2707,45 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "workflow completion status `failed` does not match final snapshot status `completed`"
+        );
+    }
+
+    /// REGRESSION FENCE (2026-08-09 review, finding CR2): a completion whose
+    /// outer workflow id disagrees with its snapshot's id is unconstructible —
+    /// otherwise `apply_completion` would read the addressed run and write a
+    /// brand-new run under the snapshot id, seeding state from a completion
+    /// event in violation of state rule D31.
+    #[test]
+    fn workflow_run_completion_rejects_workflow_id_mismatch() {
+        let error = must_fail(
+            WorkflowRunCompleted::new(
+                workflow_id("addressed"),
+                WorkflowCompletionStatus::Completed,
+                completed_snapshot(workflow_id("other")),
+            ),
+            "mismatched completion workflow id must fail",
+        );
+        assert_eq!(
+            error.to_string(),
+            "workflow completion id `addressed` does not match final snapshot id `other`"
+        );
+    }
+
+    /// Debug-build fence for the path–workflow binding guard on the four
+    /// path-carrying event constructors (2026-08-09 review, type-design
+    /// finding 1): pairing run B's id with a path rooted in run A must not
+    /// construct silently.
+    #[test]
+    #[should_panic(expected = "node path root must name the event's workflow")]
+    fn node_event_rejects_foreign_workflow_path() {
+        let path_owner = workflow_id("run-a");
+        let path = workflow_path(&path_owner, &["run-a", "node"]);
+        let _ = WorkflowNodeStarted::new(
+            workflow_id("run-b"),
+            node_id("node"),
+            path,
+            WorkflowNodeType::Step,
+            WorkflowNodeStartDetails::new(),
         );
     }
 

@@ -172,3 +172,32 @@ all suites, both fence modes, and all four oracle modes green after.
 | T10 | `apply_snapshot`/`get`/`iter` have no production caller | **Yes** | **Reject (no change)** | Not speculative: design.md:110 names cyril-jxfu (workflow-session routing) and cyril-0qe6 (control/snapshot replies) as the verified consumers; D24 added the interface fences. Staged API is design-signed. |
 
 Deferred work with tracker IDs: **cyril-74ly** (pre-existing `convert/mod.rs` CaptureWriter dedup).
+
+## PR 92 deep-review decisions — 2026-08-09 (five specialist lenses)
+
+Five parallel review agents (general, tests, silent-failure, type-design, comments)
+over the PR's Rust files, weighted at the seams the two-axis review under-covered.
+Every finding verified before action.
+
+| # | Finding (lens) | Verified? | Decision | Note |
+|---|---|---|---|---|
+| CR1 | `canonical_child_segment` strictly narrower than the vendor's own flattener; divergences fail closed and orphan repeat subtrees (general, **critical**) | **Yes** — `H1n` carved byte-exact from the 2.16.0 `kiro-cli-chat` binary: `iteration` wins outright, else suffix-only ASCII `#(\d+)$` verbatim; child type and parent id never consulted. The audit's own `review-loop` + `loop#0` naming is the reachable false negative | **Accept — SUPERSEDES D21's discriminator** | Vendor rule ported verbatim to all three implementations (Rust + both Python oracles, per the bundle-is-the-reference rule). `repeat_controls` redesigned: 9 explicit-segment rows covering every vendor decision point (suffix-only rewrite, iteration-wins conflict, type-ignored, leading-zeros-verbatim `iter-02`, foreign-prefix rewrite, non-repeat parent literal, non-digit/Unicode literals). D21's false-positive worry is answered by fidelity: whatever the vendor rewrites, we rewrite. |
+| CR2 | `run_complete` with disagreeing outer/snapshot ids reads one run, writes another (general, important) | **Yes** — id check lived only in the adapter; public `apply_event` callers could seed a run from a completion, violating D31 | **Accept** | `WorkflowCompletionMismatchError` is now an enum (`Status`/`WorkflowId`); `WorkflowRunCompleted::new` rejects id disagreement, making the state unconstructible. Adapter error mapping distinguishes the variants; domain fence added. |
+| CA1 | Engine trait doc promises `Err` on malformed-but-recognized frames — false for workflow warn-and-drop (comments, **critical**) | **Yes** | **Accept** | Trait doc now carves out the workflow exception explicitly. |
+| T1 | `snapshot_node_fields` manifest oracle orphaned; malformed snapshot-node rows unfenced (tests, important) | **Yes** — zero consumers repo-wide | **Accept** | Matrix extended 205 → 277 rows: manifest-driven injection at the snapshot root AND a nested child (missing/wrong-type/unknown-enum/null per field shape); unclassified manifest names panic, so oracle growth forces rows. |
+| T2 | Engine `Dropped → Ok(None)` arm unfenced (tests, important) | **Yes** | **Accept** | Engine-level fence added (`kas_engine_drops_malformed_workflow_frame_to_ok_none`). |
+| T3 | Depth cap and its `Value::Null` artifact untested (tests, important) | **Yes** | **Accept** | `workflow_frames_survive_depth_extremes`: 120-deep descriptor + snapshot trees convert and canonicalize losslessly; whole-params `Null`/scalar warn-and-drop. |
+| TD1 | Path–workflow binding validated then discarded; events can pair run B's id with run A's path (type-design) | **Yes** | **Accept-modified** | `debug_assert` guard in the four path-carrying constructors + `should_panic` fence, not a `Result` API break: the converter always builds paths from the event's own id, so the runtime path is safe; the guard catches future consumers during development. |
+| TD2 | `WorkflowRun` Option-shaped where snapshot facts co-vary; hidden accessor pairing (type-design) | **Yes** | **Accept-modified** | Additive `plan()` → `WorkflowPlan::{Opening, Snapshot}` gives consumers the single honest seam; the interior field shape stays (restructuring six fields through the oracle projections buys no consumer-visible safety). |
+| TD3 | `WorkflowNodeSnapshot::new` accepts leaf-with-children trees (type-design) | **Yes** | **Reject (no change)** | Wire leniency is the signed design (D18-family): snapshots preserve whatever tree the engine sent, and the internal runtime-children path already `debug_assert`s. Enforcing in the public constructor would make the converter reject representable wire shapes. |
+| TD4 | Missing `Display`/`FromStr`/accessors (type-design, minor) | **Yes** | **Accept** | `Display for WorkflowNodePath` (slash-joined, documented non-parseable), `FromStr` via `workflow_enum!`, `WorkflowSnapshotData` accessors. |
+| SF1 | Unknown `kiro/workflow/*` family member vanishes into generic `debug!` (silent-failure) | **Yes** | **Accept** | Family-scoped `warn!` before `NotWorkflow` — a tenth lifecycle kind now surfaces at default log level. |
+| SF2 | Post-deserialize id rejections lose tree position (silent-failure) | **Yes** | **Defer** | **cyril-sinu** — diagnosability only; serde-time paths are exact. |
+| SF3 | `Ok(_)` discards the changed flag; future renderer must wire redraw (silent-failure) | **Yes** | **Accept** | Constraint comment at the dispatch site. |
+| SF4 | `unreachable!` on index desync would panic the TUI on a wire frame (silent-failure) | **Yes** | **Accept** | Degrades to `debug_assert` + `warn_ignored(index_desync)`. |
+| CA2–4 | Lookup-telemetry doc overstates; `test_support` lock/feature docs imprecise (comments) | **Yes** | **Accept** | Docs scoped to the fenced events; lock documented as belt-and-braces over thread-scoped installers; feature additivity caveat stated. |
+| CA5–7 | Hazard 1/2/D33 constraints undocumented at their enforcement sites (comments) | **Yes** | **Accept** | Docs added at `WorkflowCompletionStatus`, `is_terminal`, `apply_node_started`, `apply_steps_queued`. |
+| CR3 | `from_snapshot` discards children via `..`; invariant unc checkable (general, suggestion) | **Yes** | **Accept** | Explicit binding + `debug_assert!(children.is_empty())`. |
+| T4/T5 | Feature-exclusion assert; one-directional matrix tripwire (tests, minor) | **Yes** | **Defer** | **cyril-7sjs**. |
+
+Deferred with tracker IDs: **cyril-sinu**, **cyril-7sjs**.

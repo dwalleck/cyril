@@ -6,8 +6,9 @@
 //! signal that drives turn completion under KAS, in place of v2's prompt
 //! response — and map it to [`Notification::TurnCompleted`].
 
-use agent_client_protocol as acp;
 pub(crate) mod workflow;
+
+use agent_client_protocol as acp;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
@@ -613,6 +614,21 @@ mod tests {
         assert!(
             matches!(n, Some(Notification::AgentMessage(_))),
             "agent_message_chunk must still render via the generic path, got {n:?}"
+        );
+    }
+
+    /// ENGINE-LEVEL fence for the `Dropped` arm (2026-08-09 review, test
+    /// finding 2): a recognized workflow method with a malformed payload must
+    /// reach the client as `Ok(None)` — never `Err`, which would route into
+    /// the client's malformed-extension error path and poison the stream.
+    /// The adapter suite fences the adapter; this fences the engine match.
+    #[test]
+    fn kas_engine_drops_malformed_workflow_frame_to_ok_none() {
+        let r = KasEngine::default()
+            .convert_ext_notification("kiro/workflow/run_start", &json!({"inputs": {}}));
+        assert!(
+            matches!(r, Ok(None)),
+            "malformed workflow frame must warn-and-drop to Ok(None), got {r:?}"
         );
     }
 

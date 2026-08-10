@@ -639,6 +639,7 @@ mod turn_stamp_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::must_succeed;
     use crate::types::tool_call::{ToolCallId, ToolCallStatus, ToolKind};
     use crate::types::{
         WorkflowId, WorkflowNodeId, WorkflowNodePath, WorkflowNodeStartDetails,
@@ -648,7 +649,6 @@ mod tests {
     fn assert_send<T: Send>() {}
     fn assert_sync<T: Sync>() {}
     fn assert_clone<T: Clone>() {}
-    use crate::test_support::must_succeed;
 
     #[test]
     fn notification_is_send_sync_clone() {

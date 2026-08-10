@@ -186,7 +186,10 @@ pub(crate) trait Engine {
 
     /// Convert an engine-dialect ext notification (v2: `kiro.dev/*`) to an
     /// internal one. `Err` on a malformed-but-recognized frame; `Ok(None)` for
-    /// recognized-but-not-surfaced frames.
+    /// recognized-but-not-surfaced frames — with one carve-out: a malformed
+    /// `kiro/workflow/*` lifecycle frame is warned and dropped to `Ok(None)`
+    /// by the adapter (C2 isolation; `convert::kas::WorkflowFrameOutcome`),
+    /// never surfaced as `Err`, so one bad frame cannot poison the stream.
     fn convert_ext_notification(
         &self,
         method: &str,

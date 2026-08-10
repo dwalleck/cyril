@@ -2,6 +2,7 @@
 """Project the last KAS workflow finalState without using Cyril code."""
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -33,20 +34,23 @@ def frame_body(frame):
     return parsed if isinstance(parsed, dict) else frame
 
 
-def wrapper_iteration(parent, child):
-    if parent.get("type") != "repeat" or child.get("type") != "sequence":
-        return None
-    prefix = f'{parent.get("nodeId")}#'
-    node_id = child.get("nodeId")
-    if not isinstance(node_id, str) or not node_id.startswith(prefix):
-        return None
-    suffix = node_id[len(prefix):]
-    iteration = child.get("iteration")
-    if isinstance(iteration, bool) or not isinstance(iteration, int):
-        return None
-    if not suffix.isdigit() or suffix != str(iteration):
-        return None
-    return iteration
+# Verbatim port of the KAS reference flattener (H1n, kiro-cli-chat 2.16.0):
+# a present iteration wins outright; otherwise a trailing #<ascii-digits>
+# rewrites with the digits verbatim; child type and parent id never consulted.
+WRAPPER_SUFFIX = re.compile(r"#([0-9]+)$")
+
+
+def wrapper_segment(parent, child):
+    if parent.get("type") == "repeat":
+        iteration = child.get("iteration")
+        if iteration is not None and not isinstance(iteration, bool):
+            return f"iter-{iteration}"
+        node_id = child.get("nodeId")
+        if isinstance(node_id, str):
+            match = WRAPPER_SUFFIX.search(node_id)
+            if match is not None:
+                return f"iter-{match.group(1)}"
+    return child.get("nodeId")
 
 
 def descriptor(node):
@@ -79,9 +83,7 @@ def project(path):
         data = select_fields(node, NODE_FIELDS)
         entries.append({"path": list(node_path), "data": data})
         for child in node.get("children", []):
-            iteration = wrapper_iteration(node, child)
-            segment = f"iter-{iteration}" if iteration is not None else child["nodeId"]
-            walk(child, (*node_path, segment))
+            walk(child, (*node_path, wrapper_segment(node, child)))
 
     walk(state["root"], (workflow_id,))
     run = select_fields(state, RUN_FIELDS)

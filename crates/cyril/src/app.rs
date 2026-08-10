@@ -411,6 +411,9 @@ impl App {
             let event_kind = event.method_name();
             let workflow_id = event.workflow_id().as_str().to_owned();
             match self.workflow_tracker.apply_event(*event) {
+                // The changed flag is deliberately unwired: nothing renders
+                // workflow state yet. The W-track renderer must route it into
+                // redraw_needed when drill-in lands.
                 Ok(_) => {}
                 Err(error) => {
                     tracing::warn!(
