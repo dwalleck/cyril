@@ -94,7 +94,7 @@ def check(root: Path) -> list[str]:
         failures.append("adapter re-exports a private wire item")
 
     tracker_fields = re.findall(
-        r"(?m)^\s*(pub(?:\([^)]*\))?\s+)?workflow_tracker\s*:\s*(?:[A-Za-z0-9_:]+::)?WorkflowTracker\b",
+        r"(?m)^\s*(pub(?:\([^)]*\))?\s+)?workflow_tracker\s*:\s*(?:[A-Za-z0-9_:]+::)?WorkflowTracker\s*,",
         app,
     )
     if len(tracker_fields) != 1:
