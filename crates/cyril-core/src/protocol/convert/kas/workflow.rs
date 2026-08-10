@@ -117,11 +117,6 @@ enum WorkflowAdapterError {
     },
     #[error(transparent)]
     InvalidNodePath(#[from] WorkflowNodePathError),
-    #[error("{node_type} node is missing required `{field}`")]
-    MissingNodeField {
-        node_type: &'static str,
-        field: &'static str,
-    },
     #[error(
         "run completion workflow id `{outer}` does not match final snapshot workflow id `{final_id}`"
     )]
@@ -136,7 +131,6 @@ impl WorkflowAdapterError {
             Self::MalformedField { field_path, .. } => field_path,
             Self::InvalidWorkflowId { field, .. } | Self::InvalidNodeId { field, .. } => field,
             Self::InvalidNodePath(_) => "nodePath",
-            Self::MissingNodeField { field, .. } => field,
             Self::SnapshotWorkflowMismatch { .. } => "finalState.workflowId",
             Self::CompletionMismatch(_) => "status",
         }
@@ -147,9 +141,8 @@ impl WorkflowAdapterError {
             Self::MalformedField { error_kind, .. } => *error_kind,
             Self::InvalidWorkflowId { .. }
             | Self::InvalidNodeId { .. }
-            | Self::InvalidNodePath(_) => WorkflowErrorKind::InvalidValue,
-            Self::MissingNodeField { .. } => WorkflowErrorKind::MissingRequired,
-            Self::SnapshotWorkflowMismatch { .. } => WorkflowErrorKind::InvalidValue,
+            | Self::InvalidNodePath(_)
+            | Self::SnapshotWorkflowMismatch { .. } => WorkflowErrorKind::InvalidValue,
             Self::CompletionMismatch(_) => WorkflowErrorKind::StatusMismatch,
         }
     }
@@ -308,8 +301,8 @@ enum WireNodeDescriptor {
     Watch {
         #[serde(rename = "nodeId")]
         node_id: String,
-        #[serde(rename = "handlerName")]
-        handler_name: String,
+        #[serde(rename = "agentName")]
+        agent_name: String,
     },
 }
 
@@ -355,8 +348,6 @@ struct WireNodeSnapshot {
     #[serde(default)]
     stop_when: OptionalValue,
     #[serde(default)]
-    handler_name: OptionalField<String>,
-    #[serde(default)]
     session_id: OptionalField<String>,
     #[serde(default)]
     artifacts: OptionalValue,
@@ -376,6 +367,10 @@ struct WireNodeSnapshot {
     started_at: OptionalField<String>,
     #[serde(default)]
     ended_at: OptionalField<String>,
+    #[serde(default)]
+    watch_cursor: OptionalValue,
+    #[serde(default)]
+    watch_terminal: OptionalValue,
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -742,10 +737,10 @@ impl WireNodeDescriptor {
             )),
             Self::Watch {
                 node_id: raw_node_id,
-                handler_name,
+                agent_name,
             } => Ok(WorkflowNodeDescriptor::watch(
                 node_id(raw_node_id)?,
-                handler_name,
+                agent_name,
             )),
         }
     }
@@ -782,31 +777,29 @@ impl WireSnapshot {
 
 impl WireNodeSnapshot {
     fn try_into_domain(self) -> Result<WorkflowNodeSnapshot, WorkflowAdapterError> {
-        let node_type_name = self.node_type.as_str();
         let descriptor = match self.node_type {
-            WireNodeType::Step => WorkflowNodeDescriptor::step(
+            WireNodeType::Step => WorkflowNodeDescriptor::snapshot_step(
                 node_id(self.node_id)?,
-                required(self.agent_name, node_type_name, "agentName")?,
+                self.agent_name.into_option(),
                 self.model.into_option(),
                 self.effort.into_option(),
             ),
             WireNodeType::Sequence => {
                 WorkflowNodeDescriptor::sequence(node_id(self.node_id)?, Vec::new())
             }
-            WireNodeType::Repeat => WorkflowNodeDescriptor::repeat(
+            WireNodeType::Repeat => WorkflowNodeDescriptor::snapshot_repeat(
                 node_id(self.node_id)?,
-                Vec::new(),
-                required(self.max_iterations, node_type_name, "maxIterations")?,
-                required(self.on_max_iterations, node_type_name, "onMaxIterations")?.into(),
+                self.max_iterations.into_option(),
+                self.on_max_iterations.into_option().map(Into::into),
                 self.stop_condition.into_option(),
                 self.stop_when.into_option(),
             ),
             WireNodeType::Parallel => {
                 WorkflowNodeDescriptor::parallel(node_id(self.node_id)?, Vec::new())
             }
-            WireNodeType::Watch => WorkflowNodeDescriptor::watch(
+            WireNodeType::Watch => WorkflowNodeDescriptor::snapshot_watch(
                 node_id(self.node_id)?,
-                required(self.handler_name, node_type_name, "handlerName")?,
+                self.agent_name.into_option(),
             ),
         };
         let children = match self.children.into_option() {
@@ -847,21 +840,14 @@ impl WireNodeSnapshot {
         if let Some(ended_at) = self.ended_at.into_option() {
             snapshot = snapshot.with_ended_at(ended_at);
         }
+        if let Some(watch_cursor) = self.watch_cursor.into_option() {
+            snapshot = snapshot.with_watch_cursor(watch_cursor);
+        }
+        if let Some(watch_terminal) = self.watch_terminal.into_option() {
+            snapshot = snapshot.with_watch_terminal(watch_terminal);
+        }
         Ok(snapshot)
     }
-}
-
-fn required<T>(
-    field: OptionalField<T>,
-    node_type: &'static str,
-    field_name: &'static str,
-) -> Result<T, WorkflowAdapterError> {
-    field
-        .into_option()
-        .ok_or(WorkflowAdapterError::MissingNodeField {
-            node_type,
-            field: field_name,
-        })
 }
 
 fn workflow_id(value: String, field: &'static str) -> Result<WorkflowId, WorkflowAdapterError> {
@@ -881,18 +867,6 @@ fn loop_id(value: String) -> Result<WorkflowNodeId, WorkflowAdapterError> {
         field: "loopId",
         source,
     })
-}
-
-impl WireNodeType {
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::Step => "step",
-            Self::Sequence => "sequence",
-            Self::Repeat => "repeat",
-            Self::Parallel => "parallel",
-            Self::Watch => "watch",
-        }
-    }
 }
 
 impl From<WireNodeType> for WorkflowNodeType {
@@ -1005,6 +979,16 @@ mod tests {
         include_str!("../../../../../../.cyril-6beh/terminal-failed-2.16.2.jsonl");
     const ABORTED_CAPTURE: &str =
         include_str!("../../../../../../.cyril-6beh/terminal-aborted-2.16.2.jsonl");
+    const SYNTHETIC_REPLAY: &str =
+        include_str!("../../../../../../.cyril-6beh/oracle-replay-events.jsonl");
+    const REPEAT_WATCH_CAPTURE: &str =
+        include_str!("../../../../../../experiments/conductor-spike/kas-repeat-watch-2.16.0.jsonl");
+    const REPLAY_SOURCES: [(&str, &str); 4] = [
+        ("oracle-replay-events.jsonl", SYNTHETIC_REPLAY),
+        ("terminal-failed-2.16.2.jsonl", FAILED_CAPTURE),
+        ("terminal-aborted-2.16.2.jsonl", ABORTED_CAPTURE),
+        ("kas-repeat-watch-2.16.0.jsonl", REPEAT_WATCH_CAPTURE),
+    ];
 
     fn must_succeed<T, E: std::fmt::Debug>(result: Result<T, E>, context: &str) -> T {
         match result {
@@ -1197,7 +1181,14 @@ mod tests {
             "status",
             node.status().map(WorkflowNodeStatus::as_str),
         );
-        insert_string(&mut data, "agentName", node.agent_name());
+        let agent_name = if node.node_type() == WorkflowNodeType::Watch {
+            node.descriptor()
+                .and_then(WorkflowNodeDescriptor::handler_name)
+                .or_else(|| node.agent_name())
+        } else {
+            node.agent_name()
+        };
+        insert_string(&mut data, "agentName", agent_name);
         if let Some(descriptor) = node.descriptor() {
             insert_string(&mut data, "model", descriptor.model());
             insert_string(&mut data, "effort", descriptor.effort());
@@ -1211,7 +1202,6 @@ mod tests {
             );
             insert_value(&mut data, "stopCondition", descriptor.stop_condition());
             insert_value(&mut data, "stopWhen", descriptor.stop_when());
-            insert_string(&mut data, "handlerName", descriptor.handler_name());
         }
         insert_string(
             &mut data,
@@ -1237,6 +1227,8 @@ mod tests {
         );
         insert_string(&mut data, "startedAt", node.started_at());
         insert_string(&mut data, "endedAt", node.ended_at());
+        insert_value(&mut data, "watchCursor", node.watch_cursor());
+        insert_value(&mut data, "watchTerminal", node.watch_terminal());
         insert_string(&mut data, "prompt", node.prompt());
         insert_string(&mut data, "nodePauseReason", node.node_pause_reason());
         if let Some((iteration, stop_condition_met)) = node.latest_loop_iteration() {
@@ -1271,7 +1263,12 @@ mod tests {
                 serde_json::Value::String(descriptor.node_type().as_str().to_owned()),
             ),
         ]);
-        insert_string(&mut data, "agentName", descriptor.agent_name());
+        let agent_name = if descriptor.node_type() == WorkflowNodeType::Watch {
+            descriptor.handler_name()
+        } else {
+            descriptor.agent_name()
+        };
+        insert_string(&mut data, "agentName", agent_name);
         insert_string(&mut data, "model", descriptor.model());
         insert_string(&mut data, "effort", descriptor.effort());
         insert_u32(&mut data, "maxIterations", descriptor.max_iterations());
@@ -1284,7 +1281,6 @@ mod tests {
         );
         insert_value(&mut data, "stopCondition", descriptor.stop_condition());
         insert_value(&mut data, "stopWhen", descriptor.stop_when());
-        insert_string(&mut data, "handlerName", descriptor.handler_name());
         match descriptor.node_type() {
             WorkflowNodeType::Sequence | WorkflowNodeType::Repeat => {
                 data.insert(
@@ -1367,7 +1363,7 @@ mod tests {
                 {
                     "nodeId": "sequence",
                     "type": "sequence",
-                    "steps": [{"nodeId": "nested", "type": "watch", "handlerName": "files"}]
+                    "steps": [{"nodeId": "nested", "type": "watch", "agentName": "files"}]
                 },
                 {
                     "nodeId": "repeat",
@@ -1383,7 +1379,7 @@ mod tests {
                     "type": "parallel",
                     "branches": [{"nodeId": "branch", "type": "step", "agentName": "worker"}]
                 },
-                {"nodeId": "watch", "type": "watch", "handlerName": "handler"}
+                {"nodeId": "watch", "type": "watch", "agentName": "handler"}
             ],
             "parentSessionId": "",
             "futureField": {"ignored": true}
@@ -1534,10 +1530,8 @@ mod tests {
         )
     }
 
-    fn replay_projection(passes: usize) -> serde_json::Value {
-        const REPLAY: &str =
-            include_str!("../../../../../../.cyril-6beh/oracle-replay-events.jsonl");
-        let frames = REPLAY
+    fn replay_projection(source: &str, passes: usize) -> serde_json::Value {
+        let frames = source
             .lines()
             .filter(|line| !line.is_empty())
             .map(|line| {
@@ -1551,20 +1545,26 @@ mod tests {
         let mut checkpoints = serde_json::Map::new();
         for _ in 0..passes {
             for frame in &frames {
-                let Some(method) = frame.get("method").and_then(serde_json::Value::as_str) else {
-                    panic!("replay frame lacks method");
+                let envelope = frame
+                    .get("parsed")
+                    .filter(|parsed| parsed.is_object())
+                    .unwrap_or(frame);
+                let Some(method) = envelope.get("method").and_then(serde_json::Value::as_str)
+                else {
+                    continue;
                 };
                 let method = match method.strip_prefix('_') {
                     Some(normalized) => normalized,
                     None => method,
                 };
                 if let Some(Some(Notification::Workflow(event))) =
-                    to_notification(method, &frame["params"])
+                    to_notification(method, &envelope["params"])
                 {
                     must_succeed(tracker.apply_event(*event), "replay event applies");
                 }
-                if let Some(checkpoint) =
-                    frame.get("checkpoint").and_then(serde_json::Value::as_str)
+                if let Some(checkpoint) = envelope
+                    .get("checkpoint")
+                    .and_then(serde_json::Value::as_str)
                 {
                     checkpoints
                         .insert(checkpoint.to_owned(), workflow_tracker_projection(&tracker));
@@ -1579,16 +1579,31 @@ mod tests {
 
     #[test]
     fn workflow_capture_replay_matches_independent_folder() {
-        let one = replay_projection(1);
-        let actual = serde_json::json!([{
-            "source": "oracle-replay-events.jsonl",
-            "expected": one,
-            "oneEqualsTwo": true,
-        }]);
+        let actual = serde_json::Value::Array(
+            REPLAY_SOURCES
+                .iter()
+                .map(|(name, source)| {
+                    let one = replay_projection(source, 1);
+                    let one_equals_two = one == replay_projection(source, 2);
+                    serde_json::json!({
+                        "source": name,
+                        "expected": one,
+                        "oneEqualsTwo": one_equals_two,
+                    })
+                })
+                .collect(),
+        );
+        let expected_text = match std::env::var_os("CYRIL_WORKFLOW_ORACLE_EXPECTED") {
+            Some(path) => must_succeed(
+                std::fs::read_to_string(path),
+                "replay oracle output is readable",
+            ),
+            None => {
+                include_str!("../../../../../../.cyril-6beh/oracle-replay-expected.json").to_owned()
+            }
+        };
         let expected = must_succeed(
-            serde_json::from_str::<serde_json::Value>(include_str!(
-                "../../../../../../.cyril-6beh/oracle-replay-expected.json"
-            )),
+            serde_json::from_str::<serde_json::Value>(&expected_text),
             "replay oracle output is valid JSON",
         );
         assert_eq!(actual, expected);
@@ -1596,11 +1611,13 @@ mod tests {
 
     #[test]
     fn workflow_capture_replay_is_state_idempotent() {
-        assert_eq!(
-            replay_projection(1),
-            replay_projection(2),
-            "workflow replay must be idempotent"
-        );
+        for (name, source) in REPLAY_SOURCES {
+            assert_eq!(
+                replay_projection(source, 1),
+                replay_projection(source, 2),
+                "{name} replay must be idempotent"
+            );
+        }
     }
     #[test]
     fn workflow_capture_state_matches_oracle() {
@@ -2149,7 +2166,7 @@ mod tests {
             {
                 "nodeId": "watch",
                 "type": "watch",
-                "handlerName": "files"
+                "agentName": "files"
             }
         ]);
         for outcome in ["applied", "rejected", "dropped"] {
@@ -2815,7 +2832,7 @@ mod tests {
             "watch" => serde_json::json!({
                 "nodeId": "node",
                 "type": "watch",
-                "handlerName": ""
+                "agentName": ""
             }),
             other => panic!("unknown descriptor fixture type {other}"),
         }
@@ -2884,8 +2901,8 @@ mod tests {
                 ("branches", serde_json::Value::Null, "wrong_type"),
             ]),
             "watch" => fields.extend([
-                ("handlerName", serde_json::Value::Bool(false), "wrong_type"),
-                ("handlerName", serde_json::Value::Null, "wrong_type"),
+                ("agentName", serde_json::Value::Bool(false), "wrong_type"),
+                ("agentName", serde_json::Value::Null, "wrong_type"),
             ]),
             other => panic!("unknown descriptor fixture type {other}"),
         }
@@ -3885,6 +3902,8 @@ mod tests {
             "completionSignalSource",
             "startedAt",
             "endedAt",
+            "watchCursor",
+            "watchTerminal",
         ];
         for field in optional_snapshot_fields {
             for present in [false, true] {
@@ -3917,7 +3936,9 @@ mod tests {
                 if present {
                     let value = match field {
                         "iteration" => serde_json::json!(0),
-                        "artifacts" | "capturedOutput" => serde_json::Value::Null,
+                        "artifacts" | "capturedOutput" | "watchCursor" | "watchTerminal" => {
+                            serde_json::Value::Null
+                        }
                         "completionSignal" => serde_json::Value::String("success".to_owned()),
                         "completionSignalSource" => {
                             serde_json::Value::String("send_message".to_owned())
@@ -3941,10 +3962,41 @@ mod tests {
                     "completionSignalSource" => node.completion_signal_source().is_some(),
                     "startedAt" => node.started_at().is_some(),
                     "endedAt" => node.ended_at().is_some(),
+                    "watchCursor" => node.watch_cursor().is_some(),
+                    "watchTerminal" => node.watch_terminal().is_some(),
                     other => panic!("unknown node optional field {other}"),
                 };
                 assert_eq!(actual, present, "snapshot root optional {field}");
             }
+        }
+    }
+
+    #[test]
+    fn workflow_sparse_snapshot_descriptor_matrix() {
+        for node_type in ["step", "sequence", "repeat", "parallel", "watch"] {
+            let mut snapshot = completed_snapshot("workflow", "completed");
+            let root = match must_object_mut(&mut snapshot, "snapshot").get_mut("root") {
+                Some(value) => value,
+                None => panic!("snapshot root absent"),
+            };
+            set_top_field(
+                root,
+                "type",
+                serde_json::Value::String(node_type.to_owned()),
+            );
+            let wire: WireSnapshot =
+                must_succeed(deserialize(&snapshot), "sparse snapshot descriptor");
+            let snapshot = must_succeed(wire.try_into_domain(), "sparse snapshot domain");
+            let descriptor = snapshot.root().descriptor();
+            assert_eq!(descriptor.node_type().as_str(), node_type);
+            assert!(descriptor.agent_name().is_none());
+            assert!(descriptor.model().is_none());
+            assert!(descriptor.effort().is_none());
+            assert!(descriptor.max_iterations().is_none());
+            assert!(descriptor.on_max_iterations().is_none());
+            assert!(descriptor.stop_condition().is_none());
+            assert!(descriptor.stop_when().is_none());
+            assert!(descriptor.handler_name().is_none());
         }
     }
 

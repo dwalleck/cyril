@@ -113,9 +113,13 @@
       "optional": []
     },
     "watch": {
-      "required": ["nodeId", "type", "handlerName"],
+      "required": ["nodeId", "type", "agentName"],
       "optional": []
     }
+  },
+  "snapshot_node_fields": {
+    "required": ["nodeId", "type", "status"],
+    "optional": ["children", "agentName", "model", "effort", "maxIterations", "onMaxIterations", "stopCondition", "stopWhen", "sessionId", "artifacts", "capturedOutput", "failureReason", "iteration", "branchId", "completionSignal", "completionSignalSource", "startedAt", "endedAt", "watchCursor", "watchTerminal"]
   },
   "enum_domains": {
     "snapshot_run_status": ["running", "paused", "completed", "failed", "aborted"],
@@ -212,7 +216,7 @@
     "workflowName", "status", "inputs", "artifacts", "capturedOutputs", "createdAt", "planRevision", "parentSessionId", "workspacePath", "root"
   ],
   "snapshot_owned_node_fields": [
-    "descriptor", "status", "sessionId", "artifacts", "capturedOutput", "failureReason", "iteration", "branchId", "completionSignal", "completionSignalSource", "startedAt", "endedAt"
+    "descriptor", "status", "sessionId", "artifacts", "capturedOutput", "failureReason", "iteration", "branchId", "completionSignal", "completionSignalSource", "startedAt", "endedAt", "watchCursor", "watchTerminal"
   ],
   "event_only_fields": [
     "prompt", "pendingSteps", "queueResolution", "runPauseReason", "nodePauseReason", "latestLoopIteration", "latestWatchPoll"

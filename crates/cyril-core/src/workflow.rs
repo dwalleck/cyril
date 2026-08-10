@@ -47,7 +47,10 @@ enum WorkflowNodeIdentity {
         node_type: WorkflowNodeType,
         agent_name: Option<String>,
     },
-    Snapshot(WorkflowNodeDescriptor),
+    Snapshot {
+        descriptor: WorkflowNodeDescriptor,
+        event_agent_name: Option<String>,
+    },
 }
 
 /// Immutable read model for one canonical runtime node.
@@ -65,6 +68,8 @@ pub struct WorkflowNodeState {
     completion_signal_source: Option<WorkflowCompletionSignalSource>,
     started_at: Option<String>,
     ended_at: Option<String>,
+    watch_cursor: Option<serde_json::Value>,
+    watch_terminal: Option<serde_json::Value>,
     prompt: Option<String>,
     node_pause_reason: Option<String>,
     latest_loop_iteration: Option<(u32, bool)>,
@@ -86,9 +91,14 @@ impl WorkflowNodeState {
             completion_signal_source,
             started_at,
             ended_at,
+            watch_cursor,
+            watch_terminal,
         ) = parts.into_values();
         Self {
-            identity: WorkflowNodeIdentity::Snapshot(descriptor),
+            identity: WorkflowNodeIdentity::Snapshot {
+                descriptor,
+                event_agent_name: None,
+            },
             status: Some(status),
             session_id,
             artifacts,
@@ -100,6 +110,8 @@ impl WorkflowNodeState {
             completion_signal_source,
             started_at,
             ended_at,
+            watch_cursor,
+            watch_terminal,
             prompt: None,
             node_pause_reason: None,
             latest_loop_iteration: None,
@@ -133,6 +145,8 @@ impl WorkflowNodeState {
             completion_signal_source: None,
             started_at: None,
             ended_at: None,
+            watch_cursor: None,
+            watch_terminal: None,
             prompt,
             node_pause_reason: None,
             latest_loop_iteration: None,
@@ -144,7 +158,7 @@ impl WorkflowNodeState {
     pub fn descriptor(&self) -> Option<&WorkflowNodeDescriptor> {
         match &self.identity {
             WorkflowNodeIdentity::Opening { .. } => None,
-            WorkflowNodeIdentity::Snapshot(descriptor) => Some(descriptor),
+            WorkflowNodeIdentity::Snapshot { descriptor, .. } => Some(descriptor),
         }
     }
 
@@ -152,7 +166,7 @@ impl WorkflowNodeState {
     pub fn node_id(&self) -> &WorkflowNodeId {
         match &self.identity {
             WorkflowNodeIdentity::Opening { node_id, .. } => node_id,
-            WorkflowNodeIdentity::Snapshot(descriptor) => descriptor.node_id(),
+            WorkflowNodeIdentity::Snapshot { descriptor, .. } => descriptor.node_id(),
         }
     }
 
@@ -160,7 +174,7 @@ impl WorkflowNodeState {
     pub fn node_type(&self) -> WorkflowNodeType {
         match &self.identity {
             WorkflowNodeIdentity::Opening { node_type, .. } => *node_type,
-            WorkflowNodeIdentity::Snapshot(descriptor) => descriptor.node_type(),
+            WorkflowNodeIdentity::Snapshot { descriptor, .. } => descriptor.node_type(),
         }
     }
 
@@ -168,7 +182,12 @@ impl WorkflowNodeState {
     pub fn agent_name(&self) -> Option<&str> {
         match &self.identity {
             WorkflowNodeIdentity::Opening { agent_name, .. } => agent_name.as_deref(),
-            WorkflowNodeIdentity::Snapshot(descriptor) => descriptor.agent_name(),
+            WorkflowNodeIdentity::Snapshot {
+                descriptor,
+                event_agent_name,
+            } => event_agent_name
+                .as_deref()
+                .or_else(|| descriptor.agent_name()),
         }
     }
 
@@ -225,6 +244,16 @@ impl WorkflowNodeState {
     /// Returns the opaque end timestamp when supplied.
     pub fn ended_at(&self) -> Option<&str> {
         self.ended_at.as_deref()
+    }
+
+    /// Returns opaque snapshot-authored watch cursor metadata when supplied.
+    pub fn watch_cursor(&self) -> Option<&serde_json::Value> {
+        self.watch_cursor.as_ref()
+    }
+
+    /// Returns opaque snapshot-authored watch terminal metadata when supplied.
+    pub fn watch_terminal(&self) -> Option<&serde_json::Value> {
+        self.watch_terminal.as_ref()
     }
 
     /// Returns the most recent node-start prompt when supplied.
@@ -319,6 +348,9 @@ impl WorkflowRun {
 
     /// Returns the opening descriptor forest until a persisted snapshot replaces it.
     pub fn opening_plan(&self) -> Option<&[WorkflowNodeDescriptor]> {
+        if self.snapshot_plan.is_some() {
+            return None;
+        }
         self.opening_plan.as_deref()
     }
 
@@ -470,17 +502,33 @@ impl WorkflowTracker {
                 changed |= replace_if_some(current_agent, agent_name);
                 changed
             }
-            WorkflowNodeIdentity::Snapshot(descriptor) => {
-                let preserved_agent = match agent_name {
-                    Some(agent_name) => Some(agent_name),
-                    None => descriptor.agent_name().map(str::to_owned),
-                };
-                node.identity = WorkflowNodeIdentity::Opening {
-                    node_id,
-                    node_type,
-                    agent_name: preserved_agent,
-                };
-                true
+            WorkflowNodeIdentity::Snapshot {
+                descriptor,
+                event_agent_name,
+            } => {
+                if descriptor.node_type() == node_type {
+                    let mut changed = descriptor.replace_node_id(node_id);
+                    if let Some(agent_name) = agent_name
+                        && event_agent_name
+                            .as_deref()
+                            .or_else(|| descriptor.agent_name())
+                            != Some(agent_name.as_str())
+                    {
+                        *event_agent_name = Some(agent_name);
+                        changed = true;
+                    }
+                    changed
+                } else {
+                    let preserved_agent = agent_name
+                        .or_else(|| event_agent_name.take())
+                        .or_else(|| descriptor.agent_name().map(str::to_owned));
+                    node.identity = WorkflowNodeIdentity::Opening {
+                        node_id,
+                        node_type,
+                        agent_name: preserved_agent,
+                    };
+                    true
+                }
             }
         };
         changed |= replace_if_some(&mut node.session_id, session_id);
@@ -617,7 +665,7 @@ impl WorkflowTracker {
             let exact_repeat = current.workflow_name == workflow_name
                 && current.inputs == inputs
                 && current.parent_session_id == parent_session_id
-                && current.opening_plan.as_ref() == Some(&opening_plan);
+                && opening_plan_matches(current, &opening_plan);
             if exact_repeat {
                 return Ok(false);
             }
@@ -656,6 +704,9 @@ impl WorkflowTracker {
         let Some(current) = self.runs.get(workflow_id) else {
             return;
         };
+        if incoming.opening_plan.is_none() {
+            incoming.opening_plan.clone_from(&current.opening_plan);
+        }
         incoming.pending_steps.clone_from(&current.pending_steps);
         incoming
             .queue_resolution
@@ -711,6 +762,16 @@ fn replace_if_some<T: PartialEq>(target: &mut Option<T>, incoming: Option<T>) ->
     match incoming {
         Some(incoming) => replace(target, Some(incoming)),
         None => false,
+    }
+}
+
+fn opening_plan_matches(run: &WorkflowRun, incoming: &[WorkflowNodeDescriptor]) -> bool {
+    match run.opening_plan.as_deref() {
+        Some(opening_plan) => opening_plan == incoming,
+        None => run
+            .snapshot_plan
+            .as_ref()
+            .is_some_and(|snapshot_plan| snapshot_plan.children() == incoming),
     }
 }
 
@@ -916,6 +977,50 @@ mod tests {
             Ok(path) => path,
             Err(error) => panic!("invalid node path fixture: {error}"),
         }
+    }
+
+    #[derive(Clone, Default)]
+    struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+    impl std::io::Write for CaptureWriter {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            let Ok(mut capture) = self.0.lock() else {
+                return Err(std::io::Error::other("capture lock poisoned"));
+            };
+            capture.extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
+        type Writer = CaptureWriter;
+
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    fn with_captured_warnings<T>(f: impl FnOnce() -> T) -> (T, String) {
+        let capture = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::WARN)
+            .with_ansi(false)
+            .with_writer(capture.clone())
+            .finish();
+        let result = tracing::subscriber::with_default(subscriber, f);
+        let bytes = match capture.0.lock() {
+            Ok(capture) => capture.clone(),
+            Err(error) => panic!("capture lock poisoned: {error}"),
+        };
+        let logs = match String::from_utf8(bytes) {
+            Ok(logs) => logs,
+            Err(error) => panic!("captured logs are not UTF-8: {error}"),
+        };
+        (result, logs)
     }
 
     fn step_node(id: &str) -> WorkflowNodeSnapshot {
@@ -1508,7 +1613,9 @@ mod tests {
         .with_completion_signal(WorkflowCompletionSignal::Success)
         .with_completion_signal_source(WorkflowCompletionSignalSource::SendMessage)
         .with_started_at("start".to_owned())
-        .with_ended_at("end".to_owned());
+        .with_ended_at("end".to_owned())
+        .with_watch_cursor(serde_json::json!({"seen": ["comment"]}))
+        .with_watch_terminal(serde_json::Value::Bool(true));
         let rich = WorkflowSnapshot::new(
             workflow_id.clone(),
             "recipe".to_owned(),
@@ -1529,6 +1636,20 @@ mod tests {
         );
         let mut tracker = WorkflowTracker::new();
         assert_eq!(tracker.apply_snapshot(rich), Ok(true));
+        let Some(rich_run) = tracker.get(&workflow_id) else {
+            panic!("rich snapshot did not seed");
+        };
+        let Some(rich_node) = rich_run.node(&child_path) else {
+            panic!("rich child missing");
+        };
+        assert_eq!(
+            rich_node.watch_cursor(),
+            Some(&serde_json::json!({"seen": ["comment"]}))
+        );
+        assert_eq!(
+            rich_node.watch_terminal(),
+            Some(&serde_json::Value::Bool(true))
+        );
         let Some(run) = tracker.runs.get_mut(&workflow_id) else {
             panic!("rich snapshot did not seed");
         };
@@ -1596,6 +1717,8 @@ mod tests {
         assert!(node.completion_signal_source().is_none());
         assert!(node.started_at().is_none());
         assert!(node.ended_at().is_none());
+        assert!(node.watch_cursor().is_none());
+        assert!(node.watch_terminal().is_none());
         assert_eq!(node.prompt(), Some("prompt"));
         assert_eq!(node.node_pause_reason(), Some("need-human"));
         assert_eq!(node.latest_loop_iteration(), Some((2, true)));
@@ -1723,6 +1846,114 @@ mod tests {
             assert_eq!(tracker.apply_event(conflict), Ok(false));
             assert_eq!(tracker.get(&workflow_id("workflow")), before.as_ref());
         }
+    }
+
+    #[test]
+    fn snapshot_reconciled_node_start_preserves_descriptor_metadata() {
+        let id = workflow_id("workflow");
+        let path = node_path(&id, &["workflow", "step"]);
+        let snapshot = WorkflowSnapshot::new(
+            id.clone(),
+            "recipe".to_owned(),
+            WorkflowRunStatus::Running,
+            WorkflowSnapshotData::new(
+                serde_json::json!({"seed": 1}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
+                WorkflowNodeStatus::Running,
+                vec![WorkflowNodeSnapshot::new(
+                    WorkflowNodeDescriptor::step(
+                        node_id("step"),
+                        "snapshot-agent".to_owned(),
+                        Some("snapshot-model".to_owned()),
+                        Some("snapshot-effort".to_owned()),
+                    ),
+                    WorkflowNodeStatus::Running,
+                    Vec::new(),
+                )],
+            ),
+            WorkflowSnapshotMetadata::new("created".to_owned(), 1),
+        );
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(tracker.apply_snapshot(snapshot), Ok(true));
+
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("step"),
+                path.clone(),
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new()
+                    .with_agent_name("event-agent".to_owned())
+                    .with_session_id(SessionId::new("session")),
+            ))),
+            Ok(true)
+        );
+        let Some(node) = tracker.get(&id).and_then(|run| run.node(&path)) else {
+            panic!("snapshot node must survive a partial node_start");
+        };
+        let Some(descriptor) = node.descriptor() else {
+            panic!("snapshot descriptor must survive a partial node_start");
+        };
+        assert_eq!(node.agent_name(), Some("event-agent"));
+        assert_eq!(descriptor.model(), Some("snapshot-model"));
+        assert_eq!(descriptor.effort(), Some("snapshot-effort"));
+    }
+
+    #[test]
+    fn snapshot_reconciled_active_run_start_exact_repeat_is_silent() {
+        let id = workflow_id("workflow");
+        let step = WorkflowNodeDescriptor::step(
+            node_id("step"),
+            "agent".to_owned(),
+            Some("model".to_owned()),
+            Some("effort".to_owned()),
+        );
+        let opening = WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+            id.clone(),
+            "recipe".to_owned(),
+            serde_json::json!({"seed": 1}),
+            vec![step.clone()],
+            None,
+        ));
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(tracker.apply_event(opening.clone()), Ok(true));
+        assert_eq!(
+            tracker.apply_snapshot(WorkflowSnapshot::new(
+                id.clone(),
+                "recipe".to_owned(),
+                WorkflowRunStatus::Paused,
+                WorkflowSnapshotData::new(
+                    serde_json::json!({"seed": 1}),
+                    serde_json::json!({}),
+                    serde_json::json!({}),
+                ),
+                WorkflowNodeSnapshot::new(
+                    WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
+                    WorkflowNodeStatus::Paused,
+                    vec![WorkflowNodeSnapshot::new(
+                        step,
+                        WorkflowNodeStatus::Paused,
+                        Vec::new(),
+                    )],
+                ),
+                WorkflowSnapshotMetadata::new("created".to_owned(), 1),
+            )),
+            Ok(true)
+        );
+        let before = tracker.get(&id).cloned();
+
+        let (result, logs) = with_captured_warnings(|| tracker.apply_event(opening));
+
+        assert_eq!(result, Ok(false));
+        assert_eq!(tracker.get(&id), before.as_ref());
+        assert!(
+            !logs.contains("active_run_start_conflict"),
+            "exact replay must not warn as a conflict, got:\n{logs}"
+        );
     }
     #[test]
     fn node_start_merge_presence_matrix() {

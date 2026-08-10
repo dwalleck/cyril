@@ -11,6 +11,7 @@ Convert the nine shipped KAS `_kiro/workflow/*` lifecycle notifications into a t
 - Fresh 2.16.2 captures add live `failed` and `aborted` run/node states under `workflowsEnabled: false`.
 - `completionSignal` and `completionSignalSource` are optional metadata. A completed 2.16.2 node normally has neither.
 - The repeat capture contains final-state wrapper ids `loop#0`/`loop#1` and streamed paths `iter-0`/`iter-1` for the same runtime nodes.
+- The live 2.16.0 repeat/watch capture proves that `finalState.root` is a runtime projection, not a recipe echo: repeat snapshots omit recipe-only limits/actions/predicates; watch snapshots may omit handler identity while carrying `watchCursor` and `watchTerminal`.
 - The aborted 2.16.2 capture contains `run_start → run_complete(aborted) → run_start → run_complete(aborted)` for one workflow id after `_kiro/workflow/retry`; the re-signed spec treats the second opening as a fresh incarnation.
 
 ## Input shapes
@@ -32,17 +33,19 @@ Exactly nine known methods: `run_start`, `node_start`, `node_complete`, `node_pa
 - Repeat exhaustion action (`onMaxIterations`): `pause`, `abort`.
 - Every enum also has an invalid/unknown-string input shape, which is rejected at conversion rather than represented as a sentinel.
 
-### Node descriptors
+### Plan descriptors and runtime snapshot nodes
 
+- Plan descriptors in `run_start.nodeTree` and `steps_queued.pendingSteps` are discriminated recipes.
 - `step`: required node id and agent name; model and effort both absent/present independently.
 - `sequence`: empty, one-child, multi-child, duplicate-child-path, and recursively nested shapes.
 - `repeat`: empty/one/multi child; zero, one, observed large, exact `u32::MAX`, and `u32::MAX + 1` iteration limits; required `onMaxIterations` (`pause`/`abort` plus rejected unknown); and opaque `stopCondition`/`stopWhen` values absent/present independently.
 - `parallel`: empty, one-branch, multi-branch, and duplicate-branch-path shapes.
-- `watch`: required node id and handler name.
+- `watch`: required node id and wire `agentName`; that wire field carries the handler identity and the domain exposes it as a handler.
+- Runtime snapshot nodes require only node id, node type, and status. Every recipe/configuration field is optional there. A watch snapshot may carry neither identity field and may independently carry opaque `watchCursor` and `watchTerminal` JSON values.
 
 ### Optional-field matrix
 
-Every independently optional field is exercised as absent and present: parent session, step session, prompt, iteration, branch id, artifacts, captured output, failure reason, queue resolution/reason, completion signal/source, start/end timestamps, parent model, workspace path, model id, effort level, stop condition, and stop predicate. Required `onMaxIterations` is separately exercised with both valid variants, missing/wrong type, and unknown string. Every present known optional field also receives wrong-type and explicit-null rows; null remains valid only inside fields whose domain is opaque `serde_json::Value`. Partial `node_start` re-emission covers mixed presence. Generated merge fixtures vary the reachable presence bits independently instead of testing only “all absent” and “all present.”
+Every independently optional event, plan, or runtime-snapshot field is exercised as absent and present: parent session, step session, prompt, iteration, branch id, artifacts, captured output, failure reason, queue resolution/reason, completion signal/source, start/end timestamps, parent model, workspace path, model id, effort level, stop condition, stop predicate, snapshot agent/handler identity, snapshot repeat limits/actions, watch cursor, and watch terminal marker. Plan-required `onMaxIterations` is separately exercised with both valid variants, missing/wrong type, and unknown string. Every present known optional field also receives wrong-type and explicit-null rows except opaque JSON runtime fields, where null is preserved as data. Partial `node_start` re-emission covers mixed presence. Generated merge fixtures vary the reachable presence bits independently instead of testing only all-absent/all-present endpoints.
 
 ### Collections and scalar boundaries
 
@@ -121,7 +124,7 @@ A snapshot is first validated and flattened into a temporary canonical run. Noth
 
 `new`, `list/load`, and `run_complete.finalState` use one canonical snapshot validator/flattener behind distinct transition gates. Direct `apply_snapshot` seeds a missing run and lets an active run accept any valid snapshot status, including transition to terminal; it reconciles an already-terminal run only when the incoming status equals the current terminal status. A nonterminal or different-terminal direct snapshot for a terminal id returns `WorkflowStateError::TerminalSnapshotConflict` and changes nothing. A `run_complete` never seeds an unknown run. For an active run it reconciles a valid completion status; for a terminal run an exact duplicate is unchanged and every non-exact completion event warns and is ignored, even when its final snapshot has the same terminal status. Thus `run_start` remains the sole incarnation reset. Accepted snapshot-owned runtime fields replace prior values, including clearing optional completion metadata when omitted. Stream-only data absent from snapshots, such as raw `node_start.prompt`, remains attached to the canonical node.
 
-Snapshot ownership is schema-based. Snapshot-owned run fields are workflow name/status/inputs/artifacts/captured outputs/created time/plan revision/parent session/workspace path and the descriptor tree. Snapshot-owned node fields are descriptor data plus status/session/artifacts/captured output/failure reason/iteration/branch/completion signal/source/start/end times. When an accepted snapshot omits one of those optional fields, the canonical value clears. Event-only fields absent from `WorkflowState`—node-start prompt, queued-step/acknowledgement data, pause reasons, and latest loop/watch event details—survive reconciliation. A fresh `run_start` incarnation clears both ownership classes before installing its opening data.
+Snapshot ownership is schema-based. Snapshot-owned run fields are workflow name/status/inputs/artifacts/captured outputs/created time/plan revision/parent session/workspace path and the descriptor tree. Snapshot-owned node fields are the sparse runtime descriptor data plus status/session/artifacts/captured output/failure reason/iteration/branch/completion signal/source/start/end times and opaque watch cursor/terminal metadata. Recipe-only fields absent from a runtime snapshot remain absent rather than being invented; watch handler identity may likewise be absent. When an accepted snapshot omits one of those optional fields, the canonical value clears. Event-only fields absent from `WorkflowState`—node-start prompt, queued-step/acknowledgement data, pause reasons, and latest loop/watch event details—survive reconciliation. A fresh `run_start` incarnation clears both ownership classes before installing its opening data.
 
 ### Event application
 
@@ -140,7 +143,7 @@ Snapshot ownership is schema-based. Snapshot-owned run fields are workflow name/
 
 1. The conversion boundary is exact: only the nine known method names produce workflow notifications, while near misses, unrelated KAS methods, and every existing non-workflow path preserve their prior outputs.
 2. For every method, each required-field omission and each known-field wrong type, invalid enum, or disallowed explicit null logs a contextual warning, changes zero state, and does not prevent the next valid frame from converting.
-3. Every documented node/snapshot-run/completion-status/outcome/repeat-exhaustion variant, opaque arbitrary-JSON shape and exact scalar/key boundary, identifier/scalar-string form, optional-field presence mask, collection/duplicate-key form, numeric/node-path boundary, opaque workspace-path form, typed-object unknown-extra boundary, duplicate canonical path, and outer/inner completion-status mismatch has a case-labelled lossless-or-rejected result; every rejected case includes stable structured warning context and unchanged-state evidence.
+3. Every documented plan descriptor, sparse runtime-snapshot node, node/snapshot-run/completion-status/outcome/repeat-exhaustion variant, opaque arbitrary-JSON shape and exact scalar/key boundary, identifier/scalar-string form, optional-field presence mask, collection/duplicate-key form, numeric/node-path boundary, opaque workspace-path form, typed-object unknown-extra boundary, duplicate canonical path, and outer/inner completion-status mismatch has a case-labelled lossless-or-rejected result; recipe-only fields are never invented in runtime snapshots, and every rejected case includes stable structured warning context and unchanged-state evidence.
 4. Direct snapshot ingestion and `run_complete.finalState` share one atomic validator/canonicalizer behind an explicit entrypoint × prior-status × incoming-status gate: direct snapshots may seed and reconcile persisted state; completion events never seed, apply only to active runs, and are duplicate-only after terminal.
 5. Repeat wrappers translate only for a direct sequence child matching both `<repeat-id>#N` and `iteration == N`; they yield `iter-N` while preserving wrapper metadata, and every near miss remains literal.
 6. Repeated partial node starts and completions merge idempotently: absent fields preserve, present fields replace, a changed node id moves only its path between possibly shared/occupied index buckets, and duplicate nodes never appear.
@@ -188,3 +191,14 @@ Falsifiers are ordered by observed execution cost within their dependency groups
 ## Approval decisions
 
 The design recommends the consuming `WorkflowEvent` interface rather than the issue note's borrowed `apply_notification(&Notification)` sketch. This is the only intentional deviation from that sketch: it keeps the module deep and avoids cloning full snapshots while preserving every signed observable behavior.
+
+
+## Approved design correction — 2026-08-09
+
+The approved design's original claim that watch plans require `handlerName`, and its derivative assumption that runtime snapshots repeat complete recipe descriptors, were falsified by the committed 2.16.0 repeat/watch capture. The capture and `docs/kiro-2.16.0-wire-audit.md` agree that a watch plan uses `agentName` for handler identity. The capture also shows sparse runtime repeat/watch nodes: recipe-only repeat fields and watch identity may be absent, while `watchCursor` and `watchTerminal` may be present.
+
+The wire adapter therefore keeps separate strict plan-descriptor and sparse runtime-snapshot structs. Domain descriptors preserve the semantic distinction through handler-oriented accessors without requiring a nonexistent wire key. The independent Python folder remains intentionally tolerant; the four-source Rust replay must match it field-for-field and may not make both sides strict enough to drop the same live frame.
+
+Cheapest falsifier: replay the synthetic, failed, aborted, and live repeat/watch sources once and twice, then compare the Rust canonical projection with `.cyril-6beh/oracle-replay.py`. A missing live watch run, an invented repeat limit/action, a lost watch cursor/terminal value, or any projection diff falsifies the correction. This is the existing C3/C13 assembled replay fence, not a new feature claim.
+
+Status: **passed** — `.cyril-6beh/compare-oracles.sh replay` accepted all four sources; Rust and Python projections were equal, the live watch run remained present with cursor/terminal metadata, and the test completed in 0.01 seconds.

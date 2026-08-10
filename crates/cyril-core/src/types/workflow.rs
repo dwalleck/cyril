@@ -220,7 +220,7 @@ pub struct WorkflowNodeDescriptor {
 #[derive(Debug, Clone, PartialEq)]
 enum WorkflowNodeDescriptorKind {
     Step {
-        agent_name: String,
+        agent_name: Option<String>,
         model: Option<String>,
         effort: Option<String>,
     },
@@ -229,8 +229,8 @@ enum WorkflowNodeDescriptorKind {
     },
     Repeat {
         steps: Vec<WorkflowNodeDescriptor>,
-        max_iterations: u32,
-        on_max_iterations: WorkflowRepeatExhaustion,
+        max_iterations: Option<u32>,
+        on_max_iterations: Option<WorkflowRepeatExhaustion>,
         stop_condition: Option<serde_json::Value>,
         stop_when: Option<serde_json::Value>,
     },
@@ -238,7 +238,7 @@ enum WorkflowNodeDescriptorKind {
         branches: Vec<WorkflowNodeDescriptor>,
     },
     Watch {
-        handler_name: String,
+        handler_name: Option<String>,
     },
 }
 
@@ -253,7 +253,7 @@ impl WorkflowNodeDescriptor {
         Self {
             node_id,
             kind: WorkflowNodeDescriptorKind::Step {
-                agent_name,
+                agent_name: Some(agent_name),
                 model,
                 effort,
             },
@@ -281,8 +281,8 @@ impl WorkflowNodeDescriptor {
             node_id,
             kind: WorkflowNodeDescriptorKind::Repeat {
                 steps,
-                max_iterations,
-                on_max_iterations,
+                max_iterations: Some(max_iterations),
+                on_max_iterations: Some(on_max_iterations),
                 stop_condition,
                 stop_when,
             },
@@ -301,6 +301,56 @@ impl WorkflowNodeDescriptor {
     pub fn watch(node_id: WorkflowNodeId, handler_name: String) -> Self {
         Self {
             node_id,
+            kind: WorkflowNodeDescriptorKind::Watch {
+                handler_name: Some(handler_name),
+            },
+        }
+    }
+
+    #[cfg(any(feature = "kas", test))]
+    /// Constructs a sparse runtime step descriptor from snapshot-authored fields.
+    pub(crate) fn snapshot_step(
+        node_id: WorkflowNodeId,
+        agent_name: Option<String>,
+        model: Option<String>,
+        effort: Option<String>,
+    ) -> Self {
+        Self {
+            node_id,
+            kind: WorkflowNodeDescriptorKind::Step {
+                agent_name,
+                model,
+                effort,
+            },
+        }
+    }
+
+    #[cfg(any(feature = "kas", test))]
+    /// Constructs a sparse runtime repeat descriptor from snapshot-authored fields.
+    pub(crate) fn snapshot_repeat(
+        node_id: WorkflowNodeId,
+        max_iterations: Option<u32>,
+        on_max_iterations: Option<WorkflowRepeatExhaustion>,
+        stop_condition: Option<serde_json::Value>,
+        stop_when: Option<serde_json::Value>,
+    ) -> Self {
+        Self {
+            node_id,
+            kind: WorkflowNodeDescriptorKind::Repeat {
+                steps: Vec::new(),
+                max_iterations,
+                on_max_iterations,
+                stop_condition,
+                stop_when,
+            },
+        }
+    }
+
+    #[cfg(any(feature = "kas", test))]
+    /// Constructs a sparse runtime watch descriptor from snapshot-authored fields.
+    pub(crate) fn snapshot_watch(node_id: WorkflowNodeId, handler_name: Option<String>) -> Self {
+        Self {
+            node_id,
             kind: WorkflowNodeDescriptorKind::Watch { handler_name },
         }
     }
@@ -308,6 +358,15 @@ impl WorkflowNodeDescriptor {
     /// Returns this descriptor's stable node identifier.
     pub fn node_id(&self) -> &WorkflowNodeId {
         &self.node_id
+    }
+
+    /// Replaces the runtime node identifier while preserving descriptor metadata.
+    pub(crate) fn replace_node_id(&mut self, node_id: WorkflowNodeId) -> bool {
+        if self.node_id == node_id {
+            return false;
+        }
+        self.node_id = node_id;
+        true
     }
 
     /// Returns this descriptor's structural type.
@@ -336,7 +395,7 @@ impl WorkflowNodeDescriptor {
     /// Returns the agent name when this is a step descriptor.
     pub fn agent_name(&self) -> Option<&str> {
         match &self.kind {
-            WorkflowNodeDescriptorKind::Step { agent_name, .. } => Some(agent_name),
+            WorkflowNodeDescriptorKind::Step { agent_name, .. } => agent_name.as_deref(),
             _ => None,
         }
     }
@@ -360,7 +419,7 @@ impl WorkflowNodeDescriptor {
     /// Returns the maximum iteration count when this is a repeat descriptor.
     pub fn max_iterations(&self) -> Option<u32> {
         match self.kind {
-            WorkflowNodeDescriptorKind::Repeat { max_iterations, .. } => Some(max_iterations),
+            WorkflowNodeDescriptorKind::Repeat { max_iterations, .. } => max_iterations,
             _ => None,
         }
     }
@@ -370,7 +429,7 @@ impl WorkflowNodeDescriptor {
         match self.kind {
             WorkflowNodeDescriptorKind::Repeat {
                 on_max_iterations, ..
-            } => Some(on_max_iterations),
+            } => on_max_iterations,
             _ => None,
         }
     }
@@ -394,7 +453,7 @@ impl WorkflowNodeDescriptor {
     /// Returns the handler name when this is a watch descriptor.
     pub fn handler_name(&self) -> Option<&str> {
         match &self.kind {
-            WorkflowNodeDescriptorKind::Watch { handler_name } => Some(handler_name),
+            WorkflowNodeDescriptorKind::Watch { handler_name } => handler_name.as_deref(),
             _ => None,
         }
     }
@@ -450,6 +509,8 @@ pub struct WorkflowNodeSnapshot {
     completion_signal_source: Option<WorkflowCompletionSignalSource>,
     started_at: Option<String>,
     ended_at: Option<String>,
+    watch_cursor: Option<serde_json::Value>,
+    watch_terminal: Option<serde_json::Value>,
 }
 
 /// Owned node-snapshot fields consumed by the workflow state module.
@@ -467,6 +528,8 @@ pub(crate) struct WorkflowNodeSnapshotParts {
     completion_signal_source: Option<WorkflowCompletionSignalSource>,
     started_at: Option<String>,
     ended_at: Option<String>,
+    watch_cursor: Option<serde_json::Value>,
+    watch_terminal: Option<serde_json::Value>,
 }
 
 pub(crate) type WorkflowNodeSnapshotValues = (
@@ -482,6 +545,8 @@ pub(crate) type WorkflowNodeSnapshotValues = (
     Option<WorkflowCompletionSignalSource>,
     Option<String>,
     Option<String>,
+    Option<serde_json::Value>,
+    Option<serde_json::Value>,
 );
 
 impl WorkflowNodeSnapshotParts {
@@ -507,6 +572,8 @@ impl WorkflowNodeSnapshotParts {
             self.completion_signal_source,
             self.started_at,
             self.ended_at,
+            self.watch_cursor,
+            self.watch_terminal,
         )
     }
 }
@@ -532,6 +599,8 @@ impl WorkflowNodeSnapshot {
             completion_signal_source: None,
             started_at: None,
             ended_at: None,
+            watch_cursor: None,
+            watch_terminal: None,
         }
     }
 
@@ -592,6 +661,18 @@ impl WorkflowNodeSnapshot {
     /// Sets the opaque end timestamp.
     pub fn with_ended_at(mut self, ended_at: String) -> Self {
         self.ended_at = Some(ended_at);
+        self
+    }
+
+    /// Sets opaque watch cursor metadata.
+    pub fn with_watch_cursor(mut self, watch_cursor: serde_json::Value) -> Self {
+        self.watch_cursor = Some(watch_cursor);
+        self
+    }
+
+    /// Sets opaque watch terminal metadata.
+    pub fn with_watch_terminal(mut self, watch_terminal: serde_json::Value) -> Self {
+        self.watch_terminal = Some(watch_terminal);
         self
     }
 
@@ -660,6 +741,16 @@ impl WorkflowNodeSnapshot {
         self.ended_at.as_deref()
     }
 
+    /// Returns opaque watch cursor metadata when supplied.
+    pub fn watch_cursor(&self) -> Option<&serde_json::Value> {
+        self.watch_cursor.as_ref()
+    }
+
+    /// Returns opaque watch terminal metadata when supplied.
+    pub fn watch_terminal(&self) -> Option<&serde_json::Value> {
+        self.watch_terminal.as_ref()
+    }
+
     /// Moves every field into the workflow state canonicalizer.
     pub(crate) fn into_parts(self) -> WorkflowNodeSnapshotParts {
         WorkflowNodeSnapshotParts {
@@ -676,6 +767,8 @@ impl WorkflowNodeSnapshot {
             completion_signal_source: self.completion_signal_source,
             started_at: self.started_at,
             ended_at: self.ended_at,
+            watch_cursor: self.watch_cursor,
+            watch_terminal: self.watch_terminal,
         }
     }
 }
@@ -1988,11 +2081,28 @@ mod tests {
                 "optional": []
             },
             "watch": {
-                "required": ["nodeId", "type", "handlerName"],
+                "required": ["nodeId", "type", "agentName"],
                 "optional": []
             }
         });
         assert_eq!(projection, manifest["descriptor_fields"]);
+
+        let sparse_step =
+            WorkflowNodeDescriptor::snapshot_step(node_id("runtime-step"), None, None, None);
+        assert!(sparse_step.agent_name().is_none());
+        assert!(sparse_step.model().is_none());
+        assert!(sparse_step.effort().is_none());
+        let sparse_repeat = WorkflowNodeDescriptor::snapshot_repeat(
+            node_id("runtime-repeat"),
+            None,
+            None,
+            None,
+            None,
+        );
+        assert!(sparse_repeat.max_iterations().is_none());
+        assert!(sparse_repeat.on_max_iterations().is_none());
+        let sparse_watch = WorkflowNodeDescriptor::snapshot_watch(node_id("runtime-watch"), None);
+        assert!(sparse_watch.handler_name().is_none());
     }
 
     #[test]
@@ -2011,7 +2121,9 @@ mod tests {
         .with_completion_signal(WorkflowCompletionSignal::Success)
         .with_completion_signal_source(WorkflowCompletionSignalSource::StatusUpdate)
         .with_started_at("started".to_owned())
-        .with_ended_at("ended".to_owned());
+        .with_ended_at("ended".to_owned())
+        .with_watch_cursor(serde_json::json!({"cursor": [1, 2]}))
+        .with_watch_terminal(serde_json::Value::Bool(true));
         let root = WorkflowNodeSnapshot::new(
             WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
             WorkflowNodeStatus::Completed,
@@ -2081,6 +2193,11 @@ mod tests {
         );
         assert_eq!(child.started_at(), Some("started"));
         assert_eq!(child.ended_at(), Some("ended"));
+        assert_eq!(
+            child.watch_cursor(),
+            Some(&serde_json::json!({"cursor": [1, 2]}))
+        );
+        assert_eq!(child.watch_terminal(), Some(&serde_json::Value::Bool(true)));
 
         let minimal = WorkflowNodeSnapshot::new(
             WorkflowNodeDescriptor::watch(node_id("watch"), String::new()),
@@ -2097,6 +2214,8 @@ mod tests {
         assert!(minimal.completion_signal_source().is_none());
         assert!(minimal.started_at().is_none());
         assert!(minimal.ended_at().is_none());
+        assert!(minimal.watch_cursor().is_none());
+        assert!(minimal.watch_terminal().is_none());
         let metadata = WorkflowSnapshotMetadata::new(String::new(), 0);
         assert!(metadata.parent_session_id().is_none());
         assert!(metadata.workspace_path().is_none());
@@ -2134,14 +2253,16 @@ mod tests {
                 "completionSignal",
                 "completionSignalSource",
                 "startedAt",
-                "endedAt"
+                "endedAt",
+                "watchCursor",
+                "watchTerminal"
             ])
         );
     }
 
     #[test]
     fn workflow_snapshot_optional_presence_matrix() {
-        for mask in 0_u16..1 << 10 {
+        for mask in 0_u16..1 << 12 {
             let mut node = WorkflowNodeSnapshot::new(
                 WorkflowNodeDescriptor::step(
                     node_id("node"),
@@ -2183,6 +2304,12 @@ mod tests {
             if mask & 512 != 0 {
                 node = node.with_ended_at(String::new());
             }
+            if mask & 1024 != 0 {
+                node = node.with_watch_cursor(serde_json::Value::Null);
+            }
+            if mask & 2048 != 0 {
+                node = node.with_watch_terminal(serde_json::Value::Null);
+            }
 
             assert_eq!(node.session_id().is_some(), mask & 1 != 0);
             assert_eq!(node.artifacts().is_some(), mask & 2 != 0);
@@ -2194,6 +2321,8 @@ mod tests {
             assert_eq!(node.completion_signal_source().is_some(), mask & 128 != 0);
             assert_eq!(node.started_at().is_some(), mask & 256 != 0);
             assert_eq!(node.ended_at().is_some(), mask & 512 != 0);
+            assert_eq!(node.watch_cursor().is_some(), mask & 1024 != 0);
+            assert_eq!(node.watch_terminal().is_some(), mask & 2048 != 0);
             assert_eq!(node.descriptor().model().is_some(), mask & 1 != 0);
             assert_eq!(node.descriptor().effort().is_some(), mask & 2 != 0);
         }

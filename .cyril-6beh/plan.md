@@ -87,9 +87,9 @@ Complexity notation is parametric because the signed spec accepts large strings/
 
 ## Slice 2: Node descriptors and full snapshot shapes
 
-**Claim:** C3/C12 — all five recursive descriptors and complete wire-neutral snapshot shapes.
-**Oracle:** `oracle-manifest.json` `descriptor_fields`, enum/counter domains, snapshot-owned fields, and literal source shapes from the audit.
-**Stress fixture:** A 256-node/depth-10 forest with every descriptor, empty/one/many children, duplicate paths, shared ids, `u32::MAX`, every optional mask, and all snapshot run/node fields. Expected projection is the manifest-defined field set with no invented absent value.
+**Claim:** C3/C12 — all five recursive plan descriptors plus sparse wire-neutral runtime snapshot shapes.
+**Oracle:** `oracle-manifest.json` `descriptor_fields`, `snapshot_node_fields`, enum/counter domains, snapshot-owned fields, and literal capture shapes from the audit.
+**Stress fixture:** A 256-node/depth-10 plan forest with every descriptor, empty/one/many children, duplicate paths, shared ids, `u32::MAX`, and every plan optional mask; plus sparse runtime nodes with recipe fields absent, watch identity absent/present, opaque watch cursor/terminal values, and all snapshot-owned runtime fields. Expected projection is the manifest-defined field set with no invented absent value.
 **Loop budget:** Data construction/accessors add no implicit traversal; explicit clone is O(N+J) only when called. Production conversion/state will consume owned values.
 **Wall budget:** N/A — pure data definitions.
 **Files:** `crates/cyril-core/src/types/workflow.rs`.
@@ -120,9 +120,9 @@ Complexity notation is parametric because the signed spec accepts large strings/
 
 ## Slice 4: Run opening/completion adapter
 
-**Claim:** Valid-input C3 subset — `run_start` and `run_complete` convert losslessly under `protocol::convert::kas::workflow`.
-**Oracle:** Raw committed captures, `oracle-manifest.json` run method/descriptor fields, and `.cyril-6beh/oracle.sh`.
-**Stress fixture:** Field-rich opening; failed/aborted captures; 256-node/depth-10 final snapshot; one missing field, wrong type, and outer/final mismatch followed by valid input. Expected valid variants preserve all data; invalid rows warn/drop; successor converts; terminal counts equal 2/2.
+**Claim:** Valid-input C3 subset — `run_start` and `run_complete` convert strict plans and sparse runtime snapshots losslessly under `protocol::convert::kas::workflow`.
+**Oracle:** Raw committed captures, `oracle-manifest.json` plan-descriptor/runtime-snapshot fields, and `.cyril-6beh/oracle.sh`.
+**Stress fixture:** Field-rich opening; failed/aborted/repeat-watch captures; 256-node/depth-10 final snapshot; sparse repeat/watch nodes; one missing required field, wrong type, and outer/final mismatch followed by valid input. Expected plans preserve required recipe data; snapshots preserve only supplied runtime data including opaque watch cursor/terminal values; invalid rows warn/drop; successor converts; terminal counts equal 2/2.
 **Loop budget:** O(J+H), one pass over the provided `Value` plus owned output construction; no whole-value clone or syscall. The 1 MiB/256-node/depth-10 case is measured, not enforced.
 **Wall budget:** <=50 ms for the representative 1 MiB/256-node/depth-10 frame in opt-level-1 tests; accepted larger inputs remain linear in `J+H`.
 **Files:** `crates/cyril-core/src/protocol/convert/kas.rs`, `crates/cyril-core/src/protocol/convert/kas/workflow.rs` (new), `crates/cyril-core/src/protocol/engine.rs` (KAS-only dispatch; discovered exhaustive engine seam).
@@ -296,9 +296,9 @@ Complexity notation is parametric because the signed spec accepts large strings/
 
 ## Slice 20: Assembled conversion/state replay and malformed atomicity
 
-**Claim:** State half of C2 plus C13 — raw malformed frames cannot mutate state/lose successors; complete one/two replays equal the independent folder.
-**Oracle:** `oracle-manifest.json`, `.cyril-6beh/oracle.sh`, `.cyril-6beh/oracle-snapshot.py`, `.cyril-6beh/oracle-replay.py`, its all-method fixture, and the three live captures.
-**Stress fixture:** Run every malformed row from Slice 8 through converter→tracker with before/after hashes and valid successor. Then replay synthetic/failed/aborted/repeat sources once/twice and project exclusively through public read APIs. Expected bad rows leave byte-identical state and successors mutate; both production pass counts exactly equal every independent folder checkpoint/final projection, including event-only preservation and retry stale-field absence.
+**Claim:** State half of C2 plus corrected C3/C13 — raw malformed frames cannot mutate state/lose successors; complete one/two replays equal the independent folder without inventing recipe fields in sparse runtime snapshots.
+**Oracle:** `oracle-manifest.json`, `.cyril-6beh/oracle.sh`, `.cyril-6beh/oracle-snapshot.py`, `.cyril-6beh/oracle-replay.py`, its all-method fixture, and the three live captures, including the repeat/watch capture that falsified full-descriptor snapshot requiredness.
+**Stress fixture:** Run every malformed row from Slice 8 through converter→tracker with before/after hashes and valid successor. Then replay synthetic/failed/aborted/repeat sources once/twice and project exclusively through public read APIs. Expected bad rows leave byte-identical state and successors mutate; both production pass counts exactly equal every independent folder checkpoint/final projection, including sparse repeat/watch shape, opaque watch cursor/terminal preservation, event-only preservation, and retry stale-field absence.
 **Loop budget:** Per-event parametric budgets from prior slices. Projection sort is test-only O(M log M); production `iter()` remains allocation-free/unsorted.
 **Wall budget:** <=5 s malformed assembled matrix and <=2 s representative four-source replays; accepted larger frames retain prior linear bounds.
 **Files:** `crates/cyril-core/src/protocol/convert/kas/workflow.rs`, `crates/cyril-core/src/workflow.rs`.
