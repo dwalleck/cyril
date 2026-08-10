@@ -34,15 +34,24 @@ def source(root: Path, rel: Path) -> str:
 
 
 def public_struct_fields(text: str) -> list[str]:
+    """Flag encapsulation leaks on pub-visible structs.
+
+    A plain `pub` struct is exported API and may expose no field of any
+    visibility. A restricted `pub(...)` struct is a crate-internal transfer
+    record and may expose `pub(...)`-restricted fields, but never plain
+    `pub` ones.
+    """
     failures = []
     starts = list(
         re.finditer(
-            r"(?m)^\s*pub(?:\([^)]*\))?\s+struct\s+([A-Za-z_][A-Za-z0-9_]*)[^;{(]*(?P<kind>[{(])",
+            r"(?m)^\s*pub(?P<restricted>\([^)]*\))?\s+struct\s+"
+            r"([A-Za-z_][A-Za-z0-9_]*)[^;{(]*(?P<kind>[{(])",
             text,
         )
     )
     for match in starts:
-        name = match.group(1)
+        name = match.group(2)
+        restricted = match.group("restricted") is not None
         opener = match.group("kind")
         closer = "}" if opener == "{" else ")"
         depth = 1
@@ -58,9 +67,17 @@ def public_struct_fields(text: str) -> list[str]:
             failures.append(f"unterminated public struct {name}")
             continue
         body = text[cursor : end - 1]
-        if re.search(r"(?m)^\s*pub(?:\([^)]*\))?\s+[A-Za-z_][A-Za-z0-9_]*\s*:", body):
-            failures.append(f"public field on {name}")
-        if opener == "(" and re.search(r"(?:^|,)\s*pub(?:\([^)]*\))?\s+", body):
+        if restricted:
+            field_pattern = r"(?m)^\s*pub\s+[A-Za-z_][A-Za-z0-9_]*\s*:"
+            tuple_pattern = r"(?:^|,)\s*pub\s+"
+            label = f"plain-pub field on crate-internal {name}"
+        else:
+            field_pattern = r"(?m)^\s*pub(?:\([^)]*\))?\s+[A-Za-z_][A-Za-z0-9_]*\s*:"
+            tuple_pattern = r"(?:^|,)\s*pub(?:\([^)]*\))?\s+"
+            label = f"public field on {name}"
+        if re.search(field_pattern, body):
+            failures.append(label)
+        if opener == "(" and re.search(tuple_pattern, body):
             failures.append(f"public tuple field on {name}")
     return failures
 
@@ -114,7 +131,14 @@ def check(root: Path) -> list[str]:
 def write_fixture(root: Path) -> None:
     files = {
         DOMAIN_REL[0]: "pub struct WorkflowRun {\n    id: String,\n}\npub enum WorkflowEvent { Open }\n",
-        DOMAIN_REL[1]: "pub struct WorkflowTracker {\n    runs: std::collections::HashMap<String, String>,\n}\n",
+        DOMAIN_REL[1]: (
+            "pub struct WorkflowTracker {\n"
+            "    runs: std::collections::HashMap<String, String>,\n"
+            "}\n"
+            "pub(crate) struct WorkflowRunParts {\n"
+            "    pub(crate) id: String,\n"
+            "}\n"
+        ),
         ADAPTER_REL: "struct WireRun {\n    id: String,\n}\npub(crate) fn convert() {}\n",
         APP_REL: "struct App {\n    workflow_tracker: WorkflowTracker,\n}\n",
         SESSION_REL: "pub struct SessionController;\n",
@@ -132,6 +156,14 @@ def self_test() -> None:
         "protocol import": (DOMAIN_REL[0], "use crate::protocol;\n"),
         "async runtime": (DOMAIN_REL[1], "async fn leak() {}\n"),
         "public domain field": (DOMAIN_REL[0], "pub struct Leaky {\n    pub value: String,\n}\n"),
+        "restricted field on public struct": (
+            DOMAIN_REL[0],
+            "pub struct LeakyModel {\n    pub(crate) value: String,\n}\n",
+        ),
+        "plain-pub field on crate-internal struct": (
+            DOMAIN_REL[0],
+            "pub(crate) struct LeakyParts {\n    pub value: String,\n}\n",
+        ),
         "public wire type": (ADAPTER_REL, "pub(crate) struct WireLeak;\n"),
         "public App owner": (APP_REL, "struct App {\n    pub workflow_tracker: WorkflowTracker,\n}\n"),
         "Session owner": (SESSION_REL, "struct SessionController { workflow_tracker: WorkflowTracker }\n"),

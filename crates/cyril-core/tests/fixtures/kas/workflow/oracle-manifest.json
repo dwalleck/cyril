@@ -64,41 +64,41 @@
     },
     "node_start": {
       "required": ["workflowId", "nodeId", "nodePath", "type"],
-      "optional": ["agentName", "sessionId", "prompt", "iteration", "branchId"]
+      "optional": ["agentName", "sessionId", "prompt", "iteration", "branchId", "parentSessionId"]
     },
     "node_complete": {
       "required": ["workflowId", "nodeId", "nodePath", "status"],
-      "optional": ["artifacts", "capturedOutput", "failureReason", "completionSignal", "completionSignalSource"]
+      "optional": ["artifacts", "capturedOutput", "failureReason", "completionSignal", "completionSignalSource", "parentSessionId"]
     },
     "node_paused": {
       "required": ["workflowId", "nodeId", "nodePath", "reason"],
-      "optional": []
+      "optional": ["parentSessionId"]
     },
     "loop_iteration": {
       "required": ["workflowId", "loopId", "iteration", "stopConditionMet"],
-      "optional": []
+      "optional": ["parentSessionId"]
     },
     "watch_poll": {
       "required": ["workflowId", "nodeId", "nodePath", "outcome", "at"],
-      "optional": []
+      "optional": ["parentSessionId"]
     },
     "paused": {
       "required": ["workflowId", "pauseReason"],
-      "optional": []
+      "optional": ["parentSessionId"]
     },
     "run_complete": {
       "required": ["workflowId", "status", "finalState"],
-      "optional": []
+      "optional": ["parentSessionId"]
     },
     "steps_queued": {
       "required": ["workflowId", "pendingSteps"],
-      "optional": ["resolution"]
+      "optional": ["resolution", "parentSessionId"]
     }
   },
   "descriptor_fields": {
     "step": {
       "required": ["nodeId", "type", "agentName"],
-      "optional": ["model", "effort"]
+      "optional": ["modelId", "effortLevel"]
     },
     "sequence": {
       "required": ["nodeId", "type", "steps"],
@@ -119,7 +119,7 @@
   },
   "snapshot_node_fields": {
     "required": ["nodeId", "type", "status"],
-    "optional": ["children", "agentName", "model", "effort", "maxIterations", "onMaxIterations", "stopCondition", "stopWhen", "sessionId", "artifacts", "capturedOutput", "failureReason", "iteration", "branchId", "completionSignal", "completionSignalSource", "startedAt", "endedAt", "watchCursor", "watchTerminal"]
+    "optional": ["children", "agentName", "modelId", "effortLevel", "maxIterations", "onMaxIterations", "stopCondition", "stopWhen", "sessionId", "artifacts", "capturedOutput", "failureReason", "iteration", "branchId", "completionSignal", "completionSignalSource", "startedAt", "endedAt", "watchCursor", "watchTerminal"]
   },
   "enum_domains": {
     "snapshot_run_status": ["running", "paused", "completed", "failed", "aborted"],
@@ -347,7 +347,7 @@
     "expected_nodes": 16384,
     "raw_history_entries": 0,
     "ordinary_lookup_bound": {"run": 1, "node": 1, "id_bucket": 0},
-    "pathless_lookup_bound": {"run": 1, "node": 0, "id_bucket": 1}
+    "pathless_lookup_bound": {"run": 1, "node": 2, "id_bucket": 1}
   },
   "terminal_counts": {"failed": 2, "aborted": 2}
 }

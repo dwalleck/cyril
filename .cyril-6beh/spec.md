@@ -51,7 +51,7 @@ Cyril will convert KAS's nine plain JSON-RPC `_kiro/workflow/*` lifecycle notifi
 - **Then**: missing fields preserve prior values, present fields use the latest supplied value, exact duplicates return “state unchanged,” and no duplicate node is created.
 
 ### Reject an update for an unknown node
-- **Given**: a known run but no node from its descriptors, snapshot, or prior `node_start` matches the event's `nodePath` or required node identity.
+- **Given**: a known run but no *runtime* node — one materialized by a snapshot or a prior `node_start` — matches the event's `nodePath` or required node identity. (Clarified 2026-08-09: the declared opening plan alone does not make a node addressable; a declared-but-unstarted node receiving `loop_iteration` or any node-addressed update is an unknown node under this rule.)
 - **When**: `node_complete`, `node_paused`, `watch_poll`, or `loop_iteration` is applied.
 - **Then**: the model warns, ignores the event, returns “state unchanged,” and creates no placeholder node.
 

@@ -62,7 +62,7 @@ pub struct App {
     /// Set by `create_initial_session`, consumed (`take()`) by the first
     /// main-routed `SessionCreated` in `handle_notification` — so the agent
     /// receives exactly one `session/prompt` and a later `/new` never replays
-    /// `None` for interactive startup.
+    /// it. `None` for interactive startup.
     startup_prompt: Option<String>,
     /// Workspace-global workflow lifecycle state (cyril-6beh C12). Every
     /// `Notification::Workflow` frame is applied here — exactly once, by
@@ -3758,38 +3758,18 @@ mod tests {
         Notification::Workflow(Box::new(WorkflowEvent::RunCompleted(completion)))
     }
 
-    #[derive(Clone, Default)]
-    struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
-
-    impl std::io::Write for CaptureWriter {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.0.lock().expect("capture lock").extend_from_slice(buf);
-            Ok(buf.len())
-        }
-        fn flush(&mut self) -> std::io::Result<()> {
-            Ok(())
-        }
-    }
-
-    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
-        type Writer = CaptureWriter;
-        fn make_writer(&'a self) -> Self::Writer {
-            self.clone()
-        }
-    }
-
     /// Run `f` under a WARN-level capture subscriber; return its result and
     /// the captured log text.
     fn with_captured_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
-        let capture = CaptureWriter::default();
+        let _capture_lock = cyril_core::test_support::tracing_capture_lock();
+        let capture = cyril_core::test_support::CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
             .with_max_level(tracing::Level::WARN)
             .with_ansi(false)
             .with_writer(capture.clone())
             .finish();
         let result = tracing::subscriber::with_default(subscriber, f);
-        let logs =
-            String::from_utf8(capture.0.lock().expect("capture lock").clone()).expect("utf8 logs");
+        let logs = String::from_utf8(capture.captured()).expect("utf8 logs");
         (result, logs)
     }
 

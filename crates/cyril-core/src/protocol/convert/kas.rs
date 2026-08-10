@@ -7,20 +7,23 @@
 //! response — and map it to [`Notification::TurnCompleted`].
 
 use agent_client_protocol as acp;
-mod workflow;
+pub(crate) mod workflow;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
-/// Convert an exact normalized KAS workflow extension method.
-///
-/// Outer `None` means the method is not a workflow lifecycle method and the
-/// engine should continue through its existing extension converter. Inner
-/// `None` means the method was recognized but malformed, warned, and dropped.
-pub(crate) fn workflow_to_notification(
-    method: &str,
-    params: &serde_json::Value,
-) -> Option<Option<Notification>> {
-    workflow::to_notification(method, params)
+
+/// Outcome of offering an extension method to the KAS workflow adapter.
+#[derive(Debug)]
+pub(crate) enum WorkflowFrameOutcome {
+    /// Not a workflow lifecycle method — continue through the engine's
+    /// remaining extension converters.
+    NotWorkflow,
+    /// An exact workflow lifecycle method whose payload was malformed;
+    /// the adapter warned and dropped it.
+    Dropped,
+    /// One converted workflow lifecycle event, boxed for its ride inside
+    /// [`Notification::Workflow`].
+    Converted(Box<crate::types::WorkflowEvent>),
 }
 
 /// Convert a KAS `session_info_update` to an internal notification.

@@ -6,16 +6,18 @@
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
+use super::WorkflowFrameOutcome;
 use crate::types::{
-    Notification, SessionId, WorkflowCompletionMismatchError, WorkflowCompletionSignal,
-    WorkflowCompletionSignalSource, WorkflowCompletionStatus, WorkflowEvent, WorkflowId,
-    WorkflowIdentifierError, WorkflowLoopIteration, WorkflowNodeCompleted,
-    WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
-    WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails,
-    WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
-    WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatExhaustion, WorkflowRunCompleted,
-    WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
-    WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
+    SessionId, WorkflowCompletionMismatchError, WorkflowCompletionSignal,
+    WorkflowCompletionSignalSource, WorkflowCompletionStatus, WorkflowEnumParseError,
+    WorkflowEvent, WorkflowId, WorkflowIdentifierError, WorkflowLoopIteration,
+    WorkflowNodeCompleted, WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId,
+    WorkflowNodePath, WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot,
+    WorkflowNodeStartDetails, WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType,
+    WorkflowPaused, WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatExhaustion,
+    WorkflowRunCompleted, WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot,
+    WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome,
+    WorkflowWatchPoll,
 };
 
 /// Distinguishes an absent optional field from a present non-null value.
@@ -71,6 +73,29 @@ impl<'de> Deserialize<'de> for OptionalValue {
 impl OptionalValue {
     fn into_option(self) -> Option<serde_json::Value> {
         self.0.into_option()
+    }
+}
+
+/// Wire enum field parsed through the domain vocabulary's `TryFrom<&str>`.
+///
+/// Every closed wire spelling lives once, in the `workflow_enum!` tables in
+/// `types::workflow`; this wrapper keeps rejection at deserialization time so
+/// `serde_path_to_error` still reports the exact field path.
+#[derive(Debug, Clone, Copy)]
+struct WireEnum<T>(T);
+
+impl<'de, T> Deserialize<'de> for WireEnum<T>
+where
+    T: for<'a> TryFrom<&'a str, Error = WorkflowEnumParseError>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        T::try_from(value.as_str())
+            .map(Self)
+            .map_err(serde::de::Error::custom)
     }
 }
 
@@ -163,8 +188,10 @@ struct WireRunStarted {
 #[serde(rename_all = "camelCase")]
 struct WireRunCompleted {
     workflow_id: String,
-    status: WireCompletionStatus,
+    status: WireEnum<WorkflowCompletionStatus>,
     final_state: WireSnapshot,
+    #[serde(default)]
+    parent_session_id: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
@@ -174,7 +201,7 @@ struct WireNodeStarted {
     node_id: String,
     node_path: Vec<String>,
     #[serde(rename = "type")]
-    node_type: WireNodeType,
+    node_type: WireEnum<WorkflowNodeType>,
     #[serde(default)]
     agent_name: OptionalField<String>,
     #[serde(default)]
@@ -185,6 +212,8 @@ struct WireNodeStarted {
     iteration: OptionalField<u32>,
     #[serde(default)]
     branch_id: OptionalField<String>,
+    #[serde(default)]
+    parent_session_id: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
@@ -193,7 +222,7 @@ struct WireNodeCompleted {
     workflow_id: String,
     node_id: String,
     node_path: Vec<String>,
-    status: WireNodeStatus,
+    status: WireEnum<WorkflowNodeStatus>,
     #[serde(default)]
     artifacts: OptionalValue,
     #[serde(default)]
@@ -201,9 +230,11 @@ struct WireNodeCompleted {
     #[serde(default)]
     failure_reason: OptionalField<String>,
     #[serde(default)]
-    completion_signal: OptionalField<WireCompletionSignal>,
+    completion_signal: OptionalField<WireEnum<WorkflowCompletionSignal>>,
     #[serde(default)]
-    completion_signal_source: OptionalField<WireCompletionSignalSource>,
+    completion_signal_source: OptionalField<WireEnum<WorkflowCompletionSignalSource>>,
+    #[serde(default)]
+    parent_session_id: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
@@ -213,6 +244,8 @@ struct WireNodePaused {
     node_id: String,
     node_path: Vec<String>,
     reason: String,
+    #[serde(default)]
+    parent_session_id: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
@@ -222,6 +255,8 @@ struct WireLoopIteration {
     loop_id: String,
     iteration: u32,
     stop_condition_met: bool,
+    #[serde(default)]
+    parent_session_id: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
@@ -230,8 +265,10 @@ struct WireWatchPoll {
     workflow_id: String,
     node_id: String,
     node_path: Vec<String>,
-    outcome: WireWatchOutcome,
+    outcome: WireEnum<WorkflowWatchOutcome>,
     at: String,
+    #[serde(default)]
+    parent_session_id: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
@@ -239,6 +276,8 @@ struct WireWatchPoll {
 struct WirePaused {
     workflow_id: String,
     pause_reason: String,
+    #[serde(default)]
+    parent_session_id: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
@@ -248,11 +287,13 @@ struct WireStepsQueued {
     pending_steps: Vec<WireNodeDescriptor>,
     #[serde(default)]
     resolution: OptionalField<WireQueueResolution>,
+    #[serde(default)]
+    parent_session_id: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
 struct WireQueueResolution {
-    outcome: WireQueueOutcome,
+    outcome: WireEnum<WorkflowQueueOutcome>,
     #[serde(default)]
     reason: OptionalField<String>,
 }
@@ -266,10 +307,10 @@ enum WireNodeDescriptor {
         node_id: String,
         #[serde(rename = "agentName")]
         agent_name: String,
-        #[serde(rename = "model", default)]
-        model: OptionalField<String>,
-        #[serde(rename = "effort", default)]
-        effort: OptionalField<String>,
+        #[serde(rename = "modelId", default)]
+        model_id: OptionalField<String>,
+        #[serde(rename = "effortLevel", default)]
+        effort_level: OptionalField<String>,
     },
     #[serde(rename = "sequence")]
     Sequence {
@@ -285,7 +326,7 @@ enum WireNodeDescriptor {
         #[serde(rename = "maxIterations")]
         max_iterations: u32,
         #[serde(rename = "onMaxIterations")]
-        on_max_iterations: WireRepeatExhaustion,
+        on_max_iterations: WireEnum<WorkflowRepeatExhaustion>,
         #[serde(rename = "stopCondition", default)]
         stop_condition: OptionalValue,
         #[serde(rename = "stopWhen", default)]
@@ -311,7 +352,7 @@ enum WireNodeDescriptor {
 struct WireSnapshot {
     workflow_id: String,
     workflow_name: String,
-    status: WireRunStatus,
+    status: WireEnum<WorkflowRunStatus>,
     inputs: serde_json::Value,
     artifacts: serde_json::Value,
     captured_outputs: serde_json::Value,
@@ -329,20 +370,20 @@ struct WireSnapshot {
 struct WireNodeSnapshot {
     node_id: String,
     #[serde(rename = "type")]
-    node_type: WireNodeType,
-    status: WireNodeStatus,
+    node_type: WireEnum<WorkflowNodeType>,
+    status: WireEnum<WorkflowNodeStatus>,
     #[serde(default)]
     children: OptionalField<Vec<Self>>,
     #[serde(default)]
     agent_name: OptionalField<String>,
     #[serde(default)]
-    model: OptionalField<String>,
+    model_id: OptionalField<String>,
     #[serde(default)]
-    effort: OptionalField<String>,
+    effort_level: OptionalField<String>,
     #[serde(default)]
     max_iterations: OptionalField<u32>,
     #[serde(default)]
-    on_max_iterations: OptionalField<WireRepeatExhaustion>,
+    on_max_iterations: OptionalField<WireEnum<WorkflowRepeatExhaustion>>,
     #[serde(default)]
     stop_condition: OptionalValue,
     #[serde(default)]
@@ -360,9 +401,9 @@ struct WireNodeSnapshot {
     #[serde(default)]
     branch_id: OptionalField<String>,
     #[serde(default)]
-    completion_signal: OptionalField<WireCompletionSignal>,
+    completion_signal: OptionalField<WireEnum<WorkflowCompletionSignal>>,
     #[serde(default)]
-    completion_signal_source: OptionalField<WireCompletionSignalSource>,
+    completion_signal_source: OptionalField<WireEnum<WorkflowCompletionSignalSource>>,
     #[serde(default)]
     started_at: OptionalField<String>,
     #[serde(default)]
@@ -373,96 +414,9 @@ struct WireNodeSnapshot {
     watch_terminal: OptionalValue,
 }
 
-#[derive(Clone, Copy, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum WireRunStatus {
-    Running,
-    Paused,
-    Completed,
-    Failed,
-    Aborted,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum WireCompletionStatus {
-    Paused,
-    Completed,
-    Failed,
-    Aborted,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum WireNodeStatus {
-    Pending,
-    Running,
-    Paused,
-    Completed,
-    Failed,
-    Aborted,
-    Skipped,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum WireNodeType {
-    Step,
-    Sequence,
-    Repeat,
-    Parallel,
-    Watch,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum WireRepeatExhaustion {
-    Pause,
-    Abort,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum WireCompletionSignal {
-    Success,
-    NeedInput,
-    Error,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum WireCompletionSignalSource {
-    SendMessage,
-    StatusUpdate,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-enum WireWatchOutcome {
-    #[serde(rename = "new-activity")]
-    NewActivity,
-    #[serde(rename = "idle")]
-    Idle,
-    #[serde(rename = "idle-timeout")]
-    IdleTimeout,
-    #[serde(rename = "terminal-state")]
-    TerminalState,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum WireQueueOutcome {
-    Applied,
-    Rejected,
-    Dropped,
-}
-
-/// Returns `None` when `method` is not owned by this adapter. For an exact
-/// workflow method, returns `Some(Some(notification))` on success or
-/// `Some(None)` after warning and dropping malformed input.
-pub(super) fn to_notification(
-    method: &str,
-    params: &serde_json::Value,
-) -> Option<Option<Notification>> {
+/// Converts an exact `kiro/workflow/<kind>` lifecycle method, naming each of
+/// the three possible outcomes in [`WorkflowFrameOutcome`].
+pub(crate) fn to_notification(method: &str, params: &serde_json::Value) -> WorkflowFrameOutcome {
     let event = match method {
         "kiro/workflow/run_start" => parse_run_started(params),
         "kiro/workflow/node_start" => parse_node_started(params),
@@ -473,11 +427,11 @@ pub(super) fn to_notification(
         "kiro/workflow/paused" => parse_paused(params),
         "kiro/workflow/run_complete" => parse_run_completed(params),
         "kiro/workflow/steps_queued" => parse_steps_queued(params),
-        _ => return None,
+        _ => return WorkflowFrameOutcome::NotWorkflow,
     };
 
-    Some(match event {
-        Ok(event) => Some(Notification::Workflow(Box::new(event))),
+    match event {
+        Ok(event) => WorkflowFrameOutcome::Converted(Box::new(event)),
         Err(error) => {
             tracing::warn!(
                 method,
@@ -486,9 +440,9 @@ pub(super) fn to_notification(
                 error = %error,
                 "malformed workflow notification"
             );
-            None
+            WorkflowFrameOutcome::Dropped
         }
-    })
+    }
 }
 
 fn parse_run_started(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
@@ -512,6 +466,7 @@ fn parse_node_started(params: &serde_json::Value) -> Result<WorkflowEvent, Workf
     let wire: WireNodeStarted = deserialize(params)?;
     let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
     let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
+    let parent_session_id = wire.parent_session_id.into_option().map(SessionId::new);
     let mut details = WorkflowNodeStartDetails::new();
     if let Some(agent_name) = wire.agent_name.into_option() {
         details = details.with_agent_name(agent_name);
@@ -528,19 +483,24 @@ fn parse_node_started(params: &serde_json::Value) -> Result<WorkflowEvent, Workf
     if let Some(branch_id) = wire.branch_id.into_option() {
         details = details.with_branch_id(branch_id);
     }
-    Ok(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+    let mut event = WorkflowNodeStarted::new(
         workflow_id,
         node_id(wire.node_id)?,
         node_path,
-        wire.node_type.into(),
+        wire.node_type.0,
         details,
-    )))
+    );
+    if let Some(parent_session_id) = parent_session_id {
+        event = event.with_parent_session_id(parent_session_id);
+    }
+    Ok(WorkflowEvent::NodeStarted(event))
 }
 
 fn parse_node_completed(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
     let wire: WireNodeCompleted = deserialize(params)?;
     let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
     let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
+    let parent_session_id = wire.parent_session_id.into_option().map(SessionId::new);
     let mut details = WorkflowNodeCompletionDetails::new();
     if let Some(artifacts) = wire.artifacts.into_option() {
         details = details.with_artifacts(artifacts);
@@ -552,61 +512,77 @@ fn parse_node_completed(params: &serde_json::Value) -> Result<WorkflowEvent, Wor
         details = details.with_failure_reason(failure_reason);
     }
     if let Some(completion_signal) = wire.completion_signal.into_option() {
-        details = details.with_completion_signal(completion_signal.into());
+        details = details.with_completion_signal(completion_signal.0);
     }
     if let Some(source) = wire.completion_signal_source.into_option() {
-        details = details.with_completion_signal_source(source.into());
+        details = details.with_completion_signal_source(source.0);
     }
-    Ok(WorkflowEvent::NodeCompleted(WorkflowNodeCompleted::new(
+    let mut event = WorkflowNodeCompleted::new(
         workflow_id,
         node_id(wire.node_id)?,
         node_path,
-        wire.status.into(),
+        wire.status.0,
         details,
-    )))
+    );
+    if let Some(parent_session_id) = parent_session_id {
+        event = event.with_parent_session_id(parent_session_id);
+    }
+    Ok(WorkflowEvent::NodeCompleted(event))
 }
 
 fn parse_node_paused(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
     let wire: WireNodePaused = deserialize(params)?;
     let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
     let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
-    Ok(WorkflowEvent::NodePaused(WorkflowNodePaused::new(
-        workflow_id,
-        node_id(wire.node_id)?,
-        node_path,
-        wire.reason,
-    )))
+    let mut event =
+        WorkflowNodePaused::new(workflow_id, node_id(wire.node_id)?, node_path, wire.reason);
+    if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
+        event = event.with_parent_session_id(parent_session_id);
+    }
+    Ok(WorkflowEvent::NodePaused(event))
 }
 
 fn parse_loop_iteration(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
     let wire: WireLoopIteration = deserialize(params)?;
-    Ok(WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+    let mut event = WorkflowLoopIteration::new(
         workflow_id(wire.workflow_id, "workflowId")?,
         loop_id(wire.loop_id)?,
         wire.iteration,
         wire.stop_condition_met,
-    )))
+    );
+    if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
+        event = event.with_parent_session_id(parent_session_id);
+    }
+    Ok(WorkflowEvent::LoopIteration(event))
 }
 
 fn parse_watch_poll(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
     let wire: WireWatchPoll = deserialize(params)?;
     let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
     let node_path = WorkflowNodePath::try_new(&workflow_id, wire.node_path)?;
-    Ok(WorkflowEvent::WatchPoll(WorkflowWatchPoll::new(
+    let mut event = WorkflowWatchPoll::new(
         workflow_id,
         node_id(wire.node_id)?,
         node_path,
-        wire.outcome.into(),
+        wire.outcome.0,
         wire.at,
-    )))
+    );
+    if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
+        event = event.with_parent_session_id(parent_session_id);
+    }
+    Ok(WorkflowEvent::WatchPoll(event))
 }
 
 fn parse_paused(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
     let wire: WirePaused = deserialize(params)?;
-    Ok(WorkflowEvent::Paused(WorkflowPaused::new(
+    let mut event = WorkflowPaused::new(
         workflow_id(wire.workflow_id, "workflowId")?,
         wire.pause_reason,
-    )))
+    );
+    if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
+        event = event.with_parent_session_id(parent_session_id);
+    }
+    Ok(WorkflowEvent::Paused(event))
 }
 
 fn parse_steps_queued(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
@@ -617,19 +593,23 @@ fn parse_steps_queued(params: &serde_json::Value) -> Result<WorkflowEvent, Workf
         .map(WireNodeDescriptor::try_into_domain)
         .collect::<Result<Vec<_>, _>>()?;
     let resolution = wire.resolution.into_option().map(|resolution| {
-        WorkflowQueueResolution::new(resolution.outcome.into(), resolution.reason.into_option())
+        WorkflowQueueResolution::new(resolution.outcome.0, resolution.reason.into_option())
     });
-    Ok(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+    let mut event = WorkflowStepsQueued::new(
         workflow_id(wire.workflow_id, "workflowId")?,
         pending_steps,
         resolution,
-    )))
+    );
+    if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
+        event = event.with_parent_session_id(parent_session_id);
+    }
+    Ok(WorkflowEvent::StepsQueued(event))
 }
 
 fn parse_run_completed(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
     let wire: WireRunCompleted = deserialize(params)?;
     let workflow_id = workflow_id(wire.workflow_id, "workflowId")?;
-    let status = WorkflowCompletionStatus::from(wire.status);
+    let status = wire.status.0;
     let final_state = wire.final_state.try_into_domain()?;
     if final_state.workflow_id() != &workflow_id {
         return Err(WorkflowAdapterError::SnapshotWorkflowMismatch {
@@ -637,11 +617,11 @@ fn parse_run_completed(params: &serde_json::Value) -> Result<WorkflowEvent, Work
             final_id: final_state.workflow_id().as_str().to_owned(),
         });
     }
-    Ok(WorkflowEvent::RunCompleted(WorkflowRunCompleted::new(
-        workflow_id,
-        status,
-        final_state,
-    )?))
+    let mut event = WorkflowRunCompleted::new(workflow_id, status, final_state)?;
+    if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
+        event = event.with_parent_session_id(parent_session_id);
+    }
+    Ok(WorkflowEvent::RunCompleted(event))
 }
 
 fn deserialize<T: DeserializeOwned>(value: &serde_json::Value) -> Result<T, WorkflowAdapterError> {
@@ -680,10 +660,16 @@ fn missing_field_name(message: &str) -> Option<&str> {
         .and_then(|rest| rest.split_once('`').map(|(field, _)| field))
 }
 
+/// Serde's `de::Error` erases error structure into a message string before it
+/// reaches this layer, so kind classification can only prefix-match the known
+/// message shapes: serde's own `missing field` / `unknown variant` /
+/// `invalid type` prefixes plus [`WorkflowEnumParseError`]'s
+/// `unknown workflow …` Display. Anything unrecognized degrades to
+/// `invalid_value`, and the raw message is always logged beside the kind.
 fn classify_serde_error(message: &str) -> WorkflowErrorKind {
     if message.starts_with("missing field `") {
         WorkflowErrorKind::MissingRequired
-    } else if message.starts_with("unknown variant `") {
+    } else if message.starts_with("unknown variant `") || message.starts_with("unknown workflow ") {
         WorkflowErrorKind::InvalidEnum
     } else if message.starts_with("invalid type:") {
         WorkflowErrorKind::WrongType
@@ -698,13 +684,13 @@ impl WireNodeDescriptor {
             Self::Step {
                 node_id: raw_node_id,
                 agent_name,
-                model,
-                effort,
+                model_id,
+                effort_level,
             } => Ok(WorkflowNodeDescriptor::step(
                 node_id(raw_node_id)?,
                 agent_name,
-                model.into_option(),
-                effort.into_option(),
+                model_id.into_option(),
+                effort_level.into_option(),
             )),
             Self::Sequence {
                 node_id: raw_node_id,
@@ -724,7 +710,7 @@ impl WireNodeDescriptor {
                 node_id(raw_node_id)?,
                 convert_descriptors(steps)?,
                 max_iterations,
-                on_max_iterations.into(),
+                on_max_iterations.0,
                 stop_condition.into_option(),
                 stop_when.into_option(),
             )),
@@ -767,7 +753,7 @@ impl WireSnapshot {
         Ok(WorkflowSnapshot::new(
             workflow_id(self.workflow_id, "finalState.workflowId")?,
             self.workflow_name,
-            self.status.into(),
+            self.status.0,
             WorkflowSnapshotData::new(self.inputs, self.artifacts, self.captured_outputs),
             self.root.try_into_domain()?,
             metadata,
@@ -777,27 +763,27 @@ impl WireSnapshot {
 
 impl WireNodeSnapshot {
     fn try_into_domain(self) -> Result<WorkflowNodeSnapshot, WorkflowAdapterError> {
-        let descriptor = match self.node_type {
-            WireNodeType::Step => WorkflowNodeDescriptor::snapshot_step(
+        let descriptor = match self.node_type.0 {
+            WorkflowNodeType::Step => WorkflowNodeDescriptor::snapshot_step(
                 node_id(self.node_id)?,
                 self.agent_name.into_option(),
-                self.model.into_option(),
-                self.effort.into_option(),
+                self.model_id.into_option(),
+                self.effort_level.into_option(),
             ),
-            WireNodeType::Sequence => {
+            WorkflowNodeType::Sequence => {
                 WorkflowNodeDescriptor::sequence(node_id(self.node_id)?, Vec::new())
             }
-            WireNodeType::Repeat => WorkflowNodeDescriptor::snapshot_repeat(
+            WorkflowNodeType::Repeat => WorkflowNodeDescriptor::snapshot_repeat(
                 node_id(self.node_id)?,
                 self.max_iterations.into_option(),
-                self.on_max_iterations.into_option().map(Into::into),
+                self.on_max_iterations.into_option().map(|value| value.0),
                 self.stop_condition.into_option(),
                 self.stop_when.into_option(),
             ),
-            WireNodeType::Parallel => {
+            WorkflowNodeType::Parallel => {
                 WorkflowNodeDescriptor::parallel(node_id(self.node_id)?, Vec::new())
             }
-            WireNodeType::Watch => WorkflowNodeDescriptor::snapshot_watch(
+            WorkflowNodeType::Watch => WorkflowNodeDescriptor::snapshot_watch(
                 node_id(self.node_id)?,
                 self.agent_name.into_option(),
             ),
@@ -809,7 +795,7 @@ impl WireNodeSnapshot {
                 .collect::<Result<Vec<_>, _>>()?,
             None => Vec::new(),
         };
-        let mut snapshot = WorkflowNodeSnapshot::new(descriptor, self.status.into(), children);
+        let mut snapshot = WorkflowNodeSnapshot::new(descriptor, self.status.0, children);
         if let Some(session_id) = self.session_id.into_option() {
             snapshot = snapshot.with_session_id(SessionId::new(session_id));
         }
@@ -829,10 +815,10 @@ impl WireNodeSnapshot {
             snapshot = snapshot.with_branch_id(branch_id);
         }
         if let Some(completion_signal) = self.completion_signal.into_option() {
-            snapshot = snapshot.with_completion_signal(completion_signal.into());
+            snapshot = snapshot.with_completion_signal(completion_signal.0);
         }
         if let Some(source) = self.completion_signal_source.into_option() {
-            snapshot = snapshot.with_completion_signal_source(source.into());
+            snapshot = snapshot.with_completion_signal_source(source.0);
         }
         if let Some(started_at) = self.started_at.into_option() {
             snapshot = snapshot.with_started_at(started_at);
@@ -869,171 +855,53 @@ fn loop_id(value: String) -> Result<WorkflowNodeId, WorkflowAdapterError> {
     })
 }
 
-impl From<WireNodeType> for WorkflowNodeType {
-    fn from(value: WireNodeType) -> Self {
-        match value {
-            WireNodeType::Step => Self::Step,
-            WireNodeType::Sequence => Self::Sequence,
-            WireNodeType::Repeat => Self::Repeat,
-            WireNodeType::Parallel => Self::Parallel,
-            WireNodeType::Watch => Self::Watch,
-        }
-    }
-}
-
-impl From<WireRunStatus> for WorkflowRunStatus {
-    fn from(value: WireRunStatus) -> Self {
-        match value {
-            WireRunStatus::Running => Self::Running,
-            WireRunStatus::Paused => Self::Paused,
-            WireRunStatus::Completed => Self::Completed,
-            WireRunStatus::Failed => Self::Failed,
-            WireRunStatus::Aborted => Self::Aborted,
-        }
-    }
-}
-
-impl From<WireCompletionStatus> for WorkflowCompletionStatus {
-    fn from(value: WireCompletionStatus) -> Self {
-        match value {
-            WireCompletionStatus::Paused => Self::Paused,
-            WireCompletionStatus::Completed => Self::Completed,
-            WireCompletionStatus::Failed => Self::Failed,
-            WireCompletionStatus::Aborted => Self::Aborted,
-        }
-    }
-}
-
-impl From<WireNodeStatus> for WorkflowNodeStatus {
-    fn from(value: WireNodeStatus) -> Self {
-        match value {
-            WireNodeStatus::Pending => Self::Pending,
-            WireNodeStatus::Running => Self::Running,
-            WireNodeStatus::Paused => Self::Paused,
-            WireNodeStatus::Completed => Self::Completed,
-            WireNodeStatus::Failed => Self::Failed,
-            WireNodeStatus::Aborted => Self::Aborted,
-            WireNodeStatus::Skipped => Self::Skipped,
-        }
-    }
-}
-
-impl From<WireRepeatExhaustion> for WorkflowRepeatExhaustion {
-    fn from(value: WireRepeatExhaustion) -> Self {
-        match value {
-            WireRepeatExhaustion::Pause => Self::Pause,
-            WireRepeatExhaustion::Abort => Self::Abort,
-        }
-    }
-}
-
-impl From<WireCompletionSignal> for WorkflowCompletionSignal {
-    fn from(value: WireCompletionSignal) -> Self {
-        match value {
-            WireCompletionSignal::Success => Self::Success,
-            WireCompletionSignal::NeedInput => Self::NeedInput,
-            WireCompletionSignal::Error => Self::Error,
-        }
-    }
-}
-
-impl From<WireWatchOutcome> for WorkflowWatchOutcome {
-    fn from(value: WireWatchOutcome) -> Self {
-        match value {
-            WireWatchOutcome::NewActivity => Self::NewActivity,
-            WireWatchOutcome::Idle => Self::Idle,
-            WireWatchOutcome::IdleTimeout => Self::IdleTimeout,
-            WireWatchOutcome::TerminalState => Self::TerminalState,
-        }
-    }
-}
-
-impl From<WireQueueOutcome> for WorkflowQueueOutcome {
-    fn from(value: WireQueueOutcome) -> Self {
-        match value {
-            WireQueueOutcome::Applied => Self::Applied,
-            WireQueueOutcome::Rejected => Self::Rejected,
-            WireQueueOutcome::Dropped => Self::Dropped,
-        }
-    }
-}
-impl From<WireCompletionSignalSource> for WorkflowCompletionSignalSource {
-    fn from(value: WireCompletionSignalSource) -> Self {
-        match value {
-            WireCompletionSignalSource::SendMessage => Self::SendMessage,
-            WireCompletionSignalSource::StatusUpdate => Self::StatusUpdate,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::io::{self, Write};
-    use std::sync::{Arc, Mutex};
     use std::time::{Duration, Instant};
 
     use super::*;
+    use crate::test_support::{CaptureWriter, must_succeed};
     use crate::workflow::{WorkflowNodeState, WorkflowRun, WorkflowTracker};
 
     const FAILED_CAPTURE: &str =
-        include_str!("../../../../../../.cyril-6beh/terminal-failed-2.16.2.jsonl");
+        include_str!("../../../../tests/fixtures/kas/workflow/terminal-failed-2.16.2.jsonl");
     const ABORTED_CAPTURE: &str =
-        include_str!("../../../../../../.cyril-6beh/terminal-aborted-2.16.2.jsonl");
+        include_str!("../../../../tests/fixtures/kas/workflow/terminal-aborted-2.16.2.jsonl");
     const SYNTHETIC_REPLAY: &str =
-        include_str!("../../../../../../.cyril-6beh/oracle-replay-events.jsonl");
+        include_str!("../../../../tests/fixtures/kas/workflow/oracle-replay-events.jsonl");
     const REPEAT_WATCH_CAPTURE: &str =
-        include_str!("../../../../../../experiments/conductor-spike/kas-repeat-watch-2.16.0.jsonl");
-    const REPLAY_SOURCES: [(&str, &str); 4] = [
+        include_str!("../../../../tests/fixtures/kas/workflow/kas-repeat-watch-2.16.0.jsonl");
+    const CUSTOM_DAG_CAPTURE: &str =
+        include_str!("../../../../tests/fixtures/kas/workflow/kas-custom-dag-2.16.0.jsonl");
+    const CSIG_2160_NEUTRAL_CAPTURE: &str =
+        include_str!("../../../../tests/fixtures/kas/workflow/kas-csig-2.16.0-neutral.jsonl");
+    const CSIG_2162_NEUTRAL_CAPTURE: &str =
+        include_str!("../../../../tests/fixtures/kas/workflow/kas-csig-2.16.2-neutral.jsonl");
+    const CSIG_2162_EXPLICIT_CAPTURE: &str =
+        include_str!("../../../../tests/fixtures/kas/workflow/kas-csig-2.16.2-explicit.jsonl");
+    const REPLAY_SOURCES: [(&str, &str); 8] = [
         ("oracle-replay-events.jsonl", SYNTHETIC_REPLAY),
         ("terminal-failed-2.16.2.jsonl", FAILED_CAPTURE),
         ("terminal-aborted-2.16.2.jsonl", ABORTED_CAPTURE),
         ("kas-repeat-watch-2.16.0.jsonl", REPEAT_WATCH_CAPTURE),
+        ("kas-custom-dag-2.16.0.jsonl", CUSTOM_DAG_CAPTURE),
+        ("kas-csig-2.16.0-neutral.jsonl", CSIG_2160_NEUTRAL_CAPTURE),
+        ("kas-csig-2.16.2-neutral.jsonl", CSIG_2162_NEUTRAL_CAPTURE),
+        ("kas-csig-2.16.2-explicit.jsonl", CSIG_2162_EXPLICIT_CAPTURE),
     ];
 
-    fn must_succeed<T, E: std::fmt::Debug>(result: Result<T, E>, context: &str) -> T {
+    fn event(result: WorkflowFrameOutcome, context: &str) -> WorkflowEvent {
         match result {
-            Ok(value) => value,
-            Err(error) => panic!("{context}: {error:?}"),
-        }
-    }
-
-    fn event(result: Option<Option<Notification>>, context: &str) -> WorkflowEvent {
-        match result {
-            Some(Some(Notification::Workflow(event))) => *event,
+            WorkflowFrameOutcome::Converted(event) => *event,
             other => panic!("{context}: expected workflow notification, got {other:?}"),
-        }
-    }
-
-    #[derive(Clone, Default)]
-    struct CaptureWriter(Arc<Mutex<Vec<u8>>>);
-
-    impl Write for CaptureWriter {
-        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-            let mut output = self
-                .0
-                .lock()
-                .map_err(|error| io::Error::other(error.to_string()))?;
-            output.extend_from_slice(bytes);
-            Ok(bytes.len())
-        }
-
-        fn flush(&mut self) -> io::Result<()> {
-            Ok(())
-        }
-    }
-
-    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
-        type Writer = Self;
-
-        fn make_writer(&'a self) -> Self::Writer {
-            self.clone()
         }
     }
 
     fn capture_rejection(
         method: &str,
         params: &serde_json::Value,
-    ) -> (Option<Option<Notification>>, serde_json::Value) {
+    ) -> (WorkflowFrameOutcome, serde_json::Value) {
+        let _capture_lock = crate::test_support::tracing_capture_lock();
         let capture = CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
             .json()
@@ -1043,12 +911,8 @@ mod tests {
             .finish();
         let result =
             tracing::subscriber::with_default(subscriber, || to_notification(method, params));
-        let bytes = match capture.0.lock() {
-            Ok(output) => output.clone(),
-            Err(error) => panic!("workflow warning capture lock poisoned: {error}"),
-        };
         let log = must_succeed(
-            serde_json::from_slice(&bytes),
+            serde_json::from_slice(&capture.captured()),
             "workflow warning must be one JSON event",
         );
         (result, log)
@@ -1190,8 +1054,8 @@ mod tests {
         };
         insert_string(&mut data, "agentName", agent_name);
         if let Some(descriptor) = node.descriptor() {
-            insert_string(&mut data, "model", descriptor.model());
-            insert_string(&mut data, "effort", descriptor.effort());
+            insert_string(&mut data, "modelId", descriptor.model_id());
+            insert_string(&mut data, "effortLevel", descriptor.effort_level());
             insert_u32(&mut data, "maxIterations", descriptor.max_iterations());
             insert_string(
                 &mut data,
@@ -1269,8 +1133,8 @@ mod tests {
             descriptor.agent_name()
         };
         insert_string(&mut data, "agentName", agent_name);
-        insert_string(&mut data, "model", descriptor.model());
-        insert_string(&mut data, "effort", descriptor.effort());
+        insert_string(&mut data, "modelId", descriptor.model_id());
+        insert_string(&mut data, "effortLevel", descriptor.effort_level());
         insert_u32(&mut data, "maxIterations", descriptor.max_iterations());
         insert_string(
             &mut data,
@@ -1356,8 +1220,8 @@ mod tests {
                     "nodeId": "step",
                     "type": "step",
                     "agentName": "agent",
-                    "model": "",
-                    "effort": "high",
+                    "modelId": "",
+                    "effortLevel": "high",
                     "unknown": true
                 },
                 {
@@ -1400,8 +1264,8 @@ mod tests {
         assert_eq!(nodes.len(), 5);
         assert_eq!(nodes[0].node_id().as_str(), "step");
         assert_eq!(nodes[0].agent_name(), Some("agent"));
-        assert_eq!(nodes[0].model(), Some(""));
-        assert_eq!(nodes[0].effort(), Some("high"));
+        assert_eq!(nodes[0].model_id(), Some(""));
+        assert_eq!(nodes[0].effort_level(), Some("high"));
         assert_eq!(nodes[1].children().len(), 1);
         assert_eq!(nodes[1].children()[0].handler_name(), Some("files"));
         assert_eq!(nodes[2].max_iterations(), Some(u32::MAX));
@@ -1500,7 +1364,7 @@ mod tests {
             None => {
                 let manifest: serde_json::Value = must_succeed(
                     serde_json::from_str(include_str!(
-                        "../../../../../../.cyril-6beh/oracle-manifest.json"
+                        "../../../../tests/fixtures/kas/workflow/oracle-manifest.json"
                     )),
                     "oracle manifest is valid JSON",
                 );
@@ -1557,7 +1421,7 @@ mod tests {
                     Some(normalized) => normalized,
                     None => method,
                 };
-                if let Some(Some(Notification::Workflow(event))) =
+                if let WorkflowFrameOutcome::Converted(event) =
                     to_notification(method, &envelope["params"])
                 {
                     must_succeed(tracker.apply_event(*event), "replay event applies");
@@ -1599,7 +1463,8 @@ mod tests {
                 "replay oracle output is readable",
             ),
             None => {
-                include_str!("../../../../../../.cyril-6beh/oracle-replay-expected.json").to_owned()
+                include_str!("../../../../tests/fixtures/kas/workflow/oracle-replay-expected.json")
+                    .to_owned()
             }
         };
         let expected = must_succeed(
@@ -1648,8 +1513,10 @@ mod tests {
                 std::fs::read_to_string(path),
                 "snapshot oracle output is readable",
             ),
-            None => include_str!("../../../../../../.cyril-6beh/oracle-snapshot-expected.json")
-                .to_owned(),
+            None => include_str!(
+                "../../../../tests/fixtures/kas/workflow/oracle-snapshot-expected.json"
+            )
+            .to_owned(),
         };
         let expected = must_succeed(
             serde_json::from_str::<serde_json::Value>(&expected_text),
@@ -1657,6 +1524,83 @@ mod tests {
         );
         assert_eq!(actual, expected);
     }
+
+    /// REGRESSION FENCE (2026-08-09 review, finding S1): the step descriptor
+    /// wire keys are `modelId`/`effortLevel`. The live recipe catalog inside
+    /// the committed aborted capture is the one artifact whose bytes were
+    /// produced by the shipped engine, not by this codebase's own fixtures —
+    /// a converter that reads any other spelling parses these pinned fields
+    /// as absent and this test fails.
+    #[test]
+    fn descriptor_wire_spelling_matches_live_recipe_catalog() {
+        let plan = ABORTED_CAPTURE
+            .lines()
+            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+            .find_map(|frame| {
+                let envelope = frame.get("parsed").unwrap_or(&frame);
+                let recipes = envelope.get("result")?.get("recipes")?.as_array()?;
+                recipes
+                    .iter()
+                    .find(|recipe| {
+                        recipe.get("name").and_then(serde_json::Value::as_str)
+                            == Some("semantic-review-multi-model")
+                    })
+                    .and_then(|recipe| recipe.get("plan").cloned())
+            });
+        let plan = must_succeed(
+            plan.ok_or("aborted capture must hold the multi-model recipe catalog"),
+            "live recipe plan",
+        );
+        let params = serde_json::json!({
+            "workflowId": "wf-live-catalog",
+            "workflowName": "semantic-review-multi-model",
+            "inputs": {},
+            "nodeTree": plan,
+        });
+        let WorkflowEvent::RunStarted(started) = event(
+            to_notification("kiro/workflow/run_start", &params),
+            "live recipe plan parses as a run opening",
+        ) else {
+            panic!("live recipe plan converted to the wrong event");
+        };
+
+        fn collect_steps<'tree>(
+            descriptor: &'tree WorkflowNodeDescriptor,
+            steps: &mut Vec<&'tree WorkflowNodeDescriptor>,
+        ) {
+            if descriptor.node_type() == WorkflowNodeType::Step {
+                steps.push(descriptor);
+            }
+            for child in descriptor.children() {
+                collect_steps(child, steps);
+            }
+        }
+        let mut steps = Vec::new();
+        for descriptor in started.node_tree() {
+            collect_steps(descriptor, &mut steps);
+        }
+        let observed: Vec<(&str, Option<&str>, Option<&str>)> = steps
+            .iter()
+            .map(|step| {
+                (
+                    step.node_id().as_str(),
+                    step.model_id(),
+                    step.effort_level(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            observed,
+            [
+                ("setup", None, Some("low")),
+                ("review-fable", Some("claude-fable-5"), Some("xhigh")),
+                ("review-gpt", Some("gpt-5.6-sol"), Some("xhigh")),
+                ("aggregate", Some("claude-fable-5"), Some("xhigh")),
+            ],
+            "pinned model/effort fields must survive conversion byte-exactly"
+        );
+    }
+
     #[test]
     fn malformed_run_frames_drop_without_poisoning_successor() {
         let valid_opening = serde_json::json!({
@@ -1672,7 +1616,7 @@ mod tests {
         });
         assert!(matches!(
             to_notification("kiro/workflow/run_start", &missing),
-            Some(None)
+            WorkflowFrameOutcome::Dropped
         ));
 
         let wrong_type = serde_json::json!({
@@ -1682,7 +1626,7 @@ mod tests {
         });
         assert!(matches!(
             to_notification("kiro/workflow/run_complete", &wrong_type),
-            Some(None)
+            WorkflowFrameOutcome::Dropped
         ));
 
         let mismatch = serde_json::json!({
@@ -1692,7 +1636,7 @@ mod tests {
         });
         assert!(matches!(
             to_notification("kiro/workflow/run_complete", &mismatch),
-            Some(None)
+            WorkflowFrameOutcome::Dropped
         ));
 
         let status_mismatch = serde_json::json!({
@@ -1702,14 +1646,20 @@ mod tests {
         });
         assert!(matches!(
             to_notification("kiro/workflow/run_complete", &status_mismatch),
-            Some(None)
+            WorkflowFrameOutcome::Dropped
         ));
 
-        assert!(to_notification("kiro/workflow/run_started", &valid_opening).is_none());
-        assert!(to_notification("_kiro/workflow/run_start", &valid_opening).is_none());
+        assert!(matches!(
+            to_notification("kiro/workflow/run_started", &valid_opening),
+            WorkflowFrameOutcome::NotWorkflow
+        ));
+        assert!(matches!(
+            to_notification("_kiro/workflow/run_start", &valid_opening),
+            WorkflowFrameOutcome::NotWorkflow
+        ));
         assert!(matches!(
             to_notification("kiro/workflow/run_start", &valid_opening),
-            Some(Some(Notification::Workflow(_)))
+            WorkflowFrameOutcome::Converted(_)
         ));
     }
 
@@ -1921,7 +1871,7 @@ mod tests {
         for _ in 0..10_000 {
             assert!(matches!(
                 to_notification("kiro/workflow/node_start", &minimal),
-                Some(Some(Notification::Workflow(_)))
+                WorkflowFrameOutcome::Converted(_)
             ));
         }
         let batch_elapsed = started.elapsed();
@@ -1970,15 +1920,15 @@ mod tests {
         });
         assert!(matches!(
             to_notification("kiro/workflow/node_start", &empty_path),
-            Some(None)
+            WorkflowFrameOutcome::Dropped
         ));
         assert!(matches!(
             to_notification("kiro/workflow/node_start", &wrong_root),
-            Some(None)
+            WorkflowFrameOutcome::Dropped
         ));
         assert!(matches!(
             to_notification("kiro/workflow/node_start", &minimal),
-            Some(Some(Notification::Workflow(_)))
+            WorkflowFrameOutcome::Converted(_)
         ));
     }
 
@@ -2033,7 +1983,10 @@ mod tests {
         ];
         for (method, params) in malformed {
             assert!(
-                matches!(to_notification(method, &params), Some(None)),
+                matches!(
+                    to_notification(method, &params),
+                    WorkflowFrameOutcome::Dropped
+                ),
                 "{method} malformed input must warn and drop"
             );
         }
@@ -2076,11 +2029,11 @@ mod tests {
         });
         assert!(matches!(
             to_notification("kiro/workflow/node_complete", &completion),
-            Some(Some(Notification::Workflow(_)))
+            WorkflowFrameOutcome::Converted(_)
         ));
         assert!(matches!(
             to_notification("kiro/workflow/node_paused", &paused),
-            Some(Some(Notification::Workflow(_)))
+            WorkflowFrameOutcome::Converted(_)
         ));
     }
 
@@ -2217,7 +2170,7 @@ mod tests {
         for _ in 0..100_000 {
             assert!(matches!(
                 to_notification("kiro/workflow/loop_iteration", &minimal),
-                Some(Some(Notification::Workflow(_)))
+                WorkflowFrameOutcome::Converted(_)
             ));
         }
         let fixed_elapsed = started.elapsed();
@@ -2324,7 +2277,10 @@ mod tests {
         ];
         for (method, params) in malformed {
             assert!(
-                matches!(to_notification(method, &params), Some(None)),
+                matches!(
+                    to_notification(method, &params),
+                    WorkflowFrameOutcome::Dropped
+                ),
                 "{method} malformed input must warn and drop"
             );
         }
@@ -2336,7 +2292,7 @@ mod tests {
         });
         assert!(matches!(
             to_notification("kiro/workflow/steps_queued", &valid),
-            Some(Some(Notification::Workflow(_)))
+            WorkflowFrameOutcome::Converted(_)
         ));
     }
 
@@ -2353,7 +2309,7 @@ mod tests {
         let started = Instant::now();
         let manifest: serde_json::Value = must_succeed(
             serde_json::from_str(include_str!(
-                "../../../../../../.cyril-6beh/oracle-manifest.json"
+                "../../../../tests/fixtures/kas/workflow/oracle-manifest.json"
             )),
             "workflow oracle manifest is valid JSON",
         );
@@ -2681,7 +2637,7 @@ mod tests {
         for case in cases {
             let (result, log) = capture_rejection(&case.method, &case.params);
             assert!(
-                matches!(result, Some(None)),
+                matches!(result, WorkflowFrameOutcome::Dropped),
                 "{}: malformed row must drop",
                 case.id
             );
@@ -2721,7 +2677,7 @@ mod tests {
             assert!(
                 matches!(
                     to_notification(&case.method, &valid_payload(&case.method)),
-                    Some(Some(Notification::Workflow(_)))
+                    WorkflowFrameOutcome::Converted(_)
                 ),
                 "{}: valid successor must convert",
                 case.id
@@ -2751,7 +2707,8 @@ mod tests {
                 "sessionId": "",
                 "prompt": "",
                 "iteration": 0,
-                "branchId": ""
+                "branchId": "",
+                "parentSessionId": ""
             }),
             "kiro/workflow/node_complete" => serde_json::json!({
                 "workflowId": "workflow",
@@ -2762,40 +2719,47 @@ mod tests {
                 "capturedOutput": null,
                 "failureReason": "",
                 "completionSignal": "success",
-                "completionSignalSource": "send_message"
+                "completionSignalSource": "send_message",
+                "parentSessionId": ""
             }),
             "kiro/workflow/node_paused" => serde_json::json!({
                 "workflowId": "workflow",
                 "nodeId": "node",
                 "nodePath": ["workflow", "node"],
-                "reason": ""
+                "reason": "",
+                "parentSessionId": ""
             }),
             "kiro/workflow/loop_iteration" => serde_json::json!({
                 "workflowId": "workflow",
                 "loopId": "loop",
                 "iteration": 0,
-                "stopConditionMet": false
+                "stopConditionMet": false,
+                "parentSessionId": ""
             }),
             "kiro/workflow/watch_poll" => serde_json::json!({
                 "workflowId": "workflow",
                 "nodeId": "watch",
                 "nodePath": ["workflow", "watch"],
                 "outcome": "idle",
-                "at": ""
+                "at": "",
+                "parentSessionId": ""
             }),
             "kiro/workflow/paused" => serde_json::json!({
                 "workflowId": "workflow",
-                "pauseReason": ""
+                "pauseReason": "",
+                "parentSessionId": ""
             }),
             "kiro/workflow/run_complete" => serde_json::json!({
                 "workflowId": "workflow",
                 "status": "completed",
-                "finalState": completed_snapshot("workflow", "completed")
+                "finalState": completed_snapshot("workflow", "completed"),
+                "parentSessionId": ""
             }),
             "kiro/workflow/steps_queued" => serde_json::json!({
                 "workflowId": "workflow",
                 "pendingSteps": [],
-                "resolution": {"outcome": "applied", "reason": ""}
+                "resolution": {"outcome": "applied", "reason": ""},
+                "parentSessionId": ""
             }),
             other => panic!("no valid workflow payload for {other}"),
         }
@@ -2807,8 +2771,8 @@ mod tests {
                 "nodeId": "node",
                 "type": "step",
                 "agentName": "",
-                "model": "",
-                "effort": ""
+                "modelId": "",
+                "effortLevel": ""
             }),
             "sequence" => serde_json::json!({
                 "nodeId": "node",
@@ -2865,10 +2829,10 @@ mod tests {
             "step" => fields.extend([
                 ("agentName", serde_json::Value::Bool(false), "wrong_type"),
                 ("agentName", serde_json::Value::Null, "wrong_type"),
-                ("model", serde_json::Value::Bool(false), "wrong_type"),
-                ("model", serde_json::Value::Null, "invalid_value"),
-                ("effort", serde_json::Value::Bool(false), "wrong_type"),
-                ("effort", serde_json::Value::Null, "invalid_value"),
+                ("modelId", serde_json::Value::Bool(false), "wrong_type"),
+                ("modelId", serde_json::Value::Null, "invalid_value"),
+                ("effortLevel", serde_json::Value::Bool(false), "wrong_type"),
+                ("effortLevel", serde_json::Value::Null, "invalid_value"),
             ]),
             "sequence" => fields.extend([
                 ("steps", serde_json::Value::Bool(false), "wrong_type"),
@@ -3011,7 +2975,7 @@ mod tests {
     fn workflow_manifest() -> serde_json::Value {
         must_succeed(
             serde_json::from_str(include_str!(
-                "../../../../../../.cyril-6beh/oracle-manifest.json"
+                "../../../../tests/fixtures/kas/workflow/oracle-manifest.json"
             )),
             "workflow oracle manifest",
         )
@@ -3193,7 +3157,7 @@ mod tests {
                 assert!(
                     matches!(
                         to_notification(&method, &params),
-                        Some(Some(Notification::Workflow(_)))
+                        WorkflowFrameOutcome::Converted(_)
                     ),
                     "optional field omission rejected: {event_kind}.{field}"
                 );
@@ -3213,7 +3177,7 @@ mod tests {
                 assert!(
                     matches!(
                         to_notification("kiro/workflow/run_start", &params),
-                        Some(Some(Notification::Workflow(_)))
+                        WorkflowFrameOutcome::Converted(_)
                     ),
                     "optional descriptor omission rejected: {node_type}.{field}"
                 );
@@ -3244,8 +3208,8 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(actual_types, types);
         assert_eq!(started.node_tree()[0].agent_name(), Some(""));
-        assert_eq!(started.node_tree()[0].model(), Some(""));
-        assert_eq!(started.node_tree()[0].effort(), Some(""));
+        assert_eq!(started.node_tree()[0].model_id(), Some(""));
+        assert_eq!(started.node_tree()[0].effort_level(), Some(""));
         assert_eq!(started.node_tree()[2].max_iterations(), Some(0));
         assert_eq!(
             started.node_tree()[2]
@@ -3293,7 +3257,7 @@ mod tests {
         );
         assert!(matches!(
             to_notification("kiro/workflow/run_start", &unknown),
-            Some(None)
+            WorkflowFrameOutcome::Dropped
         ));
     }
 
@@ -3594,7 +3558,7 @@ mod tests {
 
             let mut descriptor = valid_descriptor("step");
             let descriptor_object = must_object_mut(&mut descriptor, "step descriptor");
-            for field in ["agentName", "model", "effort"] {
+            for field in ["agentName", "modelId", "effortLevel"] {
                 descriptor_object.insert(
                     field.to_owned(),
                     serde_json::Value::String(value.to_owned()),
@@ -3612,8 +3576,8 @@ mod tests {
             };
             let descriptor = &descriptor_started.node_tree()[0];
             assert_eq!(descriptor.agent_name(), Some(value));
-            assert_eq!(descriptor.model(), Some(value));
-            assert_eq!(descriptor.effort(), Some(value));
+            assert_eq!(descriptor.model_id(), Some(value));
+            assert_eq!(descriptor.effort_level(), Some(value));
         }
     }
 
@@ -3727,7 +3691,10 @@ mod tests {
             let mut params = valid_payload(method);
             set_top_field(&mut params, field, serde_json::Value::String(String::new()));
             assert!(
-                matches!(to_notification(method, &params), Some(None)),
+                matches!(
+                    to_notification(method, &params),
+                    WorkflowFrameOutcome::Dropped
+                ),
                 "empty identifier accepted: {method}.{field}"
             );
         }
@@ -3741,7 +3708,7 @@ mod tests {
                 "kiro/workflow/run_start",
                 &descriptor_event_payload(descriptor)
             ),
-            Some(None)
+            WorkflowFrameOutcome::Dropped
         ));
         let empty_snapshot = completed_snapshot("", "completed");
         let wire: WireSnapshot = must_succeed(
@@ -3849,11 +3816,11 @@ mod tests {
             let mut step = valid_descriptor("step");
             let step_object = must_object_mut(&mut step, "step descriptor");
             if mask & 1 == 0 {
-                let removed = step_object.remove("model");
+                let removed = step_object.remove("modelId");
                 assert!(removed.is_some());
             }
             if mask & 2 == 0 {
-                let removed = step_object.remove("effort");
+                let removed = step_object.remove("effortLevel");
                 assert!(removed.is_some());
             }
             let started = match event(
@@ -3863,8 +3830,11 @@ mod tests {
                 WorkflowEvent::RunStarted(started) => started,
                 other => panic!("expected run_start, got {other:?}"),
             };
-            assert_eq!(started.node_tree()[0].model().is_some(), mask & 1 != 0);
-            assert_eq!(started.node_tree()[0].effort().is_some(), mask & 2 != 0);
+            assert_eq!(started.node_tree()[0].model_id().is_some(), mask & 1 != 0);
+            assert_eq!(
+                started.node_tree()[0].effort_level().is_some(),
+                mask & 2 != 0
+            );
 
             let mut repeat = valid_descriptor("repeat");
             let repeat_object = must_object_mut(&mut repeat, "repeat descriptor");
@@ -3969,6 +3939,39 @@ mod tests {
                 assert_eq!(actual, present, "snapshot root optional {field}");
             }
         }
+        let methods = [
+            "kiro/workflow/run_start",
+            "kiro/workflow/node_start",
+            "kiro/workflow/node_complete",
+            "kiro/workflow/node_paused",
+            "kiro/workflow/loop_iteration",
+            "kiro/workflow/watch_poll",
+            "kiro/workflow/paused",
+            "kiro/workflow/run_complete",
+            "kiro/workflow/steps_queued",
+        ];
+        for method in methods {
+            for present in [false, true] {
+                let mut params = valid_payload(method);
+                if !present {
+                    let removed =
+                        must_object_mut(&mut params, "workflow event").remove("parentSessionId");
+                    assert!(removed.is_some(), "{method}: parentSessionId baseline");
+                }
+                let actual = match event(to_notification(method, &params), "parent session") {
+                    WorkflowEvent::RunStarted(event) => event.parent_session_id().is_some(),
+                    WorkflowEvent::NodeStarted(event) => event.parent_session_id().is_some(),
+                    WorkflowEvent::NodeCompleted(event) => event.parent_session_id().is_some(),
+                    WorkflowEvent::NodePaused(event) => event.parent_session_id().is_some(),
+                    WorkflowEvent::LoopIteration(event) => event.parent_session_id().is_some(),
+                    WorkflowEvent::WatchPoll(event) => event.parent_session_id().is_some(),
+                    WorkflowEvent::Paused(event) => event.parent_session_id().is_some(),
+                    WorkflowEvent::RunCompleted(event) => event.parent_session_id().is_some(),
+                    WorkflowEvent::StepsQueued(event) => event.parent_session_id().is_some(),
+                };
+                assert_eq!(actual, present, "{method}: parentSessionId");
+            }
+        }
     }
 
     #[test]
@@ -3990,8 +3993,8 @@ mod tests {
             let descriptor = snapshot.root().descriptor();
             assert_eq!(descriptor.node_type().as_str(), node_type);
             assert!(descriptor.agent_name().is_none());
-            assert!(descriptor.model().is_none());
-            assert!(descriptor.effort().is_none());
+            assert!(descriptor.model_id().is_none());
+            assert!(descriptor.effort_level().is_none());
             assert!(descriptor.max_iterations().is_none());
             assert!(descriptor.on_max_iterations().is_none());
             assert!(descriptor.stop_condition().is_none());
@@ -4249,7 +4252,10 @@ mod tests {
                 let mut params = valid_payload(method);
                 set_top_field(&mut params, field, invalid.clone());
                 assert!(
-                    matches!(to_notification(method, &params), Some(None)),
+                    matches!(
+                        to_notification(method, &params),
+                        WorkflowFrameOutcome::Dropped
+                    ),
                     "out-of-range integer accepted: {method}.{field}"
                 );
             }
@@ -4261,7 +4267,7 @@ mod tests {
                     "kiro/workflow/run_start",
                     &descriptor_event_payload(descriptor)
                 ),
-                Some(None)
+                WorkflowFrameOutcome::Dropped
             ));
             let mut snapshot = completed_snapshot("workflow", "completed");
             set_top_field(&mut snapshot, "planRevision", invalid);
@@ -4307,7 +4313,7 @@ mod tests {
             set_top_field(&mut params, "nodePath", invalid);
             assert!(matches!(
                 to_notification("kiro/workflow/node_start", &params),
-                Some(None)
+                WorkflowFrameOutcome::Dropped
             ));
         }
     }
@@ -4449,7 +4455,7 @@ mod tests {
                     assert_eq!(completed.final_state().status().as_str(), snapshot);
                 } else {
                     let (result, log) = capture_rejection("kiro/workflow/run_complete", &params);
-                    assert!(matches!(result, Some(None)));
+                    assert!(matches!(result, WorkflowFrameOutcome::Dropped));
                     assert_eq!(log["level"], "WARN");
                     assert_eq!(log["fields"]["method"], "kiro/workflow/run_complete");
                     assert_eq!(log["fields"]["field_path"], "status");

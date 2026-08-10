@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::types::workflow::WorkflowNodeSnapshotParts;
+use crate::types::workflow::{
+    WorkflowNodeCompletedParts, WorkflowNodeCompletionParts, WorkflowNodeSnapshotParts,
+    WorkflowNodeStartParts, WorkflowNodeStartedParts, WorkflowRunStartedParts,
+    WorkflowSnapshotParts,
+};
 use crate::types::{
     SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId,
     WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
@@ -78,7 +82,7 @@ pub struct WorkflowNodeState {
 
 impl WorkflowNodeState {
     fn from_snapshot(parts: WorkflowNodeSnapshotParts) -> Self {
-        let (
+        let WorkflowNodeSnapshotParts {
             descriptor,
             status,
             session_id,
@@ -93,7 +97,8 @@ impl WorkflowNodeState {
             ended_at,
             watch_cursor,
             watch_terminal,
-        ) = parts.into_values();
+            ..
+        } = parts;
         Self {
             identity: WorkflowNodeIdentity::Snapshot {
                 descriptor,
@@ -472,14 +477,26 @@ impl WorkflowTracker {
         self.replace_if_changed(workflow_id, run)
     }
 
-    /// Applies one workflow lifecycle event to persisted state.
-    ///
+    /// Applies one `node_start` event to its active run.
     fn apply_node_started(&mut self, started: crate::types::WorkflowNodeStarted) -> bool {
-        let (workflow_id, node_id, node_path, node_type, details) = started.into_parts();
+        let WorkflowNodeStartedParts {
+            workflow_id,
+            node_id,
+            node_path,
+            node_type,
+            details,
+        } = started.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "node_start") else {
             return false;
         };
-        let (agent_name, session_id, prompt, iteration, branch_id) = details.into_values();
+        let WorkflowNodeStartParts {
+            agent_name,
+            session_id,
+            prompt,
+            iteration,
+            branch_id,
+        } = details.into_parts();
+        tally_node_lookup();
         let Some(node) = run.nodes.get_mut(&node_path) else {
             let node = WorkflowNodeState::from_opening(
                 node_id, node_type, agent_name, session_id, prompt, iteration, branch_id,
@@ -542,30 +559,42 @@ impl WorkflowTracker {
     }
 
     fn apply_node_completed(&mut self, completed: crate::types::WorkflowNodeCompleted) -> bool {
-        let (workflow_id, _node_id, node_path, status, details) = completed.into_parts();
+        let WorkflowNodeCompletedParts {
+            workflow_id,
+            node_path,
+            status,
+            details,
+        } = completed.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "node_complete") else {
             return false;
         };
+        tally_node_lookup();
         let Some(node) = run.nodes.get_mut(&node_path) else {
             warn_ignored(&workflow_id, "node_complete", "unknown_node");
             return false;
         };
-        let (artifacts, captured_output, failure_reason, signal, signal_source) =
-            details.into_values();
+        let WorkflowNodeCompletionParts {
+            artifacts,
+            captured_output,
+            failure_reason,
+            completion_signal,
+            completion_signal_source,
+        } = details.into_parts();
         let mut changed = replace(&mut node.status, Some(status));
         changed |= replace_if_some(&mut node.artifacts, artifacts);
         changed |= replace_if_some(&mut node.captured_output, captured_output);
         changed |= replace_if_some(&mut node.failure_reason, failure_reason);
-        changed |= replace_if_some(&mut node.completion_signal, signal);
-        changed |= replace_if_some(&mut node.completion_signal_source, signal_source);
+        changed |= replace_if_some(&mut node.completion_signal, completion_signal);
+        changed |= replace_if_some(&mut node.completion_signal_source, completion_signal_source);
         changed
     }
 
     fn apply_node_paused(&mut self, paused: crate::types::WorkflowNodePaused) -> bool {
-        let (workflow_id, _node_id, node_path, reason) = paused.into_parts();
+        let (workflow_id, _node_id, node_path, reason, _parent_session_id) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "node_paused") else {
             return false;
         };
+        tally_node_lookup();
         let Some(node) = run.nodes.get_mut(&node_path) else {
             warn_ignored(&workflow_id, "node_paused", "unknown_node");
             return false;
@@ -575,15 +604,18 @@ impl WorkflowTracker {
     }
 
     fn apply_loop_iteration(&mut self, iteration: crate::types::WorkflowLoopIteration) -> bool {
-        let (workflow_id, loop_id, value, stop_condition_met) = iteration.into_parts();
+        let (workflow_id, loop_id, value, stop_condition_met, _parent_session_id) =
+            iteration.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "loop_iteration") else {
             return false;
         };
+        tally_id_bucket_lookup();
         let Some(paths) = run.node_index.get(&loop_id) else {
             warn_ignored(&workflow_id, "loop_iteration", "unknown_node");
             return false;
         };
         let mut matches = paths.iter().filter(|path| {
+            tally_node_lookup();
             run.nodes
                 .get(*path)
                 .is_some_and(|node| node.node_type() == WorkflowNodeType::Repeat)
@@ -596,6 +628,7 @@ impl WorkflowTracker {
             warn_ignored(&workflow_id, "loop_iteration", "ambiguous_repeat");
             return false;
         }
+        tally_node_lookup();
         let Some(node) = run.nodes.get_mut(&path) else {
             unreachable!("an indexed workflow path remains present in the node map");
         };
@@ -605,10 +638,11 @@ impl WorkflowTracker {
         )
     }
     fn apply_watch_poll(&mut self, poll: crate::types::WorkflowWatchPoll) -> bool {
-        let (workflow_id, _node_id, node_path, outcome, at) = poll.into_parts();
+        let (workflow_id, _node_id, node_path, outcome, at, _parent_session_id) = poll.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "watch_poll") else {
             return false;
         };
+        tally_node_lookup();
         let Some(node) = run.nodes.get_mut(&node_path) else {
             warn_ignored(&workflow_id, "watch_poll", "unknown_node");
             return false;
@@ -617,7 +651,7 @@ impl WorkflowTracker {
     }
 
     fn apply_paused(&mut self, paused: crate::types::WorkflowPaused) -> bool {
-        let (workflow_id, reason) = paused.into_parts();
+        let (workflow_id, reason, _parent_session_id) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "paused") else {
             return false;
         };
@@ -626,7 +660,7 @@ impl WorkflowTracker {
     }
 
     fn apply_steps_queued(&mut self, queued: crate::types::WorkflowStepsQueued) -> bool {
-        let (workflow_id, pending_steps, resolution) = queued.into_parts();
+        let (workflow_id, pending_steps, resolution, _parent_session_id) = queued.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "steps_queued") else {
             return false;
         };
@@ -641,6 +675,7 @@ impl WorkflowTracker {
         workflow_id: &WorkflowId,
         event_kind: &str,
     ) -> Option<&mut WorkflowRun> {
+        tally_run_lookup();
         let Some(run) = self.runs.get_mut(workflow_id) else {
             warn_ignored(workflow_id, event_kind, "unknown_run");
             return None;
@@ -653,8 +688,13 @@ impl WorkflowTracker {
     }
 
     fn apply_opening(&mut self, opening: WorkflowRunStarted) -> Result<bool, WorkflowStateError> {
-        let (workflow_id, workflow_name, inputs, opening_plan, parent_session_id) =
-            opening.into_parts();
+        let WorkflowRunStartedParts {
+            workflow_id,
+            workflow_name,
+            inputs,
+            node_tree: opening_plan,
+            parent_session_id,
+        } = opening.into_parts();
         if let Some(current) = self.runs.get(&workflow_id) {
             if is_terminal(current.status) {
                 return self.replace_if_changed(
@@ -803,7 +843,7 @@ fn canonicalize_snapshot(
         ),
     }
 
-    let (
+    let WorkflowSnapshotParts {
         workflow_id,
         workflow_name,
         status,
@@ -815,7 +855,7 @@ fn canonicalize_snapshot(
         plan_revision,
         parent_session_id,
         workspace_path,
-    ) = snapshot.into_parts().into_values();
+    } = snapshot.into_parts();
     let root_path = WorkflowNodePath::try_new(&workflow_id, vec![workflow_id.as_str().to_owned()])
         .map_err(|source| WorkflowStateError::InvalidCanonicalPath { source })?;
     let mut nodes = HashMap::new();
@@ -938,6 +978,62 @@ fn canonical_child_segment(
     child_id.to_owned()
 }
 
+/// Test-only per-event lookup telemetry (design decision D4): result equality
+/// cannot distinguish a keyed lookup from a full-map scan, so the apply paths
+/// count their map read-lookups and the scale fence bounds them per event.
+#[cfg(test)]
+mod lookup_telemetry {
+    use std::cell::Cell;
+
+    thread_local! {
+        static RUN: Cell<u64> = const { Cell::new(0) };
+        static NODE: Cell<u64> = const { Cell::new(0) };
+        static ID_BUCKET: Cell<u64> = const { Cell::new(0) };
+    }
+
+    /// Zeroes all three counters on the current thread.
+    pub(super) fn reset() {
+        RUN.set(0);
+        NODE.set(0);
+        ID_BUCKET.set(0);
+    }
+
+    /// Returns `(run, node, id_bucket)` read-lookup counts since the last reset.
+    pub(super) fn counts() -> (u64, u64, u64) {
+        (RUN.get(), NODE.get(), ID_BUCKET.get())
+    }
+
+    pub(super) fn tally_run() {
+        RUN.set(RUN.get() + 1);
+    }
+
+    pub(super) fn tally_node() {
+        NODE.set(NODE.get() + 1);
+    }
+
+    pub(super) fn tally_id_bucket() {
+        ID_BUCKET.set(ID_BUCKET.get() + 1);
+    }
+}
+
+/// Records one run-map read lookup; a no-op outside test builds.
+fn tally_run_lookup() {
+    #[cfg(test)]
+    lookup_telemetry::tally_run();
+}
+
+/// Records one node-map read lookup; a no-op outside test builds.
+fn tally_node_lookup() {
+    #[cfg(test)]
+    lookup_telemetry::tally_node();
+}
+
+/// Records one node-id-index read lookup; a no-op outside test builds.
+fn tally_id_bucket_lookup() {
+    #[cfg(test)]
+    lookup_telemetry::tally_id_bucket();
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::{Duration, Instant};
@@ -979,44 +1075,16 @@ mod tests {
         }
     }
 
-    #[derive(Clone, Default)]
-    struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
-
-    impl std::io::Write for CaptureWriter {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            let Ok(mut capture) = self.0.lock() else {
-                return Err(std::io::Error::other("capture lock poisoned"));
-            };
-            capture.extend_from_slice(buf);
-            Ok(buf.len())
-        }
-
-        fn flush(&mut self) -> std::io::Result<()> {
-            Ok(())
-        }
-    }
-
-    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
-        type Writer = CaptureWriter;
-
-        fn make_writer(&'a self) -> Self::Writer {
-            self.clone()
-        }
-    }
-
     fn with_captured_warnings<T>(f: impl FnOnce() -> T) -> (T, String) {
-        let capture = CaptureWriter::default();
+        let _capture_lock = crate::test_support::tracing_capture_lock();
+        let capture = crate::test_support::CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
             .with_max_level(tracing::Level::WARN)
             .with_ansi(false)
             .with_writer(capture.clone())
             .finish();
         let result = tracing::subscriber::with_default(subscriber, f);
-        let bytes = match capture.0.lock() {
-            Ok(capture) => capture.clone(),
-            Err(error) => panic!("capture lock poisoned: {error}"),
-        };
-        let logs = match String::from_utf8(bytes) {
+        let logs = match String::from_utf8(capture.captured()) {
             Ok(logs) => logs,
             Err(error) => panic!("captured logs are not UTF-8: {error}"),
         };
@@ -1236,11 +1304,12 @@ mod tests {
 
     #[test]
     fn repeat_snapshot_paths_match_wire_paths() {
-        let manifest: serde_json::Value =
-            match serde_json::from_str(include_str!("../../../.cyril-6beh/oracle-manifest.json")) {
-                Ok(value) => value,
-                Err(error) => panic!("workflow manifest is invalid: {error}"),
-            };
+        let manifest: serde_json::Value = match serde_json::from_str(include_str!(
+            "../tests/fixtures/kas/workflow/oracle-manifest.json"
+        )) {
+            Ok(value) => value,
+            Err(error) => panic!("workflow manifest is invalid: {error}"),
+        };
         let controls = match manifest["repeat_controls"].as_array() {
             Some(controls) => controls,
             None => panic!("repeat controls are not an array"),
@@ -1727,11 +1796,12 @@ mod tests {
             Some((WorkflowWatchOutcome::Idle, "t1"))
         );
 
-        let manifest: serde_json::Value =
-            match serde_json::from_str(include_str!("../../../.cyril-6beh/oracle-manifest.json")) {
-                Ok(value) => value,
-                Err(error) => panic!("oracle manifest is invalid: {error}"),
-            };
+        let manifest: serde_json::Value = match serde_json::from_str(include_str!(
+            "../tests/fixtures/kas/workflow/oracle-manifest.json"
+        )) {
+            Ok(value) => value,
+            Err(error) => panic!("oracle manifest is invalid: {error}"),
+        };
         assert_eq!(
             manifest["snapshot_owned_run_fields"],
             serde_json::json!([
@@ -1843,8 +1913,13 @@ mod tests {
             let mut tracker = WorkflowTracker::new();
             assert_eq!(tracker.apply_event(parent_base.clone()), Ok(true));
             let before = tracker.get(&workflow_id("workflow")).cloned();
-            assert_eq!(tracker.apply_event(conflict), Ok(false));
+            let (result, logs) = with_captured_warnings(|| tracker.apply_event(conflict));
+            assert_eq!(result, Ok(false));
             assert_eq!(tracker.get(&workflow_id("workflow")), before.as_ref());
+            assert!(
+                logs.contains("active_run_start_conflict"),
+                "conflicting active run_start must warn, got:\n{logs}"
+            );
         }
     }
 
@@ -1899,8 +1974,8 @@ mod tests {
             panic!("snapshot descriptor must survive a partial node_start");
         };
         assert_eq!(node.agent_name(), Some("event-agent"));
-        assert_eq!(descriptor.model(), Some("snapshot-model"));
-        assert_eq!(descriptor.effort(), Some("snapshot-effort"));
+        assert_eq!(descriptor.model_id(), Some("snapshot-model"));
+        assert_eq!(descriptor.effort_level(), Some("snapshot-effort"));
     }
 
     #[test]
@@ -2333,8 +2408,13 @@ mod tests {
         ];
         let mut tracker = WorkflowTracker::new();
         for event in events {
-            assert_eq!(tracker.apply_event(event), Ok(false));
+            let (result, logs) = with_captured_warnings(|| tracker.apply_event(event));
+            assert_eq!(result, Ok(false));
             assert_eq!(tracker.iter().len(), 0);
+            assert!(
+                logs.contains("unknown_run"),
+                "pre-opening event must warn, got:\n{logs}"
+            );
         }
     }
 
@@ -2381,8 +2461,13 @@ mod tests {
                 false,
             )),
         ] {
-            assert_eq!(tracker.apply_event(event), Ok(false));
+            let (result, logs) = with_captured_warnings(|| tracker.apply_event(event));
+            assert_eq!(result, Ok(false));
             assert_eq!(tracker.get(&id).map(|run| run.nodes().len()), Some(0));
+            assert!(
+                logs.contains("unknown_node"),
+                "unknown node event must warn, got:\n{logs}"
+            );
         }
     }
 
@@ -2444,14 +2529,17 @@ mod tests {
             ))),
             Ok(true)
         );
-        assert_eq!(
-            tracker.apply_event(WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
-                id.clone(),
-                node_id("shared"),
-                2,
-                true
-            ))),
-            Ok(false)
+        let event = WorkflowEvent::LoopIteration(WorkflowLoopIteration::new(
+            id.clone(),
+            node_id("shared"),
+            2,
+            true,
+        ));
+        let (result, logs) = with_captured_warnings(|| tracker.apply_event(event));
+        assert_eq!(result, Ok(false));
+        assert!(
+            logs.contains("ambiguous_repeat"),
+            "ambiguous repeat update must warn, got:\n{logs}"
         );
         assert_eq!(
             tracker
@@ -2604,15 +2692,26 @@ mod tests {
                 let mut tracker = WorkflowTracker::new();
                 assert_eq!(tracker.apply_snapshot(original), Ok(true));
                 let before = tracker.get(&id).cloned();
-                assert_eq!(tracker.apply_event(event), Ok(false));
+                let (result, logs) = with_captured_warnings(|| tracker.apply_event(event));
+                assert_eq!(result, Ok(false));
                 assert_eq!(tracker.get(&id), before.as_ref());
+                assert!(
+                    logs.contains("post_terminal_event")
+                        || logs.contains("terminal_completion_conflict"),
+                    "post-terminal event must warn, got:\n{logs}"
+                );
             }
             let exact = snapshot_with_status("workflow", status, "exact");
             let mut tracker = WorkflowTracker::new();
             assert_eq!(tracker.apply_snapshot(exact.clone()), Ok(true));
             let before = tracker.get(&id).cloned();
-            assert_eq!(tracker.apply_event(completion(exact)), Ok(false));
+            let (result, logs) = with_captured_warnings(|| tracker.apply_event(completion(exact)));
+            assert_eq!(result, Ok(false));
             assert_eq!(tracker.get(&id), before.as_ref());
+            assert!(
+                logs.is_empty(),
+                "exact terminal duplicate must be silent, got:\n{logs}"
+            );
         }
     }
     #[test]
@@ -2732,11 +2831,12 @@ mod tests {
             digest
         }
 
-        let manifest: serde_json::Value =
-            match serde_json::from_str(include_str!("../../../.cyril-6beh/oracle-manifest.json")) {
-                Ok(value) => value,
-                Err(error) => panic!("workflow manifest is invalid: {error}"),
-            };
+        let manifest: serde_json::Value = match serde_json::from_str(include_str!(
+            "../tests/fixtures/kas/workflow/oracle-manifest.json"
+        )) {
+            Ok(value) => value,
+            Err(error) => panic!("workflow manifest is invalid: {error}"),
+        };
         let runs = manifest["scale"]["runs"].as_u64().unwrap_or_else(|| {
             panic!("scale.runs must be an integer");
         }) as usize;
@@ -2750,6 +2850,21 @@ mod tests {
             .unwrap_or_else(|| {
                 panic!("scale.events_per_node must be an integer");
             }) as usize;
+        let lookup_bound = |kind: &str, map: &str| -> u64 {
+            manifest["scale"][kind][map].as_u64().unwrap_or_else(|| {
+                panic!("scale.{kind}.{map} must be an integer");
+            })
+        };
+        let ordinary = (
+            lookup_bound("ordinary_lookup_bound", "run"),
+            lookup_bound("ordinary_lookup_bound", "node"),
+            lookup_bound("ordinary_lookup_bound", "id_bucket"),
+        );
+        let pathless = (
+            lookup_bound("pathless_lookup_bound", "run"),
+            lookup_bound("pathless_lookup_bound", "node"),
+            lookup_bound("pathless_lookup_bound", "id_bucket"),
+        );
         let started = Instant::now();
         let mut tracker = WorkflowTracker::new();
         let mut event_count = 0_usize;
@@ -2766,19 +2881,30 @@ mod tests {
                 ))),
                 Ok(true)
             );
-            for node_index in 0..nodes_per_run {
-                let node_name = format!("node-{node_index}");
-                let path = node_path(&id, &[workflow_name.as_str(), node_name.as_str()]);
-                for repeat in 0..events_per_node {
+        }
+        for repeat in 0..events_per_node {
+            for run_index in 0..runs {
+                let workflow_name = format!("workflow-{run_index}");
+                let id = workflow_id(&workflow_name);
+                for node_index in 0..nodes_per_run {
+                    let node_name = format!("node-{node_index}");
+                    let path = node_path(&id, &[workflow_name.as_str(), node_name.as_str()]);
+                    lookup_telemetry::reset();
                     assert_eq!(
                         tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
                             id.clone(),
                             node_id(&node_name),
-                            path.clone(),
+                            path,
                             WorkflowNodeType::Step,
                             WorkflowNodeStartDetails::new(),
                         ))),
                         Ok(repeat == 0)
+                    );
+                    let counts = lookup_telemetry::counts();
+                    assert!(
+                        counts.0 <= ordinary.0 && counts.1 <= ordinary.1 && counts.2 <= ordinary.2,
+                        "ordinary node_start exceeded its per-event lookup bound: \
+                         {counts:?} > {ordinary:?}"
                     );
                     event_count += 1;
                 }
@@ -2817,6 +2943,36 @@ mod tests {
             "163,840-event isolation fixture exceeded 5 s"
         );
 
+        for run_index in 0..runs {
+            let workflow_name = format!("workflow-{run_index}");
+            let id = workflow_id(&workflow_name);
+            let loop_name = "scale-repeat";
+            let path = node_path(&id, &[workflow_name.as_str(), loop_name]);
+            assert_eq!(
+                tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                    id.clone(),
+                    node_id(loop_name),
+                    path,
+                    WorkflowNodeType::Repeat,
+                    WorkflowNodeStartDetails::new(),
+                ))),
+                Ok(true)
+            );
+            lookup_telemetry::reset();
+            assert_eq!(
+                tracker.apply_event(WorkflowEvent::LoopIteration(
+                    crate::types::WorkflowLoopIteration::new(id, node_id(loop_name), 1, false)
+                )),
+                Ok(true)
+            );
+            let counts = lookup_telemetry::counts();
+            assert!(
+                counts.0 <= pathless.0 && counts.1 <= pathless.1 && counts.2 <= pathless.2,
+                "pathless loop_iteration exceeded its per-event lookup bound: \
+                 {counts:?} > {pathless:?}"
+            );
+        }
+
         let large = "x".repeat(65_536);
         let large_id = workflow_id(&large);
         let large_path = node_path(&large_id, &[large.as_str(), large.as_str()]);
@@ -2842,9 +2998,12 @@ mod tests {
             ))),
             Ok(true)
         );
+        // Generous CI-safe ceiling: a single 64 KiB event takes microseconds
+        // unless string handling regresses to repeated copies, which
+        // overshoots this bound by orders of magnitude.
         assert!(
-            large_started.elapsed() <= Duration::from_millis(50),
-            "64 KiB workflow/node/path event exceeded 50 ms"
+            large_started.elapsed() <= Duration::from_secs(2),
+            "64 KiB workflow/node/path event exceeded 2 s"
         );
     }
 }

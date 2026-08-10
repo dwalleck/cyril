@@ -53,7 +53,7 @@ def method_kind(frame):
 
 def descriptor(node):
     result = {"nodeId": node["nodeId"], "type": node["type"]}
-    for key in ("agentName", "model", "effort", "maxIterations", "onMaxIterations", "stopCondition", "stopWhen", "handlerName"):
+    for key in ("agentName", "modelId", "effortLevel", "maxIterations", "onMaxIterations", "stopCondition", "stopWhen", "handlerName"):
         if key in node:
             result[key] = copy.deepcopy(node[key])
     children = node.get("steps", node.get("branches", node.get("children")))

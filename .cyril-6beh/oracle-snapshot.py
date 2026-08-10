@@ -6,7 +6,10 @@ import sys
 from pathlib import Path
 
 MANIFEST = json.loads(
-    (Path(__file__).with_name("oracle-manifest.json")).read_text(encoding="utf-8")
+    (
+        Path(__file__).resolve().parent.parent
+        / "crates/cyril-core/tests/fixtures/kas/workflow/oracle-manifest.json"
+    ).read_text(encoding="utf-8")
 )
 RUN_FIELDS = {"workflowId"} | (
     set(MANIFEST["snapshot_owned_run_fields"]) - {"root"}

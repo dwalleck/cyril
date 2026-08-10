@@ -648,12 +648,7 @@ mod tests {
     fn assert_send<T: Send>() {}
     fn assert_sync<T: Sync>() {}
     fn assert_clone<T: Clone>() {}
-    fn must_succeed<T, E: std::fmt::Debug>(result: Result<T, E>, context: &str) -> T {
-        match result {
-            Ok(value) => value,
-            Err(error) => panic!("{context}: {error:?}"),
-        }
-    }
+    use crate::test_support::must_succeed;
 
     #[test]
     fn notification_is_send_sync_clone() {

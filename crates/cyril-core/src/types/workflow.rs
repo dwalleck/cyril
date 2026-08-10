@@ -221,8 +221,8 @@ pub struct WorkflowNodeDescriptor {
 enum WorkflowNodeDescriptorKind {
     Step {
         agent_name: Option<String>,
-        model: Option<String>,
-        effort: Option<String>,
+        model_id: Option<String>,
+        effort_level: Option<String>,
     },
     Sequence {
         steps: Vec<WorkflowNodeDescriptor>,
@@ -247,15 +247,15 @@ impl WorkflowNodeDescriptor {
     pub fn step(
         node_id: WorkflowNodeId,
         agent_name: String,
-        model: Option<String>,
-        effort: Option<String>,
+        model_id: Option<String>,
+        effort_level: Option<String>,
     ) -> Self {
         Self {
             node_id,
             kind: WorkflowNodeDescriptorKind::Step {
                 agent_name: Some(agent_name),
-                model,
-                effort,
+                model_id,
+                effort_level,
             },
         }
     }
@@ -312,15 +312,15 @@ impl WorkflowNodeDescriptor {
     pub(crate) fn snapshot_step(
         node_id: WorkflowNodeId,
         agent_name: Option<String>,
-        model: Option<String>,
-        effort: Option<String>,
+        model_id: Option<String>,
+        effort_level: Option<String>,
     ) -> Self {
         Self {
             node_id,
             kind: WorkflowNodeDescriptorKind::Step {
                 agent_name,
-                model,
-                effort,
+                model_id,
+                effort_level,
             },
         }
     }
@@ -400,18 +400,18 @@ impl WorkflowNodeDescriptor {
         }
     }
 
-    /// Returns the optional model when this is a step descriptor.
-    pub fn model(&self) -> Option<&str> {
+    /// Returns the optional pinned model identifier when this is a step descriptor.
+    pub fn model_id(&self) -> Option<&str> {
         match &self.kind {
-            WorkflowNodeDescriptorKind::Step { model, .. } => model.as_deref(),
+            WorkflowNodeDescriptorKind::Step { model_id, .. } => model_id.as_deref(),
             _ => None,
         }
     }
 
-    /// Returns the optional effort when this is a step descriptor.
-    pub fn effort(&self) -> Option<&str> {
+    /// Returns the optional pinned effort level when this is a step descriptor.
+    pub fn effort_level(&self) -> Option<&str> {
         match &self.kind {
-            WorkflowNodeDescriptorKind::Step { effort, .. } => effort.as_deref(),
+            WorkflowNodeDescriptorKind::Step { effort_level, .. } => effort_level.as_deref(),
             _ => None,
         }
     }
@@ -515,39 +515,22 @@ pub struct WorkflowNodeSnapshot {
 
 /// Owned node-snapshot fields consumed by the workflow state module.
 pub(crate) struct WorkflowNodeSnapshotParts {
-    descriptor: WorkflowNodeDescriptor,
-    status: WorkflowNodeStatus,
-    children: Vec<WorkflowNodeSnapshot>,
-    session_id: Option<SessionId>,
-    artifacts: Option<serde_json::Value>,
-    captured_output: Option<serde_json::Value>,
-    failure_reason: Option<String>,
-    iteration: Option<u32>,
-    branch_id: Option<String>,
-    completion_signal: Option<WorkflowCompletionSignal>,
-    completion_signal_source: Option<WorkflowCompletionSignalSource>,
-    started_at: Option<String>,
-    ended_at: Option<String>,
-    watch_cursor: Option<serde_json::Value>,
-    watch_terminal: Option<serde_json::Value>,
+    pub(crate) descriptor: WorkflowNodeDescriptor,
+    pub(crate) status: WorkflowNodeStatus,
+    pub(crate) children: Vec<WorkflowNodeSnapshot>,
+    pub(crate) session_id: Option<SessionId>,
+    pub(crate) artifacts: Option<serde_json::Value>,
+    pub(crate) captured_output: Option<serde_json::Value>,
+    pub(crate) failure_reason: Option<String>,
+    pub(crate) iteration: Option<u32>,
+    pub(crate) branch_id: Option<String>,
+    pub(crate) completion_signal: Option<WorkflowCompletionSignal>,
+    pub(crate) completion_signal_source: Option<WorkflowCompletionSignalSource>,
+    pub(crate) started_at: Option<String>,
+    pub(crate) ended_at: Option<String>,
+    pub(crate) watch_cursor: Option<serde_json::Value>,
+    pub(crate) watch_terminal: Option<serde_json::Value>,
 }
-
-pub(crate) type WorkflowNodeSnapshotValues = (
-    WorkflowNodeDescriptor,
-    WorkflowNodeStatus,
-    Option<SessionId>,
-    Option<serde_json::Value>,
-    Option<serde_json::Value>,
-    Option<String>,
-    Option<u32>,
-    Option<String>,
-    Option<WorkflowCompletionSignal>,
-    Option<WorkflowCompletionSignalSource>,
-    Option<String>,
-    Option<String>,
-    Option<serde_json::Value>,
-    Option<serde_json::Value>,
-);
 
 impl WorkflowNodeSnapshotParts {
     pub(crate) fn descriptor(&self) -> &WorkflowNodeDescriptor {
@@ -556,25 +539,6 @@ impl WorkflowNodeSnapshotParts {
 
     pub(crate) fn take_children(&mut self) -> Vec<WorkflowNodeSnapshot> {
         std::mem::take(&mut self.children)
-    }
-
-    pub(crate) fn into_values(self) -> WorkflowNodeSnapshotValues {
-        (
-            self.descriptor,
-            self.status,
-            self.session_id,
-            self.artifacts,
-            self.captured_output,
-            self.failure_reason,
-            self.iteration,
-            self.branch_id,
-            self.completion_signal,
-            self.completion_signal_source,
-            self.started_at,
-            self.ended_at,
-            self.watch_cursor,
-            self.watch_terminal,
-        )
     }
 }
 
@@ -851,49 +815,17 @@ pub struct WorkflowSnapshot {
 }
 /// Owned snapshot fields consumed by the workflow state module.
 pub(crate) struct WorkflowSnapshotParts {
-    workflow_id: WorkflowId,
-    workflow_name: String,
-    status: WorkflowRunStatus,
-    inputs: serde_json::Value,
-    artifacts: serde_json::Value,
-    captured_outputs: serde_json::Value,
-    root: WorkflowNodeSnapshot,
-    created_at: String,
-    plan_revision: u32,
-    parent_session_id: Option<SessionId>,
-    workspace_path: Option<String>,
-}
-
-pub(crate) type WorkflowSnapshotValues = (
-    WorkflowId,
-    String,
-    WorkflowRunStatus,
-    serde_json::Value,
-    serde_json::Value,
-    serde_json::Value,
-    WorkflowNodeSnapshot,
-    String,
-    u32,
-    Option<SessionId>,
-    Option<String>,
-);
-
-impl WorkflowSnapshotParts {
-    pub(crate) fn into_values(self) -> WorkflowSnapshotValues {
-        (
-            self.workflow_id,
-            self.workflow_name,
-            self.status,
-            self.inputs,
-            self.artifacts,
-            self.captured_outputs,
-            self.root,
-            self.created_at,
-            self.plan_revision,
-            self.parent_session_id,
-            self.workspace_path,
-        )
-    }
+    pub(crate) workflow_id: WorkflowId,
+    pub(crate) workflow_name: String,
+    pub(crate) status: WorkflowRunStatus,
+    pub(crate) inputs: serde_json::Value,
+    pub(crate) artifacts: serde_json::Value,
+    pub(crate) captured_outputs: serde_json::Value,
+    pub(crate) root: WorkflowNodeSnapshot,
+    pub(crate) created_at: String,
+    pub(crate) plan_revision: u32,
+    pub(crate) parent_session_id: Option<SessionId>,
+    pub(crate) workspace_path: Option<String>,
 }
 
 impl WorkflowSnapshot {
@@ -1046,13 +978,14 @@ pub struct WorkflowNodeStartDetails {
     branch_id: Option<String>,
 }
 
-pub(crate) type WorkflowNodeStartValues = (
-    Option<String>,
-    Option<SessionId>,
-    Option<String>,
-    Option<u32>,
-    Option<String>,
-);
+/// Owned `node_start` detail fields consumed by the workflow state module.
+pub(crate) struct WorkflowNodeStartParts {
+    pub(crate) agent_name: Option<String>,
+    pub(crate) session_id: Option<SessionId>,
+    pub(crate) prompt: Option<String>,
+    pub(crate) iteration: Option<u32>,
+    pub(crate) branch_id: Option<String>,
+}
 
 impl WorkflowNodeStartDetails {
     /// Constructs an event detail set with every optional field absent.
@@ -1116,14 +1049,14 @@ impl WorkflowNodeStartDetails {
     }
 
     /// Moves every opening detail into the workflow state machine.
-    pub(crate) fn into_values(self) -> WorkflowNodeStartValues {
-        (
-            self.agent_name,
-            self.session_id,
-            self.prompt,
-            self.iteration,
-            self.branch_id,
-        )
+    pub(crate) fn into_parts(self) -> WorkflowNodeStartParts {
+        WorkflowNodeStartParts {
+            agent_name: self.agent_name,
+            session_id: self.session_id,
+            prompt: self.prompt,
+            iteration: self.iteration,
+            branch_id: self.branch_id,
+        }
     }
 }
 
@@ -1137,13 +1070,14 @@ pub struct WorkflowNodeCompletionDetails {
     completion_signal_source: Option<WorkflowCompletionSignalSource>,
 }
 
-pub(crate) type WorkflowNodeCompletionValues = (
-    Option<serde_json::Value>,
-    Option<serde_json::Value>,
-    Option<String>,
-    Option<WorkflowCompletionSignal>,
-    Option<WorkflowCompletionSignalSource>,
-);
+/// Owned `node_complete` detail fields consumed by the workflow state module.
+pub(crate) struct WorkflowNodeCompletionParts {
+    pub(crate) artifacts: Option<serde_json::Value>,
+    pub(crate) captured_output: Option<serde_json::Value>,
+    pub(crate) failure_reason: Option<String>,
+    pub(crate) completion_signal: Option<WorkflowCompletionSignal>,
+    pub(crate) completion_signal_source: Option<WorkflowCompletionSignalSource>,
+}
 
 impl WorkflowNodeCompletionDetails {
     /// Constructs an event detail set with every optional field absent.
@@ -1207,14 +1141,14 @@ impl WorkflowNodeCompletionDetails {
     }
 
     /// Moves every completion field into the workflow state machine.
-    pub(crate) fn into_values(self) -> WorkflowNodeCompletionValues {
-        (
-            self.artifacts,
-            self.captured_output,
-            self.failure_reason,
-            self.completion_signal,
-            self.completion_signal_source,
-        )
+    pub(crate) fn into_parts(self) -> WorkflowNodeCompletionParts {
+        WorkflowNodeCompletionParts {
+            artifacts: self.artifacts,
+            captured_output: self.captured_output,
+            failure_reason: self.failure_reason,
+            completion_signal: self.completion_signal,
+            completion_signal_source: self.completion_signal_source,
+        }
     }
 }
 
@@ -1228,13 +1162,14 @@ pub struct WorkflowRunStarted {
     parent_session_id: Option<SessionId>,
 }
 
-pub(crate) type WorkflowRunStartedParts = (
-    WorkflowId,
-    String,
-    serde_json::Value,
-    Vec<WorkflowNodeDescriptor>,
-    Option<SessionId>,
-);
+/// Owned `run_start` fields consumed by the workflow state module.
+pub(crate) struct WorkflowRunStartedParts {
+    pub(crate) workflow_id: WorkflowId,
+    pub(crate) workflow_name: String,
+    pub(crate) inputs: serde_json::Value,
+    pub(crate) node_tree: Vec<WorkflowNodeDescriptor>,
+    pub(crate) parent_session_id: Option<SessionId>,
+}
 
 impl WorkflowRunStarted {
     /// Constructs a complete run-opening event.
@@ -1281,13 +1216,13 @@ impl WorkflowRunStarted {
 
     /// Moves every opening field into the workflow state machine.
     pub(crate) fn into_parts(self) -> WorkflowRunStartedParts {
-        (
-            self.workflow_id,
-            self.workflow_name,
-            self.inputs,
-            self.node_tree,
-            self.parent_session_id,
-        )
+        WorkflowRunStartedParts {
+            workflow_id: self.workflow_id,
+            workflow_name: self.workflow_name,
+            inputs: self.inputs,
+            node_tree: self.node_tree,
+            parent_session_id: self.parent_session_id,
+        }
     }
 }
 
@@ -1299,15 +1234,20 @@ pub struct WorkflowNodeStarted {
     node_path: WorkflowNodePath,
     node_type: WorkflowNodeType,
     details: WorkflowNodeStartDetails,
+    parent_session_id: Option<SessionId>,
 }
 
-pub(crate) type WorkflowNodeStartedParts = (
-    WorkflowId,
-    WorkflowNodeId,
-    WorkflowNodePath,
-    WorkflowNodeType,
-    WorkflowNodeStartDetails,
-);
+/// Owned `node_start` fields consumed by the workflow state module.
+///
+/// The event's optional parent session is routing metadata, not node state,
+/// so it is not transferred.
+pub(crate) struct WorkflowNodeStartedParts {
+    pub(crate) workflow_id: WorkflowId,
+    pub(crate) node_id: WorkflowNodeId,
+    pub(crate) node_path: WorkflowNodePath,
+    pub(crate) node_type: WorkflowNodeType,
+    pub(crate) details: WorkflowNodeStartDetails,
+}
 
 impl WorkflowNodeStarted {
     /// Constructs a node-opening event.
@@ -1324,6 +1264,7 @@ impl WorkflowNodeStarted {
             node_path,
             node_type,
             details,
+            parent_session_id: None,
         }
     }
 
@@ -1352,15 +1293,26 @@ impl WorkflowNodeStarted {
         &self.details
     }
 
-    /// Moves every node-opening field into the workflow state machine.
+    /// Sets the optional parent session.
+    pub fn with_parent_session_id(mut self, session_id: SessionId) -> Self {
+        self.parent_session_id = Some(session_id);
+        self
+    }
+
+    /// Returns the parent session when supplied.
+    pub fn parent_session_id(&self) -> Option<&SessionId> {
+        self.parent_session_id.as_ref()
+    }
+
+    /// Moves the state-consumed node-opening fields into the workflow state machine.
     pub(crate) fn into_parts(self) -> WorkflowNodeStartedParts {
-        (
-            self.workflow_id,
-            self.node_id,
-            self.node_path,
-            self.node_type,
-            self.details,
-        )
+        WorkflowNodeStartedParts {
+            workflow_id: self.workflow_id,
+            node_id: self.node_id,
+            node_path: self.node_path,
+            node_type: self.node_type,
+            details: self.details,
+        }
     }
 }
 
@@ -1372,15 +1324,21 @@ pub struct WorkflowNodeCompleted {
     node_path: WorkflowNodePath,
     status: WorkflowNodeStatus,
     details: WorkflowNodeCompletionDetails,
+    parent_session_id: Option<SessionId>,
 }
 
-pub(crate) type WorkflowNodeCompletedParts = (
-    WorkflowId,
-    WorkflowNodeId,
-    WorkflowNodePath,
-    WorkflowNodeStatus,
-    WorkflowNodeCompletionDetails,
-);
+/// Owned `node_complete` fields consumed by the workflow state module.
+///
+/// The event's `nodeId` is deliberately absent: a repeat re-uses the same
+/// `nodeId` every pass, so completion merges on the canonical `nodePath`
+/// only (wire-audit hazard 6). The optional parent session is routing
+/// metadata, not node state.
+pub(crate) struct WorkflowNodeCompletedParts {
+    pub(crate) workflow_id: WorkflowId,
+    pub(crate) node_path: WorkflowNodePath,
+    pub(crate) status: WorkflowNodeStatus,
+    pub(crate) details: WorkflowNodeCompletionDetails,
+}
 
 impl WorkflowNodeCompleted {
     /// Constructs a node-completion update.
@@ -1397,6 +1355,7 @@ impl WorkflowNodeCompleted {
             node_path,
             status,
             details,
+            parent_session_id: None,
         }
     }
 
@@ -1425,15 +1384,25 @@ impl WorkflowNodeCompleted {
         &self.details
     }
 
-    /// Moves every node-completion field into the workflow state machine.
+    /// Sets the optional parent session.
+    pub fn with_parent_session_id(mut self, session_id: SessionId) -> Self {
+        self.parent_session_id = Some(session_id);
+        self
+    }
+
+    /// Returns the parent session when supplied.
+    pub fn parent_session_id(&self) -> Option<&SessionId> {
+        self.parent_session_id.as_ref()
+    }
+
+    /// Moves the state-consumed node-completion fields into the workflow state machine.
     pub(crate) fn into_parts(self) -> WorkflowNodeCompletedParts {
-        (
-            self.workflow_id,
-            self.node_id,
-            self.node_path,
-            self.status,
-            self.details,
-        )
+        WorkflowNodeCompletedParts {
+            workflow_id: self.workflow_id,
+            node_path: self.node_path,
+            status: self.status,
+            details: self.details,
+        }
     }
 }
 
@@ -1444,6 +1413,7 @@ pub struct WorkflowNodePaused {
     node_id: WorkflowNodeId,
     node_path: WorkflowNodePath,
     reason: String,
+    parent_session_id: Option<SessionId>,
 }
 
 impl WorkflowNodePaused {
@@ -1459,6 +1429,7 @@ impl WorkflowNodePaused {
             node_id,
             node_path,
             reason,
+            parent_session_id: None,
         }
     }
 
@@ -1482,9 +1453,34 @@ impl WorkflowNodePaused {
         &self.reason
     }
 
+    /// Sets the optional parent session.
+    pub fn with_parent_session_id(mut self, session_id: SessionId) -> Self {
+        self.parent_session_id = Some(session_id);
+        self
+    }
+
+    /// Returns the parent session when supplied.
+    pub fn parent_session_id(&self) -> Option<&SessionId> {
+        self.parent_session_id.as_ref()
+    }
+
     /// Moves every node-pause field into the workflow state machine.
-    pub(crate) fn into_parts(self) -> (WorkflowId, WorkflowNodeId, WorkflowNodePath, String) {
-        (self.workflow_id, self.node_id, self.node_path, self.reason)
+    pub(crate) fn into_parts(
+        self,
+    ) -> (
+        WorkflowId,
+        WorkflowNodeId,
+        WorkflowNodePath,
+        String,
+        Option<SessionId>,
+    ) {
+        (
+            self.workflow_id,
+            self.node_id,
+            self.node_path,
+            self.reason,
+            self.parent_session_id,
+        )
     }
 }
 
@@ -1495,6 +1491,7 @@ pub struct WorkflowLoopIteration {
     loop_id: WorkflowNodeId,
     iteration: u32,
     stop_condition_met: bool,
+    parent_session_id: Option<SessionId>,
 }
 
 impl WorkflowLoopIteration {
@@ -1510,6 +1507,7 @@ impl WorkflowLoopIteration {
             loop_id,
             iteration,
             stop_condition_met,
+            parent_session_id: None,
         }
     }
 
@@ -1533,13 +1531,25 @@ impl WorkflowLoopIteration {
         self.stop_condition_met
     }
 
+    /// Sets the optional parent session.
+    pub fn with_parent_session_id(mut self, session_id: SessionId) -> Self {
+        self.parent_session_id = Some(session_id);
+        self
+    }
+
+    /// Returns the parent session when supplied.
+    pub fn parent_session_id(&self) -> Option<&SessionId> {
+        self.parent_session_id.as_ref()
+    }
+
     /// Moves every loop-progress field into the workflow state machine.
-    pub(crate) fn into_parts(self) -> (WorkflowId, WorkflowNodeId, u32, bool) {
+    pub(crate) fn into_parts(self) -> (WorkflowId, WorkflowNodeId, u32, bool, Option<SessionId>) {
         (
             self.workflow_id,
             self.loop_id,
             self.iteration,
             self.stop_condition_met,
+            self.parent_session_id,
         )
     }
 }
@@ -1552,6 +1562,7 @@ pub struct WorkflowWatchPoll {
     node_path: WorkflowNodePath,
     outcome: WorkflowWatchOutcome,
     at: String,
+    parent_session_id: Option<SessionId>,
 }
 
 impl WorkflowWatchPoll {
@@ -1569,6 +1580,7 @@ impl WorkflowWatchPoll {
             node_path,
             outcome,
             at,
+            parent_session_id: None,
         }
     }
 
@@ -1597,6 +1609,17 @@ impl WorkflowWatchPoll {
         &self.at
     }
 
+    /// Sets the optional parent session.
+    pub fn with_parent_session_id(mut self, session_id: SessionId) -> Self {
+        self.parent_session_id = Some(session_id);
+        self
+    }
+
+    /// Returns the parent session when supplied.
+    pub fn parent_session_id(&self) -> Option<&SessionId> {
+        self.parent_session_id.as_ref()
+    }
+
     /// Moves every watch-progress field into the workflow state machine.
     pub(crate) fn into_parts(
         self,
@@ -1606,6 +1629,7 @@ impl WorkflowWatchPoll {
         WorkflowNodePath,
         WorkflowWatchOutcome,
         String,
+        Option<SessionId>,
     ) {
         (
             self.workflow_id,
@@ -1613,6 +1637,7 @@ impl WorkflowWatchPoll {
             self.node_path,
             self.outcome,
             self.at,
+            self.parent_session_id,
         )
     }
 }
@@ -1622,6 +1647,7 @@ impl WorkflowWatchPoll {
 pub struct WorkflowPaused {
     workflow_id: WorkflowId,
     pause_reason: String,
+    parent_session_id: Option<SessionId>,
 }
 
 impl WorkflowPaused {
@@ -1630,6 +1656,7 @@ impl WorkflowPaused {
         Self {
             workflow_id,
             pause_reason,
+            parent_session_id: None,
         }
     }
 
@@ -1643,9 +1670,20 @@ impl WorkflowPaused {
         &self.pause_reason
     }
 
+    /// Sets the optional parent session.
+    pub fn with_parent_session_id(mut self, session_id: SessionId) -> Self {
+        self.parent_session_id = Some(session_id);
+        self
+    }
+
+    /// Returns the parent session when supplied.
+    pub fn parent_session_id(&self) -> Option<&SessionId> {
+        self.parent_session_id.as_ref()
+    }
+
     /// Moves every run-pause field into the workflow state machine.
-    pub(crate) fn into_parts(self) -> (WorkflowId, String) {
-        (self.workflow_id, self.pause_reason)
+    pub(crate) fn into_parts(self) -> (WorkflowId, String, Option<SessionId>) {
+        (self.workflow_id, self.pause_reason, self.parent_session_id)
     }
 }
 
@@ -1665,6 +1703,7 @@ pub struct WorkflowRunCompleted {
     workflow_id: WorkflowId,
     status: WorkflowCompletionStatus,
     final_state: Box<WorkflowSnapshot>,
+    parent_session_id: Option<SessionId>,
 }
 
 impl WorkflowRunCompleted {
@@ -1697,7 +1736,19 @@ impl WorkflowRunCompleted {
             workflow_id,
             status,
             final_state: Box::new(final_state),
+            parent_session_id: None,
         })
+    }
+
+    /// Sets the optional parent session.
+    pub fn with_parent_session_id(mut self, session_id: SessionId) -> Self {
+        self.parent_session_id = Some(session_id);
+        self
+    }
+
+    /// Returns the parent session when supplied.
+    pub fn parent_session_id(&self) -> Option<&SessionId> {
+        self.parent_session_id.as_ref()
     }
 
     /// Returns the persisted workflow identifier.
@@ -1751,6 +1802,7 @@ pub struct WorkflowStepsQueued {
     workflow_id: WorkflowId,
     pending_steps: Vec<WorkflowNodeDescriptor>,
     resolution: Option<WorkflowQueueResolution>,
+    parent_session_id: Option<SessionId>,
 }
 
 impl WorkflowStepsQueued {
@@ -1764,12 +1816,24 @@ impl WorkflowStepsQueued {
             workflow_id,
             pending_steps,
             resolution,
+            parent_session_id: None,
         }
     }
 
     /// Returns the persisted workflow identifier.
     pub fn workflow_id(&self) -> &WorkflowId {
         &self.workflow_id
+    }
+
+    /// Sets the optional parent session.
+    pub fn with_parent_session_id(mut self, session_id: SessionId) -> Self {
+        self.parent_session_id = Some(session_id);
+        self
+    }
+
+    /// Returns the parent session when supplied.
+    pub fn parent_session_id(&self) -> Option<&SessionId> {
+        self.parent_session_id.as_ref()
     }
 
     /// Returns the queued recipe descriptors.
@@ -1789,8 +1853,14 @@ impl WorkflowStepsQueued {
         WorkflowId,
         Vec<WorkflowNodeDescriptor>,
         Option<WorkflowQueueResolution>,
+        Option<SessionId>,
     ) {
-        (self.workflow_id, self.pending_steps, self.resolution)
+        (
+            self.workflow_id,
+            self.pending_steps,
+            self.resolution,
+            self.parent_session_id,
+        )
     }
 }
 
@@ -1843,12 +1913,7 @@ impl WorkflowEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn must_succeed<T, E: std::fmt::Debug>(result: Result<T, E>, context: &str) -> T {
-        match result {
-            Ok(value) => value,
-            Err(error) => panic!("{context}: {error:?}"),
-        }
-    }
+    use crate::test_support::must_succeed;
 
     fn must_fail<T: std::fmt::Debug, E>(result: Result<T, E>, context: &str) -> E {
         match result {
@@ -1866,7 +1931,9 @@ mod tests {
 
     fn load_manifest() -> serde_json::Value {
         must_succeed(
-            serde_json::from_str(include_str!("../../../../.cyril-6beh/oracle-manifest.json")),
+            serde_json::from_str(include_str!(
+                "../../tests/fixtures/kas/workflow/oracle-manifest.json"
+            )),
             "oracle manifest is valid JSON",
         )
     }
@@ -2018,8 +2085,8 @@ mod tests {
         assert_eq!(step.node_id().as_str(), "step");
         assert_eq!(step.node_type(), WorkflowNodeType::Step);
         assert_eq!(step.agent_name(), Some("agent"));
-        assert_eq!(step.model(), Some("model"));
-        assert_eq!(step.effort(), Some("effort"));
+        assert_eq!(step.model_id(), Some("model"));
+        assert_eq!(step.effort_level(), Some("effort"));
         assert!(step.children().is_empty());
 
         let sequence = WorkflowNodeDescriptor::sequence(node_id("sequence"), vec![step.clone()]);
@@ -2055,8 +2122,8 @@ mod tests {
         assert_eq!(watch.node_type(), WorkflowNodeType::Watch);
         assert_eq!(watch.handler_name(), Some("handler"));
         assert!(watch.agent_name().is_none());
-        assert!(watch.model().is_none());
-        assert!(watch.effort().is_none());
+        assert!(watch.model_id().is_none());
+        assert!(watch.effort_level().is_none());
         assert!(watch.max_iterations().is_none());
         assert!(watch.on_max_iterations().is_none());
         assert!(watch.stop_condition().is_none());
@@ -2066,7 +2133,7 @@ mod tests {
         let projection = serde_json::json!({
             "step": {
                 "required": ["nodeId", "type", "agentName"],
-                "optional": ["model", "effort"]
+                "optional": ["modelId", "effortLevel"]
             },
             "sequence": {
                 "required": ["nodeId", "type", "steps"],
@@ -2090,8 +2157,8 @@ mod tests {
         let sparse_step =
             WorkflowNodeDescriptor::snapshot_step(node_id("runtime-step"), None, None, None);
         assert!(sparse_step.agent_name().is_none());
-        assert!(sparse_step.model().is_none());
-        assert!(sparse_step.effort().is_none());
+        assert!(sparse_step.model_id().is_none());
+        assert!(sparse_step.effort_level().is_none());
         let sparse_repeat = WorkflowNodeDescriptor::snapshot_repeat(
             node_id("runtime-repeat"),
             None,
@@ -2323,8 +2390,8 @@ mod tests {
             assert_eq!(node.ended_at().is_some(), mask & 512 != 0);
             assert_eq!(node.watch_cursor().is_some(), mask & 1024 != 0);
             assert_eq!(node.watch_terminal().is_some(), mask & 2048 != 0);
-            assert_eq!(node.descriptor().model().is_some(), mask & 1 != 0);
-            assert_eq!(node.descriptor().effort().is_some(), mask & 2 != 0);
+            assert_eq!(node.descriptor().model_id().is_some(), mask & 1 != 0);
+            assert_eq!(node.descriptor().effort_level().is_some(), mask & 2 != 0);
         }
 
         for mask in 0_u8..4 {
@@ -2670,35 +2737,35 @@ mod tests {
             },
             "node_start": {
                 "required": ["workflowId", "nodeId", "nodePath", "type"],
-                "optional": ["agentName", "sessionId", "prompt", "iteration", "branchId"]
+                "optional": ["agentName", "sessionId", "prompt", "iteration", "branchId", "parentSessionId"]
             },
             "node_complete": {
                 "required": ["workflowId", "nodeId", "nodePath", "status"],
-                "optional": ["artifacts", "capturedOutput", "failureReason", "completionSignal", "completionSignalSource"]
+                "optional": ["artifacts", "capturedOutput", "failureReason", "completionSignal", "completionSignalSource", "parentSessionId"]
             },
             "node_paused": {
                 "required": ["workflowId", "nodeId", "nodePath", "reason"],
-                "optional": []
+                "optional": ["parentSessionId"]
             },
             "loop_iteration": {
                 "required": ["workflowId", "loopId", "iteration", "stopConditionMet"],
-                "optional": []
+                "optional": ["parentSessionId"]
             },
             "watch_poll": {
                 "required": ["workflowId", "nodeId", "nodePath", "outcome", "at"],
-                "optional": []
+                "optional": ["parentSessionId"]
             },
             "paused": {
                 "required": ["workflowId", "pauseReason"],
-                "optional": []
+                "optional": ["parentSessionId"]
             },
             "run_complete": {
                 "required": ["workflowId", "status", "finalState"],
-                "optional": []
+                "optional": ["parentSessionId"]
             },
             "steps_queued": {
                 "required": ["workflowId", "pendingSteps"],
-                "optional": ["resolution"]
+                "optional": ["resolution", "parentSessionId"]
             }
         });
         assert_eq!(projection, manifest["fields"]);

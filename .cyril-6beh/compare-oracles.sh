@@ -2,12 +2,13 @@
 set -euo pipefail
 here=$(cd -- "$(dirname -- "$0")" && pwd)
 repo=$(cd -- "$here/.." && pwd)
+fixtures=$repo/crates/cyril-core/tests/fixtures/kas/workflow
 expected=$(mktemp)
 trap 'rm -f -- "$expected"' EXIT
 
 case "${1:-}" in
   manifest)
-    cp -- "$here/oracle-manifest.json" "$expected"
+    cp -- "$fixtures/oracle-manifest.json" "$expected"
     test_name=workflow_oracle_manifest_matches_binary
     ;;
   terminal)
@@ -16,16 +17,21 @@ case "${1:-}" in
     ;;
   snapshot)
     "$here/oracle-snapshot.py" \
-      "$here/terminal-failed-2.16.2.jsonl" \
-      "$here/terminal-aborted-2.16.2.jsonl" >"$expected"
+      "$fixtures/terminal-failed-2.16.2.jsonl" \
+      "$fixtures/terminal-aborted-2.16.2.jsonl" >"$expected"
     test_name=workflow_capture_state_matches_oracle
     ;;
   replay)
+    # Order must match REPLAY_SOURCES in convert/kas/workflow.rs.
     "$here/oracle-replay.py" \
-      "$here/oracle-replay-events.jsonl" \
-      "$here/terminal-failed-2.16.2.jsonl" \
-      "$here/terminal-aborted-2.16.2.jsonl" \
-      "$repo/experiments/conductor-spike/kas-repeat-watch-2.16.0.jsonl" >"$expected"
+      "$fixtures/oracle-replay-events.jsonl" \
+      "$fixtures/terminal-failed-2.16.2.jsonl" \
+      "$fixtures/terminal-aborted-2.16.2.jsonl" \
+      "$fixtures/kas-repeat-watch-2.16.0.jsonl" \
+      "$fixtures/kas-custom-dag-2.16.0.jsonl" \
+      "$fixtures/kas-csig-2.16.0-neutral.jsonl" \
+      "$fixtures/kas-csig-2.16.2-neutral.jsonl" \
+      "$fixtures/kas-csig-2.16.2-explicit.jsonl" >"$expected"
     test_name=workflow_capture_replay_matches_independent_folder
     ;;
   *)

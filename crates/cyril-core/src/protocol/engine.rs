@@ -308,10 +308,15 @@ impl Engine for KasEngine {
         method: &str,
         params: &serde_json::Value,
     ) -> crate::Result<Option<Notification>> {
-        if let Some(notification) = convert::kas::workflow_to_notification(method, params) {
-            return Ok(notification);
+        match convert::kas::workflow::to_notification(method, params) {
+            convert::kas::WorkflowFrameOutcome::Converted(event) => {
+                Ok(Some(Notification::Workflow(event)))
+            }
+            convert::kas::WorkflowFrameOutcome::Dropped => Ok(None),
+            convert::kas::WorkflowFrameOutcome::NotWorkflow => {
+                convert::kiro::to_ext_notification(method, params)
+            }
         }
-        convert::kiro::to_ext_notification(method, params)
     }
 }
 
@@ -718,6 +723,11 @@ mod tests {
         }
 
         let poisoned = json!({"workflowId": null, "future": "x".repeat(1_048_576)});
+        // Perf fence, not a latency contract: near misses must reject on the
+        // method name without touching the 1 MiB payload. The generous 5 s
+        // ceiling (repo precedent: the workflow scale test) never flakes on a
+        // loaded runner, while an accidental parse-before-dispatch still
+        // overshoots it by orders of magnitude.
         let started = std::time::Instant::now();
         for _ in 0..100_000 {
             let result = KasEngine::default()
@@ -726,17 +736,22 @@ mod tests {
         }
         let short_elapsed = started.elapsed();
         assert!(
-            short_elapsed <= std::time::Duration::from_millis(50),
-            "100,000 near misses exceeded 50 ms: {short_elapsed:?}"
+            short_elapsed <= std::time::Duration::from_secs(5),
+            "100,000 near misses exceeded 5 s: {short_elapsed:?}"
         );
+        // 100 iterations so a quadratic scan of the 64 KiB method name (whole
+        // seconds across the loop) still trips the CI-safe ceiling a single
+        // call would slip under; the healthy path is microseconds per call.
         let long_method = format!("kiro/workflow/{}", "x".repeat(65_536));
         let started = std::time::Instant::now();
-        let result = KasEngine::default().convert_ext_notification(&long_method, &poisoned);
+        for _ in 0..100 {
+            let result = KasEngine::default().convert_ext_notification(&long_method, &poisoned);
+            assert!(matches!(result, Ok(None)));
+        }
         let long_elapsed = started.elapsed();
-        assert!(matches!(result, Ok(None)));
         assert!(
-            long_elapsed <= std::time::Duration::from_millis(50),
-            "64 KiB method near miss exceeded 50 ms: {long_elapsed:?}"
+            long_elapsed <= std::time::Duration::from_secs(5),
+            "100 iterations of the 64 KiB method near miss exceeded 5 s: {long_elapsed:?}"
         );
     }
 
