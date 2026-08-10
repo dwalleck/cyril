@@ -962,7 +962,10 @@ pub enum WorkflowNodePathError {
 }
 
 /// Canonical path of one runtime node within a workflow.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+///
+/// `Ord` is segment-lexicographic and keeps the tracker's node-id index
+/// buckets in a canonical sorted order (see `WorkflowRun` equality).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WorkflowNodePath(Box<[String]>);
 
 impl WorkflowNodePath {
@@ -1518,23 +1521,11 @@ impl WorkflowNodePaused {
         self.parent_session_id.as_ref()
     }
 
-    /// Moves every node-pause field into the workflow state machine.
-    pub(crate) fn into_parts(
-        self,
-    ) -> (
-        WorkflowId,
-        WorkflowNodeId,
-        WorkflowNodePath,
-        String,
-        Option<SessionId>,
-    ) {
-        (
-            self.workflow_id,
-            self.node_id,
-            self.node_path,
-            self.reason,
-            self.parent_session_id,
-        )
+    /// Moves the state-consumed node-pause fields into the workflow state
+    /// machine; the optional parent session is routing metadata and is not
+    /// transferred.
+    pub(crate) fn into_parts(self) -> (WorkflowId, WorkflowNodeId, WorkflowNodePath, String) {
+        (self.workflow_id, self.node_id, self.node_path, self.reason)
     }
 }
 
@@ -1596,14 +1587,15 @@ impl WorkflowLoopIteration {
         self.parent_session_id.as_ref()
     }
 
-    /// Moves every loop-progress field into the workflow state machine.
-    pub(crate) fn into_parts(self) -> (WorkflowId, WorkflowNodeId, u32, bool, Option<SessionId>) {
+    /// Moves the state-consumed loop-progress fields into the workflow state
+    /// machine; the optional parent session is routing metadata and is not
+    /// transferred.
+    pub(crate) fn into_parts(self) -> (WorkflowId, WorkflowNodeId, u32, bool) {
         (
             self.workflow_id,
             self.loop_id,
             self.iteration,
             self.stop_condition_met,
-            self.parent_session_id,
         )
     }
 }
@@ -1675,7 +1667,9 @@ impl WorkflowWatchPoll {
         self.parent_session_id.as_ref()
     }
 
-    /// Moves every watch-progress field into the workflow state machine.
+    /// Moves the state-consumed watch-progress fields into the workflow state
+    /// machine; the optional parent session is routing metadata and is not
+    /// transferred.
     pub(crate) fn into_parts(
         self,
     ) -> (
@@ -1684,7 +1678,6 @@ impl WorkflowWatchPoll {
         WorkflowNodePath,
         WorkflowWatchOutcome,
         String,
-        Option<SessionId>,
     ) {
         (
             self.workflow_id,
@@ -1692,7 +1685,6 @@ impl WorkflowWatchPoll {
             self.node_path,
             self.outcome,
             self.at,
-            self.parent_session_id,
         )
     }
 }
@@ -1736,9 +1728,11 @@ impl WorkflowPaused {
         self.parent_session_id.as_ref()
     }
 
-    /// Moves every run-pause field into the workflow state machine.
-    pub(crate) fn into_parts(self) -> (WorkflowId, String, Option<SessionId>) {
-        (self.workflow_id, self.pause_reason, self.parent_session_id)
+    /// Moves the state-consumed run-pause fields into the workflow state
+    /// machine; the optional parent session is routing metadata and is not
+    /// transferred.
+    pub(crate) fn into_parts(self) -> (WorkflowId, String) {
+        (self.workflow_id, self.pause_reason)
     }
 }
 
@@ -1920,21 +1914,16 @@ impl WorkflowStepsQueued {
         self.resolution.as_ref()
     }
 
-    /// Moves every queue field into the workflow state machine.
+    /// Moves the state-consumed queue fields into the workflow state machine;
+    /// the optional parent session is routing metadata and is not transferred.
     pub(crate) fn into_parts(
         self,
     ) -> (
         WorkflowId,
         Vec<WorkflowNodeDescriptor>,
         Option<WorkflowQueueResolution>,
-        Option<SessionId>,
     ) {
-        (
-            self.workflow_id,
-            self.pending_steps,
-            self.resolution,
-            self.parent_session_id,
-        )
+        (self.workflow_id, self.pending_steps, self.resolution)
     }
 }
 
@@ -2144,8 +2133,6 @@ mod tests {
         assert!(WorkflowCompletionSignal::try_from("unknown").is_err());
         assert!(WorkflowCompletionSignalSource::try_from("unknown").is_err());
         assert!(WorkflowRepeatExhaustion::try_from("unknown").is_err());
-
-        assert_eq!([u32::MIN, u32::MAX], [0, 4_294_967_295]);
     }
 
     #[test]

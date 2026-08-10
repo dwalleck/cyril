@@ -6,12 +6,12 @@
 //! signal that drives turn completion under KAS, in place of v2's prompt
 //! response — and map it to [`Notification::TurnCompleted`].
 
-pub(crate) mod workflow;
-
 use agent_client_protocol as acp;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
+
+pub(crate) mod workflow;
 
 /// Outcome of offering an extension method to the KAS workflow adapter.
 #[derive(Debug)]

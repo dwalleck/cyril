@@ -7,11 +7,13 @@ Cheapest falsifier: `.cyril-6beh/falsify-node-paths.py` passed with 3 wire paths
 
 These artifacts exist and were validated before production implementation:
 
+(2026-08-09: data artifacts — manifest, replay events/expected, snapshot expected, terminal captures — relocated to `crates/cyril-core/tests/fixtures/kas/workflow/`; scripts stay here and read from there.)
+
 - `.cyril-6beh/oracle-manifest.json` — JSON contract for the nine methods, required/optional fields, descriptors, enum/scalar/opaque boundaries, C6 merge/index rules, C9 progress permutations, warning schemas, transition/ownership/reset rules, replay checkpoints, and 64×256×10 scale expectations.
 - `.cyril-6beh/oracle.sh` — jq projection of committed 2.16.2 captures; exact JSON output is `{"failed":2,"aborted":2}` modulo jq whitespace.
 - `.cyril-6beh/oracle-snapshot.py CAPTURE...` — independent final-snapshot canonicalizer. Output is one compact, key-sorted JSON array; each item is `{run, nodes}`, and `nodes` is path-sorted with each entry `{path,data}`.
 - `.cyril-6beh/oracle-replay.py JSONL...` plus `oracle-replay-events.jsonl` — standalone nine-event lifecycle folder. It emits one compact sorted array of `{source,expected,oneEqualsTwo}`; `expected` contains named opening/node-opening/event-only/terminal/after-retry checkpoints plus final state. It folds the synthetic all-method stream and three live captures once/twice without Rust.
-- `.cyril-6beh/falsify-node-paths.py` — independent repeat-wrapper discriminator and capture/path oracle.
+- `.cyril-6beh/falsify-node-paths.py` — independent repeat-wrapper discriminator and capture/path oracle. (Superseded 2026-08-09 (CR1): the shipped vendor flattener H1n is the contract — a present `iteration` wins outright, else trailing ASCII `#digits` rewrites verbatim; child type and parent id are not consulted. See review-decisions.md.)
 - `.cyril-6beh/compare-oracles.sh manifest|terminal|snapshot|replay` — creates an independent expected JSON file, passes its path in `CYRIL_WORKFLOW_ORACLE_EXPECTED`, and runs the named compiled Rust test that must compare exact parsed JSON.
 - `.cyril-6beh/check-structure.py` — persistent C12 privacy/import/ownership fence with a valid fixture and eight forbidden-mutation self-tests; run against the repo after App wiring.
 
@@ -113,6 +115,7 @@ Complexity notation is parametric because the signed spec accepts large strings/
 **Oracle:** Box-size equality, pre-change unrelated notification outputs, a populated observable UI-state fingerprint, and the source-level no-op arm (which has no mutation expression).
 **Stress fixture:** Box the maximal event as `Notification::Workflow`, require `size_of::<Box<WorkflowEvent>>() == size_of::<usize>()`, call `UiState::apply_notification` directly with it, and construct 10,000 unrelated notifications. Expected: workflow returns false with its populated UI-state fingerprint unchanged; unrelated outputs/discriminants stay unchanged. The compile-only arm destructures no workflow payload, imports no workflow type, and stores no workflow state; `SessionController`'s existing wildcard remains unchanged. App is still the only production receiver.
 **Loop budget:** One allocation only when constructing a workflow notification; UI no-op O(1).
+(2026-08-09, T9: wall budgets were raised to CI-safe 5 s/2 s smoke ceilings in the shipped tests — the figures below are the original design targets, kept for sizing context.)
 **Wall budget:** <=100 ms for 10,001 direct consumer calls.
 **Files:** `crates/cyril-core/src/types/event.rs`, `crates/cyril-ui/src/state.rs`, `crates/cyril/examples/test_bridge.rs`.
 
@@ -199,7 +202,7 @@ Complexity notation is parametric because the signed spec accepts large strings/
 
 **Claim:** C4/C5 plus the state-owned C3 duplicate-path outcome — validate/flatten before mutation, reject duplicate canonical paths atomically, and translate only exact repeat wrappers.
 **Oracle:** `.cyril-6beh/oracle-snapshot.py`, `.cyril-6beh/falsify-node-paths.py`, manifest `shape_boundary_outcomes`/repeat controls, and duplicate-path expectation.
-**Stress fixture:** 256-node/depth-10 snapshot; two valid wrappers; all eight near misses; malformed deepest child; converter-preserved duplicate canonical path. Expected compact canonical projection equals Python; malformed/duplicate inputs return structured error and zero mutation.
+**Stress fixture:** 256-node/depth-10 snapshot; two valid wrappers; all eight near misses; malformed deepest child; converter-preserved duplicate canonical path. Expected compact canonical projection equals Python; malformed/duplicate inputs return structured error and zero mutation. (Superseded 2026-08-09 (CR1): the shipped vendor flattener H1n is the contract — a present `iteration` wins outright, else trailing ASCII `#digits` rewrites verbatim; child type and parent id are not consulted. See review-decisions.md.)
 **Loop budget:** O(J+H): each descriptor/input byte is visited a constant number of times and every materialized canonical-path byte is hashed/copied a constant number of times; temporary run then one swap. No N/D cap is imposed.
 **Wall budget:** <=50 ms for the representative 1 MiB/256-node/depth-10/64 KiB-segment snapshot; <=2 s matrix; larger accepted snapshots remain linear in `J+H`.
 **Files:** `crates/cyril-core/src/workflow.rs`.

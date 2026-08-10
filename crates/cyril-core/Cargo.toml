@@ -17,8 +17,10 @@ workspace = true
 # Pulls in `tokio/fs` for non-blocking file I/O on the bridge's single-threaded
 # executor, `tokio/io-util` for draining terminal pipes while a kill signal is
 # watched (terminal_io, cyril-lw67), `rusqlite` for read-only access to
-# kiro-cli's data.sqlite3, and `tempfile` for the atomic host-io write path
-# (temp + fsync + rename, cyril-0v42).
+# kiro-cli's data.sqlite3, `tempfile` for the atomic host-io write path
+# (temp + fsync + rename, cyril-0v42), and `serde_path_to_error` for exact
+# field paths in workflow wire-rejection warnings (`convert/kas/workflow.rs`
+# deserialize).
 kas = ["tokio/fs", "tokio/io-util", "dep:rusqlite", "dep:serde_path_to_error", "dep:tempfile"]
 # Compiles the `test_support` module (CaptureWriter, must_succeed,
 # tracing_capture_lock) into the lib so downstream crates' test suites can

@@ -53,7 +53,7 @@ A workspace-scoped, persisted execution object identified by a workflow id. It o
 _Avoid_: workflow (unqualified), job, pipeline, execution attempt
 
 **Run incarnation**:
-One execution attempt within a workflow run, from `run_start` through terminal `run_complete`. Kiro retry starts a fresh incarnation under the existing workflow id; Cyril's canonical current state retains only the latest incarnation.
+One execution attempt within a workflow run, from `run_start` through a `run_complete` whose status is terminal (`completed`/`failed`/`aborted`); a `run_complete` with status `paused` is non-terminal and the run stays resumable. Kiro retry starts a fresh incarnation under the existing workflow id; Cyril's canonical current state retains only the latest incarnation.
 _Avoid_: workflow run, retry run, attempt (unqualified)
 
 **Workflow step**:

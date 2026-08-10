@@ -23,7 +23,7 @@ Cyril will convert KAS's nine plain JSON-RPC `_kiro/workflow/*` lifecycle notifi
 ### Preserve unrelated extension behavior
 - **Given**: an extension notification outside the nine workflow lifecycle methods.
 - **When**: the KAS extension converter handles it.
-- **Then**: existing conversion or unknown-extension behavior is unchanged; the workflow model receives nothing.
+- **Then**: existing conversion or unknown-extension behavior is unchanged; the workflow model receives nothing. (Amended 2026-08-09: an unknown member of the recognized family, `kiro/workflow/<unknown-kind>`, deliberately emits one family-scoped `tracing::warn!` for vendor-drift visibility before falling through unconverted — see the `to_notification` catch-all arm in `convert/kas/workflow.rs`.)
 
 ### Open a run from `run_start`
 - **Given**: no canonical run exists for `workflowId`.
@@ -32,7 +32,7 @@ Cyril will convert KAS's nine plain JSON-RPC `_kiro/workflow/*` lifecycle notifi
 
 ### Reject an event before its run opening
 - **Given**: no canonical run exists for `workflowId`.
-- **When**: any lifecycle event other than `run_start`, or an explicit full-state seed, arrives.
+- **When**: any lifecycle event other than `run_start` arrives. (Clarified 2026-08-09: an explicit full-state seed is not rejected here — direct snapshot seeding is governed by the next section, which may atomically create the missing run (design D31/D20); only completion events (`run_complete.finalState`) never seed.)
 - **Then**: the model warns, ignores the event, returns “state unchanged,” and creates no partial run.
 
 ### Seed or reconcile a full workflow snapshot

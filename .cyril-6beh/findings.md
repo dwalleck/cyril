@@ -16,6 +16,8 @@ The wrapper changes temporary copies of existing audit harnesses, never producti
 - `.cyril-6beh/terminal-failed-2.16.2.jsonl`
 - `.cyril-6beh/terminal-aborted-2.16.2.jsonl`
 
+(2026-08-09: both captures relocated to `crates/cyril-core/tests/fixtures/kas/workflow/`.)
+
 Both captures were scanned for credential-bearing fields. The failed capture records no credential response; the aborted capture uses the repository's `<redacted>` convention. No unredacted credential value is present.
 
 ## Oracle

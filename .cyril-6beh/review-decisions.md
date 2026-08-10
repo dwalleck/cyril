@@ -201,3 +201,40 @@ Every finding verified before action.
 | T4/T5 | Feature-exclusion assert; one-directional matrix tripwire (tests, minor) | **Yes** | **Defer** | **cyril-7sjs**. |
 
 Deferred with tracker IDs: **cyril-sinu**, **cyril-7sjs**.
+
+## PR 92 follow-up review decisions — 2026-08-10 (Standards ×9, Spec ×18)
+
+Every finding verified before action (assessing-review-feedback discipline);
+claims that failed evaluation are rejected with rationale, not silently dropped.
+
+| # | Finding | Category | Verified? | Decision | Note |
+|---|---|---|---|---|---|
+| S1 | kas-feature rationale comment omits serde_path_to_error | Style | Yes | **Accept** | Clause added, matching comment style. |
+| S2 | WorkflowId/WorkflowNodeId newtype duplication | Style (smell) | Yes — ~30 lines ×2 | **Reject** | Rule of three: two instances with distinct error wording don't buy a macro; the reviewer's own "partially justified" concedes it. |
+| S3 | parent_session_id rides positional tuples then is discarded | Style | Yes | **Accept-modified** | Dropped from all five inline `into_parts` (routing metadata, not state) — same convention as the named `*Parts` structs — rather than structifying distinct-typed tuples. |
+| S4 | `mod workflow;` placement between docs and uses | Style | Yes | **Accept** | Moved below the import block. |
+| S5 | malformed_cases parses manifest inline despite workflow_manifest() | Style | Yes | **Accept** | Helper reused. |
+| S6 | pipeline test re-runs four sibling #[test]s | Test design | Yes — zero added coverage, doubled runtime | **Modify** | Reviewer's implicit fix (delete) would break a plan-promised fence name. Reworked into real cross-frame coverage: one live pipeline receives all 297 malformed rows, state stays byte-stable, a valid successor still applies. |
+| S7 | `[u32::MIN,u32::MAX] == [0,4_294_967_295]` tautology | Test design | Yes — cannot fail | **Accept** | Deleted; the real u32 boundaries are fenced in `workflow_numeric_and_path_boundaries`. |
+| S8 | 5 s/2 s wall-clock ceilings remain nondeterministic | Test design | Yes, and adjudicated | **Reject** | Re-flag of the 2026-08-09 T9 decision: the ceilings are orders-of-magnitude smoke fences for quadratic regressions, which the deterministic asserts cannot catch. |
+| S9 | probe.py reads argv[1] unguarded | Bug | Yes | **Accept** | Usage guard, exit 2. |
+| SP1 | spec contradicts itself on snapshot seeding | Spec doc | **Yes — real contradiction** | **Accept** | Reject-section now covers only non-`run_start` lifecycle events; direct seeding stays with the seed section (D31/D20); dated clarification. |
+| SP2 | D21 discriminator stale in design/plan/falsifier | Spec doc + oracle | **Yes** | **Accept** | Dated CR1/H1n supersession notes at each design/plan site; falsify-node-paths.py ported to the vendor rule with vendor-truth controls. |
+| SP3 | replay oracle resets active runs unconditionally; vacuous | Bug (oracle) | **Yes** | **Accept** | Oracle rewritten to the signed active-duplicate/conflict/post-terminal rule with de-vacuating synthetic frames and regenerated expected; validated by the replay comparison mode (see the final gate run for this round). |
+| SP4 | replay oracle overwrites duplicate canonical paths, keeps unknown fields | Bug (oracle) | **Yes** | **Accept** | Duplicate-path finalStates rejected atomically and node data filtered to the manifest's known fields, with a de-vacuating fixture; validated by the same gate run. |
+| SP5 | family-warn (SF1) missing from spec | Spec doc | Yes | **Accept** | Dated amendment in the unrelated-extension section. |
+| SP6 | design says kiro delegates workflow dispatch | Spec doc | Yes — engine owns it | **Accept** | Dated correction note. |
+| SP7 | terminal gate ordered after canonicalization → Err instead of absorb | **Bug** | **Yes — reproduced by the new fence** | **Accept** | Gate reordered: while terminal, a snapshot that cannot canonicalize is warned+ignored (it cannot be the exact duplicate); fence `post_terminal_completion_with_invalid_snapshot_is_absorbed`. |
+| SP8 | swap_remove breaks index-order equality | **Bug** | **Yes** | **Accept-modified** | Root fix is canonical bucket order, not just order-preserving removal: buckets kept sorted (`Ord` on WorkflowNodePath, binary-search insert), so equality is a function of contents; fence `node_index_buckets_stay_sorted_through_moves`. |
+| SP9 | glossary "terminal run_complete" ambiguity | Domain doc | Yes | **Accept** | Incarnation entry now spells out the terminal set and paused-resumability. |
+| SP10 | plan/findings point at pre-move artifact paths | Spec doc | Yes | **Accept** | Single dated relocation notes. |
+| SP11 | plan still states 50/100 ms budgets | Spec doc | Yes | **Accept-modified** | One dated T9 note where budgets are introduced; original figures kept as sizing context. |
+| SP12 | C8 queue fence covers one acknowledgement form | Test gap | Yes | **Accept** | Full outcome × reason × cardinality cross + resolution-free replacement rows. |
+| SP13 | retry-reset fixture missing shared buckets + completion metadata | Test gap | Yes | **Accept** | Prior incarnation now seeds completion signal/source/failure and a two-path shared index bucket. |
+| SP14 | malformed matrix omits finalState metadata | Test gap | Yes | **Accept** | 20 manifest-consistent rows (missing/wrong-type/unknown-enum/null); matrix 277 → 297. |
+| SP15 | running/running completion pair unfenced | Test gap | Yes — `running` absent from the outer-status axis | **Accept** | Dedicated rows: outer `running` × all snapshot statuses → invalid_enum at `status`. |
+| SP16 | scalar matrix omits slash/backslash + several fields | Test gap | Yes | **Accept** | Values +`path/with/slash`, +`back\slash`; fields +watch_poll.at, paused.pauseReason, ack reason, watch handler, finalState.createdAt. |
+| SP17 | terminal oracle counts a union across captures | Oracle gap | Yes | **Accept-modified** | Per-file validation added; aggregate output shape kept byte-identical for the Rust comparison. |
+| SP18 | wrapper falsifier checks nodeId+iteration only | Oracle gap | Yes | **Accept** | Metadata preservation checks widened (status + supplied runtime fields), folded into the SP2 falsifier port. |
+
+No deferrals this round — every finding is applied, modified, or rejected with rationale.

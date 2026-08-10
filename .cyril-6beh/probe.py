@@ -9,6 +9,9 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 SPIKE = ROOT / "experiments" / "conductor-spike"
 OUT = Path(__file__).resolve().parent
+if len(sys.argv) < 2:
+    print(f"usage: {sys.argv[0]} KIRO_CLI_CHAT_BINARY [REPS]", file=sys.stderr)
+    raise SystemExit(2)
 KIRO = Path(sys.argv[1]).resolve()
 REPS = sys.argv[2] if len(sys.argv) > 2 else "3"
 

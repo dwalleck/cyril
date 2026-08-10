@@ -31,6 +31,33 @@ RUN_FIELDS = (
     "parentSessionId",
     "workspacePath",
 )
+# Typed snapshot-node fields (manifest snapshot_node_fields, children handled
+# structurally): unknown sibling keys on a snapshot node are dropped, exactly
+# like the Rust wire types ignore unrecognized fields.
+SNAPSHOT_NODE_FIELDS = (
+    "nodeId",
+    "type",
+    "status",
+    "agentName",
+    "modelId",
+    "effortLevel",
+    "maxIterations",
+    "onMaxIterations",
+    "stopCondition",
+    "stopWhen",
+    "sessionId",
+    "artifacts",
+    "capturedOutput",
+    "failureReason",
+    "iteration",
+    "branchId",
+    "completionSignal",
+    "completionSignalSource",
+    "startedAt",
+    "endedAt",
+    "watchCursor",
+    "watchTerminal",
+)
 
 
 def body(frame):
@@ -87,17 +114,26 @@ def wrapper_segment(parent, child):
 
 
 def flatten(root, workflow_id):
+    """Flatten a snapshot tree to canonical-path → typed-node-data.
+
+    Returns None when two nodes canonicalize to the same path — the Rust
+    tracker's WorkflowStateError::DuplicateCanonicalPath — so the caller must
+    reject the enclosing snapshot atomically (state unchanged).
+    """
     nodes = {}
 
     def walk(node, path, parent=None):
         segment = node["nodeId"] if parent is None else wrapper_segment(parent, node)
         current = (workflow_id,) if parent is None else (*path, segment)
-        data = {key: copy.deepcopy(value) for key, value in node.items() if key != "children"}
-        nodes[current] = data
-        for child in node.get("children", []):
-            walk(child, current, node)
+        if current in nodes:
+            return False
+        nodes[current] = {
+            key: copy.deepcopy(node[key]) for key in SNAPSHOT_NODE_FIELDS if key in node
+        }
+        return all(walk(child, current, node) for child in node.get("children", []))
 
-    walk(root, ())
+    if not walk(root, ()):
+        return None
     return nodes
 
 
@@ -110,9 +146,28 @@ def opening(params):
             **({"parentSessionId": params["parentSessionId"]} if "parentSessionId" in params else {}),
             "descriptor": descriptor_tree(params["nodeTree"]),
         },
+        # Raw opening plan, mirroring the Rust run's preserved opening_plan
+        # field: it survives snapshot reconciliation (which swaps the projected
+        # descriptor to the snapshot root) and is what an active-run run_start
+        # duplicate is compared against.
+        "openingPlan": descriptor_tree(params["nodeTree"]),
         "nodes": {},
         "terminal": False,
     }
+
+
+def opening_plan_matches(state, incoming):
+    """Mirror of the Rust opening_plan_matches: prefer the preserved raw
+    opening plan; fall back to the snapshot root's children when a run was
+    seeded without one (unreachable in event-only replay, kept for fidelity)."""
+    opening_plan = state.get("openingPlan")
+    if opening_plan is not None:
+        return opening_plan == incoming
+    snapshot = state["run"].get("descriptor")
+    if not isinstance(snapshot, dict):
+        return False
+    key = "branches" if snapshot.get("type") == "parallel" else "steps"
+    return snapshot.get(key, []) == incoming
 
 
 def path_of(params):
@@ -120,8 +175,16 @@ def path_of(params):
 
 
 def reconcile_snapshot(state, final):
-    prior = state["nodes"]
     current = flatten(final["root"], final["workflowId"])
+    if current is None:
+        # Duplicate canonical path: reject the whole snapshot atomically,
+        # mirroring the Rust tracker's DuplicateCanonicalPath rejection.
+        print(
+            f"workflow event ignored: {final['workflowId']} run_complete duplicate_canonical_path",
+            file=sys.stderr,
+        )
+        return
+    prior = state["nodes"]
     for path, node in current.items():
         old = prior.get(path, {})
         for key in EVENT_ONLY_NODE:
@@ -148,7 +211,27 @@ def apply(runs, frame):
         return
     workflow_id = params["workflowId"]
     if kind == "run_start":
-        runs[workflow_id] = opening(params)
+        state = runs.get(workflow_id)
+        if state is None or state["terminal"]:
+            # Missing run seeds; terminal run is atomically replaced by the
+            # new incarnation.
+            runs[workflow_id] = opening(params)
+            return
+        # Active run: an exact duplicate (same workflowName, inputs,
+        # parentSessionId presence+value, and declared node tree by descriptor
+        # projection) is a silent no-op; any non-exact conflict is warned and
+        # ignored. Either way state is unchanged.
+        exact_repeat = (
+            state["run"].get("workflowName") == params["workflowName"]
+            and state["run"].get("inputs") == params["inputs"]
+            and state["run"].get("parentSessionId") == params.get("parentSessionId")
+            and opening_plan_matches(state, descriptor_tree(params["nodeTree"]))
+        )
+        if not exact_repeat:
+            print(
+                f"workflow event ignored: {workflow_id} run_start active_run_start_conflict",
+                file=sys.stderr,
+            )
         return
     state = runs.get(workflow_id)
     if state is None or state["terminal"]:

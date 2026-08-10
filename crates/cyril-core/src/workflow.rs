@@ -413,8 +413,16 @@ impl WorkflowRun {
         self.nodes.iter()
     }
 
+    /// Index buckets are kept sorted: `WorkflowRun` equality includes the
+    /// index, so bucket order must be a function of bucket *contents* — an
+    /// order-perturbing removal would make a semantically identical snapshot
+    /// look changed (2026-08-10 review, finding SP8).
     fn index_node(&mut self, node_id: WorkflowNodeId, path: WorkflowNodePath) {
-        self.node_index.entry(node_id).or_default().push(path);
+        let bucket = self.node_index.entry(node_id).or_default();
+        let position = bucket
+            .binary_search(&path)
+            .unwrap_or_else(|insert_at| insert_at);
+        bucket.insert(position, path);
     }
 
     fn move_index(
@@ -425,7 +433,7 @@ impl WorkflowRun {
     ) {
         let remove_bucket = if let Some(paths) = self.node_index.get_mut(previous_id) {
             if let Some(index) = paths.iter().position(|candidate| candidate == path) {
-                paths.swap_remove(index);
+                paths.remove(index);
             }
             paths.is_empty()
         } else {
@@ -620,7 +628,7 @@ impl WorkflowTracker {
     }
 
     fn apply_node_paused(&mut self, paused: WorkflowNodePaused) -> bool {
-        let (workflow_id, _node_id, node_path, reason, _parent_session_id) = paused.into_parts();
+        let (workflow_id, _node_id, node_path, reason) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "node_paused") else {
             return false;
         };
@@ -634,8 +642,7 @@ impl WorkflowTracker {
     }
 
     fn apply_loop_iteration(&mut self, iteration: WorkflowLoopIteration) -> bool {
-        let (workflow_id, loop_id, value, stop_condition_met, _parent_session_id) =
-            iteration.into_parts();
+        let (workflow_id, loop_id, value, stop_condition_met) = iteration.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "loop_iteration") else {
             return false;
         };
@@ -677,7 +684,7 @@ impl WorkflowTracker {
     }
 
     fn apply_watch_poll(&mut self, poll: WorkflowWatchPoll) -> bool {
-        let (workflow_id, _node_id, node_path, outcome, at, _parent_session_id) = poll.into_parts();
+        let (workflow_id, _node_id, node_path, outcome, at) = poll.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "watch_poll") else {
             return false;
         };
@@ -690,7 +697,7 @@ impl WorkflowTracker {
     }
 
     fn apply_paused(&mut self, paused: WorkflowPaused) -> bool {
-        let (workflow_id, reason, _parent_session_id) = paused.into_parts();
+        let (workflow_id, reason) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "paused") else {
             return false;
         };
@@ -703,7 +710,7 @@ impl WorkflowTracker {
     /// and the current pending descriptors survive. Only a resolution-free
     /// frame replaces pending work; an empty list there does not mean drained.
     fn apply_steps_queued(&mut self, queued: WorkflowStepsQueued) -> bool {
-        let (workflow_id, pending_steps, resolution, _parent_session_id) = queued.into_parts();
+        let (workflow_id, pending_steps, resolution) = queued.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "steps_queued") else {
             return false;
         };
@@ -770,16 +777,25 @@ impl WorkflowTracker {
             warn_ignored(&workflow_id, "run_complete", "unknown_run");
             return Ok(false);
         };
-        let terminal = is_terminal(current.status);
-        let (snapshot_id, mut incoming) = canonicalize_snapshot(completion.into_final_state())?;
-        self.preserve_event_only(&workflow_id, &mut incoming);
-        if terminal {
+        if is_terminal(current.status) {
+            // Absorbing state (D42): after a terminal incarnation every
+            // non-exact completion is warned and ignored — including one
+            // whose snapshot cannot even canonicalize, which by definition
+            // cannot be the exact duplicate. Only the exact duplicate stays
+            // a silent no-op.
+            let Ok((_, mut incoming)) = canonicalize_snapshot(completion.into_final_state()) else {
+                warn_ignored(&workflow_id, "run_complete", "terminal_completion_conflict");
+                return Ok(false);
+            };
+            self.preserve_event_only(&workflow_id, &mut incoming);
             if current == &incoming {
                 return Ok(false);
             }
             warn_ignored(&workflow_id, "run_complete", "terminal_completion_conflict");
             return Ok(false);
         }
+        let (snapshot_id, mut incoming) = canonicalize_snapshot(completion.into_final_state())?;
+        self.preserve_event_only(&workflow_id, &mut incoming);
         self.replace_if_changed(snapshot_id, incoming)
     }
 
@@ -2329,6 +2345,78 @@ mod tests {
             run.queue_resolution().map(WorkflowQueueResolution::outcome),
             Some(WorkflowQueueOutcome::Applied)
         );
+
+        // Full acknowledgement cross (2026-08-10 review, finding SP12):
+        // every outcome × reason-presence × array-cardinality acknowledgement
+        // preserves the pending list while recording exactly its resolution;
+        // resolution-free frames replace pending work at both cardinalities.
+        let decoy = WorkflowNodeDescriptor::step(node_id("decoy"), "agent".to_owned(), None, None);
+        for outcome in [
+            WorkflowQueueOutcome::Applied,
+            WorkflowQueueOutcome::Rejected,
+            WorkflowQueueOutcome::Dropped,
+        ] {
+            for reason in [None, Some("why".to_owned())] {
+                for ack_steps in [Vec::new(), vec![decoy.clone()]] {
+                    assert!(
+                        tracker
+                            .apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                                id.clone(),
+                                vec![pending.clone()],
+                                None,
+                            )))
+                            .is_ok(),
+                        "pending reset must apply"
+                    );
+                    assert!(
+                        tracker
+                            .apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                                id.clone(),
+                                ack_steps.clone(),
+                                Some(WorkflowQueueResolution::new(outcome, reason.clone())),
+                            )))
+                            .is_ok(),
+                        "acknowledgement must apply"
+                    );
+                    let Some(run) = tracker.get(&id) else {
+                        panic!("acknowledged run missing");
+                    };
+                    assert_eq!(
+                        run.pending_steps(),
+                        Some(std::slice::from_ref(&pending)),
+                        "{outcome}/{reason:?}/{}-element ack must preserve pending work",
+                        ack_steps.len()
+                    );
+                    assert_eq!(
+                        run.queue_resolution().map(WorkflowQueueResolution::outcome),
+                        Some(outcome)
+                    );
+                    assert_eq!(
+                        run.queue_resolution()
+                            .and_then(WorkflowQueueResolution::reason),
+                        reason.as_deref()
+                    );
+                }
+            }
+        }
+        assert!(
+            tracker
+                .apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                    id.clone(),
+                    vec![decoy.clone()],
+                    None,
+                )))
+                .is_ok(),
+            "non-empty resolution-free frame must apply"
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("replaced run missing");
+        };
+        assert_eq!(
+            run.pending_steps(),
+            Some(std::slice::from_ref(&decoy)),
+            "resolution-free non-empty frame replaces pending work"
+        );
     }
 
     #[test]
@@ -2704,6 +2792,121 @@ mod tests {
         }
     }
 
+    /// REGRESSION FENCE (2026-08-10 review, finding SP8): node-id index
+    /// buckets stay sorted through insert-and-remove churn. `WorkflowRun`
+    /// equality includes the index, so an order-perturbing removal (the old
+    /// `swap_remove`) would make a semantically identical snapshot compare
+    /// unequal and report a phantom change.
+    #[test]
+    fn node_index_buckets_stay_sorted_through_moves() {
+        let id = workflow_id("workflow");
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        for segment in ["a", "b", "c"] {
+            assert_eq!(
+                tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                    id.clone(),
+                    node_id("shared"),
+                    node_path(&id, &["workflow", segment]),
+                    WorkflowNodeType::Step,
+                    WorkflowNodeStartDetails::new(),
+                ))),
+                Ok(true)
+            );
+        }
+        // Retire the FIRST path from the shared bucket via a changed-id
+        // node_start — swap_remove would migrate the last entry into slot 0.
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("moved"),
+                node_path(&id, &["workflow", "a"]),
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new(),
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("run missing");
+        };
+        for (bucket_id, paths) in &run.node_index {
+            assert!(
+                paths.is_sorted(),
+                "bucket {bucket_id:?} must stay sorted, got {paths:?}"
+            );
+        }
+        let Some(shared) = run.node_index.get(&node_id("shared")) else {
+            panic!("shared bucket missing");
+        };
+        assert_eq!(
+            shared,
+            &vec![
+                node_path(&id, &["workflow", "b"]),
+                node_path(&id, &["workflow", "c"]),
+            ],
+            "surviving paths keep canonical order"
+        );
+    }
+
+    /// REGRESSION FENCE (2026-08-10 review, finding SP7): a post-terminal
+    /// completion whose snapshot cannot even canonicalize (duplicate
+    /// canonical path) is absorbed like every other non-exact post-terminal
+    /// completion — warned and ignored, never surfaced as a state error.
+    #[test]
+    fn post_terminal_completion_with_invalid_snapshot_is_absorbed() {
+        for status in [
+            WorkflowRunStatus::Completed,
+            WorkflowRunStatus::Failed,
+            WorkflowRunStatus::Aborted,
+        ] {
+            let id = workflow_id("workflow");
+            let mut tracker = WorkflowTracker::new();
+            assert_eq!(
+                tracker.apply_snapshot(snapshot_with_status("workflow", status, "before")),
+                Ok(true)
+            );
+            let before = tracker.get(&id).cloned();
+            let duplicate_root = WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
+                WorkflowNodeStatus::Completed,
+                vec![step_node("dup"), step_node("dup")],
+            );
+            let invalid = WorkflowSnapshot::new(
+                id.clone(),
+                "recipe".to_owned(),
+                status,
+                WorkflowSnapshotData::new(
+                    serde_json::json!({"input": true}),
+                    serde_json::json!({"artifact": true}),
+                    serde_json::json!({"output": true}),
+                ),
+                duplicate_root,
+                WorkflowSnapshotMetadata::new("created".to_owned(), 1),
+            );
+            let (result, logs) =
+                with_captured_warnings(|| tracker.apply_event(completion(invalid)));
+            assert_eq!(result, Ok(false), "{status}: absorbed, never Err");
+            assert_eq!(
+                tracker.get(&id),
+                before.as_ref(),
+                "{status}: state unchanged"
+            );
+            assert!(
+                logs.contains("terminal_completion_conflict"),
+                "{status}: absorbed invalid completion must warn, got:\n{logs}"
+            );
+        }
+    }
+
     #[test]
     fn post_terminal_event_matrix_is_absorbing() {
         for status in [
@@ -2813,6 +3016,30 @@ mod tests {
         old_node.node_pause_reason = Some("old pause".to_owned());
         old_node.latest_loop_iteration = Some((9, true));
         old_node.latest_watch_poll = Some((WorkflowWatchOutcome::Idle, "old".to_owned()));
+        // Claim-10 completeness (2026-08-10 review, finding SP13): the prior
+        // incarnation also carries completion metadata and a SHARED node-id
+        // index bucket, so the reset must drop those families too.
+        old_node.completion_signal = Some(WorkflowCompletionSignal::Success);
+        old_node.completion_signal_source = Some(WorkflowCompletionSignalSource::SendMessage);
+        old_node.failure_reason = Some("old failure".to_owned());
+        let twin_path = node_path(&id, &["workflow", "old-twin"]);
+        let twin = WorkflowNodeState::from_opening(
+            node_id("old"),
+            crate::types::WorkflowNodeType::Step,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        old.nodes.insert(twin_path.clone(), twin);
+        old.index_node(node_id("old"), twin_path);
+        assert!(
+            old.node_index
+                .get(&node_id("old"))
+                .is_some_and(|bucket| bucket.len() == 2),
+            "prior incarnation must hold a shared index bucket"
+        );
 
         let new_tree = vec![WorkflowNodeDescriptor::step(
             node_id("fresh"),

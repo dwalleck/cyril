@@ -1442,7 +1442,14 @@ mod tests {
                 if let WorkflowFrameOutcome::Converted(event) =
                     to_notification(method, &envelope["params"])
                 {
-                    must_succeed(tracker.apply_event(*event), "replay event applies");
+                    // Fold rejections the way the App does (D2/D36): a state
+                    // error leaves the tracker atomically unchanged and the
+                    // stream continues — a fixture may legitimately carry a
+                    // frame the tracker rejects (2026-08-10 review, SP4's
+                    // duplicate-canonical-path differential fence).
+                    if let Err(error) = tracker.apply_event(*event) {
+                        tracing::warn!(%error, "replay event rejected; state preserved");
+                    }
                 }
                 if let Some(checkpoint) = envelope
                     .get("checkpoint")
@@ -2487,12 +2494,7 @@ mod tests {
     /// from the fence itself so the row-set and the expectations it must meet
     /// stay separately readable.
     fn malformed_cases() -> Vec<MalformedCase> {
-        let manifest: serde_json::Value = must_succeed(
-            serde_json::from_str(include_str!(
-                "../../../../tests/fixtures/kas/workflow/oracle-manifest.json"
-            )),
-            "workflow oracle manifest is valid JSON",
-        );
+        let manifest = workflow_manifest();
         let field_contracts = must_object(&manifest["fields"], "manifest fields");
         let descriptor_contracts = must_object(&manifest["descriptor_fields"], "descriptor fields");
         let mut cases = Vec::new();
@@ -2664,6 +2666,103 @@ mod tests {
                         panic!("required snapshot field `{field}` listed as optional")
                     }
                 }
+            }
+        }
+
+        // finalState run-metadata rows (2026-08-10 review, finding SP14):
+        // the snapshot's own scalar metadata gets the same missing /
+        // wrong-type / unknown-enum / null treatment as its nodes. The three
+        // opaque JSON members (inputs/artifacts/capturedOutputs) accept any
+        // value, so only their absence is a row.
+        {
+            fn final_state_mut(
+                params: &mut serde_json::Value,
+            ) -> &mut serde_json::Map<String, serde_json::Value> {
+                match params
+                    .get_mut("finalState")
+                    .and_then(serde_json::Value::as_object_mut)
+                {
+                    Some(state) => state,
+                    None => panic!("run_complete baseline lacks finalState"),
+                }
+            }
+            let push_final_case = |cases: &mut Vec<MalformedCase>,
+                                   kind: &str,
+                                   field: &str,
+                                   mutate: Option<serde_json::Value>,
+                                   error_kind: &'static str| {
+                let mut params = valid_payload("kiro/workflow/run_complete");
+                match mutate {
+                    Some(value) => {
+                        final_state_mut(&mut params).insert(field.to_owned(), value);
+                    }
+                    None => {
+                        let removed = final_state_mut(&mut params).remove(field);
+                        assert!(
+                            removed.is_some(),
+                            "finalState baseline must carry required field {field}"
+                        );
+                    }
+                }
+                cases.push(MalformedCase {
+                    id: format!("snapshot.metadata.{kind}.{field}"),
+                    method: "kiro/workflow/run_complete".to_owned(),
+                    params,
+                    field_path: format!("finalState.{field}"),
+                    error_kind,
+                });
+            };
+            for field in [
+                "workflowId",
+                "workflowName",
+                "status",
+                "inputs",
+                "artifacts",
+                "capturedOutputs",
+                "root",
+                "createdAt",
+                "planRevision",
+            ] {
+                push_final_case(&mut cases, "missing", field, None, "missing_required");
+            }
+            for field in [
+                "workflowId",
+                "workflowName",
+                "status",
+                "root",
+                "createdAt",
+                "planRevision",
+            ] {
+                push_final_case(
+                    &mut cases,
+                    "wrong_type",
+                    field,
+                    Some(serde_json::Value::Bool(false)),
+                    "wrong_type",
+                );
+            }
+            push_final_case(
+                &mut cases,
+                "unknown_enum",
+                "status",
+                Some(serde_json::json!("nope")),
+                "invalid_enum",
+            );
+            for field in ["parentSessionId", "workspacePath"] {
+                push_final_case(
+                    &mut cases,
+                    "wrong_type",
+                    field,
+                    Some(serde_json::Value::Bool(false)),
+                    "wrong_type",
+                );
+                push_final_case(
+                    &mut cases,
+                    "null",
+                    field,
+                    Some(serde_json::Value::Null),
+                    "invalid_value",
+                );
             }
         }
 
@@ -2943,11 +3042,11 @@ mod tests {
     fn malformed_workflow_field_matrix_isolated() {
         let started = Instant::now();
         let cases = malformed_cases();
-        assert_eq!(cases.len(), 277, "malformed matrix row-set drift");
+        assert_eq!(cases.len(), 297, "malformed matrix row-set drift");
         let mut case_ids = cases.iter().map(|case| case.id.clone()).collect::<Vec<_>>();
         case_ids.sort_unstable();
         case_ids.dedup();
-        assert_eq!(case_ids.len(), 277, "malformed case ids must be unique");
+        assert_eq!(case_ids.len(), 297, "malformed case ids must be unique");
         for case in cases {
             let (result, log) = capture_rejection(&case.method, &case.params);
             assert!(
@@ -3820,7 +3919,15 @@ mod tests {
     #[test]
     fn workflow_scalar_string_matrix() {
         let large = "x".repeat(65_536);
-        for value in ["", "plain", "識別", " with space ", large.as_str()] {
+        for value in [
+            "",
+            "plain",
+            "識別",
+            " with space ",
+            "path/with/slash",
+            "back\\slash",
+            large.as_str(),
+        ] {
             let mut params = valid_payload("kiro/workflow/run_start");
             set_top_field(
                 &mut params,
@@ -3892,6 +3999,90 @@ mod tests {
             assert_eq!(descriptor.agent_name(), Some(value));
             assert_eq!(descriptor.model_id(), Some(value));
             assert_eq!(descriptor.effort_level(), Some(value));
+
+            // Remaining opaque scalars (2026-08-10 review, finding SP16):
+            // poll timestamps, run/ack reasons, watch handler names, and the
+            // snapshot's createdAt are byte-preserved like every other
+            // non-ID string.
+            let mut params = valid_payload("kiro/workflow/watch_poll");
+            set_top_field(
+                &mut params,
+                "at",
+                serde_json::Value::String(value.to_owned()),
+            );
+            let poll = match event(
+                to_notification("kiro/workflow/watch_poll", &params),
+                "watch poll timestamp",
+            ) {
+                WorkflowEvent::WatchPoll(poll) => poll,
+                other => panic!("expected watch_poll, got {other:?}"),
+            };
+            assert_eq!(poll.at(), value);
+
+            let mut params = valid_payload("kiro/workflow/paused");
+            set_top_field(
+                &mut params,
+                "pauseReason",
+                serde_json::Value::String(value.to_owned()),
+            );
+            let paused = match event(
+                to_notification("kiro/workflow/paused", &params),
+                "run pause reason",
+            ) {
+                WorkflowEvent::Paused(paused) => paused,
+                other => panic!("expected paused, got {other:?}"),
+            };
+            assert_eq!(paused.pause_reason(), value);
+
+            let params = serde_json::json!({
+                "workflowId": "workflow",
+                "pendingSteps": [],
+                "resolution": {"outcome": "applied", "reason": value}
+            });
+            let queued = match event(
+                to_notification("kiro/workflow/steps_queued", &params),
+                "acknowledgement reason",
+            ) {
+                WorkflowEvent::StepsQueued(queued) => queued,
+                other => panic!("expected steps_queued, got {other:?}"),
+            };
+            assert_eq!(
+                queued
+                    .resolution()
+                    .and_then(WorkflowQueueResolution::reason),
+                Some(value)
+            );
+
+            let watch = serde_json::json!({"nodeId": "watch", "type": "watch", "agentName": value});
+            let watch_started = match event(
+                to_notification("kiro/workflow/run_start", &descriptor_event_payload(watch)),
+                "watch handler name",
+            ) {
+                WorkflowEvent::RunStarted(started) => started,
+                other => panic!("expected run_start, got {other:?}"),
+            };
+            assert_eq!(watch_started.node_tree()[0].handler_name(), Some(value));
+
+            let mut params = valid_payload("kiro/workflow/run_complete");
+            let final_state = match params
+                .get_mut("finalState")
+                .and_then(serde_json::Value::as_object_mut)
+            {
+                Some(state) => state,
+                None => panic!("run_complete baseline lacks finalState"),
+            };
+            final_state.insert(
+                "createdAt".to_owned(),
+                serde_json::Value::String(value.to_owned()),
+            );
+            let completed = match event(
+                to_notification("kiro/workflow/run_complete", &params),
+                "snapshot createdAt",
+            ) {
+                WorkflowEvent::RunCompleted(completed) => completed,
+                other => panic!("expected run_complete, got {other:?}"),
+            };
+            assert_eq!(completed.final_state().created_at(), value);
         }
     }
 
@@ -4778,6 +4969,30 @@ mod tests {
                 }
             }
         }
+
+        // (2026-08-10 review, finding SP15): `running` is not a completion
+        // status — even the running/running pair must reject as an unknown
+        // enum value at the outer field, never convert.
+        for snapshot in snapshot_statuses {
+            let mut params = valid_payload("kiro/workflow/run_complete");
+            set_top_field(
+                &mut params,
+                "status",
+                serde_json::Value::String("running".to_owned()),
+            );
+            set_top_field(
+                &mut params,
+                "finalState",
+                completed_snapshot("workflow", snapshot),
+            );
+            let (result, log) = capture_rejection("kiro/workflow/run_complete", &params);
+            assert!(
+                matches!(result, WorkflowFrameOutcome::Dropped),
+                "running completion status must drop (snapshot {snapshot})"
+            );
+            assert_eq!(log["fields"]["field_path"], "status");
+            assert_eq!(log["fields"]["error_kind"], "invalid_enum");
+        }
     }
 
     fn completed_snapshot(workflow_id: &str, status: &str) -> serde_json::Value {
@@ -4808,12 +5023,47 @@ mod tests {
         })
     }
 
+    /// One live pipeline receives every malformed row in sequence: none may
+    /// convert, none may perturb existing state, and the pipeline must stay
+    /// fully usable afterwards. (Reworked 2026-08-10, review finding S6 —
+    /// the previous body re-ran four sibling `#[test]`s, adding runtime but
+    /// no cross-frame coverage.)
     #[test]
     fn malformed_workflow_pipeline_is_atomic() {
-        malformed_run_frames_drop_without_poisoning_successor();
-        malformed_node_frames_drop_without_poisoning_successors();
-        malformed_progress_frames_drop_without_poisoning_successors();
-        malformed_workflow_field_matrix_isolated();
+        let opening = event(
+            to_notification(
+                "kiro/workflow/run_start",
+                &valid_payload("kiro/workflow/run_start"),
+            ),
+            "pipeline opening",
+        );
+        let workflow_id = opening.workflow_id().clone();
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(tracker.apply_event(opening), Ok(true));
+        let before = tracker.get(&workflow_id).cloned();
+        for case in malformed_cases() {
+            assert!(
+                matches!(
+                    to_notification(&case.method, &case.params),
+                    WorkflowFrameOutcome::Dropped
+                ),
+                "{}: malformed row must stay dropped mid-pipeline",
+                case.id
+            );
+        }
+        assert_eq!(
+            tracker.get(&workflow_id),
+            before.as_ref(),
+            "no malformed frame may reach or perturb live state"
+        );
+        let successor = event(
+            to_notification(
+                "kiro/workflow/node_start",
+                &valid_payload("kiro/workflow/node_start"),
+            ),
+            "pipeline successor",
+        );
+        assert_eq!(tracker.apply_event(successor), Ok(true));
     }
 
     fn step_descriptor(node_id: &str) -> serde_json::Value {
