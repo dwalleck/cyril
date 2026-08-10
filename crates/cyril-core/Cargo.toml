@@ -17,15 +17,23 @@ workspace = true
 # Pulls in `tokio/fs` for non-blocking file I/O on the bridge's single-threaded
 # executor, `tokio/io-util` for draining terminal pipes while a kill signal is
 # watched (terminal_io, cyril-lw67), `rusqlite` for read-only access to
-# kiro-cli's data.sqlite3, and `tempfile` for the atomic host-io write path
-# (temp + fsync + rename, cyril-0v42).
-kas = ["tokio/fs", "tokio/io-util", "dep:rusqlite", "dep:tempfile"]
+# kiro-cli's data.sqlite3, `tempfile` for the atomic host-io write path
+# (temp + fsync + rename, cyril-0v42), and `serde_path_to_error` for exact
+# field paths in workflow wire-rejection warnings (`convert/kas/workflow.rs`
+# deserialize).
+kas = ["tokio/fs", "tokio/io-util", "dep:rusqlite", "dep:serde_path_to_error", "dep:tempfile"]
+# Compiles the `test_support` module (CaptureWriter, must_succeed,
+# tracing_capture_lock) into the lib so downstream crates' test suites can
+# reuse it. Intended for `[dev-dependencies]` only — never enable it from a
+# normal `[dependencies]` entry.
+test-support = ["dep:tracing-subscriber"]
 
 [dependencies]
 regex = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_path_to_error = { workspace = true, optional = true }
 # `io-util` powers the stderr drain (`BufReader`/`read_until`) in
 # `protocol/transport.rs` (cyril-0gke).
 tokio = { workspace = true, features = ["sync", "rt", "macros", "time", "process", "io-util"] }
@@ -37,6 +45,10 @@ tokio-util = { workspace = true }
 futures-util = { workspace = true }
 rusqlite = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
+# Only compiled in via the `test-support` feature — `test_support` implements
+# `MakeWriter` for its capture buffer. Regular test builds get the crate from
+# `[dev-dependencies]` instead.
+tracing-subscriber = { workspace = true, optional = true }
 
 # Unix-only: `nix` does not build on Windows, where cyril spawns
 # `wsl kiro-cli acp` and keeps only the `kill_on_drop` backstop.

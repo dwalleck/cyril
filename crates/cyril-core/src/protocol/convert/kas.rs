@@ -11,6 +11,22 @@ use agent_client_protocol as acp;
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
 
+pub(crate) mod workflow;
+
+/// Outcome of offering an extension method to the KAS workflow adapter.
+#[derive(Debug)]
+pub(crate) enum WorkflowFrameOutcome {
+    /// Not a workflow lifecycle method — continue through the engine's
+    /// remaining extension converters.
+    NotWorkflow,
+    /// An exact workflow lifecycle method whose payload was malformed;
+    /// the adapter warned and dropped it.
+    Dropped,
+    /// One converted workflow lifecycle event, boxed for its ride inside
+    /// [`Notification::Workflow`].
+    Converted(Box<crate::types::WorkflowEvent>),
+}
+
 /// Convert a KAS `session_info_update` to an internal notification.
 ///
 /// KAS multiplexes turn lifecycle, metering, context telemetry, and steering
@@ -601,13 +617,28 @@ mod tests {
         );
     }
 
+    /// ENGINE-LEVEL fence for the `Dropped` arm (2026-08-09 review, test
+    /// finding 2): a recognized workflow method with a malformed payload must
+    /// reach the client as `Ok(None)` — never `Err`, which would route into
+    /// the client's malformed-extension error path and poison the stream.
+    /// The adapter suite fences the adapter; this fences the engine match.
+    #[test]
+    fn kas_engine_drops_malformed_workflow_frame_to_ok_none() {
+        let r = KasEngine::default()
+            .convert_ext_notification("kiro/workflow/run_start", &json!({"inputs": {}}));
+        assert!(
+            matches!(r, Ok(None)),
+            "malformed workflow frame must warn-and-drop to Ok(None), got {r:?}"
+        );
+    }
+
     #[test]
     fn kas_engine_drops_unknown_ext_frame() {
         // KAS-2a (cyril-j16p) Slice 3 — unknown-variant tolerance: an
         // unrecognised `_kiro/*` frame (arriving as `kiro/*` once the acp crate
         // strips the leading underscore) drops to `Ok(None)` — no error, no hang.
-        // KasEngine delegates ext frames to the v2 `kiro::` handler, whose
-        // unknown-variant arm owns this; this fences the KAS engine path.
+        // Non-workflow names continue to the existing Kiro extension handler;
+        // its unknown-variant arm owns this and fences the fallback path.
         let r = KasEngine::default().convert_ext_notification("kiro/does/not/exist", &json!({}));
         assert!(
             matches!(r, Ok(None)),

@@ -17,6 +17,7 @@ pub mod subagent;
 pub mod tool_call;
 pub mod turn;
 pub mod voice;
+pub mod workflow;
 
 // Convenience re-exports
 pub use agent_command::AgentCommand;
@@ -45,3 +46,14 @@ pub use tool_call::{
 };
 pub use turn::{TurnAllocator, TurnId};
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
+pub use workflow::{
+    WorkflowCompletionMismatchError, WorkflowCompletionSignal, WorkflowCompletionSignalSource,
+    WorkflowCompletionStatus, WorkflowEnumParseError, WorkflowEvent, WorkflowId,
+    WorkflowIdentifierError, WorkflowLoopIteration, WorkflowNodeCompleted,
+    WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
+    WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails,
+    WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
+    WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatExhaustion, WorkflowRunCompleted,
+    WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
+    WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
+};

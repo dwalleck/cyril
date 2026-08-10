@@ -186,7 +186,10 @@ pub(crate) trait Engine {
 
     /// Convert an engine-dialect ext notification (v2: `kiro.dev/*`) to an
     /// internal one. `Err` on a malformed-but-recognized frame; `Ok(None)` for
-    /// recognized-but-not-surfaced frames.
+    /// recognized-but-not-surfaced frames — with one carve-out: a malformed
+    /// `kiro/workflow/*` lifecycle frame is warned and dropped to `Ok(None)`
+    /// by the adapter (C2 isolation; `convert::kas::WorkflowFrameOutcome`),
+    /// never surfaced as `Err`, so one bad frame cannot poison the stream.
     fn convert_ext_notification(
         &self,
         method: &str,
@@ -238,9 +241,9 @@ impl Engine for V2Engine {
 /// `convert_session_update` maps the `session_info_update` → `turn_end`
 /// lifecycle frame to `TurnCompleted` (the KAS turn-completion signal, in place
 /// of v2's prompt response) and delegates every other `session/update` — agent
-/// text, tool calls — to the generic `convert::` fns. `convert_ext_notification`
-/// still delegates to the v2 `kiro::` handler, so unrecognized `_kiro/*` frames
-/// fall to the existing unknown-variant drop (dormant until KAS-2b).
+/// text and tool calls — to the generic `convert::` functions. Exact normalized
+/// `kiro/workflow/*` lifecycle methods route through the KAS-only workflow
+/// adapter; every other extension keeps the existing Kiro conversion path.
 /// Advertises `fs` read+write (KAS-5a, cyril-7bdu) and `terminal` (KAS-5b,
 /// cyril-ufie) capabilities so KAS delegates file I/O and shell execution to
 /// cyril's host-io responders instead of running them in-process.
@@ -308,7 +311,15 @@ impl Engine for KasEngine {
         method: &str,
         params: &serde_json::Value,
     ) -> crate::Result<Option<Notification>> {
-        convert::kiro::to_ext_notification(method, params)
+        match convert::kas::workflow::to_notification(method, params) {
+            convert::kas::WorkflowFrameOutcome::Converted(event) => {
+                Ok(Some(Notification::Workflow(event)))
+            }
+            convert::kas::WorkflowFrameOutcome::Dropped => Ok(None),
+            convert::kas::WorkflowFrameOutcome::NotWorkflow => {
+                convert::kiro::to_ext_notification(method, params)
+            }
+        }
     }
 }
 
@@ -575,5 +586,226 @@ mod tests {
             matches!(r, Ok(Some(crate::types::Notification::RateLimited { .. }))),
             "KasEngine must route rate_limit to RateLimited, got {r:?}"
         );
+    }
+
+    #[cfg(feature = "kas")]
+    #[test]
+    fn workflow_method_dispatch_is_engine_exact() {
+        let completed = json!({
+            "workflowId": "workflow",
+            "workflowName": "recipe",
+            "status": "completed",
+            "inputs": {},
+            "artifacts": {},
+            "capturedOutputs": {},
+            "root": {
+                "nodeId": "workflow",
+                "type": "step",
+                "status": "completed",
+                "agentName": "agent"
+            },
+            "createdAt": "",
+            "planRevision": 0
+        });
+        let cases = [
+            (
+                "kiro/workflow/run_start",
+                "run_start",
+                json!({
+                    "workflowId": "workflow",
+                    "workflowName": "recipe",
+                    "inputs": {},
+                    "nodeTree": [{"nodeId": "step", "type": "step", "agentName": "agent"}]
+                }),
+            ),
+            (
+                "kiro/workflow/node_start",
+                "node_start",
+                json!({
+                    "workflowId": "workflow",
+                    "nodeId": "step",
+                    "nodePath": ["workflow", "step"],
+                    "type": "step"
+                }),
+            ),
+            (
+                "kiro/workflow/node_complete",
+                "node_complete",
+                json!({
+                    "workflowId": "workflow",
+                    "nodeId": "step",
+                    "nodePath": ["workflow", "step"],
+                    "status": "completed"
+                }),
+            ),
+            (
+                "kiro/workflow/node_paused",
+                "node_paused",
+                json!({
+                    "workflowId": "workflow",
+                    "nodeId": "step",
+                    "nodePath": ["workflow", "step"],
+                    "reason": ""
+                }),
+            ),
+            (
+                "kiro/workflow/loop_iteration",
+                "loop_iteration",
+                json!({
+                    "workflowId": "workflow",
+                    "loopId": "loop",
+                    "iteration": 0,
+                    "stopConditionMet": false
+                }),
+            ),
+            (
+                "kiro/workflow/watch_poll",
+                "watch_poll",
+                json!({
+                    "workflowId": "workflow",
+                    "nodeId": "watch",
+                    "nodePath": ["workflow", "watch"],
+                    "outcome": "idle",
+                    "at": ""
+                }),
+            ),
+            (
+                "kiro/workflow/paused",
+                "paused",
+                json!({"workflowId": "workflow", "pauseReason": ""}),
+            ),
+            (
+                "kiro/workflow/run_complete",
+                "run_complete",
+                json!({
+                    "workflowId": "workflow",
+                    "status": "completed",
+                    "finalState": completed
+                }),
+            ),
+            (
+                "kiro/workflow/steps_queued",
+                "steps_queued",
+                json!({"workflowId": "workflow", "pendingSteps": []}),
+            ),
+        ];
+
+        for (method, expected_kind, params) in cases {
+            let kas = KasEngine::default().convert_ext_notification(method, &params);
+            assert!(
+                matches!(
+                    kas,
+                    Ok(Some(crate::types::Notification::Workflow(event)))
+                        if event.method_name() == expected_kind
+                ),
+                "KAS must route normalized {method} to {expected_kind}"
+            );
+            let v2 = V2Engine.convert_ext_notification(method, &params);
+            assert!(
+                matches!(v2, Ok(None)),
+                "V2 must preserve the unknown-extension result for {method}, got {v2:?}"
+            );
+            let raw_method = format!("_{method}");
+            let raw = KasEngine::default().convert_ext_notification(&raw_method, &params);
+            assert!(
+                matches!(raw, Ok(None)),
+                "raw underscore spelling must not bypass ACP normalization: {raw_method}"
+            );
+        }
+
+        for method in [
+            "kiro/workflow/run_started",
+            "kiro/session/context",
+            "kiro.dev/workflow/run_start",
+        ] {
+            let result = KasEngine::default().convert_ext_notification(method, &json!({}));
+            assert!(
+                matches!(result, Ok(None)),
+                "near or unrelated method must retain its prior result: {method}"
+            );
+        }
+
+        let poisoned = json!({"workflowId": null, "future": "x".repeat(1_048_576)});
+        // Perf fence, not a latency contract: near misses must reject on the
+        // method name without touching the 1 MiB payload. The generous 5 s
+        // ceiling (repo precedent: the workflow scale test) never flakes on a
+        // loaded runner, while an accidental parse-before-dispatch still
+        // overshoots it by orders of magnitude.
+        let started = std::time::Instant::now();
+        for _ in 0..100_000 {
+            let result = KasEngine::default()
+                .convert_ext_notification("kiro/workflow/run_started", &poisoned);
+            assert!(matches!(result, Ok(None)));
+        }
+        let short_elapsed = started.elapsed();
+        assert!(
+            short_elapsed <= std::time::Duration::from_secs(5),
+            "100,000 near misses exceeded 5 s: {short_elapsed:?}"
+        );
+        // 100 iterations so a quadratic scan of the 64 KiB method name (whole
+        // seconds across the loop) still trips the CI-safe ceiling a single
+        // call would slip under; the healthy path is microseconds per call.
+        let long_method = format!("kiro/workflow/{}", "x".repeat(65_536));
+        let started = std::time::Instant::now();
+        for _ in 0..100 {
+            let result = KasEngine::default().convert_ext_notification(&long_method, &poisoned);
+            assert!(matches!(result, Ok(None)));
+        }
+        let long_elapsed = started.elapsed();
+        assert!(
+            long_elapsed <= std::time::Duration::from_secs(5),
+            "100 iterations of the 64 KiB method near miss exceeded 5 s: {long_elapsed:?}"
+        );
+    }
+
+    #[cfg(feature = "kas")]
+    #[test]
+    fn workflow_superseded_metadata_facade_remains_user_message() {
+        let params: acp::SessionNotification = serde_json::from_value(json!({
+            "sessionId": "session",
+            "update": {
+                "sessionUpdate": "user_message_chunk",
+                "content": {"type": "text", "text": "not workflow state"},
+                "_meta": {
+                    "kiro": {
+                        "messageId": "wf-progress-1",
+                        "notification": {"kind": "workflow-progress"}
+                    }
+                }
+            }
+        }))
+        .expect("facade control must deserialize as ACP session/update");
+        let notification = KasEngine::default().convert_session_update(&params);
+        assert!(
+            matches!(
+                notification,
+                Some(crate::types::Notification::UserMessage(message))
+                    if message.text == "not workflow state" && message.is_streaming
+            ),
+            "workflow-progress metadata must not subsume an ACP user message"
+        );
+    }
+
+    #[cfg(not(feature = "kas"))]
+    #[test]
+    fn default_build_keeps_workflow_extensions_unknown() {
+        let params = json!({"workflowId": "workflow"});
+        for method in [
+            "kiro/workflow/run_start",
+            "kiro/workflow/node_start",
+            "kiro/workflow/node_complete",
+            "kiro/workflow/node_paused",
+            "kiro/workflow/loop_iteration",
+            "kiro/workflow/watch_poll",
+            "kiro/workflow/paused",
+            "kiro/workflow/run_complete",
+            "kiro/workflow/steps_queued",
+        ] {
+            let result = V2Engine.convert_ext_notification(method, &params);
+            assert!(
+                matches!(result, Ok(None)),
+                "default v2 build must preserve unknown workflow method {method}"
+            );
+        }
     }
 }

@@ -11,6 +11,7 @@ use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, Comma
 use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
 use cyril_core::types::*;
+use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
 use cyril_ui::traits::{Activity, TuiState, approval_origin_label};
 
@@ -63,6 +64,23 @@ pub struct App {
     /// receives exactly one `session/prompt` and a later `/new` never replays
     /// it. `None` for interactive startup.
     startup_prompt: Option<String>,
+    /// Workspace-global workflow lifecycle state (cyril-6beh C12). Every
+    /// `Notification::Workflow` frame is applied here — exactly once, by
+    /// value — before any SessionController/UiState consumer sees it, and
+    /// workflow frames are never forwarded onward.
+    workflow_tracker: WorkflowTracker,
+    /// Test-only dispatch counters (cyril-6beh slice 22): incremented at the
+    /// actual tracker/session/UI call sites so App tests can prove a workflow
+    /// frame branches before every other consumer and is consumed exactly
+    /// once. Compiled out of production builds.
+    #[cfg(test)]
+    workflow_apply_calls: u64,
+    #[cfg(test)]
+    subagent_ui_apply_calls: u64,
+    #[cfg(test)]
+    session_apply_calls: u64,
+    #[cfg(test)]
+    ui_apply_calls: u64,
 }
 
 impl App {
@@ -118,6 +136,15 @@ impl App {
             voice: spawn_voice_engine(),
             voice_active: false,
             startup_prompt: None,
+            workflow_tracker: WorkflowTracker::new(),
+            #[cfg(test)]
+            workflow_apply_calls: 0,
+            #[cfg(test)]
+            subagent_ui_apply_calls: 0,
+            #[cfg(test)]
+            session_apply_calls: 0,
+            #[cfg(test)]
+            ui_apply_calls: 0,
         }
     }
 
@@ -327,6 +354,38 @@ impl App {
         }
     }
 
+    #[cfg(test)]
+    fn record_workflow_apply(&mut self) {
+        self.workflow_apply_calls += 1;
+    }
+
+    #[cfg(not(test))]
+    fn record_workflow_apply(&mut self) {}
+
+    #[cfg(test)]
+    fn record_subagent_ui_apply(&mut self) {
+        self.subagent_ui_apply_calls += 1;
+    }
+
+    #[cfg(not(test))]
+    fn record_subagent_ui_apply(&mut self) {}
+
+    #[cfg(test)]
+    fn record_session_apply(&mut self) {
+        self.session_apply_calls += 1;
+    }
+
+    #[cfg(not(test))]
+    fn record_session_apply(&mut self) {}
+
+    #[cfg(test)]
+    fn record_ui_apply(&mut self) {
+        self.ui_apply_calls += 1;
+    }
+
+    #[cfg(not(test))]
+    fn record_ui_apply(&mut self) {}
+
     fn handle_notification(&mut self, routed: RoutedNotification) -> Vec<BridgeCommand> {
         let RoutedNotification {
             session_id,
@@ -338,6 +397,36 @@ impl App {
             // than `..` so a rename breaks loudly here.
             turn: _,
         } = routed;
+
+        // Workflow lifecycle frames (cyril-6beh C12/C14): workspace-global
+        // state owned by this App's tracker. Branch before EVERY existing
+        // SessionController/UiState consumer, consume the boxed event exactly
+        // once by value, and never forward the frame onward. A state error
+        // leaves the tracker atomic (see WorkflowStateError) and is
+        // warning-only: dispatch continues and later frames still apply.
+        if let Notification::Workflow(event) = notification {
+            self.record_workflow_apply();
+            // Capture the frame's diagnostic identity before the tracker
+            // consumes the event by value.
+            let event_kind = event.method_name();
+            let workflow_id = event.workflow_id().as_str().to_owned();
+            match self.workflow_tracker.apply_event(*event) {
+                // The changed flag is deliberately unwired: nothing renders
+                // workflow state yet. The W-track renderer must route it into
+                // redraw_needed when drill-in lands.
+                Ok(_) => {}
+                Err(error) => {
+                    tracing::warn!(
+                        workflow_id = %workflow_id,
+                        event_kind,
+                        error_kind = error.error_kind(),
+                        error = %error,
+                        "workflow state application failed",
+                    );
+                }
+            }
+            return Vec::new();
+        }
 
         // Tracker-level notifications (list_update, inbox) are global:
         // apply them regardless of session_id. Returns false for unrelated variants.
@@ -369,6 +458,7 @@ impl App {
                             "notification for unknown session, routing to subagent stream"
                         );
                     }
+                    self.record_subagent_ui_apply();
                     self.ui_state
                         .apply_subagent_notification(sid, &notification);
                     self.redraw_needed = true;
@@ -388,7 +478,9 @@ impl App {
             }
         }
 
+        self.record_session_apply();
         let session_changed = self.session.apply_notification(&notification);
+        self.record_ui_apply();
         let ui_changed = self.ui_state.apply_notification(&notification);
 
         // Register agent commands when they arrive
@@ -3564,5 +3656,284 @@ mod tests {
             &mut ui,
         );
         assert!(result.is_empty());
+    }
+
+    // ── cyril-6beh slice 22: exact-once App ownership and error isolation ──
+    //
+    // The tracker/session/UI counters below are incremented at the REAL call
+    // sites inside handle_notification (not a parallel fake dispatcher), so
+    // these tests prove the routing shape itself: a workflow frame reaches
+    // the tracker once and every SessionController/UiState consumer zero
+    // times, and a state error stays warning-only without corrupting state.
+
+    fn workflow_id(value: &str) -> WorkflowId {
+        match WorkflowId::try_from(value.to_owned()) {
+            Ok(id) => id,
+            Err(error) => panic!("invalid workflow id fixture: {error}"),
+        }
+    }
+
+    fn workflow_node_id(value: &str) -> WorkflowNodeId {
+        match WorkflowNodeId::try_from(value.to_owned()) {
+            Ok(id) => id,
+            Err(error) => panic!("invalid node id fixture: {error}"),
+        }
+    }
+
+    fn workflow_run_started_frame(id: &str) -> Notification {
+        Notification::Workflow(Box::new(WorkflowEvent::RunStarted(
+            WorkflowRunStarted::new(
+                workflow_id(id),
+                format!("recipe-{id}"),
+                serde_json::json!({"input": true}),
+                Vec::new(),
+                None,
+            ),
+        )))
+    }
+
+    fn workflow_node_started_frame(id: &str, node: &str) -> Notification {
+        let path =
+            WorkflowNodePath::try_new(&workflow_id(id), vec![id.to_owned(), node.to_owned()])
+                .expect("canonical node path fixture");
+        Notification::Workflow(Box::new(WorkflowEvent::NodeStarted(
+            WorkflowNodeStarted::new(
+                workflow_id(id),
+                workflow_node_id(node),
+                path,
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new(),
+            ),
+        )))
+    }
+
+    /// A `run_complete` whose final snapshot declares two sibling nodes with
+    /// the same node id — a duplicate canonical path that the tracker must
+    /// reject atomically. Deliberately constructed at the domain level (not a
+    /// converter output) so it reaches the tracker exactly as a wire frame
+    /// would.
+    fn duplicate_path_completion_frame(id: &str) -> Notification {
+        let snapshot = WorkflowSnapshot::new(
+            workflow_id(id),
+            format!("recipe-{id}"),
+            WorkflowRunStatus::Completed,
+            WorkflowSnapshotData::new(
+                serde_json::json!({"input": true}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(workflow_node_id("root"), Vec::new()),
+                WorkflowNodeStatus::Completed,
+                vec![
+                    WorkflowNodeSnapshot::new(
+                        WorkflowNodeDescriptor::step(
+                            workflow_node_id("dup"),
+                            "agent".to_owned(),
+                            None,
+                            None,
+                        ),
+                        WorkflowNodeStatus::Completed,
+                        Vec::new(),
+                    ),
+                    WorkflowNodeSnapshot::new(
+                        WorkflowNodeDescriptor::step(
+                            workflow_node_id("dup"),
+                            "agent".to_owned(),
+                            None,
+                            None,
+                        ),
+                        WorkflowNodeStatus::Completed,
+                        Vec::new(),
+                    ),
+                ],
+            ),
+            WorkflowSnapshotMetadata::new("created".to_owned(), 1),
+        );
+        let completion = match WorkflowRunCompleted::new(
+            workflow_id(id),
+            WorkflowCompletionStatus::Completed,
+            snapshot,
+        ) {
+            Ok(completion) => completion,
+            Err(error) => panic!("valid completion fixture rejected: {error}"),
+        };
+        Notification::Workflow(Box::new(WorkflowEvent::RunCompleted(completion)))
+    }
+
+    /// Run `f` under a WARN-level capture subscriber; return its result and
+    /// the captured log text.
+    fn with_captured_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
+        let _capture_lock = cyril_core::test_support::tracing_capture_lock();
+        let capture = cyril_core::test_support::CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::WARN)
+            .with_ansi(false)
+            .with_writer(capture.clone())
+            .finish();
+        let result = tracing::subscriber::with_default(subscriber, f);
+        let logs = String::from_utf8(capture.captured()).expect("utf8 logs");
+        (result, logs)
+    }
+
+    #[test]
+    fn workflow_notification_branches_before_other_consumers() {
+        let mut app = test_app();
+        // A main session must exist for a main-scoped frame to route to the
+        // old consumers; without the workflow branch it would reach both.
+        let main = SessionId::new("sess_main");
+        app.handle_notification(session_created_frame(&main));
+
+        let baseline_workflow = app.workflow_apply_calls;
+        let baseline_subagent = app.subagent_ui_apply_calls;
+        let baseline_session = app.session_apply_calls;
+        let baseline_ui = app.ui_apply_calls;
+
+        // Global frame: no session scope involved, still tracker-only.
+        app.handle_notification(RoutedNotification::global(workflow_run_started_frame(
+            "wf-branch",
+        )));
+        assert_eq!(app.workflow_apply_calls, baseline_workflow + 1);
+        assert_eq!(app.subagent_ui_apply_calls, baseline_subagent);
+        assert_eq!(app.session_apply_calls, baseline_session);
+        assert_eq!(app.ui_apply_calls, baseline_ui);
+        assert!(
+            app.workflow_tracker
+                .get(&workflow_id("wf-branch"))
+                .is_some(),
+            "the frame must reach the tracker"
+        );
+
+        // Main-scoped frame: without the branch this lands in BOTH old
+        // consumers.
+        app.handle_notification(RoutedNotification::scoped(
+            main.clone(),
+            workflow_node_started_frame("wf-branch", "step-a"),
+        ));
+        assert_eq!(app.workflow_apply_calls, baseline_workflow + 2);
+        assert_eq!(app.subagent_ui_apply_calls, baseline_subagent);
+        assert_eq!(app.session_apply_calls, baseline_session);
+        assert_eq!(app.ui_apply_calls, baseline_ui);
+
+        // Foreign-scoped frame: without the branch this lands in the
+        // subagent stream.
+        app.handle_notification(RoutedNotification::scoped(
+            SessionId::new("sess_foreign"),
+            workflow_node_started_frame("wf-branch", "step-b"),
+        ));
+        assert_eq!(app.workflow_apply_calls, baseline_workflow + 3);
+        assert_eq!(app.subagent_ui_apply_calls, baseline_subagent);
+        assert_eq!(app.session_apply_calls, baseline_session);
+        assert_eq!(app.ui_apply_calls, baseline_ui);
+
+        // An unrelated frame still reaches the old consumers, proving the
+        // counters sit at the real call sites and routing is unchanged.
+        app.handle_notification(RoutedNotification::global(Notification::ModeChanged {
+            mode_id: ModeId::new("myagent"),
+        }));
+        assert_eq!(app.workflow_apply_calls, baseline_workflow + 3);
+        assert_eq!(app.session_apply_calls, baseline_session + 1);
+        assert_eq!(app.ui_apply_calls, baseline_ui + 1);
+    }
+
+    #[test]
+    fn workflow_notification_is_consumed_exactly_once() {
+        let mut app = test_app();
+        let baseline_workflow = app.workflow_apply_calls;
+        let baseline_session = app.session_apply_calls;
+        let baseline_ui = app.ui_apply_calls;
+
+        // The same frame delivered twice: each delivery is consumed exactly
+        // once (one tracker apply per frame, nothing forwarded).
+        app.handle_notification(RoutedNotification::global(workflow_run_started_frame(
+            "wf-once",
+        )));
+        app.handle_notification(RoutedNotification::global(workflow_run_started_frame(
+            "wf-once",
+        )));
+        assert_eq!(app.workflow_apply_calls, baseline_workflow + 2);
+        assert_eq!(app.session_apply_calls, baseline_session);
+        assert_eq!(app.ui_apply_calls, baseline_ui);
+
+        // The duplicate opening did not double-apply: an identical replay is
+        // an idempotent no-op, not a second state.
+        let id = workflow_id("wf-once");
+        let run = app
+            .workflow_tracker
+            .get(&id)
+            .expect("opening applied exactly once");
+        assert_eq!(run.workflow_name(), "recipe-wf-once");
+        assert_eq!(app.workflow_tracker.iter().count(), 1);
+
+        // A node opening lands exactly once per frame: one apply, one node.
+        app.handle_notification(RoutedNotification::global(workflow_node_started_frame(
+            "wf-once", "step",
+        )));
+        app.handle_notification(RoutedNotification::global(workflow_node_started_frame(
+            "wf-once", "step",
+        )));
+        assert_eq!(app.workflow_apply_calls, baseline_workflow + 4);
+        let run = app
+            .workflow_tracker
+            .get(&id)
+            .expect("run survives replayed openings");
+        assert_eq!(
+            run.nodes().count(),
+            1,
+            "the node must be applied once, not duplicated"
+        );
+    }
+
+    #[test]
+    fn workflow_state_error_isolated_by_app() {
+        let mut app = test_app();
+        let id = workflow_id("wf-error");
+        app.handle_notification(RoutedNotification::global(workflow_run_started_frame(
+            "wf-error",
+        )));
+        let before = app.workflow_tracker.get(&id).cloned();
+
+        let ((), logs) = with_captured_logs(|| {
+            app.handle_notification(RoutedNotification::global(duplicate_path_completion_frame(
+                "wf-error",
+            )));
+        });
+
+        // One structured WARN with the manifest schema: message plus
+        // workflow_id, event_kind, error_kind, error.
+        assert_eq!(
+            logs.matches("workflow state application failed").count(),
+            1,
+            "exactly one WARN per failed frame, got:\n{logs}"
+        );
+        assert!(logs.contains("workflow_id=wf-error"), "got:\n{logs}");
+        assert!(logs.contains("event_kind=\"run_complete\""), "got:\n{logs}");
+        assert!(
+            logs.contains("error_kind=\"duplicate_canonical_path\""),
+            "got:\n{logs}"
+        );
+        assert!(logs.contains("error="), "got:\n{logs}");
+
+        // The failed frame left the tracked run byte-for-byte unchanged.
+        assert_eq!(
+            app.workflow_tracker.get(&id).cloned(),
+            before,
+            "state must be atomic across a rejected frame"
+        );
+
+        // The App keeps dispatching: a successor applies normally and the
+        // failure never leaked into the old consumers.
+        let baseline_workflow = app.workflow_apply_calls;
+        app.handle_notification(RoutedNotification::global(workflow_node_started_frame(
+            "wf-error", "step",
+        )));
+        assert_eq!(app.workflow_apply_calls, baseline_workflow + 1);
+        let run = app
+            .workflow_tracker
+            .get(&id)
+            .expect("run survives the isolated error");
+        assert_eq!(run.nodes().count(), 1);
+        assert_eq!(app.session_apply_calls, 0);
+        assert_eq!(app.ui_apply_calls, 0);
     }
 }

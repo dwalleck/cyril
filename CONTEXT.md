@@ -49,8 +49,12 @@ The definition of a workflow — a named plan of nodes with declared inputs, bef
 _Avoid_: workflow (unqualified), template, workflow file
 
 **Workflow run**:
-One execution of a recipe, identified by a workflow id. A run is a workspace-scoped, persisted object: it outlives the session that started it and the cyril process that watched it, and can be listed, resumed, and re-attached to later.
-_Avoid_: workflow (unqualified), job, pipeline
+A workspace-scoped, persisted execution object identified by a workflow id. It outlives the session and process that watched it, can be listed/resumed/re-attached, and may contain successive retry incarnations under the same id.
+_Avoid_: workflow (unqualified), job, pipeline, execution attempt
+
+**Run incarnation**:
+One execution attempt within a workflow run, from `run_start` through a `run_complete` whose status is terminal (`completed`/`failed`/`aborted`); a `run_complete` with status `paused` is non-terminal and the run stays resumable. Kiro retry starts a fresh incarnation under the existing workflow id; Cyril's canonical current state retains only the latest incarnation.
+_Avoid_: workflow run, retry run, attempt (unqualified)
 
 **Workflow step**:
 A node of a run that executes as a peer session rather than as delegated work under a parent.

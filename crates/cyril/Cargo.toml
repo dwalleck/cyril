@@ -39,5 +39,9 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }
+# Test builds re-open the lib dependency with `test-support` so app.rs tests
+# share cyril-core's canonical test scaffolding (CaptureWriter). Dev-dependency
+# features never leak into the plain `[dependencies]` lib build.
+cyril-core = { path = "../cyril-core", features = ["test-support"] }
 rstest = { workspace = true }
 tempfile = { workspace = true }
