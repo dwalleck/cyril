@@ -413,16 +413,8 @@ impl WorkflowRun {
         self.nodes.iter()
     }
 
-    /// Index buckets are kept sorted: `WorkflowRun` equality includes the
-    /// index, so bucket order must be a function of bucket *contents* — an
-    /// order-perturbing removal would make a semantically identical snapshot
-    /// look changed (2026-08-10 review, finding SP8).
     fn index_node(&mut self, node_id: WorkflowNodeId, path: WorkflowNodePath) {
-        let bucket = self.node_index.entry(node_id).or_default();
-        let position = bucket
-            .binary_search(&path)
-            .unwrap_or_else(|insert_at| insert_at);
-        bucket.insert(position, path);
+        insert_indexed_path(&mut self.node_index, node_id, path);
     }
 
     fn move_index(
@@ -893,6 +885,25 @@ fn warn_ignored(workflow_id: &WorkflowId, event_kind: &str, reason: &str) {
     );
 }
 
+/// Inserts `path` into its `node_id` bucket, keeping the bucket sorted.
+///
+/// Every index construction path — incremental events via
+/// [`WorkflowRun::index_node`] and bulk [`canonicalize_snapshot`] — must go
+/// through here: `WorkflowRun` equality includes the index, so bucket order
+/// must be a function of bucket *contents*, never arrival order (2026-08-10
+/// review, finding SP8).
+fn insert_indexed_path(
+    index: &mut HashMap<WorkflowNodeId, Vec<WorkflowNodePath>>,
+    node_id: WorkflowNodeId,
+    path: WorkflowNodePath,
+) {
+    let bucket = index.entry(node_id).or_default();
+    let position = bucket
+        .binary_search(&path)
+        .unwrap_or_else(|insert_at| insert_at);
+    bucket.insert(position, path);
+}
+
 fn canonicalize_snapshot(
     snapshot: WorkflowSnapshot,
 ) -> Result<(WorkflowId, WorkflowRun), WorkflowStateError> {
@@ -962,7 +973,7 @@ fn canonicalize_snapshot(
                 if nodes.insert(path.clone(), state).is_some() {
                     return Err(WorkflowStateError::DuplicateCanonicalPath { path });
                 }
-                node_index.entry(node_id).or_default().push(path.clone());
+                insert_indexed_path(&mut node_index, node_id, path.clone());
                 descriptors.insert(path, descriptor);
             }
         }
@@ -2854,6 +2865,49 @@ mod tests {
                 node_path(&id, &["workflow", "c"]),
             ],
             "surviving paths keep canonical order"
+        );
+    }
+
+    /// REGRESSION FENCE (2026-08-10 ultrareview, segment 3): snapshot
+    /// canonicalization builds the node-id index through the same sorted
+    /// insert as the events path. An ancestor and a descendant may legally
+    /// share a node id (dedup checks canonical *paths*, not ids), and DFS
+    /// finish order emits the descendant's longer path first — an unsorted
+    /// push would order the bucket by arrival, making an event-built run and
+    /// its canonicalized snapshot compare unequal (the SP8 phantom-change
+    /// failure mode).
+    #[test]
+    fn snapshot_canonicalization_keeps_index_buckets_sorted() {
+        let id = workflow_id("workflow");
+        let root = WorkflowNodeSnapshot::new(
+            WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
+            WorkflowNodeStatus::Completed,
+            vec![step_node("workflow")],
+        );
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_snapshot(snapshot_with_root("workflow", root)),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("run missing");
+        };
+        for (bucket_id, paths) in &run.node_index {
+            assert!(
+                paths.is_sorted(),
+                "bucket {bucket_id:?} must be sorted after canonicalization, got {paths:?}"
+            );
+        }
+        let Some(shared) = run.node_index.get(&node_id("workflow")) else {
+            panic!("shared bucket missing");
+        };
+        assert_eq!(
+            shared,
+            &vec![
+                node_path(&id, &["workflow"]),
+                node_path(&id, &["workflow", "workflow"]),
+            ],
+            "the ancestor's shorter path sorts before its descendant's"
         );
     }
 

@@ -2390,13 +2390,13 @@ mod tests {
 
     #[test]
     fn workflow_snapshot_optional_presence_matrix() {
-        for mask in 0_u16..1 << 12 {
+        for mask in 0_u16..1 << 14 {
             let mut node = WorkflowNodeSnapshot::new(
                 WorkflowNodeDescriptor::step(
                     node_id("node"),
                     String::new(),
-                    (mask & 1 != 0).then(String::new),
-                    (mask & 2 != 0).then(String::new),
+                    (mask & 4096 != 0).then(String::new),
+                    (mask & 8192 != 0).then(String::new),
                 ),
                 WorkflowNodeStatus::Pending,
                 Vec::new(),
@@ -2451,11 +2451,11 @@ mod tests {
             assert_eq!(node.ended_at().is_some(), mask & 512 != 0);
             assert_eq!(node.watch_cursor().is_some(), mask & 1024 != 0);
             assert_eq!(node.watch_terminal().is_some(), mask & 2048 != 0);
-            assert_eq!(node.descriptor().model_id().is_some(), mask & 1 != 0);
-            assert_eq!(node.descriptor().effort_level().is_some(), mask & 2 != 0);
+            assert_eq!(node.descriptor().model_id().is_some(), mask & 4096 != 0);
+            assert_eq!(node.descriptor().effort_level().is_some(), mask & 8192 != 0);
         }
 
-        for mask in 0_u8..4 {
+        for mask in 0_u8..1 << 4 {
             let repeat = WorkflowNodeDescriptor::repeat(
                 node_id("repeat"),
                 Vec::new(),
@@ -2468,14 +2468,14 @@ mod tests {
             assert_eq!(repeat.stop_when().is_some(), mask & 2 != 0);
 
             let mut metadata = WorkflowSnapshotMetadata::new(String::new(), 0);
-            if mask & 1 != 0 {
+            if mask & 4 != 0 {
                 metadata = metadata.with_parent_session_id(SessionId::new(""));
             }
-            if mask & 2 != 0 {
+            if mask & 8 != 0 {
                 metadata = metadata.with_workspace_path(String::new());
             }
-            assert_eq!(metadata.parent_session_id().is_some(), mask & 1 != 0);
-            assert_eq!(metadata.workspace_path().is_some(), mask & 2 != 0);
+            assert_eq!(metadata.parent_session_id().is_some(), mask & 4 != 0);
+            assert_eq!(metadata.workspace_path().is_some(), mask & 8 != 0);
         }
     }
 
