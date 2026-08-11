@@ -839,6 +839,27 @@ impl WorkflowTracker {
     pub fn iter(&self) -> impl ExactSizeIterator<Item = (&WorkflowId, &WorkflowRun)> {
         self.runs.iter()
     }
+
+    /// Resolves which workflow node, if any, currently claims `session_id`
+    /// (cyril-jxfu): the registry query behind workflow-owned routing.
+    ///
+    /// Deliberately a linear scan over `runs × nodes` rather than a derived
+    /// index — a scan cannot desync from the tracker's mutation paths
+    /// (node_start merges, snapshot canonicalization, completion). Ownership
+    /// includes terminal runs on purpose: straggler frames after
+    /// `run_complete` must stay attributed to their step, not fall back to
+    /// the subagent guess. Step sessions are unique per node wire-side, so
+    /// first-match order across runs is unobservable, not a contract.
+    pub fn session_owner(
+        &self,
+        session_id: &SessionId,
+    ) -> Option<(&WorkflowId, &WorkflowNodePath)> {
+        self.runs.iter().find_map(|(workflow_id, run)| {
+            run.nodes.iter().find_map(|(path, node)| {
+                (node.session_id() == Some(session_id)).then_some((workflow_id, path))
+            })
+        })
+    }
 }
 
 fn replace<T: PartialEq>(target: &mut T, incoming: T) -> bool {
@@ -3400,6 +3421,248 @@ mod tests {
         assert!(
             large_started.elapsed() <= Duration::from_secs(2),
             "64 KiB workflow/node/path event exceeded 2 s"
+        );
+    }
+
+    // ── cyril-jxfu C3/C4/C9: session_owner — the workflow-owned registry ─────
+
+    fn started(
+        id: &WorkflowId,
+        node: &str,
+        segments: &[&str],
+        details: WorkflowNodeStartDetails,
+    ) -> WorkflowEvent {
+        WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+            id.clone(),
+            node_id(node),
+            node_path(id, segments),
+            WorkflowNodeType::Step,
+            details,
+        ))
+    }
+
+    fn opened(tracker: &mut WorkflowTracker, id: &WorkflowId) {
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+    }
+
+    // C3, double-emit + collision + idempotence + absent shapes in one run:
+    // a no-sid emission claims nothing, the sid-bearing re-emission claims,
+    // a duplicate re-claim changes nothing, and two nodes resolve to their
+    // OWN paths (a scan returning the first node regardless of sid fails).
+    #[test]
+    fn session_owner_resolves_reemission_claims_per_node() {
+        let id = workflow_id("workflow");
+        let alpha = SessionId::new("sess-alpha");
+        let beta = SessionId::new("sess-beta");
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &id);
+
+        // First emissions: no sessionId — nothing is claimed yet.
+        for node in ["alpha", "beta"] {
+            assert_eq!(
+                tracker.apply_event(started(
+                    &id,
+                    node,
+                    &["workflow", "fan", node],
+                    WorkflowNodeStartDetails::new(),
+                )),
+                Ok(true)
+            );
+        }
+        assert_eq!(tracker.session_owner(&alpha), None);
+
+        // Re-emissions carry the claims (the capture's dominant path).
+        for (node, sid) in [("alpha", &alpha), ("beta", &beta)] {
+            assert_eq!(
+                tracker.apply_event(started(
+                    &id,
+                    node,
+                    &["workflow", "fan", node],
+                    WorkflowNodeStartDetails::new().with_session_id(sid.clone()),
+                )),
+                Ok(true)
+            );
+        }
+        for (node, sid) in [("alpha", &alpha), ("beta", &beta)] {
+            let Some((owner_id, owner_path)) = tracker.session_owner(sid) else {
+                panic!("claimed step {node} must be workflow-owned");
+            };
+            assert_eq!(owner_id, &id);
+            assert_eq!(
+                owner_path.segments().last().map(String::as_str),
+                Some(node),
+                "each sid must resolve to its OWN node, not the first scanned"
+            );
+        }
+
+        // A duplicate claim is idempotent: no state change, ownership intact.
+        assert_eq!(
+            tracker.apply_event(started(
+                &id,
+                "alpha",
+                &["workflow", "fan", "alpha"],
+                WorkflowNodeStartDetails::new().with_session_id(alpha.clone()),
+            )),
+            Ok(false)
+        );
+        assert!(tracker.session_owner(&alpha).is_some());
+
+        // An id nothing claimed stays unowned.
+        assert_eq!(tracker.session_owner(&SessionId::new("sess-unknown")), None);
+    }
+
+    // C3, resume shape: the sessionId rides the FIRST emission (no re-emit).
+    #[test]
+    fn session_owner_resolves_first_emission_resume_claim() {
+        let id = workflow_id("workflow");
+        let sid = SessionId::new("sess-resumed");
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &id);
+        assert_eq!(
+            tracker.apply_event(started(
+                &id,
+                "step",
+                &["workflow", "step"],
+                WorkflowNodeStartDetails::new().with_session_id(sid.clone()),
+            )),
+            Ok(true)
+        );
+        assert!(
+            tracker.session_owner(&sid).is_some(),
+            "a first-emission claim (resume path) must register like a re-emit"
+        );
+    }
+
+    // C3, snapshot-borne shape: the claim arrives only inside persisted node
+    // state (pause/terminal snapshots name every step's session at once).
+    #[test]
+    fn session_owner_resolves_snapshot_borne_claim() {
+        let sid = SessionId::new("sess-snapshotted");
+        let snapshot = WorkflowSnapshot::new(
+            workflow_id("workflow"),
+            "recipe".to_owned(),
+            WorkflowRunStatus::Paused,
+            WorkflowSnapshotData::new(
+                serde_json::json!({}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(node_id("workflow"), Vec::new()),
+                WorkflowNodeStatus::Paused,
+                vec![
+                    WorkflowNodeSnapshot::new(
+                        WorkflowNodeDescriptor::step(
+                            node_id("step"),
+                            "agent".to_owned(),
+                            None,
+                            None,
+                        ),
+                        WorkflowNodeStatus::Paused,
+                        Vec::new(),
+                    )
+                    .with_session_id(sid.clone()),
+                ],
+            ),
+            WorkflowSnapshotMetadata::new("created".to_owned(), 1),
+        );
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(tracker.apply_snapshot(snapshot), Ok(true));
+        assert!(
+            tracker.session_owner(&sid).is_some(),
+            "a snapshot-borne session id must count as a claim"
+        );
+    }
+
+    // C4: ownership persists through run_complete — replay the LIVE capture
+    // end to end through the real converter and query after the terminal
+    // snapshot. Oracle: probe 3 (the committed replay projection shows both
+    // step sids surviving in node state; .cyril-jxfu/findings.md).
+    #[cfg(feature = "kas")]
+    #[test]
+    fn session_owner_survives_capture_replay_terminal_snapshot() {
+        const CAPTURE: &str =
+            include_str!("../tests/fixtures/kas/workflow/kas-custom-dag-2.16.0.jsonl");
+        let mut tracker = WorkflowTracker::new();
+        for line in CAPTURE.lines().filter(|line| !line.is_empty()) {
+            let frame: serde_json::Value = crate::test_support::must_succeed(
+                serde_json::from_str(line),
+                "capture line is valid JSON",
+            );
+            let Some(method) = frame.get("method").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            let Some(method) = method.strip_prefix('_') else {
+                continue;
+            };
+            if let crate::protocol::convert::kas::WorkflowFrameOutcome::Converted(event) =
+                crate::protocol::convert::kas::workflow::to_notification(method, &frame["params"])
+            {
+                crate::test_support::must_succeed(
+                    tracker.apply_event(*event),
+                    "capture event applies cleanly",
+                );
+            }
+        }
+        // The parent session is never claimed by any node.
+        assert_eq!(
+            tracker.session_owner(&SessionId::new("sess_2bc0cfdc-ccba-47b7-a3ab-224b23a63d60")),
+            None
+        );
+        // Both steps stay owned AFTER run_complete replaced the run state.
+        for (sid, node) in [
+            ("sess_a3d8bb37-4b02-494a-8e82-1dbbc0877fb6", "alpha"),
+            ("sess_fd35dac1-b00e-4d16-b0ae-466cd68523d9", "beta"),
+        ] {
+            let Some((owner_id, owner_path)) = tracker.session_owner(&SessionId::new(sid)) else {
+                panic!("step {node} must stay workflow-owned after the terminal snapshot");
+            };
+            assert_eq!(owner_id.as_str(), "wf_a02797dca02afbbb");
+            assert_eq!(owner_path.segments().last().map(String::as_str), Some(node));
+        }
+    }
+
+    // C9: the scan budget. 200 claimed nodes × 10k queries (half misses, the
+    // full-scan worst case). The plan's budget: an accidentally quadratic or
+    // per-call-allocating rewrite overshoots the ceiling by orders of
+    // magnitude; the honest cost is ~2M pointer-sized compares.
+    #[test]
+    fn session_owner_scan_budget_at_adversarial_scale() {
+        let id = workflow_id("workflow");
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &id);
+        for index in 0..200 {
+            let node = format!("step-{index}");
+            assert_eq!(
+                tracker.apply_event(started(
+                    &id,
+                    &node,
+                    &["workflow", &node],
+                    WorkflowNodeStartDetails::new()
+                        .with_session_id(SessionId::new(format!("sess-{index}"))),
+                )),
+                Ok(true)
+            );
+        }
+        let hit = SessionId::new("sess-137");
+        let miss = SessionId::new("sess-unclaimed");
+        let started_at = Instant::now();
+        for _ in 0..5_000 {
+            assert!(tracker.session_owner(&hit).is_some());
+            assert!(tracker.session_owner(&miss).is_none());
+        }
+        assert!(
+            started_at.elapsed() <= Duration::from_secs(2),
+            "10k session_owner queries over 200 nodes exceeded the 2 s CI ceiling"
         );
     }
 }

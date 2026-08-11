@@ -13,7 +13,7 @@ pub struct SubagentStream {
 }
 
 impl SubagentStream {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             messages: Vec::new(),
             streaming_text: String::new(),
@@ -52,6 +52,25 @@ impl SubagentStream {
         matches!(self.activity, Activity::Ready | Activity::Idle)
     }
 
+    /// Merges `earlier` — an adopted optimistic stream whose frames all
+    /// predate this stream's — in front of this history (cyril-jxfu
+    /// occupied-adopt). Chronological order is preserved (adopted messages
+    /// arrived first) and both sides' tool-call indices stay live; on an id
+    /// collision the later (self) entry wins.
+    pub(crate) fn absorb_earlier(&mut self, mut earlier: SubagentStream) {
+        earlier.flush_streaming_text();
+        let offset = earlier.messages.len();
+        if offset == 0 {
+            return;
+        }
+        for (id, idx) in self.tool_call_index.drain() {
+            earlier.tool_call_index.insert(id, idx + offset);
+        }
+        self.tool_call_index = earlier.tool_call_index;
+        earlier.messages.append(&mut self.messages);
+        self.messages = earlier.messages;
+    }
+
     fn flush_streaming_text(&mut self) {
         if !self.streaming_text.is_empty() {
             let text = std::mem::take(&mut self.streaming_text);
@@ -59,7 +78,7 @@ impl SubagentStream {
         }
     }
 
-    fn apply_notification(&mut self, notification: &Notification) -> bool {
+    pub(crate) fn apply_notification(&mut self, notification: &Notification) -> bool {
         match notification {
             Notification::AgentMessage(AgentMessage { text, is_streaming }) => {
                 if *is_streaming {
@@ -182,6 +201,19 @@ impl SubagentUiState {
 
     pub fn unfocus(&mut self) {
         self.focused = None;
+    }
+
+    /// Removes a stream from the store, returning it for adoption elsewhere
+    /// (cyril-jxfu re-parenting: a late workflow claim moves the optimistic
+    /// stream, history intact, out of the subagent domain). Clears drill-in
+    /// focus when it pointed at the removed session — this is the one seam
+    /// where a dangling focus cannot be forgotten by a caller.
+    pub fn remove_stream(&mut self, session_id: &SessionId) -> Option<SubagentStream> {
+        let removed = self.streams.remove(session_id);
+        if removed.is_some() && self.focused.as_ref() == Some(session_id) {
+            self.focused = None;
+        }
+        removed
     }
 
     pub fn focused_session_id(&self) -> Option<&SessionId> {
@@ -408,5 +440,52 @@ mod tests {
         let stream = &state.streams[&sid];
         // Should be: AgentText("before tool"), ToolCall, AgentText("after tool")
         assert_eq!(stream.messages.len(), 3);
+    }
+
+    // ── cyril-jxfu C8 seam: remove_stream ────────────────────────────────────
+
+    #[test]
+    fn remove_stream_missing_key_is_none_and_store_unchanged() {
+        let mut state = SubagentUiState::new();
+        state.apply_notification(&SessionId::new("sub-1"), &make_agent_msg("hi", false));
+
+        assert!(state.remove_stream(&SessionId::new("sub-absent")).is_none());
+        assert_eq!(state.streams.len(), 1);
+    }
+
+    #[test]
+    fn remove_stream_clears_focus_and_returns_history() {
+        let mut state = SubagentUiState::new();
+        let sid = SessionId::new("sub-1");
+        state.apply_notification(&sid, &make_agent_msg("first", false));
+        state.apply_notification(&sid, &make_tool_call("tc-1", "read"));
+        assert!(state.focus(sid.clone()));
+
+        let Some(stream) = state.remove_stream(&sid) else {
+            panic!("existing stream must be returned");
+        };
+        assert_eq!(stream.messages().len(), 2, "history rides the removal");
+        assert!(
+            state.focused_session_id().is_none(),
+            "removing the focused stream must clear drill-in focus"
+        );
+        assert!(state.streams.is_empty());
+    }
+
+    #[test]
+    fn remove_stream_of_unfocused_session_retains_focus() {
+        let mut state = SubagentUiState::new();
+        let kept = SessionId::new("sub-kept");
+        let removed = SessionId::new("sub-removed");
+        state.apply_notification(&kept, &make_agent_msg("kept", false));
+        state.apply_notification(&removed, &make_agent_msg("removed", false));
+        assert!(state.focus(kept.clone()));
+
+        assert!(state.remove_stream(&removed).is_some());
+        assert_eq!(
+            state.focused_session_id(),
+            Some(&kept),
+            "removing an unfocused stream must not disturb focus elsewhere"
+        );
     }
 }

@@ -76,6 +76,8 @@ pub struct App {
     #[cfg(test)]
     workflow_apply_calls: u64,
     #[cfg(test)]
+    workflow_stream_apply_calls: u64,
+    #[cfg(test)]
     subagent_ui_apply_calls: u64,
     #[cfg(test)]
     session_apply_calls: u64,
@@ -139,6 +141,8 @@ impl App {
             workflow_tracker: WorkflowTracker::new(),
             #[cfg(test)]
             workflow_apply_calls: 0,
+            #[cfg(test)]
+            workflow_stream_apply_calls: 0,
             #[cfg(test)]
             subagent_ui_apply_calls: 0,
             #[cfg(test)]
@@ -307,15 +311,10 @@ impl App {
                 }
             }
 
-            // Adaptive frame rate — account for subagent and voice activity as
-            // well as the main session (the voice meter animates while listening).
-            let effective_activity =
-                if self.ui_state.any_subagent_active() || self.ui_state.any_voice_active() {
-                    Activity::Streaming
-                } else {
-                    self.ui_state.activity()
-                };
-            let new_duration = Self::redraw_duration(effective_activity);
+            // Adaptive frame rate — subagent, workflow, and voice activity
+            // all count beside the main session (the voice meter animates
+            // while listening; a workflow step streams as a peer session).
+            let new_duration = Self::redraw_duration(self.effective_activity());
             redraw_interval = tokio::time::interval(new_duration);
             redraw_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -371,6 +370,57 @@ impl App {
     fn record_subagent_ui_apply(&mut self) {}
 
     #[cfg(test)]
+    fn record_workflow_stream_apply(&mut self) {
+        self.workflow_stream_apply_calls += 1;
+    }
+
+    #[cfg(not(test))]
+    fn record_workflow_stream_apply(&mut self) {}
+
+    /// Late-claim sweep (cyril-jxfu C5): after workflow state changes, any
+    /// optimistic subagent stream whose session a claim now names moves to
+    /// the workflow store, history intact. Sweeping on state-change rather
+    /// than per event kind covers every claim carrier uniformly — double-emit
+    /// re-emission, resume-path first emission, and snapshot-borne node
+    /// state. Main's own id can never appear among subagent stream keys (the
+    /// classifier never routes main frames there), so no main-guard is
+    /// needed.
+    fn reparent_claimed_subagent_streams(&mut self) {
+        let claimed: Vec<SessionId> = self
+            .ui_state
+            .subagent_ui()
+            .streams()
+            .keys()
+            .filter(|sid| self.workflow_tracker.session_owner(sid).is_some())
+            .cloned()
+            .collect();
+        for sid in claimed {
+            if self.ui_state.claim_stream_for_workflow(&sid) {
+                tracing::debug!(
+                    session_id = sid.as_str(),
+                    "late claim: re-parented optimistic subagent stream to the workflow store"
+                );
+                self.redraw_needed = true;
+            }
+        }
+    }
+
+    /// Effective activity for the adaptive frame rate: subagent, workflow,
+    /// and voice activity all hold the fast tick alongside the main session
+    /// (cyril-jxfu C7 — a streaming workflow step must animate even when the
+    /// main session is idle, e.g. after attaching to a foreign run).
+    fn effective_activity(&self) -> Activity {
+        if self.ui_state.any_subagent_active()
+            || self.ui_state.any_workflow_active()
+            || self.ui_state.any_voice_active()
+        {
+            Activity::Streaming
+        } else {
+            self.ui_state.activity()
+        }
+    }
+
+    #[cfg(test)]
     fn record_session_apply(&mut self) {
         self.session_apply_calls += 1;
     }
@@ -411,10 +461,16 @@ impl App {
             let event_kind = event.method_name();
             let workflow_id = event.workflow_id().as_str().to_owned();
             match self.workflow_tracker.apply_event(*event) {
-                // The changed flag is deliberately unwired: nothing renders
-                // workflow state yet. The W-track renderer must route it into
-                // redraw_needed when drill-in lands.
-                Ok(_) => {}
+                // A state change may carry a session claim (node_start
+                // re-emit, resume first-emit, or snapshot-borne node state),
+                // so the late-claim sweep runs on every applied change
+                // (cyril-jxfu C5). Tracker state itself still renders
+                // nothing — redraw wiring for the run view is cyril-zd8u.
+                Ok(changed) => {
+                    if changed {
+                        self.reparent_claimed_subagent_streams();
+                    }
+                }
                 Err(error) => {
                     tracing::warn!(
                         workflow_id = %workflow_id,
@@ -441,13 +497,22 @@ impl App {
         }
 
         // Route session-scoped notifications. `classify_notification_route` is
-        // total over its three inputs, so this match has no routing decision of
+        // total over its four inputs, so this match has no routing decision of
         // its own to make — cyril-tglp was exactly such a decision (an extra
         // `&& self.session.id().is_some()`) leaking back into the caller and
         // re-admitting an unattributable frame to the main pipeline.
         if let Some(ref sid) = session_id {
             let tracked = self.ui_state.subagent_tracker().is_subagent(sid);
-            match classify_notification_route(Some(sid), self.session.id(), tracked) {
+            let workflow_owned = self.workflow_tracker.session_owner(sid).is_some();
+            match classify_notification_route(Some(sid), self.session.id(), tracked, workflow_owned)
+            {
+                NotificationRoute::Workflow => {
+                    self.record_workflow_stream_apply();
+                    self.ui_state
+                        .apply_workflow_notification(sid, &notification);
+                    self.redraw_needed = true;
+                    return Vec::new();
+                }
                 NotificationRoute::Subagent => {
                     if !tracked {
                         // Not main, but no SubagentListUpdated has named it yet.
@@ -1166,13 +1231,18 @@ enum NotificationRoute {
     Main,
     /// A different session: apply to that subagent's stream, main untouched.
     Subagent,
+    /// A workflow step's peer session (cyril-jxfu): a `node_start` or
+    /// snapshot has claimed this id, so its frames belong to the workflow
+    /// stream store — never to `SubagentUiState` or the crew panel, which no
+    /// engine ever names workflow steps into.
+    Workflow,
     /// Unattributable — discard. Scoped to a session that nothing has yet
     /// identified, while no main session exists to compare it against. See the
     /// drop-vs-buffer rationale on `classify_notification_route`.
     Drop,
 }
 
-/// Classify a session-scoped notification. Total over its three inputs so the
+/// Classify a session-scoped notification. Total over its four inputs so the
 /// caller keeps no routing decision of its own: cyril-tglp was precisely such a
 /// leftover decision, an `&& self.session.id().is_some()` in `handle_notification`
 /// that re-admitted an unattributable frame to the main pipeline while this
@@ -1181,16 +1251,28 @@ enum NotificationRoute {
 /// `tracked_subagent` means "a `kiro.dev/subagent/list_update` has already named
 /// this session id as a subagent". It is load-bearing only when `main` is
 /// unknown — once main is known, "scoped and not main" is decidable without it.
+///
+/// `workflow_owned` means "a workflow claim (`node_start` or snapshot node
+/// state) has named this session id" (cyril-jxfu). It outranks everything but
+/// main itself: a workflow claim on the MAIN session is a wire anomaly, and
+/// protecting main-pipeline continuity wins there (cyril-a71q C7); it beats
+/// `tracked_subagent` because ownership is a positive per-id claim while no
+/// shipped engine ever lists a workflow step in a `list_update`; and it makes
+/// a pre-main frame attributable, so the Drop arm never fires for it.
 fn classify_notification_route(
     scope: Option<&SessionId>,
     main: Option<&SessionId>,
     tracked_subagent: bool,
+    workflow_owned: bool,
 ) -> NotificationRoute {
     match (scope, main) {
         // Unscoped -> global lifecycle event, nothing to compare against.
         (None, _) => NotificationRoute::Main,
         // Scoped and it IS the main session.
         (Some(s), Some(m)) if s == m => NotificationRoute::Main,
+        // Scoped, not main, and a workflow claim names it -> the workflow
+        // stream store, regardless of trackedness or whether main is known.
+        (Some(_), _) if workflow_owned => NotificationRoute::Workflow,
         // Scoped, main is known, and it is NOT main -> foreign. Whether the
         // subagent is already tracked only decides which stream receives it, not
         // whether main is spared; both paths spare main.
@@ -1867,21 +1949,23 @@ mod tests {
         let main = SessionId::new("sess_main");
         let foreign = SessionId::new("sess_foreign");
 
+        // ── workflow_owned = false: every pre-jxfu row, byte-identical ──────
+        //
         // Unscoped -> global lifecycle event; nothing to compare against.
         // Trackedness is irrelevant here, so both settings are asserted.
         for tracked in [false, true] {
             assert_eq!(
-                classify_notification_route(None, Some(&main), tracked),
+                classify_notification_route(None, Some(&main), tracked, false),
                 NotificationRoute::Main
             );
             // Scoped to the main session -> main.
             assert_eq!(
-                classify_notification_route(Some(&main), Some(&main), tracked),
+                classify_notification_route(Some(&main), Some(&main), tracked, false),
                 NotificationRoute::Main
             );
             // THE CLAIM: a foreign session's terminal must not reach main state.
             assert_eq!(
-                classify_notification_route(Some(&foreign), Some(&main), tracked),
+                classify_notification_route(Some(&foreign), Some(&main), tracked, false),
                 NotificationRoute::Subagent,
                 "a foreign terminal must never touch main -- the cross-session split-brain"
             );
@@ -1889,7 +1973,7 @@ mod tests {
         // Scoped while no main session is known, but a list_update has already
         // named it: attributable, so it still reaches its own stream.
         assert_eq!(
-            classify_notification_route(Some(&foreign), None, true),
+            classify_notification_route(Some(&foreign), None, true, false),
             NotificationRoute::Subagent,
             "no main session yet must not mean 'main' -- that reroutes a tracked \
              subagent's frames into main state"
@@ -1898,15 +1982,75 @@ mod tests {
         // dropped. Returning Main here is the defect; returning Subagent would
         // key a stream by an id that may yet turn out to BE main.
         assert_eq!(
-            classify_notification_route(Some(&foreign), None, false),
+            classify_notification_route(Some(&foreign), None, false, false),
             NotificationRoute::Drop,
             "an unidentified scope with no main session is unattributable, not main"
         );
         // Adversarial: equal ids that are distinct objects still compare as main.
         assert_eq!(
-            classify_notification_route(Some(&SessionId::new("sess_main")), Some(&main), false),
+            classify_notification_route(
+                Some(&SessionId::new("sess_main")),
+                Some(&main),
+                false,
+                false
+            ),
             NotificationRoute::Main,
             "identity is by value, not by pointer"
+        );
+
+        // ── workflow_owned = true: the cyril-jxfu rows (C1/C2) ──────────────
+        //
+        // Unscoped frames stay global no matter what claims exist.
+        for tracked in [false, true] {
+            assert_eq!(
+                classify_notification_route(None, Some(&main), tracked, true),
+                NotificationRoute::Main,
+                "an unscoped frame is global even while workflow runs exist"
+            );
+            assert_eq!(
+                classify_notification_route(None, None, tracked, true),
+                NotificationRoute::Main,
+                "an unscoped frame is global even pre-session"
+            );
+            // C1: a claimed foreign session routes Workflow with main known,
+            // whether or not a list_update also (anomalously) tracked it —
+            // ownership is the more specific claim and wins the collision.
+            assert_eq!(
+                classify_notification_route(Some(&foreign), Some(&main), tracked, true),
+                NotificationRoute::Workflow,
+                "C1: a workflow-owned foreign session belongs to the workflow \
+                 store, not the subagent stream (tracked={tracked})"
+            );
+            // C1: attributable WITHOUT a main session — the claim itself is
+            // the attribution, so the Drop arm must never fire here.
+            assert_eq!(
+                classify_notification_route(Some(&foreign), None, tracked, true),
+                NotificationRoute::Workflow,
+                "C1: a workflow claim makes a pre-main frame attributable \
+                 (tracked={tracked})"
+            );
+            // C2: a workflow claim on the MAIN session is a wire anomaly, and
+            // main-pipeline continuity outranks it. A build that tests
+            // ownership before scope==main fails exactly this row.
+            assert_eq!(
+                classify_notification_route(Some(&main), Some(&main), tracked, true),
+                NotificationRoute::Main,
+                "C2: main outranks a workflow claim on the main session itself \
+                 (tracked={tracked})"
+            );
+        }
+        // AC2 completeness: the pre-existing value-equality adversarial row,
+        // extended across the new input like every other combination — main
+        // identity is by value under a workflow claim too.
+        assert_eq!(
+            classify_notification_route(
+                Some(&SessionId::new("sess_main")),
+                Some(&main),
+                false,
+                true
+            ),
+            NotificationRoute::Main,
+            "C2: value-equal main identity must hold under a workflow claim"
         );
     }
 
@@ -3935,5 +4079,269 @@ mod tests {
         assert_eq!(run.nodes().count(), 1);
         assert_eq!(app.session_apply_calls, 0);
         assert_eq!(app.ui_apply_calls, 0);
+    }
+
+    // ── cyril-jxfu slices 4/5: workflow routing + the late-claim sweep ──────
+
+    fn workflow_node_claim_frame(id: &str, node: &str, sid: &SessionId) -> Notification {
+        let path =
+            WorkflowNodePath::try_new(&workflow_id(id), vec![id.to_owned(), node.to_owned()])
+                .expect("canonical node path fixture");
+        Notification::Workflow(Box::new(WorkflowEvent::NodeStarted(
+            WorkflowNodeStarted::new(
+                workflow_id(id),
+                workflow_node_id(node),
+                path,
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new().with_session_id(sid.clone()),
+            ),
+        )))
+    }
+
+    fn agent_text_frame(sid: &SessionId, text: &str, is_streaming: bool) -> RoutedNotification {
+        RoutedNotification::scoped(
+            sid.clone(),
+            Notification::AgentMessage(AgentMessage {
+                text: text.into(),
+                is_streaming,
+            }),
+        )
+    }
+
+    /// No subagent stream may keep a workflow-owned key after a sweep — the
+    /// C5 invariant, asserted directly.
+    fn assert_no_owned_subagent_stream(app: &App) {
+        let leaked: Vec<&SessionId> = app
+            .ui_state
+            .subagent_ui()
+            .streams()
+            .keys()
+            .filter(|sid| app.workflow_tracker.session_owner(sid).is_some())
+            .collect();
+        assert!(
+            leaked.is_empty(),
+            "workflow-owned ids stranded in the subagent store: {leaked:?}"
+        );
+    }
+
+    // C5, capture-shaped ordering: frames first (optimistic subagent stream),
+    // claim second (re-parent with history), more frames third (workflow
+    // store, not a re-created subagent stream). C8 rides the same fixture:
+    // the optimistic stream is focused when the claim lands.
+    #[test]
+    fn late_claim_reparents_optimistic_stream_with_history() {
+        let mut app = test_app();
+        let main = SessionId::new("sess_main");
+        let step = SessionId::new("sess_step");
+        app.handle_notification(session_created_frame(&main));
+
+        app.handle_notification(agent_text_frame(&step, "pre-claim one", false));
+        app.handle_notification(agent_text_frame(&step, "pre-claim two", false));
+        assert_eq!(
+            app.ui_state.subagent_ui().streams()[&step].messages().len(),
+            2,
+            "pre-claim frames must land in the optimistic subagent stream"
+        );
+        assert!(app.ui_state.focus_subagent(step.clone()));
+
+        app.handle_notification(RoutedNotification::global(workflow_run_started_frame("wf")));
+        app.handle_notification(RoutedNotification::global(workflow_node_claim_frame(
+            "wf", "alpha", &step,
+        )));
+
+        assert!(
+            !app.ui_state.subagent_ui().streams().contains_key(&step),
+            "the claim must move the stream out of the subagent store"
+        );
+        assert!(
+            app.ui_state.subagent_ui().focused_session_id().is_none(),
+            "C8: re-parenting the focused stream must clear drill-in focus"
+        );
+        assert_eq!(
+            app.ui_state.workflow_streams()[&step].messages().len(),
+            2,
+            "adopted history must arrive intact"
+        );
+        assert_no_owned_subagent_stream(&app);
+
+        app.handle_notification(agent_text_frame(&step, "post-claim", false));
+        assert_eq!(
+            app.ui_state.workflow_streams()[&step].messages().len(),
+            3,
+            "post-claim frames must append to the workflow stream"
+        );
+        assert!(
+            !app.ui_state.subagent_ui().streams().contains_key(&step),
+            "no subagent stream may be re-created for a claimed id"
+        );
+        assert_eq!(app.workflow_stream_apply_calls, 1);
+        assert_no_owned_subagent_stream(&app);
+    }
+
+    // C5, fresh-create path: a claim with no prior stream creates nothing;
+    // the first post-claim frame creates the workflow stream directly and
+    // the subagent store never hears about the id.
+    #[test]
+    fn claim_before_any_frame_routes_directly_to_workflow() {
+        let mut app = test_app();
+        let main = SessionId::new("sess_main");
+        let step = SessionId::new("sess_step");
+        app.handle_notification(session_created_frame(&main));
+        app.handle_notification(RoutedNotification::global(workflow_run_started_frame("wf")));
+        app.handle_notification(RoutedNotification::global(workflow_node_claim_frame(
+            "wf", "alpha", &step,
+        )));
+        assert!(
+            app.ui_state.workflow_streams().is_empty(),
+            "a claim alone must not conjure a stream"
+        );
+
+        app.handle_notification(agent_text_frame(&step, "first frame", false));
+        assert_eq!(app.ui_state.workflow_streams()[&step].messages().len(), 1);
+        assert!(!app.ui_state.subagent_ui().streams().contains_key(&step));
+        assert_eq!(app.subagent_ui_apply_calls, 0);
+        assert_eq!(app.workflow_stream_apply_calls, 1);
+    }
+
+    // C5, duplicate claim: an Ok(false) application leaves the invariant
+    // already clean — asserted on state, not on sweep mechanics.
+    #[test]
+    fn duplicate_claim_keeps_invariant_clean() {
+        let mut app = test_app();
+        let main = SessionId::new("sess_main");
+        let step = SessionId::new("sess_step");
+        app.handle_notification(session_created_frame(&main));
+        app.handle_notification(agent_text_frame(&step, "pre-claim", false));
+        app.handle_notification(RoutedNotification::global(workflow_run_started_frame("wf")));
+        for _ in 0..2 {
+            app.handle_notification(RoutedNotification::global(workflow_node_claim_frame(
+                "wf", "alpha", &step,
+            )));
+            assert_no_owned_subagent_stream(&app);
+        }
+        assert_eq!(app.ui_state.workflow_streams()[&step].messages().len(), 1);
+    }
+
+    // C6 / AC1 — THE capture replay fence: the real
+    // kas-custom-dag-2.16.0.jsonl through the real conversion path
+    // (`test_support::kas_capture_to_routed` wraps the same KasEngine
+    // converters the live bridge uses), into the real App dispatch. Expected
+    // constants pre-registered in .cyril-jxfu/plan.md slice 6; independent
+    // oracle: probe 1 + oracle.sh (.cyril-jxfu/, text-only pipeline). If a
+    // constant disagrees, investigate against the probe's line-level data —
+    // do not re-pin.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn capture_replay_attributes_every_forwarded_frame() {
+        const CAPTURE: &str = include_str!(
+            "../../cyril-core/tests/fixtures/kas/workflow/kas-custom-dag-2.16.0.jsonl"
+        );
+        const MAIN: &str = "sess_2bc0cfdc-ccba-47b7-a3ab-224b23a63d60";
+        const ALPHA: &str = "sess_a3d8bb37-4b02-494a-8e82-1dbbc0877fb6";
+        const BETA: &str = "sess_fd35dac1-b00e-4d16-b0ae-466cd68523d9";
+
+        let mut app = test_app();
+        // Production learns main from its own session/new response; the
+        // capture's response frames answer the RECORDER's requests and are
+        // skipped by the helper, so feed the equivalent SessionCreated first
+        // (the capture names main in its line-9 response; probe 1).
+        app.handle_notification(session_created_frame(&SessionId::new(MAIN)));
+
+        for (scope, notification) in cyril_core::test_support::kas_capture_to_routed(CAPTURE) {
+            app.handle_notification(match scope {
+                Some(sid) => RoutedNotification::scoped(sid, notification),
+                None => RoutedNotification::global(notification),
+            });
+        }
+
+        // Exactly the two step sessions hold workflow streams, each with ONE
+        // committed message: its completed "Send Message" tool call (capture
+        // lines 59/63 and 64/68; the bootstrap frames are ignored kinds).
+        assert_eq!(
+            app.ui_state.workflow_streams().len(),
+            2,
+            "exactly the two step sessions get workflow streams"
+        );
+        for (sid, node) in [(ALPHA, "alpha"), (BETA, "beta")] {
+            let stream = &app.ui_state.workflow_streams()[&SessionId::new(sid)];
+            assert_eq!(
+                stream.messages().len(),
+                1,
+                "step {node}: one committed message — its Send Message tool call"
+            );
+            let cyril_ui::traits::ChatMessageKind::ToolCall(tracked) = &stream.messages()[0].kind
+            else {
+                panic!("step {node}: the committed message must be the tool call");
+            };
+            assert_eq!(tracked.title(), "Send Message");
+            assert_eq!(
+                tracked.status(),
+                cyril_core::types::ToolCallStatus::Completed
+            );
+        }
+
+        // No step frame reaches the subagent domain at end state: the
+        // optimistic pre-claim streams were re-parented at the claims
+        // (capture lines 46/48), and nothing re-created them.
+        assert!(
+            app.ui_state.subagent_ui().streams().is_empty(),
+            "no subagent stream may survive the claims"
+        );
+        for sid in [MAIN, ALPHA, BETA] {
+            assert!(
+                !app.ui_state
+                    .subagent_tracker()
+                    .is_subagent(&SessionId::new(sid)),
+                "the tracker must never learn any of the capture's sessions"
+            );
+        }
+        assert_no_owned_subagent_stream(&app);
+
+        // Both halves of the late-claim path were genuinely exercised:
+        // pre-claim bootstrap frames landed optimistically in the subagent
+        // store (probe 1: updates begin at lines 33/39, claims land at
+        // 46/48), and post-claim frames landed in the workflow store. A
+        // conversion regression that stopped forwarding bootstrap kinds
+        // would zero the first counter and silently flip this fence to the
+        // fresh-create path.
+        assert!(
+            app.subagent_ui_apply_calls > 0,
+            "the capture must exercise the optimistic pre-claim landing"
+        );
+        assert!(
+            app.workflow_stream_apply_calls > 0,
+            "the capture must exercise post-claim workflow routing"
+        );
+        // The main session's own frames reached the main pipeline.
+        assert!(app.session_apply_calls > 0);
+        assert!(app.ui_apply_calls > 0);
+    }
+
+    // C7 with its adversarial counterpart: a streaming workflow step holds
+    // the fast tick while main idles; a settled one releases it.
+    #[test]
+    fn workflow_stream_activity_holds_fast_tick() {
+        let mut app = test_app();
+        let main = SessionId::new("sess_main");
+        let step = SessionId::new("sess_step");
+        app.handle_notification(session_created_frame(&main));
+        app.handle_notification(RoutedNotification::global(workflow_run_started_frame("wf")));
+        app.handle_notification(RoutedNotification::global(workflow_node_claim_frame(
+            "wf", "alpha", &step,
+        )));
+
+        app.handle_notification(agent_text_frame(&step, "streaming…", true));
+        assert_eq!(
+            app.effective_activity(),
+            Activity::Streaming,
+            "C7: a streaming workflow step must hold the fast tick"
+        );
+
+        app.handle_notification(agent_text_frame(&step, " done", false));
+        assert_ne!(
+            app.effective_activity(),
+            Activity::Streaming,
+            "a settled workflow step must release the fast tick"
+        );
     }
 }

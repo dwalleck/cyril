@@ -26,6 +26,10 @@ _Avoid_: color depth, theme (when you mean capability)
 A child agent session that performs delegated work and has its own activity stream.
 _Avoid_: worker, child process
 
+**Optimistic subagent stream**:
+A message stream created on first contact for a scoped session nothing has yet named, so no frame is lost while the session's identity (a subagent list update, or a workflow claim) is still in flight.
+_Avoid_: phantom stream, unknown-session stream
+
 **Crew**:
 A named orchestration group containing subagents and pending stages.
 _Avoid_: subagent list, team
@@ -59,6 +63,22 @@ _Avoid_: workflow run, retry run, attempt (unqualified)
 **Workflow step**:
 A node of a run that executes as a peer session rather than as delegated work under a parent.
 _Avoid_: subagent, stage, pipeline stage (that is the DAG-tool-call model)
+
+**Claim**:
+A workflow event (`node_start` or snapshot-borne node state) naming a step's session id, binding that session to a workflow node. Only claims make a session workflow-owned — per-frame metadata never does.
+_Avoid_: registration, announcement, session binding
+
+**Late claim**:
+A claim arriving after the claimed session's frames have already begun streaming. The dominant observed ordering on 2.16.0, not an edge case: routing must re-parent already-received history, not merely tag future frames.
+_Avoid_: out-of-order claim, race (unqualified)
+
+**Workflow-owned**:
+The property of a session id currently claimed by any workflow node's state. A routing input, computed from tracker state at classification time; it persists through run termination so straggler frames stay attributed.
+_Avoid_: workflow session (ambiguous with the parent), step-tagged
+
+**Re-parent**:
+Moving an optimistic subagent stream — messages, order, and activity intact — into the workflow store when a late claim lands, leaving no subagent stream keyed by a workflow-owned id.
+_Avoid_: migrate, transfer, drop-and-recreate
 
 ### Sessions & turns
 

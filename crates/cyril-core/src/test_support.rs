@@ -71,3 +71,59 @@ impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
         self.clone()
     }
 }
+
+/// Replays a raw KAS JSONL capture through the SAME conversion path the live
+/// bridge uses (cyril-jxfu C6): `session/update` params deserialize at the
+/// acp layer and convert via `KasEngine::convert_session_update`; extension
+/// notifications convert via `KasEngine::convert_ext_notification` after the
+/// acp layer's leading-underscore strip. Returns the forwarded notifications
+/// as `(scope, notification)` pairs — `Some(sid)` for the session/update
+/// envelope scope, `None` for global extension frames — mirroring the
+/// `RoutedNotification` split in `client.rs`. Unconvertible frames drop
+/// exactly as production drops them (`Ok(None)` / warned `Err`); client
+/// requests and responses in the capture are skipped.
+#[cfg(feature = "kas")]
+pub fn kas_capture_to_routed(
+    capture: &str,
+) -> Vec<(Option<crate::types::SessionId>, crate::types::Notification)> {
+    use agent_client_protocol as acp;
+
+    use crate::protocol::engine::{Engine, KasEngine};
+
+    let engine = KasEngine::default();
+    let mut forwarded = Vec::new();
+    for line in capture.lines().filter(|line| !line.is_empty()) {
+        let frame: serde_json::Value =
+            must_succeed(serde_json::from_str(line), "capture line is valid JSON");
+        if frame.get("id").is_some() {
+            // A request (agent→client, e.g. _kiro/auth/getAccessToken) or a
+            // response to one of cyril's own — either way not a notification.
+            continue;
+        }
+        let Some(method) = frame.get("method").and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        if method == "session/update" {
+            let args: acp::SessionNotification = must_succeed(
+                serde_json::from_value(frame["params"].clone()),
+                "session/update params deserialize at the acp layer",
+            );
+            let session_id = crate::types::SessionId::new(args.session_id.to_string());
+            if let Some(notification) = engine.convert_session_update(&args) {
+                forwarded.push((Some(session_id), notification));
+            }
+            continue;
+        }
+        let Some(normalized) = method.strip_prefix('_') else {
+            continue; // not an extension notification
+        };
+        match engine.convert_ext_notification(normalized, &frame["params"]) {
+            Ok(Some(notification)) => forwarded.push((None, notification)),
+            Ok(None) => {}
+            Err(error) => {
+                tracing::warn!(%error, method, "malformed extension notification in capture");
+            }
+        }
+    }
+    forwarded
+}
