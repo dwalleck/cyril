@@ -497,7 +497,7 @@ impl App {
         }
 
         // Route session-scoped notifications. `classify_notification_route` is
-        // total over its three inputs, so this match has no routing decision of
+        // total over its four inputs, so this match has no routing decision of
         // its own to make — cyril-tglp was exactly such a decision (an extra
         // `&& self.session.id().is_some()`) leaking back into the caller and
         // re-admitting an unattributable frame to the main pipeline.
@@ -2039,6 +2039,19 @@ mod tests {
                  (tracked={tracked})"
             );
         }
+        // AC2 completeness: the pre-existing value-equality adversarial row,
+        // extended across the new input like every other combination — main
+        // identity is by value under a workflow claim too.
+        assert_eq!(
+            classify_notification_route(
+                Some(&SessionId::new("sess_main")),
+                Some(&main),
+                false,
+                true
+            ),
+            NotificationRoute::Main,
+            "C2: value-equal main identity must hold under a workflow claim"
+        );
     }
 
     // ── cyril-tglp: a scoped frame that predates the main session ────────────
