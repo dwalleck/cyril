@@ -76,6 +76,8 @@ pub struct App {
     #[cfg(test)]
     workflow_apply_calls: u64,
     #[cfg(test)]
+    workflow_stream_apply_calls: u64,
+    #[cfg(test)]
     subagent_ui_apply_calls: u64,
     #[cfg(test)]
     session_apply_calls: u64,
@@ -139,6 +141,8 @@ impl App {
             workflow_tracker: WorkflowTracker::new(),
             #[cfg(test)]
             workflow_apply_calls: 0,
+            #[cfg(test)]
+            workflow_stream_apply_calls: 0,
             #[cfg(test)]
             subagent_ui_apply_calls: 0,
             #[cfg(test)]
@@ -371,6 +375,14 @@ impl App {
     fn record_subagent_ui_apply(&mut self) {}
 
     #[cfg(test)]
+    fn record_workflow_stream_apply(&mut self) {
+        self.workflow_stream_apply_calls += 1;
+    }
+
+    #[cfg(not(test))]
+    fn record_workflow_stream_apply(&mut self) {}
+
+    #[cfg(test)]
     fn record_session_apply(&mut self) {
         self.session_apply_calls += 1;
     }
@@ -447,7 +459,16 @@ impl App {
         // re-admitting an unattributable frame to the main pipeline.
         if let Some(ref sid) = session_id {
             let tracked = self.ui_state.subagent_tracker().is_subagent(sid);
-            match classify_notification_route(Some(sid), self.session.id(), tracked) {
+            let workflow_owned = self.workflow_tracker.session_owner(sid).is_some();
+            match classify_notification_route(Some(sid), self.session.id(), tracked, workflow_owned)
+            {
+                NotificationRoute::Workflow => {
+                    self.record_workflow_stream_apply();
+                    self.ui_state
+                        .apply_workflow_notification(sid, &notification);
+                    self.redraw_needed = true;
+                    return Vec::new();
+                }
                 NotificationRoute::Subagent => {
                     if !tracked {
                         // Not main, but no SubagentListUpdated has named it yet.
@@ -1166,13 +1187,18 @@ enum NotificationRoute {
     Main,
     /// A different session: apply to that subagent's stream, main untouched.
     Subagent,
+    /// A workflow step's peer session (cyril-jxfu): a `node_start` or
+    /// snapshot has claimed this id, so its frames belong to the workflow
+    /// stream store — never to `SubagentUiState` or the crew panel, which no
+    /// engine ever names workflow steps into.
+    Workflow,
     /// Unattributable — discard. Scoped to a session that nothing has yet
     /// identified, while no main session exists to compare it against. See the
     /// drop-vs-buffer rationale on `classify_notification_route`.
     Drop,
 }
 
-/// Classify a session-scoped notification. Total over its three inputs so the
+/// Classify a session-scoped notification. Total over its four inputs so the
 /// caller keeps no routing decision of its own: cyril-tglp was precisely such a
 /// leftover decision, an `&& self.session.id().is_some()` in `handle_notification`
 /// that re-admitted an unattributable frame to the main pipeline while this
@@ -1181,16 +1207,28 @@ enum NotificationRoute {
 /// `tracked_subagent` means "a `kiro.dev/subagent/list_update` has already named
 /// this session id as a subagent". It is load-bearing only when `main` is
 /// unknown — once main is known, "scoped and not main" is decidable without it.
+///
+/// `workflow_owned` means "a workflow claim (`node_start` or snapshot node
+/// state) has named this session id" (cyril-jxfu). It outranks everything but
+/// main itself: a workflow claim on the MAIN session is a wire anomaly, and
+/// protecting main-pipeline continuity wins there (cyril-a71q C7); it beats
+/// `tracked_subagent` because ownership is a positive per-id claim while no
+/// shipped engine ever lists a workflow step in a `list_update`; and it makes
+/// a pre-main frame attributable, so the Drop arm never fires for it.
 fn classify_notification_route(
     scope: Option<&SessionId>,
     main: Option<&SessionId>,
     tracked_subagent: bool,
+    workflow_owned: bool,
 ) -> NotificationRoute {
     match (scope, main) {
         // Unscoped -> global lifecycle event, nothing to compare against.
         (None, _) => NotificationRoute::Main,
         // Scoped and it IS the main session.
         (Some(s), Some(m)) if s == m => NotificationRoute::Main,
+        // Scoped, not main, and a workflow claim names it -> the workflow
+        // stream store, regardless of trackedness or whether main is known.
+        (Some(_), _) if workflow_owned => NotificationRoute::Workflow,
         // Scoped, main is known, and it is NOT main -> foreign. Whether the
         // subagent is already tracked only decides which stream receives it, not
         // whether main is spared; both paths spare main.
@@ -1867,21 +1905,23 @@ mod tests {
         let main = SessionId::new("sess_main");
         let foreign = SessionId::new("sess_foreign");
 
+        // ── workflow_owned = false: every pre-jxfu row, byte-identical ──────
+        //
         // Unscoped -> global lifecycle event; nothing to compare against.
         // Trackedness is irrelevant here, so both settings are asserted.
         for tracked in [false, true] {
             assert_eq!(
-                classify_notification_route(None, Some(&main), tracked),
+                classify_notification_route(None, Some(&main), tracked, false),
                 NotificationRoute::Main
             );
             // Scoped to the main session -> main.
             assert_eq!(
-                classify_notification_route(Some(&main), Some(&main), tracked),
+                classify_notification_route(Some(&main), Some(&main), tracked, false),
                 NotificationRoute::Main
             );
             // THE CLAIM: a foreign session's terminal must not reach main state.
             assert_eq!(
-                classify_notification_route(Some(&foreign), Some(&main), tracked),
+                classify_notification_route(Some(&foreign), Some(&main), tracked, false),
                 NotificationRoute::Subagent,
                 "a foreign terminal must never touch main -- the cross-session split-brain"
             );
@@ -1889,7 +1929,7 @@ mod tests {
         // Scoped while no main session is known, but a list_update has already
         // named it: attributable, so it still reaches its own stream.
         assert_eq!(
-            classify_notification_route(Some(&foreign), None, true),
+            classify_notification_route(Some(&foreign), None, true, false),
             NotificationRoute::Subagent,
             "no main session yet must not mean 'main' -- that reroutes a tracked \
              subagent's frames into main state"
@@ -1898,16 +1938,63 @@ mod tests {
         // dropped. Returning Main here is the defect; returning Subagent would
         // key a stream by an id that may yet turn out to BE main.
         assert_eq!(
-            classify_notification_route(Some(&foreign), None, false),
+            classify_notification_route(Some(&foreign), None, false, false),
             NotificationRoute::Drop,
             "an unidentified scope with no main session is unattributable, not main"
         );
         // Adversarial: equal ids that are distinct objects still compare as main.
         assert_eq!(
-            classify_notification_route(Some(&SessionId::new("sess_main")), Some(&main), false),
+            classify_notification_route(
+                Some(&SessionId::new("sess_main")),
+                Some(&main),
+                false,
+                false
+            ),
             NotificationRoute::Main,
             "identity is by value, not by pointer"
         );
+
+        // ── workflow_owned = true: the cyril-jxfu rows (C1/C2) ──────────────
+        //
+        // Unscoped frames stay global no matter what claims exist.
+        for tracked in [false, true] {
+            assert_eq!(
+                classify_notification_route(None, Some(&main), tracked, true),
+                NotificationRoute::Main,
+                "an unscoped frame is global even while workflow runs exist"
+            );
+            assert_eq!(
+                classify_notification_route(None, None, tracked, true),
+                NotificationRoute::Main,
+                "an unscoped frame is global even pre-session"
+            );
+            // C1: a claimed foreign session routes Workflow with main known,
+            // whether or not a list_update also (anomalously) tracked it —
+            // ownership is the more specific claim and wins the collision.
+            assert_eq!(
+                classify_notification_route(Some(&foreign), Some(&main), tracked, true),
+                NotificationRoute::Workflow,
+                "C1: a workflow-owned foreign session belongs to the workflow \
+                 store, not the subagent stream (tracked={tracked})"
+            );
+            // C1: attributable WITHOUT a main session — the claim itself is
+            // the attribution, so the Drop arm must never fire here.
+            assert_eq!(
+                classify_notification_route(Some(&foreign), None, tracked, true),
+                NotificationRoute::Workflow,
+                "C1: a workflow claim makes a pre-main frame attributable \
+                 (tracked={tracked})"
+            );
+            // C2: a workflow claim on the MAIN session is a wire anomaly, and
+            // main-pipeline continuity outranks it. A build that tests
+            // ownership before scope==main fails exactly this row.
+            assert_eq!(
+                classify_notification_route(Some(&main), Some(&main), tracked, true),
+                NotificationRoute::Main,
+                "C2: main outranks a workflow claim on the main session itself \
+                 (tracked={tracked})"
+            );
+        }
     }
 
     // ── cyril-tglp: a scoped frame that predates the main session ────────────
