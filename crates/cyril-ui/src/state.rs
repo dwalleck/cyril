@@ -84,6 +84,9 @@ pub struct UiState {
     subagents: crate::subagent_ui::SubagentUiState,
     subagent_tracker: cyril_core::subagent::SubagentTracker,
 
+    // Workflow step-session streams (cyril-jxfu; private, same discipline)
+    workflow_streams: crate::workflow_ui::WorkflowUiState,
+
     // Overlays
     approvals: VecDeque<ApprovalState>,
     picker: Option<PickerState>,
@@ -337,6 +340,7 @@ impl UiState {
             pending_refusal: false,
             subagents: crate::subagent_ui::SubagentUiState::new(),
             subagent_tracker: cyril_core::subagent::SubagentTracker::new(),
+            workflow_streams: crate::workflow_ui::WorkflowUiState::new(),
             approvals: VecDeque::new(),
             picker: None,
             hooks_panel: None,
@@ -1552,6 +1556,45 @@ impl UiState {
     /// True if any subagent stream is actively streaming or running tools.
     pub fn any_subagent_active(&self) -> bool {
         self.subagents.any_active()
+    }
+
+    // --- Workflow step streams (cyril-jxfu) ---
+
+    /// Route a notification to the workflow stream identified by
+    /// `session_id`. Creates the stream on first contact.
+    pub fn apply_workflow_notification(
+        &mut self,
+        session_id: &SessionId,
+        notification: &Notification,
+    ) -> bool {
+        self.workflow_streams
+            .apply_notification(session_id, notification)
+    }
+
+    /// Re-parent an optimistic subagent stream onto the workflow store after
+    /// a late claim (cyril-jxfu): the stream leaves the subagent domain with
+    /// its history intact (drill-in focus clears if it pointed there), and
+    /// future frames for the session route to the workflow stream. Returns
+    /// `true` if a stream actually moved.
+    pub fn claim_stream_for_workflow(&mut self, session_id: &SessionId) -> bool {
+        let Some(stream) = self.subagents.remove_stream(session_id) else {
+            return false;
+        };
+        self.workflow_streams.adopt(session_id.clone(), stream);
+        true
+    }
+
+    /// Read-only access to workflow step streams.
+    pub fn workflow_streams(
+        &self,
+    ) -> &std::collections::HashMap<SessionId, crate::subagent_ui::SubagentStream> {
+        self.workflow_streams.streams()
+    }
+
+    /// True if any workflow step stream is actively streaming or running
+    /// tools — feeds the adaptive frame rate beside the subagent check.
+    pub fn any_workflow_active(&self) -> bool {
+        self.workflow_streams.any_active()
     }
 
     // --- Voice input (CN2 / V1a) ---
@@ -4698,6 +4741,82 @@ mod tests {
         // No streams registered, list update is a no-op
         let changed = state.apply_subagent_list_update(&[]);
         assert!(!changed);
+    }
+
+    // ── cyril-jxfu C5/C7 substrate at the UiState seam ───────────────────────
+
+    #[test]
+    fn claim_stream_for_workflow_moves_history_and_unfocuses() {
+        let mut state = UiState::new(500);
+        let sid = SessionId::new("step-1");
+        state.apply_subagent_notification(
+            &sid,
+            &Notification::AgentMessage(AgentMessage {
+                text: "optimistic".into(),
+                is_streaming: false,
+            }),
+        );
+        assert!(state.focus_subagent(sid.clone()));
+
+        assert!(state.claim_stream_for_workflow(&sid));
+        assert!(
+            !state.subagent_ui().streams().contains_key(&sid),
+            "the claimed stream must leave the subagent domain"
+        );
+        assert!(
+            state.subagent_ui().focused_session_id().is_none(),
+            "drill-in focus on the claimed stream must clear"
+        );
+        assert_eq!(
+            state.workflow_streams()[&sid].messages().len(),
+            1,
+            "adopted history must survive the move"
+        );
+
+        // A later frame lands in the workflow stream, not a re-created
+        // subagent stream.
+        state.apply_workflow_notification(
+            &sid,
+            &Notification::AgentMessage(AgentMessage {
+                text: "post-claim".into(),
+                is_streaming: false,
+            }),
+        );
+        assert_eq!(state.workflow_streams()[&sid].messages().len(), 2);
+        assert!(!state.subagent_ui().streams().contains_key(&sid));
+    }
+
+    #[test]
+    fn claim_stream_for_workflow_without_stream_is_false() {
+        let mut state = UiState::new(500);
+        assert!(!state.claim_stream_for_workflow(&SessionId::new("never-seen")));
+        assert!(state.workflow_streams().is_empty());
+    }
+
+    #[test]
+    fn any_workflow_active_follows_stream_activity() {
+        let mut state = UiState::new(500);
+        let sid = SessionId::new("step-1");
+        state.apply_workflow_notification(
+            &sid,
+            &Notification::AgentMessage(AgentMessage {
+                text: "busy".into(),
+                is_streaming: true,
+            }),
+        );
+        assert!(state.any_workflow_active());
+        assert!(
+            !state.any_subagent_active(),
+            "workflow activity must not masquerade as subagent activity"
+        );
+        state.apply_workflow_notification(
+            &sid,
+            &Notification::AgentMessage(AgentMessage {
+                text: " done".into(),
+                is_streaming: false,
+            }),
+        );
+        assert!(!state.any_workflow_active());
     }
 
     #[test]

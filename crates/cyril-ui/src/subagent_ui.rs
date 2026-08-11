@@ -52,6 +52,25 @@ impl SubagentStream {
         matches!(self.activity, Activity::Ready | Activity::Idle)
     }
 
+    /// Merges `earlier` — an adopted optimistic stream whose frames all
+    /// predate this stream's — in front of this history (cyril-jxfu
+    /// occupied-adopt). Chronological order is preserved (adopted messages
+    /// arrived first) and both sides' tool-call indices stay live; on an id
+    /// collision the later (self) entry wins.
+    pub(crate) fn absorb_earlier(&mut self, mut earlier: SubagentStream) {
+        earlier.flush_streaming_text();
+        let offset = earlier.messages.len();
+        if offset == 0 {
+            return;
+        }
+        for (id, idx) in self.tool_call_index.drain() {
+            earlier.tool_call_index.insert(id, idx + offset);
+        }
+        self.tool_call_index = earlier.tool_call_index;
+        earlier.messages.append(&mut self.messages);
+        self.messages = earlier.messages;
+    }
+
     fn flush_streaming_text(&mut self) {
         if !self.streaming_text.is_empty() {
             let text = std::mem::take(&mut self.streaming_text);
