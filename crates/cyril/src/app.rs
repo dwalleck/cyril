@@ -4209,6 +4209,101 @@ mod tests {
         assert_eq!(app.ui_state.workflow_streams()[&step].messages().len(), 1);
     }
 
+    // C6 / AC1 — THE capture replay fence: the real
+    // kas-custom-dag-2.16.0.jsonl through the real conversion path
+    // (`test_support::kas_capture_to_routed` wraps the same KasEngine
+    // converters the live bridge uses), into the real App dispatch. Expected
+    // constants pre-registered in .cyril-jxfu/plan.md slice 6; independent
+    // oracle: probe 1 + oracle.sh (.cyril-jxfu/, text-only pipeline). If a
+    // constant disagrees, investigate against the probe's line-level data —
+    // do not re-pin.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn capture_replay_attributes_every_forwarded_frame() {
+        const CAPTURE: &str = include_str!(
+            "../../cyril-core/tests/fixtures/kas/workflow/kas-custom-dag-2.16.0.jsonl"
+        );
+        const MAIN: &str = "sess_2bc0cfdc-ccba-47b7-a3ab-224b23a63d60";
+        const ALPHA: &str = "sess_a3d8bb37-4b02-494a-8e82-1dbbc0877fb6";
+        const BETA: &str = "sess_fd35dac1-b00e-4d16-b0ae-466cd68523d9";
+
+        let mut app = test_app();
+        // Production learns main from its own session/new response; the
+        // capture's response frames answer the RECORDER's requests and are
+        // skipped by the helper, so feed the equivalent SessionCreated first
+        // (the capture names main in its line-9 response; probe 1).
+        app.handle_notification(session_created_frame(&SessionId::new(MAIN)));
+
+        for (scope, notification) in cyril_core::test_support::kas_capture_to_routed(CAPTURE) {
+            app.handle_notification(match scope {
+                Some(sid) => RoutedNotification::scoped(sid, notification),
+                None => RoutedNotification::global(notification),
+            });
+        }
+
+        // Exactly the two step sessions hold workflow streams, each with ONE
+        // committed message: its completed "Send Message" tool call (capture
+        // lines 59/63 and 64/68; the bootstrap frames are ignored kinds).
+        assert_eq!(
+            app.ui_state.workflow_streams().len(),
+            2,
+            "exactly the two step sessions get workflow streams"
+        );
+        for (sid, node) in [(ALPHA, "alpha"), (BETA, "beta")] {
+            let stream = &app.ui_state.workflow_streams()[&SessionId::new(sid)];
+            assert_eq!(
+                stream.messages().len(),
+                1,
+                "step {node}: one committed message — its Send Message tool call"
+            );
+            let cyril_ui::traits::ChatMessageKind::ToolCall(tracked) = &stream.messages()[0].kind
+            else {
+                panic!("step {node}: the committed message must be the tool call");
+            };
+            assert_eq!(tracked.title(), "Send Message");
+            assert_eq!(
+                tracked.status(),
+                cyril_core::types::ToolCallStatus::Completed
+            );
+        }
+
+        // No step frame reaches the subagent domain at end state: the
+        // optimistic pre-claim streams were re-parented at the claims
+        // (capture lines 46/48), and nothing re-created them.
+        assert!(
+            app.ui_state.subagent_ui().streams().is_empty(),
+            "no subagent stream may survive the claims"
+        );
+        for sid in [MAIN, ALPHA, BETA] {
+            assert!(
+                !app.ui_state
+                    .subagent_tracker()
+                    .is_subagent(&SessionId::new(sid)),
+                "the tracker must never learn any of the capture's sessions"
+            );
+        }
+        assert_no_owned_subagent_stream(&app);
+
+        // Both halves of the late-claim path were genuinely exercised:
+        // pre-claim bootstrap frames landed optimistically in the subagent
+        // store (probe 1: updates begin at lines 33/39, claims land at
+        // 46/48), and post-claim frames landed in the workflow store. A
+        // conversion regression that stopped forwarding bootstrap kinds
+        // would zero the first counter and silently flip this fence to the
+        // fresh-create path.
+        assert!(
+            app.subagent_ui_apply_calls > 0,
+            "the capture must exercise the optimistic pre-claim landing"
+        );
+        assert!(
+            app.workflow_stream_apply_calls > 0,
+            "the capture must exercise post-claim workflow routing"
+        );
+        // The main session's own frames reached the main pipeline.
+        assert!(app.session_apply_calls > 0);
+        assert!(app.ui_apply_calls > 0);
+    }
+
     // C7 with its adversarial counterpart: a streaming workflow step holds
     // the fast tick while main idles; a settled one releases it.
     #[test]
