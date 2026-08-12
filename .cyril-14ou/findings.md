@@ -2,14 +2,16 @@
 
 ## Q1 — What silence distinguishes a healthy turn from a stall?
 
-Probe: `probe_gaps.py` over the bh7g tap captures (12 healthy turns + the stall).
+Probe: `probe_gaps.py` over the bh7g tap captures (11 healthy turns + the stall;
+committed copies: `kas-turn-healthy-{a,b}-2.16.2.jsonl`, `kas-turn-stall-run-2.16.2.jsonl`).
 Oracle: KAS's persisted `messages.jsonl` timestamps — an independent recorder.
 
 - Probe and oracle **agree to the decimal** on the shared quantity (per-turn
   duration: `[27.9, 30.1, 21.1]`s both sides). Their max-gap numbers differ by
   design (wire streams chunks + context_usage; transcript persists milestones)
   — reconciled, not papered over.
-- **Healthy wire silence never exceeded 8.2s** (most gaps ≤4s) across turns up
+- **Healthy wire silence never exceeded 8.2s** (most gaps ≤4s) across the 11
+  healthy turns measured (3 in the stall run + 4 + 4 in the clean runs), up
   to 96s long — `context_usage` frames are a de-facto heartbeat during model
   legs. The stall: last frame at +3.0s, then unbounded silence (oracle's
   internal gap: 983.3s).
@@ -28,11 +30,16 @@ Oracle: `run_reap_arms.sh` pgrep set-diff (before/during/after).
 | bare handle drop (no Shutdown) | alive | **reaped** |
 | `std::process::abort()` (no Drop) | alive | **orphaned** |
 
-**Scope item 4 is already implemented and fenced**: `ProcessGroupGuard`
-(transport.rs, cyril-0pms) group-SIGKILLs on drop; regression test
-`dropped_agent_process_kills_process_group` exists. The bh7g-era orphans came
-from python probes bypassing cyril's transport and from SIGKILL'd consumers —
-Drop-skipping death is unfixable client-side. Item 4 ⇒ documentation only.
+**Scope item 4 is implemented and fenced for UNIX CLEAN teardown paths**:
+`ProcessGroupGuard` (transport.rs, cyril-0pms) group-SIGKILLs on drop;
+regression test `dropped_agent_process_kills_process_group` exists; both the
+Shutdown and bare-drop arms reaped live. Scoping (PR #94 review SP2): the
+guard is `cfg(unix)` — on native Windows `kill_on_drop` covers free mode (node
+is the direct child) but wrapper mode leaks the grandchild; and Drop-skipping
+death (SIGKILL/abort) orphans on every platform — unfixable in-process, a
+supervisor/subreaper could close it. Both gaps → **cyril-jlw9**. The bh7g-era
+orphans came from python probes bypassing cyril's transport and from
+SIGKILL'd consumers. Item 4 in THIS PR ⇒ documentation.
 
 ## Q3 — Does CancelRequest cancel a live KAS turn?
 

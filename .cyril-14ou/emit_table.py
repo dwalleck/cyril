@@ -57,11 +57,18 @@ def turns_from_wire(path):
         for t in turns
     ]
 
-base = sys.argv[1]
+base = sys.argv[1] if len(sys.argv) > 1 else None
+here = __import__('os').path.dirname(__import__('os').path.abspath(__file__))
+if base:
+    srcs = (f"{base}/run-5/wire.jsonl", f"{base}/run-6/wire.jsonl",
+            f"{base}/run-1-stall-archived/wire.jsonl")
+else:  # committed copies — reproducible from a checkout (PR #94 review SP7)
+    srcs = (f"{here}/kas-turn-healthy-a-2.16.2.jsonl",
+            f"{here}/kas-turn-healthy-b-2.16.2.jsonl",
+            f"{here}/kas-turn-stall-run-2.16.2.jsonl")
 table = {
-    "healthy": turns_from_wire(f"{base}/run-5/wire.jsonl")
-    + turns_from_wire(f"{base}/run-6/wire.jsonl"),
-    "stall": turns_from_wire(f"{base}/run-1-stall-archived/wire.jsonl"),
+    "healthy": turns_from_wire(srcs[0]) + turns_from_wire(srcs[1]),
+    "stall": turns_from_wire(srcs[2]),
 }
 dest = sys.argv[2]
 with open(dest, "w") as f:

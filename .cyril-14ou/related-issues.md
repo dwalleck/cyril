@@ -2,7 +2,7 @@
 
 - **cyril-bh7g** (closed) — the motivating research: wire-captured 16-min backend stall,
   zero client-visible traffic, turn completed late. Evidence:
-  `experiments/conductor-spike/kas-turn-stall-2.16.2.{md,jsonl}`.
+  `experiments/conductor-spike/kas-turn-stall-2.16.2.md` + `kas-turn-stall-wire-2.16.2.jsonl`.
 - **cyril-w0vy** (P1, open) — v2 sibling: security-filter marker chunk then no response,
   `is_busy` wedges forever. Different fix (marker detection + synthesized completion);
   a stalled-turn indicator would also make ITS symptom visible while unfixed.

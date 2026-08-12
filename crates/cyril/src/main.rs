@@ -60,9 +60,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             shell: config.agent.shell,
             present_as: config.agent.present_as,
             kas_hooks: config.agent.kas_hooks,
-            // Not user-configurable: SpawnConfig is the bridge's config
-            // surface and no other bridge knob has a TOML key either
-            // (cyril-14ou design, negative space #5).
+            // Deliberately not TOML-exposed (cyril-14ou design, negative
+            // space #5): the 30s default is probe-derived with >3x margin and
+            // v1 ships no tuning surface for it. Unlike the fields above,
+            // which mirror `[agent]` config keys, this one is a constant.
             stall_threshold: cyril_core::protocol::bridge::DEFAULT_STALL_THRESHOLD,
         },
         cwd.clone(),

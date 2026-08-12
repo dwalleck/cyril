@@ -2095,7 +2095,7 @@ mod tests {
     }
 
     /// cyril-14ou C9 (plumbing half; the live half — engine honors the cancel
-    /// — passed at design time, archived in .cyril-14ou/findings.md). Three
+    /// — passed at design time, archived in .cyril-14ou/findings.md). Four
     /// arms: Esc during a stalled busy turn sends CancelRequest AND escalates
     /// the chip; Esc while busy-but-not-stalled cancels without touching stall
     /// state; Esc while the approval overlay owns input does neither (the

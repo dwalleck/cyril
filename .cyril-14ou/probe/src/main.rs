@@ -97,7 +97,7 @@ async fn main() {
                         match routed.notification {
                             Notification::AgentMessage(m) => {
                                 if !cancelled {
-                                    println!("FIRST-TEXT {:?}", &m.text[..m.text.len().min(20)]);
+                                    println!("FIRST-TEXT {:?}", m.text.chars().take(20).collect::<String>());
                                     tokio::time::sleep(Duration::from_secs(2)).await;
                                     sender.send(BridgeCommand::CancelRequest).await.expect("cancel");
                                     println!("CANCEL-SENT");

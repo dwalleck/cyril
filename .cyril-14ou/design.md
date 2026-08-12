@@ -31,9 +31,11 @@ item 4 of the ticket is documentation only.
   `Notification::TurnStalled { quiet: Duration }` per quiet period, scoped to the
   active turn's session, sent on the normal notification channel.
 - Threshold: `SpawnConfig::stall_threshold: Duration`, default **30s** (probe: ≥3×
-  the observed healthy ceiling). SpawnConfig is the bridge's existing config
-  surface; no additional config surface exists for any other bridge knob, so none
-  is added for this one.
+  the observed healthy ceiling). Deliberately not TOML-exposed in v1 (unlike the
+  other SpawnConfig fields, which mirror `[agent]` keys) — the default is
+  probe-derived with wide margin and no tuning demand exists yet. [Corrected at
+  PR #94 review: the original rationale wrongly claimed no bridge knob has a
+  TOML key.]
 - `TurnStalled` is a non-terminal: the mediator's `observe` treats it as
   `Forward` (it only special-cases `TurnCompleted`), and it must not touch
   `is_busy`.
