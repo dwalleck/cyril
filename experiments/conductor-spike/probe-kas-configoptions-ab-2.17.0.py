@@ -55,6 +55,10 @@ proc = subprocess.Popen(
     [KIRO, "acp", "--agent-engine", "kas"],
     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
     env=env,
+    # Own process group: killing only the wrapper orphans the node grandchild
+    # (acp-server.js survives stdin EOF — see reference_kiro_kas_turn_stall /
+    # cyril-14ou). killpg at exit reaps the whole tree.
+    start_new_session=True,
 )
 nid = [0]
 
@@ -98,4 +102,8 @@ else:
         if o.get("id") == "model":
             names = [x.get("name") for x in o.get("options", [])]
             print(f"    model options ({len(names)}): {names[:8]}...")
-proc.kill()
+import signal
+try:
+    os.killpg(proc.pid, signal.SIGKILL)
+except ProcessLookupError:
+    pass
