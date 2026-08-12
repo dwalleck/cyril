@@ -573,6 +573,7 @@ impl UiState {
                 } else {
                     self.stall = Some(crate::traits::StallState {
                         quiet: *quiet,
+                        since: Instant::now(),
                         cancel_sent: false,
                     });
                     true

@@ -104,6 +104,33 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
         ));
     }
 
+    // Stalled turn (cyril-14ou; CONTEXT.md "Stalled turn"): the active turn is
+    // quiet past the bridge's threshold. Suppressed while the approval overlay
+    // is up — an outstanding approval explains the silence, and a "stalled"
+    // warning over it would misdiagnose the wait. Display only: input handling
+    // is untouched, and Esc's existing cancel is the affordance named here.
+    if let Some(stall) = state.stall()
+        && state.approval().is_none()
+    {
+        parts.push(Span::raw(" · "));
+        let (label, color) = if stall.cancel_sent {
+            (
+                "⚠ cancel sent — agent unresponsive".to_string(),
+                theme.subdued_negative,
+            )
+        } else {
+            let quiet = (stall.quiet + stall.since.elapsed()).as_secs();
+            (
+                format!("⚠ agent quiet {quiet}s — Esc cancels"),
+                theme.emphasis,
+            )
+        };
+        parts.push(Span::styled(
+            label,
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        ));
+    }
+
     let line = Line::from(parts);
     let toolbar = Paragraph::new(line).style(Style::default().bg(theme.chrome));
 
@@ -673,5 +700,87 @@ mod tests {
         assert_eq!(format_token_count(500), "500");
         assert_eq!(format_token_count(1500), "1.5k");
         assert_eq!(format_token_count(1_200_000), "1.2M");
+    }
+
+    fn stall(cancel_sent: bool) -> crate::traits::StallState {
+        crate::traits::StallState {
+            quiet: std::time::Duration::from_secs(31),
+            since: std::time::Instant::now(),
+            cancel_sent,
+        }
+    }
+
+    fn dummy_approval() -> crate::traits::ApprovalState {
+        crate::traits::ApprovalState {
+            session_id: cyril_core::types::SessionId::new("main"),
+            tool_call: crate::traits::TrackedToolCall::new(cyril_core::types::ToolCall::new(
+                cyril_core::types::ToolCallId::new("tc_1"),
+                "echo hello".into(),
+                cyril_core::types::ToolKind::Execute,
+                cyril_core::types::ToolCallStatus::Pending,
+                None,
+            )),
+            message: "Allow execution?".into(),
+            options: Vec::new(),
+            trust_options: Vec::new(),
+            selected: 0,
+            phase: crate::traits::ApprovalPhase::SelectOption,
+            responder: tokio::sync::oneshot::channel().0,
+        }
+    }
+
+    /// cyril-14ou C8 fence: the full {stall × approval × cancel_sent} render
+    /// matrix, expected chip presence written before the implementation.
+    /// Buggy implementations this fails under: render-whenever-stalled (chip
+    /// over the approval overlay), inverted suppression (chip ONLY during
+    /// approval), missing escalation copy.
+    #[test]
+    fn stall_suppressed_during_approval() {
+        // (stall, approval, cancel_sent) → expected fragment or absence.
+        for (has_stall, has_approval, cancel_sent) in [
+            (false, false, false),
+            (false, true, false),
+            (true, false, false),
+            (true, true, false),
+            (true, false, true),
+            (true, true, true),
+        ] {
+            let state = MockTuiState {
+                stall: has_stall.then(|| stall(cancel_sent)),
+                approval: has_approval.then(dummy_approval),
+                ..Default::default()
+            };
+            let text = toolbar_text(&state);
+            let shows_quiet = text.contains("agent quiet");
+            let shows_escalated = text.contains("cancel sent");
+            if has_stall && !has_approval {
+                if cancel_sent {
+                    assert!(shows_escalated, "escalated chip missing: {text:?}");
+                    assert!(!shows_quiet, "escalation must replace the quiet chip");
+                } else {
+                    assert!(shows_quiet, "quiet chip missing: {text:?}");
+                    assert!(text.contains("Esc cancels"), "affordance missing: {text:?}");
+                }
+            } else {
+                assert!(
+                    !shows_quiet && !shows_escalated,
+                    "chip must be absent (stall={has_stall}, approval={has_approval}): {text:?}"
+                );
+            }
+        }
+    }
+
+    /// Narrow terminal: the chip line clips, never panics (width arithmetic).
+    #[test]
+    fn stall_chip_narrow_width_no_panic() {
+        let state = MockTuiState {
+            stall: Some(stall(false)),
+            ..Default::default()
+        };
+        let backend = TestBackend::new(40, 1);
+        let mut terminal = Terminal::new(backend).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &cyril_dark()))
+            .expect("draw");
     }
 }

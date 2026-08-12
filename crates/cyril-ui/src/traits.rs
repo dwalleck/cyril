@@ -449,6 +449,10 @@ pub fn approval_origin_label(origin: &SessionId) -> &str {
 pub struct StallState {
     /// Quiet duration the bridge reported when the signal fired.
     pub quiet: std::time::Duration,
+    /// When the chip went up — the renderer animates a live counter as
+    /// `quiet + since.elapsed()` (the bridge sends one signal per quiet
+    /// period; the ticking is display-side).
+    pub since: std::time::Instant,
     /// The user pressed Esc while stalled — the cancel went out, but the
     /// engine may not be able to honor it mid-stall (cyril-w9oi is the
     /// second-tier escape). Escalates the chip wording.
