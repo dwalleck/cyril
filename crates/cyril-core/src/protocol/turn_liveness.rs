@@ -96,7 +96,7 @@ impl TurnLiveness {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
 
@@ -200,5 +200,101 @@ mod tests {
         let mut fresh = TurnLiveness::new();
         fresh.begin(t0);
         assert_eq!(fresh.check(t0, 0, T), None);
+    }
+
+    /// Replay one captured turn: stamps at the recorded frame times, a check
+    /// every 5s (the production tick period) until release (completed turns)
+    /// or the recorder's horizon (the stalled turn — replay time must NOT
+    /// stop at the last frame, the bug the design falsifier caught in its
+    /// own first draft).
+    fn replay_turn(events: &[f64], completed: bool, horizon: f64, threshold: Duration) -> usize {
+        let t0 = Instant::now();
+        let at = |s: f64| t0 + Duration::from_secs_f64(s);
+        let mut l = TurnLiveness::new();
+        l.begin(t0);
+        let end = if completed {
+            events.last().copied().unwrap_or(0.0)
+        } else {
+            horizon
+        };
+        let (mut emissions, mut ei, mut tick) = (0, 0, 5.0);
+        while tick <= end {
+            while ei < events.len() && events[ei] <= tick {
+                l.stamp(at(events[ei]));
+                ei += 1;
+            }
+            if l.check(at(tick), 0, threshold).is_some() {
+                emissions += 1;
+            }
+            tick += 5.0;
+        }
+        emissions
+    }
+
+    /// C11 REGRESSION FENCE (capture-derived; design falsifier_c11.py is the
+    /// one-shot form). Real bh7g wire timings: at the production threshold the
+    /// 8 healthy turns emit ZERO stalls and the captured stall emits EXACTLY
+    /// ONE; at a threshold below the healthy inter-frame ceiling (8s) the same
+    /// healthy turns DO emit — the tight-bound guard proving this fixture can
+    /// observe emissions at all (defeats a table regenerated too coarsely).
+    /// Buggy implementations this fails under: the threshold constant edited
+    /// below the ceiling (healthy arm), clock-advances-only-on-frames (stall
+    /// arm reports zero).
+    #[test]
+    fn capture_replay_thresholds() {
+        let raw = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/turn_liveness_timings.json"
+        ))
+        .expect("timing table fixture");
+        let table: serde_json::Value = serde_json::from_str(&raw).expect("valid table json");
+        let turns = |key: &str| -> Vec<(Vec<f64>, bool, f64)> {
+            table[key]
+                .as_array()
+                .expect("turn array")
+                .iter()
+                .map(|t| {
+                    (
+                        t["events"]
+                            .as_array()
+                            .expect("events")
+                            .iter()
+                            .map(|v| v.as_f64().expect("secs"))
+                            .collect(),
+                        t["completed"].as_bool().expect("completed"),
+                        t["horizon"].as_f64().expect("horizon"),
+                    )
+                })
+                .collect()
+        };
+
+        // The REAL production default — editing the const below the healthy
+        // ceiling is exactly the regression this arm exists to catch.
+        let production = crate::protocol::bridge::DEFAULT_STALL_THRESHOLD;
+        let healthy_at_30: usize = turns("healthy")
+            .iter()
+            .map(|(e, c, h)| replay_turn(e, *c, *h, production))
+            .sum();
+        assert_eq!(healthy_at_30, 0, "false stall on real healthy traffic");
+
+        let stall_at_30: usize = turns("stall")
+            .iter()
+            .map(|(e, c, h)| replay_turn(e, *c, *h, production))
+            .sum();
+        assert_eq!(stall_at_30, 1, "the captured stall must emit exactly once");
+
+        // Tick quantization: a threshold is only guaranteed observable when a
+        // gap exceeds threshold + one tick period (a tick must LAND in the
+        // window). The corpus ceiling is 8.2s and ticks are 5s apart, so 3s
+        // (window ≥ 5.2s) is the tightest guaranteed-observable guard.
+        let tight = Duration::from_secs(3);
+        let healthy_at_3: usize = turns("healthy")
+            .iter()
+            .map(|(e, c, h)| replay_turn(e, *c, *h, tight))
+            .sum();
+        assert!(
+            healthy_at_3 >= 1,
+            "tight-bound guard: a 3s threshold must be observable on this table"
+        );
     }
 }
