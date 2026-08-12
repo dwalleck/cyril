@@ -376,11 +376,21 @@ impl UiState {
 
     /// Apply a notification from the bridge. Returns `true` if the UI state changed.
     pub fn apply_notification(&mut self, notification: &Notification) -> bool {
-        // Stalled-turn display (cyril-14ou, C7): ANY notification other than
-        // another TurnStalled is traffic — the quiet period is over, the chip
-        // comes down. Taken before the match so every arm inherits the clear.
-        let stall_cleared = !matches!(notification, Notification::TurnStalled { .. })
-            && self.stall.take().is_some();
+        // Stalled-turn display (cyril-14ou, C7; narrowed by PR #94 review
+        // SP3): only notifications that PROVE the turn is progressing — or
+        // over — end the quiet period. Bridge-synthesized command responses
+        // (CommandExecuted, SettingsList, SubagentSpawned, ...) say nothing
+        // about the stalled turn and must not vanish the cancel affordance;
+        // new variants default to KEEPING the chip, the safe direction.
+        let stall_cleared = matches!(
+            notification,
+            Notification::AgentMessage(_)
+                | Notification::AgentThought(_)
+                | Notification::ToolCallStarted(_)
+                | Notification::ToolCallUpdated(_)
+                | Notification::PlanUpdated(_)
+                | Notification::TurnCompleted { .. }
+        ) && self.stall.take().is_some();
         let changed = match notification {
             Notification::AgentMessage(msg) => {
                 // Flush any pending user replay so the user turn commits
@@ -2320,6 +2330,26 @@ mod tests {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         }));
         assert!(state.stall().is_none(), "terminal must clear the chip");
+
+        // PR #94 review SP3: bridge-synthesized command responses say nothing
+        // about the stalled turn — the chip (the cancel affordance) survives
+        // them; only agent-turn traffic clears it.
+        state.set_activity(Activity::Streaming);
+        assert!(state.apply_notification(&stalled));
+        state.apply_notification(&Notification::CommandExecuted {
+            command: "tools".into(),
+            response: serde_json::Value::Null,
+        });
+        assert!(
+            state.stall().is_some(),
+            "a command response must not vanish the stall chip"
+        );
+        state.apply_notification(&Notification::SettingsList {
+            settings: serde_json::Value::Null,
+        });
+        assert!(state.stall().is_some(), "settings list must not clear");
+        assert!(state.apply_notification(&traffic));
+        assert!(state.stall().is_none(), "agent traffic still clears");
 
         // Review fix 1: an activity reset that BYPASSES the notification path
         // (e.g. a failed deferred send forcing Idle) must take the chip down —
