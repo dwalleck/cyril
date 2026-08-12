@@ -2251,8 +2251,11 @@ async fn run_loop(
                 // mediator forwards it untouched and the busy guard stands
                 // (a captured stall completed 16 minutes later).
                 let now = now_std();
-                let in_flight = host_mediator.borrow().in_flight();
-                if let Some(quiet) = liveness.check(now, in_flight, stall_threshold) {
+                let (in_flight, host_transition) = {
+                    let hm = host_mediator.borrow();
+                    (hm.in_flight(), hm.last_transition())
+                };
+                if let Some(quiet) = liveness.check(now, in_flight, host_transition, stall_threshold) {
                     tracing::debug!(
                         quiet_secs = quiet.as_secs(),
                         "turn stalled — no inbound activity past threshold"

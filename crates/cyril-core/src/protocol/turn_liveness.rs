@@ -78,6 +78,7 @@ impl TurnLiveness {
         &mut self,
         now: Instant,
         in_flight: usize,
+        host_transition: Option<Instant>,
         threshold: Duration,
     ) -> Option<Duration> {
         let last = self.last_activity?;
@@ -89,6 +90,17 @@ impl TurnLiveness {
             self.armed = true;
             return None;
         }
+        // A callback that entered AND left the table between ticks is
+        // invisible to `in_flight` sampling (PR #94 review SP4) — its
+        // transition stamp is the activity record. Clamp to `now`: the stamp
+        // comes from a foreign clock read and must not push the clock forward.
+        if let Some(t) = host_transition
+            && t > last
+        {
+            self.last_activity = Some(t.min(now));
+            self.armed = true;
+        }
+        let last = self.last_activity.unwrap_or(last);
         let quiet = now.saturating_duration_since(last);
         if self.armed && quiet >= threshold {
             self.armed = false;
@@ -116,16 +128,16 @@ mod tests {
         let t0 = Instant::now();
         let mut l = TurnLiveness::new();
         l.begin(t0);
-        assert_eq!(l.check(at(t0, 29), 0, T), None, "below threshold");
-        let fired = l.check(at(t0, 31), 0, T);
+        assert_eq!(l.check(at(t0, 29), 0, None, T), None, "below threshold");
+        let fired = l.check(at(t0, 31), 0, None, T);
         assert_eq!(fired, Some(Duration::from_secs(31)), "fires at threshold");
         assert_eq!(
-            l.check(at(t0, 36), 0, T),
+            l.check(at(t0, 36), 0, None, T),
             None,
             "no second fire while quiet"
         );
         assert_eq!(
-            l.check(at(t0, 300), 0, T),
+            l.check(at(t0, 300), 0, None, T),
             None,
             "still once per quiet period"
         );
@@ -137,11 +149,15 @@ mod tests {
         let t0 = Instant::now();
         let mut l = TurnLiveness::new();
         l.begin(t0);
-        assert!(l.check(at(t0, 31), 0, T).is_some());
+        assert!(l.check(at(t0, 31), 0, None, T).is_some());
         l.stamp(at(t0, 40)); // traffic resumes: quiet period over
-        assert_eq!(l.check(at(t0, 45), 0, T), None, "fresh clock after resume");
         assert_eq!(
-            l.check(at(t0, 71), 0, T),
+            l.check(at(t0, 45), 0, None, T),
+            None,
+            "fresh clock after resume"
+        );
+        assert_eq!(
+            l.check(at(t0, 71), 0, None, T),
             Some(Duration::from_secs(31)),
             "second quiet period fires again"
         );
@@ -154,22 +170,54 @@ mod tests {
         let t0 = Instant::now();
         let mut l = TurnLiveness::new();
         l.begin(t0);
-        assert_eq!(l.check(at(t0, 40), 1, T), None, "no fire while host busy");
         assert_eq!(
-            l.check(at(t0, 45), 0, T),
+            l.check(at(t0, 40), 1, None, T),
+            None,
+            "no fire while host busy"
+        );
+        assert_eq!(
+            l.check(at(t0, 45), 0, None, T),
             None,
             "no instant fire after reply"
         );
         assert_eq!(
-            l.check(at(t0, 71), 0, T),
+            l.check(at(t0, 71), 0, None, T),
             Some(Duration::from_secs(31)),
             "fires measured from the busy-host tick"
         );
+        // PR #94 review SP4: a callback that entered AND left the table
+        // between ticks (invisible to in_flight sampling) still counts as
+        // activity via its transition stamp — and re-arms.
+        let mut short = TurnLiveness::new();
+        short.begin(t0);
+        // Last frame at t0; a short callback ran at t=21 (transition stamp);
+        // ticks at 25 and 31 must NOT fire — quiet restarts from 21.
+        assert_eq!(short.check(at(t0, 25), 0, Some(at(t0, 21)), T), None);
+        assert_eq!(
+            short.check(at(t0, 31), 0, Some(at(t0, 21)), T),
+            None,
+            "short callback at t=21 defers the stall"
+        );
+        assert_eq!(
+            short.check(at(t0, 52), 0, Some(at(t0, 21)), T),
+            Some(Duration::from_secs(31)),
+            "fires measured from the transition"
+        );
+        // A transition stamp OLDER than real activity changes nothing.
+        let mut stale = TurnLiveness::new();
+        stale.begin(t0);
+        stale.stamp(at(t0, 10));
+        assert_eq!(
+            stale.check(at(t0, 41), 0, Some(at(t0, 5)), T),
+            Some(Duration::from_secs(31)),
+            "stale transition must not defer"
+        );
+
         // Review fix 2: host work after a stall RE-ARMS — a host-callback
         // window followed by renewed quiet is a new quiet period.
-        assert_eq!(l.check(at(t0, 80), 1, T), None, "host busy: parked");
+        assert_eq!(l.check(at(t0, 80), 1, None, T), None, "host busy: parked");
         assert_eq!(
-            l.check(at(t0, 111), 0, T),
+            l.check(at(t0, 111), 0, None, T),
             Some(Duration::from_secs(31)),
             "renewed quiet after host work must emit again"
         );
@@ -182,9 +230,13 @@ mod tests {
         let mut l = TurnLiveness::new();
         l.begin(t0);
         l.end();
-        assert_eq!(l.check(at(t0, 300), 0, T), None, "no clock after end");
+        assert_eq!(l.check(at(t0, 300), 0, None, T), None, "no clock after end");
         l.stamp(at(t0, 301)); // stale frame for a released turn
-        assert_eq!(l.check(at(t0, 900), 0, T), None, "stale frame arms nothing");
+        assert_eq!(
+            l.check(at(t0, 900), 0, None, T),
+            None,
+            "stale frame arms nothing"
+        );
     }
 
     /// Stress timeline from the plan: interleaves every input; expected
@@ -198,20 +250,26 @@ mod tests {
             l.stamp(at(t0, s));
         }
         // 40s of "quiet" but a callback is outstanding the whole time.
-        assert_eq!(l.check(at(t0, 43), 1, T), None);
+        assert_eq!(l.check(at(t0, 43), 1, None, T), None);
         // Reply lands; 31s after the busy tick → first fire.
-        assert_eq!(l.check(at(t0, 48), 0, T), None);
-        assert_eq!(l.check(at(t0, 74), 0, T), Some(Duration::from_secs(31)));
+        assert_eq!(l.check(at(t0, 48), 0, None, T), None);
+        assert_eq!(
+            l.check(at(t0, 74), 0, None, T),
+            Some(Duration::from_secs(31))
+        );
         // Traffic resumes (re-arm), second quiet period → second fire.
         l.stamp(at(t0, 80));
-        assert_eq!(l.check(at(t0, 111), 0, T), Some(Duration::from_secs(31)));
+        assert_eq!(
+            l.check(at(t0, 111), 0, None, T),
+            Some(Duration::from_secs(31))
+        );
         // Turn ends; eternal quiet emits nothing.
         l.end();
-        assert_eq!(l.check(at(t0, 500), 0, T), None);
+        assert_eq!(l.check(at(t0, 500), 0, None, T), None);
         // Boundary: zero elapsed never fires.
         let mut fresh = TurnLiveness::new();
         fresh.begin(t0);
-        assert_eq!(fresh.check(t0, 0, T), None);
+        assert_eq!(fresh.check(t0, 0, None, T), None);
     }
 
     /// Replay one captured turn: stamps at the recorded frame times, a check
@@ -235,7 +293,7 @@ mod tests {
                 l.stamp(at(events[ei]));
                 ei += 1;
             }
-            if l.check(at(tick), 0, threshold).is_some() {
+            if l.check(at(tick), 0, None, threshold).is_some() {
                 emissions += 1;
             }
             tick += 5.0;
