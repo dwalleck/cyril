@@ -398,6 +398,55 @@ mod tests {
         RoutedNotification::scoped(sid(s), end_turn())
     }
 
+    /// cyril-14ou C6 fence: `TurnStalled` is information, never a terminal.
+    /// The mediator must Forward it untouched in every turn phase — active
+    /// turn, no turn, and while a companion is owed — leaving the busy guard
+    /// and the ledger exactly as they were. Buggy implementation this fails
+    /// under: adding TurnStalled to the terminal match (early release), or
+    /// absorbing it as a companion (eats the ledger entry).
+    #[test]
+    fn stalled_is_forwarded_nonterminal() {
+        let stalled = |s: &str| {
+            RoutedNotification::scoped(
+                sid(s),
+                Notification::TurnStalled {
+                    quiet: std::time::Duration::from_secs(31),
+                },
+            )
+        };
+
+        // (a) mid-turn on the active session: forwarded, still busy.
+        let mut m = TurnMediator::new();
+        assert!(matches!(
+            m.begin_turn(sid("s"), true),
+            BeginTurn::Accepted(_)
+        ));
+        assert_eq!(m.observe(&stalled("s")), Disposition::Forward);
+        assert!(m.is_busy(), "stall must not release the turn");
+
+        // (b) no active turn: forwarded (not dropped as unowned).
+        let mut idle = TurnMediator::new();
+        assert_eq!(idle.observe(&stalled("s")), Disposition::Forward);
+        assert!(!idle.is_busy());
+
+        // (c) between a wire turn_end and its owed companion: forwarded, and
+        // the companion expectation survives to absorb the real twin.
+        let mut owed = TurnMediator::new();
+        let BeginTurn::Accepted(owner) = owed.begin_turn(sid("s"), true) else {
+            panic!("begin_turn refused");
+        };
+        assert_eq!(
+            owed.observe(&wire_end("s")),
+            Disposition::ForwardTurnComplete
+        );
+        assert_eq!(owed.observe(&stalled("s")), Disposition::Forward);
+        let twin = RoutedNotification::global(end_turn()).with_turn(owner);
+        assert!(
+            matches!(owed.observe(&twin), Disposition::Absorb { .. }),
+            "companion must still be owed after a stall passed through"
+        );
+    }
+
     /// The bridge-synthesized shape: owner-stamped, global scope.
     fn stamped(n: u64) -> RoutedNotification {
         RoutedNotification::global(end_turn()).with_turn(TurnId::new(n))

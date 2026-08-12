@@ -549,6 +549,9 @@ impl UiState {
                 }
                 true
             }
+            // Stalled-turn display state lands with the stall chip (cyril-14ou
+            // slice 5); until then the signal is deliberately inert here.
+            Notification::TurnStalled { .. } => false,
             Notification::TurnCompleted { stop_reason } => {
                 self.commit_streaming();
                 // Reconcile (cyril-h8zb): refusal metadata + ambiguous ACP
