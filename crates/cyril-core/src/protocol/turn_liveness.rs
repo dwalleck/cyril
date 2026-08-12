@@ -339,8 +339,16 @@ mod tests {
         };
 
         // The REAL production default — editing the const below the healthy
-        // ceiling is exactly the regression this arm exists to catch.
+        // ceiling is exactly the regression this arm exists to catch. PR #94
+        // review SP8: replaying against the const alone leaves UPWARD drift
+        // unpinned (the stall tail is ~976s, so 900s would still pass) — the
+        // approved contract is 30 seconds, asserted exactly.
         let production = crate::protocol::bridge::DEFAULT_STALL_THRESHOLD;
+        assert_eq!(
+            production,
+            Duration::from_secs(30),
+            "the approved cyril-14ou threshold is 30s; a deliberate change must re-run the replay analysis"
+        );
         let healthy_at_30: usize = turns("healthy")
             .iter()
             .map(|(e, c, h)| replay_turn(e, *c, *h, production))
