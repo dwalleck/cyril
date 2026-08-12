@@ -118,6 +118,18 @@ _Avoid_: duplicate completion (it is expected, not anomalous), echo
 The bridge policy deciding what each inbound notification does to the active turn — forward it, release the turn, absorb a companion, or drop it (stale or unowned). Owned by the `TurnMediator` state machine inside the bridge; distinct from the bridge's host-callback mediation (ADR-0004), which gates the opposite direction.
 _Avoid_: mediator (unqualified — collides with the host-callback mediator), dedup (absorption records evidence; only the stale/unowned cases drop)
 
+**Turn liveness**:
+Whether the active turn is showing signs of progress: the time since the last inbound frame scoped to the turn's session (or global), with the clock parked while cyril owes the agent a host-callback reply. Owned by the `TurnLiveness` state machine inside the bridge; time is an input, never read internally.
+_Avoid_: heartbeat (Kiro sends none; context_usage merely behaves like one), timeout (nothing expires — the turn stays open), health check (no probe is sent)
+
+**Stalled turn**:
+An active turn whose liveness clock has passed the stall threshold (default 30s) with nothing outstanding — reported to the UI as a session-scoped `TurnStalled` notification, at most once per quiet period. A stalled turn is still a live turn: it can complete minutes later (cyril-bh7g captured one finishing after 16), so a stall is information, never a terminal.
+_Avoid_: dead turn, timed-out turn, hung (the engine process is alive), failed (no failure has been observed)
+
+**Quiet period**:
+A maximal span of an active turn with no qualifying inbound traffic. One `TurnStalled` fires per quiet period that exceeds the threshold; resumed traffic ends the period and re-arms the signal.
+_Avoid_: gap (reserved for the inter-frame measurements in the bh7g analysis), silence window
+
 ### Agents & engines
 
 **Vendor**:
