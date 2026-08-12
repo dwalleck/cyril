@@ -65,6 +65,10 @@ pub trait TuiState {
     /// KAS categorized context breakdown for the toolbar bar (KAS-2b, cyril-5et2).
     /// `None` on v2 (scalar only) and before the first KAS `context_usage` frame.
     fn context_breakdown(&self) -> Option<&cyril_core::types::ContextBreakdown>;
+
+    /// Stalled-turn display state (cyril-14ou), if the active turn is quiet
+    /// past the bridge's threshold. `None` whenever traffic is flowing.
+    fn stall(&self) -> Option<StallState>;
     fn credit_usage(&self) -> Option<(f64, f64)>;
     fn last_turn(&self) -> Option<&cyril_core::types::TurnSummary>;
     fn session_cost(&self) -> &cyril_core::types::SessionCost;
@@ -437,6 +441,20 @@ pub fn approval_origin_label(origin: &SessionId) -> &str {
     }
 }
 
+/// Stalled-turn display state (cyril-14ou; CONTEXT.md "Stalled turn"): the
+/// active turn has gone quiet past the bridge's threshold. Display-only — a
+/// stalled turn is still a live turn (a captured one completed 16 minutes
+/// late), so nothing here touches busy or input handling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StallState {
+    /// Quiet duration the bridge reported when the signal fired.
+    pub quiet: std::time::Duration,
+    /// The user pressed Esc while stalled — the cancel went out, but the
+    /// engine may not be able to honor it mid-stall (cyril-w9oi is the
+    /// second-tier escape). Escalates the chip wording.
+    pub cancel_sent: bool,
+}
+
 /// Permission approval dialog state.
 #[derive(Debug)]
 pub struct ApprovalState {
@@ -540,6 +558,7 @@ pub mod test_support {
         pub steering_queued: usize,
         pub context_usage: Option<f64>,
         pub context_breakdown: Option<cyril_core::types::ContextBreakdown>,
+        pub stall: Option<StallState>,
         pub credit_usage: Option<(f64, f64)>,
         pub last_turn: Option<cyril_core::types::TurnSummary>,
         pub session_cost: cyril_core::types::SessionCost,
@@ -580,6 +599,7 @@ pub mod test_support {
                 steering_queued: 0,
                 context_usage: None,
                 context_breakdown: None,
+                stall: None,
                 credit_usage: None,
                 last_turn: None,
                 session_cost: cyril_core::types::SessionCost::new(),
@@ -660,6 +680,9 @@ pub mod test_support {
         }
         fn context_breakdown(&self) -> Option<&cyril_core::types::ContextBreakdown> {
             self.context_breakdown.as_ref()
+        }
+        fn stall(&self) -> Option<StallState> {
+            self.stall
         }
         fn credit_usage(&self) -> Option<(f64, f64)> {
             self.credit_usage

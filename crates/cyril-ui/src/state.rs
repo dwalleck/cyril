@@ -79,6 +79,11 @@ pub struct UiState {
     /// Mirrors `SessionController::pending_refusal` — the toolbar reads
     /// UiState's `last_turn`, so the render-path summary must reconcile too.
     pending_refusal: bool,
+    /// The active turn is stalled (cyril-14ou; CONTEXT.md "Stalled turn").
+    /// Set by `TurnStalled` while busy; cleared by ANY other notification —
+    /// resumed traffic ends the quiet period, and a terminal ends the turn.
+    /// Never blocks input and never fakes a terminal: display state only.
+    stall: Option<StallState>,
 
     // Subagent streams and tracker (private — mutated via delegating methods)
     subagents: crate::subagent_ui::SubagentUiState,
@@ -238,6 +243,10 @@ impl TuiState for UiState {
         self.context_breakdown.as_ref()
     }
 
+    fn stall(&self) -> Option<crate::traits::StallState> {
+        self.stall
+    }
+
     fn credit_usage(&self) -> Option<(f64, f64)> {
         self.credit_usage
     }
@@ -338,6 +347,7 @@ impl UiState {
             pending_metering: None,
             refusal_alerted_this_turn: false,
             pending_refusal: false,
+            stall: None,
             subagents: crate::subagent_ui::SubagentUiState::new(),
             subagent_tracker: cyril_core::subagent::SubagentTracker::new(),
             workflow_streams: crate::workflow_ui::WorkflowUiState::new(),
@@ -366,7 +376,12 @@ impl UiState {
 
     /// Apply a notification from the bridge. Returns `true` if the UI state changed.
     pub fn apply_notification(&mut self, notification: &Notification) -> bool {
-        match notification {
+        // Stalled-turn display (cyril-14ou, C7): ANY notification other than
+        // another TurnStalled is traffic — the quiet period is over, the chip
+        // comes down. Taken before the match so every arm inherits the clear.
+        let stall_cleared = !matches!(notification, Notification::TurnStalled { .. })
+            && self.stall.take().is_some();
+        let changed = match notification {
             Notification::AgentMessage(msg) => {
                 // Flush any pending user replay so the user turn commits
                 // before any subsequent agent text.
@@ -518,9 +533,10 @@ impl UiState {
             }
             Notification::UsageUpdated { used, size } => {
                 if *size == 0 {
-                    // `size == 0` is protocol-meaningless; don't claim state changed.
+                    // `size == 0` is protocol-meaningless; don't claim state
+                    // changed (beyond a stall chip this frame already cleared).
                     tracing::warn!(used, "UsageUpdated with size=0, ignoring");
-                    return false;
+                    return stall_cleared;
                 }
                 // Clamp to [0, 100] via ContextUsage::new() — same constructor
                 // SessionController uses, so the clamp rule is defined once in
@@ -549,9 +565,19 @@ impl UiState {
                 }
                 true
             }
-            // Stalled-turn display state lands with the stall chip (cyril-14ou
-            // slice 5); until then the signal is deliberately inert here.
-            Notification::TurnStalled { .. } => false,
+            Notification::TurnStalled { quiet } => {
+                // A late stall signal racing a terminal must not chip an idle
+                // session — the turn it described is already over.
+                if matches!(self.activity, Activity::Idle | Activity::Ready) {
+                    false
+                } else {
+                    self.stall = Some(crate::traits::StallState {
+                        quiet: *quiet,
+                        cancel_sent: false,
+                    });
+                    true
+                }
+            }
             Notification::TurnCompleted { stop_reason } => {
                 self.commit_streaming();
                 // Reconcile (cyril-h8zb): refusal metadata + ambiguous ACP
@@ -985,7 +1011,8 @@ impl UiState {
             // decision. Listed explicitly rather than falling into a catch-all
             // so a future notification cannot be silently swallowed.
             Notification::HooksChanged { .. } => false,
-        }
+        };
+        changed || stall_cleared
     }
 
     /// Flush remaining streaming text and clear active tool call display.
@@ -1322,6 +1349,20 @@ impl UiState {
             .push(ChatMessage::command_output(command, text));
         self.messages_version += 1;
         self.enforce_message_limit();
+    }
+
+    /// Mark the active stall as cancel-sent (cyril-14ou): the App calls this
+    /// when Esc dispatches a cancel while the stall chip is up, escalating
+    /// the wording. Returns whether anything changed (idempotent; no-op when
+    /// no stall is displayed).
+    pub fn mark_stall_cancel_sent(&mut self) -> bool {
+        match &mut self.stall {
+            Some(s) if !s.cancel_sent => {
+                s.cancel_sent = true;
+                true
+            }
+            _ => false,
+        }
     }
 
     /// Update the activity state and record when it changed.
@@ -2218,6 +2259,58 @@ mod tests {
         assert_eq!(state.activity(), Activity::Idle);
         assert!(!state.should_quit());
         assert_eq!(state.steering_queued(), 0);
+    }
+
+    /// cyril-14ou C7 fence: TurnStalled sets the stall chip; ANY other
+    /// notification clears it (traffic ends the quiet period); a second quiet
+    /// period sets it again; TurnCompleted clears it. Adversarial arms:
+    /// a LATE TurnStalled on an idle session must not chip (races a terminal),
+    /// double TurnStalled is an idempotent set, and cancel-sent marking is
+    /// idempotent and dies with the chip. Buggy implementations these fail
+    /// under: clear-only-on-TurnCompleted (stale chip through a resumed turn),
+    /// unconditional set (idle chip), cancel-sent surviving a clear.
+    #[test]
+    fn stall_set_and_cleared() {
+        let quiet = std::time::Duration::from_secs(31);
+        let stalled = Notification::TurnStalled { quiet };
+        let traffic = Notification::AgentMessage(cyril_core::types::AgentMessage {
+            text: "resumed".into(),
+            is_streaming: true,
+        });
+
+        let mut state = UiState::new(500);
+        // Late signal on an idle session: display nothing.
+        assert!(!state.apply_notification(&stalled));
+        assert!(state.stall().is_none(), "idle session must not chip");
+
+        // Busy turn stalls: chip up.
+        state.set_activity(Activity::Streaming);
+        assert!(state.apply_notification(&stalled));
+        assert_eq!(state.stall().map(|s| s.quiet), Some(quiet));
+
+        // Idempotent double-set (no traffic between): still chipped.
+        assert!(state.apply_notification(&stalled));
+        assert!(state.stall().is_some());
+
+        // Cancel-sent escalation is idempotent.
+        assert!(state.mark_stall_cancel_sent());
+        assert!(!state.mark_stall_cancel_sent());
+        assert_eq!(state.stall().map(|s| s.cancel_sent), Some(true));
+
+        // ANY other notification clears — resumed traffic ends the period.
+        assert!(state.apply_notification(&traffic));
+        assert!(state.stall().is_none(), "traffic must clear the chip");
+        assert!(!state.mark_stall_cancel_sent(), "no chip, nothing to mark");
+
+        // Second quiet period chips again with fresh cancel state...
+        assert!(state.apply_notification(&stalled));
+        assert_eq!(state.stall().map(|s| s.cancel_sent), Some(false));
+
+        // ...and the terminal clears it.
+        assert!(state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        }));
+        assert!(state.stall().is_none(), "terminal must clear the chip");
     }
 
     #[test]
