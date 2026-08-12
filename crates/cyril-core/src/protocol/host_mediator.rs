@@ -233,9 +233,11 @@ impl HostMediator {
         }
     }
 
-    /// In-flight count — seam-test observability (design C7). Test-only:
-    /// production code never inspects the table, it only transitions it.
-    #[cfg(test)]
+    /// In-flight count. Originally seam-test observability (design C7);
+    /// since cyril-14ou the turn-liveness tick also samples it in production:
+    /// outstanding host work means the agent is waiting on CYRIL, so quiet
+    /// wire time must not read as a stall. Still a read-only view — nothing
+    /// outside this module transitions the table.
     pub(crate) fn in_flight(&self) -> usize {
         self.in_flight.len()
     }

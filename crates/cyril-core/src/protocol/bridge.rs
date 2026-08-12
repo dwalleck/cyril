@@ -161,7 +161,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
 /// from `[agent]` config through `spawn_bridge` — bundling them means the
 /// next knob is one field, not another signature ripple across every
 /// caller.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct SpawnConfig {
     /// Which Kiro engine to drive (ADR-0001; bound for the bridge's life).
     pub engine: AgentEngine,
@@ -174,6 +174,36 @@ pub struct SpawnConfig {
     /// Which hook model runs on the KAS engine (cyril-jiyn, KAS-7); ignored
     /// for v2.
     pub kas_hooks: KasHooksMode,
+    /// Quiet-period threshold before the bridge reports a stalled turn
+    /// (cyril-14ou; CONTEXT.md "Stalled turn"). Values at or below the
+    /// healthy inter-frame ceiling (~8s on the bh7g corpus) will
+    /// false-positive on healthy traffic — tests deliberately pass tiny
+    /// values to run fast, so no lower bound is enforced.
+    pub stall_threshold: std::time::Duration,
+}
+
+/// Default [`SpawnConfig::stall_threshold`]: ≥3× the maximum healthy
+/// inter-frame gap observed across the bh7g capture corpus (8.2s over 12
+/// turns, including 96s-long ones), replay-verified to produce zero false
+/// stalls on real traffic (`.cyril-14ou/design.md` C11).
+pub const DEFAULT_STALL_THRESHOLD: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// How often the liveness clock is polled while a turn is in flight. One
+/// wake per period, O(1) work — and the bound on how late a stall can be
+/// noticed past the threshold.
+const STALL_TICK_PERIOD: std::time::Duration = std::time::Duration::from_secs(5);
+
+impl Default for SpawnConfig {
+    fn default() -> Self {
+        Self {
+            engine: AgentEngine::default(),
+            kas_spawn: KasSpawn::default(),
+            shell: None,
+            present_as: None,
+            kas_hooks: KasHooksMode::default(),
+            stall_threshold: DEFAULT_STALL_THRESHOLD,
+        }
+    }
 }
 
 /// Spawn the ACP bridge on a dedicated thread.
@@ -699,6 +729,7 @@ async fn run_bridge(
         cwd.to_path_buf(),
         engine,
         config.present_as,
+        config.stall_threshold,
         InternalChannels {
             inbound_tx,
             inbound_rx,
@@ -857,6 +888,7 @@ async fn run_loop(
     cwd: std::path::PathBuf,
     engine: std::rc::Rc<dyn Engine>,
     present_as: Option<PresentAs>,
+    stall_threshold: std::time::Duration,
     internal: InternalChannels,
 ) -> crate::Result<()> {
     // cyril-3lh8: the shared terminal-registry handle for the CancelRequest
@@ -975,6 +1007,17 @@ async fn run_loop(
     // intentionally diverge there; in v2 they clear together (the prompt
     // resolves AT turn-end). Do not re-merge them.
     let mut mediator = TurnMediator::new();
+    // Turn liveness (cyril-14ou): the quiet-period clock behind the
+    // stalled-turn signal — a pure state machine (unit-fenced in
+    // `turn_liveness.rs`); the loop feeds it wall-clock via tokio's Instant
+    // (paused-time tests can drive it) and polls it from the tick arm below,
+    // sampling `HostMediator::in_flight()` so silence while cyril owes the
+    // agent a callback reply never reads as a stall. The signal it produces
+    // is information, never a terminal — teardown/reaping is a separate,
+    // already-fenced concern (`ProcessGroupGuard` in transport.rs).
+    let mut liveness = crate::protocol::turn_liveness::TurnLiveness::new();
+    let mut stall_tick = tokio::time::interval(STALL_TICK_PERIOD);
+    stall_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     // Host-callback mediation (cyril-g9vt, ADR-0004 amendment): the lifecycle
     // state machine, shared so `run_loop`'s CancelRequest/Shutdown arms can
     // sweep it while a DEDICATED drain task owns acceptance + resolution. The
@@ -1146,6 +1189,7 @@ async fn run_loop(
                         continue;
                     }
                 };
+                liveness.begin(tokio::time::Instant::now().into_std());
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 let prompt: Vec<acp::ContentBlock> = content_blocks
                     .into_iter()
@@ -2145,6 +2189,15 @@ async fn run_loop(
                 // Silent outcomes `continue`: forwarding an absorbed or
                 // dropped terminal would make the App commit streaming and
                 // metering a second time.
+                // Turn liveness (cyril-14ou): frames scoped to the active
+                // turn's session — or global — are proof of progress; a
+                // foreign session's traffic proves nothing about the main
+                // turn (claim C4), so it must not feed the clock.
+                if routed.session_id.is_none()
+                    || mediator.cancel_target() == routed.session_id.as_ref()
+                {
+                    liveness.stamp(tokio::time::Instant::now().into_std());
+                }
                 let completed_turn = match mediator.observe(&routed) {
                     Disposition::Absorb { .. }
                     | Disposition::DropStale { .. }
@@ -2152,6 +2205,9 @@ async fn run_loop(
                     Disposition::ForwardTurnComplete => true,
                     Disposition::Forward => false,
                 };
+                if completed_turn {
+                    liveness.end();
+                }
                 if channels.notification_tx.send(routed).await.is_err() {
                     break; // App dropped the notification channel.
                 }
@@ -2168,6 +2224,29 @@ async fn run_loop(
                     )
                     .await;
                     break;
+                }
+            }
+            _ = stall_tick.tick(), if mediator.is_busy() => {
+                // Turn liveness poll (cyril-14ou): at most one TurnStalled per
+                // quiet period, scoped to the stalled turn's own session (the
+                // mediator's dispatch-time snapshot). Never a terminal — the
+                // mediator forwards it untouched and the busy guard stands
+                // (a captured stall completed 16 minutes later).
+                let now = tokio::time::Instant::now().into_std();
+                let in_flight = host_mediator.borrow().in_flight();
+                if let Some(quiet) = liveness.check(now, in_flight, stall_threshold) {
+                    tracing::debug!(
+                        quiet_secs = quiet.as_secs(),
+                        "turn stalled — no inbound activity past threshold"
+                    );
+                    let note = Notification::TurnStalled { quiet };
+                    let routed = match mediator.cancel_target() {
+                        Some(sid) => RoutedNotification::scoped(sid.clone(), note),
+                        None => RoutedNotification::global(note),
+                    };
+                    if channels.notification_tx.send(routed).await.is_err() {
+                        break; // App dropped the notification channel.
+                    }
                 }
             }
             res = &mut io_done, if deferred_disconnect.is_none() => {
@@ -2527,6 +2606,163 @@ mod tests {
                         Some(Notification::TurnCompleted { .. })
                     ),
                     "an unowned terminal with no active turn must be dropped"
+                );
+            },
+        )
+        .await;
+    }
+
+    /// cyril-14ou C1 (loop level): a parked turn with zero inbound frames
+    /// crosses the 30s threshold and the loop emits ONE session-scoped
+    /// `TurnStalled`; resumed completion ends the turn with no further
+    /// stalls. Paused time: the interval + threshold run on virtual clocks.
+    /// Buggy implementations this fails under: tick arm not wired / gated
+    /// inverted (no emission ever), per-tick re-emission (a second stall
+    /// while still quiet), global scoping (envelope loses the session).
+    #[tokio::test(start_paused = true)]
+    async fn stall_emits_at_threshold() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["park".into()],
+                    })
+                    .await
+                    .unwrap();
+
+                // The turn is parked: the next envelope must be the stall,
+                // scoped to the turn's own session.
+                let routed = tokio::time::timeout(Duration::from_secs(60), rx.recv())
+                    .await
+                    .expect("stall within 60 virtual seconds")
+                    .expect("channel open");
+                match &routed.notification {
+                    Notification::TurnStalled { quiet } => {
+                        assert!(
+                            *quiet >= DEFAULT_STALL_THRESHOLD,
+                            "reported quiet {quiet:?} below threshold"
+                        );
+                        assert_eq!(
+                            routed.session_id.as_ref(),
+                            Some(&sid),
+                            "stall must be scoped to the stalled turn's session"
+                        );
+                    }
+                    other => panic!("expected TurnStalled, got {other:?}"),
+                }
+
+                // Once per quiet period: another 120 virtual seconds of
+                // silence must produce nothing further.
+                assert!(
+                    recv_notif(&mut rx, 120).await.is_none(),
+                    "a second TurnStalled fired for the same quiet period"
+                );
+
+                gate.notify_one();
+                assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+            },
+        )
+        .await;
+    }
+
+    /// cyril-14ou C4 (loop level): frames scoped to a FOREIGN session do not
+    /// feed the main turn's liveness clock — the stall still fires while
+    /// foreign traffic streams every 5 virtual seconds. Buggy implementation
+    /// this fails under: stamping on any `RoutedNotification` regardless of
+    /// scope (the foreign chatter would mask the stall forever).
+    #[tokio::test(start_paused = true)]
+    async fn foreign_traffic_does_not_mask_stall() {
+        let script = Rc::new(RefCell::new(Script {
+            block_prompt: true,
+            ..Default::default()
+        }));
+        with_engine_harness(
+            Rc::new(V2Engine),
+            Rc::clone(&script),
+            move |sender, mut rx, _perm_rx, gate, _loop, _kill| async move {
+                let sid = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id: sid.clone(),
+                        content_blocks: vec!["park".into()],
+                    })
+                    .await
+                    .unwrap();
+
+                // Inject foreign-session chatter through the loop's internal
+                // inbound seam (cyril-upjh) on a 5s virtual cadence.
+                let inbound = script.borrow().inbound.clone().expect("inbound seam");
+                let injector = tokio::task::spawn_local(async move {
+                    loop {
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                        if inbound
+                            .send(RoutedNotification::scoped(
+                                crate::types::SessionId::new("sess_foreign"),
+                                Notification::AgentMessage(crate::types::AgentMessage {
+                                    text: "chatter".into(),
+                                    is_streaming: true,
+                                }),
+                            ))
+                            .await
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                });
+
+                // Scan forwarded traffic: the stall must surface despite the
+                // foreign frames (bounded: ~40 frames ≈ 200 virtual seconds).
+                let mut saw_stall = false;
+                for _ in 0..40 {
+                    match recv_notif(&mut rx, 20).await {
+                        Some(Notification::TurnStalled { .. }) => {
+                            saw_stall = true;
+                            break;
+                        }
+                        Some(_) => continue,
+                        None => break,
+                    }
+                }
+                injector.abort();
+                assert!(
+                    saw_stall,
+                    "foreign-session traffic masked the main turn's stall (C4)"
+                );
+
+                gate.notify_one();
+                assert_eq!(drain_to_turn(&mut rx).await, StopReason::EndTurn);
+            },
+        )
+        .await;
+    }
+
+    /// cyril-14ou C5 (loop level): with no turn in flight the tick arm is
+    /// gated off — long idle stretches emit nothing. Buggy implementation
+    /// this fails under: an ungated tick arm (phantom stall between turns).
+    #[tokio::test(start_paused = true)]
+    async fn no_stall_without_active_turn() {
+        let script = Rc::new(RefCell::new(Script::default()));
+        with_engine_harness(
+            Rc::new(V2Engine),
+            script,
+            |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                let _sid = start_session(&sender, &mut rx).await;
+                tokio::time::sleep(Duration::from_secs(90)).await;
+                assert!(
+                    !matches!(
+                        recv_notif(&mut rx, 30).await,
+                        Some(Notification::TurnStalled { .. })
+                    ),
+                    "idle bridge emitted a phantom stall (C5)"
                 );
             },
         )
@@ -3342,6 +3578,9 @@ mod tests {
                     // None = "not configured", the shape a real spawn has
                     // unless the user names a persona.
                     None,
+                    // The production default; stall-signal tests drive it with
+                    // paused time (start_paused), so no tiny override needed.
+                    DEFAULT_STALL_THRESHOLD,
                     InternalChannels {
                         inbound_tx,
                         inbound_rx,

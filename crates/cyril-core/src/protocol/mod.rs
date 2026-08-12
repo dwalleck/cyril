@@ -26,10 +26,8 @@ pub(crate) mod tool_call_ledger;
 pub(crate) mod transport;
 /// Turn liveness (cyril-14ou): the pure state machine behind the bridge
 /// `run_loop`'s stalled-turn signal — quiet-period clock, host-work parking.
-/// See CONTEXT.md "Turn liveness". Test-gated until its run_loop consumer
-/// lands (staged-module pattern: dead_code fires on the lib target).
-#[cfg(test)]
-mod turn_liveness;
+/// See CONTEXT.md "Turn liveness".
+pub(crate) mod turn_liveness;
 /// Turn mediation (cyril-b4y4): the pure state machine behind the bridge
 /// `run_loop`'s turn ownership — busy-guard, owner allocation, terminal
 /// dispositions, companion ledger. See CONTEXT.md "Turn mediation".
