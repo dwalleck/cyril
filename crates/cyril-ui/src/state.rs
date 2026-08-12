@@ -569,6 +569,10 @@ impl UiState {
                 // A late stall signal racing a terminal must not chip an idle
                 // session — the turn it described is already over.
                 if matches!(self.activity, Activity::Idle | Activity::Ready) {
+                    tracing::debug!(
+                        quiet_secs = quiet.as_secs(),
+                        "late TurnStalled for an idle session; not displayed"
+                    );
                     false
                 } else {
                     self.stall = Some(crate::traits::StallState {
@@ -1379,6 +1383,10 @@ impl UiState {
 
             if !is_busy {
                 self.activity_since = None;
+                // Stall display cannot outlive busy (cyril-14ou design: chip
+                // shows "while stalled && busy") — activity resets that bypass
+                // the notification path must take the chip down too.
+                self.stall = None;
             } else if !was_busy {
                 self.activity_since = Some(Instant::now());
             }
@@ -2312,6 +2320,18 @@ mod tests {
             stop_reason: cyril_core::types::StopReason::EndTurn,
         }));
         assert!(state.stall().is_none(), "terminal must clear the chip");
+
+        // Review fix 1: an activity reset that BYPASSES the notification path
+        // (e.g. a failed deferred send forcing Idle) must take the chip down —
+        // stall display cannot outlive busy.
+        state.set_activity(Activity::Streaming);
+        assert!(state.apply_notification(&stalled));
+        assert!(state.stall().is_some());
+        state.set_activity(Activity::Idle);
+        assert!(
+            state.stall().is_none(),
+            "stall display must not outlive busy"
+        );
     }
 
     #[test]

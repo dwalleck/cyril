@@ -82,7 +82,11 @@ impl TurnLiveness {
     ) -> Option<Duration> {
         let last = self.last_activity?;
         if in_flight > 0 {
+            // Host work is activity — it also re-arms (spec review, cyril-14ou
+            // fix 2): a stall followed by a host-callback window and renewed
+            // quiet is a NEW quiet period and must emit again.
             self.last_activity = Some(now);
+            self.armed = true;
             return None;
         }
         let quiet = now.saturating_duration_since(last);
@@ -161,6 +165,14 @@ mod tests {
             Some(Duration::from_secs(31)),
             "fires measured from the busy-host tick"
         );
+        // Review fix 2: host work after a stall RE-ARMS — a host-callback
+        // window followed by renewed quiet is a new quiet period.
+        assert_eq!(l.check(at(t0, 80), 1, T), None, "host busy: parked");
+        assert_eq!(
+            l.check(at(t0, 111), 0, T),
+            Some(Duration::from_secs(31)),
+            "renewed quiet after host work must emit again"
+        );
     }
 
     /// C5: turn end disarms; late quiet (and late frames) do nothing.
@@ -213,7 +225,7 @@ mod tests {
         let mut l = TurnLiveness::new();
         l.begin(t0);
         let end = if completed {
-            events.last().copied().unwrap_or(0.0)
+            events.last().copied().expect("completed turn has frames")
         } else {
             horizon
         };

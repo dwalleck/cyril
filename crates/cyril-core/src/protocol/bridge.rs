@@ -200,6 +200,12 @@ pub struct SpawnConfig {
 /// stalls on real traffic (`.cyril-14ou/design.md` C11).
 pub const DEFAULT_STALL_THRESHOLD: std::time::Duration = std::time::Duration::from_secs(30);
 
+/// Wall-clock for the liveness machine, tokio-sourced so paused-time tests
+/// drive it. One definition; three call sites in `run_loop`.
+fn now_std() -> std::time::Instant {
+    tokio::time::Instant::now().into_std()
+}
+
 /// How often the liveness clock is polled while a turn is in flight. One
 /// wake per period, O(1) work — and the bound on how late a stall can be
 /// noticed past the threshold.
@@ -1201,7 +1207,7 @@ async fn run_loop(
                         continue;
                     }
                 };
-                liveness.begin(tokio::time::Instant::now().into_std());
+                liveness.begin(now_std());
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 let prompt: Vec<acp::ContentBlock> = content_blocks
                     .into_iter()
@@ -1278,11 +1284,11 @@ async fn run_loop(
                 // retarget `active_session_id`; cancel must still hit the
                 // running turn. Fall back to `active_session_id` when no turn
                 // is in flight.
-                let cancel_target = mediator
-                    .cancel_target()
+                let active_turn_session = mediator
+                    .active_turn_session()
                     .map(|s| acp::SessionId::new(s.as_str()))
                     .or_else(|| active_session_id.clone());
-                if let Some(session_id) = cancel_target {
+                if let Some(session_id) = active_turn_session {
                     if let Err(e) = conn
                         .cancel(acp::CancelNotification::new(session_id.clone()))
                         .await
@@ -2206,9 +2212,9 @@ async fn run_loop(
                 // foreign session's traffic proves nothing about the main
                 // turn (claim C4), so it must not feed the clock.
                 if routed.session_id.is_none()
-                    || mediator.cancel_target() == routed.session_id.as_ref()
+                    || mediator.active_turn_session() == routed.session_id.as_ref()
                 {
-                    liveness.stamp(tokio::time::Instant::now().into_std());
+                    liveness.stamp(now_std());
                 }
                 let completed_turn = match mediator.observe(&routed) {
                     Disposition::Absorb { .. }
@@ -2244,7 +2250,7 @@ async fn run_loop(
                 // mediator's dispatch-time snapshot). Never a terminal — the
                 // mediator forwards it untouched and the busy guard stands
                 // (a captured stall completed 16 minutes later).
-                let now = tokio::time::Instant::now().into_std();
+                let now = now_std();
                 let in_flight = host_mediator.borrow().in_flight();
                 if let Some(quiet) = liveness.check(now, in_flight, stall_threshold) {
                     tracing::debug!(
@@ -2252,7 +2258,7 @@ async fn run_loop(
                         "turn stalled — no inbound activity past threshold"
                     );
                     let note = Notification::TurnStalled { quiet };
-                    let routed = match mediator.cancel_target() {
+                    let routed = match mediator.active_turn_session() {
                         Some(sid) => RoutedNotification::scoped(sid.clone(), note),
                         None => RoutedNotification::global(note),
                     };
@@ -5514,7 +5520,7 @@ mod tests {
     /// makes two turns indistinguishable, which is the whole defect. The
     /// companion property (the record's session is immutable under a mid-turn
     /// retarget) is already fenced by
-    /// `cancel_targets_inflight_turn_after_midturn_new_session` below, so this
+    /// `active_turn_sessions_inflight_turn_after_midturn_new_session` below, so this
     /// does not duplicate it.
     async fn successive_turns_get_distinct_owners() {
         with_harness(
@@ -5550,7 +5556,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn cancel_targets_inflight_turn_after_midturn_new_session() {
+    async fn active_turn_sessions_inflight_turn_after_midturn_new_session() {
         // cyril-84ca cancel-retarget fence: the command loop is now free during a
         // turn, so a mid-turn NewSession retargets `active_session_id` to the new
         // session (S2) while the in-flight turn still runs on S1. A subsequent

@@ -213,7 +213,7 @@ impl TurnMediator {
     /// to mid-turn `active_session_id` retargeting (cyril-84ca / ADR-0004).
     /// `None` when no turn is in flight; the loop falls back to
     /// `active_session_id` there.
-    pub(crate) fn cancel_target(&self) -> Option<&SessionId> {
+    pub(crate) fn active_turn_session(&self) -> Option<&SessionId> {
         self.active.as_ref().map(|t| &t.session)
     }
 
@@ -497,7 +497,7 @@ mod tests {
         );
         assert_eq!(m.observe(&stamped(0)), Disposition::ForwardTurnComplete);
         assert_eq!(
-            m.cancel_target(),
+            m.active_turn_session(),
             None,
             "released turn leaves no cancel target"
         );
@@ -514,7 +514,7 @@ mod tests {
         );
         assert!(m.is_busy(), "the stale duplicate must not release turn#1");
         assert_eq!(
-            m.cancel_target(),
+            m.active_turn_session(),
             Some(&sid("b")),
             "cancel still targets the live turn's own session"
         );
@@ -771,13 +771,13 @@ mod tests {
     /// half of the snapshot cell lands with `observe()` in slice 4's matrix —
     /// release does not exist yet in this slice.)
     #[test]
-    fn cancel_target_is_dispatch_snapshot() {
+    fn active_turn_session_is_dispatch_snapshot() {
         let mut m = TurnMediator::new();
-        assert_eq!(m.cancel_target(), None);
+        assert_eq!(m.active_turn_session(), None);
         assert_eq!(
             m.begin_turn(sid("s1"), true),
             BeginTurn::Accepted(TurnId::new(0))
         );
-        assert_eq!(m.cancel_target(), Some(&sid("s1")));
+        assert_eq!(m.active_turn_session(), Some(&sid("s1")));
     }
 }
