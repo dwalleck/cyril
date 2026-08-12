@@ -72,14 +72,26 @@ impl BridgeHandle {
     /// no silently-wrong output for a runtime check to catch.
     #[doc(hidden)]
     pub fn for_tests() -> Self {
-        let (command_tx, _command_rx) = mpsc::channel(COMMAND_CAPACITY);
+        Self::for_tests_with_command_rx().0
+    }
+
+    /// Like [`BridgeHandle::for_tests`], but hands back the command receiver so
+    /// a test can assert which `BridgeCommand`s the App dispatched (and so
+    /// sends succeed instead of failing on a dropped channel). Same
+    /// enforcement posture as `for_tests` — test-support only.
+    #[doc(hidden)]
+    pub fn for_tests_with_command_rx() -> (Self, mpsc::Receiver<BridgeCommand>) {
+        let (command_tx, command_rx) = mpsc::channel(COMMAND_CAPACITY);
         let (_notification_tx, notification_rx) = mpsc::channel(NOTIFICATION_CAPACITY);
         let (_permission_tx, permission_rx) = mpsc::channel(PERMISSION_CAPACITY);
-        Self {
-            command_tx,
-            notification_rx,
-            permission_rx,
-        }
+        (
+            Self {
+                command_tx,
+                notification_rx,
+                permission_rx,
+            },
+            command_rx,
+        )
     }
 
     /// Split into individual receivers and a sender, for use in `tokio::select!`
