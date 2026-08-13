@@ -984,6 +984,12 @@ fn map_workflow_reply(
 /// request. Pure so the request contract is testable: `list` and
 /// `listRecipes` always carry explicit `workspacePaths` — omitting them is
 /// a live `-32603 "workspacePaths is not iterable"` (cyril-0qe6 C2).
+///
+/// Method names are the CRATE-facing spelling, without the leading
+/// underscore: the acp crate prefixes `_` onto outbound extension methods
+/// (same contract as `kas::hooks::LIST_METHOD`). Passing `_kiro/…` here
+/// reaches the agent as `__kiro/…` and fails its persistence
+/// classification — caught live in the cyril-0qe6 AC sweep.
 #[cfg(feature = "kas")]
 fn workflow_op_request(
     session_id: &crate::types::SessionId,
@@ -993,33 +999,33 @@ fn workflow_op_request(
     use crate::types::WorkflowOp as Op;
     match op {
         Op::ListRecipes => (
-            "_kiro/workflow/listRecipes",
+            "kiro/workflow/listRecipes",
             serde_json::json!({
                 "sessionId": session_id.as_str(),
                 "workspacePaths": workspace_paths,
             }),
         ),
         Op::ListRuns => (
-            "_kiro/workflow/list",
+            "kiro/workflow/list",
             serde_json::json!({
                 "sessionId": session_id.as_str(),
                 "workspacePaths": workspace_paths,
             }),
         ),
         Op::Attach { id } | Op::Status { id } => (
-            "_kiro/workflow/inspect",
+            "kiro/workflow/inspect",
             serde_json::json!({ "workflowId": id.as_str() }),
         ),
         Op::Cancel { id } => (
-            "_kiro/workflow/cancel",
+            "kiro/workflow/cancel",
             serde_json::json!({ "workflowId": id.as_str() }),
         ),
         Op::Resume { id } => (
-            "_kiro/workflow/resume",
+            "kiro/workflow/resume",
             serde_json::json!({ "workflowId": id.as_str() }),
         ),
         Op::Run { target, inputs } => (
-            "_kiro/workflow/new",
+            "kiro/workflow/new",
             serde_json::json!({
                 "workflowPath": target.as_workflow_path(),
                 "inputs": inputs,
@@ -1107,7 +1113,7 @@ async fn handle_workflow_command(
                 return true;
             }
             let params = serde_json::json!({ "workflowId": workflow_id.as_str() });
-            match workflow_ext(conn, operation, "_kiro/workflow/invoke", &params).await {
+            match workflow_ext(conn, operation, "kiro/workflow/invoke", &params).await {
                 Ok(_body) => WorkflowOpReply {
                     snapshot: None,
                     outcome: Outcome::Launched { workflow_id, name },
@@ -6099,14 +6105,14 @@ mod tests {
                 inputs,
             };
             let (method, params) = workflow_op_request(&session, &roots, &run);
-            assert_eq!(method, "_kiro/workflow/new");
+            assert_eq!(method, "kiro/workflow/new");
             assert_eq!(params["workflowPath"], "bundled://ralph");
             assert_eq!(params["inputs"]["k"], "v");
             assert_eq!(params["parentSessionId"], "sess_x");
 
             let (method, params) =
                 workflow_op_request(&session, &roots, &Op::Attach { id: wid("wf_1") });
-            assert_eq!(method, "_kiro/workflow/inspect");
+            assert_eq!(method, "kiro/workflow/inspect");
             assert_eq!(params["workflowId"], "wf_1");
         }
 
