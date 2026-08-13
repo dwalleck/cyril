@@ -1,5 +1,13 @@
 # cyril-0qe6 — probe findings (2026-08-11, kiro-cli 2.16.2 / KAS)
 
+> **2.18.0 revalidation (2026-08-13):** the installed binary moved 2.16.2 →
+> 2.18.0 mid-pipeline; both light probes re-run before building. Identical on
+> every observed axis — gate-off routing (`workflowsEnabled=false`), cancel
+> reply `{ok, previousStatus}`, `aborted` after cancel, paused-after-tree-kill,
+> instant dead-owner resume, late-attach lifecycle stream, and the four-file
+> run directory. Captures: `logs/kas-workflow-cancel-gateoff-2.18.0.jsonl`,
+> `logs/kas-workflow-reattach2-2.18.0.jsonl`.
+
 Two live probes + bundle carving, closing the gaps the issue flagged: the
 run-persistence semantics behind reattach-on-demand (the 2.16.2
 `run-disk-operations.ts` hazard note) and the response shapes the command
