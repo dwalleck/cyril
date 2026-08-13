@@ -146,6 +146,11 @@ enum WorkflowAdapterError {
         "run completion workflow id `{outer}` does not match final snapshot workflow id `{final_id}`"
     )]
     SnapshotWorkflowMismatch { outer: String, final_id: String },
+    // Staged (#[cfg(test)]) until its first production consumer — the
+    // bridge's workflow command ops — lands and un-gates the reply path.
+    #[cfg(test)]
+    #[error("reply workflow id `{outer}` does not match its state's workflow id `{inner}`")]
+    ReplyWorkflowMismatch { outer: String, inner: String },
     #[error(transparent)]
     CompletionMismatch(#[from] WorkflowCompletionMismatchError),
 }
@@ -157,6 +162,8 @@ impl WorkflowAdapterError {
             Self::InvalidWorkflowId { field, .. } | Self::InvalidNodeId { field, .. } => field,
             Self::InvalidNodePath(_) => "nodePath",
             Self::SnapshotWorkflowMismatch { .. } => "finalState.workflowId",
+            #[cfg(test)]
+            Self::ReplyWorkflowMismatch { .. } => "state.workflowId",
             Self::CompletionMismatch(WorkflowCompletionMismatchError::Status { .. }) => "status",
             Self::CompletionMismatch(WorkflowCompletionMismatchError::WorkflowId { .. }) => {
                 "finalState.workflowId"
@@ -171,6 +178,8 @@ impl WorkflowAdapterError {
             | Self::InvalidNodeId { .. }
             | Self::InvalidNodePath(_)
             | Self::SnapshotWorkflowMismatch { .. } => WorkflowErrorKind::InvalidValue,
+            #[cfg(test)]
+            Self::ReplyWorkflowMismatch { .. } => WorkflowErrorKind::InvalidValue,
             Self::CompletionMismatch(WorkflowCompletionMismatchError::Status { .. }) => {
                 WorkflowErrorKind::StatusMismatch
             }
@@ -200,6 +209,19 @@ struct WireRunCompleted {
     final_state: WireSnapshot,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+}
+
+/// Reply of `_kiro/workflow/inspect` (field `state`) or `_kiro/workflow/new`
+/// (field `initialState`). Extra reply members (`nodePlan`; `stepSessions`
+/// on ≤2.16.2, dropped by 2.18.0) are deliberately ignored — only the
+/// snapshot seeds the tracker.
+#[cfg(test)]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireStateReply {
+    workflow_id: String,
+    #[serde(alias = "initialState")]
+    state: WireSnapshot,
 }
 
 #[derive(Deserialize)]
@@ -462,6 +484,52 @@ pub(crate) fn to_notification(method: &str, params: &serde_json::Value) -> Workf
             WorkflowFrameOutcome::Dropped
         }
     }
+}
+
+/// Error from parsing a `_kiro/workflow/*` request reply.
+///
+/// Distinct from lifecycle-notification handling on purpose: a malformed
+/// notification warns-and-drops (the stream continues), but a reply the
+/// client explicitly asked for must surface its failure to the user — the
+/// bridge folds this into a `Failed` command outcome, never silence.
+#[cfg(test)]
+#[derive(Debug, thiserror::Error)]
+#[error("{message} (at {field_path})")]
+pub(crate) struct WorkflowReplyError {
+    field_path: String,
+    message: String,
+}
+
+#[cfg(test)]
+impl From<WorkflowAdapterError> for WorkflowReplyError {
+    fn from(error: WorkflowAdapterError) -> Self {
+        Self {
+            field_path: error.field_path().to_owned(),
+            message: error.to_string(),
+        }
+    }
+}
+
+/// Parses the reply of `_kiro/workflow/inspect` (`{workflowId, state}`) or
+/// `_kiro/workflow/new` (`{workflowId, initialState}`) into the run's
+/// snapshot.
+///
+/// The outer `workflowId` must match the snapshot's own — a mismatched
+/// reply errors rather than silently trusting either id.
+#[cfg(test)]
+pub(crate) fn parse_state_reply(
+    reply: &serde_json::Value,
+) -> Result<WorkflowSnapshot, WorkflowReplyError> {
+    let wire: WireStateReply = deserialize(reply)?;
+    let snapshot = wire.state.try_into_domain()?;
+    if snapshot.workflow_id().as_str() != wire.workflow_id {
+        return Err(WorkflowAdapterError::ReplyWorkflowMismatch {
+            outer: wire.workflow_id,
+            inner: snapshot.workflow_id().as_str().to_owned(),
+        }
+        .into());
+    }
+    Ok(snapshot)
 }
 
 fn parse_run_started(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
@@ -5105,5 +5173,71 @@ mod tests {
             .map(snapshot_depth)
             .max()
             .unwrap_or(0)
+    }
+
+    // ---- request-reply parsing (cyril-0qe6 C4) --------------------------
+
+    const INSPECT_REPLY_2180: &str =
+        include_str!("../../../../tests/fixtures/kas/workflow/inspect-reply-2.18.0.json");
+    const NEW_REPLY_2180: &str =
+        include_str!("../../../../tests/fixtures/kas/workflow/new-reply-2.18.0.json");
+
+    fn fixture_value(raw: &str) -> serde_json::Value {
+        must_succeed(serde_json::from_str(raw), "fixture is valid JSON")
+    }
+
+    #[test]
+    fn state_reply_parses_live_inspect_fixture() {
+        let snapshot = must_succeed(
+            parse_state_reply(&fixture_value(INSPECT_REPLY_2180)),
+            "live inspect reply",
+        );
+        assert_eq!(snapshot.workflow_name(), "cyril-reattach2");
+        assert_eq!(snapshot.status(), WorkflowRunStatus::Completed);
+        assert_eq!(snapshot.root().children().len(), 1);
+    }
+
+    #[test]
+    fn state_reply_parses_live_new_fixture_via_initial_state_alias() {
+        let snapshot = must_succeed(
+            parse_state_reply(&fixture_value(NEW_REPLY_2180)),
+            "live new reply",
+        );
+        assert_eq!(snapshot.workflow_name(), "cyril-reattach2");
+        assert_eq!(snapshot.status(), WorkflowRunStatus::Running);
+    }
+
+    #[test]
+    fn state_reply_rejects_workflow_id_mismatch() {
+        let mut reply = fixture_value(INSPECT_REPLY_2180);
+        reply["workflowId"] = serde_json::Value::String("wf_other".into());
+        let error = parse_state_reply(&reply).map(|snapshot| snapshot.status());
+        let Err(error) = error else {
+            panic!("mismatched ids must not parse, got {error:?}");
+        };
+        assert!(
+            error.to_string().contains("does not match"),
+            "error must name the mismatch: {error}"
+        );
+    }
+
+    #[test]
+    fn state_reply_rejects_missing_root() {
+        let mut reply = fixture_value(INSPECT_REPLY_2180);
+        let state = must_succeed(
+            reply["state"]
+                .as_object_mut()
+                .ok_or("state must be an object"),
+            "state object",
+        );
+        state.remove("root");
+        let error = parse_state_reply(&reply).map(|snapshot| snapshot.status());
+        let Err(error) = error else {
+            panic!("a reply without state.root must not parse, got {error:?}");
+        };
+        assert!(
+            error.to_string().contains("root"),
+            "error must name the missing field: {error}"
+        );
     }
 }

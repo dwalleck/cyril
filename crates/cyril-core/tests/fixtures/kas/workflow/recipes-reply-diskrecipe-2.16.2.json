@@ -1,0 +1,320 @@
+{
+ "recipes": [
+  {
+   "name": "cyril-disk-probe",
+   "source": "/home/dwalleck/.claude/tmp/kas-wfdisk-rjmklmbs/.kiro/workflows/cyril-disk-probe.workflow.json",
+   "builtIn": false,
+   "description": "One-step recipe loaded from disk; created but never invoked.",
+   "inputs": {
+    "task": "prompt"
+   },
+   "plan": [
+    {
+     "nodeId": "only",
+     "type": "step",
+     "agentName": "wf-coder"
+    }
+   ]
+  },
+  {
+   "name": "autoresearch",
+   "description": "Repeatedly proposes and applies one experiment at a time, runs the benchmark, and keeps changes only when they beat the current best result.",
+   "source": "bundled://autoresearch",
+   "inputs": {
+    "benchmark_path": "string",
+    "research_directions": "string"
+   },
+   "plan": [
+    {
+     "nodeId": "experiments",
+     "type": "repeat",
+     "steps": [
+      {
+       "nodeId": "experiment",
+       "type": "step",
+       "agentName": "wf-auto-researcher"
+      }
+     ],
+     "maxIterations": 1000,
+     "onMaxIterations": "pause"
+    }
+   ],
+   "builtIn": true
+  },
+  {
+   "name": "feature-pipeline",
+   "description": "Full feature pipeline following the Roki multi-phase pattern: single-pass requirements, a design loop with a dedicated design reviewer, an implementation plan, a code loop with two-model semantic review plus aggregation, and a requirements-based validation gate. The loops and the validation gate are fail-closed: exhausting a review loop without an APPROVED verdict, or a FAIL/missing validation verdict, aborts the run instead of completing it. Does not use Kiro spec sessions \u2014 plain workflow steps. Every referenced agent is bundled (wf-design, wf-design-reviewer, wf-planner, wf-coder, semantic_reviewer, wf-review-aggregator), so this recipe is runnable in any workspace. Inputs: 'task' (the feature request) and 'workdir' (absolute path of the repo to work in; if empty the setup step falls back to the current workspace root). A leading setup step creates a fresh timestamped run folder, so artifacts are written under <workdir>/.agents/pipeline/<yyyy-mm-dd_HH-MM-SS>/ \u2014 one isolated folder per run, so no stale files from a previous run bias a reviewer or make the first draft look like a revision.",
+   "source": "bundled://feature-pipeline",
+   "inputs": {
+    "task": "prompt",
+    "workdir": "string"
+   },
+   "plan": [
+    {
+     "nodeId": "setup",
+     "type": "step",
+     "agentName": "wf-coder",
+     "effortLevel": "low"
+    },
+    {
+     "nodeId": "requirements",
+     "type": "step",
+     "agentName": "wf-design"
+    },
+    {
+     "nodeId": "design-loop",
+     "type": "repeat",
+     "steps": [
+      {
+       "nodeId": "design-draft",
+       "type": "step",
+       "agentName": "wf-design"
+      },
+      {
+       "nodeId": "design-review",
+       "type": "step",
+       "agentName": "wf-design-reviewer"
+      }
+     ],
+     "maxIterations": 3,
+     "onMaxIterations": "abort",
+     "stopCondition": {
+      "fileCheck": {
+       "path": "{{setup.output}}/design-review.json",
+       "jsonPath": "verdict",
+       "value": "APPROVED"
+      }
+     }
+    },
+    {
+     "nodeId": "plan",
+     "type": "step",
+     "agentName": "wf-planner"
+    },
+    {
+     "nodeId": "code-loop",
+     "type": "repeat",
+     "steps": [
+      {
+       "nodeId": "implement",
+       "type": "step",
+       "agentName": "wf-coder"
+      },
+      {
+       "nodeId": "code-reviews",
+       "type": "parallel",
+       "branches": [
+        {
+         "nodeId": "review-fable",
+         "type": "step",
+         "agentName": "semantic_reviewer",
+         "modelId": "claude-fable-5",
+         "effortLevel": "xhigh"
+        },
+        {
+         "nodeId": "review-gpt",
+         "type": "step",
+         "agentName": "semantic_reviewer",
+         "modelId": "gpt-5.6-sol",
+         "effortLevel": "xhigh"
+        }
+       ]
+      },
+      {
+       "nodeId": "code-aggregate",
+       "type": "step",
+       "agentName": "wf-review-aggregator"
+      }
+     ],
+     "maxIterations": 3,
+     "onMaxIterations": "abort",
+     "stopCondition": {
+      "fileCheck": {
+       "path": "{{setup.output}}/code-review.json",
+       "jsonPath": "verdict",
+       "value": "APPROVED"
+      }
+     }
+    },
+    {
+     "nodeId": "validate-gate",
+     "type": "repeat",
+     "steps": [
+      {
+       "nodeId": "validate",
+       "type": "step",
+       "agentName": "wf-coder"
+      }
+     ],
+     "maxIterations": 1,
+     "onMaxIterations": "abort",
+     "stopCondition": {
+      "fileCheck": {
+       "path": "{{setup.output}}/validation.json",
+       "jsonPath": "verdict",
+       "value": "PASS"
+      }
+     }
+    }
+   ],
+   "builtIn": true
+  },
+  {
+   "name": "goal",
+   "description": "Iterative agent loop working toward a user-defined goal until verified complete or iteration budget exhausted. Suits a single verifiable outcome (e.g. 'make the test suite pass') where the agent self-declares success backed by concrete evidence; there is no external progress state, so each iteration re-derives progress from the repo itself.",
+   "source": "bundled://goal",
+   "inputs": {
+    "prompt": "prompt",
+    "max_iterations": "string"
+   },
+   "plan": [
+    {
+     "nodeId": "goal-loop",
+     "type": "repeat",
+     "steps": [
+      {
+       "nodeId": "work",
+       "type": "step",
+       "agentName": "wf-coder"
+      }
+     ],
+     "maxIterations": 200,
+     "onMaxIterations": "pause",
+     "stopCondition": {
+      "completionSignal": "success"
+     }
+    }
+   ],
+   "builtIn": true
+  },
+  {
+   "name": "investigate",
+   "description": "Single-step read-only investigation. The orchestrator supplies a self-contained brief; a planner agent investigates and writes a findings report.",
+   "source": "bundled://investigate",
+   "inputs": {
+    "brief": "prompt",
+    "report_path": "file"
+   },
+   "plan": [
+    {
+     "nodeId": "investigate",
+     "type": "step",
+     "agentName": "wf-planner"
+    }
+   ],
+   "builtIn": true
+  },
+  {
+   "name": "publish-pr",
+   "description": "Opens a pull request from a branch, then watches it and responds to incoming feedback until the PR reaches a terminal state.",
+   "source": "bundled://publish-pr",
+   "inputs": {
+    "branch": "string"
+   },
+   "plan": [
+    {
+     "nodeId": "submit",
+     "type": "step",
+     "agentName": "wf-pr-submitter"
+    },
+    {
+     "nodeId": "pr-loop",
+     "type": "repeat",
+     "steps": [
+      {
+       "nodeId": "wait",
+       "type": "watch",
+       "agentName": "github-pr"
+      },
+      {
+       "nodeId": "respond",
+       "type": "step",
+       "agentName": "wf-pr-responder"
+      }
+     ],
+     "maxIterations": 200,
+     "onMaxIterations": "pause",
+     "stopWhen": "wait.terminal"
+    }
+   ],
+   "builtIn": true
+  },
+  {
+   "name": "ralph",
+   "description": "Loops a single coding agent against a goal, working through a JSON checklist one item at a time until every item is done. Suits decomposable work driven by a JSON checklist file: progress is durable and human-inspectable mid-run. For a single non-decomposable outcome, use the goal recipe instead.",
+   "source": "bundled://ralph",
+   "inputs": {
+    "goal": "prompt",
+    "prd_path": "file"
+   },
+   "plan": [
+    {
+     "nodeId": "ralph-loop",
+     "type": "repeat",
+     "steps": [
+      {
+       "nodeId": "iterate",
+       "type": "step",
+       "agentName": "wf-coder"
+      }
+     ],
+     "maxIterations": 200,
+     "onMaxIterations": "pause",
+     "stopCondition": {
+      "fileCheck": {
+       "path": "{{prd_path}}",
+       "jsonPath": "complete",
+       "value": true
+      }
+     }
+    }
+   ],
+   "builtIn": true
+  },
+  {
+   "name": "semantic-review-multi-model",
+   "description": "Reviews a change with two independent semantic reviewers in parallel on different models (Claude Fable 5 and GPT 5.6 Sol, both at xhigh effort), each writing its own review without seeing the other's to avoid bias, then a wf-coder aggregator (Claude Fable 5, xhigh) merges the two into a single issues-only final report grouped by Severity and sorted highest-to-lowest by combined importance/confidence (each issue: User impact / Issue / Recommendation, deduped across reviewers). A leading setup step creates a fresh timestamped run folder so every run is isolated (no overwrites, and no stale files from a previous run to bias a reviewer or the aggregator); the timestamp is generated once and shared with all steps via captured output. Inputs: 'target' (what to review: a GitHub PR URL or owner/repo#N, a CRUX/Amazon code-review link or CR-id, or a local git branch name / 'uncommitted' / 'staged') and 'workdir' (absolute path of the repo/workspace to review in and the anchor for output files; if empty the setup step falls back to the current workspace root). Artifacts are written under <workdir>/.agents/reviews/semantic-review-multi-model/<yyyy-mm-dd_HH-MM-SS>/ (review-fable-5.md, review-gpt-5.6-sol.md, final-report.md). Each reviewer self-checks that it actually has the semantic_reviewer process/format loaded and pauses via send_message('warning') if not. The semantic_reviewer and wf-coder agents are bundled, so this recipe is runnable in any workspace.",
+   "source": "bundled://semantic-review-multi-model",
+   "inputs": {
+    "target": "prompt",
+    "workdir": "string"
+   },
+   "plan": [
+    {
+     "nodeId": "setup",
+     "type": "step",
+     "agentName": "wf-coder",
+     "effortLevel": "low"
+    },
+    {
+     "nodeId": "reviews",
+     "type": "parallel",
+     "branches": [
+      {
+       "nodeId": "review-fable",
+       "type": "step",
+       "agentName": "semantic_reviewer",
+       "modelId": "claude-fable-5",
+       "effortLevel": "xhigh"
+      },
+      {
+       "nodeId": "review-gpt",
+       "type": "step",
+       "agentName": "semantic_reviewer",
+       "modelId": "gpt-5.6-sol",
+       "effortLevel": "xhigh"
+      }
+     ]
+    },
+    {
+     "nodeId": "aggregate",
+     "type": "step",
+     "agentName": "wf-coder",
+     "modelId": "claude-fable-5",
+     "effortLevel": "xhigh"
+    }
+   ],
+   "builtIn": true
+  }
+ ]
+}
