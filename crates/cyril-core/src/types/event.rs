@@ -340,6 +340,16 @@ pub enum Notification {
     TurnCompleted {
         stop_reason: StopReason,
     },
+    /// The active turn has gone quiet past the stall threshold with no
+    /// host-side work outstanding (cyril-14ou; CONTEXT.md "Stalled turn").
+    /// Information, never a terminal: the turn is still live and can complete
+    /// minutes later (a captured stall finished after 16), so this must not
+    /// release the busy guard — the mediator forwards it untouched. Emitted at
+    /// most once per quiet period, scoped to the stalled turn's session.
+    TurnStalled {
+        /// How long the turn had been quiet when the signal fired.
+        quiet: std::time::Duration,
+    },
     BridgeDisconnected {
         reason: String,
     },

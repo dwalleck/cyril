@@ -115,7 +115,7 @@ Kiro binaries, tui.js bundles, and strings dumps live **outside the repo** at `~
 └── strings/<ver>/       # *.strings dumps for old versions
 ```
 
-Why outside: binaries are 3.3 GB across versions and reproducible from the versioned S3 origin (`https://desktop-release.q.us-east-1.amazonaws.com/<ver>/kirocli-<arch>-linux.tar.zst`). `.gitignore` blocks `docs/kiro-binaries-*/` and `docs/kiro-tui-*.js*` to prevent accidental git addition.
+Why outside: binaries are 3.3 GB across versions and reproducible from the versioned S3 origin (`https://desktop-release.q.us-east-1.amazonaws.com/<ver>/kirocli-<arch>-linux.tar.zst`; ≥2.17.0 serves `.tar.xz` — check the manifest for the actual filename). `.gitignore` blocks `docs/kiro-binaries-*/` and `docs/kiro-tui-*.js*` to prevent accidental git addition.
 
 Small derived items (manual ACP captures, extracted system prompts, changelogs, schemas) stay in `docs/kiro-*` since they're version-controlled-friendly and load-bearing for tooling like `experiments/conductor-spike/diff_fields.py`.
 

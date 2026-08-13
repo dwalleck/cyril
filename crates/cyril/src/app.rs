@@ -888,6 +888,12 @@ impl App {
                     self.bridge_sender
                         .send(BridgeCommand::CancelRequest)
                         .await?;
+                    // Stalled-turn escalation (cyril-14ou): if the stall chip
+                    // is up, record that this cancel went out — the engine may
+                    // not honor a cancel mid-stall (cyril-w9oi is the second
+                    // tier), and the chip wording should say so. No-op when
+                    // no stall is displayed.
+                    self.ui_state.mark_stall_cancel_sent();
                 }
             }
             _ => {
@@ -2104,6 +2110,93 @@ mod tests {
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
         )
+    }
+
+    /// Like `test_app`, but keeps the command receiver so a test can assert
+    /// which `BridgeCommand`s a key dispatched.
+    fn test_app_with_command_rx() -> (App, tokio::sync::mpsc::Receiver<BridgeCommand>) {
+        let (handle, rx) = BridgeHandle::for_tests_with_command_rx();
+        (
+            App::new(
+                handle,
+                &config::UiConfig::default(),
+                PathBuf::from("/tmp"),
+                cyril_core::commands::HooksCommandSource::Agent,
+                cyril_core::commands::WorkflowCommandSource::None,
+            ),
+            rx,
+        )
+    }
+
+    /// cyril-14ou C9 (plumbing half; the live half — engine honors the cancel
+    /// — passed at design time, archived in .cyril-14ou/findings.md). Four
+    /// arms: Esc during a stalled busy turn sends CancelRequest AND escalates
+    /// the chip; Esc while busy-but-not-stalled cancels without touching stall
+    /// state; Esc while the approval overlay owns input does neither (the
+    /// key-layer priority holds). Buggy implementations these fail under:
+    /// unconditional cancel-sent marking, marking wired before the busy guard,
+    /// Esc bypassing the overlay layer.
+    #[tokio::test]
+    async fn esc_marks_cancel_sent_during_stall() {
+        use cyril_ui::traits::Activity;
+        let stalled = Notification::TurnStalled {
+            quiet: std::time::Duration::from_secs(31),
+        };
+
+        // Arm 1: stalled busy turn — cancel goes out, chip escalates.
+        let (mut app, mut rx) = test_app_with_command_rx();
+        app.session.set_status(SessionStatus::Busy);
+        app.ui_state.set_activity(Activity::Streaming);
+        assert!(app.ui_state.apply_notification(&stalled));
+        app.handle_key(key(KeyCode::Esc)).await.expect("esc");
+        assert!(
+            matches!(rx.try_recv(), Ok(BridgeCommand::CancelRequest)),
+            "Esc while busy must dispatch CancelRequest"
+        );
+        assert_eq!(
+            app.ui_state.stall().map(|s| s.cancel_sent),
+            Some(true),
+            "stall chip must escalate to cancel-sent"
+        );
+
+        // Arm 2: busy but not stalled — cancel only, stall stays absent.
+        let (mut app, mut rx) = test_app_with_command_rx();
+        app.session.set_status(SessionStatus::Busy);
+        app.ui_state.set_activity(Activity::Streaming);
+        app.handle_key(key(KeyCode::Esc)).await.expect("esc");
+        assert!(matches!(rx.try_recv(), Ok(BridgeCommand::CancelRequest)));
+        assert!(app.ui_state.stall().is_none(), "no chip to escalate");
+
+        // Arm 3: approval overlay owns input — no cancel, no escalation.
+        let (mut app, mut rx) = test_app_with_command_rx();
+        app.session.set_status(SessionStatus::Busy);
+        app.ui_state.set_activity(Activity::Streaming);
+        assert!(app.ui_state.apply_notification(&stalled));
+        let (request, _responder_rx) = trust_request("main");
+        app.ui_state.show_approval(request);
+        app.handle_key(key(KeyCode::Esc)).await.expect("esc");
+        assert!(
+            rx.try_recv().is_err(),
+            "the overlay consumed Esc; no CancelRequest may go out"
+        );
+        assert_eq!(
+            app.ui_state.stall().map(|s| s.cancel_sent),
+            Some(false),
+            "no escalation while the overlay owns input"
+        );
+
+        // Arm 4: not busy — no cancel goes out, so nothing may escalate even
+        // with a (stale) chip up. Catches marking wired outside the busy guard.
+        let (mut app, mut rx) = test_app_with_command_rx();
+        app.ui_state.set_activity(Activity::Streaming);
+        assert!(app.ui_state.apply_notification(&stalled));
+        app.handle_key(key(KeyCode::Esc)).await.expect("esc");
+        assert!(rx.try_recv().is_err(), "not busy: no CancelRequest");
+        assert_eq!(
+            app.ui_state.stall().map(|s| s.cancel_sent),
+            Some(false),
+            "no cancel sent means no escalation"
+        );
     }
 
     fn trust_request(

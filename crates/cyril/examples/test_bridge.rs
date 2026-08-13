@@ -368,6 +368,9 @@ fn print_notification(n: &Notification) {
         Notification::TurnCompleted { .. } => {
             println!("  [TurnCompleted]");
         }
+        Notification::TurnStalled { quiet } => {
+            println!("  [TurnStalled] quiet for {}s", quiet.as_secs());
+        }
         Notification::Workflow(event) => {
             println!("  [Workflow] {}", event.method_name());
         }
