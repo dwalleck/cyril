@@ -13,6 +13,42 @@ use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
 
 pub(crate) mod workflow;
 
+/// The four command names `resolveWorkflows()` registers when the workflow
+/// gate is on. Cyril never sets the gate (ADR-0011), but a backend feature
+/// flip could still advertise them — and they dispatch to
+/// `kiro.dev/commands/execute`, a v2-only method KAS lacks (cyril-oieu), so
+/// offering them is offering a dead end. Exact names only: prefix-matching
+/// would eat legitimate names like `workflow-creator`.
+const GATE_WORKFLOW_COMMANDS: [&str; 4] = [
+    "workflow-run",
+    "workflow-status",
+    "workflow-cancel",
+    "workflow-resume",
+];
+
+/// Drops the gate-advertised workflow commands from a KAS commands update
+/// (cyril-0qe6 C8); every other notification passes through untouched.
+pub(crate) fn suppress_workflow_gate_commands(notification: Notification) -> Notification {
+    let Notification::CommandsUpdated {
+        mut commands,
+        prompts,
+    } = notification
+    else {
+        return notification;
+    };
+    commands.retain(|command| {
+        let suppress = GATE_WORKFLOW_COMMANDS.contains(&command.name());
+        if suppress {
+            tracing::debug!(
+                command = command.name(),
+                "suppressing gate-advertised workflow command (ADR-0011: cyril owns the control plane)"
+            );
+        }
+        !suppress
+    });
+    Notification::CommandsUpdated { commands, prompts }
+}
+
 /// Outcome of offering an extension method to the KAS workflow adapter.
 #[derive(Debug)]
 pub(crate) enum WorkflowFrameOutcome {
@@ -621,6 +657,52 @@ mod tests {
     /// finding 2): a recognized workflow method with a malformed payload must
     /// reach the client as `Ok(None)` — never `Err`, which would route into
     /// the client's malformed-extension error path and poison the stream.
+    /// cyril-0qe6 C8: exactly the four gate-advertised workflow commands are
+    /// suppressed — the buggy implementations are no filter at all, and a
+    /// prefix match that eats `workflow-creator`-style names.
+    #[test]
+    fn gate_workflow_commands_suppressed_exactly() {
+        let info = |name: &str| {
+            crate::types::CommandInfo::new(name, name, None::<String>, false, false, false)
+        };
+        let update = Notification::CommandsUpdated {
+            commands: vec![
+                info("workflow-run"),
+                info("workflow-status"),
+                info("workflow-cancel"),
+                info("workflow-resume"),
+                info("workflow-creator"),
+                info("steer"),
+                info("wörkflöw"),
+            ],
+            prompts: Vec::new(),
+        };
+        let Notification::CommandsUpdated { commands, .. } =
+            suppress_workflow_gate_commands(update)
+        else {
+            panic!("variant must be preserved");
+        };
+        let names: Vec<&str> = commands.iter().map(|command| command.name()).collect();
+        assert_eq!(
+            names,
+            vec!["workflow-creator", "steer", "wörkflöw"],
+            "exact-name suppression only — order and other entries preserved"
+        );
+
+        // Identity on an empty update and on non-command notifications.
+        let empty = suppress_workflow_gate_commands(Notification::CommandsUpdated {
+            commands: Vec::new(),
+            prompts: Vec::new(),
+        });
+        assert!(
+            matches!(empty, Notification::CommandsUpdated { ref commands, .. } if commands.is_empty())
+        );
+        let other = suppress_workflow_gate_commands(Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert!(matches!(other, Notification::TurnCompleted { .. }));
+    }
+
     /// The adapter suite fences the adapter; this fences the engine match.
     #[test]
     fn kas_engine_drops_malformed_workflow_frame_to_ok_none() {

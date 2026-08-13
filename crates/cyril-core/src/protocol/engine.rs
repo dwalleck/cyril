@@ -303,7 +303,10 @@ impl Engine for KasEngine {
         if let acp::SessionUpdate::SessionInfoUpdate(siu) = &args.update {
             return convert::kas::session_info_to_notification(siu);
         }
+        // Gate-advertised workflow commands never reach autocomplete
+        // (cyril-0qe6 C8) — a KAS dialect quirk, filtered in the dialect.
         convert::session_update_to_notification(args)
+            .map(convert::kas::suppress_workflow_gate_commands)
     }
 
     fn convert_ext_notification(
