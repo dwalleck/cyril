@@ -166,10 +166,12 @@ pub fn parse_run_inputs<'token>(
 pub struct WorkflowRecipe {
     /// Recipe name (e.g. `ralph`, `autoresearch`).
     pub name: String,
-    /// One-line description shipped with the recipe.
-    pub description: String,
-    /// Where the recipe lives: absent for bundled recipes, the absolute
-    /// `.workflow.json` path for workspace recipes.
+    /// One-line description shipped with the recipe; `None` when the wire
+    /// omits it (absence is not an empty description).
+    pub description: Option<String>,
+    /// Where the recipe lives: `bundled://<name>` for bundled recipes, the
+    /// absolute `.workflow.json` path for workspace recipes (live-observed;
+    /// kept `Option` for wire tolerance).
     pub source: Option<String>,
 }
 

@@ -19,6 +19,10 @@ use crate::types::{
     WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome,
     WorkflowWatchPoll,
 };
+// Staged with the reply parsers (#[cfg(test)] until the bridge workflow ops
+// land in this PR and un-gate the whole reply path).
+#[cfg(test)]
+use crate::types::{WorkflowRecipe, WorkflowRunSummary};
 
 /// Distinguishes an absent optional field from a present non-null value.
 ///
@@ -530,6 +534,192 @@ pub(crate) fn parse_state_reply(
         .into());
     }
     Ok(snapshot)
+}
+
+/// One `_kiro/workflow/list` entry. Timestamps are genuinely optional on the
+/// wire: a never-invoked run has no `startedAt`, a non-terminal run has no
+/// `endedAt` (live-observed on 2.16.2 and 2.18.0).
+#[cfg(test)]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireRunListEntry {
+    workflow_id: String,
+    name: String,
+    status: WireEnum<WorkflowRunStatus>,
+    #[serde(default)]
+    created_at: OptionalField<String>,
+    #[serde(default)]
+    updated_at: OptionalField<String>,
+    #[serde(default)]
+    started_at: OptionalField<String>,
+    #[serde(default)]
+    ended_at: OptionalField<String>,
+    #[serde(default)]
+    parent_session_id: OptionalField<String>,
+}
+
+#[cfg(test)]
+impl WireRunListEntry {
+    fn try_into_domain(self) -> Result<WorkflowRunSummary, WorkflowAdapterError> {
+        Ok(WorkflowRunSummary {
+            workflow_id: workflow_id(self.workflow_id, "workflowId")?,
+            name: self.name,
+            status: self.status.0,
+            created_at: self.created_at.into_option(),
+            updated_at: self.updated_at.into_option(),
+            started_at: self.started_at.into_option(),
+            ended_at: self.ended_at.into_option(),
+            parent_session_id: self.parent_session_id.into_option().map(SessionId::new),
+        })
+    }
+}
+
+/// Parsed `_kiro/workflow/list` reply: the entries that parsed, plus one
+/// error per skipped entry (each already warned here — callers may surface
+/// the skip count but need not re-log).
+#[cfg(test)]
+pub(crate) struct WorkflowListing {
+    pub(crate) runs: Vec<WorkflowRunSummary>,
+    pub(crate) skipped: Vec<WorkflowReplyError>,
+}
+
+/// Parses `_kiro/workflow/list`. The outer `{runs: […]}` shape is required;
+/// entries are tolerant per-entry — one malformed entry (unknown status
+/// string, missing id) is warned and skipped without killing the listing.
+#[cfg(test)]
+pub(crate) fn parse_list_reply(
+    reply: &serde_json::Value,
+) -> Result<WorkflowListing, WorkflowReplyError> {
+    #[derive(Deserialize)]
+    struct WireListReply {
+        runs: Vec<serde_json::Value>,
+    }
+    let wire: WireListReply = deserialize(reply)?;
+    let mut runs = Vec::with_capacity(wire.runs.len());
+    let mut skipped = Vec::new();
+    for (index, entry) in wire.runs.iter().enumerate() {
+        match deserialize::<WireRunListEntry>(entry).and_then(WireRunListEntry::try_into_domain) {
+            Ok(summary) => runs.push(summary),
+            Err(error) => {
+                tracing::warn!(index, error = %error, "skipping malformed workflow list entry");
+                skipped.push(error.into());
+            }
+        }
+    }
+    Ok(WorkflowListing { runs, skipped })
+}
+
+/// One `listRecipes` entry. `builtIn`, `inputs`, and `plan` are deliberately
+/// ignored — the control plane needs identity and provenance only; recipe
+/// internals belong to the authoring surface (`kiro-workflow-authoring`).
+#[cfg(test)]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireRecipe {
+    name: String,
+    #[serde(default)]
+    description: OptionalField<String>,
+    #[serde(default)]
+    source: OptionalField<String>,
+}
+
+/// Parsed `listRecipes` reply, tolerant per-entry like [`parse_list_reply`].
+#[cfg(test)]
+pub(crate) struct WorkflowRecipeListing {
+    pub(crate) recipes: Vec<WorkflowRecipe>,
+    pub(crate) skipped: Vec<WorkflowReplyError>,
+}
+
+/// Parses `_kiro/workflow/listRecipes` (`{recipes: […]}`).
+#[cfg(test)]
+pub(crate) fn parse_recipes_reply(
+    reply: &serde_json::Value,
+) -> Result<WorkflowRecipeListing, WorkflowReplyError> {
+    #[derive(Deserialize)]
+    struct WireRecipesReply {
+        recipes: Vec<serde_json::Value>,
+    }
+    let wire: WireRecipesReply = deserialize(reply)?;
+    let mut recipes = Vec::with_capacity(wire.recipes.len());
+    let mut skipped = Vec::new();
+    for (index, entry) in wire.recipes.iter().enumerate() {
+        match deserialize::<WireRecipe>(entry) {
+            Ok(recipe) => recipes.push(WorkflowRecipe {
+                name: recipe.name,
+                description: recipe.description.into_option(),
+                source: recipe.source.into_option(),
+            }),
+            Err(error) => {
+                tracing::warn!(index, error = %error, "skipping malformed workflow recipe entry");
+                skipped.push(error.into());
+            }
+        }
+    }
+    Ok(WorkflowRecipeListing { recipes, skipped })
+}
+
+/// Parsed `_kiro/workflow/cancel` reply — `{ok, previousStatus}`, a
+/// deliberately different shape from invoke/resume's `{workflowId, status}`.
+#[cfg(test)]
+pub(crate) struct WorkflowCancelReply {
+    pub(crate) ok: bool,
+    pub(crate) previous_status: Option<WorkflowRunStatus>,
+}
+
+/// Parses `_kiro/workflow/cancel`. An unknown `previousStatus` string is
+/// warned and reported as unreported rather than failing the whole reply.
+#[cfg(test)]
+pub(crate) fn parse_cancel_reply(
+    reply: &serde_json::Value,
+) -> Result<WorkflowCancelReply, WorkflowReplyError> {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct WireCancelReply {
+        ok: bool,
+        #[serde(default)]
+        previous_status: OptionalField<String>,
+    }
+    let wire: WireCancelReply = deserialize(reply)?;
+    Ok(WorkflowCancelReply {
+        ok: wire.ok,
+        previous_status: lenient_run_status(wire.previous_status.into_option(), "cancel reply"),
+    })
+}
+
+/// Parses an `_kiro/workflow/invoke` or `resume` reply (`{workflowId,
+/// status}`). An unknown status string is warned and reported as unreported.
+#[cfg(test)]
+pub(crate) fn parse_run_status_reply(
+    reply: &serde_json::Value,
+) -> Result<(WorkflowId, Option<WorkflowRunStatus>), WorkflowReplyError> {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct WireRunStatusReply {
+        workflow_id: String,
+        #[serde(default)]
+        status: OptionalField<String>,
+    }
+    let wire: WireRunStatusReply = deserialize(reply)?;
+    let id = workflow_id(wire.workflow_id, "workflowId")?;
+    Ok((
+        id,
+        lenient_run_status(wire.status.into_option(), "run-status reply"),
+    ))
+}
+
+/// Maps a raw status string to the known vocabulary, warning (never
+/// failing) on a value outside it — replies stay useful across vendor
+/// status additions.
+#[cfg(test)]
+fn lenient_run_status(raw: Option<String>, context: &'static str) -> Option<WorkflowRunStatus> {
+    let raw = raw?;
+    match WorkflowRunStatus::try_from(raw.as_str()) {
+        Ok(status) => Some(status),
+        Err(error) => {
+            tracing::warn!(%error, context, "unknown workflow run status in reply");
+            None
+        }
+    }
 }
 
 fn parse_run_started(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
@@ -5219,6 +5409,158 @@ mod tests {
             error.to_string().contains("does not match"),
             "error must name the mismatch: {error}"
         );
+    }
+
+    const LIST_REPLY_2180: &str =
+        include_str!("../../../../tests/fixtures/kas/workflow/list-reply-2.18.0.json");
+    const LIST_REPLY_NEVER_INVOKED_2180: &str = include_str!(
+        "../../../../tests/fixtures/kas/workflow/list-reply-never-invoked-2.18.0.json"
+    );
+    const RECIPES_REPLY_2162: &str =
+        include_str!("../../../../tests/fixtures/kas/workflow/recipes-reply-2.16.2.json");
+    const RECIPES_REPLY_DISK_2162: &str = include_str!(
+        "../../../../tests/fixtures/kas/workflow/recipes-reply-diskrecipe-2.16.2.json"
+    );
+    const CANCEL_REPLY_2180: &str =
+        include_str!("../../../../tests/fixtures/kas/workflow/cancel-reply-2.18.0.json");
+
+    #[test]
+    fn list_reply_parses_live_completed_fixture() {
+        let listing = must_succeed(
+            parse_list_reply(&fixture_value(LIST_REPLY_2180)),
+            "live list reply",
+        );
+        assert_eq!(listing.runs.len(), 1);
+        assert!(listing.skipped.is_empty());
+        let run = &listing.runs[0];
+        assert_eq!(run.status, WorkflowRunStatus::Completed);
+        assert!(run.started_at.is_some(), "invoked run carries startedAt");
+        assert!(run.ended_at.is_some(), "terminal run carries endedAt");
+    }
+
+    #[test]
+    fn list_reply_never_invoked_entry_has_no_started_at() {
+        let listing = must_succeed(
+            parse_list_reply(&fixture_value(LIST_REPLY_NEVER_INVOKED_2180)),
+            "live never-invoked list reply",
+        );
+        assert_eq!(listing.runs.len(), 1);
+        let run = &listing.runs[0];
+        assert_eq!(run.status, WorkflowRunStatus::Aborted);
+        assert!(
+            run.started_at.is_none(),
+            "never-invoked run must have Option::None startedAt, not a sentinel"
+        );
+        assert!(run.ended_at.is_none());
+    }
+
+    #[test]
+    fn list_reply_skips_unknown_status_entry_without_killing_listing() {
+        let mut reply = fixture_value(LIST_REPLY_2180);
+        let good = fixture_value(LIST_REPLY_NEVER_INVOKED_2180)["runs"][0].clone();
+        let mut bogus = good.clone();
+        bogus["status"] = serde_json::Value::String("quantum".into());
+        let runs = must_succeed(
+            reply["runs"].as_array_mut().ok_or("runs must be an array"),
+            "runs array",
+        );
+        runs.push(bogus);
+        runs.push(good);
+        let listing = must_succeed(parse_list_reply(&reply), "tolerant list reply");
+        assert_eq!(listing.runs.len(), 2, "both good entries survive");
+        assert_eq!(listing.skipped.len(), 1, "the bogus entry is skipped");
+        assert!(
+            listing.skipped[0].to_string().contains("quantum"),
+            "skip reason names the unknown value: {}",
+            listing.skipped[0]
+        );
+    }
+
+    #[test]
+    fn list_reply_empty_runs_is_empty_listing() {
+        let listing = must_succeed(
+            parse_list_reply(&serde_json::json!({"runs": []})),
+            "empty list reply",
+        );
+        assert!(listing.runs.is_empty());
+        assert!(listing.skipped.is_empty());
+    }
+
+    #[test]
+    fn recipes_reply_parses_all_seven_bundled() {
+        let listing = must_succeed(
+            parse_recipes_reply(&fixture_value(RECIPES_REPLY_2162)),
+            "live recipes reply",
+        );
+        assert_eq!(listing.recipes.len(), 7);
+        assert!(listing.skipped.is_empty());
+        let names: Vec<&str> = listing
+            .recipes
+            .iter()
+            .map(|recipe| recipe.name.as_str())
+            .collect();
+        assert!(names.contains(&"ralph"));
+        assert!(names.contains(&"autoresearch"));
+        assert!(
+            listing
+                .recipes
+                .iter()
+                .all(|recipe| recipe.source.as_deref().is_some_and(|s| !s.is_empty())),
+            "bundled recipes carry bundled:// sources (live-observed)"
+        );
+    }
+
+    #[test]
+    fn recipes_reply_workspace_recipe_carries_its_path() {
+        let listing = must_succeed(
+            parse_recipes_reply(&fixture_value(RECIPES_REPLY_DISK_2162)),
+            "live diskrecipe recipes reply",
+        );
+        assert!(
+            listing.recipes.iter().any(|recipe| {
+                recipe
+                    .source
+                    .as_deref()
+                    .is_some_and(|source| source.starts_with('/'))
+            }),
+            "a workspace recipe must surface its absolute path"
+        );
+    }
+
+    #[test]
+    fn cancel_reply_parses_live_fixture() {
+        let reply = must_succeed(
+            parse_cancel_reply(&fixture_value(CANCEL_REPLY_2180)),
+            "live cancel reply",
+        );
+        assert!(reply.ok);
+        assert_eq!(reply.previous_status, Some(WorkflowRunStatus::Running));
+    }
+
+    #[test]
+    fn cancel_reply_shape_is_not_the_run_status_shape() {
+        // Guards against modeling cancel with the invoke/resume reply
+        // struct: the cancel fixture has no workflowId, so the run-status
+        // parser must refuse it rather than fabricate a value.
+        let error = parse_run_status_reply(&fixture_value(CANCEL_REPLY_2180))
+            .map(|(id, status)| (id.as_str().to_owned(), status));
+        let Err(error) = error else {
+            panic!("cancel reply must not parse as a run-status reply, got {error:?}");
+        };
+        assert!(
+            error.to_string().contains("workflowId"),
+            "error names the missing field: {error}"
+        );
+    }
+
+    #[test]
+    fn run_status_reply_tolerates_unknown_status() {
+        let (id, status) = must_succeed(
+            parse_run_status_reply(&serde_json::json!({"workflowId": "wf_x", "status": "quantum"})),
+            "unknown status tolerated",
+        );
+        assert_eq!(id.as_str(), "wf_x");
+        assert_eq!(status, None, "unknown status is unreported, not fatal");
     }
 
     #[test]
