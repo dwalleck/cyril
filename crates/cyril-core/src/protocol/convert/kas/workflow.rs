@@ -5540,6 +5540,65 @@ mod tests {
         assert_eq!(status, None, "unknown status is unreported, not fatal");
     }
 
+    /// cyril-0qe6 C4 end-to-end at the core level: the live inspect reply,
+    /// parsed and applied, is visible in the tracker with the capture's
+    /// status and node count. (Colocated here rather than in `tests/`
+    /// because `parse_state_reply` is deliberately `pub(crate)`.)
+    #[test]
+    fn attach_snapshot_seeds_tracker_from_live_reply() {
+        let snapshot = must_succeed(
+            parse_state_reply(&fixture_value(INSPECT_REPLY_2180)),
+            "live inspect reply",
+        );
+        let workflow_id = snapshot.workflow_id().clone();
+        let expected_nodes = snapshot_node_count(snapshot.root());
+        let mut tracker = WorkflowTracker::new();
+        let changed = must_succeed(tracker.apply_snapshot(snapshot), "snapshot applies");
+        assert!(changed);
+        let run = tracker.get(&workflow_id).map(|run| {
+            (
+                run.status(),
+                run.workflow_name().to_owned(),
+                run.nodes().count(),
+            )
+        });
+        let Some((status, name, nodes)) = run else {
+            panic!("the fetched run must be visible in the tracker");
+        };
+        assert_eq!(status, Some(WorkflowRunStatus::Completed));
+        assert_eq!(name, "cyril-reattach2");
+        assert_eq!(nodes, expected_nodes, "every captured node is tracked");
+    }
+
+    /// cyril-0qe6 C5: a snapshot whose terminal status conflicts with the
+    /// tracker's is rejected without state change (the ignored-Err bug
+    /// class would silently flip history).
+    #[test]
+    fn conflicting_terminal_snapshot_is_rejected_without_change() {
+        let snapshot = must_succeed(
+            parse_state_reply(&fixture_value(INSPECT_REPLY_2180)),
+            "live inspect reply",
+        );
+        let workflow_id = snapshot.workflow_id().clone();
+        let mut tracker = WorkflowTracker::new();
+        must_succeed(tracker.apply_snapshot(snapshot), "first snapshot applies");
+
+        let mut doctored = fixture_value(INSPECT_REPLY_2180);
+        doctored["state"]["status"] = serde_json::Value::String("failed".into());
+        let conflicting = must_succeed(parse_state_reply(&doctored), "doctored reply still parses");
+        let error = tracker.apply_snapshot(conflicting);
+        assert!(
+            error.is_err(),
+            "a conflicting terminal snapshot must be refused, got {error:?}"
+        );
+        let status = tracker.get(&workflow_id).and_then(WorkflowRun::status);
+        assert_eq!(
+            status,
+            Some(WorkflowRunStatus::Completed),
+            "the tracker keeps its original terminal status"
+        );
+    }
+
     #[test]
     fn state_reply_rejects_missing_root() {
         let mut reply = fixture_value(INSPECT_REPLY_2180);

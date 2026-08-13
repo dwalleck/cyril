@@ -484,6 +484,34 @@ impl App {
             return Vec::new();
         }
 
+        // Fetched run snapshots (cyril-0qe6 C4/C5): same exactly-once
+        // ownership as lifecycle frames — the tracker consumes the boxed
+        // snapshot by value and the notification is never forwarded. The
+        // companion WorkflowCommand display outcome arrives separately and
+        // rides normal routing. A rejected snapshot (terminal-conflict, bad
+        // node paths) leaves the tracker unchanged and is warning-only.
+        if let Notification::WorkflowSnapshot(snapshot) = notification {
+            let workflow_id = snapshot.workflow_id().as_str().to_owned();
+            match self.workflow_tracker.apply_snapshot(*snapshot) {
+                Ok(changed) => {
+                    if changed {
+                        // Snapshot-borne node state can carry session claims
+                        // (cyril-jxfu C5) — same sweep as lifecycle frames.
+                        self.reparent_claimed_subagent_streams();
+                    }
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        workflow_id = %workflow_id,
+                        error_kind = error.error_kind(),
+                        error = %error,
+                        "workflow snapshot application failed",
+                    );
+                }
+            }
+            return Vec::new();
+        }
+
         // Tracker-level notifications (list_update, inbox) are global:
         // apply them regardless of session_id. Returns false for unrelated variants.
         let tracker_changed = self
@@ -4106,6 +4134,99 @@ mod tests {
                 is_streaming,
             }),
         )
+    }
+
+    /// A minimal one-node fetched-run snapshot, as the bridge produces for
+    /// `/workflow attach` / `status <id>` (cyril-0qe6).
+    fn workflow_snapshot_frame(id: &str, status: WorkflowRunStatus) -> Notification {
+        Notification::WorkflowSnapshot(Box::new(WorkflowSnapshot::new(
+            workflow_id(id),
+            format!("recipe-{id}"),
+            status,
+            WorkflowSnapshotData::new(
+                serde_json::json!({}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(workflow_node_id("root"), Vec::new()),
+                WorkflowNodeStatus::Completed,
+                Vec::new(),
+            ),
+            WorkflowSnapshotMetadata::new("2026-08-13T00:00:00Z".to_owned(), 0),
+        )))
+    }
+
+    /// cyril-0qe6 C4: an attach snapshot seeds the tracker exactly once and
+    /// is never forwarded to SessionController or UiState.
+    #[test]
+    fn workflow_snapshot_seeds_tracker_and_is_not_forwarded() {
+        let mut app = test_app();
+        let baseline_session = app.session_apply_calls;
+        let baseline_ui = app.ui_apply_calls;
+
+        app.handle_notification(RoutedNotification::global(workflow_snapshot_frame(
+            "wf-seeded",
+            WorkflowRunStatus::Completed,
+        )));
+
+        let run = app
+            .workflow_tracker
+            .get(&workflow_id("wf-seeded"))
+            .expect("the snapshot must seed the tracker");
+        assert_eq!(run.status(), Some(WorkflowRunStatus::Completed));
+        assert_eq!(app.session_apply_calls, baseline_session);
+        assert_eq!(app.ui_apply_calls, baseline_ui);
+    }
+
+    /// cyril-0qe6 C5: a snapshot conflicting with a terminal run is rejected
+    /// without state change — warning-only, never a silent overwrite.
+    #[test]
+    fn workflow_snapshot_terminal_conflict_changes_nothing() {
+        let mut app = test_app();
+        app.handle_notification(RoutedNotification::global(workflow_snapshot_frame(
+            "wf-conflict",
+            WorkflowRunStatus::Completed,
+        )));
+
+        // A different terminal status for the same run: apply_snapshot's
+        // terminal-conflict guard must refuse it.
+        app.handle_notification(RoutedNotification::global(workflow_snapshot_frame(
+            "wf-conflict",
+            WorkflowRunStatus::Failed,
+        )));
+
+        let run = app
+            .workflow_tracker
+            .get(&workflow_id("wf-conflict"))
+            .expect("the run survives the rejected snapshot");
+        assert_eq!(
+            run.status(),
+            Some(WorkflowRunStatus::Completed),
+            "the terminal status must be unchanged by the conflicting snapshot"
+        );
+    }
+
+    /// The display half rides normal routing: a WorkflowCommand outcome
+    /// reaches the ordinary consumers and never the tracker.
+    #[test]
+    fn workflow_command_outcome_rides_normal_routing() {
+        let mut app = test_app();
+        let baseline_workflow = app.workflow_apply_calls;
+        let baseline_session = app.session_apply_calls;
+        let baseline_ui = app.ui_apply_calls;
+
+        app.handle_notification(RoutedNotification::global(Notification::WorkflowCommand(
+            Box::new(cyril_core::types::WorkflowCommandOutcome::Failed {
+                operation: "workflow list".to_owned(),
+                code: Some(-32603),
+                details: "details".to_owned(),
+            }),
+        )));
+
+        assert_eq!(app.workflow_apply_calls, baseline_workflow);
+        assert_eq!(app.session_apply_calls, baseline_session + 1);
+        assert_eq!(app.ui_apply_calls, baseline_ui + 1);
     }
 
     /// No subagent stream may keep a workflow-owned key after a sweep — the
