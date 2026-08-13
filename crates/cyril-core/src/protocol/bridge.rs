@@ -898,7 +898,7 @@ fn workflow_reply_notifications(reply: WorkflowOpReply) -> Vec<Notification> {
     if let Some(snapshot) = reply.snapshot {
         notifications.push(Notification::WorkflowSnapshot(Box::new(snapshot)));
     }
-    notifications.push(Notification::WorkflowCommand(Box::new(reply.outcome)));
+    notifications.push(Notification::WorkflowCommand(reply.outcome));
     notifications
 }
 
@@ -3469,6 +3469,10 @@ mod tests {
         sess_ids: Option<bool>,
         /// Method names the agent received, in order (e.g. "new_session", "prompt").
         received: Vec<String>,
+        /// Stripped ext-method names the fake answers with a JSON-RPC error
+        /// (`-32603`) instead of `{}` — e.g. `"kiro/workflow/new"` for the
+        /// C6 failed-`new` fixture (cyril-0qe6).
+        ext_err: Vec<String>,
         prompt_count: usize,
         /// When set, `prompt` parks on the gate until the test releases it,
         /// modelling a long-running turn (so mid-turn commands can be observed).
@@ -3794,10 +3798,14 @@ mod tests {
         async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
             // Record by stripped method name (e.g. "ext:session/steer"); the ACP
             // library already stripped the leading `_` before dispatch.
-            self.script
-                .borrow_mut()
-                .received
-                .push(format!("ext:{}", args.method));
+            let scripted_err = {
+                let mut s = self.script.borrow_mut();
+                s.received.push(format!("ext:{}", args.method));
+                s.ext_err.iter().any(|m| m == args.method.as_ref())
+            };
+            if scripted_err {
+                return Err(acp::Error::new(-32603, "Internal error"));
+            }
             Ok(acp::ExtResponse::new(
                 to_raw_arc(&serde_json::json!({})).expect("serialize empty params"),
             ))
@@ -6393,7 +6401,7 @@ mod tests {
             assert!(matches!(
                 &notifications[0],
                 Notification::WorkflowCommand(outcome)
-                    if matches!(&**outcome, Outcome::Failed { operation, code: Some(-32603), .. }
+                    if matches!(outcome, Outcome::Failed { operation, code: Some(-32603), .. }
                         if operation == "workflow list")
             ));
         }
@@ -6414,7 +6422,7 @@ mod tests {
             assert!(matches!(
                 &notifications[1],
                 Notification::WorkflowCommand(outcome)
-                    if matches!(&**outcome, Outcome::Fetched { verb: WorkflowFetchVerb::Attach, .. })
+                    if matches!(outcome, Outcome::Fetched { verb: WorkflowFetchVerb::Attach, .. })
             ));
         }
 
@@ -6466,6 +6474,63 @@ mod tests {
                 &reply.outcome,
                 Outcome::Failed { details, .. } if details.contains("could not read the reply")
             ));
+        }
+
+        /// C6 end-to-end through the fake-agent harness: `run` is `new` →
+        /// `invoke`, and invoke fires ONLY after new succeeds. The named bug
+        /// (unconditional invoke) would show `ext:kiro/workflow/invoke` in
+        /// the agent's received log after the scripted `new` error — and the
+        /// failure must surface as a Failed outcome, never silence.
+        #[tokio::test]
+        async fn run_op_never_invokes_after_failed_new() {
+            let script = Rc::new(RefCell::new(Script {
+                ext_err: vec!["kiro/workflow/new".into()],
+                ..Default::default()
+            }));
+            let probe = script.clone();
+            with_harness(
+                script,
+                |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                    let sid = start_session(&sender, &mut rx).await;
+                    sender
+                        .send(BridgeCommand::Workflow {
+                            session_id: sid,
+                            workspace_paths: vec![std::path::PathBuf::from("/ws")],
+                            op: Op::Run {
+                                target: crate::types::WorkflowRunTarget::Reference(
+                                    "bundled://ralph".into(),
+                                ),
+                                inputs: serde_json::Map::new(),
+                            },
+                        })
+                        .await
+                        .expect("send workflow run");
+                    let mut failed_outcome = false;
+                    while let Some(n) = recv_notif(&mut rx, 5).await {
+                        if let Notification::WorkflowCommand(outcome) = n {
+                            assert!(
+                                matches!(outcome, Outcome::Failed { .. }),
+                                "a failed new must answer Failed, got {outcome:?}"
+                            );
+                            failed_outcome = true;
+                            break;
+                        }
+                    }
+                    assert!(failed_outcome, "the op must answer — never silence");
+                },
+            )
+            .await;
+            let s = probe.borrow();
+            assert!(
+                s.received.iter().any(|r| r == "ext:kiro/workflow/new"),
+                "new was attempted: {:?}",
+                s.received
+            );
+            assert!(
+                !s.received.iter().any(|r| r.contains("invoke")),
+                "invoke must never fire after a failed new: {:?}",
+                s.received
+            );
         }
     }
 }

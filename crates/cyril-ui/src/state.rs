@@ -4096,13 +4096,13 @@ mod tests {
     #[test]
     fn workflow_command_outcome_becomes_one_system_message() {
         let mut state = UiState::new(500);
-        let changed = state.apply_notification(&Notification::WorkflowCommand(Box::new(
+        let changed = state.apply_notification(&Notification::WorkflowCommand(
             cyril_core::types::WorkflowCommandOutcome::Failed {
                 operation: "workflow resume".into(),
                 code: Some(-32603),
                 details: "running in another process (owner pid 42, liveness verdict: live)".into(),
             },
-        )));
+        ));
         assert!(changed);
         assert_eq!(state.messages().len(), 1);
         assert!(matches!(

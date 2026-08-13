@@ -4318,11 +4318,11 @@ mod tests {
         let baseline_ui = app.ui_apply_calls;
 
         app.handle_notification(RoutedNotification::global(Notification::WorkflowCommand(
-            Box::new(cyril_core::types::WorkflowCommandOutcome::Failed {
+            cyril_core::types::WorkflowCommandOutcome::Failed {
                 operation: "workflow list".to_owned(),
                 code: Some(-32603),
                 details: "details".to_owned(),
-            }),
+            },
         )));
 
         assert_eq!(app.workflow_apply_calls, baseline_workflow);

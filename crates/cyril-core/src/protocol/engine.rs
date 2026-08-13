@@ -320,7 +320,11 @@ impl Engine for KasEngine {
             }
             convert::kas::WorkflowFrameOutcome::Dropped => Ok(None),
             convert::kas::WorkflowFrameOutcome::NotWorkflow => {
-                convert::kiro::to_ext_notification(method, params)
+                // Same C8 suppression as the session-update path: the shared
+                // kiro converter can also emit CommandsUpdated, and the four
+                // gate commands must not reach autocomplete from any route.
+                Ok(convert::kiro::to_ext_notification(method, params)?
+                    .map(convert::kas::suppress_workflow_gate_commands))
             }
         }
     }

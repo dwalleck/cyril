@@ -95,11 +95,8 @@ impl Command for WorkflowCommand {
         };
 
         // Tracker-only path first: no session, no wire (C14).
-        if subcommand == "status" {
-            let rest: Vec<&str> = parts.clone().collect();
-            if rest.is_empty() {
-                return Ok(Self::tracker_summary(ctx));
-            }
+        if subcommand == "status" && parts.clone().next().is_none() {
+            return Ok(Self::tracker_summary(ctx));
         }
 
         let op = match subcommand {

@@ -321,8 +321,11 @@ pub enum Notification {
 
     /// Outcome of one `/workflow` command op, rendered by `UiState` as a
     /// system message. Every dispatched [`BridgeCommand::Workflow`] produces
-    /// exactly one of these (or a `BridgeError`) — never silence.
-    WorkflowCommand(Box<WorkflowCommandOutcome>),
+    /// exactly one of these (or a `BridgeError`) — never silence. Unboxed on
+    /// purpose: the outcome is 64 bytes against the enum's 216 (heavy state
+    /// rides inside `Fetched`'s own `Box<WorkflowSnapshot>`), so a box here
+    /// would be indirection without a size win — see the fence below.
+    WorkflowCommand(WorkflowCommandOutcome),
 
     // Lifecycle
     SessionCreated {
@@ -734,18 +737,24 @@ mod tests {
         ));
     }
 
-    /// The command-plane variants must stay boxed for the same reason
-    /// `Workflow` is: an unboxed `WorkflowSnapshot`/`WorkflowCommandOutcome`
-    /// payload would bloat every channel message the App ever receives.
+    /// `WorkflowSnapshot` must stay boxed: unboxing it grows every channel
+    /// message to at least the snapshot's size (648 vs 216 bytes measured on
+    /// x86_64), and this comparison fails — a `Box<T>`-is-pointer-sized
+    /// assert would be tautologically green forever. The unboxed
+    /// `WorkflowCommandOutcome` (64 bytes) gets the inverse tripwire: if it
+    /// ever outgrows the enum, inlining it has started costing every
+    /// message — re-box it and flip that assert.
     #[test]
-    fn workflow_command_variants_stay_boxed() {
-        assert_eq!(
-            std::mem::size_of::<Box<crate::types::WorkflowSnapshot>>(),
-            std::mem::size_of::<usize>()
+    fn workflow_payload_sizes_hold() {
+        assert!(
+            std::mem::size_of::<Notification>()
+                < std::mem::size_of::<crate::types::WorkflowSnapshot>(),
+            "WorkflowSnapshot must ride boxed"
         );
-        assert_eq!(
-            std::mem::size_of::<Box<crate::types::WorkflowCommandOutcome>>(),
-            std::mem::size_of::<usize>()
+        assert!(
+            std::mem::size_of::<crate::types::WorkflowCommandOutcome>()
+                <= std::mem::size_of::<Notification>(),
+            "WorkflowCommandOutcome outgrew the enum — re-box it"
         );
     }
 

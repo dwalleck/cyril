@@ -420,4 +420,27 @@ mod tests {
         });
         assert_eq!(got, expected, "live fixture marshal mismatch");
     }
+
+    /// ADR-0011 / cyril-0qe6 C6: cyril NEVER sets `workflows.enabled` — the
+    /// gate would register `run_workflow` and put the model in the launch
+    /// path. The marshaller must not emit a `workflows` key even when the
+    /// user's cli.json contains one (the buggy implementation: a gate flip
+    /// left in during debugging, or a future mapping added by reflex).
+    #[test]
+    fn workflows_gate_never_marshaled() {
+        let mut entries = serde_json::Map::new();
+        entries.insert(
+            "workflows.enabled".to_owned(),
+            serde_json::Value::Bool(true),
+        );
+        entries.insert(
+            "chat.enableThinking".to_owned(),
+            serde_json::Value::Bool(true),
+        );
+        let got = marshal_agent_settings(&entries);
+        assert!(
+            got.get("workflows").is_none(),
+            "the workflow gate must never reach the handshake (ADR-0011): {got}"
+        );
+    }
 }
