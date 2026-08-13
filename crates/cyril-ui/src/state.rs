@@ -975,6 +975,16 @@ impl UiState {
             // Workflow lifecycle is owned outside UiState. This consumer must
             // not inspect or retain the payload.
             Notification::Workflow(_) => false,
+            // Same ownership rule as `Workflow`: snapshots are the App-owned
+            // tracker's to consume, exactly once; reaching UiState is a
+            // routing bug worth hearing about, not worth panicking over.
+            Notification::WorkflowSnapshot(_) => {
+                tracing::warn!("WorkflowSnapshot reached UiState; it is tracker-owned");
+                false
+            }
+            // Rendered as a system message once the workflow formatter lands
+            // (checkpointed-build slice 13 of cyril-0qe6, this PR).
+            Notification::WorkflowCommand(_) => false,
             // Handled by the App via `refresh_hooks_panel`, not here
             // (cyril-gk17). It must NOT open the panel — it arrives unprompted
             // whenever KAS sees a hook file change — and this method cannot

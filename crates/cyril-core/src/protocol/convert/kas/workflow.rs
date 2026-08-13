@@ -19,9 +19,6 @@ use crate::types::{
     WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome,
     WorkflowWatchPoll,
 };
-// Staged with the reply parsers (#[cfg(test)] until the bridge workflow ops
-// land in this PR and un-gate the whole reply path).
-#[cfg(test)]
 use crate::types::{WorkflowRecipe, WorkflowRunSummary};
 
 /// Distinguishes an absent optional field from a present non-null value.
@@ -150,9 +147,6 @@ enum WorkflowAdapterError {
         "run completion workflow id `{outer}` does not match final snapshot workflow id `{final_id}`"
     )]
     SnapshotWorkflowMismatch { outer: String, final_id: String },
-    // Staged (#[cfg(test)]) until its first production consumer — the
-    // bridge's workflow command ops — lands and un-gates the reply path.
-    #[cfg(test)]
     #[error("reply workflow id `{outer}` does not match its state's workflow id `{inner}`")]
     ReplyWorkflowMismatch { outer: String, inner: String },
     #[error(transparent)]
@@ -166,7 +160,6 @@ impl WorkflowAdapterError {
             Self::InvalidWorkflowId { field, .. } | Self::InvalidNodeId { field, .. } => field,
             Self::InvalidNodePath(_) => "nodePath",
             Self::SnapshotWorkflowMismatch { .. } => "finalState.workflowId",
-            #[cfg(test)]
             Self::ReplyWorkflowMismatch { .. } => "state.workflowId",
             Self::CompletionMismatch(WorkflowCompletionMismatchError::Status { .. }) => "status",
             Self::CompletionMismatch(WorkflowCompletionMismatchError::WorkflowId { .. }) => {
@@ -182,7 +175,6 @@ impl WorkflowAdapterError {
             | Self::InvalidNodeId { .. }
             | Self::InvalidNodePath(_)
             | Self::SnapshotWorkflowMismatch { .. } => WorkflowErrorKind::InvalidValue,
-            #[cfg(test)]
             Self::ReplyWorkflowMismatch { .. } => WorkflowErrorKind::InvalidValue,
             Self::CompletionMismatch(WorkflowCompletionMismatchError::Status { .. }) => {
                 WorkflowErrorKind::StatusMismatch
@@ -219,7 +211,6 @@ struct WireRunCompleted {
 /// (field `initialState`). Extra reply members (`nodePlan`; `stepSessions`
 /// on ≤2.16.2, dropped by 2.18.0) are deliberately ignored — only the
 /// snapshot seeds the tracker.
-#[cfg(test)]
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WireStateReply {
@@ -496,7 +487,6 @@ pub(crate) fn to_notification(method: &str, params: &serde_json::Value) -> Workf
 /// notification warns-and-drops (the stream continues), but a reply the
 /// client explicitly asked for must surface its failure to the user — the
 /// bridge folds this into a `Failed` command outcome, never silence.
-#[cfg(test)]
 #[derive(Debug, thiserror::Error)]
 #[error("{message} (at {field_path})")]
 pub(crate) struct WorkflowReplyError {
@@ -504,7 +494,6 @@ pub(crate) struct WorkflowReplyError {
     message: String,
 }
 
-#[cfg(test)]
 impl From<WorkflowAdapterError> for WorkflowReplyError {
     fn from(error: WorkflowAdapterError) -> Self {
         Self {
@@ -520,7 +509,6 @@ impl From<WorkflowAdapterError> for WorkflowReplyError {
 ///
 /// The outer `workflowId` must match the snapshot's own — a mismatched
 /// reply errors rather than silently trusting either id.
-#[cfg(test)]
 pub(crate) fn parse_state_reply(
     reply: &serde_json::Value,
 ) -> Result<WorkflowSnapshot, WorkflowReplyError> {
@@ -539,7 +527,6 @@ pub(crate) fn parse_state_reply(
 /// One `_kiro/workflow/list` entry. Timestamps are genuinely optional on the
 /// wire: a never-invoked run has no `startedAt`, a non-terminal run has no
 /// `endedAt` (live-observed on 2.16.2 and 2.18.0).
-#[cfg(test)]
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WireRunListEntry {
@@ -558,7 +545,6 @@ struct WireRunListEntry {
     parent_session_id: OptionalField<String>,
 }
 
-#[cfg(test)]
 impl WireRunListEntry {
     fn try_into_domain(self) -> Result<WorkflowRunSummary, WorkflowAdapterError> {
         Ok(WorkflowRunSummary {
@@ -577,7 +563,6 @@ impl WireRunListEntry {
 /// Parsed `_kiro/workflow/list` reply: the entries that parsed, plus one
 /// error per skipped entry (each already warned here — callers may surface
 /// the skip count but need not re-log).
-#[cfg(test)]
 pub(crate) struct WorkflowListing {
     pub(crate) runs: Vec<WorkflowRunSummary>,
     pub(crate) skipped: Vec<WorkflowReplyError>,
@@ -586,7 +571,6 @@ pub(crate) struct WorkflowListing {
 /// Parses `_kiro/workflow/list`. The outer `{runs: […]}` shape is required;
 /// entries are tolerant per-entry — one malformed entry (unknown status
 /// string, missing id) is warned and skipped without killing the listing.
-#[cfg(test)]
 pub(crate) fn parse_list_reply(
     reply: &serde_json::Value,
 ) -> Result<WorkflowListing, WorkflowReplyError> {
@@ -612,7 +596,6 @@ pub(crate) fn parse_list_reply(
 /// One `listRecipes` entry. `builtIn`, `inputs`, and `plan` are deliberately
 /// ignored — the control plane needs identity and provenance only; recipe
 /// internals belong to the authoring surface (`kiro-workflow-authoring`).
-#[cfg(test)]
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WireRecipe {
@@ -624,14 +607,12 @@ struct WireRecipe {
 }
 
 /// Parsed `listRecipes` reply, tolerant per-entry like [`parse_list_reply`].
-#[cfg(test)]
 pub(crate) struct WorkflowRecipeListing {
     pub(crate) recipes: Vec<WorkflowRecipe>,
     pub(crate) skipped: Vec<WorkflowReplyError>,
 }
 
 /// Parses `_kiro/workflow/listRecipes` (`{recipes: […]}`).
-#[cfg(test)]
 pub(crate) fn parse_recipes_reply(
     reply: &serde_json::Value,
 ) -> Result<WorkflowRecipeListing, WorkflowReplyError> {
@@ -660,7 +641,6 @@ pub(crate) fn parse_recipes_reply(
 
 /// Parsed `_kiro/workflow/cancel` reply — `{ok, previousStatus}`, a
 /// deliberately different shape from invoke/resume's `{workflowId, status}`.
-#[cfg(test)]
 pub(crate) struct WorkflowCancelReply {
     pub(crate) ok: bool,
     pub(crate) previous_status: Option<WorkflowRunStatus>,
@@ -668,7 +648,6 @@ pub(crate) struct WorkflowCancelReply {
 
 /// Parses `_kiro/workflow/cancel`. An unknown `previousStatus` string is
 /// warned and reported as unreported rather than failing the whole reply.
-#[cfg(test)]
 pub(crate) fn parse_cancel_reply(
     reply: &serde_json::Value,
 ) -> Result<WorkflowCancelReply, WorkflowReplyError> {
@@ -688,7 +667,6 @@ pub(crate) fn parse_cancel_reply(
 
 /// Parses an `_kiro/workflow/invoke` or `resume` reply (`{workflowId,
 /// status}`). An unknown status string is warned and reported as unreported.
-#[cfg(test)]
 pub(crate) fn parse_run_status_reply(
     reply: &serde_json::Value,
 ) -> Result<(WorkflowId, Option<WorkflowRunStatus>), WorkflowReplyError> {
@@ -710,7 +688,6 @@ pub(crate) fn parse_run_status_reply(
 /// Maps a raw status string to the known vocabulary, warning (never
 /// failing) on a value outside it — replies stay useful across vendor
 /// status additions.
-#[cfg(test)]
 fn lenient_run_status(raw: Option<String>, context: &'static str) -> Option<WorkflowRunStatus> {
     let raw = raw?;
     match WorkflowRunStatus::try_from(raw.as_str()) {

@@ -215,9 +215,20 @@ pub enum WorkflowFetchVerb {
 #[derive(Debug, Clone, PartialEq)]
 pub enum WorkflowCommandOutcome {
     /// `listRecipes` succeeded.
-    Recipes(Vec<WorkflowRecipe>),
+    Recipes {
+        /// The recipes that parsed.
+        recipes: Vec<WorkflowRecipe>,
+        /// Entries skipped as unreadable (each already warned to the log);
+        /// non-zero must be visible to the user, not silently absorbed.
+        skipped: usize,
+    },
     /// `list` succeeded.
-    Runs(Vec<WorkflowRunSummary>),
+    Runs {
+        /// The runs that parsed.
+        runs: Vec<WorkflowRunSummary>,
+        /// Entries skipped as unreadable (each already warned to the log).
+        skipped: usize,
+    },
     /// `inspect` succeeded; the same snapshot separately seeds the tracker
     /// via `Notification::WorkflowSnapshot` (sent first).
     Fetched {
