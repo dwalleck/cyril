@@ -1,5 +1,6 @@
 pub mod builtin;
 pub mod subagent;
+pub mod workflow;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -94,6 +95,36 @@ impl HooksCommandSource {
                 Self::Kas { workspace_root }
             }
             _ => Self::Agent,
+        }
+    }
+}
+
+/// Whether cyril registers its native `/workflow` family (cyril-0qe6,
+/// ADR-0011). Unlike `/hooks` this depends on the engine alone: workflows
+/// are KAS-only (no v2 surface exists, even dark-flagged), and cyril owns
+/// the whole control plane — there is no agent-supplied alternative to
+/// defer to in any mode.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum WorkflowCommandSource {
+    /// No `/workflow`: the bound engine has no workflow surface (v2).
+    #[default]
+    None,
+    /// Cyril registers [`workflow::WorkflowCommand`], driving
+    /// `_kiro/workflow/*` with the gate off.
+    ///
+    /// Carries the workspace root for `workspacePaths` — the session's
+    /// `--cwd`, for the same wrong-root reason as
+    /// [`HooksCommandSource::Kas`].
+    Kas { workspace_root: std::path::PathBuf },
+}
+
+impl WorkflowCommandSource {
+    /// Resolve from the bound engine and the session's workspace root.
+    #[must_use]
+    pub fn resolve(engine: crate::types::AgentEngine, workspace_root: std::path::PathBuf) -> Self {
+        match engine {
+            crate::types::AgentEngine::Kas => Self::Kas { workspace_root },
+            _ => Self::None,
         }
     }
 }
@@ -234,8 +265,9 @@ impl CommandRegistry {
     /// Create a registry pre-populated with all builtin commands.
     ///
     /// `hooks` decides whether cyril supplies its own `/hooks` — see
-    /// [`HooksCommandSource`].
-    pub fn with_builtins(hooks: HooksCommandSource) -> Self {
+    /// [`HooksCommandSource`]. `workflows` decides whether the native
+    /// `/workflow` family exists — see [`WorkflowCommandSource`].
+    pub fn with_builtins(hooks: HooksCommandSource, workflows: WorkflowCommandSource) -> Self {
         let mut registry = Self::new();
         let mut names: Vec<&str> = vec![
             "help", "clear", "quit", "new", "load", "steer", "voice", "sessions", "spawn", "kill",
@@ -244,6 +276,10 @@ impl CommandRegistry {
         if let HooksCommandSource::Kas { workspace_root } = hooks {
             names.push("hooks");
             registry.register(Arc::new(builtin::KasHooksCommand::new(workspace_root)));
+        }
+        if let WorkflowCommandSource::Kas { workspace_root } = workflows {
+            names.push("workflow");
+            registry.register(Arc::new(workflow::WorkflowCommand::new(workspace_root)));
         }
         registry.register(Arc::new(builtin::HelpCommand::new(&names)));
         registry.register(Arc::new(builtin::ClearCommand));
@@ -577,7 +613,8 @@ mod tests {
     // cyril-bm1j Slice 12: /steer is registered and routes its args through parse().
     #[test]
     fn steer_command_registered_and_parses_args() {
-        let registry = CommandRegistry::with_builtins(HooksCommandSource::Agent);
+        let registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
         let (cmd, args) = registry.parse("/steer go now").unwrap();
         assert_eq!(cmd.name(), "steer");
         assert_eq!(args, "go now");
@@ -662,7 +699,8 @@ mod tests {
 
     #[test]
     fn voice_command_registered_and_parses() {
-        let registry = CommandRegistry::with_builtins(HooksCommandSource::Agent);
+        let registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
         let (cmd, args) = registry.parse("/voice").expect("/voice is registered");
         assert_eq!(cmd.name(), "voice");
         assert_eq!(args, "");
@@ -728,7 +766,8 @@ mod tests {
 
     #[test]
     fn register_agent_commands_skips_builtin_names() {
-        let mut registry = CommandRegistry::with_builtins(HooksCommandSource::Agent);
+        let mut registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
         let cmds = vec![crate::types::CommandInfo::new(
             "help",
             "Agent Help",
@@ -748,7 +787,8 @@ mod tests {
 
     #[test]
     fn default_registry_has_builtins() {
-        let registry = CommandRegistry::with_builtins(HooksCommandSource::Agent);
+        let registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
         assert!(registry.parse("/help").is_some());
         assert!(registry.parse("/clear").is_some());
         assert!(registry.parse("/quit").is_some());
@@ -919,6 +959,42 @@ mod hooks_source_tests {
         std::path::PathBuf::from("/workspace")
     }
 
+    /// cyril-0qe6 C11: `/workflow` exists exactly when the engine is KAS —
+    /// the buggy implementation (unconditional registration) hands v2 users
+    /// a command whose bridge arm can only answer errors.
+    #[test]
+    fn workflow_command_is_kas_engine_only() {
+        assert_eq!(
+            WorkflowCommandSource::resolve(AgentEngine::Kas, root()),
+            WorkflowCommandSource::Kas {
+                workspace_root: root()
+            }
+        );
+        assert_eq!(
+            WorkflowCommandSource::resolve(AgentEngine::V2, root()),
+            WorkflowCommandSource::None
+        );
+
+        let v2 =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
+        assert!(
+            v2.parse("/workflow list").is_none(),
+            "no /workflow under v2 — nothing would answer it"
+        );
+
+        let kas = CommandRegistry::with_builtins(
+            HooksCommandSource::Agent,
+            WorkflowCommandSource::Kas {
+                workspace_root: root(),
+            },
+        );
+        let (cmd, args) = kas
+            .parse("/workflow status wf_1")
+            .expect("registered under KAS");
+        assert_eq!(cmd.name(), "workflow");
+        assert_eq!(args, "status wf_1");
+    }
+
     #[test]
     fn only_kas_engine_with_kas_hooks_gets_the_builtin() {
         // The full matrix. The load-bearing cell is (Kas, Host): cyril OWNS the
@@ -955,13 +1031,16 @@ mod hooks_source_tests {
         // overwrite it — a race the user would see as a broken /hooks at
         // startup. Absence is the guarantee.
         assert!(
-            CommandRegistry::with_builtins(HooksCommandSource::Agent)
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None)
                 .parse("/hooks")
                 .is_none()
         );
-        let kas = CommandRegistry::with_builtins(HooksCommandSource::Kas {
-            workspace_root: root(),
-        });
+        let kas = CommandRegistry::with_builtins(
+            HooksCommandSource::Kas {
+                workspace_root: root(),
+            },
+            WorkflowCommandSource::None,
+        );
         let (cmd, args) = kas.parse("/hooks disable audit").expect("registered");
         assert_eq!(cmd.name(), "hooks");
         assert_eq!(args, "disable audit");

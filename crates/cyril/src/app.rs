@@ -98,6 +98,7 @@ impl App {
         ui: &config::UiConfig,
         cwd: PathBuf,
         hooks: cyril_core::commands::HooksCommandSource,
+        workflows: cyril_core::commands::WorkflowCommandSource,
     ) -> Self {
         // EXHAUSTIVE ON PURPOSE -- no `..`. Adding a UiConfig field must fail
         // compilation here rather than join the ranks of the silently ignored.
@@ -106,7 +107,7 @@ impl App {
             mouse_capture,
         } = ui;
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
-        let commands = CommandRegistry::with_builtins(hooks);
+        let commands = CommandRegistry::with_builtins(hooks, workflows);
         let info: Vec<(String, Option<String>)> = commands
             .all_commands()
             .iter()
@@ -1936,6 +1937,7 @@ mod tests {
             },
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         )
     }
 
@@ -1962,6 +1964,7 @@ mod tests {
             &config::UiConfig::default(),
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         );
         assert!(app.mouse_captured());
     }
@@ -2099,6 +2102,7 @@ mod tests {
             &config::UiConfig::default(),
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         )
     }
 
@@ -2185,6 +2189,7 @@ mod tests {
             &config::UiConfig::default(),
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         );
         let main_id = SessionId::new("main-session");
         app.session
@@ -2250,6 +2255,7 @@ mod tests {
             &config::UiConfig::default(),
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         );
         app.session.apply_notification(&Notification::ModeChanged {
             mode_id: ModeId::new("myagent"),
@@ -2289,6 +2295,7 @@ mod tests {
             &config::UiConfig::default(),
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         );
         app.session
             .set_session(SessionId::new(""), SessionStatus::Active);
