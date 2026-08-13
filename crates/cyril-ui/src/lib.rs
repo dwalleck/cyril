@@ -15,6 +15,7 @@ pub mod text;
 pub mod theme;
 pub mod traits;
 pub mod widgets;
+pub mod workflow_format;
 pub mod workflow_ui;
 
 pub use error::{Error, ErrorKind, Result};
