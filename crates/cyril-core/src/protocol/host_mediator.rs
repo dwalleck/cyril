@@ -128,6 +128,13 @@ pub(crate) struct HostMediator {
     #[cfg(any(test, feature = "kas"))]
     next_id: u64,
     in_flight: HashMap<JobId, Entry>,
+    /// When a job last entered or left the table (cyril-14ou, PR #94 review
+    /// SP4): a callback accepted AND completed between two liveness ticks is
+    /// invisible to `in_flight()` sampling, so the tick also reads this stamp
+    /// as host activity. Recorded internally rather than passed in — the
+    /// time-as-input pin is scoped to `TurnLiveness`; this table's callers
+    /// (the drain task) have no clock of their own to thread.
+    last_transition: Option<std::time::Instant>,
 }
 
 impl HostMediator {
@@ -140,6 +147,7 @@ impl HostMediator {
     /// already-accepted work (ADR-0004 "ordered acceptance").
     #[cfg(any(test, feature = "kas"))]
     pub(crate) fn accept<C: CallbackMeta>(&mut self, callback: C) -> Accept<C> {
+        self.last_transition = Some(std::time::Instant::now());
         if let Some(key) = callback.cancels() {
             let target = self.in_flight.iter().find_map(|(id, e)| match &e.cancel {
                 Some((k, _)) if *k == key => Some(*id),
@@ -199,6 +207,13 @@ impl HostMediator {
     #[cfg(any(test, feature = "kas"))]
     pub(crate) fn complete(&mut self, id: JobId) {
         self.in_flight.remove(&id);
+        self.last_transition = Some(std::time::Instant::now());
+    }
+
+    /// The last moment a job entered or left the table, if any. Read by the
+    /// liveness tick alongside [`HostMediator::in_flight`].
+    pub(crate) fn last_transition(&self) -> Option<std::time::Instant> {
+        self.last_transition
     }
 
     /// Scope-wide sweep (session cancel): signal every in-flight cancellable
@@ -233,9 +248,11 @@ impl HostMediator {
         }
     }
 
-    /// In-flight count — seam-test observability (design C7). Test-only:
-    /// production code never inspects the table, it only transitions it.
-    #[cfg(test)]
+    /// In-flight count. Originally seam-test observability (design C7);
+    /// since cyril-14ou the turn-liveness tick also samples it in production:
+    /// outstanding host work means the agent is waiting on CYRIL, so quiet
+    /// wire time must not read as a stall. Still a read-only view — nothing
+    /// outside this module transitions the table.
     pub(crate) fn in_flight(&self) -> usize {
         self.in_flight.len()
     }

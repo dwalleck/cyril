@@ -1,0 +1,11 @@
+[package]
+name = "cyril-14ou-probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+cyril-core = { path = "../../crates/cyril-core", features = ["kas"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "io-std", "io-util"] }
