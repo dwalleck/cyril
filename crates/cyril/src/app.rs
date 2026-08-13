@@ -1039,6 +1039,7 @@ impl App {
                 session: &self.session,
                 bridge: &self.bridge_sender,
                 subagent_tracker: Some(self.ui_state.subagent_tracker()),
+                workflow_tracker: Some(&self.workflow_tracker),
             };
             let command_name = cmd.name().to_string();
             let args = args.to_string();

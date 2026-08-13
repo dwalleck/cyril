@@ -16,6 +16,10 @@ pub struct CommandContext<'a> {
     /// by name (e.g., `/kill`, `/msg`). `None` in tests that don't exercise
     /// subagent commands.
     pub subagent_tracker: Option<&'a crate::subagent::SubagentTracker>,
+    /// Optional workflow tracker for `/workflow status` (no-arg), which
+    /// renders known runs without a wire round-trip (cyril-0qe6 C14).
+    /// `None` in tests that don't exercise workflow commands.
+    pub workflow_tracker: Option<&'a crate::workflow::WorkflowTracker>,
 }
 
 impl<'a> CommandContext<'a> {
@@ -478,6 +482,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
         let result = cmd.execute(&ctx, "test").await;
         assert!(result.is_ok());
@@ -498,6 +503,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         // C10: a message -> Steer{text}.
@@ -537,6 +543,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         // Exact word, with and without surrounding whitespace -> ClearSteer.
@@ -585,6 +592,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         let result = builtin::HelpCommand::new(&[]).execute(&ctx, "").await;
@@ -604,6 +612,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         let result = builtin::ClearCommand.execute(&ctx, "").await;
@@ -623,6 +632,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         let result = builtin::QuitCommand.execute(&ctx, "").await;
@@ -639,6 +649,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         let result = builtin::VoiceToggleCommand.execute(&ctx, "").await;
@@ -666,6 +677,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         let result = builtin::NewCommand.execute(&ctx, "").await;
@@ -755,6 +767,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         let cmd = AgentCommand {
@@ -783,6 +796,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         let cmd = AgentCommand {
@@ -825,6 +839,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         let cmd = AgentCommand {
@@ -862,6 +877,7 @@ mod tests {
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
+            workflow_tracker: None,
         };
 
         let cmd = AgentCommand {

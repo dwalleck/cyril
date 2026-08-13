@@ -263,6 +263,7 @@ async fn command_sends_to_bridge() {
         session: &session,
         bridge: &sender,
         subagent_tracker: None,
+        workflow_tracker: None,
     };
     let result = cmd.execute(&ctx, args).await;
     assert!(result.is_ok());
