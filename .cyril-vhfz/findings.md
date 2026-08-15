@@ -15,33 +15,33 @@ A live 2.18.0 node-pause recapture was attempted with the repository's existing 
 
 ## Probe
 
-`.cyril-vhfz/probe/src/main.rs` is a 63-line standalone Rust probe. It enables cyril-core's dev-only `test-support` seam, sends each JSONL frame through the same KAS conversion path as the live bridge, applies each `WorkflowEvent` to the shipped `WorkflowTracker`, and prints the run status, paused-node count, and run pause reason at `node_paused`, queue, run-summary, and completion boundaries.
+`.cyril-vhfz/probe/src/main.rs` is a 49-line standalone Rust probe. It enables cyril-core's dev-only `test-support` seam, sends each JSONL frame through the same KAS conversion path as the live bridge, applies each `WorkflowEvent` to the shipped `WorkflowTracker`, and prints the run status, paused-node count, per-node pause reasons, and run pause reason at `node_paused`, queue, run-summary, and completion boundaries.
 
 Inputs:
 
 1. The committed old-ordering synthetic lifecycle fixture used by cyril-6beh.
-2. `.cyril-vhfz/source-derived-new-ordering.jsonl`, the same production-shaped lifecycle sequence with the run summary moved to the exact 0.38.7 source position immediately before `run_complete`; it also carries the new `initiator`/`initiatorReason` extras.
-   `.cyril-vhfz/derive-new-ordering.py` regenerates this fixture byte-for-byte (SHA-256 `bcf915cadd6b1ec5611a028f68c7b53f2c131f300b4e3e92bce556be371bc49d`).
+2. `.cyril-vhfz/source-derived-new-ordering.jsonl`, the same production-shaped lifecycle sequence with the run summary moved to the exact 0.38.7 source position immediately before `run_complete`; both summary and completion carry the new `initiator`/`initiatorReason` extras.
+   `.cyril-vhfz/derive-new-ordering.py` regenerates this fixture byte-for-byte (SHA-256 `1f39a6f6424680cb6b88435ca4075bfd0f8495b6970f61cc214decbcf31bb28e`).
 
 ## Independent oracle
 
-`.cyril-vhfz/oracle.py` folds the JSON wire fields directly without importing Cyril. It independently counts paused nodes from `nodePath` and the final snapshot tree, applies wire statuses, and prints the same checkpoint projection.
+`.cyril-vhfz/oracle.py` folds the JSON wire fields directly without importing Cyril. It independently tracks paused canonical paths and their event reasons, preserves those reasons while replacing statuses from the final snapshot tree, applies wire run statuses, and prints the same checkpoint projection.
 
 Observed comparison: 10/10 rows byte-identical after excluding command timing text.
 
 ```text
-old: node_paused  run=None          paused_nodes=1  run_reason=None
-old: paused       run=Some(Paused)  paused_nodes=1  run_reason=Some("operator")
-old: steps_queued run=Some(Paused)  paused_nodes=1  run_reason=Some("operator")
-old: run_complete run=Some(Paused)  paused_nodes=2  run_reason=Some("operator")
+old: node_paused  run=None          paused_nodes=1  node_reasons=["wf_oracle/step=need-human"]  run_reason=None
+old: paused       run=Some(Paused)  paused_nodes=1  node_reasons=["wf_oracle/step=need-human"]  run_reason=Some("operator")
+old: steps_queued run=Some(Paused)  paused_nodes=1  node_reasons=["wf_oracle/step=need-human"]  run_reason=Some("operator")
+old: run_complete run=Some(Paused)  paused_nodes=2  node_reasons=["wf_oracle/step=need-human"]  run_reason=Some("operator")
 
-new: node_paused  run=None          paused_nodes=1  run_reason=None
-new: steps_queued run=None          paused_nodes=1  run_reason=None
-new: paused       run=Some(Paused)  paused_nodes=1  run_reason=Some("operator")
-new: run_complete run=Some(Paused)  paused_nodes=2  run_reason=Some("operator")
+new: node_paused  run=None          paused_nodes=1  node_reasons=["wf_oracle/step=need-human"]  run_reason=None
+new: steps_queued run=None          paused_nodes=1  node_reasons=["wf_oracle/step=need-human"]  run_reason=None
+new: paused       run=Some(Paused)  paused_nodes=1  node_reasons=["wf_oracle/step=need-human"]  run_reason=Some("operator")
+new: run_complete run=Some(Paused)  paused_nodes=2  node_reasons=["wf_oracle/step=need-human"]  run_reason=Some("operator")
 ```
 
-The existing converter ignores unknown run-summary attribution fields because `WirePaused` does not deny unknown fields; both extras passed through the real adapter without rejecting the event.
+The existing converter ignores unknown run attribution fields because `WirePaused` and `WireRunComplete` do not deny unknown fields; both extras passed through both frames via the real adapter without rejecting either event.
 
 ## What I learned
 

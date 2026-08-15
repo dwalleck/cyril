@@ -147,7 +147,6 @@ name = "cyril-vhfz-probe"
 version = "0.0.0"
 dependencies = [
  "cyril-core",
- "serde_json",
 ]
 
 [[package]]

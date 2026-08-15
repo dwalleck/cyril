@@ -14,6 +14,10 @@ paused["params"].update(
     initiatorReason="operator requested pause",
 )
 complete_at = next(i for i, frame in enumerate(frames) if frame.get("method") == "_kiro/workflow/run_complete")
+frames[complete_at]["params"].update(
+    initiator="user",
+    initiatorReason="operator requested pause",
+)
 frames.insert(complete_at, paused)
 TARGET.write_text(
     "\n".join(json.dumps(frame, separators=(",", ":"), ensure_ascii=False) for frame in frames) + "\n"

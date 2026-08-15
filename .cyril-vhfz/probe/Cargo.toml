@@ -8,4 +8,3 @@ publish = false
 
 [dependencies]
 cyril-core = { path = "../../crates/cyril-core", features = ["kas", "test-support"] }
-serde_json = "1"
