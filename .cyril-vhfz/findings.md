@@ -27,7 +27,7 @@ Inputs:
 
 `.cyril-vhfz/oracle.py` folds the JSON wire fields directly without importing Cyril. It independently tracks paused canonical paths and their event reasons, preserves those reasons while replacing statuses from the final snapshot tree, applies wire run statuses, and prints the same checkpoint projection.
 
-Observed comparison: 10/10 rows byte-identical after excluding command timing text.
+Observed comparison: 10/10 rows byte-identical after excluding command timing text. Selected boundaries below omit each ordering's duplicate `steps_queued` row:
 
 ```text
 old: node_paused  run=None          paused_nodes=1  node_reasons=["wf_oracle/step=need-human"]  run_reason=None
