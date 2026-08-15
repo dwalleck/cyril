@@ -2591,6 +2591,56 @@ mod tests {
                 .and_then(WorkflowNodeState::node_pause_reason),
             Some("等待 human")
         );
+
+        let pending =
+            WorkflowNodeDescriptor::step(node_id("queued"), "agent".to_owned(), None, None);
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                vec![pending.clone()],
+                None,
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("run missing after pending queue frame");
+        };
+        assert_eq!(run.status(), None);
+        assert_eq!(run.run_pause_reason(), None);
+        assert_eq!(
+            run.node(&path)
+                .and_then(WorkflowNodeState::node_pause_reason),
+            Some("等待 human")
+        );
+        assert_eq!(run.pending_steps(), Some(std::slice::from_ref(&pending)));
+        assert!(run.queue_resolution().is_none());
+
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                Vec::new(),
+                Some(WorkflowQueueResolution::new(
+                    WorkflowQueueOutcome::Applied,
+                    Some("acknowledged".to_owned()),
+                )),
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("run missing after queue acknowledgement");
+        };
+        assert_eq!(run.status(), None);
+        assert_eq!(run.run_pause_reason(), None);
+        assert_eq!(
+            run.node(&path)
+                .and_then(WorkflowNodeState::node_pause_reason),
+            Some("等待 human")
+        );
+        assert_eq!(run.pending_steps(), Some(std::slice::from_ref(&pending)));
+        assert_eq!(
+            run.queue_resolution().map(WorkflowQueueResolution::outcome),
+            Some(WorkflowQueueOutcome::Applied)
+        );
     }
 
     #[test]
