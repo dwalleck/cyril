@@ -2644,6 +2644,61 @@ mod tests {
     }
 
     #[test]
+    fn legacy_summary_only_pause_remains_resumable() {
+        let id = workflow_id("summary-only");
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::Paused(WorkflowPaused::new(
+                id.clone(),
+                "repeat exhausted".to_owned(),
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("summary-only run missing before completion");
+        };
+        assert_eq!(run.status(), Some(WorkflowRunStatus::Paused));
+        assert_eq!(run.run_pause_reason(), Some("repeat exhausted"));
+        assert!(run.nodes().all(|(_, node)| node.node_pause_reason().is_none()));
+
+        assert_eq!(
+            tracker.apply_event(completion(snapshot_with_status(
+                "summary-only",
+                WorkflowRunStatus::Paused,
+                "step",
+            ))),
+            Ok(true)
+        );
+        let pending =
+            WorkflowNodeDescriptor::step(node_id("next"), "agent".to_owned(), None, None);
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                vec![pending.clone()],
+                None,
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("summary-only run missing after completion");
+        };
+        assert_eq!(run.status(), Some(WorkflowRunStatus::Paused));
+        assert_eq!(run.run_pause_reason(), Some("repeat exhausted"));
+        assert!(run.nodes().all(|(_, node)| node.node_pause_reason().is_none()));
+        assert_eq!(run.pending_steps(), Some(std::slice::from_ref(&pending)));
+    }
+
+    #[test]
     fn unknown_workflow_event_matrix_no_placeholders() {
         let id = workflow_id("unknown");
         let path = node_path(&id, &["unknown", "node"]);
