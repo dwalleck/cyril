@@ -64,6 +64,14 @@ _Avoid_: workflow run, retry run, attempt (unqualified)
 A node of a run that executes as a peer session rather than as delegated work under a parent.
 _Avoid_: subagent, stage, pipeline stage (that is the DAG-tool-call model)
 
+**Node pause**:
+The immediate, node-scoped suspension of one workflow node, with its node reason. It does not imply that the workflow run has reached its resumable paused summary.
+_Avoid_: run pause, workflow pause (ambiguous), termination
+
+**Run pause**:
+The resumable, non-terminal state of a workflow run after the current execution settles. It summarizes the run and may follow a node pause or arise without one, such as repeat exhaustion.
+_Avoid_: node pause, completion, termination
+
 **Claim**:
 A workflow event (`node_start` or snapshot-borne node state) naming a step's session id, binding that session to a workflow node. Only claims make a session workflow-owned — per-frame metadata never does.
 _Avoid_: registration, announcement, session binding
