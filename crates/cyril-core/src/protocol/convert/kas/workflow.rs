@@ -3,8 +3,8 @@
 //! The ACP crate removes the leading underscore from extension method names,
 //! so this module matches the normalized `kiro/workflow/*` spelling exactly.
 
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 
 use super::WorkflowFrameOutcome;
 use crate::types::{
@@ -1112,7 +1112,7 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::*;
-    use crate::test_support::{must_succeed, CaptureWriter};
+    use crate::test_support::{CaptureWriter, must_succeed};
     use crate::workflow::{WorkflowNodeState, WorkflowRun, WorkflowTracker};
 
     const FAILED_CAPTURE: &str =
@@ -1134,7 +1134,7 @@ mod tests {
     const LATE_PAUSE_CAPTURE: &str = include_str!(
         "../../../../tests/fixtures/kas/workflow/pause-late-summary-2.18.0-source-derived.jsonl"
     );
-    const REPLAY_SOURCES: [(&str, &str); 8] = [
+    const REPLAY_SOURCES: [(&str, &str); 9] = [
         ("oracle-replay-events.jsonl", SYNTHETIC_REPLAY),
         ("terminal-failed-2.16.2.jsonl", FAILED_CAPTURE),
         ("terminal-aborted-2.16.2.jsonl", ABORTED_CAPTURE),
@@ -1143,6 +1143,10 @@ mod tests {
         ("kas-csig-2.16.0-neutral.jsonl", CSIG_2160_NEUTRAL_CAPTURE),
         ("kas-csig-2.16.2-neutral.jsonl", CSIG_2162_NEUTRAL_CAPTURE),
         ("kas-csig-2.16.2-explicit.jsonl", CSIG_2162_EXPLICIT_CAPTURE),
+        (
+            "pause-late-summary-2.18.0-source-derived.jsonl",
+            LATE_PAUSE_CAPTURE,
+        ),
     ];
 
     fn event(result: WorkflowFrameOutcome, context: &str) -> WorkflowEvent {
