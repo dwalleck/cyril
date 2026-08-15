@@ -240,6 +240,7 @@ fn message_limit_enforced() {
 fn command_registry_with_builtins_resolves() {
     let registry = cyril_core::commands::CommandRegistry::with_builtins(
         cyril_core::commands::HooksCommandSource::Agent,
+        cyril_core::commands::WorkflowCommandSource::None,
     );
     assert!(registry.parse("/help").is_some());
     assert!(registry.parse("/quit").is_some());
@@ -253,6 +254,7 @@ fn command_registry_with_builtins_resolves() {
 async fn command_sends_to_bridge() {
     let registry = cyril_core::commands::CommandRegistry::with_builtins(
         cyril_core::commands::HooksCommandSource::Agent,
+        cyril_core::commands::WorkflowCommandSource::None,
     );
     let session = SessionController::new();
     let (tx, mut rx) = tokio::sync::mpsc::channel(4);
@@ -263,6 +265,7 @@ async fn command_sends_to_bridge() {
         session: &session,
         bridge: &sender,
         subagent_tracker: None,
+        workflow_tracker: None,
     };
     let result = cmd.execute(&ctx, args).await;
     assert!(result.is_ok());

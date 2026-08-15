@@ -243,6 +243,7 @@ mod tests {
             session,
             bridge: sender,
             subagent_tracker: tracker,
+            workflow_tracker: None,
         }
     }
 

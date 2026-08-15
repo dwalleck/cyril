@@ -98,6 +98,7 @@ impl App {
         ui: &config::UiConfig,
         cwd: PathBuf,
         hooks: cyril_core::commands::HooksCommandSource,
+        workflows: cyril_core::commands::WorkflowCommandSource,
     ) -> Self {
         // EXHAUSTIVE ON PURPOSE -- no `..`. Adding a UiConfig field must fail
         // compilation here rather than join the ranks of the silently ignored.
@@ -106,7 +107,7 @@ impl App {
             mouse_capture,
         } = ui;
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
-        let commands = CommandRegistry::with_builtins(hooks);
+        let commands = CommandRegistry::with_builtins(hooks, workflows);
         let info: Vec<(String, Option<String>)> = commands
             .all_commands()
             .iter()
@@ -478,6 +479,34 @@ impl App {
                         error_kind = error.error_kind(),
                         error = %error,
                         "workflow state application failed",
+                    );
+                }
+            }
+            return Vec::new();
+        }
+
+        // Fetched run snapshots (cyril-0qe6 C4/C5): same exactly-once
+        // ownership as lifecycle frames — the tracker consumes the boxed
+        // snapshot by value and the notification is never forwarded. The
+        // companion WorkflowCommand display outcome arrives separately and
+        // rides normal routing. A rejected snapshot (terminal-conflict, bad
+        // node paths) leaves the tracker unchanged and is warning-only.
+        if let Notification::WorkflowSnapshot(snapshot) = notification {
+            let workflow_id = snapshot.workflow_id().as_str().to_owned();
+            match self.workflow_tracker.apply_snapshot(*snapshot) {
+                Ok(changed) => {
+                    if changed {
+                        // Snapshot-borne node state can carry session claims
+                        // (cyril-jxfu C5) — same sweep as lifecycle frames.
+                        self.reparent_claimed_subagent_streams();
+                    }
+                }
+                Err(error) => {
+                    tracing::warn!(
+                        workflow_id = %workflow_id,
+                        error_kind = error.error_kind(),
+                        error = %error,
+                        "workflow snapshot application failed",
                     );
                 }
             }
@@ -1017,6 +1046,7 @@ impl App {
                 session: &self.session,
                 bridge: &self.bridge_sender,
                 subagent_tracker: Some(self.ui_state.subagent_tracker()),
+                workflow_tracker: Some(&self.workflow_tracker),
             };
             let command_name = cmd.name().to_string();
             let args = args.to_string();
@@ -1913,6 +1943,7 @@ mod tests {
             },
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         )
     }
 
@@ -1939,6 +1970,7 @@ mod tests {
             &config::UiConfig::default(),
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         );
         assert!(app.mouse_captured());
     }
@@ -2076,6 +2108,7 @@ mod tests {
             &config::UiConfig::default(),
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         )
     }
 
@@ -2089,6 +2122,7 @@ mod tests {
                 &config::UiConfig::default(),
                 PathBuf::from("/tmp"),
                 cyril_core::commands::HooksCommandSource::Agent,
+                cyril_core::commands::WorkflowCommandSource::None,
             ),
             rx,
         )
@@ -2248,6 +2282,7 @@ mod tests {
             &config::UiConfig::default(),
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         );
         let main_id = SessionId::new("main-session");
         app.session
@@ -2313,6 +2348,7 @@ mod tests {
             &config::UiConfig::default(),
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         );
         app.session.apply_notification(&Notification::ModeChanged {
             mode_id: ModeId::new("myagent"),
@@ -2352,6 +2388,7 @@ mod tests {
             &config::UiConfig::default(),
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
         );
         app.session
             .set_session(SessionId::new(""), SessionStatus::Active);
@@ -4198,6 +4235,99 @@ mod tests {
                 is_streaming,
             }),
         )
+    }
+
+    /// A minimal one-node fetched-run snapshot, as the bridge produces for
+    /// `/workflow attach` / `status <id>` (cyril-0qe6).
+    fn workflow_snapshot_frame(id: &str, status: WorkflowRunStatus) -> Notification {
+        Notification::WorkflowSnapshot(Box::new(WorkflowSnapshot::new(
+            workflow_id(id),
+            format!("recipe-{id}"),
+            status,
+            WorkflowSnapshotData::new(
+                serde_json::json!({}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(workflow_node_id("root"), Vec::new()),
+                WorkflowNodeStatus::Completed,
+                Vec::new(),
+            ),
+            WorkflowSnapshotMetadata::new("2026-08-13T00:00:00Z".to_owned(), 0),
+        )))
+    }
+
+    /// cyril-0qe6 C4: an attach snapshot seeds the tracker exactly once and
+    /// is never forwarded to SessionController or UiState.
+    #[test]
+    fn workflow_snapshot_seeds_tracker_and_is_not_forwarded() {
+        let mut app = test_app();
+        let baseline_session = app.session_apply_calls;
+        let baseline_ui = app.ui_apply_calls;
+
+        app.handle_notification(RoutedNotification::global(workflow_snapshot_frame(
+            "wf-seeded",
+            WorkflowRunStatus::Completed,
+        )));
+
+        let run = app
+            .workflow_tracker
+            .get(&workflow_id("wf-seeded"))
+            .expect("the snapshot must seed the tracker");
+        assert_eq!(run.status(), Some(WorkflowRunStatus::Completed));
+        assert_eq!(app.session_apply_calls, baseline_session);
+        assert_eq!(app.ui_apply_calls, baseline_ui);
+    }
+
+    /// cyril-0qe6 C5: a snapshot conflicting with a terminal run is rejected
+    /// without state change — warning-only, never a silent overwrite.
+    #[test]
+    fn workflow_snapshot_terminal_conflict_changes_nothing() {
+        let mut app = test_app();
+        app.handle_notification(RoutedNotification::global(workflow_snapshot_frame(
+            "wf-conflict",
+            WorkflowRunStatus::Completed,
+        )));
+
+        // A different terminal status for the same run: apply_snapshot's
+        // terminal-conflict guard must refuse it.
+        app.handle_notification(RoutedNotification::global(workflow_snapshot_frame(
+            "wf-conflict",
+            WorkflowRunStatus::Failed,
+        )));
+
+        let run = app
+            .workflow_tracker
+            .get(&workflow_id("wf-conflict"))
+            .expect("the run survives the rejected snapshot");
+        assert_eq!(
+            run.status(),
+            Some(WorkflowRunStatus::Completed),
+            "the terminal status must be unchanged by the conflicting snapshot"
+        );
+    }
+
+    /// The display half rides normal routing: a WorkflowCommand outcome
+    /// reaches the ordinary consumers and never the tracker.
+    #[test]
+    fn workflow_command_outcome_rides_normal_routing() {
+        let mut app = test_app();
+        let baseline_workflow = app.workflow_apply_calls;
+        let baseline_session = app.session_apply_calls;
+        let baseline_ui = app.ui_apply_calls;
+
+        app.handle_notification(RoutedNotification::global(Notification::WorkflowCommand(
+            cyril_core::types::WorkflowCommandOutcome::Failed {
+                operation: "workflow list".to_owned(),
+                code: Some(-32603),
+                details: "details".to_owned(),
+            },
+        )));
+
+        assert_eq!(app.workflow_apply_calls, baseline_workflow);
+        assert_eq!(app.session_apply_calls, baseline_session + 1);
+        assert_eq!(app.ui_apply_calls, baseline_ui + 1);
     }
 
     /// No subagent stream may keep a workflow-owned key after a sweep — the

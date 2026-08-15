@@ -374,6 +374,16 @@ fn print_notification(n: &Notification) {
         Notification::Workflow(event) => {
             println!("  [Workflow] {}", event.method_name());
         }
+        Notification::WorkflowSnapshot(snapshot) => {
+            println!(
+                "  [WorkflowSnapshot] {} status={}",
+                snapshot.workflow_id(),
+                snapshot.status()
+            );
+        }
+        Notification::WorkflowCommand(outcome) => {
+            println!("  [WorkflowCommand] {outcome:?}");
+        }
         Notification::BridgeDisconnected { reason } => {
             println!("  [BridgeDisconnected] {reason}");
         }

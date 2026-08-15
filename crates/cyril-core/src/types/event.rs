@@ -7,7 +7,8 @@ use crate::types::session::{
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 use crate::types::turn::TurnId;
-use crate::types::workflow::WorkflowEvent;
+use crate::types::workflow::{WorkflowEvent, WorkflowSnapshot};
+use crate::types::workflow_command::{WorkflowCommandOutcome, WorkflowOp};
 
 /// KAS `_kiro/system/notify` severity level (KAS 0.17.2+).
 /// Currently `info` and `warning`; the `Unknown` arm captures future levels
@@ -310,6 +311,22 @@ pub enum Notification {
     /// the enum's pre-workflow stack footprint.
     Workflow(Box<WorkflowEvent>),
 
+    /// A persisted run's state fetched by a `/workflow` command (`inspect` /
+    /// `new` reply). Consumed exactly once by the App —
+    /// `WorkflowTracker::apply_snapshot` — and never forwarded to
+    /// `SessionController` or `UiState`, mirroring [`Notification::Workflow`].
+    /// Sent *before* its companion [`Notification::WorkflowCommand`] so the
+    /// tracker is current by the time the outcome message renders.
+    WorkflowSnapshot(Box<WorkflowSnapshot>),
+
+    /// Outcome of one `/workflow` command op, rendered by `UiState` as a
+    /// system message. Every dispatched [`BridgeCommand::Workflow`] produces
+    /// exactly one of these (or a `BridgeError`) — never silence. Unboxed on
+    /// purpose: the outcome is 64 bytes against the enum's 216 (heavy state
+    /// rides inside `Fetched`'s own `Box<WorkflowSnapshot>`), so a box here
+    /// would be indirection without a size win — see the fence below.
+    WorkflowCommand(WorkflowCommandOutcome),
+
     // Lifecycle
     SessionCreated {
         session_id: SessionId,
@@ -579,6 +596,18 @@ pub enum BridgeCommand {
         /// Workspace roots to search, sent as `workspacePaths`.
         workspace_paths: Vec<std::path::PathBuf>,
     },
+    /// One `/workflow` control-plane op against `_kiro/workflow/*`
+    /// (ADR-0011: gate never set; the model never gains `run_workflow`).
+    /// Response-carrying like [`BridgeCommand::ListKasHooks`]: the bridge
+    /// awaits the reply and answers with `WorkflowSnapshot`/`WorkflowCommand`
+    /// notifications, or `BridgeError` — one outcome per op, always.
+    Workflow {
+        session_id: SessionId,
+        /// Workspace roots, sent as `workspacePaths` where the verb requires
+        /// them (`list` hard-fails with -32603 without an explicit array).
+        workspace_paths: Vec<std::path::PathBuf>,
+        op: WorkflowOp,
+    },
     /// Flip a KAS hook's enabled flag via `_kiro/hooks/setEnabled`
     /// (cyril-gk17). The agent rewrites the flag in the backing hook **file**,
     /// so the change outlives the session.
@@ -706,6 +735,27 @@ mod tests {
             notification,
             Notification::Workflow(event) if event.method_name() == "node_start"
         ));
+    }
+
+    /// `WorkflowSnapshot` must stay boxed: unboxing it grows every channel
+    /// message to at least the snapshot's size (648 vs 216 bytes measured on
+    /// x86_64), and this comparison fails — a `Box<T>`-is-pointer-sized
+    /// assert would be tautologically green forever. The unboxed
+    /// `WorkflowCommandOutcome` (64 bytes) gets the inverse tripwire: if it
+    /// ever outgrows the enum, inlining it has started costing every
+    /// message — re-box it and flip that assert.
+    #[test]
+    fn workflow_payload_sizes_hold() {
+        assert!(
+            std::mem::size_of::<Notification>()
+                < std::mem::size_of::<crate::types::WorkflowSnapshot>(),
+            "WorkflowSnapshot must ride boxed"
+        );
+        assert!(
+            std::mem::size_of::<crate::types::WorkflowCommandOutcome>()
+                <= std::mem::size_of::<Notification>(),
+            "WorkflowCommandOutcome outgrew the enum — re-box it"
+        );
     }
 
     #[test]

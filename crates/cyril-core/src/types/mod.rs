@@ -18,6 +18,7 @@ pub mod tool_call;
 pub mod turn;
 pub mod voice;
 pub mod workflow;
+pub mod workflow_command;
 
 // Convenience re-exports
 pub use agent_command::AgentCommand;
@@ -56,4 +57,8 @@ pub use workflow::{
     WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatExhaustion, WorkflowRunCompleted,
     WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
     WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
+};
+pub use workflow_command::{
+    WorkflowCommandOutcome, WorkflowFetchVerb, WorkflowInputError, WorkflowOp, WorkflowRecipe,
+    WorkflowRunSummary, WorkflowRunTarget, parse_run_inputs, parse_run_target,
 };

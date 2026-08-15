@@ -48,7 +48,7 @@ When making multi-file Rust changes, always run `cargo test` and `cargo clippy -
 
 After any rewrite or large refactor, verify functional wiring end-to-end before declaring the work complete:
 
-- Event handlers are connected — notifications reach both `SessionController` and `UiState`, and `Notification::Workflow` reaches the `WorkflowTracker`
+- Event handlers are connected — notifications reach both `SessionController` and `UiState`, and `Notification::Workflow` / `Notification::WorkflowSnapshot` reach the `WorkflowTracker`
 - Streaming behavior works correctly (append, not replace) — test with a real `kiro-cli acp` session
 - All features from the previous version still function — check the key handling chain, overlays, and command dispatch
 - Cross-cutting concerns in `App` are preserved — picker wiring, model extraction, subagent routing
@@ -151,7 +151,7 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 
 **`cyril`** — Thin orchestrator binary.
 - **Owns:** `App` (event loop), CLI args, terminal setup, wiring between components
-- **Responsibility:** Wire `cyril-core` and `cyril-ui` together. Run the `tokio::select!` event loop. Dispatch key events through the layered handler. Route notifications to both `SessionController` and `UiState` — except `Notification::Workflow`, which the App-owned `WorkflowTracker` consumes exactly once and which is never forwarded to either. Handle cross-cutting concerns (opening pickers from `CommandOptionsReceived`, extracting model from `CommandExecuted`).
+- **Responsibility:** Wire `cyril-core` and `cyril-ui` together. Run the `tokio::select!` event loop. Dispatch key events through the layered handler. Route notifications to both `SessionController` and `UiState` — except `Notification::Workflow` and `Notification::WorkflowSnapshot` (fetched run state from the `/workflow` commands), each of which the App-owned `WorkflowTracker` consumes exactly once and never forwards to either. Handle cross-cutting concerns (opening pickers from `CommandOptionsReceived`, extracting model from `CommandExecuted`).
 - **Must NOT:** Contain business logic or protocol knowledge. Parse JSON responses (that's `cyril-core`'s job). Make rendering decisions (that's `cyril-ui`'s job).
 
 ### Component Separation Within Crates
@@ -178,7 +178,7 @@ The crate boundaries enforce dependency rules, but equally important is the sepa
 
 **`App`** (`cyril/app.rs`) — Thin orchestrator. Owns all components but contains no business logic.
 - Routes notifications to both `SessionController` and `UiState`
-- Exception: `Notification::Workflow` is consumed exactly once — `handle_notification` applies the boxed event to the App's private `WorkflowTracker` (`cyril-core/src/workflow.rs`) and never forwards it to `SessionController` or `UiState`. Do not add a second consumer. Workflow lifecycle events arrive as global (session-less) `_kiro/workflow/*` extension notifications correlated by `workflowId`; workflow steps are peer sessions and deliberately do NOT ride `SubagentTracker`.
+- Exception: `Notification::Workflow` and `Notification::WorkflowSnapshot` are consumed exactly once — `handle_notification` applies the boxed lifecycle event (`apply_event`) or fetched-run snapshot (`apply_snapshot`, cyril-0qe6) to the App's private `WorkflowTracker` (`cyril-core/src/workflow.rs`) and never forwards either to `SessionController` or `UiState`. Do not add a second consumer. The companion `Notification::WorkflowCommand` display outcome rides normal routing and renders in `UiState`. Workflow lifecycle events arrive as global (session-less) `_kiro/workflow/*` extension notifications correlated by `workflowId`; workflow steps are peer sessions and deliberately do NOT ride `SubagentTracker`.
 - Handles cross-cutting concerns: wiring `CommandOptionsReceived` to `show_picker()`, extracting model from `CommandExecuted`
 - The ONLY place where all components interact — if logic can live in a component, it should not be in App.
 
@@ -211,6 +211,7 @@ User input → CommandRegistry::parse() → Command::execute() → BridgeSender:
                                                                     ↓
 App event loop (tokio::select!):
   ├─ Notification::Workflow → WorkflowTracker::apply_event()  (consumed exactly once, never forwarded)
+  ├─ Notification::WorkflowSnapshot → WorkflowTracker::apply_snapshot()  (same exactly-once doctrine)
   ├─ Notification (all others) → SessionController::apply_notification()
   │                            → UiState::apply_notification()
   │                            → cross-cutting handlers (CommandOptionsReceived, CommandExecuted, etc.)
