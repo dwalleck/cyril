@@ -201,7 +201,7 @@ impl WorkflowNodeState {
         }
     }
 
-    /// Returns the snapshot-authored status when this node has been snapshotted.
+    /// Returns the latest node status. A node pause updates it immediately.
     pub fn status(&self) -> Option<WorkflowNodeStatus> {
         self.status
     }
@@ -271,7 +271,7 @@ impl WorkflowNodeState {
         self.prompt.as_deref()
     }
 
-    /// Returns the latest node-specific pause reason.
+    /// Returns the node-scoped pause reason as soon as that node pauses.
     pub fn node_pause_reason(&self) -> Option<&str> {
         self.node_pause_reason.as_deref()
     }
@@ -325,7 +325,7 @@ impl WorkflowRun {
         &self.workflow_name
     }
 
-    /// Returns the authoritative run status after a persisted snapshot arrives.
+    /// Returns the latest run-level status. A node pause alone does not update it.
     pub fn status(&self) -> Option<WorkflowRunStatus> {
         self.status
     }
@@ -398,7 +398,7 @@ impl WorkflowRun {
         self.queue_resolution.as_ref()
     }
 
-    /// Returns the latest run-level pause reason.
+    /// Returns the run-summary pause reason after that summary arrives.
     pub fn run_pause_reason(&self) -> Option<&str> {
         self.run_pause_reason.as_deref()
     }
@@ -619,6 +619,7 @@ impl WorkflowTracker {
         changed
     }
 
+    /// Applies the immediate node authority without synthesizing run pause state.
     fn apply_node_paused(&mut self, paused: WorkflowNodePaused) -> bool {
         let (workflow_id, _node_id, node_path, reason) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "node_paused") else {
@@ -688,6 +689,7 @@ impl WorkflowTracker {
         replace(&mut node.latest_watch_poll, Some((outcome, at)))
     }
 
+    /// Applies the later run-summary authority without rewriting node pause state.
     fn apply_paused(&mut self, paused: WorkflowPaused) -> bool {
         let (workflow_id, reason) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "paused") else {

@@ -1462,7 +1462,7 @@ impl WorkflowNodeCompleted {
     }
 }
 
-/// Runtime node pause from `node_paused`.
+/// Immediate node-scoped pause. It does not imply that run pause state is available.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowNodePaused {
     workflow_id: WorkflowId,
@@ -1689,7 +1689,7 @@ impl WorkflowWatchPoll {
     }
 }
 
-/// Run pause from `paused`.
+/// Resumable run-pause summary. It may arrive after a node pause or without one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowPaused {
     workflow_id: WorkflowId,
