@@ -2669,7 +2669,10 @@ mod tests {
         };
         assert_eq!(run.status(), Some(WorkflowRunStatus::Paused));
         assert_eq!(run.run_pause_reason(), Some("repeat exhausted"));
-        assert!(run.nodes().all(|(_, node)| node.node_pause_reason().is_none()));
+        assert!(
+            run.nodes()
+                .all(|(_, node)| node.node_pause_reason().is_none())
+        );
 
         assert_eq!(
             tracker.apply_event(completion(snapshot_with_status(
@@ -2679,8 +2682,7 @@ mod tests {
             ))),
             Ok(true)
         );
-        let pending =
-            WorkflowNodeDescriptor::step(node_id("next"), "agent".to_owned(), None, None);
+        let pending = WorkflowNodeDescriptor::step(node_id("next"), "agent".to_owned(), None, None);
         assert_eq!(
             tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
                 id.clone(),
@@ -2694,10 +2696,86 @@ mod tests {
         };
         assert_eq!(run.status(), Some(WorkflowRunStatus::Paused));
         assert_eq!(run.run_pause_reason(), Some("repeat exhausted"));
-        assert!(run.nodes().all(|(_, node)| node.node_pause_reason().is_none()));
+        assert!(
+            run.nodes()
+                .all(|(_, node)| node.node_pause_reason().is_none())
+        );
         assert_eq!(run.pending_steps(), Some(std::slice::from_ref(&pending)));
     }
 
+    #[test]
+    fn pause_orderings_converge_after_completion() {
+        fn fold(summary_late: bool) -> WorkflowRun {
+            let id = workflow_id("converge");
+            let path = node_path(&id, &["converge", "step"]);
+            let mut events = vec![
+                WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                    id.clone(),
+                    "recipe".to_owned(),
+                    serde_json::json!({}),
+                    Vec::new(),
+                    None,
+                )),
+                WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                    id.clone(),
+                    node_id("step"),
+                    path.clone(),
+                    WorkflowNodeType::Step,
+                    WorkflowNodeStartDetails::new(),
+                )),
+                WorkflowEvent::NodePaused(WorkflowNodePaused::new(
+                    id.clone(),
+                    node_id("step"),
+                    path,
+                    "node reason".to_owned(),
+                )),
+            ];
+            if !summary_late {
+                events.push(WorkflowEvent::Paused(WorkflowPaused::new(
+                    id.clone(),
+                    "run reason".to_owned(),
+                )));
+            }
+            events.push(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                Vec::new(),
+                None,
+            )));
+            if summary_late {
+                events.push(WorkflowEvent::Paused(WorkflowPaused::new(
+                    id.clone(),
+                    "run reason".to_owned(),
+                )));
+            }
+            events.push(completion(snapshot_with_status(
+                "converge",
+                WorkflowRunStatus::Paused,
+                "step",
+            )));
+
+            let mut tracker = WorkflowTracker::new();
+            for event in events {
+                assert_eq!(tracker.apply_event(event), Ok(true));
+            }
+            match tracker.get(&id) {
+                Some(run) => run.clone(),
+                None => panic!("converged run missing"),
+            }
+        }
+
+        let early = fold(false);
+        let late = fold(true);
+        assert_eq!(early, late);
+        assert_eq!(late.status(), Some(WorkflowRunStatus::Paused));
+        assert_eq!(late.run_pause_reason(), Some("run reason"));
+        let id = workflow_id("converge");
+        let path = node_path(&id, &["converge", "step"]);
+        assert_eq!(
+            late.node(&path)
+                .and_then(WorkflowNodeState::node_pause_reason),
+            Some("node reason")
+        );
+    }
     #[test]
     fn unknown_workflow_event_matrix_no_placeholders() {
         let id = workflow_id("unknown");
