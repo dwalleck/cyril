@@ -180,7 +180,7 @@ Every slice is a regression-characterization or documentation slice. No slice ch
 
 **Oracle:** Repository architecture rules plus a mechanical changed-file allowlist against `main`.
 
-**Stress fixture:** Enumerate every changed path and reject any production path outside `CONTEXT.md`, `.cyril-vhfz/`, `crates/cyril-core/src/workflow.rs`, `crates/cyril-core/src/types/workflow.rs`, `crates/cyril-core/src/protocol/convert/kas/workflow.rs`, and `crates/cyril-core/tests/fixtures/kas/workflow/`. Expected: zero disallowed paths. This fails accidental UI/App/command placement. Update the fixture table with source hash, derivation path, attribution mirror, and old/new ordering role.
+**Stress fixture:** Enumerate every changed path and reject any production path outside `CONTEXT.md`, `.cyril-vhfz/`, `.cyril-6beh/compare-oracles.sh`, `crates/cyril-core/src/workflow.rs`, `crates/cyril-core/src/types/workflow.rs`, `crates/cyril-core/src/protocol/convert/kas/workflow.rs`, and `crates/cyril-core/tests/fixtures/kas/workflow/`. Expected: zero disallowed paths. This fails accidental UI/App/command placement. Update the fixture table with source hash, derivation path, attribution mirror, and old/new ordering role. Run `.cyril-6beh/compare-oracles.sh replay`; it must regenerate all nine replay projections and pass the Rust comparison.
 
 **Loop budget:** Mechanical review loops once over at most 20 changed paths: $O(p)$ with $p\le20$ and one `git diff` process. No runtime loop.
 
@@ -188,11 +188,13 @@ Every slice is a regression-characterization or documentation slice. No slice ch
 
 **Files:**
 - `crates/cyril-core/tests/fixtures/kas/workflow/README.md`
+- `.cyril-6beh/compare-oracles.sh`
 
-**Regression fence:** Manual changed-file allowlist and fixture hash/provenance check.
+**Regression fence:** Manual changed-file allowlist, fixture hash/provenance check, and the executable replay-regeneration path.
 
 **Verification:**
 - [ ] Fixture provenance and immutable/source-derived status are explicit
+- [ ] Replay regeneration covers all nine `REPLAY_SOURCES`
 - [ ] Changed-file allowlist reports zero violations
 - [ ] Prove-it-prototype oracle still agrees with the binary
 - [ ] Path scan remains within 20 paths and one process invocation
