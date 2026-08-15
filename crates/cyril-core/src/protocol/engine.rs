@@ -303,7 +303,10 @@ impl Engine for KasEngine {
         if let acp::SessionUpdate::SessionInfoUpdate(siu) = &args.update {
             return convert::kas::session_info_to_notification(siu);
         }
+        // Gate-advertised workflow commands never reach autocomplete
+        // (cyril-0qe6 C8) — a KAS dialect quirk, filtered in the dialect.
         convert::session_update_to_notification(args)
+            .map(convert::kas::suppress_workflow_gate_commands)
     }
 
     fn convert_ext_notification(
@@ -317,7 +320,11 @@ impl Engine for KasEngine {
             }
             convert::kas::WorkflowFrameOutcome::Dropped => Ok(None),
             convert::kas::WorkflowFrameOutcome::NotWorkflow => {
-                convert::kiro::to_ext_notification(method, params)
+                // Same C8 suppression as the session-update path: the shared
+                // kiro converter can also emit CommandsUpdated, and the four
+                // gate commands must not reach autocomplete from any route.
+                Ok(convert::kiro::to_ext_notification(method, params)?
+                    .map(convert::kas::suppress_workflow_gate_commands))
             }
         }
     }

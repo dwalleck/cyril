@@ -880,6 +880,315 @@ async fn kas_hooks_list(
         .ok_or_else(|| fail("hooks/list reply carried no `hooks` array".to_string()))
 }
 
+/// One `/workflow` op's answer: an optional tracker-owned snapshot plus the
+/// display outcome. Split so [`workflow_reply_notifications`] can enforce
+/// snapshot-first ordering in one place.
+#[cfg(feature = "kas")]
+struct WorkflowOpReply {
+    snapshot: Option<crate::types::WorkflowSnapshot>,
+    outcome: crate::types::WorkflowCommandOutcome,
+}
+
+/// The notifications one workflow reply produces, in send order: the
+/// snapshot (when present) precedes the display outcome so the tracker is
+/// current by the time the message renders (hooks-listing precedent).
+#[cfg(feature = "kas")]
+fn workflow_reply_notifications(reply: WorkflowOpReply) -> Vec<Notification> {
+    let mut notifications = Vec::with_capacity(2);
+    if let Some(snapshot) = reply.snapshot {
+        notifications.push(Notification::WorkflowSnapshot(Box::new(snapshot)));
+    }
+    notifications.push(Notification::WorkflowCommand(reply.outcome));
+    notifications
+}
+
+/// A failed workflow op, as a reply — every failure path becomes a
+/// `WorkflowCommand(Failed)` the user sees, never a log-only drop (the bug
+/// class the plain `ExtMethod` arm still has).
+#[cfg(feature = "kas")]
+fn workflow_failure(operation: &str, code: Option<i64>, details: String) -> WorkflowOpReply {
+    WorkflowOpReply {
+        snapshot: None,
+        outcome: crate::types::WorkflowCommandOutcome::Failed {
+            operation: operation.to_owned(),
+            code,
+            details,
+        },
+    }
+}
+
+/// Extracts the user-actionable text from a JSON-RPC error. The engine puts
+/// it in `error.data.details` (the run-ownership refusal, the
+/// `workspacePaths` contract); `error.message` alone is usually just
+/// "Internal error".
+#[cfg(feature = "kas")]
+fn ext_error_details(error: &agent_client_protocol::Error) -> (Option<i64>, String) {
+    let code = i64::from(i32::from(error.code));
+    let details = error
+        .data
+        .as_ref()
+        .and_then(|data| data.get("details"))
+        .and_then(|details| details.as_str())
+        .map(str::to_owned)
+        .unwrap_or_else(|| error.message.clone());
+    (Some(code), details)
+}
+
+/// Pure reply→outcome mapping for the single-round-trip workflow ops.
+/// Feed it the fetched body (or the failure fetching it produced) and it
+/// yields exactly one reply — the "never silence" contract, testable
+/// without a connection. `Run` never reaches here (it is a two-call
+/// sequence owned by [`handle_workflow_command`]).
+#[cfg(feature = "kas")]
+fn map_workflow_reply(
+    op: &crate::types::WorkflowOp,
+    body: Result<serde_json::Value, WorkflowOpReply>,
+) -> WorkflowOpReply {
+    use crate::protocol::convert::kas::workflow as wire;
+    use crate::types::{WorkflowCommandOutcome as Outcome, WorkflowFetchVerb, WorkflowOp as Op};
+
+    let operation = op.label();
+    let body = match body {
+        Ok(body) => body,
+        Err(failure) => return failure,
+    };
+    let parse_failure = |error: &dyn std::fmt::Display| {
+        workflow_failure(
+            operation,
+            None,
+            format!("could not read the reply: {error}"),
+        )
+    };
+    match op {
+        Op::ListRecipes => match wire::parse_recipes_reply(&body) {
+            Ok(listing) => WorkflowOpReply {
+                snapshot: None,
+                outcome: Outcome::Recipes {
+                    recipes: listing.recipes,
+                    skipped: listing.skipped.len(),
+                },
+            },
+            Err(error) => parse_failure(&error),
+        },
+        Op::ListRuns => match wire::parse_list_reply(&body) {
+            Ok(listing) => WorkflowOpReply {
+                snapshot: None,
+                outcome: Outcome::Runs {
+                    runs: listing.runs,
+                    skipped: listing.skipped.len(),
+                },
+            },
+            Err(error) => parse_failure(&error),
+        },
+        Op::Attach { .. } | Op::Status { .. } => match wire::parse_state_reply(&body) {
+            Ok(snapshot) => {
+                let verb = if matches!(op, Op::Attach { .. }) {
+                    WorkflowFetchVerb::Attach
+                } else {
+                    WorkflowFetchVerb::Status
+                };
+                WorkflowOpReply {
+                    snapshot: Some(snapshot.clone()),
+                    outcome: Outcome::Fetched {
+                        verb,
+                        snapshot: Box::new(snapshot),
+                    },
+                }
+            }
+            Err(error) => parse_failure(&error),
+        },
+        Op::Cancel { id } => match wire::parse_cancel_reply(&body) {
+            Ok(reply) if reply.ok => WorkflowOpReply {
+                snapshot: None,
+                outcome: Outcome::Cancelled {
+                    workflow_id: id.clone(),
+                    previous_status: reply.previous_status,
+                },
+            },
+            Ok(_) => workflow_failure(
+                operation,
+                None,
+                "the agent answered ok=false without an error".to_owned(),
+            ),
+            Err(error) => parse_failure(&error),
+        },
+        Op::Resume { .. } => match wire::parse_run_status_reply(&body) {
+            Ok((workflow_id, status)) => WorkflowOpReply {
+                snapshot: None,
+                outcome: Outcome::Resumed {
+                    workflow_id,
+                    status,
+                },
+            },
+            Err(error) => parse_failure(&error),
+        },
+        Op::Run { .. } => {
+            tracing::error!("map_workflow_reply received a Run op; run is a two-call sequence");
+            workflow_failure(operation, None, "internal: run mis-routed".to_owned())
+        }
+    }
+}
+
+/// The wire method + params for an op's first (for `Run`: only its `new`)
+/// request. Pure so the request contract is testable: `list` and
+/// `listRecipes` always carry explicit `workspacePaths` — omitting them is
+/// a live `-32603 "workspacePaths is not iterable"` (cyril-0qe6 C2).
+///
+/// Method names are the CRATE-facing spelling, without the leading
+/// underscore: the acp crate prefixes `_` onto outbound extension methods
+/// (same contract as `kas::hooks::LIST_METHOD`). Passing `_kiro/…` here
+/// reaches the agent as `__kiro/…` and fails its persistence
+/// classification — caught live in the cyril-0qe6 AC sweep.
+#[cfg(feature = "kas")]
+fn workflow_op_request(
+    session_id: &crate::types::SessionId,
+    workspace_paths: &[std::path::PathBuf],
+    op: &crate::types::WorkflowOp,
+) -> (&'static str, serde_json::Value) {
+    use crate::types::WorkflowOp as Op;
+    match op {
+        Op::ListRecipes => (
+            "kiro/workflow/listRecipes",
+            serde_json::json!({
+                "sessionId": session_id.as_str(),
+                "workspacePaths": workspace_paths,
+            }),
+        ),
+        Op::ListRuns => (
+            "kiro/workflow/list",
+            serde_json::json!({
+                "sessionId": session_id.as_str(),
+                "workspacePaths": workspace_paths,
+            }),
+        ),
+        Op::Attach { id } | Op::Status { id } => (
+            "kiro/workflow/inspect",
+            serde_json::json!({ "workflowId": id.as_str() }),
+        ),
+        Op::Cancel { id } => (
+            "kiro/workflow/cancel",
+            serde_json::json!({ "workflowId": id.as_str() }),
+        ),
+        Op::Resume { id } => (
+            "kiro/workflow/resume",
+            serde_json::json!({ "workflowId": id.as_str() }),
+        ),
+        Op::Run { target, inputs } => (
+            "kiro/workflow/new",
+            serde_json::json!({
+                "workflowPath": target.as_workflow_path(),
+                "inputs": inputs,
+                "parentSessionId": session_id.as_str(),
+                "workspacePaths": workspace_paths,
+            }),
+        ),
+    }
+}
+
+/// Sends one `_kiro/workflow/*` request and returns its JSON body, or the
+/// `Failed` reply describing why it could not be fetched.
+#[cfg(feature = "kas")]
+async fn workflow_ext(
+    conn: &agent_client_protocol::ClientSideConnection,
+    operation: &str,
+    method: &str,
+    params: &serde_json::Value,
+) -> Result<serde_json::Value, WorkflowOpReply> {
+    use acp::Agent as _;
+    use agent_client_protocol as acp;
+
+    let raw = to_raw_arc(params)
+        .map_err(|e| workflow_failure(operation, None, format!("serialize params: {e}")))?;
+    let response = conn
+        .ext_method(acp::ExtRequest::new(method, raw))
+        .await
+        .map_err(|error| {
+            tracing::error!(error = %error, operation, method, "workflow request failed");
+            let (code, details) = ext_error_details(&error);
+            workflow_failure(operation, code, details)
+        })?;
+    serde_json::from_str(response.0.get())
+        .map_err(|e| workflow_failure(operation, None, format!("reply is not JSON: {e}")))
+}
+
+/// Executes one `/workflow` op end to end and notifies the App. Returns
+/// whether the notification channel closed (the run loop's exit signal).
+///
+/// `Run` is a two-call sequence: `new` (validates and persists, returns
+/// `initialState`), whose snapshot notification is sent BEFORE `invoke`, so
+/// the tracker already knows the run when its first lifecycle event lands.
+#[cfg(feature = "kas")]
+async fn handle_workflow_command(
+    conn: &agent_client_protocol::ClientSideConnection,
+    tx: &mpsc::Sender<RoutedNotification>,
+    session_id: &crate::types::SessionId,
+    workspace_paths: &[std::path::PathBuf],
+    op: crate::types::WorkflowOp,
+) -> bool {
+    use crate::protocol::convert::kas::workflow as wire;
+    use crate::types::{WorkflowCommandOutcome as Outcome, WorkflowOp as Op};
+
+    let operation = op.label();
+    let (method, params) = workflow_op_request(session_id, workspace_paths, &op);
+    let reply = match &op {
+        Op::ListRecipes
+        | Op::ListRuns
+        | Op::Attach { .. }
+        | Op::Status { .. }
+        | Op::Cancel { .. }
+        | Op::Resume { .. } => {
+            let body = workflow_ext(conn, operation, method, &params).await;
+            map_workflow_reply(&op, body)
+        }
+        Op::Run { .. } => {
+            let body = workflow_ext(conn, operation, method, &params).await;
+            let snapshot = match body.map(|body| wire::parse_state_reply(&body)) {
+                Ok(Ok(snapshot)) => snapshot,
+                Ok(Err(error)) => {
+                    let failure = workflow_failure(
+                        operation,
+                        None,
+                        format!("could not read the new-run reply: {error}"),
+                    );
+                    return send_workflow_reply(tx, failure).await;
+                }
+                Err(failure) => return send_workflow_reply(tx, failure).await,
+            };
+            let workflow_id = snapshot.workflow_id().clone();
+            let name = snapshot.workflow_name().to_owned();
+            // Snapshot first: the tracker must know the run before invoke's
+            // lifecycle stream starts arriving.
+            if notify_or_closed(tx, Notification::WorkflowSnapshot(Box::new(snapshot))).await {
+                return true;
+            }
+            let params = serde_json::json!({ "workflowId": workflow_id.as_str() });
+            match workflow_ext(conn, operation, "kiro/workflow/invoke", &params).await {
+                Ok(_body) => WorkflowOpReply {
+                    snapshot: None,
+                    outcome: Outcome::Launched { workflow_id, name },
+                },
+                Err(failure) => failure,
+            }
+        }
+    };
+    send_workflow_reply(tx, reply).await
+}
+
+/// Sends a workflow reply's notifications; returns whether the channel
+/// closed.
+#[cfg(feature = "kas")]
+async fn send_workflow_reply(
+    tx: &mpsc::Sender<RoutedNotification>,
+    reply: WorkflowOpReply,
+) -> bool {
+    for notification in workflow_reply_notifications(reply) {
+        if notify_or_closed(tx, notification).await {
+            return true;
+        }
+    }
+    false
+}
+
 /// The `clientInfo` cyril presents at `initialize` (cyril-0wyn ADR-0006,
 /// default flipped by cyril-df5l ADR-0008).
 ///
@@ -2108,6 +2417,40 @@ async fn run_loop(
                     break;
                 }
             }
+            #[cfg(not(feature = "kas"))]
+            BridgeCommand::Workflow { op, .. } => {
+                // Same contract as the hooks arms above: a build without KAS
+                // support answers instead of dangling (cyril-0qe6 C11).
+                if notify_or_closed(
+                    &channels.notification_tx,
+                    Notification::BridgeError {
+                        operation: op.label().to_string(),
+                        message: "this build has no KAS support (cargo feature `kas`)".to_string(),
+                    },
+                )
+                .await
+                {
+                    break;
+                }
+            }
+            #[cfg(feature = "kas")]
+            BridgeCommand::Workflow {
+                session_id,
+                workspace_paths,
+                op,
+            } => {
+                if handle_workflow_command(
+                    &conn,
+                    &channels.notification_tx,
+                    &session_id,
+                    &workspace_paths,
+                    op,
+                )
+                .await
+                {
+                    break;
+                }
+            }
             #[cfg(feature = "kas")]
             BridgeCommand::ListKasHooks {
                 session_id,
@@ -3126,6 +3469,10 @@ mod tests {
         sess_ids: Option<bool>,
         /// Method names the agent received, in order (e.g. "new_session", "prompt").
         received: Vec<String>,
+        /// Stripped ext-method names the fake answers with a JSON-RPC error
+        /// (`-32603`) instead of `{}` — e.g. `"kiro/workflow/new"` for the
+        /// C6 failed-`new` fixture (cyril-0qe6).
+        ext_err: Vec<String>,
         prompt_count: usize,
         /// When set, `prompt` parks on the gate until the test releases it,
         /// modelling a long-running turn (so mid-turn commands can be observed).
@@ -3451,10 +3798,14 @@ mod tests {
         async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
             // Record by stripped method name (e.g. "ext:session/steer"); the ACP
             // library already stripped the leading `_` before dispatch.
-            self.script
-                .borrow_mut()
-                .received
-                .push(format!("ext:{}", args.method));
+            let scripted_err = {
+                let mut s = self.script.borrow_mut();
+                s.received.push(format!("ext:{}", args.method));
+                s.ext_err.iter().any(|m| m == args.method.as_ref())
+            };
+            if scripted_err {
+                return Err(acp::Error::new(-32603, "Internal error"));
+            }
             Ok(acp::ExtResponse::new(
                 to_raw_arc(&serde_json::json!({})).expect("serialize empty params"),
             ))
@@ -5945,5 +6296,241 @@ mod tests {
             .expect("build raw value");
         let value = parse_response(&raw).expect("valid JSON parses");
         assert_eq!(value["ok"], serde_json::json!(true));
+    }
+
+    // ---- /workflow op plumbing (cyril-0qe6 C2, C3, C6, C7) ----------------
+
+    #[cfg(feature = "kas")]
+    mod workflow_ops {
+        use super::*;
+        use crate::types::{
+            WorkflowCommandOutcome as Outcome, WorkflowFetchVerb, WorkflowId, WorkflowOp as Op,
+        };
+
+        const INSPECT_REPLY: &str =
+            include_str!("../../tests/fixtures/kas/workflow/inspect-reply-2.18.0.json");
+        const RECIPES_REPLY: &str =
+            include_str!("../../tests/fixtures/kas/workflow/recipes-reply-2.16.2.json");
+        const REFUSAL_ERROR: &str =
+            include_str!("../../tests/fixtures/kas/workflow/resume-refusal-error-2.16.2.json");
+
+        fn wid(raw: &str) -> WorkflowId {
+            WorkflowId::try_from(raw.to_owned()).expect("non-empty id")
+        }
+
+        fn body(raw: &str) -> serde_json::Value {
+            serde_json::from_str(raw).expect("fixture is valid JSON")
+        }
+
+        /// C7: the live-owner refusal's actionable text rides
+        /// `error.data.details`; surfacing only `error.message` would show
+        /// the user a bare "Internal error".
+        #[test]
+        fn refusal_error_details_surface_verbatim() {
+            let error: agent_client_protocol::Error =
+                serde_json::from_str(REFUSAL_ERROR).expect("captured error frame parses");
+            let (code, details) = ext_error_details(&error);
+            assert_eq!(code, Some(-32603));
+            assert!(
+                details.contains("running in another process (owner pid"),
+                "details must carry the ownership refusal verbatim: {details}"
+            );
+        }
+
+        #[test]
+        fn error_without_details_falls_back_to_message() {
+            let error = agent_client_protocol::Error::new(-32603, "Internal error");
+            let (code, details) = ext_error_details(&error);
+            assert_eq!(code, Some(-32603));
+            assert_eq!(details, "Internal error");
+        }
+
+        /// C2: `list`/`listRecipes` requests always carry explicit
+        /// `workspacePaths` — the live agent answers `-32603` without them.
+        #[test]
+        fn list_requests_always_carry_workspace_paths() {
+            let session = crate::types::SessionId::new("sess_x");
+            let roots = vec![std::path::PathBuf::from("/ws")];
+            for op in [Op::ListRuns, Op::ListRecipes] {
+                let (_, params) = workflow_op_request(&session, &roots, &op);
+                let paths = params["workspacePaths"]
+                    .as_array()
+                    .expect("workspacePaths present");
+                assert_eq!(paths.len(), 1, "explicit non-empty workspacePaths");
+            }
+        }
+
+        /// C6: `run` maps to `new` (with inputs + parent session) as its
+        /// first call; id-verbs name the workflow.
+        #[test]
+        fn run_and_id_requests_have_their_wire_shapes() {
+            let session = crate::types::SessionId::new("sess_x");
+            let roots = vec![std::path::PathBuf::from("/ws")];
+            let mut inputs = serde_json::Map::new();
+            inputs.insert("k".into(), serde_json::Value::String("v".into()));
+            let run = Op::Run {
+                target: crate::types::WorkflowRunTarget::Reference("bundled://ralph".into()),
+                inputs,
+            };
+            let (method, params) = workflow_op_request(&session, &roots, &run);
+            assert_eq!(method, "kiro/workflow/new");
+            assert_eq!(params["workflowPath"], "bundled://ralph");
+            assert_eq!(params["inputs"]["k"], "v");
+            assert_eq!(params["parentSessionId"], "sess_x");
+
+            let (method, params) =
+                workflow_op_request(&session, &roots, &Op::Attach { id: wid("wf_1") });
+            assert_eq!(method, "kiro/workflow/inspect");
+            assert_eq!(params["workflowId"], "wf_1");
+        }
+
+        /// C3: a fetch failure passes through as exactly one Failed
+        /// notification — never zero (the log-and-continue bug class).
+        #[test]
+        fn failure_passthrough_yields_one_failed_notification() {
+            let reply = map_workflow_reply(
+                &Op::ListRuns,
+                Err(workflow_failure(
+                    "workflow list",
+                    Some(-32603),
+                    "boom".into(),
+                )),
+            );
+            let notifications = workflow_reply_notifications(reply);
+            assert_eq!(notifications.len(), 1);
+            assert!(matches!(
+                &notifications[0],
+                Notification::WorkflowCommand(outcome)
+                    if matches!(outcome, Outcome::Failed { operation, code: Some(-32603), .. }
+                        if operation == "workflow list")
+            ));
+        }
+
+        /// C4 ordering: a fetched run's snapshot notification precedes its
+        /// display outcome, so the tracker is current when the message
+        /// renders.
+        #[test]
+        fn attach_reply_notifies_snapshot_before_outcome() {
+            let reply =
+                map_workflow_reply(&Op::Attach { id: wid("wf_1") }, Ok(body(INSPECT_REPLY)));
+            let notifications = workflow_reply_notifications(reply);
+            assert_eq!(notifications.len(), 2);
+            assert!(matches!(
+                &notifications[0],
+                Notification::WorkflowSnapshot(_)
+            ));
+            assert!(matches!(
+                &notifications[1],
+                Notification::WorkflowCommand(outcome)
+                    if matches!(outcome, Outcome::Fetched { verb: WorkflowFetchVerb::Attach, .. })
+            ));
+        }
+
+        /// The two fetch verbs stay distinguishable in the outcome.
+        #[test]
+        fn status_reply_uses_status_verb() {
+            let reply =
+                map_workflow_reply(&Op::Status { id: wid("wf_1") }, Ok(body(INSPECT_REPLY)));
+            assert!(matches!(
+                reply.outcome,
+                Outcome::Fetched {
+                    verb: WorkflowFetchVerb::Status,
+                    ..
+                }
+            ));
+        }
+
+        #[test]
+        fn recipes_reply_maps_to_recipes_outcome() {
+            let reply = map_workflow_reply(&Op::ListRecipes, Ok(body(RECIPES_REPLY)));
+            assert!(
+                matches!(
+                    &reply.outcome,
+                    Outcome::Recipes { recipes, skipped: 0 } if recipes.len() == 7
+                ),
+                "seven bundled recipes from the live fixture, none skipped"
+            );
+        }
+
+        /// An `ok=false` cancel is a loud failure, not a fabricated success.
+        #[test]
+        fn cancel_ok_false_is_failed() {
+            let reply = map_workflow_reply(
+                &Op::Cancel { id: wid("wf_1") },
+                Ok(serde_json::json!({"ok": false})),
+            );
+            assert!(matches!(
+                &reply.outcome,
+                Outcome::Failed { details, .. } if details.contains("ok=false")
+            ));
+        }
+
+        /// C3: a body cyril cannot parse still produces a Failed outcome
+        /// naming the trouble.
+        #[test]
+        fn malformed_list_body_is_failed() {
+            let reply = map_workflow_reply(&Op::ListRuns, Ok(serde_json::json!({})));
+            assert!(matches!(
+                &reply.outcome,
+                Outcome::Failed { details, .. } if details.contains("could not read the reply")
+            ));
+        }
+
+        /// C6 end-to-end through the fake-agent harness: `run` is `new` →
+        /// `invoke`, and invoke fires ONLY after new succeeds. The named bug
+        /// (unconditional invoke) would show `ext:kiro/workflow/invoke` in
+        /// the agent's received log after the scripted `new` error — and the
+        /// failure must surface as a Failed outcome, never silence.
+        #[tokio::test]
+        async fn run_op_never_invokes_after_failed_new() {
+            let script = Rc::new(RefCell::new(Script {
+                ext_err: vec!["kiro/workflow/new".into()],
+                ..Default::default()
+            }));
+            let probe = script.clone();
+            with_harness(
+                script,
+                |sender, mut rx, _perm_rx, _gate, _loop| async move {
+                    let sid = start_session(&sender, &mut rx).await;
+                    sender
+                        .send(BridgeCommand::Workflow {
+                            session_id: sid,
+                            workspace_paths: vec![std::path::PathBuf::from("/ws")],
+                            op: Op::Run {
+                                target: crate::types::WorkflowRunTarget::Reference(
+                                    "bundled://ralph".into(),
+                                ),
+                                inputs: serde_json::Map::new(),
+                            },
+                        })
+                        .await
+                        .expect("send workflow run");
+                    let mut failed_outcome = false;
+                    while let Some(n) = recv_notif(&mut rx, 5).await {
+                        if let Notification::WorkflowCommand(outcome) = n {
+                            assert!(
+                                matches!(outcome, Outcome::Failed { .. }),
+                                "a failed new must answer Failed, got {outcome:?}"
+                            );
+                            failed_outcome = true;
+                            break;
+                        }
+                    }
+                    assert!(failed_outcome, "the op must answer — never silence");
+                },
+            )
+            .await;
+            let s = probe.borrow();
+            assert!(
+                s.received.iter().any(|r| r == "ext:kiro/workflow/new"),
+                "new was attempted: {:?}",
+                s.received
+            );
+            assert!(
+                !s.received.iter().any(|r| r.contains("invoke")),
+                "invoke must never fire after a failed new: {:?}",
+                s.received
+            );
+        }
     }
 }

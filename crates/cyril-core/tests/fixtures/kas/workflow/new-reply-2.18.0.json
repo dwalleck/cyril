@@ -1,0 +1,28 @@
+{
+ "workflowId": "wf_67c4d77ef2bcd709",
+ "initialState": {
+  "workflowId": "wf_67c4d77ef2bcd709",
+  "workflowName": "cyril-reattach2",
+  "status": "running",
+  "inputs": {},
+  "artifacts": {},
+  "capturedOutputs": {},
+  "root": {
+   "nodeId": "wf_67c4d77ef2bcd709",
+   "type": "sequence",
+   "status": "pending",
+   "children": [
+    {
+     "nodeId": "slow",
+     "type": "step",
+     "status": "pending",
+     "agentName": "wf-coder"
+    }
+   ]
+  },
+  "createdAt": "2026-08-13T05:31:52.505Z",
+  "planRevision": 0,
+  "parentSessionId": "sess_4f0a642e-1c79-4241-a865-747bb9bb2c90",
+  "workspacePath": "/home/dwalleck/.claude/tmp/kas-wfreattach2-rc20brbt"
+ }
+}

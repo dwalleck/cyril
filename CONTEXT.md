@@ -88,6 +88,14 @@ _Avoid_: workflow session (ambiguous with the parent), step-tagged
 Moving an optimistic subagent stream — messages, order, and activity intact — into the workflow store when a late claim lands, leaving no subagent stream keyed by a workflow-owned id.
 _Avoid_: migrate, transfer, drop-and-recreate
 
+**Attach**:
+Reading a persisted run's current state (`inspect`) into the tracker so status renders locally — read-only, acquiring nothing: the engine's ownership of the run is untouched and no execution starts. Resuming is the separate, ownership-taking act.
+_Avoid_: subscribe (no such wire verb), follow, reattach-and-resume (conflates two verbs)
+
+**Run ownership**:
+The engine-side exclusive claim on a run's execution, held by one process via a pid-stamped heartbeat (`run.beat`; beat interval × 4.5 = stale, dead pid = stale immediately). A live foreign owner refuses `resume` naming its pid; an abandoned run lists as `paused` after the engine's sweep. Cyril never bypasses this — it surfaces the refusal verbatim.
+_Avoid_: lock (it expires), lease (the client renews nothing), busy (says nothing about who owns it)
+
 ### Sessions & turns
 
 **Session**:

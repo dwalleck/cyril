@@ -1,0 +1,12 @@
+{
+ "runs": [
+  {
+   "workflowId": "wf_8962078460af8290",
+   "name": "cyril-cancel-probe",
+   "status": "aborted",
+   "createdAt": "2026-08-13T05:31:40.721Z",
+   "updatedAt": "2026-08-13T05:31:40.721Z",
+   "parentSessionId": "sess_f679f9d6-c1a0-4705-9ae6-6a3904d8e9c2"
+  }
+ ]
+}

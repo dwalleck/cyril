@@ -1019,6 +1019,19 @@ impl UiState {
             // Workflow lifecycle is owned outside UiState. This consumer must
             // not inspect or retain the payload.
             Notification::Workflow(_) => false,
+            // Same ownership rule as `Workflow`: snapshots are the App-owned
+            // tracker's to consume, exactly once; reaching UiState is a
+            // routing bug worth hearing about, not worth panicking over.
+            Notification::WorkflowSnapshot(_) => {
+                tracing::warn!("WorkflowSnapshot reached UiState; it is tracker-owned");
+                false
+            }
+            // One system message per command outcome, built by the pure
+            // formatter (cyril-0qe6). Run *progress* rendering is cyril-zd8u.
+            Notification::WorkflowCommand(outcome) => {
+                self.add_system_message(crate::workflow_format::format_workflow_outcome(outcome));
+                true
+            }
             // Handled by the App via `refresh_hooks_panel`, not here
             // (cyril-gk17). It must NOT open the panel — it arrives unprompted
             // whenever KAS sees a hook file change — and this method cannot
@@ -4075,6 +4088,62 @@ mod tests {
         state.add_system_message("Welcome".into());
         assert_eq!(state.messages().len(), 1);
         assert!(matches!(state.messages()[0].kind(), ChatMessageKind::System(t) if t == "Welcome"));
+    }
+
+    /// cyril-0qe6: one system message per workflow command outcome — the
+    /// double-consumption bug (also rendering the tracker-owned snapshot)
+    /// would produce two messages or a panic.
+    #[test]
+    fn workflow_command_outcome_becomes_one_system_message() {
+        let mut state = UiState::new(500);
+        let changed = state.apply_notification(&Notification::WorkflowCommand(
+            cyril_core::types::WorkflowCommandOutcome::Failed {
+                operation: "workflow resume".into(),
+                code: Some(-32603),
+                details: "running in another process (owner pid 42, liveness verdict: live)".into(),
+            },
+        ));
+        assert!(changed);
+        assert_eq!(state.messages().len(), 1);
+        assert!(matches!(
+            state.messages()[0].kind(),
+            ChatMessageKind::System(text) if text.contains("owner pid 42")
+        ));
+    }
+
+    /// The tracker-owned snapshot never renders here: defensively ignored
+    /// with a warn, no message, no panic.
+    #[test]
+    fn workflow_snapshot_is_ignored_by_ui_state() {
+        let mut state = UiState::new(500);
+        let snapshot = cyril_core::types::WorkflowSnapshot::new(
+            match cyril_core::types::WorkflowId::try_from("wf_x".to_owned()) {
+                Ok(id) => id,
+                Err(error) => panic!("fixture id: {error}"),
+            },
+            "recipe".into(),
+            cyril_core::types::WorkflowRunStatus::Running,
+            cyril_core::types::WorkflowSnapshotData::new(
+                serde_json::json!({}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            cyril_core::types::WorkflowNodeSnapshot::new(
+                cyril_core::types::WorkflowNodeDescriptor::sequence(
+                    match cyril_core::types::WorkflowNodeId::try_from("root".to_owned()) {
+                        Ok(id) => id,
+                        Err(error) => panic!("fixture node id: {error}"),
+                    },
+                    Vec::new(),
+                ),
+                cyril_core::types::WorkflowNodeStatus::Running,
+                Vec::new(),
+            ),
+            cyril_core::types::WorkflowSnapshotMetadata::new("2026-08-13T00:00:00Z".into(), 0),
+        );
+        let changed = state.apply_notification(&Notification::WorkflowSnapshot(Box::new(snapshot)));
+        assert!(!changed);
+        assert!(state.messages().is_empty());
     }
 
     /// Metadata frame carrying only a refusal alert (cyril-h8zb fences).
