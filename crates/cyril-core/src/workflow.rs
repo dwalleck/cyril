@@ -2547,6 +2547,53 @@ mod tests {
     }
 
     #[test]
+    fn pause_ordering_matrix_preserves_intermediate_authority() {
+        let id = workflow_id("pause-ordering");
+        let path = node_path(&id, &["pause-ordering", "step"]);
+        let mut tracker = WorkflowTracker::new();
+        for event in [
+            WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            )),
+            WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("step"),
+                path.clone(),
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new(),
+            )),
+            WorkflowEvent::NodePaused(WorkflowNodePaused::new(
+                id.clone(),
+                node_id("step"),
+                path.clone(),
+                "等待 human".to_owned(),
+            )),
+        ] {
+            assert_eq!(tracker.apply_event(event), Ok(true));
+        }
+
+        let Some(run) = tracker.get(&id) else {
+            panic!("pause-ordering run missing");
+        };
+        assert_eq!(run.status(), None);
+        assert_eq!(run.run_pause_reason(), None);
+        assert_eq!(run.nodes().len(), 1);
+        assert_eq!(
+            run.node(&path).map(WorkflowNodeState::status),
+            Some(Some(WorkflowNodeStatus::Paused))
+        );
+        assert_eq!(
+            run.node(&path)
+                .and_then(WorkflowNodeState::node_pause_reason),
+            Some("等待 human")
+        );
+    }
+
+    #[test]
     fn unknown_workflow_event_matrix_no_placeholders() {
         let id = workflow_id("unknown");
         let path = node_path(&id, &["unknown", "node"]);
