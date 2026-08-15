@@ -13,7 +13,7 @@ The probe and independent oracle in `.cyril-vhfz/findings.md` agree on all 10 in
 - Live 2.16.0 evidence: `paused` precedes queue frames and paused `run_complete`.
 - Extracted KAS 0.38.7 evidence: immediate park-site `node_paused`; centralized run-level `paused` at `acp-server.js` lines 439940–439952; `run_complete` immediately after at 439954–439967.
 - Current Cyril behavior: new ordering leaves run status/reason absent during intervening queue frames while the paused node and its reason are already present; final paused state matches the old ordering.
-- Shipped-consumer audit: `run_pause_reason`, `node_pause_reason`, and paused workflow statuses have no consumers outside `cyril-core`; there is no caller on `main` to migrate in this PR.
+- Shipped-consumer audit after cyril-0qe6 merged in PR #95: its `/workflow` surface consumes command outcomes and snapshots, not pause events/status/reasons. Pause accessors and statuses still have no consumer outside `cyril-core`; there is no immediate-pause caller to migrate in this PR.
 
 ## Input shapes
 
@@ -86,7 +86,7 @@ Adding a convenience `WorkflowRun::is_paused()` would hide a resume ambiguity: a
 - Do not delay node mutation until run-level `paused`; that recreates the 0.38.7 UI latency bug.
 - Do not make `Paused` terminal or tear down run/session ownership on paused `run_complete`.
 - Do not parse KAS JSON in `cyril-ui` or `cyril`; only the core adapter sees wire fields.
-- Do not add renderer or slash-command behavior in this PR. cyril-zd8u owns the verified run-panel scope; cyril-0qe6 owns the verified v1 command scope, which contains no event-driven pause prompt. Neither implementation exists on `main`.
+- Do not add renderer or slash-command behavior in this PR. cyril-zd8u owns the verified run-panel scope; the now-merged cyril-0qe6 v1 command surface has no event-driven pause prompt.
 
 ## Claims
 
@@ -127,7 +127,7 @@ Result: 10/10 checkpoint rows agreed. The decisive `new_before_summary` row is `
 
 1. No run-level pause synthesis from `node_paused`; preserving separate authorities is the compatibility behavior, not missing implementation.
 2. No workflow renderer or pause chip; cyril-zd8u owns the verified presentation scope.
-3. No `/workflow` prompt/control changes; cyril-0qe6's verified v1 scope contains no event-driven pause prompt, so this compatibility fence has no command consumer to migrate on `main`.
+3. No `/workflow` prompt/control changes; the merged cyril-0qe6 v1 surface has no event-driven pause prompt, so this compatibility fence has no command consumer to migrate.
 4. No new domain field for `initiator`/`initiatorReason`; this PR proves forward-compatible tolerance, while no accepted behavior reads summary attribution.
 5. No fresh live 2.18.0 capture claim; the authenticated attempt failed before the pause trigger, so the design relies on the extracted production source plus committed live 2.16.0 evidence.
 6. No changes to retries, terminal absorption, session ownership, node-path canonicalization, or queue-resolution semantics.

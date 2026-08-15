@@ -49,4 +49,4 @@ The final tracker state was already order-tolerant, but the intermediate run sta
 
 ## Evidence boundary
 
-This proves conversion tolerance, per-frame intermediate state, and final convergence for both orderings. It does not prove a fresh authenticated 2.18.0 live run, renderer behavior from cyril-zd8u, or `/workflow` behavior from the still-in-progress cyril-0qe6 branch. Those consumers are not present on `main` and must consume the core immediate-node contract when they land.
+This proves conversion tolerance, per-frame intermediate state, and final convergence for both orderings. It does not prove a fresh authenticated 2.18.0 live run or renderer behavior from cyril-zd8u. After cyril-0qe6 merged in PR #95, its `/workflow` surface was re-audited: it consumes command outcomes and snapshots but has no event-driven pause prompt/status/reason consumer, so there is no caller to migrate here.

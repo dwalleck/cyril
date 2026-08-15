@@ -199,10 +199,10 @@ Every slice is a regression-characterization or documentation slice. No slice ch
 
 ## Plan Self-Review
 
-1. **Loops:** No production loop is introduced. Every test/review loop has an explicit formula and concrete bound; maximum is one `<64`-frame offline fixture scan or 31 synthetic event applications.
+1. **Loops:** No production loop is introduced. Every test/review loop has an explicit formula and concrete bound; maximum is one `<64`-frame offline fixture scan or 57 incremental replay/status applications.
 2. **Fixtures:** Each slice names a plausible bug: authority conflation, queue replacement, summary precondition/terminality, strict unknown-field parsing, reason loss, replay special-casing, misleading API contract, or cross-layer leakage. Expected outcomes are fixed before implementation.
 3. **Doc-comment preconditions:** Slice 7 adds descriptive timing semantics only; no `must`, non-empty requirement, or other precondition is introduced. No enforcement gap exists.
 4. **Write targets:** Production code writes nothing new. Test assertions are diagnostics on failure. The prove-it probe/oracle output is data on stdout; Cargo/compiler diagnostics remain stderr.
-5. **Tracker references:** Implementation defers no work. The approved design's negative space cites verified issues `cyril-zd8u` (renderer/run panel) and `cyril-0qe6` (v1 command surface); neither scope is silently moved into this plan.
+5. **Tracker references:** Implementation defers no work. The approved design's negative space cites verified issue `cyril-zd8u` (renderer/run panel) and merged issue `cyril-0qe6` (v1 command surface, re-audited after PR #95); neither scope is silently moved into this plan.
 
 Claim coverage is complete: slices 1–6 cover design claims 1–6; slices 7–8 jointly cover claim 7 and its documentation/placement evidence.
