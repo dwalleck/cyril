@@ -2778,6 +2778,7 @@ mod tests {
             Some("node reason")
         );
     }
+
     #[test]
     fn unknown_workflow_event_matrix_no_placeholders() {
         let id = workflow_id("unknown");
