@@ -3,8 +3,8 @@
 //! The ACP crate removes the leading underscore from extension method names,
 //! so this module matches the normalized `kiro/workflow/*` spelling exactly.
 
-use serde::Deserialize;
 use serde::de::DeserializeOwned;
+use serde::Deserialize;
 
 use super::WorkflowFrameOutcome;
 use crate::types::{
@@ -1112,7 +1112,7 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::*;
-    use crate::test_support::{CaptureWriter, must_succeed};
+    use crate::test_support::{must_succeed, CaptureWriter};
     use crate::workflow::{WorkflowNodeState, WorkflowRun, WorkflowTracker};
 
     const FAILED_CAPTURE: &str =
@@ -1131,6 +1131,9 @@ mod tests {
         include_str!("../../../../tests/fixtures/kas/workflow/kas-csig-2.16.2-neutral.jsonl");
     const CSIG_2162_EXPLICIT_CAPTURE: &str =
         include_str!("../../../../tests/fixtures/kas/workflow/kas-csig-2.16.2-explicit.jsonl");
+    const LATE_PAUSE_CAPTURE: &str = include_str!(
+        "../../../../tests/fixtures/kas/workflow/pause-late-summary-2.18.0-source-derived.jsonl"
+    );
     const REPLAY_SOURCES: [(&str, &str); 8] = [
         ("oracle-replay-events.jsonl", SYNTHETIC_REPLAY),
         ("terminal-failed-2.16.2.jsonl", FAILED_CAPTURE),
@@ -2499,6 +2502,45 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn pause_frames_tolerate_attribution_extras() {
+        let mut converted = 0;
+        for line in LATE_PAUSE_CAPTURE.lines() {
+            let frame: serde_json::Value = must_succeed(
+                serde_json::from_str(line),
+                "late-pause fixture is valid JSON",
+            );
+            let Some(method) = frame.get("method").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            let params = &frame["params"];
+            let attributed_pause = method == "_kiro/workflow/paused"
+                || (method == "_kiro/workflow/run_complete"
+                    && params.get("status").and_then(serde_json::Value::as_str) == Some("paused"));
+            if !attributed_pause {
+                continue;
+            }
+            assert_eq!(params["initiator"], "user");
+            assert_eq!(params["initiatorReason"], "operator requested pause");
+
+            let normalized = method.strip_prefix('_').unwrap_or(method);
+            match event(
+                to_notification(normalized, params),
+                "attributed pause frame",
+            ) {
+                WorkflowEvent::Paused(paused) => {
+                    assert_eq!(paused.pause_reason(), "operator");
+                }
+                WorkflowEvent::RunCompleted(completed) => {
+                    assert_eq!(completed.status(), WorkflowCompletionStatus::Paused);
+                }
+                other => panic!("unexpected attributed pause event: {other:?}"),
+            }
+            converted += 1;
+        }
+        assert_eq!(converted, 2);
     }
 
     #[test]
