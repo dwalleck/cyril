@@ -1177,12 +1177,28 @@ mod tests {
         (result, log)
     }
 
+    /// Capture lines come in two shapes: raw JSON-RPC frames, and proxy-log
+    /// envelopes that nest the frame under `parsed` (whose outer object also
+    /// carries its own `method` key). Consumers always want the frame itself,
+    /// so the envelope is unwrapped here.
+    fn capture_frames(source: &str) -> Vec<serde_json::Value> {
+        source
+            .lines()
+            .filter(|line| !line.is_empty())
+            .map(|line| {
+                let mut frame: serde_json::Value =
+                    must_succeed(serde_json::from_str(line), "capture line is valid JSON");
+                match frame.get("parsed") {
+                    Some(parsed) if parsed.is_object() => frame["parsed"].take(),
+                    _ => frame,
+                }
+            })
+            .collect()
+    }
+
     fn capture_params(source: &str, expected_status: &str) -> serde_json::Value {
         let mut matched = None;
-        for line in source.lines() {
-            let frame: serde_json::Value =
-                must_succeed(serde_json::from_str(line), "capture line is valid JSON");
-            let envelope = frame.get("parsed").unwrap_or(&frame);
+        for envelope in capture_frames(source) {
             if envelope.get("method").and_then(serde_json::Value::as_str)
                 == Some("_kiro/workflow/run_complete")
                 && envelope
@@ -1584,10 +1600,7 @@ mod tests {
         let mut failed = 0_u64;
         let mut aborted = 0_u64;
         for source in [FAILED_CAPTURE, ABORTED_CAPTURE] {
-            for line in source.lines() {
-                let frame: serde_json::Value =
-                    must_succeed(serde_json::from_str(line), "capture line is valid JSON");
-                let envelope = frame.get("parsed").unwrap_or(&frame);
+            for envelope in capture_frames(source) {
                 if envelope.get("method").and_then(serde_json::Value::as_str)
                     != Some("_kiro/workflow/run_complete")
                 {
@@ -1655,24 +1668,11 @@ mod tests {
     }
 
     fn replay_projection(source: &str, passes: usize) -> serde_json::Value {
-        let frames = source
-            .lines()
-            .filter(|line| !line.is_empty())
-            .map(|line| {
-                must_succeed(
-                    serde_json::from_str::<serde_json::Value>(line),
-                    "replay line is valid JSON",
-                )
-            })
-            .collect::<Vec<_>>();
+        let frames = capture_frames(source);
         let mut tracker = WorkflowTracker::new();
         let mut checkpoints = serde_json::Map::new();
         for _ in 0..passes {
-            for frame in &frames {
-                let envelope = frame
-                    .get("parsed")
-                    .filter(|parsed| parsed.is_object())
-                    .unwrap_or(frame);
+            for envelope in &frames {
                 let Some(method) = envelope.get("method").and_then(serde_json::Value::as_str)
                 else {
                     continue;
@@ -1880,11 +1880,9 @@ mod tests {
     /// as absent and this test fails.
     #[test]
     fn descriptor_wire_spelling_matches_live_recipe_catalog() {
-        let plan = ABORTED_CAPTURE
-            .lines()
-            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
-            .find_map(|frame| {
-                let envelope = frame.get("parsed").unwrap_or(&frame);
+        let plan = capture_frames(ABORTED_CAPTURE)
+            .into_iter()
+            .find_map(|envelope| {
                 let recipes = envelope.get("result")?.get("recipes")?.as_array()?;
                 recipes
                     .iter()
@@ -2511,15 +2509,11 @@ mod tests {
     #[test]
     fn pause_frames_tolerate_attribution_extras() {
         let mut converted = 0;
-        for line in LATE_PAUSE_CAPTURE.lines() {
-            let frame: serde_json::Value = must_succeed(
-                serde_json::from_str(line),
-                "late-pause fixture is valid JSON",
-            );
-            let Some(method) = frame.get("method").and_then(serde_json::Value::as_str) else {
+        for envelope in capture_frames(LATE_PAUSE_CAPTURE) {
+            let Some(method) = envelope.get("method").and_then(serde_json::Value::as_str) else {
                 continue;
             };
-            let params = &frame["params"];
+            let params = &envelope["params"];
             let attributed_pause = method == "_kiro/workflow/paused"
                 || (method == "_kiro/workflow/run_complete"
                     && params.get("status").and_then(serde_json::Value::as_str) == Some("paused"));
