@@ -1131,7 +1131,10 @@ mod tests {
         include_str!("../../../../tests/fixtures/kas/workflow/kas-csig-2.16.2-neutral.jsonl");
     const CSIG_2162_EXPLICIT_CAPTURE: &str =
         include_str!("../../../../tests/fixtures/kas/workflow/kas-csig-2.16.2-explicit.jsonl");
-    const REPLAY_SOURCES: [(&str, &str); 8] = [
+    const LATE_PAUSE_CAPTURE: &str = include_str!(
+        "../../../../tests/fixtures/kas/workflow/pause-late-summary-2.18.0-source-derived.jsonl"
+    );
+    const REPLAY_SOURCES: [(&str, &str); 9] = [
         ("oracle-replay-events.jsonl", SYNTHETIC_REPLAY),
         ("terminal-failed-2.16.2.jsonl", FAILED_CAPTURE),
         ("terminal-aborted-2.16.2.jsonl", ABORTED_CAPTURE),
@@ -1140,6 +1143,10 @@ mod tests {
         ("kas-csig-2.16.0-neutral.jsonl", CSIG_2160_NEUTRAL_CAPTURE),
         ("kas-csig-2.16.2-neutral.jsonl", CSIG_2162_NEUTRAL_CAPTURE),
         ("kas-csig-2.16.2-explicit.jsonl", CSIG_2162_EXPLICIT_CAPTURE),
+        (
+            "pause-late-summary-2.18.0-source-derived.jsonl",
+            LATE_PAUSE_CAPTURE,
+        ),
     ];
 
     fn event(result: WorkflowFrameOutcome, context: &str) -> WorkflowEvent {
@@ -1170,12 +1177,28 @@ mod tests {
         (result, log)
     }
 
+    /// Capture lines come in two shapes: raw JSON-RPC frames, and proxy-log
+    /// envelopes that nest the frame under `parsed` (whose outer object also
+    /// carries its own `method` key). Consumers always want the frame itself,
+    /// so the envelope is unwrapped here.
+    fn capture_frames(source: &str) -> Vec<serde_json::Value> {
+        source
+            .lines()
+            .filter(|line| !line.is_empty())
+            .map(|line| {
+                let mut frame: serde_json::Value =
+                    must_succeed(serde_json::from_str(line), "capture line is valid JSON");
+                match frame.get("parsed") {
+                    Some(parsed) if parsed.is_object() => frame["parsed"].take(),
+                    _ => frame,
+                }
+            })
+            .collect()
+    }
+
     fn capture_params(source: &str, expected_status: &str) -> serde_json::Value {
         let mut matched = None;
-        for line in source.lines() {
-            let frame: serde_json::Value =
-                must_succeed(serde_json::from_str(line), "capture line is valid JSON");
-            let envelope = frame.get("parsed").unwrap_or(&frame);
+        for envelope in capture_frames(source) {
             if envelope.get("method").and_then(serde_json::Value::as_str)
                 == Some("_kiro/workflow/run_complete")
                 && envelope
@@ -1577,10 +1600,7 @@ mod tests {
         let mut failed = 0_u64;
         let mut aborted = 0_u64;
         for source in [FAILED_CAPTURE, ABORTED_CAPTURE] {
-            for line in source.lines() {
-                let frame: serde_json::Value =
-                    must_succeed(serde_json::from_str(line), "capture line is valid JSON");
-                let envelope = frame.get("parsed").unwrap_or(&frame);
+            for envelope in capture_frames(source) {
                 if envelope.get("method").and_then(serde_json::Value::as_str)
                     != Some("_kiro/workflow/run_complete")
                 {
@@ -1648,24 +1668,11 @@ mod tests {
     }
 
     fn replay_projection(source: &str, passes: usize) -> serde_json::Value {
-        let frames = source
-            .lines()
-            .filter(|line| !line.is_empty())
-            .map(|line| {
-                must_succeed(
-                    serde_json::from_str::<serde_json::Value>(line),
-                    "replay line is valid JSON",
-                )
-            })
-            .collect::<Vec<_>>();
+        let frames = capture_frames(source);
         let mut tracker = WorkflowTracker::new();
         let mut checkpoints = serde_json::Map::new();
         for _ in 0..passes {
-            for frame in &frames {
-                let envelope = frame
-                    .get("parsed")
-                    .filter(|parsed| parsed.is_object())
-                    .unwrap_or(frame);
+            for envelope in &frames {
                 let Some(method) = envelope.get("method").and_then(serde_json::Value::as_str)
                 else {
                     continue;
@@ -1873,11 +1880,9 @@ mod tests {
     /// as absent and this test fails.
     #[test]
     fn descriptor_wire_spelling_matches_live_recipe_catalog() {
-        let plan = ABORTED_CAPTURE
-            .lines()
-            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
-            .find_map(|frame| {
-                let envelope = frame.get("parsed").unwrap_or(&frame);
+        let plan = capture_frames(ABORTED_CAPTURE)
+            .into_iter()
+            .find_map(|envelope| {
                 let recipes = envelope.get("result")?.get("recipes")?.as_array()?;
                 recipes
                     .iter()
@@ -2499,6 +2504,41 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn pause_frames_tolerate_attribution_extras() {
+        let mut converted = 0;
+        for envelope in capture_frames(LATE_PAUSE_CAPTURE) {
+            let Some(method) = envelope.get("method").and_then(serde_json::Value::as_str) else {
+                continue;
+            };
+            let params = &envelope["params"];
+            let attributed_pause = method == "_kiro/workflow/paused"
+                || (method == "_kiro/workflow/run_complete"
+                    && params.get("status").and_then(serde_json::Value::as_str) == Some("paused"));
+            if !attributed_pause {
+                continue;
+            }
+            assert_eq!(params["initiator"], "user");
+            assert_eq!(params["initiatorReason"], "operator requested pause");
+
+            let normalized = method.strip_prefix('_').unwrap_or(method);
+            match event(
+                to_notification(normalized, params),
+                "attributed pause frame",
+            ) {
+                WorkflowEvent::Paused(paused) => {
+                    assert_eq!(paused.pause_reason(), "operator");
+                }
+                WorkflowEvent::RunCompleted(completed) => {
+                    assert_eq!(completed.status(), WorkflowCompletionStatus::Paused);
+                }
+                other => panic!("unexpected attributed pause event: {other:?}"),
+            }
+            converted += 1;
+        }
+        assert_eq!(converted, 2);
     }
 
     #[test]

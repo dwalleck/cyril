@@ -201,7 +201,7 @@ impl WorkflowNodeState {
         }
     }
 
-    /// Returns the snapshot-authored status when this node has been snapshotted.
+    /// Returns the latest node status. A node pause updates it immediately.
     pub fn status(&self) -> Option<WorkflowNodeStatus> {
         self.status
     }
@@ -271,7 +271,7 @@ impl WorkflowNodeState {
         self.prompt.as_deref()
     }
 
-    /// Returns the latest node-specific pause reason.
+    /// Returns the node-scoped pause reason as soon as that node pauses.
     pub fn node_pause_reason(&self) -> Option<&str> {
         self.node_pause_reason.as_deref()
     }
@@ -325,7 +325,7 @@ impl WorkflowRun {
         &self.workflow_name
     }
 
-    /// Returns the authoritative run status after a persisted snapshot arrives.
+    /// Returns the latest run-level status. A node pause alone does not update it.
     pub fn status(&self) -> Option<WorkflowRunStatus> {
         self.status
     }
@@ -398,7 +398,7 @@ impl WorkflowRun {
         self.queue_resolution.as_ref()
     }
 
-    /// Returns the latest run-level pause reason.
+    /// Returns the run-summary pause reason after that summary arrives.
     pub fn run_pause_reason(&self) -> Option<&str> {
         self.run_pause_reason.as_deref()
     }
@@ -619,6 +619,7 @@ impl WorkflowTracker {
         changed
     }
 
+    /// Applies the immediate node authority without synthesizing run pause state.
     fn apply_node_paused(&mut self, paused: WorkflowNodePaused) -> bool {
         let (workflow_id, _node_id, node_path, reason) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "node_paused") else {
@@ -688,6 +689,7 @@ impl WorkflowTracker {
         replace(&mut node.latest_watch_poll, Some((outcome, at)))
     }
 
+    /// Applies the later run-summary authority without rewriting node pause state.
     fn apply_paused(&mut self, paused: WorkflowPaused) -> bool {
         let (workflow_id, reason) = paused.into_parts();
         let Some(run) = self.active_run_mut(&workflow_id, "paused") else {
@@ -2543,6 +2545,237 @@ mod tests {
             run.node(&watch_path)
                 .and_then(WorkflowNodeState::latest_watch_poll),
             Some((WorkflowWatchOutcome::Idle, "t2"))
+        );
+    }
+
+    #[test]
+    fn pause_ordering_matrix_preserves_intermediate_authority() {
+        let id = workflow_id("pause-ordering");
+        let path = node_path(&id, &["pause-ordering", "step"]);
+        let mut tracker = WorkflowTracker::new();
+        for event in [
+            WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            )),
+            WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                id.clone(),
+                node_id("step"),
+                path.clone(),
+                WorkflowNodeType::Step,
+                WorkflowNodeStartDetails::new(),
+            )),
+            WorkflowEvent::NodePaused(WorkflowNodePaused::new(
+                id.clone(),
+                node_id("step"),
+                path.clone(),
+                "等待 human".to_owned(),
+            )),
+        ] {
+            assert_eq!(tracker.apply_event(event), Ok(true));
+        }
+
+        let Some(run) = tracker.get(&id) else {
+            panic!("pause-ordering run missing");
+        };
+        assert_eq!(run.status(), None);
+        assert_eq!(run.run_pause_reason(), None);
+        assert_eq!(run.nodes().len(), 1);
+        assert_eq!(
+            run.node(&path).map(WorkflowNodeState::status),
+            Some(Some(WorkflowNodeStatus::Paused))
+        );
+        assert_eq!(
+            run.node(&path)
+                .and_then(WorkflowNodeState::node_pause_reason),
+            Some("等待 human")
+        );
+
+        let pending =
+            WorkflowNodeDescriptor::step(node_id("queued"), "agent".to_owned(), None, None);
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                vec![pending.clone()],
+                None,
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("run missing after pending queue frame");
+        };
+        assert_eq!(run.status(), None);
+        assert_eq!(run.run_pause_reason(), None);
+        assert_eq!(
+            run.node(&path)
+                .and_then(WorkflowNodeState::node_pause_reason),
+            Some("等待 human")
+        );
+        assert_eq!(run.pending_steps(), Some(std::slice::from_ref(&pending)));
+        assert!(run.queue_resolution().is_none());
+
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                Vec::new(),
+                Some(WorkflowQueueResolution::new(
+                    WorkflowQueueOutcome::Applied,
+                    Some("acknowledged".to_owned()),
+                )),
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("run missing after queue acknowledgement");
+        };
+        assert_eq!(run.status(), None);
+        assert_eq!(run.run_pause_reason(), None);
+        assert_eq!(
+            run.node(&path)
+                .and_then(WorkflowNodeState::node_pause_reason),
+            Some("等待 human")
+        );
+        assert_eq!(run.pending_steps(), Some(std::slice::from_ref(&pending)));
+        assert_eq!(
+            run.queue_resolution().map(WorkflowQueueResolution::outcome),
+            Some(WorkflowQueueOutcome::Applied)
+        );
+    }
+
+    #[test]
+    fn legacy_summary_only_pause_remains_resumable() {
+        let id = workflow_id("summary-only");
+        let mut tracker = WorkflowTracker::new();
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                id.clone(),
+                "recipe".to_owned(),
+                serde_json::json!({}),
+                Vec::new(),
+                None,
+            ))),
+            Ok(true)
+        );
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::Paused(WorkflowPaused::new(
+                id.clone(),
+                "repeat exhausted".to_owned(),
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("summary-only run missing before completion");
+        };
+        assert_eq!(run.status(), Some(WorkflowRunStatus::Paused));
+        assert_eq!(run.run_pause_reason(), Some("repeat exhausted"));
+        assert!(
+            run.nodes()
+                .all(|(_, node)| node.node_pause_reason().is_none())
+        );
+
+        assert_eq!(
+            tracker.apply_event(completion(snapshot_with_status(
+                "summary-only",
+                WorkflowRunStatus::Paused,
+                "step",
+            ))),
+            Ok(true)
+        );
+        let pending = WorkflowNodeDescriptor::step(node_id("next"), "agent".to_owned(), None, None);
+        assert_eq!(
+            tracker.apply_event(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                vec![pending.clone()],
+                None,
+            ))),
+            Ok(true)
+        );
+        let Some(run) = tracker.get(&id) else {
+            panic!("summary-only run missing after completion");
+        };
+        assert_eq!(run.status(), Some(WorkflowRunStatus::Paused));
+        assert_eq!(run.run_pause_reason(), Some("repeat exhausted"));
+        assert!(
+            run.nodes()
+                .all(|(_, node)| node.node_pause_reason().is_none())
+        );
+        assert_eq!(run.pending_steps(), Some(std::slice::from_ref(&pending)));
+    }
+
+    #[test]
+    fn pause_orderings_converge_after_completion() {
+        fn fold(summary_late: bool) -> WorkflowRun {
+            let id = workflow_id("converge");
+            let path = node_path(&id, &["converge", "step"]);
+            let mut events = vec![
+                WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                    id.clone(),
+                    "recipe".to_owned(),
+                    serde_json::json!({}),
+                    Vec::new(),
+                    None,
+                )),
+                WorkflowEvent::NodeStarted(WorkflowNodeStarted::new(
+                    id.clone(),
+                    node_id("step"),
+                    path.clone(),
+                    WorkflowNodeType::Step,
+                    WorkflowNodeStartDetails::new(),
+                )),
+                WorkflowEvent::NodePaused(WorkflowNodePaused::new(
+                    id.clone(),
+                    node_id("step"),
+                    path,
+                    "node reason".to_owned(),
+                )),
+            ];
+            if !summary_late {
+                events.push(WorkflowEvent::Paused(WorkflowPaused::new(
+                    id.clone(),
+                    "run reason".to_owned(),
+                )));
+            }
+            events.push(WorkflowEvent::StepsQueued(WorkflowStepsQueued::new(
+                id.clone(),
+                Vec::new(),
+                None,
+            )));
+            if summary_late {
+                events.push(WorkflowEvent::Paused(WorkflowPaused::new(
+                    id.clone(),
+                    "run reason".to_owned(),
+                )));
+            }
+            events.push(completion(snapshot_with_status(
+                "converge",
+                WorkflowRunStatus::Paused,
+                "step",
+            )));
+
+            let mut tracker = WorkflowTracker::new();
+            for event in events {
+                assert_eq!(tracker.apply_event(event), Ok(true));
+            }
+            match tracker.get(&id) {
+                Some(run) => run.clone(),
+                None => panic!("converged run missing"),
+            }
+        }
+
+        let early = fold(false);
+        let late = fold(true);
+        assert_eq!(early, late);
+        assert_eq!(late.status(), Some(WorkflowRunStatus::Paused));
+        assert_eq!(late.run_pause_reason(), Some("run reason"));
+        let id = workflow_id("converge");
+        let path = node_path(&id, &["converge", "step"]);
+        assert_eq!(
+            late.node(&path)
+                .and_then(WorkflowNodeState::node_pause_reason),
+            Some("node reason")
         );
     }
 

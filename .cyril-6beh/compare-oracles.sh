@@ -31,7 +31,8 @@ case "${1:-}" in
       "$fixtures/kas-custom-dag-2.16.0.jsonl" \
       "$fixtures/kas-csig-2.16.0-neutral.jsonl" \
       "$fixtures/kas-csig-2.16.2-neutral.jsonl" \
-      "$fixtures/kas-csig-2.16.2-explicit.jsonl" >"$expected"
+      "$fixtures/kas-csig-2.16.2-explicit.jsonl" \
+      "$fixtures/pause-late-summary-2.18.0-source-derived.jsonl" >"$expected"
     test_name=workflow_capture_replay_matches_independent_folder
     ;;
   *)
