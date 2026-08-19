@@ -104,7 +104,7 @@ Single PR increment: **a5wo-interruption-fences** (Slices 1–3). Mergeable defi
 
 **Stress fixture:** Six distinct session/tool-call identities across two engine generations; middle update omits title and kind; terminal update carries empty-string raw output; unrelated metering/context frames surround the lifecycle. Expected: every named capture independently converges to the same state without ID sampling, duplicate commit, field erasure, or stuck activity.
 
-**Regression fence:** `crates/cyril-ui/src/state.rs::cancel_recovery_captures_converge_without_duplicate_or_spinner`, created in this slice, with explicit `CAPTURES.len() == 6`; existing core fences `merge_update_preserves_content_when_update_has_none`, `merge_update_preserves_title_when_update_is_empty`, `merge_update_preserves_raw_input_when_update_has_none`, and `ledger_partial_update_preserves_non_empty_fields`.
+**Regression fence:** `crates/cyril-ui/src/state.rs::cancellation_captures_converge_to_one_failed_committed_call`, covering all six captures; existing core fences `merge_update_preserves_content_when_update_has_none`, `merge_update_preserves_title_when_update_is_empty`, `merge_update_preserves_raw_input_when_update_has_none`, and `ledger_partial_update_preserves_non_empty_fields`.
 
 **Named mutation:** C4 — make the `ToolCallUpdated` arm append a message instead of updating `tool_call_index`; committed count becomes three and the new fence fails. C5 — replace guarded title/raw-input/content/location assignments in `ToolCall::merge_update` with unconditional assignments; the update checkpoint or existing guard fences fail.
 
@@ -113,6 +113,7 @@ Single PR increment: **a5wo-interruption-fences** (Slices 1–3). Mergeable defi
 **Wall budget/phase:** N/A — one-off test phase; no production runtime phase is introduced.
 
 **Files:**
+- `crates/cyril-core/src/test_support.rs`
 - `crates/cyril-ui/src/state.rs`
 
 **Estimate:** 45 minutes
@@ -122,9 +123,60 @@ Single PR increment: **a5wo-interruption-fences** (Slices 1–3). Mergeable defi
 **PR increment:** a5wo-interruption-fences
 
 **Commands and expected results:**
-- `cargo test -p cyril-ui cancel_recovery_captures_converge_without_duplicate_or_spinner` → six named captures each report one committed failed call, exact checkpoint field equality, zero active calls, and Ready activity. Under the C4 append mutation every capture fails its committed-count assertion; restored code passes.
-- `cargo test -p cyril-core merge_update_preserves` → title, content, raw-input, and raw-output omission guards stay green; the C5 unconditional-assignment mutation turns the relevant guards red; restored code passes.
+- `cargo test -p cyril-ui cancellation_captures_converge_to_one_failed_committed_call` → six named captures each report one committed failed call, exact checkpoint field equality, zero active calls, and Ready activity. Under the C4 append mutation every capture fails its committed-count assertion; restored code passes.
+- `cargo test -p cyril-core merge_update_preserves_` → title, content, raw-input, and raw-output omission guards stay green; the C5 unconditional-assignment mutation turns the relevant guards red; restored code passes.
 - `cargo test -p cyril-core ledger_partial_update_preserves_non_empty_fields` → session-scoped ledger keeps non-empty title/input/content/locations; the C5 mutation turns the fence red; restored code passes.
+
+## Checkpointed-build results
+
+### Slice 1 — PASS (`12b40fc`)
+
+1. Affected unit/integration tests — **PASS**: focused core fixture test plus `cargo test` (1,370 passed).
+2. Pending falsifiers — **PASS**: C1 source gate reverified; C2 exact fixture fence established.
+3. Stress fixture — **PASS**: absolute path with embedded space and Unicode survived byte regeneration and ACP conversion exactly.
+4. Implementation vs independent oracle — **PASS**: lexical probe and independent AST enumeration agreed on 4 initial sites, 15 update sites, absence, and the three pinned path-only producers.
+5. Loop budget — **PASS**: source probe 0.23 seconds and generator 0.21 seconds, each below the 2-second one-off budget; four-frame Rust replay reported 0.00 seconds.
+6. Always-on wall budget — **N/A — reason**: no production runtime phase or loop changed.
+7. Regression fences — **PASS**: source hash/site gate, generator byte equality, and exact ACP fixture-shape test green.
+8. Named mutations and restoration — **PASS**: C1 hash mutation exited nonzero; C2 missing-`rawInput` mutation failed both byte and shape fences; restored commands green.
+
+Post-commit drift/size: fetched `origin/main`; no upstream commits to review; cumulative diff 1,297 changed lines, below the 2,000-line review tripwire.
+
+### Slice 2 — PASS (`1684877`)
+
+1. Affected unit/integration tests — **PASS**: focused display fence, UI `--no-run`, workspace tests (1,670 passed), and clippy.
+2. Pending falsifiers — **PASS**: C3 display-totality and C6 core/UI dependency boundary both established.
+3. Stress fixture — **PASS**: absent input and `/workspace/src/space ü.rs` produced `None`/exact-path/`None` without panic or fabricated command.
+4. Implementation vs independent oracle — **PASS**: display values matched the pinned source-derived table; compiler independently rejected a UI-side ACP import.
+5. Loop budget — **PASS**: four-frame in-memory replay reported 0.00 seconds, below 500 ms.
+6. Always-on wall budget — **N/A — reason**: test-only dependency features and assertions add no production phase.
+7. Regression fences — **PASS**: focused display and UI compilation fences green.
+8. Named mutations and restoration — **PASS**: `primary_path` `expect` mutation panicked; direct ACP import failed unresolved; restored focused and compilation fences green.
+
+Post-commit drift/size: fetched `origin/main`; no upstream commits to review; cumulative diff 1,338 changed lines, below the 2,000-line review tripwire.
+
+### Slice 3 — PASS (`e2c3922`)
+
+1. Affected unit/integration tests — **PASS**: six-capture lifecycle fence, four merge guards, ledger guard, workspace tests (1,671 passed), and clippy.
+2. Pending falsifiers — **PASS**: C4 convergence and C5 per-update field preservation both established.
+3. Stress fixture — **PASS**: six captures, two KAS generations, six IDs, surrounding context/metering frames, omitted middle fields, and terminal empty output all converged independently.
+4. Implementation vs independent oracle — **PASS**: production-path replay matched the Python oracle's per-ID `pending → in_progress → failed` ordering and recorded cancelled turn end.
+5. Loop budget — **PASS**: six-capture in-memory replay reported 0.00 seconds, below 2 seconds.
+6. Always-on wall budget — **N/A — reason**: recorder adaptation and replay exist only behind test-support.
+7. Regression fences — **PASS**: each update checkpoint retained title/kind/input/content/locations; final state had one failed committed call, zero active calls, and `Activity::Ready`.
+8. Named mutations and restoration — **PASS**: append-on-update produced three committed calls; unconditional merge assignments erased the title at the first captured update and failed three merge guards plus the ledger guard; all restored fences green.
+
+Post-commit drift/size: fetched `origin/main`; no upstream commits to review; cumulative implementation diff 1,463 changed lines, below both the 2,000-line review tripwire and 4,000-line hard gate.
+
+### Assembled implementation gate — PASS
+
+- Source/provenance: pinned package 0.38.7 and SHA matched; source probe reported `REPRESENTABLE absent=true partial=true`; generated four-frame fixture matched SHA `384dc37487079a49ac1f344648c32850cd2e81bced44165d6a6cfa86fe03719b`.
+- Focused fences: source fixture 1 passed; display 1 passed; six-capture lifecycle 1 passed; merge guards 4 passed; ledger guard 1 passed; UI `--no-run` passed.
+- Workspace: two consecutive clean `cargo test` runs each passed 1,671 tests across 19 suites with 5 ignored; `cargo clippy -- -D warnings` passed; `cargo fmt --all --check` passed.
+- Stability note: the first assembled workspace run intermittently observed an empty tracing capture in unrelated existing `malformed_workflow_field_matrix_isolated`; its exact test, the full KAS core suite, and both subsequent workspace runs passed without source changes.
+- Independent final review: **PASS** — reviewer reported no actionable correctness, acceptance, boundary, or fence findings.
+- Final drift/size: **PASS** — final fetch found no `origin/main` movement; assembled review surface is 1,523 changed lines, below both thresholds.
+- Gate state: every applicable item is **PASS**; every non-applicable wall-budget item is recorded `N/A — reason`; no checkpoint has a `FAIL`.
 
 ## Tracker taxonomy
 
@@ -133,10 +185,10 @@ Single PR increment: **a5wo-interruption-fences** (Slices 1–3). Mergeable defi
 
 ## Self-review
 
-- [x] C1–C6 are assigned exactly once; every `PENDING` design row is discharged by its owning slice.
+- [x] C1–C6 are assigned exactly once; every design claim is `PASS`.
 - [x] Every slice has all thirteen mandatory fields; every conditional field has an explicit `N/A — reason` where applicable.
 - [x] Each claim's fence and named mutation land in the same slice.
 - [x] Every new loop records asymptotic cost, bounded test/source size, and an explicit accepted maximum; no always-on production phase is introduced.
 - [x] Review arithmetic includes a documented 25% margin and yields one independently mergeable increment below 4,000 lines.
 - [x] Deferrals are classified under the tracker taxonomy with verified IDs where future work exists.
-- [x] No slice is declared complete; checkpointed-build owns completion.
+- [x] Checkpointed-build completed all slices; every gate item is `PASS` or `N/A — reason`, with no `FAIL`.

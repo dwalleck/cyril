@@ -37,3 +37,5 @@ prove-it-prototype → falsifiable-design → budgeted-plan → checkpointed-bui
 ## Terminal criterion
 
 Empirical — `prove-it-prototype` records `PASS` for the current-source wire-representability premise, every later artifact satisfies its owning stage's completion criterion, and `checkpointed-build` records no `FAIL`.
+
+Result: 2026-08-18 | pinned source probe; fixture byte derivation; C1–C6 focused fences and named mutations; two clean `cargo test` runs; clippy; rustfmt | PASS
