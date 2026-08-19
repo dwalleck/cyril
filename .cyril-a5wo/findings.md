@@ -52,3 +52,25 @@ KAS 2.16.2 exposes a deterministic cancelled-subagent lifecycle on ACP—`pendin
 ## Gate result
 
 **BLOCKED.** The signed spec requires stopping after three fresh attempts if the subagent mid-arguments sequence is absent. The captures are valid supplemental cancellation/recovery evidence, but they do not satisfy the live partial-rawInput criterion and cannot advance to falsifiable design.
+
+## 2026-08-18 reprobe — kiro-cli 2.18.1
+
+Same probe, same protocol, current engine:
+
+- Binary: `~/.local/share/kiro-research/binaries/2.18.1/kiro-cli-chat`
+- Version: `2.18.1` (BUILD_HASH `74b78bb5a369788e393b06654b2b213d937a41d2`, built 2026-08-13)
+- Binary SHA-256: `e0fc67e6e9b355dcbdb72995576a1d88a7ad9db7c766502418e5bd3bcab819c9`
+- Captures: `captures-2.18.1/attempt-{1,2,3}.jsonl` (separate directory; the 2.16.2 evidence is untouched)
+
+Result: **identical to 2.16.2 on every predicate.** All three attempts injected
+`session/cancel` on the first `agent-subtask` frame (12/14/14 session updates) and captured
+the same single-`toolCallId` lifecycle `pending → in_progress → failed`; every frame carried
+the complete `rawInput` object (`contextFiles`, `explanation`, `name`, `prompt`). The oracle
+verdict is FAIL on all three: `partial_raw_input` empty in each capture.
+
+Interpretation: six attempts across two engine generations (the fix-era 2.16.2 and current
+2.18.1) never exposed a partial or absent `rawInput` on the ACP seam. This strengthens the
+reading that the release-note's "interrupted mid-arguments" condition is internal to the
+engine and structurally unobservable at cyril's boundary — the argument object is complete
+by the earliest frame ACP ever sees. The cancel-recovery lifecycle itself is now confirmed
+stable across both engines and is fenceable evidence in its own right.
