@@ -4442,6 +4442,99 @@ mod tests {
         assert_eq!(partial.command_text(), None);
     }
 
+    #[test]
+    fn cancellation_captures_converge_to_one_failed_committed_call() {
+        const CAPTURES: [(&str, &str); 6] = [
+            (
+                "2.16.2 attempt 1",
+                include_str!("../../../.cyril-a5wo/captures/attempt-1.jsonl"),
+            ),
+            (
+                "2.16.2 attempt 2",
+                include_str!("../../../.cyril-a5wo/captures/attempt-2.jsonl"),
+            ),
+            (
+                "2.16.2 attempt 3",
+                include_str!("../../../.cyril-a5wo/captures/attempt-3.jsonl"),
+            ),
+            (
+                "2.18.1 attempt 1",
+                include_str!("../../../.cyril-a5wo/captures-2.18.1/attempt-1.jsonl"),
+            ),
+            (
+                "2.18.1 attempt 2",
+                include_str!("../../../.cyril-a5wo/captures-2.18.1/attempt-2.jsonl"),
+            ),
+            (
+                "2.18.1 attempt 3",
+                include_str!("../../../.cyril-a5wo/captures-2.18.1/attempt-3.jsonl"),
+            ),
+        ];
+
+        fn assert_preserved_fields(name: &str, current: &TrackedToolCall, initial: &ToolCall) {
+            assert_eq!(current.title(), initial.title(), "{name}");
+            assert_eq!(current.kind(), initial.kind(), "{name}");
+            assert_eq!(current.raw_input(), initial.raw_input(), "{name}");
+            assert_eq!(
+                format!("{:?}", current.content()),
+                format!("{:?}", initial.content()),
+                "{name}"
+            );
+            assert_eq!(
+                format!("{:?}", current.locations()),
+                format!("{:?}", initial.locations()),
+                "{name}"
+            );
+        }
+
+        for (name, capture) in CAPTURES {
+            let notifications = cyril_core::test_support::kas_recording_to_routed(capture);
+            let mut initial = None;
+            let mut state = UiState::new(500);
+            for (_, notification) in notifications {
+                if let Notification::ToolCallStarted(call) = &notification {
+                    assert!(initial.replace(call.clone()).is_none(), "{name}");
+                }
+                state.apply_notification(&notification);
+                if matches!(notification, Notification::ToolCallUpdated(_)) {
+                    let expected = initial
+                        .as_ref()
+                        .unwrap_or_else(|| panic!("{name}: update preceded initial call"));
+                    let current = state
+                        .messages()
+                        .iter()
+                        .find_map(|message| {
+                            let ChatMessageKind::ToolCall(call) = message.kind() else {
+                                return None;
+                            };
+                            (call.id() == expected.id()).then_some(call)
+                        })
+                        .unwrap_or_else(|| panic!("{name}: update lost committed call"));
+                    assert_preserved_fields(name, current, expected);
+                }
+            }
+
+            let initial = initial.unwrap_or_else(|| panic!("{name}: missing initial tool call"));
+            let committed: Vec<_> = state
+                .messages()
+                .iter()
+                .filter_map(|message| {
+                    let ChatMessageKind::ToolCall(call) = message.kind() else {
+                        return None;
+                    };
+                    Some(call)
+                })
+                .collect();
+            assert_eq!(committed.len(), 1, "{name}");
+            let committed = committed[0];
+            assert_eq!(committed.id(), initial.id(), "{name}");
+            assert_preserved_fields(name, committed, &initial);
+            assert_eq!(committed.status(), ToolCallStatus::Failed, "{name}");
+            assert!(state.active_tool_calls().is_empty(), "{name}");
+            assert_eq!(state.activity(), Activity::Ready, "{name}");
+        }
+    }
+
     // --- Turn lifecycle tests ---
     // These test realistic sequences of notifications, not just individual events.
 

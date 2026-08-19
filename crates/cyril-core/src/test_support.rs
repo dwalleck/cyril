@@ -248,3 +248,35 @@ pub fn kas_capture_to_routed(
     }
     forwarded
 }
+
+/// Replays agent-to-client notifications from Cyril's JSONL wire recorder.
+///
+/// Recorder rows wrap the original JSON-RPC frame in `parsed`; client-to-agent
+/// cancellation and agent requests/responses are not inputs to notification
+/// state machines, so this unwraps only inbound notification envelopes before
+/// delegating to [`kas_capture_to_routed`].
+#[cfg(feature = "kas")]
+pub fn kas_recording_to_routed(
+    recording: &str,
+) -> Vec<(Option<crate::types::SessionId>, crate::types::Notification)> {
+    let mut capture = String::new();
+    for line in recording.lines().filter(|line| !line.is_empty()) {
+        let row: serde_json::Value =
+            must_succeed(serde_json::from_str(line), "recorder row is valid JSON");
+        if row.get("direction").and_then(serde_json::Value::as_str) != Some("agent_to_client")
+            || row.get("envelope").and_then(serde_json::Value::as_str) != Some("notification")
+        {
+            continue;
+        }
+        let parsed = row
+            .get("parsed")
+            .unwrap_or_else(|| panic!("agent-to-client notification row carries parsed JSON"));
+        let frame = must_succeed(
+            serde_json::to_string(parsed),
+            "parsed recorder frame serializes",
+        );
+        capture.push_str(&frame);
+        capture.push('\n');
+    }
+    kas_capture_to_routed(&capture)
+}
