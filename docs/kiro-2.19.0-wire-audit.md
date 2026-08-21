@@ -187,9 +187,20 @@ The first pass audited only the ACP wire; this leg dumps the agent→backend mod
 - Remaining request-layer gap: **v2 has no dumper** — v2 request auditing (e.g. whether a watchdog stall-retry resends an identical payload) needs TLS interception or a fresh AWS prompt-log pull; the July prompt-log corpus predates 2.19.0.
 - Artifacts: `experiments/conductor-spike/reqdump-kas-{0.46.1-main,0.38.7pin-main,0.46.1-titlecall}-2.19.0.json` (no auth material; request dumps carry no tokens).
 
-## 14. Artifacts
+## 14. Live workflow run (`_kiro/workflow/*` re-verification — added on follow-up)
 
-- Probes: `experiments/conductor-spike/probe-v2-watchdog-2.19.0.py` (parameterized engine/soft/hard/prompt — reusable for future watchdog checks), `probe-kas-surface-2.19.0.py`.
+A two-step recipe (bundled `wf-coder`, exact-output prompts, `{{s1.output}}` chaining) driven gate-off on 0.46.1, plus a same-day 0.38.7-pinned A/B (`KIRO_KAS_SERVER_PATH`). Probe: `experiments/conductor-spike/probe-kas-workflow-live-2.19.0.py`.
+
+**Event contract: unchanged.** Gate-off `_kiro/workflow/new` + `invoke` still work (`_meta.workflowsEnabled: false` echoed); ordering matches the W1 model exactly — `run_start` → `node_start` ×2 per step (scheduled, then with `sessionId`) → `node_complete` → … → `run_complete`; payload keys per kind are identical to the documented nine-kind table, **no new fields on the happy path** (an organic `node_paused` carries `reason` only — no `kind`, consistent with `retry-wait` being the sole kind-bearing case). `run_complete status:"paused"` non-terminal trap still true. Step-session titles live-confirmed as `«workflow» · «nodeId»` (`audit-min · s1`) via `session/list`; step transcripts persist the `…-turn-start`/`…-turn-end` messageId records.
+
+**Finding: `{{step.output}}` capture is BROKEN in practice — and not newly.** s1 answered `ALPHA` as text then signaled `send_message(severity:success)` (the pattern the engine's own appended protocol produces); `node_complete.capturedOutput` and `finalState.capturedOutputs` came back `""`. Same on the 0.38.7 pin, and every committed 2.16.0/2.16.2 capture in this repo also shows `capturedOutput:""` — every observation we hold is empty. Root cause visible in the 0.46.1 bundle: `extractCapturedOutput` matches `role:"bot"` messages with `entries[].type:"text"`; the in-turn view yields nothing for a speak-then-signal turn, and the **new 0.46.1 transcript fallback** (whose doc comment describes this exact bug and promises to keep `{{id.output}}` non-empty) reads persisted records shaped `{payload:{type:"assistant", content}}` — no `role`, no `entries` — so it can never match either; live it returned `""` with no `captured_output_fallback_failed` warning. Downstream consequence observed live: s2's prompt interpolated the hole, the model asked for clarification (`send_message need_input`) and the run parked (`node_paused` → `paused` → `run_complete paused`) — while the 0.38.7-pin s2 happened to comply and the run completed (model roulette, not a binary delta).
+
+Consequences: (a) workflow authoring must not build data flow on `{{id.output}}`/`{{previous.output}}` — the `artifacts` path registry with input-derived paths is the reliable channel (the kiro-workflow-authoring skill's templating section and setup-step idiom updated accordingly); (b) cyril-zd8u should not spend UI on `capturedOutput` — it is empty in every observed run; (c) `send_message` severity → completion mapping re-verified (`success` → completed, `need_input` → node pause).
+
+## 15. Artifacts
+
+- Probes: `experiments/conductor-spike/probe-v2-watchdog-2.19.0.py` (parameterized engine/soft/hard/prompt — reusable for future watchdog checks), `probe-kas-surface-2.19.0.py`, `probe-kas-workflow-live-2.19.0.py` (two-step gate-off workflow run; reusable capture re-verifier).
+- Workflow captures (token-scrubbed): `kas-workflow-live-{0.46.1,0.38.7pin}-2.19.0.jsonl`.
 - Captures (token-scrubbed): `experiments/conductor-spike/{v2-watchdog-control,v2-watchdog-soft,v2-watchdog-hard,kas-watchdog,kas-surface,v2-slash}-2.19.0.jsonl`. `v2-watchdog-soft` shows the notice at exactly the configured soft seconds during a completing turn; `v2-watchdog-hard` is the full 3-attempt exhaustion; `kas-watchdog` is the KAS negative (3.78 s gap, no notice).
 - Doc-manifest baselines: `docs/kiro-docs-index-2.19.0-{103,138,merged}.json` (identical counts to 2.18.1; see § 9).
 - Archive: binaries + BUILD-INFO + SHA256SUMS at `~/.local/share/kiro-research/binaries/2.19.0/`; `tui-bundles/kiro-tui-2.19.0.js` (+`.sha256`).
