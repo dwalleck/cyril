@@ -18,6 +18,30 @@ The ride-along find, and the first `_kiro/*` + `_session/*` vocabulary expansion
 - **Client-gated**: `initialize.clientCapabilities._meta.kiro.streamingShellContent: true` (new member of the `textSearch`/`findFiles` capability family; default off → zero cyril impact today).
 - **No shipped client consumes it**: tui.js 2.19.1 has 0 hits for the method and the capability — the emitter shipped ahead of any consumer (the mirror image of `_kiro/diagnostics/changed`, where the TUI subscribes to a non-existent emitter — still 0 in 0.48.0). Cyril can be the first client with live shell streaming → **cyril-2mo0**.
 
+### LIVE CAPTURE (0.48.0, capability advertised; `kas-content-chunk-2.19.1.jsonl`)
+
+Prompted `for i in 1 2 3 4 5; do echo "tick $i at $(date +%T)"; sleep 1; done; echo "key: AKIA…"; echo done`:
+
+```
++2.72s tool_call         status=pending  title='Run Command'
++2.86s tool_call_update  status=in_progress   (×2, no content — chunks replace content updates)
++2.90s content_chunk  text='tick 1 at 18:54:35\n'
++3.90s content_chunk  text='tick 2 at 18:54:36\n'
++4.91s content_chunk  text='tick 3 at 18:54:37\n'
++5.91s content_chunk  text='tick 4 at 18:54:38\n'
++6.92s content_chunk  text='tick 5 at 18:54:39\n'
++7.89s content_chunk  text='key: AKIA1234567890ABCDEF\ndone\n'
++7.89s tool_call_update  status=completed
+       content[0].content.text = "{\"output\":\"tick 1 at 18:54:35\\n…\\ndone\\n\"}"   ← FULL output, JSON-encoded
+```
+
+Live-established facts:
+
+- **True real-time streaming**: one chunk per output line, ~1.00 s cadence matching the `sleep 1` ticks; delivery latency after the line appeared is sub-100 ms (`date +%T` values in the text match wall clock). The coalescer's flush interval is ≤1 s.
+- **`toolCallId` correlates directly** with the `tool_call` lifecycle id (`run_command_toolu_bdrk_…`); mid-run `tool_call_update`s carry no content while chunks flow.
+- **Terminal-update dedup contract**: the `completed` update's content is the **full accumulated output, wrapped as a JSON object string** (`{"output":"…"}`) inside the text block — a renderer that appended chunks must *replace* (or drop) the terminal content, and note the shape difference: chunks are raw text, the terminal is JSON-in-text.
+- **Redaction is value-based, not pattern-based**: the fake `AKIA1234567890ABCDEF` passed through verbatim. `createStreamingRedactor` masks only the *values* of four sensitive env vars (`__MDE_ENV_API_AUTHORIZATION_TOKEN`, `__MDE_ENVIRONMENT_API`, `AWS_CONTAINER_CREDENTIALS_FULL_URI`, `ACTIVITY_LOG_QUEUE_ARN` — cloud/MDE sandbox credentials) as `[REDACTED:<name>]`, with a hold-back window sized to the longest value so a secret split across chunk boundaries cannot leak. On a normal workstation those vars are unset and the redactor is inert.
+
 ## 2. [V3] "Always allow" suppression — new consent fields (LIVE-PROBED)
 
 New `src/acp/permission-options.ts`:
