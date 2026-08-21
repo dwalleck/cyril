@@ -175,7 +175,19 @@ New tui.js settings keys: `chat.enableWorkflows`, `chat.keybindings.toggleSessio
 | cyril-0f4e | Parse compaction `unsummarized_dropped` | History-loss recovery currently invisible |
 | cyril-w0vy (note) | 2.19.0 watchdog does NOT cover the security-filter wedge | Watchdog guards an open stream; w0vy's stream ends normally |
 
-## 13. Artifacts
+## 13. Request-layer audit (`KIRO_DUMP_REQUESTS`, KAS only — added on follow-up)
+
+The first pass audited only the ACP wire; this leg dumps the agent→backend model requests (`conversationState`) — same-day A/B: host 2.19.0 with KAS 0.46.1 vs 0.38.7 pinned via `KIRO_KAS_SERVER_PATH`, same prompt.
+
+- **Eight versions of KAS churn ≈ near-frozen model-facing request contract.** conversationState keys, `userInputMessage` fields, the `<EnvironmentContext>` content wrapper, and the system-prompt delivery (rides `history[0].userInputMessage`, primed by `history[1].assistantResponseMessage: "I will follow these instructions."`) are all identical. Only two deltas:
+  - **`read_files` REMOVED from the model's tool list (17 → 16)** — corrects the static leg's inference that the tool "survives" (its registration strings do; its model exposure does not). The system prompt's context-gatherer paragraph drops the `read_files` mention accordingly. No cyril impact (tool roster is agent-internal), but it is a real capability removal.
+  - System prompt +286 chars: documents steering `inclusion: auto` front-matter (name/description auto-match) — pairs with the steering fixes.
+- **The dark title-LLM feature verified end-to-end**: with `KIRO_FEATURE_SESSION_TITLE_LLM_ENABLED=true` (env passthrough through the host spawn works), the session's first prompt triggers a **second, separate model request** — fired ~60 ms *before* the main turn call — whose shape is: titling instructions as `history[0]` user message ("3 to 6 words. Never more than 8…"), **prefilled assistant turn `"Title:"`** (response priming), current message literally `"Continue"`, no tools, no modelId in the dump. It returned 200 and the `session/list` title became the LLM output (`'OK'`) instead of the verbatim prompt. When AWS ramps this experiment, every session gains +1 model call on first prompt (credit impact unmeasured — the dump carries no metering).
+- **Dumper corrections to the 2.14.2-era notes**: the dump envelope is `{invocation {agentName, executionId, chatId}, request.conversationState, response {conversationId, metadata {httpStatusCode, requestId, attempts, totalRetryDelay}, headers}}` in BOTH 0.38.7 and 0.46.1 — response/retry accounting is included, and the system prompt IS visible (via history[0]). Still absent: `additionalModelRequestFields`, `profileArn`.
+- Remaining request-layer gap: **v2 has no dumper** — v2 request auditing (e.g. whether a watchdog stall-retry resends an identical payload) needs TLS interception or a fresh AWS prompt-log pull; the July prompt-log corpus predates 2.19.0.
+- Artifacts: `experiments/conductor-spike/reqdump-kas-{0.46.1-main,0.38.7pin-main,0.46.1-titlecall}-2.19.0.json` (no auth material; request dumps carry no tokens).
+
+## 14. Artifacts
 
 - Probes: `experiments/conductor-spike/probe-v2-watchdog-2.19.0.py` (parameterized engine/soft/hard/prompt — reusable for future watchdog checks), `probe-kas-surface-2.19.0.py`.
 - Captures (token-scrubbed): `experiments/conductor-spike/{v2-watchdog-control,v2-watchdog-soft,v2-watchdog-hard,kas-watchdog,kas-surface,v2-slash}-2.19.0.jsonl`. `v2-watchdog-soft` shows the notice at exactly the configured soft seconds during a completing turn; `v2-watchdog-hard` is the full 3-attempt exhaustion; `kas-watchdog` is the KAS negative (3.78 s gap, no notice).
