@@ -94,7 +94,7 @@ tui.js validates exactly: `{attempt:number, maxAttempts:number, delaySecs:number
 
 - `session/new` → `configOptions` ids `[mode, autopilot, contentCollection]` — **`model` absent** (registry not yet loaded), same presentation as the 2.17.0 "transiently absent" watch item.
 - At first prompt, a `config_option_update` arrives with the **full rebuilt list including `model`** (observed `currentValue: "auto"`).
-- **KAS-5 consequence:** a cyril model picker for KAS must consume `config_option_update` (and tolerate `model` missing at session/new), not snapshot the `session/new` response. The [V3] "empty model list right after startup" fix manifests as this late push.
+- **KAS-4 consequence** (Config options + modes UX — corrected from "KAS-5", which is the fs/terminal host-callback milestone): a cyril model picker for KAS must consume `config_option_update` (and tolerate `model` missing at session/new), not snapshot the `session/new` response. This amends KAS-4's earlier guidance that the initial `session/new` snapshot is the only way to learn starting config state — still true for `mode`/`autopilot`, but `model` can be cold-absent and arrive only via the later update. The [V3] "empty model list right after startup" fix manifests as this late push.
 
 ## 4. AI session titles (KAS) — field old, generation new, **LLM part ships DARK**
 
