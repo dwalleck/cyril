@@ -330,7 +330,10 @@ impl SessionController {
                 self.context_usage = Some(ContextUsage::new(pct));
                 true
             }
-            Notification::UsageSessionStarted { .. } | Notification::TurnUsageCaptured(_) => false,
+            Notification::UsageSessionStarted { .. }
+            | Notification::TurnUsageCaptured(_)
+            | Notification::UsageAccountUpdated { .. }
+            | Notification::UsageAccountQueryFailed { .. } => false,
             // Under KAS the context-usage scalar arrives via ContextBreakdownUpdated
             // (KAS emits no kiro.dev/metadata), not MetadataUpdated/UsageUpdated.
             // Keep SessionController.context_usage in sync so the documented

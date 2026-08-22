@@ -3968,4 +3968,30 @@ mod tests {
             Some(50.0)
         );
     }
+
+    #[test]
+    fn usage_layers_are_engine_neutral() {
+        let core = include_str!("usage.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("production core source");
+        let renderer = include_str!("../../cyril-ui/src/widgets/usage_panel.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("production renderer source");
+        for (label, source) in [("core", core), ("renderer", renderer)] {
+            for forbidden in [
+                "AgentEngine",
+                "provider ==",
+                "provider==",
+                "model ==",
+                "model==",
+            ] {
+                assert!(
+                    !source.contains(forbidden),
+                    "{label} usage layer contains forbidden engine/provider decision {forbidden:?}"
+                );
+            }
+        }
+    }
 }

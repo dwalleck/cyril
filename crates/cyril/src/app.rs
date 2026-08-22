@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -12,8 +13,8 @@ use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
 use cyril_core::types::*;
 use cyril_core::usage::{
-    UsageEnrichmentHandle, UsageEnrichmentResult, UsageLog, UsageObserver, UsageWrite,
-    spawn_usage_enrichment_worker,
+    KiroSidecarKind, UsageEnrichmentHandle, UsageEnrichmentResult, UsageLog, UsageObserver,
+    UsageWrite, spawn_usage_enrichment_worker,
 };
 use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
@@ -56,6 +57,8 @@ pub struct App {
     usage_enrichment: UsageEnrichmentHandle,
     usage_enrichment_rx: mpsc::UnboundedReceiver<UsageEnrichmentResult>,
     agent_engine: AgentEngine,
+    enrichment_requests: HashMap<UsageRecordId, (SessionId, KiroSidecarKind)>,
+    failed_enrichments: HashSet<UsageRecordId>,
     /// Voice-input engine handle (ROADMAP CN2). `None` when the `voice` feature
     /// is off (or the engine could not start). The type lives in cyril-core so
     /// this field and its `select!` arm compile regardless of the feature.
@@ -120,7 +123,11 @@ impl App {
         } = ui;
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
         let (usage_enrichment, usage_enrichment_rx) = spawn_usage_enrichment_worker();
-        let commands = CommandRegistry::with_builtins(hooks, workflows);
+        let commands = CommandRegistry::with_builtins_and_usage(
+            hooks,
+            workflows,
+            cyril_core::commands::UsageAccountCommandSource::resolve(agent_engine),
+        );
         let info: Vec<(String, Option<String>)> = commands
             .all_commands()
             .iter()
@@ -150,6 +157,8 @@ impl App {
             last_activity: Instant::now(),
             cwd,
             usage_observer: UsageObserver::new(),
+            enrichment_requests: HashMap::new(),
+            failed_enrichments: HashSet::new(),
             usage_log,
             usage_enrichment,
             usage_enrichment_rx,
@@ -507,6 +516,8 @@ impl App {
     fn handle_usage_enrichment(&mut self, result: UsageEnrichmentResult) {
         match result {
             UsageEnrichmentResult::Enriched(enrichment) => {
+                self.enrichment_requests.remove(&enrichment.record_id);
+                self.failed_enrichments.remove(&enrichment.record_id);
                 if let Err(error) = self.usage_log.enrich_record(
                     enrichment.record_id,
                     enrichment.billed_model_id.as_deref(),
@@ -517,9 +528,18 @@ impl App {
                         error = %error,
                         "usage sidecar enrichment could not update the durable record"
                     );
+                } else if self.ui_state.has_usage_panel() {
+                    match self.usage_log.snapshot() {
+                        Ok(snapshot) => self.ui_state.refresh_usage_panel(snapshot),
+                        Err(error) => tracing::warn!(
+                            error = %error,
+                            "usage panel refresh after enrichment failed"
+                        ),
+                    }
                 }
             }
             UsageEnrichmentResult::Failed { record_id, message } => {
+                self.failed_enrichments.insert(record_id);
                 tracing::warn!(
                     record_id = record_id.get(),
                     error = message,
@@ -550,6 +570,8 @@ impl App {
                 } => match self.usage_log.append(&record) {
                     Ok(record_id) => {
                         if let Some(kind) = sidecar_kind {
+                            self.enrichment_requests
+                                .insert(record_id, (record.context().session_id().clone(), kind));
                             self.usage_enrichment.enrich(
                                 record_id,
                                 record.context().session_id().clone(),
@@ -1329,8 +1351,23 @@ impl App {
             CommandResultKind::ToggleVoice => {
                 self.toggle_voice();
             }
-            CommandResultKind::ShowUsage => match self.usage_log.snapshot() {
-                Ok(snapshot) => self.ui_state.show_usage_panel(snapshot),
+            CommandResultKind::ShowUsage {
+                account_query_started,
+            } => match self.usage_log.snapshot() {
+                Ok(snapshot) => {
+                    self.ui_state.show_usage_panel(snapshot);
+                    if account_query_started {
+                        self.ui_state.mark_usage_account_loading();
+                    }
+                    let retry_ids = self.failed_enrichments.drain().collect::<Vec<_>>();
+                    for record_id in retry_ids {
+                        if let Some((session_id, kind)) =
+                            self.enrichment_requests.get(&record_id).cloned()
+                        {
+                            self.usage_enrichment.enrich(record_id, session_id, kind);
+                        }
+                    }
+                }
                 Err(error) => {
                     tracing::error!(error = %error, "load usage dashboard failed");
                     self.ui_state
@@ -2301,6 +2338,12 @@ mod tests {
     /// Like `test_app`, but keeps the command receiver so a test can assert
     /// which `BridgeCommand`s a key dispatched.
     fn test_app_with_command_rx() -> (App, tokio::sync::mpsc::Receiver<BridgeCommand>) {
+        test_app_with_engine_and_command_rx(AgentEngine::V2)
+    }
+
+    fn test_app_with_engine_and_command_rx(
+        engine: AgentEngine,
+    ) -> (App, tokio::sync::mpsc::Receiver<BridgeCommand>) {
         let (handle, rx) = BridgeHandle::for_tests_with_command_rx();
         (
             App::new(
@@ -2310,7 +2353,7 @@ mod tests {
                 cyril_core::commands::HooksCommandSource::Agent,
                 cyril_core::commands::WorkflowCommandSource::None,
                 test_usage_log(),
-                AgentEngine::V2,
+                engine,
             ),
             rx,
         )
@@ -2373,6 +2416,71 @@ mod tests {
             .await
             .expect("close modal");
         assert!(!app.ui_state.has_usage_panel());
+    }
+
+    #[tokio::test]
+    async fn usage_account_query_order_and_state_matrix() {
+        let (mut app, mut rx) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        establish_main_session(&mut app, &SessionId::new("sess_kas"));
+        app.ui_state.insert_text("/usage");
+        app.submit_input().await.expect("open KAS usage");
+        assert!(app.ui_state.has_usage_panel(), "local snapshot opens first");
+        assert!(matches!(
+            app.ui_state
+                .usage_panel()
+                .map(|panel| &panel.account_status),
+            Some(cyril_ui::traits::UsageAccountStatus::Loading)
+        ));
+        assert!(matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::QueryUsageAccount)
+        ));
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+
+        app.handle_notification(RoutedNotification::global(
+            Notification::UsageAccountUpdated {
+                account: UsageAccount {
+                    plan_name: "KIRO PRO MAX".to_owned(),
+                    billing_cycle_reset: "2026-09-01".to_owned(),
+                    overages_enabled: false,
+                    is_enterprise: false,
+                    usage_breakdowns: Vec::new(),
+                    bonus_credits: Vec::new(),
+                },
+                fetched_at_ms: Some(42),
+            },
+        ));
+        assert!(matches!(
+            app.ui_state
+                .usage_panel()
+                .map(|panel| &panel.account_status),
+            Some(cyril_ui::traits::UsageAccountStatus::Fresh)
+        ));
+        app.handle_notification(RoutedNotification::global(
+            Notification::UsageAccountQueryFailed {
+                message: "offline".to_owned(),
+            },
+        ));
+        assert!(matches!(
+            app.ui_state
+                .usage_panel()
+                .map(|panel| &panel.account_status),
+            Some(cyril_ui::traits::UsageAccountStatus::Stale(message))
+                if message == "offline"
+        ));
+
+        let (mut v2, mut v2_rx) = test_app_with_engine_and_command_rx(AgentEngine::V2);
+        establish_main_session(&mut v2, &SessionId::new("v2-session"));
+        v2.ui_state.insert_text("/usage");
+        v2.submit_input().await.expect("open v2 usage");
+        assert!(v2.ui_state.has_usage_panel());
+        assert!(matches!(
+            v2_rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
     }
 
     #[tokio::test]

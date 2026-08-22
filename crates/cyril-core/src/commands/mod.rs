@@ -129,6 +129,23 @@ impl WorkflowCommandSource {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum UsageAccountCommandSource {
+    #[default]
+    None,
+    Kas,
+}
+
+impl UsageAccountCommandSource {
+    #[must_use]
+    pub fn resolve(engine: crate::types::AgentEngine) -> Self {
+        match engine {
+            crate::types::AgentEngine::Kas => Self::Kas,
+            crate::types::AgentEngine::V2 => Self::None,
+        }
+    }
+}
+
 /// Result of executing a command.
 #[derive(Debug)]
 pub struct CommandResult {
@@ -162,8 +179,9 @@ pub enum CommandResultKind {
     /// access to the voice engine handle (which the App owns), so it returns
     /// this and the App flips capture state — same split as `Steer`/`ShowPicker`.
     ToggleVoice,
-    /// Open Cyril's local usage dashboard. The App owns the durable log.
-    ShowUsage,
+    /// Open Cyril's local usage dashboard; records whether an async KAS
+    /// account query was dispatched before returning.
+    ShowUsage { account_query_started: bool },
     /// Quit the application.
     Quit,
 }
@@ -211,9 +229,11 @@ impl CommandResult {
         }
     }
 
-    pub fn show_usage() -> Self {
+    pub fn show_usage(account_query_started: bool) -> Self {
         Self {
-            kind: CommandResultKind::ShowUsage,
+            kind: CommandResultKind::ShowUsage {
+                account_query_started,
+            },
         }
     }
 
@@ -276,6 +296,14 @@ impl CommandRegistry {
     /// [`HooksCommandSource`]. `workflows` decides whether the native
     /// `/workflow` family exists — see [`WorkflowCommandSource`].
     pub fn with_builtins(hooks: HooksCommandSource, workflows: WorkflowCommandSource) -> Self {
+        Self::with_builtins_and_usage(hooks, workflows, UsageAccountCommandSource::None)
+    }
+
+    pub fn with_builtins_and_usage(
+        hooks: HooksCommandSource,
+        workflows: WorkflowCommandSource,
+        usage_account: UsageAccountCommandSource,
+    ) -> Self {
         let mut registry = Self::new();
         let mut names: Vec<&str> = vec![
             "help", "clear", "quit", "new", "load", "steer", "voice", "usage", "sessions", "spawn",
@@ -296,7 +324,7 @@ impl CommandRegistry {
         registry.register(Arc::new(builtin::LoadCommand));
         registry.register(Arc::new(builtin::SteerCommand));
         registry.register(Arc::new(builtin::VoiceToggleCommand));
-        registry.register(Arc::new(builtin::UsageCommand));
+        registry.register(Arc::new(builtin::UsageCommand::new(usage_account)));
         registry.register(Arc::new(subagent::SessionsCommand));
         registry.register(Arc::new(subagent::SpawnCommand));
         registry.register(Arc::new(subagent::KillCommand));
@@ -730,7 +758,12 @@ mod tests {
             CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
         let (command, args) = registry.parse("/usage").expect("/usage is registered");
         let result = command.execute(&ctx, args).await.expect("/usage executes");
-        assert!(matches!(result.kind, CommandResultKind::ShowUsage));
+        assert!(matches!(
+            result.kind,
+            CommandResultKind::ShowUsage {
+                account_query_started: false
+            }
+        ));
         assert!(
             matches!(
                 rx.try_recv(),
@@ -738,6 +771,40 @@ mod tests {
             ),
             "local usage command must not send to the ACP bridge"
         );
+    }
+
+    #[tokio::test]
+    async fn kas_usage_opens_locally_and_dispatches_account_query() {
+        let mut session = crate::session::SessionController::new();
+        session.set_session(
+            crate::types::SessionId::new("sess_kas"),
+            crate::types::SessionStatus::Active,
+        );
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+        };
+        let registry = CommandRegistry::with_builtins_and_usage(
+            HooksCommandSource::Agent,
+            WorkflowCommandSource::None,
+            UsageAccountCommandSource::Kas,
+        );
+        let (command, args) = registry.parse("/usage").expect("/usage is registered");
+        let result = command.execute(&ctx, args).await.expect("/usage executes");
+        assert!(matches!(
+            result.kind,
+            CommandResultKind::ShowUsage {
+                account_query_started: true
+            }
+        ));
+        assert!(matches!(
+            rx.recv().await,
+            Some(crate::types::BridgeCommand::QueryUsageAccount)
+        ));
     }
 
     #[tokio::test]

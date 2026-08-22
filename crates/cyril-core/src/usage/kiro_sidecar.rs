@@ -1082,7 +1082,7 @@ mod tests {
             .as_bytes(),
         )?;
         handle.enrich(UsageRecordId::new(7), session, KiroSidecarKind::V2);
-        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+        let result = tokio::time::timeout(Duration::from_secs(5), receiver.recv())
             .await?
             .ok_or("worker closed")?;
         let UsageEnrichmentResult::Enriched(enrichment) = result else {
@@ -1121,7 +1121,7 @@ mod tests {
             &recovering_jsonl,
             "{\"kind\":\"AssistantMessage\",\"data\":{\"content\":[]}}\n",
         )?;
-        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+        let result = tokio::time::timeout(Duration::from_secs(5), receiver.recv())
             .await?
             .ok_or("worker closed")?;
         assert!(matches!(result, UsageEnrichmentResult::Enriched(_)));

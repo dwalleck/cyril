@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use tokio::sync::mpsc;
 
@@ -12,7 +13,7 @@ use crate::types::event::{BridgeCommand, Notification, PermissionRequest, Routed
 use crate::types::kas_hooks::KasHooksMode;
 use crate::types::kas_spawn::KasSpawn;
 use crate::types::present_as::PresentAs;
-use crate::types::{SessionOrigin, StopReason};
+use crate::types::{SessionOrigin, StopReason, UsageAccount};
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -435,6 +436,35 @@ fn parse_response(
     raw: &serde_json::value::RawValue,
 ) -> std::result::Result<serde_json::Value, serde_json::Error> {
     serde_json::from_str(raw.get())
+}
+
+fn parse_usage_account(value: &serde_json::Value) -> Result<UsageAccount, String> {
+    #[cfg(feature = "kas")]
+    {
+        crate::protocol::convert::kas::account_usage_from_response(value)
+            .map_err(|error| error.to_string())
+    }
+    #[cfg(not(feature = "kas"))]
+    {
+        let _ = value;
+        Err("KAS account usage requires a build with --features kas".to_owned())
+    }
+}
+
+fn current_timestamp_ms() -> Option<u64> {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => match u64::try_from(duration.as_millis()) {
+            Ok(timestamp) => Some(timestamp),
+            Err(error) => {
+                tracing::warn!(error = %error, "account usage fetch timestamp exceeds u64");
+                None
+            }
+        },
+        Err(error) => {
+            tracing::warn!(error = %error, "system clock predates Unix epoch");
+            None
+        }
+    }
 }
 
 /// Send a notification on the bridge channel; returns `true` if the channel
@@ -2254,6 +2284,44 @@ async fn run_loop(
                     {
                         break;
                     }
+                }
+            }
+            BridgeCommand::QueryUsageAccount => {
+                let notification = if engine.kind() != AgentEngine::Kas {
+                    Notification::UsageAccountQueryFailed {
+                        message: "account usage is available only for the KAS engine".to_owned(),
+                    }
+                } else {
+                    match to_raw_arc(&serde_json::json!({})) {
+                        Err(error) => Notification::UsageAccountQueryFailed {
+                            message: format!("serialize account usage request: {error}"),
+                        },
+                        Ok(params) => match conn
+                            .ext_method(acp::ExtRequest::new("kiro/account/getUsage", params))
+                            .await
+                        {
+                            Err(error) => Notification::UsageAccountQueryFailed {
+                                message: error.to_string(),
+                            },
+                            Ok(response) => match parse_response(&response.0) {
+                                Err(error) => Notification::UsageAccountQueryFailed {
+                                    message: format!("malformed account usage JSON: {error}"),
+                                },
+                                Ok(value) => match parse_usage_account(&value) {
+                                    Ok(account) => Notification::UsageAccountUpdated {
+                                        account,
+                                        fetched_at_ms: current_timestamp_ms(),
+                                    },
+                                    Err(message) => {
+                                        Notification::UsageAccountQueryFailed { message }
+                                    }
+                                },
+                            },
+                        },
+                    }
+                };
+                if notify_or_closed(&channels.notification_tx, notification).await {
+                    break;
                 }
             }
             BridgeCommand::ListSettings => {

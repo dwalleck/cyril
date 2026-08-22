@@ -152,6 +152,17 @@ The total exceeds 4,000, so the plan has three independently mergeable increment
 - Apply loaded-cursor, early-advance, and requested-only mutations; owning fences turn red, then green after restore.
 - `cargo test && cargo test --features kas && cargo clippy -- -D warnings && cargo clippy --features kas -- -D warnings` → increment 2 is independently green with path/error branches covered.
 
+### Execution amendment: merge Slices 5–6 at their shared interface
+
+Checkpointed-build found that account query state (Slice 5) and typed
+Costs/Context rendering (Slice 6) mutate the same public `UsagePanelState`,
+`Notification`, `CommandResultKind`, `UiState`, and App dispatch interface.
+Landing either alone requires a temporary state/notification path that the
+approved clean-cutover design forbids. Treat the two sections below as one
+atomic final slice with Claim IDs C9, C10, and C13; its gate is the union of
+both sections' fixtures, oracles, budgets, fences, and mutations. The final PR
+increment and 1,500-line projection are unchanged.
+
 ## Slice 5: Query KAS account usage without blocking or stale masquerade
 
 **Claim IDs:** C9

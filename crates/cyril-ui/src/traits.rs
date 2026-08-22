@@ -505,6 +505,7 @@ pub enum UsagePage {
     #[default]
     Overview,
     Costs,
+    Context,
     Providers,
     Models,
     Tools,
@@ -514,9 +515,10 @@ pub enum UsagePage {
 }
 
 impl UsagePage {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Overview,
         Self::Costs,
+        Self::Context,
         Self::Providers,
         Self::Models,
         Self::Tools,
@@ -529,6 +531,7 @@ impl UsagePage {
         match self {
             Self::Overview => "Overview",
             Self::Costs => "Costs",
+            Self::Context => "Context",
             Self::Providers => "Providers",
             Self::Models => "Models",
             Self::Tools => "Tools",
@@ -550,14 +553,25 @@ impl UsagePage {
         match self {
             Self::Overview => 0,
             Self::Costs => 1,
-            Self::Providers => 2,
-            Self::Models => 3,
-            Self::Tools => 4,
-            Self::Recent => 5,
-            Self::Errors => 6,
-            Self::Folders => 7,
+            Self::Context => 2,
+            Self::Providers => 3,
+            Self::Models => 4,
+            Self::Tools => 5,
+            Self::Recent => 6,
+            Self::Errors => 7,
+            Self::Folders => 8,
         }
     }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum UsageAccountStatus {
+    #[default]
+    Idle,
+    Loading,
+    Fresh,
+    Unavailable(String),
+    Stale(String),
 }
 
 #[derive(Debug, Clone)]
@@ -565,6 +579,9 @@ pub struct UsagePanelState {
     pub snapshot: cyril_core::types::UsageSnapshot,
     pub page: UsagePage,
     pub scroll_offset: usize,
+    pub account: Option<cyril_core::types::UsageAccount>,
+    pub account_fetched_at_ms: Option<u64>,
+    pub account_status: UsageAccountStatus,
 }
 
 impl UsagePanelState {
@@ -574,21 +591,34 @@ impl UsagePanelState {
                 if self.snapshot.overview.requests == 0 {
                     1
                 } else {
-                    10
+                    17
                 }
             }
             UsagePage::Costs => {
                 self.snapshot.overview.costs.len()
+                    + self.snapshot.overview.charges.len()
                     + self
                         .snapshot
                         .models
                         .iter()
-                        .filter(|group| !group.summary.costs.is_empty())
+                        .filter(|group| {
+                            !group.summary.costs.is_empty() || !group.summary.charges.is_empty()
+                        })
                         .count()
+                    + self.account.as_ref().map_or(1, |account| {
+                        4 + account.usage_breakdowns.len() + account.bonus_credits.len()
+                    })
             }
+            UsagePage::Context => 12,
             UsagePage::Providers => self.snapshot.providers.len(),
+            UsagePage::Tools => self
+                .snapshot
+                .tools
+                .iter()
+                .map(|group| 1 + group.models.len())
+                .sum::<usize>()
+                .max(1),
             UsagePage::Models => self.snapshot.models.len(),
-            UsagePage::Tools => self.snapshot.tools.len(),
             UsagePage::Recent => self.snapshot.recent.len(),
             UsagePage::Errors => self.snapshot.errors.len(),
             UsagePage::Folders => self.snapshot.folders.len(),

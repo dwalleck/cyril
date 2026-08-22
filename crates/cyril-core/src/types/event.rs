@@ -7,7 +7,7 @@ use crate::types::session::{
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 use crate::types::turn::TurnId;
-use crate::types::usage::{Money, SessionOrigin, TokenUsage, TurnMeteringUpdate};
+use crate::types::usage::{Money, SessionOrigin, TokenUsage, TurnMeteringUpdate, UsageAccount};
 use crate::types::workflow::{WorkflowEvent, WorkflowSnapshot};
 use crate::types::workflow_command::{WorkflowCommandOutcome, WorkflowOp};
 
@@ -333,6 +333,13 @@ pub enum Notification {
     /// rides inside `Fetched`'s own `Box<WorkflowSnapshot>`), so a box here
     /// would be indirection without a size win — see the fence below.
     WorkflowCommand(WorkflowCommandOutcome),
+    UsageAccountUpdated {
+        account: UsageAccount,
+        fetched_at_ms: Option<u64>,
+    },
+    UsageAccountQueryFailed {
+        message: String,
+    },
 
     // Lifecycle
     /// Usage-only lifecycle marker emitted before `SessionCreated`, preserving
@@ -567,6 +574,8 @@ pub enum BridgeCommand {
     /// in its constants table with zero call sites; the TUI mutates
     /// settings by writing the cli.json file directly).
     ListSettings,
+    /// Query KAS account plan, credits, bonuses, and overage state.
+    QueryUsageAccount,
     QueryCommandOptions {
         command: String,
         session_id: SessionId,
