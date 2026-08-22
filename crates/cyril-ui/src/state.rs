@@ -547,6 +547,13 @@ impl UiState {
                 }
                 true
             }
+            Notification::TurnMeteringUpdated(update) => {
+                let metering =
+                    TurnMetering::from_charges(update.charges().to_vec(), update.duration_ms());
+                self.pending_metering =
+                    TurnMetering::merge_pending(self.pending_metering.take(), Some(metering), None);
+                true
+            }
             Notification::UsageUpdated { used, size, .. } => {
                 if *size == 0 {
                     // `size == 0` is protocol-meaningless; don't claim state
@@ -5629,7 +5636,9 @@ mod tests {
         state.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: None,
-            metering: Some(TurnMetering::new(Some(0.018), None)),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.018), None).expect("valid metering fixture"),
+            ),
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Unchanged,
@@ -5652,6 +5661,31 @@ mod tests {
     }
 
     #[test]
+    fn kas_turn_metering_reaches_ui_turn_summary() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::TurnMeteringUpdated(TurnMeteringUpdate::new(
+            vec![MeteredAmount::try_new(0.25, "credit", "credits").expect("valid credit")],
+            Some(4442),
+            Some(UsageTurnStatus::Success),
+            vec!["read_file".to_owned()],
+            Some(vec!["r1".to_owned(), "r2".to_owned()]),
+        )));
+        assert!(
+            state.last_turn().is_none(),
+            "metering does not finish the turn"
+        );
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        let metering = state
+            .last_turn()
+            .and_then(TurnSummary::metering)
+            .expect("metering joins completed turn");
+        assert_eq!(metering.credits(), Some(0.25));
+        assert_eq!(metering.duration_ms(), Some(4442));
+    }
+
+    #[test]
     fn metadata_without_context_retains_last_context() {
         // Replays the captured 2.4.1 wire shape: duration/effort-only frames
         // omit contextUsagePercentage. Such a frame must not stamp the
@@ -5671,7 +5705,10 @@ mod tests {
         state.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: None,
-            metering: Some(TurnMetering::new(Some(0.018), Some(2281))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.018), Some(2281))
+                    .expect("valid metering fixture"),
+            ),
             tokens: None,
             effort: EffortUpdate::Set(EffortLevel::High),
             duration_ms: None,
@@ -5776,7 +5813,10 @@ mod tests {
         state.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(50.0)),
-            metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.03), Some(2000))
+                    .expect("valid metering fixture"),
+            ),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -5810,7 +5850,9 @@ mod tests {
         state.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(Some(0.01), None)),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.01), None).expect("valid metering fixture"),
+            ),
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -5842,7 +5884,10 @@ mod tests {
         state.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(Some(0.02), Some(1000))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.02), Some(1000))
+                    .expect("valid metering fixture"),
+            ),
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -5856,7 +5901,10 @@ mod tests {
         state.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(20.0)),
-            metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.03), Some(2000))
+                    .expect("valid metering fixture"),
+            ),
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -5877,7 +5925,10 @@ mod tests {
         state.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(Some(0.05), Some(2000))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.05), Some(2000))
+                    .expect("valid metering fixture"),
+            ),
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,

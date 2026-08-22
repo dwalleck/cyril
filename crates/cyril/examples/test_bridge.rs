@@ -473,6 +473,16 @@ fn print_notification(n: &Notification) {
                 tokens.as_ref().map(|t| (t.input(), t.output(), t.cached()))
             );
         }
+        Notification::TurnMeteringUpdated(update) => {
+            println!(
+                "  [TurnMeteringUpdated] charges={:?} duration={:?} status={:?} tools={:?} requests={:?}",
+                update.charges(),
+                update.duration_ms(),
+                update.status(),
+                update.used_tools(),
+                update.request_ids()
+            );
+        }
         Notification::AgentSwitched { name, welcome, .. } => {
             println!("  [AgentSwitched] name={name} welcome={:?}", welcome);
         }

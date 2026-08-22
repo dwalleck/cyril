@@ -378,27 +378,43 @@ pub(crate) fn to_ext_notification(
                 },
             };
 
-            // Preserve explicit zero-credit turns rather than filtering them
-            // out. A present array with no numeric `value`, however, carries
-            // no aggregate and must remain distinct from `Some(0.0)`.
             let metering = params
                 .get("meteringUsage")
-                .and_then(|m| m.as_array())
-                .and_then(|arr| {
-                    let mut credits = None;
-                    for usage in arr {
-                        match usage.get("value").and_then(|v| v.as_f64()) {
-                            Some(value) => *credits.get_or_insert(0.0) += value,
-                            None => tracing::warn!(
-                                value = ?usage,
-                                "metadata `meteringUsage` entry has no numeric `value`, ignoring"
+                .and_then(serde_json::Value::as_array)
+                .and_then(|entries| {
+                    let mut charges = Vec::with_capacity(entries.len());
+                    for entry in entries {
+                        let amount = entry.get("value").and_then(serde_json::Value::as_f64);
+                        let unit = entry.get("unit").and_then(serde_json::Value::as_str);
+                        let unit_plural = entry
+                            .get("unitPlural")
+                            .and_then(serde_json::Value::as_str);
+                        let (Some(amount), Some(unit), Some(unit_plural)) =
+                            (amount, unit, unit_plural)
+                        else {
+                            tracing::warn!(
+                                value = ?entry,
+                                "metadata `meteringUsage` entry lacks valid value/unit/unitPlural, ignoring"
+                            );
+                            continue;
+                        };
+                        match MeteredAmount::try_new(amount, unit, unit_plural) {
+                            Ok(charge) => charges.push(charge),
+                            Err(error) => tracing::warn!(
+                                value = ?entry,
+                                error = %error,
+                                "metadata `meteringUsage` entry is invalid, ignoring"
                             ),
                         }
                     }
-                    if arr.is_empty() {
-                        tracing::warn!("metadata `meteringUsage` is empty, ignoring");
+                    if charges.is_empty() {
+                        if entries.is_empty() {
+                            tracing::warn!("metadata `meteringUsage` is empty, ignoring");
+                        }
+                        None
+                    } else {
+                        Some(TurnMetering::from_charges(charges, duration_ms))
                     }
-                    credits.map(|total| TurnMetering::new(Some(total), duration_ms))
                 });
 
             let tokens = {
@@ -455,9 +471,9 @@ pub(crate) fn to_ext_notification(
 
             // Full `kiro.dev/metadata` field inventory (carved 2.12.1 tui.js
             // handleMetadataUpdate + live captures, cyril-1gim). Parsed above:
-            // sessionId, contextUsagePercentage, meteringUsage[] (value summed;
-            // per-entry unit/unitPlural intentionally dropped — the aggregate
-            // credits figure is what the toolbar shows), turnDurationMs,
+            // sessionId, contextUsagePercentage, meteringUsage[] (validated
+            // value/unit/unitPlural retained as typed non-money charges),
+            // turnDurationMs,
             // effort, and the legacy inputTokens/outputTokens/cachedTokens
             // (unconfirmed-on-wire on the v2 path; those names are the KAS
             // normalizer's legacy fallbacks — kept, not trusted). refusal
