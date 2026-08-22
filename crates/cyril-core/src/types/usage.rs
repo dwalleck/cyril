@@ -690,6 +690,7 @@ pub struct UsageSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::must_succeed;
 
     #[test]
     fn money_rejects_invalid_values_without_defaulting() {
@@ -714,7 +715,7 @@ mod tests {
 
     #[test]
     fn metric_source_matrix_preserves_typed_values_and_absence() {
-        let money = ObservedMetric::Value(Money::try_new(1.25, "USD").expect("valid money"));
+        let money = ObservedMetric::Value(must_succeed(Money::try_new(1.25, "USD"), "valid money"));
         let gated: ObservedMetric<Money> =
             ObservedMetric::Unavailable(UnavailableReason::BackendGated);
         let unreported: ObservedMetric<Money> = ObservedMetric::Unreported;
@@ -729,10 +730,14 @@ mod tests {
         assert!(unreported.value().is_none());
         assert_eq!(unreported.unavailable_reason(), None);
 
-        let credit = MeteredAmount::try_new(0.0, "credit", "credits")
-            .expect("explicit zero credit is valid");
-        let request =
-            MeteredAmount::try_new(2.0, "request", "requests").expect("different unit is valid");
+        let credit = must_succeed(
+            MeteredAmount::try_new(0.0, "credit", "credits"),
+            "explicit zero credit is valid",
+        );
+        let request = must_succeed(
+            MeteredAmount::try_new(2.0, "request", "requests"),
+            "different unit is valid",
+        );
         assert_eq!(credit.unit(), "credit");
         assert_eq!(credit.unit_plural(), "credits");
         assert_eq!(request.unit(), "request");

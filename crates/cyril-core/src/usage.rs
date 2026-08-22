@@ -1491,17 +1491,24 @@ mod tests {
                 UsageTurnOutcome::Error,
             ),
         ];
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         for (index, (status, request_ids, stop_reason, expected_outcome)) in
             cases.into_iter().enumerate()
         {
-            observer
-                .begin_turn(context("s", Some("auto")), start, index as u64 + 1)
-                .expect("begin turn");
+            must_succeed(
+                observer.begin_turn(context("s", Some("auto")), start, index as u64 + 1),
+                "begin turn",
+            );
             let metering = Notification::TurnMeteringUpdated(TurnMeteringUpdate::new(
                 vec![
-                    MeteredAmount::try_new(0.25, "credit", "credits").expect("valid credit"),
-                    MeteredAmount::try_new(2.0, "request", "requests").expect("valid requests"),
+                    must_succeed(
+                        MeteredAmount::try_new(0.25, "credit", "credits"),
+                        "valid credit",
+                    ),
+                    must_succeed(
+                        MeteredAmount::try_new(2.0, "request", "requests"),
+                        "valid requests",
+                    ),
                 ],
                 Some(9_999),
                 Some(status.clone()),
@@ -1512,12 +1519,12 @@ mod tests {
                 observer.apply(&scoped("s", metering), start).is_none(),
                 "turn metering is not a lifecycle terminal"
             );
-            let record = observer
-                .apply(
-                    &scoped("s", Notification::TurnCompleted { stop_reason }),
-                    start + Duration::from_millis(10),
-                )
-                .expect("lifecycle completes exactly one record");
+            let Some(record) = observer.apply(
+                &scoped("s", Notification::TurnCompleted { stop_reason }),
+                start + Duration::from_millis(10),
+            ) else {
+                panic!("lifecycle completes exactly one record");
+            };
             assert_eq!(record.outcome(), expected_outcome);
             assert_eq!(
                 record.token_metric().unavailable_reason(),
@@ -1546,10 +1553,10 @@ mod tests {
             if index == 2 {
                 assert_eq!(record.error(), Some("turn status: failed"));
             }
-            log.append(&record).expect("append Kiro record");
+            must_succeed(log.append(&record), "append Kiro record");
         }
 
-        let summary = log.snapshot().expect("snapshot").overview;
+        let summary = must_succeed(log.snapshot(), "snapshot").overview;
         assert_eq!(summary.requests, 3);
         assert_eq!(summary.successes, 1);
         assert_eq!(summary.cancelled, 1);
@@ -1573,32 +1580,36 @@ mod tests {
     fn captured_kas_usage_rollup_matches_oracle() {
         let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests/fixtures/kas/turn_completion_2_16_0_four.jsonl");
-        let raw = std::fs::read_to_string(fixture).expect("read fixture");
+        let raw = must_succeed(std::fs::read_to_string(fixture), "read fixture");
         let start = Instant::now();
         let mut observer = UsageObserver::new();
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         start_session(&mut observer, "captured", SessionOrigin::Fresh, start);
         for (index, line) in raw.lines().enumerate() {
-            observer
-                .begin_turn(context("captured", Some("auto")), start, index as u64)
-                .expect("begin captured turn");
+            must_succeed(
+                observer.begin_turn(context("captured", Some("auto")), start, index as u64),
+                "begin captured turn",
+            );
             let notification: agent_client_protocol::SessionNotification =
-                serde_json::from_str(line).expect("fixture deserializes");
+                must_succeed(serde_json::from_str(line), "fixture deserializes");
             let update = match &notification.update {
                 agent_client_protocol::SessionUpdate::SessionInfoUpdate(update) => update,
                 other => panic!("expected session_info_update, got {other:?}"),
             };
-            let metering = crate::protocol::convert::kas::session_info_to_notification(update)
-                .expect("captured metering converts");
+            let Some(metering) =
+                crate::protocol::convert::kas::session_info_to_notification(update)
+            else {
+                panic!("captured metering converts");
+            };
             assert!(
                 observer
                     .apply(&scoped("captured", metering), start)
                     .is_none()
             );
             let record = complete(&mut observer, "captured", start);
-            log.append(&record).expect("append captured turn");
+            must_succeed(log.append(&record), "append captured turn");
         }
-        let summary = log.snapshot().expect("snapshot").overview;
+        let summary = must_succeed(log.snapshot(), "snapshot").overview;
         assert_eq!(summary.requests, 4);
         assert_eq!(summary.successes, 4);
         assert_eq!(summary.errors, 0);
@@ -1606,11 +1617,13 @@ mod tests {
         assert_eq!(summary.retries, Some(5));
         assert_eq!(summary.token_coverage.backend_gated, 4);
         assert_eq!(summary.cost_coverage.backend_gated, 4);
-        let credits = summary
+        let Some(credits) = summary
             .charges
             .iter()
             .find(|charge| charge.unit() == "credit")
-            .expect("credit total");
+        else {
+            panic!("credit total");
+        };
         assert!((credits.amount() - 0.385_573_410_447_761_2).abs() < 1e-12);
     }
 
@@ -1620,9 +1633,10 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "budget", SessionOrigin::Fresh, start);
-        observer
-            .begin_turn(context("budget", None), start, 1)
-            .expect("begin turn");
+        must_succeed(
+            observer.begin_turn(context("budget", None), start, 1),
+            "begin turn",
+        );
         for index in 0..10_000 {
             observer.apply(
                 &scoped(
@@ -1919,19 +1933,20 @@ mod tests {
 
     #[test]
     fn phase1_snapshot_is_unchanged_and_observed_wins_coverage() {
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         let standard = record(
             "omp",
             Some("openai-codex/gpt-5.6"),
-            Some(TokenUsage::new(150, 100, 20, None, Some(30), None)),
-            Some(Money::try_new(1.25, "USD").expect("valid cost")),
-            100,
-            Some(25),
-            None,
+            (
+                Some(TokenUsage::new(150, 100, 20, None, Some(30), None)),
+                Some(must_succeed(Money::try_new(1.25, "USD"), "valid cost")),
+                None,
+            ),
+            (100, Some(25)),
             Vec::new(),
         );
-        log.append(&standard).expect("append standard turn");
-        let phase1 = log.snapshot().expect("phase1 snapshot").overview;
+        must_succeed(log.append(&standard), "append standard turn");
+        let phase1 = must_succeed(log.snapshot(), "phase1 snapshot").overview;
         assert_eq!(phase1.requests, 1);
         assert_eq!(phase1.successes, 1);
         assert_eq!(phase1.cancelled, 0);
@@ -1941,7 +1956,7 @@ mod tests {
         assert_eq!(phase1.cost_coverage.observed, 1);
         assert_eq!(
             phase1.costs,
-            vec![Money::try_new(1.25, "USD").expect("valid cost")]
+            vec![must_succeed(Money::try_new(1.25, "USD"), "valid cost",)]
         );
         assert_eq!(phase1.cache_rate, Some(30.0 / 130.0));
         assert_eq!(phase1.avg_duration_ms, Some(100.0));
@@ -1951,14 +1966,18 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "kiro", SessionOrigin::Fresh, start);
-        observer
-            .begin_turn(context("kiro", Some("anthropic/claude")), start, 2)
-            .expect("begin future Kiro turn");
+        must_succeed(
+            observer.begin_turn(context("kiro", Some("anthropic/claude")), start, 2),
+            "begin future Kiro turn",
+        );
         observer.apply(
             &scoped(
                 "kiro",
                 Notification::TurnMeteringUpdated(TurnMeteringUpdate::new(
-                    vec![MeteredAmount::try_new(0.25, "credit", "credits").expect("valid credit")],
+                    vec![must_succeed(
+                        MeteredAmount::try_new(0.25, "credit", "credits"),
+                        "valid credit",
+                    )],
                     Some(50),
                     Some(UsageTurnStatus::Success),
                     Vec::new(),
@@ -1980,7 +1999,10 @@ mod tests {
                 Notification::UsageUpdated {
                     used: 1,
                     size: 10,
-                    cost: Some(Money::try_new(0.5, "USD").expect("valid future wire cost")),
+                    cost: Some(must_succeed(
+                        Money::try_new(0.5, "USD"),
+                        "valid future wire cost",
+                    )),
                 },
             ),
             start,
@@ -1994,8 +2016,8 @@ mod tests {
             future_kiro.cost_metric(),
             ObservedMetric::Value(_)
         ));
-        log.append(&future_kiro).expect("append future Kiro turn");
-        let mixed = log.snapshot().expect("mixed snapshot").overview;
+        must_succeed(log.append(&future_kiro), "append future Kiro turn");
+        let mixed = must_succeed(log.snapshot(), "mixed snapshot").overview;
         assert_eq!(mixed.token_coverage.observed, 2);
         assert_eq!(mixed.token_coverage.backend_gated, 0);
         assert_eq!(mixed.cost_coverage.observed, 2);
@@ -2007,9 +2029,9 @@ mod tests {
 
     #[test]
     fn v1_migration_is_lossless_idempotent_and_enrichment_atomic() {
-        let connection = Connection::open_in_memory().expect("legacy connection");
-        connection
-            .execute_batch(
+        let connection = must_succeed(Connection::open_in_memory(), "legacy connection");
+        must_succeed(
+            connection.execute_batch(
                 "PRAGMA foreign_keys = ON;
                  CREATE TABLE usage_turns (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2073,16 +2095,18 @@ mod tests {
                     session_id, folder, agent_type, timestamp_ms, duration_ms,
                     stop_reason
                  ) VALUES ('legacy-refusal', '/old', 'main', 7, 200, 'refusal');",
-            )
-            .expect("seed legacy schema");
+            ),
+            "seed legacy schema",
+        );
 
-        let mut log = UsageLog::from_connection(connection).expect("migrate v1 schema");
-        let version: i64 = log
-            .connection
-            .query_row("PRAGMA user_version", [], |row| row.get(0))
-            .expect("schema version");
+        let mut log = must_succeed(UsageLog::from_connection(connection), "migrate v1 schema");
+        let version: i64 = must_succeed(
+            log.connection
+                .query_row("PRAGMA user_version", [], |row| row.get(0)),
+            "schema version",
+        );
         assert_eq!(version, 2);
-        let snapshot = log.snapshot().expect("migrated snapshot");
+        let snapshot = must_succeed(log.snapshot(), "migrated snapshot");
         assert_eq!(snapshot.overview.requests, 7);
         assert_eq!(snapshot.overview.successes, 1);
         assert_eq!(snapshot.overview.cancelled, 1);
@@ -2097,20 +2121,24 @@ mod tests {
         assert_eq!(snapshot.overview.cost_coverage.unreported, 6);
         assert_eq!(
             snapshot.overview.costs,
-            vec![Money::try_new(1.25, "USD").expect("valid cost")]
+            vec![must_succeed(Money::try_new(1.25, "USD"), "valid cost",)]
         );
         let migrated_outcomes = {
-            let mut statement = log
-                .connection
-                .prepare("SELECT session_id, outcome FROM usage_turns ORDER BY id")
-                .expect("prepare migrated outcome query");
-            statement
-                .query_map([], |row| {
+            let mut statement = must_succeed(
+                log.connection
+                    .prepare("SELECT session_id, outcome FROM usage_turns ORDER BY id"),
+                "prepare migrated outcome query",
+            );
+            let rows = must_succeed(
+                statement.query_map([], |row| {
                     Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-                })
-                .expect("query migrated outcomes")
-                .collect::<Result<Vec<_>, _>>()
-                .expect("collect migrated outcomes")
+                }),
+                "query migrated outcomes",
+            );
+            must_succeed(
+                rows.collect::<Result<Vec<_>, _>>(),
+                "collect migrated outcomes",
+            )
         };
         assert_eq!(
             migrated_outcomes,
@@ -2125,12 +2153,13 @@ mod tests {
             ]
         );
 
-        log.connection
-            .execute_batch(
+        must_succeed(
+            log.connection.execute_batch(
                 "CREATE TRIGGER reject_usage_charge BEFORE INSERT ON usage_charges
-                 BEGIN SELECT RAISE(ABORT, 'forced charge failure'); END;",
-            )
-            .expect("install failure trigger");
+                     BEGIN SELECT RAISE(ABORT, 'forced charge failure'); END;",
+            ),
+            "install failure trigger",
+        );
         let charged = UsageRecord::new(
             context("new", Some("auto")),
             UsageTiming::new(3, 10, None),
@@ -2140,7 +2169,10 @@ mod tests {
                 TurnUsageMetrics::new(
                     ObservedMetric::Unavailable(UnavailableReason::BackendGated),
                     ObservedMetric::Unavailable(UnavailableReason::BackendGated),
-                    vec![MeteredAmount::try_new(0.25, "credit", "credits").expect("valid credit")],
+                    vec![must_succeed(
+                        MeteredAmount::try_new(0.25, "credit", "credits"),
+                        "valid credit",
+                    )],
                     Some(2),
                     Some(UsageTurnStatus::Success),
                 ),
@@ -2149,19 +2181,22 @@ mod tests {
             Vec::new(),
         );
         assert!(log.append(&charged).is_err());
-        let count: i64 = log
-            .connection
-            .query_row("SELECT COUNT(*) FROM usage_turns", [], |row| row.get(0))
-            .expect("count after failed charge");
+        let count: i64 = must_succeed(
+            log.connection
+                .query_row("SELECT COUNT(*) FROM usage_turns", [], |row| row.get(0)),
+            "count after failed charge",
+        );
         assert_eq!(count, 7, "failed child insert rolls back parent");
 
-        log.connection
-            .execute_batch("DROP TRIGGER reject_usage_charge;")
-            .expect("remove failure trigger");
+        must_succeed(
+            log.connection
+                .execute_batch("DROP TRIGGER reject_usage_charge;"),
+            "remove failure trigger",
+        );
         let UsageLog { connection } = log;
-        let reopened = UsageLog::from_connection(connection).expect("version 2 reopens");
+        let reopened = must_succeed(UsageLog::from_connection(connection), "version 2 reopens");
         assert_eq!(
-            reopened.snapshot().expect("reopened snapshot"),
+            must_succeed(reopened.snapshot(), "reopened snapshot"),
             snapshot,
             "migration is idempotent"
         );
@@ -2169,7 +2204,7 @@ mod tests {
 
     #[test]
     fn concurrent_schema_open_is_idempotent() {
-        let directory = tempfile::tempdir().expect("tempdir");
+        let directory = must_succeed(tempfile::tempdir(), "tempdir");
         let path = std::sync::Arc::new(directory.path().join("usage.sqlite3"));
         let barrier = std::sync::Arc::new(std::sync::Barrier::new(3));
         let handles = (0..2)
@@ -2184,24 +2219,26 @@ mod tests {
             .collect::<Vec<_>>();
         barrier.wait();
         for handle in handles {
-            let log = handle
-                .join()
-                .expect("open thread")
-                .expect("concurrent open");
-            let version: i64 = log
-                .connection
-                .query_row("PRAGMA user_version", [], |row| row.get(0))
-                .expect("schema version");
+            let log = match handle.join() {
+                Ok(result) => must_succeed(result, "concurrent open"),
+                Err(_) => panic!("open thread"),
+            };
+            let version: i64 = must_succeed(
+                log.connection
+                    .query_row("PRAGMA user_version", [], |row| row.get(0)),
+                "schema version",
+            );
             assert_eq!(version, 2);
         }
     }
 
     #[test]
     fn unsupported_schema_version_is_rejected() {
-        let connection = Connection::open_in_memory().expect("connection");
-        connection
-            .execute_batch("PRAGMA user_version = 99;")
-            .expect("set unsupported version");
+        let connection = must_succeed(Connection::open_in_memory(), "connection");
+        must_succeed(
+            connection.execute_batch("PRAGMA user_version = 99;"),
+            "set unsupported version",
+        );
         assert!(matches!(
             UsageLog::from_connection(connection),
             Err(UsageError::UnsupportedSchema(99))
