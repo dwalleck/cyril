@@ -390,26 +390,62 @@ impl UsageTiming {
     }
 }
 
+/// Aggregate outcome category used by the usage dashboard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UsageTurnOutcome {
+    Success,
+    Cancelled,
+    Error,
+}
+
+/// Metering fields correlated with one completed turn.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TurnUsageMetrics {
+    tokens: ObservedMetric<TokenUsage>,
+    cost: ObservedMetric<Money>,
+    charges: Vec<MeteredAmount>,
+    provider_requests: Option<u64>,
+    metering_status: Option<UsageTurnStatus>,
+}
+
+impl TurnUsageMetrics {
+    pub fn new(
+        tokens: ObservedMetric<TokenUsage>,
+        cost: ObservedMetric<Money>,
+        charges: Vec<MeteredAmount>,
+        provider_requests: Option<u64>,
+        metering_status: Option<UsageTurnStatus>,
+    ) -> Self {
+        Self {
+            tokens,
+            cost,
+            charges,
+            provider_requests,
+            metering_status,
+        }
+    }
+}
+
 /// Wire outcome captured at the turn boundary.
 #[derive(Debug, Clone, PartialEq)]
 pub struct UsageOutcome {
     stop_reason: StopReason,
-    tokens: Option<TokenUsage>,
-    cost: Option<Money>,
+    outcome: UsageTurnOutcome,
+    metrics: TurnUsageMetrics,
     error: Option<String>,
 }
 
 impl UsageOutcome {
     pub fn new(
         stop_reason: StopReason,
-        tokens: Option<TokenUsage>,
-        cost: Option<Money>,
+        outcome: UsageTurnOutcome,
+        metrics: TurnUsageMetrics,
         error: Option<String>,
     ) -> Self {
         Self {
             stop_reason,
-            tokens,
-            cost,
+            outcome,
+            metrics,
             error: error.filter(|value| !value.is_empty()),
         }
     }
@@ -418,12 +454,36 @@ impl UsageOutcome {
         self.stop_reason
     }
 
+    pub fn outcome(&self) -> UsageTurnOutcome {
+        self.outcome
+    }
+
     pub fn tokens(&self) -> Option<&TokenUsage> {
-        self.tokens.as_ref()
+        self.metrics.tokens.value()
+    }
+
+    pub fn token_metric(&self) -> &ObservedMetric<TokenUsage> {
+        &self.metrics.tokens
     }
 
     pub fn cost(&self) -> Option<&Money> {
-        self.cost.as_ref()
+        self.metrics.cost.value()
+    }
+
+    pub fn cost_metric(&self) -> &ObservedMetric<Money> {
+        &self.metrics.cost
+    }
+
+    pub fn charges(&self) -> &[MeteredAmount] {
+        &self.metrics.charges
+    }
+
+    pub fn provider_requests(&self) -> Option<u64> {
+        self.metrics.provider_requests
+    }
+
+    pub fn metering_status(&self) -> Option<&UsageTurnStatus> {
+        self.metrics.metering_status.as_ref()
     }
 
     pub fn error(&self) -> Option<&str> {
@@ -483,6 +543,30 @@ impl UsageRecord {
         self.outcome.cost()
     }
 
+    pub fn token_metric(&self) -> &ObservedMetric<TokenUsage> {
+        self.outcome.token_metric()
+    }
+
+    pub fn cost_metric(&self) -> &ObservedMetric<Money> {
+        self.outcome.cost_metric()
+    }
+
+    pub fn charges(&self) -> &[MeteredAmount] {
+        self.outcome.charges()
+    }
+
+    pub fn outcome(&self) -> UsageTurnOutcome {
+        self.outcome.outcome()
+    }
+
+    pub fn provider_requests(&self) -> Option<u64> {
+        self.outcome.provider_requests()
+    }
+
+    pub fn metering_status(&self) -> Option<&UsageTurnStatus> {
+        self.outcome.metering_status()
+    }
+
     pub fn tools(&self) -> &[UsageTool] {
         &self.tools
     }
@@ -503,13 +587,38 @@ pub struct TokenTotals {
     pub cached_write: u64,
 }
 
+/// Counts of observed and unavailable records for one metric family.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MetricCoverage {
+    pub observed: u64,
+    pub unreported: u64,
+    pub backend_gated: u64,
+}
+
+impl MetricCoverage {
+    pub fn unavailable_reason(&self) -> Option<UnavailableReason> {
+        if self.observed == 0 && self.backend_gated > 0 {
+            Some(UnavailableReason::BackendGated)
+        } else {
+            None
+        }
+    }
+}
+
 /// Aggregated usage metrics. `tokens` is absent when no record supplied usage.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct UsageSummary {
     pub requests: u64,
+    pub successes: u64,
+    pub cancelled: u64,
     pub errors: u64,
+    pub provider_requests: Option<u64>,
+    pub retries: Option<u64>,
     pub tokens: Option<TokenTotals>,
+    pub token_coverage: MetricCoverage,
     pub costs: Vec<Money>,
+    pub cost_coverage: MetricCoverage,
+    pub charges: Vec<MeteredAmount>,
     pub cache_rate: Option<f64>,
     pub avg_duration_ms: Option<f64>,
     pub avg_ttft_ms: Option<f64>,
@@ -556,8 +665,13 @@ pub struct RecentUsage {
     pub duration_ms: u64,
     pub ttft_ms: Option<u64>,
     pub stop_reason: StopReason,
+    pub outcome: UsageTurnOutcome,
+    pub provider_requests: Option<u64>,
     pub tokens: Option<TokenUsage>,
+    pub token_unavailable_reason: Option<UnavailableReason>,
     pub cost: Option<Money>,
+    pub cost_unavailable_reason: Option<UnavailableReason>,
+    pub charges: Vec<MeteredAmount>,
     pub error: Option<String>,
 }
 
