@@ -753,6 +753,14 @@ mod tests {
     #[test]
     fn kiro_full_mixed_pages_render_at_floor() {
         let mut snapshot = sample_snapshot();
+        let credit = match cyril_core::types::MeteredAmount::try_new(0.25, "credit", "credits") {
+            Ok(credit) => credit,
+            Err(error) => panic!("valid credit: {error}"),
+        };
+        let money = match cyril_core::types::Money::try_new(0.125, "USD") {
+            Ok(money) => money,
+            Err(error) => panic!("valid money: {error}"),
+        };
         snapshot.overview.tokens = None;
         snapshot.overview.token_coverage = MetricCoverage {
             observed: 0,
@@ -765,10 +773,7 @@ mod tests {
             unreported: 0,
             backend_gated: 2,
         };
-        snapshot.overview.charges = vec![
-            cyril_core::types::MeteredAmount::try_new(0.25, "credit", "credits")
-                .expect("valid credit"),
-        ];
+        snapshot.overview.charges = vec![credit];
         snapshot.context = cyril_core::types::UsageContextSummary {
             latest: Some(cyril_core::types::UsageContextSample {
                 context: cyril_core::types::TurnUsageContext::new(
@@ -795,8 +800,7 @@ mod tests {
         snapshot.tools[0].name = Some("read_file".to_owned());
         snapshot.tools[0].charges = snapshot.overview.charges.clone();
         snapshot.tools[0].total_tokens_share = Some(250.0);
-        snapshot.tools[0].costs =
-            vec![cyril_core::types::Money::try_new(0.125, "USD").expect("valid money")];
+        snapshot.tools[0].costs = vec![money];
         snapshot.tools[0].models = vec![cyril_core::types::ToolModelUsageGroup {
             provider: Some("anthropic".to_owned()),
             model: Some("claude".to_owned()),
