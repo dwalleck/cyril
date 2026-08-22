@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -24,6 +24,15 @@ use cyril_core::types::code_panel::CodeCommandResponse;
 
 /// Lines per mouse wheel tick (finer-grained than keyboard half-page scroll).
 const MOUSE_SCROLL_LINES: usize = 3;
+const MAX_ENRICHMENT_RETRIES: u8 = 1;
+
+fn reserve_enrichment_retry(retryable: bool, attempts: &mut u8) -> bool {
+    if !retryable || *attempts >= MAX_ENRICHMENT_RETRIES {
+        return false;
+    }
+    *attempts += 1;
+    true
+}
 
 /// Spawn the voice engine when the `voice` feature is enabled. This is the only
 /// feature-gated site — everything downstream operates on the always-present
@@ -58,7 +67,8 @@ pub struct App {
     usage_enrichment_rx: mpsc::UnboundedReceiver<UsageEnrichmentResult>,
     agent_engine: AgentEngine,
     enrichment_requests: HashMap<UsageRecordId, (SessionId, KiroSidecarKind)>,
-    failed_enrichments: HashSet<UsageRecordId>,
+    failed_enrichments: BTreeSet<UsageRecordId>,
+    enrichment_attempts: HashMap<UsageRecordId, u8>,
     /// Voice-input engine handle (ROADMAP CN2). `None` when the `voice` feature
     /// is off (or the engine could not start). The type lives in cyril-core so
     /// this field and its `select!` arm compile regardless of the feature.
@@ -158,7 +168,8 @@ impl App {
             cwd,
             usage_observer: UsageObserver::new(),
             enrichment_requests: HashMap::new(),
-            failed_enrichments: HashSet::new(),
+            failed_enrichments: BTreeSet::new(),
+            enrichment_attempts: HashMap::new(),
             usage_log,
             usage_enrichment,
             usage_enrichment_rx,
@@ -507,11 +518,27 @@ impl App {
     #[cfg(not(test))]
     fn record_ui_apply(&mut self) {}
 
+    fn refresh_usage_panel_from_log(&mut self) {
+        if !self.ui_state.has_usage_panel() {
+            return;
+        }
+        match self.usage_log.snapshot() {
+            Ok(snapshot) => {
+                self.ui_state.refresh_usage_panel(snapshot);
+                self.redraw_needed = true;
+            }
+            Err(error) => {
+                tracing::warn!(error = %error, "usage panel refresh failed");
+            }
+        }
+    }
+
     fn handle_usage_enrichment(&mut self, result: UsageEnrichmentResult) {
         match result {
             UsageEnrichmentResult::Enriched(enrichment) => {
                 self.enrichment_requests.remove(&enrichment.record_id);
                 self.failed_enrichments.remove(&enrichment.record_id);
+                self.enrichment_attempts.remove(&enrichment.record_id);
                 if let Err(error) = self.usage_log.enrich_record(
                     enrichment.record_id,
                     enrichment.billed_model_id.as_deref(),
@@ -522,21 +549,27 @@ impl App {
                         error = %error,
                         "usage sidecar enrichment could not update the durable record"
                     );
-                } else if self.ui_state.has_usage_panel() {
-                    match self.usage_log.snapshot() {
-                        Ok(snapshot) => self.ui_state.refresh_usage_panel(snapshot),
-                        Err(error) => tracing::warn!(
-                            error = %error,
-                            "usage panel refresh after enrichment failed"
-                        ),
-                    }
+                } else {
+                    self.refresh_usage_panel_from_log();
                 }
             }
-            UsageEnrichmentResult::Failed { record_id, message } => {
-                self.failed_enrichments.insert(record_id);
+            UsageEnrichmentResult::Failed {
+                record_id,
+                message,
+                retryable,
+            } => {
+                let attempts = self.enrichment_attempts.entry(record_id).or_default();
+                if reserve_enrichment_retry(retryable, attempts) {
+                    self.failed_enrichments.insert(record_id);
+                } else {
+                    self.enrichment_requests.remove(&record_id);
+                    self.failed_enrichments.remove(&record_id);
+                    self.enrichment_attempts.remove(&record_id);
+                }
                 tracing::warn!(
                     record_id = record_id.get(),
                     error = message,
+                    retryable,
                     "usage sidecar enrichment unavailable; retaining live tool data"
                 );
             }
@@ -563,9 +596,11 @@ impl App {
                     sidecar_kind,
                 } => match self.usage_log.append(&record) {
                     Ok(record_id) => {
+                        self.refresh_usage_panel_from_log();
                         if let Some(kind) = sidecar_kind {
                             self.enrichment_requests
                                 .insert(record_id, (record.context().session_id().clone(), kind));
+                            self.enrichment_attempts.insert(record_id, 0);
                             self.usage_enrichment.enrich(
                                 record_id,
                                 record.context().session_id().clone(),
@@ -585,6 +620,8 @@ impl App {
                         tracing::error!(error = %error, "persist usage context failed");
                         self.ui_state
                             .add_system_message(format!("Usage recording failed: {error}"));
+                    } else {
+                        self.refresh_usage_panel_from_log();
                     }
                 }
             }
@@ -1352,8 +1389,18 @@ impl App {
                     self.ui_state.show_usage_panel(snapshot);
                     if account_query_started {
                         self.ui_state.mark_usage_account_loading();
+                        if let Err(error) = self
+                            .bridge_sender
+                            .try_send(BridgeCommand::QueryUsageAccount)
+                        {
+                            self.ui_state.apply_notification(
+                                &Notification::UsageAccountQueryFailed {
+                                    message: error.to_string(),
+                                },
+                            );
+                        }
                     }
-                    let retry_ids = self.failed_enrichments.drain().collect::<Vec<_>>();
+                    let retry_ids = std::mem::take(&mut self.failed_enrichments);
                     for record_id in retry_ids {
                         if let Some((session_id, kind)) =
                             self.enrichment_requests.get(&record_id).cloned()
@@ -2136,6 +2183,19 @@ mod tests {
         UsageLog::open_in_memory().expect("in-memory usage log")
     }
 
+    #[test]
+    fn enrichment_retry_budget_allows_one_transient_retry_only() {
+        let mut transient_attempts = 0;
+        assert!(reserve_enrichment_retry(true, &mut transient_attempts));
+        assert_eq!(transient_attempts, 1);
+        assert!(!reserve_enrichment_retry(true, &mut transient_attempts));
+        assert_eq!(transient_attempts, 1);
+
+        let mut terminal_attempts = 0;
+        assert!(!reserve_enrichment_retry(false, &mut terminal_attempts));
+        assert_eq!(terminal_attempts, 0);
+    }
+
     // ── cyril-nd4h: ui.mouse_capture is actually honored (claims C1, C2) ──────
     //
     // STRESS FIXTURE: all three reachable shapes -- explicit false, explicit
@@ -2441,8 +2501,10 @@ mod tests {
                     billing_cycle_reset: "2026-09-01".to_owned(),
                     overages_enabled: false,
                     is_enterprise: false,
+                    overage_capable: false,
                     usage_breakdowns: Vec::new(),
                     bonus_credits: Vec::new(),
+                    add_on_credits: Vec::new(),
                 },
                 fetched_at_ms: Some(42),
             },
@@ -2475,6 +2537,72 @@ mod tests {
             v2_rx.try_recv(),
             Err(tokio::sync::mpsc::error::TryRecvError::Empty)
         ));
+
+        let (mut dead, dead_rx) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        drop(dead_rx);
+        establish_main_session(&mut dead, &SessionId::new("sess_dead"));
+        dead.ui_state.insert_text("/usage");
+        dead.submit_input()
+            .await
+            .expect("local usage must open after bridge death");
+        assert!(dead.ui_state.has_usage_panel());
+        assert!(matches!(
+            dead.ui_state
+                .usage_panel()
+                .map(|panel| &panel.account_status),
+            Some(cyril_ui::traits::UsageAccountStatus::Unavailable(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn open_usage_panel_refreshes_on_turn_and_context_writes() {
+        let session_id = SessionId::new("s-refresh");
+        let (mut app, mut command_rx) = test_app_with_command_rx();
+        establish_main_session(&mut app, &session_id);
+        app.ui_state.insert_text("hello");
+        app.submit_input().await.expect("send prompt");
+        assert!(matches!(
+            command_rx.try_recv(),
+            Ok(BridgeCommand::SendPrompt { .. })
+        ));
+        app.ui_state
+            .show_usage_panel(app.usage_log.snapshot().expect("initial usage snapshot"));
+        app.redraw_needed = false;
+
+        app.handle_notification(RoutedNotification::scoped(
+            session_id.clone(),
+            Notification::TurnUsageCaptured(TokenUsage::new(10, 4, 6, None, None, None)),
+        ));
+        app.handle_notification(RoutedNotification::scoped(
+            session_id.clone(),
+            Notification::TurnCompleted {
+                stop_reason: StopReason::EndTurn,
+            },
+        ));
+        assert_eq!(
+            app.ui_state
+                .usage_panel()
+                .map(|panel| panel.snapshot.overview.requests),
+            Some(1)
+        );
+        assert!(app.redraw_needed);
+
+        app.redraw_needed = false;
+        app.handle_notification(RoutedNotification::scoped(
+            session_id,
+            Notification::ContextBreakdownUpdated {
+                usage_percentage: 42.0,
+                breakdown: None,
+            },
+        ));
+        assert_eq!(
+            app.ui_state
+                .usage_panel()
+                .and_then(|panel| panel.snapshot.context.latest.as_ref())
+                .map(|sample| sample.percentage),
+            Some(42.0)
+        );
+        assert!(app.redraw_needed);
     }
 
     #[tokio::test]

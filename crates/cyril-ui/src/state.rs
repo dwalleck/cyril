@@ -695,6 +695,9 @@ impl UiState {
                 // `Context: N%` and 5-label bar as if the session were alive.
                 self.context_usage = None;
                 self.context_breakdown = None;
+                self.usage_account_status =
+                    UsageAccountStatus::Unavailable(format!("bridge disconnected: {reason}"));
+                self.sync_usage_account_panel();
                 // cyril-nvmh (path d): a dead bridge can never drain a queued
                 // steer, so this is an explicit drain point for the optimistic
                 // chip too — otherwise it leaks past the disconnect until `/new`.
@@ -2295,7 +2298,7 @@ impl UiState {
 
     pub fn mark_usage_account_loading(&mut self) {
         self.usage_account_status = if self.usage_account.is_some() {
-            UsageAccountStatus::Stale("refreshing".to_owned())
+            UsageAccountStatus::Refreshing
         } else {
             UsageAccountStatus::Loading
         };
@@ -6101,8 +6104,10 @@ mod tests {
             billing_cycle_reset: "2026-09-01".to_owned(),
             overages_enabled: false,
             is_enterprise: false,
+            overage_capable: false,
             usage_breakdowns: Vec::new(),
             bonus_credits: Vec::new(),
+            add_on_credits: Vec::new(),
         };
         state.apply_notification(&Notification::UsageAccountUpdated {
             account,
@@ -6111,6 +6116,11 @@ mod tests {
         assert!(matches!(
             state.usage_panel().map(|panel| &panel.account_status),
             Some(UsageAccountStatus::Fresh)
+        ));
+        state.mark_usage_account_loading();
+        assert!(matches!(
+            state.usage_panel().map(|panel| &panel.account_status),
+            Some(UsageAccountStatus::Refreshing)
         ));
         state.apply_notification(&Notification::UsageAccountQueryFailed {
             message: "offline".to_owned(),
@@ -6127,6 +6137,14 @@ mod tests {
             panel.account.as_ref().map(|value| value.plan_name.as_str()),
             Some("KIRO PRO MAX")
         );
+        state.apply_notification(&Notification::BridgeDisconnected {
+            reason: "process exited".to_owned(),
+        });
+        assert!(matches!(
+            state.usage_panel().map(|panel| &panel.account_status),
+            Some(UsageAccountStatus::Unavailable(message))
+                if message == "bridge disconnected: process exited"
+        ));
     }
     fn sample_breakdown() -> cyril_core::types::ContextBreakdown {
         use cyril_core::types::{ContextBreakdown, ContextBucket};

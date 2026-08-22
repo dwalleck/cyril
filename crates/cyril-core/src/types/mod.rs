@@ -51,10 +51,10 @@ pub use usage::{
     AgentUsageGroup, MeteredAmount, MetricCoverage, ModelUsageGroup, Money, NamedUsageGroup,
     ObservedMetric, RecentUsage, SessionOrigin, TokenTotals, TokenUsage, ToolModelUsageGroup,
     ToolUsageGroup, TurnMeteringUpdate, TurnUsageContext, TurnUsageMetrics, UnavailableReason,
-    UsageAccount, UsageAccountBreakdown, UsageAgentType, UsageBonusCredit, UsageCompaction,
-    UsageContextSample, UsageContextSummary, UsageOutcome, UsageRecord, UsageRecordId,
-    UsageSnapshot, UsageSummary, UsageTiming, UsageTool, UsageTurnOutcome, UsageTurnStatus,
-    UsageValueError,
+    UsageAccount, UsageAccountBreakdown, UsageAddOnCredit, UsageAgentType, UsageBonusCredit,
+    UsageCompaction, UsageContextSample, UsageContextSummary, UsageOutcome, UsageRecord,
+    UsageRecordId, UsageSnapshot, UsageSummary, UsageTiming, UsageTool, UsageTurnOutcome,
+    UsageTurnStatus, UsageValueError,
 };
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{

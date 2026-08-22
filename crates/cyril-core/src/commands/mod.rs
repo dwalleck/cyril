@@ -774,7 +774,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn kas_usage_opens_locally_and_dispatches_account_query() {
+    async fn kas_usage_marks_account_query_for_app_dispatch() {
         let mut session = crate::session::SessionController::new();
         session.set_session(
             crate::types::SessionId::new("sess_kas"),
@@ -802,8 +802,8 @@ mod tests {
             }
         ));
         assert!(matches!(
-            rx.recv().await,
-            Some(crate::types::BridgeCommand::QueryUsageAccount)
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
         ));
     }
 

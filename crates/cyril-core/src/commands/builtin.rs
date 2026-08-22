@@ -169,12 +169,9 @@ impl Command for UsageCommand {
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, _args: &str) -> crate::Result<CommandResult> {
-        let account_query_started =
+        let account_query_requested =
             self.account_source == UsageAccountCommandSource::Kas && ctx.session.id().is_some();
-        if account_query_started {
-            ctx.bridge.send(BridgeCommand::QueryUsageAccount).await?;
-        }
-        Ok(CommandResult::show_usage(account_query_started))
+        Ok(CommandResult::show_usage(account_query_requested))
     }
 }
 

@@ -569,6 +569,7 @@ pub enum UsageAccountStatus {
     #[default]
     Idle,
     Loading,
+    Refreshing,
     Fresh,
     Unavailable(String),
     Stale(String),
@@ -591,25 +592,31 @@ impl UsagePanelState {
                 if self.snapshot.overview.requests == 0 {
                     1
                 } else {
-                    17
+                    16
                 }
             }
             UsagePage::Costs => {
-                self.snapshot.overview.costs.len()
-                    + self.snapshot.overview.charges.len()
-                    + self
-                        .snapshot
-                        .models
-                        .iter()
-                        .filter(|group| {
-                            !group.summary.costs.is_empty() || !group.summary.charges.is_empty()
-                        })
-                        .count()
-                    + self.account.as_ref().map_or(1, |account| {
-                        4 + account.usage_breakdowns.len() + account.bonus_credits.len()
+                let model_rows = self
+                    .snapshot
+                    .models
+                    .iter()
+                    .filter(|group| {
+                        !group.summary.costs.is_empty() || !group.summary.charges.is_empty()
+                    })
+                    .count();
+                3 + model_rows
+                    + self.account.as_ref().map_or(0, |account| {
+                        3 + account.usage_breakdowns.len()
+                            + account.bonus_credits.len()
+                            + account.add_on_credits.len()
                     })
             }
-            UsagePage::Context => 12,
+            UsagePage::Context => self
+                .snapshot
+                .context
+                .latest
+                .as_ref()
+                .map_or(1, |latest| if latest.breakdown.is_some() { 10 } else { 6 }),
             UsagePage::Providers => self.snapshot.providers.len(),
             UsagePage::Tools => self
                 .snapshot

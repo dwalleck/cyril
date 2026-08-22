@@ -12,15 +12,16 @@ Projected slice diffs:
 - Slice 4: 1,000 lines
 - Slice 5: 600 lines
 - Slice 6: 900 lines
-- Sum: 5,500 changed lines
-- Churn margin: 20% = 1,100 lines. Rationale: three existing public domain interfaces, a live SQLite schema, and the App/UI wiring all require caller/test migrations; fixture-driven Rust changes in this repository routinely add more fence code than implementation.
-- Review budget: 6,600 changed lines.
+- Slice 7: 800 lines
+- Sum: 6,300 changed lines
+- Churn margin: 20% = 1,260 lines. Rationale: three existing public domain interfaces, a live SQLite schema, App/UI wiring, and review-driven concurrency/correlation repairs require caller/test migrations; fixture-driven Rust changes in this repository routinely add more fence code than implementation.
+- Review budget: 7,560 changed lines.
 
 The total exceeds 4,000, so the plan has three independently mergeable increments:
 
 1. **Live metering substrate** — Slices 1–2, projected 1,800 lines. Mergeable onto the Phase 1 dependency branch: KAS/v2 metering becomes typed and durable, the existing modal still compiles and standard-ACP snapshots remain unchanged. Verified without later slices by conversion, observer, migration, and Phase 1 equivalence fences.
 2. **Usage detail and enrichment** — Slices 3–4, projected 2,200 lines. Mergeable after increment 1: detailed tool/context/compaction aggregation and bounded current-session enrichment are durable and queryable even before the new UI page lands. Verified without increment 3 by raw SQLite, parser, attribution, and scale fences.
-3. **Account and modal completion** — Slices 5–6, projected 1,500 lines. Mergeable after increment 2: async KAS account state and the complete Costs/Tools/Context presentation ship together with App refresh wiring and live acceptance.
+3. **Account and modal completion** — Slices 5–7, projected 2,300 lines. Mergeable after increment 2: async KAS account state, the complete Costs/Tools/Context presentation, and review hardening for correlation, bridge liveness, and truthful refresh/rendering ship together.
 
 ## Slice 1: Type and convert Kiro metering without lifecycle confusion
 
@@ -201,13 +202,13 @@ increment and 1,500-line projection are unchanged.
 
 **Expected behavior:** The nine-page modal visibly separates credits/money, names backend-gated metrics, shows provider requests/retries/outcomes, detailed tools and combined context/compaction state, refreshes without unwanted page reset, protects input at 60×16, and contains no Kiro/provider decision outside adapters.
 
-**Oracle:** Ratatui `TestBackend` literal labels/cell coordinates and page/scroll state table; a file ownership/source allowlist independently scans forbidden decision strings.
+**Oracle:** Ratatui `TestBackend` literal labels/cell coordinates and page/scroll state table; byte-identical Overview buffers when only provider identity changes.
 
-**Stress fixture:** Empty, Kiro-only, standard-only, mixed, multi-unit, account loading/fresh/stale/error, full/malformed-absent context, detailed/fallback tools, long Unicode labels, all nine pages at 60×16, refresh while scrolled. Expected: required labels/data visible, no charge mixing/input overwrite/page reset, fallback tools retained.
+**Stress fixture:** Empty, Kiro-only, standard-only, mixed, multi-unit, account loading/fresh/stale/error, full/malformed-absent context, detailed/fallback tools, long Unicode labels, all nine pages at 60×16, refresh while scrolled, and otherwise-identical `kiro`/`omp` provider summaries. Expected: required labels/data visible, no charge mixing/input overwrite/page reset, fallback tools retained, and metric availability is provider invariant.
 
-**Regression fence:** `usage_panel::tests::kiro_full_mixed_pages_render_at_floor` and `usage::tests::usage_layers_are_engine_neutral`, created in this slice.
+**Regression fence:** `usage_panel::tests::kiro_full_mixed_pages_render_at_floor` and `usage_panel::tests::overview_metric_availability_is_provider_invariant`, created in this slice.
 
-**Named mutation:** In `widgets/usage_panel.rs`, render backend gating as an em dash or append credits to monetary totals; C10 turns red. Branch on provider `"kiro"` in renderer/aggregation; C13 source ownership fence turns red.
+**Named mutation:** In `widgets/usage_panel.rs`, render backend gating as an em dash or append credits to monetary totals; C10 turns red. Branch on provider `"kiro"` for placeholders; C13 provider-invariance buffers differ.
 
 **Complexity/production scale:** New Context/account sections are O(1) plus O(B) account breakdowns; Tools retains existing O(G) genuine group rendering. No new per-turn history vector. Maximum accepted render cost: one 60×16 or 120×40 TestBackend frame ≤16 ms with 10,000 aggregate groups, maintaining terminal responsiveness; rows outside the viewport must not allocate presentation strings eagerly if this budget fails.
 
@@ -223,10 +224,45 @@ increment and 1,500-line projection are unchanged.
 
 **Commands and expected results:**
 - `cargo test -p cyril-ui kiro_full_mixed_pages_render_at_floor` → every snapshot/page state contains the literal typed/backend/context/tool labels and writes no cell at or below input top.
-- `cargo test -p cyril-core usage_layers_are_engine_neutral` → the allowlist reports no engine/provider decision in aggregation/render files.
+- `cargo test -p cyril-ui overview_metric_availability_is_provider_invariant` → Overview buffers remain byte-identical when only provider identity changes.
 - Apply em-dash/charge-mixing and provider-branch mutations; C10/C13 fences turn red, then green after restore.
 - Run the actual TUI against one v2 and one KAS turn and open `/usage` → credits, outcomes, timing, requests/retries where present, context/tools/model/folder, account status, and backend-gated labels are visible; existing omp smoke values remain unchanged.
 - `cargo test && cargo test --features kas && cargo clippy -- -D warnings && cargo clippy --features kas -- -D warnings && cargo fmt --check` → increment 3 and the complete issue are green.
+
+## Slice 7: Harden usage correlation, account liveness, and truthful modal state after review
+
+**Purpose:** Resolve review findings F1–F16: F1/F10 sidecar ownership/retry bounds; F2/F3 bridge and local-open ordering; F4/F5/F8 account conversion; F6/F7/F9/F11/F12/F14 modal fidelity and refresh; F13/F15 account state; F16 provider-neutral verification.
+
+**Claim IDs:** C5, C9, C10, C13
+
+**Expected behavior:** A late KAS retry retains its record ownership and never consumes an incomplete later tail; the account RPC runs off the bridge mediator with a five-second terminal notification; `/usage` always opens local SQLite state before best-effort account dispatch; current account fields and overages render truthfully; open panels refresh and redraw on turn/context/enrichment writes; transient enrichment retries are bounded; provider identity does not change metric availability.
+
+**Oracle:** Ordered record IDs plus literal KAS JSONL turn boundaries and byte offsets for sidecar ownership; a parked fake account RPC plus independently observed short bridge command for mediator liveness; captured account JSON compared field-by-field; rendered row counts compared with actual page lines and provider-invariance buffers.
+
+**Stress fixture:** Record A fails before its KAS `usage_summary`, A+B then arrive before record B requests enrichment, and B has a partial tail; a parked account request runs while `ListSettings` completes; a dead bridge receives `/usage`; account responses include percentage 104, admin-managed message without data, no-cap breakdown, add-on credits, enterprise/overage charge fields; sparse Costs/Context and an open panel receive new turn/context writes. Expected: A/B tools stay on A/B, cursor stops after the last complete summary, the mediator remains live, local modal opens, all account states/rows are typed and visible, and no retry/state collection grows indefinitely.
+
+**Regression fence:** `usage::kiro_sidecar::tests::late_retry_and_partial_tail_preserve_kas_turn_ownership`, `protocol::bridge::tests::workflow_ops::slow_account_query_does_not_block_bridge_loop`, `commands::tests::kas_usage_marks_account_query_for_app_dispatch`, `app::tests::usage_account_query_order_and_state_matrix`, `app::tests::open_usage_panel_refreshes_on_turn_and_context_writes`, `protocol::convert::kas::tests::account_usage_response_maps_exactly`, `state::tests::usage_account_state_retains_last_known_with_status`, `usage_panel::tests::sparse_cost_and_context_row_counts_match_rendered_lines`, `usage_panel::tests::kiro_full_mixed_pages_render_at_floor`, and `usage_panel::tests::overview_metric_availability_is_provider_invariant`.
+
+**Named mutation:** Remove record IDs from the sidecar outstanding queue or advance the cursor to EOF; F1 fence misattributes/loses the partial tail. Await account RPC inline or send from `UsageCommand`; F2/F3 fences block or observe the wrong command-layer send. Restore percentage rejection/drop current account fields, mismatch row counts/drop tool costs/cache row, or restore `Stale("refreshing")`; account/state/render fences turn red. Branch metric placeholders on provider; provider-invariance buffers differ.
+
+**Complexity/production scale:** Sidecar parsing remains O(appended bytes + completed turns log outstanding records) with the existing 64 MiB cap; outstanding/pending state is O(records awaiting one bounded retry) and terminal failures are removed. Account conversion is O(breakdowns + bonuses + add-ons), with the existing 10,000-entry/25 ms reference budget. Modal row construction is O(visible aggregate/account rows), with the existing 10,000-group/16 ms reference budget. Account RPC state is one spawned future per explicit `/usage`, bounded to five seconds.
+
+**Wall budget/phase:** Sidecar enrichment is always-on in its worker and retains the ≤1 second per attempt sequence; one later user-triggered retry is the maximum. Modal rendering is always-on while open and retains the ≤16 ms production-scale budget. Account lookup is one-off per explicit `/usage`; N/A — reason: one-off phase, bounded by a five-second timeout rather than a redraw budget.
+
+**Files:** `crates/cyril-core/src/commands/builtin.rs`, `crates/cyril-core/src/commands/mod.rs`, `crates/cyril-core/src/protocol/bridge.rs`, `crates/cyril-core/src/protocol/convert/kas.rs`, `crates/cyril-core/src/types/mod.rs`, `crates/cyril-core/src/types/usage.rs`, `crates/cyril-core/src/usage/kiro_sidecar.rs`, `crates/cyril-ui/src/state.rs`, `crates/cyril-ui/src/traits.rs`, `crates/cyril-ui/src/widgets/usage_panel.rs`, `crates/cyril/src/app.rs`.
+
+**Estimate:** 1 implementation day.
+
+**Diff estimate:** 800 changed lines: 400 implementation, 400 regression/state/render tests and workflow evidence.
+
+**PR increment:** Account and modal completion.
+
+**Commands and expected results:**
+- `cargo test -p cyril-core --features kas late_retry_and_partial_tail_preserve_kas_turn_ownership && cargo test -p cyril-core --features kas slow_account_query_does_not_block_bridge_loop && cargo test -p cyril-core --features kas account_usage_response_maps_exactly` → exact A/B tool ownership, complete-tail cursor, mediator liveness, and current account conversion values match the independent oracles.
+- `cargo test -p cyril --features kas usage_account_query_order_and_state_matrix && cargo test -p cyril open_usage_panel_refreshes_on_turn_and_context_writes` → local modal opens before best-effort query, dead bridge becomes unavailable, and open snapshots/redraw update on writes.
+- `cargo test -p cyril-ui usage_` → sparse row counts equal rendered lines, account states/details are visible, tool token/money fidelity is retained, and provider-invariance buffers match.
+- Apply each named mutation, run its owning fence red, restore, and rerun green.
+- `cargo test && cargo test --features kas && cargo clippy -- -D warnings && cargo clippy --features kas -- -D warnings && cargo fmt --check` → default/KAS final integration remains green with no warning suppression.
 
 ## Tracker taxonomy
 
