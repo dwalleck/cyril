@@ -1112,7 +1112,7 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::*;
-    use crate::test_support::{CaptureWriter, must_succeed};
+    use crate::test_support::must_succeed;
     use crate::workflow::{WorkflowNodeState, WorkflowRun, WorkflowTracker};
 
     const FAILED_CAPTURE: &str =
@@ -1160,20 +1160,17 @@ mod tests {
         method: &str,
         params: &serde_json::Value,
     ) -> (WorkflowFrameOutcome, serde_json::Value) {
-        let _capture_lock = crate::test_support::tracing_capture_lock();
-        let capture = CaptureWriter::default();
-        let subscriber = tracing_subscriber::fmt()
-            .json()
-            .with_current_span(false)
-            .with_span_list(false)
-            .with_writer(capture.clone())
-            .finish();
+        let (_capture_lock, capture, dispatch) = crate::test_support::capture_json_subscriber();
         let result =
-            tracing::subscriber::with_default(subscriber, || to_notification(method, params));
-        let log = must_succeed(
-            serde_json::from_slice(&capture.captured()),
-            "workflow warning must be one JSON event",
-        );
+            tracing::dispatcher::with_default(&dispatch, || to_notification(method, params));
+        let captured = capture.captured();
+        let log = match captured.as_slice() {
+            [event] => event.clone(),
+            events => panic!(
+                "workflow warning must be one event, captured {}",
+                events.len()
+            ),
+        };
         (result, log)
     }
 

@@ -1,4 +1,4 @@
-use crate::commands::{Command, CommandContext, CommandResult};
+use crate::commands::{Command, CommandContext, CommandResult, UsageAccountCommandSource};
 use crate::types::BridgeCommand;
 
 /// /help — show available commands
@@ -148,7 +148,15 @@ impl Command for VoiceToggleCommand {
 }
 
 /// /usage — open Cyril's local live-usage dashboard.
-pub struct UsageCommand;
+pub struct UsageCommand {
+    account_source: UsageAccountCommandSource,
+}
+
+impl UsageCommand {
+    pub fn new(account_source: UsageAccountCommandSource) -> Self {
+        Self { account_source }
+    }
+}
 
 #[async_trait::async_trait]
 impl Command for UsageCommand {
@@ -160,12 +168,10 @@ impl Command for UsageCommand {
         "Show live token, cost, model, provider, and tool usage"
     }
 
-    async fn execute(
-        &self,
-        _ctx: &CommandContext<'_>,
-        _args: &str,
-    ) -> crate::Result<CommandResult> {
-        Ok(CommandResult::show_usage())
+    async fn execute(&self, ctx: &CommandContext<'_>, _args: &str) -> crate::Result<CommandResult> {
+        let account_query_requested =
+            self.account_source == UsageAccountCommandSource::Kas && ctx.session.id().is_some();
+        Ok(CommandResult::show_usage(account_query_requested))
     }
 }
 

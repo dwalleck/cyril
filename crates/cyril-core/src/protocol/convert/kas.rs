@@ -11,10 +11,183 @@ use agent_client_protocol as acp;
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{
     ContextBreakdown, ContextBucket, MeteredAmount, Notification, StopReason, TurnMeteringUpdate,
-    UsageTurnStatus,
+    UsageAccount, UsageAccountBreakdown, UsageAddOnCredit, UsageBonusCredit, UsageTurnStatus,
 };
 
 pub(crate) mod workflow;
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum AccountUsageParseError {
+    #[error("account usage request failed: {0}")]
+    Rejected(String),
+    #[error("account usage response is missing {0}")]
+    Missing(&'static str),
+    #[error("account usage response has invalid {0}")]
+    Invalid(&'static str),
+}
+
+pub(crate) fn account_usage_from_response(
+    response: &serde_json::Value,
+) -> Result<UsageAccount, AccountUsageParseError> {
+    if response.get("success").and_then(serde_json::Value::as_bool) != Some(true) {
+        let message = response
+            .get("message")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("agent returned success=false");
+        return Err(AccountUsageParseError::Rejected(message.to_owned()));
+    }
+    let Some(data) = response.get("data").filter(|data| !data.is_null()) else {
+        let message = response
+            .get("message")
+            .and_then(serde_json::Value::as_str)
+            .filter(|message| !message.is_empty())
+            .ok_or(AccountUsageParseError::Missing("data and message"))?;
+        return Err(AccountUsageParseError::Rejected(message.to_owned()));
+    };
+    let breakdowns = required_array(data, "usageBreakdowns")?
+        .iter()
+        .map(parse_account_breakdown)
+        .collect::<Result<Vec<_>, _>>()?;
+    let bonus_credits = required_array(data, "bonusCredits")?
+        .iter()
+        .map(parse_bonus_credit)
+        .collect::<Result<Vec<_>, _>>()?;
+    let add_on_credits = required_array(data, "addOnCredits")?
+        .iter()
+        .map(parse_add_on_credit)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(UsageAccount {
+        plan_name: required_string(data, "planName")?.to_owned(),
+        billing_cycle_reset: required_string(data, "billingCycleReset")?.to_owned(),
+        overages_enabled: required_bool(data, "overagesEnabled")?,
+        is_enterprise: required_bool(data, "isEnterprise")?,
+        overage_capable: required_bool(data, "overageCapable")?,
+        usage_breakdowns: breakdowns,
+        bonus_credits,
+        add_on_credits,
+    })
+}
+
+fn parse_account_breakdown(
+    value: &serde_json::Value,
+) -> Result<UsageAccountBreakdown, AccountUsageParseError> {
+    Ok(UsageAccountBreakdown {
+        resource_type: required_string(value, "resourceType")?.to_owned(),
+        display_name: required_string(value, "displayName")?.to_owned(),
+        used: required_nonnegative(value, "used")?,
+        has_limit: required_bool(value, "hasLimit")?,
+        limit: required_nonnegative(value, "limit")?,
+        percentage: required_percentage(value, "percentage")?,
+        current_overages: required_nonnegative(value, "currentOverages")?,
+        overage_rate: required_nonnegative(value, "overageRate")?,
+        overage_charges: optional_nonnegative(value, "overageCharges")?,
+        currency: required_string(value, "currency")?.to_owned(),
+    })
+}
+
+fn parse_bonus_credit(
+    value: &serde_json::Value,
+) -> Result<UsageBonusCredit, AccountUsageParseError> {
+    Ok(UsageBonusCredit {
+        name: required_string(value, "name")?.to_owned(),
+        used: required_nonnegative(value, "used")?,
+        total: required_nonnegative(value, "total")?,
+        days_until_expiry: value
+            .get("daysUntilExpiry")
+            .and_then(serde_json::Value::as_u64)
+            .ok_or(AccountUsageParseError::Invalid(
+                "bonusCredits[].daysUntilExpiry",
+            ))?,
+    })
+}
+
+fn parse_add_on_credit(
+    value: &serde_json::Value,
+) -> Result<UsageAddOnCredit, AccountUsageParseError> {
+    Ok(UsageAddOnCredit {
+        used: required_nonnegative(value, "used")?,
+        total: required_nonnegative(value, "total")?,
+        is_active: required_bool(value, "isActive")?,
+        expires_at: optional_string(value, "expiresAt")?,
+    })
+}
+
+fn optional_string(
+    value: &serde_json::Value,
+    field: &'static str,
+) -> Result<Option<String>, AccountUsageParseError> {
+    match value.get(field) {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(value) => value
+            .as_str()
+            .filter(|value| !value.is_empty())
+            .map(|value| Some(value.to_owned()))
+            .ok_or(AccountUsageParseError::Invalid(field)),
+    }
+}
+
+fn required_string<'a>(
+    value: &'a serde_json::Value,
+    field: &'static str,
+) -> Result<&'a str, AccountUsageParseError> {
+    value
+        .get(field)
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.is_empty())
+        .ok_or(AccountUsageParseError::Invalid(field))
+}
+
+fn required_bool(
+    value: &serde_json::Value,
+    field: &'static str,
+) -> Result<bool, AccountUsageParseError> {
+    value
+        .get(field)
+        .and_then(serde_json::Value::as_bool)
+        .ok_or(AccountUsageParseError::Invalid(field))
+}
+
+fn required_array<'a>(
+    value: &'a serde_json::Value,
+    field: &'static str,
+) -> Result<&'a [serde_json::Value], AccountUsageParseError> {
+    value
+        .get(field)
+        .and_then(serde_json::Value::as_array)
+        .map(Vec::as_slice)
+        .ok_or(AccountUsageParseError::Invalid(field))
+}
+
+fn required_nonnegative(
+    value: &serde_json::Value,
+    field: &'static str,
+) -> Result<f64, AccountUsageParseError> {
+    let amount = value
+        .get(field)
+        .and_then(serde_json::Value::as_f64)
+        .ok_or(AccountUsageParseError::Invalid(field))?;
+    if !amount.is_finite() || amount < 0.0 {
+        return Err(AccountUsageParseError::Invalid(field));
+    }
+    Ok(amount)
+}
+
+fn optional_nonnegative(
+    value: &serde_json::Value,
+    field: &'static str,
+) -> Result<Option<f64>, AccountUsageParseError> {
+    match value.get(field) {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(_) => required_nonnegative(value, field).map(Some),
+    }
+}
+
+fn required_percentage(
+    value: &serde_json::Value,
+    field: &'static str,
+) -> Result<f64, AccountUsageParseError> {
+    required_nonnegative(value, field).map(|percentage| percentage.min(100.0))
+}
 
 /// The four command names `resolveWorkflows()` registers when the workflow
 /// gate is on. Cyril never sets the gate (ADR-0011), but a backend feature
@@ -406,6 +579,164 @@ mod tests {
             .lines()
             .map(|line| serde_json::from_str(line).expect("fixture line deserializes"))
             .collect()
+    }
+
+    #[test]
+    fn account_usage_response_maps_exactly() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/kas/workflow/terminal-aborted-2.16.2.jsonl");
+        let raw = std::fs::read_to_string(path).expect("read captured sweep");
+        let response = raw
+            .lines()
+            .map(|line| serde_json::from_str::<serde_json::Value>(line).expect("JSONL fixture"))
+            .find_map(|line| {
+                line.pointer("/parsed/result")
+                    .filter(|result| result.pointer("/data/planName").is_some())
+                    .cloned()
+            })
+            .expect("captured account response");
+        let account = account_usage_from_response(&response).expect("captured response maps");
+        assert_eq!(account.plan_name, "KIRO PRO MAX");
+        assert_eq!(account.billing_cycle_reset, "2026-09-01");
+        assert!(!account.overages_enabled);
+        assert!(!account.is_enterprise);
+        assert!(account.overage_capable);
+        assert_eq!(account.usage_breakdowns.len(), 1);
+        let credits = &account.usage_breakdowns[0];
+        assert_eq!(credits.resource_type, "CREDIT");
+        assert_eq!(credits.display_name, "Credits");
+        assert_eq!(credits.used, 1075.01);
+        assert!(credits.has_limit);
+        assert_eq!(credits.limit, 5000.0);
+        assert_eq!(credits.percentage, 21.0);
+        assert_eq!(credits.current_overages, 0.0);
+        assert_eq!(credits.overage_rate, 0.04);
+        assert_eq!(credits.overage_charges, Some(0.0));
+        assert_eq!(credits.currency, "USD");
+        assert!(account.bonus_credits.is_empty());
+        assert!(account.add_on_credits.is_empty());
+
+        let with_bonus = json!({
+            "success": true,
+            "data": {
+                "planName": "Plan",
+                "billingCycleReset": "2026-09-01",
+                "overagesEnabled": true,
+                "isEnterprise": false,
+                "overageCapable": true,
+                "usageBreakdowns": [{
+                    "resourceType": "CREDIT",
+                    "displayName": "Credits",
+                    "used": 104.0,
+                    "limit": 100.0,
+                    "percentage": 104,
+                    "hasLimit": true,
+                    "currentOverages": 4.0,
+                    "overageRate": 0.04,
+                    "overageCharges": 0.16,
+                    "currency": "USD"
+                }],
+                "bonusCredits": [{
+                    "name": "Welcome bonus",
+                    "used": 81.96,
+                    "total": 500.0,
+                    "daysUntilExpiry": 12
+                }],
+                "addOnCredits": [{
+                    "used": 2.0,
+                    "total": 100.0,
+                    "isActive": true,
+                    "expiresAt": "2026-10-01"
+                }]
+            }
+        });
+        let account = account_usage_from_response(&with_bonus).expect("bonus maps");
+        assert_eq!(account.bonus_credits[0].name, "Welcome bonus");
+        assert_eq!(account.bonus_credits[0].days_until_expiry, 12);
+        assert_eq!(account.usage_breakdowns[0].percentage, 100.0);
+        assert_eq!(account.add_on_credits[0].total, 100.0);
+        assert_eq!(
+            account.add_on_credits[0].expires_at.as_deref(),
+            Some("2026-10-01")
+        );
+        let admin_managed = json!({
+            "success": true,
+            "message": "Your plan is managed by admin"
+        });
+        assert_eq!(
+            account_usage_from_response(&admin_managed)
+                .expect_err("admin-managed response is unavailable")
+                .to_string(),
+            "account usage request failed: Your plan is managed by admin"
+        );
+
+        for invalid in [
+            json!({"success": false, "message": "denied"}),
+            json!({"success": true, "data": {}}),
+            json!({
+                "success": true,
+                "data": {
+                    "planName": "Plan", "billingCycleReset": "date",
+                    "overagesEnabled": false, "isEnterprise": false,
+                    "overageCapable": false,
+                    "usageBreakdowns": [{
+                        "resourceType": "CREDIT", "displayName": "Credits",
+                        "used": -1, "limit": 1, "percentage": 101,
+                        "hasLimit": true,
+                        "currentOverages": 0, "overageRate": 0,
+                        "currency": "USD"
+                    }],
+                    "bonusCredits": [],
+                    "addOnCredits": []
+                }
+            }),
+        ] {
+            assert!(account_usage_from_response(&invalid).is_err());
+        }
+    }
+
+    #[test]
+    #[ignore = "reference-workstation account conversion budget"]
+    fn account_usage_conversion_budget_reference() {
+        let breakdowns = (0..5_000)
+            .map(|index| {
+                json!({
+                    "resourceType": "CREDIT",
+                    "displayName": format!("Credits {index}"),
+                    "used": 1, "limit": 100, "percentage": 1,
+                    "hasLimit": true,
+                    "currentOverages": 0, "overageRate": 0.04,
+                    "overageCharges": 0, "currency": "USD"
+                })
+            })
+            .collect::<Vec<_>>();
+        let bonuses = (0..5_000)
+            .map(|index| {
+                json!({
+                    "name": format!("Bonus {index}"),
+                    "used": 1, "total": 10, "daysUntilExpiry": 30
+                })
+            })
+            .collect::<Vec<_>>();
+        let response = json!({
+            "success": true,
+            "data": {
+                "planName": "Plan", "billingCycleReset": "date",
+                "overagesEnabled": false, "isEnterprise": false,
+                "overageCapable": false,
+                "usageBreakdowns": breakdowns, "bonusCredits": bonuses,
+                "addOnCredits": []
+            }
+        });
+        let started = std::time::Instant::now();
+        let account = account_usage_from_response(&response).expect("stress response maps");
+        let elapsed = started.elapsed();
+        assert_eq!(account.usage_breakdowns.len(), 5_000);
+        assert_eq!(account.bonus_credits.len(), 5_000);
+        assert!(
+            elapsed <= std::time::Duration::from_millis(25),
+            "10,000-entry account conversion exceeded 25ms: {elapsed:?}"
+        );
     }
 
     fn info_update(sn: &acp::SessionNotification) -> &acp::SessionInfoUpdate {

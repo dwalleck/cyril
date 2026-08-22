@@ -839,6 +839,7 @@ mod tests {
     /// Run `f` under a DEBUG-level capture subscriber; return its result and
     /// the captured log text.
     fn with_captured_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
+        let _capture_lock = crate::test_support::tracing_capture_lock();
         let capture = CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
             .with_max_level(tracing::Level::DEBUG)
@@ -1625,6 +1626,7 @@ mod tests {
             acp::PermissionOptionKind::AllowOnce,
         )]);
 
+        let _capture_lock = crate::test_support::tracing_capture_lock();
         let capture = CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
             .with_writer(capture.clone())
