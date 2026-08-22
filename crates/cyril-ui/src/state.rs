@@ -97,6 +97,7 @@ pub struct UiState {
     picker: Option<PickerState>,
     hooks_panel: Option<HooksPanelState>,
     code_panel: Option<cyril_core::types::CodePanelData>,
+    usage_panel: Option<UsagePanelState>,
 
     // Session-projected flags
     code_intelligence_active: bool,
@@ -275,6 +276,10 @@ impl TuiState for UiState {
         self.code_panel.as_ref()
     }
 
+    fn usage_panel(&self) -> Option<&UsagePanelState> {
+        self.usage_panel.as_ref()
+    }
+
     fn code_intelligence_active(&self) -> bool {
         self.code_intelligence_active
     }
@@ -355,6 +360,7 @@ impl UiState {
             picker: None,
             hooks_panel: None,
             code_panel: None,
+            usage_panel: None,
             code_intelligence_active: false,
             chat_scroll_back: None,
             terminal_size: (80, 24),
@@ -2230,6 +2236,51 @@ impl UiState {
 
     pub fn has_code_panel(&self) -> bool {
         self.code_panel.is_some()
+    }
+
+    // --- Usage panel ---
+
+    pub fn show_usage_panel(&mut self, snapshot: cyril_core::types::UsageSnapshot) {
+        self.usage_panel = Some(UsagePanelState {
+            snapshot,
+            page: UsagePage::Overview,
+            scroll_offset: 0,
+        });
+    }
+
+    pub fn hide_usage_panel(&mut self) {
+        self.usage_panel = None;
+    }
+
+    pub fn has_usage_panel(&self) -> bool {
+        self.usage_panel.is_some()
+    }
+
+    pub fn usage_panel_next_page(&mut self) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            panel.page = panel.page.next();
+            panel.scroll_offset = 0;
+        }
+    }
+
+    pub fn usage_panel_previous_page(&mut self) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            panel.page = panel.page.previous();
+            panel.scroll_offset = 0;
+        }
+    }
+
+    pub fn usage_panel_scroll_up(&mut self, lines: usize) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            panel.scroll_offset = panel.scroll_offset.saturating_sub(lines);
+        }
+    }
+
+    pub fn usage_panel_scroll_down(&mut self, lines: usize) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            let max = panel.row_count().saturating_sub(1);
+            panel.scroll_offset = panel.scroll_offset.saturating_add(lines).min(max);
+        }
     }
 
     pub fn set_code_intelligence_active(&mut self, active: bool) {
@@ -5889,6 +5940,45 @@ mod tests {
         assert!(state.context_usage().is_none());
     }
 
+    #[test]
+    fn usage_panel_page_and_scroll_state() {
+        let mut snapshot = cyril_core::types::UsageSnapshot::default();
+        snapshot.providers = ["alpha", "beta", "gamma"]
+            .into_iter()
+            .map(|name| cyril_core::types::NamedUsageGroup {
+                name: Some(name.to_owned()),
+                summary: cyril_core::types::UsageSummary::default(),
+            })
+            .collect();
+        let mut state = UiState::new(500);
+        state.show_usage_panel(snapshot);
+        assert_eq!(
+            state.usage_panel().map(|panel| panel.page),
+            Some(UsagePage::Overview)
+        );
+        state.usage_panel_next_page();
+        state.usage_panel_next_page();
+        assert_eq!(
+            state.usage_panel().map(|panel| panel.page),
+            Some(UsagePage::Providers)
+        );
+        state.usage_panel_scroll_down(99);
+        assert_eq!(
+            state.usage_panel().map(|panel| panel.scroll_offset),
+            Some(2)
+        );
+        state.usage_panel_previous_page();
+        assert_eq!(
+            state.usage_panel().map(|panel| panel.page),
+            Some(UsagePage::Costs)
+        );
+        assert_eq!(
+            state.usage_panel().map(|panel| panel.scroll_offset),
+            Some(0)
+        );
+        state.hide_usage_panel();
+        assert!(!state.has_usage_panel());
+    }
     fn sample_breakdown() -> cyril_core::types::ContextBreakdown {
         use cyril_core::types::{ContextBreakdown, ContextBucket};
         ContextBreakdown::new(

@@ -103,6 +103,7 @@ pub trait TuiState {
     fn picker(&self) -> Option<&PickerState>;
     fn hooks_panel(&self) -> Option<&HooksPanelState>;
     fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData>;
+    fn usage_panel(&self) -> Option<&UsagePanelState>;
     fn code_intelligence_active(&self) -> bool;
 
     // Chat scroll
@@ -499,6 +500,102 @@ pub struct HooksPanelState {
     pub scroll_offset: usize,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum UsagePage {
+    #[default]
+    Overview,
+    Costs,
+    Providers,
+    Models,
+    Tools,
+    Recent,
+    Errors,
+    Folders,
+}
+
+impl UsagePage {
+    pub const ALL: [Self; 8] = [
+        Self::Overview,
+        Self::Costs,
+        Self::Providers,
+        Self::Models,
+        Self::Tools,
+        Self::Recent,
+        Self::Errors,
+        Self::Folders,
+    ];
+
+    pub fn title(self) -> &'static str {
+        match self {
+            Self::Overview => "Overview",
+            Self::Costs => "Costs",
+            Self::Providers => "Providers",
+            Self::Models => "Models",
+            Self::Tools => "Tools",
+            Self::Recent => "Recent",
+            Self::Errors => "Errors",
+            Self::Folders => "Folders",
+        }
+    }
+
+    pub fn next(self) -> Self {
+        Self::ALL[(self.index() + 1) % Self::ALL.len()]
+    }
+
+    pub fn previous(self) -> Self {
+        Self::ALL[(self.index() + Self::ALL.len() - 1) % Self::ALL.len()]
+    }
+
+    fn index(self) -> usize {
+        match self {
+            Self::Overview => 0,
+            Self::Costs => 1,
+            Self::Providers => 2,
+            Self::Models => 3,
+            Self::Tools => 4,
+            Self::Recent => 5,
+            Self::Errors => 6,
+            Self::Folders => 7,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct UsagePanelState {
+    pub snapshot: cyril_core::types::UsageSnapshot,
+    pub page: UsagePage,
+    pub scroll_offset: usize,
+}
+
+impl UsagePanelState {
+    pub fn row_count(&self) -> usize {
+        match self.page {
+            UsagePage::Overview => {
+                if self.snapshot.overview.requests == 0 {
+                    1
+                } else {
+                    10
+                }
+            }
+            UsagePage::Costs => {
+                self.snapshot.overview.costs.len()
+                    + self
+                        .snapshot
+                        .models
+                        .iter()
+                        .filter(|group| !group.summary.costs.is_empty())
+                        .count()
+            }
+            UsagePage::Providers => self.snapshot.providers.len(),
+            UsagePage::Models => self.snapshot.models.len(),
+            UsagePage::Tools => self.snapshot.tools.len(),
+            UsagePage::Recent => self.snapshot.recent.len(),
+            UsagePage::Errors => self.snapshot.errors.len(),
+            UsagePage::Folders => self.snapshot.folders.len(),
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod test_support {
     use super::*;
@@ -570,6 +667,7 @@ pub mod test_support {
         pub picker: Option<PickerState>,
         pub hooks_panel: Option<HooksPanelState>,
         pub code_panel: Option<cyril_core::types::CodePanelData>,
+        pub usage_panel: Option<UsagePanelState>,
         pub code_intelligence_active: bool,
         pub chat_scroll_back: Option<usize>,
         pub terminal_size: (u16, u16),
@@ -611,6 +709,7 @@ pub mod test_support {
                 picker: None,
                 hooks_panel: None,
                 code_panel: None,
+                usage_panel: None,
                 code_intelligence_active: false,
                 chat_scroll_back: None,
                 terminal_size: (80, 24),
@@ -708,6 +807,9 @@ pub mod test_support {
         }
         fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData> {
             self.code_panel.as_ref()
+        }
+        fn usage_panel(&self) -> Option<&UsagePanelState> {
+            self.usage_panel.as_ref()
         }
         fn code_intelligence_active(&self) -> bool {
             self.code_intelligence_active

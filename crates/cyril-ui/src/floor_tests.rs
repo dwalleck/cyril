@@ -350,7 +350,7 @@ fn input_scroll_window_matches_oracle() -> anyhow::Result<()> {
 /// geometry.
 #[test]
 fn modals_never_cover_input() -> anyhow::Result<()> {
-    use crate::traits::{HooksPanelState, PickerState};
+    use crate::traits::{HooksPanelState, PickerState, UsagePage, UsagePanelState};
     use cyril_core::types::{CodePanelData, HookInfo, LspStatus};
 
     let big_draft = (1..=10)
@@ -437,6 +437,16 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
                     config_path: None,
                     doc_url: None,
                     lsps: vec![],
+                });
+            }),
+        ),
+        (
+            "usage",
+            Box::new(|state: &mut MockTuiState| {
+                state.usage_panel = Some(UsagePanelState {
+                    snapshot: cyril_core::types::UsageSnapshot::default(),
+                    page: UsagePage::Overview,
+                    scroll_offset: 0,
                 });
             }),
         ),

@@ -143,6 +143,9 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     if let Some(code_panel) = state.code_panel() {
         crate::widgets::code_panel::render(frame, area, input_area.y, code_panel, &theme);
     }
+    if let Some(usage_panel) = state.usage_panel() {
+        crate::widgets::usage_panel::render(frame, area, input_area.y, usage_panel, &theme);
+    }
 }
 
 fn draw_fallback(frame: &mut Frame) {

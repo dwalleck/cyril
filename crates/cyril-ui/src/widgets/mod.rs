@@ -9,4 +9,5 @@ pub mod modal;
 pub mod picker;
 pub mod suggestions;
 pub mod toolbar;
+pub mod usage_panel;
 pub mod voice;
