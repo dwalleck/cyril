@@ -7,7 +7,7 @@ use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
 
 use crate::traits::test_support::MockTuiState;
-use crate::traits::{ApprovalPhase, ApprovalState, ChatMessage, Suggestion};
+use crate::traits::{ApprovalPhase, ApprovalState, ChatMessage, Suggestion, UsageAccountStatus};
 
 fn render_frame(state: &MockTuiState, width: u16, height: u16) -> anyhow::Result<Buffer> {
     let mut terminal = Terminal::new(TestBackend::new(width, height))?;
@@ -447,6 +447,9 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
                     snapshot: cyril_core::types::UsageSnapshot::default(),
                     page: UsagePage::Overview,
                     scroll_offset: 0,
+                    account: None,
+                    account_fetched_at_ms: None,
+                    account_status: UsageAccountStatus::Idle,
                 });
             }),
         ),

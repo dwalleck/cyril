@@ -98,6 +98,9 @@ pub struct UiState {
     hooks_panel: Option<HooksPanelState>,
     code_panel: Option<cyril_core::types::CodePanelData>,
     usage_panel: Option<UsagePanelState>,
+    usage_account: Option<cyril_core::types::UsageAccount>,
+    usage_account_fetched_at_ms: Option<u64>,
+    usage_account_status: UsageAccountStatus,
 
     // Session-projected flags
     code_intelligence_active: bool,
@@ -361,6 +364,9 @@ impl UiState {
             hooks_panel: None,
             code_panel: None,
             usage_panel: None,
+            usage_account: None,
+            usage_account_fetched_at_ms: None,
+            usage_account_status: UsageAccountStatus::Idle,
             code_intelligence_active: false,
             chat_scroll_back: None,
             terminal_size: (80, 24),
@@ -552,6 +558,25 @@ impl UiState {
                     TurnMetering::from_charges(update.charges().to_vec(), update.duration_ms());
                 self.pending_metering =
                     TurnMetering::merge_pending(self.pending_metering.take(), Some(metering), None);
+                true
+            }
+            Notification::UsageAccountUpdated {
+                account,
+                fetched_at_ms,
+            } => {
+                self.usage_account = Some(account.clone());
+                self.usage_account_fetched_at_ms = *fetched_at_ms;
+                self.usage_account_status = UsageAccountStatus::Fresh;
+                self.sync_usage_account_panel();
+                true
+            }
+            Notification::UsageAccountQueryFailed { message } => {
+                self.usage_account_status = if self.usage_account.is_some() {
+                    UsageAccountStatus::Stale(message.clone())
+                } else {
+                    UsageAccountStatus::Unavailable(message.clone())
+                };
+                self.sync_usage_account_panel();
                 true
             }
             Notification::UsageUpdated { used, size, .. } => {
@@ -2252,7 +2277,37 @@ impl UiState {
             snapshot,
             page: UsagePage::Overview,
             scroll_offset: 0,
+            account: self.usage_account.clone(),
+            account_fetched_at_ms: self.usage_account_fetched_at_ms,
+            account_status: self.usage_account_status.clone(),
         });
+    }
+
+    pub fn refresh_usage_panel(&mut self, snapshot: cyril_core::types::UsageSnapshot) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            panel.snapshot = snapshot;
+            panel.account = self.usage_account.clone();
+            panel.account_fetched_at_ms = self.usage_account_fetched_at_ms;
+            panel.account_status = self.usage_account_status.clone();
+            panel.scroll_offset = panel.scroll_offset.min(panel.row_count().saturating_sub(1));
+        }
+    }
+
+    pub fn mark_usage_account_loading(&mut self) {
+        self.usage_account_status = if self.usage_account.is_some() {
+            UsageAccountStatus::Stale("refreshing".to_owned())
+        } else {
+            UsageAccountStatus::Loading
+        };
+        self.sync_usage_account_panel();
+    }
+
+    fn sync_usage_account_panel(&mut self) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            panel.account = self.usage_account.clone();
+            panel.account_fetched_at_ms = self.usage_account_fetched_at_ms;
+            panel.account_status = self.usage_account_status.clone();
+        }
     }
 
     pub fn hide_usage_panel(&mut self) {
@@ -6009,6 +6064,7 @@ mod tests {
         );
         state.usage_panel_next_page();
         state.usage_panel_next_page();
+        state.usage_panel_next_page();
         assert_eq!(
             state.usage_panel().map(|panel| panel.page),
             Some(UsagePage::Providers)
@@ -6021,7 +6077,7 @@ mod tests {
         state.usage_panel_previous_page();
         assert_eq!(
             state.usage_panel().map(|panel| panel.page),
-            Some(UsagePage::Costs)
+            Some(UsagePage::Context)
         );
         assert_eq!(
             state.usage_panel().map(|panel| panel.scroll_offset),
@@ -6029,6 +6085,48 @@ mod tests {
         );
         state.hide_usage_panel();
         assert!(!state.has_usage_panel());
+    }
+
+    #[test]
+    fn usage_account_state_retains_last_known_with_status() {
+        let mut state = UiState::new(500);
+        state.show_usage_panel(cyril_core::types::UsageSnapshot::default());
+        state.mark_usage_account_loading();
+        assert!(matches!(
+            state.usage_panel().map(|panel| &panel.account_status),
+            Some(UsageAccountStatus::Loading)
+        ));
+        let account = cyril_core::types::UsageAccount {
+            plan_name: "KIRO PRO MAX".to_owned(),
+            billing_cycle_reset: "2026-09-01".to_owned(),
+            overages_enabled: false,
+            is_enterprise: false,
+            usage_breakdowns: Vec::new(),
+            bonus_credits: Vec::new(),
+        };
+        state.apply_notification(&Notification::UsageAccountUpdated {
+            account,
+            fetched_at_ms: Some(42),
+        });
+        assert!(matches!(
+            state.usage_panel().map(|panel| &panel.account_status),
+            Some(UsageAccountStatus::Fresh)
+        ));
+        state.apply_notification(&Notification::UsageAccountQueryFailed {
+            message: "offline".to_owned(),
+        });
+        assert!(matches!(
+            state.usage_panel().map(|panel| &panel.account_status),
+            Some(UsageAccountStatus::Stale(message)) if message == "offline"
+        ));
+        state.hide_usage_panel();
+        state.show_usage_panel(cyril_core::types::UsageSnapshot::default());
+        let panel = state.usage_panel().expect("reopened usage panel");
+        assert_eq!(panel.account_fetched_at_ms, Some(42));
+        assert_eq!(
+            panel.account.as_ref().map(|value| value.plan_name.as_str()),
+            Some("KIRO PRO MAX")
+        );
     }
     fn sample_breakdown() -> cyril_core::types::ContextBreakdown {
         use cyril_core::types::{ContextBreakdown, ContextBucket};

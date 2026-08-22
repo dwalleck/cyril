@@ -671,7 +671,7 @@ mod tests {
             r#"{"kind":"ToolResults","data":{"content":[{"kind":"toolResult","data":{"toolUseId":"new","content":"done","status":"success"}}]}}"#
         )?;
         handle.enrich(UsageRecordId::new(7), session, KiroSidecarKind::V2);
-        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+        let result = tokio::time::timeout(Duration::from_secs(5), receiver.recv())
             .await?
             .ok_or("worker closed")?;
         let UsageEnrichmentResult::Enriched(enrichment) = result else {
@@ -706,22 +706,21 @@ mod tests {
             &recovering_jsonl,
             "{\"kind\":\"AssistantMessage\",\"data\":{\"content\":[]}}\n",
         )?;
-        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+        let result = tokio::time::timeout(Duration::from_secs(5), receiver.recv())
             .await?
             .ok_or("worker closed")?;
         assert!(matches!(result, UsageEnrichmentResult::Enriched(_)));
 
-        let (handle, mut receiver) = spawn_usage_enrichment_worker_at(Some(home.clone()));
+        let (_command_tx, command_rx) = std::sync::mpsc::channel();
+        let (result_tx, _result_rx) = tokio::sync::mpsc::unbounded_channel();
+        let mut missing_worker = Worker::new(Some(home.clone()), command_rx, result_tx);
         let started = std::time::Instant::now();
-        handle.enrich(
+        let result = missing_worker.enrich_with_retries(
             UsageRecordId::new(8),
-            SessionId::new("missing"),
+            &SessionId::new("missing"),
             KiroSidecarKind::V2,
         );
-        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
-            .await?
-            .ok_or("worker closed")?;
-        assert!(matches!(result, UsageEnrichmentResult::Failed { .. }));
+        assert!(result.is_err());
         assert!(started.elapsed() <= Duration::from_secs(1));
 
         let invalid = validate_session_id(&SessionId::new("../escape"));

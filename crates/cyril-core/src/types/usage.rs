@@ -792,6 +792,37 @@ pub struct UsageContextSummary {
     pub average_reduction_percentage_points: Option<f64>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct UsageAccountBreakdown {
+    pub resource_type: String,
+    pub display_name: String,
+    pub used: f64,
+    pub limit: f64,
+    pub percentage: f64,
+    pub current_overages: f64,
+    pub overage_rate: f64,
+    pub overage_charges: Option<f64>,
+    pub currency: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UsageBonusCredit {
+    pub name: String,
+    pub used: f64,
+    pub total: f64,
+    pub days_until_expiry: u64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UsageAccount {
+    pub plan_name: String,
+    pub billing_cycle_reset: String,
+    pub overages_enabled: bool,
+    pub is_enterprise: bool,
+    pub usage_breakdowns: Vec<UsageAccountBreakdown>,
+    pub bonus_credits: Vec<UsageBonusCredit>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct UsageSnapshot {
     pub overview: UsageSummary,
