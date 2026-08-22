@@ -568,7 +568,9 @@ impl App {
                 if reserve_enrichment_retry(retryable, attempts) {
                     self.failed_enrichments.insert(record_id);
                 } else {
-                    self.enrichment_requests.remove(&record_id);
+                    if let Some((session_id, kind)) = self.enrichment_requests.remove(&record_id) {
+                        self.usage_enrichment.abandon(record_id, session_id, kind);
+                    }
                     self.failed_enrichments.remove(&record_id);
                     self.enrichment_attempts.remove(&record_id);
                 }
