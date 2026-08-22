@@ -6603,6 +6603,45 @@ mod tests {
             ));
         }
 
+        /// The ACP crate prefixes client extension requests; the bridge must pass
+        /// KAS's canonical `kiro/account/getUsage` so the wire carries exactly
+        /// `_kiro/account/getUsage` (not a doubled underscore).
+        #[tokio::test]
+        async fn query_usage_account_uses_exact_kas_wire_method() {
+            let script = Rc::new(RefCell::new(Script::default()));
+            let probe = script.clone();
+            with_engine_harness(
+                Rc::new(crate::protocol::engine::KasEngine::default()),
+                script,
+                |sender, mut rx, _perm_rx, _gate, _loop, _kill| async move {
+                    let _sid = start_session(&sender, &mut rx).await;
+                    sender
+                        .send(BridgeCommand::QueryUsageAccount)
+                        .await
+                        .expect("send account query");
+                    let result = recv_notif(&mut rx, 5).await.expect("account query result");
+                    assert!(
+                        matches!(result, Notification::UsageAccountQueryFailed { .. }),
+                        "empty fake response must fail visibly, got {result:?}"
+                    );
+                    let received = probe.borrow().received.clone();
+                    assert!(
+                        received
+                            .iter()
+                            .any(|method| method == "ext:kiro/account/getUsage"),
+                        "wire method missing canonical KAS prefix: {received:?}"
+                    );
+                    assert!(
+                        !received
+                            .iter()
+                            .any(|method| method.starts_with("ext:_kiro/_")),
+                        "bridge must not double-prefix the KAS method: {received:?}"
+                    );
+                },
+            )
+            .await;
+        }
+
         /// C3: a body cyril cannot parse still produces a Failed outcome
         /// naming the trouble.
         #[test]
