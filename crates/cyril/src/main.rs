@@ -99,6 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             hooks_source,
             workflow_source,
             usage_log,
+            agent_engine,
         );
 
         // Create initial session; a parsed `--prompt` rides along and is
