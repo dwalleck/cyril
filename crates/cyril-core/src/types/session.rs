@@ -1,5 +1,7 @@
 use std::fmt;
 
+use super::usage::{MeteredAmount, UsageValueError};
+
 /// Unique session identifier. Newtype wrapper preventing string mixups.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SessionId(String);
@@ -381,67 +383,93 @@ impl CreditUsage {
     }
 }
 
-/// Per-turn metering data from kiro.dev/metadata.
-#[derive(Debug, Clone)]
+/// Per-turn non-money metering data from Kiro metadata.
+#[derive(Debug, Clone, PartialEq)]
 pub struct TurnMetering {
-    /// Credits for the turn. `None` when the wire carried no `meteringUsage`
-    /// aggregate (a duration/effort-only frame) — deliberately distinct from
-    /// an explicit `Some(0.0)`, which is a real zero-cost turn (cyril-1gim).
-    credits: Option<f64>,
+    charges: Vec<MeteredAmount>,
     duration_ms: Option<u64>,
 }
 
 impl TurnMetering {
-    pub fn new(credits: Option<f64>, duration_ms: Option<u64>) -> Self {
+    pub fn from_charges(charges: Vec<MeteredAmount>, duration_ms: Option<u64>) -> Self {
         Self {
-            credits,
+            charges,
             duration_ms,
         }
     }
 
+    pub fn try_from_credits(
+        credits: Option<f64>,
+        duration_ms: Option<u64>,
+    ) -> Result<Self, UsageValueError> {
+        let charges = credits
+            .map(|amount| MeteredAmount::try_new(amount, "credit", "credits"))
+            .transpose()?
+            .into_iter()
+            .collect();
+        Ok(Self::from_charges(charges, duration_ms))
+    }
+
+    pub fn charges(&self) -> &[MeteredAmount] {
+        &self.charges
+    }
+
     pub fn credits(&self) -> Option<f64> {
-        self.credits
+        let mut total = None;
+        for charge in &self.charges {
+            if charge.unit() == "credit" {
+                *total.get_or_insert(0.0) += charge.amount();
+            }
+        }
+        total
     }
 
     pub fn duration_ms(&self) -> Option<u64> {
         self.duration_ms
     }
 
-    /// Replace the duration, preserving credits.
+    /// Replace the duration, preserving metered charges.
     pub fn with_duration_ms(mut self, duration_ms: Option<u64>) -> Self {
         self.duration_ms = duration_ms;
         self
     }
 
     /// Merge a metadata frame's parsed pieces into the pending turn state.
-    /// Order-independent, last-writer-wins per field (cyril-1gim): credits
-    /// come from `meteringUsage` frames, the duration from whichever frame
-    /// last carried `turnDurationMs` — credits frames and duration/effort-
-    /// only frames (real 2.4.1 shape) interleave, so neither must clobber
-    /// the other. Never fabricates a credits figure: a lone duration yields
-    /// `credits: None`, distinct from an explicit zero.
+    /// Incoming non-empty charges win as one atomic wire snapshot; an empty
+    /// charge list preserves the prior snapshot. Duration merges independently.
     pub fn merge_pending(
         pending: Option<TurnMetering>,
         metering: Option<TurnMetering>,
         duration_ms: Option<u64>,
     ) -> Option<TurnMetering> {
         let mut merged = pending;
-        if let Some(m) = metering {
+        if let Some(metering) = metering {
             merged = Some(match merged {
-                // Incoming populated fields win; absent fields preserve the
-                // pending value. The standalone `duration_ms` below is the
-                // newest override when the frame carried `turnDurationMs`.
-                Some(prev) => TurnMetering::new(
-                    m.credits().or(prev.credits()),
-                    m.duration_ms().or(prev.duration_ms()),
-                ),
-                None => m,
+                Some(previous) => {
+                    let TurnMetering {
+                        charges: previous_charges,
+                        duration_ms: previous_duration,
+                    } = previous;
+                    let TurnMetering {
+                        charges: incoming_charges,
+                        duration_ms: incoming_duration,
+                    } = metering;
+                    TurnMetering::from_charges(
+                        if incoming_charges.is_empty() {
+                            previous_charges
+                        } else {
+                            incoming_charges
+                        },
+                        incoming_duration.or(previous_duration),
+                    )
+                }
+                None => metering,
             });
         }
-        if let Some(d) = duration_ms {
+        if let Some(duration_ms) = duration_ms {
             merged = Some(match merged {
-                Some(m) => m.with_duration_ms(Some(d)),
-                None => TurnMetering::new(None, Some(d)),
+                Some(metering) => metering.with_duration_ms(Some(duration_ms)),
+                None => TurnMetering::from_charges(Vec::new(), Some(duration_ms)),
             });
         }
         merged
@@ -867,12 +895,37 @@ mod tests {
     #[test]
     fn session_cost_accumulates() {
         let mut cost = SessionCost::new();
-        cost.record_turn(&TurnMetering::new(Some(0.018), Some(1948)));
-        cost.record_turn(&TurnMetering::new(Some(0.042), Some(5200)));
+        cost.record_turn(
+            &TurnMetering::try_from_credits(Some(0.018), Some(1948))
+                .expect("valid metering fixture"),
+        );
+        cost.record_turn(
+            &TurnMetering::try_from_credits(Some(0.042), Some(5200))
+                .expect("valid metering fixture"),
+        );
         assert_eq!(cost.turn_count(), 2);
         assert!((cost.total_credits() - 0.060).abs() < 0.001);
         assert!((cost.last_turn_credits().unwrap() - 0.042).abs() < 0.001);
         assert_eq!(cost.last_turn_duration_ms(), Some(5200));
+    }
+
+    #[test]
+    fn turn_metering_keeps_unlike_units_separate() {
+        let metering = TurnMetering::from_charges(
+            vec![
+                MeteredAmount::try_new(0.25, "credit", "credits").expect("valid credit"),
+                MeteredAmount::try_new(2.0, "request", "requests").expect("valid requests"),
+                MeteredAmount::try_new(0.5, "credit", "credits").expect("valid credit"),
+            ],
+            Some(25),
+        );
+        assert_eq!(metering.charges().len(), 3);
+        assert_eq!(metering.credits(), Some(0.75));
+        assert_eq!(metering.duration_ms(), Some(25));
+        assert_eq!(
+            TurnMetering::try_from_credits(Some(f64::NAN), None),
+            Err(UsageValueError::InvalidAmount)
+        );
     }
 
     #[test]
@@ -883,7 +936,10 @@ mod tests {
         // Duration after credits:
         let m = TurnMetering::merge_pending(
             None,
-            Some(TurnMetering::new(Some(0.018), Some(1000))),
+            Some(
+                TurnMetering::try_from_credits(Some(0.018), Some(1000))
+                    .expect("valid metering fixture"),
+            ),
             None,
         )
         .and_then(|m| TurnMetering::merge_pending(Some(m), None, Some(2281)))
@@ -900,7 +956,10 @@ mod tests {
             .and_then(|m| {
                 TurnMetering::merge_pending(
                     Some(m),
-                    Some(TurnMetering::new(Some(0.018), None)),
+                    Some(
+                        TurnMetering::try_from_credits(Some(0.018), None)
+                            .expect("valid metering fixture"),
+                    ),
                     None,
                 )
             })
@@ -915,7 +974,10 @@ mod tests {
         // Newest duration wins when the standalone param carries it:
         let m = TurnMetering::merge_pending(
             None,
-            Some(TurnMetering::new(Some(0.018), Some(1000))),
+            Some(
+                TurnMetering::try_from_credits(Some(0.018), Some(1000))
+                    .expect("valid metering fixture"),
+            ),
             Some(2281),
         )
         .expect("merged");
@@ -925,7 +987,10 @@ mod tests {
         // is absent:
         let m = TurnMetering::merge_pending(
             None,
-            Some(TurnMetering::new(Some(0.018), Some(1000))),
+            Some(
+                TurnMetering::try_from_credits(Some(0.018), Some(1000))
+                    .expect("valid metering fixture"),
+            ),
             None,
         )
         .expect("merged");
@@ -939,8 +1004,10 @@ mod tests {
     #[test]
     fn metering_absence_merge_preserves_pending_credits() {
         let merged = TurnMetering::merge_pending(
-            Some(TurnMetering::new(Some(0.018), None)),
-            Some(TurnMetering::new(None, Some(2281))),
+            Some(
+                TurnMetering::try_from_credits(Some(0.018), None).expect("valid metering fixture"),
+            ),
+            Some(TurnMetering::try_from_credits(None, Some(2281)).expect("valid metering fixture")),
             None,
         )
         .expect("merged");
@@ -967,7 +1034,9 @@ mod tests {
     #[test]
     fn session_cost_skips_duration_only_turns() {
         let mut cost = SessionCost::new();
-        cost.record_turn(&TurnMetering::new(None, Some(2281)));
+        cost.record_turn(
+            &TurnMetering::try_from_credits(None, Some(2281)).expect("valid metering fixture"),
+        );
         assert_eq!(cost.turn_count(), 1);
         assert_eq!(
             cost.total_credits(),
@@ -980,23 +1049,16 @@ mod tests {
 
     #[test]
     fn duration_display_formatting() {
+        let metering = |duration| {
+            TurnMetering::try_from_credits(Some(0.01), duration).expect("valid metering fixture")
+        };
+        assert_eq!(metering(Some(500)).duration_display(), Some("500ms".into()));
+        assert_eq!(metering(Some(1948)).duration_display(), Some("1.9s".into()));
         assert_eq!(
-            TurnMetering::new(Some(0.01), Some(500)).duration_display(),
-            Some("500ms".into())
-        );
-        assert_eq!(
-            TurnMetering::new(Some(0.01), Some(1948)).duration_display(),
-            Some("1.9s".into())
-        );
-        assert_eq!(
-            TurnMetering::new(Some(0.01), Some(135000)).duration_display(),
+            metering(Some(135000)).duration_display(),
             Some("2m 15s".into())
         );
-        assert!(
-            TurnMetering::new(Some(0.01), None)
-                .duration_display()
-                .is_none()
-        );
+        assert!(metering(None).duration_display().is_none());
     }
 
     #[test]
@@ -1040,7 +1102,10 @@ mod tests {
         let summary = TurnSummary::new(
             StopReason::MaxTokens,
             Some(TokenCounts::new(1000, 500, Some(200))),
-            Some(TurnMetering::new(Some(0.05), Some(3000))),
+            Some(
+                TurnMetering::try_from_credits(Some(0.05), Some(3000))
+                    .expect("valid metering fixture"),
+            ),
         );
         assert_eq!(summary.stop_reason(), StopReason::MaxTokens);
         assert!(summary.token_counts().is_some());

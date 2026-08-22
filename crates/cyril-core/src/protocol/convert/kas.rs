@@ -9,7 +9,10 @@
 use agent_client_protocol as acp;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
-use crate::types::{ContextBreakdown, ContextBucket, Notification, StopReason};
+use crate::types::{
+    ContextBreakdown, ContextBucket, MeteredAmount, Notification, StopReason, TurnMeteringUpdate,
+    UsageTurnStatus,
+};
 
 pub(crate) mod workflow;
 
@@ -80,12 +83,11 @@ pub(crate) enum WorkflowFrameOutcome {
 ///   explicit `_session/steer/clear` and routinely post-injection (findings
 ///   F4) — which is why [`Notification::SteeringCleared`] must stay id-scoped.
 ///
-/// Every other sub-kind (`turn_completion` metering, `user_message_id_assigned`,
-/// `steering_inclusion` fileMatch catalog, …) returns `None` — matching is
-/// exact on the `kind` value, never prefix/substring (a `steering_inclusion`
-/// frame must NOT be mistaken for a queue echo). Completion keys on the
-/// `kind == "turn_end"` value, never on frame ordering — a `context_usage`
-/// frame trails `turn_end` on the wire.
+/// Every other sub-kind (`user_message_id_assigned`, `steering_inclusion`
+/// fileMatch catalog, …) returns `None` — matching is exact on the `kind`
+/// value, never prefix/substring. `turn_completion` maps metering only;
+/// lifecycle completion keys on `kind == "turn_end"`, never frame ordering,
+/// because a `context_usage` frame trails `turn_end` on the wire.
 ///
 /// A `turn_end` whose `_meta.kiro.stopReason` is missing or unparseable still
 /// completes the turn (defaults [`StopReason::EndTurn`]): silently returning
@@ -129,6 +131,9 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
                     .and_then(serde_json::Value::as_i64),
             })
         }
+        Some("turn_completion") => Some(Notification::TurnMeteringUpdated(turn_metering_update(
+            kiro,
+        ))),
         Some("turn_end") => Some(Notification::TurnCompleted {
             stop_reason: turn_end_stop_reason(kiro),
         }),
@@ -185,6 +190,137 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
             message_ids: steering_message_ids(Some(kiro), "KAS steering_cleared", None),
         }),
         _ => None,
+    }
+}
+
+fn turn_metering_update(kiro: &serde_json::Value) -> TurnMeteringUpdate {
+    let duration_ms = optional_u64(kiro, "elapsedTime", "KAS turn_completion");
+    let status = match kiro.get("status") {
+        None => None,
+        Some(value) => match value.as_str().and_then(UsageTurnStatus::from_wire) {
+            Some(status) => Some(status),
+            None => {
+                tracing::warn!(
+                    value = ?value,
+                    "KAS turn_completion `status` present but invalid, ignoring"
+                );
+                None
+            }
+        },
+    };
+
+    let mut charges = Vec::new();
+    let mut used_tools = Vec::new();
+    match kiro.get("promptTurnSummaries") {
+        None => {}
+        Some(value) => match value.as_array() {
+            Some(summaries) => {
+                for summary in summaries {
+                    if let Some(charge) = parse_metered_amount(summary) {
+                        charges.push(charge);
+                    }
+                    match summary.get("usedTools") {
+                        None => {}
+                        Some(tools) => match tools.as_array() {
+                            Some(tools) => {
+                                for tool in tools {
+                                    if let Some(tool) =
+                                        tool.as_str().filter(|tool| !tool.is_empty())
+                                    {
+                                        used_tools.push(tool.to_owned());
+                                    } else {
+                                        tracing::warn!(
+                                            value = ?tool,
+                                            "KAS turn_completion `usedTools` entry is invalid, ignoring"
+                                        );
+                                    }
+                                }
+                            }
+                            None => tracing::warn!(
+                                value = ?tools,
+                                "KAS turn_completion `usedTools` is not an array, ignoring"
+                            ),
+                        },
+                    }
+                }
+            }
+            None => tracing::warn!(
+                value = ?value,
+                "KAS turn_completion `promptTurnSummaries` is not an array, ignoring"
+            ),
+        },
+    }
+
+    let request_ids = match kiro.get("requestIds") {
+        None => None,
+        Some(value) => match value.as_array() {
+            Some(ids) => {
+                let mut parsed = Vec::with_capacity(ids.len());
+                for id in ids {
+                    if let Some(id) = id.as_str().filter(|id| !id.is_empty()) {
+                        parsed.push(id.to_owned());
+                    } else {
+                        tracing::warn!(
+                            value = ?id,
+                            "KAS turn_completion `requestIds` entry is invalid, ignoring"
+                        );
+                    }
+                }
+                Some(parsed)
+            }
+            None => {
+                tracing::warn!(
+                    value = ?value,
+                    "KAS turn_completion `requestIds` is not an array, ignoring"
+                );
+                None
+            }
+        },
+    };
+
+    TurnMeteringUpdate::new(charges, duration_ms, status, used_tools, request_ids)
+}
+
+fn parse_metered_amount(summary: &serde_json::Value) -> Option<MeteredAmount> {
+    let amount = summary.get("usage").and_then(serde_json::Value::as_f64);
+    let unit = summary.get("unit").and_then(serde_json::Value::as_str);
+    let unit_plural = summary
+        .get("unitPlural")
+        .and_then(serde_json::Value::as_str);
+    let (Some(amount), Some(unit), Some(unit_plural)) = (amount, unit, unit_plural) else {
+        tracing::warn!(
+            value = ?summary,
+            "KAS turn_completion summary lacks valid usage/unit/unitPlural, ignoring charge"
+        );
+        return None;
+    };
+    match MeteredAmount::try_new(amount, unit, unit_plural) {
+        Ok(charge) => Some(charge),
+        Err(error) => {
+            tracing::warn!(
+                value = ?summary,
+                error = %error,
+                "KAS turn_completion summary charge is invalid, ignoring"
+            );
+            None
+        }
+    }
+}
+
+fn optional_u64(
+    value: &serde_json::Value,
+    field: &'static str,
+    source: &'static str,
+) -> Option<u64> {
+    match value.get(field) {
+        None => None,
+        Some(value) => match value.as_u64() {
+            Some(parsed) => Some(parsed),
+            None => {
+                tracing::warn!(value = ?value, field, source, "numeric field is invalid, ignoring");
+                None
+            }
+        },
     }
 }
 
@@ -259,6 +395,17 @@ mod tests {
         let parsed: acp::SessionNotification =
             serde_json::from_value(value.clone()).expect("fixture deserializes");
         (value, parsed)
+    }
+
+    fn load_jsonl(name: &str) -> Vec<acp::SessionNotification> {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/kas")
+            .join(name);
+        std::fs::read_to_string(&path)
+            .expect("read fixture")
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("fixture line deserializes"))
+            .collect()
     }
 
     fn info_update(sn: &acp::SessionNotification) -> &acp::SessionInfoUpdate {
@@ -380,11 +527,52 @@ mod tests {
     }
 
     #[test]
-    fn turn_completion_metering_is_not_a_turn_end() {
-        // Guards confusing metering for completion — the exact ambiguity the
-        // cheapest-falsifier resolved (turn_completion fires BEFORE turn_end).
-        let (_v, sn) = load("session_info_update_turn_completion.json");
-        assert!(session_info_to_notification(info_update(&sn)).is_none());
+    fn captured_turn_completion_maps_exactly_and_is_not_terminal() {
+        let notifications = load_jsonl("turn_completion_2_16_0_four.jsonl");
+        let expected = [
+            (0.104_566_227_363_184_09, 4442, ["read_file"].as_slice(), 2),
+            (
+                0.076_486_929_353_233_84,
+                4223,
+                ["execute_bash"].as_slice(),
+                2,
+            ),
+            (0.081_022_536_815_920_39, 4690, ["fs_write"].as_slice(), 2),
+            (
+                0.123_497_716_915_422_9,
+                8087,
+                ["invoke_sub_agent", "subagent_response"].as_slice(),
+                3,
+            ),
+        ];
+        assert_eq!(notifications.len(), expected.len());
+        for (notification, (credits, duration, tools, request_count)) in
+            notifications.iter().zip(expected)
+        {
+            let result = session_info_to_notification(info_update(notification))
+                .expect("captured turn completion converts");
+            let Notification::TurnMeteringUpdated(update) = result else {
+                panic!("turn_completion must map only to metering, got {result:?}");
+            };
+            assert_eq!(update.duration_ms(), Some(duration));
+            assert_eq!(
+                update.status(),
+                Some(&crate::types::UsageTurnStatus::Success)
+            );
+            assert_eq!(
+                update.request_ids().map(<[String]>::len),
+                Some(request_count)
+            );
+            assert_eq!(
+                update.used_tools(),
+                tools,
+                "captured usedTools must remain exact"
+            );
+            assert_eq!(update.charges().len(), 1);
+            assert!((update.charges()[0].amount() - credits).abs() < f64::EPSILON);
+            assert_eq!(update.charges()[0].unit(), "credit");
+            assert_eq!(update.charges()[0].unit_plural(), "credits");
+        }
     }
 
     #[test]
@@ -403,6 +591,94 @@ mod tests {
             "update": { "sessionUpdate": "session_info_update", "_meta": { "kiro": kiro } }
         }))
         .expect("frame deserializes")
+    }
+
+    #[test]
+    fn turn_completion_presence_matrix_preserves_absence_and_units() {
+        let notification = kiro_frame(json!({
+            "kind": "turn_completion",
+            "promptTurnSummaries": [
+                {"unit": "credit", "unitPlural": "credits", "usage": 0.0},
+                {"unit": "request", "unitPlural": "requests", "usage": 2.0},
+                {"unit": "credit", "unitPlural": "credits", "usage": -1.0},
+                {"unit": "", "unitPlural": "invalid", "usage": 4.0}
+            ],
+            "status": "future"
+        }));
+        let result = session_info_to_notification(info_update(&notification))
+            .expect("turn completion converts despite optional gaps");
+        let Notification::TurnMeteringUpdated(update) = result else {
+            panic!("expected metering update, got {result:?}");
+        };
+        assert_eq!(update.duration_ms(), None);
+        assert_eq!(
+            update.status(),
+            Some(&crate::types::UsageTurnStatus::Other("future".to_owned()))
+        );
+        assert_eq!(update.request_ids(), None);
+        assert_eq!(update.charges().len(), 2);
+        assert_eq!(
+            update
+                .charges()
+                .iter()
+                .map(|charge| (charge.unit(), charge.amount()))
+                .collect::<Vec<_>>(),
+            vec![("credit", 0.0), ("request", 2.0)]
+        );
+
+        let explicit_empty = kiro_frame(json!({
+            "kind": "turn_completion",
+            "requestIds": [],
+            "status": "",
+            "elapsedTime": "invalid"
+        }));
+        let result = session_info_to_notification(info_update(&explicit_empty))
+            .expect("kind remains observable");
+        let Notification::TurnMeteringUpdated(update) = result else {
+            panic!("expected metering update, got {result:?}");
+        };
+        assert_eq!(update.request_ids(), Some([].as_slice()));
+        assert_eq!(update.status(), None);
+        assert_eq!(update.duration_ms(), None);
+    }
+
+    #[test]
+    fn turn_completion_conversion_stays_within_budget() {
+        let summaries = (0..2_500)
+            .map(|index| {
+                json!({
+                    "unit": "credit",
+                    "unitPlural": "credits",
+                    "usage": 0.001,
+                    "usedTools": [format!("tool_{index}")]
+                })
+            })
+            .collect::<Vec<_>>();
+        let request_ids = (0..5_000)
+            .map(|index| format!("request_{index}"))
+            .collect::<Vec<_>>();
+        let notification = kiro_frame(json!({
+            "kind": "turn_completion",
+            "promptTurnSummaries": summaries,
+            "elapsedTime": 1,
+            "status": "success",
+            "requestIds": request_ids
+        }));
+
+        let started = std::time::Instant::now();
+        let result = session_info_to_notification(info_update(&notification))
+            .expect("stress frame converts");
+        let elapsed = started.elapsed();
+        let Notification::TurnMeteringUpdated(update) = result else {
+            panic!("expected metering update, got {result:?}");
+        };
+        assert_eq!(update.charges().len(), 2_500);
+        assert_eq!(update.used_tools().len(), 2_500);
+        assert_eq!(update.request_ids().map(<[String]>::len), Some(5_000));
+        assert!(
+            elapsed <= std::time::Duration::from_millis(25),
+            "10,000-element conversion took {elapsed:?}, budget is 25ms"
+        );
     }
 
     // cyril-vgcm C5: the three steering kinds map to the same notifications the

@@ -237,6 +237,13 @@ impl SessionController {
                 self.pending_refusal |= refusal.is_some();
                 true
             }
+            Notification::TurnMeteringUpdated(update) => {
+                let metering =
+                    TurnMetering::from_charges(update.charges().to_vec(), update.duration_ms());
+                self.pending_metering =
+                    TurnMetering::merge_pending(self.pending_metering.take(), Some(metering), None);
+                true
+            }
             Notification::ConfigOptionsUpdated(options) => {
                 if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
                     self.cached_model = model_opt.value.clone();
@@ -512,7 +519,10 @@ mod tests {
         ctrl.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(5.0)),
-            metering: Some(TurnMetering::new(Some(0.018), Some(1948))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.018), Some(1948))
+                    .expect("valid metering fixture"),
+            ),
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -526,7 +536,10 @@ mod tests {
         ctrl.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(6.0)),
-            metering: Some(TurnMetering::new(Some(0.042), Some(5200))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.042), Some(5200))
+                    .expect("valid metering fixture"),
+            ),
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -539,6 +552,37 @@ mod tests {
         assert_eq!(ctrl.session_cost().turn_count(), 2);
         assert!((ctrl.session_cost().total_credits() - 0.060).abs() < 0.001);
         assert!((ctrl.session_cost().last_turn_credits().unwrap() - 0.042).abs() < 0.001);
+    }
+
+    #[test]
+    fn kas_turn_metering_updates_pending_summary_without_completing() {
+        let mut ctrl = SessionController::new();
+        let update = TurnMeteringUpdate::new(
+            vec![
+                MeteredAmount::try_new(0.25, "credit", "credits").expect("valid credit"),
+                MeteredAmount::try_new(2.0, "request", "requests").expect("valid requests"),
+            ],
+            Some(4442),
+            Some(UsageTurnStatus::Success),
+            vec!["read_file".to_owned()],
+            Some(vec!["r1".to_owned(), "r2".to_owned()]),
+        );
+        assert!(ctrl.apply_notification(&Notification::TurnMeteringUpdated(update)));
+        assert!(
+            ctrl.last_turn().is_none(),
+            "metering is not a lifecycle terminal"
+        );
+
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        let metering = ctrl
+            .last_turn()
+            .and_then(TurnSummary::metering)
+            .expect("metering joins the completed summary");
+        assert_eq!(metering.charges().len(), 2);
+        assert_eq!(metering.credits(), Some(0.25));
+        assert_eq!(metering.duration_ms(), Some(4442));
     }
 
     #[test]
@@ -578,7 +622,10 @@ mod tests {
         ctrl.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(50.0)),
-            metering: Some(TurnMetering::new(Some(0.03), Some(2000))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.03), Some(2000))
+                    .expect("valid metering fixture"),
+            ),
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -607,7 +654,9 @@ mod tests {
         ctrl.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(Some(0.01), None)),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.01), None).expect("valid metering fixture"),
+            ),
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -771,7 +820,9 @@ mod tests {
         ctrl.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(Some(0.01), None)),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.01), None).expect("valid metering fixture"),
+            ),
             tokens: Some(TokenCounts::new(100, 50, None)),
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -789,7 +840,10 @@ mod tests {
         ctrl.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(20.0)),
-            metering: Some(TurnMetering::new(Some(0.05), Some(5000))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.05), Some(5000))
+                    .expect("valid metering fixture"),
+            ),
             tokens: Some(TokenCounts::new(800, 400, Some(200))),
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
@@ -897,7 +951,10 @@ mod tests {
         ctrl.apply_notification(&Notification::MetadataUpdated {
             refusal: None,
             context_usage: Some(ContextUsage::new(10.0)),
-            metering: Some(TurnMetering::new(Some(0.05), Some(2000))),
+            metering: Some(
+                TurnMetering::try_from_credits(Some(0.05), Some(2000))
+                    .expect("valid metering fixture"),
+            ),
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
