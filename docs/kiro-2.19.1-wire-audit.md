@@ -70,6 +70,14 @@ Live A/B (0.48.0, autopilot→off so approvals fire; probes committed): benign `
 - **Doc manifest: zero drift** — identical path/title sets; 2.19.1 actually embeds a slightly *older* generation than 2.19.0 (2026-08-17 vs 08-19; `features/session-management.md` shows the pre-revalidation entry again). No new baselines committed.
 - tmux/terminal-attribute fixes, `/knowledge` autocomplete + `rm` alias: TUI-side.
 
+## 3b. Token usage: still absent from the client wire — now precisely mapped (0.48.0)
+
+Checked because both engines were unfrozen this cycle. **Still no per-turn token counts anywhere a client can see**, but the plumbing is fully mapped:
+
+- **The standard ACP slots exist and kiro leaves both empty.** The vendored protocol schema in the KAS bundle defines (a) the `usage_update` session-update kind (present only as a zod validator — zero emitters; omp fills this slot) and (b) `session/prompt` response `usage {inputTokens, outputTokens, totalTokens, cachedReadTokens?, cachedWriteTokens?, thoughtTokens?}` — every live prompt response this audit was a bare `{stopReason}`.
+- **The numbers reach the agent.** The backend stream's `metadataEvent.tokenUsage {uncachedInputTokens, outputTokens, cacheReadInputTokens, cacheWriteInputTokens}` is parsed per request; KAS routes it to AWS telemetry histograms (`reportHistogramMetrics({inputTokens, outputTokens, cacheRead/WriteInputTokens})`), OTel `GEN_AI_USAGE_*` span attributes, and internal retry-safety accounting (`emissions.tokenMetadata`) — never to any ACP emission.
+- **What a client does get, unchanged:** credits (`session_info_update kind:turn_completion promptTurnSummaries`, v2 `meteringUsage`, `_kiro/account/getUsage`) and the KAS `context_usage` breakdown's per-bucket token counts — which measure prompt *composition* (e.g. `tools: {tokens: 5063}`), not consumption. Persisted transcripts (`usage_summary`) are credits-only too.
+
 ## 4. Artifacts
 
 - Probes: `experiments/conductor-spike/probe-kas-perm-persist-2.19.1.py` (+ the second-arm variant is parameter tweaks of the same file).
