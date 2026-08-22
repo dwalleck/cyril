@@ -147,5 +147,45 @@
   "kiro.remote-tools::remote_tool_discovery.discoveryDuration",
   "kiro.remote-tools::remote_tool_discovery.discoveryFailure",
   "kiro.remote-tools::remote_tool_discovery.discoverySuccess"
- ]
+ ],
+ "model_sweep": {
+  "method": "PIN_MODEL via session/set_config_option model=<id>, one KAS process per model, QApi validated present each run",
+  "models_tested": [
+   "auto",
+   "claude-sonnet-4.5",
+   "claude-opus-5",
+   "gpt-5.6-sol",
+   "deepseek-3.2",
+   "qwen3-coder-next"
+  ],
+  "providers": [
+   "Anthropic",
+   "OpenAI",
+   "DeepSeek",
+   "Qwen"
+  ],
+  "available_catalog": [
+   "auto",
+   "claude-haiku-4.5",
+   "claude-opus-4.5",
+   "claude-opus-4.6",
+   "claude-opus-4.7",
+   "claude-opus-4.8",
+   "claude-opus-5",
+   "claude-sonnet-4",
+   "claude-sonnet-4.5",
+   "claude-sonnet-4.6",
+   "claude-sonnet-5",
+   "deepseek-3.2",
+   "glm-5",
+   "gpt-5.6-luna",
+   "gpt-5.6-sol",
+   "gpt-5.6-terra",
+   "minimax-m2.1",
+   "minimax-m2.5",
+   "qwen3-coder-next"
+  ],
+  "result": "EVERY model: QApi.inputSize=53974 + QApi.success present (turn measured), token-count metrics = NONE",
+  "conclusion": "tokenUsage absence is ACCOUNT/BACKEND-level, NOT model-selectable. Pinning an explicit model does not surface token counts on this Tethys/IdC account."
+ }
 }
