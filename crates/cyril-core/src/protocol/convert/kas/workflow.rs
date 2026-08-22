@@ -1161,8 +1161,10 @@ mod tests {
         params: &serde_json::Value,
     ) -> (WorkflowFrameOutcome, serde_json::Value) {
         let (_capture_lock, capture, dispatch) = crate::test_support::capture_json_subscriber();
-        let result =
-            tracing::dispatcher::with_default(&dispatch, || to_notification(method, params));
+        let dispatch_guard = tracing::dispatcher::set_default(&dispatch);
+        tracing::callsite::rebuild_interest_cache();
+        let result = to_notification(method, params);
+        drop(dispatch_guard);
         let captured = capture.captured();
         let log = match captured.as_slice() {
             [event] => event.clone(),
