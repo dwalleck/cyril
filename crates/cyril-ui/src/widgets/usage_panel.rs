@@ -353,7 +353,8 @@ fn tool_kind_label(kind: cyril_core::types::ToolKind) -> &'static str {
 mod tests {
     use super::*;
     use cyril_core::types::{
-        Money, NamedUsageGroup, TokenTotals, ToolKind, ToolUsageGroup, UsageSnapshot, UsageSummary,
+        MetricCoverage, Money, NamedUsageGroup, TokenTotals, ToolKind, ToolUsageGroup,
+        UsageSnapshot, UsageSummary,
     };
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
@@ -365,7 +366,11 @@ mod tests {
         };
         let summary = UsageSummary {
             requests: 2,
+            successes: 1,
+            cancelled: 0,
             errors: 1,
+            provider_requests: None,
+            retries: None,
             tokens: Some(TokenTotals {
                 total: 250,
                 input: 150,
@@ -374,7 +379,18 @@ mod tests {
                 cached_read: 40,
                 cached_write: 0,
             }),
+            token_coverage: MetricCoverage {
+                observed: 2,
+                unreported: 0,
+                backend_gated: 0,
+            },
             costs: vec![cost],
+            cost_coverage: MetricCoverage {
+                observed: 2,
+                unreported: 0,
+                backend_gated: 0,
+            },
+            charges: Vec::new(),
             cache_rate: Some(0.25),
             avg_duration_ms: Some(150.0),
             avg_ttft_ms: Some(25.0),
