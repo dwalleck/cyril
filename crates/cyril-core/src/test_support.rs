@@ -8,6 +8,7 @@
 //! non-dev enablement as a review error.
 
 use std::io;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 
 static TRACING_CAPTURE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
@@ -21,6 +22,126 @@ pub fn tracing_capture_lock() -> MutexGuard<'static, ()> {
     match TRACING_CAPTURE_LOCK.lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
+    }
+}
+
+/// Creates a structural event capture subscriber while holding the shared
+/// capture lock. `register_callsite` returns `always`, avoiding tracing's
+/// process-global interest cache when parallel tests use different dispatches.
+pub fn capture_json_subscriber() -> (MutexGuard<'static, ()>, JsonEventCapture, tracing::Dispatch) {
+    let guard = tracing_capture_lock();
+    let capture = JsonEventCapture::default();
+    let subscriber = JsonEventSubscriber {
+        capture: capture.clone(),
+        next_span_id: AtomicU64::new(1),
+    };
+    (guard, capture, tracing::Dispatch::new(subscriber))
+}
+
+#[derive(Clone, Default)]
+pub struct JsonEventCapture(Arc<Mutex<Vec<serde_json::Value>>>);
+
+impl JsonEventCapture {
+    pub fn captured(&self) -> Vec<serde_json::Value> {
+        match self.0.lock() {
+            Ok(captured) => captured.clone(),
+            Err(poisoned) => poisoned.into_inner().clone(),
+        }
+    }
+}
+
+struct JsonEventSubscriber {
+    capture: JsonEventCapture,
+    next_span_id: AtomicU64,
+}
+
+impl tracing::Subscriber for JsonEventSubscriber {
+    fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
+        true
+    }
+
+    fn register_callsite(
+        &self,
+        _metadata: &'static tracing::Metadata<'static>,
+    ) -> tracing::subscriber::Interest {
+        tracing::subscriber::Interest::always()
+    }
+
+    fn max_level_hint(&self) -> Option<tracing::metadata::LevelFilter> {
+        Some(tracing::metadata::LevelFilter::TRACE)
+    }
+
+    fn new_span(&self, _attributes: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+        tracing::span::Id::from_u64(self.next_span_id.fetch_add(1, Ordering::Relaxed))
+    }
+
+    fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
+
+    fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
+
+    fn event(&self, event: &tracing::Event<'_>) {
+        let mut visitor = JsonEventVisitor::default();
+        event.record(&mut visitor);
+        let captured = serde_json::json!({
+            "level": event.metadata().level().as_str(),
+            "fields": visitor.fields,
+        });
+        match self.capture.0.lock() {
+            Ok(mut events) => events.push(captured),
+            Err(poisoned) => poisoned.into_inner().push(captured),
+        }
+    }
+
+    fn enter(&self, _span: &tracing::span::Id) {}
+
+    fn exit(&self, _span: &tracing::span::Id) {}
+}
+
+#[derive(Default)]
+struct JsonEventVisitor {
+    fields: serde_json::Map<String, serde_json::Value>,
+}
+
+impl tracing::field::Visit for JsonEventVisitor {
+    fn record_f64(&mut self, field: &tracing::field::Field, value: f64) {
+        let value = serde_json::Number::from_f64(value)
+            .map_or(serde_json::Value::Null, serde_json::Value::Number);
+        self.fields.insert(field.name().to_owned(), value);
+    }
+
+    fn record_i64(&mut self, field: &tracing::field::Field, value: i64) {
+        self.fields
+            .insert(field.name().to_owned(), serde_json::Value::from(value));
+    }
+
+    fn record_u64(&mut self, field: &tracing::field::Field, value: u64) {
+        self.fields
+            .insert(field.name().to_owned(), serde_json::Value::from(value));
+    }
+
+    fn record_bool(&mut self, field: &tracing::field::Field, value: bool) {
+        self.fields
+            .insert(field.name().to_owned(), serde_json::Value::from(value));
+    }
+
+    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+        self.fields
+            .insert(field.name().to_owned(), serde_json::Value::from(value));
+    }
+
+    fn record_error(
+        &mut self,
+        field: &tracing::field::Field,
+        value: &(dyn std::error::Error + 'static),
+    ) {
+        self.record_str(field, &value.to_string());
+    }
+
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        self.fields.insert(
+            field.name().to_owned(),
+            serde_json::Value::from(format!("{value:?}")),
+        );
     }
 }
 
