@@ -89,6 +89,14 @@ pub(crate) fn home_dir() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
+/// Kiro's profile root: non-empty `KIRO_HOME`, otherwise `<home>/.kiro`.
+pub(crate) fn kiro_home_dir() -> Option<PathBuf> {
+    match std::env::var_os("KIRO_HOME") {
+        Some(path) if !path.is_empty() => Some(PathBuf::from(path)),
+        _ => home_dir().map(|home| home.join(".kiro")),
+    }
+}
+
 /// The directory holding global agent configs (`~/.kiro/agents`), if a home
 /// directory can be determined.
 fn global_agents_dir() -> Option<PathBuf> {
