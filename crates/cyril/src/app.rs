@@ -187,10 +187,16 @@ impl App {
             self.session.current_model(),
             UsageAgentType::Main,
         );
-        match self
-            .usage_observer
-            .begin_turn(context, Instant::now(), timestamp_ms)
-        {
+        let sidecar_kind = match self.agent_engine {
+            AgentEngine::V2 => cyril_core::usage::KiroSidecarKind::V2,
+            AgentEngine::Kas => cyril_core::usage::KiroSidecarKind::Kas,
+        };
+        match self.usage_observer.begin_turn(
+            context,
+            Instant::now(),
+            timestamp_ms,
+            Some(sidecar_kind),
+        ) {
             Ok(()) => true,
             Err(error) => {
                 tracing::error!(session_id = %session_id, error = %error, "usage turn start failed");
@@ -528,13 +534,13 @@ impl App {
             &routed.notification,
             Notification::UsageSessionStarted { .. } | Notification::TurnUsageCaptured(_)
         );
-        if let Notification::UsageSessionStarted { session_id, .. } = &routed.notification {
+        if let Notification::UsageSessionStarted { session_id, origin } = &routed.notification {
             let kind = match self.agent_engine {
                 AgentEngine::V2 => cyril_core::usage::KiroSidecarKind::V2,
                 AgentEngine::Kas => cyril_core::usage::KiroSidecarKind::Kas,
             };
             self.usage_enrichment
-                .session_started(session_id.clone(), kind);
+                .session_started(session_id.clone(), kind, *origin);
         }
         if let Some(write) = self.usage_observer.apply(&routed, Instant::now()) {
             match write {

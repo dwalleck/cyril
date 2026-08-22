@@ -59,6 +59,8 @@ pub enum UsageError {
     IntegerRange { field: &'static str, value: u64 },
     #[error("unsupported usage database schema version {0}")]
     UnsupportedSchema(i64),
+    #[error("usage context {field} percentage must be finite and within 0..=100: {value}")]
+    InvalidContextPercentage { field: &'static str, value: String },
     #[error("usage database contains invalid {field}: {value}")]
     CorruptValue { field: &'static str, value: String },
     #[error("usage record {0} does not exist")]
@@ -155,6 +157,7 @@ impl UsageObserver {
         context: TurnUsageContext,
         started_at: Instant,
         timestamp_ms: u64,
+        sidecar_kind: Option<KiroSidecarKind>,
     ) -> Result<(), UsageObserverError> {
         let session_id = context.session_id().clone();
         if self.pending.contains_key(&session_id) {
@@ -185,7 +188,7 @@ impl UsageObserver {
                 metering_status: None,
                 provider_requests: None,
                 backend_gated: false,
-                sidecar_kind: None,
+                sidecar_kind,
                 tools: HashMap::new(),
                 error: None,
             },
@@ -194,7 +197,9 @@ impl UsageObserver {
     }
 
     pub fn abort_turn(&mut self, session_id: &SessionId) -> bool {
-        self.pending.remove(session_id).is_some()
+        let removed = self.pending.remove(session_id).is_some();
+        self.contexts.remove(session_id);
+        removed
     }
 
     pub fn apply(&mut self, routed: &RoutedNotification, now: Instant) -> Option<UsageWrite> {
@@ -289,16 +294,14 @@ impl UsageObserver {
                         );
                     }
                     CompactionPhase::Completed => {
-                        self.compactions
-                            .entry(session_id.clone())
-                            .and_modify(|pending| pending.completed = true)
-                            .or_insert(PendingCompaction {
-                                before_percentage: self
-                                    .context_percentages
-                                    .get(&session_id)
-                                    .copied(),
-                                completed: true,
-                            });
+                        if let Some(pending) = self.compactions.get_mut(&session_id) {
+                            pending.completed = true;
+                        } else {
+                            tracing::warn!(
+                                session_id = %session_id,
+                                "compaction completed without a started compaction; ignoring"
+                            );
+                        }
                     }
                     CompactionPhase::Failed { .. } => {
                         self.compactions.remove(&session_id);
@@ -376,11 +379,24 @@ impl UsageObserver {
         percentage: f64,
         breakdown: Option<ContextBreakdown>,
     ) -> Option<UsageWrite> {
-        if !percentage.is_finite() {
+        let percentage = match valid_context_percentage("sample", percentage) {
+            Ok(percentage) => percentage,
+            Err(error) => {
+                tracing::warn!(
+                    session_id = %session_id,
+                    error = %error,
+                    "usage context percentage is invalid, ignoring"
+                );
+                return None;
+            }
+        };
+        if let Some(breakdown) = breakdown.as_ref()
+            && let Err(error) = validate_context_breakdown(breakdown)
+        {
             tracing::warn!(
                 session_id = %session_id,
-                percentage,
-                "usage context percentage is non-finite, ignoring"
+                error = %error,
+                "usage context breakdown contains an invalid percentage, ignoring"
             );
             return None;
         }
@@ -391,7 +407,6 @@ impl UsageObserver {
             );
             return None;
         };
-        let percentage = percentage.clamp(0.0, 100.0);
         self.context_percentages
             .insert(session_id.clone(), percentage);
         if let Some(breakdown) = breakdown {
@@ -494,6 +509,29 @@ impl UsageObserver {
             tools.into_iter().map(|(_, tool)| tool).collect(),
         )
     }
+}
+
+fn valid_context_percentage(field: &'static str, value: f64) -> Result<f64, UsageError> {
+    if !value.is_finite() || !(0.0..=100.0).contains(&value) {
+        return Err(UsageError::InvalidContextPercentage {
+            field,
+            value: value.to_string(),
+        });
+    }
+    Ok(value)
+}
+
+fn validate_context_breakdown(breakdown: &ContextBreakdown) -> Result<(), UsageError> {
+    for (field, bucket) in [
+        ("context_files", breakdown.context_files()),
+        ("session_files", breakdown.session_files()),
+        ("tools", breakdown.tools()),
+        ("your_prompts", breakdown.your_prompts()),
+        ("kiro_responses", breakdown.kiro_responses()),
+    ] {
+        valid_context_percentage(field, bucket.percent())?;
+    }
+    Ok(())
 }
 
 fn duration_ms(duration: Duration) -> u64 {
@@ -907,14 +945,40 @@ impl UsageLog {
         if updated != 1 {
             return Err(UsageError::RecordNotFound(record_id.get()));
         }
-        transaction
-            .execute(
-                "DELETE FROM usage_tools WHERE turn_id = ?",
-                [record_id.get()],
-            )
-            .map_err(UsageError::Write)?;
         for tool in tools {
-            insert_usage_tool(&transaction, record_id.get(), tool)?;
+            let Some(call_id) = tool.call_id() else {
+                insert_usage_tool(&transaction, record_id.get(), tool)?;
+                continue;
+            };
+            let argument_chars = tool
+                .argument_chars()
+                .map(|value| sqlite_integer("argument_chars", value))
+                .transpose()?;
+            let result_chars = tool
+                .result_chars()
+                .map(|value| sqlite_integer("result_chars", value))
+                .transpose()?;
+            let updated = transaction
+                .execute(
+                    "UPDATE usage_tools
+                     SET name = ?, kind = ?, failed = failed OR ?,
+                         argument_chars = COALESCE(?, argument_chars),
+                         result_chars = COALESCE(?, result_chars)
+                     WHERE turn_id = ? AND call_id = ?",
+                    params![
+                        tool.name(),
+                        tool_kind_name(tool.kind()),
+                        tool.failed(),
+                        argument_chars,
+                        result_chars,
+                        record_id.get(),
+                        call_id.as_str(),
+                    ],
+                )
+                .map_err(UsageError::Write)?;
+            if updated == 0 {
+                insert_usage_tool(&transaction, record_id.get(), tool)?;
+            }
         }
         transaction.commit().map_err(UsageError::Write)
     }
@@ -924,6 +988,19 @@ impl UsageLog {
         sample: &UsageContextSample,
         compaction: Option<&UsageCompaction>,
     ) -> Result<(), UsageError> {
+        valid_context_percentage("sample", sample.percentage)?;
+        if let Some(breakdown) = sample.breakdown.as_ref() {
+            validate_context_breakdown(breakdown)?;
+        }
+        if let Some(compaction) = compaction {
+            if let Some(before) = compaction.before_percentage {
+                valid_context_percentage("compaction before", before)?;
+            }
+            valid_context_percentage("compaction after", compaction.after_percentage)?;
+            if let Some(reduction) = compaction.reduction_percentage_points {
+                valid_context_percentage("compaction reduction", reduction)?;
+            }
+        }
         let timestamp = sqlite_integer("context timestamp_ms", sample.timestamp_ms)?;
         let breakdown = sample.breakdown.as_ref();
         let context_files_tokens = breakdown
@@ -1064,6 +1141,25 @@ impl UsageLog {
             )
             .optional()
             .map_err(UsageError::Query)?;
+        let invalid_compactions: i64 = self
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM usage_compactions
+                 WHERE (before_percentage IS NOT NULL
+                        AND before_percentage NOT BETWEEN 0.0 AND 100.0)
+                    OR after_percentage NOT BETWEEN 0.0 AND 100.0
+                    OR (reduction_percentage_points IS NOT NULL
+                        AND reduction_percentage_points NOT BETWEEN 0.0 AND 100.0)",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(UsageError::Query)?;
+        if invalid_compactions != 0 {
+            return Err(UsageError::CorruptValue {
+                field: "usage_compactions percentage",
+                value: format!("{invalid_compactions} invalid rows"),
+            });
+        }
         self.connection
             .query_row(
                 "SELECT COUNT(*), COUNT(reduction_percentage_points),
@@ -1813,14 +1909,21 @@ fn context_bucket_from_row(
     let percent: Option<f64> = row.get(percent_index)?;
     match (tokens, percent) {
         (None, None) => Ok(None),
-        (Some(tokens), Some(percent)) if percent.is_finite() => Ok(Some(ContextBucket::new(
-            stored_u64(tokens_index, field, tokens)?,
-            percent,
-        ))),
+        (Some(tokens), Some(percent)) => {
+            ContextBucket::try_new(stored_u64(tokens_index, field, tokens)?, percent)
+                .map(Some)
+                .map_err(|error| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        percent_index,
+                        rusqlite::types::Type::Real,
+                        Box::new(StoredValueError::new(field, error.to_string())),
+                    )
+                })
+        }
         _ => Err(rusqlite::Error::FromSqlConversionFailure(
             tokens_index,
             rusqlite::types::Type::Null,
-            Box::new(StoredValueError::new(field, "partial or non-finite bucket")),
+            Box::new(StoredValueError::new(field, "partial bucket")),
         )),
     }
 }
@@ -2122,10 +2225,9 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "s", SessionOrigin::Fresh, start);
-        must_succeed(
-            observer.begin_turn(context("s", None), start, 100),
-            "begin turn",
-        );
+        observer
+            .begin_turn(context("s", None), start, 100, None)
+            .expect("begin turn");
         observer.apply(
             &scoped(
                 "s",
@@ -2167,7 +2269,7 @@ mod tests {
         let mut log = UsageLog::open_in_memory().expect("in-memory log");
         start_session(&mut observer, "context", SessionOrigin::Fresh, start);
         observer
-            .begin_turn(context("context", Some("provider/model")), start, 100)
+            .begin_turn(context("context", Some("provider/model")), start, 100, None)
             .expect("begin turn");
         let breakdown = ContextBreakdown::new(
             ContextBucket::new(1, 1.0),
@@ -2320,10 +2422,9 @@ mod tests {
         for (index, (status, request_ids, stop_reason, expected_outcome)) in
             cases.into_iter().enumerate()
         {
-            must_succeed(
-                observer.begin_turn(context("s", Some("auto")), start, index as u64 + 1),
-                "begin turn",
-            );
+            observer
+                .begin_turn(context("s", Some("auto")), start, index as u64 + 1, None)
+                .expect("begin turn");
             let metering = Notification::TurnMeteringUpdated(TurnMeteringUpdate::new(
                 vec![
                     must_succeed(
@@ -2412,10 +2513,9 @@ mod tests {
         let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         start_session(&mut observer, "captured", SessionOrigin::Fresh, start);
         for (index, line) in raw.lines().enumerate() {
-            must_succeed(
-                observer.begin_turn(context("captured", Some("auto")), start, index as u64),
-                "begin captured turn",
-            );
+            observer
+                .begin_turn(context("captured", Some("auto")), start, index as u64, None)
+                .expect("begin captured turn");
             let notification: agent_client_protocol::SessionNotification =
                 must_succeed(serde_json::from_str(line), "fixture deserializes");
             let update = match &notification.update {
@@ -2459,10 +2559,9 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "budget", SessionOrigin::Fresh, start);
-        must_succeed(
-            observer.begin_turn(context("budget", None), start, 1),
-            "begin turn",
-        );
+        observer
+            .begin_turn(context("budget", None), start, 1, None)
+            .expect("begin turn");
         for index in 0..10_000 {
             observer.apply(
                 &scoped(
@@ -2493,10 +2592,9 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "fresh", SessionOrigin::Fresh, start);
-        must_succeed(
-            observer.begin_turn(context("fresh", None), start, 1),
-            "begin first turn",
-        );
+        observer
+            .begin_turn(context("fresh", None), start, 1, None)
+            .expect("begin first turn");
         observer.apply(
             &scoped(
                 "fresh",
@@ -2517,10 +2615,9 @@ mod tests {
         };
         assert!((first_cost.amount() - 0.003_907_2).abs() < 1e-12);
 
-        must_succeed(
-            observer.begin_turn(context("fresh", None), start, 2),
-            "begin second turn",
-        );
+        observer
+            .begin_turn(context("fresh", None), start, 2, None)
+            .expect("begin second turn");
         observer.apply(
             &scoped(
                 "fresh",
@@ -2538,10 +2635,9 @@ mod tests {
         };
         assert!((second_cost.amount() - 0.000_441_8).abs() < 1e-12);
 
-        must_succeed(
-            observer.begin_turn(context("fresh", None), start, 3),
-            "begin reset turn",
-        );
+        observer
+            .begin_turn(context("fresh", None), start, 3, None)
+            .expect("begin reset turn");
         observer.apply(
             &scoped(
                 "fresh",
@@ -2561,10 +2657,9 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "loaded", SessionOrigin::Loaded, start);
-        must_succeed(
-            observer.begin_turn(context("loaded", None), start, 1),
-            "begin resumed turn",
-        );
+        observer
+            .begin_turn(context("loaded", None), start, 1, None)
+            .expect("begin resumed turn");
         observer.apply(
             &scoped(
                 "loaded",
@@ -2578,10 +2673,9 @@ mod tests {
         );
         assert!(complete(&mut observer, "loaded", start).cost().is_none());
 
-        must_succeed(
-            observer.begin_turn(context("loaded", None), start, 2),
-            "begin next turn",
-        );
+        observer
+            .begin_turn(context("loaded", None), start, 2, None)
+            .expect("begin next turn");
         observer.apply(
             &scoped(
                 "loaded",
@@ -2606,10 +2700,9 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "s", SessionOrigin::Fresh, start);
-        must_succeed(
-            observer.begin_turn(context("s", None), start, 1),
-            "begin turn",
-        );
+        observer
+            .begin_turn(context("s", None), start, 1, None)
+            .expect("begin turn");
         observer.apply(
             &scoped(
                 "s",
@@ -2634,10 +2727,9 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "s", SessionOrigin::Fresh, start);
-        must_succeed(
-            observer.begin_turn(context("s", None), start, 1),
-            "begin turn",
-        );
+        observer
+            .begin_turn(context("s", None), start, 1, None)
+            .expect("begin turn");
         let read = ToolCall::new(
             ToolCallId::new("a"),
             "Read".into(),
@@ -2674,7 +2766,7 @@ mod tests {
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "tools", SessionOrigin::Fresh, start);
         observer
-            .begin_turn(context("tools", Some("provider/model")), start, 100)
+            .begin_turn(context("tools", Some("provider/model")), start, 100, None)
             .expect("begin turn");
         let first = ToolCall::new(
             ToolCallId::new("a"),
@@ -2804,15 +2896,19 @@ mod tests {
         assert_eq!(snapshot.models.len(), 1);
         assert_eq!(snapshot.models[0].provider.as_deref(), Some("anthropic"));
         assert_eq!(snapshot.models[0].model.as_deref(), Some("claude-sonnet"));
-        assert_eq!(snapshot.tools.len(), 1);
-        assert_eq!(snapshot.tools[0].name.as_deref(), Some("read_file"));
-        assert_eq!(snapshot.tools[0].calls, 1);
+        assert_eq!(snapshot.tools.len(), 2);
+        let enriched_tool = snapshot
+            .tools
+            .iter()
+            .find(|tool| tool.name.as_deref() == Some("read_file"))
+            .expect("enriched tool");
+        assert_eq!(enriched_tool.calls, 1);
         assert_eq!(snapshot.recent[0].provider.as_deref(), Some("anthropic"));
         assert_eq!(snapshot.recent[0].model.as_deref(), Some("claude-sonnet"));
 
         log.connection
             .execute_batch(
-                "CREATE TRIGGER reject_enriched_tool BEFORE INSERT ON usage_tools
+                "CREATE TRIGGER reject_enriched_tool BEFORE UPDATE ON usage_tools
                  BEGIN SELECT RAISE(ABORT, 'forced enrichment failure'); END;",
             )
             .expect("failure trigger");
@@ -2825,7 +2921,15 @@ mod tests {
             after_failure.models[0].model.as_deref(),
             Some("claude-sonnet")
         );
-        assert_eq!(after_failure.tools[0].name.as_deref(), Some("read_file"));
+        assert_eq!(
+            after_failure
+                .tools
+                .iter()
+                .find(|tool| tool.name.as_deref() == Some("read_file"))
+                .expect("enriched tool after rollback")
+                .calls,
+            1
+        );
         assert!(matches!(
             log.enrich_record(UsageRecordId::new(i64::MAX), None, &[]),
             Err(UsageError::RecordNotFound(i64::MAX))
@@ -2956,10 +3060,9 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "kiro", SessionOrigin::Fresh, start);
-        must_succeed(
-            observer.begin_turn(context("kiro", Some("anthropic/claude")), start, 2),
-            "begin future Kiro turn",
-        );
+        observer
+            .begin_turn(context("kiro", Some("anthropic/claude")), start, 2, None)
+            .expect("begin future Kiro turn");
         observer.apply(
             &scoped(
                 "kiro",
@@ -3394,10 +3497,9 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "s", SessionOrigin::Fresh, start);
-        must_succeed(
-            observer.begin_turn(context("s", None), start, 1),
-            "begin error turn",
-        );
+        observer
+            .begin_turn(context("s", None), start, 1, None)
+            .expect("begin error turn");
         observer.apply(
             &scoped(
                 "s",
@@ -3453,7 +3555,305 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "reference-workstation 100k snapshot budget"]
+    fn abort_turn_removes_context_identity_from_global_frames() {
+        let start = Instant::now();
+        let mut observer = UsageObserver::new();
+        start_session(&mut observer, "aborted", SessionOrigin::Fresh, start);
+        observer
+            .begin_turn(context("aborted", None), start, 1, None)
+            .expect("begin turn");
+        assert!(observer.abort_turn(&SessionId::new("aborted")));
+        assert!(
+            observer
+                .apply(
+                    &RoutedNotification::global(Notification::ContextBreakdownUpdated {
+                        usage_percentage: 50.0,
+                        breakdown: None,
+                    }),
+                    start,
+                )
+                .is_none(),
+            "a global context frame must not persist an aborted turn"
+        );
+    }
+
+    #[test]
+    fn compaction_completed_without_started_is_ignored() {
+        let start = Instant::now();
+        let mut observer = UsageObserver::new();
+        start_session(&mut observer, "compaction", SessionOrigin::Fresh, start);
+        observer
+            .begin_turn(context("compaction", None), start, 1, None)
+            .expect("begin turn");
+        observer.apply(
+            &scoped(
+                "compaction",
+                Notification::CompactionStatus {
+                    phase: CompactionPhase::Completed,
+                    summary: None,
+                },
+            ),
+            start,
+        );
+        let UsageWrite::Context { compaction, .. } = observer
+            .apply(
+                &scoped(
+                    "compaction",
+                    Notification::ContextBreakdownUpdated {
+                        usage_percentage: 20.0,
+                        breakdown: None,
+                    },
+                ),
+                start,
+            )
+            .expect("context write")
+        else {
+            panic!("expected context write");
+        };
+        assert!(compaction.is_none());
+    }
+
+    #[test]
+    fn no_metering_turn_retains_configured_sidecar_kind() {
+        let start = Instant::now();
+        let mut observer = UsageObserver::new();
+        start_session(&mut observer, "sidecar", SessionOrigin::Fresh, start);
+        observer
+            .begin_turn(
+                context("sidecar", None),
+                start,
+                1,
+                Some(KiroSidecarKind::Kas),
+            )
+            .expect("begin turn");
+        let UsageWrite::Turn { sidecar_kind, .. } = observer
+            .apply(
+                &scoped(
+                    "sidecar",
+                    Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    },
+                ),
+                start,
+            )
+            .expect("turn write")
+        else {
+            panic!("expected turn write");
+        };
+        assert_eq!(sidecar_kind, Some(KiroSidecarKind::Kas));
+    }
+
+    #[test]
+    fn record_context_rejects_invalid_direct_percentages() {
+        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let invalid_sample = UsageContextSample {
+            context: context("invalid", None),
+            timestamp_ms: 1,
+            percentage: 101.0,
+            breakdown: None,
+        };
+        assert!(log.record_context(&invalid_sample, None).is_err());
+        let invalid_breakdown = ContextBreakdown::new(
+            ContextBucket::new(1, f64::NAN),
+            ContextBucket::new(1, 0.0),
+            ContextBucket::new(1, 0.0),
+            ContextBucket::new(1, 0.0),
+            ContextBucket::new(1, 0.0),
+        );
+        let sample = UsageContextSample {
+            context: context("invalid", None),
+            timestamp_ms: 2,
+            percentage: 1.0,
+            breakdown: Some(invalid_breakdown),
+        };
+        assert!(log.record_context(&sample, None).is_err());
+        assert!(log.snapshot().expect("snapshot").context.latest.is_none());
+    }
+    #[test]
+    fn context_snapshot_rejects_corrupt_percentages() {
+        let mut bucket_log = UsageLog::open_in_memory().expect("bucket log");
+        bucket_log
+            .record_context(
+                &UsageContextSample {
+                    context: context("corrupt-bucket", None),
+                    timestamp_ms: 1,
+                    percentage: 1.0,
+                    breakdown: None,
+                },
+                None,
+            )
+            .expect("seed valid context");
+        bucket_log
+            .connection
+            .execute(
+                "UPDATE usage_context_latest
+                 SET context_files_tokens = 1, context_files_percent = 101.0",
+                [],
+            )
+            .expect("corrupt bucket percentage");
+        assert!(matches!(bucket_log.snapshot(), Err(UsageError::Query(_))));
+
+        let compaction_log = UsageLog::open_in_memory().expect("compaction log");
+        compaction_log
+            .connection
+            .execute(
+                "INSERT INTO usage_compactions (
+                    session_id, folder, agent_type, timestamp_ms,
+                    before_percentage, after_percentage, reduction_percentage_points
+                 ) VALUES ('corrupt', '/tmp', 'main', 1, 80.0, 40.0, 101.0)",
+                [],
+            )
+            .expect("corrupt compaction percentage");
+        assert!(matches!(
+            compaction_log.snapshot(),
+            Err(UsageError::CorruptValue {
+                field: "usage_compactions percentage",
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn enrichment_merges_partial_and_empty_sidecar_tools() {
+        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let record_id = log
+            .append(&record(
+                "enrichment",
+                None,
+                None,
+                None,
+                1,
+                None,
+                None,
+                vec![
+                    UsageTool::observed(
+                        ToolCallId::new("portable"),
+                        ToolKind::Read,
+                        false,
+                        Some(3),
+                        None,
+                    ),
+                    UsageTool::observed(
+                        ToolCallId::new("shared"),
+                        ToolKind::Read,
+                        true,
+                        Some(4),
+                        Some(5),
+                    ),
+                ],
+            ))
+            .expect("append record");
+        log.enrich_record(record_id, None, &[])
+            .expect("empty enrichment is a no-op");
+        let sidecar = [UsageTool::enriched(
+            ToolCallId::new("shared"),
+            "write_file",
+            ToolKind::Write,
+            false,
+            None,
+            Some(9),
+        )];
+        log.enrich_record(record_id, Some("provider/model"), &sidecar)
+            .expect("partial enrichment");
+        log.enrich_record(record_id, Some("provider/model"), &sidecar)
+            .expect("repeat enrichment is idempotent");
+        let mut statement = log
+            .connection
+            .prepare(
+                "SELECT call_id, name, kind, failed, argument_chars, result_chars
+                 FROM usage_tools WHERE turn_id = ? ORDER BY call_id",
+            )
+            .expect("prepare tools query");
+        let rows: Vec<(
+            String,
+            Option<String>,
+            String,
+            i64,
+            Option<i64>,
+            Option<i64>,
+        )> = statement
+            .query_map([record_id.get()], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                ))
+            })
+            .expect("query tools")
+            .collect::<rusqlite::Result<_>>()
+            .expect("collect tools");
+        assert_eq!(rows.len(), 2, "portable rows absent from sidecar remain");
+        assert_eq!(
+            rows[0],
+            ("portable".into(), None, "read".into(), 0, Some(3), None)
+        );
+        assert_eq!(
+            rows[1],
+            (
+                "shared".into(),
+                Some("write_file".into()),
+                "write".into(),
+                1,
+                Some(4),
+                Some(9)
+            )
+        );
+    }
+
+    #[test]
+    fn context_write_rejects_invalid_scalar_and_bucket_percentages() {
+        let start = Instant::now();
+        let mut observer = UsageObserver::new();
+        start_session(
+            &mut observer,
+            "invalid-context",
+            SessionOrigin::Fresh,
+            start,
+        );
+        observer
+            .begin_turn(context("invalid-context", None), start, 1, None)
+            .expect("begin turn");
+        assert!(
+            observer
+                .apply(
+                    &scoped(
+                        "invalid-context",
+                        Notification::ContextBreakdownUpdated {
+                            usage_percentage: -1.0,
+                            breakdown: None,
+                        },
+                    ),
+                    start,
+                )
+                .is_none()
+        );
+        let breakdown = ContextBreakdown::new(
+            ContextBucket::new(1, 0.0),
+            ContextBucket::new(1, 0.0),
+            ContextBucket::new(1, 0.0),
+            ContextBucket::new(1, 0.0),
+            ContextBucket::new(1, 101.0),
+        );
+        assert!(
+            observer
+                .apply(
+                    &scoped(
+                        "invalid-context",
+                        Notification::ContextBreakdownUpdated {
+                            usage_percentage: 1.0,
+                            breakdown: Some(breakdown),
+                        },
+                    ),
+                    start,
+                )
+                .is_none()
+        );
+    }
+
+    #[test]
     fn kiro_snapshot_remains_bounded_at_100k() {
         let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         let transaction = must_succeed(log.connection.transaction(), "bulk transaction");

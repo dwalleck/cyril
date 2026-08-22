@@ -1,15 +1,16 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use thiserror::Error;
 
 use super::{KiroSidecarKind, UsageRecordId, UsageTool};
-use crate::types::{SessionId, ToolCallId, ToolKind};
+use crate::types::{SessionId, SessionOrigin, ToolCallId, ToolKind};
 
 const MAX_SIDECAR_BYTES: u64 = 64 * 1024 * 1024;
+const ENRICHMENT_DEADLINE: Duration = Duration::from_secs(1);
 const RETRY_DELAYS: [Duration; 2] = [Duration::from_millis(250), Duration::from_millis(500)];
 
 #[derive(Debug)]
@@ -34,11 +35,17 @@ pub struct UsageEnrichmentHandle {
 }
 
 impl UsageEnrichmentHandle {
-    pub fn session_started(&self, session_id: SessionId, kind: KiroSidecarKind) {
-        if let Err(error) = self
-            .sender
-            .send(WorkerCommand::SessionStarted { session_id, kind })
-        {
+    pub fn session_started(
+        &self,
+        session_id: SessionId,
+        kind: KiroSidecarKind,
+        origin: SessionOrigin,
+    ) {
+        if let Err(error) = self.sender.send(WorkerCommand::SessionStarted {
+            session_id,
+            kind,
+            origin,
+        }) {
             tracing::warn!(error = %error, "usage enrichment worker is unavailable");
         }
     }
@@ -83,6 +90,7 @@ enum WorkerCommand {
     SessionStarted {
         session_id: SessionId,
         kind: KiroSidecarKind,
+        origin: SessionOrigin,
     },
     Enrich {
         record_id: UsageRecordId,
@@ -92,8 +100,10 @@ enum WorkerCommand {
 }
 
 #[derive(Debug, Clone)]
-struct Cursor {
-    jsonl_offset: u64,
+enum Cursor {
+    Ready { jsonl_offset: u64 },
+    FreshMissing,
+    Unavailable { reason: String },
 }
 
 struct Worker {
@@ -120,35 +130,11 @@ impl Worker {
     fn run(mut self) {
         while let Ok(command) = self.commands.recv() {
             match command {
-                WorkerCommand::SessionStarted { session_id, kind } => {
-                    match self.locate_jsonl(&session_id, kind) {
-                        Ok(path) => {
-                            let offset = match std::fs::metadata(&path) {
-                                Ok(metadata) => metadata.len(),
-                                Err(error) if error.kind() == std::io::ErrorKind::NotFound => 0,
-                                Err(error) => {
-                                    tracing::warn!(
-                                        path = %path.display(),
-                                        error = %error,
-                                        "usage sidecar metadata unavailable at session start"
-                                    );
-                                    0
-                                }
-                            };
-                            self.cursors.insert(
-                                (session_id, kind),
-                                Cursor {
-                                    jsonl_offset: offset,
-                                },
-                            );
-                        }
-                        Err(error) => {
-                            tracing::debug!(error = %error, "usage sidecar absent at session start");
-                            self.cursors
-                                .insert((session_id, kind), Cursor { jsonl_offset: 0 });
-                        }
-                    }
-                }
+                WorkerCommand::SessionStarted {
+                    session_id,
+                    kind,
+                    origin,
+                } => self.initialize_cursor(session_id, kind, origin),
                 WorkerCommand::Enrich {
                     record_id,
                     session_id,
@@ -170,26 +156,77 @@ impl Worker {
         }
     }
 
+    fn initialize_cursor(
+        &mut self,
+        session_id: SessionId,
+        kind: KiroSidecarKind,
+        origin: SessionOrigin,
+    ) {
+        let key = (session_id.clone(), kind);
+        let cursor = match validate_session_id(&session_id)
+            .and_then(|()| self.locate_jsonl(&session_id, kind))
+        {
+            Ok(path) => match std::fs::metadata(&path) {
+                Ok(metadata) => Cursor::Ready {
+                    jsonl_offset: metadata.len(),
+                },
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::NotFound
+                        && origin == SessionOrigin::Fresh =>
+                {
+                    Cursor::FreshMissing
+                }
+                Err(error) => Cursor::Unavailable {
+                    reason: format!("usage sidecar baseline {}: {error}", path.display()),
+                },
+            },
+            Err(error) if error.is_missing() && origin == SessionOrigin::Fresh => {
+                Cursor::FreshMissing
+            }
+            Err(error) => Cursor::Unavailable {
+                reason: error.to_string(),
+            },
+        };
+        if let Cursor::Unavailable { reason } = &cursor {
+            tracing::warn!(
+                session_id = %session_id,
+                sidecar_kind = ?kind,
+                reason,
+                "usage sidecar baseline is unavailable"
+            );
+        }
+        self.cursors.insert(key, cursor);
+    }
+
     fn enrich_with_retries(
         &mut self,
         record_id: UsageRecordId,
         session_id: &SessionId,
         kind: KiroSidecarKind,
     ) -> Result<UsageEnrichment, SidecarError> {
+        let deadline = Instant::now() + ENRICHMENT_DEADLINE;
         let mut last_error = None;
         for attempt in 0..=RETRY_DELAYS.len() {
-            match self.enrich_once(record_id, session_id, kind) {
+            if Instant::now() >= deadline {
+                return Err(SidecarError::DeadlineExceeded);
+            }
+            match self.enrich_once(record_id, session_id, kind, deadline) {
                 Ok(enrichment) => return Ok(enrichment),
-                Err(error) => last_error = Some(error),
+                Err(_) if Instant::now() >= deadline => {
+                    return Err(SidecarError::DeadlineExceeded);
+                }
+                Err(error) if error.is_retryable() => last_error = Some(error),
+                Err(error) => return Err(error),
             }
             if let Some(delay) = RETRY_DELAYS.get(attempt) {
-                std::thread::sleep(*delay);
+                let remaining = deadline.saturating_duration_since(Instant::now());
+                if remaining.is_zero() {
+                    return Err(SidecarError::DeadlineExceeded);
+                }
+                std::thread::sleep((*delay).min(remaining));
             }
         }
-        match last_error {
-            Some(error) => Err(error),
-            None => Err(SidecarError::IncompleteTurn),
-        }
+        Err(last_error.unwrap_or(SidecarError::IncompleteTurn))
     }
 
     fn enrich_once(
@@ -197,28 +234,49 @@ impl Worker {
         record_id: UsageRecordId,
         session_id: &SessionId,
         kind: KiroSidecarKind,
+        deadline: Instant,
     ) -> Result<UsageEnrichment, SidecarError> {
         validate_session_id(session_id)?;
-        let path = self.locate_jsonl(session_id, kind)?;
         let key = (session_id.clone(), kind);
-        let offset = self
-            .cursors
-            .get(&key)
-            .map_or(0, |cursor| cursor.jsonl_offset);
-        let (raw, end) = read_appended(&path, offset)?;
-        let tools = match kind {
-            KiroSidecarKind::V2 => parse_v2_jsonl(&raw)?,
-            KiroSidecarKind::Kas => parse_kas_jsonl(&raw)?,
+        let offset = match self.cursors.get(&key) {
+            Some(Cursor::Ready { jsonl_offset }) => *jsonl_offset,
+            Some(Cursor::FreshMissing) => 0,
+            Some(Cursor::Unavailable { reason }) => {
+                return Err(SidecarError::UnsafeBaseline {
+                    session_id: session_id.as_str().to_owned(),
+                    reason: reason.clone(),
+                });
+            }
+            None => {
+                return Err(SidecarError::MissingCursor(session_id.as_str().to_owned()));
+            }
         };
+        let path = self.locate_jsonl(session_id, kind)?;
+        let parsed = read_sidecar_turn(&path, offset, kind, deadline)?;
         let billed_model_id = match kind {
-            KiroSidecarKind::V2 => self.read_v2_billed_model(session_id)?,
+            KiroSidecarKind::V2 => match self.read_v2_billed_model(session_id) {
+                Ok(model) => model,
+                Err(error) => {
+                    tracing::warn!(
+                        session_id = %session_id,
+                        error = %error,
+                        "usage billed model enrichment unavailable"
+                    );
+                    None
+                }
+            },
             KiroSidecarKind::Kas => None,
         };
-        self.cursors.insert(key, Cursor { jsonl_offset: end });
+        self.cursors.insert(
+            key,
+            Cursor::Ready {
+                jsonl_offset: offset + parsed.consumed_bytes,
+            },
+        );
         Ok(UsageEnrichment {
             record_id,
             billed_model_id,
-            tools,
+            tools: parsed.tools,
         })
     }
 
@@ -280,14 +338,48 @@ enum SidecarError {
     },
     #[error("usage sidecar {path} is {size} bytes; maximum is {MAX_SIDECAR_BYTES}")]
     Oversized { path: PathBuf, size: u64 },
+    #[error("usage sidecar {path} was truncated below cursor {offset} to {size} bytes")]
+    Truncated {
+        path: PathBuf,
+        offset: u64,
+        size: u64,
+    },
     #[error("parse usage sidecar {path}: {source}")]
     Json {
         path: PathBuf,
         #[source]
         source: serde_json::Error,
     },
+    #[error("usage sidecar {path} has malformed {field}")]
+    Malformed { path: PathBuf, field: &'static str },
     #[error("usage sidecar has no complete current turn")]
     IncompleteTurn,
+    #[error("usage sidecar enrichment exceeded one second")]
+    DeadlineExceeded,
+    #[error("usage sidecar baseline for loaded session {session_id} is unsafe: {reason}")]
+    UnsafeBaseline { session_id: String, reason: String },
+    #[error("usage sidecar cursor was not initialized for session {0}")]
+    MissingCursor(String),
+}
+
+impl SidecarError {
+    fn is_missing(&self) -> bool {
+        matches!(self, Self::MissingKasSession(_))
+            || matches!(
+                self,
+                Self::Locate { source, .. } | Self::Read { source, .. }
+                    if source.kind() == std::io::ErrorKind::NotFound
+            )
+    }
+
+    fn is_retryable(&self) -> bool {
+        matches!(self, Self::IncompleteTurn) || self.is_missing()
+    }
+}
+
+struct ParsedTurn {
+    tools: Vec<UsageTool>,
+    consumed_bytes: u64,
 }
 
 fn validate_session_id(session_id: &SessionId) -> Result<(), SidecarError> {
@@ -339,7 +431,12 @@ fn locate_kas_session(home: &Path, session_id: &SessionId) -> Result<PathBuf, Si
     match_path.ok_or_else(|| SidecarError::MissingKasSession(session_id.as_str().to_owned()))
 }
 
-fn read_appended(path: &Path, offset: u64) -> Result<(String, u64), SidecarError> {
+fn read_sidecar_turn(
+    path: &Path,
+    offset: u64,
+    kind: KiroSidecarKind,
+    deadline: Instant,
+) -> Result<ParsedTurn, SidecarError> {
     let mut file = File::open(path).map_err(|source| SidecarError::Read {
         path: path.to_path_buf(),
         source,
@@ -358,42 +455,183 @@ fn read_appended(path: &Path, offset: u64) -> Result<(String, u64), SidecarError
         });
     }
     if offset > size {
-        return Err(SidecarError::IncompleteTurn);
+        return Err(SidecarError::Truncated {
+            path: path.to_path_buf(),
+            offset,
+            size,
+        });
     }
     file.seek(SeekFrom::Start(offset))
         .map_err(|source| SidecarError::Read {
             path: path.to_path_buf(),
             source,
         })?;
+    let reader = BufReader::new(file.take(MAX_SIDECAR_BYTES + 1));
+    match kind {
+        KiroSidecarKind::V2 => read_v2_turn(reader, path, deadline),
+        KiroSidecarKind::Kas => read_kas_turn(reader, path, deadline),
+    }
+}
+
+fn read_v2_turn(
+    mut reader: impl BufRead,
+    path: &Path,
+    deadline: Instant,
+) -> Result<ParsedTurn, SidecarError> {
+    let mut tools = HashMap::new();
+    let mut line = Vec::new();
+    let mut consumed_bytes = 0_u64;
+    let mut saw_prompt = false;
+    let mut complete = false;
+    loop {
+        ensure_deadline(deadline)?;
+        line.clear();
+        let read = reader
+            .read_until(b'\n', &mut line)
+            .map_err(|source| SidecarError::Read {
+                path: path.to_path_buf(),
+                source,
+            })?;
+        if read == 0 {
+            break;
+        }
+        let read = u64::try_from(read).map_err(|_| SidecarError::Oversized {
+            path: path.to_path_buf(),
+            size: MAX_SIDECAR_BYTES + 1,
+        })?;
+        let next_consumed =
+            consumed_bytes
+                .checked_add(read)
+                .ok_or_else(|| SidecarError::Oversized {
+                    path: path.to_path_buf(),
+                    size: MAX_SIDECAR_BYTES + 1,
+                })?;
+        if next_consumed > MAX_SIDECAR_BYTES {
+            return Err(SidecarError::Oversized {
+                path: path.to_path_buf(),
+                size: next_consumed,
+            });
+        }
+        if !line.ends_with(b"\n") {
+            break;
+        }
+        let value = parse_json_line(path, &line)?;
+        let is_prompt = value.get("kind").and_then(serde_json::Value::as_str) == Some("Prompt");
+        if is_prompt && saw_prompt {
+            return Ok(ParsedTurn {
+                tools: sorted_tools(tools),
+                consumed_bytes,
+            });
+        }
+        saw_prompt |= is_prompt;
+        complete |= apply_v2_value(path, &value, &mut tools)?;
+        consumed_bytes = next_consumed;
+    }
+    if complete {
+        Ok(ParsedTurn {
+            tools: sorted_tools(tools),
+            consumed_bytes,
+        })
+    } else {
+        Err(SidecarError::IncompleteTurn)
+    }
+}
+
+fn read_kas_turn(
+    mut reader: impl BufRead,
+    path: &Path,
+    deadline: Instant,
+) -> Result<ParsedTurn, SidecarError> {
+    let mut tools = HashMap::new();
+    let mut line = Vec::new();
+    let mut consumed_bytes = 0_u64;
+    loop {
+        ensure_deadline(deadline)?;
+        line.clear();
+        let read = reader
+            .read_until(b'\n', &mut line)
+            .map_err(|source| SidecarError::Read {
+                path: path.to_path_buf(),
+                source,
+            })?;
+        if read == 0 {
+            break;
+        }
+        let read = u64::try_from(read).map_err(|_| SidecarError::Oversized {
+            path: path.to_path_buf(),
+            size: MAX_SIDECAR_BYTES + 1,
+        })?;
+        consumed_bytes =
+            consumed_bytes
+                .checked_add(read)
+                .ok_or_else(|| SidecarError::Oversized {
+                    path: path.to_path_buf(),
+                    size: MAX_SIDECAR_BYTES + 1,
+                })?;
+        if consumed_bytes > MAX_SIDECAR_BYTES {
+            return Err(SidecarError::Oversized {
+                path: path.to_path_buf(),
+                size: consumed_bytes,
+            });
+        }
+        if !line.ends_with(b"\n") {
+            break;
+        }
+        let value = parse_json_line(path, &line)?;
+        if apply_kas_value(path, &value, &mut tools)? {
+            return Ok(ParsedTurn {
+                tools: sorted_tools(tools),
+                consumed_bytes,
+            });
+        }
+    }
+    Err(SidecarError::IncompleteTurn)
+}
+
+fn ensure_deadline(deadline: Instant) -> Result<(), SidecarError> {
+    if Instant::now() >= deadline {
+        Err(SidecarError::DeadlineExceeded)
+    } else {
+        Ok(())
+    }
+}
+
+fn parse_json_line(path: &Path, line: &[u8]) -> Result<serde_json::Value, SidecarError> {
+    let mut trimmed = line;
+    while let Some((last, rest)) = trimmed.split_last()
+        && matches!(last, b'\n' | b'\r')
+    {
+        trimmed = rest;
+    }
+    serde_json::from_slice(trimmed).map_err(|source| SidecarError::Json {
+        path: path.to_path_buf(),
+        source,
+    })
+}
+
+fn read_whole(path: &Path) -> Result<String, SidecarError> {
+    let file = File::open(path).map_err(|source| SidecarError::Read {
+        path: path.to_path_buf(),
+        source,
+    })?;
     let mut raw = String::new();
-    file.read_to_string(&mut raw)
+    file.take(MAX_SIDECAR_BYTES + 1)
+        .read_to_string(&mut raw)
         .map_err(|source| SidecarError::Read {
             path: path.to_path_buf(),
             source,
         })?;
-    if raw.is_empty() {
-        return Err(SidecarError::IncompleteTurn);
-    }
-    Ok((raw, size))
-}
-
-fn read_whole(path: &Path) -> Result<String, SidecarError> {
-    let size = std::fs::metadata(path)
-        .map_err(|source| SidecarError::Read {
-            path: path.to_path_buf(),
-            source,
-        })?
-        .len();
+    let size = u64::try_from(raw.len()).map_err(|_| SidecarError::Oversized {
+        path: path.to_path_buf(),
+        size: MAX_SIDECAR_BYTES + 1,
+    })?;
     if size > MAX_SIDECAR_BYTES {
         return Err(SidecarError::Oversized {
             path: path.to_path_buf(),
             size,
         });
     }
-    std::fs::read_to_string(path).map_err(|source| SidecarError::Read {
-        path: path.to_path_buf(),
-        source,
-    })
+    Ok(raw)
 }
 
 #[derive(Debug)]
@@ -419,150 +657,199 @@ impl ParsedTool {
     }
 }
 
+#[cfg(test)]
 fn parse_v2_jsonl(raw: &str) -> Result<Vec<UsageTool>, SidecarError> {
-    let mut tools: HashMap<String, ParsedTool> = HashMap::new();
+    let path = Path::new("v2 current-session JSONL");
+    let mut tools = HashMap::new();
     let mut complete = false;
     for line in raw.lines() {
         let value: serde_json::Value =
             serde_json::from_str(line).map_err(|source| SidecarError::Json {
-                path: PathBuf::from("v2 current-session JSONL"),
+                path: path.to_path_buf(),
                 source,
             })?;
-        match value.get("kind").and_then(serde_json::Value::as_str) {
-            Some("AssistantMessage") => {
-                complete = true;
-                if let Some(content) = value
-                    .pointer("/data/content")
-                    .and_then(serde_json::Value::as_array)
-                {
-                    for item in content {
-                        if item.get("kind").and_then(serde_json::Value::as_str) != Some("toolUse") {
-                            continue;
-                        }
-                        let Some(data) = item.get("data") else {
-                            continue;
-                        };
-                        let Some(id) = data.get("toolUseId").and_then(serde_json::Value::as_str)
-                        else {
-                            continue;
-                        };
-                        let Some(name) = data.get("name").and_then(serde_json::Value::as_str)
-                        else {
-                            continue;
-                        };
-                        tools.insert(
-                            id.to_owned(),
-                            ParsedTool {
-                                call_id: ToolCallId::new(id),
-                                name: name.to_owned(),
-                                kind: tool_kind(name),
-                                failed: false,
-                                argument_chars: data.get("input").and_then(value_chars),
-                                result_chars: None,
-                            },
-                        );
-                    }
-                }
-            }
-            Some("ToolResults") => {
-                complete = true;
-                if let Some(content) = value
-                    .pointer("/data/content")
-                    .and_then(serde_json::Value::as_array)
-                {
-                    for item in content {
-                        if item.get("kind").and_then(serde_json::Value::as_str)
-                            != Some("toolResult")
-                        {
-                            continue;
-                        }
-                        let Some(data) = item.get("data") else {
-                            continue;
-                        };
-                        let Some(id) = data.get("toolUseId").and_then(serde_json::Value::as_str)
-                        else {
-                            continue;
-                        };
-                        if let Some(tool) = tools.get_mut(id) {
-                            tool.failed = data.get("status").and_then(serde_json::Value::as_str)
-                                == Some("error");
-                            tool.result_chars = data.get("content").and_then(value_chars);
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
+        complete |= apply_v2_value(path, &value, &mut tools)?;
     }
-    if !complete {
-        return Err(SidecarError::IncompleteTurn);
+    if complete {
+        Ok(sorted_tools(tools))
+    } else {
+        Err(SidecarError::IncompleteTurn)
     }
-    Ok(sorted_tools(tools))
 }
 
+fn apply_v2_value(
+    path: &Path,
+    value: &serde_json::Value,
+    tools: &mut HashMap<String, ParsedTool>,
+) -> Result<bool, SidecarError> {
+    match value.get("kind").and_then(serde_json::Value::as_str) {
+        Some("AssistantMessage") => {
+            if let Some(content) = value
+                .pointer("/data/content")
+                .and_then(serde_json::Value::as_array)
+            {
+                for item in content {
+                    if item.get("kind").and_then(serde_json::Value::as_str) != Some("toolUse") {
+                        continue;
+                    }
+                    let data = item.get("data").ok_or_else(|| SidecarError::Malformed {
+                        path: path.to_path_buf(),
+                        field: "v2 toolUse data",
+                    })?;
+                    let id = data
+                        .get("toolUseId")
+                        .and_then(serde_json::Value::as_str)
+                        .filter(|id| !id.is_empty())
+                        .ok_or_else(|| SidecarError::Malformed {
+                            path: path.to_path_buf(),
+                            field: "v2 toolUseId",
+                        })?;
+                    let name = data
+                        .get("name")
+                        .and_then(serde_json::Value::as_str)
+                        .filter(|name| !name.is_empty())
+                        .ok_or_else(|| SidecarError::Malformed {
+                            path: path.to_path_buf(),
+                            field: "v2 tool name",
+                        })?;
+                    tools.insert(
+                        id.to_owned(),
+                        ParsedTool {
+                            call_id: ToolCallId::new(id),
+                            name: name.to_owned(),
+                            kind: tool_kind(name),
+                            failed: false,
+                            argument_chars: data.get("input").and_then(value_chars),
+                            result_chars: None,
+                        },
+                    );
+                }
+            }
+            Ok(true)
+        }
+        Some("ToolResults") => {
+            if let Some(content) = value
+                .pointer("/data/content")
+                .and_then(serde_json::Value::as_array)
+            {
+                for item in content {
+                    if item.get("kind").and_then(serde_json::Value::as_str) != Some("toolResult") {
+                        continue;
+                    }
+                    let data = item.get("data").ok_or_else(|| SidecarError::Malformed {
+                        path: path.to_path_buf(),
+                        field: "v2 toolResult data",
+                    })?;
+                    let id = data
+                        .get("toolUseId")
+                        .and_then(serde_json::Value::as_str)
+                        .filter(|id| !id.is_empty())
+                        .ok_or_else(|| SidecarError::Malformed {
+                            path: path.to_path_buf(),
+                            field: "v2 toolResult id",
+                        })?;
+                    if let Some(tool) = tools.get_mut(id) {
+                        tool.failed |=
+                            data.get("status").and_then(serde_json::Value::as_str) == Some("error");
+                        if let Some(result_chars) = data.get("content").and_then(value_chars) {
+                            tool.result_chars = Some(result_chars);
+                        }
+                    }
+                }
+            }
+            Ok(true)
+        }
+        _ => Ok(false),
+    }
+}
+
+#[cfg(test)]
 fn parse_kas_jsonl(raw: &str) -> Result<Vec<UsageTool>, SidecarError> {
-    let mut tools: HashMap<String, ParsedTool> = HashMap::new();
+    let path = Path::new("KAS current-session JSONL");
+    let mut tools = HashMap::new();
     let mut complete = false;
     for line in raw.lines() {
         let value: serde_json::Value =
             serde_json::from_str(line).map_err(|source| SidecarError::Json {
-                path: PathBuf::from("KAS current-session JSONL"),
+                path: path.to_path_buf(),
                 source,
             })?;
-        let Some(payload) = value.get("payload") else {
-            continue;
-        };
-        match payload.get("type").and_then(serde_json::Value::as_str) {
-            Some("tool_call") => {
-                let Some(id) = payload
-                    .get("toolCallId")
-                    .and_then(serde_json::Value::as_str)
-                else {
-                    continue;
-                };
-                let Some(name) = payload.get("toolName").and_then(serde_json::Value::as_str) else {
-                    continue;
-                };
-                let kind = payload
-                    .get("kind")
-                    .and_then(serde_json::Value::as_str)
-                    .map_or_else(|| tool_kind(name), tool_kind);
-                tools.insert(
-                    id.to_owned(),
-                    ParsedTool {
-                        call_id: ToolCallId::new(id),
-                        name: name.to_owned(),
-                        kind,
-                        failed: matches!(
-                            payload.get("status").and_then(serde_json::Value::as_str),
-                            Some("failed" | "denied")
-                        ),
-                        argument_chars: payload.get("args").and_then(value_chars),
-                        result_chars: None,
-                    },
-                );
-            }
-            Some("tool_result") => {
-                let Some(id) = payload
-                    .get("toolCallId")
-                    .and_then(serde_json::Value::as_str)
-                else {
-                    continue;
-                };
-                if let Some(tool) = tools.get_mut(id) {
-                    tool.failed |=
-                        payload.get("success").and_then(serde_json::Value::as_bool) == Some(false);
-                    tool.result_chars = payload.get("content").and_then(value_chars);
+        complete |= apply_kas_value(path, &value, &mut tools)?;
+    }
+    if complete {
+        Ok(sorted_tools(tools))
+    } else {
+        Err(SidecarError::IncompleteTurn)
+    }
+}
+
+fn apply_kas_value(
+    path: &Path,
+    value: &serde_json::Value,
+    tools: &mut HashMap<String, ParsedTool>,
+) -> Result<bool, SidecarError> {
+    let Some(payload) = value.get("payload") else {
+        return Ok(false);
+    };
+    match payload.get("type").and_then(serde_json::Value::as_str) {
+        Some("tool_call") => {
+            let id = payload
+                .get("toolCallId")
+                .and_then(serde_json::Value::as_str)
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| SidecarError::Malformed {
+                    path: path.to_path_buf(),
+                    field: "KAS toolCallId",
+                })?;
+            let name = payload
+                .get("toolName")
+                .and_then(serde_json::Value::as_str)
+                .filter(|name| !name.is_empty())
+                .ok_or_else(|| SidecarError::Malformed {
+                    path: path.to_path_buf(),
+                    field: "KAS toolName",
+                })?;
+            let kind = payload
+                .get("kind")
+                .and_then(serde_json::Value::as_str)
+                .map_or_else(|| tool_kind(name), tool_kind);
+            tools.insert(
+                id.to_owned(),
+                ParsedTool {
+                    call_id: ToolCallId::new(id),
+                    name: name.to_owned(),
+                    kind,
+                    failed: matches!(
+                        payload.get("status").and_then(serde_json::Value::as_str),
+                        Some("failed" | "denied")
+                    ),
+                    argument_chars: payload.get("args").and_then(value_chars),
+                    result_chars: None,
+                },
+            );
+            Ok(false)
+        }
+        Some("tool_result") => {
+            let id = payload
+                .get("toolCallId")
+                .and_then(serde_json::Value::as_str)
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| SidecarError::Malformed {
+                    path: path.to_path_buf(),
+                    field: "KAS tool result id",
+                })?;
+            if let Some(tool) = tools.get_mut(id) {
+                tool.failed |=
+                    payload.get("success").and_then(serde_json::Value::as_bool) == Some(false);
+                if let Some(result_chars) = payload.get("content").and_then(value_chars) {
+                    tool.result_chars = Some(result_chars);
                 }
             }
-            Some("usage_summary") => complete = true,
-            _ => {}
+            Ok(false)
         }
+        Some("usage_summary") => Ok(true),
+        _ => Ok(false),
     }
-    if !complete {
-        return Err(SidecarError::IncompleteTurn);
-    }
-    Ok(sorted_tools(tools))
 }
 
 fn sorted_tools(tools: HashMap<String, ParsedTool>) -> Vec<UsageTool> {
@@ -638,6 +925,126 @@ mod tests {
         assert_eq!(tools[0].result_chars(), Some(2));
         Ok(())
     }
+    #[test]
+    fn streamed_turn_reader_preserves_v2_and_kas_boundaries() -> TestResult {
+        let directory = tempfile::tempdir()?;
+        let v2_path = directory.path().join("v2.jsonl");
+        let prompt_a = "{\"kind\":\"Prompt\",\"data\":{\"content\":\"a\"}}\n";
+        let assistant_a = "{\"kind\":\"AssistantMessage\",\"data\":{\"content\":[{\"kind\":\"toolUse\",\"data\":{\"toolUseId\":\"a\",\"name\":\"read\",\"input\":{}}}]}}\n";
+        let prompt_b = "{\"kind\":\"Prompt\",\"data\":{\"content\":\"b\"}}\n";
+        let assistant_b = "{\"kind\":\"AssistantMessage\",\"data\":{\"content\":[{\"kind\":\"toolUse\",\"data\":{\"toolUseId\":\"b\",\"name\":\"write\",\"input\":{}}}]}}\n";
+        let raw = format!("{prompt_a}{assistant_a}{prompt_b}{assistant_b}");
+        std::fs::write(&v2_path, &raw)?;
+        let deadline = Instant::now() + ENRICHMENT_DEADLINE;
+        let first = read_sidecar_turn(&v2_path, 0, KiroSidecarKind::V2, deadline)?;
+        assert_eq!(first.tools.len(), 1);
+        assert_eq!(first.tools[0].call_id().map(ToolCallId::as_str), Some("a"));
+        assert_eq!(
+            first.consumed_bytes,
+            u64::try_from(prompt_a.len() + assistant_a.len())?
+        );
+        let second = read_sidecar_turn(
+            &v2_path,
+            first.consumed_bytes,
+            KiroSidecarKind::V2,
+            deadline,
+        )?;
+        assert_eq!(second.tools.len(), 1);
+        assert_eq!(second.tools[0].call_id().map(ToolCallId::as_str), Some("b"));
+
+        let partial_prefix = "{\"kind\":\"AssistantMessage\",\"data\":";
+        std::fs::write(&v2_path, format!("{prompt_a}{prompt_b}{partial_prefix}"))?;
+        let first = read_sidecar_turn(&v2_path, 0, KiroSidecarKind::V2, deadline)?;
+        assert!(first.tools.is_empty());
+        assert_eq!(first.consumed_bytes, u64::try_from(prompt_a.len())?);
+        assert!(matches!(
+            read_sidecar_turn(
+                &v2_path,
+                first.consumed_bytes,
+                KiroSidecarKind::V2,
+                deadline,
+            ),
+            Err(SidecarError::IncompleteTurn)
+        ));
+        use std::io::Write as _;
+        let mut partial = std::fs::OpenOptions::new().append(true).open(&v2_path)?;
+        partial.write_all(b"{\"content\":[]}}\n")?;
+        let completed = read_sidecar_turn(
+            &v2_path,
+            first.consumed_bytes,
+            KiroSidecarKind::V2,
+            deadline,
+        )?;
+        assert!(completed.tools.is_empty());
+
+        let kas_path = directory.path().join("kas.jsonl");
+        let summary_a = "{\"payload\":{\"type\":\"usage_summary\"}}\n";
+        let call_b = "{\"payload\":{\"type\":\"tool_call\",\"toolCallId\":\"b\",\"toolName\":\"execute_bash\",\"args\":{}}}\n";
+        let summary_b = "{\"payload\":{\"type\":\"usage_summary\"}}\n";
+        std::fs::write(&kas_path, format!("{summary_a}{call_b}{summary_b}"))?;
+        let first = read_sidecar_turn(&kas_path, 0, KiroSidecarKind::Kas, deadline)?;
+        assert!(first.tools.is_empty());
+        assert_eq!(first.consumed_bytes, u64::try_from(summary_a.len())?);
+        let second = read_sidecar_turn(
+            &kas_path,
+            first.consumed_bytes,
+            KiroSidecarKind::Kas,
+            deadline,
+        )?;
+        assert_eq!(second.tools.len(), 1);
+        assert_eq!(second.tools[0].call_id().map(ToolCallId::as_str), Some("b"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn sidecar_baseline_rejects_loaded_missing_and_invalid_sessions() -> TestResult {
+        let directory = tempfile::tempdir()?;
+        let home = directory.path().join(".kiro");
+        let cli = home.join("sessions/cli");
+        std::fs::create_dir_all(&cli)?;
+        let (handle, mut receiver) = spawn_usage_enrichment_worker_at(Some(home.clone()));
+
+        let loaded = SessionId::new("loaded-missing");
+        handle.session_started(loaded.clone(), KiroSidecarKind::V2, SessionOrigin::Loaded);
+        std::thread::sleep(Duration::from_millis(10));
+        std::fs::write(
+            cli.join("loaded-missing.jsonl"),
+            "{\"kind\":\"AssistantMessage\",\"data\":{\"content\":[]}}\n",
+        )?;
+        handle.enrich(UsageRecordId::new(1), loaded, KiroSidecarKind::V2);
+        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("worker closed")?;
+        let UsageEnrichmentResult::Failed { message, .. } = result else {
+            return Err("loaded missing sidecar must fail closed".into());
+        };
+        assert!(message.contains("baseline"));
+
+        let fresh = SessionId::new("fresh-missing");
+        handle.session_started(fresh.clone(), KiroSidecarKind::V2, SessionOrigin::Fresh);
+        std::thread::sleep(Duration::from_millis(10));
+        std::fs::write(
+            cli.join("fresh-missing.jsonl"),
+            "{\"kind\":\"AssistantMessage\",\"data\":{\"content\":[]}}\n",
+        )?;
+        handle.enrich(UsageRecordId::new(2), fresh, KiroSidecarKind::V2);
+        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("worker closed")?;
+        assert!(matches!(result, UsageEnrichmentResult::Enriched(_)));
+
+        let invalid = SessionId::new("../escape");
+        handle.session_started(invalid.clone(), KiroSidecarKind::V2, SessionOrigin::Fresh);
+        handle.enrich(UsageRecordId::new(3), invalid, KiroSidecarKind::V2);
+        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("worker closed")?;
+        let UsageEnrichmentResult::Failed { message, .. } = result else {
+            return Err("invalid session must fail".into());
+        };
+        assert!(message.contains("invalid Kiro session id"));
+        Ok(())
+    }
 
     #[tokio::test]
     async fn bounded_current_turn_enrichment_matrix() -> TestResult {
@@ -656,7 +1063,7 @@ mod tests {
             r#"{"session_state":{"rts_model_state":{"model_info":{"model_id":"anthropic/claude-sonnet"}}}}"#,
         )?;
         let (handle, mut receiver) = spawn_usage_enrichment_worker_at(Some(home.clone()));
-        handle.session_started(session.clone(), KiroSidecarKind::V2);
+        handle.session_started(session.clone(), KiroSidecarKind::V2, SessionOrigin::Fresh);
         std::thread::sleep(Duration::from_millis(10));
         let mut file = std::fs::OpenOptions::new().append(true).open(&jsonl)?;
         use std::io::Write as _;
@@ -697,7 +1104,11 @@ mod tests {
             cli.join("session-2.json"),
             r#"{"session_state":{"rts_model_state":{"model_info":{"model_id":"auto"}}}}"#,
         )?;
-        handle.session_started(recovering.clone(), KiroSidecarKind::V2);
+        handle.session_started(
+            recovering.clone(),
+            KiroSidecarKind::V2,
+            SessionOrigin::Fresh,
+        );
         std::thread::sleep(Duration::from_millis(10));
         std::fs::write(&recovering_jsonl, "{")?;
         handle.enrich(UsageRecordId::new(9), recovering, KiroSidecarKind::V2);
@@ -712,12 +1123,11 @@ mod tests {
         assert!(matches!(result, UsageEnrichmentResult::Enriched(_)));
 
         let (handle, mut receiver) = spawn_usage_enrichment_worker_at(Some(home.clone()));
+        let missing = SessionId::new("missing");
+        handle.session_started(missing.clone(), KiroSidecarKind::V2, SessionOrigin::Fresh);
+        std::thread::sleep(Duration::from_millis(10));
         let started = std::time::Instant::now();
-        handle.enrich(
-            UsageRecordId::new(8),
-            SessionId::new("missing"),
-            KiroSidecarKind::V2,
-        );
+        handle.enrich(UsageRecordId::new(8), missing, KiroSidecarKind::V2);
         let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
             .await?
             .ok_or("worker closed")?;
@@ -726,10 +1136,26 @@ mod tests {
 
         let invalid = validate_session_id(&SessionId::new("../escape"));
         assert!(matches!(invalid, Err(SidecarError::InvalidSessionId(_))));
+        let malformed = cli.join("malformed.jsonl");
+        std::fs::write(&malformed, "{not-json}\n")?;
+        let Err(SidecarError::Json { path, .. }) = read_sidecar_turn(
+            &malformed,
+            0,
+            KiroSidecarKind::V2,
+            Instant::now() + ENRICHMENT_DEADLINE,
+        ) else {
+            return Err("malformed complete line must report JSON error".into());
+        };
+        assert_eq!(path, malformed);
         let oversized = cli.join("oversized.jsonl");
         File::create(&oversized)?.set_len(MAX_SIDECAR_BYTES + 1)?;
         assert!(matches!(
-            read_appended(&oversized, 0),
+            read_sidecar_turn(
+                &oversized,
+                0,
+                KiroSidecarKind::V2,
+                Instant::now() + ENRICHMENT_DEADLINE,
+            ),
             Err(SidecarError::Oversized { .. })
         ));
         Ok(())

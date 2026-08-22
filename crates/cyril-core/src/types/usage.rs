@@ -53,6 +53,8 @@ pub enum UsageValueError {
     InvalidCurrency,
     #[error("usage metering unit must be non-empty")]
     InvalidUnit,
+    #[error("usage context percentage must be finite and within 0..=100")]
+    InvalidPercentage,
 }
 
 /// A validated monetary amount. Currencies are never combined implicitly.

@@ -250,6 +250,74 @@ The total exceeds 4,000, so the plan has three independently mergeable increment
 - Apply the error-only `CASE` mutation; the focused fence turns red, then green after restore.
 - `cargo test && cargo test --features kas && cargo clippy -- -D warnings && cargo clippy --features kas -- -D warnings && cargo fmt --all --check` → PR #97 remains independently green.
 
+## Slice 9: Reject invalid context and preserve turn lifecycle after review
+
+**Purpose:** Resolve F21, F22, F25, F26, F32, and F34 without changing the established clamped `ContextUsage::new` API; strictness applies at untrusted adapters and persistence boundaries.
+
+**Claim IDs:** C5, C8, C12
+
+**Expected behavior:** Invalid wire/persisted context values never enter aggregates, abort removes only the aborted turn identity, compaction completion without start produces no gain, every configured Kiro turn carries its sidecar kind even without metering, and the 100,000-turn fence runs in normal validation.
+
+**Oracle:** A hand-authored scalar/bucket validity matrix; an observer timeline of begin→abort→global context and completed-without-start→sample; App channel state showing a no-metering turn requests enrichment; direct SQL/count bounds for 100,000 records.
+
+**Stress fixture:** Finite endpoints, negative/>100/non-finite scalar and five-bucket values; abort followed by an unscoped late frame; completion without start and a lower sample; a no-text/no-metering terminal turn; 100,000 rows with 30 errors and 1,000 tools. Expected: only valid context persists, no phantom sample/gain appears, enrichment is scheduled once, and recent/error details remain bounded to 20.
+
+**Regression fence:** Adapter/domain invalid-percentage tests, `usage::tests::context_and_compaction_state_matrix` extensions, an abort/global-context observer test, an App no-metering enrichment test, and the now-always-on `usage::tests::kiro_snapshot_remains_bounded_at_100k`.
+
+**Named mutation:** Restore adapter clamping or bucket infallibility, remove abort context cleanup, restore compaction `or_insert`, reset sidecar kind to `None`, or restore `#[ignore]`; the owning matrix row/fence turns red.
+
+**Complexity/production scale:** Validation and lifecycle transitions remain O(1) per frame. The normal C12 fence performs the existing O(R + T) SQL aggregation over 100,000 rows/1,000 tools with no retained per-turn vector and must remain within its two-second reference budget.
+
+**Wall budget/phase:** Context and notification handling are always-on O(1) operations within the existing 25 ms observer budget; the 100,000-row fence is one-off test setup, not production work.
+
+**Files:** `.cyril-kryv/plan.md`, `.cyril-kryv/review-decisions.md`, `crates/cyril-core/src/usage.rs`, `crates/cyril-core/src/types/session.rs`, `crates/cyril-core/src/protocol/convert/kas.rs`, `crates/cyril-core/src/protocol/convert/kiro.rs`, `crates/cyril-core/src/session.rs`, `crates/cyril/src/app.rs`.
+
+**Estimate:** 1 implementation day.
+
+**Diff estimate:** 450 changed lines: 170 validation/lifecycle/wiring, 230 regression/stress tests, 50 workflow evidence.
+
+**PR increment:** Usage detail and enrichment.
+
+**Commands and expected results:**
+- Run `context_usage_try_new_rejects_invalid_percentages`, `context_bucket_try_new_rejects_invalid_percentages`, `context_write_rejects_invalid_scalar_and_bucket_percentages`, `context_snapshot_rejects_corrupt_percentages`, `abort_turn_removes_context_identity_from_global_frames`, `compaction_completed_without_started_is_ignored`, and `no_metering_turn_retains_configured_sidecar_kind` → every literal validity/lifecycle row matches the oracle and a no-metering turn requests enrichment.
+- `cargo test -p cyril-core kiro_snapshot_remains_bounded_at_100k` → the formerly ignored 100,000-row fence passes its detail bounds and two-second reference budget in normal mode.
+- Apply each named mutation, run its owning fence red, restore, and rerun green.
+- `cargo test && cargo test --features kas && cargo clippy -- -D warnings && cargo clippy --features kas -- -D warnings && cargo fmt --all --check` → the context/lifecycle slice is green before sidecar parser changes.
+
+## Slice 10: Make sidecar enrichment bounded and turn-safe after review
+
+**Purpose:** Resolve F23, F24, and F27–F33; F35 is refuted because current KAS sidecars expose no billed identity.
+
+**Claim IDs:** C4, C5, C7
+
+**Expected behavior:** Each enrichment consumes exactly one complete current-session turn, never crosses a later prompt/summary, preserves portable calls on empty/partial exact data, validates before probing paths, distinguishes fresh from loaded missing baselines, reports the real path, and enforces three attempts, one second, streamed memory, and a hard 64 MiB cap.
+
+**Oracle:** Raw byte offsets and one-turn marker positions computed directly from temp JSONL fixtures; a second SQLite connection compares portable/exact call rows before and after enrichment; elapsed/attempt counters and file sizes are read independently of the worker.
+
+**Stress fixture:** Fresh/loaded absent files, traversal IDs, two complete v2 turns, two complete KAS summaries, Prompt-only/no-tool turns, an unterminated final JSON line, malformed complete lines, truncation/replacement, exact-cap/cap+1 growth, permission denial, and empty/partial exact tools beside portable calls. Expected: one record owns one turn, cursors stop at the last consumed marker, failures retain every live row, and no read/retry exceeds its bound.
+
+**Regression fence:** `usage::kiro_sidecar::tests::{streamed_turn_reader_preserves_v2_and_kas_boundaries,sidecar_baseline_rejects_loaded_missing_and_invalid_sessions,bounded_current_turn_enrichment_matrix}` plus `usage::tests::{enrichment_merges_partial_and_empty_sidecar_tools,context_snapshot_rejects_corrupt_percentages}`.
+
+**Named mutation:** Advance the cursor to EOF, aggregate a second marker, delete all portable rows, probe before validation, initialize loaded-missing at zero, use uncapped `read_to_string`, or replace the real path with a constant; the corresponding ownership/safety fence turns red.
+
+**Complexity/production scale:** Streaming parse is O(B + T) for B consumed bytes and T current-turn tools, with O(longest complete line + T) memory. Reads are capped at 64 MiB plus one sentinel byte; only one turn is materialized. DB merge performs T indexed `(turn_id, call_id)` updates, O(T log T), under the existing unique composite index; accepted CPU remains 25 ms parser and 250 ms SQLite update at the 10,000-call stress size.
+
+**Wall budget/phase:** Always-on worker enrichment performs at most three attempts and checks a one-second elapsed deadline; terminal failures stop immediately. SQLite enrichment retains the existing 250 ms busy timeout.
+
+**Files:** `.cyril-kryv/plan.md`, `.cyril-kryv/review-decisions.md`, `crates/cyril-core/src/usage/kiro_sidecar.rs`, `crates/cyril-core/src/usage.rs`, `crates/cyril/src/app.rs`.
+
+**Estimate:** 2 implementation days.
+
+**Diff estimate:** 850 changed lines: 360 streaming/parser/merge implementation, 420 fixture/state tests, 70 workflow evidence.
+
+**PR increment:** Usage detail and enrichment.
+
+**Commands and expected results:**
+- `cargo test -p cyril-core --features kas usage::kiro_sidecar::tests` → every consumed byte offset, result tuple, error path, attempt/deadline result, and fresh/loaded decision matches the independent matrix.
+- `cargo test -p cyril-core enrichment_merges_partial_and_empty_sidecar_tools` → exact rows update by call ID, portable-only rows remain, and repeated enrichment is byte/count stable.
+- Apply each named mutation, run its owning fence red, restore, and rerun green.
+- `cargo test && cargo test --features kas && cargo clippy -- -D warnings && cargo clippy --features kas -- -D warnings && cargo fmt --all --check` → PR #98 remains independently green.
+
 ## Tracker taxonomy
 
 - Permanent exclusions are fixed by the approved spec/design: no historical backfill, OTLP dependency, synthetic metrics, skill inference, or credit-as-currency.
