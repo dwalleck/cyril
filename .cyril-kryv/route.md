@@ -37,3 +37,13 @@ interrogated-spec → falsifiable-design → budgeted-plan → checkpointed-buil
 ## Terminal criterion
 
 Structural — every downstream artifact satisfies its owning stage's completion criterion, ending with no FAIL in checkpointed-build's recorded gate.
+
+Result: 2026-08-22 | PASS — `cargo test` (1,415 passed), three consecutive `cargo test --features kas` runs (1,721 passed each), default/KAS `cargo clippy -- -D warnings`, and `cargo fmt --all --check` all succeeded after the review-fix slice. The tracing gate now captures events structurally with callsites registered as always enabled, and the previously hanging usage-command test asserts App-owned dispatch without awaiting an impossible command-layer receive.
+
+## PR increments
+
+- PR #97 — Live metering substrate (`feat/cyril-kryv-kiro-usage`, draft).
+- PR #98 — Usage detail and enrichment (`feat/cyril-kryv-usage-detail`, draft).
+- PR #99 — Account and modal completion (`feat/cyril-kryv-usage-modal`, draft), plus exact-wire review fence commit `99496ca`.
+
+Live acceptance: KAS authenticated on this host, completed a no-tool turn (`OK`), and the open `/usage` panel refreshed from 4→5 turns with `Provider requests 1`, `Retries 0`, and `0.1698 credits`; Costs also showed live account plan/limit/overage fields. v2 remains unavailable because the host is not logged in, so no live v2 claim is made; committed v2 fixtures and default-suite coverage remain the evidence for that path.

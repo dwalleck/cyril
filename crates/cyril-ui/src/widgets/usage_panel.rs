@@ -138,11 +138,6 @@ fn overview_lines(state: &UsagePanelState, theme: &Theme) -> Vec<Line<'static>> 
             theme,
         ),
         metric_line(
-            "Cache savings",
-            metric_f64(None, "", 1, &summary.token_coverage),
-            theme,
-        ),
-        metric_line(
             "Average TTFT",
             optional_f64(summary.avg_ttft_ms, "ms", 1),
             theme,
@@ -201,33 +196,61 @@ fn cost_lines(state: &UsagePanelState, theme: &Theme) -> Vec<Line<'static>> {
         theme,
     ));
     if let Some(account) = state.account.as_ref() {
-        lines.push(metric_line("Plan", account.plan_name.clone(), theme));
+        let plan = if account.is_enterprise {
+            format!("{} · enterprise", account.plan_name)
+        } else {
+            account.plan_name.clone()
+        };
+        lines.push(metric_line("Plan", plan, theme));
         lines.push(metric_line(
             "Billing reset",
             account.billing_cycle_reset.clone(),
             theme,
         ));
-        lines.push(metric_line(
-            "Overages",
-            if account.overages_enabled {
-                "enabled".to_owned()
-            } else {
-                "disabled".to_owned()
-            },
-            theme,
-        ));
+        let overages = match (account.overages_enabled, account.overage_capable) {
+            (true, _) => "enabled",
+            (false, true) => "disabled · available",
+            (false, false) => "unavailable",
+        };
+        lines.push(metric_line("Overages", overages.to_owned(), theme));
         for breakdown in &account.usage_breakdowns {
-            lines.push(metric_line(
-                &breakdown.display_name,
+            let quota = if breakdown.has_limit {
                 format!(
-                    "{:.2}/{:.2} ({:.1}%) · overage {:.2} @ {:.4} {}",
-                    breakdown.used,
-                    breakdown.limit,
-                    breakdown.percentage,
+                    "{:.2}/{:.2} ({:.1}%)",
+                    breakdown.used, breakdown.limit, breakdown.percentage
+                )
+            } else {
+                format!("{:.2} used · no plan limit", breakdown.used)
+            };
+            let billed = breakdown.overage_charges.map_or_else(
+                || "charge —".to_owned(),
+                |charge| format!("charge {charge:.2} {}", breakdown.currency),
+            );
+            lines.push(metric_line(
+                &format!("Account {}", breakdown.display_name),
+                format!(
+                    "{} · {quota} · overage {:.2} @ {:.4} {} · {billed}",
+                    breakdown.resource_type,
                     breakdown.current_overages,
                     breakdown.overage_rate,
                     breakdown.currency
                 ),
+                theme,
+            ));
+        }
+        for (index, add_on) in account.add_on_credits.iter().enumerate() {
+            let status = if add_on.is_active {
+                "active".to_owned()
+            } else {
+                "inactive".to_owned()
+            };
+            let expiry = add_on
+                .expires_at
+                .as_deref()
+                .map_or_else(String::new, |expiry| format!(" · expires {expiry}"));
+            lines.push(metric_line(
+                &format!("Add-on credits {}", index + 1),
+                format!("{:.2}/{:.2} · {status}{expiry}", add_on.used, add_on.total),
                 theme,
             ));
         }
@@ -317,9 +340,11 @@ fn tool_lines(state: &UsagePanelState, theme: &Theme) -> Vec<Line<'static>> {
             ),
             Span::styled(
                 format!(
-                    "{} calls · {:.1}% err · {} · args {} · result {} · last {}",
+                    "{} calls · {:.1}% err · {} · {} · {} · args {} · result {} · last {}",
                     group.calls,
                     error_rate,
+                    optional_f64(group.total_tokens_share, " tokens", 0),
+                    format_costs(&group.costs),
                     format_charges(&group.charges),
                     optional_u64(group.argument_chars),
                     optional_u64(group.result_chars),
@@ -515,6 +540,7 @@ fn account_status(status: &UsageAccountStatus, fetched_at_ms: Option<u64>) -> St
     match status {
         UsageAccountStatus::Idle => "not queried".to_owned(),
         UsageAccountStatus::Loading => "loading".to_owned(),
+        UsageAccountStatus::Refreshing => format!("refreshing{fetched}"),
         UsageAccountStatus::Fresh => format!("fresh{fetched}"),
         UsageAccountStatus::Unavailable(message) => format!("unavailable: {message}"),
         UsageAccountStatus::Stale(message) => format!("stale{fetched}: {message}"),
@@ -768,6 +794,9 @@ mod tests {
         };
         snapshot.tools[0].name = Some("read_file".to_owned());
         snapshot.tools[0].charges = snapshot.overview.charges.clone();
+        snapshot.tools[0].total_tokens_share = Some(250.0);
+        snapshot.tools[0].costs =
+            vec![cyril_core::types::Money::try_new(0.125, "USD").expect("valid money")];
         snapshot.tools[0].models = vec![cyril_core::types::ToolModelUsageGroup {
             provider: Some("anthropic".to_owned()),
             model: Some("claude".to_owned()),
@@ -778,19 +807,27 @@ mod tests {
             plan_name: "KIRO PRO MAX".to_owned(),
             billing_cycle_reset: "2026-09-01".to_owned(),
             overages_enabled: false,
-            is_enterprise: false,
+            is_enterprise: true,
+            overage_capable: true,
             usage_breakdowns: vec![cyril_core::types::UsageAccountBreakdown {
                 resource_type: "CREDIT".to_owned(),
                 display_name: "Credits".to_owned(),
                 used: 10.0,
-                limit: 100.0,
+                has_limit: false,
+                limit: 999_999.0,
                 percentage: 10.0,
-                current_overages: 0.0,
+                current_overages: 2.0,
                 overage_rate: 0.04,
-                overage_charges: Some(0.0),
+                overage_charges: Some(0.08),
                 currency: "USD".to_owned(),
             }],
             bonus_credits: Vec::new(),
+            add_on_credits: vec![cyril_core::types::UsageAddOnCredit {
+                used: 2.0,
+                total: 100.0,
+                is_active: true,
+                expires_at: Some("2026-10-01".to_owned()),
+            }],
         };
         let theme = crate::traits::test_support::marker_theme();
         for (page, needles) in [
@@ -800,7 +837,14 @@ mod tests {
             ),
             (
                 UsagePage::Costs,
-                ["KIRO PRO MAX", "Monetary cost"].as_slice(),
+                [
+                    "KIRO PRO MAX · enterprise",
+                    "Monetary cost",
+                    "CREDIT · 10.00 used · no plan limit",
+                    "charge 0.08 USD",
+                    "Add-on credits 1",
+                ]
+                .as_slice(),
             ),
             (
                 UsagePage::Context,
@@ -808,7 +852,7 @@ mod tests {
             ),
             (
                 UsagePage::Tools,
-                ["read_file", "anthropic/claude"].as_slice(),
+                ["read_file", "anthropic/claude", "250 tokens", "$0.1250"].as_slice(),
             ),
         ] {
             let state = UsagePanelState {
@@ -819,6 +863,7 @@ mod tests {
                 account_fetched_at_ms: Some(42),
                 account_status: UsageAccountStatus::Fresh,
             };
+            assert_eq!(state.row_count(), page_lines(&state, &theme).len());
             let backend = TestBackend::new(120, 40);
             let mut terminal = Terminal::new(backend).expect("test terminal");
             terminal
@@ -844,6 +889,51 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn sparse_cost_and_context_row_counts_match_rendered_lines() {
+        let theme = crate::traits::test_support::marker_theme();
+        for page in [UsagePage::Costs, UsagePage::Context] {
+            let state = UsagePanelState {
+                snapshot: cyril_core::types::UsageSnapshot::default(),
+                page,
+                scroll_offset: 0,
+                account: None,
+                account_fetched_at_ms: None,
+                account_status: UsageAccountStatus::Loading,
+            };
+            assert_eq!(state.row_count(), page_lines(&state, &theme).len());
+        }
+    }
+
+    #[test]
+    fn overview_metric_availability_is_provider_invariant() {
+        let render_provider = |provider: &str| {
+            let mut snapshot = sample_snapshot();
+            snapshot.providers[0].name = Some(provider.to_owned());
+            snapshot.overview.tokens = None;
+            snapshot.overview.token_coverage = MetricCoverage {
+                observed: 0,
+                unreported: 0,
+                backend_gated: 2,
+            };
+            let state = UsagePanelState {
+                snapshot,
+                page: UsagePage::Overview,
+                scroll_offset: 0,
+                account: None,
+                account_fetched_at_ms: None,
+                account_status: UsageAccountStatus::Idle,
+            };
+            let mut terminal = Terminal::new(TestBackend::new(120, 40)).expect("test terminal");
+            let theme = crate::traits::test_support::marker_theme();
+            terminal
+                .draw(|frame| render(frame, frame.area(), 36, &state, &theme))
+                .expect("draw provider overview");
+            rows(&terminal)
+        };
+        assert_eq!(render_provider("kiro"), render_provider("omp"));
     }
 
     #[test]

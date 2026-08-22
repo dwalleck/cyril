@@ -280,8 +280,7 @@ impl TokenUsage {
     }
 }
 
-/// Durable row identity returned after one turn commits.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct UsageRecordId(i64);
 
 impl UsageRecordId {
@@ -799,6 +798,7 @@ pub struct UsageAccountBreakdown {
     pub resource_type: String,
     pub display_name: String,
     pub used: f64,
+    pub has_limit: bool,
     pub limit: f64,
     pub percentage: f64,
     pub current_overages: f64,
@@ -816,13 +816,23 @@ pub struct UsageBonusCredit {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct UsageAddOnCredit {
+    pub used: f64,
+    pub total: f64,
+    pub is_active: bool,
+    pub expires_at: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct UsageAccount {
     pub plan_name: String,
     pub billing_cycle_reset: String,
     pub overages_enabled: bool,
     pub is_enterprise: bool,
+    pub overage_capable: bool,
     pub usage_breakdowns: Vec<UsageAccountBreakdown>,
     pub bonus_credits: Vec<UsageBonusCredit>,
+    pub add_on_credits: Vec<UsageAddOnCredit>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]

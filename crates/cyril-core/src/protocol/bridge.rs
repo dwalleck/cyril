@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use agent_client_protocol::Agent as _;
 use tokio::sync::mpsc;
 
 use crate::protocol::convert::{session_created_from_response, to_config_options, to_token_usage};
@@ -133,6 +134,20 @@ impl BridgeSender {
             .send(cmd)
             .await
             .map_err(|_| crate::Error::from_kind(crate::ErrorKind::BridgeClosed))
+    }
+
+    /// Try to enqueue a command without waiting. Local UI overlays use this
+    /// after opening their panel so a dead/full bridge cannot prevent the
+    /// local state from rendering.
+    pub fn try_send(&self, cmd: BridgeCommand) -> crate::Result<()> {
+        self.command_tx.try_send(cmd).map_err(|error| match error {
+            mpsc::error::TrySendError::Full(_) => {
+                crate::Error::from_kind(crate::ErrorKind::BridgeClosed)
+            }
+            mpsc::error::TrySendError::Closed(_) => {
+                crate::Error::from_kind(crate::ErrorKind::BridgeClosed)
+            }
+        })
     }
 }
 
@@ -448,6 +463,54 @@ fn parse_usage_account(value: &serde_json::Value) -> Result<UsageAccount, String
     {
         let _ = value;
         Err("KAS account usage requires a build with --features kas".to_owned())
+    }
+}
+
+async fn query_usage_account(
+    conn: std::rc::Rc<agent_client_protocol::ClientSideConnection>,
+    engine: AgentEngine,
+) -> Notification {
+    if engine != AgentEngine::Kas {
+        return Notification::UsageAccountQueryFailed {
+            message: "account usage is available only for the KAS engine".to_owned(),
+        };
+    }
+    let params = match to_raw_arc(&serde_json::json!({})) {
+        Ok(params) => params,
+        Err(error) => {
+            return Notification::UsageAccountQueryFailed {
+                message: format!("serialize account usage request: {error}"),
+            };
+        }
+    };
+    let response = match conn
+        .ext_method(agent_client_protocol::ExtRequest::new(
+            "kiro/account/getUsage",
+            params,
+        ))
+        .await
+    {
+        Ok(response) => response,
+        Err(error) => {
+            return Notification::UsageAccountQueryFailed {
+                message: error.to_string(),
+            };
+        }
+    };
+    let value = match parse_response(&response.0) {
+        Ok(value) => value,
+        Err(error) => {
+            return Notification::UsageAccountQueryFailed {
+                message: format!("malformed account usage JSON: {error}"),
+            };
+        }
+    };
+    match parse_usage_account(&value) {
+        Ok(account) => Notification::UsageAccountUpdated {
+            account,
+            fetched_at_ms: current_timestamp_ms(),
+        },
+        Err(message) => Notification::UsageAccountQueryFailed { message },
     }
 }
 
@@ -2287,42 +2350,25 @@ async fn run_loop(
                 }
             }
             BridgeCommand::QueryUsageAccount => {
-                let notification = if engine.kind() != AgentEngine::Kas {
-                    Notification::UsageAccountQueryFailed {
-                        message: "account usage is available only for the KAS engine".to_owned(),
-                    }
-                } else {
-                    match to_raw_arc(&serde_json::json!({})) {
-                        Err(error) => Notification::UsageAccountQueryFailed {
-                            message: format!("serialize account usage request: {error}"),
+                let tx = channels.notification_tx.clone();
+                let connection = std::rc::Rc::clone(&conn);
+                let bound_engine = engine.kind();
+                tokio::task::spawn_local(async move {
+                    let notification = match tokio::time::timeout(
+                        std::time::Duration::from_secs(5),
+                        query_usage_account(connection, bound_engine),
+                    )
+                    .await
+                    {
+                        Ok(notification) => notification,
+                        Err(_) => Notification::UsageAccountQueryFailed {
+                            message: "account usage query timed out after 5s".to_owned(),
                         },
-                        Ok(params) => match conn
-                            .ext_method(acp::ExtRequest::new("kiro/account/getUsage", params))
-                            .await
-                        {
-                            Err(error) => Notification::UsageAccountQueryFailed {
-                                message: error.to_string(),
-                            },
-                            Ok(response) => match parse_response(&response.0) {
-                                Err(error) => Notification::UsageAccountQueryFailed {
-                                    message: format!("malformed account usage JSON: {error}"),
-                                },
-                                Ok(value) => match parse_usage_account(&value) {
-                                    Ok(account) => Notification::UsageAccountUpdated {
-                                        account,
-                                        fetched_at_ms: current_timestamp_ms(),
-                                    },
-                                    Err(message) => {
-                                        Notification::UsageAccountQueryFailed { message }
-                                    }
-                                },
-                            },
-                        },
+                    };
+                    if notify_or_closed(&tx, notification).await {
+                        tracing::debug!("account usage result dropped after bridge closure");
                     }
-                };
-                if notify_or_closed(&channels.notification_tx, notification).await {
-                    break;
-                }
+                });
             }
             BridgeCommand::ListSettings => {
                 // Wire request takes empty `{}` params — non-empty hangs the
@@ -3612,9 +3658,9 @@ mod tests {
         /// C6 failed-`new` fixture (cyril-0qe6).
         ext_err: Vec<String>,
         prompt_count: usize,
-        /// When set, `prompt` parks on the gate until the test releases it,
-        /// modelling a long-running turn (so mid-turn commands can be observed).
         block_prompt: bool,
+        /// When set, account usage extension RPC parks on the gate until release.
+        block_account_usage: bool,
         /// When set, `prompt` returns an error (the transport/error turn path).
         prompt_err: bool,
         /// Number of `agent_message_chunk` notifications `prompt` streams before
@@ -3936,11 +3982,17 @@ mod tests {
         async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
             // Record by stripped method name (e.g. "ext:session/steer"); the ACP
             // library already stripped the leading `_` before dispatch.
-            let scripted_err = {
+            let (scripted_err, block_account) = {
                 let mut s = self.script.borrow_mut();
                 s.received.push(format!("ext:{}", args.method));
-                s.ext_err.iter().any(|m| m == args.method.as_ref())
+                (
+                    s.ext_err.iter().any(|m| m == args.method.as_ref()),
+                    s.block_account_usage && args.method.as_ref() == "kiro/account/getUsage",
+                )
             };
+            if block_account {
+                self.gate.notified().await;
+            }
             if scripted_err {
                 return Err(acp::Error::new(-32603, "Internal error"));
             }
@@ -6637,6 +6689,64 @@ mod tests {
                             .any(|method| method.starts_with("ext:_kiro/_")),
                         "bridge must not double-prefix the KAS method: {received:?}"
                     );
+                },
+            )
+            .await;
+        }
+        /// A slow account control-plane RPC must not hold the single mediator
+        /// hostage: another short command is serviced before the account gate
+        /// is released.
+        #[tokio::test]
+        async fn slow_account_query_does_not_block_bridge_loop() {
+            let script = Rc::new(RefCell::new(Script {
+                block_account_usage: true,
+                ..Default::default()
+            }));
+            let probe = script.clone();
+            with_engine_harness(
+                Rc::new(crate::protocol::engine::KasEngine::default()),
+                script,
+                |sender, mut rx, _perm_rx, gate, _loop, _kill| async move {
+                    let _sid = start_session(&sender, &mut rx).await;
+                    sender
+                        .send(BridgeCommand::QueryUsageAccount)
+                        .await
+                        .expect("send account query");
+                    sender
+                        .send(BridgeCommand::ListSettings)
+                        .await
+                        .expect("send short command");
+                    let short = tokio::time::timeout(std::time::Duration::from_secs(1), async {
+                        loop {
+                            if let Some(notification) = rx.recv().await {
+                                if matches!(
+                                    notification.notification,
+                                    Notification::SettingsList { .. }
+                                ) {
+                                    break notification.notification;
+                                }
+                            } else {
+                                break Notification::BridgeDisconnected {
+                                    reason: "channel closed".to_owned(),
+                                };
+                            }
+                        }
+                    })
+                    .await
+                    .expect("short command must not wait for account RPC");
+                    assert!(matches!(short, Notification::SettingsList { .. }));
+                    assert!(
+                        probe
+                            .borrow()
+                            .received
+                            .iter()
+                            .any(|method| method == "ext:kiro/account/getUsage")
+                    );
+                    gate.notify_one();
+                    assert!(matches!(
+                        recv_notif(&mut rx, 5).await,
+                        Some(Notification::UsageAccountQueryFailed { .. })
+                    ));
                 },
             )
             .await;
