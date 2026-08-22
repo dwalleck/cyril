@@ -1142,6 +1142,36 @@ mod tests {
     }
 
     #[test]
+    fn parse_metadata_preserves_unlike_metering_units() {
+        let params = serde_json::json!({
+            "meteringUsage": [
+                {"unit": "credit", "unitPlural": "credits", "value": 0.25},
+                {"unit": "request", "unitPlural": "requests", "value": 2.0},
+                {"unit": "credit", "unitPlural": "credits", "value": -1.0}
+            ]
+        });
+        let notification = to_ext_notification("kiro.dev/metadata", &params)
+            .expect("conversion succeeds")
+            .expect("metadata converts");
+        let Notification::MetadataUpdated {
+            metering: Some(metering),
+            ..
+        } = notification
+        else {
+            panic!("expected metering metadata");
+        };
+        assert_eq!(
+            metering
+                .charges()
+                .iter()
+                .map(|charge| (charge.unit(), charge.amount()))
+                .collect::<Vec<_>>(),
+            vec![("credit", 0.25), ("request", 2.0)]
+        );
+        assert_eq!(metering.credits(), Some(0.25));
+    }
+
+    #[test]
     fn metering_absence_parser_does_not_fabricate_zero() {
         for metering_usage in [
             serde_json::json!([]),

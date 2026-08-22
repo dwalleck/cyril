@@ -7,7 +7,7 @@ use crate::types::session::{
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 use crate::types::turn::TurnId;
-use crate::types::usage::{Money, SessionOrigin, TokenUsage};
+use crate::types::usage::{Money, SessionOrigin, TokenUsage, TurnMeteringUpdate};
 use crate::types::workflow::{WorkflowEvent, WorkflowSnapshot};
 use crate::types::workflow_command::{WorkflowCommandOutcome, WorkflowOp};
 
@@ -109,6 +109,10 @@ pub enum Notification {
         /// "refusal cleared".
         refusal: Option<RefusalAlert>,
     },
+    /// Per-turn non-money metering emitted before the lifecycle terminal.
+    /// KAS carries this as `session_info_update` kind `turn_completion`; it
+    /// must never be interpreted as [`Notification::TurnCompleted`].
+    TurnMeteringUpdated(TurnMeteringUpdate),
     /// ACP `usage_update` session notification (unstable_session_usage).
     /// Carries absolute token counts rather than the percentage from
     /// `kiro.dev/metadata`. Both may arrive within a turn; whichever notification

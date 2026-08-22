@@ -48,9 +48,10 @@ pub use tool_call::{
 };
 pub use turn::{TurnAllocator, TurnId};
 pub use usage::{
-    AgentUsageGroup, ModelUsageGroup, Money, NamedUsageGroup, RecentUsage, SessionOrigin,
-    TokenTotals, TokenUsage, ToolUsageGroup, TurnUsageContext, UsageAgentType, UsageOutcome,
-    UsageRecord, UsageSnapshot, UsageSummary, UsageTiming, UsageTool, UsageValueError,
+    AgentUsageGroup, MeteredAmount, ModelUsageGroup, Money, NamedUsageGroup, ObservedMetric,
+    RecentUsage, SessionOrigin, TokenTotals, TokenUsage, ToolUsageGroup, TurnMeteringUpdate,
+    TurnUsageContext, UnavailableReason, UsageAgentType, UsageOutcome, UsageRecord, UsageSnapshot,
+    UsageSummary, UsageTiming, UsageTool, UsageTurnStatus, UsageValueError,
 };
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{
