@@ -21,7 +21,7 @@ workspace = true
 # (temp + fsync + rename, cyril-0v42), and `serde_path_to_error` for exact
 # field paths in workflow wire-rejection warnings (`convert/kas/workflow.rs`
 # deserialize).
-kas = ["tokio/fs", "tokio/io-util", "dep:rusqlite", "dep:serde_path_to_error", "dep:tempfile"]
+kas = ["tokio/fs", "tokio/io-util", "dep:serde_path_to_error", "dep:tempfile"]
 # Compiles the `test_support` module (CaptureWriter, must_succeed,
 # tracing_capture_lock) into the lib so downstream crates' test suites can
 # reuse it. Intended for `[dev-dependencies]` only — never enable it from a
@@ -43,7 +43,7 @@ agent-client-protocol = { workspace = true }
 async-trait = { workspace = true }
 tokio-util = { workspace = true }
 futures-util = { workspace = true }
-rusqlite = { workspace = true, optional = true }
+rusqlite = { workspace = true }
 tempfile = { workspace = true, optional = true }
 # Only compiled in via the `test-support` feature — `test_support` implements
 # `MakeWriter` for its capture buffer. Regular test builds get the crate from

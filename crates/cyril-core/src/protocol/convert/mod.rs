@@ -57,6 +57,32 @@ pub(crate) fn to_model_info(info: &acp::ModelInfo) -> ModelInfo {
         info.description.clone(),
     )
 }
+/// Convert standard ACP prompt-response usage without leaking ACP types.
+pub(crate) fn to_token_usage(usage: &acp::Usage) -> TokenUsage {
+    TokenUsage::new(
+        usage.total_tokens,
+        usage.input_tokens,
+        usage.output_tokens,
+        usage.thought_tokens,
+        usage.cached_read_tokens,
+        usage.cached_write_tokens,
+    )
+}
+
+fn to_money(cost: &acp::Cost) -> Option<Money> {
+    match Money::try_new(cost.amount, cost.currency.clone()) {
+        Ok(money) => Some(money),
+        Err(error) => {
+            tracing::warn!(
+                amount = cost.amount,
+                currency = cost.currency,
+                error = %error,
+                "invalid ACP cumulative usage cost, ignoring cost"
+            );
+            None
+        }
+    }
+}
 
 /// Build a `SessionCreated` notification from the mode/model state returned
 /// by `session/new` or `session/load`. Consolidates the ACP→cyril conversion
@@ -461,6 +487,7 @@ pub(crate) fn session_update_to_notification(
             Some(Notification::UsageUpdated {
                 used: usage.used,
                 size: usage.size,
+                cost: usage.cost.as_ref().and_then(to_money),
             })
         }
         _ => {
@@ -2545,6 +2572,37 @@ mod tests {
         assert!(
             checked.contains(&"session_info_update".to_string()),
             "the KAS-distinctive session_info_update variant must be covered; got {checked:?}"
+        );
+    }
+
+    #[test]
+    fn captured_omp_prompt_usage_maps_exactly() {
+        let capture =
+            include_str!("../../../../../experiments/conductor-spike/omp-usage-update-2turn.jsonl");
+        let actual: Vec<TokenUsage> = capture
+            .lines()
+            .filter_map(|line| {
+                let frame: serde_json::Value =
+                    serde_json::from_str(line).expect("captured frame is JSON");
+                let result = frame.get("msg")?.get("result")?;
+                result.get("usage")?;
+                let response: acp::PromptResponse =
+                    serde_json::from_value(result.clone()).expect("captured prompt response");
+                response.usage.as_ref().map(to_token_usage)
+            })
+            .collect();
+        assert_eq!(
+            actual,
+            vec![
+                TokenUsage::new(19_446, 19_428, 18, None, None, None),
+                TokenUsage::new(19_464, 259, 5, None, Some(19_200), None),
+            ]
+        );
+        assert!(
+            acp::PromptResponse::new(acp::StopReason::EndTurn)
+                .usage
+                .is_none(),
+            "absent standard usage must stay absent"
         );
     }
 }

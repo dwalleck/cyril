@@ -541,7 +541,7 @@ impl UiState {
                 }
                 true
             }
-            Notification::UsageUpdated { used, size } => {
+            Notification::UsageUpdated { used, size, .. } => {
                 if *size == 0 {
                     // `size == 0` is protocol-meaningless; don't claim state
                     // changed (beyond a stall chip this frame already cleared).
@@ -556,6 +556,9 @@ impl UiState {
                 let pct = (*used as f64 / *size as f64) * 100.0;
                 self.context_usage = Some(ContextUsage::new(pct).percentage());
                 true
+            }
+            Notification::UsageSessionStarted { .. } | Notification::TurnUsageCaptured(_) => {
+                stall_cleared
             }
             Notification::ContextBreakdownUpdated {
                 usage_percentage,
@@ -5852,6 +5855,7 @@ mod tests {
         let changed = state.apply_notification(&Notification::UsageUpdated {
             used: 80_000,
             size: 200_000,
+            cost: None,
         });
         assert!(changed);
         let pct = state.context_usage().unwrap_or(0.0);
@@ -5864,6 +5868,7 @@ mod tests {
         state.apply_notification(&Notification::UsageUpdated {
             used: 250_000,
             size: 200_000,
+            cost: None,
         });
         let pct = state.context_usage().unwrap_or(-1.0);
         assert!(
@@ -5875,7 +5880,11 @@ mod tests {
     #[test]
     fn ui_state_usage_updated_zero_size_returns_false() {
         let mut state = UiState::new(500);
-        let changed = state.apply_notification(&Notification::UsageUpdated { used: 100, size: 0 });
+        let changed = state.apply_notification(&Notification::UsageUpdated {
+            used: 100,
+            size: 0,
+            cost: None,
+        });
         assert!(!changed, "size=0 should not claim state changed");
         assert!(state.context_usage().is_none());
     }

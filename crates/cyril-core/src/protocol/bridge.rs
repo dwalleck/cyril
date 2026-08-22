@@ -3,16 +3,16 @@ use std::sync::Arc;
 
 use tokio::sync::mpsc;
 
-use crate::protocol::convert::session_created_from_response;
+use crate::protocol::convert::{session_created_from_response, to_token_usage};
 use crate::protocol::engine::{Engine, V2Engine};
 use crate::protocol::turn_mediator::{BeginTurn, Disposition, TurnMediator};
-use crate::types::StopReason;
 use crate::types::agent_command::AgentCommand;
 use crate::types::agent_engine::AgentEngine;
 use crate::types::event::{BridgeCommand, Notification, PermissionRequest, RoutedNotification};
 use crate::types::kas_hooks::KasHooksMode;
 use crate::types::kas_spawn::KasSpawn;
 use crate::types::present_as::PresentAs;
+use crate::types::{SessionOrigin, StopReason};
 
 /// Channel capacities
 const COMMAND_CAPACITY: usize = 32;
@@ -1452,6 +1452,19 @@ async fn run_loop(
                         steering_unsupported.remove(&crate::types::SessionId::new(
                             response.session_id.to_string(),
                         ));
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::UsageSessionStarted {
+                                session_id: crate::types::SessionId::new(
+                                    response.session_id.to_string(),
+                                ),
+                                origin: SessionOrigin::Fresh,
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         let notification = session_created_from_response(
                             response.session_id.to_string(),
                             response.modes.as_ref(),
@@ -1534,6 +1547,7 @@ async fn run_loop(
                 // ADR-0004: the synthesized TurnCompleted goes to the INTERNAL
                 // channel, so the loop is the single observer that clears the flag.
                 let turn_tx = inbound_tx.clone();
+                let usage_session_id = session_id.clone();
                 let handle = tokio::task::spawn_local(async move {
                     // One TurnCompleted construction for both arms (success and
                     // transport error) so the terminal marker can't drift between
@@ -1541,8 +1555,11 @@ async fn run_loop(
                     // RoutedNotification envelope rather than inside TurnCompleted,
                     // so this construction stayed single and the stamp is applied
                     // once, below.
-                    let stop_reason = match turn_conn.prompt(request).await {
-                        Ok(response) => crate::protocol::convert::to_stop_reason(response.stop_reason),
+                    let (stop_reason, usage) = match turn_conn.prompt(request).await {
+                        Ok(response) => (
+                            crate::protocol::convert::to_stop_reason(response.stop_reason),
+                            response.usage.as_ref().map(to_token_usage),
+                        ),
                         Err(e) => {
                             tracing::error!(error = %e, "prompt failed");
                             // cyril-l7tw C1: surface the failure to the App BEFORE
@@ -1561,9 +1578,19 @@ async fn run_loop(
                             // UI from "busy". App-gone is detected by the command
                             // loop's own recv() ending, so a failed send here only
                             // means the App already left.
-                            StopReason::EndTurn
+                            (StopReason::EndTurn, None)
                         }
                     };
+                    if let Some(usage) = usage {
+                        let routed = RoutedNotification::scoped(
+                            usage_session_id,
+                            Notification::TurnUsageCaptured(usage),
+                        )
+                        .with_turn(turn_owner);
+                        if let Err(e) = turn_tx.send(routed).await {
+                            tracing::debug!(error = %e, "turn usage send failed (App gone)");
+                        }
+                    }
                     let note = Notification::TurnCompleted { stop_reason };
                     // cyril-a71q: stamp the owner. This completion is synthesized
                     // from a source the bridge owns (the prompt RPC), so the turn
@@ -1739,6 +1766,17 @@ async fn run_loop(
                         // id may carry a stale unsupported mark from a prior life.
                         steering_unsupported.remove(&session_id);
                         tracing::info!(session_id = session_id.as_str(), "session loaded");
+                        if notify_or_closed(
+                            &channels.notification_tx,
+                            Notification::UsageSessionStarted {
+                                session_id: session_id.clone(),
+                                origin: SessionOrigin::Loaded,
+                            },
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         let notification = session_created_from_response(
                             session_id.as_str().to_string(),
                             response.modes.as_ref(),
