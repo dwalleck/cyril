@@ -1067,15 +1067,19 @@ mod tests {
         std::thread::sleep(Duration::from_millis(10));
         let mut file = std::fs::OpenOptions::new().append(true).open(&jsonl)?;
         use std::io::Write as _;
-        writeln!(
-            file,
-            "{}",
-            r#"{"kind":"AssistantMessage","data":{"content":[{"kind":"toolUse","data":{"toolUseId":"new","name":"write","input":{"text":"é"}}}]}}"#
+        file.write_all(
+            concat!(
+                r#"{"kind":"AssistantMessage","data":{"content":[{"kind":"toolUse","data":{"toolUseId":"new","name":"write","input":{"text":"é"}}}]}}"#,
+                "\n"
+            )
+            .as_bytes(),
         )?;
-        writeln!(
-            file,
-            "{}",
-            r#"{"kind":"ToolResults","data":{"content":[{"kind":"toolResult","data":{"toolUseId":"new","content":"done","status":"success"}}]}}"#
+        file.write_all(
+            concat!(
+                r#"{"kind":"ToolResults","data":{"content":[{"kind":"toolResult","data":{"toolUseId":"new","content":"done","status":"success"}}]}}"#,
+                "\n"
+            )
+            .as_bytes(),
         )?;
         handle.enrich(UsageRecordId::new(7), session, KiroSidecarKind::V2);
         let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
