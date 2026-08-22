@@ -5942,14 +5942,16 @@ mod tests {
 
     #[test]
     fn usage_panel_page_and_scroll_state() {
-        let mut snapshot = cyril_core::types::UsageSnapshot::default();
-        snapshot.providers = ["alpha", "beta", "gamma"]
-            .into_iter()
-            .map(|name| cyril_core::types::NamedUsageGroup {
-                name: Some(name.to_owned()),
-                summary: cyril_core::types::UsageSummary::default(),
-            })
-            .collect();
+        let snapshot = cyril_core::types::UsageSnapshot {
+            providers: ["alpha", "beta", "gamma"]
+                .into_iter()
+                .map(|name| cyril_core::types::NamedUsageGroup {
+                    name: Some(name.to_owned()),
+                    summary: cyril_core::types::UsageSummary::default(),
+                })
+                .collect(),
+            ..Default::default()
+        };
         let mut state = UiState::new(500);
         state.show_usage_panel(snapshot);
         assert_eq!(

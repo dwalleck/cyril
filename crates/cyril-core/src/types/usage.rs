@@ -449,7 +449,10 @@ mod tests {
                 Err(UsageValueError::InvalidCurrency)
             );
         }
-        let zero = Money::try_new(0.0, "USD").expect("explicit zero is valid");
+        let zero = match Money::try_new(0.0, "USD") {
+            Ok(zero) => zero,
+            Err(_) => panic!("explicit zero is valid"),
+        };
         assert_eq!(zero.amount(), 0.0);
     }
 

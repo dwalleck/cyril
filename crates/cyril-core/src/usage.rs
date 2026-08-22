@@ -991,6 +991,7 @@ fn tool_kind_from_name(value: &str) -> Option<ToolKind> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::must_succeed;
     use crate::types::{AgentMessage, ToolCallStatus};
 
     fn context(session: &str, model: Option<&str>) -> TurnUsageContext {
@@ -1022,17 +1023,18 @@ mod tests {
     }
 
     fn complete(observer: &mut UsageObserver, session: &str, now: Instant) -> UsageRecord {
-        observer
-            .apply(
-                &scoped(
-                    session,
-                    Notification::TurnCompleted {
-                        stop_reason: StopReason::EndTurn,
-                    },
-                ),
-                now,
-            )
-            .expect("pending turn completes")
+        let Some(record) = observer.apply(
+            &scoped(
+                session,
+                Notification::TurnCompleted {
+                    stop_reason: StopReason::EndTurn,
+                },
+            ),
+            now,
+        ) else {
+            panic!("pending turn completes");
+        };
+        record
     }
 
     #[test]
@@ -1040,9 +1042,10 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "s", SessionOrigin::Fresh, start);
-        observer
-            .begin_turn(context("s", None), start, 100)
-            .expect("begin turn");
+        must_succeed(
+            observer.begin_turn(context("s", None), start, 100),
+            "begin turn",
+        );
         observer.apply(
             &scoped(
                 "s",
@@ -1082,50 +1085,62 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "fresh", SessionOrigin::Fresh, start);
-        observer
-            .begin_turn(context("fresh", None), start, 1)
-            .expect("begin first turn");
+        must_succeed(
+            observer.begin_turn(context("fresh", None), start, 1),
+            "begin first turn",
+        );
         observer.apply(
             &scoped(
                 "fresh",
                 Notification::UsageUpdated {
                     used: 1,
                     size: 10,
-                    cost: Some(Money::try_new(0.003_907_2, "USD").expect("valid cost")),
+                    cost: Some(must_succeed(
+                        Money::try_new(0.003_907_2, "USD"),
+                        "valid cost",
+                    )),
                 },
             ),
             start,
         );
         let first = complete(&mut observer, "fresh", start);
-        assert!((first.cost().expect("first cost").amount() - 0.003_907_2).abs() < 1e-12);
+        let Some(first_cost) = first.cost() else {
+            panic!("first cost");
+        };
+        assert!((first_cost.amount() - 0.003_907_2).abs() < 1e-12);
 
-        observer
-            .begin_turn(context("fresh", None), start, 2)
-            .expect("begin second turn");
+        must_succeed(
+            observer.begin_turn(context("fresh", None), start, 2),
+            "begin second turn",
+        );
         observer.apply(
             &scoped(
                 "fresh",
                 Notification::UsageUpdated {
                     used: 2,
                     size: 10,
-                    cost: Some(Money::try_new(0.004_349, "USD").expect("valid cost")),
+                    cost: Some(must_succeed(Money::try_new(0.004_349, "USD"), "valid cost")),
                 },
             ),
             start,
         );
         let second = complete(&mut observer, "fresh", start);
-        assert!((second.cost().expect("second cost").amount() - 0.000_441_8).abs() < 1e-12);
+        let Some(second_cost) = second.cost() else {
+            panic!("second cost");
+        };
+        assert!((second_cost.amount() - 0.000_441_8).abs() < 1e-12);
 
-        observer
-            .begin_turn(context("fresh", None), start, 3)
-            .expect("begin reset turn");
+        must_succeed(
+            observer.begin_turn(context("fresh", None), start, 3),
+            "begin reset turn",
+        );
         observer.apply(
             &scoped(
                 "fresh",
                 Notification::UsageUpdated {
                     used: 3,
                     size: 10,
-                    cost: Some(Money::try_new(0.001, "EUR").expect("valid cost")),
+                    cost: Some(must_succeed(Money::try_new(0.001, "EUR"), "valid cost")),
                 },
             ),
             start,
@@ -1138,32 +1153,34 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "loaded", SessionOrigin::Loaded, start);
-        observer
-            .begin_turn(context("loaded", None), start, 1)
-            .expect("begin resumed turn");
+        must_succeed(
+            observer.begin_turn(context("loaded", None), start, 1),
+            "begin resumed turn",
+        );
         observer.apply(
             &scoped(
                 "loaded",
                 Notification::UsageUpdated {
                     used: 1,
                     size: 10,
-                    cost: Some(Money::try_new(9.0, "USD").expect("valid cost")),
+                    cost: Some(must_succeed(Money::try_new(9.0, "USD"), "valid cost")),
                 },
             ),
             start,
         );
         assert!(complete(&mut observer, "loaded", start).cost().is_none());
 
-        observer
-            .begin_turn(context("loaded", None), start, 2)
-            .expect("begin next turn");
+        must_succeed(
+            observer.begin_turn(context("loaded", None), start, 2),
+            "begin next turn",
+        );
         observer.apply(
             &scoped(
                 "loaded",
                 Notification::UsageUpdated {
                     used: 2,
                     size: 10,
-                    cost: Some(Money::try_new(9.25, "USD").expect("valid cost")),
+                    cost: Some(must_succeed(Money::try_new(9.25, "USD"), "valid cost")),
                 },
             ),
             start,
@@ -1181,16 +1198,17 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "s", SessionOrigin::Fresh, start);
-        observer
-            .begin_turn(context("s", None), start, 1)
-            .expect("begin turn");
+        must_succeed(
+            observer.begin_turn(context("s", None), start, 1),
+            "begin turn",
+        );
         observer.apply(
             &scoped(
                 "s",
                 Notification::UsageUpdated {
                     used: 1,
                     size: 10,
-                    cost: Some(Money::try_new(0.5, "USD").expect("valid cost")),
+                    cost: Some(must_succeed(Money::try_new(0.5, "USD"), "valid cost")),
                 },
             ),
             start,
@@ -1208,9 +1226,10 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "s", SessionOrigin::Fresh, start);
-        observer
-            .begin_turn(context("s", None), start, 1)
-            .expect("begin turn");
+        must_succeed(
+            observer.begin_turn(context("s", None), start, 1),
+            "begin turn",
+        );
         let read = ToolCall::new(
             ToolCallId::new("a"),
             "Read".into(),
@@ -1244,13 +1263,12 @@ mod tests {
     fn record(
         session: &str,
         model: Option<&str>,
-        tokens: Option<TokenUsage>,
-        cost: Option<Money>,
-        duration_ms: u64,
-        ttft_ms: Option<u64>,
-        error: Option<&str>,
+        usage: (Option<TokenUsage>, Option<Money>, Option<&str>),
+        timing: (u64, Option<u64>),
         tools: Vec<UsageTool>,
     ) -> UsageRecord {
+        let (tokens, cost, error) = usage;
+        let (duration_ms, ttft_ms) = timing;
         UsageRecord::new(
             context(session, model),
             UsageTiming::new(1, duration_ms, ttft_ms),
@@ -1261,90 +1279,107 @@ mod tests {
 
     #[test]
     fn overview_matches_independent_omp_formula_oracle() {
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
-        log.append(&record(
-            "s1",
-            Some("p/m"),
-            Some(TokenUsage::new(150, 100, 20, None, Some(30), None)),
-            Some(Money::try_new(1.0, "USD").expect("valid cost")),
-            100,
-            Some(25),
-            None,
-            Vec::new(),
-        ))
-        .expect("append first");
-        log.append(&record(
-            "s2",
-            Some("q/n"),
-            Some(TokenUsage::new(100, 50, 40, None, Some(10), None)),
-            Some(Money::try_new(2.0, "EUR").expect("valid cost")),
-            200,
-            None,
-            Some("boom"),
-            Vec::new(),
-        ))
-        .expect("append second");
-        let overview = log.snapshot().expect("snapshot").overview;
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        must_succeed(
+            log.append(&record(
+                "s1",
+                Some("p/m"),
+                (
+                    Some(TokenUsage::new(150, 100, 20, None, Some(30), None)),
+                    Some(must_succeed(Money::try_new(1.0, "USD"), "valid cost")),
+                    None,
+                ),
+                (100, Some(25)),
+                Vec::new(),
+            )),
+            "append first",
+        );
+        must_succeed(
+            log.append(&record(
+                "s2",
+                Some("q/n"),
+                (
+                    Some(TokenUsage::new(100, 50, 40, None, Some(10), None)),
+                    Some(must_succeed(Money::try_new(2.0, "EUR"), "valid cost")),
+                    Some("boom"),
+                ),
+                (200, None),
+                Vec::new(),
+            )),
+            "append second",
+        );
+        let overview = must_succeed(log.snapshot(), "snapshot").overview;
         assert_eq!(overview.requests, 2);
         assert_eq!(overview.errors, 1);
-        let totals = overview.tokens.expect("token totals");
+        let Some(totals) = overview.tokens else {
+            panic!("token totals");
+        };
         assert_eq!(totals.total, 250);
         assert_eq!(totals.input, 150);
         assert_eq!(totals.output, 60);
         assert_eq!(totals.cached_read, 40);
-        assert!((overview.cache_rate.expect("cache rate") - 40.0 / 190.0).abs() < 1e-12);
-        assert!((overview.avg_duration_ms.expect("duration") - 150.0).abs() < 1e-12);
+        let Some(cache_rate) = overview.cache_rate else {
+            panic!("cache rate");
+        };
+        assert!((cache_rate - 40.0 / 190.0).abs() < 1e-12);
+        let Some(avg_duration_ms) = overview.avg_duration_ms else {
+            panic!("duration");
+        };
+        assert!((avg_duration_ms - 150.0).abs() < 1e-12);
         assert_eq!(overview.avg_ttft_ms, Some(25.0));
-        assert!((overview.avg_tokens_per_second.expect("tps") - 200.0).abs() < 1e-12);
+        let Some(avg_tokens_per_second) = overview.avg_tokens_per_second else {
+            panic!("tps");
+        };
+        assert!((avg_tokens_per_second - 200.0).abs() < 1e-12);
         assert_eq!(overview.costs.len(), 2);
     }
 
     #[test]
     fn append_is_atomic_across_record_and_tools() {
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
-        log.connection
-            .execute_batch(
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        must_succeed(
+            log.connection.execute_batch(
                 "CREATE TRIGGER reject_usage_tool BEFORE INSERT ON usage_tools
-                 BEGIN SELECT RAISE(ABORT, 'forced child failure'); END;",
-            )
-            .expect("install failure trigger");
+                     BEGIN SELECT RAISE(ABORT, 'forced child failure'); END;",
+            ),
+            "install failure trigger",
+        );
         let result = log.append(&record(
             "s",
             None,
-            None,
-            None,
-            1,
-            None,
-            None,
+            (None, None, None),
+            (1, None),
             vec![UsageTool::new(ToolKind::Read, false)],
         ));
         assert!(result.is_err());
-        let count: i64 = log
-            .connection
-            .query_row("SELECT COUNT(*) FROM usage_turns", [], |row| row.get(0))
-            .expect("count parents");
+        let count: i64 = must_succeed(
+            log.connection
+                .query_row("SELECT COUNT(*) FROM usage_turns", [], |row| row.get(0)),
+            "count parents",
+        );
         assert_eq!(count, 0);
     }
 
     #[test]
     #[ignore = "reference-workstation append budget"]
     fn append_100_tools_budget_reference() {
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         let tools = (0..100)
             .map(|_| UsageTool::new(ToolKind::Read, false))
             .collect();
         let record = record(
             "s",
             Some("provider/model"),
-            Some(TokenUsage::new(10, 4, 6, None, None, None)),
-            Some(Money::try_new(0.1, "USD").expect("valid cost")),
-            10,
-            Some(2),
-            None,
+            (
+                Some(TokenUsage::new(10, 4, 6, None, None, None)),
+                Some(must_succeed(Money::try_new(0.1, "USD"), "valid cost")),
+                None,
+            ),
+            (10, Some(2)),
             tools,
         );
         let started = Instant::now();
-        log.append(&record).expect("append 100-tool turn");
+        must_succeed(log.append(&record), "append 100-tool turn");
         assert!(
             started.elapsed() <= Duration::from_millis(10),
             "100-tool usage append exceeded 10ms: {:?}",
@@ -1353,15 +1388,16 @@ mod tests {
     }
     #[test]
     fn invalid_values_fail_without_defaulting() {
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         let invalid = record(
             "s",
             None,
-            Some(TokenUsage::new(u64::MAX, 0, 0, None, None, None)),
-            None,
-            1,
-            None,
-            None,
+            (
+                Some(TokenUsage::new(u64::MAX, 0, 0, None, None, None)),
+                None,
+                None,
+            ),
+            (1, None),
             Vec::new(),
         );
         assert!(matches!(
@@ -1371,7 +1407,10 @@ mod tests {
                 value: u64::MAX
             })
         ));
-        assert_eq!(log.snapshot().expect("snapshot").overview.requests, 0);
+        assert_eq!(
+            must_succeed(log.snapshot(), "snapshot").overview.requests,
+            0
+        );
     }
 
     #[test]
@@ -1379,9 +1418,10 @@ mod tests {
         let start = Instant::now();
         let mut observer = UsageObserver::new();
         start_session(&mut observer, "s", SessionOrigin::Fresh, start);
-        observer
-            .begin_turn(context("s", None), start, 1)
-            .expect("begin error turn");
+        must_succeed(
+            observer.begin_turn(context("s", None), start, 1),
+            "begin error turn",
+        );
         observer.apply(
             &scoped(
                 "s",
@@ -1395,9 +1435,9 @@ mod tests {
         let record = complete(&mut observer, "s", start + Duration::from_millis(4));
         assert!(record.tokens().is_none());
         assert_eq!(record.error(), Some("prompt: failed"));
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
-        log.append(&record).expect("append error");
-        let snapshot = log.snapshot().expect("snapshot");
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        must_succeed(log.append(&record), "append error");
+        let snapshot = must_succeed(log.snapshot(), "snapshot");
         assert_eq!(snapshot.overview.requests, 1);
         assert_eq!(snapshot.overview.errors, 1);
         assert!(snapshot.overview.tokens.is_none());
@@ -1407,21 +1447,24 @@ mod tests {
 
     #[test]
     fn breakdowns_are_identity_agnostic() {
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         for (session, model) in [("a", "openai-codex/m"), ("b", "beta/n")] {
-            log.append(&record(
-                session,
-                Some(model),
-                Some(TokenUsage::new(10, 4, 6, None, None, None)),
-                None,
-                10,
-                Some(2),
-                None,
-                vec![UsageTool::new(ToolKind::Read, false)],
-            ))
-            .expect("append identity");
+            must_succeed(
+                log.append(&record(
+                    session,
+                    Some(model),
+                    (
+                        Some(TokenUsage::new(10, 4, 6, None, None, None)),
+                        None,
+                        None,
+                    ),
+                    (10, Some(2)),
+                    vec![UsageTool::new(ToolKind::Read, false)],
+                )),
+                "append identity",
+            );
         }
-        let snapshot = log.snapshot().expect("snapshot");
+        let snapshot = must_succeed(log.snapshot(), "snapshot");
         assert_eq!(snapshot.providers.len(), 2);
         assert_eq!(snapshot.models.len(), 2);
         for group in &snapshot.providers {
@@ -1435,36 +1478,39 @@ mod tests {
 
     #[test]
     fn snapshot_is_bounded_for_large_history() {
-        let mut log = UsageLog::open_in_memory().expect("in-memory log");
-        let transaction = log.connection.transaction().expect("bulk transaction");
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        let transaction = must_succeed(log.connection.transaction(), "bulk transaction");
         {
-            let mut statement = transaction
-                .prepare(
+            let mut statement = must_succeed(
+                transaction.prepare(
                     "INSERT INTO usage_turns (
                         session_id, folder, model, provider, agent_type,
                         timestamp_ms, duration_ms, stop_reason,
                         total_tokens, input_tokens, output_tokens
                      ) VALUES (?, '/tmp', 'm', 'p', 'main', ?, 10, 'end_turn', 3, 1, 2)",
-                )
-                .expect("prepare seed");
+                ),
+                "prepare seed",
+            );
             for index in 0..100_000_i64 {
                 let error: Option<&str> = (index < 30).then_some("error");
-                statement
-                    .execute(params![format!("s{index}"), index])
-                    .expect("seed row");
+                must_succeed(
+                    statement.execute(params![format!("s{index}"), index]),
+                    "seed row",
+                );
                 if let Some(error) = error {
-                    transaction
-                        .execute(
+                    must_succeed(
+                        transaction.execute(
                             "UPDATE usage_turns SET error = ? WHERE id = last_insert_rowid()",
                             [error],
-                        )
-                        .expect("mark error");
+                        ),
+                        "mark error",
+                    );
                 }
             }
         }
-        transaction.commit().expect("commit seed");
+        must_succeed(transaction.commit(), "commit seed");
         let started = Instant::now();
-        let snapshot = log.snapshot().expect("bounded snapshot");
+        let snapshot = must_succeed(log.snapshot(), "bounded snapshot");
         assert!(started.elapsed() <= Duration::from_secs(2));
         assert_eq!(snapshot.overview.requests, 100_000);
         assert_eq!(snapshot.recent.len(), 20);

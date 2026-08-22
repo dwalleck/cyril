@@ -359,6 +359,10 @@ mod tests {
     use ratatui::backend::TestBackend;
 
     fn sample_snapshot() -> UsageSnapshot {
+        let cost = match Money::try_new(0.125, "USD") {
+            Ok(cost) => cost,
+            Err(error) => panic!("valid cost: {error}"),
+        };
         let summary = UsageSummary {
             requests: 2,
             errors: 1,
@@ -370,7 +374,7 @@ mod tests {
                 cached_read: 40,
                 cached_write: 0,
             }),
-            costs: vec![Money::try_new(0.125, "USD").expect("valid cost")],
+            costs: vec![cost],
             cache_rate: Some(0.25),
             avg_duration_ms: Some(150.0),
             avg_ttft_ms: Some(25.0),
