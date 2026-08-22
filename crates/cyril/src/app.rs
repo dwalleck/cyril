@@ -11,7 +11,7 @@ use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, Comma
 use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
 use cyril_core::types::*;
-use cyril_core::usage::{UsageLog, UsageObserver};
+use cyril_core::usage::{UsageLog, UsageObserver, UsageWrite};
 use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
 use cyril_ui::traits::{Activity, TuiState, approval_origin_label};
@@ -488,12 +488,18 @@ impl App {
             &routed.notification,
             Notification::UsageSessionStarted { .. } | Notification::TurnUsageCaptured(_)
         );
-        if let Some(record) = self.usage_observer.apply(&routed, Instant::now())
-            && let Err(error) = self.usage_log.append(&record)
-        {
-            tracing::error!(error = %error, "persist usage turn failed");
-            self.ui_state
-                .add_system_message(format!("Usage recording failed: {error}"));
+        if let Some(write) = self.usage_observer.apply(&routed, Instant::now()) {
+            let result = match write {
+                UsageWrite::Turn(record) => self.usage_log.append(&record),
+                UsageWrite::Context { sample, compaction } => {
+                    self.usage_log.record_context(&sample, compaction.as_ref())
+                }
+            };
+            if let Err(error) = result {
+                tracing::error!(error = %error, "persist usage data failed");
+                self.ui_state
+                    .add_system_message(format!("Usage recording failed: {error}"));
+            }
         }
         let RoutedNotification {
             session_id,
