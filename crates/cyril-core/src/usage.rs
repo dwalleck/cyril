@@ -3,7 +3,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use rusqlite::{Connection, OptionalExtension, Row, TransactionBehavior, params};
+use rusqlite::{Connection, OptionalExtension, Row, Transaction, TransactionBehavior, params};
 use thiserror::Error;
 
 use crate::types::{
@@ -12,8 +12,8 @@ use crate::types::{
     RecentUsage, RoutedNotification, SessionId, SessionOrigin, StopReason, TokenTotals, TokenUsage,
     ToolCall, ToolCallId, ToolCallStatus, ToolKind, ToolModelUsageGroup, ToolUsageGroup,
     TurnUsageContext, TurnUsageMetrics, UnavailableReason, UsageAgentType, UsageCompaction,
-    UsageContextSample, UsageContextSummary, UsageOutcome, UsageRecord, UsageSnapshot,
-    UsageSummary, UsageTiming, UsageTool, UsageTurnOutcome, UsageTurnStatus,
+    UsageContextSample, UsageContextSummary, UsageOutcome, UsageRecord, UsageRecordId,
+    UsageSnapshot, UsageSummary, UsageTiming, UsageTool, UsageTurnOutcome, UsageTurnStatus,
 };
 
 const RECENT_LIMIT: usize = 20;
@@ -21,6 +21,11 @@ const BUSY_TIMEOUT: Duration = Duration::from_millis(250);
 const STARTUP_BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 type ToolGroupKey = (Option<String>, String);
 type ModelGroupKey = (Option<String>, Option<String>);
+
+mod kiro_sidecar;
+pub use kiro_sidecar::{
+    UsageEnrichment, UsageEnrichmentHandle, UsageEnrichmentResult, spawn_usage_enrichment_worker,
+};
 
 #[derive(Debug, Error)]
 pub enum UsageError {
@@ -56,6 +61,8 @@ pub enum UsageError {
     UnsupportedSchema(i64),
     #[error("usage database contains invalid {field}: {value}")]
     CorruptValue { field: &'static str, value: String },
+    #[error("usage record {0} does not exist")]
+    RecordNotFound(i64),
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -64,9 +71,18 @@ pub enum UsageObserverError {
     TurnAlreadyPending(SessionId),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum KiroSidecarKind {
+    V2,
+    Kas,
+}
+
 #[derive(Debug)]
 pub enum UsageWrite {
-    Turn(UsageRecord),
+    Turn {
+        record: UsageRecord,
+        sidecar_kind: Option<KiroSidecarKind>,
+    },
     Context {
         sample: UsageContextSample,
         compaction: Option<UsageCompaction>,
@@ -102,6 +118,7 @@ struct PendingTurn {
     backend_gated: bool,
     tools: HashMap<ToolCallId, ObservedTool>,
     error: Option<String>,
+    sidecar_kind: Option<KiroSidecarKind>,
 }
 
 #[derive(Debug, Clone)]
@@ -168,6 +185,7 @@ impl UsageObserver {
                 metering_status: None,
                 provider_requests: None,
                 backend_gated: false,
+                sidecar_kind: None,
                 tools: HashMap::new(),
                 error: None,
             },
@@ -221,6 +239,7 @@ impl UsageObserver {
                     {
                         pending.charges = metering.charges().to_vec();
                     }
+                    pending.sidecar_kind = Some(KiroSidecarKind::V2);
                 }
                 context_usage
                     .as_ref()
@@ -235,6 +254,7 @@ impl UsageObserver {
                     if let Some(status) = update.status() {
                         pending.metering_status = Some(status.clone());
                     }
+                    pending.sidecar_kind = Some(KiroSidecarKind::Kas);
                     if let Some(request_ids) = update.request_ids() {
                         pending.provider_requests = match u64::try_from(request_ids.len()) {
                             Ok(count) => Some(count),
@@ -327,12 +347,11 @@ impl UsageObserver {
                     );
                     return None;
                 };
-                Some(UsageWrite::Turn(self.finish_turn(
-                    session_id,
-                    pending,
-                    *stop_reason,
-                    now,
-                )))
+                let sidecar_kind = pending.sidecar_kind;
+                Some(UsageWrite::Turn {
+                    record: self.finish_turn(session_id, pending, *stop_reason, now),
+                    sidecar_kind,
+                })
             }
             _ => None,
         }
@@ -772,13 +791,25 @@ impl UsageLog {
                 .map_err(UsageError::Configure)?;
             version = 3;
         }
-        if version != 3 {
+        if version == 3 {
+            transaction
+                .execute_batch(
+                    "ALTER TABLE usage_turns ADD COLUMN billed_provider TEXT;
+                     ALTER TABLE usage_turns ADD COLUMN billed_model TEXT;
+                     CREATE INDEX usage_turns_billed_model
+                        ON usage_turns(billed_provider, billed_model);
+                     PRAGMA user_version = 4;",
+                )
+                .map_err(UsageError::Configure)?;
+            version = 4;
+        }
+        if version != 4 {
             return Err(UsageError::UnsupportedSchema(version));
         }
         transaction.commit().map_err(UsageError::Configure)
     }
 
-    pub fn append(&mut self, record: &UsageRecord) -> Result<(), UsageError> {
+    pub fn append(&mut self, record: &UsageRecord) -> Result<UsageRecordId, UsageError> {
         let timestamp = sqlite_integer("timestamp_ms", record.timestamp_ms())?;
         let duration = sqlite_integer("duration_ms", record.duration_ms())?;
         let ttft = record
@@ -830,26 +861,7 @@ impl UsageLog {
             .map_err(UsageError::Write)?;
         let turn_id = transaction.last_insert_rowid();
         for tool in record.tools() {
-            transaction
-                .execute(
-                    "INSERT INTO usage_tools (
-                        turn_id, call_id, name, kind, failed, argument_chars, result_chars
-                     ) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    params![
-                        turn_id,
-                        tool.call_id().map(ToolCallId::as_str),
-                        tool.name(),
-                        tool_kind_name(tool.kind()),
-                        tool.failed(),
-                        tool.argument_chars()
-                            .map(|value| sqlite_integer("argument_chars", value))
-                            .transpose()?,
-                        tool.result_chars()
-                            .map(|value| sqlite_integer("result_chars", value))
-                            .transpose()?,
-                    ],
-                )
-                .map_err(UsageError::Write)?;
+            insert_usage_tool(&transaction, turn_id, tool)?;
         }
         for charge in record.charges() {
             transaction
@@ -865,8 +877,48 @@ impl UsageLog {
                 )
                 .map_err(UsageError::Write)?;
         }
+        transaction.commit().map_err(UsageError::Write)?;
+        Ok(UsageRecordId::new(turn_id))
+    }
+    pub fn enrich_record(
+        &mut self,
+        record_id: UsageRecordId,
+        billed_model_id: Option<&str>,
+        tools: &[UsageTool],
+    ) -> Result<(), UsageError> {
+        let (billed_provider, billed_model) =
+            crate::types::usage::split_model_identity(billed_model_id);
+        let transaction = self.connection.transaction().map_err(UsageError::Write)?;
+        let updated = transaction
+            .execute(
+                "UPDATE usage_turns
+                 SET billed_provider = CASE WHEN ? THEN ? ELSE billed_provider END,
+                     billed_model = CASE WHEN ? THEN ? ELSE billed_model END
+                 WHERE id = ?",
+                params![
+                    billed_model_id.is_some(),
+                    billed_provider,
+                    billed_model_id.is_some(),
+                    billed_model,
+                    record_id.get(),
+                ],
+            )
+            .map_err(UsageError::Write)?;
+        if updated != 1 {
+            return Err(UsageError::RecordNotFound(record_id.get()));
+        }
+        transaction
+            .execute(
+                "DELETE FROM usage_tools WHERE turn_id = ?",
+                [record_id.get()],
+            )
+            .map_err(UsageError::Write)?;
+        for tool in tools {
+            insert_usage_tool(&transaction, record_id.get(), tool)?;
+        }
         transaction.commit().map_err(UsageError::Write)
     }
+
     pub fn record_context(
         &mut self,
         sample: &UsageContextSample,
@@ -1067,8 +1119,12 @@ impl UsageLog {
 
     fn model_groups(&self) -> Result<Vec<ModelUsageGroup>, UsageError> {
         let sql = format!(
-            "SELECT provider, model, {SUMMARY_COLUMNS} FROM usage_turns \
-             GROUP BY provider, model ORDER BY COUNT(*) DESC, provider, model"
+            "SELECT COALESCE(billed_provider, provider), COALESCE(billed_model, model),
+                    {SUMMARY_COLUMNS}
+             FROM usage_turns
+             GROUP BY COALESCE(billed_provider, provider), COALESCE(billed_model, model)
+             ORDER BY COUNT(*) DESC, COALESCE(billed_provider, provider),
+                      COALESCE(billed_model, model)"
         );
         let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
         let costs = self.model_cost_totals()?;
@@ -1197,7 +1253,8 @@ impl UsageLog {
             ""
         };
         let sql = format!(
-            "SELECT id, session_id, folder, model, provider, agent_type,
+            "SELECT id, session_id, folder, COALESCE(billed_model, model),
+                    COALESCE(billed_provider, provider), agent_type,
                     timestamp_ms, duration_ms, ttft_ms, stop_reason, outcome,
                     provider_requests, token_availability, cost_availability,
                     total_tokens, input_tokens, output_tokens, thought_tokens,
@@ -1295,11 +1352,14 @@ impl UsageLog {
         let mut statement = self
             .connection
             .prepare(
-                "SELECT turns.provider, turns.model, charges.unit, charges.unit_plural,
-                        SUM(charges.amount)
+                "SELECT COALESCE(turns.billed_provider, turns.provider),
+                        COALESCE(turns.billed_model, turns.model),
+                        charges.unit, charges.unit_plural, SUM(charges.amount)
                  FROM usage_charges AS charges
                  JOIN usage_turns AS turns ON turns.id = charges.turn_id
-                 GROUP BY turns.provider, turns.model, charges.unit, charges.unit_plural
+                 GROUP BY COALESCE(turns.billed_provider, turns.provider),
+                          COALESCE(turns.billed_model, turns.model),
+                          charges.unit, charges.unit_plural
                  ORDER BY charges.unit, charges.unit_plural",
             )
             .map_err(UsageError::Query)?;
@@ -1344,9 +1404,13 @@ impl UsageLog {
         let mut statement = self
             .connection
             .prepare(
-                "SELECT provider, model, cost_currency, SUM(cost_amount) FROM usage_turns
+                "SELECT COALESCE(billed_provider, provider), COALESCE(billed_model, model),
+                        cost_currency, SUM(cost_amount)
+                 FROM usage_turns
                  WHERE cost_amount IS NOT NULL
-                 GROUP BY provider, model, cost_currency ORDER BY cost_currency",
+                 GROUP BY COALESCE(billed_provider, provider), COALESCE(billed_model, model),
+                          cost_currency
+                 ORDER BY cost_currency",
             )
             .map_err(UsageError::Query)?;
         let rows = statement
@@ -1430,12 +1494,17 @@ impl UsageLog {
         let mut statement = self
             .connection
             .prepare(
-                "SELECT tools.name, tools.kind, turns.provider, turns.model,
+                "SELECT tools.name, tools.kind,
+                        COALESCE(turns.billed_provider, turns.provider),
+                        COALESCE(turns.billed_model, turns.model),
                         COUNT(*), SUM(tools.failed)
                  FROM usage_tools AS tools
                  JOIN usage_turns AS turns ON turns.id = tools.turn_id
-                 GROUP BY tools.name, tools.kind, turns.provider, turns.model
-                 ORDER BY COUNT(*) DESC, turns.provider, turns.model",
+                 GROUP BY tools.name, tools.kind,
+                          COALESCE(turns.billed_provider, turns.provider),
+                          COALESCE(turns.billed_model, turns.model)
+                 ORDER BY COUNT(*) DESC, COALESCE(turns.billed_provider, turns.provider),
+                          COALESCE(turns.billed_model, turns.model)",
             )
             .map_err(UsageError::Query)?;
         let rows = statement
@@ -1493,6 +1562,34 @@ fn sqlite_tokens(tokens: &TokenUsage) -> Result<SqliteTokens, UsageError> {
 
 fn sqlite_integer(field: &'static str, value: u64) -> Result<i64, UsageError> {
     i64::try_from(value).map_err(|_| UsageError::IntegerRange { field, value })
+}
+
+fn insert_usage_tool(
+    transaction: &Transaction<'_>,
+    turn_id: i64,
+    tool: &UsageTool,
+) -> Result<(), UsageError> {
+    transaction
+        .execute(
+            "INSERT INTO usage_tools (
+                turn_id, call_id, name, kind, failed, argument_chars, result_chars
+             ) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            params![
+                turn_id,
+                tool.call_id().map(ToolCallId::as_str),
+                tool.name(),
+                tool_kind_name(tool.kind()),
+                tool.failed(),
+                tool.argument_chars()
+                    .map(|value| sqlite_integer("argument_chars", value))
+                    .transpose()?,
+                tool.result_chars()
+                    .map(|value| sqlite_integer("result_chars", value))
+                    .transpose()?,
+            ],
+        )
+        .map_err(UsageError::Write)?;
+    Ok(())
 }
 
 const SUMMARY_COLUMNS: &str = "
@@ -1991,7 +2088,7 @@ mod tests {
 
     fn turn(write: UsageWrite) -> UsageRecord {
         match write {
-            UsageWrite::Turn(record) => record,
+            UsageWrite::Turn { record, .. } => record,
             UsageWrite::Context { .. } => panic!("expected turn write"),
         }
     }
@@ -2001,7 +2098,7 @@ mod tests {
             UsageWrite::Context { sample, compaction } => log
                 .record_context(&sample, compaction.as_ref())
                 .expect("persist context"),
-            UsageWrite::Turn(_) => panic!("expected context write"),
+            UsageWrite::Turn { .. } => panic!("expected context write"),
         }
     }
 
@@ -2676,6 +2773,65 @@ mod tests {
         assert_eq!(group.models[0].errors, 1);
     }
 
+    #[test]
+    fn billed_model_wins_grouping_matrix() {
+        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let record_id = log
+            .append(&record(
+                "model",
+                Some("auto"),
+                None,
+                None,
+                10,
+                None,
+                None,
+                vec![UsageTool::new(ToolKind::Read, false)],
+            ))
+            .expect("append requested model");
+        let exact_tools = vec![UsageTool::enriched(
+            ToolCallId::new("call"),
+            "read_file",
+            ToolKind::Read,
+            false,
+            Some(7),
+            Some(2),
+        )];
+        log.enrich_record(record_id, Some("anthropic/claude-sonnet"), &exact_tools)
+            .expect("enrich billed model");
+        log.enrich_record(record_id, Some("anthropic/claude-sonnet"), &exact_tools)
+            .expect("repeat enrichment is idempotent");
+        let snapshot = log.snapshot().expect("snapshot");
+        assert_eq!(snapshot.models.len(), 1);
+        assert_eq!(snapshot.models[0].provider.as_deref(), Some("anthropic"));
+        assert_eq!(snapshot.models[0].model.as_deref(), Some("claude-sonnet"));
+        assert_eq!(snapshot.tools.len(), 1);
+        assert_eq!(snapshot.tools[0].name.as_deref(), Some("read_file"));
+        assert_eq!(snapshot.tools[0].calls, 1);
+        assert_eq!(snapshot.recent[0].provider.as_deref(), Some("anthropic"));
+        assert_eq!(snapshot.recent[0].model.as_deref(), Some("claude-sonnet"));
+
+        log.connection
+            .execute_batch(
+                "CREATE TRIGGER reject_enriched_tool BEFORE INSERT ON usage_tools
+                 BEGIN SELECT RAISE(ABORT, 'forced enrichment failure'); END;",
+            )
+            .expect("failure trigger");
+        assert!(
+            log.enrich_record(record_id, Some("wrong/model"), &exact_tools)
+                .is_err()
+        );
+        let after_failure = log.snapshot().expect("snapshot after rollback");
+        assert_eq!(
+            after_failure.models[0].model.as_deref(),
+            Some("claude-sonnet")
+        );
+        assert_eq!(after_failure.tools[0].name.as_deref(), Some("read_file"));
+        assert!(matches!(
+            log.enrich_record(UsageRecordId::new(i64::MAX), None, &[]),
+            Err(UsageError::RecordNotFound(i64::MAX))
+        ));
+    }
+
     fn record(
         session: &str,
         model: Option<&str>,
@@ -2939,7 +3095,7 @@ mod tests {
                 .query_row("PRAGMA user_version", [], |row| row.get(0)),
             "schema version",
         );
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
         let snapshot = must_succeed(log.snapshot(), "migrated snapshot");
         assert_eq!(snapshot.overview.requests, 7);
         assert_eq!(snapshot.overview.successes, 1);
@@ -3062,7 +3218,7 @@ mod tests {
                     .query_row("PRAGMA user_version", [], |row| row.get(0)),
                 "schema version",
             );
-            assert_eq!(version, 3);
+            assert_eq!(version, 4);
         }
     }
 
@@ -3096,17 +3252,20 @@ mod tests {
 
     #[test]
     fn v2_schema_migrates_to_detail_tables() {
-        let log = UsageLog::open_in_memory().expect("version 3 log");
+        let log = UsageLog::open_in_memory().expect("version 4 log");
         let UsageLog { connection } = log;
         connection
             .execute_batch(
                 "DROP INDEX usage_tools_turn_call;
+                 DROP INDEX usage_turns_billed_model;
                  DROP TABLE usage_context_latest;
                  DROP TABLE usage_compactions;
                  ALTER TABLE usage_tools DROP COLUMN call_id;
                  ALTER TABLE usage_tools DROP COLUMN name;
                  ALTER TABLE usage_tools DROP COLUMN argument_chars;
                  ALTER TABLE usage_tools DROP COLUMN result_chars;
+                 ALTER TABLE usage_turns DROP COLUMN billed_provider;
+                 ALTER TABLE usage_turns DROP COLUMN billed_model;
                  PRAGMA user_version = 2;",
             )
             .expect("downgrade fixture to v2 shape");
@@ -3115,7 +3274,7 @@ mod tests {
             .connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .expect("schema version");
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
         let mut statement = migrated
             .connection
             .prepare("PRAGMA table_info(usage_tools)")

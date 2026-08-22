@@ -52,8 +52,8 @@ pub use usage::{
     ObservedMetric, RecentUsage, SessionOrigin, TokenTotals, TokenUsage, ToolModelUsageGroup,
     ToolUsageGroup, TurnMeteringUpdate, TurnUsageContext, TurnUsageMetrics, UnavailableReason,
     UsageAgentType, UsageCompaction, UsageContextSample, UsageContextSummary, UsageOutcome,
-    UsageRecord, UsageSnapshot, UsageSummary, UsageTiming, UsageTool, UsageTurnOutcome,
-    UsageTurnStatus, UsageValueError,
+    UsageRecord, UsageRecordId, UsageSnapshot, UsageSummary, UsageTiming, UsageTool,
+    UsageTurnOutcome, UsageTurnStatus, UsageValueError,
 };
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{

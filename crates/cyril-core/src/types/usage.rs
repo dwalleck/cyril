@@ -278,6 +278,20 @@ impl TokenUsage {
     }
 }
 
+/// Durable row identity returned after one turn commits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UsageRecordId(i64);
+
+impl UsageRecordId {
+    pub(crate) fn new(value: i64) -> Self {
+        Self(value)
+    }
+
+    pub fn get(self) -> i64 {
+        self.0
+    }
+}
+
 /// One distinct tool call observed during a turn.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UsageTool {
@@ -324,6 +338,25 @@ impl UsageTool {
 
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
+    }
+
+    pub fn enriched(
+        call_id: ToolCallId,
+        name: impl Into<String>,
+        kind: ToolKind,
+        failed: bool,
+        argument_chars: Option<u64>,
+        result_chars: Option<u64>,
+    ) -> Self {
+        let name = name.into();
+        Self {
+            call_id: Some(call_id),
+            name: Some(name).filter(|value| !value.is_empty()),
+            kind,
+            failed,
+            argument_chars,
+            result_chars,
+        }
     }
 
     pub fn kind(&self) -> ToolKind {
@@ -391,7 +424,7 @@ impl TurnUsageContext {
     }
 }
 
-fn split_model_identity(model_id: Option<&str>) -> (Option<String>, Option<String>) {
+pub(crate) fn split_model_identity(model_id: Option<&str>) -> (Option<String>, Option<String>) {
     let Some(raw) = model_id.filter(|value| !value.is_empty()) else {
         return (None, None);
     };

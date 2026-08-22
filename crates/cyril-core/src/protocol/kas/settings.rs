@@ -48,10 +48,7 @@ fn read_settings_at(path: &std::path::Path) -> Map<String, Value> {
 /// different path would silently fall back to empty settings for users who set
 /// `$KIRO_HOME` — exactly the bare-fallback-flags bug this handshake fixes.
 fn kiro_home_dir() -> Option<std::path::PathBuf> {
-    match std::env::var_os("KIRO_HOME") {
-        Some(h) if !h.is_empty() => Some(std::path::PathBuf::from(h)),
-        _ => crate::kiro_agent_config::home_dir().map(|home| home.join(".kiro")),
-    }
+    crate::kiro_agent_config::kiro_home_dir()
 }
 
 /// Read the global kiro-cli settings (`<kiro-home>/settings/cli.json`, where

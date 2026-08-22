@@ -11,7 +11,10 @@ use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, Comma
 use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
 use cyril_core::types::*;
-use cyril_core::usage::{UsageLog, UsageObserver, UsageWrite};
+use cyril_core::usage::{
+    UsageEnrichmentHandle, UsageEnrichmentResult, UsageLog, UsageObserver, UsageWrite,
+    spawn_usage_enrichment_worker,
+};
 use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
 use cyril_ui::traits::{Activity, TuiState, approval_origin_label};
@@ -50,6 +53,9 @@ pub struct App {
     /// Canonical live usage observer and durable aggregate source.
     usage_observer: UsageObserver,
     usage_log: UsageLog,
+    usage_enrichment: UsageEnrichmentHandle,
+    usage_enrichment_rx: mpsc::UnboundedReceiver<UsageEnrichmentResult>,
+    agent_engine: AgentEngine,
     /// Voice-input engine handle (ROADMAP CN2). `None` when the `voice` feature
     /// is off (or the engine could not start). The type lives in cyril-core so
     /// this field and its `select!` arm compile regardless of the feature.
@@ -104,6 +110,7 @@ impl App {
         hooks: cyril_core::commands::HooksCommandSource,
         workflows: cyril_core::commands::WorkflowCommandSource,
         usage_log: UsageLog,
+        agent_engine: AgentEngine,
     ) -> Self {
         // EXHAUSTIVE ON PURPOSE -- no `..`. Adding a UiConfig field must fail
         // compilation here rather than join the ranks of the silently ignored.
@@ -112,6 +119,7 @@ impl App {
             mouse_capture,
         } = ui;
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
+        let (usage_enrichment, usage_enrichment_rx) = spawn_usage_enrichment_worker();
         let commands = CommandRegistry::with_builtins(hooks, workflows);
         let info: Vec<(String, Option<String>)> = commands
             .all_commands()
@@ -143,6 +151,9 @@ impl App {
             cwd,
             usage_observer: UsageObserver::new(),
             usage_log,
+            usage_enrichment,
+            usage_enrichment_rx,
+            agent_engine,
             voice: spawn_voice_engine(),
             voice_active: false,
             startup_prompt: None,
@@ -317,6 +328,10 @@ impl App {
                         self.dispatch_deferred_command(deferred).await;
                     }
                 }
+                Some(result) = self.usage_enrichment_rx.recv() => {
+                    self.handle_usage_enrichment(result);
+                }
+
 
                 // Priority 3: Permission requests from bridge
                 Some(request) = self.permission_rx.recv() => {
@@ -483,22 +498,73 @@ impl App {
     #[cfg(not(test))]
     fn record_ui_apply(&mut self) {}
 
+    fn handle_usage_enrichment(&mut self, result: UsageEnrichmentResult) {
+        match result {
+            UsageEnrichmentResult::Enriched(enrichment) => {
+                if let Err(error) = self.usage_log.enrich_record(
+                    enrichment.record_id,
+                    enrichment.billed_model_id.as_deref(),
+                    &enrichment.tools,
+                ) {
+                    tracing::warn!(
+                        record_id = enrichment.record_id.get(),
+                        error = %error,
+                        "usage sidecar enrichment could not update the durable record"
+                    );
+                }
+            }
+            UsageEnrichmentResult::Failed { record_id, message } => {
+                tracing::warn!(
+                    record_id = record_id.get(),
+                    error = message,
+                    "usage sidecar enrichment unavailable; retaining live tool data"
+                );
+            }
+        }
+    }
+
     fn handle_notification(&mut self, routed: RoutedNotification) -> Vec<BridgeCommand> {
         let usage_only = matches!(
             &routed.notification,
             Notification::UsageSessionStarted { .. } | Notification::TurnUsageCaptured(_)
         );
-        if let Some(write) = self.usage_observer.apply(&routed, Instant::now()) {
-            let result = match write {
-                UsageWrite::Turn(record) => self.usage_log.append(&record),
-                UsageWrite::Context { sample, compaction } => {
-                    self.usage_log.record_context(&sample, compaction.as_ref())
-                }
+        if let Notification::UsageSessionStarted { session_id, .. } = &routed.notification {
+            let kind = match self.agent_engine {
+                AgentEngine::V2 => cyril_core::usage::KiroSidecarKind::V2,
+                AgentEngine::Kas => cyril_core::usage::KiroSidecarKind::Kas,
             };
-            if let Err(error) = result {
-                tracing::error!(error = %error, "persist usage data failed");
-                self.ui_state
-                    .add_system_message(format!("Usage recording failed: {error}"));
+            self.usage_enrichment
+                .session_started(session_id.clone(), kind);
+        }
+        if let Some(write) = self.usage_observer.apply(&routed, Instant::now()) {
+            match write {
+                UsageWrite::Turn {
+                    record,
+                    sidecar_kind,
+                } => match self.usage_log.append(&record) {
+                    Ok(record_id) => {
+                        if let Some(kind) = sidecar_kind {
+                            self.usage_enrichment.enrich(
+                                record_id,
+                                record.context().session_id().clone(),
+                                kind,
+                            );
+                        }
+                    }
+                    Err(error) => {
+                        tracing::error!(error = %error, "persist usage turn failed");
+                        self.ui_state
+                            .add_system_message(format!("Usage recording failed: {error}"));
+                    }
+                },
+                UsageWrite::Context { sample, compaction } => {
+                    if let Err(error) = self.usage_log.record_context(&sample, compaction.as_ref())
+                    {
+                        tracing::error!(error = %error, "persist usage context failed");
+                        self.ui_state
+                            .add_system_message(format!("Usage recording failed: {error}"));
+                    }
+                }
             }
         }
         let RoutedNotification {
@@ -2053,6 +2119,7 @@ mod tests {
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
             test_usage_log(),
+            AgentEngine::V2,
         )
     }
 
@@ -2081,6 +2148,7 @@ mod tests {
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
             test_usage_log(),
+            AgentEngine::V2,
         );
         assert!(app.mouse_captured());
     }
@@ -2220,6 +2288,7 @@ mod tests {
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
             test_usage_log(),
+            AgentEngine::V2,
         )
     }
 
@@ -2235,6 +2304,7 @@ mod tests {
                 cyril_core::commands::HooksCommandSource::Agent,
                 cyril_core::commands::WorkflowCommandSource::None,
                 test_usage_log(),
+                AgentEngine::V2,
             ),
             rx,
         )
@@ -2385,6 +2455,7 @@ mod tests {
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
             test_usage_log(),
+            AgentEngine::V2,
         );
         establish_main_session(&mut failed, &session_id);
         failed.ui_state.insert_text("will fail");
@@ -2569,6 +2640,7 @@ mod tests {
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
             test_usage_log(),
+            AgentEngine::V2,
         );
         let main_id = SessionId::new("main-session");
         app.session
@@ -2636,6 +2708,7 @@ mod tests {
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
             test_usage_log(),
+            AgentEngine::V2,
         );
         app.session.apply_notification(&Notification::ModeChanged {
             mode_id: ModeId::new("myagent"),
@@ -2677,6 +2750,7 @@ mod tests {
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
             test_usage_log(),
+            AgentEngine::V2,
         );
         app.session
             .set_session(SessionId::new(""), SessionStatus::Active);
