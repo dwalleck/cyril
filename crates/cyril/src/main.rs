@@ -72,6 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Bound outside the async block: `cli` is already partially moved (cwd,
     // agent_command), and an async block would capture the whole struct.
     let oneshot_prompt = cli.prompt;
+    let usage_log = cyril_core::usage::UsageLog::open(&config_dir().join("usage.sqlite3"))?;
 
     // Build and run TUI
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -97,6 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cwd.clone(),
             hooks_source,
             workflow_source,
+            usage_log,
         );
 
         // Create initial session; a parsed `--prompt` rides along and is

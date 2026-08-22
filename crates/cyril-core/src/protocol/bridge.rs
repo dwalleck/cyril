@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use tokio::sync::mpsc;
 
-use crate::protocol::convert::{session_created_from_response, to_token_usage};
+use crate::protocol::convert::{session_created_from_response, to_config_options, to_token_usage};
 use crate::protocol::engine::{Engine, V2Engine};
 use crate::protocol::turn_mediator::{BeginTurn, Disposition, TurnMediator};
 use crate::types::agent_command::AgentCommand;
@@ -447,6 +447,22 @@ async fn notify_or_closed(
     notification: Notification,
 ) -> bool {
     tx.send(notification.into()).await.is_err()
+}
+
+async fn notify_initial_config(
+    tx: &mpsc::Sender<RoutedNotification>,
+    options: Option<&[agent_client_protocol::SessionConfigOption]>,
+) -> bool {
+    match options {
+        Some(options) => {
+            notify_or_closed(
+                tx,
+                Notification::ConfigOptionsUpdated(to_config_options(options)),
+            )
+            .await
+        }
+        None => false,
+    }
 }
 
 /// Log and surface an engine-fingerprint contradiction (cyril-6iek) as the
@@ -1465,6 +1481,14 @@ async fn run_loop(
                         {
                             break;
                         }
+                        if notify_initial_config(
+                            &channels.notification_tx,
+                            response.config_options.as_deref(),
+                        )
+                        .await
+                        {
+                            break;
+                        }
                         let notification = session_created_from_response(
                             response.session_id.to_string(),
                             response.modes.as_ref(),
@@ -1772,6 +1796,14 @@ async fn run_loop(
                                 session_id: session_id.clone(),
                                 origin: SessionOrigin::Loaded,
                             },
+                        )
+                        .await
+                        {
+                            break;
+                        }
+                        if notify_initial_config(
+                            &channels.notification_tx,
+                            response.config_options.as_deref(),
                         )
                         .await
                         {

@@ -1327,6 +1327,31 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "reference-workstation append budget"]
+    fn append_100_tools_budget_reference() {
+        let mut log = UsageLog::open_in_memory().expect("in-memory log");
+        let tools = (0..100)
+            .map(|_| UsageTool::new(ToolKind::Read, false))
+            .collect();
+        let record = record(
+            "s",
+            Some("provider/model"),
+            Some(TokenUsage::new(10, 4, 6, None, None, None)),
+            Some(Money::try_new(0.1, "USD").expect("valid cost")),
+            10,
+            Some(2),
+            None,
+            tools,
+        );
+        let started = Instant::now();
+        log.append(&record).expect("append 100-tool turn");
+        assert!(
+            started.elapsed() <= Duration::from_millis(10),
+            "100-tool usage append exceeded 10ms: {:?}",
+            started.elapsed()
+        );
+    }
+    #[test]
     fn invalid_values_fail_without_defaulting() {
         let mut log = UsageLog::open_in_memory().expect("in-memory log");
         let invalid = record(

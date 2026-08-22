@@ -162,6 +162,8 @@ pub enum CommandResultKind {
     /// access to the voice engine handle (which the App owns), so it returns
     /// this and the App flips capture state — same split as `Steer`/`ShowPicker`.
     ToggleVoice,
+    /// Open Cyril's local usage dashboard. The App owns the durable log.
+    ShowUsage,
     /// Quit the application.
     Quit,
 }
@@ -206,6 +208,12 @@ impl CommandResult {
     pub fn toggle_voice() -> Self {
         Self {
             kind: CommandResultKind::ToggleVoice,
+        }
+    }
+
+    pub fn show_usage() -> Self {
+        Self {
+            kind: CommandResultKind::ShowUsage,
         }
     }
 
@@ -270,8 +278,8 @@ impl CommandRegistry {
     pub fn with_builtins(hooks: HooksCommandSource, workflows: WorkflowCommandSource) -> Self {
         let mut registry = Self::new();
         let mut names: Vec<&str> = vec![
-            "help", "clear", "quit", "new", "load", "steer", "voice", "sessions", "spawn", "kill",
-            "msg",
+            "help", "clear", "quit", "new", "load", "steer", "voice", "usage", "sessions", "spawn",
+            "kill", "msg",
         ];
         if let HooksCommandSource::Kas { workspace_root } = hooks {
             names.push("hooks");
@@ -288,6 +296,7 @@ impl CommandRegistry {
         registry.register(Arc::new(builtin::LoadCommand));
         registry.register(Arc::new(builtin::SteerCommand));
         registry.register(Arc::new(builtin::VoiceToggleCommand));
+        registry.register(Arc::new(builtin::UsageCommand));
         registry.register(Arc::new(subagent::SessionsCommand));
         registry.register(Arc::new(subagent::SpawnCommand));
         registry.register(Arc::new(subagent::KillCommand));
@@ -704,6 +713,31 @@ mod tests {
         let (cmd, args) = registry.parse("/voice").expect("/voice is registered");
         assert_eq!(cmd.name(), "voice");
         assert_eq!(args, "");
+    }
+
+    #[tokio::test]
+    async fn usage_command_is_local_without_a_session() {
+        let session = crate::session::SessionController::new();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+        };
+        let registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
+        let (command, args) = registry.parse("/usage").expect("/usage is registered");
+        let result = command.execute(&ctx, args).await.expect("/usage executes");
+        assert!(matches!(result.kind, CommandResultKind::ShowUsage));
+        assert!(
+            matches!(
+                rx.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ),
+            "local usage command must not send to the ACP bridge"
+        );
     }
 
     #[tokio::test]
