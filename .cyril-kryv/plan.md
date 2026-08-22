@@ -217,6 +217,39 @@ The total exceeds 4,000, so the plan has three independently mergeable increment
 - Run the actual TUI against one v2 and one KAS turn and open `/usage` → credits, outcomes, timing, requests/retries where present, context/tools/model/folder, account status, and backend-gated labels are visible; existing omp smoke values remain unchanged.
 - `cargo test && cargo test --features kas && cargo clippy -- -D warnings && cargo clippy --features kas -- -D warnings && cargo fmt --check` → increment 3 and the complete issue are green.
 
+## Slice 8: Preserve legacy outcome classification after review
+
+**Purpose:** Resolve F19; F20 is refuted in `review-decisions.md` because vendor summary names cannot safely become portable per-call rows.
+
+**Claim IDs:** C3, C7, C11
+
+**Expected behavior:** Opening a populated Phase 1 database classifies legacy rows exactly like the live observer: explicit errors are errors, cancelled rows are cancelled, clean end-turn rows are successes, and every other non-success terminal reason is an error.
+
+**Oracle:** A literal table keyed by legacy `stop_reason` and error presence, compared after migration through raw SQL; production uses the migration `CASE` expression and typed snapshot reader.
+
+**Stress fixture:** A v1 database containing clean end-turn, errored end-turn, cancelled, max-tokens, max-turn-requests, and refusal rows. Expected: one success, one cancelled, and every remaining row classified as error without changing any legacy column.
+
+**Regression fence:** `usage::tests::v1_migration_is_lossless_idempotent_and_enrichment_atomic`, extended in this slice with the full outcome matrix.
+
+**Named mutation:** Restore the error-only migration `CASE`; the cancelled and non-end-turn matrix rows turn red.
+
+**Complexity/production scale:** The migration remains one O(R) SQL update over R legacy rows inside the existing transaction; no new per-turn loop or allocation. The existing 250 ms SQLite busy timeout remains the accepted operational bound.
+
+**Wall budget/phase:** One-off schema migration; N/A — reason: no always-on phase is changed.
+
+**Files:** `.cyril-kryv/plan.md`, `.cyril-kryv/review-decisions.md`, `crates/cyril-core/src/usage.rs`.
+
+**Estimate:** 1 hour.
+
+**Diff estimate:** 90 changed lines: 10 migration implementation, 55 regression fixture/assertions, 25 workflow evidence.
+
+**PR increment:** Live metering substrate.
+
+**Commands and expected results:**
+- `cargo test -p cyril-core v1_migration_is_lossless_idempotent_and_enrichment_atomic` → the literal legacy matrix migrates to the expected success/cancelled/error tuple with all original columns intact.
+- Apply the error-only `CASE` mutation; the focused fence turns red, then green after restore.
+- `cargo test && cargo test --features kas && cargo clippy -- -D warnings && cargo clippy --features kas -- -D warnings && cargo fmt --all --check` → PR #97 remains independently green.
+
 ## Tracker taxonomy
 
 - Permanent exclusions are fixed by the approved spec/design: no historical backfill, OTLP dependency, synthetic metrics, skill inference, or credit-as-currency.
@@ -224,7 +257,7 @@ The total exceeds 4,000, so the plan has three independently mergeable increment
 
 ## Self-review
 
-- [x] C1–C13 are each assigned exactly once; every PENDING design row is discharged by its owning slice.
+- [x] Initial delivery slices assign C1–C13 exactly once; review-fix slices re-fence only the claims named by accepted findings.
 - [x] Every slice has all thirteen mandatory fields and every conditional field has an explicit `N/A — reason` where applicable.
 - [x] Each claim's permanent fence and mechanical mutation land in the same slice.
 - [x] Every new loop records asymptotic cost, production input, explicit maximum, and every always-on phase has a wall budget.

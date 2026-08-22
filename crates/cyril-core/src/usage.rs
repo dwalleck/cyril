@@ -512,7 +512,12 @@ impl UsageLog {
                      ALTER TABLE usage_turns ADD COLUMN token_availability TEXT NOT NULL DEFAULT 'unreported';
                      ALTER TABLE usage_turns ADD COLUMN cost_availability TEXT NOT NULL DEFAULT 'unreported';
                      UPDATE usage_turns
-                        SET outcome = CASE WHEN error IS NULL THEN 'success' ELSE 'error' END,
+                        SET outcome = CASE
+                            WHEN error IS NOT NULL THEN 'error'
+                            WHEN stop_reason = 'cancelled' THEN 'cancelled'
+                            WHEN stop_reason <> 'end_turn' THEN 'error'
+                            ELSE 'success'
+                        END,
                             token_availability = CASE
                                 WHEN total_tokens IS NULL THEN 'unreported' ELSE 'observed' END,
                             cost_availability = CASE
@@ -2045,7 +2050,29 @@ mod tests {
                  INSERT INTO usage_turns (
                     session_id, folder, agent_type, timestamp_ms, duration_ms,
                     stop_reason, error
-                 ) VALUES ('legacy-error', '/old', 'main', 2, 200, 'end_turn', 'boom');",
+                 ) VALUES ('legacy-error', '/old', 'main', 2, 200, 'end_turn', 'boom');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason, error
+                 ) VALUES ('legacy-error-cancelled', '/old', 'main', 3, 200,
+                           'cancelled', 'boom-cancelled');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason
+                 ) VALUES ('legacy-cancelled', '/old', 'main', 4, 200, 'cancelled');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason
+                 ) VALUES ('legacy-max-tokens', '/old', 'main', 5, 200, 'max_tokens');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason
+                 ) VALUES ('legacy-max-requests', '/old', 'main', 6, 200,
+                           'max_turn_requests');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason
+                 ) VALUES ('legacy-refusal', '/old', 'main', 7, 200, 'refusal');",
             )
             .expect("seed legacy schema");
 
@@ -2056,20 +2083,46 @@ mod tests {
             .expect("schema version");
         assert_eq!(version, 2);
         let snapshot = log.snapshot().expect("migrated snapshot");
-        assert_eq!(snapshot.overview.requests, 2);
+        assert_eq!(snapshot.overview.requests, 7);
         assert_eq!(snapshot.overview.successes, 1);
-        assert_eq!(snapshot.overview.errors, 1);
+        assert_eq!(snapshot.overview.cancelled, 1);
+        assert_eq!(snapshot.overview.errors, 5);
         assert_eq!(
             snapshot.overview.tokens.as_ref().map(|v| v.total),
             Some(150)
         );
         assert_eq!(snapshot.overview.token_coverage.observed, 1);
-        assert_eq!(snapshot.overview.token_coverage.unreported, 1);
+        assert_eq!(snapshot.overview.token_coverage.unreported, 6);
         assert_eq!(snapshot.overview.cost_coverage.observed, 1);
-        assert_eq!(snapshot.overview.cost_coverage.unreported, 1);
+        assert_eq!(snapshot.overview.cost_coverage.unreported, 6);
         assert_eq!(
             snapshot.overview.costs,
             vec![Money::try_new(1.25, "USD").expect("valid cost")]
+        );
+        let migrated_outcomes = {
+            let mut statement = log
+                .connection
+                .prepare("SELECT session_id, outcome FROM usage_turns ORDER BY id")
+                .expect("prepare migrated outcome query");
+            statement
+                .query_map([], |row| {
+                    Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+                })
+                .expect("query migrated outcomes")
+                .collect::<Result<Vec<_>, _>>()
+                .expect("collect migrated outcomes")
+        };
+        assert_eq!(
+            migrated_outcomes,
+            vec![
+                ("legacy-ok".to_owned(), "success".to_owned()),
+                ("legacy-error".to_owned(), "error".to_owned()),
+                ("legacy-error-cancelled".to_owned(), "error".to_owned()),
+                ("legacy-cancelled".to_owned(), "cancelled".to_owned()),
+                ("legacy-max-tokens".to_owned(), "error".to_owned()),
+                ("legacy-max-requests".to_owned(), "error".to_owned()),
+                ("legacy-refusal".to_owned(), "error".to_owned()),
+            ]
         );
 
         log.connection
@@ -2100,7 +2153,7 @@ mod tests {
             .connection
             .query_row("SELECT COUNT(*) FROM usage_turns", [], |row| row.get(0))
             .expect("count after failed charge");
-        assert_eq!(count, 2, "failed child insert rolls back parent");
+        assert_eq!(count, 7, "failed child insert rolls back parent");
 
         log.connection
             .execute_batch("DROP TRIGGER reject_usage_charge;")
