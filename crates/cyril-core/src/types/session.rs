@@ -291,7 +291,7 @@ impl ContextUsage {
 /// cyril-5et2 renders the aggregate bar; per-file drill-in is a separate feature
 /// (cyril-1116). Omitting an `items` field makes the no-drill-in invariant
 /// unrepresentable rather than merely unenforced.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ContextBucket {
     tokens: u64,
     percent: f64,
@@ -315,7 +315,7 @@ impl ContextBucket {
 /// `session_info_update` `context_usage` buckets KAS pushes proactively each
 /// turn. v2 has only the scalar [`ContextUsage`]; bucket names mirror the wire
 /// `_meta.kiro.breakdown.*`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ContextBreakdown {
     context_files: ContextBucket,
     session_files: ContextBucket,

@@ -2,7 +2,7 @@ use std::fmt;
 
 use thiserror::Error;
 
-use super::{SessionId, StopReason, ToolKind};
+use super::{ContextBreakdown, SessionId, StopReason, ToolCallId, ToolKind};
 
 /// Whether a session starts with a known zero cost or resumes existing history.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -281,13 +281,49 @@ impl TokenUsage {
 /// One distinct tool call observed during a turn.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UsageTool {
+    call_id: Option<ToolCallId>,
+    name: Option<String>,
     kind: ToolKind,
     failed: bool,
+    argument_chars: Option<u64>,
+    result_chars: Option<u64>,
 }
 
 impl UsageTool {
     pub fn new(kind: ToolKind, failed: bool) -> Self {
-        Self { kind, failed }
+        Self {
+            call_id: None,
+            name: None,
+            kind,
+            failed,
+            argument_chars: None,
+            result_chars: None,
+        }
+    }
+
+    pub fn observed(
+        call_id: ToolCallId,
+        kind: ToolKind,
+        failed: bool,
+        argument_chars: Option<u64>,
+        result_chars: Option<u64>,
+    ) -> Self {
+        Self {
+            call_id: Some(call_id),
+            name: None,
+            kind,
+            failed,
+            argument_chars,
+            result_chars,
+        }
+    }
+
+    pub fn call_id(&self) -> Option<&ToolCallId> {
+        self.call_id.as_ref()
+    }
+
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
     }
 
     pub fn kind(&self) -> ToolKind {
@@ -296,6 +332,14 @@ impl UsageTool {
 
     pub fn failed(&self) -> bool {
         self.failed
+    }
+
+    pub fn argument_chars(&self) -> Option<u64> {
+        self.argument_chars
+    }
+
+    pub fn result_chars(&self) -> Option<u64> {
+        self.result_chars
     }
 }
 
@@ -645,13 +689,27 @@ pub struct AgentUsageGroup {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct ToolModelUsageGroup {
+    pub provider: Option<String>,
+    pub model: Option<String>,
+    pub calls: u64,
+    pub errors: u64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ToolUsageGroup {
+    pub name: Option<String>,
     pub kind: ToolKind,
     pub calls: u64,
     pub errors: u64,
+    pub argument_chars: Option<u64>,
+    pub result_chars: Option<u64>,
+    pub last_used_ms: u64,
     pub total_tokens_share: Option<f64>,
     pub output_tokens_share: Option<f64>,
     pub costs: Vec<Money>,
+    pub charges: Vec<MeteredAmount>,
+    pub models: Vec<ToolModelUsageGroup>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -675,6 +733,32 @@ pub struct RecentUsage {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct UsageContextSample {
+    pub context: TurnUsageContext,
+    pub timestamp_ms: u64,
+    pub percentage: f64,
+    pub breakdown: Option<ContextBreakdown>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UsageCompaction {
+    pub context: TurnUsageContext,
+    pub timestamp_ms: u64,
+    pub before_percentage: Option<f64>,
+    pub after_percentage: f64,
+    pub reduction_percentage_points: Option<f64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct UsageContextSummary {
+    pub latest: Option<UsageContextSample>,
+    pub compactions: u64,
+    pub sampled_compactions: u64,
+    pub total_reduction_percentage_points: Option<f64>,
+    pub average_reduction_percentage_points: Option<f64>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct UsageSnapshot {
     pub overview: UsageSummary,
@@ -683,6 +767,7 @@ pub struct UsageSnapshot {
     pub folders: Vec<NamedUsageGroup>,
     pub agent_types: Vec<AgentUsageGroup>,
     pub tools: Vec<ToolUsageGroup>,
+    pub context: UsageContextSummary,
     pub recent: Vec<RecentUsage>,
     pub errors: Vec<RecentUsage>,
 }

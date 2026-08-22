@@ -49,10 +49,11 @@ pub use tool_call::{
 pub use turn::{TurnAllocator, TurnId};
 pub use usage::{
     AgentUsageGroup, MeteredAmount, MetricCoverage, ModelUsageGroup, Money, NamedUsageGroup,
-    ObservedMetric, RecentUsage, SessionOrigin, TokenTotals, TokenUsage, ToolUsageGroup,
-    TurnMeteringUpdate, TurnUsageContext, TurnUsageMetrics, UnavailableReason, UsageAgentType,
-    UsageOutcome, UsageRecord, UsageSnapshot, UsageSummary, UsageTiming, UsageTool,
-    UsageTurnOutcome, UsageTurnStatus, UsageValueError,
+    ObservedMetric, RecentUsage, SessionOrigin, TokenTotals, TokenUsage, ToolModelUsageGroup,
+    ToolUsageGroup, TurnMeteringUpdate, TurnUsageContext, TurnUsageMetrics, UnavailableReason,
+    UsageAgentType, UsageCompaction, UsageContextSample, UsageContextSummary, UsageOutcome,
+    UsageRecord, UsageSnapshot, UsageSummary, UsageTiming, UsageTool, UsageTurnOutcome,
+    UsageTurnStatus, UsageValueError,
 };
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{
