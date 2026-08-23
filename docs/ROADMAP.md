@@ -79,17 +79,32 @@ The presentation side of that generalization starts with the semantic-theme trac
 ### Phase 5+ — Stages catalog growth
 
 **Estimate:** ongoing.
-**Depends on:** Phase 2.
+**Depends on:** capability-specific. Proxy-stage adapters depend on Phase 2.
 
-Each new stage is reusable across all supported vendors. Candidates in rough priority order:
+This phase grows reusable platform capabilities across supported vendors.
+Capabilities that require wire interposition become proxy stages; host and MCP
+adapters may land independently when an accepted ADR establishes those as the
+near-term seam.
 
 - **Skill resolver** — supplement whatever skill system the underlying agent has (or doesn't have). On KAS there's a **native injection hook** (no proxy rewriting needed): `session/new` `_meta.kiro.customAgents: ClientCustomAgent[]` (`CustomAgentSource.CLIENT_PROVIDED`, highest precedence) — **verified live 2026-06-16** (`probe-kas-client-agent-2.7.1.py`): a client-supplied agent loads with no rejection and runs as a first-class `orchestrate_subagent` role with its injected prompt+tools. So the skill/agent-injection half of the platform vision is wire-proven on KAS, complementing the interception half (hooks + fs/terminal host callbacks, KAS-5/KAS-7).
 - **Context injector** — auto-attach project context, steering files, environment metadata per turn
 - **Auto-approval policy** — bypass permission prompts for whitelisted tools according to org rules
-- **Persistent memory** — cross-session memory synthesis the underlying agent doesn't ship natively
+- **Persistent memory (`cyril-ct0y`)** — Cyril-owned, cross-session memory plus
+  cited document knowledge, independent of the bound agent. It belongs to
+  Phase 5+ as a platform capability, but its near-term adapters follow
+  [ADR-0003](adr/0003-defer-proxy-stack-for-host-callbacks.md): bridge capture
+  and first-prompt injection, a stdio MCP surface for explicit agent use, and a
+  TUI control plane. The proxy-stage adapter stays deferred. Delivery uses
+  memory-specific milestones that do not replace this roadmap's phase names:
+  **M0** runtime/scope/storage foundation; **M1** bridge capture and automatic
+  recall; **M2** capability-bound MCP tools; **M3** cited knowledge and source
+  management; **M4** restart-safe consolidation, local embeddings, and
+  retrieval-quality gates.
 - **Fan-out observer** — broadcast notifications to additional ACP clients for editor integrations (e.g. nvim plugin reading what cyril sees). **KAS is independently building the server-side substrate for this** (surfaced in the 2.12.3 / 0.17.2 audit): the ws `MultiplexStream` already carries `primary` vs `observer` `ClientRole`s, a per-session subscriber roster (`sessionSubscriberCount` — a *presence* signal, `>0` = a client is attached to answer human round-trips), a `_kiro/sessions/changed` CDC feed of the roster, and a `CloudSessionController` that keeps a **detached** (zero-observer) session working and defers its human-facing callbacks until a client re-attaches. All server-internal today (cyril's single stdio client hardcodes `subscriberCount = 1`, so it's degenerate), and none of it is a wire change — but it means the multi-observer + detached-session model cyril's fan-out would need is being built *by the agent*, not something cyril must bolt on over a dumb wire. If cyril moves past single-stdio-client, this roster/CDC machinery is the KAS-side counterpart to design against (see `docs/kiro-2.12.3-wire-audit.md`; ties to the session-level-workflow direction). **Update (2.14.0 / `@kiro/agent` 0.22.7 audit — `docs/kiro-2.14.1-wire-audit.md`):** the observer half is now fully specced in KAS's shipped, commented `multiplex-stream.d.ts` — one `KiroAgent` fans **many** WS clients in (inbound merge with request-ID rewriting) and demuxes responses back out, `ClientRole` splits `primary` (answers via normal JSON-RPC + gets fs/terminal callbacks) from `observer` (acks immediately, direct responses suppressed, no fs/terminal), and — the load-bearing trick — agent-initiated requests (permission, `_kiro/userInput`) are answered by **any** attached client via **respond-by-`toolCallId`** (`_kiro/permission/respond`, `_kiro/userInput/respond`, fire-and-forget ack), decoupling *who answers* from the connection the request went out on, with session-scoped subscriber fan-out (two leak invariants from shipped bugs), TTL sweeps, and `-32602` on a malformed respond. That `toolCallId`-keyed correlation + role split + session-scoped fan-out is the concrete pattern to copy for this stage. **Crucial layering point (verified in the 0.22.7 carve):** the mux is *not* an ACP feature and does not run over the ACP wire — it exists only on KAS's WebSocket entry point (`startWebSocket`, `new MultiplexStream()`, port 8082), whereas the stdio entry (`startStdio`, cyril's path) binds `KiroAgent` directly to one ndjson stream with **no mux**. Multiplexing is a transport/connection adapter that sits *above* the agent's single ACP endpoint. So when cyril builds this stage it runs its **own** mux above its single stdio ACP link to `kiro-cli`, over whatever transport cyril picks for observers to attach **to cyril** (local socket, another process — not the agent's wire); the agent link stays strictly 1:1. Topology maps cleanly: KAS's "one agent conn + mux + N clients" becomes cyril's "one stdio ACP link + a cyril-side mux (bridge/App) + N observer TUIs/web views" — and cyril needs none of the `_kiro/*` respond-by-`toolCallId` methods to speak KAS over stdio (those are mux-internal, intercepted before the agent). **Tracked: cyril-5g2o** (design/research capture; cyril is a single stdio `primary` today, and its `RoutedNotification` session routing is the seam to extend).
 
-Each stage is its own subprocess, written in any language that speaks `sacp-proxy`'s protocol. Stages can be authored by third parties and dropped into a user's chain config.
+Proxy-stage adapters are subprocesses written in any language that speaks
+`sacp-proxy`'s protocol. They can be authored by third parties and dropped into
+a user's chain config.
 
 ## Kiro feature-parity track
 

@@ -1,0 +1,14 @@
+lsp:
+  enabled: true
+  formatOnWrite: true
+  diagnosticsOnWrite: true
+  diagnosticsOnEdit: true
+compaction:
+  enabled: true
+  midTurnEnabled: true
+  thresholdTokens: 250000
+  keepRecentTokens: 20000
+
+task:
+  isolation:
+    mode: auto

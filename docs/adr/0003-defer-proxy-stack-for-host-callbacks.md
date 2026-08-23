@@ -30,6 +30,19 @@ stage 2 on Claude), where `_message/send` is unavailable and cyril must relay �
 and that is blocked on Phases 3/4 regardless. See [ADR-0011](0011-ungated-client-driven-workflow-control-plane.md)
 for how cyril drives that engine, and the ROADMAP **W track**.
 
+**Persistent-memory exception accepted 2026-08-22 (`cyril-ct0y`).** Automatic
+memory recall is a message-stream concern, but waiting for the deferred proxy
+stack would make every other part of the memory runtime depend on Phase 2.
+Cyril may therefore inject the bounded first-prompt memory block at the
+existing bridge prompt seam as an explicit interim adapter. Durable capture is
+a separate bridge observer: it records original outbound prompts and normalized
+inbound turn/tool lifecycle before UI projection. Neither bridge adapter owns
+storage, ranking, consolidation, or UI policy; those remain behind the shared
+memory interface. When the proxy stack is activated, automatic capture and
+injection move to a proxy-stage adapter and both interim bridge adapters are
+removed. The memory runtime, capability-bound MCP tools, stores, and TUI control
+plane remain unchanged.
+
 ## Context
 
 The platform vision (Mission, Phase 2, Phase 5) frames cyril's differentiating value as **composable proxy stages** built on `sacp-proxy`/`sacp-conductor` — a separate process in the JSON-RPC path that observes/rewrites the wire. But the KAS integration work surfaced a second interception mechanism: KAS delegates file I/O, shell execution, and hooks to the **host** via ACP callbacks, making cyril itself the executor and therefore the natural audit/gate/transform point — with no `sacp` dependency and structured (typed) requests instead of parsed-from-stream messages.
@@ -43,11 +56,19 @@ The side-effect concerns that originally justified proxy stages (transcript audi
 ## Considered options
 
 - **Keep `sacp-proxy` as the primary interception mechanism now (original Phase 2)** — rejected for the near term: for KAS it duplicates, with more moving parts and a single-maintainer dependency (Open Tensions #4/#5), what host callbacks do natively.
-- **Drop the proxy stack entirely** — rejected: it remains the *only* mechanism for (a) interception over agents that run side effects in-process and advertise no callbacks (e.g. v2 Kiro), (b) message-stream concerns that aren't side effects (context injection, fan-out/observer), and (c) third-party, language-agnostic composable stages. The long-term mission still wants it.
+- **Drop the proxy stack entirely** — rejected: it remains the only general mechanism for (a) interception over agents that run side effects in-process and advertise no callbacks (e.g. v2 Kiro), (b) message-stream concerns that must operate outside Cyril's own bridge (context injection, fan-out/observer), and (c) third-party, language-agnostic composable stages. The bounded persistent-memory exception above is deliberately temporary and bridge-local; it does not replace that general mechanism. The long-term mission still wants it.
 
 ## Consequences
 
 - Near-term platform value is delivered through the `cyril-stages` **host-callback layer** (responders, no `sacp`), not `sacp-proxy` wire stages. These are distinct shapes and should be named distinctly.
 - Open Tensions #4 (framework ahead of the curve) and #5 (single-maintainer `sacp` risk) are partially discharged for side-effect interception — cyril does not depend on that stack to ship KAS audit/gate/policy.
 - Phase 2 (a `sacp-proxy` transcript-recorder) is on hold; when the stack is revisited it should lead with fan-out/observer or workflow orchestration — whichever genuinely needs the wire.
+- Until that revisit, `cyril-ct0y` may inject the first-prompt memory block at
+  the bridge prompt seam and capture original outbound plus normalized inbound
+  lifecycle through a separate pre-UI bridge observer. Its clean cutover removes
+  both bridge adapters only after the proxy-stage adapter passes the same
+  adapter-neutral suite: identical original-prompt preservation, exactly-once
+  first-prompt injection bytes/budgets, session/project identity, normalized
+  assistant/tool capture and terminal dispositions, fail-open behavior, and no
+  double capture while both implementations are present for verification.
 - Vendor-neutral side-effect interception over in-process agents is explicitly **not** a near-term goal; if it becomes one, the proxy stack returns to the critical path.
