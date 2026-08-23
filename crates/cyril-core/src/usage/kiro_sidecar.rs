@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
@@ -19,6 +19,7 @@ pub struct UsageEnrichment {
     pub billed_model_id: Option<String>,
     pub tools: Vec<UsageTool>,
 }
+type PendingKey = (SessionId, KiroSidecarKind, UsageRecordId);
 
 #[derive(Debug)]
 pub enum UsageEnrichmentResult {
@@ -26,6 +27,7 @@ pub enum UsageEnrichmentResult {
     Failed {
         record_id: UsageRecordId,
         message: String,
+        retryable: bool,
     },
 }
 
@@ -52,6 +54,16 @@ impl UsageEnrichmentHandle {
 
     pub fn enrich(&self, record_id: UsageRecordId, session_id: SessionId, kind: KiroSidecarKind) {
         if let Err(error) = self.sender.send(WorkerCommand::Enrich {
+            record_id,
+            session_id,
+            kind,
+        }) {
+            tracing::warn!(error = %error, "usage enrichment worker is unavailable");
+        }
+    }
+
+    pub fn abandon(&self, record_id: UsageRecordId, session_id: SessionId, kind: KiroSidecarKind) {
+        if let Err(error) = self.sender.send(WorkerCommand::Abandon {
             record_id,
             session_id,
             kind,
@@ -97,6 +109,11 @@ enum WorkerCommand {
         session_id: SessionId,
         kind: KiroSidecarKind,
     },
+    Abandon {
+        record_id: UsageRecordId,
+        session_id: SessionId,
+        kind: KiroSidecarKind,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -106,11 +123,19 @@ enum Cursor {
     Unavailable { reason: String },
 }
 
+#[derive(Debug)]
+struct PendingEnrichment {
+    billed_model_id: Option<String>,
+    tools: Vec<UsageTool>,
+}
+
 struct Worker {
     kiro_home: Option<PathBuf>,
     commands: std::sync::mpsc::Receiver<WorkerCommand>,
     results: tokio::sync::mpsc::UnboundedSender<UsageEnrichmentResult>,
+    pending: HashMap<PendingKey, PendingEnrichment>,
     cursors: HashMap<(SessionId, KiroSidecarKind), Cursor>,
+    outstanding: HashMap<(SessionId, KiroSidecarKind), BTreeSet<UsageRecordId>>,
 }
 
 impl Worker {
@@ -124,6 +149,8 @@ impl Worker {
             commands,
             results,
             cursors: HashMap::new(),
+            pending: HashMap::new(),
+            outstanding: HashMap::new(),
         }
     }
 
@@ -140,18 +167,35 @@ impl Worker {
                     session_id,
                     kind,
                 } => {
+                    let key = (session_id.clone(), kind);
+                    self.outstanding
+                        .entry(key.clone())
+                        .or_default()
+                        .insert(record_id);
                     let result = self.enrich_with_retries(record_id, &session_id, kind);
                     let message = match result {
                         Ok(enrichment) => UsageEnrichmentResult::Enriched(enrichment),
-                        Err(error) => UsageEnrichmentResult::Failed {
-                            record_id,
-                            message: error.to_string(),
-                        },
+                        Err(error) => {
+                            let retryable = error.is_retryable();
+                            if !retryable {
+                                self.abandon_record(record_id, &key);
+                            }
+                            UsageEnrichmentResult::Failed {
+                                record_id,
+                                retryable,
+                                message: error.to_string(),
+                            }
+                        }
                     };
                     if self.results.send(message).is_err() {
                         return;
                     }
                 }
+                WorkerCommand::Abandon {
+                    record_id,
+                    session_id,
+                    kind,
+                } => self.abandon_record(record_id, &(session_id, kind)),
             }
         }
     }
@@ -195,7 +239,12 @@ impl Worker {
                 "usage sidecar baseline is unavailable"
             );
         }
-        self.cursors.insert(key, cursor);
+        self.cursors.insert(key.clone(), cursor);
+        self.outstanding.remove(&key);
+        self.pending
+            .retain(|(pending_session, pending_kind, _), _| {
+                pending_session != &session_id || *pending_kind != kind
+            });
     }
 
     fn enrich_with_retries(
@@ -238,7 +287,15 @@ impl Worker {
     ) -> Result<UsageEnrichment, SidecarError> {
         validate_session_id(session_id)?;
         let key = (session_id.clone(), kind);
-        let offset = match self.cursors.get(&key) {
+        if self
+            .pending
+            .contains_key(&(session_id.clone(), kind, record_id))
+        {
+            return self
+                .take_pending(record_id, &key)
+                .ok_or(SidecarError::IncompleteTurn);
+        }
+        let mut offset = match self.cursors.get(&key) {
             Some(Cursor::Ready { jsonl_offset }) => *jsonl_offset,
             Some(Cursor::FreshMissing) => 0,
             Some(Cursor::Unavailable { reason }) => {
@@ -252,7 +309,6 @@ impl Worker {
             }
         };
         let path = self.locate_jsonl(session_id, kind)?;
-        let parsed = read_sidecar_turn(&path, offset, kind, deadline)?;
         let billed_model_id = match kind {
             KiroSidecarKind::V2 => match self.read_v2_billed_model(session_id) {
                 Ok(model) => model,
@@ -267,17 +323,75 @@ impl Worker {
             },
             KiroSidecarKind::Kas => None,
         };
-        self.cursors.insert(
-            key,
-            Cursor::Ready {
-                jsonl_offset: offset + parsed.consumed_bytes,
-            },
-        );
-        Ok(UsageEnrichment {
-            record_id,
-            billed_model_id,
-            tools: parsed.tools,
+        loop {
+            let parsed = read_sidecar_turn(&path, offset, kind, deadline)?;
+            let owner = self
+                .next_unassigned_record(&key)
+                .ok_or_else(|| SidecarError::MissingOwner(session_id.as_str().to_owned()))?;
+            offset = offset.checked_add(parsed.consumed_bytes).ok_or_else(|| {
+                SidecarError::Oversized {
+                    path: path.clone(),
+                    size: MAX_SIDECAR_BYTES + 1,
+                }
+            })?;
+            self.cursors.insert(
+                key.clone(),
+                Cursor::Ready {
+                    jsonl_offset: offset,
+                },
+            );
+            self.pending.insert(
+                (session_id.clone(), kind, owner),
+                PendingEnrichment {
+                    billed_model_id: billed_model_id.clone(),
+                    tools: parsed.tools,
+                },
+            );
+            if owner == record_id {
+                return self
+                    .take_pending(record_id, &key)
+                    .ok_or(SidecarError::IncompleteTurn);
+            }
+        }
+    }
+
+    fn next_unassigned_record(&self, key: &(SessionId, KiroSidecarKind)) -> Option<UsageRecordId> {
+        self.outstanding.get(key).and_then(|record_ids| {
+            record_ids.iter().copied().find(|record_id| {
+                !self
+                    .pending
+                    .contains_key(&(key.0.clone(), key.1, *record_id))
+            })
         })
+    }
+
+    fn take_pending(
+        &mut self,
+        record_id: UsageRecordId,
+        key: &(SessionId, KiroSidecarKind),
+    ) -> Option<UsageEnrichment> {
+        let pending = self.pending.remove(&(key.0.clone(), key.1, record_id))?;
+        self.remove_outstanding(record_id, key);
+        Some(UsageEnrichment {
+            record_id,
+            billed_model_id: pending.billed_model_id,
+            tools: pending.tools,
+        })
+    }
+
+    fn abandon_record(&mut self, record_id: UsageRecordId, key: &(SessionId, KiroSidecarKind)) {
+        self.pending.remove(&(key.0.clone(), key.1, record_id));
+        self.remove_outstanding(record_id, key);
+    }
+
+    fn remove_outstanding(&mut self, record_id: UsageRecordId, key: &(SessionId, KiroSidecarKind)) {
+        let remove_key = self.outstanding.get_mut(key).is_some_and(|record_ids| {
+            record_ids.remove(&record_id);
+            record_ids.is_empty()
+        });
+        if remove_key {
+            self.outstanding.remove(key);
+        }
     }
 
     fn locate_jsonl(
@@ -360,6 +474,8 @@ enum SidecarError {
     UnsafeBaseline { session_id: String, reason: String },
     #[error("usage sidecar cursor was not initialized for session {0}")]
     MissingCursor(String),
+    #[error("usage sidecar has no outstanding owner for session {0}")]
+    MissingOwner(String),
 }
 
 impl SidecarError {
@@ -1082,7 +1198,7 @@ mod tests {
             .as_bytes(),
         )?;
         handle.enrich(UsageRecordId::new(7), session, KiroSidecarKind::V2);
-        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+        let result = tokio::time::timeout(Duration::from_secs(5), receiver.recv())
             .await?
             .ok_or("worker closed")?;
         let UsageEnrichmentResult::Enriched(enrichment) = result else {
@@ -1121,7 +1237,7 @@ mod tests {
             &recovering_jsonl,
             "{\"kind\":\"AssistantMessage\",\"data\":{\"content\":[]}}\n",
         )?;
-        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+        let result = tokio::time::timeout(Duration::from_secs(5), receiver.recv())
             .await?
             .ok_or("worker closed")?;
         assert!(matches!(result, UsageEnrichmentResult::Enriched(_)));
@@ -1162,6 +1278,188 @@ mod tests {
             ),
             Err(SidecarError::Oversized { .. })
         ));
+        Ok(())
+    }
+    #[tokio::test]
+    async fn late_retry_and_partial_tail_preserve_kas_turn_ownership() -> TestResult {
+        let directory = tempfile::tempdir()?;
+        let home = directory.path().join(".kiro");
+        let messages = home
+            .join("sessions/hash-1/sess-shared")
+            .join("messages.jsonl");
+        std::fs::create_dir_all(messages.parent().ok_or("messages parent")?)?;
+        std::fs::write(&messages, "")?;
+        let session = SessionId::new("sess-shared");
+        let (handle, mut receiver) = spawn_usage_enrichment_worker_at(Some(home.clone()));
+        handle.session_started(session.clone(), KiroSidecarKind::Kas, SessionOrigin::Fresh);
+        std::thread::sleep(Duration::from_millis(10));
+
+        handle.enrich(UsageRecordId::new(1), session.clone(), KiroSidecarKind::Kas);
+        let initial = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("initial enrichment missing")?;
+        assert!(matches!(
+            initial,
+            UsageEnrichmentResult::Failed {
+                record_id,
+                retryable: true,
+                ..
+            } if record_id.get() == 1
+        ));
+
+        use std::io::Write as _;
+        let mut file = std::fs::OpenOptions::new().append(true).open(&messages)?;
+        for line in [
+            r#"{"payload":{"type":"tool_call","toolCallId":"call-a","toolName":"read_file","kind":"read","status":"completed","args":{"path":"a"}}}"#,
+            r#"{"payload":{"type":"tool_result","toolCallId":"call-a","content":"A","success":true}}"#,
+            r#"{"payload":{"type":"usage_summary"}}"#,
+            r#"{"payload":{"type":"tool_call","toolCallId":"call-b","toolName":"write_file","kind":"write","status":"completed","args":{"path":"b"}}}"#,
+            r#"{"payload":{"type":"tool_result","toolCallId":"call-b","content":"B","success":true}}"#,
+            r#"{"payload":{"type":"usage_summary"}}"#,
+        ] {
+            writeln!(file, "{line}")?;
+        }
+        file.flush()?;
+
+        handle.enrich(UsageRecordId::new(2), session.clone(), KiroSidecarKind::Kas);
+        let later = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("later enrichment missing")?;
+        let UsageEnrichmentResult::Enriched(later) = later else {
+            return Err("expected later enrichment".into());
+        };
+        assert_eq!(later.record_id.get(), 2);
+        assert_eq!(
+            later.tools[0].call_id().map(ToolCallId::as_str),
+            Some("call-b")
+        );
+
+        handle.enrich(UsageRecordId::new(1), session, KiroSidecarKind::Kas);
+        let retried = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("retried enrichment missing")?;
+        let UsageEnrichmentResult::Enriched(retried) = retried else {
+            return Err("expected retried enrichment".into());
+        };
+        assert_eq!(retried.record_id.get(), 1);
+        assert_eq!(
+            retried.tools[0].call_id().map(ToolCallId::as_str),
+            Some("call-a")
+        );
+
+        let tail_messages = home
+            .join("sessions/hash-2/sess-tail")
+            .join("messages.jsonl");
+        std::fs::create_dir_all(tail_messages.parent().ok_or("tail messages parent")?)?;
+        std::fs::write(&tail_messages, "")?;
+        let tail_session = SessionId::new("sess-tail");
+        handle.session_started(
+            tail_session.clone(),
+            KiroSidecarKind::Kas,
+            SessionOrigin::Fresh,
+        );
+        std::thread::sleep(Duration::from_millis(10));
+        let mut tail_file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(&tail_messages)?;
+        for line in [
+            r#"{"payload":{"type":"tool_call","toolCallId":"complete","toolName":"read_file","kind":"read","status":"completed","args":{}}}"#,
+            r#"{"payload":{"type":"usage_summary"}}"#,
+            r#"{"payload":{"type":"tool_call","toolCallId":"partial","toolName":"write_file","kind":"write","status":"completed","args":{}}}"#,
+        ] {
+            writeln!(tail_file, "{line}")?;
+        }
+        tail_file.flush()?;
+
+        handle.enrich(
+            UsageRecordId::new(3),
+            tail_session.clone(),
+            KiroSidecarKind::Kas,
+        );
+        let complete = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("complete enrichment missing")?;
+        let UsageEnrichmentResult::Enriched(complete) = complete else {
+            return Err("expected complete enrichment".into());
+        };
+        assert_eq!(
+            complete.tools[0].call_id().map(ToolCallId::as_str),
+            Some("complete")
+        );
+
+        for line in [
+            r#"{"payload":{"type":"tool_result","toolCallId":"partial","content":"done","success":true}}"#,
+            r#"{"payload":{"type":"usage_summary"}}"#,
+        ] {
+            writeln!(tail_file, "{line}")?;
+        }
+        tail_file.flush()?;
+        handle.enrich(UsageRecordId::new(4), tail_session, KiroSidecarKind::Kas);
+        let completed_tail = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("completed tail enrichment missing")?;
+        let UsageEnrichmentResult::Enriched(completed_tail) = completed_tail else {
+            return Err("expected completed tail enrichment".into());
+        };
+        assert_eq!(
+            completed_tail.tools[0].call_id().map(ToolCallId::as_str),
+            Some("partial")
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn abandoned_record_does_not_capture_later_turn() -> TestResult {
+        let directory = tempfile::tempdir()?;
+        let home = directory.path().join(".kiro");
+        let messages = home
+            .join("sessions/hash-1/sess-abandon")
+            .join("messages.jsonl");
+        std::fs::create_dir_all(messages.parent().ok_or("messages parent")?)?;
+        std::fs::write(&messages, "")?;
+        let session = SessionId::new("sess-abandon");
+        let (handle, mut receiver) = spawn_usage_enrichment_worker_at(Some(home));
+        handle.session_started(session.clone(), KiroSidecarKind::Kas, SessionOrigin::Fresh);
+        std::thread::sleep(Duration::from_millis(10));
+
+        let abandoned = UsageRecordId::new(10);
+        handle.enrich(abandoned, session.clone(), KiroSidecarKind::Kas);
+        let failed = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("failed enrichment missing")?;
+        assert!(matches!(
+            failed,
+            UsageEnrichmentResult::Failed {
+                record_id,
+                retryable: true,
+                ..
+            } if record_id == abandoned
+        ));
+        handle.abandon(abandoned, session.clone(), KiroSidecarKind::Kas);
+
+        use std::io::Write as _;
+        let mut file = std::fs::OpenOptions::new().append(true).open(&messages)?;
+        for line in [
+            r#"{"payload":{"type":"tool_call","toolCallId":"call-b","toolName":"write_file","kind":"write","status":"completed","args":{}}}"#,
+            r#"{"payload":{"type":"usage_summary"}}"#,
+        ] {
+            writeln!(file, "{line}")?;
+        }
+        file.flush()?;
+
+        let later = UsageRecordId::new(11);
+        handle.enrich(later, session, KiroSidecarKind::Kas);
+        let result = tokio::time::timeout(Duration::from_secs(2), receiver.recv())
+            .await?
+            .ok_or("later enrichment missing")?;
+        let UsageEnrichmentResult::Enriched(enrichment) = result else {
+            return Err("later record must enrich after abandonment".into());
+        };
+        assert_eq!(enrichment.record_id, later);
+        assert_eq!(
+            enrichment.tools[0].call_id().map(ToolCallId::as_str),
+            Some("call-b")
+        );
         Ok(())
     }
 }

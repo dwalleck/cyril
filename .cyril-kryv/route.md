@@ -37,3 +37,13 @@ interrogated-spec → falsifiable-design → budgeted-plan → checkpointed-buil
 ## Terminal criterion
 
 Structural — every downstream artifact satisfies its owning stage's completion criterion, ending with no FAIL in checkpointed-build's recorded gate.
+
+Result: 2026-08-22 | PASS — `cargo test` (1,415 passed), three consecutive `cargo test --features kas` runs (1,721 passed each), default/KAS `cargo clippy -- -D warnings`, and `cargo fmt --all --check` all succeeded after the review-fix slice. The tracing gate now captures events structurally with callsites registered as always enabled, and the previously hanging usage-command test asserts App-owned dispatch without awaiting an impossible command-layer receive.
+
+## PR increments
+
+- PR #97 — Live metering substrate (`feat/cyril-kryv-kiro-usage`, draft).
+- PR #98 — Usage detail and enrichment (`feat/cyril-kryv-usage-detail`, draft).
+- PR #99 — Account and modal completion (`feat/cyril-kryv-usage-modal`, draft), plus exact-wire review fence commit `99496ca`.
+
+Live acceptance: KAS completed a no-tool turn (`OK`), and the open `/usage` panel refreshed from 4→5 turns with `Provider requests 1`, `Retries 0`, `0.1698 credits`, and live account plan/limit/overage fields. v2 session `d831ff76-f27a-43e5-877a-7d115cb46718` on `gpt-5.6-terra` also returned exact `OK`; its `/usage` panel showed six successful turns, one provider request, zero retries, `0.2402 credits` aggregate, `0.0704 credits` for the v2 model, 8% context, folder/model grouping, and `n/a (backend-gated)` token/monetary fields for v2 records. The dual-engine live gate is PASS.

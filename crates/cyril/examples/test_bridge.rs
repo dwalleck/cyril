@@ -483,6 +483,18 @@ fn print_notification(n: &Notification) {
                 update.request_ids()
             );
         }
+        Notification::UsageAccountUpdated {
+            account,
+            fetched_at_ms,
+        } => {
+            println!(
+                "  [UsageAccountUpdated] plan={} fetched={fetched_at_ms:?}",
+                account.plan_name
+            );
+        }
+        Notification::UsageAccountQueryFailed { message } => {
+            println!("  [UsageAccountQueryFailed] {message}");
+        }
         Notification::AgentSwitched { name, welcome, .. } => {
             println!("  [AgentSwitched] name={name} welcome={:?}", welcome);
         }
