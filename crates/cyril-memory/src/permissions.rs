@@ -134,14 +134,7 @@ pub(crate) fn tighten_directory(path: &Path) -> io::Result<()> {
     if !applied_sddl.contains("D:P") || !current_user_only {
         return Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
-            format!(
-                "memory data root DACL verification failed: sddl={applied_sddl:?}, ace_count={}, ace_type={:?}, flags={:?}, rights={:?}, sid_matches={}",
-                applied_dacl.len(),
-                ace.map(|value| value.ace_type()),
-                ace.map(|value| value.flags()),
-                ace.map(|value| value.mask()),
-                ace.and_then(|value| value.sid()) == Some(expected_sid.as_ref()),
-            ),
+            "memory data root DACL verification failed",
         ));
     }
 
