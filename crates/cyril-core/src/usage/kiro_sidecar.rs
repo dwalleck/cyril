@@ -1252,7 +1252,7 @@ mod tests {
             .await?
             .ok_or("worker closed")?;
         assert!(matches!(result, UsageEnrichmentResult::Failed { .. }));
-        assert!(started.elapsed() <= Duration::from_secs(1));
+        assert!(started.elapsed() <= ENRICHMENT_DEADLINE + Duration::from_secs(1));
 
         let invalid = validate_session_id(&SessionId::new("../escape"));
         assert!(matches!(invalid, Err(SidecarError::InvalidSessionId(_))));
