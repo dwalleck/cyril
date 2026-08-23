@@ -37,10 +37,13 @@ Or build from source:
 ```sh
 git clone https://github.com/dwalleck/cyril.git
 cd cyril
-cargo build --release
+cargo build -p cyril --release --bins
 ```
 
-The binary will be at `target/release/cyril` (or `cyril.exe` on Windows).
+The build produces `target/release/cyril` and
+`target/release/cyril-memory-runtime` (with `.exe` suffixes on Windows).
+Keep both executables in the same directory; Cyril launches the memory runtime
+by canonical absolute sibling path when `[memory] enabled = true`.
 
 ## Usage
 

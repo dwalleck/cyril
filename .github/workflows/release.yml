@@ -18,14 +18,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: cyril-linux-x86_64
-            bin_path: target/release/cyril
+            artifact_name: cyril-linux-x86_64.tar.gz
           - os: macos-latest
-            artifact_name: cyril-macos-aarch64
-            bin_path: target/release/cyril
+            artifact_name: cyril-macos-aarch64.tar.gz
           - os: windows-latest
-            artifact_name: cyril-windows-x86_64.exe
-            bin_path: target/release/cyril.exe
+            artifact_name: cyril-windows-x86_64.zip
 
     steps:
       - name: Checkout code
@@ -34,21 +31,25 @@ jobs:
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Build release binary
-        run: cargo build --release --all-features --bin cyril
+      - name: Build release binaries
+        run: cargo build -p cyril --release --all-features --bins
 
-      - name: Stage binary (Unix)
+      - name: Stage binaries (Unix)
         if: matrix.os != 'windows-latest'
         run: |
-          mkdir -p dist
-          cp "${{ matrix.bin_path }}" "dist/${{ matrix.artifact_name }}"
+          mkdir -p dist/package
+          cp target/release/cyril dist/package/cyril
+          cp target/release/cyril-memory-runtime dist/package/cyril-memory-runtime
+          tar -czf "dist/${{ matrix.artifact_name }}" -C dist/package .
 
-      - name: Stage binary (Windows)
+      - name: Stage binaries (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path dist
-          Copy-Item "${{ matrix.bin_path }}" "dist/${{ matrix.artifact_name }}"
+          New-Item -ItemType Directory -Force -Path dist/package
+          Copy-Item target/release/cyril.exe dist/package/cyril.exe
+          Copy-Item target/release/cyril-memory-runtime.exe dist/package/cyril-memory-runtime.exe
+          Compress-Archive -Path dist/package/* -DestinationPath "dist/${{ matrix.artifact_name }}"
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2

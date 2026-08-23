@@ -8,6 +8,7 @@ use ratatui::DefaultTerminal;
 use serde::Deserialize;
 use tokio::sync::mpsc;
 
+use crate::memory_runtime::MemoryRuntimeHandle;
 use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, CommandResultKind};
 use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
@@ -73,6 +74,7 @@ pub struct App {
     /// is off (or the engine could not start). The type lives in cyril-core so
     /// this field and its `select!` arm compile regardless of the feature.
     voice: Option<cyril_core::voice::VoiceHandle>,
+    memory_runtime: Option<MemoryRuntimeHandle>,
     /// Authoritative "is voice capturing?" intent. Flipped on each successful
     /// Start/Stop send (and cleared on engine `Error`). Toggling reads this —
     /// NOT the lagging `ui_state.voice_status()` projection — so rapid `/voice`
@@ -175,6 +177,7 @@ impl App {
             usage_enrichment_rx,
             agent_engine,
             voice: spawn_voice_engine(),
+            memory_runtime: None,
             voice_active: false,
             startup_prompt: None,
             workflow_tracker: WorkflowTracker::new(),
@@ -273,6 +276,18 @@ impl App {
     /// performs when `execute!` fails.
     pub fn set_mouse_captured(&mut self, captured: bool) {
         self.ui_state.set_mouse_captured(captured);
+    }
+    pub(crate) fn set_memory_runtime(&mut self, memory_runtime: MemoryRuntimeHandle) {
+        match memory_runtime.status() {
+            crate::memory_runtime::MemoryRuntimeStatus::Failed(failure)
+            | crate::memory_runtime::MemoryRuntimeStatus::Degraded(failure) => {
+                tracing::warn!(reason = failure.message(), "memory runtime unavailable");
+            }
+            crate::memory_runtime::MemoryRuntimeStatus::Disabled(_)
+            | crate::memory_runtime::MemoryRuntimeStatus::Starting
+            | crate::memory_runtime::MemoryRuntimeStatus::Ready(_) => {}
+        }
+        self.memory_runtime = Some(memory_runtime);
     }
 
     /// Kick off the initial session. `oneshot_prompt` is the parsed `--prompt`
@@ -424,6 +439,9 @@ impl App {
             if self.ui_state.should_quit() {
                 if let Err(e) = self.bridge_sender.send(BridgeCommand::Shutdown).await {
                     tracing::warn!(error = %e, "failed to send shutdown to bridge");
+                }
+                if let Some(mut memory_runtime) = self.memory_runtime.take() {
+                    memory_runtime.shutdown().await;
                 }
                 break;
             }
@@ -2419,6 +2437,33 @@ mod tests {
             ),
             rx,
         )
+    }
+    #[tokio::test]
+    async fn memory_failure_does_not_block_initial_session_dispatch() {
+        let root = tempfile::tempdir().expect("root");
+        let config_path = root.path().join("config.toml");
+        std::fs::write(
+            &config_path,
+            "[memory]\nenabled = false\nunknown_memory_field = true\n",
+        )
+        .expect("config");
+        let report = cyril_memory::load_config_report(&config_path);
+        let memory_runtime =
+            crate::memory_runtime::MemoryRuntimeHandle::start(report.memory().clone());
+        assert!(matches!(
+            memory_runtime.status(),
+            crate::memory_runtime::MemoryRuntimeStatus::Failed(_)
+        ));
+
+        let (mut app, mut commands) = test_app_with_command_rx();
+        app.set_memory_runtime(memory_runtime);
+        app.create_initial_session(root.path().to_path_buf(), None)
+            .await;
+        let command = tokio::time::timeout(Duration::from_secs(1), commands.recv())
+            .await
+            .expect("command deadline")
+            .expect("bridge command");
+        assert!(matches!(command, BridgeCommand::NewSession { .. }));
     }
 
     fn establish_main_session(app: &mut App, session_id: &SessionId) {
