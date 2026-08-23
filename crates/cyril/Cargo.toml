@@ -25,6 +25,7 @@ kas = ["cyril-core/kas"]
 
 [dependencies]
 cyril-core = { path = "../cyril-core" }
+cyril-memory = { path = "../cyril-memory" }
 cyril-ui = { path = "../cyril-ui" }
 cyril-voice = { path = "../cyril-voice", optional = true }
 tokio = { workspace = true, features = ["full"] }
@@ -43,5 +44,6 @@ anyhow = { workspace = true }
 # share cyril-core's canonical test scaffolding (CaptureWriter). Dev-dependency
 # features never leak into the plain `[dependencies]` lib build.
 cyril-core = { path = "../cyril-core", features = ["test-support"] }
+rusqlite = { workspace = true }
 rstest = { workspace = true }
 tempfile = { workspace = true }

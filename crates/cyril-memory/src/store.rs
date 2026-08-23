@@ -27,6 +27,9 @@ impl MemoryStoreVersions {
     const fn new(memory: u32, knowledge: u32) -> Self {
         Self { memory, knowledge }
     }
+    pub(crate) const fn from_parts(memory: u32, knowledge: u32) -> Self {
+        Self::new(memory, knowledge)
+    }
 
     pub fn memory(self) -> u32 {
         self.memory

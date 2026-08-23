@@ -351,6 +351,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "constant_time_eq"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
+
+[[package]]
 name = "convert_case"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -439,11 +445,13 @@ dependencies = [
  "clap",
  "crossterm",
  "cyril-core",
+ "cyril-memory",
  "cyril-ui",
  "cyril-voice",
  "futures-util",
  "ratatui",
  "rstest",
+ "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
@@ -480,14 +488,21 @@ dependencies = [
 name = "cyril-memory"
 version = "0.2.0-alpha.1"
 dependencies = [
+ "constant_time_eq",
  "cyril-core",
+ "getrandom 0.4.2",
+ "hex",
+ "interprocess",
  "rusqlite",
  "serde",
+ "serde_json",
  "serde_path_to_error",
  "tempfile",
  "thiserror 2.0.18",
+ "tokio",
  "toml",
  "tracing",
+ "widestring",
  "win-security-identifier",
  "windows-permissions",
 ]
@@ -615,6 +630,12 @@ dependencies = [
  "block-buffer",
  "crypto-common",
 ]
+
+[[package]]
+name = "doctest-file"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2db04e74f0a9a93103b50e90b96024c9b2bdca8bce6a632ec71b88736d3d359"
 
 [[package]]
 name = "document-features"
@@ -1008,6 +1029,21 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.116",
+]
+
+[[package]]
+name = "interprocess"
+version = "2.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "798de1433ba514cc6c04c4144c2469af81396e4906195218737c776d47769572"
+dependencies = [
+ "doctest-file",
+ "futures-core",
+ "libc",
+ "recvmsg",
+ "tokio",
+ "widestring",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1658,6 +1694,12 @@ dependencies = [
  "unicode-segmentation",
  "unicode-width",
 ]
+
+[[package]]
+name = "recvmsg"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3edd4d5d42c92f0a659926464d4cce56b562761267ecf0f469d85b7de384175"
 
 [[package]]
 name = "redox_syscall"
