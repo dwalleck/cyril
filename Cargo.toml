@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/cyril-core", "crates/cyril-ui", "crates/cyril-voice", "crates/cyril"]
+members = [
+    "crates/cyril-core",
+    "crates/cyril-memory",
+    "crates/cyril-ui",
+    "crates/cyril-voice",
+    "crates/cyril",
+]
 
 [workspace.package]
 version = "0.2.0-alpha.1"
@@ -52,6 +58,8 @@ rusqlite = { version = "0.39", default-features = false, features = ["bundled"] 
 # guard (root passes any-execute-bit checks even with AT_EACCESS). Safe
 # wrappers — `unsafe_code = "forbid"` governs OUR code, not dependencies.
 nix = { version = "0.31", default-features = false, features = ["fs", "signal", "user"] }
+win-security-identifier = { version = "0.2", default-features = false, features = ["std"] }
+windows-permissions = { version = "0.2", default-features = false }
 
 [profile.dev]
 incremental = true
