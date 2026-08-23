@@ -3379,7 +3379,7 @@ mod tests {
                 .query_row("PRAGMA user_version", [], |row| row.get(0)),
             "schema version",
         );
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
     }
 
     #[test]
