@@ -17,6 +17,7 @@ use crate::types::{
 
 const RECENT_LIMIT: usize = 20;
 const BUSY_TIMEOUT: Duration = Duration::from_millis(250);
+const STARTUP_BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 type ModelGroupKey = (Option<String>, Option<String>);
 
 #[derive(Debug, Error)]
@@ -443,7 +444,7 @@ impl UsageLog {
 
     fn from_connection(mut connection: Connection) -> Result<Self, UsageError> {
         connection
-            .busy_timeout(BUSY_TIMEOUT)
+            .busy_timeout(STARTUP_BUSY_TIMEOUT)
             .map_err(UsageError::Configure)?;
         connection
             .execute_batch("PRAGMA foreign_keys = ON;")
@@ -451,6 +452,9 @@ impl UsageLog {
         Self::migrate_schema(&mut connection)?;
         connection
             .execute_batch("PRAGMA journal_mode = WAL;")
+            .map_err(UsageError::Configure)?;
+        connection
+            .busy_timeout(BUSY_TIMEOUT)
             .map_err(UsageError::Configure)?;
         Ok(Self { connection })
     }
@@ -2230,6 +2234,34 @@ mod tests {
             );
             assert_eq!(version, 2);
         }
+    }
+
+    #[test]
+    fn schema_open_waits_for_a_concurrent_startup_lock() {
+        let directory = must_succeed(tempfile::tempdir(), "tempdir");
+        let path = directory.path().join("usage.sqlite3");
+        let blocker = must_succeed(Connection::open(&path), "open blocking connection");
+        must_succeed(
+            blocker.execute_batch("BEGIN IMMEDIATE;"),
+            "acquire startup write lock",
+        );
+        let open_path = path.clone();
+        let handle = std::thread::spawn(move || UsageLog::open(&open_path));
+        std::thread::sleep(Duration::from_millis(400));
+        must_succeed(
+            blocker.execute_batch("COMMIT;"),
+            "release startup write lock",
+        );
+        let log = match handle.join() {
+            Ok(result) => must_succeed(result, "open after startup lock"),
+            Err(_) => panic!("open thread"),
+        };
+        let version: i64 = must_succeed(
+            log.connection
+                .query_row("PRAGMA user_version", [], |row| row.get(0)),
+            "schema version",
+        );
+        assert_eq!(version, 2);
     }
 
     #[test]
