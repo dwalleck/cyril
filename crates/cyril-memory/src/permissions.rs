@@ -86,7 +86,8 @@ pub(crate) fn tighten_directory(path: &Path) -> io::Result<()> {
         SeObjectType::SE_FILE_OBJECT,
         SecurityInformation::Dacl,
     )?;
-    let applied_sddl = applied.as_sddl()?.to_string_lossy();
+    let applied_sddl_value = applied.as_sddl()?;
+    let applied_sddl = applied_sddl_value.to_string_lossy();
     if !applied_sddl.starts_with("D:P")
         || !applied_sddl.contains("OICI")
         || !applied_sddl.contains(sid.as_str())
