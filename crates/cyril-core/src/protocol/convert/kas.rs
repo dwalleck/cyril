@@ -10,8 +10,8 @@ use agent_client_protocol as acp;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{
-    ContextBreakdown, ContextBucket, MeteredAmount, Notification, StopReason, TurnMeteringUpdate,
-    UsageTurnStatus,
+    ContextBreakdown, ContextBucket, ContextUsage, MeteredAmount, Notification, StopReason,
+    TurnMeteringUpdate, UsageTurnStatus,
 };
 
 pub(crate) mod workflow;
@@ -143,9 +143,31 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
             // present, ALWAYS return Some even if the breakdown is absent/malformed
             // — the scalar `Context: N%` must still update (the bars retain-last in
             // UiState). No unwrap; a malformed breakdown degrades to `None`.
-            let usage_percentage = kiro
-                .get("usagePercentage")
-                .and_then(serde_json::Value::as_f64)?;
+            let Some(raw_percentage) = kiro.get("usagePercentage") else {
+                tracing::warn!(
+                    "KAS context_usage frame is missing `usagePercentage`; dropping frame"
+                );
+                return None;
+            };
+            let Some(raw_percentage) = raw_percentage.as_f64() else {
+                tracing::warn!(
+                    value = ?raw_percentage,
+                    "KAS context_usage `usagePercentage` is not numeric; dropping frame"
+                );
+                return None;
+            };
+            let usage_percentage = match ContextUsage::try_new(raw_percentage) {
+                Ok(usage) => usage.percentage(),
+                Err(error) => {
+                    tracing::warn!(
+                        value = raw_percentage,
+                        error = %error,
+                        "KAS context_usage `usagePercentage` is outside the finite 0..=100 range; \
+                         dropping frame"
+                    );
+                    return None;
+                }
+            };
             // Distinguish "missing" from "corrupt" (CLAUDE.md "Log before
             // returning None"): a frame with no `breakdown` key is the normal
             // scalar-only case (silent), but a `breakdown` that IS present yet
@@ -368,8 +390,19 @@ fn parse_breakdown(breakdown: Option<&serde_json::Value>) -> Option<ContextBreak
 fn parse_bucket(bucket: Option<&serde_json::Value>) -> Option<ContextBucket> {
     let b = bucket?;
     let tokens = b.get("tokens").and_then(serde_json::Value::as_u64)?;
-    let percent = b.get("percent").and_then(serde_json::Value::as_f64)?;
-    Some(ContextBucket::new(tokens, percent))
+    let raw_percent = b.get("percent").and_then(serde_json::Value::as_f64)?;
+    match ContextBucket::try_new(tokens, raw_percent) {
+        Ok(bucket) => Some(bucket),
+        Err(error) => {
+            tracing::warn!(
+                value = raw_percent,
+                error = %error,
+                "KAS context_usage breakdown bucket has invalid percent; \
+                 degrading to scalar-only"
+            );
+            None
+        }
+    }
 }
 
 #[cfg(test)]
@@ -885,6 +918,40 @@ mod tests {
             ),
             "malformed breakdown must degrade to None, got {result:?}"
         );
+    }
+
+    #[test]
+    fn context_usage_rejects_out_of_range_scalar() {
+        let sn = kiro_frame(json!({
+            "kind": "context_usage",
+            "usagePercentage": 150.0
+        }));
+        assert!(
+            session_info_to_notification(info_update(&sn)).is_none(),
+            "invalid scalar must be rejected at the wire boundary"
+        );
+    }
+
+    #[test]
+    fn context_usage_rejects_out_of_range_bucket() {
+        let sn = kiro_frame(json!({
+            "kind": "context_usage",
+            "usagePercentage": 3.0,
+            "breakdown": {
+                "contextFiles": { "tokens": 1, "percent": 101.0 },
+                "sessionFiles": { "tokens": 0, "percent": 0.0 },
+                "tools": { "tokens": 0, "percent": 0.0 },
+                "yourPrompts": { "tokens": 0, "percent": 0.0 },
+                "kiroResponses": { "tokens": 0, "percent": 0.0 }
+            }
+        }));
+        assert!(matches!(
+            session_info_to_notification(info_update(&sn)),
+            Some(Notification::ContextBreakdownUpdated {
+                usage_percentage: 3.0,
+                breakdown: None
+            })
+        ));
     }
 
     #[test]

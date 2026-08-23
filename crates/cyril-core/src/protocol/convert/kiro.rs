@@ -347,7 +347,18 @@ pub(crate) fn to_ext_notification(
             let context_usage = match params.get("contextUsagePercentage") {
                 None => None,
                 Some(v) => match v.as_f64() {
-                    Some(pct) => Some(ContextUsage::new(pct)),
+                    Some(pct) => match ContextUsage::try_new(pct) {
+                        Ok(usage) => Some(usage),
+                        Err(error) => {
+                            tracing::warn!(
+                                value = ?v,
+                                error = %error,
+                                "kiro.dev/metadata `contextUsagePercentage` is outside \
+                                 the finite 0..=100 range, ignoring"
+                            );
+                            None
+                        }
+                    },
                     None => {
                         tracing::warn!(
                             value = ?v,
@@ -1738,5 +1749,20 @@ mod tests {
         });
         let info = parse_subagent_entry(&v).expect("entry should parse");
         assert_eq!(info.stage_name(), None);
+    }
+    #[test]
+    fn metadata_rejects_out_of_range_context_percentage() {
+        let params = json!({
+            "contextUsagePercentage": 150.0,
+            "sessionId": "session",
+        });
+        let result = to_ext_notification("kiro.dev/metadata", &params);
+        assert!(matches!(
+            result,
+            Ok(Some(Notification::MetadataUpdated {
+                context_usage: None,
+                ..
+            }))
+        ));
     }
 }

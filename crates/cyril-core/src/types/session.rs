@@ -279,6 +279,17 @@ impl ContextUsage {
         }
     }
 
+    /// Validate a percentage received from an untrusted protocol boundary.
+    ///
+    /// [`ContextUsage::new`] intentionally retains its historical clamping
+    /// behavior for trusted/UI callers; converters must use this strict path.
+    pub fn try_new(percentage: f64) -> Result<Self, UsageValueError> {
+        if !percentage.is_finite() || !(0.0..=100.0).contains(&percentage) {
+            return Err(UsageValueError::InvalidPercentage);
+        }
+        Ok(Self { percentage })
+    }
+
     pub fn percentage(&self) -> f64 {
         self.percentage
     }
@@ -291,7 +302,7 @@ impl ContextUsage {
 /// cyril-5et2 renders the aggregate bar; per-file drill-in is a separate feature
 /// (cyril-1116). Omitting an `items` field makes the no-drill-in invariant
 /// unrepresentable rather than merely unenforced.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ContextBucket {
     tokens: u64,
     percent: f64,
@@ -300,6 +311,16 @@ pub struct ContextBucket {
 impl ContextBucket {
     pub fn new(tokens: u64, percent: f64) -> Self {
         Self { tokens, percent }
+    }
+
+    /// Validate a bucket percentage received from an untrusted protocol
+    /// boundary. The infallible constructor remains available for trusted
+    /// internal fixtures and legacy callers.
+    pub fn try_new(tokens: u64, percent: f64) -> Result<Self, UsageValueError> {
+        if !percent.is_finite() || !(0.0..=100.0).contains(&percent) {
+            return Err(UsageValueError::InvalidPercentage);
+        }
+        Ok(Self { tokens, percent })
     }
 
     pub fn tokens(&self) -> u64 {
@@ -315,7 +336,7 @@ impl ContextBucket {
 /// `session_info_update` `context_usage` buckets KAS pushes proactively each
 /// turn. v2 has only the scalar [`ContextUsage`]; bucket names mirror the wire
 /// `_meta.kiro.breakdown.*`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ContextBreakdown {
     context_files: ContextBucket,
     session_files: ContextBucket,
@@ -841,6 +862,35 @@ mod tests {
     fn context_usage_clamps_low() {
         let usage = ContextUsage::new(-10.0);
         assert!((usage.percentage() - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn context_usage_try_new_rejects_invalid_percentages() {
+        for percentage in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.1, 100.1] {
+            assert!(
+                ContextUsage::try_new(percentage).is_err(),
+                "invalid percentage {percentage:?} must be rejected"
+            );
+        }
+        assert_eq!(
+            ContextUsage::try_new(42.5)
+                .expect("valid percentage")
+                .percentage(),
+            42.5
+        );
+    }
+
+    #[test]
+    fn context_bucket_try_new_rejects_invalid_percentages() {
+        for percent in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.1, 100.1] {
+            assert!(
+                ContextBucket::try_new(10, percent).is_err(),
+                "invalid bucket percentage {percent:?} must be rejected"
+            );
+        }
+        let bucket = ContextBucket::try_new(10, 42.5).expect("valid bucket");
+        assert_eq!(bucket.tokens(), 10);
+        assert_eq!(bucket.percent(), 42.5);
     }
 
     #[test]
