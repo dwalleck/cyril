@@ -482,9 +482,9 @@ fn resolve_runtime_dir() -> Result<PathBuf, std::io::Error> {
 }
 
 fn create_endpoint(runtime_dir: &Path) -> Result<MemoryEndpoint, cyril_memory::IpcError> {
-    let mut random = [0_u8; 16];
+    let mut random = [0_u8; 8];
     getrandom::fill(&mut random).map_err(cyril_memory::IpcError::Random)?;
-    MemoryEndpoint::from_path(&runtime_dir.join(format!("memory-{}.sock", hex::encode(random))))
+    MemoryEndpoint::from_path(&runtime_dir.join(format!("m-{}", hex::encode(random))))
 }
 
 #[cfg(test)]
