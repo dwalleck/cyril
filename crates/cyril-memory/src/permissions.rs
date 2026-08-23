@@ -40,9 +40,11 @@ pub(crate) fn tighten_directory(path: &Path) -> io::Result<()> {
     use std::str::FromStr;
 
     use win_security_identifier::{GetCurrentSid, SecurityIdentifier};
-    use windows_permissions::constants::{SeObjectType, SecurityInformation};
+    use windows_permissions::constants::{
+        AccessRights, AceFlags, AceType, SeObjectType, SecurityInformation,
+    };
     use windows_permissions::wrappers::{GetNamedSecurityInfo, SetNamedSecurityInfo};
-    use windows_permissions::{LocalBox, SecurityDescriptor};
+    use windows_permissions::{LocalBox, SecurityDescriptor, Sid};
 
     let metadata = fs::symlink_metadata(path)?;
     if metadata.file_type().is_symlink() {
@@ -63,6 +65,8 @@ pub(crate) fn tighten_directory(path: &Path) -> io::Result<()> {
     let sid = current_sid.to_string();
     let descriptor_text = format!("D:P(A;OICI;GA;;;{sid})");
     let descriptor = LocalBox::<SecurityDescriptor>::from_str(&descriptor_text)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))?;
+    let expected_sid = LocalBox::<Sid>::from_str(&sid)
         .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))?;
     let dacl = descriptor.dacl().ok_or_else(|| {
         io::Error::new(
@@ -88,10 +92,25 @@ pub(crate) fn tighten_directory(path: &Path) -> io::Result<()> {
     )?;
     let applied_sddl_value = applied.as_sddl()?;
     let applied_sddl = applied_sddl_value.to_string_lossy();
-    if !applied_sddl.starts_with("D:P")
-        || !applied_sddl.contains("OICI")
-        || !applied_sddl.contains(sid.as_str())
-    {
+    let applied_dacl = applied.dacl().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "memory data root has no DACL after hardening",
+        )
+    })?;
+    let ace = (applied_dacl.len() == 1)
+        .then(|| applied_dacl.get_ace(0))
+        .flatten();
+    let current_user_only = ace.is_some_and(|ace| {
+        let flags = ace.flags();
+        let rights = ace.mask();
+        ace.ace_type() == AceType::ACCESS_ALLOWED_ACE_TYPE
+            && ace.sid() == Some(expected_sid.as_ref())
+            && flags.contains(AceFlags::ObjectInherit | AceFlags::ContainerInherit)
+            && (rights.contains(AccessRights::GenericAll)
+                || rights.contains(AccessRights::FileAllAccess))
+    });
+    if !applied_sddl.contains("D:P") || !current_user_only {
         return Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
             "memory data root DACL verification failed",
