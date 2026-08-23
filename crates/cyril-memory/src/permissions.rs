@@ -98,18 +98,39 @@ pub(crate) fn tighten_directory(path: &Path) -> io::Result<()> {
             "memory data root has no DACL after hardening",
         )
     })?;
-    let ace = (applied_dacl.len() == 1)
-        .then(|| applied_dacl.get_ace(0))
-        .flatten();
-    let current_user_only = ace.is_some_and(|ace| {
+    let mut direct_aces = 0_u32;
+    let mut inheritable_aces = 0_u32;
+    let mut current_user_only = applied_dacl.len() == 2;
+    for index in 0..applied_dacl.len() {
+        let Some(ace) = applied_dacl.get_ace(index) else {
+            current_user_only = false;
+            break;
+        };
         let flags = ace.flags();
         let rights = ace.mask();
-        ace.ace_type() == AceType::ACCESS_ALLOWED_ACE_TYPE
+        let common = ace.ace_type() == AceType::ACCESS_ALLOWED_ACE_TYPE
             && ace.sid() == Some(expected_sid.as_ref())
-            && flags.contains(AceFlags::ObjectInherit | AceFlags::ContainerInherit)
+            && !flags.contains(AceFlags::Inherited)
             && (rights.contains(AccessRights::GenericAll)
-                || rights.contains(AccessRights::FileAllAccess))
-    });
+                || rights.contains(AccessRights::FileAllAccess));
+        if !common {
+            current_user_only = false;
+            break;
+        }
+        if flags
+            .contains(AceFlags::ObjectInherit | AceFlags::ContainerInherit | AceFlags::InheritOnly)
+        {
+            inheritable_aces += 1;
+        } else if !flags.intersects(
+            AceFlags::ObjectInherit | AceFlags::ContainerInherit | AceFlags::InheritOnly,
+        ) {
+            direct_aces += 1;
+        } else {
+            current_user_only = false;
+            break;
+        }
+    }
+    current_user_only &= direct_aces == 1 && inheritable_aces == 1;
     if !applied_sddl.contains("D:P") || !current_user_only {
         return Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
