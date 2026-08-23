@@ -63,6 +63,7 @@ pub(crate) enum MemoryRuntimeStatus {
 
 pub(crate) struct MemoryRuntimeHandle {
     status: watch::Receiver<MemoryRuntimeStatus>,
+    status_closed: bool,
     shutdown: Option<oneshot::Sender<()>>,
     task: Option<JoinHandle<()>>,
 }
@@ -118,6 +119,7 @@ impl MemoryRuntimeHandle {
         });
         Self {
             status,
+            status_closed: false,
             shutdown: Some(shutdown_tx),
             task: Some(task),
         }
@@ -127,6 +129,7 @@ impl MemoryRuntimeHandle {
         let (_status_tx, status) = watch::channel(status_value);
         Self {
             status,
+            status_closed: false,
             shutdown: None,
             task: None,
         }
@@ -140,8 +143,37 @@ impl MemoryRuntimeHandle {
     }
 
     pub(crate) async fn changed(&mut self) -> Option<cyril_core::types::MemoryStatusView> {
-        self.status.changed().await.ok()?;
-        Some(self.status_view())
+        if self.status_closed {
+            return None;
+        }
+        match self.status.changed().await {
+            Ok(()) => Some(self.status_view()),
+            Err(error) => {
+                self.status_closed = true;
+                let current = self.status_view();
+                let terminal = match current.status() {
+                    cyril_core::types::MemoryStatus::Starting => {
+                        cyril_core::types::MemoryStatusView::failed(
+                            "memory runtime status channel closed during startup",
+                        )
+                    }
+                    cyril_core::types::MemoryStatus::Ready => {
+                        cyril_core::types::MemoryStatusView::degraded(
+                            "memory runtime status channel closed",
+                        )
+                    }
+                    cyril_core::types::MemoryStatus::Disabled
+                    | cyril_core::types::MemoryStatus::Degraded
+                    | cyril_core::types::MemoryStatus::Failed => current,
+                };
+                tracing::warn!(
+                    error = %error,
+                    terminal_status = ?terminal.status(),
+                    "memory runtime status channel closed"
+                );
+                Some(terminal)
+            }
+        }
     }
 
     pub(crate) async fn shutdown(&mut self) {
@@ -625,5 +657,24 @@ mod tests {
             !process_path.exists(),
             "runtime grandchild survived shutdown"
         );
+    }
+    #[tokio::test]
+    async fn closed_status_channel_transitions_once() {
+        let (sender, status) = watch::channel(MemoryRuntimeStatus::Starting);
+        drop(sender);
+        let mut handle = MemoryRuntimeHandle {
+            status,
+            status_closed: false,
+            shutdown: None,
+            task: None,
+        };
+
+        let terminal = handle.changed().await.expect("explicit terminal status");
+        assert_eq!(terminal.status(), cyril_core::types::MemoryStatus::Failed);
+        assert_eq!(
+            terminal.detail(),
+            Some("memory runtime status channel closed during startup")
+        );
+        assert!(handle.changed().await.is_none());
     }
 }

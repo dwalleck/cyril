@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
+#[cfg(windows)]
+use cyril_memory::ClientError;
 use cyril_memory::{
     AdminClient, AdminCredential, HealthResponse, MemoryEndpoint, MemoryErrorCode, MemoryPaths,
     PROTOCOL_VERSION, RuntimeHealth, RuntimeLaunchConfig,
@@ -491,6 +493,21 @@ mod unix_protocol {
 #[tokio::test]
 async fn windows_endpoint_uses_current_user_protected_acl() -> Result<()> {
     let runtime = RunningRuntime::start().await?;
-    assert!(runtime.endpoint.display().to_string().contains("pipe"));
+    assert!(runtime.endpoint.display().contains("pipe"));
+
+    let wrong_credential = AdminCredential::generate()?;
+    let mut unauthorized =
+        AdminClient::connect(runtime.endpoint.clone(), wrong_credential, STARTUP_TIMEOUT).await?;
+    match unauthorized.health().await {
+        Err(ClientError::Protocol(error)) => {
+            assert_eq!(error.code(), MemoryErrorCode::Unauthorized);
+        }
+        other => bail!("wrong Windows runtime credential was not rejected: {other:?}"),
+    }
+    drop(unauthorized);
+
+    let mut valid = runtime.client().await?;
+    assert_ready(&valid.health().await?)?;
+    drop(valid);
     runtime.shutdown().await
 }
