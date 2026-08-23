@@ -14,7 +14,8 @@ use thiserror::Error;
 use crate::paths::MemoryPaths;
 
 const CURRENT_SCHEMA_VERSION: u32 = 1;
-const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
+const STARTUP_BUSY_TIMEOUT: Duration = Duration::from_secs(5);
+const BUSY_TIMEOUT: Duration = Duration::from_millis(250);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemoryStoreVersions {
@@ -96,9 +97,9 @@ pub enum StoreError {
 }
 
 pub struct StoreSet {
-    _lock: File,
     _memory: Connection,
     _knowledge: Connection,
+    _lock: File,
     versions: MemoryStoreVersions,
 }
 
@@ -188,7 +189,7 @@ fn precreate_store(path: &Path) -> Result<StoreFileState, StoreError> {
 fn open_store(path: &Path, state: StoreFileState) -> Result<Connection, StoreError> {
     let mut connection = Connection::open(path).map_err(|source| map_sqlite(path, source))?;
     connection
-        .busy_timeout(BUSY_TIMEOUT)
+        .busy_timeout(STARTUP_BUSY_TIMEOUT)
         .map_err(|source| map_sqlite(path, source))?;
     connection
         .pragma_update(None, "foreign_keys", "ON")
@@ -578,7 +579,7 @@ mod tests {
             connection
                 .query_row("PRAGMA busy_timeout", [], |row| row.get::<_, i64>(0))
                 .unwrap(),
-            5_000
+            250
         );
     }
 
