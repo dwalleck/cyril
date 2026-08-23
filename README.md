@@ -19,6 +19,7 @@ Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. 
 - **Agent/model switching** — switch agents (`/agent`) and models (`/model`) via picker UI
 - **Live activity indicator** — animated spinner with elapsed time and current tool activity in the toolbar
 - **Context bar** — visual gauge showing context window usage
+- **Opt-in local memory runtime** — private versioned stores and authenticated health reporting without making chat depend on memory availability
 - **@-file references** — reference files in prompts with `@path/to/file` autocomplete
 
 ## Prerequisites
@@ -37,10 +38,13 @@ Or build from source:
 ```sh
 git clone https://github.com/dwalleck/cyril.git
 cd cyril
-cargo build --release
+cargo build -p cyril --release --bins
 ```
 
-The binary will be at `target/release/cyril` (or `cyril.exe` on Windows).
+The build produces `target/release/cyril` and
+`target/release/cyril-memory-runtime` (with `.exe` suffixes on Windows).
+Keep both executables in the same directory; Cyril launches the memory runtime
+by canonical absolute sibling path when `[memory] enabled = true`.
 
 ## Usage
 
@@ -62,6 +66,20 @@ Specify a working directory:
 cyril -d /path/to/project        # Linux
 cyril -d C:\Users\you\project    # Windows
 ```
+### Local memory runtime
+
+Memory is disabled by default. Enable the local runtime in Cyril's
+`~/.config/cyril/config.toml`:
+
+```toml
+[memory]
+enabled = true
+```
+
+Use `/memory status` to inspect runtime health and store schema versions. This
+M0 runtime initializes empty stores only; it does not yet capture, retrieve, or
+inject memories.
+
 
 ### Keyboard shortcuts
 
@@ -86,6 +104,7 @@ cyril -d C:\Users\you\project    # Windows
 | `/clear` | Clear the chat |
 | `/mode <id>` | Switch agent mode |
 | `/model [id]` | Switch model (opens picker if no ID given) |
+| `/memory status` | Show local memory runtime health and store versions |
 | `/quit` | Quit |
 
 **Agent commands** (forwarded to Kiro via ACP):

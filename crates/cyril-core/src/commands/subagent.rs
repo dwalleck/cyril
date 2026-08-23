@@ -244,6 +244,7 @@ mod tests {
             bridge: sender,
             subagent_tracker: tracker,
             workflow_tracker: None,
+            memory_status: None,
         }
     }
 

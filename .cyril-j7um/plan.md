@@ -149,6 +149,37 @@ The 25% margin covers cross-platform cfg branches, Cargo lock/workflow churn, an
 - `cargo metadata --format-version 1` plus the public-contract fence → core/UI dependency direction remains valid and the public request surface contains health/shutdown only.
 - At checkpoint, C9/C10/C11 mutations each turn their named fence red; restore returns all focused commands green.
 
+## Slice 5: Resolve advisor findings on channel closure and Windows IPC proof
+
+**Claim IDs:** C5b, C9
+
+**Expected behavior:** A closed runtime-status watch channel produces one explicit terminal projection—Degraded after Ready, Failed during Starting, otherwise the existing terminal state—then parks. Windows CI binds the protected named pipe, reads the live pipe handle DACL, proves it contains only the current user, and rejects a wrong admin credential without killing the runtime.
+
+**Oracle:** A literal status-transition table independent of `changed()`; Windows `GetSecurityInfo` against the accepted pipe handle plus the process token SID; a second generated credential as the negative authentication oracle.
+
+**Stress fixture:** Drop a status sender immediately after publishing Ready, call `changed()` twice, and expect Degraded then `None`. On Windows, inspect the live server pipe and attempt health with a distinct credential before a valid follow-up health.
+
+**Regression fence:** `memory_runtime::tests::closed_status_channel_transitions_once`; Windows-only live pipe DACL test in `ipc/windows.rs`; `windows_invalid_credential_is_rejected` in the real-process suite.
+
+**Named mutation:** Restore `self.status.changed().await.ok()?`; the closure-transition test loses the explicit terminal state. Create the pipe with a null/default descriptor or accept the wrong credential; Windows DACL/auth fences turn red.
+
+**Complexity/production scale:** O(1) state transition and fixed two-ACE/one-ACE ACL inspection; one extra allocation-free status comparison. Maximum accepted cost is 1 ms locally, excluding OS pipe connection scheduling.
+
+**Wall budget/phase:** N/A — reason: channel closure is one-off; Windows ACL/auth checks are test-only.
+
+**Files:** `crates/cyril/src/memory_runtime.rs`, `crates/cyril-memory/src/ipc/windows.rs`, `crates/cyril/tests/memory_runtime.rs`, `.cyril-j7um/review-decisions.md`, `.cyril-j7um/plan.md`.
+
+**Estimate:** 1 hour.
+
+**Diff estimate:** 250 changed lines including Windows-only tests and review artifacts.
+
+**PR increment:** cyril-memory-status-integration
+
+**Commands and expected results:**
+- `cargo test -p cyril closed_status_channel_transitions_once --all-features` → Ready+close yields one Degraded view and then `None`; restoring `.ok()?` turns it red.
+- `cargo test -p cyril --test memory_runtime` → native Windows wrong-auth rejection followed by valid health; Unix matrix remains green.
+- Windows CI → live pipe DACL contains only the current process user and remote clients remain disabled; full rollup passes all jobs.
+
 ## Tracker taxonomy
 
 - Permanent first-release non-goal: backend trait/selector/remote/no-op adapters — one real implementation creates no real seam.

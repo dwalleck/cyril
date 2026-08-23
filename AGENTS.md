@@ -123,11 +123,12 @@ Tooling references the archive via `$HOME/.local/share/kiro-research/binaries/<v
 
 ## Architecture
 
-### Four-Crate Workspace
+### Five-Crate Workspace
 
 ```
 crates/
   cyril-core/     # Library — protocol, types, commands, session, platform
+  cyril-memory/   # Library — strict memory config, private stores, authenticated local runtime
   cyril-ui/       # Library — rendering, widgets, UI state (depends on cyril-core)
   cyril-voice/    # Library — speech-to-text voice input engine; behind the default-off `voice` feature (ROADMAP CN2)
   cyril/          # Binary — wires everything together, owns the event loop
@@ -142,6 +143,12 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 - **Responsibility:** Convert between ACP wire types and internal domain types. Generic ACP conversion lives in `convert/mod.rs`; v2 Kiro extensions (`kiro.dev/*`) in `convert/kiro.rs`; KAS extensions (`_kiro/*`, `session_info_update` kinds) in `convert/kas.rs`. The bridge runs on a dedicated `!Send` thread and communicates via typed channels.
 - **Must NOT:** Import any UI crate. Reference ratatui, crossterm, or any rendering concept. Know how content is displayed.
 - **Dependency rule:** Only crate that imports `agent-client-protocol`. No other crate may reference `acp::` types.
+**`cyril-memory`** — Local memory domain and runtime.
+- **Owns:** Presence-aware `[memory]` validation, canonical private data paths, versioned SQLite stores, exclusive ownership, authenticated local IPC, and the `MemoryRequest → MemoryResponse` admin protocol.
+- **Responsibility:** Hide storage, framing, authentication, migrations, and platform IPC behind `AdminClient::{health, shutdown}` and the companion runtime entrypoint.
+- **Must NOT:** Import ACP, MCP, ratatui, or native-model types. Add retrieval/content/job schema before a production consumer. Define a backend trait or selector while local is the only implementation.
+- **Dependency rule:** `cyril` may depend on `cyril-memory`; core and UI remain persistence-free.
+
 
 **`cyril-ui`** — Rendering and UI state.
 - **Owns:** `UiState` (all mutable UI state), `TuiState` trait (read-only rendering interface), widgets (`widgets/`), markdown rendering, syntax highlighting, file completer, stream buffer
@@ -150,9 +157,9 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 - **Dependency rule:** Depends on `cyril-core` for types only — never `protocol::`.
 
 **`cyril`** — Thin orchestrator binary.
-- **Owns:** `App` (event loop), CLI args, terminal setup, wiring between components
-- **Responsibility:** Wire `cyril-core` and `cyril-ui` together. Run the `tokio::select!` event loop. Dispatch key events through the layered handler. Route notifications to both `SessionController` and `UiState`. Handle cross-cutting concerns (opening pickers from `CommandOptionsReceived`, extracting model from `CommandExecuted`).
-- **Must NOT:** Contain business logic or protocol knowledge. Parse JSON responses (that's `cyril-core`'s job). Make rendering decisions (that's `cyril-ui`'s job).
+- **Owns:** `App` (event loop), CLI args, terminal setup, companion-process startup and bounded shutdown, wiring between modules
+- **Responsibility:** Wire `cyril-core`, `cyril-memory`, and `cyril-ui` together. Run the `tokio::select!` event loop. Route typed memory status without making ACP session state depend on it.
+- **Must NOT:** Contain memory storage/protocol logic. Parse JSON responses. Make rendering decisions.
 
 ### Component Separation Within Crates
 
@@ -167,14 +174,14 @@ The crate boundaries enforce dependency rules, but equally important is the sepa
 **`UiState`** (`cyril-ui/state.rs`) — Pure state machine for UI data.
 - `apply_notification(&Notification) -> bool` — updates UI fields, returns whether state changed
 - No async. No bridge access. Does not send commands or open pickers.
-- Owns: messages, streaming buffers, tool call index, input text/cursor, autocomplete, approval/picker overlays, activity state, subagent tracker, subagent UI streams
+- Owns: messages, streaming buffers, tool call index, input text/cursor, autocomplete, approval/picker overlays, activity state, process-global memory status, subagent tracker, subagent UI streams
 - Subagent state is mutated via delegating methods (`apply_subagent_notification`, `apply_subagent_list_update`, `focus_subagent`, etc.) — callers never reach into the private `subagents` field.
 - Testable by constructing state, applying notifications, and asserting field values.
 
 **`CommandRegistry`** (`cyril-core/commands/mod.rs`) — Command dispatch.
 - `parse(&str) -> Option<(&dyn Command, &str)>` — finds the command, returns it with args
-- Commands get `CommandContext { session: &SessionController, bridge: &BridgeSender, subagent_tracker: Option<&SubagentTracker> }` — read-only session and tracker, write-only bridge. No UI state access.
-- Commands return `CommandResult` (SystemMessage/ShowPicker/Dispatched/Quit) — the App decides what to do with the result.
+- Commands get `CommandContext { session, bridge, subagent_tracker, workflow_tracker, memory_status }` — read-only state and trackers, write-only bridge. No UI state access.
+- Commands return typed `CommandResult` values; the App owns cross-module effects and UI projection.
 
 **`App`** (`cyril/app.rs`) — Thin orchestrator. Owns all components but contains no business logic.
 - Routes notifications to both `SessionController` and `UiState`

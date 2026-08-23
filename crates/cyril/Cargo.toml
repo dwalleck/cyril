@@ -28,6 +28,9 @@ cyril-core = { path = "../cyril-core" }
 cyril-memory = { path = "../cyril-memory" }
 cyril-ui = { path = "../cyril-ui" }
 cyril-voice = { path = "../cyril-voice", optional = true }
+getrandom = { workspace = true }
+hex = { workspace = true }
+process-wrap = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 clap = { workspace = true }
 tracing = { workspace = true }

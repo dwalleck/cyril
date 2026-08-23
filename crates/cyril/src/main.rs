@@ -1,4 +1,5 @@
 mod app;
+mod memory_runtime;
 
 use std::path::PathBuf;
 
@@ -43,8 +44,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .cwd
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
-    let config =
-        cyril_core::types::config::Config::load_from_path(&config_dir().join("config.toml"));
+    let config_report = cyril_memory::load_config_report(&config_dir().join("config.toml"));
+    let memory_config = config_report.memory().clone();
+    let config = config_report.ordinary().clone();
 
     // Spawn bridge
     let agent_command = cyril_core::types::AgentCommand::try_from_argv(cli.agent_command)?;
@@ -101,6 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             usage_log,
             agent_engine,
         );
+        app.set_memory_runtime(memory_runtime::MemoryRuntimeHandle::start(memory_config));
 
         // Create initial session; a parsed `--prompt` rides along and is
         // submitted once the session is ready (cyril-0ffy).

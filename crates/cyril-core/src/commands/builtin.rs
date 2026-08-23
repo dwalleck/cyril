@@ -174,6 +174,35 @@ impl Command for UsageCommand {
         Ok(CommandResult::show_usage(account_query_requested))
     }
 }
+/// `/memory status` — report Cyril's local memory runtime state without a
+/// bridge or runtime round-trip.
+pub struct MemoryCommand;
+
+#[async_trait::async_trait]
+impl Command for MemoryCommand {
+    fn name(&self) -> &str {
+        "memory"
+    }
+
+    fn description(&self) -> &str {
+        "Show local memory runtime status"
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        if args.trim() != "status" {
+            return Ok(CommandResult::system_message(
+                "Usage: /memory status".to_owned(),
+            ));
+        }
+        let Some(status) = ctx.memory_status else {
+            tracing::error!("CommandContext.memory_status is None — wiring error in App");
+            return Ok(CommandResult::system_message(
+                "Memory status unavailable.".to_owned(),
+            ));
+        };
+        Ok(CommandResult::memory_status(status.clone()))
+    }
+}
 
 /// /new — create a new session
 pub struct NewCommand;
