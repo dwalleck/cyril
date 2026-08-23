@@ -3,18 +3,21 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use rusqlite::{Connection, Row, params};
+use rusqlite::{Connection, Row, TransactionBehavior, params};
 use thiserror::Error;
 
 use crate::types::{
-    AgentMessage, AgentUsageGroup, ModelUsageGroup, Money, NamedUsageGroup, Notification,
-    RecentUsage, RoutedNotification, SessionId, SessionOrigin, StopReason, TokenTotals, TokenUsage,
-    ToolCall, ToolCallId, ToolCallStatus, ToolKind, ToolUsageGroup, TurnUsageContext,
+    AgentMessage, AgentUsageGroup, MeteredAmount, MetricCoverage, ModelUsageGroup, Money,
+    NamedUsageGroup, Notification, ObservedMetric, RecentUsage, RoutedNotification, SessionId,
+    SessionOrigin, StopReason, TokenTotals, TokenUsage, ToolCall, ToolCallId, ToolCallStatus,
+    ToolKind, ToolUsageGroup, TurnUsageContext, TurnUsageMetrics, UnavailableReason,
     UsageAgentType, UsageOutcome, UsageRecord, UsageSnapshot, UsageSummary, UsageTiming, UsageTool,
+    UsageTurnOutcome, UsageTurnStatus,
 };
 
 const RECENT_LIMIT: usize = 20;
 const BUSY_TIMEOUT: Duration = Duration::from_millis(250);
+const STARTUP_BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 type ModelGroupKey = (Option<String>, Option<String>);
 
 #[derive(Debug, Error)]
@@ -47,6 +50,8 @@ pub enum UsageError {
     Query(#[source] rusqlite::Error),
     #[error("usage field {field} exceeds SQLite's signed integer range: {value}")]
     IntegerRange { field: &'static str, value: u64 },
+    #[error("unsupported usage database schema version {0}")]
+    UnsupportedSchema(i64),
     #[error("usage database contains invalid {field}: {value}")]
     CorruptValue { field: &'static str, value: String },
 }
@@ -78,6 +83,10 @@ struct PendingTurn {
     first_text_at: Option<Instant>,
     tokens: Option<TokenUsage>,
     cost_start: CostBaseline,
+    charges: Vec<MeteredAmount>,
+    metering_status: Option<UsageTurnStatus>,
+    provider_requests: Option<u64>,
+    backend_gated: bool,
     tools: HashMap<ToolCallId, ObservedTool>,
     error: Option<String>,
 }
@@ -119,6 +128,10 @@ impl UsageObserver {
                 first_text_at: None,
                 tokens: None,
                 cost_start,
+                charges: Vec::new(),
+                metering_status: None,
+                provider_requests: None,
+                backend_gated: false,
                 tools: HashMap::new(),
                 error: None,
             },
@@ -156,6 +169,41 @@ impl UsageObserver {
         let session_id = session_id?;
 
         match &routed.notification {
+            Notification::MetadataUpdated { metering, .. } => {
+                if let Some(pending) = self.pending.get_mut(&session_id) {
+                    pending.backend_gated = true;
+                    if let Some(metering) = metering
+                        && !metering.charges().is_empty()
+                    {
+                        pending.charges = metering.charges().to_vec();
+                    }
+                }
+                None
+            }
+            Notification::TurnMeteringUpdated(update) => {
+                if let Some(pending) = self.pending.get_mut(&session_id) {
+                    pending.backend_gated = true;
+                    if !update.charges().is_empty() {
+                        pending.charges = update.charges().to_vec();
+                    }
+                    if let Some(status) = update.status() {
+                        pending.metering_status = Some(status.clone());
+                    }
+                    if let Some(request_ids) = update.request_ids() {
+                        pending.provider_requests = match u64::try_from(request_ids.len()) {
+                            Ok(count) => Some(count),
+                            Err(error) => {
+                                tracing::warn!(
+                                    error = %error,
+                                    "provider request count exceeds u64, ignoring"
+                                );
+                                None
+                            }
+                        };
+                    }
+                }
+                None
+            }
             Notification::AgentMessage(AgentMessage { .. }) => {
                 if let Some(pending) = self.pending.get_mut(&session_id)
                     && pending.first_text_at.is_none()
@@ -252,10 +300,25 @@ impl UsageObserver {
                 .then_with(|| left.0.cmp(&right.0))
         });
 
+        let mut error = pending.error;
+        if error.is_none()
+            && let Some(UsageTurnStatus::Other(status)) = pending.metering_status.as_ref()
+        {
+            error = Some(format!("turn status: {status}"));
+        }
+        let outcome = classify_outcome(stop_reason, pending.metering_status.as_ref(), &error);
+        let metrics = TurnUsageMetrics::new(
+            observed_metric(pending.tokens, pending.backend_gated),
+            observed_metric(cost, pending.backend_gated),
+            pending.charges,
+            pending.provider_requests,
+            pending.metering_status,
+        );
+
         UsageRecord::new(
             pending.context,
             UsageTiming::new(pending.timestamp_ms, elapsed_ms, ttft_ms),
-            UsageOutcome::new(stop_reason, pending.tokens, cost, pending.error),
+            UsageOutcome::new(stop_reason, outcome, metrics, error),
             tools.into_iter().map(|(_, tool)| tool).collect(),
         )
     }
@@ -263,6 +326,31 @@ impl UsageObserver {
 
 fn duration_ms(duration: Duration) -> u64 {
     duration.as_millis().min(u128::from(u64::MAX)) as u64
+}
+
+fn observed_metric<T>(value: Option<T>, backend_gated: bool) -> ObservedMetric<T> {
+    match value {
+        Some(value) => ObservedMetric::Value(value),
+        None if backend_gated => ObservedMetric::Unavailable(UnavailableReason::BackendGated),
+        None => ObservedMetric::Unreported,
+    }
+}
+
+fn classify_outcome(
+    stop_reason: StopReason,
+    status: Option<&UsageTurnStatus>,
+    error: &Option<String>,
+) -> UsageTurnOutcome {
+    if error.is_some() {
+        return UsageTurnOutcome::Error;
+    }
+    if stop_reason == StopReason::Cancelled || matches!(status, Some(UsageTurnStatus::Aborted)) {
+        return UsageTurnOutcome::Cancelled;
+    }
+    if stop_reason != StopReason::EndTurn || matches!(status, Some(UsageTurnStatus::Other(_))) {
+        return UsageTurnOutcome::Error;
+    }
+    UsageTurnOutcome::Success
 }
 
 fn observe_tool(tools: &mut HashMap<ToolCallId, ObservedTool>, call: &ToolCall) {
@@ -354,15 +442,30 @@ impl UsageLog {
         Self::from_connection(connection)
     }
 
-    fn from_connection(connection: Connection) -> Result<Self, UsageError> {
+    fn from_connection(mut connection: Connection) -> Result<Self, UsageError> {
+        connection
+            .busy_timeout(STARTUP_BUSY_TIMEOUT)
+            .map_err(UsageError::Configure)?;
+        connection
+            .execute_batch("PRAGMA foreign_keys = ON;")
+            .map_err(UsageError::Configure)?;
+        Self::migrate_schema(&mut connection)?;
+        connection
+            .execute_batch("PRAGMA journal_mode = WAL;")
+            .map_err(UsageError::Configure)?;
         connection
             .busy_timeout(BUSY_TIMEOUT)
             .map_err(UsageError::Configure)?;
-        connection
+        Ok(Self { connection })
+    }
+
+    fn migrate_schema(connection: &mut Connection) -> Result<(), UsageError> {
+        let transaction = connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(UsageError::Configure)?;
+        transaction
             .execute_batch(
-                "PRAGMA foreign_keys = ON;
-                 PRAGMA journal_mode = WAL;
-                 CREATE TABLE IF NOT EXISTS usage_turns (
+                "CREATE TABLE IF NOT EXISTS usage_turns (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     session_id TEXT NOT NULL,
                     folder TEXT NOT NULL,
@@ -402,7 +505,45 @@ impl UsageLog {
                  CREATE INDEX IF NOT EXISTS usage_tools_kind ON usage_tools(kind);",
             )
             .map_err(UsageError::Configure)?;
-        Ok(Self { connection })
+        let version = transaction
+            .query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0))
+            .map_err(UsageError::Configure)?;
+        match version {
+            0 => transaction
+                .execute_batch(
+                    "ALTER TABLE usage_turns ADD COLUMN outcome TEXT NOT NULL DEFAULT 'success';
+                     ALTER TABLE usage_turns ADD COLUMN provider_requests INTEGER;
+                     ALTER TABLE usage_turns ADD COLUMN token_availability TEXT NOT NULL DEFAULT 'unreported';
+                     ALTER TABLE usage_turns ADD COLUMN cost_availability TEXT NOT NULL DEFAULT 'unreported';
+                     UPDATE usage_turns
+                        SET outcome = CASE
+                            WHEN error IS NOT NULL THEN 'error'
+                            WHEN stop_reason = 'cancelled' THEN 'cancelled'
+                            WHEN stop_reason <> 'end_turn' THEN 'error'
+                            ELSE 'success'
+                        END,
+                            token_availability = CASE
+                                WHEN total_tokens IS NULL THEN 'unreported' ELSE 'observed' END,
+                            cost_availability = CASE
+                                WHEN cost_amount IS NULL THEN 'unreported' ELSE 'observed' END;
+                     CREATE TABLE usage_charges (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        turn_id INTEGER NOT NULL REFERENCES usage_turns(id) ON DELETE CASCADE,
+                        amount REAL NOT NULL CHECK (amount >= 0.0),
+                        unit TEXT NOT NULL CHECK (length(unit) > 0),
+                        unit_plural TEXT NOT NULL CHECK (length(unit_plural) > 0)
+                     );
+                     CREATE INDEX usage_charges_turn ON usage_charges(turn_id);
+                     CREATE INDEX usage_charges_unit ON usage_charges(unit, unit_plural);
+                     CREATE INDEX usage_turns_outcome
+                        ON usage_turns(outcome, timestamp_ms DESC);
+                     PRAGMA user_version = 2;",
+                )
+                .map_err(UsageError::Configure)?,
+            2 => {}
+            other => return Err(UsageError::UnsupportedSchema(other)),
+        }
+        transaction.commit().map_err(UsageError::Configure)
     }
 
     pub fn append(&mut self, record: &UsageRecord) -> Result<(), UsageError> {
@@ -415,15 +556,20 @@ impl UsageLog {
         let tokens = record.tokens().map(sqlite_tokens).transpose()?;
         let cost_amount = record.cost().map(Money::amount);
         let cost_currency = record.cost().map(Money::currency);
+        let provider_requests = record
+            .provider_requests()
+            .map(|value| sqlite_integer("provider_requests", value))
+            .transpose()?;
         let transaction = self.connection.transaction().map_err(UsageError::Write)?;
         transaction
             .execute(
                 "INSERT INTO usage_turns (
                     session_id, folder, model, provider, agent_type,
                     timestamp_ms, duration_ms, ttft_ms, stop_reason, error,
+                    outcome, provider_requests, token_availability, cost_availability,
                     total_tokens, input_tokens, output_tokens, thought_tokens,
                     cached_read_tokens, cached_write_tokens, cost_amount, cost_currency
-                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 params![
                     record.context().session_id().as_str(),
                     record.context().folder(),
@@ -435,6 +581,10 @@ impl UsageLog {
                     ttft,
                     stop_reason_name(record.stop_reason()),
                     record.error(),
+                    outcome_name(record.outcome()),
+                    provider_requests,
+                    metric_state_name(record.token_metric()),
+                    metric_state_name(record.cost_metric()),
                     tokens.as_ref().map(|values| values.total),
                     tokens.as_ref().map(|values| values.input),
                     tokens.as_ref().map(|values| values.output),
@@ -452,6 +602,20 @@ impl UsageLog {
                 .execute(
                     "INSERT INTO usage_tools (turn_id, kind, failed) VALUES (?, ?, ?)",
                     params![turn_id, tool_kind_name(tool.kind()), tool.failed()],
+                )
+                .map_err(UsageError::Write)?;
+        }
+        for charge in record.charges() {
+            transaction
+                .execute(
+                    "INSERT INTO usage_charges (turn_id, amount, unit, unit_plural)
+                     VALUES (?, ?, ?, ?)",
+                    params![
+                        turn_id,
+                        charge.amount(),
+                        charge.unit(),
+                        charge.unit_plural()
+                    ],
                 )
                 .map_err(UsageError::Write)?;
         }
@@ -477,8 +641,9 @@ impl UsageLog {
             .prepare(&format!("SELECT {SUMMARY_COLUMNS} FROM usage_turns"))
             .map_err(UsageError::Query)?;
         let costs = self.cost_totals(None)?;
+        let charges = self.charge_totals(None)?;
         statement
-            .query_row([], |row| summary_from_row(row, 0, costs))
+            .query_row([], |row| summary_from_row(row, 0, costs, charges))
             .map_err(UsageError::Query)
     }
 
@@ -488,11 +653,16 @@ impl UsageLog {
         );
         let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
         let costs = self.named_cost_totals(column)?;
+        let charges = self.named_charge_totals(column)?;
         let rows = statement
             .query_map([], |row| {
                 let name: Option<String> = row.get(0)?;
-                let summary =
-                    summary_from_row(row, 1, costs.get(&name).cloned().unwrap_or_default())?;
+                let summary = summary_from_row(
+                    row,
+                    1,
+                    costs.get(&name).cloned().unwrap_or_default(),
+                    charges.get(&name).cloned().unwrap_or_default(),
+                )?;
                 Ok(NamedUsageGroup { name, summary })
             })
             .map_err(UsageError::Query)?;
@@ -506,13 +676,18 @@ impl UsageLog {
         );
         let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
         let costs = self.model_cost_totals()?;
+        let charges = self.model_charge_totals()?;
         let rows = statement
             .query_map([], |row| {
                 let provider: Option<String> = row.get(0)?;
                 let model: Option<String> = row.get(1)?;
                 let key = (provider.clone(), model.clone());
-                let summary =
-                    summary_from_row(row, 2, costs.get(&key).cloned().unwrap_or_default())?;
+                let summary = summary_from_row(
+                    row,
+                    2,
+                    costs.get(&key).cloned().unwrap_or_default(),
+                    charges.get(&key).cloned().unwrap_or_default(),
+                )?;
                 Ok(ModelUsageGroup {
                     provider,
                     model,
@@ -530,6 +705,7 @@ impl UsageLog {
         );
         let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
         let costs = self.named_cost_totals("agent_type")?;
+        let charges = self.named_charge_totals("agent_type")?;
         let rows = statement
             .query_map([], |row| {
                 let raw: String = row.get(0)?;
@@ -540,8 +716,12 @@ impl UsageLog {
                         Box::new(StoredValueError::new("agent_type", raw.clone())),
                     )
                 })?;
-                let summary =
-                    summary_from_row(row, 1, costs.get(&Some(raw)).cloned().unwrap_or_default())?;
+                let summary = summary_from_row(
+                    row,
+                    1,
+                    costs.get(&Some(raw.clone())).cloned().unwrap_or_default(),
+                    charges.get(&Some(raw)).cloned().unwrap_or_default(),
+                )?;
                 Ok(AgentUsageGroup {
                     agent_type,
                     summary,
@@ -596,13 +776,14 @@ impl UsageLog {
 
     fn recent(&self, errors_only: bool) -> Result<Vec<RecentUsage>, UsageError> {
         let where_clause = if errors_only {
-            "WHERE error IS NOT NULL"
+            "WHERE outcome = 'error'"
         } else {
             ""
         };
         let sql = format!(
-            "SELECT session_id, folder, model, provider, agent_type,
-                    timestamp_ms, duration_ms, ttft_ms, stop_reason,
+            "SELECT id, session_id, folder, model, provider, agent_type,
+                    timestamp_ms, duration_ms, ttft_ms, stop_reason, outcome,
+                    provider_requests, token_availability, cost_availability,
                     total_tokens, input_tokens, output_tokens, thought_tokens,
                     cached_read_tokens, cached_write_tokens,
                     cost_amount, cost_currency, error
@@ -612,6 +793,26 @@ impl UsageLog {
         let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
         let rows = statement
             .query_map([], recent_from_row)
+            .map_err(UsageError::Query)?;
+        let mut records = Vec::new();
+        for row in rows {
+            let (turn_id, mut record) = row.map_err(UsageError::Query)?;
+            record.charges = self.charges_for_turn(turn_id)?;
+            records.push(record);
+        }
+        Ok(records)
+    }
+
+    fn charges_for_turn(&self, turn_id: i64) -> Result<Vec<MeteredAmount>, UsageError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT unit, unit_plural, amount
+                 FROM usage_charges WHERE turn_id = ? ORDER BY unit, unit_plural",
+            )
+            .map_err(UsageError::Query)?;
+        let rows = statement
+            .query_map([turn_id], |row| metered_amount_from_row(row, 0, 1, 2))
             .map_err(UsageError::Query)?;
         collect_rows(rows)
     }
@@ -627,6 +828,77 @@ impl UsageLog {
             .query_map([], |row| money_from_row(row, 0, 1))
             .map_err(UsageError::Query)?;
         collect_rows(rows)
+    }
+
+    fn charge_totals(&self, where_sql: Option<&str>) -> Result<Vec<MeteredAmount>, UsageError> {
+        let suffix = where_sql.unwrap_or("");
+        let sql = format!(
+            "SELECT charges.unit, charges.unit_plural, SUM(charges.amount)
+             FROM usage_charges AS charges
+             JOIN usage_turns AS turns ON turns.id = charges.turn_id
+             WHERE 1 = 1 {suffix}
+             GROUP BY charges.unit, charges.unit_plural
+             ORDER BY charges.unit, charges.unit_plural"
+        );
+        let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
+        let rows = statement
+            .query_map([], |row| metered_amount_from_row(row, 0, 1, 2))
+            .map_err(UsageError::Query)?;
+        collect_rows(rows)
+    }
+
+    fn named_charge_totals(
+        &self,
+        column: &'static str,
+    ) -> Result<HashMap<Option<String>, Vec<MeteredAmount>>, UsageError> {
+        let sql = format!(
+            "SELECT turns.{column}, charges.unit, charges.unit_plural, SUM(charges.amount)
+             FROM usage_charges AS charges
+             JOIN usage_turns AS turns ON turns.id = charges.turn_id
+             GROUP BY turns.{column}, charges.unit, charges.unit_plural
+             ORDER BY charges.unit, charges.unit_plural"
+        );
+        let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
+        let rows = statement
+            .query_map([], |row| {
+                let key: Option<String> = row.get(0)?;
+                Ok((key, metered_amount_from_row(row, 1, 2, 3)?))
+            })
+            .map_err(UsageError::Query)?;
+        let mut result: HashMap<Option<String>, Vec<MeteredAmount>> = HashMap::new();
+        for row in rows {
+            let (key, amount) = row.map_err(UsageError::Query)?;
+            result.entry(key).or_default().push(amount);
+        }
+        Ok(result)
+    }
+
+    fn model_charge_totals(
+        &self,
+    ) -> Result<HashMap<ModelGroupKey, Vec<MeteredAmount>>, UsageError> {
+        let mut statement = self
+            .connection
+            .prepare(
+                "SELECT turns.provider, turns.model, charges.unit, charges.unit_plural,
+                        SUM(charges.amount)
+                 FROM usage_charges AS charges
+                 JOIN usage_turns AS turns ON turns.id = charges.turn_id
+                 GROUP BY turns.provider, turns.model, charges.unit, charges.unit_plural
+                 ORDER BY charges.unit, charges.unit_plural",
+            )
+            .map_err(UsageError::Query)?;
+        let rows = statement
+            .query_map([], |row| {
+                let key = (row.get(0)?, row.get(1)?);
+                Ok((key, metered_amount_from_row(row, 2, 3, 4)?))
+            })
+            .map_err(UsageError::Query)?;
+        let mut result = HashMap::new();
+        for row in rows {
+            let (key, amount) = row.map_err(UsageError::Query)?;
+            result.entry(key).or_insert_with(Vec::new).push(amount);
+        }
+        Ok(result)
     }
 
     fn named_cost_totals(
@@ -743,7 +1015,13 @@ fn sqlite_integer(field: &'static str, value: u64) -> Result<i64, UsageError> {
 
 const SUMMARY_COLUMNS: &str = "
     COUNT(*) AS requests,
-    COALESCE(SUM(CASE WHEN error IS NOT NULL THEN 1 ELSE 0 END), 0) AS errors,
+    COALESCE(SUM(CASE WHEN outcome = 'success' THEN 1 ELSE 0 END), 0) AS successes,
+    COALESCE(SUM(CASE WHEN outcome = 'cancelled' THEN 1 ELSE 0 END), 0) AS cancelled,
+    COALESCE(SUM(CASE WHEN outcome = 'error' THEN 1 ELSE 0 END), 0) AS errors,
+    COUNT(provider_requests) AS provider_request_rows,
+    COALESCE(SUM(provider_requests), 0) AS provider_requests,
+    COALESCE(SUM(CASE WHEN provider_requests > 0 THEN provider_requests - 1 ELSE 0 END), 0)
+        AS retries,
     COUNT(total_tokens) AS token_rows,
     SUM(total_tokens) AS total_tokens,
     SUM(input_tokens) AS input_tokens,
@@ -754,26 +1032,36 @@ const SUMMARY_COLUMNS: &str = "
     AVG(duration_ms) AS avg_duration,
     AVG(ttft_ms) AS avg_ttft,
     AVG(CASE WHEN duration_ms > 0 AND output_tokens IS NOT NULL
-        THEN output_tokens * 1000.0 / duration_ms ELSE NULL END) AS avg_tps";
+        THEN output_tokens * 1000.0 / duration_ms ELSE NULL END) AS avg_tps,
+    COALESCE(SUM(CASE WHEN token_availability = 'observed' THEN 1 ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN token_availability = 'unreported' THEN 1 ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN token_availability = 'backend_gated' THEN 1 ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cost_availability = 'observed' THEN 1 ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cost_availability = 'unreported' THEN 1 ELSE 0 END), 0),
+    COALESCE(SUM(CASE WHEN cost_availability = 'backend_gated' THEN 1 ELSE 0 END), 0)";
 
 fn summary_from_row(
     row: &Row<'_>,
     base: usize,
     costs: Vec<Money>,
+    charges: Vec<MeteredAmount>,
 ) -> rusqlite::Result<UsageSummary> {
     let requests = row_u64(row, base, "requests")?;
-    let errors = row_u64(row, base + 1, "errors")?;
-    let token_rows = row_u64(row, base + 2, "token rows")?;
+    let successes = row_u64(row, base + 1, "successes")?;
+    let cancelled = row_u64(row, base + 2, "cancelled")?;
+    let errors = row_u64(row, base + 3, "errors")?;
+    let provider_rows = row_u64(row, base + 4, "provider request rows")?;
+    let token_rows = row_u64(row, base + 7, "token rows")?;
     let tokens = if token_rows == 0 {
         None
     } else {
         Some(TokenTotals {
-            total: row_u64(row, base + 3, "total tokens")?,
-            input: row_u64(row, base + 4, "input tokens")?,
-            output: row_u64(row, base + 5, "output tokens")?,
-            thought: row_u64(row, base + 6, "thought tokens")?,
-            cached_read: row_u64(row, base + 7, "cached read tokens")?,
-            cached_write: row_u64(row, base + 8, "cached write tokens")?,
+            total: row_u64(row, base + 8, "total tokens")?,
+            input: row_u64(row, base + 9, "input tokens")?,
+            output: row_u64(row, base + 10, "output tokens")?,
+            thought: row_u64(row, base + 11, "thought tokens")?,
+            cached_read: row_u64(row, base + 12, "cached read tokens")?,
+            cached_write: row_u64(row, base + 13, "cached write tokens")?,
         })
     };
     let cache_rate = tokens.as_ref().and_then(|totals| {
@@ -782,13 +1070,32 @@ fn summary_from_row(
     });
     Ok(UsageSummary {
         requests,
+        successes,
+        cancelled,
         errors,
+        provider_requests: (provider_rows > 0)
+            .then(|| row_u64(row, base + 5, "provider requests"))
+            .transpose()?,
+        retries: (provider_rows > 0)
+            .then(|| row_u64(row, base + 6, "provider retries"))
+            .transpose()?,
         tokens,
+        token_coverage: MetricCoverage {
+            observed: row_u64(row, base + 17, "observed token rows")?,
+            unreported: row_u64(row, base + 18, "unreported token rows")?,
+            backend_gated: row_u64(row, base + 19, "backend-gated token rows")?,
+        },
         costs,
+        cost_coverage: MetricCoverage {
+            observed: row_u64(row, base + 20, "observed cost rows")?,
+            unreported: row_u64(row, base + 21, "unreported cost rows")?,
+            backend_gated: row_u64(row, base + 22, "backend-gated cost rows")?,
+        },
+        charges,
         cache_rate,
-        avg_duration_ms: row.get(base + 9)?,
-        avg_ttft_ms: row.get(base + 10)?,
-        avg_tokens_per_second: row.get(base + 11)?,
+        avg_duration_ms: row.get(base + 14)?,
+        avg_ttft_ms: row.get(base + 15)?,
+        avg_tokens_per_second: row.get(base + 16)?,
     })
 }
 
@@ -822,43 +1129,73 @@ fn money_from_row(
     })
 }
 
-fn recent_from_row(row: &Row<'_>) -> rusqlite::Result<RecentUsage> {
-    let raw_agent: String = row.get(4)?;
+fn metered_amount_from_row(
+    row: &Row<'_>,
+    unit_index: usize,
+    plural_index: usize,
+    amount_index: usize,
+) -> rusqlite::Result<MeteredAmount> {
+    let unit: String = row.get(unit_index)?;
+    let unit_plural: String = row.get(plural_index)?;
+    let amount: f64 = row.get(amount_index)?;
+    MeteredAmount::try_new(amount, unit.clone(), unit_plural.clone()).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(
+            amount_index,
+            rusqlite::types::Type::Real,
+            Box::new(StoredValueError::new(
+                "metered amount",
+                format!("{amount} {unit}/{unit_plural}: {error}"),
+            )),
+        )
+    })
+}
+
+fn recent_from_row(row: &Row<'_>) -> rusqlite::Result<(i64, RecentUsage)> {
+    let turn_id: i64 = row.get(0)?;
+    let raw_agent: String = row.get(5)?;
     let agent_type = UsageAgentType::from_str(&raw_agent).ok_or_else(|| {
         rusqlite::Error::FromSqlConversionFailure(
-            4,
+            5,
             rusqlite::types::Type::Text,
             Box::new(StoredValueError::new("agent_type", raw_agent.clone())),
         )
     })?;
-    let raw_stop: String = row.get(8)?;
+    let raw_stop: String = row.get(9)?;
     let stop_reason = stop_reason_from_name(&raw_stop).ok_or_else(|| {
         rusqlite::Error::FromSqlConversionFailure(
-            8,
+            9,
             rusqlite::types::Type::Text,
             Box::new(StoredValueError::new("stop_reason", raw_stop.clone())),
         )
     })?;
-    let total: Option<i64> = row.get(9)?;
+    let raw_outcome: String = row.get(10)?;
+    let outcome = outcome_from_name(&raw_outcome).ok_or_else(|| {
+        rusqlite::Error::FromSqlConversionFailure(
+            10,
+            rusqlite::types::Type::Text,
+            Box::new(StoredValueError::new("outcome", raw_outcome.clone())),
+        )
+    })?;
+    let total: Option<i64> = row.get(14)?;
     let tokens = total
         .map(|total| {
             Ok::<TokenUsage, rusqlite::Error>(TokenUsage::new(
-                stored_u64(9, "total_tokens", total)?,
-                stored_u64(10, "input_tokens", row.get(10)?)?,
-                stored_u64(11, "output_tokens", row.get(11)?)?,
-                stored_optional_u64(12, "thought_tokens", row.get(12)?)?,
-                stored_optional_u64(13, "cached_read_tokens", row.get(13)?)?,
-                stored_optional_u64(14, "cached_write_tokens", row.get(14)?)?,
+                stored_u64(14, "total_tokens", total)?,
+                stored_u64(15, "input_tokens", row.get(15)?)?,
+                stored_u64(16, "output_tokens", row.get(16)?)?,
+                stored_optional_u64(17, "thought_tokens", row.get(17)?)?,
+                stored_optional_u64(18, "cached_read_tokens", row.get(18)?)?,
+                stored_optional_u64(19, "cached_write_tokens", row.get(19)?)?,
             ))
         })
         .transpose()?;
-    let cost_amount: Option<f64> = row.get(15)?;
-    let cost_currency: Option<String> = row.get(16)?;
+    let cost_amount: Option<f64> = row.get(20)?;
+    let cost_currency: Option<String> = row.get(21)?;
     let cost = match (cost_amount, cost_currency) {
         (Some(amount), Some(currency)) => {
             Some(Money::try_new(amount, currency.clone()).map_err(|error| {
                 rusqlite::Error::FromSqlConversionFailure(
-                    15,
+                    20,
                     rusqlite::types::Type::Real,
                     Box::new(StoredValueError::new(
                         "money",
@@ -870,26 +1207,34 @@ fn recent_from_row(row: &Row<'_>) -> rusqlite::Result<RecentUsage> {
         (None, None) => None,
         _ => {
             return Err(rusqlite::Error::FromSqlConversionFailure(
-                15,
+                20,
                 rusqlite::types::Type::Null,
                 Box::new(StoredValueError::new("money", "partial cost row")),
             ));
         }
     };
-    Ok(RecentUsage {
-        session_id: SessionId::new(row.get::<_, String>(0)?),
-        folder: row.get(1)?,
-        model: row.get(2)?,
-        provider: row.get(3)?,
+    let token_state: String = row.get(12)?;
+    let cost_state: String = row.get(13)?;
+    let record = RecentUsage {
+        session_id: SessionId::new(row.get::<_, String>(1)?),
+        folder: row.get(2)?,
+        model: row.get(3)?,
+        provider: row.get(4)?,
         agent_type,
-        timestamp_ms: stored_u64(5, "timestamp_ms", row.get(5)?)?,
-        duration_ms: stored_u64(6, "duration_ms", row.get(6)?)?,
-        ttft_ms: stored_optional_u64(7, "ttft_ms", row.get(7)?)?,
+        timestamp_ms: stored_u64(6, "timestamp_ms", row.get(6)?)?,
+        duration_ms: stored_u64(7, "duration_ms", row.get(7)?)?,
+        ttft_ms: stored_optional_u64(8, "ttft_ms", row.get(8)?)?,
         stop_reason,
+        outcome,
+        provider_requests: stored_optional_u64(11, "provider_requests", row.get(11)?)?,
+        token_unavailable_reason: metric_unavailable_reason(12, &token_state, tokens.is_some())?,
         tokens,
+        cost_unavailable_reason: metric_unavailable_reason(13, &cost_state, cost.is_some())?,
         cost,
-        error: row.get(17)?,
-    })
+        charges: Vec::new(),
+        error: row.get(22)?,
+    };
+    Ok((turn_id, record))
 }
 
 fn stored_u64(index: usize, field: &'static str, value: i64) -> rusqlite::Result<u64> {
@@ -961,6 +1306,50 @@ fn stop_reason_from_name(value: &str) -> Option<StopReason> {
     }
 }
 
+fn outcome_name(outcome: UsageTurnOutcome) -> &'static str {
+    match outcome {
+        UsageTurnOutcome::Success => "success",
+        UsageTurnOutcome::Cancelled => "cancelled",
+        UsageTurnOutcome::Error => "error",
+    }
+}
+
+fn outcome_from_name(value: &str) -> Option<UsageTurnOutcome> {
+    match value {
+        "success" => Some(UsageTurnOutcome::Success),
+        "cancelled" => Some(UsageTurnOutcome::Cancelled),
+        "error" => Some(UsageTurnOutcome::Error),
+        _ => None,
+    }
+}
+
+fn metric_state_name<T>(metric: &ObservedMetric<T>) -> &'static str {
+    match metric {
+        ObservedMetric::Value(_) => "observed",
+        ObservedMetric::Unreported => "unreported",
+        ObservedMetric::Unavailable(UnavailableReason::BackendGated) => "backend_gated",
+    }
+}
+
+fn metric_unavailable_reason(
+    index: usize,
+    state: &str,
+    has_value: bool,
+) -> rusqlite::Result<Option<UnavailableReason>> {
+    match (state, has_value) {
+        ("observed", true) | ("unreported", false) => Ok(None),
+        ("backend_gated", false) => Ok(Some(UnavailableReason::BackendGated)),
+        _ => Err(rusqlite::Error::FromSqlConversionFailure(
+            index,
+            rusqlite::types::Type::Text,
+            Box::new(StoredValueError::new(
+                "metric availability",
+                format!("{state} with has_value={has_value}"),
+            )),
+        )),
+    }
+}
+
 fn tool_kind_name(kind: ToolKind) -> &'static str {
     match kind {
         ToolKind::Read => "read",
@@ -992,7 +1381,7 @@ fn tool_kind_from_name(value: &str) -> Option<ToolKind> {
 mod tests {
     use super::*;
     use crate::test_support::must_succeed;
-    use crate::types::{AgentMessage, ToolCallStatus};
+    use crate::types::{AgentMessage, ToolCallStatus, TurnMeteringUpdate};
 
     fn context(session: &str, model: Option<&str>) -> TurnUsageContext {
         TurnUsageContext::new(
@@ -1078,6 +1467,203 @@ mod tests {
         let record = complete(&mut observer, "s", start + Duration::from_millis(100));
         assert_eq!(record.duration_ms(), 100);
         assert_eq!(record.ttft_ms(), Some(25));
+    }
+
+    #[test]
+    fn kiro_turn_timeline_matrix_records_once() {
+        let start = Instant::now();
+        let mut observer = UsageObserver::new();
+        start_session(&mut observer, "s", SessionOrigin::Fresh, start);
+
+        let cases = [
+            (
+                UsageTurnStatus::Success,
+                Some(vec!["r1".to_owned(), "r2".to_owned(), "r3".to_owned()]),
+                StopReason::EndTurn,
+                UsageTurnOutcome::Success,
+            ),
+            (
+                UsageTurnStatus::Aborted,
+                Some(Vec::new()),
+                StopReason::Cancelled,
+                UsageTurnOutcome::Cancelled,
+            ),
+            (
+                UsageTurnStatus::Other("failed".to_owned()),
+                None,
+                StopReason::EndTurn,
+                UsageTurnOutcome::Error,
+            ),
+        ];
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        for (index, (status, request_ids, stop_reason, expected_outcome)) in
+            cases.into_iter().enumerate()
+        {
+            must_succeed(
+                observer.begin_turn(context("s", Some("auto")), start, index as u64 + 1),
+                "begin turn",
+            );
+            let metering = Notification::TurnMeteringUpdated(TurnMeteringUpdate::new(
+                vec![
+                    must_succeed(
+                        MeteredAmount::try_new(0.25, "credit", "credits"),
+                        "valid credit",
+                    ),
+                    must_succeed(
+                        MeteredAmount::try_new(2.0, "request", "requests"),
+                        "valid requests",
+                    ),
+                ],
+                Some(9_999),
+                Some(status.clone()),
+                vec!["read_file".to_owned()],
+                request_ids,
+            ));
+            assert!(
+                observer.apply(&scoped("s", metering), start).is_none(),
+                "turn metering is not a lifecycle terminal"
+            );
+            let Some(record) = observer.apply(
+                &scoped("s", Notification::TurnCompleted { stop_reason }),
+                start + Duration::from_millis(10),
+            ) else {
+                panic!("lifecycle completes exactly one record");
+            };
+            assert_eq!(record.outcome(), expected_outcome);
+            assert_eq!(
+                record.token_metric().unavailable_reason(),
+                Some(UnavailableReason::BackendGated)
+            );
+            assert_eq!(
+                record.cost_metric().unavailable_reason(),
+                Some(UnavailableReason::BackendGated)
+            );
+            assert_eq!(
+                record
+                    .charges()
+                    .iter()
+                    .map(|charge| (charge.unit(), charge.amount()))
+                    .collect::<Vec<_>>(),
+                vec![("credit", 0.25), ("request", 2.0)]
+            );
+            assert_eq!(
+                record.provider_requests(),
+                match index {
+                    0 => Some(3),
+                    1 => Some(0),
+                    _ => None,
+                }
+            );
+            if index == 2 {
+                assert_eq!(record.error(), Some("turn status: failed"));
+            }
+            must_succeed(log.append(&record), "append Kiro record");
+        }
+
+        let summary = must_succeed(log.snapshot(), "snapshot").overview;
+        assert_eq!(summary.requests, 3);
+        assert_eq!(summary.successes, 1);
+        assert_eq!(summary.cancelled, 1);
+        assert_eq!(summary.errors, 1);
+        assert_eq!(summary.provider_requests, Some(3));
+        assert_eq!(summary.retries, Some(2));
+        assert_eq!(summary.token_coverage.backend_gated, 3);
+        assert_eq!(summary.cost_coverage.backend_gated, 3);
+        assert_eq!(
+            summary
+                .charges
+                .iter()
+                .map(|charge| (charge.unit(), charge.amount()))
+                .collect::<Vec<_>>(),
+            vec![("credit", 0.75), ("request", 6.0)]
+        );
+    }
+
+    #[cfg(feature = "kas")]
+    #[test]
+    fn captured_kas_usage_rollup_matches_oracle() {
+        let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/kas/turn_completion_2_16_0_four.jsonl");
+        let raw = must_succeed(std::fs::read_to_string(fixture), "read fixture");
+        let start = Instant::now();
+        let mut observer = UsageObserver::new();
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        start_session(&mut observer, "captured", SessionOrigin::Fresh, start);
+        for (index, line) in raw.lines().enumerate() {
+            must_succeed(
+                observer.begin_turn(context("captured", Some("auto")), start, index as u64),
+                "begin captured turn",
+            );
+            let notification: agent_client_protocol::SessionNotification =
+                must_succeed(serde_json::from_str(line), "fixture deserializes");
+            let update = match &notification.update {
+                agent_client_protocol::SessionUpdate::SessionInfoUpdate(update) => update,
+                other => panic!("expected session_info_update, got {other:?}"),
+            };
+            let Some(metering) =
+                crate::protocol::convert::kas::session_info_to_notification(update)
+            else {
+                panic!("captured metering converts");
+            };
+            assert!(
+                observer
+                    .apply(&scoped("captured", metering), start)
+                    .is_none()
+            );
+            let record = complete(&mut observer, "captured", start);
+            must_succeed(log.append(&record), "append captured turn");
+        }
+        let summary = must_succeed(log.snapshot(), "snapshot").overview;
+        assert_eq!(summary.requests, 4);
+        assert_eq!(summary.successes, 4);
+        assert_eq!(summary.errors, 0);
+        assert_eq!(summary.provider_requests, Some(9));
+        assert_eq!(summary.retries, Some(5));
+        assert_eq!(summary.token_coverage.backend_gated, 4);
+        assert_eq!(summary.cost_coverage.backend_gated, 4);
+        let Some(credits) = summary
+            .charges
+            .iter()
+            .find(|charge| charge.unit() == "credit")
+        else {
+            panic!("credit total");
+        };
+        assert!((credits.amount() - 0.385_573_410_447_761_2).abs() < 1e-12);
+    }
+
+    #[test]
+    #[ignore = "reference-workstation observer budget"]
+    fn observer_10k_tools_budget_reference() {
+        let start = Instant::now();
+        let mut observer = UsageObserver::new();
+        start_session(&mut observer, "budget", SessionOrigin::Fresh, start);
+        must_succeed(
+            observer.begin_turn(context("budget", None), start, 1),
+            "begin turn",
+        );
+        for index in 0..10_000 {
+            observer.apply(
+                &scoped(
+                    "budget",
+                    Notification::ToolCallStarted(ToolCall::new(
+                        ToolCallId::new(format!("tool-{index}")),
+                        format!("Tool {index}"),
+                        ToolKind::Read,
+                        ToolCallStatus::Completed,
+                        None,
+                    )),
+                ),
+                start,
+            );
+        }
+        let started = Instant::now();
+        let record = complete(&mut observer, "budget", start + Duration::from_millis(1));
+        let elapsed = started.elapsed();
+        assert_eq!(record.tools().len(), 10_000);
+        assert!(
+            elapsed <= Duration::from_millis(25),
+            "10,000-tool observer completion exceeded 25ms: {elapsed:?}"
+        );
     }
 
     #[test]
@@ -1272,7 +1858,22 @@ mod tests {
         UsageRecord::new(
             context(session, model),
             UsageTiming::new(1, duration_ms, ttft_ms),
-            UsageOutcome::new(StopReason::EndTurn, tokens, cost, error.map(str::to_owned)),
+            UsageOutcome::new(
+                StopReason::EndTurn,
+                if error.is_some() {
+                    UsageTurnOutcome::Error
+                } else {
+                    UsageTurnOutcome::Success
+                },
+                TurnUsageMetrics::new(
+                    tokens.map_or(ObservedMetric::Unreported, ObservedMetric::Value),
+                    cost.map_or(ObservedMetric::Unreported, ObservedMetric::Value),
+                    Vec::new(),
+                    None,
+                    None,
+                ),
+                error.map(str::to_owned),
+            ),
             tools,
         )
     }
@@ -1335,6 +1936,348 @@ mod tests {
     }
 
     #[test]
+    fn phase1_snapshot_is_unchanged_and_observed_wins_coverage() {
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        let standard = record(
+            "omp",
+            Some("openai-codex/gpt-5.6"),
+            (
+                Some(TokenUsage::new(150, 100, 20, None, Some(30), None)),
+                Some(must_succeed(Money::try_new(1.25, "USD"), "valid cost")),
+                None,
+            ),
+            (100, Some(25)),
+            Vec::new(),
+        );
+        must_succeed(log.append(&standard), "append standard turn");
+        let phase1 = must_succeed(log.snapshot(), "phase1 snapshot").overview;
+        assert_eq!(phase1.requests, 1);
+        assert_eq!(phase1.successes, 1);
+        assert_eq!(phase1.cancelled, 0);
+        assert_eq!(phase1.errors, 0);
+        assert_eq!(phase1.tokens.as_ref().map(|value| value.total), Some(150));
+        assert_eq!(phase1.token_coverage.observed, 1);
+        assert_eq!(phase1.cost_coverage.observed, 1);
+        assert_eq!(
+            phase1.costs,
+            vec![must_succeed(Money::try_new(1.25, "USD"), "valid cost",)]
+        );
+        assert_eq!(phase1.cache_rate, Some(30.0 / 130.0));
+        assert_eq!(phase1.avg_duration_ms, Some(100.0));
+        assert_eq!(phase1.avg_ttft_ms, Some(25.0));
+        assert_eq!(phase1.avg_tokens_per_second, Some(200.0));
+
+        let start = Instant::now();
+        let mut observer = UsageObserver::new();
+        start_session(&mut observer, "kiro", SessionOrigin::Fresh, start);
+        must_succeed(
+            observer.begin_turn(context("kiro", Some("anthropic/claude")), start, 2),
+            "begin future Kiro turn",
+        );
+        observer.apply(
+            &scoped(
+                "kiro",
+                Notification::TurnMeteringUpdated(TurnMeteringUpdate::new(
+                    vec![must_succeed(
+                        MeteredAmount::try_new(0.25, "credit", "credits"),
+                        "valid credit",
+                    )],
+                    Some(50),
+                    Some(UsageTurnStatus::Success),
+                    Vec::new(),
+                    Some(vec!["request".to_owned()]),
+                )),
+            ),
+            start,
+        );
+        observer.apply(
+            &scoped(
+                "kiro",
+                Notification::TurnUsageCaptured(TokenUsage::new(10, 4, 6, None, None, None)),
+            ),
+            start,
+        );
+        observer.apply(
+            &scoped(
+                "kiro",
+                Notification::UsageUpdated {
+                    used: 1,
+                    size: 10,
+                    cost: Some(must_succeed(
+                        Money::try_new(0.5, "USD"),
+                        "valid future wire cost",
+                    )),
+                },
+            ),
+            start,
+        );
+        let future_kiro = complete(&mut observer, "kiro", start + Duration::from_millis(50));
+        assert!(matches!(
+            future_kiro.token_metric(),
+            ObservedMetric::Value(_)
+        ));
+        assert!(matches!(
+            future_kiro.cost_metric(),
+            ObservedMetric::Value(_)
+        ));
+        must_succeed(log.append(&future_kiro), "append future Kiro turn");
+        let mixed = must_succeed(log.snapshot(), "mixed snapshot").overview;
+        assert_eq!(mixed.token_coverage.observed, 2);
+        assert_eq!(mixed.token_coverage.backend_gated, 0);
+        assert_eq!(mixed.cost_coverage.observed, 2);
+        assert_eq!(mixed.cost_coverage.backend_gated, 0);
+        assert_eq!(mixed.tokens.as_ref().map(|value| value.total), Some(160));
+        assert_eq!(mixed.charges[0].unit(), "credit");
+        assert_eq!(mixed.charges[0].amount(), 0.25);
+    }
+
+    #[test]
+    fn v1_migration_is_lossless_idempotent_and_enrichment_atomic() {
+        let connection = must_succeed(Connection::open_in_memory(), "legacy connection");
+        must_succeed(
+            connection.execute_batch(
+                "PRAGMA foreign_keys = ON;
+                 CREATE TABLE usage_turns (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    folder TEXT NOT NULL,
+                    model TEXT,
+                    provider TEXT,
+                    agent_type TEXT NOT NULL,
+                    timestamp_ms INTEGER NOT NULL,
+                    duration_ms INTEGER NOT NULL,
+                    ttft_ms INTEGER,
+                    stop_reason TEXT NOT NULL,
+                    error TEXT,
+                    total_tokens INTEGER,
+                    input_tokens INTEGER,
+                    output_tokens INTEGER,
+                    thought_tokens INTEGER,
+                    cached_read_tokens INTEGER,
+                    cached_write_tokens INTEGER,
+                    cost_amount REAL,
+                    cost_currency TEXT,
+                    CHECK ((cost_amount IS NULL) = (cost_currency IS NULL))
+                 );
+                 CREATE TABLE usage_tools (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    turn_id INTEGER NOT NULL REFERENCES usage_turns(id) ON DELETE CASCADE,
+                    kind TEXT NOT NULL,
+                    failed INTEGER NOT NULL CHECK (failed IN (0, 1))
+                 );
+                 INSERT INTO usage_turns (
+                    session_id, folder, model, provider, agent_type, timestamp_ms,
+                    duration_ms, ttft_ms, stop_reason, total_tokens, input_tokens,
+                    output_tokens, cached_read_tokens, cost_amount, cost_currency
+                 ) VALUES (
+                    'legacy-ok', '/old', 'm', 'p', 'main', 1, 100, 25,
+                    'end_turn', 150, 100, 20, 30, 1.25, 'USD'
+                 );
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason, error
+                 ) VALUES ('legacy-error', '/old', 'main', 2, 200, 'end_turn', 'boom');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason, error
+                 ) VALUES ('legacy-error-cancelled', '/old', 'main', 3, 200,
+                           'cancelled', 'boom-cancelled');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason
+                 ) VALUES ('legacy-cancelled', '/old', 'main', 4, 200, 'cancelled');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason
+                 ) VALUES ('legacy-max-tokens', '/old', 'main', 5, 200, 'max_tokens');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason
+                 ) VALUES ('legacy-max-requests', '/old', 'main', 6, 200,
+                           'max_turn_requests');
+                 INSERT INTO usage_turns (
+                    session_id, folder, agent_type, timestamp_ms, duration_ms,
+                    stop_reason
+                 ) VALUES ('legacy-refusal', '/old', 'main', 7, 200, 'refusal');",
+            ),
+            "seed legacy schema",
+        );
+
+        let mut log = must_succeed(UsageLog::from_connection(connection), "migrate v1 schema");
+        let version: i64 = must_succeed(
+            log.connection
+                .query_row("PRAGMA user_version", [], |row| row.get(0)),
+            "schema version",
+        );
+        assert_eq!(version, 2);
+        let snapshot = must_succeed(log.snapshot(), "migrated snapshot");
+        assert_eq!(snapshot.overview.requests, 7);
+        assert_eq!(snapshot.overview.successes, 1);
+        assert_eq!(snapshot.overview.cancelled, 1);
+        assert_eq!(snapshot.overview.errors, 5);
+        assert_eq!(
+            snapshot.overview.tokens.as_ref().map(|v| v.total),
+            Some(150)
+        );
+        assert_eq!(snapshot.overview.token_coverage.observed, 1);
+        assert_eq!(snapshot.overview.token_coverage.unreported, 6);
+        assert_eq!(snapshot.overview.cost_coverage.observed, 1);
+        assert_eq!(snapshot.overview.cost_coverage.unreported, 6);
+        assert_eq!(
+            snapshot.overview.costs,
+            vec![must_succeed(Money::try_new(1.25, "USD"), "valid cost",)]
+        );
+        let migrated_outcomes = {
+            let mut statement = must_succeed(
+                log.connection
+                    .prepare("SELECT session_id, outcome FROM usage_turns ORDER BY id"),
+                "prepare migrated outcome query",
+            );
+            let rows = must_succeed(
+                statement.query_map([], |row| {
+                    Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+                }),
+                "query migrated outcomes",
+            );
+            must_succeed(
+                rows.collect::<Result<Vec<_>, _>>(),
+                "collect migrated outcomes",
+            )
+        };
+        assert_eq!(
+            migrated_outcomes,
+            vec![
+                ("legacy-ok".to_owned(), "success".to_owned()),
+                ("legacy-error".to_owned(), "error".to_owned()),
+                ("legacy-error-cancelled".to_owned(), "error".to_owned()),
+                ("legacy-cancelled".to_owned(), "cancelled".to_owned()),
+                ("legacy-max-tokens".to_owned(), "error".to_owned()),
+                ("legacy-max-requests".to_owned(), "error".to_owned()),
+                ("legacy-refusal".to_owned(), "error".to_owned()),
+            ]
+        );
+
+        must_succeed(
+            log.connection.execute_batch(
+                "CREATE TRIGGER reject_usage_charge BEFORE INSERT ON usage_charges
+                     BEGIN SELECT RAISE(ABORT, 'forced charge failure'); END;",
+            ),
+            "install failure trigger",
+        );
+        let charged = UsageRecord::new(
+            context("new", Some("auto")),
+            UsageTiming::new(3, 10, None),
+            UsageOutcome::new(
+                StopReason::EndTurn,
+                UsageTurnOutcome::Success,
+                TurnUsageMetrics::new(
+                    ObservedMetric::Unavailable(UnavailableReason::BackendGated),
+                    ObservedMetric::Unavailable(UnavailableReason::BackendGated),
+                    vec![must_succeed(
+                        MeteredAmount::try_new(0.25, "credit", "credits"),
+                        "valid credit",
+                    )],
+                    Some(2),
+                    Some(UsageTurnStatus::Success),
+                ),
+                None,
+            ),
+            Vec::new(),
+        );
+        assert!(log.append(&charged).is_err());
+        let count: i64 = must_succeed(
+            log.connection
+                .query_row("SELECT COUNT(*) FROM usage_turns", [], |row| row.get(0)),
+            "count after failed charge",
+        );
+        assert_eq!(count, 7, "failed child insert rolls back parent");
+
+        must_succeed(
+            log.connection
+                .execute_batch("DROP TRIGGER reject_usage_charge;"),
+            "remove failure trigger",
+        );
+        let UsageLog { connection } = log;
+        let reopened = must_succeed(UsageLog::from_connection(connection), "version 2 reopens");
+        assert_eq!(
+            must_succeed(reopened.snapshot(), "reopened snapshot"),
+            snapshot,
+            "migration is idempotent"
+        );
+    }
+
+    #[test]
+    fn concurrent_schema_open_is_idempotent() {
+        let directory = must_succeed(tempfile::tempdir(), "tempdir");
+        let path = std::sync::Arc::new(directory.path().join("usage.sqlite3"));
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(3));
+        let handles = (0..2)
+            .map(|_| {
+                let path = std::sync::Arc::clone(&path);
+                let barrier = std::sync::Arc::clone(&barrier);
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    UsageLog::open(path.as_ref())
+                })
+            })
+            .collect::<Vec<_>>();
+        barrier.wait();
+        for handle in handles {
+            let log = match handle.join() {
+                Ok(result) => must_succeed(result, "concurrent open"),
+                Err(_) => panic!("open thread"),
+            };
+            let version: i64 = must_succeed(
+                log.connection
+                    .query_row("PRAGMA user_version", [], |row| row.get(0)),
+                "schema version",
+            );
+            assert_eq!(version, 2);
+        }
+    }
+
+    #[test]
+    fn schema_open_waits_for_a_concurrent_startup_lock() {
+        let directory = must_succeed(tempfile::tempdir(), "tempdir");
+        let path = directory.path().join("usage.sqlite3");
+        let blocker = must_succeed(Connection::open(&path), "open blocking connection");
+        must_succeed(
+            blocker.execute_batch("BEGIN IMMEDIATE;"),
+            "acquire startup write lock",
+        );
+        let open_path = path.clone();
+        let handle = std::thread::spawn(move || UsageLog::open(&open_path));
+        std::thread::sleep(Duration::from_millis(400));
+        must_succeed(
+            blocker.execute_batch("COMMIT;"),
+            "release startup write lock",
+        );
+        let log = match handle.join() {
+            Ok(result) => must_succeed(result, "open after startup lock"),
+            Err(_) => panic!("open thread"),
+        };
+        let version: i64 = must_succeed(
+            log.connection
+                .query_row("PRAGMA user_version", [], |row| row.get(0)),
+            "schema version",
+        );
+        assert_eq!(version, 2);
+    }
+
+    #[test]
+    fn unsupported_schema_version_is_rejected() {
+        let connection = must_succeed(Connection::open_in_memory(), "connection");
+        must_succeed(
+            connection.execute_batch("PRAGMA user_version = 99;"),
+            "set unsupported version",
+        );
+        assert!(matches!(
+            UsageLog::from_connection(connection),
+            Err(UsageError::UnsupportedSchema(99))
+        ));
+    }
+
+    #[test]
     fn append_is_atomic_across_record_and_tools() {
         let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         must_succeed(
@@ -1362,9 +2305,9 @@ mod tests {
 
     #[test]
     #[ignore = "reference-workstation append budget"]
-    fn append_100_tools_budget_reference() {
+    fn append_10k_tools_budget_reference() {
         let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
-        let tools = (0..100)
+        let tools = (0..10_000)
             .map(|_| UsageTool::new(ToolKind::Read, false))
             .collect();
         let record = record(
@@ -1379,10 +2322,10 @@ mod tests {
             tools,
         );
         let started = Instant::now();
-        must_succeed(log.append(&record), "append 100-tool turn");
+        must_succeed(log.append(&record), "append 10,000-tool turn");
         assert!(
-            started.elapsed() <= Duration::from_millis(10),
-            "100-tool usage append exceeded 10ms: {:?}",
+            started.elapsed() <= Duration::from_millis(250),
+            "10,000-tool usage append exceeded 250ms: {:?}",
             started.elapsed()
         );
     }
@@ -1485,27 +2428,22 @@ mod tests {
                 transaction.prepare(
                     "INSERT INTO usage_turns (
                         session_id, folder, model, provider, agent_type,
-                        timestamp_ms, duration_ms, stop_reason,
-                        total_tokens, input_tokens, output_tokens
-                     ) VALUES (?, '/tmp', 'm', 'p', 'main', ?, 10, 'end_turn', 3, 1, 2)",
+                        timestamp_ms, duration_ms, stop_reason, outcome, error,
+                        token_availability, total_tokens, input_tokens, output_tokens
+                     ) VALUES (
+                        ?, '/tmp', 'm', 'p', 'main', ?, 10, 'end_turn', ?, ?,
+                        'observed', 3, 1, 2
+                     )",
                 ),
                 "prepare seed",
             );
             for index in 0..100_000_i64 {
                 let error: Option<&str> = (index < 30).then_some("error");
+                let outcome = if error.is_some() { "error" } else { "success" };
                 must_succeed(
-                    statement.execute(params![format!("s{index}"), index]),
+                    statement.execute(params![format!("s{index}"), index, outcome, error]),
                     "seed row",
                 );
-                if let Some(error) = error {
-                    must_succeed(
-                        transaction.execute(
-                            "UPDATE usage_turns SET error = ? WHERE id = last_insert_rowid()",
-                            [error],
-                        ),
-                        "mark error",
-                    );
-                }
             }
         }
         must_succeed(transaction.commit(), "commit seed");

@@ -353,7 +353,8 @@ fn tool_kind_label(kind: cyril_core::types::ToolKind) -> &'static str {
 mod tests {
     use super::*;
     use cyril_core::types::{
-        Money, NamedUsageGroup, TokenTotals, ToolKind, ToolUsageGroup, UsageSnapshot, UsageSummary,
+        MetricCoverage, Money, NamedUsageGroup, TokenTotals, ToolKind, ToolUsageGroup,
+        UsageSnapshot, UsageSummary,
     };
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
@@ -365,7 +366,11 @@ mod tests {
         };
         let summary = UsageSummary {
             requests: 2,
+            successes: 1,
+            cancelled: 0,
             errors: 1,
+            provider_requests: None,
+            retries: None,
             tokens: Some(TokenTotals {
                 total: 250,
                 input: 150,
@@ -374,7 +379,18 @@ mod tests {
                 cached_read: 40,
                 cached_write: 0,
             }),
+            token_coverage: MetricCoverage {
+                observed: 2,
+                unreported: 0,
+                backend_gated: 0,
+            },
             costs: vec![cost],
+            cost_coverage: MetricCoverage {
+                observed: 2,
+                unreported: 0,
+                backend_gated: 0,
+            },
+            charges: Vec::new(),
             cache_rate: Some(0.25),
             avg_duration_ms: Some(150.0),
             avg_ttft_ms: Some(25.0),
@@ -426,22 +442,26 @@ mod tests {
         for page in UsagePage::ALL {
             for (width, height) in [(80, 24), (30, 10)] {
                 let backend = TestBackend::new(width, height);
-                let mut terminal = Terminal::new(backend).expect("test terminal");
+                let mut terminal = match Terminal::new(backend) {
+                    Ok(terminal) => terminal,
+                    Err(error) => panic!("test terminal: {error}"),
+                };
                 let input_top = height.saturating_sub(3);
                 let state = UsagePanelState {
                     snapshot: sample_snapshot(),
                     page,
                     scroll_offset: 0,
                 };
-                terminal
-                    .draw(|frame| {
-                        frame.render_widget(
-                            Paragraph::new("INPUT_MARKER"),
-                            Rect::new(0, input_top, width, 1),
-                        );
-                        render(frame, frame.area(), input_top, &state, &theme);
-                    })
-                    .expect("draw usage page");
+                match terminal.draw(|frame| {
+                    frame.render_widget(
+                        Paragraph::new("INPUT_MARKER"),
+                        Rect::new(0, input_top, width, 1),
+                    );
+                    render(frame, frame.area(), input_top, &state, &theme);
+                }) {
+                    Ok(_) => {}
+                    Err(error) => panic!("draw usage page: {error}"),
+                }
                 let rendered = rows(&terminal);
                 assert!(
                     rendered.iter().any(|row| row.contains(page.title())),
@@ -458,16 +478,20 @@ mod tests {
     #[test]
     fn empty_snapshot_renders_truthful_placeholder() {
         let backend = TestBackend::new(80, 24);
-        let mut terminal = Terminal::new(backend).expect("test terminal");
+        let mut terminal = match Terminal::new(backend) {
+            Ok(terminal) => terminal,
+            Err(error) => panic!("test terminal: {error}"),
+        };
         let state = UsagePanelState {
             snapshot: UsageSnapshot::default(),
             page: UsagePage::Overview,
             scroll_offset: 0,
         };
         let theme = crate::traits::test_support::marker_theme();
-        terminal
-            .draw(|frame| render(frame, frame.area(), 20, &state, &theme))
-            .expect("draw empty usage");
+        match terminal.draw(|frame| render(frame, frame.area(), 20, &state, &theme)) {
+            Ok(_) => {}
+            Err(error) => panic!("draw empty usage: {error}"),
+        }
         assert!(
             rows(&terminal)
                 .iter()
@@ -479,7 +503,10 @@ mod tests {
     #[ignore = "reference-workstation render budget"]
     fn usage_panel_render_budget_reference() {
         let backend = TestBackend::new(240, 80);
-        let mut terminal = Terminal::new(backend).expect("test terminal");
+        let mut terminal = match Terminal::new(backend) {
+            Ok(terminal) => terminal,
+            Err(error) => panic!("test terminal: {error}"),
+        };
         let state = UsagePanelState {
             snapshot: sample_snapshot(),
             page: UsagePage::Overview,
@@ -488,9 +515,10 @@ mod tests {
         let theme = crate::traits::test_support::marker_theme();
         let started = std::time::Instant::now();
         for _ in 0..1_000 {
-            terminal
-                .draw(|frame| render(frame, frame.area(), 76, &state, &theme))
-                .expect("draw usage budget frame");
+            match terminal.draw(|frame| render(frame, frame.area(), 76, &state, &theme)) {
+                Ok(_) => {}
+                Err(error) => panic!("draw usage budget frame: {error}"),
+            }
         }
         let elapsed = started.elapsed();
         assert!(

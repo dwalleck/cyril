@@ -24,10 +24,11 @@ KAS-distinctive variant is **`session_info_update`** — the envelope that, via
   `_meta.kiro.turnEnd.stopReason`). Captured live 2026-06-29 by
   `experiments/conductor-spike/probe-kas-turnend-capture.py` (KAS-2a / cyril-j16p
   cheapest-falsifier).
-- `turn_completion` — `session_info_update_turn_completion.json` — **metering
-  only** (`promptTurnSummaries`/`elapsedTime`/`status`), NOT the busy-clear
-  signal. Fires BEFORE `turn_end`. Kept as a negative fixture so the converter
-  can't confuse metering for completion.
+- `turn_completion` — `session_info_update_turn_completion.json` and
+  `turn_completion_2_16_0_four.jsonl` — **metering only**
+  (`promptTurnSummaries`/`elapsedTime`/`status`/`requestIds`), mapped to
+  `TurnMeteringUpdated`, never the busy-clear signal. Fires BEFORE `turn_end`;
+  the four-frame fixture preserves the observed 2/2/2/3 request-count vector.
 - **`context_usage`** — `session_info_update_context_usage.json` — the
   proactively-pushed per-category breakdown (KAS-2b / cyril-5et2 →
   `ContextBreakdownUpdated`). `_meta.kiro` carries flat `usagePercentage`, a

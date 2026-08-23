@@ -51,6 +51,8 @@ pub enum UsageValueError {
     InvalidAmount,
     #[error("usage cost currency must be a three-letter uppercase ISO 4217 code")]
     InvalidCurrency,
+    #[error("usage metering unit must be non-empty")]
+    InvalidUnit,
 }
 
 /// A validated monetary amount. Currencies are never combined implicitly.
@@ -78,6 +80,146 @@ impl Money {
 
     pub fn currency(&self) -> &str {
         &self.currency
+    }
+}
+
+/// Why a metric has no value. Distinguishes an upstream limitation from an
+/// ordinary omission without encoding either as a numeric sentinel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnavailableReason {
+    BackendGated,
+}
+
+/// A metric and its provenance-sensitive absence state.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ObservedMetric<T> {
+    Value(T),
+    Unreported,
+    Unavailable(UnavailableReason),
+}
+
+impl<T> ObservedMetric<T> {
+    pub fn value(&self) -> Option<&T> {
+        match self {
+            Self::Value(value) => Some(value),
+            Self::Unreported | Self::Unavailable(_) => None,
+        }
+    }
+
+    pub fn unavailable_reason(&self) -> Option<UnavailableReason> {
+        match self {
+            Self::Unavailable(reason) => Some(*reason),
+            Self::Value(_) | Self::Unreported => None,
+        }
+    }
+}
+
+/// A validated non-money metering amount such as Kiro credits.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MeteredAmount {
+    amount: f64,
+    unit: String,
+    unit_plural: String,
+}
+
+impl MeteredAmount {
+    pub fn try_new(
+        amount: f64,
+        unit: impl Into<String>,
+        unit_plural: impl Into<String>,
+    ) -> Result<Self, UsageValueError> {
+        if !amount.is_finite() || amount < 0.0 {
+            return Err(UsageValueError::InvalidAmount);
+        }
+        let unit = unit.into();
+        let unit_plural = unit_plural.into();
+        if unit.trim().is_empty() || unit_plural.trim().is_empty() {
+            return Err(UsageValueError::InvalidUnit);
+        }
+        Ok(Self {
+            amount,
+            unit,
+            unit_plural,
+        })
+    }
+
+    pub fn amount(&self) -> f64 {
+        self.amount
+    }
+
+    pub fn unit(&self) -> &str {
+        &self.unit
+    }
+
+    pub fn unit_plural(&self) -> &str {
+        &self.unit_plural
+    }
+}
+
+/// Backend-reported outcome for a metered turn.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UsageTurnStatus {
+    Success,
+    Aborted,
+    Other(String),
+}
+
+impl UsageTurnStatus {
+    pub fn from_wire(value: &str) -> Option<Self> {
+        match value {
+            "success" => Some(Self::Success),
+            "aborted" => Some(Self::Aborted),
+            "" => None,
+            other => Some(Self::Other(other.to_owned())),
+        }
+    }
+}
+
+/// Per-turn metering fact emitted before the lifecycle terminal.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TurnMeteringUpdate {
+    charges: Vec<MeteredAmount>,
+    duration_ms: Option<u64>,
+    status: Option<UsageTurnStatus>,
+    used_tools: Vec<String>,
+    request_ids: Option<Vec<String>>,
+}
+
+impl TurnMeteringUpdate {
+    pub fn new(
+        charges: Vec<MeteredAmount>,
+        duration_ms: Option<u64>,
+        status: Option<UsageTurnStatus>,
+        used_tools: Vec<String>,
+        request_ids: Option<Vec<String>>,
+    ) -> Self {
+        Self {
+            charges,
+            duration_ms,
+            status,
+            used_tools,
+            request_ids,
+        }
+    }
+
+    pub fn charges(&self) -> &[MeteredAmount] {
+        &self.charges
+    }
+
+    pub fn duration_ms(&self) -> Option<u64> {
+        self.duration_ms
+    }
+
+    pub fn status(&self) -> Option<&UsageTurnStatus> {
+        self.status.as_ref()
+    }
+
+    pub fn used_tools(&self) -> &[String] {
+        &self.used_tools
+    }
+
+    pub fn request_ids(&self) -> Option<&[String]> {
+        self.request_ids.as_deref()
     }
 }
 
@@ -248,26 +390,62 @@ impl UsageTiming {
     }
 }
 
+/// Aggregate outcome category used by the usage dashboard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UsageTurnOutcome {
+    Success,
+    Cancelled,
+    Error,
+}
+
+/// Metering fields correlated with one completed turn.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TurnUsageMetrics {
+    tokens: ObservedMetric<TokenUsage>,
+    cost: ObservedMetric<Money>,
+    charges: Vec<MeteredAmount>,
+    provider_requests: Option<u64>,
+    metering_status: Option<UsageTurnStatus>,
+}
+
+impl TurnUsageMetrics {
+    pub fn new(
+        tokens: ObservedMetric<TokenUsage>,
+        cost: ObservedMetric<Money>,
+        charges: Vec<MeteredAmount>,
+        provider_requests: Option<u64>,
+        metering_status: Option<UsageTurnStatus>,
+    ) -> Self {
+        Self {
+            tokens,
+            cost,
+            charges,
+            provider_requests,
+            metering_status,
+        }
+    }
+}
+
 /// Wire outcome captured at the turn boundary.
 #[derive(Debug, Clone, PartialEq)]
 pub struct UsageOutcome {
     stop_reason: StopReason,
-    tokens: Option<TokenUsage>,
-    cost: Option<Money>,
+    outcome: UsageTurnOutcome,
+    metrics: TurnUsageMetrics,
     error: Option<String>,
 }
 
 impl UsageOutcome {
     pub fn new(
         stop_reason: StopReason,
-        tokens: Option<TokenUsage>,
-        cost: Option<Money>,
+        outcome: UsageTurnOutcome,
+        metrics: TurnUsageMetrics,
         error: Option<String>,
     ) -> Self {
         Self {
             stop_reason,
-            tokens,
-            cost,
+            outcome,
+            metrics,
             error: error.filter(|value| !value.is_empty()),
         }
     }
@@ -276,12 +454,36 @@ impl UsageOutcome {
         self.stop_reason
     }
 
+    pub fn outcome(&self) -> UsageTurnOutcome {
+        self.outcome
+    }
+
     pub fn tokens(&self) -> Option<&TokenUsage> {
-        self.tokens.as_ref()
+        self.metrics.tokens.value()
+    }
+
+    pub fn token_metric(&self) -> &ObservedMetric<TokenUsage> {
+        &self.metrics.tokens
     }
 
     pub fn cost(&self) -> Option<&Money> {
-        self.cost.as_ref()
+        self.metrics.cost.value()
+    }
+
+    pub fn cost_metric(&self) -> &ObservedMetric<Money> {
+        &self.metrics.cost
+    }
+
+    pub fn charges(&self) -> &[MeteredAmount] {
+        &self.metrics.charges
+    }
+
+    pub fn provider_requests(&self) -> Option<u64> {
+        self.metrics.provider_requests
+    }
+
+    pub fn metering_status(&self) -> Option<&UsageTurnStatus> {
+        self.metrics.metering_status.as_ref()
     }
 
     pub fn error(&self) -> Option<&str> {
@@ -341,6 +543,30 @@ impl UsageRecord {
         self.outcome.cost()
     }
 
+    pub fn token_metric(&self) -> &ObservedMetric<TokenUsage> {
+        self.outcome.token_metric()
+    }
+
+    pub fn cost_metric(&self) -> &ObservedMetric<Money> {
+        self.outcome.cost_metric()
+    }
+
+    pub fn charges(&self) -> &[MeteredAmount] {
+        self.outcome.charges()
+    }
+
+    pub fn outcome(&self) -> UsageTurnOutcome {
+        self.outcome.outcome()
+    }
+
+    pub fn provider_requests(&self) -> Option<u64> {
+        self.outcome.provider_requests()
+    }
+
+    pub fn metering_status(&self) -> Option<&UsageTurnStatus> {
+        self.outcome.metering_status()
+    }
+
     pub fn tools(&self) -> &[UsageTool] {
         &self.tools
     }
@@ -361,13 +587,38 @@ pub struct TokenTotals {
     pub cached_write: u64,
 }
 
+/// Counts of observed and unavailable records for one metric family.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MetricCoverage {
+    pub observed: u64,
+    pub unreported: u64,
+    pub backend_gated: u64,
+}
+
+impl MetricCoverage {
+    pub fn unavailable_reason(&self) -> Option<UnavailableReason> {
+        if self.observed == 0 && self.backend_gated > 0 {
+            Some(UnavailableReason::BackendGated)
+        } else {
+            None
+        }
+    }
+}
+
 /// Aggregated usage metrics. `tokens` is absent when no record supplied usage.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct UsageSummary {
     pub requests: u64,
+    pub successes: u64,
+    pub cancelled: u64,
     pub errors: u64,
+    pub provider_requests: Option<u64>,
+    pub retries: Option<u64>,
     pub tokens: Option<TokenTotals>,
+    pub token_coverage: MetricCoverage,
     pub costs: Vec<Money>,
+    pub cost_coverage: MetricCoverage,
+    pub charges: Vec<MeteredAmount>,
     pub cache_rate: Option<f64>,
     pub avg_duration_ms: Option<f64>,
     pub avg_ttft_ms: Option<f64>,
@@ -414,8 +665,13 @@ pub struct RecentUsage {
     pub duration_ms: u64,
     pub ttft_ms: Option<u64>,
     pub stop_reason: StopReason,
+    pub outcome: UsageTurnOutcome,
+    pub provider_requests: Option<u64>,
     pub tokens: Option<TokenUsage>,
+    pub token_unavailable_reason: Option<UnavailableReason>,
     pub cost: Option<Money>,
+    pub cost_unavailable_reason: Option<UnavailableReason>,
+    pub charges: Vec<MeteredAmount>,
     pub error: Option<String>,
 }
 
@@ -434,6 +690,7 @@ pub struct UsageSnapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::must_succeed;
 
     #[test]
     fn money_rejects_invalid_values_without_defaulting() {
@@ -454,6 +711,71 @@ mod tests {
             Err(_) => panic!("explicit zero is valid"),
         };
         assert_eq!(zero.amount(), 0.0);
+    }
+
+    #[test]
+    fn metric_source_matrix_preserves_typed_values_and_absence() {
+        let money = ObservedMetric::Value(must_succeed(Money::try_new(1.25, "USD"), "valid money"));
+        let gated: ObservedMetric<Money> =
+            ObservedMetric::Unavailable(UnavailableReason::BackendGated);
+        let unreported: ObservedMetric<Money> = ObservedMetric::Unreported;
+
+        assert_eq!(money.value().map(Money::amount), Some(1.25));
+        assert_eq!(money.unavailable_reason(), None);
+        assert!(gated.value().is_none());
+        assert_eq!(
+            gated.unavailable_reason(),
+            Some(UnavailableReason::BackendGated)
+        );
+        assert!(unreported.value().is_none());
+        assert_eq!(unreported.unavailable_reason(), None);
+
+        let credit = must_succeed(
+            MeteredAmount::try_new(0.0, "credit", "credits"),
+            "explicit zero credit is valid",
+        );
+        let request = must_succeed(
+            MeteredAmount::try_new(2.0, "request", "requests"),
+            "different unit is valid",
+        );
+        assert_eq!(credit.unit(), "credit");
+        assert_eq!(credit.unit_plural(), "credits");
+        assert_eq!(request.unit(), "request");
+        assert_ne!(credit.unit(), request.unit());
+
+        for amount in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.01] {
+            assert_eq!(
+                MeteredAmount::try_new(amount, "credit", "credits"),
+                Err(UsageValueError::InvalidAmount)
+            );
+        }
+        for (unit, plural) in [("", "credits"), ("credit", ""), (" ", "credits")] {
+            assert_eq!(
+                MeteredAmount::try_new(1.0, unit, plural),
+                Err(UsageValueError::InvalidUnit)
+            );
+        }
+    }
+
+    #[test]
+    fn turn_metering_update_preserves_missing_and_explicit_empty_requests() {
+        let missing = TurnMeteringUpdate::new(Vec::new(), None, None, Vec::new(), None);
+        let empty = TurnMeteringUpdate::new(
+            Vec::new(),
+            Some(0),
+            Some(UsageTurnStatus::Aborted),
+            Vec::new(),
+            Some(Vec::new()),
+        );
+        assert!(missing.request_ids().is_none());
+        assert_eq!(empty.request_ids(), Some([].as_slice()));
+        assert_eq!(empty.duration_ms(), Some(0));
+        assert_eq!(empty.status(), Some(&UsageTurnStatus::Aborted));
+        assert_eq!(
+            UsageTurnStatus::from_wire("future"),
+            Some(UsageTurnStatus::Other("future".to_owned()))
+        );
+        assert_eq!(UsageTurnStatus::from_wire(""), None);
     }
 
     #[test]
