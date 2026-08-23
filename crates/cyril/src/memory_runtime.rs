@@ -578,12 +578,24 @@ mod tests {
         let MemoryConfigState::Valid(config) = report.memory().clone() else {
             panic!("valid config expected");
         };
-        let mut handle =
-            MemoryRuntimeHandle::start_with_options(config, runtime, root.path().join("ipc"));
+        let runtime_root = tempfile::Builder::new()
+            .prefix("cyril-memory-")
+            .tempdir_in("/tmp")
+            .expect("short runtime root");
+        let mut handle = MemoryRuntimeHandle::start_with_options(
+            config,
+            runtime,
+            runtime_root.path().to_path_buf(),
+        );
         let marker_deadline = tokio::time::Instant::now() + Duration::from_secs(1);
         while !marker.exists() && tokio::time::Instant::now() < marker_deadline {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
+        assert!(
+            marker.exists(),
+            "runtime fixture did not start: {:?}",
+            handle.status()
+        );
         let grandchild = std::fs::read_to_string(&marker).expect("grandchild marker");
         assert_eq!(
             std::fs::read_to_string(&args_marker)
