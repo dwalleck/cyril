@@ -489,7 +489,7 @@ impl SidecarError {
     }
 
     fn is_retryable(&self) -> bool {
-        matches!(self, Self::IncompleteTurn) || self.is_missing()
+        matches!(self, Self::IncompleteTurn | Self::DeadlineExceeded) || self.is_missing()
     }
 }
 
