@@ -130,6 +130,7 @@ pub struct UiState {
     // is only meaningful while `voice_status == Listening`.
     voice_status: VoiceStatus,
     voice_level: f32,
+    memory_status: cyril_core::types::MemoryStatusView,
 
     // Config
     max_messages: usize,
@@ -237,6 +238,9 @@ impl TuiState for UiState {
 
     fn voice_level(&self) -> f32 {
         self.voice_level
+    }
+    fn memory_status(&self) -> &cyril_core::types::MemoryStatusView {
+        &self.memory_status
     }
 
     fn context_usage(&self) -> Option<f64> {
@@ -377,6 +381,7 @@ impl UiState {
             turns_since_steer_activity: 0,
             voice_status: VoiceStatus::Idle,
             voice_level: 0.0,
+            memory_status: cyril_core::types::MemoryStatusView::default(),
             max_messages,
         }
     }
@@ -1726,6 +1731,14 @@ impl UiState {
             self.voice_level = 0.0;
         }
         self.voice_status = status;
+    }
+    /// Replace the process-global memory status snapshot atomically.
+    pub fn set_memory_status(&mut self, status: cyril_core::types::MemoryStatusView) -> bool {
+        if self.memory_status == status {
+            return false;
+        }
+        self.memory_status = status;
+        true
     }
 
     /// Update the current voice input level, normalized to `0.0..=1.0`.
@@ -4468,6 +4481,30 @@ mod tests {
         state.set_voice_level(f32::NAN);
         assert_eq!(state.voice_level(), 0.0);
         assert!(!state.voice_level().is_nan());
+    }
+    #[test]
+    fn memory_status_replaces_atomically_and_survives_session_reset() {
+        let mut state = UiState::new(500);
+        let ready = cyril_core::types::MemoryStatusView::ready(
+            "instance",
+            1,
+            cyril_core::types::MemoryStoreVersions::new(1, 1),
+        );
+        assert!(state.set_memory_status(ready.clone()));
+        assert!(!state.set_memory_status(ready.clone()));
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("fresh"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        assert_eq!(state.memory_status(), &ready);
+
+        let failed = cyril_core::types::MemoryStatusView::failed("runtime exited");
+        assert!(state.set_memory_status(failed.clone()));
+        assert_eq!(state.memory_status(), &failed);
+        assert_eq!(state.memory_status().instance_id(), None);
     }
 
     #[test]

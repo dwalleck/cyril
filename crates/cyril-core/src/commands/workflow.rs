@@ -203,6 +203,7 @@ mod tests {
             bridge: &harness.bridge,
             subagent_tracker: None,
             workflow_tracker: Some(&harness.tracker),
+            memory_status: None,
         };
         match command().execute(&ctx, args).await {
             Ok(result) => result,

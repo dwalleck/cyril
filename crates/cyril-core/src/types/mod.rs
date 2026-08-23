@@ -7,6 +7,7 @@ pub mod event;
 pub mod hook;
 pub mod kas_hooks;
 pub mod kas_spawn;
+pub mod memory;
 pub mod message;
 pub mod plan;
 pub mod present_as;
@@ -32,6 +33,7 @@ pub use event::{
 };
 pub use hook::HookInfo;
 pub use kas_spawn::KasSpawn;
+pub use memory::{MemoryDisabledReason, MemoryStatus, MemoryStatusView, MemoryStoreVersions};
 pub use message::{AgentMessage, AgentThought, UserMessage};
 pub use plan::{Plan, PlanEntry, PlanEntryPriority, PlanEntryStatus};
 pub use present_as::PresentAs;

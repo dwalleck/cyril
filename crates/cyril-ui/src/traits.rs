@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use cyril_core::types::{CommandOption, EffortLevel, HookInfo, Plan, SessionId, VoiceStatus};
+use cyril_core::types::{
+    CommandOption, EffortLevel, HookInfo, MemoryStatusView, Plan, SessionId, VoiceStatus,
+};
 
 use crate::theme::Theme;
 
@@ -61,6 +63,7 @@ pub trait TuiState {
     fn voice_level(&self) -> f32 {
         0.0
     }
+    fn memory_status(&self) -> &MemoryStatusView;
     fn context_usage(&self) -> Option<f64>;
     /// KAS categorized context breakdown for the toolbar bar (KAS-2b, cyril-5et2).
     /// `None` on v2 (scalar only) and before the first KAS `context_usage` frame.
@@ -694,6 +697,7 @@ pub mod test_support {
         pub current_model: Option<String>,
         pub effort: Option<EffortLevel>,
         pub steering_queued: usize,
+        pub memory_status: MemoryStatusView,
         pub context_usage: Option<f64>,
         pub context_breakdown: Option<cyril_core::types::ContextBreakdown>,
         pub stall: Option<StallState>,
@@ -736,6 +740,7 @@ pub mod test_support {
                 current_model: None,
                 effort: None,
                 steering_queued: 0,
+                memory_status: MemoryStatusView::default(),
                 context_usage: None,
                 context_breakdown: None,
                 stall: None,
@@ -814,6 +819,9 @@ pub mod test_support {
         }
         fn steering_queued(&self) -> usize {
             self.steering_queued
+        }
+        fn memory_status(&self) -> &MemoryStatusView {
+            &self.memory_status
         }
         fn context_usage(&self) -> Option<f64> {
             self.context_usage

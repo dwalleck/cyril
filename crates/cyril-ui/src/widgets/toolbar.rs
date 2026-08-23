@@ -1,6 +1,8 @@
 use ratatui::prelude::*;
 use ratatui::widgets::Paragraph;
 
+use cyril_core::types::MemoryStatus;
+
 use crate::spinner;
 use crate::theme::Theme;
 use crate::traits::{Activity, TuiState};
@@ -163,6 +165,16 @@ fn status_bar_spans(
     include_breakdown: bool,
 ) -> Vec<Span<'static>> {
     let mut parts: Vec<Span> = Vec::new();
+    let memory = match state.memory_status().status() {
+        MemoryStatus::Disabled => None,
+        MemoryStatus::Starting => Some(("Memory: starting", theme.emphasis)),
+        MemoryStatus::Ready => Some(("Memory: ready", theme.subdued_positive)),
+        MemoryStatus::Degraded => Some(("Memory: degraded", theme.emphasis)),
+        MemoryStatus::Failed => Some(("Memory: failed", theme.subdued_negative)),
+    };
+    if let Some((label, color)) = memory {
+        parts.push(Span::styled(label, Style::default().fg(color)));
+    }
 
     // Context usage gauge
     if let Some(pct) = state.context_usage() {
@@ -635,6 +647,53 @@ mod tests {
         (0..width)
             .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
             .collect()
+    }
+    #[test]
+    fn memory_status_matrix_has_text_and_semantic_color() {
+        use cyril_core::types::MemoryStatusView;
+
+        let theme = cyril_dark();
+        let cases = [
+            (
+                MemoryStatusView::starting(),
+                "Memory: starting",
+                theme.emphasis,
+            ),
+            (
+                MemoryStatusView::ready(
+                    "instance",
+                    1,
+                    cyril_core::types::MemoryStoreVersions::new(1, 1),
+                ),
+                "Memory: ready",
+                theme.subdued_positive,
+            ),
+            (
+                MemoryStatusView::degraded("runtime exited"),
+                "Memory: degraded",
+                theme.emphasis,
+            ),
+            (
+                MemoryStatusView::failed("startup failed"),
+                "Memory: failed",
+                theme.subdued_negative,
+            ),
+        ];
+        for (memory_status, label, color) in cases {
+            let state = MockTuiState {
+                memory_status,
+                ..Default::default()
+            };
+            let spans = status_bar_spans(&state, &theme, false);
+            assert_eq!(spans[0].content.as_ref(), label);
+            assert_eq!(spans[0].style.fg, Some(color));
+        }
+
+        let disabled = status_bar_text(&MockTuiState::default(), 80);
+        assert!(
+            !disabled.contains("Memory:"),
+            "disabled chrome must stay unchanged"
+        );
     }
 
     fn breakdown_browse_state() -> MockTuiState {

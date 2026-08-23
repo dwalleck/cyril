@@ -6,6 +6,7 @@ pub mod file_completer;
 #[cfg(test)]
 mod floor_tests;
 pub mod highlight;
+pub mod memory_format;
 pub mod render;
 pub mod spinner;
 pub mod state;

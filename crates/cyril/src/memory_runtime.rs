@@ -135,6 +135,14 @@ impl MemoryRuntimeHandle {
     pub(crate) fn status(&self) -> MemoryRuntimeStatus {
         self.status.borrow().clone()
     }
+    pub(crate) fn status_view(&self) -> cyril_core::types::MemoryStatusView {
+        project_status(&self.status())
+    }
+
+    pub(crate) async fn changed(&mut self) -> Option<cyril_core::types::MemoryStatusView> {
+        self.status.changed().await.ok()?;
+        Some(self.status_view())
+    }
 
     pub(crate) async fn shutdown(&mut self) {
         if let Some(shutdown) = self.shutdown.take()
@@ -154,6 +162,44 @@ impl MemoryRuntimeHandle {
         }
     }
 }
+fn project_status(status: &MemoryRuntimeStatus) -> cyril_core::types::MemoryStatusView {
+    match status {
+        MemoryRuntimeStatus::Disabled(MemoryDisabledReason::Absent) => {
+            cyril_core::types::MemoryStatusView::disabled(
+                cyril_core::types::MemoryDisabledReason::Absent,
+            )
+        }
+        MemoryRuntimeStatus::Disabled(MemoryDisabledReason::ConfiguredOff) => {
+            cyril_core::types::MemoryStatusView::disabled(
+                cyril_core::types::MemoryDisabledReason::ConfiguredOff,
+            )
+        }
+        MemoryRuntimeStatus::Starting => cyril_core::types::MemoryStatusView::starting(),
+        MemoryRuntimeStatus::Ready(health) => {
+            let Some(versions) = health.store_versions() else {
+                return cyril_core::types::MemoryStatusView::failed(
+                    "memory runtime ready health omitted store versions",
+                );
+            };
+            let versions = cyril_core::types::MemoryStoreVersions::new(
+                versions.memory(),
+                versions.knowledge(),
+            );
+            cyril_core::types::MemoryStatusView::ready(
+                health.instance_id(),
+                health.protocol_version(),
+                versions,
+            )
+        }
+        MemoryRuntimeStatus::Degraded(failure) => {
+            cyril_core::types::MemoryStatusView::degraded(failure.message())
+        }
+        MemoryRuntimeStatus::Failed(failure) => {
+            cyril_core::types::MemoryStatusView::failed(failure.message())
+        }
+    }
+}
+
 impl Drop for MemoryRuntimeHandle {
     fn drop(&mut self) {
         if let Some(shutdown) = self.shutdown.take()

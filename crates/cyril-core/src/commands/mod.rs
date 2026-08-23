@@ -21,6 +21,9 @@ pub struct CommandContext<'a> {
     /// renders known runs without a wire round-trip (cyril-0qe6 C14).
     /// `None` in tests that don't exercise workflow commands.
     pub workflow_tracker: Option<&'a crate::workflow::WorkflowTracker>,
+    /// Current process-global memory status for the local `/memory status`.
+    /// `None` means caller wiring is incomplete; the command reports it.
+    pub memory_status: Option<&'a crate::types::MemoryStatusView>,
 }
 
 impl<'a> CommandContext<'a> {
@@ -182,6 +185,8 @@ pub enum CommandResultKind {
     /// Open Cyril's local usage dashboard; records whether an async KAS
     /// account query was dispatched before returning.
     ShowUsage { account_query_started: bool },
+    /// Return Cyril's current typed memory runtime status.
+    MemoryStatus(crate::types::MemoryStatusView),
     /// Quit the application.
     Quit,
 }
@@ -234,6 +239,11 @@ impl CommandResult {
             kind: CommandResultKind::ShowUsage {
                 account_query_started,
             },
+        }
+    }
+    pub fn memory_status(status: crate::types::MemoryStatusView) -> Self {
+        Self {
+            kind: CommandResultKind::MemoryStatus(status),
         }
     }
 
@@ -306,8 +316,8 @@ impl CommandRegistry {
     ) -> Self {
         let mut registry = Self::new();
         let mut names: Vec<&str> = vec![
-            "help", "clear", "quit", "new", "load", "steer", "voice", "usage", "sessions", "spawn",
-            "kill", "msg",
+            "help", "clear", "quit", "new", "load", "steer", "voice", "usage", "memory",
+            "sessions", "spawn", "kill", "msg",
         ];
         if let HooksCommandSource::Kas { workspace_root } = hooks {
             names.push("hooks");
@@ -325,6 +335,7 @@ impl CommandRegistry {
         registry.register(Arc::new(builtin::SteerCommand));
         registry.register(Arc::new(builtin::VoiceToggleCommand));
         registry.register(Arc::new(builtin::UsageCommand::new(usage_account)));
+        registry.register(Arc::new(builtin::MemoryCommand));
         registry.register(Arc::new(subagent::SessionsCommand));
         registry.register(Arc::new(subagent::SpawnCommand));
         registry.register(Arc::new(subagent::KillCommand));
@@ -556,6 +567,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
         let result = cmd.execute(&ctx, "test").await;
         assert!(result.is_ok());
@@ -577,6 +589,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         // C10: a message -> Steer{text}.
@@ -617,6 +630,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         // Exact word, with and without surrounding whitespace -> ClearSteer.
@@ -667,6 +681,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         let result = builtin::HelpCommand::new(&[]).execute(&ctx, "").await;
@@ -687,6 +702,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         let result = builtin::ClearCommand.execute(&ctx, "").await;
@@ -707,6 +723,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         let result = builtin::QuitCommand.execute(&ctx, "").await;
@@ -724,6 +741,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         let result = builtin::VoiceToggleCommand.execute(&ctx, "").await;
@@ -753,6 +771,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
         let registry =
             CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
@@ -787,6 +806,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
         let registry = CommandRegistry::with_builtins_and_usage(
             HooksCommandSource::Agent,
@@ -817,6 +837,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         let result = builtin::NewCommand.execute(&ctx, "").await;
@@ -909,6 +930,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         let cmd = AgentCommand {
@@ -938,6 +960,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         let cmd = AgentCommand {
@@ -981,6 +1004,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         let cmd = AgentCommand {
@@ -1019,6 +1043,7 @@ mod tests {
             bridge: &sender,
             subagent_tracker: None,
             workflow_tracker: None,
+            memory_status: None,
         };
 
         let cmd = AgentCommand {
@@ -1045,6 +1070,61 @@ mod tests {
         } else {
             panic!("expected QueryCommandOptions, got {bridge_cmd:?}");
         }
+    }
+    #[tokio::test]
+    async fn memory_status_command_is_local_and_typed() {
+        let registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
+        let session = SessionController::new();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let status = crate::types::MemoryStatusView::ready(
+            "instance",
+            1,
+            crate::types::MemoryStoreVersions::new(1, 1),
+        );
+        let ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: Some(&status),
+        };
+        let (command, args) = registry.parse("/memory status").expect("memory command");
+        let result = command.execute(&ctx, args).await.expect("memory status");
+        match result.kind {
+            CommandResultKind::MemoryStatus(actual) => assert_eq!(actual, status),
+            other => panic!("expected typed memory status, got {other:?}"),
+        }
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+
+        let (_, invalid_args) = registry.parse("/memory other").expect("memory command");
+        let invalid = command
+            .execute(&ctx, invalid_args)
+            .await
+            .expect("memory usage");
+        assert!(matches!(
+            &invalid.kind,
+            CommandResultKind::SystemMessage(text) if text == "Usage: /memory status"
+        ));
+        let unavailable_ctx = CommandContext {
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+        let unavailable = command
+            .execute(&unavailable_ctx, "status")
+            .await
+            .expect("missing provider");
+        assert!(matches!(
+            &unavailable.kind,
+            CommandResultKind::SystemMessage(text) if text == "Memory status unavailable."
+        ));
     }
 }
 

@@ -75,6 +75,7 @@ pub struct App {
     /// this field and its `select!` arm compile regardless of the feature.
     voice: Option<cyril_core::voice::VoiceHandle>,
     memory_runtime: Option<MemoryRuntimeHandle>,
+    memory_status: MemoryStatusView,
     /// Authoritative "is voice capturing?" intent. Flipped on each successful
     /// Start/Stop send (and cleared on engine `Error`). Toggling reads this —
     /// NOT the lagging `ui_state.voice_status()` projection — so rapid `/voice`
@@ -178,6 +179,7 @@ impl App {
             agent_engine,
             voice: spawn_voice_engine(),
             memory_runtime: None,
+            memory_status: MemoryStatusView::default(),
             voice_active: false,
             startup_prompt: None,
             workflow_tracker: WorkflowTracker::new(),
@@ -287,6 +289,9 @@ impl App {
             | crate::memory_runtime::MemoryRuntimeStatus::Starting
             | crate::memory_runtime::MemoryRuntimeStatus::Ready(_) => {}
         }
+        let status = memory_runtime.status_view();
+        self.ui_state.set_memory_status(status.clone());
+        self.memory_status = status;
         self.memory_runtime = Some(memory_runtime);
     }
 
@@ -385,9 +390,20 @@ impl App {
                 voice_event = Self::next_voice_event(&mut self.voice) => {
                     match voice_event {
                         Some(ev) => self.handle_voice_event(ev),
-                        // Channel closed: the engine thread exited. Stop polling
-                        // so the branch parks on `pending` instead of busy-looping.
+                        // Channel closed: stop polling instead of busy-looping.
                         None => self.voice = None,
+                    }
+                }
+
+                memory_status = Self::next_memory_status(&mut self.memory_runtime) => {
+                    match memory_status {
+                        Some(status) => {
+                            self.memory_status = status.clone();
+                            if self.ui_state.set_memory_status(status) {
+                                self.redraw_needed = true;
+                            }
+                        }
+                        None => self.memory_runtime = None,
                     }
                 }
 
@@ -1273,6 +1289,7 @@ impl App {
                 bridge: &self.bridge_sender,
                 subagent_tracker: Some(self.ui_state.subagent_tracker()),
                 workflow_tracker: Some(&self.workflow_tracker),
+                memory_status: Some(&self.memory_status),
             };
             let command_name = cmd.name().to_string();
             let args = args.to_string();
@@ -1408,6 +1425,11 @@ impl App {
             CommandResultKind::ToggleVoice => {
                 self.toggle_voice();
             }
+            CommandResultKind::MemoryStatus(status) => {
+                let rendered = cyril_ui::memory_format::format_memory_status(&status);
+                self.ui_state
+                    .add_command_output("memory".to_owned(), rendered);
+            }
             CommandResultKind::ShowUsage {
                 account_query_started,
             } => match self.usage_log.snapshot() {
@@ -1455,6 +1477,14 @@ impl App {
     ) -> Option<VoiceEvent> {
         match voice {
             Some(handle) => handle.recv_event().await,
+            None => std::future::pending().await,
+        }
+    }
+    async fn next_memory_status(
+        memory_runtime: &mut Option<MemoryRuntimeHandle>,
+    ) -> Option<MemoryStatusView> {
+        match memory_runtime {
+            Some(runtime) => runtime.changed().await,
             None => std::future::pending().await,
         }
     }
@@ -2464,6 +2494,25 @@ mod tests {
             .expect("command deadline")
             .expect("bridge command");
         assert!(matches!(command, BridgeCommand::NewSession { .. }));
+    }
+    #[test]
+    fn typed_memory_result_formats_through_ui_command_output() {
+        let mut app = test_app();
+        let status = MemoryStatusView::ready(
+            "instance",
+            1,
+            cyril_core::types::MemoryStoreVersions::new(1, 1),
+        );
+        app.handle_command_result(CommandResult::memory_status(status));
+        let message = app.ui_state.messages().last().expect("command output");
+        match message.kind() {
+            cyril_ui::traits::ChatMessageKind::CommandOutput { command, text } => {
+                assert_eq!(command, "memory");
+                assert!(text.contains("Memory: ready"));
+                assert!(text.contains("memory 1, knowledge 1"));
+            }
+            other => panic!("expected memory command output, got {other:?}"),
+        }
     }
 
     fn establish_main_session(app: &mut App, session_id: &SessionId) {
