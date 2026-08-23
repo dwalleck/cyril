@@ -26,6 +26,10 @@ expect_used = "warn"  # Downgraded to warn — tests legitimately use .expect()
 tokio = { version = "1.50", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+constant_time_eq = "0.4"
+getrandom = "0.4"
+hex = "0.4"
+interprocess = { version = "2.4.3", default-features = false, features = ["tokio"] }
 serde_path_to_error = { version = "0.1", default-features = false }
 regex = { version = "1", default-features = false, features = ["std", "perf"] }
 thiserror = "2"
@@ -60,6 +64,7 @@ rusqlite = { version = "0.39", default-features = false, features = ["bundled"] 
 nix = { version = "0.31", default-features = false, features = ["fs", "signal", "user"] }
 win-security-identifier = { version = "0.2", default-features = false, features = ["std"] }
 windows-permissions = { version = "0.2", default-features = false }
+widestring = "1.2"
 
 [profile.dev]
 incremental = true

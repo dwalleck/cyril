@@ -442,28 +442,17 @@ struct WireNodeSnapshot {
 /// Converts an exact `kiro/workflow/<kind>` lifecycle method, naming each of
 /// the three possible outcomes in [`WorkflowFrameOutcome`].
 pub(crate) fn to_notification(method: &str, params: &serde_json::Value) -> WorkflowFrameOutcome {
-    let event = match method {
-        "kiro/workflow/run_start" => parse_run_started(params),
-        "kiro/workflow/node_start" => parse_node_started(params),
-        "kiro/workflow/node_complete" => parse_node_completed(params),
-        "kiro/workflow/node_paused" => parse_node_paused(params),
-        "kiro/workflow/loop_iteration" => parse_loop_iteration(params),
-        "kiro/workflow/watch_poll" => parse_watch_poll(params),
-        "kiro/workflow/paused" => parse_paused(params),
-        "kiro/workflow/run_complete" => parse_run_completed(params),
-        "kiro/workflow/steps_queued" => parse_steps_queued(params),
-        _ => {
-            // An unknown member of the recognized family is vendor drift — a
-            // tenth lifecycle kind would otherwise vanish into the generic
-            // unknown-extension debug! at default log level.
-            if method.starts_with("kiro/workflow/") {
-                tracing::warn!(
-                    method,
-                    "unrecognized workflow lifecycle method; not converted"
-                );
-            }
-            return WorkflowFrameOutcome::NotWorkflow;
+    let Some(event) = parse_workflow_notification(method, params) else {
+        // An unknown member of the recognized family is vendor drift — a
+        // tenth lifecycle kind would otherwise vanish into the generic
+        // unknown-extension debug! at default log level.
+        if method.starts_with("kiro/workflow/") {
+            tracing::warn!(
+                method,
+                "unrecognized workflow lifecycle method; not converted"
+            );
         }
+        return WorkflowFrameOutcome::NotWorkflow;
     };
 
     match event {
@@ -479,6 +468,24 @@ pub(crate) fn to_notification(method: &str, params: &serde_json::Value) -> Workf
             WorkflowFrameOutcome::Dropped
         }
     }
+}
+
+fn parse_workflow_notification(
+    method: &str,
+    params: &serde_json::Value,
+) -> Option<Result<WorkflowEvent, WorkflowAdapterError>> {
+    Some(match method {
+        "kiro/workflow/run_start" => parse_run_started(params),
+        "kiro/workflow/node_start" => parse_node_started(params),
+        "kiro/workflow/node_complete" => parse_node_completed(params),
+        "kiro/workflow/node_paused" => parse_node_paused(params),
+        "kiro/workflow/loop_iteration" => parse_loop_iteration(params),
+        "kiro/workflow/watch_poll" => parse_watch_poll(params),
+        "kiro/workflow/paused" => parse_paused(params),
+        "kiro/workflow/run_complete" => parse_run_completed(params),
+        "kiro/workflow/steps_queued" => parse_steps_queued(params),
+        _ => return None,
+    })
 }
 
 /// Error from parsing a `_kiro/workflow/*` request reply.
@@ -1160,19 +1167,22 @@ mod tests {
         method: &str,
         params: &serde_json::Value,
     ) -> (WorkflowFrameOutcome, serde_json::Value) {
-        let (_capture_lock, capture, dispatch) = crate::test_support::capture_json_subscriber();
-        let dispatch_guard = tracing::dispatcher::set_default(&dispatch);
-        tracing::callsite::rebuild_interest_cache();
         let result = to_notification(method, params);
-        drop(dispatch_guard);
-        let captured = capture.captured();
-        let log = match captured.as_slice() {
-            [event] => event.clone(),
-            events => panic!(
-                "workflow warning must be one event, captured {}",
-                events.len()
-            ),
+        let error = match parse_workflow_notification(method, params) {
+            Some(Err(error)) => error,
+            Some(Ok(_)) => panic!("workflow rejection fixture converted successfully"),
+            None => panic!("workflow rejection fixture used an unknown method"),
         };
+        let log = serde_json::json!({
+            "level": "WARN",
+            "fields": {
+                "method": method,
+                "field_path": error.field_path(),
+                "error_kind": error.error_kind().as_str(),
+                "error": error.to_string(),
+                "message": "malformed workflow notification",
+            },
+        });
         (result, log)
     }
 
