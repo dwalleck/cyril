@@ -7,6 +7,7 @@ use crate::types::session::{
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 use crate::types::turn::TurnId;
+use crate::types::usage::{Money, SessionOrigin, TokenUsage};
 use crate::types::workflow::{WorkflowEvent, WorkflowSnapshot};
 use crate::types::workflow_command::{WorkflowCommandOutcome, WorkflowOp};
 
@@ -115,6 +116,8 @@ pub enum Notification {
     UsageUpdated {
         used: u64,
         size: u64,
+        /// Cumulative session cost, when the agent supplies it.
+        cost: Option<Money>,
     },
     /// KAS `session_info_update` → `context_usage` (KAS-2b, cyril-5et2). KAS
     /// pushes the categorized breakdown proactively each turn (v2 sends only the
@@ -328,6 +331,15 @@ pub enum Notification {
     WorkflowCommand(WorkflowCommandOutcome),
 
     // Lifecycle
+    /// Usage-only lifecycle marker emitted before `SessionCreated`, preserving
+    /// whether a cumulative cost starts at zero or resumes existing history.
+    UsageSessionStarted {
+        session_id: SessionId,
+        origin: SessionOrigin,
+    },
+    /// Standard ACP prompt-response usage for the active turn. The bridge emits
+    /// this immediately before `TurnCompleted` on the same routed turn.
+    TurnUsageCaptured(TokenUsage),
     SessionCreated {
         session_id: SessionId,
         current_mode: Option<ModeId>,

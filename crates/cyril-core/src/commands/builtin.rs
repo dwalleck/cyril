@@ -147,6 +147,28 @@ impl Command for VoiceToggleCommand {
     }
 }
 
+/// /usage — open Cyril's local live-usage dashboard.
+pub struct UsageCommand;
+
+#[async_trait::async_trait]
+impl Command for UsageCommand {
+    fn name(&self) -> &str {
+        "usage"
+    }
+
+    fn description(&self) -> &str {
+        "Show live token, cost, model, provider, and tool usage"
+    }
+
+    async fn execute(
+        &self,
+        _ctx: &CommandContext<'_>,
+        _args: &str,
+    ) -> crate::Result<CommandResult> {
+        Ok(CommandResult::show_usage())
+    }
+}
+
 /// /new — create a new session
 pub struct NewCommand;
 

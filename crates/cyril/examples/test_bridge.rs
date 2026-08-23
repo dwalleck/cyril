@@ -627,9 +627,20 @@ fn print_notification(n: &Notification) {
         } => {
             println!("  [HookExecuted] {name}: {status} (exit {exit_code:?})");
         }
-        Notification::UsageUpdated { used, size } => {
+        Notification::UsageUpdated { used, size, .. } => {
             let pct = *used as f64 / (*size).max(1) as f64 * 100.0;
             println!("  [UsageUpdated] {used}/{size} tokens ({pct:.1}%)");
+        }
+        Notification::UsageSessionStarted { session_id, origin } => {
+            println!("  [UsageSessionStarted] {session_id} ({origin:?})");
+        }
+        Notification::TurnUsageCaptured(usage) => {
+            println!(
+                "  [TurnUsageCaptured] total={} input={} output={}",
+                usage.total(),
+                usage.input(),
+                usage.output()
+            );
         }
         Notification::ContextBreakdownUpdated {
             usage_percentage,

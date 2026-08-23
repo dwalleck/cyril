@@ -312,7 +312,7 @@ impl SessionController {
                 self.steering_unsupported = true;
                 true
             }
-            Notification::UsageUpdated { used, size } => {
+            Notification::UsageUpdated { used, size, .. } => {
                 if *size == 0 {
                     // `size == 0` is protocol-meaningless (division would be undefined).
                     // Treat as a malformed update — don't claim state changed.
@@ -323,6 +323,7 @@ impl SessionController {
                 self.context_usage = Some(ContextUsage::new(pct));
                 true
             }
+            Notification::UsageSessionStarted { .. } | Notification::TurnUsageCaptured(_) => false,
             // Under KAS the context-usage scalar arrives via ContextBreakdownUpdated
             // (KAS emits no kiro.dev/metadata), not MetadataUpdated/UsageUpdated.
             // Keep SessionController.context_usage in sync so the documented
@@ -974,6 +975,7 @@ mod tests {
         let changed = ctrl.apply_notification(&Notification::UsageUpdated {
             used: 50_000,
             size: 200_000,
+            cost: None,
         });
         assert!(changed);
         let pct = ctrl.context_usage().map(|u| u.percentage()).unwrap_or(0.0);
@@ -983,7 +985,11 @@ mod tests {
     #[test]
     fn usage_updated_zero_size_is_safe() {
         let mut ctrl = SessionController::new();
-        let changed = ctrl.apply_notification(&Notification::UsageUpdated { used: 100, size: 0 });
+        let changed = ctrl.apply_notification(&Notification::UsageUpdated {
+            used: 100,
+            size: 0,
+            cost: None,
+        });
         // size=0 is protocol-meaningless; return false to avoid spurious repaint
         // and leave context_usage untouched.
         assert!(!changed);
@@ -998,6 +1004,7 @@ mod tests {
         ctrl.apply_notification(&Notification::UsageUpdated {
             used: 250_000,
             size: 200_000,
+            cost: None,
         });
         let pct = ctrl.context_usage().map(|u| u.percentage()).unwrap_or(-1.0);
         assert!(

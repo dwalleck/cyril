@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseEventKind};
 use futures_util::{FutureExt, StreamExt};
@@ -11,6 +11,7 @@ use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, Comma
 use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
 use cyril_core::types::*;
+use cyril_core::usage::{UsageLog, UsageObserver};
 use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
 use cyril_ui::traits::{Activity, TuiState, approval_origin_label};
@@ -46,6 +47,9 @@ pub struct App {
     /// The cwd kiro-cli was spawned in — used to resolve the active agent's
     /// workspace config (`<cwd>/.kiro/agents/`) when persisting trust grants.
     cwd: PathBuf,
+    /// Canonical live usage observer and durable aggregate source.
+    usage_observer: UsageObserver,
+    usage_log: UsageLog,
     /// Voice-input engine handle (ROADMAP CN2). `None` when the `voice` feature
     /// is off (or the engine could not start). The type lives in cyril-core so
     /// this field and its `select!` arm compile regardless of the feature.
@@ -99,6 +103,7 @@ impl App {
         cwd: PathBuf,
         hooks: cyril_core::commands::HooksCommandSource,
         workflows: cyril_core::commands::WorkflowCommandSource,
+        usage_log: UsageLog,
     ) -> Self {
         // EXHAUSTIVE ON PURPOSE -- no `..`. Adding a UiConfig field must fail
         // compilation here rather than join the ranks of the silently ignored.
@@ -136,6 +141,8 @@ impl App {
             redraw_needed: true,
             last_activity: Instant::now(),
             cwd,
+            usage_observer: UsageObserver::new(),
+            usage_log,
             voice: spawn_voice_engine(),
             voice_active: false,
             startup_prompt: None,
@@ -153,6 +160,63 @@ impl App {
         }
     }
 
+    fn begin_usage_turn(&mut self, session_id: &SessionId) -> bool {
+        let timestamp_ms = match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(duration) => duration.as_millis().min(u128::from(u64::MAX)) as u64,
+            Err(error) => {
+                tracing::error!(error = %error, "system clock predates Unix epoch; usage turn not recorded");
+                self.ui_state
+                    .add_system_message("Usage recording failed: system clock is invalid.".into());
+                return false;
+            }
+        };
+        let context = TurnUsageContext::new(
+            session_id.clone(),
+            self.cwd.to_string_lossy(),
+            self.session.current_model(),
+            UsageAgentType::Main,
+        );
+        match self
+            .usage_observer
+            .begin_turn(context, Instant::now(), timestamp_ms)
+        {
+            Ok(()) => true,
+            Err(error) => {
+                tracing::error!(session_id = %session_id, error = %error, "usage turn start failed");
+                self.ui_state
+                    .add_system_message(format!("Usage recording failed: {error}"));
+                false
+            }
+        }
+    }
+
+    async fn dispatch_deferred_command(&mut self, deferred: BridgeCommand) {
+        // SendPrompt triggers a real turn → mark session Busy. Session-management
+        // commands do not. See `/code` (busy) versus `/rewind` (not busy).
+        let turn_session = match &deferred {
+            BridgeCommand::SendPrompt { session_id, .. } => Some(session_id.clone()),
+            _ => None,
+        };
+        let usage_started = turn_session
+            .as_ref()
+            .is_some_and(|session_id| self.begin_usage_turn(session_id));
+        match self.bridge_sender.send(deferred).await {
+            Ok(()) => {
+                if turn_session.is_some() {
+                    self.session.set_status(SessionStatus::Busy);
+                }
+            }
+            Err(error) => {
+                if usage_started && let Some(session_id) = turn_session.as_ref() {
+                    self.usage_observer.abort_turn(session_id);
+                }
+                tracing::warn!(error = %error, "failed to send deferred bridge command");
+                self.ui_state.set_activity(Activity::Idle);
+                self.ui_state
+                    .add_system_message("Failed to dispatch follow-up command to agent.".into());
+            }
+        }
+    }
     /// Whether mouse capture should be active, per `ui.mouse_capture`.
     ///
     /// `main.rs` calls this to decide whether to issue `EnableMouseCapture` at
@@ -250,25 +314,7 @@ impl App {
                 // Priority 2: Notifications from bridge
                 Some(notification) = self.notification_rx.recv() => {
                     for deferred in self.handle_notification(notification) {
-                        // SendPrompt triggers a real turn → mark session Busy.
-                        // Session-management commands (LoadSession,
-                        // TerminateSession) don't start a turn so leave status
-                        // alone. See `/code` (busy) vs `/rewind` (not busy).
-                        let starts_turn = matches!(deferred, BridgeCommand::SendPrompt { .. });
-                        match self.bridge_sender.send(deferred).await {
-                            Ok(()) => {
-                                if starts_turn {
-                                    self.session.set_status(SessionStatus::Busy);
-                                }
-                            }
-                            Err(e) => {
-                                tracing::warn!(error = %e, "failed to send deferred bridge command");
-                                self.ui_state.set_activity(Activity::Idle);
-                                self.ui_state.add_system_message(
-                                    "Failed to dispatch follow-up command to agent.".into(),
-                                );
-                            }
-                        }
+                        self.dispatch_deferred_command(deferred).await;
                     }
                 }
 
@@ -438,6 +484,17 @@ impl App {
     fn record_ui_apply(&mut self) {}
 
     fn handle_notification(&mut self, routed: RoutedNotification) -> Vec<BridgeCommand> {
+        let usage_only = matches!(
+            &routed.notification,
+            Notification::UsageSessionStarted { .. } | Notification::TurnUsageCaptured(_)
+        );
+        if let Some(record) = self.usage_observer.apply(&routed, Instant::now())
+            && let Err(error) = self.usage_log.append(&record)
+        {
+            tracing::error!(error = %error, "persist usage turn failed");
+            self.ui_state
+                .add_system_message(format!("Usage recording failed: {error}"));
+        }
         let RoutedNotification {
             session_id,
             notification,
@@ -448,6 +505,10 @@ impl App {
             // than `..` so a rename breaks loudly here.
             turn: _,
         } = routed;
+
+        if usage_only {
+            return Vec::new();
+        }
 
         // Workflow lifecycle frames (cyril-6beh C12/C14): workspace-global
         // state owned by this App's tracker. Branch before EVERY existing
@@ -782,6 +843,7 @@ impl App {
                     && !self.ui_state.has_picker()
                     && !self.ui_state.has_hooks_panel()
                     && !self.ui_state.has_code_panel()
+                    && !self.ui_state.has_usage_panel()
                     && self.ui_state.subagent_ui().focused_session_id().is_none()
                 {
                     // Mouse wheel uses a fixed 3-line step; keyboard
@@ -804,8 +866,10 @@ impl App {
                 self.redraw_needed = true;
             }
             Event::Paste(text) => {
-                self.ui_state.insert_text(&text);
-                self.redraw_needed = true;
+                if !self.ui_state.has_usage_panel() {
+                    self.ui_state.insert_text(&text);
+                    self.redraw_needed = true;
+                }
             }
             _ => {}
         }
@@ -857,6 +921,11 @@ impl App {
         }
         if self.ui_state.has_code_panel() {
             self.handle_code_panel_key(key).await?;
+            self.redraw_needed = true;
+            return Ok(());
+        }
+        if self.ui_state.has_usage_panel() {
+            dispatch_usage_panel_key(key, &mut self.ui_state);
             self.redraw_needed = true;
             return Ok(());
         }
@@ -1133,12 +1202,20 @@ impl App {
             }
         }
 
-        self.bridge_sender
+        let usage_started = self.begin_usage_turn(&session_id);
+        if let Err(error) = self
+            .bridge_sender
             .send(BridgeCommand::SendPrompt {
-                session_id,
+                session_id: session_id.clone(),
                 content_blocks,
             })
-            .await?;
+            .await
+        {
+            if usage_started {
+                self.usage_observer.abort_turn(&session_id);
+            }
+            return Err(error);
+        }
 
         Ok(())
     }
@@ -1174,6 +1251,14 @@ impl App {
             CommandResultKind::ToggleVoice => {
                 self.toggle_voice();
             }
+            CommandResultKind::ShowUsage => match self.usage_log.snapshot() {
+                Ok(snapshot) => self.ui_state.show_usage_panel(snapshot),
+                Err(error) => {
+                    tracing::error!(error = %error, "load usage dashboard failed");
+                    self.ui_state
+                        .add_system_message(format!("Usage dashboard failed: {error}"));
+                }
+            },
             CommandResultKind::Quit => {
                 self.ui_state.request_quit();
             }
@@ -1890,6 +1975,19 @@ fn dispatch_hooks_panel_key(key: KeyEvent, ui_state: &mut cyril_ui::state::UiSta
     }
 }
 
+fn dispatch_usage_panel_key(key: KeyEvent, ui_state: &mut cyril_ui::state::UiState) {
+    match key.code {
+        KeyCode::Esc => ui_state.hide_usage_panel(),
+        KeyCode::Tab | KeyCode::Right => ui_state.usage_panel_next_page(),
+        KeyCode::BackTab | KeyCode::Left => ui_state.usage_panel_previous_page(),
+        KeyCode::Up => ui_state.usage_panel_scroll_up(1),
+        KeyCode::Down => ui_state.usage_panel_scroll_down(1),
+        KeyCode::PageUp => ui_state.usage_panel_scroll_up(10),
+        KeyCode::PageDown => ui_state.usage_panel_scroll_down(10),
+        _ => {}
+    }
+}
+
 /// Handle PageUp/PageDown for main chat scrolling.
 /// Returns `true` if the key was consumed.
 fn dispatch_chat_scroll_key(key: KeyEvent, ui_state: &mut cyril_ui::state::UiState) -> bool {
@@ -1925,6 +2023,10 @@ mod tests {
     use super::*;
     use cyril_ui::traits::ChatMessageKind;
 
+    fn test_usage_log() -> UsageLog {
+        UsageLog::open_in_memory().expect("in-memory usage log")
+    }
+
     // ── cyril-nd4h: ui.mouse_capture is actually honored (claims C1, C2) ──────
     //
     // STRESS FIXTURE: all three reachable shapes -- explicit false, explicit
@@ -1944,6 +2046,7 @@ mod tests {
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
+            test_usage_log(),
         )
     }
 
@@ -1971,6 +2074,7 @@ mod tests {
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
+            test_usage_log(),
         );
         assert!(app.mouse_captured());
     }
@@ -2109,6 +2213,7 @@ mod tests {
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
+            test_usage_log(),
         )
     }
 
@@ -2123,11 +2228,185 @@ mod tests {
                 PathBuf::from("/tmp"),
                 cyril_core::commands::HooksCommandSource::Agent,
                 cyril_core::commands::WorkflowCommandSource::None,
+                test_usage_log(),
             ),
             rx,
         )
     }
 
+    fn establish_main_session(app: &mut App, session_id: &SessionId) {
+        app.handle_notification(RoutedNotification::global(
+            Notification::UsageSessionStarted {
+                session_id: session_id.clone(),
+                origin: SessionOrigin::Fresh,
+            },
+        ));
+        app.handle_notification(RoutedNotification::global(Notification::SessionCreated {
+            session_id: session_id.clone(),
+            current_mode: None,
+            current_model: Some("openai-codex/gpt-5.6-luna".into()),
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        }));
+    }
+
+    #[tokio::test]
+    async fn usage_modal_command_and_key_priority() {
+        let (mut app, mut rx) = test_app_with_command_rx();
+        assert!(
+            app.session.id().is_none(),
+            "fixture must have no active session"
+        );
+        app.ui_state.insert_text("/usage");
+        app.submit_input().await.expect("execute local /usage");
+        assert!(app.ui_state.has_usage_panel());
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+
+        app.ui_state.insert_text("draft");
+        app.handle_key(key(KeyCode::Char('x')))
+            .await
+            .expect("modal consumes character");
+        assert_eq!(app.ui_state.input_text(), "draft");
+        app.handle_terminal_event(Event::Paste("paste".into()))
+            .await
+            .expect("modal consumes paste");
+        assert_eq!(app.ui_state.input_text(), "draft");
+
+        app.handle_key(key(KeyCode::Tab)).await.expect("next page");
+        assert_eq!(
+            app.ui_state.usage_panel().map(|panel| panel.page),
+            Some(cyril_ui::traits::UsagePage::Costs)
+        );
+        app.handle_key(key(KeyCode::BackTab))
+            .await
+            .expect("previous page");
+        assert_eq!(
+            app.ui_state.usage_panel().map(|panel| panel.page),
+            Some(cyril_ui::traits::UsagePage::Overview)
+        );
+        app.handle_key(key(KeyCode::Esc))
+            .await
+            .expect("close modal");
+        assert!(!app.ui_state.has_usage_panel());
+    }
+
+    #[tokio::test]
+    async fn all_prompt_paths_start_and_failed_send_aborts_usage() {
+        let session_id = SessionId::new("s-main");
+
+        // Direct typed prompt.
+        let (mut direct, mut direct_rx) = test_app_with_command_rx();
+        establish_main_session(&mut direct, &session_id);
+        direct.ui_state.insert_text("hello");
+        direct.submit_input().await.expect("send direct prompt");
+        assert!(matches!(
+            direct_rx.try_recv(),
+            Ok(BridgeCommand::SendPrompt { .. })
+        ));
+        direct.handle_notification(RoutedNotification::scoped(
+            session_id.clone(),
+            Notification::TurnUsageCaptured(TokenUsage::new(10, 4, 6, None, None, None)),
+        ));
+        direct.handle_notification(RoutedNotification::scoped(
+            session_id.clone(),
+            Notification::TurnCompleted {
+                stop_reason: StopReason::EndTurn,
+            },
+        ));
+        assert_eq!(
+            direct
+                .usage_log
+                .snapshot()
+                .expect("direct usage snapshot")
+                .overview
+                .requests,
+            1
+        );
+
+        // One-shot/deferred prompt.
+        let (mut deferred, mut deferred_rx) = test_app_with_command_rx();
+        deferred.startup_prompt = Some("startup".into());
+        deferred.handle_notification(RoutedNotification::global(
+            Notification::UsageSessionStarted {
+                session_id: session_id.clone(),
+                origin: SessionOrigin::Fresh,
+            },
+        ));
+        let commands = deferred.handle_notification(RoutedNotification::global(
+            Notification::SessionCreated {
+                session_id: session_id.clone(),
+                current_mode: None,
+                current_model: None,
+                available_modes: Vec::new(),
+                available_models: Vec::new(),
+            },
+        ));
+        assert_eq!(commands.len(), 1);
+        deferred
+            .dispatch_deferred_command(commands.into_iter().next().expect("one deferred prompt"))
+            .await;
+        assert!(matches!(
+            deferred_rx.try_recv(),
+            Ok(BridgeCommand::SendPrompt { .. })
+        ));
+        deferred.handle_notification(RoutedNotification::scoped(
+            session_id.clone(),
+            Notification::TurnCompleted {
+                stop_reason: StopReason::EndTurn,
+            },
+        ));
+        assert_eq!(
+            deferred
+                .usage_log
+                .snapshot()
+                .expect("deferred usage snapshot")
+                .overview
+                .requests,
+            1,
+            "usage-less completed prompts are still recent records"
+        );
+
+        // Failed send must remove the observer pending turn.
+        let (handle, command_rx) = BridgeHandle::for_tests_with_command_rx();
+        drop(command_rx);
+        let mut failed = App::new(
+            handle,
+            &config::UiConfig::default(),
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
+            test_usage_log(),
+        );
+        establish_main_session(&mut failed, &session_id);
+        failed.ui_state.insert_text("will fail");
+        assert!(failed.submit_input().await.is_err());
+        assert!(
+            failed.begin_usage_turn(&session_id),
+            "failed send must abort its pending usage turn"
+        );
+        assert!(failed.usage_observer.abort_turn(&session_id));
+    }
+
+    #[test]
+    #[ignore = "reference-workstation prompt coordination budget"]
+    fn usage_prompt_coordination_budget_reference() {
+        let session_id = SessionId::new("budget-session");
+        let mut app = test_app();
+        establish_main_session(&mut app, &session_id);
+        let started = Instant::now();
+        for _ in 0..10_000 {
+            assert!(app.begin_usage_turn(&session_id));
+            assert!(app.usage_observer.abort_turn(&session_id));
+        }
+        let elapsed = started.elapsed();
+        assert!(
+            elapsed <= Duration::from_secs(10),
+            "10,000 prompt coordination cycles exceeded 1ms/event: {elapsed:?}"
+        );
+    }
     /// cyril-14ou C9 (plumbing half; the live half — engine honors the cancel
     /// — passed at design time, archived in .cyril-14ou/findings.md). Four
     /// arms: Esc during a stalled busy turn sends CancelRequest AND escalates
@@ -2283,6 +2562,7 @@ mod tests {
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
+            test_usage_log(),
         );
         let main_id = SessionId::new("main-session");
         app.session
@@ -2349,6 +2629,7 @@ mod tests {
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
+            test_usage_log(),
         );
         app.session.apply_notification(&Notification::ModeChanged {
             mode_id: ModeId::new("myagent"),
@@ -2389,6 +2670,7 @@ mod tests {
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
+            test_usage_log(),
         );
         app.session
             .set_session(SessionId::new(""), SessionStatus::Active);

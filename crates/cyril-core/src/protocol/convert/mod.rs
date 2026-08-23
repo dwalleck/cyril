@@ -57,6 +57,59 @@ pub(crate) fn to_model_info(info: &acp::ModelInfo) -> ModelInfo {
         info.description.clone(),
     )
 }
+/// Convert standard ACP prompt-response usage without leaking ACP types.
+pub(crate) fn to_token_usage(usage: &acp::Usage) -> TokenUsage {
+    TokenUsage::new(
+        usage.total_tokens,
+        usage.input_tokens,
+        usage.output_tokens,
+        usage.thought_tokens,
+        usage.cached_read_tokens,
+        usage.cached_write_tokens,
+    )
+}
+
+fn to_money(cost: &acp::Cost) -> Option<Money> {
+    match Money::try_new(cost.amount, cost.currency.clone()) {
+        Ok(money) => Some(money),
+        Err(error) => {
+            tracing::warn!(
+                amount = cost.amount,
+                currency = cost.currency,
+                error = %error,
+                "invalid ACP cumulative usage cost, ignoring cost"
+            );
+            None
+        }
+    }
+}
+
+pub(crate) fn to_config_options(options: &[acp::SessionConfigOption]) -> Vec<ConfigOption> {
+    options
+        .iter()
+        .filter_map(|option| match &option.kind {
+            acp::SessionConfigKind::Select(select) => {
+                let values = match &select.options {
+                    acp::SessionConfigSelectOptions::Ungrouped(flat) => {
+                        flat.iter().map(|value| value.value.to_string()).collect()
+                    }
+                    acp::SessionConfigSelectOptions::Grouped(groups) => groups
+                        .iter()
+                        .flat_map(|group| group.options.iter().map(|value| value.value.to_string()))
+                        .collect(),
+                    _ => Vec::new(),
+                };
+                Some(ConfigOption {
+                    key: option.id.to_string(),
+                    label: option.name.clone(),
+                    value: Some(select.current_value.to_string()),
+                    options: values,
+                })
+            }
+            _ => None,
+        })
+        .collect()
+}
 
 /// Build a `SessionCreated` notification from the mode/model state returned
 /// by `session/new` or `session/load`. Consolidates the ACP→cyril conversion
@@ -403,34 +456,9 @@ pub(crate) fn session_update_to_notification(
         acp::SessionUpdate::CurrentModeUpdate(mode) => Some(Notification::ModeChanged {
             mode_id: ModeId::new(mode.current_mode_id.to_string()),
         }),
-        acp::SessionUpdate::ConfigOptionUpdate(update) => {
-            let options = update
-                .config_options
-                .iter()
-                .filter_map(|opt| match &opt.kind {
-                    acp::SessionConfigKind::Select(select) => {
-                        let values = match &select.options {
-                            acp::SessionConfigSelectOptions::Ungrouped(flat) => {
-                                flat.iter().map(|v| v.value.to_string()).collect()
-                            }
-                            acp::SessionConfigSelectOptions::Grouped(groups) => groups
-                                .iter()
-                                .flat_map(|g| g.options.iter().map(|v| v.value.to_string()))
-                                .collect(),
-                            _ => Vec::new(),
-                        };
-                        Some(ConfigOption {
-                            key: opt.id.to_string(),
-                            label: opt.name.clone(),
-                            value: Some(select.current_value.to_string()),
-                            options: values,
-                        })
-                    }
-                    _ => None,
-                })
-                .collect();
-            Some(Notification::ConfigOptionsUpdated(options))
-        }
+        acp::SessionUpdate::ConfigOptionUpdate(update) => Some(Notification::ConfigOptionsUpdated(
+            to_config_options(&update.config_options),
+        )),
         acp::SessionUpdate::AvailableCommandsUpdate(update) => {
             let commands = update
                 .available_commands
@@ -461,6 +489,7 @@ pub(crate) fn session_update_to_notification(
             Some(Notification::UsageUpdated {
                 used: usage.used,
                 size: usage.size,
+                cost: usage.cost.as_ref().and_then(to_money),
             })
         }
         _ => {
@@ -2546,5 +2575,67 @@ mod tests {
             checked.contains(&"session_info_update".to_string()),
             "the KAS-distinctive session_info_update variant must be covered; got {checked:?}"
         );
+    }
+
+    #[test]
+    fn captured_omp_prompt_usage_maps_exactly() {
+        let capture =
+            include_str!("../../../../../experiments/conductor-spike/omp-usage-update-2turn.jsonl");
+        let actual: Vec<TokenUsage> = capture
+            .lines()
+            .filter_map(|line| {
+                let frame: serde_json::Value =
+                    serde_json::from_str(line).expect("captured frame is JSON");
+                let result = frame.get("msg")?.get("result")?;
+                result.get("usage")?;
+                let response: acp::PromptResponse =
+                    serde_json::from_value(result.clone()).expect("captured prompt response");
+                response.usage.as_ref().map(to_token_usage)
+            })
+            .collect();
+        assert_eq!(
+            actual,
+            vec![
+                TokenUsage::new(19_446, 19_428, 18, None, None, None),
+                TokenUsage::new(19_464, 259, 5, None, Some(19_200), None),
+            ]
+        );
+        assert!(
+            acp::PromptResponse::new(acp::StopReason::EndTurn)
+                .usage
+                .is_none(),
+            "absent standard usage must stay absent"
+        );
+    }
+
+    #[test]
+    fn captured_omp_initial_config_exposes_model() {
+        let capture =
+            include_str!("../../../../../experiments/conductor-spike/omp-usage-update-2turn.jsonl");
+        let response = capture
+            .lines()
+            .find_map(|line| {
+                let frame: serde_json::Value =
+                    serde_json::from_str(line).expect("captured frame is JSON");
+                let result = frame.get("msg")?.get("result")?;
+                (result.get("sessionId").is_some() && result.get("configOptions").is_some()).then(
+                    || {
+                        serde_json::from_value::<acp::NewSessionResponse>(result.clone())
+                            .expect("captured new-session response")
+                    },
+                )
+            })
+            .expect("capture contains session/new response");
+        let options = to_config_options(
+            response
+                .config_options
+                .as_deref()
+                .expect("omp supplies initial config options"),
+        );
+        let model = options
+            .iter()
+            .find(|option| option.key == "model")
+            .expect("model config option");
+        assert_eq!(model.value.as_deref(), Some("openai-codex/gpt-5.6-luna"));
     }
 }

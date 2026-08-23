@@ -6,6 +6,7 @@ pub mod protocol;
 pub mod session;
 pub mod subagent;
 pub mod types;
+pub mod usage;
 pub mod voice;
 pub mod workflow;
 

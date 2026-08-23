@@ -16,6 +16,7 @@ pub mod steer_receipt;
 pub mod subagent;
 pub mod tool_call;
 pub mod turn;
+pub mod usage;
 pub mod voice;
 pub mod workflow;
 pub mod workflow_command;
@@ -46,6 +47,11 @@ pub use tool_call::{
     ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
 };
 pub use turn::{TurnAllocator, TurnId};
+pub use usage::{
+    AgentUsageGroup, ModelUsageGroup, Money, NamedUsageGroup, RecentUsage, SessionOrigin,
+    TokenTotals, TokenUsage, ToolUsageGroup, TurnUsageContext, UsageAgentType, UsageOutcome,
+    UsageRecord, UsageSnapshot, UsageSummary, UsageTiming, UsageTool, UsageValueError,
+};
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{
     WorkflowCompletionMismatchError, WorkflowCompletionSignal, WorkflowCompletionSignalSource,

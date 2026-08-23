@@ -1251,6 +1251,7 @@ mod tests {
             include_str!("widgets/picker.rs"),
             include_str!("widgets/suggestions.rs"),
             include_str!("widgets/toolbar.rs"),
+            include_str!("widgets/usage_panel.rs"),
             include_str!("widgets/voice.rs"),
         ];
         let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/widgets");
