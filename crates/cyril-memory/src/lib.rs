@@ -21,14 +21,14 @@ pub use config::{
 };
 pub use ipc::{IpcError, MemoryEndpoint};
 pub use lesson::{
-    ContextBlock, ContextLesson, LessonError, LessonId, LessonProvenance, LessonStatus, LessonText,
-    LessonTrust, render_context,
+    ContextBlock, ContextLesson, LessonError, LessonId, LessonIdParseError, LessonProvenance,
+    LessonStatus, LessonText, LessonTrust, MAX_CONTEXT_CHARS, MAX_LESSON_CHARS, render_context,
 };
 pub use paths::{MemoryPaths, PathError};
 pub use project::{ProjectError, ProjectId, ProjectScope};
 pub use protocol::{
-    HealthResponse, MemoryErrorCode, MemoryProtocolError, MemoryRequest, MemoryResponse,
-    PROTOCOL_VERSION, RuntimeHealth,
+    HealthResponse, LessonListResponse, LessonRecord, MemoryErrorCode, MemoryProtocolError,
+    MemoryRequest, MemoryResponse, PROTOCOL_VERSION, RuntimeHealth, TeachResponse,
 };
 pub use runtime::{RuntimeError, RuntimeLaunchConfig, run_runtime};
 pub use store::{MemoryStoreVersions, StoreError, StoreSet};

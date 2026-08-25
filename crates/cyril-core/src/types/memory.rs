@@ -139,6 +139,156 @@ impl MemoryStatusView {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemoryLessonProvenance {
+    UserExplicit,
+    Document,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemoryLessonTrust {
+    Instruction,
+    Reference,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemoryLessonStatus {
+    Active,
+    Invalidated,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryLessonMetadataView {
+    provenance: MemoryLessonProvenance,
+    trust: MemoryLessonTrust,
+    status: MemoryLessonStatus,
+    supersedes_id: Option<String>,
+    created_at_ms: i64,
+    updated_at_ms: i64,
+}
+
+impl MemoryLessonMetadataView {
+    pub fn new(
+        provenance: MemoryLessonProvenance,
+        trust: MemoryLessonTrust,
+        status: MemoryLessonStatus,
+        supersedes_id: Option<String>,
+        created_at_ms: i64,
+        updated_at_ms: i64,
+    ) -> Self {
+        Self {
+            provenance,
+            trust,
+            status,
+            supersedes_id,
+            created_at_ms,
+            updated_at_ms,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryLessonView {
+    id: String,
+    content: String,
+    provenance: MemoryLessonProvenance,
+    trust: MemoryLessonTrust,
+    status: MemoryLessonStatus,
+    supersedes_id: Option<String>,
+    created_at_ms: i64,
+    updated_at_ms: i64,
+}
+
+impl MemoryLessonView {
+    pub fn new(id: String, content: String, metadata: MemoryLessonMetadataView) -> Self {
+        Self {
+            id,
+            content,
+            provenance: metadata.provenance,
+            trust: metadata.trust,
+            status: metadata.status,
+            supersedes_id: metadata.supersedes_id,
+            created_at_ms: metadata.created_at_ms,
+            updated_at_ms: metadata.updated_at_ms,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn content(&self) -> &str {
+        &self.content
+    }
+
+    pub const fn provenance(&self) -> MemoryLessonProvenance {
+        self.provenance
+    }
+
+    pub const fn trust(&self) -> MemoryLessonTrust {
+        self.trust
+    }
+
+    pub const fn status(&self) -> MemoryLessonStatus {
+        self.status
+    }
+
+    pub fn supersedes_id(&self) -> Option<&str> {
+        self.supersedes_id.as_deref()
+    }
+
+    pub const fn created_at_ms(&self) -> i64 {
+        self.created_at_ms
+    }
+
+    pub const fn updated_at_ms(&self) -> i64 {
+        self.updated_at_ms
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryTeachView {
+    lesson: MemoryLessonView,
+    created: bool,
+}
+
+impl MemoryTeachView {
+    pub const fn new(lesson: MemoryLessonView, created: bool) -> Self {
+        Self { lesson, created }
+    }
+
+    pub const fn lesson(&self) -> &MemoryLessonView {
+        &self.lesson
+    }
+
+    pub const fn created(&self) -> bool {
+        self.created
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryLessonListView {
+    lessons: Vec<MemoryLessonView>,
+    omitted_count: usize,
+}
+
+impl MemoryLessonListView {
+    pub const fn new(lessons: Vec<MemoryLessonView>, omitted_count: usize) -> Self {
+        Self {
+            lessons,
+            omitted_count,
+        }
+    }
+
+    pub fn lessons(&self) -> &[MemoryLessonView] {
+        &self.lessons
+    }
+
+    pub const fn omitted_count(&self) -> usize {
+        self.omitted_count
+    }
+}
+
 fn bound_text(value: &str) -> String {
     if value.len() <= MAX_DETAIL_BYTES {
         return value.to_owned();

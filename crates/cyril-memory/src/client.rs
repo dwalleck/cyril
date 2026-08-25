@@ -5,7 +5,12 @@ use std::time::Duration;
 use thiserror::Error;
 
 use crate::ipc::{self, IpcError, MemoryEndpoint};
-use crate::protocol::{HealthResponse, MemoryProtocolError, MemoryRequest, MemoryResponse};
+use crate::lesson::{ContextBlock, LessonId, LessonText};
+use crate::project::ProjectScope;
+use crate::protocol::{
+    HealthResponse, LessonListResponse, LessonRecord, MemoryProtocolError, MemoryRequest,
+    MemoryResponse, TeachResponse,
+};
 use crate::wire::{BoxedStream, WireError};
 
 /// The orchestration-only 256-bit runtime administrator credential.
@@ -95,18 +100,111 @@ impl AdminClient {
     pub async fn health(&mut self) -> Result<HealthResponse, ClientError> {
         match self.request(MemoryRequest::Health).await? {
             MemoryResponse::Health(health) => Ok(health),
-            MemoryResponse::Shutdown | MemoryResponse::Error(_) => {
-                Err(ClientError::UnexpectedResponse)
-            }
+            _ => Err(ClientError::UnexpectedResponse),
         }
     }
 
     pub async fn shutdown(&mut self) -> Result<(), ClientError> {
         match self.request(MemoryRequest::Shutdown).await? {
             MemoryResponse::Shutdown => Ok(()),
-            MemoryResponse::Health(_) | MemoryResponse::Error(_) => {
-                Err(ClientError::UnexpectedResponse)
-            }
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
+    pub async fn bind_project(&mut self, project: &ProjectScope) -> Result<(), ClientError> {
+        match self
+            .request(MemoryRequest::BindProject {
+                project: project.clone(),
+            })
+            .await?
+        {
+            MemoryResponse::ProjectBound => Ok(()),
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
+    pub async fn teach(
+        &mut self,
+        project: &ProjectScope,
+        text: LessonText,
+    ) -> Result<TeachResponse, ClientError> {
+        match self
+            .request(MemoryRequest::Teach {
+                project: project.clone(),
+                text,
+            })
+            .await?
+        {
+            MemoryResponse::Taught(response) => Ok(response),
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
+    pub async fn replace(
+        &mut self,
+        project: &ProjectScope,
+        replaced_id: LessonId,
+        text: LessonText,
+    ) -> Result<TeachResponse, ClientError> {
+        match self
+            .request(MemoryRequest::Replace {
+                project: project.clone(),
+                replaced_id,
+                text,
+            })
+            .await?
+        {
+            MemoryResponse::Taught(response) => Ok(response),
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
+    pub async fn list(
+        &mut self,
+        project: &ProjectScope,
+    ) -> Result<LessonListResponse, ClientError> {
+        match self
+            .request(MemoryRequest::List {
+                project: project.clone(),
+            })
+            .await?
+        {
+            MemoryResponse::Lessons(response) => Ok(response),
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
+    pub async fn inspect(
+        &mut self,
+        project: &ProjectScope,
+        id: LessonId,
+    ) -> Result<LessonRecord, ClientError> {
+        match self
+            .request(MemoryRequest::Inspect {
+                project: project.clone(),
+                id,
+            })
+            .await?
+        {
+            MemoryResponse::Lesson(response) => Ok(response),
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
+    pub async fn context(
+        &mut self,
+        project: &ProjectScope,
+        max_chars: u16,
+    ) -> Result<Option<ContextBlock>, ClientError> {
+        match self
+            .request(MemoryRequest::Context {
+                project: project.clone(),
+                max_chars,
+            })
+            .await?
+        {
+            MemoryResponse::Context(response) => Ok(response),
+            _ => Err(ClientError::UnexpectedResponse),
         }
     }
 

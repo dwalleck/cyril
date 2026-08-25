@@ -1,15 +1,23 @@
 //! Private JSON envelopes and bounded length framing.
 
 use std::io;
+use std::str::FromStr;
 
 use constant_time_eq::constant_time_eq;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::client::AdminCredential;
+use crate::lesson::{
+    ContextBlock, LessonId, LessonProvenance, LessonStatus, LessonText, LessonTrust,
+    MAX_CONTEXT_CHARS,
+};
+use crate::project::ProjectScope;
 use crate::protocol::{
-    HealthResponse, MAX_FRAME_SIZE, MemoryErrorCode, MemoryProtocolError, MemoryRequest,
-    MemoryResponse, PROTOCOL_VERSION, RuntimeHealth,
+    HealthResponse, LessonListResponse, LessonRecord, LessonRecordMetadata, MAX_FRAME_SIZE,
+    MemoryErrorCode, MemoryProtocolError, MemoryRequest, MemoryResponse, PROTOCOL_VERSION,
+    RuntimeHealth, TeachResponse,
 };
 
 pub(crate) trait AsyncStream: AsyncRead + AsyncWrite + Unpin + Send {}
@@ -78,6 +86,42 @@ struct IncomingEnvelope {
     payload: serde_json::Value,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProjectPayload {
+    project_id: String,
+    display_path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TeachPayload {
+    project: ProjectPayload,
+    text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReplacePayload {
+    project: ProjectPayload,
+    replaced_id: String,
+    text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InspectPayload {
+    project: ProjectPayload,
+    id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ContextPayload {
+    project: ProjectPayload,
+    max_chars: u16,
+}
+
 #[derive(Debug, Serialize)]
 struct ResponseEnvelope<'a> {
     version: u16,
@@ -96,6 +140,22 @@ enum ResponsePayload<'a> {
         store_versions: Option<StoreVersionsEnvelope>,
         error: Option<ErrorEnvelope<'a>>,
     },
+    #[serde(rename = "project_bound")]
+    ProjectBound,
+    #[serde(rename = "taught")]
+    Taught {
+        created: bool,
+        lesson: LessonEnvelope<'a>,
+    },
+    #[serde(rename = "lessons")]
+    Lessons {
+        lessons: Vec<LessonEnvelope<'a>>,
+        omitted_count: usize,
+    },
+    #[serde(rename = "lesson")]
+    Lesson { lesson: LessonEnvelope<'a> },
+    #[serde(rename = "context")]
+    Context { block: Option<ContextEnvelope<'a>> },
     #[serde(rename = "shutdown")]
     Shutdown,
     #[serde(rename = "error")]
@@ -119,6 +179,24 @@ struct ErrorEnvelope<'a> {
     retryable: bool,
 }
 
+#[derive(Debug, Serialize)]
+struct LessonEnvelope<'a> {
+    id: String,
+    content: &'a str,
+    provenance: &'static str,
+    trust: &'static str,
+    status: &'static str,
+    supersedes_id: Option<String>,
+    created_at_ms: i64,
+    updated_at_ms: i64,
+}
+
+#[derive(Debug, Serialize)]
+struct ContextEnvelope<'a> {
+    text: &'a str,
+    omitted_count: usize,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ResponseEnvelopeOwned {
@@ -131,21 +209,69 @@ struct ResponseEnvelopeOwned {
 #[serde(tag = "kind")]
 enum IncomingResponsePayload {
     #[serde(rename = "health")]
-    Health {
-        instance_id: String,
-        status: String,
-        protocol_version: u16,
-        store_versions: Option<StoreVersionsEnvelopeOwned>,
-        error: Option<ErrorEnvelopeOwned>,
-    },
+    Health(HealthPayloadOwned),
+    #[serde(rename = "project_bound")]
+    ProjectBound(EmptyPayloadOwned),
+    #[serde(rename = "taught")]
+    Taught(TaughtPayloadOwned),
+    #[serde(rename = "lessons")]
+    Lessons(LessonsPayloadOwned),
+    #[serde(rename = "lesson")]
+    Lesson(LessonPayloadOwned),
+    #[serde(rename = "context")]
+    Context(ContextPayloadOwned),
     #[serde(rename = "shutdown")]
-    Shutdown,
+    Shutdown(EmptyPayloadOwned),
     #[serde(rename = "error")]
-    Error {
-        code: String,
-        message: String,
-        retryable: bool,
-    },
+    Error(ErrorPayloadOwned),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EmptyPayloadOwned {}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HealthPayloadOwned {
+    instance_id: String,
+    status: String,
+    protocol_version: u16,
+    store_versions: Option<StoreVersionsEnvelopeOwned>,
+    error: Option<ErrorEnvelopeOwned>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TaughtPayloadOwned {
+    created: bool,
+    lesson: LessonEnvelopeOwned,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LessonsPayloadOwned {
+    lessons: Vec<LessonEnvelopeOwned>,
+    omitted_count: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LessonPayloadOwned {
+    lesson: LessonEnvelopeOwned,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ContextPayloadOwned {
+    block: Option<ContextEnvelopeOwned>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ErrorPayloadOwned {
+    code: String,
+    message: String,
+    retryable: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -163,6 +289,26 @@ struct ErrorEnvelopeOwned {
     retryable: bool,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LessonEnvelopeOwned {
+    id: String,
+    content: String,
+    provenance: String,
+    trust: String,
+    status: String,
+    supersedes_id: Option<String>,
+    created_at_ms: i64,
+    updated_at_ms: i64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ContextEnvelopeOwned {
+    text: String,
+    omitted_count: usize,
+}
+
 pub(crate) async fn send_request(
     stream: &mut BoxedStream,
     credential: &AdminCredential,
@@ -172,6 +318,49 @@ pub(crate) async fn send_request(
     let auth = credential.child_env_value();
     let (operation, payload) = match request {
         MemoryRequest::Health => ("health", None),
+        MemoryRequest::BindProject { project } => (
+            "bind_project",
+            Some(payload_value(project_payload(&project, id)?)?),
+        ),
+        MemoryRequest::Teach { project, text } => (
+            "teach",
+            Some(payload_value(TeachPayload {
+                project: project_payload(&project, id)?,
+                text: text.redacted().to_owned(),
+            })?),
+        ),
+        MemoryRequest::Replace {
+            project,
+            replaced_id,
+            text,
+        } => (
+            "replace",
+            Some(payload_value(ReplacePayload {
+                project: project_payload(&project, id)?,
+                replaced_id: replaced_id.to_string(),
+                text: text.redacted().to_owned(),
+            })?),
+        ),
+        MemoryRequest::List { project } => {
+            ("list", Some(payload_value(project_payload(&project, id)?)?))
+        }
+        MemoryRequest::Inspect {
+            project,
+            id: lesson_id,
+        } => (
+            "inspect",
+            Some(payload_value(InspectPayload {
+                project: project_payload(&project, id)?,
+                id: lesson_id.to_string(),
+            })?),
+        ),
+        MemoryRequest::Context { project, max_chars } => (
+            "context",
+            Some(payload_value(ContextPayload {
+                project: project_payload(&project, id)?,
+                max_chars,
+            })?),
+        ),
         MemoryRequest::Shutdown => ("shutdown", None),
     };
     let envelope = RequestEnvelope {
@@ -203,6 +392,28 @@ pub(crate) async fn send_request(
         });
     }
     decode_response(response.payload)
+}
+
+fn payload_value<T: Serialize>(payload: T) -> Result<serde_json::Value, WireError> {
+    serde_json::to_value(payload)
+        .map_err(|source| WireError::Io(io::Error::new(io::ErrorKind::InvalidData, source)))
+}
+
+fn project_payload(project: &ProjectScope, id: u64) -> Result<ProjectPayload, WireError> {
+    let display_path =
+        project
+            .display_path()
+            .to_str()
+            .map(str::to_owned)
+            .ok_or(WireError::Protocol {
+                code: MemoryErrorCode::InvalidRequest,
+                id: Some(id),
+                version: Some(PROTOCOL_VERSION),
+            })?;
+    Ok(ProjectPayload {
+        project_id: project.project_id().to_string(),
+        display_path,
+    })
 }
 
 pub(crate) async fn read_request(
@@ -252,25 +463,74 @@ pub(crate) async fn read_request(
     if decoded.len() != 32 || !constant_time_eq(&decoded, credential.as_bytes()) {
         return Err(unauthorized());
     }
-    if !envelope.payload.is_null() {
-        return Err(WireError::Protocol {
-            code: MemoryErrorCode::InvalidRequest,
-            id: Some(envelope.id),
-            version: Some(envelope.version),
-        });
-    }
     let operation = envelope
         .operation
         .as_ref()
         .and_then(serde_json::Value::as_str)
-        .ok_or(WireError::Protocol {
-            code: MemoryErrorCode::InvalidRequest,
-            id: Some(envelope.id),
-            version: Some(envelope.version),
-        })?;
+        .ok_or_else(|| invalid_request(envelope.id, envelope.version))?;
     let request = match operation {
-        "health" => MemoryRequest::Health,
-        "shutdown" => MemoryRequest::Shutdown,
+        "health" => {
+            require_null_payload(&envelope.payload, envelope.id, envelope.version)?;
+            MemoryRequest::Health
+        }
+        "bind_project" => {
+            let payload: ProjectPayload =
+                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+            MemoryRequest::BindProject {
+                project: project_from_payload(payload, envelope.id, envelope.version)?,
+            }
+        }
+        "teach" => {
+            let payload: TeachPayload =
+                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+            MemoryRequest::Teach {
+                project: project_from_payload(payload.project, envelope.id, envelope.version)?,
+                text: LessonText::new(&payload.text)
+                    .map_err(|_| invalid_request(envelope.id, envelope.version))?,
+            }
+        }
+        "replace" => {
+            let payload: ReplacePayload =
+                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+            MemoryRequest::Replace {
+                project: project_from_payload(payload.project, envelope.id, envelope.version)?,
+                replaced_id: LessonId::from_str(&payload.replaced_id)
+                    .map_err(|_| invalid_request(envelope.id, envelope.version))?,
+                text: LessonText::new(&payload.text)
+                    .map_err(|_| invalid_request(envelope.id, envelope.version))?,
+            }
+        }
+        "list" => {
+            let payload: ProjectPayload =
+                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+            MemoryRequest::List {
+                project: project_from_payload(payload, envelope.id, envelope.version)?,
+            }
+        }
+        "inspect" => {
+            let payload: InspectPayload =
+                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+            MemoryRequest::Inspect {
+                project: project_from_payload(payload.project, envelope.id, envelope.version)?,
+                id: LessonId::from_str(&payload.id)
+                    .map_err(|_| invalid_request(envelope.id, envelope.version))?,
+            }
+        }
+        "context" => {
+            let payload: ContextPayload =
+                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+            if payload.max_chars == 0 || usize::from(payload.max_chars) > MAX_CONTEXT_CHARS {
+                return Err(invalid_request(envelope.id, envelope.version));
+            }
+            MemoryRequest::Context {
+                project: project_from_payload(payload.project, envelope.id, envelope.version)?,
+                max_chars: payload.max_chars,
+            }
+        }
+        "shutdown" => {
+            require_null_payload(&envelope.payload, envelope.id, envelope.version)?;
+            MemoryRequest::Shutdown
+        }
         _ => {
             return Err(WireError::Protocol {
                 code: MemoryErrorCode::UnknownOperation,
@@ -283,6 +543,43 @@ pub(crate) async fn read_request(
         id: envelope.id,
         request,
     })
+}
+
+fn invalid_request(id: u64, version: u16) -> WireError {
+    WireError::Protocol {
+        code: MemoryErrorCode::InvalidRequest,
+        id: Some(id),
+        version: Some(version),
+    }
+}
+
+fn require_null_payload(
+    payload: &serde_json::Value,
+    id: u64,
+    version: u16,
+) -> Result<(), WireError> {
+    if payload.is_null() {
+        Ok(())
+    } else {
+        Err(invalid_request(id, version))
+    }
+}
+
+fn decode_payload<T: DeserializeOwned>(
+    payload: serde_json::Value,
+    id: u64,
+    version: u16,
+) -> Result<T, WireError> {
+    serde_json::from_value(payload).map_err(|_| invalid_request(id, version))
+}
+
+fn project_from_payload(
+    payload: ProjectPayload,
+    id: u64,
+    version: u16,
+) -> Result<ProjectScope, WireError> {
+    ProjectScope::from_wire(&payload.project_id, &payload.display_path)
+        .map_err(|_| invalid_request(id, version))
 }
 
 pub(crate) async fn send_response(
@@ -312,6 +609,24 @@ pub(crate) async fn send_response(
                 retryable: error.retryable(),
             }),
         },
+        MemoryResponse::ProjectBound => ResponsePayload::ProjectBound,
+        MemoryResponse::Taught(result) => ResponsePayload::Taught {
+            created: result.created(),
+            lesson: lesson_envelope(result.lesson()),
+        },
+        MemoryResponse::Lessons(result) => ResponsePayload::Lessons {
+            lessons: result.lessons().iter().map(lesson_envelope).collect(),
+            omitted_count: result.omitted_count(),
+        },
+        MemoryResponse::Lesson(lesson) => ResponsePayload::Lesson {
+            lesson: lesson_envelope(lesson),
+        },
+        MemoryResponse::Context(block) => ResponsePayload::Context {
+            block: block.as_ref().map(|block| ContextEnvelope {
+                text: block.text(),
+                omitted_count: block.omitted_count(),
+            }),
+        },
         MemoryResponse::Shutdown => ResponsePayload::Shutdown,
         MemoryResponse::Error(error) => ResponsePayload::Error {
             code: error.code().as_str(),
@@ -327,6 +642,19 @@ pub(crate) async fn send_response(
     let bytes = serde_json::to_vec(&envelope)
         .map_err(|source| WireError::Io(io::Error::new(io::ErrorKind::InvalidData, source)))?;
     write_frame(stream, &bytes).await
+}
+
+fn lesson_envelope(lesson: &LessonRecord) -> LessonEnvelope<'_> {
+    LessonEnvelope {
+        id: lesson.id().to_string(),
+        content: lesson.content(),
+        provenance: lesson.provenance().as_str(),
+        trust: lesson.trust().as_str(),
+        status: lesson.status().as_str(),
+        supersedes_id: lesson.supersedes_id().map(|id| id.to_string()),
+        created_at_ms: lesson.created_at_ms(),
+        updated_at_ms: lesson.updated_at_ms(),
+    }
 }
 
 pub(crate) async fn send_protocol_error(
@@ -398,13 +726,20 @@ async fn read_frame(stream: &mut BoxedStream) -> Result<Vec<u8>, WireError> {
 
 fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, WireError> {
     match payload {
-        IncomingResponsePayload::Health {
-            instance_id,
-            status,
-            protocol_version,
-            store_versions,
-            error,
-        } => {
+        IncomingResponsePayload::Health(value) => {
+            let HealthPayloadOwned {
+                instance_id,
+                status,
+                protocol_version,
+                store_versions,
+                error,
+            } = value;
+            if protocol_version != PROTOCOL_VERSION
+                || instance_id.len() != 32
+                || !instance_id.bytes().all(|byte| byte.is_ascii_hexdigit())
+            {
+                return Err(invalid_response());
+            }
             let status = match status.as_str() {
                 "starting" => RuntimeHealth::Starting,
                 "ready" => RuntimeHealth::Ready,
@@ -431,6 +766,14 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
                     id: None,
                     version: None,
                 })?;
+            let shape_valid = match status {
+                RuntimeHealth::Starting => store_versions.is_none() && error.is_none(),
+                RuntimeHealth::Ready => store_versions.is_some() && error.is_none(),
+                RuntimeHealth::Failed => store_versions.is_none() && error.is_some(),
+            };
+            if !shape_valid {
+                return Err(invalid_response());
+            }
             let response = HealthResponse::from_wire(
                 instance_id,
                 status,
@@ -445,12 +788,46 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
             );
             Ok(MemoryResponse::Health(response))
         }
-        IncomingResponsePayload::Shutdown => Ok(MemoryResponse::Shutdown),
-        IncomingResponsePayload::Error {
-            code,
-            message,
-            retryable,
-        } => {
+        IncomingResponsePayload::ProjectBound(_) => Ok(MemoryResponse::ProjectBound),
+        IncomingResponsePayload::Taught(value) => Ok(MemoryResponse::Taught(TeachResponse::new(
+            decode_lesson_record(value.lesson)?,
+            value.created,
+        ))),
+        IncomingResponsePayload::Lessons(value) => {
+            let LessonsPayloadOwned {
+                lessons,
+                omitted_count,
+            } = value;
+            if lessons.len() > 100 {
+                return Err(invalid_response());
+            }
+            let lessons = lessons
+                .into_iter()
+                .map(decode_lesson_record)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(MemoryResponse::Lessons(LessonListResponse::new(
+                lessons,
+                omitted_count,
+            )))
+        }
+        IncomingResponsePayload::Lesson(value) => {
+            Ok(MemoryResponse::Lesson(decode_lesson_record(value.lesson)?))
+        }
+        IncomingResponsePayload::Context(value) => {
+            let block = value
+                .block
+                .map(|block| ContextBlock::from_wire(block.text, block.omitted_count))
+                .transpose()
+                .map_err(|_| invalid_response())?;
+            Ok(MemoryResponse::Context(block))
+        }
+        IncomingResponsePayload::Shutdown(_) => Ok(MemoryResponse::Shutdown),
+        IncomingResponsePayload::Error(value) => {
+            let ErrorPayloadOwned {
+                code,
+                message,
+                retryable,
+            } = value;
             let code = MemoryErrorCode::from_wire_name(&code).ok_or(WireError::Protocol {
                 code: MemoryErrorCode::MalformedFrame,
                 id: None,
@@ -468,11 +845,241 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
     }
 }
 
+fn decode_lesson_record(value: LessonEnvelopeOwned) -> Result<LessonRecord, WireError> {
+    if value.created_at_ms < 0 || value.updated_at_ms < value.created_at_ms {
+        return Err(invalid_response());
+    }
+    let id = LessonId::from_str(&value.id).map_err(|_| invalid_response())?;
+    let text = LessonText::new(&value.content).map_err(|_| invalid_response())?;
+    if text.redacted() != value.content {
+        return Err(invalid_response());
+    }
+    let provenance =
+        LessonProvenance::from_stored(&value.provenance).ok_or_else(invalid_response)?;
+    let trust = LessonTrust::from_stored(&value.trust).ok_or_else(invalid_response)?;
+    let status = LessonStatus::from_stored(&value.status).ok_or_else(invalid_response)?;
+    let supersedes_id = value
+        .supersedes_id
+        .as_deref()
+        .map(LessonId::from_str)
+        .transpose()
+        .map_err(|_| invalid_response())?;
+    Ok(LessonRecord::new(
+        id,
+        value.content,
+        LessonRecordMetadata::new(
+            provenance,
+            trust,
+            status,
+            supersedes_id,
+            value.created_at_ms,
+            value.updated_at_ms,
+        ),
+    ))
+}
+
+fn invalid_response() -> WireError {
+    WireError::Protocol {
+        code: MemoryErrorCode::MalformedFrame,
+        id: None,
+        version: None,
+    }
+}
+
 #[cfg(test)]
 #[expect(clippy::expect_used)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
     use tokio::io::duplex;
+
+    async fn decode_raw_request(
+        credential: &AdminCredential,
+        value: serde_json::Value,
+    ) -> Result<IncomingRequest, WireError> {
+        let bytes = serde_json::to_vec(&value).expect("request JSON");
+        let (mut writer, reader) = duplex(bytes.len() + 4);
+        writer
+            .write_all(&(u32::try_from(bytes.len()).expect("bounded length")).to_be_bytes())
+            .await
+            .expect("length");
+        writer.write_all(&bytes).await.expect("payload");
+        drop(writer);
+        let mut stream: BoxedStream = Box::new(reader);
+        read_request(&mut stream, credential, None).await
+    }
+
+    fn request(
+        credential: &AdminCredential,
+        operation: &str,
+        payload: serde_json::Value,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "version": PROTOCOL_VERSION,
+            "id": 1,
+            "auth": credential.child_env_value(),
+            "operation": operation,
+            "payload": payload,
+        })
+    }
+
+    #[tokio::test]
+    async fn v1_operation_payload_matrix_is_strict_and_backward_compatible() {
+        let credential = AdminCredential::generate().expect("credential");
+        let root = TempDir::new().expect("workspace");
+        let workspace = root.path().to_str().expect("UTF-8 fixture");
+        let project = ProjectScope::resolve(root.path()).expect("project");
+        let project_payload = serde_json::json!({
+            "project_id": project.project_id().to_string(),
+            "display_path": workspace,
+        });
+        let lesson_id = "00112233445566778899aabbccddeeff";
+        let valid = [
+            ("health", serde_json::Value::Null),
+            ("shutdown", serde_json::Value::Null),
+            ("bind_project", project_payload.clone()),
+            (
+                "teach",
+                serde_json::json!({"project": project_payload.clone(), "text": "prefer boring Rust"}),
+            ),
+            (
+                "replace",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "replaced_id": lesson_id,
+                    "text": "prefer explicit errors"
+                }),
+            ),
+            ("list", project_payload.clone()),
+            (
+                "inspect",
+                serde_json::json!({"project": project_payload.clone(), "id": lesson_id}),
+            ),
+            (
+                "context",
+                serde_json::json!({"project": project_payload.clone(), "max_chars": 4000}),
+            ),
+        ];
+        for (operation, payload) in valid {
+            decode_raw_request(&credential, request(&credential, operation, payload))
+                .await
+                .unwrap_or_else(|error| panic!("{operation} should decode: {error:?}"));
+        }
+
+        let invalid = [
+            ("health", serde_json::json!({})),
+            ("shutdown", serde_json::json!({})),
+            ("teach", serde_json::Value::Null),
+            (
+                "bind_project",
+                serde_json::json!({"project_id": "wrong", "display_path": workspace}),
+            ),
+            (
+                "bind_project",
+                serde_json::json!({
+                    "project_id": project.project_id().to_string(),
+                    "display_path": "relative"
+                }),
+            ),
+            (
+                "teach",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "text": "valid",
+                    "unexpected": true
+                }),
+            ),
+            (
+                "teach",
+                serde_json::json!({"project": project_payload.clone(), "text": 7}),
+            ),
+            (
+                "replace",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "replaced_id": "wrong",
+                    "text": "valid"
+                }),
+            ),
+            (
+                "inspect",
+                serde_json::json!({"project": project_payload.clone(), "id": "wrong"}),
+            ),
+            (
+                "context",
+                serde_json::json!({"project": project_payload.clone(), "max_chars": 0}),
+            ),
+            (
+                "context",
+                serde_json::json!({"project": project_payload, "max_chars": 4001}),
+            ),
+        ];
+        for (operation, payload) in invalid {
+            let error = decode_raw_request(&credential, request(&credential, operation, payload))
+                .await
+                .expect_err(operation);
+            assert_eq!(error.code(), Some(MemoryErrorCode::InvalidRequest));
+        }
+        let error = decode_raw_request(
+            &credential,
+            request(&credential, "unknown", serde_json::Value::Null),
+        )
+        .await
+        .expect_err("unknown operation");
+        assert_eq!(error.code(), Some(MemoryErrorCode::UnknownOperation));
+    }
+
+    #[test]
+    fn response_payloads_reject_drift_and_invalid_health_identity() {
+        let health = |instance_id: &str, protocol_version: u16| {
+            serde_json::json!({
+                "version": 1,
+                "id": 1,
+                "payload": {
+                    "kind": "health",
+                    "instance_id": instance_id,
+                    "status": "ready",
+                    "protocol_version": protocol_version,
+                    "store_versions": {"memory": 2, "knowledge": 1},
+                    "error": null
+                }
+            })
+        };
+        let valid: ResponseEnvelopeOwned =
+            serde_json::from_value(health("00112233445566778899aabbccddeeff", PROTOCOL_VERSION))
+                .expect("strict health payload");
+        assert!(matches!(
+            decode_response(valid.payload),
+            Ok(MemoryResponse::Health(_))
+        ));
+
+        let mut unknown = health("00112233445566778899aabbccddeeff", PROTOCOL_VERSION);
+        unknown["payload"]["unexpected"] = serde_json::json!(true);
+        assert!(serde_json::from_value::<ResponseEnvelopeOwned>(unknown).is_err());
+        assert!(
+            serde_json::from_value::<ResponseEnvelopeOwned>(serde_json::json!({
+                "version": 1,
+                "id": 1,
+                "payload": {"kind": "project_bound", "unexpected": true}
+            }))
+            .is_err()
+        );
+
+        for malformed in [
+            health("", PROTOCOL_VERSION),
+            health("not-a-runtime-instance", PROTOCOL_VERSION),
+            health("00112233445566778899aabbccddeeff", PROTOCOL_VERSION + 1),
+        ] {
+            let envelope: ResponseEnvelopeOwned =
+                serde_json::from_value(malformed).expect("response envelope shape");
+            assert!(decode_response(envelope.payload).is_err());
+        }
+        let mut wrong_shape = health("00112233445566778899aabbccddeeff", PROTOCOL_VERSION);
+        wrong_shape["payload"]["store_versions"] = serde_json::Value::Null;
+        let envelope: ResponseEnvelopeOwned =
+            serde_json::from_value(wrong_shape).expect("response envelope shape");
+        assert!(decode_response(envelope.payload).is_err());
+    }
 
     #[tokio::test]
     async fn exact_cap_frame_is_accepted() {

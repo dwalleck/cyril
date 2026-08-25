@@ -53,6 +53,27 @@ impl ProjectScope {
             display_path,
         })
     }
+    pub(crate) fn from_wire(project_id: &str, display_path: &str) -> Result<Self, ProjectError> {
+        let mut bytes = [0_u8; 32];
+        hex::decode_to_slice(project_id, &mut bytes)
+            .map_err(|_| ProjectError::InvalidBoundScope)?;
+        let display_path = PathBuf::from(display_path);
+        if display_path.as_os_str().is_empty()
+            || !display_path.is_absolute()
+            || display_path.components().any(|component| {
+                matches!(
+                    component,
+                    std::path::Component::CurDir | std::path::Component::ParentDir
+                )
+            })
+        {
+            return Err(ProjectError::InvalidBoundScope);
+        }
+        Ok(Self {
+            project_id: ProjectId::from_bytes(bytes),
+            display_path,
+        })
+    }
 
     pub const fn project_id(&self) -> ProjectId {
         self.project_id
@@ -79,6 +100,8 @@ pub enum ProjectError {
     },
     #[error("Git metadata file {path} is invalid")]
     InvalidGitFile { path: PathBuf },
+    #[error("bound project identity is invalid")]
+    InvalidBoundScope,
 }
 
 fn find_git_common_dir(workspace: &Path) -> Result<Option<PathBuf>, ProjectError> {
@@ -238,6 +261,29 @@ mod tests {
             scope.display_path(),
             workspace.canonicalize().expect("canonical")
         );
+    }
+
+    #[test]
+    fn bound_scope_does_not_retarget_when_git_metadata_changes() {
+        let root = tempdir().expect("root");
+        let workspace = root.path().join("workspace");
+        let first_git = root.path().join("first.git");
+        let second_git = root.path().join("second.git");
+        fs::create_dir(&workspace).expect("workspace");
+        fs::create_dir(&first_git).expect("first git dir");
+        fs::create_dir(&second_git).expect("second git dir");
+        fs::write(workspace.join(".git"), "gitdir: ../first.git\n").expect("first binding");
+        let first = ProjectScope::resolve(&workspace).expect("first scope");
+        let bound = ProjectScope::from_wire(
+            &first.project_id().to_string(),
+            first.display_path().to_str().expect("UTF-8 fixture"),
+        )
+        .expect("bound scope");
+
+        fs::write(workspace.join(".git"), "gitdir: ../second.git\n").expect("retarget binding");
+        let retargeted = ProjectScope::resolve(&workspace).expect("retargeted scope");
+        assert_ne!(first.project_id(), retargeted.project_id());
+        assert_eq!(bound, first);
     }
 
     #[test]

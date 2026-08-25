@@ -2,13 +2,19 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 
+use cyril_core::protocol::bridge::{
+    FirstPromptContext, FirstPromptContextError, FirstPromptContextFuture,
+};
 use cyril_memory::{
-    AdminClient, HealthResponse, MemoryConfig, MemoryConfigState, MemoryEndpoint, MemoryErrorCode,
-    MemoryPaths, RuntimeHealth, RuntimeLaunchConfig,
+    AdminClient, ClientError, ContextBlock, HealthResponse, LessonId, LessonListResponse,
+    LessonRecord, LessonText, MemoryConfig, MemoryConfigState, MemoryEndpoint, MemoryErrorCode,
+    MemoryPaths, ProjectScope, RuntimeHealth, RuntimeLaunchConfig, TeachResponse,
 };
 use process_wrap::tokio::{ChildWrapper, CommandWrap, KillOnDrop};
+use thiserror::Error;
 use tokio::sync::{oneshot, watch};
 use tokio::task::JoinHandle;
+const FIRST_PROMPT_CONTEXT_CHARS: u16 = 4_000;
 
 const STARTUP_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(2);
@@ -61,8 +67,129 @@ pub(crate) enum MemoryRuntimeStatus {
     Failed(MemoryRuntimeFailure),
 }
 
+#[derive(Clone, Debug)]
+struct ProjectAccess {
+    endpoint: MemoryEndpoint,
+    credential: cyril_memory::AdminCredential,
+    request_timeout: Duration,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ProjectMemoryUnavailable {
+    Disabled,
+    Starting,
+    Degraded,
+    Failed,
+    RuntimeLost,
+}
+
+#[derive(Debug, Error)]
+pub(crate) enum ProjectMemoryError {
+    #[error("project memory is unavailable: {0:?}")]
+    Unavailable(ProjectMemoryUnavailable),
+    #[error(transparent)]
+    Client(#[from] ClientError),
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct ProjectMemory {
+    project: ProjectScope,
+    status: watch::Receiver<MemoryRuntimeStatus>,
+    access: watch::Receiver<Option<ProjectAccess>>,
+}
+
+impl ProjectMemory {
+    async fn client(&self) -> Result<AdminClient, ProjectMemoryError> {
+        let mut status = self.status.clone();
+        let current = status.borrow_and_update().clone();
+        let status_closed = status.has_changed().is_err();
+        let unavailable = match &current {
+            MemoryRuntimeStatus::Disabled(_) => Some(ProjectMemoryUnavailable::Disabled),
+            MemoryRuntimeStatus::Starting if status_closed => {
+                Some(ProjectMemoryUnavailable::RuntimeLost)
+            }
+            MemoryRuntimeStatus::Starting => Some(ProjectMemoryUnavailable::Starting),
+            MemoryRuntimeStatus::Degraded(_) => Some(ProjectMemoryUnavailable::Degraded),
+            MemoryRuntimeStatus::Failed(_) => Some(ProjectMemoryUnavailable::Failed),
+            MemoryRuntimeStatus::Ready(_) if status_closed => {
+                Some(ProjectMemoryUnavailable::RuntimeLost)
+            }
+            MemoryRuntimeStatus::Ready(_) => None,
+        };
+        if let Some(unavailable) = unavailable {
+            return Err(ProjectMemoryError::Unavailable(unavailable));
+        }
+        let mut access = self.access.clone();
+        let current_access = access.borrow_and_update().clone();
+        if access.has_changed().is_err() {
+            return Err(ProjectMemoryError::Unavailable(
+                ProjectMemoryUnavailable::RuntimeLost,
+            ));
+        }
+        let access = current_access.ok_or(ProjectMemoryError::Unavailable(
+            ProjectMemoryUnavailable::RuntimeLost,
+        ))?;
+        AdminClient::connect(access.endpoint, access.credential, access.request_timeout)
+            .await
+            .map_err(ProjectMemoryError::from)
+    }
+
+    pub(crate) async fn teach(
+        &self,
+        text: LessonText,
+    ) -> Result<TeachResponse, ProjectMemoryError> {
+        Ok(self.client().await?.teach(&self.project, text).await?)
+    }
+
+    pub(crate) async fn replace(
+        &self,
+        replaced_id: LessonId,
+        text: LessonText,
+    ) -> Result<TeachResponse, ProjectMemoryError> {
+        Ok(self
+            .client()
+            .await?
+            .replace(&self.project, replaced_id, text)
+            .await?)
+    }
+
+    pub(crate) async fn list(&self) -> Result<LessonListResponse, ProjectMemoryError> {
+        Ok(self.client().await?.list(&self.project).await?)
+    }
+
+    pub(crate) async fn inspect(&self, id: LessonId) -> Result<LessonRecord, ProjectMemoryError> {
+        Ok(self.client().await?.inspect(&self.project, id).await?)
+    }
+
+    pub(crate) async fn context(
+        &self,
+        max_chars: u16,
+    ) -> Result<Option<ContextBlock>, ProjectMemoryError> {
+        Ok(self
+            .client()
+            .await?
+            .context(&self.project, max_chars)
+            .await?)
+    }
+}
+
+impl FirstPromptContext for ProjectMemory {
+    fn load_context(&self) -> FirstPromptContextFuture<'_> {
+        Box::pin(async move {
+            match ProjectMemory::context(self, FIRST_PROMPT_CONTEXT_CHARS).await {
+                Ok(block) => Ok(block.map(|block| block.text().to_owned())),
+                Err(error) => {
+                    tracing::debug!(error = %error, "project memory context unavailable");
+                    Err(FirstPromptContextError)
+                }
+            }
+        })
+    }
+}
+
 pub(crate) struct MemoryRuntimeHandle {
     status: watch::Receiver<MemoryRuntimeStatus>,
+    access: watch::Receiver<Option<ProjectAccess>>,
     status_closed: bool,
     shutdown: Option<oneshot::Sender<()>>,
     task: Option<JoinHandle<()>>,
@@ -113,12 +240,14 @@ impl MemoryRuntimeHandle {
 
     fn launch(config: MemoryConfig, options: Option<LaunchOptions>) -> Self {
         let (status_tx, status) = watch::channel(MemoryRuntimeStatus::Starting);
+        let (access_tx, access) = watch::channel(None);
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let task = tokio::spawn(async move {
-            supervise(config, options, status_tx, shutdown_rx).await;
+            supervise(config, options, status_tx, access_tx, shutdown_rx).await;
         });
         Self {
             status,
+            access,
             status_closed: false,
             shutdown: Some(shutdown_tx),
             task: Some(task),
@@ -127,8 +256,10 @@ impl MemoryRuntimeHandle {
 
     fn terminal(status_value: MemoryRuntimeStatus) -> Self {
         let (_status_tx, status) = watch::channel(status_value);
+        let (_access_tx, access) = watch::channel(None);
         Self {
             status,
+            access,
             status_closed: false,
             shutdown: None,
             task: None,
@@ -140,6 +271,14 @@ impl MemoryRuntimeHandle {
     }
     pub(crate) fn status_view(&self) -> cyril_core::types::MemoryStatusView {
         project_status(&self.status())
+    }
+
+    pub(crate) fn bind_project(&self, project: ProjectScope) -> ProjectMemory {
+        ProjectMemory {
+            project,
+            status: self.status.clone(),
+            access: self.access.clone(),
+        }
     }
 
     pub(crate) async fn changed(&mut self) -> Option<cyril_core::types::MemoryStatusView> {
@@ -254,6 +393,7 @@ async fn supervise(
     config: MemoryConfig,
     options: Option<LaunchOptions>,
     status: watch::Sender<MemoryRuntimeStatus>,
+    access: watch::Sender<Option<ProjectAccess>>,
     mut shutdown: oneshot::Receiver<()>,
 ) {
     let paths = match MemoryPaths::prepare(config.data_root()) {
@@ -408,12 +548,18 @@ async fn supervise(
     };
     let was_ready = ready.is_some();
     if let Some(health) = ready {
+        access.send_replace(Some(ProjectAccess {
+            endpoint: endpoint.clone(),
+            credential: credential.clone(),
+            request_timeout: launch.request_timeout(),
+        }));
         send_status(&status, MemoryRuntimeStatus::Ready(health));
     }
 
     let wait = child.wait();
     tokio::select! {
         exit = wait => {
+            access.send_replace(None);
             if was_ready {
                 tracing::warn!(?exit, "memory runtime exited after readiness");
                 send_status(
@@ -423,6 +569,7 @@ async fn supervise(
             }
         }
         _ = &mut shutdown => {
+            access.send_replace(None);
             stop_child(&mut child, &endpoint, &credential, launch.request_timeout()).await;
         }
     }
@@ -662,8 +809,10 @@ mod tests {
     async fn closed_status_channel_transitions_once() {
         let (sender, status) = watch::channel(MemoryRuntimeStatus::Starting);
         drop(sender);
+        let (_access_sender, access) = watch::channel(None);
         let mut handle = MemoryRuntimeHandle {
             status,
+            access,
             status_closed: false,
             shutdown: None,
             task: None,
@@ -676,5 +825,76 @@ mod tests {
             Some("memory runtime status channel closed during startup")
         );
         assert!(handle.changed().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn project_access_tracks_runtime_lifecycle_without_exposing_admin() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let project = ProjectScope::resolve(workspace.path()).expect("project");
+        let cases = [
+            (
+                MemoryRuntimeStatus::Disabled(MemoryDisabledReason::Absent),
+                ProjectMemoryUnavailable::Disabled,
+            ),
+            (
+                MemoryRuntimeStatus::Starting,
+                ProjectMemoryUnavailable::Starting,
+            ),
+            (
+                MemoryRuntimeStatus::Degraded(MemoryRuntimeFailure::RuntimeExited),
+                ProjectMemoryUnavailable::Degraded,
+            ),
+            (
+                MemoryRuntimeStatus::Failed(MemoryRuntimeFailure::SpawnFailed),
+                ProjectMemoryUnavailable::Failed,
+            ),
+            (
+                MemoryRuntimeStatus::Ready(HealthResponse::ready(
+                    "test-instance".to_owned(),
+                    cyril_memory::MemoryStoreVersions::new(2, 1),
+                )),
+                ProjectMemoryUnavailable::RuntimeLost,
+            ),
+        ];
+        for (status, expected) in cases {
+            let (_status_sender, status) = watch::channel(status);
+            let (_access_sender, access) = watch::channel(None);
+            let memory = ProjectMemory {
+                project: project.clone(),
+                status,
+                access,
+            };
+            assert!(matches!(
+                memory.list().await,
+                Err(ProjectMemoryError::Unavailable(actual)) if actual == expected
+            ));
+        }
+        let (status_sender, status) =
+            watch::channel(MemoryRuntimeStatus::Ready(HealthResponse::ready(
+                "closed-instance".to_owned(),
+                cyril_memory::MemoryStoreVersions::new(2, 1),
+            )));
+        let runtime_dir = tempfile::tempdir().expect("runtime directory");
+        let endpoint =
+            MemoryEndpoint::from_path(runtime_dir.path()).expect("private test endpoint");
+        let access_value = ProjectAccess {
+            endpoint,
+            credential: cyril_memory::AdminCredential::generate().expect("credential"),
+            request_timeout: Duration::from_millis(10),
+        };
+        let (access_sender, access) = watch::channel(Some(access_value));
+        let memory = ProjectMemory {
+            project,
+            status,
+            access,
+        };
+        drop(status_sender);
+        drop(access_sender);
+        assert!(matches!(
+            memory.list().await,
+            Err(ProjectMemoryError::Unavailable(
+                ProjectMemoryUnavailable::RuntimeLost
+            ))
+        ));
     }
 }

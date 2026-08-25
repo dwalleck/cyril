@@ -11,6 +11,8 @@ use crate::types::CommandOption;
 
 /// Context provided to commands during execution.
 pub struct CommandContext<'a> {
+    /// Canonical workspace bound at application startup.
+    pub workspace: &'a std::path::Path,
     pub session: &'a SessionController,
     pub bridge: &'a BridgeSender,
     /// Optional subagent tracker for commands that need to look up subagents
@@ -149,6 +151,14 @@ impl UsageAccountCommandSource {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MemoryCommandAction {
+    Teach { text: String },
+    Replace { lesson_id: String, text: String },
+    List,
+    Inspect { lesson_id: String },
+}
+
 /// Result of executing a command.
 #[derive(Debug)]
 pub struct CommandResult {
@@ -187,6 +197,8 @@ pub enum CommandResultKind {
     ShowUsage { account_query_started: bool },
     /// Return Cyril's current typed memory runtime status.
     MemoryStatus(crate::types::MemoryStatusView),
+    /// Execute one typed project-memory operation in the binary orchestrator.
+    MemoryAction(MemoryCommandAction),
     /// Quit the application.
     Quit,
 }
@@ -244,6 +256,12 @@ impl CommandResult {
     pub fn memory_status(status: crate::types::MemoryStatusView) -> Self {
         Self {
             kind: CommandResultKind::MemoryStatus(status),
+        }
+    }
+
+    pub fn memory_action(action: MemoryCommandAction) -> Self {
+        Self {
+            kind: CommandResultKind::MemoryAction(action),
         }
     }
 
@@ -563,6 +581,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -585,6 +604,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -626,6 +646,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -677,6 +698,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -698,6 +720,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -719,6 +742,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -737,6 +761,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -767,6 +792,7 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::channel(1);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -802,6 +828,7 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::channel(1);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -833,6 +860,7 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::channel(4);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -926,6 +954,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(4);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -956,6 +985,7 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::channel(4);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -1000,6 +1030,7 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::channel(4);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -1039,6 +1070,7 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::channel(4);
         let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -1084,6 +1116,7 @@ mod tests {
             crate::types::MemoryStoreVersions::new(1, 1),
         );
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -1108,9 +1141,11 @@ mod tests {
             .expect("memory usage");
         assert!(matches!(
             &invalid.kind,
-            CommandResultKind::SystemMessage(text) if text == "Usage: /memory status"
+            CommandResultKind::SystemMessage(text)
+                if text == "Usage: /memory status | teach <text> | teach --replace <lesson-id> <text> | list | inspect <lesson-id>"
         ));
         let unavailable_ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &session,
             bridge: &sender,
             subagent_tracker: None,
@@ -1125,6 +1160,66 @@ mod tests {
             &unavailable.kind,
             CommandResultKind::SystemMessage(text) if text == "Memory status unavailable."
         ));
+    }
+
+    #[tokio::test]
+    async fn memory_commands_emit_typed_actions() {
+        let registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
+        let session = SessionController::new();
+        let (tx, _rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            workspace: std::path::Path::new("/bound-workspace"),
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+        let rows = [
+            (
+                "/memory teach prefer boring Rust",
+                MemoryCommandAction::Teach {
+                    text: "prefer boring Rust".to_owned(),
+                },
+            ),
+            (
+                "/memory teach --replace 00112233445566778899aabbccddeeff prefer explicit errors",
+                MemoryCommandAction::Replace {
+                    lesson_id: "00112233445566778899aabbccddeeff".to_owned(),
+                    text: "prefer explicit errors".to_owned(),
+                },
+            ),
+            ("/memory list", MemoryCommandAction::List),
+            (
+                "/memory inspect 00112233445566778899aabbccddeeff",
+                MemoryCommandAction::Inspect {
+                    lesson_id: "00112233445566778899aabbccddeeff".to_owned(),
+                },
+            ),
+        ];
+        for (input, expected) in rows {
+            let (command, args) = registry.parse(input).expect("memory command");
+            let result = command.execute(&ctx, args).await.expect("typed action");
+            assert!(matches!(
+                result.kind,
+                CommandResultKind::MemoryAction(actual) if actual == expected
+            ));
+        }
+        for input in [
+            "/memory",
+            "/memory teach",
+            "/memory teach   ",
+            "/memory teach --replace",
+            "/memory teach --replace id",
+            "/memory inspect",
+            "/memory inspect too many",
+        ] {
+            let (command, args) = registry.parse(input).expect("memory command");
+            let result = command.execute(&ctx, args).await.expect("usage");
+            assert!(matches!(result.kind, CommandResultKind::SystemMessage(_)));
+        }
     }
 }
 

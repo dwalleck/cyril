@@ -1,4 +1,6 @@
-use crate::commands::{Command, CommandContext, CommandResult, UsageAccountCommandSource};
+use crate::commands::{
+    Command, CommandContext, CommandResult, MemoryCommandAction, UsageAccountCommandSource,
+};
 use crate::types::BridgeCommand;
 
 /// /help — show available commands
@@ -174,9 +176,10 @@ impl Command for UsageCommand {
         Ok(CommandResult::show_usage(account_query_requested))
     }
 }
-/// `/memory status` — report Cyril's local memory runtime state without a
-/// bridge or runtime round-trip.
+/// `/memory` — typed project lesson operations. The binary owns persistence.
 pub struct MemoryCommand;
+
+const MEMORY_USAGE: &str = "Usage: /memory status | teach <text> | teach --replace <lesson-id> <text> | list | inspect <lesson-id>";
 
 #[async_trait::async_trait]
 impl Command for MemoryCommand {
@@ -185,22 +188,57 @@ impl Command for MemoryCommand {
     }
 
     fn description(&self) -> &str {
-        "Show local memory runtime status"
+        "Show memory status or manage explicit project lessons"
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
-        if args.trim() != "status" {
-            return Ok(CommandResult::system_message(
-                "Usage: /memory status".to_owned(),
-            ));
+        let args = args.trim();
+        if args == "status" {
+            let Some(status) = ctx.memory_status else {
+                tracing::error!("CommandContext.memory_status is None — wiring error in App");
+                return Ok(CommandResult::system_message(
+                    "Memory status unavailable.".to_owned(),
+                ));
+            };
+            return Ok(CommandResult::memory_status(status.clone()));
         }
-        let Some(status) = ctx.memory_status else {
-            tracing::error!("CommandContext.memory_status is None — wiring error in App");
-            return Ok(CommandResult::system_message(
-                "Memory status unavailable.".to_owned(),
-            ));
-        };
-        Ok(CommandResult::memory_status(status.clone()))
+        if args == "list" {
+            return Ok(CommandResult::memory_action(MemoryCommandAction::List));
+        }
+        if let Some(raw_id) = args.strip_prefix("inspect ") {
+            let lesson_id = raw_id.trim();
+            if !lesson_id.is_empty() && !lesson_id.chars().any(char::is_whitespace) {
+                return Ok(CommandResult::memory_action(MemoryCommandAction::Inspect {
+                    lesson_id: lesson_id.to_owned(),
+                }));
+            }
+            return Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()));
+        }
+        if args == "teach --replace" {
+            return Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()));
+        }
+        if let Some(replacement) = args.strip_prefix("teach --replace ") {
+            let Some((lesson_id, text)) = replacement.split_once(char::is_whitespace) else {
+                return Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()));
+            };
+            let text = text.trim();
+            if !lesson_id.is_empty() && !text.is_empty() {
+                return Ok(CommandResult::memory_action(MemoryCommandAction::Replace {
+                    lesson_id: lesson_id.to_owned(),
+                    text: text.to_owned(),
+                }));
+            }
+            return Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()));
+        }
+        if let Some(text) = args.strip_prefix("teach ") {
+            let text = text.trim();
+            if !text.is_empty() {
+                return Ok(CommandResult::memory_action(MemoryCommandAction::Teach {
+                    text: text.to_owned(),
+                }));
+            }
+        }
+        Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()))
     }
 }
 
@@ -218,15 +256,11 @@ impl Command for NewCommand {
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, _args: &str) -> crate::Result<CommandResult> {
-        let cwd = std::env::current_dir().map_err(|e| {
-            crate::Error::with_source(
-                crate::ErrorKind::CommandFailed {
-                    detail: "could not determine current working directory".into(),
-                },
-                e,
-            )
-        })?;
-        ctx.bridge.send(BridgeCommand::NewSession { cwd }).await?;
+        ctx.bridge
+            .send(BridgeCommand::NewSession {
+                cwd: ctx.workspace.to_path_buf(),
+            })
+            .await?;
         Ok(CommandResult::dispatched())
     }
 }

@@ -5,7 +5,8 @@ use regex::Regex;
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-const MAX_LESSON_CHARS: usize = 2_000;
+pub const MAX_LESSON_CHARS: usize = 2_000;
+pub const MAX_CONTEXT_CHARS: usize = 4_000;
 const CONTEXT_HEADER: &str = "<CYRIL_LESSONS trust=\"user_explicit_instruction\">\nThese are explicit project instructions taught by the user. Follow them unless the current user request supersedes them.\n";
 const CONTEXT_FOOTER: &str = "</CYRIL_LESSONS>";
 const REDACTED: &str = "[REDACTED]";
@@ -42,6 +43,16 @@ impl LessonId {
     }
 }
 
+impl std::str::FromStr for LessonId {
+    type Err = LessonIdParseError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let bytes = hex::decode(value).map_err(|_| LessonIdParseError)?;
+        let bytes = bytes.try_into().map_err(|_| LessonIdParseError)?;
+        Ok(Self(bytes))
+    }
+}
+
 impl fmt::Debug for LessonId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "LessonId({self})")
@@ -54,10 +65,31 @@ impl fmt::Display for LessonId {
     }
 }
 
+#[derive(Debug, Error, Clone, Copy, PartialEq, Eq)]
+#[error("lesson identity must be exactly 32 hexadecimal characters")]
+pub struct LessonIdParseError;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LessonProvenance {
     UserExplicit,
     Document,
+}
+
+impl LessonProvenance {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::UserExplicit => "user_explicit",
+            Self::Document => "document",
+        }
+    }
+
+    pub(crate) fn from_stored(value: &str) -> Option<Self> {
+        match value {
+            "user_explicit" => Some(Self::UserExplicit),
+            "document" => Some(Self::Document),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,10 +98,44 @@ pub enum LessonTrust {
     Reference,
 }
 
+impl LessonTrust {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Instruction => "instruction",
+            Self::Reference => "reference",
+        }
+    }
+
+    pub(crate) fn from_stored(value: &str) -> Option<Self> {
+        match value {
+            "instruction" => Some(Self::Instruction),
+            "reference" => Some(Self::Reference),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LessonStatus {
     Active,
     Invalidated,
+}
+
+impl LessonStatus {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Invalidated => "invalidated",
+        }
+    }
+
+    pub(crate) fn from_stored(value: &str) -> Option<Self> {
+        match value {
+            "active" => Some(Self::Active),
+            "invalidated" => Some(Self::Invalidated),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -113,6 +179,17 @@ impl LessonText {
     pub const fn content_hash(&self) -> [u8; 32] {
         self.content_hash
     }
+
+    pub(crate) fn from_stored(
+        redacted: String,
+        content_hash: [u8; 32],
+    ) -> Result<Self, LessonError> {
+        let reconstructed = Self::new(&redacted)?;
+        if reconstructed.redacted != redacted || reconstructed.content_hash != content_hash {
+            return Err(LessonError::CorruptStored);
+        }
+        Ok(reconstructed)
+    }
 }
 
 impl fmt::Debug for LessonText {
@@ -133,6 +210,8 @@ pub enum LessonError {
     ControlCharacter,
     #[error("lesson text has {actual} characters; maximum is {max}")]
     TooLong { actual: usize, max: usize },
+    #[error("stored lesson text or hash is corrupt")]
+    CorruptStored,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -167,6 +246,9 @@ impl ContextLesson {
     pub const fn id(&self) -> LessonId {
         self.id
     }
+    pub(crate) fn rendered_line_chars(&self) -> usize {
+        3 + self.text.redacted().chars().count()
+    }
 
     pub const fn sequence(&self) -> u64 {
         self.sequence
@@ -174,6 +256,18 @@ impl ContextLesson {
 
     pub fn text(&self) -> &LessonText {
         &self.text
+    }
+
+    pub const fn provenance(&self) -> LessonProvenance {
+        self.provenance
+    }
+
+    pub const fn trust(&self) -> LessonTrust {
+        self.trust
+    }
+
+    pub const fn status(&self) -> LessonStatus {
+        self.status
     }
 
     fn is_explicit_instruction(&self) -> bool {
@@ -197,33 +291,72 @@ impl ContextBlock {
     pub const fn omitted_count(&self) -> usize {
         self.omitted_count
     }
+
+    pub(crate) fn from_wire(text: String, omitted_count: usize) -> Result<Self, LessonError> {
+        if text.chars().count() > MAX_CONTEXT_CHARS
+            || !text.starts_with(CONTEXT_HEADER)
+            || !text.ends_with(CONTEXT_FOOTER)
+        {
+            return Err(LessonError::CorruptStored);
+        }
+        Ok(Self {
+            text,
+            omitted_count,
+        })
+    }
 }
 
 pub fn render_context(candidates: &[ContextLesson], budget: usize) -> Option<ContextBlock> {
-    let mut eligible: Vec<&ContextLesson> = candidates
+    let eligible: Vec<&ContextLesson> = candidates
         .iter()
         .filter(|lesson| lesson.is_explicit_instruction())
         .collect();
+    render_context_counted(&eligible, eligible.len(), budget)
+}
+
+pub(crate) fn render_context_counted(
+    candidates: &[&ContextLesson],
+    eligible_count: usize,
+    budget: usize,
+) -> Option<ContextBlock> {
+    let mut eligible = candidates.to_vec();
     eligible.sort_by_key(|lesson| std::cmp::Reverse(lesson.sequence));
-    if eligible.is_empty() {
+    if eligible_count == 0 {
         return None;
     }
 
-    let mut selected = Vec::new();
-    for lesson in &eligible {
-        selected.push(*lesson);
-        let omitted = eligible.len() - selected.len();
-        if render_selected(&selected, omitted).chars().count() > budget {
-            selected.pop();
+    let fixed_chars = CONTEXT_HEADER.len() + CONTEXT_FOOTER.len();
+    let mut selected = Vec::with_capacity(eligible.len());
+    let mut selected_chars = 0;
+    for lesson in eligible {
+        let line_chars = lesson.rendered_line_chars();
+        let omitted = eligible_count.saturating_sub(selected.len() + 1);
+        let omitted_chars = if omitted == 0 {
+            0
+        } else {
+            "[ additional lesson(s) omitted]\n".len() + decimal_digits(omitted)
+        };
+        if fixed_chars + selected_chars + line_chars + omitted_chars > budget {
             break;
         }
+        selected.push(lesson);
+        selected_chars += line_chars;
     }
-    let omitted_count = eligible.len() - selected.len();
+    let omitted_count = eligible_count.saturating_sub(selected.len());
     let text = render_selected(&selected, omitted_count);
     (text.chars().count() <= budget).then_some(ContextBlock {
         text,
         omitted_count,
     })
+}
+
+fn decimal_digits(mut value: usize) -> usize {
+    let mut digits = 1;
+    while value >= 10 {
+        value /= 10;
+        digits += 1;
+    }
+    digits
 }
 
 fn render_selected(selected: &[&ContextLesson], omitted_count: usize) -> String {

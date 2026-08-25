@@ -251,7 +251,7 @@ fn command_registry_with_builtins_resolves() {
 }
 
 #[tokio::test]
-async fn command_sends_to_bridge() {
+async fn new_command_uses_bound_workspace() {
     let registry = cyril_core::commands::CommandRegistry::with_builtins(
         cyril_core::commands::HooksCommandSource::Agent,
         cyril_core::commands::WorkflowCommandSource::None,
@@ -259,9 +259,11 @@ async fn command_sends_to_bridge() {
     let session = SessionController::new();
     let (tx, mut rx) = tokio::sync::mpsc::channel(4);
     let sender = cyril_core::protocol::bridge::BridgeSender::from_sender(tx);
+    let workspace = tempfile::tempdir().expect("workspace");
 
     let (cmd, args) = registry.parse("/new").expect("should parse /new");
     let ctx = cyril_core::commands::CommandContext {
+        workspace: workspace.path(),
         session: &session,
         bridge: &sender,
         subagent_tracker: None,
@@ -272,7 +274,10 @@ async fn command_sends_to_bridge() {
     assert!(result.is_ok());
 
     let bridge_cmd = rx.recv().await;
-    assert!(matches!(bridge_cmd, Some(BridgeCommand::NewSession { .. })));
+    assert!(matches!(
+        bridge_cmd,
+        Some(BridgeCommand::NewSession { cwd }) if cwd == workspace.path()
+    ));
 }
 
 #[test]

@@ -1,8 +1,12 @@
 //! Public, transport-independent memory runtime protocol domain types.
 
-use std::fmt;
-
+use crate::lesson::{
+    ContextBlock, LessonId, LessonProvenance, LessonStatus, LessonText, LessonTrust,
+};
+use crate::project::ProjectScope;
 use crate::store::MemoryStoreVersions;
+
+use std::fmt;
 
 /// Protocol version understood by this crate.
 pub const PROTOCOL_VERSION: u16 = 1;
@@ -11,10 +15,32 @@ pub const PROTOCOL_VERSION: u16 = 1;
 pub(crate) const MAX_FRAME_SIZE: usize = 1_048_576;
 
 /// Operations supported by the runtime administration protocol.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MemoryRequest {
     /// Ask the runtime for its current health.
     Health,
+    /// Bind one already-resolved project to the runtime.
+    BindProject { project: ProjectScope },
+    /// Persist one explicit project lesson.
+    Teach {
+        project: ProjectScope,
+        text: LessonText,
+    },
+    /// Supersede one active project lesson.
+    Replace {
+        project: ProjectScope,
+        replaced_id: LessonId,
+        text: LessonText,
+    },
+    /// List at most 100 active project lessons.
+    List { project: ProjectScope },
+    /// Inspect one active or invalidated project lesson.
+    Inspect { project: ProjectScope, id: LessonId },
+    /// Prepare a bounded first-prompt context block.
+    Context {
+        project: ProjectScope,
+        max_chars: u16,
+    },
     /// Ask the runtime to stop after acknowledging this request.
     Shutdown,
 }
@@ -24,10 +50,167 @@ pub enum MemoryRequest {
 pub enum MemoryResponse {
     /// Current runtime health.
     Health(HealthResponse),
+    /// Acknowledgement that a project was resolved and bound.
+    ProjectBound,
+    /// Result of a teach or replacement attempt.
+    Taught(TeachResponse),
+    /// Bounded active lesson list.
+    Lessons(LessonListResponse),
+    /// Full lesson detail.
+    Lesson(LessonRecord),
+    /// Optional bounded first-prompt context.
+    Context(Option<ContextBlock>),
     /// Acknowledgement of an authenticated shutdown request.
     Shutdown,
     /// A bounded, typed protocol failure.
     Error(MemoryProtocolError),
+}
+
+pub(crate) struct LessonRecordMetadata {
+    provenance: LessonProvenance,
+    trust: LessonTrust,
+    status: LessonStatus,
+    supersedes_id: Option<LessonId>,
+    created_at_ms: i64,
+    updated_at_ms: i64,
+}
+
+impl LessonRecordMetadata {
+    pub(crate) const fn new(
+        provenance: LessonProvenance,
+        trust: LessonTrust,
+        status: LessonStatus,
+        supersedes_id: Option<LessonId>,
+        created_at_ms: i64,
+        updated_at_ms: i64,
+    ) -> Self {
+        Self {
+            provenance,
+            trust,
+            status,
+            supersedes_id,
+            created_at_ms,
+            updated_at_ms,
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct LessonRecord {
+    id: LessonId,
+    content: String,
+    provenance: LessonProvenance,
+    trust: LessonTrust,
+    status: LessonStatus,
+    supersedes_id: Option<LessonId>,
+    created_at_ms: i64,
+    updated_at_ms: i64,
+}
+
+impl LessonRecord {
+    pub(crate) fn new(id: LessonId, content: String, metadata: LessonRecordMetadata) -> Self {
+        Self {
+            id,
+            content,
+            provenance: metadata.provenance,
+            trust: metadata.trust,
+            status: metadata.status,
+            supersedes_id: metadata.supersedes_id,
+            created_at_ms: metadata.created_at_ms,
+            updated_at_ms: metadata.updated_at_ms,
+        }
+    }
+
+    pub const fn id(&self) -> LessonId {
+        self.id
+    }
+
+    pub fn content(&self) -> &str {
+        &self.content
+    }
+
+    pub const fn provenance(&self) -> LessonProvenance {
+        self.provenance
+    }
+
+    pub const fn trust(&self) -> LessonTrust {
+        self.trust
+    }
+
+    pub const fn status(&self) -> LessonStatus {
+        self.status
+    }
+
+    pub const fn supersedes_id(&self) -> Option<LessonId> {
+        self.supersedes_id
+    }
+
+    pub const fn created_at_ms(&self) -> i64 {
+        self.created_at_ms
+    }
+
+    pub const fn updated_at_ms(&self) -> i64 {
+        self.updated_at_ms
+    }
+}
+
+impl fmt::Debug for LessonRecord {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("LessonRecord")
+            .field("id", &self.id)
+            .field("content", &"[REDACTED]")
+            .field("provenance", &self.provenance)
+            .field("trust", &self.trust)
+            .field("status", &self.status)
+            .field("supersedes_id", &self.supersedes_id)
+            .field("created_at_ms", &self.created_at_ms)
+            .field("updated_at_ms", &self.updated_at_ms)
+            .finish()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TeachResponse {
+    lesson: LessonRecord,
+    created: bool,
+}
+
+impl TeachResponse {
+    pub(crate) const fn new(lesson: LessonRecord, created: bool) -> Self {
+        Self { lesson, created }
+    }
+
+    pub const fn lesson(&self) -> &LessonRecord {
+        &self.lesson
+    }
+
+    pub const fn created(&self) -> bool {
+        self.created
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LessonListResponse {
+    lessons: Vec<LessonRecord>,
+    omitted_count: usize,
+}
+
+impl LessonListResponse {
+    pub(crate) const fn new(lessons: Vec<LessonRecord>, omitted_count: usize) -> Self {
+        Self {
+            lessons,
+            omitted_count,
+        }
+    }
+
+    pub fn lessons(&self) -> &[LessonRecord] {
+        &self.lessons
+    }
+
+    pub const fn omitted_count(&self) -> usize {
+        self.omitted_count
+    }
 }
 
 /// Stable machine-readable protocol error codes.
@@ -41,6 +224,7 @@ pub enum MemoryErrorCode {
     InvalidRequest,
     DuplicateRequest,
     AlreadyRunning,
+    NotFound,
     PermissionDenied,
     MigrationFailed,
     Internal,
@@ -58,6 +242,7 @@ impl MemoryErrorCode {
             Self::DuplicateRequest => "duplicate_request",
             Self::AlreadyRunning => "already_running",
             Self::PermissionDenied => "permission_denied",
+            Self::NotFound => "not_found",
             Self::MigrationFailed => "migration_failed",
             Self::Internal => "internal",
         }
@@ -75,6 +260,7 @@ impl MemoryErrorCode {
             "already_running" => Self::AlreadyRunning,
             "permission_denied" => Self::PermissionDenied,
             "migration_failed" => Self::MigrationFailed,
+            "not_found" => Self::NotFound,
             "internal" => Self::Internal,
             _ => return None,
         })
@@ -95,6 +281,7 @@ impl MemoryErrorCode {
             Self::AlreadyRunning => "memory runtime is already running",
             Self::PermissionDenied => "memory runtime permission denied",
             Self::MigrationFailed => "memory store migration failed",
+            Self::NotFound => "project lesson not found",
             Self::Internal => "memory runtime internal error",
         }
     }
@@ -165,7 +352,7 @@ pub struct HealthResponse {
 }
 
 impl HealthResponse {
-    pub(crate) fn ready(instance_id: String, store_versions: MemoryStoreVersions) -> Self {
+    pub fn ready(instance_id: String, store_versions: MemoryStoreVersions) -> Self {
         Self {
             instance_id,
             status: RuntimeHealth::Ready,

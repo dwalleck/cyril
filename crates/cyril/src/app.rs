@@ -8,8 +8,10 @@ use ratatui::DefaultTerminal;
 use serde::Deserialize;
 use tokio::sync::mpsc;
 
-use crate::memory_runtime::MemoryRuntimeHandle;
-use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, CommandResultKind};
+use crate::memory_runtime::{MemoryRuntimeHandle, ProjectMemory};
+use cyril_core::commands::{
+    CommandContext, CommandRegistry, CommandResult, CommandResultKind, MemoryCommandAction,
+};
 use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
 use cyril_core::types::*;
@@ -76,6 +78,7 @@ pub struct App {
     voice: Option<cyril_core::voice::VoiceHandle>,
     memory_runtime: Option<MemoryRuntimeHandle>,
     memory_status: MemoryStatusView,
+    project_memory: Option<ProjectMemory>,
     /// Authoritative "is voice capturing?" intent. Flipped on each successful
     /// Start/Stop send (and cleared on engine `Error`). Toggling reads this —
     /// NOT the lagging `ui_state.voice_status()` projection — so rapid `/voice`
@@ -109,6 +112,36 @@ pub struct App {
     session_apply_calls: u64,
     #[cfg(test)]
     ui_apply_calls: u64,
+}
+fn memory_lesson_view(lesson: &cyril_memory::LessonRecord) -> MemoryLessonView {
+    let provenance = match lesson.provenance() {
+        cyril_memory::LessonProvenance::UserExplicit => MemoryLessonProvenance::UserExplicit,
+        cyril_memory::LessonProvenance::Document => MemoryLessonProvenance::Document,
+    };
+    let trust = match lesson.trust() {
+        cyril_memory::LessonTrust::Instruction => MemoryLessonTrust::Instruction,
+        cyril_memory::LessonTrust::Reference => MemoryLessonTrust::Reference,
+    };
+    let status = match lesson.status() {
+        cyril_memory::LessonStatus::Active => MemoryLessonStatus::Active,
+        cyril_memory::LessonStatus::Invalidated => MemoryLessonStatus::Invalidated,
+    };
+    MemoryLessonView::new(
+        lesson.id().to_string(),
+        lesson.content().to_owned(),
+        cyril_core::types::MemoryLessonMetadataView::new(
+            provenance,
+            trust,
+            status,
+            lesson.supersedes_id().map(|id| id.to_string()),
+            lesson.created_at_ms(),
+            lesson.updated_at_ms(),
+        ),
+    )
+}
+
+fn memory_teach_view(result: &cyril_memory::TeachResponse) -> MemoryTeachView {
+    MemoryTeachView::new(memory_lesson_view(result.lesson()), result.created())
 }
 
 impl App {
@@ -180,6 +213,7 @@ impl App {
             voice: spawn_voice_engine(),
             memory_runtime: None,
             memory_status: MemoryStatusView::default(),
+            project_memory: None,
             voice_active: false,
             startup_prompt: None,
             workflow_tracker: WorkflowTracker::new(),
@@ -279,7 +313,11 @@ impl App {
     pub fn set_mouse_captured(&mut self, captured: bool) {
         self.ui_state.set_mouse_captured(captured);
     }
-    pub(crate) fn set_memory_runtime(&mut self, memory_runtime: MemoryRuntimeHandle) {
+    pub(crate) fn set_memory_runtime(
+        &mut self,
+        memory_runtime: MemoryRuntimeHandle,
+        project_memory: Option<ProjectMemory>,
+    ) {
         match memory_runtime.status() {
             crate::memory_runtime::MemoryRuntimeStatus::Failed(failure)
             | crate::memory_runtime::MemoryRuntimeStatus::Degraded(failure) => {
@@ -289,6 +327,7 @@ impl App {
             | crate::memory_runtime::MemoryRuntimeStatus::Starting
             | crate::memory_runtime::MemoryRuntimeStatus::Ready(_) => {}
         }
+        self.project_memory = project_memory;
         let status = memory_runtime.status_view();
         self.ui_state.set_memory_status(status.clone());
         self.memory_status = status;
@@ -1274,6 +1313,61 @@ impl App {
         Ok(())
     }
 
+    async fn handle_memory_action(&mut self, action: MemoryCommandAction) {
+        let Some(memory) = self.project_memory.clone() else {
+            self.ui_state
+                .add_system_message("Memory is unavailable for this project.".to_owned());
+            return;
+        };
+        let rendered = match action {
+            MemoryCommandAction::Teach { text } => match cyril_memory::LessonText::new(&text) {
+                Ok(text) => match memory.teach(text).await {
+                    Ok(result) => {
+                        cyril_ui::memory_format::format_memory_teach(&memory_teach_view(&result))
+                    }
+                    Err(error) => format!("Memory error: {error}"),
+                },
+                Err(error) => format!("Memory lesson rejected: {error}"),
+            },
+            MemoryCommandAction::Replace { lesson_id, text } => {
+                match (
+                    lesson_id.parse::<cyril_memory::LessonId>(),
+                    cyril_memory::LessonText::new(&text),
+                ) {
+                    (Ok(lesson_id), Ok(text)) => match memory.replace(lesson_id, text).await {
+                        Ok(result) => cyril_ui::memory_format::format_memory_replace(
+                            &memory_teach_view(&result),
+                        ),
+                        Err(error) => format!("Memory error: {error}"),
+                    },
+                    (Err(error), _) => format!("Memory lesson ID rejected: {error}"),
+                    (_, Err(error)) => format!("Memory lesson rejected: {error}"),
+                }
+            }
+            MemoryCommandAction::List => match memory.list().await {
+                Ok(result) => {
+                    cyril_ui::memory_format::format_memory_list(&MemoryLessonListView::new(
+                        result.lessons().iter().map(memory_lesson_view).collect(),
+                        result.omitted_count(),
+                    ))
+                }
+                Err(error) => format!("Memory error: {error}"),
+            },
+            MemoryCommandAction::Inspect { lesson_id } => {
+                match lesson_id.parse::<cyril_memory::LessonId>() {
+                    Ok(lesson_id) => match memory.inspect(lesson_id).await {
+                        Ok(result) => cyril_ui::memory_format::format_memory_lesson(
+                            &memory_lesson_view(&result),
+                        ),
+                        Err(error) => format!("Memory error: {error}"),
+                    },
+                    Err(error) => format!("Memory lesson ID rejected: {error}"),
+                }
+            }
+        };
+        self.ui_state.add_system_message(rendered);
+    }
+
     async fn submit_input(&mut self) -> cyril_core::Result<()> {
         let text = self.ui_state.take_input();
         if text.is_empty() {
@@ -1285,6 +1379,7 @@ impl App {
         // Try as slash command
         if let Some((cmd, args)) = self.commands.parse(&text) {
             let ctx = CommandContext {
+                workspace: &self.cwd,
                 session: &self.session,
                 bridge: &self.bridge_sender,
                 subagent_tracker: Some(self.ui_state.subagent_tracker()),
@@ -1317,6 +1412,12 @@ impl App {
                         &self.bridge_sender,
                     )
                     .await;
+                }
+                Ok(CommandResult {
+                    kind: CommandResultKind::MemoryAction(action),
+                }) => {
+                    self.handle_memory_action(action).await;
+                    return Ok(());
                 }
                 Ok(result) => self.handle_command_result(result),
                 Err(e) => {
@@ -1429,6 +1530,9 @@ impl App {
                 let rendered = cyril_ui::memory_format::format_memory_status(&status);
                 self.ui_state
                     .add_command_output("memory".to_owned(), rendered);
+            }
+            CommandResultKind::MemoryAction(_) => {
+                tracing::error!("MemoryAction reached synchronous result routing");
             }
             CommandResultKind::ShowUsage {
                 account_query_started,
@@ -2486,7 +2590,7 @@ mod tests {
         ));
 
         let (mut app, mut commands) = test_app_with_command_rx();
-        app.set_memory_runtime(memory_runtime);
+        app.set_memory_runtime(memory_runtime, None);
         app.create_initial_session(root.path().to_path_buf(), None)
             .await;
         let command = tokio::time::timeout(Duration::from_secs(1), commands.recv())
@@ -3306,6 +3410,35 @@ mod tests {
                 _ => None,
             })
             .collect()
+    }
+
+    #[tokio::test]
+    async fn injected_context_is_wire_only_for_interactive_prompts() {
+        let main = SessionId::new("sess_interactive");
+        let (mut app, mut commands) = test_app_with_command_rx();
+        let deferred = app.handle_notification(session_created_frame(&main));
+        assert!(deferred.is_empty());
+        let original = "Original Ω prompt with attachment semantics";
+        app.ui_state.insert_text(original);
+        app.submit_input().await.expect("submit original");
+
+        let command = commands.recv().await.expect("prompt command");
+        assert!(matches!(
+            command,
+            BridgeCommand::SendPrompt {
+                session_id,
+                content_blocks,
+            } if session_id == main && content_blocks == [original.to_owned()]
+        ));
+        assert!(app.ui_state.messages().iter().any(
+            |message| matches!(message.kind(), ChatMessageKind::UserText(text) if text == original)
+        ));
+        assert!(!app.ui_state.messages().iter().any(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::UserText(text) if text.contains("<CYRIL_LESSONS")
+            )
+        }));
     }
 
     #[tokio::test]

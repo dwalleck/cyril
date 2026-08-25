@@ -2,6 +2,7 @@ mod app;
 mod memory_runtime;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use clap::Parser;
 use cyril_core::types::AgentEngine;
@@ -40,12 +41,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     setup_logging();
 
-    let cwd = cli
-        .cwd
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+    let cwd = startup_cwd(cli.cwd)?;
 
     let config_report = cyril_memory::load_config_report(&config_dir().join("config.toml"));
     let memory_config = config_report.memory().clone();
+    let memory_enabled = matches!(
+        &memory_config,
+        cyril_memory::MemoryConfigState::Valid(config) if config.enabled()
+    );
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
+    let memory_runtime = {
+        let _runtime_guard = rt.enter();
+        memory_runtime::MemoryRuntimeHandle::start(memory_config)
+    };
+    let project_memory = if memory_enabled {
+        match cyril_memory::ProjectScope::resolve(&cwd) {
+            Ok(project) => Some(memory_runtime.bind_project(project)),
+            Err(error) => {
+                tracing::warn!(error = %error, "memory project binding failed");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let first_prompt_context: Option<Arc<dyn cyril_core::protocol::bridge::FirstPromptContext>> =
+        project_memory.clone().map(|memory| {
+            Arc::new(memory) as Arc<dyn cyril_core::protocol::bridge::FirstPromptContext>
+        });
     let config = config_report.ordinary().clone();
 
     // Spawn bridge
@@ -67,6 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // v1 ships no tuning surface for it. Unlike the fields above,
             // which mirror `[agent]` config keys, this one is a constant.
             stall_threshold: cyril_core::protocol::bridge::DEFAULT_STALL_THRESHOLD,
+            first_prompt_context,
         },
         cwd.clone(),
     )?;
@@ -76,10 +102,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let oneshot_prompt = cli.prompt;
     let usage_log = cyril_core::usage::UsageLog::open(&config_dir().join("usage.sqlite3"))?;
 
-    // Build and run TUI
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()?;
+    // Build and run TUI.
 
     rt.block_on(async {
         // Who answers `/hooks` depends on which side owns a hook registry
@@ -103,7 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             usage_log,
             agent_engine,
         );
-        app.set_memory_runtime(memory_runtime::MemoryRuntimeHandle::start(memory_config));
+        app.set_memory_runtime(memory_runtime, project_memory);
 
         // Create initial session; a parsed `--prompt` rides along and is
         // submitted once the session is ready (cyril-0ffy).
@@ -162,6 +185,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+fn startup_cwd(configured: Option<PathBuf>) -> std::io::Result<PathBuf> {
+    match configured {
+        Some(cwd) => cwd.canonicalize(),
+        None => std::env::current_dir()?.canonicalize(),
+    }
+}
 
 fn setup_logging() {
     let log_dir = config_dir();
@@ -218,5 +247,17 @@ mod tests {
             Cli::try_parse_from(["cyril", "--agent-engine", "bogus"]).is_err(),
             "an unknown engine value is rejected, not silently defaulted"
         );
+    }
+    #[test]
+    fn configured_startup_cwd_is_canonical_and_missing_is_an_error() {
+        let directory = tempfile::tempdir().expect("temporary workspace");
+        let nested = directory.path().join("nested");
+        std::fs::create_dir(&nested).expect("create nested workspace");
+        let alias = nested.join("..").join("nested");
+        assert_eq!(
+            startup_cwd(Some(alias)).expect("canonical startup workspace"),
+            nested.canonicalize().expect("canonical fixture")
+        );
+        assert!(startup_cwd(Some(directory.path().join("missing"))).is_err());
     }
 }
