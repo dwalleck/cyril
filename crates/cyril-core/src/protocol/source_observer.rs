@@ -1,5 +1,6 @@
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
+use std::io::{self, Write};
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -181,11 +182,11 @@ impl SourceObserver {
                     active,
                     bounded_tool_snapshot(
                         index,
-                        key,
-                        title.clone(),
-                        kind.clone(),
-                        String::new(),
-                        String::new(),
+                        &key,
+                        title,
+                        kind,
+                        (String::new(), 0),
+                        (String::new(), 0),
                     ),
                 );
             }
@@ -228,23 +229,23 @@ impl SourceObserver {
         let key = tool.id().as_str().to_owned();
         let index = tool_index(active, &key);
         let input = match tool.raw_input() {
-            Some(value) => match serde_json::to_string(value) {
+            Some(value) => match bounded_json(value, TOOL_INPUT_BYTES) {
                 Ok(encoded) => encoded,
                 Err(error) => {
                     tracing::warn!(%error, tool_call_id = %tool.id(), "tool input serialization failed");
-                    String::new()
+                    (String::new(), 0)
                 }
             },
-            None => String::new(),
+            None => (String::new(), 0),
         };
         let result = tool_result(tool);
         self.try_emit(
             active,
             bounded_tool_snapshot(
                 index,
-                key,
-                tool.title().to_owned(),
-                tool_status(tool.status()).to_owned(),
+                &key,
+                tool.title(),
+                tool_status(tool.status()),
                 input,
                 result,
             ),
@@ -280,16 +281,16 @@ fn tool_index(active: &mut ActiveTurn, key: &str) -> usize {
     *active.tool_indices.entry(key.to_owned()).or_insert(next)
 }
 
-fn tool_result(tool: &ToolCall) -> String {
+fn tool_result(tool: &ToolCall) -> (String, usize) {
     if let Some(raw) = tool.raw_output() {
-        match serde_json::to_string(raw) {
+        match bounded_json(raw, TOOL_RESULT_BYTES) {
             Ok(encoded) => return encoded,
             Err(error) => {
                 tracing::warn!(%error, tool_call_id = %tool.id(), "tool output serialization failed");
             }
         }
     }
-    let mut result = String::new();
+    let mut result = BoundedText::new(TOOL_RESULT_BYTES);
     for content in tool.content() {
         match content {
             ToolCallContent::Text(text) => result.push_str(text),
@@ -299,31 +300,40 @@ fn tool_result(tool: &ToolCall) -> String {
                 new_text,
             } => {
                 result.push_str(path);
-                result.push('\n');
+                result.push_str("\n");
                 if let Some(old) = old_text {
                     result.push_str(old);
-                    result.push('\n');
+                    result.push_str("\n");
                 }
                 result.push_str(new_text);
             }
         }
     }
-    result
+    result.finish()
+}
+
+fn bounded_json(
+    value: &serde_json::Value,
+    max_bytes: usize,
+) -> Result<(String, usize), serde_json::Error> {
+    let mut output = BoundedText::new(max_bytes);
+    serde_json::to_writer(&mut output, value)?;
+    Ok(output.finish())
 }
 
 fn bounded_tool_snapshot(
     tool_index: usize,
-    tool_id: String,
-    name: String,
-    status: String,
-    input: String,
-    result: String,
+    tool_id: &str,
+    name: &str,
+    status: &str,
+    input: (String, usize),
+    result: (String, usize),
 ) -> SourceTurnEventKind {
-    let (tool_id, tool_id_dropped) = bounded_utf8(tool_id, TOOL_ID_BYTES);
-    let (name, name_dropped) = bounded_utf8(name, TOOL_NAME_BYTES);
-    let (status, status_dropped) = bounded_utf8(status, TOOL_STATUS_BYTES);
-    let (input, input_dropped) = bounded_utf8(input, TOOL_INPUT_BYTES);
-    let (result, result_dropped) = bounded_utf8(result, TOOL_RESULT_BYTES);
+    let (tool_id, tool_id_dropped) = BoundedText::from_str(tool_id, TOOL_ID_BYTES);
+    let (name, name_dropped) = BoundedText::from_str(name, TOOL_NAME_BYTES);
+    let (status, status_dropped) = BoundedText::from_str(status, TOOL_STATUS_BYTES);
+    let (input, input_dropped) = input;
+    let (result, result_dropped) = result;
     let source_truncated_chars = tool_id_dropped
         .saturating_add(name_dropped)
         .saturating_add(status_dropped)
@@ -340,16 +350,57 @@ fn bounded_tool_snapshot(
     }
 }
 
-fn bounded_utf8(value: String, max_bytes: usize) -> (String, usize) {
-    if value.len() <= max_bytes {
-        return (value, 0);
+struct BoundedText {
+    value: String,
+    max_bytes: usize,
+    total_chars: usize,
+}
+
+impl BoundedText {
+    fn new(max_bytes: usize) -> Self {
+        Self {
+            value: String::with_capacity(max_bytes),
+            max_bytes,
+            total_chars: 0,
+        }
     }
-    let mut end = max_bytes;
-    while !value.is_char_boundary(end) {
-        end = end.saturating_sub(1);
+
+    fn from_str(value: &str, max_bytes: usize) -> (String, usize) {
+        let mut bounded = Self::new(max_bytes);
+        bounded.push_str(value);
+        bounded.finish()
     }
-    let dropped = value[end..].chars().count();
-    (value[..end].to_owned(), dropped)
+
+    fn push_str(&mut self, value: &str) {
+        self.total_chars = self.total_chars.saturating_add(value.chars().count());
+        let available = self.max_bytes.saturating_sub(self.value.len());
+        if available == 0 {
+            return;
+        }
+        let mut end = value.len().min(available);
+        while end > 0 && !value.is_char_boundary(end) {
+            end -= 1;
+        }
+        self.value.push_str(&value[..end]);
+    }
+
+    fn finish(self) -> (String, usize) {
+        let kept_chars = self.value.chars().count();
+        (self.value, self.total_chars.saturating_sub(kept_chars))
+    }
+}
+
+impl Write for BoundedText {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        let value = std::str::from_utf8(buffer)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        self.push_str(value);
+        Ok(buffer.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 fn utf8_fragments(value: &str, max_bytes: usize) -> Vec<&str> {
@@ -395,7 +446,7 @@ fn now_ms() -> i64 {
 mod tests {
     #![expect(clippy::expect_used)]
 
-    use super::{IngressTracker, SourceObserver, utf8_fragments};
+    use super::{IngressTracker, SourceObserver, TOOL_INPUT_BYTES, bounded_json, utf8_fragments};
     use crate::types::{
         AgentMessage, AgentThought, Notification, PromptEnvelope, RoutedNotification, SessionId,
         SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind, ToolCall, ToolCallContent,
@@ -554,6 +605,11 @@ mod tests {
         observer
             .begin(session.clone(), TurnId::new(1), &["prompt".to_owned()])
             .expect("source id");
+        let raw_input = serde_json::json!({"payload": "🦀".repeat(20_000)});
+        let (expected_input, input_dropped) =
+            bounded_json(&raw_input, TOOL_INPUT_BYTES).expect("bounded JSON");
+        assert_eq!(expected_input.len(), TOOL_INPUT_BYTES);
+        assert_eq!(input_dropped, 13_861, "C3 dropped input scalars");
         observer.observe(&RoutedNotification::scoped(
             session,
             Notification::ToolCallStarted(
@@ -562,7 +618,7 @@ mod tests {
                     "🦀".repeat(3_000),
                     ToolKind::Read,
                     ToolCallStatus::Completed,
-                    Some(serde_json::json!({"payload": "🦀".repeat(20_000)})),
+                    Some(raw_input),
                 )
                 .with_content(vec![ToolCallContent::Text("🦀".repeat(20_000))]),
             ),
@@ -592,6 +648,9 @@ mod tests {
             payload_bytes <= crate::types::source_turn::SOURCE_FRAGMENT_BYTES,
             "C3 tool snapshot exceeded source event bound"
         );
+        assert_eq!(snapshot.3, &expected_input, "C3 emitted input prefix");
+        assert!(snapshot.3.is_char_boundary(snapshot.3.len()));
+        assert_eq!(*snapshot.5, 28_669, "C3 aggregate dropped scalar metadata");
         assert!(*snapshot.5 > 0, "C3 source truncation was not recorded");
     }
 
