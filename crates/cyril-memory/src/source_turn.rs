@@ -745,6 +745,8 @@ fn put_string(hasher: &mut Sha256, value: &str) {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::expect_used)]
+
     use super::{
         CaptureBatch, MAX_TOOL_CHARS, SourceSessionId, SourceTurnDisposition, SourceTurnDraft,
         SourceTurnError, SourceTurnEvent, SourceTurnEventKind, SourceTurnId,
