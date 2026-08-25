@@ -15,6 +15,8 @@ use tokio::time::{sleep, timeout};
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(5);
 const ATTEMPT_TIMEOUT: Duration = Duration::from_millis(250);
+// Only the Unix-socket raw-wire helpers use this; Windows builds it dead otherwise.
+#[cfg(unix)]
 const RAW_TIMEOUT: Duration = Duration::from_secs(2);
 const FRAME_CAP: usize = 1_048_576;
 

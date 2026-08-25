@@ -1207,10 +1207,19 @@ mod tests {
         ));
 
         // A relocated worktree: `.git` names a gitdir that no longer exists.
+        // The gitdir is an absolute path under the tempdir: a POSIX literal
+        // like `/old/primary` is drive-relative on Windows and would be joined
+        // onto the workspace's `\\?\C:` prefix, changing the reported text.
         let stale = tempfile::tempdir().expect("stale worktree");
+        let missing_gitdir = stale
+            .path()
+            .join("old-primary")
+            .join(".git")
+            .join("worktrees")
+            .join("x");
         std::fs::write(
             stale.path().join(".git"),
-            "gitdir: /old/primary/.git/worktrees/x\n",
+            format!("gitdir: {}\n", missing_gitdir.display()),
         )
         .expect("stale marker");
         let unbound = handle.bind_project(stale.path());
@@ -1227,7 +1236,10 @@ mod tests {
         else {
             panic!("unbound status view expected");
         };
-        assert!(reason.contains("/old/primary/.git/worktrees/x"), "{reason}");
+        assert!(
+            reason.contains("old-primary") && reason.contains("worktrees"),
+            "{reason}"
+        );
     }
 
     #[cfg(unix)]
