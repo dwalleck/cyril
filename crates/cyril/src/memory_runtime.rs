@@ -3,9 +3,9 @@ use std::process::Stdio;
 use std::time::Duration;
 
 use cyril_memory::{
-    AdminClient, ClientError, ContextBlock, HealthResponse, LessonId, LessonListResponse,
-    LessonRecord, LessonText, MAX_CONTEXT_CHARS, MemoryConfig, MemoryConfigState, MemoryEndpoint,
-    MemoryErrorCode, MemoryPaths, ProjectScope, RuntimeHealth, RuntimeLaunchConfig, TeachResponse,
+    AdminClient, ClientError, HealthResponse, LessonId, LessonListResponse, LessonRecord,
+    LessonText, MemoryConfig, MemoryConfigState, MemoryEndpoint, MemoryErrorCode, MemoryPaths,
+    ProjectScope, PromptContext, RuntimeHealth, RuntimeLaunchConfig, TeachResponse,
 };
 use process_wrap::tokio::{ChildWrapper, CommandWrap, KillOnDrop};
 use thiserror::Error;
@@ -195,38 +195,28 @@ impl ProjectMemory {
         Ok(self.client().await?.inspect(&self.project, id).await?)
     }
 
-    pub(crate) async fn context(
-        &self,
-        max_chars: u16,
-    ) -> Result<Option<ContextBlock>, ProjectMemoryError> {
-        Ok(self
-            .client()
-            .await?
-            .context(&self.project, max_chars)
-            .await?)
-    }
-
-    /// The bounded first-prompt context block, or `None` when the project
-    /// has no active lessons. Every failure names its cause so the caller
-    /// can log it and decide whether the session stays eligible.
+    /// Prepare the bounded first-prompt context for the original first block.
+    /// The returned context remains opaque to the runtime adapter; only the
+    /// final insertion seam consumes its text.
     pub(crate) async fn first_prompt_context(
         &self,
-    ) -> Result<Option<String>, FirstPromptContextError> {
-        match tokio::time::timeout(
-            FIRST_PROMPT_CONTEXT_TIMEOUT,
-            self.context(MAX_CONTEXT_CHARS),
-        )
+        query: String,
+    ) -> Result<Option<PromptContext>, FirstPromptContextError> {
+        match tokio::time::timeout(FIRST_PROMPT_CONTEXT_TIMEOUT, async {
+            let mut client = self.client().await.map_err(|error| match error {
+                ProjectMemoryError::Unavailable(reason) => {
+                    FirstPromptContextError::Unavailable(reason)
+                }
+                ProjectMemoryError::Client(error) => FirstPromptContextError::Client(error),
+            })?;
+            client
+                .prepare_prompt(&self.project, query)
+                .await
+                .map_err(FirstPromptContextError::Client)
+        })
         .await
         {
-            Ok(Ok(block)) => Ok(block
-                .map(|block| block.text().to_owned())
-                .filter(|text| !text.is_empty())),
-            Ok(Err(ProjectMemoryError::Unavailable(reason))) => {
-                Err(FirstPromptContextError::Unavailable(reason))
-            }
-            Ok(Err(ProjectMemoryError::Client(error))) => {
-                Err(FirstPromptContextError::Client(error))
-            }
+            Ok(result) => result,
             Err(_) => Err(FirstPromptContextError::TimedOut(
                 FIRST_PROMPT_CONTEXT_TIMEOUT,
             )),
@@ -1097,7 +1087,7 @@ mod tests {
             (
                 MemoryRuntimeStatus::Ready(HealthResponse::ready(
                     "test-instance".to_owned(),
-                    cyril_memory::MemoryStoreVersions::new(2, 1),
+                    cyril_memory::MemoryStoreVersions::new(3, 1),
                 )),
                 ProjectMemoryUnavailable::RuntimeLost,
             ),
@@ -1118,7 +1108,7 @@ mod tests {
         let (status_sender, status) =
             watch::channel(MemoryRuntimeStatus::Ready(HealthResponse::ready(
                 "closed-instance".to_owned(),
-                cyril_memory::MemoryStoreVersions::new(2, 1),
+                cyril_memory::MemoryStoreVersions::new(3, 1),
             )));
         let runtime_dir = tempfile::tempdir().expect("runtime directory");
         let endpoint =
@@ -1249,7 +1239,10 @@ mod tests {
         let workspace = tempfile::tempdir().expect("workspace");
         let memory = runtime.bind(workspace.path());
         assert_eq!(
-            memory.first_prompt_context().await.expect("no lessons yet"),
+            memory
+                .first_prompt_context("first query".to_owned())
+                .await
+                .expect("no lessons yet"),
             None
         );
         memory
@@ -1257,25 +1250,25 @@ mod tests {
             .await
             .expect("teach");
         let block = memory
-            .first_prompt_context()
+            .first_prompt_context("prefer boring Rust".to_owned())
             .await
-            .expect("context")
+            .expect("context request")
             .expect("one lesson");
-        assert!(block.starts_with("<CYRIL_LESSONS"));
-        assert!(block.contains("- prefer boring Rust"));
+        assert!(block.text().starts_with("<CYRIL_LESSONS"));
+        assert!(block.text().contains("- prefer boring Rust"));
 
         runtime.set_starting();
         let error = memory
-            .first_prompt_context()
+            .first_prompt_context("prefer boring Rust".to_owned())
             .await
             .expect_err("starting is reported, not swallowed");
         assert!(error.retry_on_next_prompt(), "{error}");
         runtime.set_ready();
         assert!(
             memory
-                .first_prompt_context()
+                .first_prompt_context("prefer boring Rust".to_owned())
                 .await
-                .expect("ready again")
+                .expect("context request")
                 .is_some()
         );
         runtime.shutdown().await;

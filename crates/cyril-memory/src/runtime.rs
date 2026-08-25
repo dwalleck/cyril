@@ -283,12 +283,26 @@ fn execute_store_request(
             Ok(lesson) => MemoryResponse::Lesson(lesson_record(&lesson, None)),
             Err(error) => operation_error(error),
         },
-        MemoryRequest::Context { project, max_chars } => {
-            match stores.context(&project, usize::from(max_chars)) {
-                Ok(block) => MemoryResponse::Context(block),
+        MemoryRequest::PreparePrompt { project, query } => {
+            match stores.prepare_prompt(&project, &query) {
+                Ok(context) => MemoryResponse::Prompt(context),
                 Err(error) => operation_error(error),
             }
         }
+        MemoryRequest::CaptureBatch { project, batch } => {
+            match stores.capture_batch(&project, &batch) {
+                Ok(()) => MemoryResponse::Captured,
+                Err(error) => operation_error(error),
+            }
+        }
+        MemoryRequest::ListTurns { project } => match stores.list_turns(&project) {
+            Ok(turns) => MemoryResponse::Turns(turns),
+            Err(error) => operation_error(error),
+        },
+        MemoryRequest::InspectTurn { project, id } => match stores.inspect_turn(&project, id) {
+            Ok(turn) => MemoryResponse::Turn(turn),
+            Err(error) => operation_error(error),
+        },
         MemoryRequest::Health | MemoryRequest::Shutdown => {
             MemoryResponse::Error(MemoryProtocolError::new(MemoryErrorCode::Internal))
         }
@@ -325,9 +339,13 @@ fn bounded_preview(content: &str, limit: usize) -> String {
 
 fn operation_error(error: StoreError) -> MemoryResponse {
     let code = match error {
-        StoreError::LessonNotFound => MemoryErrorCode::NotFound,
+        StoreError::LessonNotFound | StoreError::SourceTurnNotFound => MemoryErrorCode::NotFound,
         StoreError::LessonSuperseded => MemoryErrorCode::AlreadySuperseded,
-        StoreError::CorruptLesson { .. } => MemoryErrorCode::CorruptLesson,
+        StoreError::CorruptLesson { .. } | StoreError::CorruptSource { .. } => {
+            MemoryErrorCode::CorruptLesson
+        }
+        StoreError::SourceTurnConflict => MemoryErrorCode::IntegrityConflict,
+        StoreError::SourceInvalid(_) => MemoryErrorCode::InvalidRequest,
         StoreError::Permission { .. } => MemoryErrorCode::PermissionDenied,
         _ => MemoryErrorCode::Internal,
     };
@@ -349,6 +367,10 @@ fn map_store_error(error: &StoreError) -> MemoryErrorCode {
     match error {
         StoreError::AlreadyRunning { .. } => MemoryErrorCode::AlreadyRunning,
         StoreError::Permission { .. } => MemoryErrorCode::PermissionDenied,
+        StoreError::SourceTurnNotFound => MemoryErrorCode::NotFound,
+        StoreError::SourceTurnConflict => MemoryErrorCode::IntegrityConflict,
+        StoreError::SourceInvalid(_) => MemoryErrorCode::InvalidRequest,
+        StoreError::CorruptSource { .. } => MemoryErrorCode::MigrationFailed,
         StoreError::Missing { .. }
         | StoreError::Unreadable { .. }
         | StoreError::Malformed { .. }

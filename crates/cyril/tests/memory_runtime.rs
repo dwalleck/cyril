@@ -2,12 +2,12 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
-#[cfg(windows)]
 use cyril_memory::ClientError;
 use cyril_memory::{
-    AdminClient, AdminCredential, HealthResponse, LessonStatus, LessonText, MemoryEndpoint,
-    MemoryErrorCode, MemoryPaths, PROTOCOL_VERSION, ProjectScope, RuntimeHealth,
-    RuntimeLaunchConfig,
+    AdminClient, AdminCredential, CaptureBatch, HealthResponse, LessonStatus, LessonText,
+    MemoryEndpoint, MemoryErrorCode, MemoryPaths, PROTOCOL_VERSION, ProjectScope, RuntimeHealth,
+    RuntimeLaunchConfig, SourceSessionId, SourceTurnDisposition, SourceTurnEvent,
+    SourceTurnEventKind, SourceTurnId,
 };
 use tempfile::TempDir;
 use tokio::process::{Child, Command};
@@ -129,14 +129,14 @@ fn assert_ready(health: &HealthResponse) -> Result<()> {
     let Some(versions) = health.store_versions() else {
         bail!("ready health omitted store versions");
     };
-    assert_eq!(versions.memory(), 2);
+    assert_eq!(versions.memory(), 3);
     assert_eq!(versions.knowledge(), 1);
     assert!(health.error().is_none());
     Ok(())
 }
 
 #[tokio::test]
-async fn real_process_reports_ready_v1_and_exact_store_schema() -> Result<()> {
+async fn real_process_reports_ready_v3_and_exact_store_schema() -> Result<()> {
     let runtime = RunningRuntime::start().await?;
     let paths = runtime.paths()?;
     {
@@ -146,8 +146,20 @@ async fn real_process_reports_ready_v1_and_exact_store_schema() -> Result<()> {
     }
     assert_store_schema(
         paths.memory_store_path(),
-        2,
-        &["lessons", "memory_audit", "projects", "schema_version"],
+        3,
+        &[
+            "lessons",
+            "memory_audit",
+            "projects",
+            "schema_version",
+            "source_turn_audit",
+            "source_turns",
+            "source_turns_fts",
+            "source_turns_fts_config",
+            "source_turns_fts_data",
+            "source_turns_fts_docsize",
+            "source_turns_fts_idx",
+        ],
     )?;
     assert_store_schema(paths.knowledge_store_path(), 1, &["schema_version"])?;
     runtime.shutdown().await
@@ -162,8 +174,20 @@ async fn real_process_shutdown_and_restart_preserve_stores() -> Result<()> {
     let paths = restarted.paths()?;
     assert_store_schema(
         paths.memory_store_path(),
-        2,
-        &["lessons", "memory_audit", "projects", "schema_version"],
+        3,
+        &[
+            "lessons",
+            "memory_audit",
+            "projects",
+            "schema_version",
+            "source_turn_audit",
+            "source_turns",
+            "source_turns_fts",
+            "source_turns_fts_config",
+            "source_turns_fts_data",
+            "source_turns_fts_docsize",
+            "source_turns_fts_idx",
+        ],
     )?;
     assert_store_schema(paths.knowledge_store_path(), 1, &["schema_version"])?;
     restarted.shutdown().await
@@ -219,7 +243,7 @@ async fn real_runtime_restart_preserves_lessons_and_audit() -> Result<()> {
     assert_eq!(listed.lessons().len(), 1);
     assert_eq!(listed.lessons()[0].id(), replacement_id);
     let context = client
-        .context(&project, 4_000)
+        .prepare_prompt(&project, "prefer boring Rust".to_owned())
         .await?
         .context("context block")?;
     assert!(context.text().contains("prefer boring Rust"));
@@ -240,6 +264,98 @@ async fn real_runtime_restart_preserves_lessons_and_audit() -> Result<()> {
     restarted.shutdown().await
 }
 
+#[tokio::test]
+async fn c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe() -> Result<()> {
+    let workspace = TempDir::new()?;
+    let project = ProjectScope::resolve(workspace.path())?;
+    let source_turn_id = SourceTurnId::from_bytes([7; 16]);
+    let session_id = SourceSessionId::new("session-c3")?;
+    let started = SourceTurnEvent::new(
+        session_id.clone(),
+        source_turn_id,
+        0,
+        SourceTurnEventKind::Started {
+            bridge_turn_id: 0,
+            started_at_ms: 1,
+            block_count: 1,
+        },
+    )?;
+    let prompt = SourceTurnEvent::new(
+        session_id.clone(),
+        source_turn_id,
+        1,
+        SourceTurnEventKind::PromptFragment {
+            block_index: 0,
+            fragment_index: 0,
+            text: "distinctive restart decision".to_owned(),
+            is_last: true,
+        },
+    )?;
+    let assistant = SourceTurnEvent::new(
+        session_id.clone(),
+        source_turn_id,
+        2,
+        SourceTurnEventKind::AssistantFragment {
+            fragment_index: 0,
+            text: "keep the protocol typed".to_owned(),
+        },
+    )?;
+    let finished = SourceTurnEvent::new(
+        session_id.clone(),
+        source_turn_id,
+        3,
+        SourceTurnEventKind::Finished {
+            disposition: SourceTurnDisposition::Completed,
+            finished_at_ms: 2,
+        },
+    )?;
+    let first_batch = CaptureBatch::new(vec![started, prompt])?;
+    let second_batch = CaptureBatch::new(vec![assistant, finished])?;
+
+    let runtime = RunningRuntime::start().await?;
+    let mut client = runtime.client().await?;
+    client.capture_batch(&project, first_batch.clone()).await?;
+    drop(client);
+    let (data_root, runtime_root) = runtime.shutdown_with_roots().await?;
+
+    let restarted = RunningRuntime::start_in_roots(data_root, runtime_root).await?;
+    let mut client = restarted.client().await?;
+    client.capture_batch(&project, second_batch.clone()).await?;
+    client.capture_batch(&project, first_batch).await?;
+    client.capture_batch(&project, second_batch).await?;
+    let turns = client.list_turns(&project).await?;
+    assert_eq!(
+        turns.turns().len(),
+        1,
+        "C3: replay must keep one durable row"
+    );
+    assert_eq!(
+        turns.turns()[0].status(),
+        cyril_memory::SourceTurnStatus::Completed,
+        "C3: terminal replay must remain completed"
+    );
+
+    let conflict = CaptureBatch::new(vec![SourceTurnEvent::new(
+        session_id,
+        source_turn_id,
+        1,
+        SourceTurnEventKind::PromptFragment {
+            block_index: 0,
+            fragment_index: 0,
+            text: "conflicting source".to_owned(),
+            is_last: true,
+        },
+    )?])?;
+    let error = client
+        .capture_batch(&project, conflict)
+        .await
+        .expect_err("C3: conflicting replay must fail");
+    assert!(
+        matches!(error, ClientError::Protocol(ref error) if error.code() == MemoryErrorCode::IntegrityConflict),
+        "C3: expected typed integrity conflict, got {error}"
+    );
+    restarted.shutdown().await
+}
 #[tokio::test]
 async fn forced_kill_allows_reopen_with_same_roots() -> Result<()> {
     let runtime = RunningRuntime::start_in_roots(TempDir::new()?, TempDir::new()?).await?;
@@ -495,7 +611,7 @@ mod unix_protocol {
 
         let response = send_body(
             &runtime.endpoint_path,
-            &request_body(1, 1, None, Some("health"), Value::Null),
+            &request_body(2, 1, None, Some("health"), Value::Null),
         )
         .await?;
         assert_eq!(response_code(response)?, "unauthorized");
@@ -504,7 +620,7 @@ mod unix_protocol {
         let wrong_auth = "0".repeat(64);
         let response = send_body(
             &runtime.endpoint_path,
-            &request_body(1, 1, Some(&wrong_auth), Some("health"), Value::Null),
+            &request_body(2, 1, Some(&wrong_auth), Some("health"), Value::Null),
         )
         .await?;
         assert_eq!(response_code(response)?, "unauthorized");
@@ -512,7 +628,7 @@ mod unix_protocol {
 
         let response = send_body(
             &runtime.endpoint_path,
-            &request_body(1, 0, Some(&auth), Some("health"), Value::Null),
+            &request_body(2, 0, Some(&auth), Some("health"), Value::Null),
         )
         .await?;
         assert_eq!(response_code(response)?, "invalid_request");
@@ -520,7 +636,7 @@ mod unix_protocol {
 
         let response = send_body(
             &runtime.endpoint_path,
-            &request_body(2, 2, Some(&auth), Some("health"), Value::Null),
+            &request_body(1, 2, Some(&auth), Some("health"), Value::Null),
         )
         .await?;
         assert_eq!(response_code(response)?, "unsupported_version");
@@ -528,14 +644,14 @@ mod unix_protocol {
 
         let response = send_body(
             &runtime.endpoint_path,
-            &request_body(1, 3, Some(&auth), Some("unknown"), Value::Null),
+            &request_body(2, 3, Some(&auth), Some("unknown"), Value::Null),
         )
         .await?;
         assert_eq!(response_code(response)?, "unknown_operation");
         followup_health(&runtime).await?;
 
         let mut duplicate = UnixStream::connect(&runtime.endpoint_path).await?;
-        let first = request_body(1, 7, Some(&auth), Some("health"), Value::Null);
+        let first = request_body(2, 7, Some(&auth), Some("health"), Value::Null);
         let first_len = u32::try_from(first.len())?;
         duplicate.write_all(&first_len.to_be_bytes()).await?;
         duplicate.write_all(&first).await?;
@@ -543,7 +659,7 @@ mod unix_protocol {
             .await?
             .context("health response missing")?;
         assert_eq!(first_response["payload"]["kind"], "health");
-        let second = request_body(1, 7, Some(&auth), Some("health"), Value::Null);
+        let second = request_body(2, 7, Some(&auth), Some("health"), Value::Null);
         let second_len = u32::try_from(second.len())?;
         duplicate.write_all(&second_len.to_be_bytes()).await?;
         duplicate.write_all(&second).await?;

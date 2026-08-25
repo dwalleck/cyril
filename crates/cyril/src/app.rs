@@ -132,11 +132,12 @@ pub struct App {
 enum MemoryTaskResult {
     /// Rendered `/memory` command output, ready to show.
     CommandOutput(String),
-    /// A fresh session's first prompt, held back while its lessons loaded.
+    /// A fresh session's first prompt, held back while its query-aware
+    /// context loads.
     FirstPromptContext {
         session_id: SessionId,
         content_blocks: Vec<String>,
-        outcome: Result<Option<String>, FirstPromptContextError>,
+        outcome: Result<Option<cyril_memory::PromptContext>, FirstPromptContextError>,
     },
 }
 
@@ -398,7 +399,7 @@ impl App {
         content_blocks: Vec<String>,
     ) -> cyril_core::Result<()> {
         if self.first_prompt_lessons_pending.as_ref() == Some(&session_id)
-            && !content_blocks.is_empty()
+            && let Some(query) = content_blocks.first().cloned()
             && let Some(memory) = self.project_binding.memory()
         {
             // Consumed now — the result handler re-arms it only when the
@@ -410,7 +411,7 @@ impl App {
             let memory = memory.clone();
             let results = self.memory_task_tx.clone();
             tokio::spawn(async move {
-                let outcome = memory.first_prompt_context().await;
+                let outcome = memory.first_prompt_context(query).await;
                 if results
                     .send(MemoryTaskResult::FirstPromptContext {
                         session_id,
@@ -419,7 +420,7 @@ impl App {
                     })
                     .is_err()
                 {
-                    tracing::debug!("first-prompt lessons dropped: app is gone");
+                    tracing::debug!("first-prompt context dropped: app is gone");
                 }
             });
             return Ok(());
@@ -464,15 +465,13 @@ impl App {
                 outcome,
             } => {
                 match outcome {
-                    Ok(Some(context)) => content_blocks.insert(0, context),
+                    Ok(Some(context)) => content_blocks.insert(0, context.text().to_owned()),
                     Ok(None) => {}
                     Err(error) => {
-                        // Fail open with the concrete cause on record; the
-                        // prompt itself is never delayed past the bound.
                         tracing::warn!(
                             session_id = %session_id,
                             error = %error,
-                            "first-prompt lessons unavailable; prompt sent without them"
+                            "first-prompt context unavailable; prompt sent without it"
                         );
                         if error.retry_on_next_prompt()
                             && self.session.id() == Some(&session_id)

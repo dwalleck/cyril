@@ -11,14 +11,17 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use crate::client::AdminCredential;
 use crate::encoding::decode_fixed_hex;
 use crate::lesson::{
-    ContextBlock, LESSON_PREVIEW_CHARS, LessonId, LessonProvenance, LessonStatus, LessonText,
-    LessonTrust, MAX_CONTEXT_CHARS,
+    LESSON_PREVIEW_CHARS, LessonId, LessonProvenance, LessonStatus, LessonText, LessonTrust,
 };
 use crate::project::ProjectScope;
 use crate::protocol::{
     HealthResponse, LessonListResponse, LessonRecord, LessonRecordMetadata, MAX_FRAME_SIZE,
     MemoryErrorCode, MemoryProtocolError, MemoryRequest, MemoryResponse, PROTOCOL_VERSION,
-    RuntimeHealth, TeachResponse,
+    PromptContext, RuntimeHealth, SourceTurnListResponse, SourceTurnRecord, TeachResponse,
+};
+use crate::source_turn::{
+    CaptureBatch, MAX_CAPTURE_EVENTS, SourceSessionId, SourceTurnDisposition, SourceTurnError,
+    SourceTurnEvent, SourceTurnEventKind, SourceTurnId,
 };
 
 pub(crate) trait AsyncStream: AsyncRead + AsyncWrite + Unpin + Send {}
@@ -108,7 +111,6 @@ struct ReplacePayload {
     replaced_id: String,
     text: String,
 }
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct InspectPayload {
@@ -118,11 +120,64 @@ struct InspectPayload {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ContextPayload {
+struct PreparePromptPayload {
     project: ProjectPayload,
-    max_chars: u16,
+    query: String,
+}
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CapturePayload {
+    project: ProjectPayload,
+    events: Vec<SourceEventPayload>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SourceEventPayload {
+    session_id: String,
+    source_turn_id: String,
+    sequence: u64,
+    kind: SourceEventKindPayload,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "kind", deny_unknown_fields)]
+enum SourceEventKindPayload {
+    Started {
+        bridge_turn_id: u64,
+        started_at_ms: i64,
+        block_count: usize,
+    },
+    PromptFragment {
+        block_index: usize,
+        fragment_index: usize,
+        text: String,
+        is_last: bool,
+    },
+    AssistantFragment {
+        fragment_index: usize,
+        text: String,
+    },
+    ToolSnapshot {
+        tool_index: usize,
+        tool_id: String,
+        name: String,
+        status: String,
+        input: String,
+        result: String,
+    },
+    Finished {
+        disposition: SourceTurnDisposition,
+        finished_at_ms: i64,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InspectTurnPayload {
+    project: ProjectPayload,
+    id: String,
+}
 #[derive(Debug, Serialize)]
 struct ResponseEnvelope<'a> {
     version: u16,
@@ -154,8 +209,18 @@ enum ResponsePayload<'a> {
     },
     #[serde(rename = "lesson")]
     Lesson { lesson: LessonEnvelope<'a> },
-    #[serde(rename = "context")]
-    Context { block: Option<ContextEnvelope<'a>> },
+    #[serde(rename = "captured")]
+    Captured,
+    #[serde(rename = "prompt")]
+    Prompt { context: Option<PromptEnvelope<'a>> },
+    #[serde(rename = "turns")]
+    Turns {
+        turns: Vec<SourceTurnEnvelope<'a>>,
+        omitted_count: usize,
+        corrupt_count: usize,
+    },
+    #[serde(rename = "turn")]
+    Turn { turn: SourceTurnEnvelope<'a> },
     #[serde(rename = "shutdown")]
     Shutdown,
     #[serde(rename = "error")]
@@ -192,9 +257,23 @@ struct LessonEnvelope<'a> {
 }
 
 #[derive(Debug, Serialize)]
-struct ContextEnvelope<'a> {
+struct PromptEnvelope<'a> {
     text: &'a str,
-    omitted_count: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct SourceTurnEnvelope<'a> {
+    id: String,
+    session_id: &'a str,
+    bridge_turn_id: u64,
+    status: &'a str,
+    prompt: &'a str,
+    assistant: &'a str,
+    tools: &'a str,
+    source_hash: Option<String>,
+    started_at_ms: i64,
+    finished_at_ms: Option<i64>,
+    next_sequence: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -216,17 +295,19 @@ enum IncomingResponsePayload {
     Lessons(LessonsPayloadOwned),
     #[serde(rename = "lesson")]
     Lesson(LessonPayloadOwned),
-    #[serde(rename = "context")]
-    Context(ContextPayloadOwned),
+    #[serde(rename = "captured")]
+    Captured,
+    #[serde(rename = "prompt")]
+    Prompt(PromptPayloadOwned),
+    #[serde(rename = "turns")]
+    Turns(TurnsPayloadOwned),
+    #[serde(rename = "turn")]
+    Turn(TurnPayloadOwned),
     #[serde(rename = "shutdown")]
-    Shutdown(EmptyPayloadOwned),
+    Shutdown,
     #[serde(rename = "error")]
     Error(ErrorPayloadOwned),
 }
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct EmptyPayloadOwned {}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -261,8 +342,44 @@ struct LessonPayloadOwned {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ContextPayloadOwned {
-    block: Option<ContextEnvelopeOwned>,
+struct PromptPayloadOwned {
+    context: Option<PromptEnvelopeOwned>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PromptEnvelopeOwned {
+    text: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TurnsPayloadOwned {
+    turns: Vec<SourceTurnEnvelopeOwned>,
+    omitted_count: usize,
+    corrupt_count: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TurnPayloadOwned {
+    turn: SourceTurnEnvelopeOwned,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SourceTurnEnvelopeOwned {
+    id: String,
+    session_id: String,
+    bridge_turn_id: u64,
+    status: String,
+    prompt: String,
+    assistant: String,
+    tools: String,
+    source_hash: Option<String>,
+    started_at_ms: i64,
+    finished_at_ms: Option<i64>,
+    next_sequence: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -299,13 +416,6 @@ struct LessonEnvelopeOwned {
     supersedes_id: Option<String>,
     created_at_ms: i64,
     updated_at_ms: i64,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ContextEnvelopeOwned {
-    text: String,
-    omitted_count: usize,
 }
 
 pub(crate) async fn send_request(
@@ -349,11 +459,32 @@ pub(crate) async fn send_request(
                 id: lesson_id.to_string(),
             })?),
         ),
-        MemoryRequest::Context { project, max_chars } => (
-            "context",
-            Some(payload_value(ContextPayload {
+        MemoryRequest::PreparePrompt { project, query } => (
+            "prepare_prompt",
+            Some(payload_value(PreparePromptPayload {
                 project: project_payload(&project, id)?,
-                max_chars,
+                query,
+            })?),
+        ),
+        MemoryRequest::CaptureBatch { project, batch } => (
+            "capture_batch",
+            Some(payload_value(CapturePayload {
+                project: project_payload(&project, id)?,
+                events: batch.events().iter().map(source_event_payload).collect(),
+            })?),
+        ),
+        MemoryRequest::ListTurns { project } => (
+            "list_turns",
+            Some(payload_value(project_payload(&project, id)?)?),
+        ),
+        MemoryRequest::InspectTurn {
+            project,
+            id: turn_id,
+        } => (
+            "inspect_turn",
+            Some(payload_value(InspectTurnPayload {
+                project: project_payload(&project, id)?,
+                id: turn_id.to_string(),
             })?),
         ),
         MemoryRequest::Shutdown => ("shutdown", None),
@@ -393,7 +524,126 @@ fn payload_value<T: Serialize>(payload: T) -> Result<serde_json::Value, WireErro
     serde_json::to_value(payload)
         .map_err(|source| WireError::Io(io::Error::new(io::ErrorKind::InvalidData, source)))
 }
+fn source_event_payload(event: &SourceTurnEvent) -> SourceEventPayload {
+    let kind = match event.kind() {
+        SourceTurnEventKind::Started {
+            bridge_turn_id,
+            started_at_ms,
+            block_count,
+        } => SourceEventKindPayload::Started {
+            bridge_turn_id: *bridge_turn_id,
+            started_at_ms: *started_at_ms,
+            block_count: *block_count,
+        },
+        SourceTurnEventKind::PromptFragment {
+            block_index,
+            fragment_index,
+            text,
+            is_last,
+        } => SourceEventKindPayload::PromptFragment {
+            block_index: *block_index,
+            fragment_index: *fragment_index,
+            text: text.clone(),
+            is_last: *is_last,
+        },
+        SourceTurnEventKind::AssistantFragment {
+            fragment_index,
+            text,
+        } => SourceEventKindPayload::AssistantFragment {
+            fragment_index: *fragment_index,
+            text: text.clone(),
+        },
+        SourceTurnEventKind::ToolSnapshot {
+            tool_index,
+            tool_id,
+            name,
+            status,
+            input,
+            result,
+        } => SourceEventKindPayload::ToolSnapshot {
+            tool_index: *tool_index,
+            tool_id: tool_id.clone(),
+            name: name.clone(),
+            status: status.clone(),
+            input: input.clone(),
+            result: result.clone(),
+        },
+        SourceTurnEventKind::Finished {
+            disposition,
+            finished_at_ms,
+        } => SourceEventKindPayload::Finished {
+            disposition: *disposition,
+            finished_at_ms: *finished_at_ms,
+        },
+    };
+    SourceEventPayload {
+        session_id: event.session_id().as_str().to_owned(),
+        source_turn_id: event.source_turn_id().to_string(),
+        sequence: event.sequence(),
+        kind,
+    }
+}
 
+fn source_event_from_payload(
+    payload: SourceEventPayload,
+) -> Result<SourceTurnEvent, SourceTurnError> {
+    let session_id =
+        SourceSessionId::new(payload.session_id).map_err(|_| SourceTurnError::InvalidEvent)?;
+    let source_turn_id = SourceTurnId::from_str(&payload.source_turn_id)
+        .map_err(|_| SourceTurnError::InvalidEvent)?;
+    let kind = match payload.kind {
+        SourceEventKindPayload::Started {
+            bridge_turn_id,
+            started_at_ms,
+            block_count,
+        } => SourceTurnEventKind::Started {
+            bridge_turn_id,
+            started_at_ms,
+            block_count,
+        },
+        SourceEventKindPayload::PromptFragment {
+            block_index,
+            fragment_index,
+            text,
+            is_last,
+        } => SourceTurnEventKind::PromptFragment {
+            block_index,
+            fragment_index,
+            text,
+            is_last,
+        },
+        SourceEventKindPayload::AssistantFragment {
+            fragment_index,
+            text,
+        } => SourceTurnEventKind::AssistantFragment {
+            fragment_index,
+            text,
+        },
+        SourceEventKindPayload::ToolSnapshot {
+            tool_index,
+            tool_id,
+            name,
+            status,
+            input,
+            result,
+        } => SourceTurnEventKind::ToolSnapshot {
+            tool_index,
+            tool_id,
+            name,
+            status,
+            input,
+            result,
+        },
+        SourceEventKindPayload::Finished {
+            disposition,
+            finished_at_ms,
+        } => SourceTurnEventKind::Finished {
+            disposition,
+            finished_at_ms,
+        },
+    };
+    SourceTurnEvent::new(session_id, source_turn_id, payload.sequence, kind)
+}
 fn project_payload(project: &ProjectScope, id: u64) -> Result<ProjectPayload, WireError> {
     let display_path =
         project
@@ -511,15 +761,49 @@ pub(crate) async fn read_request(
                 id: LessonId::from_str(&payload.id).map_err(|_| invalid_field("id"))?,
             }
         }
-        "context" => {
-            let payload: ContextPayload =
+        "prepare_prompt" => {
+            let payload: PreparePromptPayload =
                 decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
-            if payload.max_chars == 0 || payload.max_chars > MAX_CONTEXT_CHARS {
-                return Err(invalid_field("max_chars"));
+            if payload.query.chars().count() > crate::source_turn::MAX_QUERY_CHARS
+                || payload.query.chars().any(char::is_control)
+            {
+                return Err(invalid_field("query"));
             }
-            MemoryRequest::Context {
+            MemoryRequest::PreparePrompt {
                 project: project_from_payload(payload.project, envelope.id, envelope.version)?,
-                max_chars: payload.max_chars,
+                query: payload.query,
+            }
+        }
+        "capture_batch" => {
+            let CapturePayload { project, events } =
+                decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
+            if events.is_empty() || events.len() > MAX_CAPTURE_EVENTS {
+                return Err(invalid_field("events"));
+            }
+            let events = events
+                .into_iter()
+                .map(source_event_from_payload)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|_| invalid_field("events"))?;
+            let batch = CaptureBatch::new(events).map_err(|_| invalid_field("events"))?;
+            MemoryRequest::CaptureBatch {
+                project: project_from_payload(project, envelope.id, envelope.version)?,
+                batch,
+            }
+        }
+        "list_turns" => {
+            let payload: ProjectPayload =
+                decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
+            MemoryRequest::ListTurns {
+                project: project_from_payload(payload, envelope.id, envelope.version)?,
+            }
+        }
+        "inspect_turn" => {
+            let payload: InspectTurnPayload =
+                decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
+            MemoryRequest::InspectTurn {
+                project: project_from_payload(payload.project, envelope.id, envelope.version)?,
+                id: SourceTurnId::from_str(&payload.id).map_err(|_| invalid_field("id"))?,
             }
         }
         "shutdown" => {
@@ -622,11 +906,19 @@ pub(crate) async fn send_response(
         MemoryResponse::Lesson(lesson) => ResponsePayload::Lesson {
             lesson: lesson_envelope(lesson),
         },
-        MemoryResponse::Context(block) => ResponsePayload::Context {
-            block: block.as_ref().map(|block| ContextEnvelope {
-                text: block.text(),
-                omitted_count: block.omitted_count(),
+        MemoryResponse::Captured => ResponsePayload::Captured,
+        MemoryResponse::Prompt(context) => ResponsePayload::Prompt {
+            context: context.as_ref().map(|context| PromptEnvelope {
+                text: context.text(),
             }),
+        },
+        MemoryResponse::Turns(result) => ResponsePayload::Turns {
+            turns: result.turns().iter().map(source_turn_envelope).collect(),
+            omitted_count: result.omitted_count(),
+            corrupt_count: result.corrupt_count(),
+        },
+        MemoryResponse::Turn(turn) => ResponsePayload::Turn {
+            turn: source_turn_envelope(turn),
         },
         MemoryResponse::Shutdown => ResponsePayload::Shutdown,
         MemoryResponse::Error(error) => ResponsePayload::Error {
@@ -655,6 +947,22 @@ fn lesson_envelope(lesson: &LessonRecord) -> LessonEnvelope<'_> {
         supersedes_id: lesson.supersedes_id().map(|id| id.to_string()),
         created_at_ms: lesson.created_at_ms(),
         updated_at_ms: lesson.updated_at_ms(),
+    }
+}
+
+fn source_turn_envelope(turn: &SourceTurnRecord) -> SourceTurnEnvelope<'_> {
+    SourceTurnEnvelope {
+        id: turn.id().to_string(),
+        session_id: turn.session_id().as_str(),
+        bridge_turn_id: turn.bridge_turn_id(),
+        status: turn.status().as_str(),
+        prompt: turn.prompt(),
+        assistant: turn.assistant(),
+        tools: turn.tools(),
+        source_hash: turn.source_hash().map(hex::encode),
+        started_at_ms: turn.started_at_ms(),
+        finished_at_ms: turn.finished_at_ms(),
+        next_sequence: turn.next_sequence(),
     }
 }
 
@@ -816,15 +1124,34 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
             value.lesson,
             LessonContent::Full,
         )?)),
-        IncomingResponsePayload::Context(value) => {
-            let block = value
-                .block
-                .map(|block| ContextBlock::from_wire(block.text, block.omitted_count))
+        IncomingResponsePayload::Captured => Ok(MemoryResponse::Captured),
+        IncomingResponsePayload::Prompt(value) => {
+            let context = value
+                .context
+                .map(|context| PromptContext::from_text(context.text))
                 .transpose()
-                .map_err(|_| invalid_response("context block"))?;
-            Ok(MemoryResponse::Context(block))
+                .map_err(|_| invalid_response("prompt context"))?;
+            Ok(MemoryResponse::Prompt(context))
         }
-        IncomingResponsePayload::Shutdown(_) => Ok(MemoryResponse::Shutdown),
+        IncomingResponsePayload::Turns(value) => {
+            if value.turns.len() > 100 {
+                return Err(invalid_response("source turn list length"));
+            }
+            let turns = value
+                .turns
+                .into_iter()
+                .map(decode_source_turn_record)
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(MemoryResponse::Turns(SourceTurnListResponse::new(
+                turns,
+                value.omitted_count,
+                value.corrupt_count,
+            )))
+        }
+        IncomingResponsePayload::Turn(value) => {
+            Ok(MemoryResponse::Turn(decode_source_turn_record(value.turn)?))
+        }
+        IncomingResponsePayload::Shutdown => Ok(MemoryResponse::Shutdown),
         IncomingResponsePayload::Error(value) => {
             let ErrorPayloadOwned {
                 code,
@@ -910,6 +1237,51 @@ fn decode_lesson_record(
     ))
 }
 
+fn decode_source_turn_record(
+    value: SourceTurnEnvelopeOwned,
+) -> Result<SourceTurnRecord, WireError> {
+    if value.started_at_ms < 0
+        || value
+            .finished_at_ms
+            .is_some_and(|finished| finished < value.started_at_ms)
+        || value.next_sequence == 0
+        || [
+            value.prompt.chars().count(),
+            value.assistant.chars().count(),
+            value.tools.chars().count(),
+        ]
+        .into_iter()
+        .any(|count| count > MAX_FRAME_SIZE)
+    {
+        return Err(invalid_response("source turn bounds"));
+    }
+    let id = SourceTurnId::from_str(&value.id).map_err(|_| invalid_response("source turn id"))?;
+    let session_id = SourceSessionId::new(value.session_id)
+        .map_err(|_| invalid_response("source session id"))?;
+    let status = crate::protocol::SourceTurnStatus::from_stored(&value.status)
+        .ok_or_else(|| invalid_response("source turn status"))?;
+    let source_hash = value
+        .source_hash
+        .as_deref()
+        .map(|hash| {
+            decode_fixed_hex::<32>(hash).ok_or_else(|| invalid_response("source turn hash"))
+        })
+        .transpose()?;
+    Ok(SourceTurnRecord {
+        id,
+        session_id,
+        bridge_turn_id: value.bridge_turn_id,
+        status,
+        prompt: value.prompt,
+        assistant: value.assistant,
+        tools: value.tools,
+        source_hash,
+        started_at_ms: value.started_at_ms,
+        finished_at_ms: value.finished_at_ms,
+        next_sequence: value.next_sequence,
+    })
+}
+
 fn validate_preview(preview: &str) -> Result<(), WireError> {
     if preview.is_empty() {
         return Err(invalid_response("lesson preview empty"));
@@ -973,7 +1345,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn v1_operation_payload_matrix_is_strict_and_backward_compatible() {
+    async fn c11_v2_source_operations_are_strict_and_authenticated() {
         let credential = AdminCredential::generate().expect("credential");
         let root = TempDir::new().expect("workspace");
         let workspace = root.path().to_str().expect("UTF-8 fixture");
@@ -1004,8 +1376,33 @@ mod tests {
                 serde_json::json!({"project": project_payload.clone(), "id": lesson_id}),
             ),
             (
-                "context",
-                serde_json::json!({"project": project_payload.clone(), "max_chars": 4000}),
+                "prepare_prompt",
+                serde_json::json!({"project": project_payload.clone(), "query": "decision"}),
+            ),
+            (
+                "capture_batch",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "events": [{
+                        "session_id": "session-wire",
+                        "source_turn_id": lesson_id,
+                        "sequence": 0,
+                        "kind": {
+                            "kind": "started",
+                            "bridge_turn_id": 1,
+                            "started_at_ms": 1,
+                            "block_count": 1
+                        }
+                    }]
+                }),
+            ),
+            ("list_turns", project_payload.clone()),
+            (
+                "inspect_turn",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "id": "00112233445566778899aabbccddeeff"
+                }),
             ),
         ];
         for (operation, payload) in valid {
@@ -1054,19 +1451,35 @@ mod tests {
                 serde_json::json!({"project": project_payload.clone(), "id": "wrong"}),
             ),
             (
-                "context",
-                serde_json::json!({"project": project_payload.clone(), "max_chars": 0}),
+                "prepare_prompt",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "query": "x".repeat(crate::source_turn::MAX_QUERY_CHARS + 1)
+                }),
             ),
             (
-                "context",
-                serde_json::json!({"project": project_payload, "max_chars": 4001}),
+                "inspect_turn",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "id": "wrong"
+                }),
             ),
         ];
         for (operation, payload) in invalid {
-            let error = decode_raw_request(&credential, request(&credential, operation, payload))
-                .await
-                .expect_err(operation);
-            assert_eq!(error.code(), Some(MemoryErrorCode::InvalidRequest));
+            let error =
+                match decode_raw_request(&credential, request(&credential, operation, payload))
+                    .await
+                {
+                    Ok(value) => {
+                        panic!("C11: {operation} accepted invalid request: {value:?}")
+                    }
+                    Err(error) => error,
+                };
+            assert_eq!(
+                error.code(),
+                Some(MemoryErrorCode::InvalidRequest),
+                "C11: {operation} returned the wrong error code"
+            );
         }
         let error = decode_raw_request(
             &credential,
@@ -1098,9 +1511,10 @@ mod tests {
     }
 
     fn decode_payload_json(payload: serde_json::Value) -> Result<MemoryResponse, WireError> {
-        let envelope: ResponseEnvelopeOwned =
-            serde_json::from_value(serde_json::json!({"version": 1, "id": 1, "payload": payload}))
-                .expect("response envelope shape");
+        let envelope: ResponseEnvelopeOwned = serde_json::from_value(
+            serde_json::json!({"version": PROTOCOL_VERSION, "id": 1, "payload": payload}),
+        )
+        .expect("response envelope shape");
         decode_response(envelope.payload)
     }
 
@@ -1184,14 +1598,14 @@ mod tests {
     fn response_payloads_reject_drift_and_invalid_health_identity() {
         let health = |instance_id: &str, protocol_version: u16| {
             serde_json::json!({
-                "version": 1,
+                "version": PROTOCOL_VERSION,
                 "id": 1,
                 "payload": {
                     "kind": "health",
                     "instance_id": instance_id,
                     "status": "ready",
                     "protocol_version": protocol_version,
-                    "store_versions": {"memory": 2, "knowledge": 1},
+                    "store_versions": {"memory": 3, "knowledge": 1},
                     "error": null
                 }
             })
@@ -1209,7 +1623,7 @@ mod tests {
         assert!(serde_json::from_value::<ResponseEnvelopeOwned>(unknown).is_err());
         assert!(
             serde_json::from_value::<ResponseEnvelopeOwned>(serde_json::json!({
-                "version": 1,
+                "version": PROTOCOL_VERSION,
                 "id": 1,
                 "payload": {"kind": "project_bound", "unexpected": true}
             }))
