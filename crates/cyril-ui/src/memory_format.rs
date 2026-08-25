@@ -1,6 +1,7 @@
 use cyril_core::types::{
     MemoryDisabledReason, MemoryLessonListView, MemoryLessonView, MemoryProjectBinding,
-    MemoryStatus, MemoryStatusView, MemoryTeachOperation, MemoryTeachView,
+    MemorySourceTurnListView, MemorySourceTurnView, MemoryStatus, MemoryStatusView,
+    MemoryTeachOperation, MemoryTeachView,
 };
 
 /// Format `/memory status` from the immutable domain view.
@@ -120,6 +121,53 @@ pub fn format_memory_lesson(lesson: &MemoryLessonView) -> String {
     )
 }
 
+pub fn format_memory_turn_list(result: &MemorySourceTurnListView) -> String {
+    if result.turns().is_empty() && result.corrupt_count() == 0 {
+        return "No captured project source turns.".to_owned();
+    }
+    let mut lines = Vec::with_capacity(result.turns().len() + 3);
+    lines.push("Captured project source turns:".to_owned());
+    lines.extend(result.turns().iter().map(|turn| {
+        format!(
+            "{} [{}] session={} bridge_turn={} started={} {}",
+            turn.id(),
+            turn.status().as_str(),
+            turn.session_id(),
+            turn.bridge_turn_id(),
+            turn.started_at_ms(),
+            single_line(turn.prompt())
+        )
+    }));
+    if result.omitted_count() > 0 {
+        lines.push(format!("+{} more", result.omitted_count()));
+    }
+    if result.corrupt_count() > 0 {
+        lines.push(format!(
+            "{} corrupt source turn row(s) skipped — see cyril.log",
+            result.corrupt_count()
+        ));
+    }
+    lines.join("\n")
+}
+
+pub fn format_memory_turn(turn: &MemorySourceTurnView) -> String {
+    format!(
+        "ID: {}\nSession: {}\nBridge turn: {}\nStatus: {}\nStarted: {}\nFinished: {}\nNext sequence: {}\nSource hash: {}\nPrompt:\n{}\nAssistant:\n{}\nTools:\n{}",
+        turn.id(),
+        turn.session_id(),
+        turn.bridge_turn_id(),
+        turn.status().as_str(),
+        turn.started_at_ms(),
+        turn.finished_at_ms()
+            .map_or_else(|| "none".to_owned(), |value| value.to_string()),
+        turn.next_sequence(),
+        turn.source_hash().unwrap_or("none"),
+        turn.prompt(),
+        turn.assistant(),
+        turn.tools(),
+    )
+}
+
 /// One list row stays one row: multi-line content shows its first line plus
 /// how many lines follow, so a lesson cannot masquerade as several entries.
 fn single_line(content: &str) -> String {
@@ -138,7 +186,8 @@ mod tests {
     use super::*;
     use cyril_core::types::{
         MemoryLessonMetadataView, MemoryLessonProvenance, MemoryLessonStatus, MemoryLessonTrust,
-        MemoryStoreVersions,
+        MemorySourceTurnListView, MemorySourceTurnMetadataView, MemorySourceTurnStatus,
+        MemorySourceTurnView, MemoryStoreVersions,
     };
 
     #[test]
@@ -297,5 +346,48 @@ mod tests {
 
         let only_corrupt = format_memory_list(&MemoryLessonListView::new(Vec::new(), 0, 1));
         assert!(only_corrupt.contains("1 corrupt lesson row(s) skipped"));
+    }
+    #[test]
+    fn c7_turn_inspection_survives_ui_retention_and_is_scoped() {
+        let turn = MemorySourceTurnView::new(
+            "00112233445566778899aabbccddeeff".to_owned(),
+            "first line\nsecond line".to_owned(),
+            "assistant output".to_owned(),
+            "[{\"name\":\"read\"}]".to_owned(),
+            MemorySourceTurnMetadataView::new(
+                "session-1".to_owned(),
+                42,
+                MemorySourceTurnStatus::Completed,
+                Some("deadbeef".to_owned()),
+                1_000,
+                Some(2_000),
+                5,
+            ),
+        );
+        let list =
+            format_memory_turn_list(&MemorySourceTurnListView::new(vec![turn.clone()], 2, 1));
+        assert!(list.contains("[completed] session=session-1 bridge_turn=42"));
+        assert!(list.contains("first line (+1 more line(s))"));
+        assert!(!list.contains("second line"));
+        assert!(list.contains("+2 more"));
+        assert!(list.contains("1 corrupt source turn row(s) skipped"));
+
+        let inspection = format_memory_turn(&turn);
+        for expected in [
+            "ID: 00112233445566778899aabbccddeeff",
+            "Session: session-1",
+            "Bridge turn: 42",
+            "Status: completed",
+            "Finished: 2000",
+            "Source hash: deadbeef",
+            "Prompt:\nfirst line\nsecond line",
+            "Assistant:\nassistant output",
+            "Tools:\n[{\"name\":\"read\"}]",
+        ] {
+            assert!(
+                inspection.contains(expected),
+                "missing {expected}: {inspection}"
+            );
+        }
     }
 }

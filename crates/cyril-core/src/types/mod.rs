@@ -13,6 +13,7 @@ pub mod plan;
 pub mod present_as;
 pub mod prompt;
 pub mod session;
+pub mod source_turn;
 pub mod steer_receipt;
 pub mod subagent;
 pub mod tool_call;
@@ -35,8 +36,10 @@ pub use hook::HookInfo;
 pub use kas_spawn::KasSpawn;
 pub use memory::{
     MemoryDisabledReason, MemoryLessonListView, MemoryLessonMetadataView, MemoryLessonProvenance,
-    MemoryLessonStatus, MemoryLessonTrust, MemoryLessonView, MemoryProjectBinding, MemoryStatus,
-    MemoryStatusView, MemoryStoreVersions, MemoryTeachOperation, MemoryTeachView,
+    MemoryLessonStatus, MemoryLessonTrust, MemoryLessonView, MemoryProjectBinding,
+    MemorySourceTurnListView, MemorySourceTurnMetadataView, MemorySourceTurnStatus,
+    MemorySourceTurnView, MemoryStatus, MemoryStatusView, MemoryStoreVersions,
+    MemoryTeachOperation, MemoryTeachView,
 };
 pub use message::{AgentMessage, AgentThought, UserMessage};
 pub use plan::{Plan, PlanEntry, PlanEntryPriority, PlanEntryStatus};
@@ -46,6 +49,9 @@ pub use session::{
     CompactionPhase, ContextBreakdown, ContextBucket, ContextUsage, CreditUsage, EffortLevel,
     EffortUpdate, ModeId, ModelId, ModelInfo, RefusalAlert, SessionCost, SessionId, SessionMode,
     SessionStatus, StopReason, TokenCounts, TurnMetering, TurnSummary,
+};
+pub use source_turn::{
+    PromptEnvelope, SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind, SourceTurnId,
 };
 pub use steer_receipt::SteerReceipt;
 pub use subagent::{LoopState, PendingStage, SubagentInfo, SubagentStatus};

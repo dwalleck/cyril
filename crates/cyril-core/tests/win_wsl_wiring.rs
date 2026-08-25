@@ -134,7 +134,7 @@ async fn bridge_spawn_binds_agent_location_before_exec() {
     .expect("argv");
     let handle = spawn_bridge(cmd, SpawnConfig::default(), std::env::temp_dir())
         .expect("bridge thread spawns");
-    let (_sender, mut rx, _perm) = handle.split();
+    let (_sender, mut rx, _perm, _source_rx, _completion_rx) = handle.split();
     let routed = tokio::time::timeout(std::time::Duration::from_secs(10), rx.recv())
         .await
         .expect("notification within 10s of spawn failure")

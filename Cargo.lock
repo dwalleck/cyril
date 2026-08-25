@@ -473,6 +473,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "futures-util",
+ "getrandom 0.4.2",
  "nix 0.31.3",
  "regex",
  "rstest",

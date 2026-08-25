@@ -541,7 +541,7 @@ pub enum PermissionResponse {
 pub enum BridgeCommand {
     SendPrompt {
         session_id: SessionId,
-        content_blocks: Vec<String>,
+        prompt: crate::types::PromptEnvelope,
     },
     NewSession {
         cwd: std::path::PathBuf,
@@ -925,7 +925,7 @@ mod tests {
     fn bridge_command_send_prompt() {
         let cmd = BridgeCommand::SendPrompt {
             session_id: SessionId::new("sess_1"),
-            content_blocks: vec!["hello".into()],
+            prompt: crate::types::PromptEnvelope::original(vec!["hello".into()]),
         };
         assert!(matches!(cmd, BridgeCommand::SendPrompt { .. }));
     }

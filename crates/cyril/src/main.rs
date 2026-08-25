@@ -1,4 +1,5 @@
 mod app;
+mod capture_forwarder;
 mod memory_runtime;
 
 use std::fmt;

@@ -50,10 +50,10 @@ async fn freepath_turn_completes_through_bridge() {
     sender
         .send(BridgeCommand::SendPrompt {
             session_id,
-            content_blocks: vec![
+            prompt: cyril_core::types::PromptEnvelope::original(vec![
                 "Reply with exactly the text KAS_SMOKE_OK and nothing else. Do not use any tools."
                     .into(),
-            ],
+            ]),
         })
         .await
         .expect("send SendPrompt");

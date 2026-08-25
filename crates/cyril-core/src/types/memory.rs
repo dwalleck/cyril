@@ -392,6 +392,166 @@ impl MemoryLessonListView {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemorySourceTurnStatus {
+    Incomplete,
+    Completed,
+    Interrupted,
+    Failed,
+    Abandoned,
+    CaptureOverflow,
+}
+
+impl MemorySourceTurnStatus {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Incomplete => "incomplete",
+            Self::Completed => "completed",
+            Self::Interrupted => "interrupted",
+            Self::Failed => "failed",
+            Self::Abandoned => "abandoned",
+            Self::CaptureOverflow => "capture_overflow",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemorySourceTurnMetadataView {
+    session_id: String,
+    bridge_turn_id: u64,
+    status: MemorySourceTurnStatus,
+    source_hash: Option<String>,
+    started_at_ms: i64,
+    finished_at_ms: Option<i64>,
+    next_sequence: u64,
+}
+
+impl MemorySourceTurnMetadataView {
+    pub fn new(
+        session_id: String,
+        bridge_turn_id: u64,
+        status: MemorySourceTurnStatus,
+        source_hash: Option<String>,
+        started_at_ms: i64,
+        finished_at_ms: Option<i64>,
+        next_sequence: u64,
+    ) -> Self {
+        Self {
+            session_id,
+            bridge_turn_id,
+            status,
+            source_hash,
+            started_at_ms,
+            finished_at_ms,
+            next_sequence,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemorySourceTurnView {
+    id: String,
+    prompt: String,
+    assistant: String,
+    tools: String,
+    metadata: MemorySourceTurnMetadataView,
+}
+
+impl MemorySourceTurnView {
+    pub fn new(
+        id: String,
+        prompt: String,
+        assistant: String,
+        tools: String,
+        metadata: MemorySourceTurnMetadataView,
+    ) -> Self {
+        Self {
+            id,
+            prompt,
+            assistant,
+            tools,
+            metadata,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn session_id(&self) -> &str {
+        &self.metadata.session_id
+    }
+
+    pub const fn bridge_turn_id(&self) -> u64 {
+        self.metadata.bridge_turn_id
+    }
+
+    pub const fn status(&self) -> MemorySourceTurnStatus {
+        self.metadata.status
+    }
+
+    pub fn prompt(&self) -> &str {
+        &self.prompt
+    }
+
+    pub fn assistant(&self) -> &str {
+        &self.assistant
+    }
+
+    pub fn tools(&self) -> &str {
+        &self.tools
+    }
+
+    pub fn source_hash(&self) -> Option<&str> {
+        self.metadata.source_hash.as_deref()
+    }
+
+    pub const fn started_at_ms(&self) -> i64 {
+        self.metadata.started_at_ms
+    }
+
+    pub const fn finished_at_ms(&self) -> Option<i64> {
+        self.metadata.finished_at_ms
+    }
+
+    pub const fn next_sequence(&self) -> u64 {
+        self.metadata.next_sequence
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemorySourceTurnListView {
+    turns: Vec<MemorySourceTurnView>,
+    omitted_count: usize,
+    corrupt_count: usize,
+}
+
+impl MemorySourceTurnListView {
+    pub const fn new(
+        turns: Vec<MemorySourceTurnView>,
+        omitted_count: usize,
+        corrupt_count: usize,
+    ) -> Self {
+        Self {
+            turns,
+            omitted_count,
+            corrupt_count,
+        }
+    }
+
+    pub fn turns(&self) -> &[MemorySourceTurnView] {
+        &self.turns
+    }
+
+    pub const fn omitted_count(&self) -> usize {
+        self.omitted_count
+    }
+
+    pub const fn corrupt_count(&self) -> usize {
+        self.corrupt_count
+    }
+}
+
 fn bound_text(value: &str) -> String {
     if value.len() <= MAX_DETAIL_BYTES {
         return value.to_owned();

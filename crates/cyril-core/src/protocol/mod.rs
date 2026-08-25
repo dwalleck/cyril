@@ -22,6 +22,7 @@ mod probe_dn91;
 /// (the default build is the point).
 #[cfg(test)]
 mod probe_g9vt_c13;
+pub(crate) mod source_observer;
 pub(crate) mod tool_call_ledger;
 pub(crate) mod transport;
 /// Turn liveness (cyril-14ou): the pure state machine behind the bridge

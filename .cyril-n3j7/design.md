@@ -147,6 +147,20 @@ Every permanent fence below uses the lowercase claim ID as its test-name prefix 
 
 - 2026-08-25 — C10 cheapest structural falsifier: `cargo test -p cyril --test architecture_tests core_and_ui_remain_persistence_free`. **PASS**: 1 test passed; core and UI remain persistence-free before the change.
 
+- 2026-08-25 — C1 mutation prefixed captured prompt fragments with a synthetic lesson block. `c1_accepted_prompt_capture_precedes_ui_and_excludes_context` went **RED** (`artifact://320`), then **GREEN** after restoration.
+- 2026-08-25 — C2 mutations collapsed interrupted terminals to completed in both the source observer and the bridge stop-reason mapper. Both C2 fences went **RED** (`artifact://322`, `artifact://335`), then **GREEN** after restoration.
+- 2026-08-25 — C3 mutation replaced immutable replay comparison; `c3_source_turn_restart_retry_is_exact_once_and_conflict_safe` went **RED**, then **GREEN** after restoration.
+- 2026-08-25 — C4 mutation removed project/status filtering; `c4_episode_recall_is_literal_scoped_deterministic_and_bounded` went **RED**, then **GREEN** after restoration.
+- 2026-08-25 — C5 mutation folded prepared context into original blocks. `c5_first_prompt_is_ordered_exactly_once_and_source_clean` went **RED** (`artifact://330`), then **GREEN** after restoration.
+- 2026-08-25 — C6 mutation persisted `AgentThought` as assistant source. `c6_stream_tool_tail_assembles_without_thoughts_or_secrets` went **RED** (`artifact://324`), then **GREEN** after restoration.
+- 2026-08-25 — C7 mutation removed durable turn rows from the storage-backed formatter. `c7_turn_inspection_survives_ui_retention_and_is_scoped` went **RED** (`artifact://332`), then **GREEN** after restoration.
+- 2026-08-25 — C8 mutation skipped the sequential v1→v2 step; `c8_memory_v1_and_v2_migrate_atomically_to_v3` went **RED**, then **GREEN** after restoration.
+- 2026-08-25 — C9 mutation converted capture overflow into completed. `c9_slow_capture_is_bounded_and_shutdown_drains_in_order` went **RED** (`artifact://326`), then **GREEN** after restoration.
+- 2026-08-25 — C10 oracle mutation classified the existing `regex` edge as forbidden. `c10_core_and_ui_remain_persistence_free` went **RED**, then **GREEN** after restoration; no forbidden dependency was retained.
+- 2026-08-25 — C11 mutation removed the query bound; `c11_v2_source_operations_are_strict_and_authenticated` went **RED**, then **GREEN** after restoration.
+- 2026-08-25 — C12 mutation replaced random durable IDs with zero. `c12_source_identity_survives_numeric_reuse_and_ignores_history` went **RED** (`artifact://328`), then **GREEN** after restoration.
+- 2026-08-25 — C13 mutation leaked episode framing into `App`; `c13_memory_policy_stays_behind_runtime_interface` went **RED**, then **GREEN** after restoration.
+
 ## Approval
 
 - Requester approval: "I approve this design"

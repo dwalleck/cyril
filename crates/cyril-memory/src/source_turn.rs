@@ -745,6 +745,8 @@ fn put_string(hasher: &mut Sha256, value: &str) {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::expect_used)]
+
     use super::{
         CaptureBatch, MAX_TOOL_CHARS, SourceSessionId, SourceTurnDisposition, SourceTurnDraft,
         SourceTurnError, SourceTurnEvent, SourceTurnEventKind, SourceTurnId,
@@ -903,5 +905,73 @@ mod tests {
         let tool = &draft.tools_in_order()[0];
         assert!(tool.char_count() <= MAX_TOOL_CHARS, "C3 per-tool bound");
         assert!(tool.truncated_chars > 0, "C3 truncation metadata");
+    }
+    #[test]
+    fn c6_stream_tool_tail_assembles_without_thoughts_or_secrets() {
+        let session = SourceSessionId::new("session-redaction").expect("session identity");
+        let id = SourceTurnId::from_bytes([9; 16]);
+        let secret = "ghp_abcdefghijklmnopqrstuvwxyz123456";
+        let batch = CaptureBatch::new(vec![
+            event(
+                &session,
+                id,
+                0,
+                SourceTurnEventKind::Started {
+                    bridge_turn_id: 9,
+                    started_at_ms: 1,
+                    block_count: 1,
+                },
+            ),
+            event(
+                &session,
+                id,
+                1,
+                SourceTurnEventKind::PromptFragment {
+                    block_index: 0,
+                    fragment_index: 0,
+                    text: format!("prompt token: {secret}"),
+                    is_last: true,
+                },
+            ),
+            event(
+                &session,
+                id,
+                2,
+                SourceTurnEventKind::AssistantFragment {
+                    fragment_index: 0,
+                    text: format!("assistant token: {secret}"),
+                },
+            ),
+            event(
+                &session,
+                id,
+                3,
+                SourceTurnEventKind::ToolSnapshot {
+                    tool_index: 0,
+                    tool_id: "tool-1".to_owned(),
+                    name: "read".to_owned(),
+                    status: "completed".to_owned(),
+                    input: format!("token={secret}"),
+                    result: format!("token={secret}"),
+                },
+            ),
+        ])
+        .expect("redaction batch");
+        let draft = SourceTurnDraft::from_batch(&batch).expect("redacted draft");
+        let combined = format!(
+            "{}\n{}\n{}\n{}",
+            draft.original_prompt(),
+            draft.assistant_text(),
+            draft.tools_in_order()[0].input,
+            draft.tools_in_order()[0].result,
+        );
+        assert!(
+            !combined.contains(secret),
+            "C6 secret persisted: {combined}"
+        );
+        assert!(
+            combined.contains("[REDACTED]"),
+            "C6 redaction marker missing"
+        );
     }
 }

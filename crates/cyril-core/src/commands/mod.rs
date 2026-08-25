@@ -157,6 +157,8 @@ pub enum MemoryCommandAction {
     Replace { lesson_id: String, text: String },
     List,
     Inspect { lesson_id: String },
+    Turns,
+    InspectTurn { source_turn_id: String },
 }
 
 /// Result of executing a command.
@@ -1142,7 +1144,7 @@ mod tests {
         assert!(matches!(
             &invalid.kind,
             CommandResultKind::SystemMessage(text)
-                if text == "Usage: /memory status | teach <text> | teach --replace <lesson-id> <text> | list | inspect <lesson-id>"
+                if text == "Usage: /memory status | teach <text> | teach --replace <lesson-id> <text> | list | inspect <lesson-id> | turns | inspect-turn <source-turn-id>"
         ));
         let unavailable_ctx = CommandContext {
             workspace: std::path::Path::new("."),
@@ -1198,6 +1200,13 @@ mod tests {
                     lesson_id: "00112233445566778899aabbccddeeff".to_owned(),
                 },
             ),
+            ("/memory turns", MemoryCommandAction::Turns),
+            (
+                "/memory inspect-turn 00112233445566778899aabbccddeeff",
+                MemoryCommandAction::InspectTurn {
+                    source_turn_id: "00112233445566778899aabbccddeeff".to_owned(),
+                },
+            ),
             // Any whitespace run separates tokens: a double space or a
             // pasted tab must not turn a replacement into a new lesson.
             (
@@ -1239,6 +1248,9 @@ mod tests {
             "/memory teach --replace id",
             "/memory teach\t--replace\tid\t",
             "/memory inspect",
+            "/memory turns extra",
+            "/memory inspect-turn",
+            "/memory inspect-turn too many",
             "/memory inspect too many",
             "/memory list extra",
             "/memory status extra",

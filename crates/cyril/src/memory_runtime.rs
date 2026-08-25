@@ -194,6 +194,28 @@ impl ProjectMemory {
     pub(crate) async fn inspect(&self, id: LessonId) -> Result<LessonRecord, ProjectMemoryError> {
         Ok(self.client().await?.inspect(&self.project, id).await?)
     }
+    pub(crate) async fn capture_batch(
+        &self,
+        batch: cyril_memory::CaptureBatch,
+    ) -> Result<(), ProjectMemoryError> {
+        Ok(self
+            .client()
+            .await?
+            .capture_batch(&self.project, batch)
+            .await?)
+    }
+    pub(crate) async fn list_turns(
+        &self,
+    ) -> Result<cyril_memory::SourceTurnListResponse, ProjectMemoryError> {
+        Ok(self.client().await?.list_turns(&self.project).await?)
+    }
+
+    pub(crate) async fn inspect_turn(
+        &self,
+        id: cyril_memory::SourceTurnId,
+    ) -> Result<cyril_memory::SourceTurnRecord, ProjectMemoryError> {
+        Ok(self.client().await?.inspect_turn(&self.project, id).await?)
+    }
 
     /// Prepare the bounded first-prompt context for the original first block.
     /// The returned context remains opaque to the runtime adapter; only the
