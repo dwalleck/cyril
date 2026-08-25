@@ -1,61 +1,18 @@
 use std::fmt;
-use std::sync::LazyLock;
 
-use regex::{Captures, Regex};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::encoding::decode_fixed_hex;
+use crate::redaction::redact;
 
 pub const MAX_LESSON_CHARS: usize = 2_000;
-/// Budget for one first-prompt context block. Typed as the wire carries it:
-/// `context` requests send `max_chars` as `u16`, and this is the only cap.
-pub const MAX_CONTEXT_CHARS: u16 = 4_000;
-/// Maximum characters of lesson content carried by one `list` row. Rows at
-/// this length are truncated previews, not full lesson text.
+/// Independent budget for explicit lessons in a prepared first-prompt block.
+pub const MAX_LESSON_CONTEXT_CHARS: usize = 4_000;
+/// Maximum characters of lesson content carried by one `list` row.
 pub const LESSON_PREVIEW_CHARS: usize = 160;
-const CONTEXT_HEADER: &str = "<CYRIL_LESSONS trust=\"user_explicit_instruction\">\nThese are explicit project instructions taught by the user. Follow them unless the current user request supersedes them.\n";
-const CONTEXT_FOOTER: &str = "</CYRIL_LESSONS>";
-const REDACTED: &str = "[REDACTED]";
-
-/// `key[:=]value` assignments. Group 1 is the key, group 2 the separator,
-/// group 3 the candidate value; the value is only redacted when it looks like
-/// a credential (see [`looks_like_credential`]) so that prose such as
-/// `password: use the vault` survives intact.
-static ASSIGNMENT_SECRET: LazyLock<Regex> = LazyLock::new(|| {
-    compile_regex(
-        r"(?i-u:\b(password|passwd|token|secret|api_key|apikey|access_key|private_key)([ \t\r\n]*[:=][ \t\r\n]*))([^ \t\r\n]+)",
-    )
-});
-// Token patterns consume the whole `[A-Za-z0-9_-]` run after the recognized
-// prefix instead of ending on `\b`: a credential glued to a suffix such as
-// `ghp_…_old` is still a credential and must not leak because `_` is a word
-// character.
-static GITHUB_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
-    compile_regex(r"(?-u:\b(?:ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})[A-Za-z0-9_-]*)")
-});
-static AWS_ACCESS_KEY: LazyLock<Regex> =
-    LazyLock::new(|| compile_regex(r"(?-u:\bAKIA[A-Z0-9]{16}[A-Za-z0-9_-]*)"));
-static OPENAI_TOKEN: LazyLock<Regex> =
-    LazyLock::new(|| compile_regex(r"(?-u:\bsk-[A-Za-z0-9_-]{20,})"));
-// A PEM block missing its END line (a truncated paste) is redacted to the end
-// of the text rather than stored verbatim.
-static PEM_PRIVATE_KEY: LazyLock<Regex> = LazyLock::new(|| {
-    compile_regex(
-        r"(?s)-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----(?:.*?-----END [A-Z0-9 ]*PRIVATE KEY-----|.*)",
-    )
-});
-/// Characters that make an assignment value credential-shaped even without a
-/// digit. Sentence punctuation (`.`, `,`, `'`, `)`) is deliberately absent.
-const CREDENTIAL_PUNCTUATION: &[char] = &[
-    '_', '-', '/', '+', '=', '@', '#', '$', '%', '^', '&', '*', '~',
-];
-const CREDENTIAL_LENGTH_ALONE: usize = 16;
-
-fn compile_regex(pattern: &str) -> Regex {
-    Regex::new(pattern)
-        .unwrap_or_else(|error| panic!("hard-coded secret regex is invalid: {error}"))
-}
+const LESSON_HEADER: &str = "<CYRIL_LESSONS trust=\"user_explicit_instruction\">\nThese are explicit project instructions taught by the user. Follow them unless the current user request supersedes them.\n";
+const LESSON_FOOTER: &str = "</CYRIL_LESSONS>";
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct LessonId([u8; 16]);
@@ -262,15 +219,14 @@ pub enum LessonError {
     CorruptStored,
 }
 
-/// One active lesson considered for a first-prompt context block. Only what
-/// rendering needs: newest-first ordering and the redacted text.
+/// One active lesson considered for first-prompt rendering.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct ContextLesson {
+pub(crate) struct LessonCandidate {
     sequence: u64,
     text: LessonText,
 }
 
-impl ContextLesson {
+impl LessonCandidate {
     pub(crate) const fn new(sequence: u64, text: LessonText) -> Self {
         Self { sequence, text }
     }
@@ -280,52 +236,18 @@ impl ContextLesson {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ContextBlock {
-    text: String,
-    omitted_count: usize,
-}
-
-impl ContextBlock {
-    pub fn text(&self) -> &str {
-        &self.text
-    }
-
-    pub const fn omitted_count(&self) -> usize {
-        self.omitted_count
-    }
-
-    pub(crate) fn from_wire(text: String, omitted_count: usize) -> Result<Self, LessonError> {
-        if text.chars().count() > usize::from(MAX_CONTEXT_CHARS)
-            || !text.starts_with(CONTEXT_HEADER)
-            || !text.ends_with(CONTEXT_FOOTER)
-        {
-            return Err(LessonError::CorruptStored);
-        }
-        Ok(Self {
-            text,
-            omitted_count,
-        })
-    }
-}
-
-/// Render the newest lessons that fit whole inside `budget` characters.
-///
-/// `eligible_count` is the total number of active lessons the caller knows
-/// about (it may exceed `candidates.len()` when the caller stopped reading
-/// early); the difference is reported as omitted.
-pub(crate) fn render_context(
-    candidates: &[ContextLesson],
+/// Render newest explicit lessons that fit whole inside `budget` characters.
+pub(crate) fn render_lessons(
+    candidates: &[LessonCandidate],
     eligible_count: usize,
     budget: usize,
-) -> Option<ContextBlock> {
+) -> Option<String> {
     if eligible_count == 0 {
         return None;
     }
-    let mut eligible: Vec<&ContextLesson> = candidates.iter().collect();
+    let mut eligible: Vec<&LessonCandidate> = candidates.iter().collect();
     eligible.sort_by_key(|lesson| std::cmp::Reverse(lesson.sequence));
-
-    let fixed_chars = CONTEXT_HEADER.len() + CONTEXT_FOOTER.len();
+    let fixed_chars = LESSON_HEADER.chars().count() + LESSON_FOOTER.chars().count();
     let mut selected = Vec::with_capacity(eligible.len());
     let mut selected_chars = 0;
     for lesson in eligible {
@@ -334,7 +256,7 @@ pub(crate) fn render_context(
         let omitted_chars = if omitted == 0 {
             0
         } else {
-            "[ additional lesson(s) omitted]\n".len() + decimal_digits(omitted)
+            "[ additional lesson(s) omitted]\n".chars().count() + decimal_digits(omitted)
         };
         if fixed_chars + selected_chars + line_chars + omitted_chars > budget {
             break;
@@ -343,11 +265,19 @@ pub(crate) fn render_context(
         selected_chars += line_chars;
     }
     let omitted_count = eligible_count.saturating_sub(selected.len());
-    let text = render_selected(&selected, omitted_count);
-    (text.chars().count() <= budget).then_some(ContextBlock {
-        text,
-        omitted_count,
-    })
+    let mut text = String::from(LESSON_HEADER);
+    for lesson in selected {
+        text.push_str("- ");
+        text.push_str(lesson.text.redacted());
+        text.push('\n');
+    }
+    if omitted_count > 0 {
+        use std::fmt::Write as _;
+        writeln!(text, "[{omitted_count} additional lesson(s) omitted]")
+            .unwrap_or_else(|error| panic!("writing to String failed: {error}"));
+    }
+    text.push_str(LESSON_FOOTER);
+    (text.chars().count() <= budget).then_some(text)
 }
 
 fn decimal_digits(mut value: usize) -> usize {
@@ -359,53 +289,13 @@ fn decimal_digits(mut value: usize) -> usize {
     digits
 }
 
-fn render_selected(selected: &[&ContextLesson], omitted_count: usize) -> String {
-    let mut text = String::from(CONTEXT_HEADER);
-    for lesson in selected {
-        text.push_str("- ");
-        text.push_str(lesson.text.redacted());
-        text.push('\n');
-    }
-    if omitted_count > 0 {
-        use std::fmt::Write as _;
-        writeln!(text, "[{omitted_count} additional lesson(s) omitted]")
-            .unwrap_or_else(|error| panic!("writing to String failed: {error}"));
-    }
-    text.push_str(CONTEXT_FOOTER);
-    text
-}
-
-/// Whether an assignment value is credential-shaped rather than prose: it
-/// carries a digit, credential punctuation, or is long enough that no
-/// ordinary word would appear there.
-fn looks_like_credential(value: &str) -> bool {
-    value.chars().count() >= CREDENTIAL_LENGTH_ALONE
-        || value.chars().any(|character| character.is_ascii_digit())
-        || value.contains(CREDENTIAL_PUNCTUATION)
-}
-
-fn redact(input: &str) -> String {
-    let redacted = PEM_PRIVATE_KEY.replace_all(input, REDACTED);
-    let redacted = ASSIGNMENT_SECRET.replace_all(&redacted, |captures: &Captures<'_>| {
-        let group = |index: usize| captures.get(index).map_or("", |found| found.as_str());
-        if looks_like_credential(group(3)) {
-            format!("{}{}{REDACTED}", group(1), group(2))
-        } else {
-            group(0).to_owned()
-        }
-    });
-    let redacted = GITHUB_TOKEN.replace_all(&redacted, REDACTED);
-    let redacted = AWS_ACCESS_KEY.replace_all(&redacted, REDACTED);
-    OPENAI_TOKEN.replace_all(&redacted, REDACTED).into_owned()
-}
-
 #[cfg(test)]
 #[expect(clippy::expect_used)]
 mod tests {
     use super::*;
 
-    fn lesson(sequence: u64, text: &str) -> ContextLesson {
-        ContextLesson::new(sequence, LessonText::new(text).expect("lesson text"))
+    fn lesson(sequence: u64, text: &str) -> LessonCandidate {
+        LessonCandidate::new(sequence, LessonText::new(text).expect("lesson text"))
     }
 
     #[test]
@@ -581,7 +471,7 @@ mod tests {
     }
 
     #[test]
-    fn context_block_orders_newest_first_within_whole_lesson_budget() {
+    fn lesson_render_orders_newest_first_within_budget() {
         let newest = lesson(3, "newest explicit instruction");
         let older = lesson(
             1,
@@ -589,32 +479,29 @@ mod tests {
         );
         let candidates = vec![older, newest];
 
-        assert!(render_context(&candidates, 0, 4_000).is_none());
-        assert!(render_context(&candidates, candidates.len(), 0).is_none());
-        let full = render_context(&candidates, candidates.len(), 4_000).expect("full block");
-        assert!(full.text().starts_with("<CYRIL_LESSONS"));
-        assert!(full.text().ends_with("</CYRIL_LESSONS>"));
-        assert!(
-            full.text().find("newest").expect("newest") < full.text().find("older").expect("older")
-        );
-        assert_eq!(full.omitted_count(), 0);
-        assert!(full.text().chars().count() <= 4_000);
+        assert!(render_lessons(&candidates, 0, MAX_LESSON_CONTEXT_CHARS).is_none());
+        assert!(render_lessons(&candidates, candidates.len(), 0).is_none());
+        let full = render_lessons(&candidates, candidates.len(), MAX_LESSON_CONTEXT_CHARS)
+            .expect("full block");
+        assert!(full.starts_with("<CYRIL_LESSONS"));
+        assert!(full.ends_with("</CYRIL_LESSONS>"));
+        assert!(full.find("newest").expect("newest") < full.find("older").expect("older"));
+        assert!(!full.contains("additional lesson(s) omitted"));
+        assert!(full.chars().count() <= MAX_LESSON_CONTEXT_CHARS);
 
-        let one_lesson_budget = CONTEXT_HEADER.chars().count()
+        let one_lesson_budget = LESSON_HEADER.chars().count()
             + "- newest explicit instruction\n".chars().count()
             + "[1 additional lesson(s) omitted]\n".chars().count()
-            + CONTEXT_FOOTER.chars().count();
-        let bounded = render_context(&candidates, candidates.len(), one_lesson_budget)
+            + LESSON_FOOTER.chars().count();
+        let bounded = render_lessons(&candidates, candidates.len(), one_lesson_budget)
             .expect("bounded block");
-        assert!(bounded.text().contains("newest explicit instruction"));
-        assert!(!bounded.text().contains("older explicit instruction"));
-        assert_eq!(bounded.omitted_count(), 1);
-        assert!(bounded.text().chars().count() <= one_lesson_budget);
+        assert!(bounded.contains("newest explicit instruction"));
+        assert!(!bounded.contains("older explicit instruction"));
+        assert!(bounded.contains("[1 additional lesson(s) omitted]"));
+        assert!(bounded.chars().count() <= one_lesson_budget);
 
-        // The caller may know about more eligible lessons than it read.
-        let partial = render_context(&candidates, 5, 4_000).expect("partial block");
-        assert_eq!(partial.omitted_count(), 3);
-        assert!(partial.text().contains("[3 additional lesson(s) omitted]"));
+        let partial = render_lessons(&candidates, 5, MAX_LESSON_CONTEXT_CHARS).expect("partial");
+        assert!(partial.contains("[3 additional lesson(s) omitted]"));
     }
 
     fn sha256(bytes: &[u8]) -> [u8; 32] {

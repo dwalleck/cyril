@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 #[test]
-fn core_and_ui_remain_persistence_free() -> Result<()> {
+fn c10_core_and_ui_remain_persistence_free() -> Result<()> {
     let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .context("workspace crates directory")?;
@@ -16,6 +16,48 @@ fn core_and_ui_remain_persistence_free() -> Result<()> {
         assert_no_memory_dependency(&manifest, crate_name);
     }
     Ok(())
+}
+
+#[test]
+fn c13_memory_policy_stays_behind_runtime_interface() -> Result<()> {
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .context("workspace crates directory")?;
+    let forbidden = [
+        ("bm25(", "source ranking"),
+        ("source_turns_fts", "source SQL/FTS"),
+        ("<CYRIL_EPISODES", "episode framing"),
+        ("cyril-source-turn-", "source hashing"),
+    ];
+    for crate_name in ["cyril", "cyril-core", "cyril-ui"] {
+        let root = workspace.join(crate_name).join("src");
+        for path in rust_files(&root)? {
+            let contents = std::fs::read_to_string(&path)
+                .with_context(|| format!("read {}", path.display()))?;
+            for (needle, policy) in forbidden {
+                assert!(
+                    !contents.contains(needle),
+                    "C13: {policy} policy escaped memory boundary in {}",
+                    path.display()
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn rust_files(root: &Path) -> Result<Vec<std::path::PathBuf>> {
+    let mut files = Vec::new();
+    for entry in std::fs::read_dir(root).with_context(|| format!("read {}", root.display()))? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            files.extend(rust_files(&path)?);
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            files.push(path);
+        }
+    }
+    Ok(files)
 }
 
 fn assert_no_memory_dependency(value: &toml::Value, crate_name: &str) {

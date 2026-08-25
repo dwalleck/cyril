@@ -6,12 +6,13 @@ use thiserror::Error;
 
 use crate::encoding::decode_fixed_hex;
 use crate::ipc::{self, IpcError, MemoryEndpoint};
-use crate::lesson::{ContextBlock, LessonId, LessonText};
+use crate::lesson::{LessonId, LessonText};
 use crate::project::ProjectScope;
 use crate::protocol::{
     HealthResponse, LessonListResponse, LessonRecord, MemoryProtocolError, MemoryRequest,
-    MemoryResponse, TeachResponse,
+    MemoryResponse, PromptContext, SourceTurnListResponse, SourceTurnRecord, TeachResponse,
 };
+use crate::source_turn::{CaptureBatch, PromptQuery, SourceTurnId};
 use crate::wire::{BoxedStream, WireError};
 
 /// The orchestration-only 256-bit runtime administrator credential.
@@ -178,19 +179,71 @@ impl AdminClient {
         }
     }
 
-    pub async fn context(
+    /// Prepare first-prompt context for `prompt`, the user's original first
+    /// block. Any text is accepted: the query is normalized here so a pasted
+    /// stack trace or a long prompt can never be rejected by the runtime.
+    pub async fn prepare_prompt(
         &mut self,
         project: &ProjectScope,
-        max_chars: u16,
-    ) -> Result<Option<ContextBlock>, ClientError> {
+        prompt: &str,
+    ) -> Result<Option<PromptContext>, ClientError> {
         match self
-            .request(MemoryRequest::Context {
+            .request(MemoryRequest::PreparePrompt {
                 project: project.clone(),
-                max_chars,
+                query: PromptQuery::from_prompt(prompt),
             })
             .await?
         {
-            MemoryResponse::Context(response) => Ok(response),
+            MemoryResponse::Prompt(response) => Ok(response),
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
+    pub async fn capture_batch(
+        &mut self,
+        project: &ProjectScope,
+        batch: CaptureBatch,
+    ) -> Result<(), ClientError> {
+        match self
+            .request(MemoryRequest::CaptureBatch {
+                project: project.clone(),
+                batch,
+            })
+            .await?
+        {
+            MemoryResponse::Captured => Ok(()),
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
+    pub async fn list_turns(
+        &mut self,
+        project: &ProjectScope,
+    ) -> Result<SourceTurnListResponse, ClientError> {
+        match self
+            .request(MemoryRequest::ListTurns {
+                project: project.clone(),
+            })
+            .await?
+        {
+            MemoryResponse::Turns(response) => Ok(response),
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
+    pub async fn inspect_turn(
+        &mut self,
+        project: &ProjectScope,
+        id: SourceTurnId,
+    ) -> Result<SourceTurnRecord, ClientError> {
+        match self
+            .request(MemoryRequest::InspectTurn {
+                project: project.clone(),
+                id,
+            })
+            .await?
+        {
+            MemoryResponse::Turn(response) => Ok(response),
             _ => Err(ClientError::UnexpectedResponse),
         }
     }
