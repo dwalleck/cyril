@@ -33,6 +33,7 @@ regex = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 getrandom = { workspace = true }
 serde_path_to_error = { workspace = true, optional = true }
 # `io-util` powers the stderr drain (`BufReader`/`read_until`) in

@@ -4,6 +4,7 @@ use std::io::{self, Write};
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use sha2::{Digest, Sha256};
 use tokio::sync::{Notify, mpsc};
 
 use crate::types::source_turn::{SOURCE_FRAGMENT_BYTES, tool_status};
@@ -91,7 +92,7 @@ struct ActiveTurn {
     source_turn_id: SourceTurnId,
     next_sequence: u64,
     assistant_fragment: usize,
-    tool_indices: BTreeMap<String, usize>,
+    tool_indices: BTreeMap<[u8; 32], usize>,
     lost: bool,
 }
 
@@ -176,13 +177,13 @@ impl SourceObserver {
                 kind,
                 ..
             } => {
-                let key = tool_call_id.as_str().to_owned();
-                let index = tool_index(active, &key);
+                let tool_id = tool_call_id.as_str();
+                let index = tool_index(active, tool_id);
                 self.try_emit(
                     active,
                     bounded_tool_snapshot(
                         index,
-                        &key,
+                        tool_id,
                         title,
                         kind,
                         (String::new(), 0),
@@ -226,8 +227,8 @@ impl SourceObserver {
     }
 
     fn observe_tool(&self, active: &mut ActiveTurn, tool: &ToolCall) {
-        let key = tool.id().as_str().to_owned();
-        let index = tool_index(active, &key);
+        let tool_id = tool.id().as_str();
+        let index = tool_index(active, tool_id);
         let input = match tool.raw_input() {
             Some(value) => match bounded_json(value, TOOL_INPUT_BYTES) {
                 Ok(encoded) => encoded,
@@ -243,7 +244,7 @@ impl SourceObserver {
             active,
             bounded_tool_snapshot(
                 index,
-                &key,
+                tool_id,
                 tool.title(),
                 tool_status(tool.status()),
                 input,
@@ -276,9 +277,10 @@ impl ActiveTurn {
     }
 }
 
-fn tool_index(active: &mut ActiveTurn, key: &str) -> usize {
+fn tool_index(active: &mut ActiveTurn, tool_id: &str) -> usize {
+    let identity = Sha256::digest(tool_id.as_bytes()).into();
     let next = active.tool_indices.len();
-    *active.tool_indices.entry(key.to_owned()).or_insert(next)
+    *active.tool_indices.entry(identity).or_insert(next)
 }
 
 fn tool_result(tool: &ToolCall) -> (String, usize) {
@@ -446,7 +448,10 @@ fn now_ms() -> i64 {
 mod tests {
     #![expect(clippy::expect_used)]
 
-    use super::{IngressTracker, SourceObserver, TOOL_INPUT_BYTES, bounded_json, utf8_fragments};
+    use super::{
+        IngressTracker, SourceObserver, TOOL_ID_BYTES, TOOL_INPUT_BYTES, bounded_json,
+        utf8_fragments,
+    };
     use crate::types::{
         AgentMessage, AgentThought, Notification, PromptEnvelope, RoutedNotification, SessionId,
         SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind, ToolCall, ToolCallContent,
@@ -652,6 +657,56 @@ mod tests {
         assert!(snapshot.3.is_char_boundary(snapshot.3.len()));
         assert_eq!(*snapshot.5, 28_669, "C3 aggregate dropped scalar metadata");
         assert!(*snapshot.5 > 0, "C3 source truncation was not recorded");
+    }
+
+    #[test]
+    fn oversized_tool_ids_are_bounded_and_remain_distinct() {
+        let (tx, mut rx) = mpsc::channel(8);
+        let observer = SourceObserver::new(tx);
+        let session = SessionId::new("main");
+        observer
+            .begin(session.clone(), TurnId::new(1), &["prompt".to_owned()])
+            .expect("source id");
+        let prefix = "🦀".repeat(TOOL_ID_BYTES / 4);
+        let suffix_chars = 256 * 1024;
+        let first_id = format!("{prefix}{}", "a".repeat(suffix_chars));
+        let second_id = format!("{prefix}{}", "b".repeat(suffix_chars));
+        for tool_call_id in [&first_id, &second_id, &first_id] {
+            observer.observe(&RoutedNotification::scoped(
+                session.clone(),
+                Notification::ToolCallChunk {
+                    tool_call_id: ToolCallId::new(tool_call_id.clone()),
+                    title: "read".to_owned(),
+                    kind: "read".to_owned(),
+                    session_id: None,
+                },
+            ));
+        }
+        let snapshots: Vec<_> = drain(&mut rx)
+            .into_iter()
+            .filter_map(|event| match event.kind() {
+                SourceTurnEventKind::ToolSnapshot {
+                    tool_index,
+                    tool_id,
+                    source_truncated_chars,
+                    ..
+                } => Some((*tool_index, tool_id.clone(), *source_truncated_chars)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            snapshots
+                .iter()
+                .map(|snapshot| snapshot.0)
+                .collect::<Vec<_>>(),
+            [0, 1, 0],
+            "bounded identity must deduplicate repeats without merging equal prefixes"
+        );
+        assert!(snapshots.iter().all(|snapshot| snapshot.1 == prefix));
+        assert!(
+            snapshots.iter().all(|snapshot| snapshot.2 == suffix_chars),
+            "oversized ID truncation metadata must count dropped Unicode scalars"
+        );
     }
 
     #[tokio::test(flavor = "current_thread")]
