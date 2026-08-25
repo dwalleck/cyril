@@ -346,10 +346,9 @@ async fn c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe() -> Res
             is_last: true,
         },
     )?])?;
-    let error = client
-        .capture_batch(&project, conflict)
-        .await
-        .expect_err("C3: conflicting replay must fail");
+    let Err(error) = client.capture_batch(&project, conflict).await else {
+        panic!("C3: conflicting replay must fail");
+    };
     assert!(
         matches!(error, ClientError::Protocol(ref error) if error.code() == MemoryErrorCode::IntegrityConflict),
         "C3: expected typed integrity conflict, got {error}"
