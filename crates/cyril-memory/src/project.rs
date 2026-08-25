@@ -343,10 +343,13 @@ mod tests {
         )
         .expect("dangling marker");
 
+        // The marker path is reported under the canonical workspace (macOS
+        // tempdirs live under `/var` -> `/private/var`).
+        let canonical_workspace = workspace.canonicalize().expect("canonical workspace");
         let ancestor = ProjectScope::resolve(root.path()).expect("ancestor scope");
         let error = ProjectScope::resolve(&workspace).expect_err("dangling marker");
         assert!(
-            matches!(&error, ProjectError::DanglingGitLink { path } if path == &workspace.join(".git")),
+            matches!(&error, ProjectError::DanglingGitLink { path } if path == &canonical_workspace.join(".git")),
             "{error}"
         );
         assert!(error.to_string().contains("dangling symbolic link"));
@@ -358,7 +361,9 @@ mod tests {
         assert_ne!(mounted.project_id(), ancestor.project_id());
     }
 
-    #[cfg(unix)]
+    // Linux only: APFS (macOS) rejects non-UTF-8 file names with EILSEQ, so the
+    // fixture cannot exist there, and Windows paths are UTF-16.
+    #[cfg(target_os = "linux")]
     #[test]
     fn non_utf8_workspace_is_a_binding_error() {
         use std::ffi::OsStr;
