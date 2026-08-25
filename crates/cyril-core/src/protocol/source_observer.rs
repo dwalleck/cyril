@@ -11,6 +11,12 @@ use crate::types::{
     SourceTurnEventKind, SourceTurnId, ToolCall, ToolCallContent, TurnId,
 };
 
+const TOOL_ID_BYTES: usize = 1024;
+const TOOL_NAME_BYTES: usize = 8 * 1024;
+const TOOL_STATUS_BYTES: usize = 256;
+const TOOL_INPUT_BYTES: usize = 24 * 1024;
+const TOOL_RESULT_BYTES: usize = 24 * 1024;
+
 #[derive(Clone)]
 pub(crate) struct IngressTracker {
     state: Rc<IngressState>,
@@ -173,14 +179,14 @@ impl SourceObserver {
                 let index = tool_index(active, &key);
                 self.try_emit(
                     active,
-                    SourceTurnEventKind::ToolSnapshot {
-                        tool_index: index,
-                        tool_id: key,
-                        name: title.clone(),
-                        status: kind.clone(),
-                        input: String::new(),
-                        result: String::new(),
-                    },
+                    bounded_tool_snapshot(
+                        index,
+                        key,
+                        title.clone(),
+                        kind.clone(),
+                        String::new(),
+                        String::new(),
+                    ),
                 );
             }
             // Thoughts, replayed user messages, terminals, locations, usage,
@@ -234,14 +240,14 @@ impl SourceObserver {
         let result = tool_result(tool);
         self.try_emit(
             active,
-            SourceTurnEventKind::ToolSnapshot {
-                tool_index: index,
-                tool_id: key,
-                name: tool.title().to_owned(),
-                status: tool_status(tool.status()).to_owned(),
+            bounded_tool_snapshot(
+                index,
+                key,
+                tool.title().to_owned(),
+                tool_status(tool.status()).to_owned(),
                 input,
                 result,
-            },
+            ),
         );
     }
 
@@ -305,6 +311,47 @@ fn tool_result(tool: &ToolCall) -> String {
     result
 }
 
+fn bounded_tool_snapshot(
+    tool_index: usize,
+    tool_id: String,
+    name: String,
+    status: String,
+    input: String,
+    result: String,
+) -> SourceTurnEventKind {
+    let (tool_id, tool_id_dropped) = bounded_utf8(tool_id, TOOL_ID_BYTES);
+    let (name, name_dropped) = bounded_utf8(name, TOOL_NAME_BYTES);
+    let (status, status_dropped) = bounded_utf8(status, TOOL_STATUS_BYTES);
+    let (input, input_dropped) = bounded_utf8(input, TOOL_INPUT_BYTES);
+    let (result, result_dropped) = bounded_utf8(result, TOOL_RESULT_BYTES);
+    let source_truncated_chars = tool_id_dropped
+        .saturating_add(name_dropped)
+        .saturating_add(status_dropped)
+        .saturating_add(input_dropped)
+        .saturating_add(result_dropped);
+    SourceTurnEventKind::ToolSnapshot {
+        tool_index,
+        tool_id,
+        name,
+        status,
+        input,
+        result,
+        source_truncated_chars,
+    }
+}
+
+fn bounded_utf8(value: String, max_bytes: usize) -> (String, usize) {
+    if value.len() <= max_bytes {
+        return (value, 0);
+    }
+    let mut end = max_bytes;
+    while !value.is_char_boundary(end) {
+        end = end.saturating_sub(1);
+    }
+    let dropped = value[end..].chars().count();
+    (value[..end].to_owned(), dropped)
+}
+
 fn utf8_fragments(value: &str, max_bytes: usize) -> Vec<&str> {
     if value.is_empty() {
         return vec![""];
@@ -348,7 +395,7 @@ fn now_ms() -> i64 {
 mod tests {
     #![expect(clippy::expect_used)]
 
-    use super::{SourceObserver, utf8_fragments};
+    use super::{IngressTracker, SourceObserver, utf8_fragments};
     use crate::types::{
         AgentMessage, AgentThought, Notification, PromptEnvelope, RoutedNotification, SessionId,
         SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind, ToolCall, ToolCallContent,
@@ -364,6 +411,17 @@ mod tests {
         assert!(
             fragments.iter().all(|fragment| fragment.len() <= 64 * 1024),
             "C1 fragment exceeded channel contract"
+        );
+        let (tx, _rx) = mpsc::channel(8);
+        let observer = SourceObserver::new(tx);
+        let started = std::time::Instant::now();
+        observer
+            .begin(SessionId::new("main"), TurnId::new(1), &[text])
+            .expect("source id");
+        let elapsed = started.elapsed();
+        assert!(
+            elapsed <= std::time::Duration::from_millis(10),
+            "source observation budget exceeded: {elapsed:?}"
         );
     }
     fn drain(rx: &mut mpsc::Receiver<SourceTurnEvent>) -> Vec<SourceTurnEvent> {
@@ -441,6 +499,7 @@ mod tests {
                 text: "private reasoning".to_owned(),
             }),
         ));
+
         observer.observe(&RoutedNotification::scoped(
             session.clone(),
             Notification::UserMessage(UserMessage {
@@ -487,6 +546,54 @@ mod tests {
             _ => false,
         }));
     }
+    #[test]
+    fn c3_tool_snapshot_payload_is_bounded_with_truncation_metadata() {
+        let (tx, mut rx) = mpsc::channel(8);
+        let observer = SourceObserver::new(tx);
+        let session = SessionId::new("main");
+        observer
+            .begin(session.clone(), TurnId::new(1), &["prompt".to_owned()])
+            .expect("source id");
+        observer.observe(&RoutedNotification::scoped(
+            session,
+            Notification::ToolCallStarted(
+                ToolCall::new(
+                    ToolCallId::new("tool-1"),
+                    "🦀".repeat(3_000),
+                    ToolKind::Read,
+                    ToolCallStatus::Completed,
+                    Some(serde_json::json!({"payload": "🦀".repeat(20_000)})),
+                )
+                .with_content(vec![ToolCallContent::Text("🦀".repeat(20_000))]),
+            ),
+        ));
+        let events = drain(&mut rx);
+        let snapshot = events
+            .iter()
+            .find_map(|event| match event.kind() {
+                SourceTurnEventKind::ToolSnapshot {
+                    tool_id,
+                    name,
+                    status,
+                    input,
+                    result,
+                    source_truncated_chars,
+                    ..
+                } => Some((tool_id, name, status, input, result, source_truncated_chars)),
+                _ => None,
+            })
+            .expect("tool snapshot");
+        let payload_bytes = snapshot.0.len()
+            + snapshot.1.len()
+            + snapshot.2.len()
+            + snapshot.3.len()
+            + snapshot.4.len();
+        assert!(
+            payload_bytes <= crate::types::source_turn::SOURCE_FRAGMENT_BYTES,
+            "C3 tool snapshot exceeded source event bound"
+        );
+        assert!(*snapshot.5 > 0, "C3 source truncation was not recorded");
+    }
 
     #[tokio::test(flavor = "current_thread")]
     async fn c9_slow_capture_is_bounded_and_shutdown_drains_in_order() {
@@ -515,6 +622,26 @@ mod tests {
                         ..
                     }
                 ));
+            })
+            .await;
+    }
+    #[tokio::test(flavor = "current_thread")]
+    async fn c9_ingress_quiescence_stays_within_bridge_budget() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let tracker = IngressTracker::new();
+                let guards: Vec<_> = (0..32).map(|_| tracker.enter()).collect();
+                tokio::task::spawn_local(async move {
+                    tokio::task::yield_now().await;
+                    drop(guards);
+                });
+                let started = std::time::Instant::now();
+                tracker.wait_quiescent().await;
+                let elapsed = started.elapsed();
+                assert!(
+                    elapsed <= std::time::Duration::from_millis(50),
+                    "C9 ingress barrier exceeded budget: {elapsed:?}"
+                );
             })
             .await;
     }

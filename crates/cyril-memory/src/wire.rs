@@ -165,6 +165,7 @@ enum SourceEventKindPayload {
         status: String,
         input: String,
         result: String,
+        source_truncated_chars: usize,
     },
     Finished {
         disposition: SourceTurnDisposition,
@@ -560,6 +561,7 @@ fn source_event_payload(event: &SourceTurnEvent) -> SourceEventPayload {
             status,
             input,
             result,
+            source_truncated_chars,
         } => SourceEventKindPayload::ToolSnapshot {
             tool_index: *tool_index,
             tool_id: tool_id.clone(),
@@ -567,6 +569,7 @@ fn source_event_payload(event: &SourceTurnEvent) -> SourceEventPayload {
             status: status.clone(),
             input: input.clone(),
             result: result.clone(),
+            source_truncated_chars: *source_truncated_chars,
         },
         SourceTurnEventKind::Finished {
             disposition,
@@ -626,6 +629,7 @@ fn source_event_from_payload(
             status,
             input,
             result,
+            source_truncated_chars,
         } => SourceTurnEventKind::ToolSnapshot {
             tool_index,
             tool_id,
@@ -633,6 +637,7 @@ fn source_event_from_payload(
             status,
             input,
             result,
+            source_truncated_chars,
         },
         SourceEventKindPayload::Finished {
             disposition,

@@ -389,5 +389,35 @@ mod tests {
                 "missing {expected}: {inspection}"
             );
         }
+
+        let large_turn = MemorySourceTurnView::new(
+            "ffeeddccbbaa99887766554433221100".to_owned(),
+            "p".repeat(6 * 1024),
+            "a".repeat(6 * 1024),
+            "t".repeat(4 * 1024),
+            MemorySourceTurnMetadataView::new(
+                "session-performance".to_owned(),
+                99,
+                MemorySourceTurnStatus::Completed,
+                Some("deadbeef".to_owned()),
+                1_000,
+                Some(2_000),
+                5,
+            ),
+        );
+        let render_started = std::time::Instant::now();
+        let list = format_memory_turn_list(&MemorySourceTurnListView::new(
+            vec![large_turn.clone(); 100],
+            0,
+            0,
+        ));
+        let detail = format_memory_turn(&large_turn);
+        let render_elapsed = render_started.elapsed();
+        assert_eq!(list.lines().count(), 101);
+        assert!(detail.contains("session-performance"));
+        assert!(
+            render_elapsed <= std::time::Duration::from_millis(50),
+            "C7 source turn render budget exceeded: {render_elapsed:?}"
+        );
     }
 }

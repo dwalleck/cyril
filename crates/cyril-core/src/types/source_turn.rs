@@ -107,6 +107,7 @@ pub enum SourceTurnEventKind {
         status: String,
         input: String,
         result: String,
+        source_truncated_chars: usize,
     },
     Finished {
         disposition: SourceTurnDisposition,

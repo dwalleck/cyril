@@ -148,6 +148,7 @@ fn convert_event(event: CoreEvent) -> Result<SourceTurnEvent, cyril_memory::Sour
             status,
             input,
             result,
+            source_truncated_chars,
         } => SourceTurnEventKind::ToolSnapshot {
             tool_index,
             tool_id,
@@ -155,6 +156,7 @@ fn convert_event(event: CoreEvent) -> Result<SourceTurnEvent, cyril_memory::Sour
             status,
             input,
             result,
+            source_truncated_chars,
         },
         CoreEventKind::Finished {
             disposition,
@@ -204,6 +206,7 @@ mod tests {
     use cyril_core::types::{
         SessionId, SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind, SourceTurnId,
     };
+    use std::time::{Duration, Instant};
     use tokio::sync::mpsc;
 
     #[cfg(unix)]
@@ -216,6 +219,7 @@ mod tests {
         let session_id = SessionId::new("forwarded-session");
         let (tx, rx) = mpsc::channel(32);
         let forwarder = CaptureForwarder::spawn(rx, memory.clone());
+        let batch_started = Instant::now();
         for event in [
             SourceTurnEvent::for_tests(
                 session_id.clone(),
@@ -252,6 +256,11 @@ mod tests {
         }
         drop(tx);
         forwarder.drain().await;
+        let batch_elapsed = batch_started.elapsed();
+        assert!(
+            batch_elapsed <= Duration::from_millis(100),
+            "C9 forwarder batch exceeded budget: {batch_elapsed:?}"
+        );
         let stored = memory
             .inspect_turn(cyril_memory::SourceTurnId::from_bytes(
                 source_turn_id.as_bytes(),

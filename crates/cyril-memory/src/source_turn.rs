@@ -150,6 +150,7 @@ pub enum SourceTurnEventKind {
         status: String,
         input: String,
         result: String,
+        source_truncated_chars: usize,
     },
     Finished {
         disposition: SourceTurnDisposition,
@@ -425,6 +426,16 @@ pub struct SourceTurnDraft {
     omitted_tool_indices: BTreeSet<usize>,
 }
 
+struct ToolSnapshotParts<'a> {
+    tool_index: usize,
+    tool_id: &'a str,
+    name: &'a str,
+    status: &'a str,
+    input: &'a str,
+    result: &'a str,
+    source_truncated_chars: usize,
+}
+
 impl SourceTurnDraft {
     pub fn from_batch(batch: &CaptureBatch) -> Result<Self, SourceTurnError> {
         let first = batch.events().first().ok_or(SourceTurnError::EmptyBatch)?;
@@ -562,7 +573,16 @@ impl SourceTurnDraft {
                 status,
                 input,
                 result,
-            } => self.merge_tool(*tool_index, tool_id, name, status, input, result)?,
+                source_truncated_chars,
+            } => self.merge_tool(ToolSnapshotParts {
+                tool_index: *tool_index,
+                tool_id,
+                name,
+                status,
+                input,
+                result,
+                source_truncated_chars: *source_truncated_chars,
+            })?,
             SourceTurnEventKind::Finished {
                 disposition,
                 finished_at_ms,
@@ -579,15 +599,16 @@ impl SourceTurnDraft {
         Ok(())
     }
 
-    fn merge_tool(
-        &mut self,
-        tool_index: usize,
-        tool_id: &str,
-        name: &str,
-        status: &str,
-        input: &str,
-        result: &str,
-    ) -> Result<(), SourceTurnError> {
+    fn merge_tool(&mut self, snapshot: ToolSnapshotParts<'_>) -> Result<(), SourceTurnError> {
+        let ToolSnapshotParts {
+            tool_index,
+            tool_id,
+            name,
+            status,
+            input,
+            result,
+            source_truncated_chars,
+        } = snapshot;
         if tool_index >= MAX_TOOLS {
             self.omitted_tool_indices.insert(tool_index);
             return Ok(());
@@ -599,7 +620,10 @@ impl SourceTurnDraft {
         let used_without_existing = self.total_tool_chars().saturating_sub(existing_chars);
         let remaining_total = MAX_TOTAL_TOOL_CHARS.saturating_sub(used_without_existing);
         let budget = MAX_TOOL_CHARS.min(remaining_total);
-        let record = bounded_tool_record(tool_id, name, status, input, result, budget);
+        let mut record = bounded_tool_record(tool_id, name, status, input, result, budget);
+        record.truncated_chars = record
+            .truncated_chars
+            .saturating_add(source_truncated_chars);
         if tool_index == self.tools.len() {
             self.tools.push(record);
         } else {
@@ -719,6 +743,7 @@ fn redacted_kind(kind: &SourceTurnEventKind) -> SourceTurnEventKind {
             status,
             input,
             result,
+            source_truncated_chars,
         } => SourceTurnEventKind::ToolSnapshot {
             tool_index: *tool_index,
             tool_id: redact(tool_id),
@@ -726,6 +751,7 @@ fn redacted_kind(kind: &SourceTurnEventKind) -> SourceTurnEventKind {
             status: redact(status),
             input: redact(input),
             result: redact(result),
+            source_truncated_chars: *source_truncated_chars,
         },
         SourceTurnEventKind::Finished {
             disposition,
@@ -897,6 +923,7 @@ mod tests {
                     status: "completed".to_owned(),
                     input: "x".repeat(MAX_TOOL_CHARS),
                     result: "y".repeat(MAX_TOOL_CHARS),
+                    source_truncated_chars: 0,
                 },
             ),
         ])
@@ -953,6 +980,7 @@ mod tests {
                     status: "completed".to_owned(),
                     input: format!("token={secret}"),
                     result: format!("token={secret}"),
+                    source_truncated_chars: 0,
                 },
             ),
         ])
