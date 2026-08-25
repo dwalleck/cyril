@@ -51,7 +51,7 @@ Implementation: inspection landed with the concrete adapter boundary in `db64d3c
 - `cargo test` — **PASS**, 1,556 tests across 24 suites; 6 ignored production/manual gates.
 - `cargo fmt --check` — **PASS**.
 - `cargo clippy --all-targets -- -D warnings` — **PASS**.
-- KAS feature CI-equivalent build and warning-denied all-target Clippy — **PASS**.
+- Workspace all-feature warning-denied all-target Clippy, including the KAS feature — **PASS**.
 - `cargo nextest run -p cyril -p cyril-core --features kas` — **PASS**, 1,185 tests; 8 skipped.
 - Production-scale ignored gate — **PASS** with measurements recorded above.
 - Failures — none.
