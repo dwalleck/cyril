@@ -337,17 +337,29 @@ fn bounded_preview(content: &str, limit: usize) -> String {
     preview
 }
 
+/// Wire code for a failed store operation on an open store.
 fn operation_error(error: StoreError) -> MemoryResponse {
     let code = match error {
         StoreError::LessonNotFound | StoreError::SourceTurnNotFound => MemoryErrorCode::NotFound,
         StoreError::LessonSuperseded => MemoryErrorCode::AlreadySuperseded,
-        StoreError::CorruptLesson { .. } | StoreError::CorruptSource { .. } => {
-            MemoryErrorCode::CorruptLesson
-        }
+        StoreError::CorruptLesson { .. } => MemoryErrorCode::CorruptLesson,
+        StoreError::CorruptSource { .. } => MemoryErrorCode::CorruptSource,
         StoreError::SourceTurnConflict => MemoryErrorCode::IntegrityConflict,
         StoreError::SourceInvalid(_) => MemoryErrorCode::InvalidRequest,
         StoreError::Permission { .. } => MemoryErrorCode::PermissionDenied,
-        _ => MemoryErrorCode::Internal,
+        StoreError::AlreadyRunning { .. } => MemoryErrorCode::AlreadyRunning,
+        StoreError::Missing { .. }
+        | StoreError::Unreadable { .. }
+        | StoreError::Malformed { .. }
+        | StoreError::Invalid { .. }
+        | StoreError::Lock { .. }
+        | StoreError::MissingMetadata { .. }
+        | StoreError::CorruptSchema { .. }
+        | StoreError::DuplicateMetadata { .. }
+        | StoreError::UnsupportedSchema { .. }
+        | StoreError::Random(_)
+        | StoreError::Clock(_)
+        | StoreError::Sqlite { .. } => MemoryErrorCode::Internal,
     };
     tracing::warn!(error = %error, "memory store operation failed");
     MemoryResponse::Error(MemoryProtocolError::new(code))
@@ -363,14 +375,13 @@ fn random_instance_id() -> Result<String, RuntimeError> {
     Ok(hex::encode(bytes))
 }
 
+/// Health code for a store that failed to open. Only ownership and
+/// permission failures are distinguishable to the client; everything else
+/// is a migration/open failure, whatever the SQLite-level cause.
 fn map_store_error(error: &StoreError) -> MemoryErrorCode {
     match error {
         StoreError::AlreadyRunning { .. } => MemoryErrorCode::AlreadyRunning,
         StoreError::Permission { .. } => MemoryErrorCode::PermissionDenied,
-        StoreError::SourceTurnNotFound => MemoryErrorCode::NotFound,
-        StoreError::SourceTurnConflict => MemoryErrorCode::IntegrityConflict,
-        StoreError::SourceInvalid(_) => MemoryErrorCode::InvalidRequest,
-        StoreError::CorruptSource { .. } => MemoryErrorCode::MigrationFailed,
         StoreError::Missing { .. }
         | StoreError::Unreadable { .. }
         | StoreError::Malformed { .. }
@@ -382,6 +393,10 @@ fn map_store_error(error: &StoreError) -> MemoryErrorCode {
         | StoreError::UnsupportedSchema { .. }
         | StoreError::LessonNotFound
         | StoreError::LessonSuperseded
+        | StoreError::SourceTurnNotFound
+        | StoreError::SourceTurnConflict
+        | StoreError::SourceInvalid(_)
+        | StoreError::CorruptSource { .. }
         | StoreError::Random(_)
         | StoreError::Clock(_)
         | StoreError::CorruptLesson { .. }

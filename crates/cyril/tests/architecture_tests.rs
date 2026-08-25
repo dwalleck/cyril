@@ -27,7 +27,7 @@ fn c13_memory_policy_stays_behind_runtime_interface() -> Result<()> {
         ("bm25(", "source ranking"),
         ("source_turns_fts", "source SQL/FTS"),
         ("<CYRIL_EPISODES", "episode framing"),
-        ("cyril-source-turn-v1", "source hashing"),
+        ("cyril-source-turn-", "source hashing"),
     ];
     for crate_name in ["cyril", "cyril-core", "cyril-ui"] {
         let root = workspace.join(crate_name).join("src");

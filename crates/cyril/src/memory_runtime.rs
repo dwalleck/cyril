@@ -210,7 +210,7 @@ impl ProjectMemory {
                 ProjectMemoryError::Client(error) => FirstPromptContextError::Client(error),
             })?;
             client
-                .prepare_prompt(&self.project, query)
+                .prepare_prompt(&self.project, &query)
                 .await
                 .map_err(FirstPromptContextError::Client)
         })

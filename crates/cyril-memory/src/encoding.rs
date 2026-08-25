@@ -1,4 +1,5 @@
-//! Fixed-width hexadecimal decoding shared by every identity and credential type.
+//! Fixed-width hexadecimal decoding and bounded text previews shared by every
+//! identity, credential, and record type.
 
 /// Decode `value` as exactly `N` bytes of hexadecimal.
 ///
@@ -14,6 +15,30 @@ pub(crate) fn decode_fixed_hex<const N: usize>(value: &str) -> Option<[u8; N]> {
     Some(bytes)
 }
 
+/// Cut `content` to at most `limit` Unicode scalar values.
+///
+/// Returns the retained text and the number of scalars dropped. A cut is
+/// marked with a trailing `…` that counts against `limit`, so the result
+/// never exceeds `limit` scalars; a zero limit retains nothing.
+pub(crate) fn bounded_text(content: &str, limit: usize) -> (String, usize) {
+    let total = content.chars().count();
+    if total <= limit {
+        return (content.to_owned(), 0);
+    }
+    if limit == 0 {
+        return (String::new(), total);
+    }
+    let kept = limit - 1;
+    let mut text: String = content.chars().take(kept).collect();
+    text.push('…');
+    (text, total - kept)
+}
+
+/// [`bounded_text`] without the dropped count, for previews.
+pub(crate) fn bounded_preview(content: &str, limit: usize) -> String {
+    bounded_text(content, limit).0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -25,5 +50,16 @@ mod tests {
         assert_eq!(decode_fixed_hex::<2>("0a0"), None);
         assert_eq!(decode_fixed_hex::<2>("zz0b"), None);
         assert_eq!(decode_fixed_hex::<0>(""), Some([]));
+    }
+
+    #[test]
+    fn bounded_text_counts_scalars_and_marks_cuts() {
+        assert_eq!(bounded_text("abc", 3), ("abc".to_owned(), 0));
+        assert_eq!(bounded_text("abcd", 3), ("ab…".to_owned(), 2));
+        assert_eq!(bounded_text("héllo wörld", 4), ("hél…".to_owned(), 8));
+        assert_eq!(bounded_text("abc", 0), (String::new(), 3));
+        assert_eq!(bounded_text("", 0), (String::new(), 0));
+        assert_eq!(bounded_text("ab", 1), ("…".to_owned(), 2));
+        assert_eq!(bounded_preview("abcd", 3), "ab…");
     }
 }

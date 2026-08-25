@@ -15,13 +15,16 @@ use crate::lesson::{
 };
 use crate::project::ProjectScope;
 use crate::protocol::{
-    HealthResponse, LessonListResponse, LessonRecord, LessonRecordMetadata, MAX_FRAME_SIZE,
-    MemoryErrorCode, MemoryProtocolError, MemoryRequest, MemoryResponse, PROTOCOL_VERSION,
-    PromptContext, RuntimeHealth, SourceTurnListResponse, SourceTurnRecord, TeachResponse,
+    BoundedText, HealthResponse, INSPECT_TEXT_CHARS, INSPECT_TOOL_TEXT_CHARS, LessonListResponse,
+    LessonRecord, LessonRecordMetadata, MAX_FRAME_SIZE, MemoryErrorCode, MemoryProtocolError,
+    MemoryRequest, MemoryResponse, PROTOCOL_VERSION, PromptContext, RuntimeHealth,
+    SOURCE_TURN_PREVIEW_CHARS, SourceTurnListResponse, SourceTurnRecord, SourceTurnSummary,
+    TeachResponse, ToolSummary,
 };
 use crate::source_turn::{
-    CaptureBatch, MAX_CAPTURE_EVENTS, SourceSessionId, SourceTurnDisposition, SourceTurnError,
-    SourceTurnEvent, SourceTurnEventKind, SourceTurnId,
+    CaptureBatch, MAX_CAPTURE_EVENTS, MAX_TOOL_STATUS_CHARS, MAX_TOOLS, PromptQuery,
+    SourceSessionId, SourceToolId, SourceTurnError, SourceTurnEvent, SourceTurnEventKind,
+    SourceTurnId, SourceTurnStatus,
 };
 
 pub(crate) trait AsyncStream: AsyncRead + AsyncWrite + Unpin + Send {}
@@ -131,45 +134,16 @@ struct CapturePayload {
     events: Vec<SourceEventPayload>,
 }
 
+/// One event on the wire. `kind` is the domain enum itself (it already
+/// carries the strict serde shape); [`SourceTurnEvent::new`] re-validates
+/// and normalizes it on the way in.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SourceEventPayload {
     session_id: String,
     source_turn_id: String,
     sequence: u64,
-    kind: SourceEventKindPayload,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case", tag = "kind", deny_unknown_fields)]
-enum SourceEventKindPayload {
-    Started {
-        bridge_turn_id: u64,
-        started_at_ms: i64,
-        block_count: usize,
-    },
-    PromptFragment {
-        block_index: usize,
-        fragment_index: usize,
-        text: String,
-        is_last: bool,
-    },
-    AssistantFragment {
-        fragment_index: usize,
-        text: String,
-    },
-    ToolSnapshot {
-        tool_index: usize,
-        tool_id: String,
-        name: String,
-        status: String,
-        input: String,
-        result: String,
-    },
-    Finished {
-        disposition: SourceTurnDisposition,
-        finished_at_ms: i64,
-    },
+    kind: SourceTurnEventKind,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -215,12 +189,12 @@ enum ResponsePayload<'a> {
     Prompt { context: Option<PromptEnvelope<'a>> },
     #[serde(rename = "turns")]
     Turns {
-        turns: Vec<SourceTurnEnvelope<'a>>,
+        turns: Vec<SourceTurnSummaryEnvelope<'a>>,
         omitted_count: usize,
         corrupt_count: usize,
     },
     #[serde(rename = "turn")]
-    Turn { turn: SourceTurnEnvelope<'a> },
+    Turn { turn: SourceTurnRecordEnvelope<'a> },
     #[serde(rename = "shutdown")]
     Shutdown,
     #[serde(rename = "error")]
@@ -262,14 +236,43 @@ struct PromptEnvelope<'a> {
 }
 
 #[derive(Debug, Serialize)]
-struct SourceTurnEnvelope<'a> {
+struct SourceTurnSummaryEnvelope<'a> {
     id: String,
     session_id: &'a str,
     bridge_turn_id: u64,
     status: &'a str,
-    prompt: &'a str,
-    assistant: &'a str,
-    tools: &'a str,
+    prompt_preview: &'a str,
+    tool_count: usize,
+    started_at_ms: i64,
+    finished_at_ms: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
+struct BoundedTextEnvelope<'a> {
+    text: &'a str,
+    truncated_chars: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct ToolSummaryEnvelope<'a> {
+    tool_id: &'a str,
+    name: BoundedTextEnvelope<'a>,
+    status: &'a str,
+    input: BoundedTextEnvelope<'a>,
+    result: BoundedTextEnvelope<'a>,
+    capture_truncated_chars: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct SourceTurnRecordEnvelope<'a> {
+    id: String,
+    session_id: &'a str,
+    bridge_turn_id: u64,
+    status: &'a str,
+    prompt: BoundedTextEnvelope<'a>,
+    assistant: BoundedTextEnvelope<'a>,
+    tools: Vec<ToolSummaryEnvelope<'a>>,
+    omitted_tool_count: usize,
     source_hash: Option<String>,
     started_at_ms: i64,
     finished_at_ms: Option<i64>,
@@ -296,7 +299,7 @@ enum IncomingResponsePayload {
     #[serde(rename = "lesson")]
     Lesson(LessonPayloadOwned),
     #[serde(rename = "captured")]
-    Captured,
+    Captured(EmptyPayloadOwned),
     #[serde(rename = "prompt")]
     Prompt(PromptPayloadOwned),
     #[serde(rename = "turns")]
@@ -304,10 +307,16 @@ enum IncomingResponsePayload {
     #[serde(rename = "turn")]
     Turn(TurnPayloadOwned),
     #[serde(rename = "shutdown")]
-    Shutdown,
+    Shutdown(EmptyPayloadOwned),
     #[serde(rename = "error")]
     Error(ErrorPayloadOwned),
 }
+
+/// A payload with no fields. A unit variant would silently accept unknown
+/// fields under `tag = "kind"`; an empty struct keeps drift detection.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EmptyPayloadOwned {}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -355,7 +364,7 @@ struct PromptEnvelopeOwned {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct TurnsPayloadOwned {
-    turns: Vec<SourceTurnEnvelopeOwned>,
+    turns: Vec<SourceTurnSummaryOwned>,
     omitted_count: usize,
     corrupt_count: usize,
 }
@@ -363,19 +372,51 @@ struct TurnsPayloadOwned {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct TurnPayloadOwned {
-    turn: SourceTurnEnvelopeOwned,
+    turn: SourceTurnRecordOwned,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct SourceTurnEnvelopeOwned {
+struct SourceTurnSummaryOwned {
     id: String,
     session_id: String,
     bridge_turn_id: u64,
     status: String,
-    prompt: String,
-    assistant: String,
-    tools: String,
+    prompt_preview: String,
+    tool_count: usize,
+    started_at_ms: i64,
+    finished_at_ms: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BoundedTextOwned {
+    text: String,
+    truncated_chars: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ToolSummaryOwned {
+    tool_id: String,
+    name: BoundedTextOwned,
+    status: String,
+    input: BoundedTextOwned,
+    result: BoundedTextOwned,
+    capture_truncated_chars: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SourceTurnRecordOwned {
+    id: String,
+    session_id: String,
+    bridge_turn_id: u64,
+    status: String,
+    prompt: BoundedTextOwned,
+    assistant: BoundedTextOwned,
+    tools: Vec<ToolSummaryOwned>,
+    omitted_tool_count: usize,
     source_hash: Option<String>,
     started_at_ms: i64,
     finished_at_ms: Option<i64>,
@@ -463,7 +504,7 @@ pub(crate) async fn send_request(
             "prepare_prompt",
             Some(payload_value(PreparePromptPayload {
                 project: project_payload(&project, id)?,
-                query,
+                query: query.into_string(),
             })?),
         ),
         MemoryRequest::CaptureBatch { project, batch } => (
@@ -525,62 +566,11 @@ fn payload_value<T: Serialize>(payload: T) -> Result<serde_json::Value, WireErro
         .map_err(|source| WireError::Io(io::Error::new(io::ErrorKind::InvalidData, source)))
 }
 fn source_event_payload(event: &SourceTurnEvent) -> SourceEventPayload {
-    let kind = match event.kind() {
-        SourceTurnEventKind::Started {
-            bridge_turn_id,
-            started_at_ms,
-            block_count,
-        } => SourceEventKindPayload::Started {
-            bridge_turn_id: *bridge_turn_id,
-            started_at_ms: *started_at_ms,
-            block_count: *block_count,
-        },
-        SourceTurnEventKind::PromptFragment {
-            block_index,
-            fragment_index,
-            text,
-            is_last,
-        } => SourceEventKindPayload::PromptFragment {
-            block_index: *block_index,
-            fragment_index: *fragment_index,
-            text: text.clone(),
-            is_last: *is_last,
-        },
-        SourceTurnEventKind::AssistantFragment {
-            fragment_index,
-            text,
-        } => SourceEventKindPayload::AssistantFragment {
-            fragment_index: *fragment_index,
-            text: text.clone(),
-        },
-        SourceTurnEventKind::ToolSnapshot {
-            tool_index,
-            tool_id,
-            name,
-            status,
-            input,
-            result,
-        } => SourceEventKindPayload::ToolSnapshot {
-            tool_index: *tool_index,
-            tool_id: tool_id.clone(),
-            name: name.clone(),
-            status: status.clone(),
-            input: input.clone(),
-            result: result.clone(),
-        },
-        SourceTurnEventKind::Finished {
-            disposition,
-            finished_at_ms,
-        } => SourceEventKindPayload::Finished {
-            disposition: *disposition,
-            finished_at_ms: *finished_at_ms,
-        },
-    };
     SourceEventPayload {
         session_id: event.session_id().as_str().to_owned(),
         source_turn_id: event.source_turn_id().to_string(),
         sequence: event.sequence(),
-        kind,
+        kind: event.kind().clone(),
     }
 }
 
@@ -591,59 +581,9 @@ fn source_event_from_payload(
         SourceSessionId::new(payload.session_id).map_err(|_| SourceTurnError::InvalidEvent)?;
     let source_turn_id = SourceTurnId::from_str(&payload.source_turn_id)
         .map_err(|_| SourceTurnError::InvalidEvent)?;
-    let kind = match payload.kind {
-        SourceEventKindPayload::Started {
-            bridge_turn_id,
-            started_at_ms,
-            block_count,
-        } => SourceTurnEventKind::Started {
-            bridge_turn_id,
-            started_at_ms,
-            block_count,
-        },
-        SourceEventKindPayload::PromptFragment {
-            block_index,
-            fragment_index,
-            text,
-            is_last,
-        } => SourceTurnEventKind::PromptFragment {
-            block_index,
-            fragment_index,
-            text,
-            is_last,
-        },
-        SourceEventKindPayload::AssistantFragment {
-            fragment_index,
-            text,
-        } => SourceTurnEventKind::AssistantFragment {
-            fragment_index,
-            text,
-        },
-        SourceEventKindPayload::ToolSnapshot {
-            tool_index,
-            tool_id,
-            name,
-            status,
-            input,
-            result,
-        } => SourceTurnEventKind::ToolSnapshot {
-            tool_index,
-            tool_id,
-            name,
-            status,
-            input,
-            result,
-        },
-        SourceEventKindPayload::Finished {
-            disposition,
-            finished_at_ms,
-        } => SourceTurnEventKind::Finished {
-            disposition,
-            finished_at_ms,
-        },
-    };
-    SourceTurnEvent::new(session_id, source_turn_id, payload.sequence, kind)
+    SourceTurnEvent::new(session_id, source_turn_id, payload.sequence, payload.kind)
 }
+
 fn project_payload(project: &ProjectScope, id: u64) -> Result<ProjectPayload, WireError> {
     let display_path =
         project
@@ -764,14 +704,13 @@ pub(crate) async fn read_request(
         "prepare_prompt" => {
             let payload: PreparePromptPayload =
                 decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
-            if payload.query.chars().count() > crate::source_turn::MAX_QUERY_CHARS
-                || payload.query.chars().any(char::is_control)
-            {
-                return Err(invalid_field("query"));
-            }
+            // The wire stays strict; the client normalizes free text before
+            // sending, so a rejection here is protocol drift, not user input.
+            let query =
+                PromptQuery::from_wire(payload.query).map_err(|_| invalid_field("query"))?;
             MemoryRequest::PreparePrompt {
                 project: project_from_payload(payload.project, envelope.id, envelope.version)?,
-                query: payload.query,
+                query,
             }
         }
         "capture_batch" => {
@@ -913,12 +852,16 @@ pub(crate) async fn send_response(
             }),
         },
         MemoryResponse::Turns(result) => ResponsePayload::Turns {
-            turns: result.turns().iter().map(source_turn_envelope).collect(),
+            turns: result
+                .turns()
+                .iter()
+                .map(source_turn_summary_envelope)
+                .collect(),
             omitted_count: result.omitted_count(),
             corrupt_count: result.corrupt_count(),
         },
         MemoryResponse::Turn(turn) => ResponsePayload::Turn {
-            turn: source_turn_envelope(turn),
+            turn: source_turn_record_envelope(turn),
         },
         MemoryResponse::Shutdown => ResponsePayload::Shutdown,
         MemoryResponse::Error(error) => ResponsePayload::Error {
@@ -950,15 +893,47 @@ fn lesson_envelope(lesson: &LessonRecord) -> LessonEnvelope<'_> {
     }
 }
 
-fn source_turn_envelope(turn: &SourceTurnRecord) -> SourceTurnEnvelope<'_> {
-    SourceTurnEnvelope {
+fn source_turn_summary_envelope(turn: &SourceTurnSummary) -> SourceTurnSummaryEnvelope<'_> {
+    SourceTurnSummaryEnvelope {
         id: turn.id().to_string(),
         session_id: turn.session_id().as_str(),
         bridge_turn_id: turn.bridge_turn_id(),
         status: turn.status().as_str(),
-        prompt: turn.prompt(),
-        assistant: turn.assistant(),
-        tools: turn.tools(),
+        prompt_preview: turn.prompt_preview(),
+        tool_count: turn.tool_count(),
+        started_at_ms: turn.started_at_ms(),
+        finished_at_ms: turn.finished_at_ms(),
+    }
+}
+
+fn bounded_text_envelope(text: &BoundedText) -> BoundedTextEnvelope<'_> {
+    BoundedTextEnvelope {
+        text: text.text(),
+        truncated_chars: text.truncated_chars(),
+    }
+}
+
+fn source_turn_record_envelope(turn: &SourceTurnRecord) -> SourceTurnRecordEnvelope<'_> {
+    SourceTurnRecordEnvelope {
+        id: turn.id().to_string(),
+        session_id: turn.session_id().as_str(),
+        bridge_turn_id: turn.bridge_turn_id(),
+        status: turn.status().as_str(),
+        prompt: bounded_text_envelope(turn.prompt()),
+        assistant: bounded_text_envelope(turn.assistant()),
+        tools: turn
+            .tools()
+            .iter()
+            .map(|tool| ToolSummaryEnvelope {
+                tool_id: tool.tool_id().as_str(),
+                name: bounded_text_envelope(tool.name()),
+                status: tool.status(),
+                input: bounded_text_envelope(tool.input()),
+                result: bounded_text_envelope(tool.result()),
+                capture_truncated_chars: tool.capture_truncated_chars(),
+            })
+            .collect(),
+        omitted_tool_count: turn.omitted_tool_count(),
         source_hash: turn.source_hash().map(hex::encode),
         started_at_ms: turn.started_at_ms(),
         finished_at_ms: turn.finished_at_ms(),
@@ -1124,7 +1099,7 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
             value.lesson,
             LessonContent::Full,
         )?)),
-        IncomingResponsePayload::Captured => Ok(MemoryResponse::Captured),
+        IncomingResponsePayload::Captured(_) => Ok(MemoryResponse::Captured),
         IncomingResponsePayload::Prompt(value) => {
             let context = value
                 .context
@@ -1140,7 +1115,7 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
             let turns = value
                 .turns
                 .into_iter()
-                .map(decode_source_turn_record)
+                .map(decode_source_turn_summary)
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(MemoryResponse::Turns(SourceTurnListResponse::new(
                 turns,
@@ -1151,7 +1126,7 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
         IncomingResponsePayload::Turn(value) => {
             Ok(MemoryResponse::Turn(decode_source_turn_record(value.turn)?))
         }
-        IncomingResponsePayload::Shutdown => Ok(MemoryResponse::Shutdown),
+        IncomingResponsePayload::Shutdown(_) => Ok(MemoryResponse::Shutdown),
         IncomingResponsePayload::Error(value) => {
             let ErrorPayloadOwned {
                 code,
@@ -1237,29 +1212,50 @@ fn decode_lesson_record(
     ))
 }
 
-fn decode_source_turn_record(
-    value: SourceTurnEnvelopeOwned,
-) -> Result<SourceTurnRecord, WireError> {
+fn decode_source_turn_summary(
+    value: SourceTurnSummaryOwned,
+) -> Result<SourceTurnSummary, WireError> {
+    if value.started_at_ms < 0
+        || value
+            .finished_at_ms
+            .is_some_and(|finished| finished < value.started_at_ms)
+        || value.tool_count > MAX_TOOLS
+    {
+        return Err(invalid_response("source turn bounds"));
+    }
+    if value.prompt_preview.chars().count() > SOURCE_TURN_PREVIEW_CHARS
+        || value
+            .prompt_preview
+            .chars()
+            .any(|character| character.is_control() && !matches!(character, '\n' | '\t'))
+    {
+        return Err(invalid_response("source turn preview"));
+    }
+    let status = decode_source_status(&value.status, value.finished_at_ms.is_some())?;
+    Ok(SourceTurnSummary {
+        id: SourceTurnId::from_str(&value.id).map_err(|_| invalid_response("source turn id"))?,
+        session_id: SourceSessionId::new(value.session_id)
+            .map_err(|_| invalid_response("source session id"))?,
+        bridge_turn_id: value.bridge_turn_id,
+        status,
+        prompt_preview: value.prompt_preview,
+        tool_count: value.tool_count,
+        started_at_ms: value.started_at_ms,
+        finished_at_ms: value.finished_at_ms,
+    })
+}
+
+fn decode_source_turn_record(value: SourceTurnRecordOwned) -> Result<SourceTurnRecord, WireError> {
     if value.started_at_ms < 0
         || value
             .finished_at_ms
             .is_some_and(|finished| finished < value.started_at_ms)
         || value.next_sequence == 0
-        || [
-            value.prompt.chars().count(),
-            value.assistant.chars().count(),
-            value.tools.chars().count(),
-        ]
-        .into_iter()
-        .any(|count| count > MAX_FRAME_SIZE)
+        || value.tools.len() > MAX_TOOLS
     {
         return Err(invalid_response("source turn bounds"));
     }
-    let id = SourceTurnId::from_str(&value.id).map_err(|_| invalid_response("source turn id"))?;
-    let session_id = SourceSessionId::new(value.session_id)
-        .map_err(|_| invalid_response("source session id"))?;
-    let status = crate::protocol::SourceTurnStatus::from_stored(&value.status)
-        .ok_or_else(|| invalid_response("source turn status"))?;
+    let status = decode_source_status(&value.status, value.finished_at_ms.is_some())?;
     let source_hash = value
         .source_hash
         .as_deref()
@@ -1267,19 +1263,69 @@ fn decode_source_turn_record(
             decode_fixed_hex::<32>(hash).ok_or_else(|| invalid_response("source turn hash"))
         })
         .transpose()?;
+    if source_hash.is_some() != matches!(status, SourceTurnStatus::Finished(_)) {
+        return Err(invalid_response("source turn hash presence"));
+    }
     Ok(SourceTurnRecord {
-        id,
-        session_id,
+        id: SourceTurnId::from_str(&value.id).map_err(|_| invalid_response("source turn id"))?,
+        session_id: SourceSessionId::new(value.session_id)
+            .map_err(|_| invalid_response("source session id"))?,
         bridge_turn_id: value.bridge_turn_id,
         status,
-        prompt: value.prompt,
-        assistant: value.assistant,
-        tools: value.tools,
+        prompt: decode_bounded_text(value.prompt, INSPECT_TEXT_CHARS, "source turn prompt")?,
+        assistant: decode_bounded_text(
+            value.assistant,
+            INSPECT_TEXT_CHARS,
+            "source turn assistant",
+        )?,
+        tools: value
+            .tools
+            .into_iter()
+            .map(decode_tool_summary)
+            .collect::<Result<Vec<_>, _>>()?,
+        omitted_tool_count: value.omitted_tool_count,
         source_hash,
         started_at_ms: value.started_at_ms,
         finished_at_ms: value.finished_at_ms,
         next_sequence: value.next_sequence,
     })
+}
+
+fn decode_source_status(value: &str, finished: bool) -> Result<SourceTurnStatus, WireError> {
+    let status = SourceTurnStatus::from_stored(value)
+        .ok_or_else(|| invalid_response("source turn status"))?;
+    if finished != matches!(status, SourceTurnStatus::Finished(_)) {
+        return Err(invalid_response("source turn finish time presence"));
+    }
+    Ok(status)
+}
+
+fn decode_tool_summary(value: ToolSummaryOwned) -> Result<ToolSummary, WireError> {
+    if value.status.is_empty()
+        || value.status.chars().count() > MAX_TOOL_STATUS_CHARS
+        || value.status.chars().any(char::is_control)
+    {
+        return Err(invalid_response("tool status"));
+    }
+    Ok(ToolSummary {
+        tool_id: SourceToolId::new(value.tool_id).map_err(|_| invalid_response("tool id"))?,
+        name: decode_bounded_text(value.name, INSPECT_TOOL_TEXT_CHARS, "tool name")?,
+        status: value.status,
+        input: decode_bounded_text(value.input, INSPECT_TOOL_TEXT_CHARS, "tool input")?,
+        result: decode_bounded_text(value.result, INSPECT_TOOL_TEXT_CHARS, "tool result")?,
+        capture_truncated_chars: value.capture_truncated_chars,
+    })
+}
+
+fn decode_bounded_text(
+    value: BoundedTextOwned,
+    limit: usize,
+    field: &'static str,
+) -> Result<BoundedText, WireError> {
+    if value.text.chars().count() > limit {
+        return Err(invalid_response(field));
+    }
+    Ok(BoundedText::new(value.text, value.truncated_chars))
 }
 
 fn validate_preview(preview: &str) -> Result<(), WireError> {
@@ -1464,6 +1510,115 @@ mod tests {
                     "id": "wrong"
                 }),
             ),
+            (
+                "prepare_prompt",
+                serde_json::json!({"project": project_payload.clone(), "query": "line\nbreak"}),
+            ),
+            (
+                "capture_batch",
+                serde_json::json!({"project": project_payload.clone(), "events": []}),
+            ),
+            (
+                "capture_batch",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "events": [{
+                        "session_id": "session-wire",
+                        "source_turn_id": lesson_id,
+                        "sequence": 0,
+                        "kind": {
+                            "kind": "started",
+                            "bridge_turn_id": 1,
+                            "started_at_ms": 1,
+                            "block_count": 1,
+                            "unexpected": true
+                        }
+                    }]
+                }),
+            ),
+            (
+                "capture_batch",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "events": [{
+                        "session_id": "session-wire",
+                        "source_turn_id": lesson_id,
+                        "sequence": 0,
+                        "kind": {
+                            "kind": "started",
+                            "bridge_turn_id": 1,
+                            "started_at_ms": 1,
+                            "block_count": 0
+                        }
+                    }]
+                }),
+            ),
+            (
+                "capture_batch",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "events": [
+                        {
+                            "session_id": "session-wire",
+                            "source_turn_id": lesson_id,
+                            "sequence": 0,
+                            "kind": {
+                                "kind": "started",
+                                "bridge_turn_id": 1,
+                                "started_at_ms": 1,
+                                "block_count": 1
+                            }
+                        },
+                        {
+                            "session_id": "session-wire",
+                            "source_turn_id": lesson_id,
+                            "sequence": 2,
+                            "kind": {
+                                "kind": "finished",
+                                "disposition": "completed",
+                                "finished_at_ms": 1
+                            }
+                        }
+                    ]
+                }),
+            ),
+            (
+                "capture_batch",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "events": [{
+                        "session_id": "",
+                        "source_turn_id": lesson_id,
+                        "sequence": 0,
+                        "kind": {
+                            "kind": "started",
+                            "bridge_turn_id": 1,
+                            "started_at_ms": 1,
+                            "block_count": 1
+                        }
+                    }]
+                }),
+            ),
+            (
+                "capture_batch",
+                serde_json::json!({
+                    "project": project_payload.clone(),
+                    "events": [{
+                        "session_id": "session-wire",
+                        "source_turn_id": lesson_id,
+                        "sequence": 0,
+                        "kind": {
+                            "kind": "tool_snapshot",
+                            "tool_index": 0,
+                            "tool_id": "",
+                            "name": "read",
+                            "status": "completed",
+                            "input": "",
+                            "result": ""
+                        }
+                    }]
+                }),
+            ),
         ];
         for (operation, payload) in invalid {
             let error =
@@ -1629,6 +1784,25 @@ mod tests {
             }))
             .is_err()
         );
+        for kind in ["captured", "shutdown"] {
+            assert!(
+                serde_json::from_value::<ResponseEnvelopeOwned>(serde_json::json!({
+                    "version": PROTOCOL_VERSION,
+                    "id": 1,
+                    "payload": {"kind": kind, "extra": 1}
+                }))
+                .is_err(),
+                "C11: {kind} must reject unknown fields"
+            );
+            assert!(
+                serde_json::from_value::<ResponseEnvelopeOwned>(serde_json::json!({
+                    "version": PROTOCOL_VERSION,
+                    "id": 1,
+                    "payload": {"kind": kind}
+                }))
+                .is_ok()
+            );
+        }
 
         for malformed in [
             health("", PROTOCOL_VERSION),
@@ -1644,6 +1818,96 @@ mod tests {
         let envelope: ResponseEnvelopeOwned =
             serde_json::from_value(wrong_shape).expect("response envelope shape");
         assert!(decode_response(envelope.payload).is_err());
+    }
+
+    #[test]
+    fn source_turn_responses_are_bounded_and_typed() {
+        let bounded = |text: &str| serde_json::json!({"text": text, "truncated_chars": 0});
+        let record = |prompt: serde_json::Value, status: &str, finished: Option<i64>| {
+            serde_json::json!({
+                "id": "00112233445566778899aabbccddeeff",
+                "session_id": "session-wire",
+                "bridge_turn_id": 1,
+                "status": status,
+                "prompt": prompt,
+                "assistant": bounded("ok"),
+                "tools": [{
+                    "tool_id": "t1",
+                    "name": bounded("read"),
+                    "status": "completed",
+                    "input": bounded("/x"),
+                    "result": bounded("done"),
+                    "capture_truncated_chars": 0
+                }],
+                "omitted_tool_count": 0,
+                "source_hash": finished.map(|_| "a".repeat(64)),
+                "started_at_ms": 1,
+                "finished_at_ms": finished,
+                "next_sequence": 4
+            })
+        };
+        let decoded = decode_payload_json(serde_json::json!({
+            "kind": "turn",
+            "turn": record(bounded("hello"), "completed", Some(2))
+        }))
+        .expect("bounded record decodes");
+        let MemoryResponse::Turn(turn) = decoded else {
+            panic!("turn response expected");
+        };
+        assert_eq!(turn.prompt().text(), "hello");
+        assert_eq!(turn.tools()[0].tool_id().as_str(), "t1");
+        assert!(
+            decode_payload_json(serde_json::json!({
+                "kind": "turn",
+                "turn": record(bounded("hello"), "incomplete", None)
+            }))
+            .is_ok()
+        );
+        for (label, payload) in [
+            (
+                "oversized prompt",
+                record(
+                    bounded(&"x".repeat(INSPECT_TEXT_CHARS + 1)),
+                    "completed",
+                    Some(2),
+                ),
+            ),
+            (
+                "finished without time",
+                record(bounded("x"), "completed", None),
+            ),
+            ("incomplete with hash", {
+                let mut value = record(bounded("x"), "incomplete", None);
+                value["source_hash"] = serde_json::json!("a".repeat(64));
+                value
+            }),
+            ("unknown status", record(bounded("x"), "weird", Some(2))),
+        ] {
+            assert!(
+                decode_payload_json(serde_json::json!({"kind": "turn", "turn": payload})).is_err(),
+                "{label} must be rejected"
+            );
+        }
+        let summary = serde_json::json!({
+            "id": "00112233445566778899aabbccddeeff",
+            "session_id": "session-wire",
+            "bridge_turn_id": 1,
+            "status": "incomplete",
+            "prompt_preview": "x".repeat(SOURCE_TURN_PREVIEW_CHARS + 1),
+            "tool_count": 0,
+            "started_at_ms": 1,
+            "finished_at_ms": null
+        });
+        assert!(
+            decode_payload_json(serde_json::json!({
+                "kind": "turns",
+                "turns": [summary],
+                "omitted_count": 0,
+                "corrupt_count": 0
+            }))
+            .is_err(),
+            "oversized preview must be rejected"
+        );
     }
 
     #[tokio::test]

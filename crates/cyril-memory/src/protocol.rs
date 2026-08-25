@@ -1,8 +1,13 @@
 //! Public, transport-independent memory runtime protocol domain types.
 
-use crate::lesson::{LessonId, LessonProvenance, LessonStatus, LessonText, LessonTrust};
+use crate::lesson::{
+    LessonId, LessonProvenance, LessonStatus, LessonText, LessonTrust, MAX_LESSON_CONTEXT_CHARS,
+};
 use crate::project::ProjectScope;
-use crate::source_turn::{CaptureBatch, SourceSessionId, SourceTurnId};
+use crate::source_turn::{
+    CaptureBatch, MAX_EPISODE_TOTAL_CHARS, PromptQuery, SourceSessionId, SourceToolId,
+    SourceTurnId, SourceTurnStatus,
+};
 use crate::store::MemoryStoreVersions;
 use std::fmt;
 
@@ -11,6 +16,18 @@ pub const PROTOCOL_VERSION: u16 = 2;
 
 /// Maximum encoded request or response payload, excluding the four-byte length.
 pub(crate) const MAX_FRAME_SIZE: usize = 1_048_576;
+/// Maximum characters in one prepared first-prompt block: the lesson section,
+/// one joining newline, and the episode section.
+pub const MAX_PROMPT_CONTEXT_CHARS: usize = MAX_LESSON_CONTEXT_CHARS + 1 + MAX_EPISODE_TOTAL_CHARS;
+/// Characters of prompt text carried by one `list_turns` row.
+pub const SOURCE_TURN_PREVIEW_CHARS: usize = 160;
+/// Characters of prompt and of assistant text carried by one `inspect_turn`
+/// record. Together with the tool bounds this keeps any record inside one
+/// frame.
+pub const INSPECT_TEXT_CHARS: usize = 16_000;
+/// Characters of each tool name, input, and result carried by one
+/// `inspect_turn` record.
+pub const INSPECT_TOOL_TEXT_CHARS: usize = 300;
 
 /// Operations supported by the runtime administration protocol.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,7 +52,7 @@ pub enum MemoryRequest {
     /// Prepare a query-aware first-prompt context block.
     PreparePrompt {
         project: ProjectScope,
-        query: String,
+        query: PromptQuery,
     },
     /// Stage or commit a bounded source event batch.
     CaptureBatch {
@@ -87,7 +104,7 @@ pub struct PromptContext {
 
 impl PromptContext {
     pub(crate) fn from_text(text: String) -> Result<Self, MemoryProtocolError> {
-        if text.is_empty() || text.chars().count() > 7_601 {
+        if text.is_empty() || text.chars().count() > MAX_PROMPT_CONTEXT_CHARS {
             return Err(MemoryProtocolError::new(MemoryErrorCode::InvalidRequest));
         }
         Ok(Self { text })
@@ -98,51 +115,119 @@ impl PromptContext {
     }
 }
 
-/// Durable source-turn status projection.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SourceTurnStatus {
-    Incomplete,
-    Completed,
-    Interrupted,
-    Failed,
-    Abandoned,
-    CaptureOverflow,
+/// Text cut to a wire budget, with the number of scalars it lost.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BoundedText {
+    text: String,
+    truncated_chars: usize,
 }
 
-impl SourceTurnStatus {
-    pub(crate) fn from_stored(value: &str) -> Option<Self> {
-        Some(match value {
-            "incomplete" => Self::Incomplete,
-            "completed" => Self::Completed,
-            "interrupted" => Self::Interrupted,
-            "failed" => Self::Failed,
-            "abandoned" => Self::Abandoned,
-            "capture_overflow" => Self::CaptureOverflow,
-            _ => return None,
-        })
-    }
-
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Incomplete => "incomplete",
-            Self::Completed => "completed",
-            Self::Interrupted => "interrupted",
-            Self::Failed => "failed",
-            Self::Abandoned => "abandoned",
-            Self::CaptureOverflow => "capture_overflow",
+impl BoundedText {
+    pub(crate) const fn new(text: String, truncated_chars: usize) -> Self {
+        Self {
+            text,
+            truncated_chars,
         }
     }
+
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub const fn truncated_chars(&self) -> usize {
+        self.truncated_chars
+    }
+
+    pub const fn is_truncated(&self) -> bool {
+        self.truncated_chars > 0
+    }
 }
 
+/// One tool of an inspected turn, bounded for the wire.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ToolSummary {
+    pub(crate) tool_id: SourceToolId,
+    pub(crate) name: BoundedText,
+    pub(crate) status: String,
+    pub(crate) input: BoundedText,
+    pub(crate) result: BoundedText,
+    /// Scalars dropped when the tool was captured, before inspection bounds.
+    pub(crate) capture_truncated_chars: usize,
+}
+
+impl ToolSummary {
+    pub fn tool_id(&self) -> &SourceToolId {
+        &self.tool_id
+    }
+    pub fn name(&self) -> &BoundedText {
+        &self.name
+    }
+    pub fn status(&self) -> &str {
+        &self.status
+    }
+    pub fn input(&self) -> &BoundedText {
+        &self.input
+    }
+    pub fn result(&self) -> &BoundedText {
+        &self.result
+    }
+    pub const fn capture_truncated_chars(&self) -> usize {
+        self.capture_truncated_chars
+    }
+}
+
+/// One row of a source-turn listing.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SourceTurnSummary {
+    pub(crate) id: SourceTurnId,
+    pub(crate) session_id: SourceSessionId,
+    pub(crate) bridge_turn_id: u64,
+    pub(crate) status: SourceTurnStatus,
+    pub(crate) prompt_preview: String,
+    pub(crate) tool_count: usize,
+    pub(crate) started_at_ms: i64,
+    pub(crate) finished_at_ms: Option<i64>,
+}
+
+impl SourceTurnSummary {
+    pub const fn id(&self) -> SourceTurnId {
+        self.id
+    }
+    pub fn session_id(&self) -> &SourceSessionId {
+        &self.session_id
+    }
+    pub const fn bridge_turn_id(&self) -> u64 {
+        self.bridge_turn_id
+    }
+    pub const fn status(&self) -> SourceTurnStatus {
+        self.status
+    }
+    pub fn prompt_preview(&self) -> &str {
+        &self.prompt_preview
+    }
+    pub const fn tool_count(&self) -> usize {
+        self.tool_count
+    }
+    pub const fn started_at_ms(&self) -> i64 {
+        self.started_at_ms
+    }
+    pub const fn finished_at_ms(&self) -> Option<i64> {
+        self.finished_at_ms
+    }
+}
+
+/// One inspected source turn: bounded text, tool summaries, provenance, and
+/// the durable hash of a finished turn.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceTurnRecord {
     pub(crate) id: SourceTurnId,
     pub(crate) session_id: SourceSessionId,
     pub(crate) bridge_turn_id: u64,
     pub(crate) status: SourceTurnStatus,
-    pub(crate) prompt: String,
-    pub(crate) assistant: String,
-    pub(crate) tools: String,
+    pub(crate) prompt: BoundedText,
+    pub(crate) assistant: BoundedText,
+    pub(crate) tools: Vec<ToolSummary>,
+    pub(crate) omitted_tool_count: usize,
     pub(crate) source_hash: Option<[u8; 32]>,
     pub(crate) started_at_ms: i64,
     pub(crate) finished_at_ms: Option<i64>,
@@ -162,14 +247,17 @@ impl SourceTurnRecord {
     pub const fn status(&self) -> SourceTurnStatus {
         self.status
     }
-    pub fn prompt(&self) -> &str {
+    pub fn prompt(&self) -> &BoundedText {
         &self.prompt
     }
-    pub fn assistant(&self) -> &str {
+    pub fn assistant(&self) -> &BoundedText {
         &self.assistant
     }
-    pub fn tools(&self) -> &str {
+    pub fn tools(&self) -> &[ToolSummary] {
         &self.tools
+    }
+    pub const fn omitted_tool_count(&self) -> usize {
+        self.omitted_tool_count
     }
     pub const fn source_hash(&self) -> Option<[u8; 32]> {
         self.source_hash
@@ -187,14 +275,14 @@ impl SourceTurnRecord {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceTurnListResponse {
-    turns: Vec<SourceTurnRecord>,
+    turns: Vec<SourceTurnSummary>,
     omitted_count: usize,
     corrupt_count: usize,
 }
 
 impl SourceTurnListResponse {
     pub(crate) const fn new(
-        turns: Vec<SourceTurnRecord>,
+        turns: Vec<SourceTurnSummary>,
         omitted_count: usize,
         corrupt_count: usize,
     ) -> Self {
@@ -204,7 +292,7 @@ impl SourceTurnListResponse {
             corrupt_count,
         }
     }
-    pub fn turns(&self) -> &[SourceTurnRecord] {
+    pub fn turns(&self) -> &[SourceTurnSummary] {
         &self.turns
     }
     pub const fn omitted_count(&self) -> usize {
@@ -393,6 +481,7 @@ pub enum MemoryErrorCode {
     AlreadySuperseded,
     IntegrityConflict,
     CorruptLesson,
+    CorruptSource,
     PermissionDenied,
     MigrationFailed,
     Internal,
@@ -414,6 +503,7 @@ impl MemoryErrorCode {
             Self::AlreadySuperseded => "already_superseded",
             Self::IntegrityConflict => "integrity_conflict",
             Self::CorruptLesson => "corrupt_lesson",
+            Self::CorruptSource => "corrupt_source",
             Self::MigrationFailed => "migration_failed",
             Self::Internal => "internal",
         }
@@ -435,6 +525,7 @@ impl MemoryErrorCode {
             "already_superseded" => Self::AlreadySuperseded,
             "integrity_conflict" => Self::IntegrityConflict,
             "corrupt_lesson" => Self::CorruptLesson,
+            "corrupt_source" => Self::CorruptSource,
             "internal" => Self::Internal,
             _ => return None,
         })
@@ -459,6 +550,7 @@ impl MemoryErrorCode {
             Self::AlreadySuperseded => "project lesson was already replaced",
             Self::IntegrityConflict => "source turn replay conflicts with immutable data",
             Self::CorruptLesson => "stored project lesson is corrupt",
+            Self::CorruptSource => "stored source turn is corrupt",
             Self::Internal => "memory runtime internal error",
         }
     }
@@ -623,7 +715,13 @@ mod tests {
                 "already_superseded",
                 false,
             ),
+            (
+                MemoryErrorCode::IntegrityConflict,
+                "integrity_conflict",
+                false,
+            ),
             (MemoryErrorCode::CorruptLesson, "corrupt_lesson", false),
+            (MemoryErrorCode::CorruptSource, "corrupt_source", false),
             (MemoryErrorCode::MigrationFailed, "migration_failed", false),
             (MemoryErrorCode::Internal, "internal", true),
         ];

@@ -486,6 +486,7 @@ mod tests {
         assert!(full.starts_with("<CYRIL_LESSONS"));
         assert!(full.ends_with("</CYRIL_LESSONS>"));
         assert!(full.find("newest").expect("newest") < full.find("older").expect("older"));
+        assert!(!full.contains("additional lesson(s) omitted"));
         assert!(full.chars().count() <= MAX_LESSON_CONTEXT_CHARS);
 
         let one_lesson_budget = LESSON_HEADER.chars().count()
@@ -496,6 +497,8 @@ mod tests {
             .expect("bounded block");
         assert!(bounded.contains("newest explicit instruction"));
         assert!(!bounded.contains("older explicit instruction"));
+        assert!(bounded.contains("[1 additional lesson(s) omitted]"));
+        assert!(bounded.chars().count() <= one_lesson_budget);
 
         let partial = render_lessons(&candidates, 5, MAX_LESSON_CONTEXT_CHARS).expect("partial");
         assert!(partial.contains("[3 additional lesson(s) omitted]"));

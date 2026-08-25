@@ -243,7 +243,7 @@ async fn real_runtime_restart_preserves_lessons_and_audit() -> Result<()> {
     assert_eq!(listed.lessons().len(), 1);
     assert_eq!(listed.lessons()[0].id(), replacement_id);
     let context = client
-        .prepare_prompt(&project, "prefer boring Rust".to_owned())
+        .prepare_prompt(&project, "prefer boring Rust")
         .await?
         .context("context block")?;
     assert!(context.text().contains("prefer boring Rust"));
@@ -331,7 +331,7 @@ async fn c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe() -> Res
     );
     assert_eq!(
         turns.turns()[0].status(),
-        cyril_memory::SourceTurnStatus::Completed,
+        cyril_memory::SourceTurnStatus::Finished(SourceTurnDisposition::Completed),
         "C3: terminal replay must remain completed"
     );
 
