@@ -8,6 +8,7 @@ use tokio::process::Command;
 
 use crate::client::{AdminCredential, ClientError};
 use crate::ipc::{self, IpcError, MemoryEndpoint};
+use crate::lesson::LESSON_PREVIEW_CHARS;
 use crate::protocol::{
     HealthResponse, LessonListResponse, LessonRecord, LessonRecordMetadata, MemoryErrorCode,
     MemoryProtocolError, MemoryRequest, MemoryResponse, PROTOCOL_VERSION, TeachResponse,
@@ -248,10 +249,6 @@ fn execute_store_request(
         return MemoryResponse::Error(MemoryProtocolError::new(code));
     };
     match request {
-        MemoryRequest::BindProject { project } => match stores.bind_project(&project) {
-            Ok(()) => MemoryResponse::ProjectBound,
-            Err(error) => operation_error(error),
-        },
         MemoryRequest::Teach { project, text } => match stores.teach_lesson(&project, &text) {
             Ok(result) => MemoryResponse::Taught(TeachResponse::new(
                 lesson_record(result.lesson(), None),
@@ -275,9 +272,10 @@ fn execute_store_request(
                 result
                     .lessons()
                     .iter()
-                    .map(|lesson| lesson_record(lesson, Some(160)))
+                    .map(|lesson| lesson_record(lesson, Some(LESSON_PREVIEW_CHARS)))
                     .collect(),
                 result.omitted_count(),
+                result.corrupt_count(),
             )),
             Err(error) => operation_error(error),
         },
@@ -328,6 +326,8 @@ fn bounded_preview(content: &str, limit: usize) -> String {
 fn operation_error(error: StoreError) -> MemoryResponse {
     let code = match error {
         StoreError::LessonNotFound => MemoryErrorCode::NotFound,
+        StoreError::LessonSuperseded => MemoryErrorCode::AlreadySuperseded,
+        StoreError::CorruptLesson { .. } => MemoryErrorCode::CorruptLesson,
         StoreError::Permission { .. } => MemoryErrorCode::PermissionDenied,
         _ => MemoryErrorCode::Internal,
     };
@@ -359,6 +359,7 @@ fn map_store_error(error: &StoreError) -> MemoryErrorCode {
         | StoreError::DuplicateMetadata { .. }
         | StoreError::UnsupportedSchema { .. }
         | StoreError::LessonNotFound
+        | StoreError::LessonSuperseded
         | StoreError::Random(_)
         | StoreError::Clock(_)
         | StoreError::CorruptLesson { .. }

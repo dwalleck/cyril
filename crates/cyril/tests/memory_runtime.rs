@@ -174,7 +174,6 @@ async fn real_runtime_restart_preserves_lessons_and_audit() -> Result<()> {
     let runtime = RunningRuntime::start_in_roots(TempDir::new()?, TempDir::new()?).await?;
     let memory_path = runtime.paths()?.memory_store_path().to_path_buf();
     let mut client = runtime.client().await?;
-    client.bind_project(&project).await?;
     let first = client
         .teach(
             &project,

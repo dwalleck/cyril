@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::pin::Pin;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -185,17 +184,6 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     (handle, channels)
 }
 
-pub type FirstPromptContextFuture<'a> =
-    Pin<Box<dyn Future<Output = Result<Option<String>, FirstPromptContextError>> + Send + 'a>>;
-
-pub trait FirstPromptContext: std::fmt::Debug + Send + Sync {
-    fn load_context(&self) -> FirstPromptContextFuture<'_>;
-}
-
-#[derive(Clone, Copy, Debug, thiserror::Error)]
-#[error("first-prompt project memory is unavailable")]
-pub struct FirstPromptContextError;
-
 /// The spawn-time knob bundle for a bridge (cyril-jmjb): which engine, how
 /// KAS is launched, and what identity is presented. These travel together
 /// from `[agent]` config through `spawn_bridge` — bundling them means the
@@ -220,9 +208,6 @@ pub struct SpawnConfig {
     /// false-positive on healthy traffic — tests deliberately pass tiny
     /// values to run fast, so no lower bound is enforced.
     pub stall_threshold: std::time::Duration,
-    /// Optional project-memory adapter consulted once on a fresh session's
-    /// first accepted prompt. `None` is the zero-work disabled path.
-    pub first_prompt_context: Option<Arc<dyn FirstPromptContext>>,
 }
 
 /// Default [`SpawnConfig::stall_threshold`]: ≥3× the maximum healthy
@@ -230,7 +215,6 @@ pub struct SpawnConfig {
 /// turns, including 96s-long ones), replay-verified to produce zero false
 /// stalls on real traffic (`.cyril-14ou/design.md` C11).
 pub const DEFAULT_STALL_THRESHOLD: std::time::Duration = std::time::Duration::from_secs(30);
-const FIRST_PROMPT_CONTEXT_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(250);
 
 /// Wall-clock for the liveness machine, tokio-sourced so paused-time tests
 /// drive it. One definition; three call sites in `run_loop`.
@@ -252,7 +236,6 @@ impl Default for SpawnConfig {
             present_as: None,
             kas_hooks: KasHooksMode::default(),
             stall_threshold: DEFAULT_STALL_THRESHOLD,
-            first_prompt_context: None,
         }
     }
 }
@@ -875,7 +858,6 @@ async fn run_bridge(
             cwd: cwd.to_path_buf(),
             present_as: config.present_as,
             stall_threshold: config.stall_threshold,
-            first_prompt_context: config.first_prompt_context,
         },
         InternalChannels {
             inbound_tx,
@@ -1338,7 +1320,6 @@ struct BridgeLoopConfig {
     cwd: std::path::PathBuf,
     present_as: Option<PresentAs>,
     stall_threshold: std::time::Duration,
-    first_prompt_context: Option<Arc<dyn FirstPromptContext>>,
 }
 
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
@@ -1356,7 +1337,6 @@ async fn run_loop(
         cwd,
         present_as,
         stall_threshold,
-        first_prompt_context,
     } = config;
     // cyril-3lh8: the shared terminal-registry handle for the CancelRequest
     // arm's reap, cloned out before the destructure (a `#[cfg]`'d field can't
@@ -1552,10 +1532,6 @@ async fn run_loop(
     // BridgeDisconnected. Also the load-bearing guard that keeps the select
     // arm from re-polling the completed oneshot (which would panic).
     let mut deferred_disconnect: Option<String> = None;
-    // Fresh sessions pending one automatic context attempt. Keeping this keyed
-    // prevents a newly-created session from re-arming an older session.
-    let mut first_prompt_context_pending =
-        std::collections::HashSet::<crate::types::SessionId>::new();
 
     loop {
         // Single mediator (ADR-0004): one `select!` services commands AND the
@@ -1590,9 +1566,6 @@ async fn run_loop(
                             .await;
                             break;
                         }
-                        first_prompt_context_pending.insert(crate::types::SessionId::new(
-                            response.session_id.to_string(),
-                        ));
                         active_session_id = Some(response.session_id.clone());
                         // A (re)entered session re-probes steering: drop any stale
                         // unsupported mark so it can't silently swallow steers.
@@ -1646,7 +1619,7 @@ async fn run_loop(
             }
             BridgeCommand::SendPrompt {
                 session_id,
-                mut content_blocks,
+                content_blocks,
             } => {
                 // cyril-84ca / ADR-0004: at most one turn in flight; cyril-a71q
                 // C8: the owner is allocated BEFORE dispatch and fails closed
@@ -1684,29 +1657,6 @@ async fn run_loop(
                         continue;
                     }
                 };
-                if first_prompt_context_pending.remove(&session_id)
-                    && !content_blocks.is_empty()
-                    && let Some(provider) = first_prompt_context.as_ref()
-                {
-                        match tokio::time::timeout(
-                            FIRST_PROMPT_CONTEXT_TIMEOUT,
-                            provider.load_context(),
-                        )
-                        .await
-                        {
-                            Ok(Ok(Some(context))) if !context.is_empty() => {
-                                content_blocks.reserve_exact(1);
-                                content_blocks.insert(0, context);
-                            }
-                            Ok(Ok(Some(_)) | Ok(None)) => {}
-                            Ok(Err(error)) => {
-                                tracing::warn!(error = %error, "first-prompt memory unavailable");
-                            }
-                            Err(_) => {
-                                tracing::warn!("first-prompt memory request timed out");
-                            }
-                        }
-                    }
                 liveness.begin(now_std());
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
                 let prompt: Vec<acp::ContentBlock> = content_blocks
@@ -1939,7 +1889,6 @@ async fn run_loop(
                     .await
                 {
                     Ok(response) => {
-                        first_prompt_context_pending.remove(&session_id);
                         active_session_id = Some(acp_session_id);
                         // A reloaded session re-probes steering: a caller-supplied
                         // id may carry a stale unsupported mark from a prior life.
@@ -3701,53 +3650,6 @@ mod tests {
         }
     }
 
-    #[derive(Debug)]
-    enum ContextBehavior {
-        Block(String),
-        None,
-        Error,
-        Pending,
-    }
-
-    #[derive(Debug)]
-    struct TestPromptContext {
-        behaviors: std::sync::Mutex<std::collections::VecDeque<ContextBehavior>>,
-        calls: std::sync::atomic::AtomicUsize,
-    }
-
-    impl TestPromptContext {
-        fn new(behaviors: impl IntoIterator<Item = ContextBehavior>) -> Self {
-            Self {
-                behaviors: std::sync::Mutex::new(behaviors.into_iter().collect()),
-                calls: std::sync::atomic::AtomicUsize::new(0),
-            }
-        }
-
-        fn calls(&self) -> usize {
-            self.calls.load(std::sync::atomic::Ordering::SeqCst)
-        }
-    }
-
-    impl FirstPromptContext for TestPromptContext {
-        fn load_context(&self) -> FirstPromptContextFuture<'_> {
-            self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            let behavior = self
-                .behaviors
-                .lock()
-                .expect("context behavior mutex")
-                .pop_front()
-                .unwrap_or(ContextBehavior::None);
-            Box::pin(async move {
-                match behavior {
-                    ContextBehavior::Block(block) => Ok(Some(block)),
-                    ContextBehavior::None => Ok(None),
-                    ContextBehavior::Error => Err(FirstPromptContextError),
-                    ContextBehavior::Pending => std::future::pending().await,
-                }
-            })
-        }
-    }
-
     #[derive(Default)]
     struct Script {
         /// The fake's wire personality (cyril-6iek): `Some(true)` = KAS-shaped
@@ -3762,8 +3664,6 @@ mod tests {
         sess_ids: Option<bool>,
         /// Method names the agent received, in order (e.g. "new_session", "prompt").
         received: Vec<String>,
-        /// Exact text block vectors received by the fake agent.
-        prompts: Vec<Vec<String>>,
         /// Stripped ext-method names the fake answers with a JSON-RPC error
         /// (`-32603`) instead of `{}` — e.g. `"kiro/workflow/new"` for the
         /// C6 failed-`new` fixture (cyril-0qe6).
@@ -3910,15 +3810,6 @@ mod tests {
             let (block, err, want_perm, emit_turn_end, emit_chunks, turn_end_session) = {
                 let mut s = self.script.borrow_mut();
                 s.received.push("prompt".into());
-                s.prompts.push(
-                    a.prompt
-                        .iter()
-                        .filter_map(|block| match block {
-                            acp::ContentBlock::Text(text) => Some(text.text.clone()),
-                            _ => None,
-                        })
-                        .collect(),
-                );
                 s.prompt_count += 1;
                 (
                     s.block_prompt,
@@ -4176,25 +4067,6 @@ mod tests {
         ) -> Fut,
         Fut: Future<Output = ()>,
     {
-        with_engine_harness_context(engine, script, None, body).await;
-    }
-
-    async fn with_engine_harness_context<F, Fut>(
-        engine: Rc<dyn Engine>,
-        script: Rc<RefCell<Script>>,
-        first_prompt_context: Option<Arc<dyn FirstPromptContext>>,
-        body: F,
-    ) where
-        F: FnOnce(
-            BridgeSender,
-            mpsc::Receiver<RoutedNotification>,
-            mpsc::Receiver<PermissionRequest>,
-            Rc<tokio::sync::Notify>,
-            tokio::task::JoinHandle<crate::Result<()>>,
-            AgentKill,
-        ) -> Fut,
-        Fut: Future<Output = ()>,
-    {
         let gate = Rc::new(tokio::sync::Notify::new());
         // Default the fake's wire personality to the bound engine (cyril-6iek)
         // so engine-parity tests present a matching handshake; fingerprint
@@ -4283,7 +4155,6 @@ mod tests {
                         // The production default; stall-signal tests drive it with
                         // paused time (start_paused), so no tiny override needed.
                         stall_threshold: DEFAULT_STALL_THRESHOLD,
-                        first_prompt_context,
                     },
                     InternalChannels {
                         inbound_tx,
@@ -4355,164 +4226,6 @@ mod tests {
         panic!("no TurnCompleted within 5s");
     }
 
-    // First-prompt project-memory fences.
-
-    #[tokio::test]
-    async fn first_prompt_memory_is_ordered_and_exactly_once() {
-        let script = Rc::new(RefCell::new(Script::default()));
-        let probe = Rc::clone(&script);
-        let context = Arc::new(TestPromptContext::new([
-            ContextBehavior::Block("<CYRIL_LESSONS>one</CYRIL_LESSONS>".to_owned()),
-            ContextBehavior::Block("<CYRIL_LESSONS>two</CYRIL_LESSONS>".to_owned()),
-        ]));
-        let context_probe = Arc::clone(&context);
-        with_engine_harness_context(
-            Rc::new(V2Engine),
-            script,
-            Some(context),
-            move |sender, mut rx, _perm, _gate, _loop, _kill| async move {
-                let sid = start_session(&sender, &mut rx).await;
-                sender
-                    .send(BridgeCommand::SendPrompt {
-                        session_id: sid.clone(),
-                        content_blocks: vec!["original".into(), "attachment".into()],
-                    })
-                    .await
-                    .unwrap();
-                drain_to_turn(&mut rx).await;
-                sender
-                    .send(BridgeCommand::SendPrompt {
-                        session_id: sid.clone(),
-                        content_blocks: vec!["later".into()],
-                    })
-                    .await
-                    .unwrap();
-                drain_to_turn(&mut rx).await;
-
-                let second_sid = start_session(&sender, &mut rx).await;
-                sender
-                    .send(BridgeCommand::SendPrompt {
-                        session_id: sid,
-                        content_blocks: vec!["old-after-new".into()],
-                    })
-                    .await
-                    .unwrap();
-                drain_to_turn(&mut rx).await;
-                sender
-                    .send(BridgeCommand::SendPrompt {
-                        session_id: second_sid,
-                        content_blocks: vec!["fresh".into()],
-                    })
-                    .await
-                    .unwrap();
-                drain_to_turn(&mut rx).await;
-
-                assert_eq!(
-                    probe.borrow().prompts,
-                    [
-                        vec![
-                            "<CYRIL_LESSONS>one</CYRIL_LESSONS>".to_owned(),
-                            "original".to_owned(),
-                            "attachment".to_owned(),
-                        ],
-                        vec!["later".to_owned()],
-                        vec!["old-after-new".to_owned()],
-                        vec![
-                            "<CYRIL_LESSONS>two</CYRIL_LESSONS>".to_owned(),
-                            "fresh".to_owned(),
-                        ],
-                    ]
-                );
-                assert_eq!(context_probe.calls(), 2);
-            },
-        )
-        .await;
-    }
-
-    #[tokio::test]
-    async fn empty_prompt_consumes_attempt_without_mutation() {
-        let script = Rc::new(RefCell::new(Script::default()));
-        let probe = Rc::clone(&script);
-        let context = Arc::new(TestPromptContext::new([ContextBehavior::Block(
-            "<CYRIL_LESSONS>unused</CYRIL_LESSONS>".to_owned(),
-        )]));
-        let context_probe = Arc::clone(&context);
-        with_engine_harness_context(
-            Rc::new(V2Engine),
-            script,
-            Some(context),
-            move |sender, mut rx, _perm, _gate, _loop, _kill| async move {
-                let sid = start_session(&sender, &mut rx).await;
-                sender
-                    .send(BridgeCommand::SendPrompt {
-                        session_id: sid.clone(),
-                        content_blocks: Vec::new(),
-                    })
-                    .await
-                    .unwrap();
-                drain_to_turn(&mut rx).await;
-                sender
-                    .send(BridgeCommand::SendPrompt {
-                        session_id: sid,
-                        content_blocks: vec!["later".into()],
-                    })
-                    .await
-                    .unwrap();
-                drain_to_turn(&mut rx).await;
-                assert_eq!(
-                    probe.borrow().prompts,
-                    [Vec::<String>::new(), vec!["later".to_owned()]]
-                );
-                assert_eq!(context_probe.calls(), 0);
-            },
-        )
-        .await;
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn memory_failure_and_timeout_are_exact_fail_open() {
-        for behavior in [
-            ContextBehavior::None,
-            ContextBehavior::Error,
-            ContextBehavior::Pending,
-        ] {
-            let script = Rc::new(RefCell::new(Script::default()));
-            let probe = Rc::clone(&script);
-            let context = Arc::new(TestPromptContext::new([behavior]));
-            let context_probe = Arc::clone(&context);
-            with_engine_harness_context(
-                Rc::new(V2Engine),
-                script,
-                Some(context),
-                move |sender, mut rx, _perm, _gate, _loop, _kill| async move {
-                    let sid = start_session(&sender, &mut rx).await;
-                    let originals = vec!["alpha".to_owned(), "βeta".to_owned()];
-                    sender
-                        .send(BridgeCommand::SendPrompt {
-                            session_id: sid.clone(),
-                            content_blocks: originals.clone(),
-                        })
-                        .await
-                        .unwrap();
-                    drain_to_turn(&mut rx).await;
-                    sender
-                        .send(BridgeCommand::SendPrompt {
-                            session_id: sid,
-                            content_blocks: vec!["later".into()],
-                        })
-                        .await
-                        .unwrap();
-                    drain_to_turn(&mut rx).await;
-                    assert_eq!(
-                        probe.borrow().prompts,
-                        [originals, vec!["later".to_owned()]]
-                    );
-                    assert_eq!(context_probe.calls(), 1);
-                },
-            )
-            .await;
-        }
-    }
     /// Poll the agent's `received` log for `marker` (e.g. "ext:session/steer"),
     /// yielding between checks; returns false after `secs`. Used to observe that a
     /// command reached the agent while a turn is still parked.

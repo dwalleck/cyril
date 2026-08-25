@@ -5,6 +5,7 @@
 
 mod client;
 mod config;
+mod encoding;
 mod ipc;
 mod lesson;
 mod paths;
@@ -21,8 +22,8 @@ pub use config::{
 };
 pub use ipc::{IpcError, MemoryEndpoint};
 pub use lesson::{
-    ContextBlock, ContextLesson, LessonError, LessonId, LessonIdParseError, LessonProvenance,
-    LessonStatus, LessonText, LessonTrust, MAX_CONTEXT_CHARS, MAX_LESSON_CHARS, render_context,
+    ContextBlock, LESSON_PREVIEW_CHARS, LessonError, LessonId, LessonIdParseError,
+    LessonProvenance, LessonStatus, LessonText, LessonTrust, MAX_CONTEXT_CHARS, MAX_LESSON_CHARS,
 };
 pub use paths::{MemoryPaths, PathError};
 pub use project::{ProjectError, ProjectId, ProjectScope};

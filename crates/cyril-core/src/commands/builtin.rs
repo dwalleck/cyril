@@ -192,8 +192,12 @@ impl Command for MemoryCommand {
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
-        let args = args.trim();
-        if args == "status" {
+        // Tokenized on any whitespace run, never on a literal single space:
+        // `teach  --replace <id> <text>` (double space, or a pasted tab) must
+        // be a replacement, not a new lesson whose text starts with
+        // `--replace`.
+        let (subcommand, rest) = split_token(args);
+        if subcommand == "status" && rest.is_empty() {
             let Some(status) = ctx.memory_status else {
                 tracing::error!("CommandContext.memory_status is None — wiring error in App");
                 return Ok(CommandResult::system_message(
@@ -202,43 +206,48 @@ impl Command for MemoryCommand {
             };
             return Ok(CommandResult::memory_status(status.clone()));
         }
-        if args == "list" {
-            return Ok(CommandResult::memory_action(MemoryCommandAction::List));
-        }
-        if let Some(raw_id) = args.strip_prefix("inspect ") {
-            let lesson_id = raw_id.trim();
-            if !lesson_id.is_empty() && !lesson_id.chars().any(char::is_whitespace) {
-                return Ok(CommandResult::memory_action(MemoryCommandAction::Inspect {
+        let action = match (subcommand, rest) {
+            ("list", "") => Some(MemoryCommandAction::List),
+            ("inspect", rest) => match split_token(rest) {
+                (lesson_id, "") if !lesson_id.is_empty() => Some(MemoryCommandAction::Inspect {
                     lesson_id: lesson_id.to_owned(),
-                }));
-            }
-            return Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()));
-        }
-        if args == "teach --replace" {
-            return Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()));
-        }
-        if let Some(replacement) = args.strip_prefix("teach --replace ") {
-            let Some((lesson_id, text)) = replacement.split_once(char::is_whitespace) else {
-                return Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()));
-            };
-            let text = text.trim();
-            if !lesson_id.is_empty() && !text.is_empty() {
-                return Ok(CommandResult::memory_action(MemoryCommandAction::Replace {
-                    lesson_id: lesson_id.to_owned(),
-                    text: text.to_owned(),
-                }));
-            }
-            return Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()));
-        }
-        if let Some(text) = args.strip_prefix("teach ") {
-            let text = text.trim();
-            if !text.is_empty() {
-                return Ok(CommandResult::memory_action(MemoryCommandAction::Teach {
-                    text: text.to_owned(),
-                }));
-            }
-        }
-        Ok(CommandResult::system_message(MEMORY_USAGE.to_owned()))
+                }),
+                _ => None,
+            },
+            ("teach", rest) => match split_token(rest) {
+                ("--replace", replacement) => match split_token(replacement) {
+                    (lesson_id, text) if !lesson_id.is_empty() && !text.is_empty() => {
+                        Some(MemoryCommandAction::Replace {
+                            lesson_id: lesson_id.to_owned(),
+                            text: text.to_owned(),
+                        })
+                    }
+                    _ => None,
+                },
+                (first, _) if !first.is_empty() => Some(MemoryCommandAction::Teach {
+                    text: rest.to_owned(),
+                }),
+                _ => None,
+            },
+            _ => None,
+        };
+        Ok(action.map_or_else(
+            || CommandResult::system_message(MEMORY_USAGE.to_owned()),
+            CommandResult::memory_action,
+        ))
+    }
+}
+
+/// Split the leading whitespace-delimited token from `input`.
+///
+/// Returns `(token, remainder)` with the remainder trimmed at both ends so
+/// internal spacing of lesson text is preserved while surrounding whitespace
+/// (including a tab or a double space after the token) is not.
+fn split_token(input: &str) -> (&str, &str) {
+    let input = input.trim();
+    match input.split_once(char::is_whitespace) {
+        Some((token, rest)) => (token, rest.trim()),
+        None => (input, ""),
     }
 }
 

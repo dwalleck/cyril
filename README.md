@@ -19,7 +19,7 @@ Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. 
 - **Agent/model switching** — switch agents (`/agent`) and models (`/model`) via picker UI
 - **Live activity indicator** — animated spinner with elapsed time and current tool activity in the toolbar
 - **Context bar** — visual gauge showing context window usage
-- **Opt-in local memory runtime** — private versioned stores and authenticated health reporting without making chat depend on memory availability
+- **Opt-in local memory runtime** — teach explicit per-project lessons that are injected into a fresh session's first prompt, backed by private versioned stores and authenticated health reporting, without making chat depend on memory availability
 - **@-file references** — reference files in prompts with `@path/to/file` autocomplete
 
 ## Prerequisites
@@ -76,9 +76,18 @@ Memory is disabled by default. Enable the local runtime in Cyril's
 enabled = true
 ```
 
-Use `/memory status` to inspect runtime health and store schema versions. This
-M0 runtime initializes empty stores only; it does not yet capture, retrieve, or
-inject memories.
+Use `/memory status` to inspect runtime health, store schema versions, and how
+the current workspace is bound to a project (a Git common dir, or the
+canonical path outside Git).
+
+Lessons are explicit: nothing is captured from conversations. `/memory teach
+<text>` stores a project lesson (secrets such as `password=…`, `ghp_…`, `AKIA…`,
+`sk-…`, and PEM private keys are redacted before storage); `/memory list` and
+`/memory inspect <id>` read them back; `/memory teach --replace <id> <text>`
+supersedes one. Active lessons for the bound project are prepended, in a
+`<CYRIL_LESSONS>` block, to the **first prompt of each fresh session** and never
+shown in the transcript. If the memory runtime is unavailable the prompt goes
+out without them; chat never waits on memory.
 
 
 ### Keyboard shortcuts
@@ -104,7 +113,11 @@ inject memories.
 | `/clear` | Clear the chat |
 | `/mode <id>` | Switch agent mode |
 | `/model [id]` | Switch model (opens picker if no ID given) |
-| `/memory status` | Show local memory runtime health and store versions |
+| `/memory status` | Show local memory runtime health, store versions, and project binding |
+| `/memory teach <text>` | Store an explicit lesson for the bound project |
+| `/memory teach --replace <id> <text>` | Supersede one lesson with new text |
+| `/memory list` | List active project lessons (newest first) |
+| `/memory inspect <id>` | Show one lesson, active or replaced |
 | `/quit` | Quit |
 
 **Agent commands** (forwarded to Kiro via ACP):

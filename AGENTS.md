@@ -158,7 +158,7 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 
 **`cyril`** — Thin orchestrator binary.
 - **Owns:** `App` (event loop), CLI args, terminal setup, companion-process startup and bounded shutdown, wiring between modules
-- **Responsibility:** Wire `cyril-core`, `cyril-memory`, and `cyril-ui` together. Run the `tokio::select!` event loop. Bind the canonical startup project and route typed memory status, lesson commands, and first-prompt context without making ACP session state depend on persistence.
+- **Responsibility:** Wire `cyril-core`, `cyril-memory`, and `cyril-ui` together. Run the `tokio::select!` event loop. Bind the canonical startup project and route typed memory status, lesson commands, and first-prompt context without making ACP session state depend on persistence. Memory round trips run on spawned tasks and report back through the loop; nothing awaits the companion inline.
 - **Must NOT:** Contain memory storage/protocol logic. Parse JSON responses. Make rendering decisions.
 
 ### Component Separation Within Crates

@@ -19,8 +19,6 @@ pub(crate) const MAX_FRAME_SIZE: usize = 1_048_576;
 pub enum MemoryRequest {
     /// Ask the runtime for its current health.
     Health,
-    /// Bind one already-resolved project to the runtime.
-    BindProject { project: ProjectScope },
     /// Persist one explicit project lesson.
     Teach {
         project: ProjectScope,
@@ -50,8 +48,6 @@ pub enum MemoryRequest {
 pub enum MemoryResponse {
     /// Current runtime health.
     Health(HealthResponse),
-    /// Acknowledgement that a project was resolved and bound.
-    ProjectBound,
     /// Result of a teach or replacement attempt.
     Taught(TeachResponse),
     /// Bounded active lesson list.
@@ -125,6 +121,8 @@ impl LessonRecord {
         self.id
     }
 
+    /// Lesson text. Full for teach/replace/inspect results; a preview of at
+    /// most [`crate::LESSON_PREVIEW_CHARS`] characters in list rows.
     pub fn content(&self) -> &str {
         &self.content
     }
@@ -185,6 +183,8 @@ impl TeachResponse {
         &self.lesson
     }
 
+    /// `true` when a new row was inserted; `false` when the text already
+    /// matched an active lesson, which is the lesson returned.
     pub const fn created(&self) -> bool {
         self.created
     }
@@ -194,13 +194,19 @@ impl TeachResponse {
 pub struct LessonListResponse {
     lessons: Vec<LessonRecord>,
     omitted_count: usize,
+    corrupt_count: usize,
 }
 
 impl LessonListResponse {
-    pub(crate) const fn new(lessons: Vec<LessonRecord>, omitted_count: usize) -> Self {
+    pub(crate) const fn new(
+        lessons: Vec<LessonRecord>,
+        omitted_count: usize,
+        corrupt_count: usize,
+    ) -> Self {
         Self {
             lessons,
             omitted_count,
+            corrupt_count,
         }
     }
 
@@ -208,8 +214,14 @@ impl LessonListResponse {
         &self.lessons
     }
 
+    /// Active lessons beyond the list cap.
     pub const fn omitted_count(&self) -> usize {
         self.omitted_count
+    }
+
+    /// Active rows skipped because their stored integrity check failed.
+    pub const fn corrupt_count(&self) -> usize {
+        self.corrupt_count
     }
 }
 
@@ -225,6 +237,8 @@ pub enum MemoryErrorCode {
     DuplicateRequest,
     AlreadyRunning,
     NotFound,
+    AlreadySuperseded,
+    CorruptLesson,
     PermissionDenied,
     MigrationFailed,
     Internal,
@@ -243,6 +257,8 @@ impl MemoryErrorCode {
             Self::AlreadyRunning => "already_running",
             Self::PermissionDenied => "permission_denied",
             Self::NotFound => "not_found",
+            Self::AlreadySuperseded => "already_superseded",
+            Self::CorruptLesson => "corrupt_lesson",
             Self::MigrationFailed => "migration_failed",
             Self::Internal => "internal",
         }
@@ -261,6 +277,8 @@ impl MemoryErrorCode {
             "permission_denied" => Self::PermissionDenied,
             "migration_failed" => Self::MigrationFailed,
             "not_found" => Self::NotFound,
+            "already_superseded" => Self::AlreadySuperseded,
+            "corrupt_lesson" => Self::CorruptLesson,
             "internal" => Self::Internal,
             _ => return None,
         })
@@ -282,6 +300,8 @@ impl MemoryErrorCode {
             Self::PermissionDenied => "memory runtime permission denied",
             Self::MigrationFailed => "memory store migration failed",
             Self::NotFound => "project lesson not found",
+            Self::AlreadySuperseded => "project lesson was already replaced",
+            Self::CorruptLesson => "stored project lesson is corrupt",
             Self::Internal => "memory runtime internal error",
         }
     }
@@ -440,6 +460,13 @@ mod tests {
                 "permission_denied",
                 false,
             ),
+            (MemoryErrorCode::NotFound, "not_found", false),
+            (
+                MemoryErrorCode::AlreadySuperseded,
+                "already_superseded",
+                false,
+            ),
+            (MemoryErrorCode::CorruptLesson, "corrupt_lesson", false),
             (MemoryErrorCode::MigrationFailed, "migration_failed", false),
             (MemoryErrorCode::Internal, "internal", true),
         ];
@@ -447,6 +474,7 @@ mod tests {
             let error = MemoryProtocolError::new(code);
             assert_eq!(code.as_str(), name);
             assert_eq!(code.to_string(), name);
+            assert_eq!(MemoryErrorCode::from_wire_name(name), Some(code));
             assert_eq!(error.code(), code);
             assert_eq!(error.retryable(), retryable);
             assert!(!error.message().is_empty());

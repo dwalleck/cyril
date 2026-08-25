@@ -2,19 +2,20 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 
-use cyril_core::protocol::bridge::{
-    FirstPromptContext, FirstPromptContextError, FirstPromptContextFuture,
-};
 use cyril_memory::{
     AdminClient, ClientError, ContextBlock, HealthResponse, LessonId, LessonListResponse,
-    LessonRecord, LessonText, MemoryConfig, MemoryConfigState, MemoryEndpoint, MemoryErrorCode,
-    MemoryPaths, ProjectScope, RuntimeHealth, RuntimeLaunchConfig, TeachResponse,
+    LessonRecord, LessonText, MAX_CONTEXT_CHARS, MemoryConfig, MemoryConfigState, MemoryEndpoint,
+    MemoryErrorCode, MemoryPaths, ProjectScope, RuntimeHealth, RuntimeLaunchConfig, TeachResponse,
 };
 use process_wrap::tokio::{ChildWrapper, CommandWrap, KillOnDrop};
 use thiserror::Error;
 use tokio::sync::{oneshot, watch};
 use tokio::task::JoinHandle;
-const FIRST_PROMPT_CONTEXT_CHARS: u16 = 4_000;
+
+/// Bound on the first-prompt context round trip. A slow companion delays a
+/// fresh session's first prompt by at most this much; after that the prompt
+/// goes out without lessons.
+pub(crate) const FIRST_PROMPT_CONTEXT_TIMEOUT: Duration = Duration::from_millis(250);
 
 const STARTUP_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(2);
@@ -74,23 +75,52 @@ struct ProjectAccess {
     request_timeout: Duration,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Why a project-scoped operation cannot reach the runtime right now.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Error)]
 pub(crate) enum ProjectMemoryUnavailable {
+    #[error("memory is disabled")]
     Disabled,
+    #[error("memory runtime is still starting")]
     Starting,
+    #[error("memory runtime is degraded")]
     Degraded,
+    #[error("memory runtime failed to start")]
     Failed,
+    #[error("memory runtime is no longer running")]
     RuntimeLost,
 }
 
 #[derive(Debug, Error)]
 pub(crate) enum ProjectMemoryError {
-    #[error("project memory is unavailable: {0:?}")]
+    #[error("project memory is unavailable: {0}")]
     Unavailable(ProjectMemoryUnavailable),
     #[error(transparent)]
     Client(#[from] ClientError),
 }
 
+/// Why a fresh session's first prompt went out without lessons.
+#[derive(Debug, Error)]
+pub(crate) enum FirstPromptContextError {
+    #[error("{0}")]
+    Unavailable(ProjectMemoryUnavailable),
+    #[error("memory runtime did not answer within {0:?}")]
+    TimedOut(Duration),
+    #[error(transparent)]
+    Client(ClientError),
+}
+
+impl FirstPromptContextError {
+    /// Whether the session should stay eligible so its NEXT prompt is
+    /// augmented: only a companion that has not finished starting yet.
+    /// Disabled/failed/timed-out/malformed are not going to change by
+    /// themselves, and re-trying them would spend the deadline on every
+    /// prompt.
+    pub(crate) const fn retry_on_next_prompt(&self) -> bool {
+        matches!(self, Self::Unavailable(ProjectMemoryUnavailable::Starting))
+    }
+}
+
+/// One workspace bound to project memory for the life of the process.
 #[derive(Clone, Debug)]
 pub(crate) struct ProjectMemory {
     project: ProjectScope,
@@ -134,6 +164,10 @@ impl ProjectMemory {
             .map_err(ProjectMemoryError::from)
     }
 
+    pub(crate) fn project(&self) -> &ProjectScope {
+        &self.project
+    }
+
     pub(crate) async fn teach(
         &self,
         text: LessonText,
@@ -171,19 +205,81 @@ impl ProjectMemory {
             .context(&self.project, max_chars)
             .await?)
     }
+
+    /// The bounded first-prompt context block, or `None` when the project
+    /// has no active lessons. Every failure names its cause so the caller
+    /// can log it and decide whether the session stays eligible.
+    pub(crate) async fn first_prompt_context(
+        &self,
+    ) -> Result<Option<String>, FirstPromptContextError> {
+        match tokio::time::timeout(
+            FIRST_PROMPT_CONTEXT_TIMEOUT,
+            self.context(MAX_CONTEXT_CHARS),
+        )
+        .await
+        {
+            Ok(Ok(block)) => Ok(block
+                .map(|block| block.text().to_owned())
+                .filter(|text| !text.is_empty())),
+            Ok(Err(ProjectMemoryError::Unavailable(reason))) => {
+                Err(FirstPromptContextError::Unavailable(reason))
+            }
+            Ok(Err(ProjectMemoryError::Client(error))) => {
+                Err(FirstPromptContextError::Client(error))
+            }
+            Err(_) => Err(FirstPromptContextError::TimedOut(
+                FIRST_PROMPT_CONTEXT_TIMEOUT,
+            )),
+        }
+    }
 }
 
-impl FirstPromptContext for ProjectMemory {
-    fn load_context(&self) -> FirstPromptContextFuture<'_> {
-        Box::pin(async move {
-            match ProjectMemory::context(self, FIRST_PROMPT_CONTEXT_CHARS).await {
-                Ok(block) => Ok(block.map(|block| block.text().to_owned())),
-                Err(error) => {
-                    tracing::debug!(error = %error, "project memory context unavailable");
-                    Err(FirstPromptContextError)
-                }
+/// How the startup workspace resolved against project memory. Orthogonal to
+/// runtime health: a Ready runtime with an unbound workspace still cannot
+/// serve lesson commands, and the cause must be visible.
+#[derive(Clone, Debug)]
+pub(crate) enum ProjectBinding {
+    /// Memory is not enabled; no binding was attempted.
+    Disabled,
+    /// The workspace resolved to a project.
+    Bound(ProjectMemory),
+    /// The workspace could not be resolved.
+    Unbound { reason: String },
+}
+
+impl ProjectBinding {
+    pub(crate) const fn memory(&self) -> Option<&ProjectMemory> {
+        match self {
+            Self::Bound(memory) => Some(memory),
+            Self::Disabled | Self::Unbound { .. } => None,
+        }
+    }
+
+    /// The project axis of `/memory status`; absent when memory is disabled.
+    pub(crate) fn status_view(&self) -> Option<cyril_core::types::MemoryProjectBinding> {
+        match self {
+            Self::Disabled => None,
+            Self::Bound(memory) => Some(cyril_core::types::MemoryProjectBinding::bound(
+                memory.project().display_path().to_string_lossy(),
+            )),
+            Self::Unbound { reason } => {
+                Some(cyril_core::types::MemoryProjectBinding::unbound(reason))
             }
-        })
+        }
+    }
+
+    /// What a lesson command tells the user when it cannot run.
+    pub(crate) fn unavailable_message(&self) -> Option<String> {
+        match self {
+            Self::Bound(_) => None,
+            Self::Disabled => Some(
+                "Memory is disabled. Set `[memory] enabled = true` in Cyril's config to use project lessons."
+                    .to_owned(),
+            ),
+            Self::Unbound { reason } => {
+                Some(format!("Memory is unavailable for this project: {reason}"))
+            }
+        }
     }
 }
 
@@ -273,11 +369,30 @@ impl MemoryRuntimeHandle {
         project_status(&self.status())
     }
 
-    pub(crate) fn bind_project(&self, project: ProjectScope) -> ProjectMemory {
-        ProjectMemory {
-            project,
-            status: self.status.clone(),
-            access: self.access.clone(),
+    /// Resolve the startup workspace once. A binding failure is reported,
+    /// never collapsed into "no project": the runtime may be perfectly
+    /// healthy while this workspace still cannot use it, and the user needs
+    /// the reason (a relocated worktree, a malformed `.git` file, ...).
+    pub(crate) fn bind_project(&self, workspace: &Path) -> ProjectBinding {
+        if matches!(self.status(), MemoryRuntimeStatus::Disabled(_)) {
+            return ProjectBinding::Disabled;
+        }
+        match ProjectScope::resolve(workspace) {
+            Ok(project) => ProjectBinding::Bound(ProjectMemory {
+                project,
+                status: self.status.clone(),
+                access: self.access.clone(),
+            }),
+            Err(error) => {
+                tracing::warn!(
+                    workspace = %workspace.display(),
+                    error = %error,
+                    "memory project binding failed"
+                );
+                ProjectBinding::Unbound {
+                    reason: error.to_string(),
+                }
+            }
         }
     }
 
@@ -666,6 +781,137 @@ fn create_endpoint(runtime_dir: &Path) -> Result<MemoryEndpoint, cyril_memory::I
     MemoryEndpoint::from_path(&runtime_dir.join(format!("m-{}", hex::encode(random))))
 }
 
+/// An in-process `cyril-memory` runtime plus a hand-driven status channel,
+/// so `App` tests can observe real lesson injection and drive the
+/// Starting → Ready transition without a child process.
+#[cfg(test)]
+#[expect(clippy::expect_used)]
+pub(crate) mod test_support {
+    use super::*;
+
+    pub(crate) struct InProcessRuntime {
+        endpoint: MemoryEndpoint,
+        credential: cyril_memory::AdminCredential,
+        request_timeout: Duration,
+        health: HealthResponse,
+        status_tx: watch::Sender<MemoryRuntimeStatus>,
+        access_tx: watch::Sender<Option<ProjectAccess>>,
+        status: watch::Receiver<MemoryRuntimeStatus>,
+        access: watch::Receiver<Option<ProjectAccess>>,
+        task: JoinHandle<Result<(), cyril_memory::RuntimeError>>,
+        _roots: (tempfile::TempDir, tempfile::TempDir),
+    }
+
+    impl InProcessRuntime {
+        /// Start a runtime on private roots and wait for it to report Ready.
+        /// The published status starts as Ready; `set_starting` rewinds it.
+        pub(crate) async fn start() -> Self {
+            let data_root = tempfile::tempdir().expect("data root");
+            // Unix sockets need a short path; `/tmp` keeps macOS's long
+            // per-user temp roots out of the 100-byte limit.
+            #[cfg(unix)]
+            let runtime_root = tempfile::Builder::new()
+                .prefix("cyril-m-")
+                .tempdir_in("/tmp")
+                .expect("runtime root");
+            #[cfg(not(unix))]
+            let runtime_root = tempfile::tempdir().expect("runtime root");
+            let paths = MemoryPaths::prepare(Some(data_root.path())).expect("memory paths");
+            let endpoint = create_endpoint(runtime_root.path()).expect("endpoint");
+            let credential = cyril_memory::AdminCredential::generate().expect("credential");
+            let request_timeout = Duration::from_secs(2);
+            let launch = RuntimeLaunchConfig::new(
+                paths,
+                endpoint.clone(),
+                credential.clone(),
+                request_timeout,
+            );
+            let task = tokio::spawn(cyril_memory::run_runtime(launch));
+            let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+            let health = loop {
+                assert!(
+                    tokio::time::Instant::now() < deadline,
+                    "in-process memory runtime did not become ready"
+                );
+                if let Ok(mut client) =
+                    AdminClient::connect(endpoint.clone(), credential.clone(), request_timeout)
+                        .await
+                    && let Ok(health) = client.health().await
+                    && health.status() == RuntimeHealth::Ready
+                {
+                    break health;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            };
+            let (status_tx, status) = watch::channel(MemoryRuntimeStatus::Ready(health.clone()));
+            let (access_tx, access) = watch::channel(Some(ProjectAccess {
+                endpoint: endpoint.clone(),
+                credential: credential.clone(),
+                request_timeout,
+            }));
+            Self {
+                endpoint,
+                credential,
+                request_timeout,
+                health,
+                status_tx,
+                access_tx,
+                status,
+                access,
+                task,
+                _roots: (data_root, runtime_root),
+            }
+        }
+
+        pub(crate) fn bind(&self, workspace: &Path) -> ProjectMemory {
+            ProjectMemory {
+                project: ProjectScope::resolve(workspace).expect("workspace resolves"),
+                status: self.status.clone(),
+                access: self.access.clone(),
+            }
+        }
+
+        /// Publish "still starting" without touching the live runtime.
+        pub(crate) fn set_starting(&self) {
+            self.access_tx.send_replace(None);
+            self.status_tx.send_replace(MemoryRuntimeStatus::Starting);
+        }
+
+        pub(crate) fn set_ready(&self) {
+            self.access_tx.send_replace(Some(ProjectAccess {
+                endpoint: self.endpoint.clone(),
+                credential: self.credential.clone(),
+                request_timeout: self.request_timeout,
+            }));
+            self.status_tx
+                .send_replace(MemoryRuntimeStatus::Ready(self.health.clone()));
+        }
+
+        pub(crate) async fn client(&self) -> AdminClient {
+            AdminClient::connect(
+                self.endpoint.clone(),
+                self.credential.clone(),
+                self.request_timeout,
+            )
+            .await
+            .expect("admin client")
+        }
+
+        pub(crate) async fn shutdown(self) {
+            self.client()
+                .await
+                .shutdown()
+                .await
+                .expect("graceful shutdown");
+            tokio::time::timeout(Duration::from_secs(5), self.task)
+                .await
+                .expect("runtime task exits")
+                .expect("runtime task joins")
+                .expect("runtime exits cleanly");
+        }
+    }
+}
+
 #[cfg(test)]
 #[expect(clippy::expect_used)]
 mod tests {
@@ -896,5 +1142,130 @@ mod tests {
                 ProjectMemoryUnavailable::RuntimeLost
             ))
         ));
+    }
+
+    #[test]
+    fn unavailability_reads_as_a_sentence_not_a_variant_name() {
+        assert_eq!(
+            ProjectMemoryError::Unavailable(ProjectMemoryUnavailable::Degraded).to_string(),
+            "project memory is unavailable: memory runtime is degraded"
+        );
+        assert_eq!(
+            ProjectMemoryError::Unavailable(ProjectMemoryUnavailable::RuntimeLost).to_string(),
+            "project memory is unavailable: memory runtime is no longer running"
+        );
+        let starting = FirstPromptContextError::Unavailable(ProjectMemoryUnavailable::Starting);
+        assert_eq!(starting.to_string(), "memory runtime is still starting");
+        assert!(starting.retry_on_next_prompt());
+        assert!(
+            !FirstPromptContextError::Unavailable(ProjectMemoryUnavailable::Disabled)
+                .retry_on_next_prompt()
+        );
+        assert!(
+            !FirstPromptContextError::TimedOut(Duration::from_millis(250)).retry_on_next_prompt()
+        );
+    }
+
+    #[tokio::test]
+    async fn project_binding_reports_its_cause_and_never_falls_back() {
+        let disabled = MemoryRuntimeHandle::start(MemoryConfigState::Absent);
+        let workspace = tempfile::tempdir().expect("workspace");
+        assert!(matches!(
+            disabled.bind_project(workspace.path()),
+            ProjectBinding::Disabled
+        ));
+        assert!(
+            disabled
+                .bind_project(workspace.path())
+                .status_view()
+                .is_none()
+        );
+        assert!(
+            disabled
+                .bind_project(workspace.path())
+                .unavailable_message()
+                .expect("disabled message")
+                .contains("Memory is disabled")
+        );
+
+        // A runtime that is (or will be) alive: binding is attempted.
+        let (_status_tx, status) = watch::channel(MemoryRuntimeStatus::Starting);
+        let (_access_tx, access) = watch::channel(None);
+        let handle = MemoryRuntimeHandle {
+            status,
+            access,
+            status_closed: false,
+            shutdown: None,
+            task: None,
+        };
+        let bound = handle.bind_project(workspace.path());
+        assert!(bound.memory().is_some());
+        assert!(bound.unavailable_message().is_none());
+        assert!(matches!(
+            bound.status_view(),
+            Some(cyril_core::types::MemoryProjectBinding::Bound { .. })
+        ));
+
+        // A relocated worktree: `.git` names a gitdir that no longer exists.
+        let stale = tempfile::tempdir().expect("stale worktree");
+        std::fs::write(
+            stale.path().join(".git"),
+            "gitdir: /old/primary/.git/worktrees/x\n",
+        )
+        .expect("stale marker");
+        let unbound = handle.bind_project(stale.path());
+        assert!(unbound.memory().is_none());
+        let message = unbound.unavailable_message().expect("unbound message");
+        assert!(
+            message.starts_with(
+                "Memory is unavailable for this project: could not inspect Git metadata at"
+            ),
+            "{message}"
+        );
+        let Some(cyril_core::types::MemoryProjectBinding::Unbound { reason }) =
+            unbound.status_view()
+        else {
+            panic!("unbound status view expected");
+        };
+        assert!(reason.contains("/old/primary/.git/worktrees/x"), "{reason}");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn in_process_runtime_serves_first_prompt_context_and_reports_starting() {
+        let runtime = test_support::InProcessRuntime::start().await;
+        let workspace = tempfile::tempdir().expect("workspace");
+        let memory = runtime.bind(workspace.path());
+        assert_eq!(
+            memory.first_prompt_context().await.expect("no lessons yet"),
+            None
+        );
+        memory
+            .teach(LessonText::new("prefer boring Rust").expect("lesson"))
+            .await
+            .expect("teach");
+        let block = memory
+            .first_prompt_context()
+            .await
+            .expect("context")
+            .expect("one lesson");
+        assert!(block.starts_with("<CYRIL_LESSONS"));
+        assert!(block.contains("- prefer boring Rust"));
+
+        runtime.set_starting();
+        let error = memory
+            .first_prompt_context()
+            .await
+            .expect_err("starting is reported, not swallowed");
+        assert!(error.retry_on_next_prompt(), "{error}");
+        runtime.set_ready();
+        assert!(
+            memory
+                .first_prompt_context()
+                .await
+                .expect("ready again")
+                .is_some()
+        );
+        runtime.shutdown().await;
     }
 }

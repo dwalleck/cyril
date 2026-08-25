@@ -1198,6 +1198,29 @@ mod tests {
                     lesson_id: "00112233445566778899aabbccddeeff".to_owned(),
                 },
             ),
+            // Any whitespace run separates tokens: a double space or a
+            // pasted tab must not turn a replacement into a new lesson.
+            (
+                "/memory teach  --replace 00112233445566778899aabbccddeeff new text",
+                MemoryCommandAction::Replace {
+                    lesson_id: "00112233445566778899aabbccddeeff".to_owned(),
+                    text: "new text".to_owned(),
+                },
+            ),
+            (
+                "/memory teach\t--replace\t00112233445566778899aabbccddeeff\tnew text",
+                MemoryCommandAction::Replace {
+                    lesson_id: "00112233445566778899aabbccddeeff".to_owned(),
+                    text: "new text".to_owned(),
+                },
+            ),
+            ("/memory   list  ", MemoryCommandAction::List),
+            (
+                "/memory teach   keep  internal   spacing ",
+                MemoryCommandAction::Teach {
+                    text: "keep  internal   spacing".to_owned(),
+                },
+            ),
         ];
         for (input, expected) in rows {
             let (command, args) = registry.parse(input).expect("memory command");
@@ -1212,9 +1235,13 @@ mod tests {
             "/memory teach",
             "/memory teach   ",
             "/memory teach --replace",
+            "/memory teach  --replace",
             "/memory teach --replace id",
+            "/memory teach\t--replace\tid\t",
             "/memory inspect",
             "/memory inspect too many",
+            "/memory list extra",
+            "/memory status extra",
         ] {
             let (command, args) = registry.parse(input).expect("memory command");
             let result = command.execute(&ctx, args).await.expect("usage");

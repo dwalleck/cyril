@@ -9,9 +9,10 @@ use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::client::AdminCredential;
+use crate::encoding::decode_fixed_hex;
 use crate::lesson::{
-    ContextBlock, LessonId, LessonProvenance, LessonStatus, LessonText, LessonTrust,
-    MAX_CONTEXT_CHARS,
+    ContextBlock, LESSON_PREVIEW_CHARS, LessonId, LessonProvenance, LessonStatus, LessonText,
+    LessonTrust, MAX_CONTEXT_CHARS,
 };
 use crate::project::ProjectScope;
 use crate::protocol::{
@@ -140,8 +141,6 @@ enum ResponsePayload<'a> {
         store_versions: Option<StoreVersionsEnvelope>,
         error: Option<ErrorEnvelope<'a>>,
     },
-    #[serde(rename = "project_bound")]
-    ProjectBound,
     #[serde(rename = "taught")]
     Taught {
         created: bool,
@@ -151,6 +150,7 @@ enum ResponsePayload<'a> {
     Lessons {
         lessons: Vec<LessonEnvelope<'a>>,
         omitted_count: usize,
+        corrupt_count: usize,
     },
     #[serde(rename = "lesson")]
     Lesson { lesson: LessonEnvelope<'a> },
@@ -210,8 +210,6 @@ struct ResponseEnvelopeOwned {
 enum IncomingResponsePayload {
     #[serde(rename = "health")]
     Health(HealthPayloadOwned),
-    #[serde(rename = "project_bound")]
-    ProjectBound(EmptyPayloadOwned),
     #[serde(rename = "taught")]
     Taught(TaughtPayloadOwned),
     #[serde(rename = "lessons")]
@@ -252,6 +250,7 @@ struct TaughtPayloadOwned {
 struct LessonsPayloadOwned {
     lessons: Vec<LessonEnvelopeOwned>,
     omitted_count: usize,
+    corrupt_count: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -318,10 +317,6 @@ pub(crate) async fn send_request(
     let auth = credential.child_env_value();
     let (operation, payload) = match request {
         MemoryRequest::Health => ("health", None),
-        MemoryRequest::BindProject { project } => (
-            "bind_project",
-            Some(payload_value(project_payload(&project, id)?)?),
-        ),
         MemoryRequest::Teach { project, text } => (
             "teach",
             Some(payload_value(TeachPayload {
@@ -459,8 +454,8 @@ pub(crate) async fn read_request(
         .as_ref()
         .and_then(serde_json::Value::as_str)
         .ok_or_else(unauthorized)?;
-    let decoded = hex::decode(encoded).map_err(|_| unauthorized())?;
-    if decoded.len() != 32 || !constant_time_eq(&decoded, credential.as_bytes()) {
+    let decoded = decode_fixed_hex::<32>(encoded).ok_or_else(unauthorized)?;
+    if !constant_time_eq(&decoded, credential.as_bytes()) {
         return Err(unauthorized());
     }
     let operation = envelope
@@ -468,59 +463,59 @@ pub(crate) async fn read_request(
         .as_ref()
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| invalid_request(envelope.id, envelope.version))?;
+    let invalid_field = |field: &'static str| {
+        tracing::debug!(operation, field, "memory request field failed validation");
+        invalid_request(envelope.id, envelope.version)
+    };
+    let lesson_text = |text: &str| {
+        LessonText::new(text).map_err(|error| {
+            tracing::debug!(operation, error = %error, "memory request lesson text rejected");
+            invalid_request(envelope.id, envelope.version)
+        })
+    };
     let request = match operation {
         "health" => {
             require_null_payload(&envelope.payload, envelope.id, envelope.version)?;
             MemoryRequest::Health
         }
-        "bind_project" => {
-            let payload: ProjectPayload =
-                decode_payload(envelope.payload, envelope.id, envelope.version)?;
-            MemoryRequest::BindProject {
-                project: project_from_payload(payload, envelope.id, envelope.version)?,
-            }
-        }
         "teach" => {
             let payload: TeachPayload =
-                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+                decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
             MemoryRequest::Teach {
                 project: project_from_payload(payload.project, envelope.id, envelope.version)?,
-                text: LessonText::new(&payload.text)
-                    .map_err(|_| invalid_request(envelope.id, envelope.version))?,
+                text: lesson_text(&payload.text)?,
             }
         }
         "replace" => {
             let payload: ReplacePayload =
-                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+                decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
             MemoryRequest::Replace {
                 project: project_from_payload(payload.project, envelope.id, envelope.version)?,
                 replaced_id: LessonId::from_str(&payload.replaced_id)
-                    .map_err(|_| invalid_request(envelope.id, envelope.version))?,
-                text: LessonText::new(&payload.text)
-                    .map_err(|_| invalid_request(envelope.id, envelope.version))?,
+                    .map_err(|_| invalid_field("replaced_id"))?,
+                text: lesson_text(&payload.text)?,
             }
         }
         "list" => {
             let payload: ProjectPayload =
-                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+                decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
             MemoryRequest::List {
                 project: project_from_payload(payload, envelope.id, envelope.version)?,
             }
         }
         "inspect" => {
             let payload: InspectPayload =
-                decode_payload(envelope.payload, envelope.id, envelope.version)?;
+                decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
             MemoryRequest::Inspect {
                 project: project_from_payload(payload.project, envelope.id, envelope.version)?,
-                id: LessonId::from_str(&payload.id)
-                    .map_err(|_| invalid_request(envelope.id, envelope.version))?,
+                id: LessonId::from_str(&payload.id).map_err(|_| invalid_field("id"))?,
             }
         }
         "context" => {
             let payload: ContextPayload =
-                decode_payload(envelope.payload, envelope.id, envelope.version)?;
-            if payload.max_chars == 0 || usize::from(payload.max_chars) > MAX_CONTEXT_CHARS {
-                return Err(invalid_request(envelope.id, envelope.version));
+                decode_payload(operation, envelope.payload, envelope.id, envelope.version)?;
+            if payload.max_chars == 0 || payload.max_chars > MAX_CONTEXT_CHARS {
+                return Err(invalid_field("max_chars"));
             }
             MemoryRequest::Context {
                 project: project_from_payload(payload.project, envelope.id, envelope.version)?,
@@ -566,11 +561,15 @@ fn require_null_payload(
 }
 
 fn decode_payload<T: DeserializeOwned>(
+    operation: &str,
     payload: serde_json::Value,
     id: u64,
     version: u16,
 ) -> Result<T, WireError> {
-    serde_json::from_value(payload).map_err(|_| invalid_request(id, version))
+    serde_json::from_value(payload).map_err(|error| {
+        tracing::debug!(operation, error = %error, "memory request payload failed to decode");
+        invalid_request(id, version)
+    })
 }
 
 fn project_from_payload(
@@ -578,8 +577,10 @@ fn project_from_payload(
     id: u64,
     version: u16,
 ) -> Result<ProjectScope, WireError> {
-    ProjectScope::from_wire(&payload.project_id, &payload.display_path)
-        .map_err(|_| invalid_request(id, version))
+    ProjectScope::from_wire(&payload.project_id, &payload.display_path).map_err(|error| {
+        tracing::debug!(error = %error, "memory request project scope rejected");
+        invalid_request(id, version)
+    })
 }
 
 pub(crate) async fn send_response(
@@ -609,7 +610,6 @@ pub(crate) async fn send_response(
                 retryable: error.retryable(),
             }),
         },
-        MemoryResponse::ProjectBound => ResponsePayload::ProjectBound,
         MemoryResponse::Taught(result) => ResponsePayload::Taught {
             created: result.created(),
             lesson: lesson_envelope(result.lesson()),
@@ -617,6 +617,7 @@ pub(crate) async fn send_response(
         MemoryResponse::Lessons(result) => ResponsePayload::Lessons {
             lessons: result.lessons().iter().map(lesson_envelope).collect(),
             omitted_count: result.omitted_count(),
+            corrupt_count: result.corrupt_count(),
         },
         MemoryResponse::Lesson(lesson) => ResponsePayload::Lesson {
             lesson: lesson_envelope(lesson),
@@ -738,7 +739,7 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
                 || instance_id.len() != 32
                 || !instance_id.bytes().all(|byte| byte.is_ascii_hexdigit())
             {
-                return Err(invalid_response());
+                return Err(invalid_response("health identity"));
             }
             let status = match status.as_str() {
                 "starting" => RuntimeHealth::Starting,
@@ -772,7 +773,7 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
                 RuntimeHealth::Failed => store_versions.is_none() && error.is_some(),
             };
             if !shape_valid {
-                return Err(invalid_response());
+                return Err(invalid_response("health shape"));
             }
             let response = HealthResponse::from_wire(
                 instance_id,
@@ -788,37 +789,39 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
             );
             Ok(MemoryResponse::Health(response))
         }
-        IncomingResponsePayload::ProjectBound(_) => Ok(MemoryResponse::ProjectBound),
         IncomingResponsePayload::Taught(value) => Ok(MemoryResponse::Taught(TeachResponse::new(
-            decode_lesson_record(value.lesson)?,
+            decode_lesson_record(value.lesson, LessonContent::Full)?,
             value.created,
         ))),
         IncomingResponsePayload::Lessons(value) => {
             let LessonsPayloadOwned {
                 lessons,
                 omitted_count,
+                corrupt_count,
             } = value;
             if lessons.len() > 100 {
-                return Err(invalid_response());
+                return Err(invalid_response("lesson list length"));
             }
             let lessons = lessons
                 .into_iter()
-                .map(decode_lesson_record)
+                .map(|lesson| decode_lesson_record(lesson, LessonContent::Preview))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(MemoryResponse::Lessons(LessonListResponse::new(
                 lessons,
                 omitted_count,
+                corrupt_count,
             )))
         }
-        IncomingResponsePayload::Lesson(value) => {
-            Ok(MemoryResponse::Lesson(decode_lesson_record(value.lesson)?))
-        }
+        IncomingResponsePayload::Lesson(value) => Ok(MemoryResponse::Lesson(decode_lesson_record(
+            value.lesson,
+            LessonContent::Full,
+        )?)),
         IncomingResponsePayload::Context(value) => {
             let block = value
                 .block
                 .map(|block| ContextBlock::from_wire(block.text, block.omitted_count))
                 .transpose()
-                .map_err(|_| invalid_response())?;
+                .map_err(|_| invalid_response("context block"))?;
             Ok(MemoryResponse::Context(block))
         }
         IncomingResponsePayload::Shutdown(_) => Ok(MemoryResponse::Shutdown),
@@ -845,28 +848,57 @@ fn decode_response(payload: IncomingResponsePayload) -> Result<MemoryResponse, W
     }
 }
 
-fn decode_lesson_record(value: LessonEnvelopeOwned) -> Result<LessonRecord, WireError> {
+/// What a lesson envelope's `content` carries, which decides how it is checked.
+#[derive(Clone, Copy)]
+enum LessonContent {
+    /// Complete lesson text (teach, replace, inspect).
+    Full,
+    /// A `list` row: a prefix of at most [`LESSON_PREVIEW_CHARS`] characters,
+    /// possibly cut mid-token, so it must never be re-validated as a lesson.
+    Preview,
+}
+
+fn decode_lesson_record(
+    value: LessonEnvelopeOwned,
+    kind: LessonContent,
+) -> Result<LessonRecord, WireError> {
     if value.created_at_ms < 0 || value.updated_at_ms < value.created_at_ms {
-        return Err(invalid_response());
+        return Err(invalid_response("lesson timestamps"));
     }
-    let id = LessonId::from_str(&value.id).map_err(|_| invalid_response())?;
-    let text = LessonText::new(&value.content).map_err(|_| invalid_response())?;
-    if text.redacted() != value.content {
-        return Err(invalid_response());
-    }
-    let provenance =
-        LessonProvenance::from_stored(&value.provenance).ok_or_else(invalid_response)?;
-    let trust = LessonTrust::from_stored(&value.trust).ok_or_else(invalid_response)?;
-    let status = LessonStatus::from_stored(&value.status).ok_or_else(invalid_response)?;
+    let id = LessonId::from_str(&value.id).map_err(|_| invalid_response("lesson id"))?;
+    let content = match kind {
+        // Shape is checked by re-running the constructor, and the CLIENT's
+        // redacted form is what gets served: a client whose redactor is
+        // tighter than the runtime's redacts more, never rejects, so a
+        // binary skew between the two is fail-safe rather than a hard
+        // "malformed frame" on every read.
+        LessonContent::Full => LessonText::new(&value.content)
+            .map_err(|error| {
+                tracing::debug!(error = %error, "lesson content failed validation");
+                invalid_response("lesson content")
+            })?
+            .redacted()
+            .to_owned(),
+        LessonContent::Preview => {
+            validate_preview(&value.content)?;
+            value.content
+        }
+    };
+    let provenance = LessonProvenance::from_stored(&value.provenance)
+        .ok_or_else(|| invalid_response("lesson provenance"))?;
+    let trust =
+        LessonTrust::from_stored(&value.trust).ok_or_else(|| invalid_response("lesson trust"))?;
+    let status = LessonStatus::from_stored(&value.status)
+        .ok_or_else(|| invalid_response("lesson status"))?;
     let supersedes_id = value
         .supersedes_id
         .as_deref()
         .map(LessonId::from_str)
         .transpose()
-        .map_err(|_| invalid_response())?;
+        .map_err(|_| invalid_response("lesson supersedes_id"))?;
     Ok(LessonRecord::new(
         id,
-        value.content,
+        content,
         LessonRecordMetadata::new(
             provenance,
             trust,
@@ -878,7 +910,24 @@ fn decode_lesson_record(value: LessonEnvelopeOwned) -> Result<LessonRecord, Wire
     ))
 }
 
-fn invalid_response() -> WireError {
+fn validate_preview(preview: &str) -> Result<(), WireError> {
+    if preview.is_empty() {
+        return Err(invalid_response("lesson preview empty"));
+    }
+    if preview.chars().count() > LESSON_PREVIEW_CHARS {
+        return Err(invalid_response("lesson preview length"));
+    }
+    if preview
+        .chars()
+        .any(|character| character.is_control() && !matches!(character, '\n' | '\t'))
+    {
+        return Err(invalid_response("lesson preview control character"));
+    }
+    Ok(())
+}
+
+fn invalid_response(field: &'static str) -> WireError {
+    tracing::debug!(field, "memory response field failed validation");
     WireError::Protocol {
         code: MemoryErrorCode::MalformedFrame,
         id: None,
@@ -937,7 +986,6 @@ mod tests {
         let valid = [
             ("health", serde_json::Value::Null),
             ("shutdown", serde_json::Value::Null),
-            ("bind_project", project_payload.clone()),
             (
                 "teach",
                 serde_json::json!({"project": project_payload.clone(), "text": "prefer boring Rust"}),
@@ -971,11 +1019,11 @@ mod tests {
             ("shutdown", serde_json::json!({})),
             ("teach", serde_json::Value::Null),
             (
-                "bind_project",
+                "list",
                 serde_json::json!({"project_id": "wrong", "display_path": workspace}),
             ),
             (
-                "bind_project",
+                "list",
                 serde_json::json!({
                     "project_id": project.project_id().to_string(),
                     "display_path": "relative"
@@ -1027,6 +1075,109 @@ mod tests {
         .await
         .expect_err("unknown operation");
         assert_eq!(error.code(), Some(MemoryErrorCode::UnknownOperation));
+        let removed = decode_raw_request(
+            &credential,
+            request(&credential, "bind_project", project_payload),
+        )
+        .await
+        .expect_err("bind_project is not an operation");
+        assert_eq!(removed.code(), Some(MemoryErrorCode::UnknownOperation));
+    }
+
+    fn lesson_json(content: &str) -> serde_json::Value {
+        serde_json::json!({
+            "id": "00112233445566778899aabbccddeeff",
+            "content": content,
+            "provenance": "user_explicit",
+            "trust": "instruction",
+            "status": "active",
+            "supersedes_id": null,
+            "created_at_ms": 1_000,
+            "updated_at_ms": 1_000
+        })
+    }
+
+    fn decode_payload_json(payload: serde_json::Value) -> Result<MemoryResponse, WireError> {
+        let envelope: ResponseEnvelopeOwned =
+            serde_json::from_value(serde_json::json!({"version": 1, "id": 1, "payload": payload}))
+                .expect("response envelope shape");
+        decode_response(envelope.payload)
+    }
+
+    #[test]
+    fn list_previews_are_bounded_text_not_revalidated_lessons() {
+        // Stored: 140×'a' + " password=[REDACTED] and more"; the 160-char
+        // preview cuts inside the redaction marker. Re-running the lesson
+        // constructor on that prefix used to yield a different string and
+        // reject the whole list.
+        let stored = format!("{} password=[REDACTED] and more", "a".repeat(140));
+        let preview: String = stored
+            .chars()
+            .take(LESSON_PREVIEW_CHARS - 1)
+            .chain(std::iter::once('…'))
+            .collect();
+        assert!(preview.ends_with("password=[REDACTED…"), "{preview}");
+        // A preview cut right after the separator, and a raw-looking one
+        // (a runtime whose redactor is looser than this client's).
+        let after_separator = format!("{} password=…", "a".repeat(149));
+        let looser_runtime = "token: hunter22 must never be logged".to_owned();
+        for preview in [preview, after_separator, looser_runtime] {
+            let decoded = decode_payload_json(serde_json::json!({
+                "kind": "lessons",
+                "lessons": [lesson_json(&preview)],
+                "omitted_count": 2,
+                "corrupt_count": 1
+            }))
+            .unwrap_or_else(|error| panic!("preview {preview:?} should decode: {error:?}"));
+            let MemoryResponse::Lessons(list) = decoded else {
+                panic!("lessons response expected");
+            };
+            assert_eq!(list.lessons()[0].content(), preview);
+            assert_eq!(list.omitted_count(), 2);
+            assert_eq!(list.corrupt_count(), 1);
+        }
+
+        for (label, preview) in [
+            ("too long", "x".repeat(LESSON_PREVIEW_CHARS + 1)),
+            ("empty", String::new()),
+            ("control", "bad\u{0}preview".to_owned()),
+        ] {
+            let error = decode_payload_json(serde_json::json!({
+                "kind": "lessons",
+                "lessons": [lesson_json(&preview)],
+                "omitted_count": 0,
+                "corrupt_count": 0
+            }))
+            .expect_err(label);
+            assert_eq!(
+                error.code(),
+                Some(MemoryErrorCode::MalformedFrame),
+                "{label}"
+            );
+        }
+    }
+
+    #[test]
+    fn full_lessons_are_served_through_the_client_redactor_not_rejected() {
+        // A runtime binary with a looser redactor than this client serves a
+        // row the client would rewrite: it is redacted on the way in, not
+        // rejected as a malformed frame.
+        let skewed = "use ghp_abcdefghijklmnopqrstuvwxyz1234 in CI";
+        let decoded = decode_payload_json(
+            serde_json::json!({"kind": "lesson", "lesson": lesson_json(skewed)}),
+        )
+        .expect("skewed row decodes");
+        let MemoryResponse::Lesson(lesson) = decoded else {
+            panic!("lesson response expected");
+        };
+        assert_eq!(lesson.content(), "use [REDACTED] in CI");
+
+        let error = decode_payload_json(serde_json::json!({
+            "kind": "lesson",
+            "lesson": lesson_json("bad\u{0}lesson")
+        }))
+        .expect_err("control characters stay malformed");
+        assert_eq!(error.code(), Some(MemoryErrorCode::MalformedFrame));
     }
 
     #[test]

@@ -1,8 +1,8 @@
 mod app;
 mod memory_runtime;
 
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::fmt;
+use std::path::{Component, Path, PathBuf};
 
 use clap::Parser;
 use cyril_core::types::AgentEngine;
@@ -45,32 +45,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let config_report = cyril_memory::load_config_report(&config_dir().join("config.toml"));
     let memory_config = config_report.memory().clone();
-    let memory_enabled = matches!(
-        &memory_config,
-        cyril_memory::MemoryConfigState::Valid(config) if config.enabled()
-    );
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?;
-    let memory_runtime = {
-        let _runtime_guard = rt.enter();
-        memory_runtime::MemoryRuntimeHandle::start(memory_config)
-    };
-    let project_memory = if memory_enabled {
-        match cyril_memory::ProjectScope::resolve(&cwd) {
-            Ok(project) => Some(memory_runtime.bind_project(project)),
-            Err(error) => {
-                tracing::warn!(error = %error, "memory project binding failed");
-                None
-            }
-        }
-    } else {
-        None
-    };
-    let first_prompt_context: Option<Arc<dyn cyril_core::protocol::bridge::FirstPromptContext>> =
-        project_memory.clone().map(|memory| {
-            Arc::new(memory) as Arc<dyn cyril_core::protocol::bridge::FirstPromptContext>
-        });
     let config = config_report.ordinary().clone();
 
     // Spawn bridge
@@ -92,7 +69,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // v1 ships no tuning surface for it. Unlike the fields above,
             // which mirror `[agent]` config keys, this one is a constant.
             stall_threshold: cyril_core::protocol::bridge::DEFAULT_STALL_THRESHOLD,
-            first_prompt_context,
         },
         cwd.clone(),
     )?;
@@ -126,7 +102,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             usage_log,
             agent_engine,
         );
-        app.set_memory_runtime(memory_runtime, project_memory);
+
+        // The memory companion starts only once every fallible startup step
+        // above has passed: an early `?` return would drop the handle, whose
+        // `Drop` is abort-only, and SIGKILL the child with its socket file
+        // left behind. From here on every exit path goes through
+        // `App::shutdown_memory_runtime`.
+        let memory_runtime = memory_runtime::MemoryRuntimeHandle::start(memory_config);
+        let project_binding = memory_runtime.bind_project(&cwd);
+        app.set_memory_runtime(memory_runtime, project_binding);
 
         // Create initial session; a parsed `--prompt` rides along and is
         // submitted once the session is ready (cyril-0ffy).
@@ -134,16 +118,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Initialize terminal
         let mut terminal = ratatui::init();
-        crossterm::execute!(std::io::stdout(), crossterm::event::EnableBracketedPaste).map_err(
-            |e| {
-                cyril_core::Error::with_source(
-                    cyril_core::ErrorKind::Transport {
-                        detail: "failed to enable bracketed paste".into(),
-                    },
-                    e,
-                )
-            },
-        )?;
+        if let Err(e) =
+            crossterm::execute!(std::io::stdout(), crossterm::event::EnableBracketedPaste)
+        {
+            ratatui::restore();
+            app.shutdown_memory_runtime().await;
+            return Err(Box::new(cyril_core::Error::with_source(
+                cyril_core::ErrorKind::Transport {
+                    detail: "failed to enable bracketed paste".into(),
+                },
+                e,
+            )) as Box<dyn std::error::Error>);
+        }
 
         // Mouse capture follows `ui.mouse_capture` (cyril-nd4h). Derived from
         // App's state, NOT read from the config again: two independent reads is
@@ -175,6 +161,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             tracing::warn!(error = %e, "failed to disable mouse capture / bracketed paste");
         }
         ratatui::restore();
+        // `run` shuts the companion down on a clean quit; an error return
+        // from it must not skip that.
+        app.shutdown_memory_runtime().await;
 
         if let Err(ref e) = result {
             eprintln!("Error: {e}");
@@ -185,11 +174,72 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-fn startup_cwd(configured: Option<PathBuf>) -> std::io::Result<PathBuf> {
-    match configured {
-        Some(cwd) => cwd.canonicalize(),
-        None => std::env::current_dir()?.canonicalize(),
+
+/// Why the startup workspace could not be bound. Carries the path: this is
+/// the first thing a user sees after a bad `--cwd`, and `Os { code: 2 }`
+/// alone does not say which path.
+#[derive(thiserror::Error)]
+enum StartupCwdError {
+    #[error("workspace path {path} could not be resolved: {source}")]
+    Resolve {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("workspace path {path} is not a directory")]
+    NotADirectory { path: PathBuf },
+}
+
+// `main` returns this through `Box<dyn Error>`, which the runtime prints via
+// `Debug`; delegating to `Display` keeps the message a sentence.
+impl fmt::Debug for StartupCwdError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, formatter)
     }
+}
+
+/// Resolve the workspace to an absolute, lexically normalized path that is a
+/// directory. Deliberately NOT `canonicalize`: that yields a `\\?\C:\…`
+/// verbatim path on Windows that a native `kiro-cli.exe` and `cmd.exe`-based
+/// hooks do not accept, and rewrites a symlinked workspace to its target,
+/// which splits the usage log's per-project history. Project *identity*
+/// (`ProjectScope`) canonicalizes on its own.
+fn startup_cwd(configured: Option<PathBuf>) -> Result<PathBuf, StartupCwdError> {
+    let requested = match configured {
+        Some(cwd) => cwd,
+        None => std::env::current_dir().map_err(|source| StartupCwdError::Resolve {
+            path: PathBuf::from("."),
+            source,
+        })?,
+    };
+    let absolute = std::path::absolute(&requested).map_err(|source| StartupCwdError::Resolve {
+        path: requested.clone(),
+        source,
+    })?;
+    let path = normalize_lexically(&absolute);
+    match std::fs::metadata(&path) {
+        Ok(metadata) if metadata.is_dir() => Ok(path),
+        Ok(_) => Err(StartupCwdError::NotADirectory { path }),
+        Err(source) => Err(StartupCwdError::Resolve { path, source }),
+    }
+}
+
+/// Drop `.` components and fold `..` onto the preceding component, the way a
+/// shell's logical `cd` does, without touching the filesystem.
+fn normalize_lexically(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                // `..` above the root stays at the root; `pop` reports that
+                // there was nothing to remove and that is the desired result.
+                normalized.pop();
+            }
+            other => normalized.push(other),
+        }
+    }
+    normalized
 }
 
 fn setup_logging() {
@@ -248,16 +298,52 @@ mod tests {
             "an unknown engine value is rejected, not silently defaulted"
         );
     }
+
     #[test]
-    fn configured_startup_cwd_is_canonical_and_missing_is_an_error() {
+    fn configured_startup_cwd_is_absolute_normalized_and_names_the_path_on_error() {
         let directory = tempfile::tempdir().expect("temporary workspace");
         let nested = directory.path().join("nested");
         std::fs::create_dir(&nested).expect("create nested workspace");
-        let alias = nested.join("..").join("nested");
-        assert_eq!(
-            startup_cwd(Some(alias)).expect("canonical startup workspace"),
-            nested.canonicalize().expect("canonical fixture")
+        let alias = nested.join("..").join("nested").join(".");
+        let resolved = startup_cwd(Some(alias)).expect("normalized startup workspace");
+        // Lexical only: `..`/`.` fold away, but the tempdir itself is NOT
+        // rewritten to its canonical target (no `\\?\`, no symlink chasing).
+        assert_eq!(resolved, nested);
+        assert!(resolved.is_absolute());
+
+        let missing = directory.path().join("missing");
+        let error = startup_cwd(Some(missing.clone())).expect_err("missing workspace");
+        assert!(matches!(&error, StartupCwdError::Resolve { path, .. } if path == &missing));
+        assert!(
+            format!("{error:?}").contains(&missing.display().to_string()),
+            "{error:?}"
         );
-        assert!(startup_cwd(Some(directory.path().join("missing"))).is_err());
+
+        let file = directory.path().join("file.txt");
+        std::fs::write(&file, "not a directory").expect("file fixture");
+        let error = startup_cwd(Some(file.clone())).expect_err("file is not a workspace");
+        assert!(matches!(&error, StartupCwdError::NotADirectory { path } if path == &file));
+        assert_eq!(
+            error.to_string(),
+            format!("workspace path {} is not a directory", file.display())
+        );
+
+        // `.` resolves against the process cwd without touching the filesystem
+        // for anything but the final directory check.
+        let here = startup_cwd(Some(PathBuf::from("."))).expect("process cwd");
+        assert_eq!(here, std::env::current_dir().expect("current directory"));
+    }
+
+    #[test]
+    fn lexical_normalization_keeps_the_root_and_drops_dots() {
+        let root = Path::new("/").join("work");
+        assert_eq!(
+            normalize_lexically(&root.join(".").join("a").join("..").join("b")),
+            root.join("b")
+        );
+        assert_eq!(
+            normalize_lexically(&Path::new("/").join("..").join("x")),
+            Path::new("/").join("x")
+        );
     }
 }

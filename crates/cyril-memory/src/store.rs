@@ -15,7 +15,7 @@ use thiserror::Error;
 
 use crate::lesson::{
     ContextBlock, ContextLesson, LessonId, LessonProvenance, LessonStatus, LessonText, LessonTrust,
-    render_context_counted,
+    render_context,
 };
 use crate::paths::MemoryPaths;
 use crate::project::ProjectScope;
@@ -109,6 +109,9 @@ pub enum StoreError {
     #[error("lesson does not exist in the bound project")]
     LessonNotFound,
 
+    #[error("lesson was already replaced and is no longer active")]
+    LessonSuperseded,
+
     #[error("could not generate a lesson identity")]
     Random(#[source] getrandom::Error),
 
@@ -198,6 +201,7 @@ impl TeachOutcome {
 pub(crate) struct LessonList {
     lessons: Vec<StoredLesson>,
     omitted_count: usize,
+    corrupt_count: usize,
 }
 
 impl LessonList {
@@ -207,6 +211,11 @@ impl LessonList {
 
     pub(crate) const fn omitted_count(&self) -> usize {
         self.omitted_count
+    }
+
+    /// Active rows skipped because their stored integrity check failed.
+    pub(crate) const fn corrupt_count(&self) -> usize {
+        self.corrupt_count
     }
 }
 
@@ -246,19 +255,6 @@ impl StoreSet {
 
     pub fn versions(&self) -> MemoryStoreVersions {
         self.versions
-    }
-
-    pub(crate) fn bind_project(&mut self, project: &ProjectScope) -> Result<(), StoreError> {
-        let path = self.memory_path.clone();
-        let now = now_ms()?;
-        let transaction = self
-            ._memory
-            .transaction_with_behavior(TransactionBehavior::Immediate)
-            .map_err(|source| map_sqlite(&path, source))?;
-        ensure_project(&path, &transaction, project, now)?;
-        transaction
-            .commit()
-            .map_err(|source| map_sqlite(&path, source))
     }
 
     pub(crate) fn teach_lesson(
@@ -315,20 +311,28 @@ impl StoreSet {
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(|source| map_sqlite(&path, source))?;
         ensure_project(&path, &transaction, project, now)?;
-        let replaced = find_lesson(
-            &path,
-            &transaction,
-            project,
-            replaced_id,
-            Some(LessonStatus::Active),
-        )?
-        .ok_or(StoreError::LessonNotFound)?;
-        if let Some(lesson) = find_active_by_hash(&path, &transaction, project, text)? {
+        // Look the target up in any status so "already replaced" is reported
+        // as itself, not as the same "not found" a never-existing id gets.
+        let replaced = find_lesson(&path, &transaction, project, replaced_id, None)?
+            .ok_or(StoreError::LessonNotFound)?;
+        if replaced.status() != LessonStatus::Active {
+            return Err(StoreError::LessonSuperseded);
+        }
+        // The user asked for the target to go away: it is invalidated even
+        // when the replacement text already matches another active lesson,
+        // in which case that lesson is what the replacement resolves to.
+        let existing = find_active_by_hash(&path, &transaction, project, text)?;
+        if existing
+            .as_ref()
+            .is_some_and(|lesson| lesson.id() == replaced_id)
+        {
+            // Replacing a lesson with its own text is a no-op, not a
+            // self-supersede that would leave nothing active.
             insert_audit(
                 &path,
                 &transaction,
                 project,
-                &lesson,
+                &replaced,
                 "duplicate",
                 Some(replaced_id),
                 now,
@@ -337,17 +341,20 @@ impl StoreSet {
                 .commit()
                 .map_err(|source| map_sqlite(&path, source))?;
             return Ok(TeachOutcome {
-                lesson,
+                lesson: replaced,
                 created: false,
             });
         }
+        // A backwards wall-clock step must not stamp the invalidated row
+        // before its own creation: readers reject `updated < created`.
+        let invalidated_at = now.max(replaced.created_at_ms());
         let changed = transaction
             .execute(
                 "UPDATE lessons
                  SET status = 'invalidated', updated_at_ms = ?1
                  WHERE project_id = ?2 AND lesson_id = ?3 AND status = 'active'",
                 params![
-                    now,
+                    invalidated_at,
                     project.project_id().to_string(),
                     replaced_id.to_string()
                 ],
@@ -356,7 +363,13 @@ impl StoreSet {
         if changed != 1 {
             return Err(StoreError::LessonNotFound);
         }
-        let lesson = insert_lesson(&path, &transaction, project, text, Some(replaced.id()), now)?;
+        let (lesson, created) = match existing {
+            Some(lesson) => (lesson, false),
+            None => (
+                insert_lesson(&path, &transaction, project, text, Some(replaced.id()), now)?,
+                true,
+            ),
+        };
         insert_audit(
             &path,
             &transaction,
@@ -369,10 +382,7 @@ impl StoreSet {
         transaction
             .commit()
             .map_err(|source| map_sqlite(&path, source))?;
-        Ok(TeachOutcome {
-            lesson,
-            created: true,
-        })
+        Ok(TeachOutcome { lesson, created })
     }
 
     pub(crate) fn list_lessons(
@@ -410,14 +420,21 @@ impl StoreSet {
             .query_map(params![project_id, sql_limit], read_raw_lesson)
             .map_err(|source| map_sqlite(&self.memory_path, source))?;
         let mut lessons = Vec::with_capacity(total.min(limit));
+        let mut corrupt_count = 0;
         for row in rows {
-            lessons.push(decode_lesson(
-                row.map_err(|source| map_sqlite(&self.memory_path, source))?,
-            )?);
+            let raw = row.map_err(|source| map_sqlite(&self.memory_path, source))?;
+            match decode_lesson(raw) {
+                Ok(lesson) => lessons.push(lesson),
+                Err(error) => {
+                    corrupt_count += 1;
+                    log_corrupt_row(&error, "list");
+                }
+            }
         }
         Ok(LessonList {
-            omitted_count: total.saturating_sub(lessons.len()),
+            omitted_count: total.saturating_sub(lessons.len() + corrupt_count),
             lessons,
+            corrupt_count,
         })
     }
 
@@ -468,26 +485,36 @@ impl StoreSet {
             .map_err(|source| map_sqlite(&self.memory_path, source))?;
         let mut candidates = Vec::new();
         let mut candidate_chars = 0_usize;
+        let mut corrupt_count = 0_usize;
         for row in rows {
-            let lesson =
-                decode_lesson(row.map_err(|source| map_sqlite(&self.memory_path, source))?)?;
-            let candidate = ContextLesson::new(
-                lesson.id(),
-                lesson.sequence(),
-                lesson.text().clone(),
-                lesson.provenance(),
-                lesson.trust(),
-                lesson.status(),
-            );
+            let raw = row.map_err(|source| map_sqlite(&self.memory_path, source))?;
+            let lesson = match decode_lesson(raw) {
+                Ok(lesson) => lesson,
+                Err(error) => {
+                    // One corrupt row must not blank first-prompt context for
+                    // the whole project; it is skipped and reported.
+                    corrupt_count += 1;
+                    log_corrupt_row(&error, "context");
+                    continue;
+                }
+            };
+            let candidate = ContextLesson::new(lesson.sequence(), lesson.text().clone());
             candidate_chars = candidate_chars.saturating_add(candidate.rendered_line_chars());
             candidates.push(candidate);
             if candidate_chars > budget {
                 break;
             }
         }
-        let references: Vec<_> = candidates.iter().collect();
-        Ok(render_context_counted(&references, total, budget))
+        Ok(render_context(
+            &candidates,
+            total.saturating_sub(corrupt_count),
+            budget,
+        ))
     }
+}
+
+fn log_corrupt_row(error: &StoreError, operation: &'static str) {
+    tracing::warn!(error = %error, operation, "skipping corrupt stored lesson row");
 }
 
 struct RawLesson {
@@ -563,11 +590,8 @@ fn decode_lesson_id(value: &str) -> Result<LessonId, StoreError> {
 }
 
 fn decode_fixed<const N: usize>(value: &str, label: &str) -> Result<[u8; N], StoreError> {
-    let decoded = hex::decode(value).map_err(|_| StoreError::CorruptLesson {
-        reason: format!("{label} is not hexadecimal"),
-    })?;
-    decoded.try_into().map_err(|_| StoreError::CorruptLesson {
-        reason: format!("{label} has the wrong length"),
+    crate::encoding::decode_fixed_hex::<N>(value).ok_or_else(|| StoreError::CorruptLesson {
+        reason: format!("{label} is not {N}-byte hexadecimal"),
     })
 }
 
@@ -925,8 +949,8 @@ fn migrate_memory_to_v2(path: &Path, transaction: &Transaction<'_>) -> Result<()
                 project_id TEXT NOT NULL REFERENCES projects(project_id),
                 content TEXT NOT NULL,
                 content_hash TEXT NOT NULL CHECK (length(content_hash) = 64),
-                provenance TEXT NOT NULL CHECK (provenance IN ('user_explicit', 'document')),
-                trust TEXT NOT NULL CHECK (trust IN ('instruction', 'reference')),
+                provenance TEXT NOT NULL CHECK (provenance IN ('user_explicit')),
+                trust TEXT NOT NULL CHECK (trust IN ('instruction')),
                 status TEXT NOT NULL CHECK (status IN ('active', 'invalidated')),
                 supersedes_id TEXT REFERENCES lessons(lesson_id),
                 created_at_ms INTEGER NOT NULL,
@@ -1460,14 +1484,31 @@ mod tests {
         );
     }
 
-    #[test]
-    fn duplicate_replacement_audits_requested_target() {
+    fn project_store() -> (TempDir, crate::ProjectScope, StoreSet) {
         let root = TempDir::new().unwrap();
         let workspace = root.path().join("project");
         fs::create_dir(&workspace).unwrap();
         let paths = MemoryPaths::prepare(Some(&root.path().join("data"))).unwrap();
         let project = crate::ProjectScope::resolve(&workspace).unwrap();
-        let mut stores = StoreSet::open(&paths).unwrap();
+        let stores = StoreSet::open(&paths).unwrap();
+        (root, project, stores)
+    }
+
+    fn last_audit(stores: &StoreSet) -> (String, Option<String>, String) {
+        stores
+            ._memory
+            .query_row(
+                "SELECT lesson_id, target_lesson_id, action
+                 FROM memory_audit ORDER BY sequence DESC LIMIT 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap()
+    }
+
+    #[test]
+    fn replacement_matching_another_lesson_still_supersedes_the_target() {
+        let (_root, project, mut stores) = project_store();
         let first = stores
             .teach_lesson(&project, &crate::LessonText::new("first").unwrap())
             .unwrap()
@@ -1485,18 +1526,171 @@ mod tests {
             .unwrap();
         assert!(!outcome.created);
         assert_eq!(outcome.lesson.id(), existing.id());
-        let (result_id, target_id, action): (String, Option<String>, String) = stores
-            ._memory
-            .query_row(
-                "SELECT lesson_id, target_lesson_id, action
-                 FROM memory_audit ORDER BY sequence DESC LIMIT 1",
-                [],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-            )
-            .unwrap();
+        // The user asked for `first` to go away: it is no longer active.
+        assert_eq!(
+            stores
+                .inspect_lesson(&project, first.id())
+                .unwrap()
+                .status(),
+            LessonStatus::Invalidated
+        );
+        let active = stores.list_lessons(&project, 100).unwrap();
+        assert_eq!(active.lessons().len(), 1);
+        assert_eq!(active.lessons()[0].id(), existing.id());
+        let (result_id, target_id, action) = last_audit(&stores);
         assert_eq!(result_id, existing.id().to_string());
         assert_eq!(target_id, Some(first.id().to_string()));
-        assert_eq!(action, "duplicate");
+        assert_eq!(action, "superseded");
+    }
+
+    #[test]
+    fn replacing_a_lesson_with_its_own_text_is_a_noop() {
+        let (_root, project, mut stores) = project_store();
+        let text = crate::LessonText::new("keep me").unwrap();
+        let lesson = stores.teach_lesson(&project, &text).unwrap().lesson;
+        let outcome = stores.replace_lesson(&project, lesson.id(), &text).unwrap();
+        assert!(!outcome.created);
+        assert_eq!(outcome.lesson.id(), lesson.id());
+        assert_eq!(
+            stores
+                .inspect_lesson(&project, lesson.id())
+                .unwrap()
+                .status(),
+            LessonStatus::Active
+        );
+        assert_eq!(last_audit(&stores).2, "duplicate");
+    }
+
+    #[test]
+    fn replacing_an_already_replaced_lesson_is_distinct_from_not_found() {
+        let (_root, project, mut stores) = project_store();
+        let first = stores
+            .teach_lesson(&project, &crate::LessonText::new("first").unwrap())
+            .unwrap()
+            .lesson;
+        stores
+            .replace_lesson(
+                &project,
+                first.id(),
+                &crate::LessonText::new("second").unwrap(),
+            )
+            .unwrap();
+        let stale = stores.replace_lesson(
+            &project,
+            first.id(),
+            &crate::LessonText::new("third").unwrap(),
+        );
+        assert!(
+            matches!(stale, Err(StoreError::LessonSuperseded)),
+            "{stale:?}"
+        );
+        let unknown = stores.replace_lesson(
+            &project,
+            LessonId::from_bytes([9; 16]),
+            &crate::LessonText::new("third").unwrap(),
+        );
+        assert!(
+            matches!(unknown, Err(StoreError::LessonNotFound)),
+            "{unknown:?}"
+        );
+        assert_eq!(
+            StoreError::LessonSuperseded.to_string(),
+            "lesson was already replaced and is no longer active"
+        );
+    }
+
+    #[test]
+    fn invalidation_stamp_never_precedes_creation_after_clock_step_back() {
+        let (_root, project, mut stores) = project_store();
+        let lesson = stores
+            .teach_lesson(&project, &crate::LessonText::new("created late").unwrap())
+            .unwrap()
+            .lesson;
+        // Simulate the wall clock stepping back after creation by pushing the
+        // row's creation stamp into the future.
+        let future = lesson.created_at_ms() + 5_000;
+        stores
+            ._memory
+            .execute(
+                "UPDATE lessons SET created_at_ms = ?1, updated_at_ms = ?1 WHERE lesson_id = ?2",
+                params![future, lesson.id().to_string()],
+            )
+            .unwrap();
+        stores
+            .replace_lesson(
+                &project,
+                lesson.id(),
+                &crate::LessonText::new("replacement").unwrap(),
+            )
+            .unwrap();
+        let invalidated = stores.inspect_lesson(&project, lesson.id()).unwrap();
+        assert_eq!(invalidated.status(), LessonStatus::Invalidated);
+        assert!(invalidated.updated_at_ms() >= invalidated.created_at_ms());
+        assert_eq!(invalidated.updated_at_ms(), future);
+    }
+
+    #[test]
+    fn corrupt_rows_are_skipped_and_stale_redaction_is_healed_on_read() {
+        let (_root, project, mut stores) = project_store();
+        let healthy = stores
+            .teach_lesson(&project, &crate::LessonText::new("healthy").unwrap())
+            .unwrap()
+            .lesson;
+        let stale = stores
+            .teach_lesson(&project, &crate::LessonText::new("stale").unwrap())
+            .unwrap()
+            .lesson;
+        let broken = stores
+            .teach_lesson(&project, &crate::LessonText::new("broken").unwrap())
+            .unwrap()
+            .lesson;
+        // A row an older, looser redactor would have written raw, with a
+        // correct hash: integrity holds, so it is served redacted.
+        let raw = "use ghp_abcdefghijklmnopqrstuvwxyz1234 in CI";
+        let raw_hash: [u8; 32] = <sha2::Sha256 as sha2::Digest>::digest(raw.as_bytes()).into();
+        stores
+            ._memory
+            .execute(
+                "UPDATE lessons SET content = ?1, content_hash = ?2 WHERE lesson_id = ?3",
+                params![raw, hex::encode(raw_hash), stale.id().to_string()],
+            )
+            .unwrap();
+        // A row whose bytes no longer match its hash is corrupt.
+        stores
+            ._memory
+            .execute(
+                "UPDATE lessons SET content = 'tampered' WHERE lesson_id = ?1",
+                [broken.id().to_string()],
+            )
+            .unwrap();
+
+        let list = stores.list_lessons(&project, 100).unwrap();
+        assert_eq!(list.corrupt_count(), 1);
+        assert_eq!(list.omitted_count(), 0);
+        let ids: Vec<_> = list.lessons().iter().map(StoredLesson::id).collect();
+        assert_eq!(ids, vec![stale.id(), healthy.id()]);
+        assert_eq!(list.lessons()[0].text().redacted(), "use [REDACTED] in CI");
+
+        let context = stores.context(&project, 4_000).unwrap().unwrap();
+        assert!(context.text().contains("use [REDACTED] in CI"));
+        assert!(context.text().contains("healthy"));
+        assert!(!context.text().contains("ghp_"));
+        assert!(!context.text().contains("tampered"));
+        assert_eq!(context.omitted_count(), 0);
+
+        let inspect = stores.inspect_lesson(&project, broken.id());
+        assert!(
+            matches!(inspect, Err(StoreError::CorruptLesson { .. })),
+            "{inspect:?}"
+        );
+        assert!(stores.inspect_lesson(&project, stale.id()).is_ok());
+        // Teaching still works alongside a corrupt sibling row.
+        assert!(
+            stores
+                .teach_lesson(&project, &crate::LessonText::new("after").unwrap())
+                .unwrap()
+                .created()
+        );
     }
 
     #[test]

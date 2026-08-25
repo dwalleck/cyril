@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use thiserror::Error;
 
+use crate::encoding::decode_fixed_hex;
 use crate::ipc::{self, IpcError, MemoryEndpoint};
 use crate::lesson::{ContextBlock, LessonId, LessonText};
 use crate::project::ProjectScope;
@@ -26,11 +27,9 @@ impl AdminCredential {
 
     pub(crate) fn from_child_env(value: &OsStr) -> Result<Self, ClientError> {
         let value = value.to_str().ok_or(ClientError::InvalidCredential)?;
-        let decoded = hex::decode(value).map_err(|_| ClientError::InvalidCredential)?;
-        let bytes: [u8; 32] = decoded
-            .try_into()
-            .map_err(|_| ClientError::InvalidCredential)?;
-        Ok(Self(bytes))
+        decode_fixed_hex::<32>(value)
+            .map(Self)
+            .ok_or(ClientError::InvalidCredential)
     }
 
     /// Encode the secret exclusively for the child environment.
@@ -107,18 +106,6 @@ impl AdminClient {
     pub async fn shutdown(&mut self) -> Result<(), ClientError> {
         match self.request(MemoryRequest::Shutdown).await? {
             MemoryResponse::Shutdown => Ok(()),
-            _ => Err(ClientError::UnexpectedResponse),
-        }
-    }
-
-    pub async fn bind_project(&mut self, project: &ProjectScope) -> Result<(), ClientError> {
-        match self
-            .request(MemoryRequest::BindProject {
-                project: project.clone(),
-            })
-            .await?
-        {
-            MemoryResponse::ProjectBound => Ok(()),
             _ => Err(ClientError::UnexpectedResponse),
         }
     }

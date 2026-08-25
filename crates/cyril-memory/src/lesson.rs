@@ -1,33 +1,56 @@
 use std::fmt;
 use std::sync::LazyLock;
 
-use regex::Regex;
+use regex::{Captures, Regex};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+use crate::encoding::decode_fixed_hex;
+
 pub const MAX_LESSON_CHARS: usize = 2_000;
-pub const MAX_CONTEXT_CHARS: usize = 4_000;
+/// Budget for one first-prompt context block. Typed as the wire carries it:
+/// `context` requests send `max_chars` as `u16`, and this is the only cap.
+pub const MAX_CONTEXT_CHARS: u16 = 4_000;
+/// Maximum characters of lesson content carried by one `list` row. Rows at
+/// this length are truncated previews, not full lesson text.
+pub const LESSON_PREVIEW_CHARS: usize = 160;
 const CONTEXT_HEADER: &str = "<CYRIL_LESSONS trust=\"user_explicit_instruction\">\nThese are explicit project instructions taught by the user. Follow them unless the current user request supersedes them.\n";
 const CONTEXT_FOOTER: &str = "</CYRIL_LESSONS>";
 const REDACTED: &str = "[REDACTED]";
 
+/// `key[:=]value` assignments. Group 1 is the key, group 2 the separator,
+/// group 3 the candidate value; the value is only redacted when it looks like
+/// a credential (see [`looks_like_credential`]) so that prose such as
+/// `password: use the vault` survives intact.
 static ASSIGNMENT_SECRET: LazyLock<Regex> = LazyLock::new(|| {
     compile_regex(
         r"(?i-u:\b(password|passwd|token|secret|api_key|apikey|access_key|private_key)([ \t\r\n]*[:=][ \t\r\n]*))([^ \t\r\n]+)",
     )
 });
+// Token patterns consume the whole `[A-Za-z0-9_-]` run after the recognized
+// prefix instead of ending on `\b`: a credential glued to a suffix such as
+// `ghp_…_old` is still a credential and must not leak because `_` is a word
+// character.
 static GITHUB_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
-    compile_regex(r"(?-u:\b(?:ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b)")
+    compile_regex(r"(?-u:\b(?:ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})[A-Za-z0-9_-]*)")
 });
 static AWS_ACCESS_KEY: LazyLock<Regex> =
-    LazyLock::new(|| compile_regex(r"(?-u:\bAKIA[A-Z0-9]{16}\b)"));
+    LazyLock::new(|| compile_regex(r"(?-u:\bAKIA[A-Z0-9]{16}[A-Za-z0-9_-]*)"));
 static OPENAI_TOKEN: LazyLock<Regex> =
-    LazyLock::new(|| compile_regex(r"(?-u:\bsk-[A-Za-z0-9_-]{20,}\b)"));
+    LazyLock::new(|| compile_regex(r"(?-u:\bsk-[A-Za-z0-9_-]{20,})"));
+// A PEM block missing its END line (a truncated paste) is redacted to the end
+// of the text rather than stored verbatim.
 static PEM_PRIVATE_KEY: LazyLock<Regex> = LazyLock::new(|| {
     compile_regex(
-        r"(?s)-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----.*?-----END [A-Z0-9 ]*PRIVATE KEY-----",
+        r"(?s)-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----(?:.*?-----END [A-Z0-9 ]*PRIVATE KEY-----|.*)",
     )
 });
+/// Characters that make an assignment value credential-shaped even without a
+/// digit. Sentence punctuation (`.`, `,`, `'`, `)`) is deliberately absent.
+const CREDENTIAL_PUNCTUATION: &[char] = &[
+    '_', '-', '/', '+', '=', '@', '#', '$', '%', '^', '&', '*', '~',
+];
+const CREDENTIAL_LENGTH_ALONE: usize = 16;
 
 fn compile_regex(pattern: &str) -> Regex {
     Regex::new(pattern)
@@ -47,9 +70,9 @@ impl std::str::FromStr for LessonId {
     type Err = LessonIdParseError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let bytes = hex::decode(value).map_err(|_| LessonIdParseError)?;
-        let bytes = bytes.try_into().map_err(|_| LessonIdParseError)?;
-        Ok(Self(bytes))
+        decode_fixed_hex::<16>(value)
+            .map(Self)
+            .ok_or(LessonIdParseError)
     }
 }
 
@@ -69,47 +92,44 @@ impl fmt::Display for LessonId {
 #[error("lesson identity must be exactly 32 hexadecimal characters")]
 pub struct LessonIdParseError;
 
+/// Where a lesson came from. Only explicit user teaching exists today; the
+/// column and vocabulary stay so a future source is an additive change.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LessonProvenance {
     UserExplicit,
-    Document,
 }
 
 impl LessonProvenance {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::UserExplicit => "user_explicit",
-            Self::Document => "document",
         }
     }
 
     pub(crate) fn from_stored(value: &str) -> Option<Self> {
         match value {
             "user_explicit" => Some(Self::UserExplicit),
-            "document" => Some(Self::Document),
             _ => None,
         }
     }
 }
 
+/// How a lesson is presented to the model. Only instructions exist today.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LessonTrust {
     Instruction,
-    Reference,
 }
 
 impl LessonTrust {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::Instruction => "instruction",
-            Self::Reference => "reference",
         }
     }
 
     pub(crate) fn from_stored(value: &str) -> Option<Self> {
         match value {
             "instruction" => Some(Self::Instruction),
-            "reference" => Some(Self::Reference),
             _ => None,
         }
     }
@@ -165,6 +185,17 @@ impl LessonText {
             });
         }
         let redacted = redact(normalized);
+        // Redaction can grow the text (`token=x` becomes `token=[REDACTED]`),
+        // and the redacted form is what gets stored and re-validated by the
+        // runtime, so the cap is enforced on it too — otherwise the client
+        // accepts what the runtime then rejects as an opaque wire error.
+        let redacted_chars = redacted.chars().count();
+        if redacted_chars > MAX_LESSON_CHARS {
+            return Err(LessonError::TooLongRedacted {
+                actual: redacted_chars,
+                max: MAX_LESSON_CHARS,
+            });
+        }
         let content_hash = Sha256::digest(redacted.as_bytes()).into();
         Ok(Self {
             redacted,
@@ -180,15 +211,30 @@ impl LessonText {
         self.content_hash
     }
 
+    /// Rebuild a lesson from a stored row.
+    ///
+    /// The stored invariant is integrity only: `content_hash` must be the
+    /// SHA-256 of the stored bytes. The current redactor is then re-applied
+    /// to the content when serving, so a row written by an older, looser
+    /// redactor is served redacted (self-healing) instead of being rejected
+    /// — "current regexes leave the text unchanged" is a property of the
+    /// binary, not of the data, and must not be treated as a stored invariant.
     pub(crate) fn from_stored(
-        redacted: String,
+        content: String,
         content_hash: [u8; 32],
     ) -> Result<Self, LessonError> {
-        let reconstructed = Self::new(&redacted)?;
-        if reconstructed.redacted != redacted || reconstructed.content_hash != content_hash {
+        let actual: [u8; 32] = Sha256::digest(content.as_bytes()).into();
+        if actual != content_hash {
             return Err(LessonError::CorruptStored);
         }
-        Ok(reconstructed)
+        let healed = Self::new(&content).map_err(|error| {
+            tracing::warn!(error = %error, "stored lesson failed shape validation");
+            LessonError::CorruptStored
+        })?;
+        Ok(Self {
+            redacted: healed.redacted,
+            content_hash,
+        })
     }
 }
 
@@ -210,70 +256,27 @@ pub enum LessonError {
     ControlCharacter,
     #[error("lesson text has {actual} characters; maximum is {max}")]
     TooLong { actual: usize, max: usize },
+    #[error("lesson text expands to {actual} characters after secret redaction; maximum is {max}")]
+    TooLongRedacted { actual: usize, max: usize },
     #[error("stored lesson text or hash is corrupt")]
     CorruptStored,
 }
 
+/// One active lesson considered for a first-prompt context block. Only what
+/// rendering needs: newest-first ordering and the redacted text.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ContextLesson {
-    id: LessonId,
+pub(crate) struct ContextLesson {
     sequence: u64,
     text: LessonText,
-    provenance: LessonProvenance,
-    trust: LessonTrust,
-    status: LessonStatus,
 }
 
 impl ContextLesson {
-    pub const fn new(
-        id: LessonId,
-        sequence: u64,
-        text: LessonText,
-        provenance: LessonProvenance,
-        trust: LessonTrust,
-        status: LessonStatus,
-    ) -> Self {
-        Self {
-            id,
-            sequence,
-            text,
-            provenance,
-            trust,
-            status,
-        }
+    pub(crate) const fn new(sequence: u64, text: LessonText) -> Self {
+        Self { sequence, text }
     }
 
-    pub const fn id(&self) -> LessonId {
-        self.id
-    }
     pub(crate) fn rendered_line_chars(&self) -> usize {
         3 + self.text.redacted().chars().count()
-    }
-
-    pub const fn sequence(&self) -> u64 {
-        self.sequence
-    }
-
-    pub fn text(&self) -> &LessonText {
-        &self.text
-    }
-
-    pub const fn provenance(&self) -> LessonProvenance {
-        self.provenance
-    }
-
-    pub const fn trust(&self) -> LessonTrust {
-        self.trust
-    }
-
-    pub const fn status(&self) -> LessonStatus {
-        self.status
-    }
-
-    fn is_explicit_instruction(&self) -> bool {
-        self.provenance == LessonProvenance::UserExplicit
-            && self.trust == LessonTrust::Instruction
-            && self.status == LessonStatus::Active
     }
 }
 
@@ -293,7 +296,7 @@ impl ContextBlock {
     }
 
     pub(crate) fn from_wire(text: String, omitted_count: usize) -> Result<Self, LessonError> {
-        if text.chars().count() > MAX_CONTEXT_CHARS
+        if text.chars().count() > usize::from(MAX_CONTEXT_CHARS)
             || !text.starts_with(CONTEXT_HEADER)
             || !text.ends_with(CONTEXT_FOOTER)
         {
@@ -306,24 +309,21 @@ impl ContextBlock {
     }
 }
 
-pub fn render_context(candidates: &[ContextLesson], budget: usize) -> Option<ContextBlock> {
-    let eligible: Vec<&ContextLesson> = candidates
-        .iter()
-        .filter(|lesson| lesson.is_explicit_instruction())
-        .collect();
-    render_context_counted(&eligible, eligible.len(), budget)
-}
-
-pub(crate) fn render_context_counted(
-    candidates: &[&ContextLesson],
+/// Render the newest lessons that fit whole inside `budget` characters.
+///
+/// `eligible_count` is the total number of active lessons the caller knows
+/// about (it may exceed `candidates.len()` when the caller stopped reading
+/// early); the difference is reported as omitted.
+pub(crate) fn render_context(
+    candidates: &[ContextLesson],
     eligible_count: usize,
     budget: usize,
 ) -> Option<ContextBlock> {
-    let mut eligible = candidates.to_vec();
-    eligible.sort_by_key(|lesson| std::cmp::Reverse(lesson.sequence));
     if eligible_count == 0 {
         return None;
     }
+    let mut eligible: Vec<&ContextLesson> = candidates.iter().collect();
+    eligible.sort_by_key(|lesson| std::cmp::Reverse(lesson.sequence));
 
     let fixed_chars = CONTEXT_HEADER.len() + CONTEXT_FOOTER.len();
     let mut selected = Vec::with_capacity(eligible.len());
@@ -375,9 +375,25 @@ fn render_selected(selected: &[&ContextLesson], omitted_count: usize) -> String 
     text
 }
 
+/// Whether an assignment value is credential-shaped rather than prose: it
+/// carries a digit, credential punctuation, or is long enough that no
+/// ordinary word would appear there.
+fn looks_like_credential(value: &str) -> bool {
+    value.chars().count() >= CREDENTIAL_LENGTH_ALONE
+        || value.chars().any(|character| character.is_ascii_digit())
+        || value.contains(CREDENTIAL_PUNCTUATION)
+}
+
 fn redact(input: &str) -> String {
     let redacted = PEM_PRIVATE_KEY.replace_all(input, REDACTED);
-    let redacted = ASSIGNMENT_SECRET.replace_all(&redacted, "${1}${2}[REDACTED]");
+    let redacted = ASSIGNMENT_SECRET.replace_all(&redacted, |captures: &Captures<'_>| {
+        let group = |index: usize| captures.get(index).map_or("", |found| found.as_str());
+        if looks_like_credential(group(3)) {
+            format!("{}{}{REDACTED}", group(1), group(2))
+        } else {
+            group(0).to_owned()
+        }
+    });
     let redacted = GITHUB_TOKEN.replace_all(&redacted, REDACTED);
     let redacted = AWS_ACCESS_KEY.replace_all(&redacted, REDACTED);
     OPENAI_TOKEN.replace_all(&redacted, REDACTED).into_owned()
@@ -389,14 +405,7 @@ mod tests {
     use super::*;
 
     fn lesson(sequence: u64, text: &str) -> ContextLesson {
-        ContextLesson::new(
-            LessonId::from_bytes([sequence as u8; 16]),
-            sequence,
-            LessonText::new(text).expect("lesson text"),
-            LessonProvenance::UserExplicit,
-            LessonTrust::Instruction,
-            LessonStatus::Active,
-        )
+        ContextLesson::new(sequence, LessonText::new(text).expect("lesson text"))
     }
 
     #[test]
@@ -411,6 +420,41 @@ mod tests {
         assert!(LessonText::new(&"x".repeat(2_000)).is_ok());
         assert!(matches!(
             LessonText::new(&"x".repeat(2_001)),
+            Err(LessonError::TooLong { .. })
+        ));
+    }
+
+    #[test]
+    fn lesson_cap_applies_to_the_redacted_text() {
+        // 222 × "token=s3 " = 1998 chars before redaction and 3774 after
+        // (`token=[REDACTED] `): the client-side constructor must reject
+        // exactly what the runtime would.
+        let input = "token=s3 ".repeat(222);
+        assert_eq!(input.trim().chars().count(), 1_997);
+        let expected = "token=[REDACTED] ".repeat(222).trim().chars().count();
+        assert!(expected > MAX_LESSON_CHARS);
+        let error = LessonText::new(&input).expect_err("over the cap after redaction");
+        assert_eq!(
+            error,
+            LessonError::TooLongRedacted {
+                actual: expected,
+                max: MAX_LESSON_CHARS
+            }
+        );
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "lesson text expands to {expected} characters after secret redaction; maximum is 2000"
+            )
+        );
+        // A text that only shrinks under redaction is still bounded by the
+        // pre-redaction cap.
+        let pem = format!(
+            "-----BEGIN PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----",
+            "A".repeat(2_100)
+        );
+        assert!(matches!(
+            LessonText::new(&pem),
             Err(LessonError::TooLong { .. })
         ));
     }
@@ -432,6 +476,11 @@ mod tests {
                 "-----BEGIN PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----",
                 "[REDACTED]",
             ),
+            ("secret=my-secret", "secret=[REDACTED]"),
+            (
+                "passphrase password: correcthorsebatterystaple",
+                "passphrase password: [REDACTED]",
+            ),
         ];
         for (input, expected) in cases {
             let text = LessonText::new(input).expect("valid secret-shaped lesson");
@@ -449,39 +498,105 @@ mod tests {
     }
 
     #[test]
-    fn context_block_respects_trust_order_and_whole_lesson_budget() {
+    fn prose_assignments_are_not_rewritten() {
+        let cases = [
+            "Never commit the password: use the vault",
+            "never log the token: use structured fields",
+            "the secret = don't ship on Fridays.",
+            "api_key: rotate quarterly",
+        ];
+        for input in cases {
+            let text = LessonText::new(input).expect("prose lesson");
+            assert_eq!(text.redacted(), input, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn glued_and_truncated_credentials_are_still_redacted() {
+        let cases = [
+            (
+                "the old key was ghp_abcdefghijklmnopqrstuvwxyz123456_old, rotate it",
+                "the old key was [REDACTED], rotate it",
+            ),
+            (
+                "github_pat_abcdefghijklmnopqrstuvwxyz-suffix ok",
+                "[REDACTED] ok",
+            ),
+            ("AKIAABCDEFGHIJKLMNOP_x rotated", "[REDACTED] rotated"),
+            ("sk-abcdefghijklmnopqrstuvwxyz123456_legacy!", "[REDACTED]!"),
+            (
+                "key:\n-----BEGIN RSA PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC",
+                "key:\n[REDACTED]",
+            ),
+        ];
+        for (input, expected) in cases {
+            let text = LessonText::new(input).expect("valid lesson");
+            assert_eq!(text.redacted(), expected, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn redaction_is_idempotent() {
+        for input in [
+            "password=hunter2",
+            "token: ghp_abcdefghijklmnopqrstuvwxyz123456",
+            "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----",
+            "the old key was ghp_abcdefghijklmnopqrstuvwxyz123456_old",
+        ] {
+            let once = LessonText::new(input)
+                .expect("first pass")
+                .redacted()
+                .to_owned();
+            let twice = LessonText::new(&once).expect("second pass");
+            assert_eq!(twice.redacted(), once, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn stored_rows_verify_integrity_and_self_heal_redaction() {
+        // A row an older, looser redactor would have written raw.
+        let raw = "use ghp_abcdefghijklmnopqrstuvwxyz1234 in CI".to_owned();
+        let hash = sha256(raw.as_bytes());
+        let healed = LessonText::from_stored(raw, hash).expect("integrity holds");
+        assert_eq!(healed.redacted(), "use [REDACTED] in CI");
+        assert_eq!(
+            healed.content_hash(),
+            hash,
+            "stored hash stays the row identity"
+        );
+
+        let clean = LessonText::new("prefer boring Rust").expect("clean");
+        let round_trip = LessonText::from_stored(clean.redacted().to_owned(), clean.content_hash())
+            .expect("clean row");
+        assert_eq!(round_trip, clean);
+
+        assert_eq!(
+            LessonText::from_stored("tampered".to_owned(), hash),
+            Err(LessonError::CorruptStored)
+        );
+        assert_eq!(
+            LessonText::from_stored(String::new(), sha256(b"")),
+            Err(LessonError::CorruptStored)
+        );
+    }
+
+    #[test]
+    fn context_block_orders_newest_first_within_whole_lesson_budget() {
         let newest = lesson(3, "newest explicit instruction");
         let older = lesson(
             1,
             "older explicit instruction that is deliberately much longer than omitted marker",
         );
-        let invalidated = ContextLesson::new(
-            LessonId::from_bytes([4; 16]),
-            4,
-            LessonText::new("invalidated").expect("text"),
-            LessonProvenance::UserExplicit,
-            LessonTrust::Instruction,
-            LessonStatus::Invalidated,
-        );
-        let derived = ContextLesson::new(
-            LessonId::from_bytes([5; 16]),
-            5,
-            LessonText::new("derived reference").expect("text"),
-            LessonProvenance::Document,
-            LessonTrust::Reference,
-            LessonStatus::Active,
-        );
-        let candidates = vec![older, derived, newest, invalidated];
+        let candidates = vec![older, newest];
 
-        assert!(render_context(&candidates, 0).is_none());
-        let full = render_context(&candidates, 4_000).expect("full block");
+        assert!(render_context(&candidates, 0, 4_000).is_none());
+        assert!(render_context(&candidates, candidates.len(), 0).is_none());
+        let full = render_context(&candidates, candidates.len(), 4_000).expect("full block");
         assert!(full.text().starts_with("<CYRIL_LESSONS"));
         assert!(full.text().ends_with("</CYRIL_LESSONS>"));
         assert!(
             full.text().find("newest").expect("newest") < full.text().find("older").expect("older")
         );
-        assert!(!full.text().contains("derived"));
-        assert!(!full.text().contains("invalidated"));
         assert_eq!(full.omitted_count(), 0);
         assert!(full.text().chars().count() <= 4_000);
 
@@ -489,11 +604,17 @@ mod tests {
             + "- newest explicit instruction\n".chars().count()
             + "[1 additional lesson(s) omitted]\n".chars().count()
             + CONTEXT_FOOTER.chars().count();
-        let bounded = render_context(&candidates, one_lesson_budget).expect("bounded block");
+        let bounded = render_context(&candidates, candidates.len(), one_lesson_budget)
+            .expect("bounded block");
         assert!(bounded.text().contains("newest explicit instruction"));
         assert!(!bounded.text().contains("older explicit instruction"));
         assert_eq!(bounded.omitted_count(), 1);
         assert!(bounded.text().chars().count() <= one_lesson_budget);
+
+        // The caller may know about more eligible lessons than it read.
+        let partial = render_context(&candidates, 5, 4_000).expect("partial block");
+        assert_eq!(partial.omitted_count(), 3);
+        assert!(partial.text().contains("[3 additional lesson(s) omitted]"));
     }
 
     fn sha256(bytes: &[u8]) -> [u8; 32] {

@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
+use crate::encoding::decode_fixed_hex;
+
 /// Opaque stable identity for one canonical local project.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ProjectId([u8; 32]);
@@ -45,6 +47,12 @@ impl ProjectScope {
                     path: workspace.to_path_buf(),
                     source,
                 })?;
+        // The path crosses the runtime protocol as UTF-8 on every operation;
+        // refusing it here turns a per-request "invalid protocol request"
+        // into one visible binding failure with a cause.
+        if display_path.to_str().is_none() {
+            return Err(ProjectError::NonUtf8Path { path: display_path });
+        }
         let identity_path =
             find_git_common_dir(&display_path)?.unwrap_or_else(|| display_path.clone());
         let project_id = ProjectId::from_bytes(hash_identity(&identity_path));
@@ -54,9 +62,7 @@ impl ProjectScope {
         })
     }
     pub(crate) fn from_wire(project_id: &str, display_path: &str) -> Result<Self, ProjectError> {
-        let mut bytes = [0_u8; 32];
-        hex::decode_to_slice(project_id, &mut bytes)
-            .map_err(|_| ProjectError::InvalidBoundScope)?;
+        let bytes = decode_fixed_hex::<32>(project_id).ok_or(ProjectError::InvalidBoundScope)?;
         let display_path = PathBuf::from(display_path);
         if display_path.as_os_str().is_empty()
             || !display_path.is_absolute()
@@ -86,13 +92,15 @@ impl ProjectScope {
 
 #[derive(Debug, Error)]
 pub enum ProjectError {
-    #[error("could not canonicalize project workspace {path}")]
+    #[error("could not canonicalize project workspace {path}: {source}")]
     Canonicalize {
         path: PathBuf,
         #[source]
         source: io::Error,
     },
-    #[error("could not inspect Git metadata at {path}")]
+    #[error("project workspace path {path} is not valid UTF-8")]
+    NonUtf8Path { path: PathBuf },
+    #[error("could not inspect Git metadata at {path}: {source}")]
     InspectGit {
         path: PathBuf,
         #[source]
@@ -100,6 +108,8 @@ pub enum ProjectError {
     },
     #[error("Git metadata file {path} is invalid")]
     InvalidGitFile { path: PathBuf },
+    #[error("Git marker {path} is a dangling symbolic link")]
+    DanglingGitLink { path: PathBuf },
     #[error("bound project identity is invalid")]
     InvalidBoundScope,
 }
@@ -107,7 +117,13 @@ pub enum ProjectError {
 fn find_git_common_dir(workspace: &Path) -> Result<Option<PathBuf>, ProjectError> {
     for ancestor in workspace.ancestors() {
         let marker = ancestor.join(".git");
-        let metadata = match fs::metadata(&marker) {
+        // `symlink_metadata` so a symlinked marker is seen as a marker even
+        // when its target is missing. Following it blindly (`fs::metadata`)
+        // reads a dangling link as "no `.git` here" and walks on to an
+        // ancestor — silently binding the workspace to a different
+        // repository's lessons. A malformed marker is an error, never a
+        // fallback (same policy as a malformed `.git` file).
+        let link_metadata = match fs::symlink_metadata(&marker) {
             Ok(metadata) => metadata,
             Err(source) if source.kind() == io::ErrorKind::NotFound => continue,
             Err(source) => {
@@ -116,6 +132,22 @@ fn find_git_common_dir(workspace: &Path) -> Result<Option<PathBuf>, ProjectError
                     source,
                 });
             }
+        };
+        let metadata = if link_metadata.is_symlink() {
+            match fs::metadata(&marker) {
+                Ok(metadata) => metadata,
+                Err(source) if source.kind() == io::ErrorKind::NotFound => {
+                    return Err(ProjectError::DanglingGitLink { path: marker });
+                }
+                Err(source) => {
+                    return Err(ProjectError::InspectGit {
+                        path: marker,
+                        source,
+                    });
+                }
+            }
+        } else {
+            link_metadata
         };
         if metadata.is_dir() {
             return canonicalize_git_path(&marker).map(Some);
@@ -294,5 +326,49 @@ mod tests {
             ProjectScope::resolve(root.path()),
             Err(ProjectError::InvalidGitFile { .. })
         ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn dangling_git_symlink_is_an_error_not_an_ancestor_fallback() {
+        // `~/.git` dotfiles repo above a workspace whose `.git` symlink points
+        // at an unmounted volume: the workspace must NOT bind to the ancestor.
+        let root = tempdir().expect("root");
+        fs::create_dir(root.path().join(".git")).expect("ancestor repository");
+        let workspace = root.path().join("proj");
+        fs::create_dir(&workspace).expect("workspace");
+        std::os::unix::fs::symlink(
+            root.path().join("unmounted").join("proj.git"),
+            workspace.join(".git"),
+        )
+        .expect("dangling marker");
+
+        let ancestor = ProjectScope::resolve(root.path()).expect("ancestor scope");
+        let error = ProjectScope::resolve(&workspace).expect_err("dangling marker");
+        assert!(
+            matches!(&error, ProjectError::DanglingGitLink { path } if path == &workspace.join(".git")),
+            "{error}"
+        );
+        assert!(error.to_string().contains("dangling symbolic link"));
+
+        // Once the target exists the link is followed like any other marker
+        // and the identity is the workspace's own repository, not the ancestor.
+        fs::create_dir_all(root.path().join("unmounted").join("proj.git")).expect("mount");
+        let mounted = ProjectScope::resolve(&workspace).expect("mounted scope");
+        assert_ne!(mounted.project_id(), ancestor.project_id());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn non_utf8_workspace_is_a_binding_error() {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+
+        let root = tempdir().expect("root");
+        let workspace = root.path().join(OsStr::from_bytes(b"caf\xe9"));
+        fs::create_dir(&workspace).expect("non-UTF-8 workspace");
+        let error = ProjectScope::resolve(&workspace).expect_err("non-UTF-8 path");
+        assert!(matches!(error, ProjectError::NonUtf8Path { .. }), "{error}");
+        assert!(error.to_string().contains("not valid UTF-8"));
     }
 }
