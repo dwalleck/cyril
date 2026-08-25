@@ -1,0 +1,370 @@
+{
+ "invocation": {
+  "agentName": "memory-extraction",
+  "executionId": "656a8ab8-dd84-4931-b291-7f1fae5ddc26",
+  "chatId": "c9f2f22e-b1a3-4f5a-8717-b882244844b9"
+ },
+ "request": {
+  "conversationState": {
+   "conversationId": "sess_2cfb0d28-3d63-47af-839b-3186e8e60093",
+   "rootConversationId": "sess_2cfb0d28-3d63-47af-839b-3186e8e60093",
+   "agentContinuationId": "9f305d70-4f8e-498c-bc17-b5a8025b5aba",
+   "agentTaskType": "vibe",
+   "currentMessage": {
+    "userInputMessage": {
+     "content": "[Background task: memory extraction]\n\nFor THIS task, ignore your usual persona and other tools \u2014 use ONLY the `memory` tool to capture durable, cross-session memories from the conversation above.\n\nBe selective, not silent. Save what will genuinely help FUTURE work \u2014 on this repo/topic or generally \u2014 and skip noise. An exploratory or debugging session that taught you something non-obvious SHOULD be stored. When unsure between saving one well-scoped memory and saving nothing, prefer saving it \u2014 but never duplicate.\n\n## Existing memories\nAn earlier `<learnings>`/`<index>` block may appear in the conversation above \u2014 it is a STALE session-start snapshot; ignore it for deduping. Use ONLY the list below, which was read fresh just now. `memory get` with a title for full content; `memory list` with a filter for other scopes.\n\n# Memory Index\n\n## Global (2)\n- [USER_PREFERENCE] Commit messages in imperative mood \u2014 Write git commit messages in imperative mood.\n- [USER_PREFERENCE] Indentation: tabs, not spaces \u2014 Use TABS for indentation in all code, never spaces.\n\n## repo:example.invalid/cyril-audit/memprobe (1)\n- [SEMANTIC] Build and test commands \u2014 Build with 'cargo build --release'; run tests with 'cargo nextest run'.\n\n## Worth saving (capture these)\n- Architecture/design decisions and the WHY behind them.\n- How a non-obvious part of the system actually works \u2014 especially something that took effort to figure out.\n- Gotchas, workarounds, sharp edges, build/test/tooling quirks.\n- User preferences, conventions, and corrections.\n\n## The bar (each memory should be)\n- USEFUL LATER: it will help future work \u2014 on this repo/topic or generally \u2014 not just this task's transient state.\n- NON-OBVIOUS: not trivially re-derivable by glancing at the code or docs right now.\n- GROUNDED: the user expressed/corrected it, or you actually learned/verified it THIS session \u2014 not speculation.\n\n## Consolidation (you own this \u2014 there is no automatic dedup)\n- ONE memory per distinct preference/fact. No redundancy.\n- Before adding, scan the index above. If the insight refines, corrects, or overlaps an existing entry, `memory update` that entry \u2014 do NOT `memory add`.\n- Never create a near-duplicate of something already stored.\n\n## Never store (skip silently)\n- Secrets or credentials: tokens, API keys, passwords, private keys, connection strings.\n- Personal/sensitive data beyond what's strictly necessary; and no health, political, religious, or sexual content.\n- Pure transient state: task progress, restated context, one-off values with no lasting relevance.\n\n## Fields\nSet `sessionId` to \"sess_2cfb0d28-3d63-47af-839b-3186e8e60093\" on add. (Command names, scope levels, and other field semantics are in the `memory` tool schema \u2014 follow it; don't restate here.)\n\nIf genuinely nothing qualifies, it's fine to stop without writing.",
+     "modelId": "auto",
+     "origin": "AI_EDITOR",
+     "userInputMessageContext": {
+      "tools": [
+       {
+        "toolSpecification": {
+         "name": "memory",
+         "description": "Persistent local memory shared across sessions. Stored at ~/.kiro/memories/memories.jsonl \u2014 one JSON record per line, the single source of truth, and user-editable.\n\n## Commands\n- 'list': Return every memory as a compact index (type, scope, title, summary). Use this first to scan what already exists \u2014 cheap, no content.\n- 'get': Return the FULL content of specific memories by TITLE. Pass 'titles' as an array (e.g. [\"Build uses npm\"]); a single 'title' is also accepted. Returns the content plus its type/scope and timestamps \u2014 not the raw stored record. Use after 'list' to inspect candidates before deciding to update or dedupe.\n- 'add': Create a new memory (requires memoryType, scope, title, summary, content).\n- 'update': Modify an existing memory, selected by 'title', plus the fields to change. To RENAME it, pass the new name as 'newTitle' ('title' always identifies the existing memory).\n- 'delete': Remove a memory by 'title'.\n\nMemories are addressed by title \u2014 there are no ids. Titles must be unique within a scope; if a title matches more than one memory (the same title in two repos), narrow it with 'scope' (and 'path' for a repo).\n\n## When to use\n- Retrieval: at the start of a session, 'list' to load learned USER_PREFERENCE behavior; 'get' to pull details when one is relevant.\n- Capture: 'add' something non-obvious worth remembering across sessions; 'update' when info is superseded; 'delete' when a memory is wrong or obsolete.\n\n## What to store\n- USER_PREFERENCE: how the user likes things done (style, tools, conventions, corrections).\n- SEMANTIC: durable factual knowledge (tool workarounds, architecture decisions, debugging techniques).\n- Only store what is NON-OBVIOUS and would be LOST when the session ends. Do NOT store code derivable from the repo, API signatures, or transient state.\n\n## Writing a good memory\n\nUse all four fields \u2014 don't stuff everything into content. The summary is what a future session sees at prompt-load time, so it needs to be useful there.\n\nsummary: be actionable and concise \u2014 say what to DO, not just what happened.\ncontent: the actionable core \u2014 the concrete fix or approach. Keep it tight; avoid restating the summary or narrating the debugging journey. Longer is fine when the fix is genuinely step-by-step.\nwhy (1 line): the underlying cause, when it isn't self-evident from the fix.\nhowToApply (1 line): the trigger \u2014 the situation that should make a future session apply this memory.",
+         "inputSchema": {
+          "json": {
+           "type": "object",
+           "properties": {
+            "command": {
+             "type": "string",
+             "enum": [
+              "list",
+              "get",
+              "add",
+              "update",
+              "delete"
+             ],
+             "description": "The memory operation:\n- 'list': index of memories; optionally narrow with 'scope' (your current global/workspace/repo) or 'filter' (an exact scope tag)\n- 'get': full content by title(s) \u2014 pass 'titles' as an array, or a single 'title'\n- 'add': create (requires memoryType, scope, title, summary, content)\n- 'update': modify the memory named by 'title' (+ fields to change; 'newTitle' renames it)\n- 'delete': remove the memory named by 'title'"
+            },
+            "titles": {
+             "type": [
+              "array",
+              "null"
+             ],
+             "items": {
+              "type": "string"
+             },
+             "description": "Memory title(s) for 'get'. Prefer an array like [\"Build uses npm\",\"Prefers tabs\"]; a single 'title' is also accepted."
+            },
+            "newTitle": {
+             "type": [
+              "string",
+              "null"
+             ],
+             "description": "Only for 'update': the NEW title, when renaming. The memory to change is always identified by 'title'; content and timestamps (including createdAt, which drives index ordering) are preserved across a rename."
+            },
+            "scope": {
+             "anyOf": [
+              {
+               "type": "string",
+               "enum": [
+                "global",
+                "workspace",
+                "repo"
+               ]
+              },
+              {
+               "type": "null"
+              }
+             ],
+             "description": "Scope LEVEL. Required for 'add' \u2014 YOU decide how broadly it applies:\n- 'repo': specific to THIS repository (an architecture decision, a build quirk, a bug's root cause here). In a workspace with MORE THAN ONE repo, also pass 'path' so the memory binds to the right repo (see 'path').\n- 'workspace': relevant to this working environment but not one repo in particular.\n- 'global': a cross-cutting user preference or fact that applies everywhere.\nFor 'list' (optional): only return memories at this level, resolved to YOUR current repo/workspace (e.g. scope='repo' lists this repo's memories). You choose the level; the system fills in the concrete identity."
+            },
+            "path": {
+             "type": [
+              "string",
+              "null"
+             ],
+             "description": "Optional; only used when scope='repo'. A path inside the repo this memory is about \u2014 absolute, or relative to the workspace root. The system resolves the concrete repo from that path's git remote. Pass it when the workspace holds MORE THAN ONE repo (e.g. a Brazil workspace, or an editor window opened above several repos), so the memory targets the intended repo instead of defaulting to the first workspace folder. Omit for a single-repo workspace."
+            },
+            "filter": {
+             "type": [
+              "string",
+              "null"
+             ],
+             "description": "Filter for 'list' by an EXACT scope tag (e.g. 'repo:github/owner/name' copied from an 'Other scopes' manifest line). Use this to explore a scope other than your current one; use 'scope' for your own current repo/workspace/global."
+            },
+            "memoryType": {
+             "anyOf": [
+              {
+               "type": "string",
+               "enum": [
+                "USER_PREFERENCE",
+                "SEMANTIC"
+               ]
+              },
+              {
+               "type": "null"
+              }
+             ],
+             "description": "USER_PREFERENCE (how the user likes things) or SEMANTIC (durable facts). Required for 'add'."
+            },
+            "title": {
+             "anyOf": [
+              {
+               "type": "string",
+               "maxLength": 200
+              },
+              {
+               "type": "null"
+              }
+             ],
+             "description": "Short label, and the handle a memory is addressed by. Required for 'add' (the new memory's name) and for 'update'/'delete' (identifies which memory to act on); for 'get' it is the single-title form of 'titles'."
+            },
+            "summary": {
+             "anyOf": [
+              {
+               "type": "string",
+               "maxLength": 500
+              },
+              {
+               "type": "null"
+              }
+             ],
+             "description": "One-line summary for the index. Required for 'add'."
+            },
+            "content": {
+             "anyOf": [
+              {
+               "type": "string",
+               "maxLength": 20000
+              },
+              {
+               "type": "null"
+              }
+             ],
+             "description": "Full content (may be multi-paragraph markdown). Required for 'add'."
+            },
+            "why": {
+             "anyOf": [
+              {
+               "type": "string",
+               "maxLength": 1000
+              },
+              {
+               "type": "null"
+              }
+             ],
+             "description": "Optional \u2014 why this matters."
+            },
+            "howToApply": {
+             "anyOf": [
+              {
+               "type": "string",
+               "maxLength": 1000
+              },
+              {
+               "type": "null"
+              }
+             ],
+             "description": "Optional \u2014 when/how to apply it."
+            },
+            "sessionId": {
+             "type": [
+              "string",
+              "null"
+             ],
+             "description": "Optional originating session id, recorded for provenance on add."
+            }
+           },
+           "required": [
+            "command"
+           ],
+           "additionalProperties": false
+          }
+         }
+        }
+       },
+       {
+        "toolSpecification": {
+         "name": "disclose_context",
+         "description": "Activate skills or auto inclusion steering files to load their full instructions into context.\n\n**Available Items:** None\n\nNo skills or auto inclusion steering files are currently available. Skills can be added to ~/.kiro/skills/ (user-level) or .kiro/skills/ (workspace-level). Steering files with `inclusion: auto` can be added to ~/.kiro/steering/ or .kiro/steering/.",
+         "inputSchema": {
+          "json": {
+           "type": "object",
+           "properties": {
+            "name": {
+             "type": "string",
+             "description": "The exact name of the skill or auto inclusion steering file to activate. Must match one of the names shown in the Available Items list."
+            }
+           },
+           "required": [
+            "name"
+           ],
+           "additionalProperties": false
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   },
+   "history": [
+    {
+     "userInputMessage": {
+      "content": "You are Kiro, an agentic AI software engineer working inside the Kiro IDE, an AI-powered development environment built on VS Code. You collaborate with the user directly in their editor and workspace.\n\n<key_kiro_features>\n\n<session_types>\n- Kiro supports two session types: Vibe (conversational Q&A and exploratory coding) and Spec (structured requirements \u2192 design \u2192 tasks workflow).\n</session_types>\n\n<autonomy_modes>\n- Kiro supports two autonomy modes that apply across both session types:\n- Autopilot mode (default): Kiro works autonomously to complete tasks end-to-end. Users can view all changes, revert, or interrupt at any time.\n- Supervised mode: Kiro yields for approval after each turn with file edits, presenting changes as individual hunks for fine-grained accept/reject control.\n</autonomy_modes>\n\n<chat_context>\n- Tell Kiro to use #File or #Folder to grab a particular file or folder.\n- Kiro can consume images in chat by dragging an image file in, or clicking the icon in the chat input.\n- Kiro can consume documents (PDF, DOCX, etc.) in chat by dragging a document file in, or clicking the attachment icon in the chat input.\n- When images or documents are attached to a message, always acknowledge them and incorporate their content into your response. If the user's text is brief or empty, focus your response on the attached content.\n- Kiro can see #Problems in your current file, you #Terminal, current #Git Diff\n</chat_context>\n\n<hooks>\n- Kiro has the ability to create agent hooks, hooks allow an agent execution to kick off automatically when an event occurs (or user clicks a button) in the IDE.\n- Hooks are JSON files stored at `.kiro/hooks/<id>.json` that the agent executes directly.\n- To create hooks, use the `createHook` tool. Do NOT write hook files manually with fs_write.\n- Hooks can be triggered by various events (PascalCase trigger names):\n- UserPromptSubmit: When a message is sent to the agent\n- Stop: When an agent execution completes\n- PreToolUse: Before a tool is about to be executed (can filter by tool name via matcher regex)\n- PostToolUse: After a tool has been executed (can filter by tool name via matcher regex)\n- PreTaskExec: Before a spec task status is set to in_progress\n- PostTaskExec: After a spec task status is set to completed\n- PostFileSave: When a user saves a code file\n- PostFileCreate: When a user creates a new file\n- PostFileDelete: When the user deletes an existing file\n- SessionStart: When a new session begins\n- Hooks can perform two types of actions:\n- agent: Appends a static prompt to the model context\n- command: Runs a shell command; receives JSON on stdin with session context\n- If the user asks about these hooks, they can view current hooks, or create new ones using the explorer view 'Agent Hooks' section.\n- Alternately, direct them to use the command palette to 'Open Kiro Hook UI' to start building a new hook\n- Hook files follow this schema:\n\n```json\n{\n\"version\": \"v1\",\n\"hooks\": [{\n\"name\": \"<name>\",\n\"trigger\": \"<Trigger>\",\n\"matcher\": \"<optional regex>\",\n\"action\": { \"type\": \"command\", \"command\": \"<shell command>\" }\n}]\n}\n```\n\nAction types:\ncommand \u2014 runs a shell command; receives JSON on stdin with session context\nagent   \u2014 appends a static prompt to the model context\n\nExit-code semantics for command actions:\nexit 0  \u2014 success; stdout forwarded for SessionStart/UserPromptSubmit/PreToolUse\nexit 2  \u2014 block the action (PreToolUse, UserPromptSubmit, PreTaskExec); stderr forwarded\nother   \u2014 silent failure, no block\n\nFor PreToolUse hooks, exit 0 stdout may contain a JSON decision:\n{\"hookSpecificOutput\":{\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"reason\"}}\nWhen permissionDecision is \"ask\", the user is prompted to confirm before the tool proceeds.\n\nMatcher (optional regex):\n- PreToolUse/PostToolUse: tested against tool name\n- PostFileCreate/PostFileSave/PostFileDelete: tested against file path\n- Other triggers: ignored (always matches)\n\n- IMPORTANT NOTES on PreToolUse:\n- PreToolUse hooks are often used for access control and authorization checks.\n- If the hook output indicates that access is NOT granted or permission is denied, you are FORBIDDEN from retrying the tool invocation. The tool call is not allowed.\n- If the hook output shows NO indication of access denial, you MUST invoke the tool again to complete the operation.\n- Unless the hook output explicitly indicates that parameters need to be changed, you MUST invoke the tool with EXACTLY the same parameters as the original call.\n- CIRCULAR DEPENDENCY DETECTION: PreToolUse hooks can create infinite loops. Example: Hook A requires you to call Tool X \u2192 Tool X triggers Hook A again \u2192 Hook A requires Tool X again (infinite cycle). When you detect this circular pattern, you need to do the following: The top level hook always MUST be honored but additional hooks in nested invocations MUST be skipped if you deem them to be because a circular pattern.  However, if the hook explicitly denies access or permission, you MUST NOT proceed with the tool call under any circumstances.\n\n<example_hook_json>\n```json\n{\n\"version\": \"v1\",\n\"hooks\": [{\n\"name\": \"Lint on Save\",\n\"trigger\": \"PostFileSave\",\n\"matcher\": \"\\\\.(ts|tsx)$\",\n\"action\": { \"type\": \"command\", \"command\": \"npm run lint\" }\n}]\n}\n```\n</example_hook_json>\n\n<example_pretooluse_hook_json>\n```json\n{\n\"version\": \"v1\",\n\"hooks\": [{\n\"name\": \"Review Write Operations\",\n\"trigger\": \"PreToolUse\",\n\"matcher\": \"fs_write|str_replace|fs_append\",\n\"action\": { \"type\": \"agent\", \"prompt\": \"Verify this write operation follows our coding standards\" }\n}]\n}\n```\n</example_pretooluse_hook_json>\n\n<example_task_execution_hook_json>\n```json\n{\n\"version\": \"v1\",\n\"hooks\": [{\n\"name\": \"Run Tests After Task\",\n\"trigger\": \"PostTaskExec\",\n\"action\": { \"type\": \"command\", \"command\": \"npm run test\" }\n}]\n}\n```\n</example_task_execution_hook_json>\n\n</hooks>\n\n<steering>\n- Steering allows for including additional context and instructions in all or some of the user interactions with Kiro.\n- Common uses for this will be standards and norms for a team, useful information about the project, or additional information how to achieve tasks (build/test/etc.)\n- They are located in the workspace .kiro/steering/*.md\n- Steering files can be either\n- Always included (this is the default behavior)\n- Conditionally when a file is read into context by adding a front-matter section with \"inclusion: fileMatch\", and \"fileMatchPattern: 'README*'\"\n- Manually when the user providers it via a context key ('#' in chat), this is configured by adding a front-matter key \"inclusion: manual\"\n- Automatically when the user's request matches the file's description, by adding front-matter keys \"inclusion: auto\", \"name\", and \"description\". These files are activated on demand via the disclose_context tool. \"inclusion: auto\" is valid syntax \u2014 never rewrite or remove it as if it were an error.\n- Steering files allow for the inclusion of references to additional files via \"#[[file:<relative_file_name>]]\". This means that documents like an openapi spec or graphql spec can be used to influence implementation in a low-friction way.\n- You can add or update steering rules when prompted by the users, you will need to edit the files in .kiro/steering to achieve this goal.\n- For multi-file project scaffolding, follow this approach: 1. First provide a project structure overview, 2. Create the skeleton implementations, then flesh them out into complete, working implementations that fully satisfy the request\n</steering>\n\n<model_context_protocol>\n- MCP is an acronym for Model Context Protocol.\n- If a user asks for help testing an MCP tool, do not check its configuration until you face issues. Instead immediately try one or more sample calls to test the behavior.\n- If a user asks about configuring MCP, they can configure it using mcp.json config files. Do not inspect these configurations for tool calls or testing, only open them if the user is explicitly working on updating their configuration!\n- MCP configs are merged with the following precedence: user config < workspace1 < workspace2 < ... (later workspace folders override earlier ones). This means if an expected MCP server isn't defined in a workspace, it may be defined at the user level or in another workspace folder.\n- In multi-root workspaces, each workspace folder can have its own config at '.kiro/settings/mcp.json'.\n- There is a User level config (global or cross-workspace) at the absolute file path '~/.kiro/settings/mcp.json'.\n- Do not overwrite these files if the user already has them defined, only make edits.\n- The user can also search the command palette for 'MCP' to find relevant commands.\n\n- 'disabled' allows the user to enable or disable the MCP server entirely.\n- The example default MCP servers use the \"uvx\" command to run, which must be installed along with \"uv\", a Python package manager. To help users with installation, suggest using their python installer if they have one, like pip or homebrew, otherwise recommend they read the installation guide here: https://docs.astral.sh/uv/getting-started/installation/. Once installed, uvx will download and run added servers typically without any server-specific installation required -- there is no \"uvx install <package>\"!\n- Servers reconnect automatically on config changes or can be reconnected without restarting Kiro from the MCP Server view in the Kiro feature panel.\n<example_mcp_json>\n{\n\"mcpServers\": {\n\"aws-docs\": {\n    \"command\": \"uvx\",\n    \"args\": [\"awslabs.aws-documentation-mcp-server@latest\"],\n    \"env\": {\n      \"FASTMCP_LOG_LEVEL\": \"ERROR\"\n    },\n    \"disabled\": false\n}\n}\n}\n</example_mcp_json>\n</model_context_protocol>\n\n<system_information>\nOperating System: Linux\nPlatform: linux\nShell: /usr/bin/zsh\nHome Directory: /home/dwalleck/.claude/tmp/mem-on-home-mqsazzm8\n</system_information>\n\n<platform_specific_command_guidelines>\nCommands MUST be adapted to your Linux system running on linux with /usr/bin/zsh shell.\n\n# Long-Running Commands Warning\n- NEVER use bash commands for long-running processes like development servers, build watchers, or interactive applications\n- Commands like \"npm run dev\", \"yarn start\", \"webpack --watch\", \"jest --watch\", or text editors will block execution and cause issues\n- Instead, recommend that users run these commands manually in their terminal\n- For test commands, suggest using --run flag (e.g., \"vitest --run\") for single execution instead of watch mode\n- If you need to start a development server or watcher, explain to the user that they should run it manually and provide the exact command\n\n# Destructive Commands Warning\n- Execute recursive or force deletions with caution, watching out for uncommitted or unpushed work\n\n<platform_specific_command_examples>\n<macos_linux_command_examples>\n- List files: ls -la\n- Remove file: rm file.txt\n- Remove directory: rm -rf dir\n- Copy file: cp source.txt destination.txt\n- Copy directory: cp -r source destination\n- Create directory: mkdir -p dir\n- View file content: cat file.txt\n- Find in files: grep -r \"search\" *.txt\n- Command separator: &&\n</macos_linux_command_examples>\n</platform_specific_command_examples>\n\n</platform_specific_command_guidelines>\n\n\n\n\n<workspace_folder>\n- The workspace root is: /home/dwalleck/.claude/tmp/mem-on-ws-z8ba6ham\n- This is the current project directory. Create new files and directories inside this folder, and resolve relative paths against it.\n- When the user asks you to create a project, app, or files without naming a location, place them inside this workspace root \u2014 not in the home directory or anywhere else outside it. Only write outside this folder when the user explicitly names such a path.\n</workspace_folder>\n\n\n<spec>\n- Specs are a structured way of building and documenting a feature you want to build with Kiro. A spec is a formalization of the design and implementation process, iterating with the agent on requirements, design, and implementation tasks, then allowing the agent to work through the implementation.\n- Specs allow incremental development of complex features, with control and feedback.\n- Spec files allow for the inclusion of references to additional files via \"#[[file:<relative_file_name>]]\". This means that documents like an openapi spec or graphql spec can be used to influence implementation in a low-friction way.\n\n</spec>\n\n<internet_access>\n- Use web search and content fetching tools to get current information from the internet\n- Search for documentation, tutorials, code examples, and solutions to technical problems\n- Fetch content from specific URLs when users provide links or when you need to reference specific resources first search for it and use the url obtained there to fetch\n- Stay up-to-date with latest technology trends, library versions, and best practices\n- Verify information by cross-referencing multiple sources when possible\n- Always cite sources when providing information obtained from the internet\n- Use internet tools proactively when users ask about current events, latest versions, or when your knowledge might be outdated\n</internet_access>\n\n</key_kiro_features>\n\n<current_date_and_time>\nDate: August 25, 2026\nDay of Week: Tuesday\n\nUse this carefully for any queries involving date, time, or ranges. Pay close attention to the year when considering if dates are in the past or future. For example, November 2024 is before February 2025.\n</current_date_and_time>\n\n<goal>\n- Execute the user goal using the provided tools. Correctness is the priority: take whatever steps and tool calls are needed to fully accomplish the goal, and do not stop early to save time.\n- Before telling the user the task is done, verify the result against the user's actual request: re-read the original goal, identify its concrete success criteria (exact outputs, values, file paths, and formats it specifies), and confirm the real result satisfies each one. A command exiting without error is NOT sufficient evidence of success. If you cannot verify a criterion, say so explicitly rather than claiming the task is complete.\n- You can communicate directly with the user.\n- If the user intent is very unclear, clarify the intent with the user.\n- DO NOT automatically add tests unless explicitly requested by the user.\n- If the user is asking for information, explanations, or opinions, provide clear and direct answers.\n- For questions requiring current information, use available tools to get the latest data. Examples include:\n- \"What's the latest version of Node.js?\"\n- \"Explain how promises work in JavaScript\"\n- \"List the top 10 Python libraries for data science\"\n- \"What's the difference between let and const?\"\n- \"Tell me about design patterns for this use case\"\n- \"How do I fix this problem in my code: Missing return type on function?\"\n\n</goal>\n\n<subagents>\n- You have access to specialized sub-agents through the invoke_sub_agent tool that can help with specific tasks.\n- Sub-agents run autonomously with their own system prompts and tool access, and return their results to you.\n\n## When to Use Sub-Agents\n\n**Use context-gatherer when:**\n- Starting work on an unfamiliar codebase or feature area\n- User asks to investigate a bug or issue across multiple files\n- Need to understand how components interact before making changes\n- Facing repository-wide problems where relevant files are unclear\n\n**When using context-gatherer:**\n- Be specific in your prompt \u2014 include relevant names, paths, or error details when available\n- Treat context-gatherer's output as your file reads. Don't issue read_file for files or ranges it already returned.\n- Don't re-invoke context-gatherer for information already gathered this session.\n\n**Use custom-agent-creator when:**\n- User explicitly asks to create a new custom agent\n- Need to define a specialized agent for a recurring task pattern\n\n**Use general-task-execution when:**\n- Need to delegate a well-defined subtask while continuing other work\n- Want to parallelize independent work streams\n- Task would benefit from isolated context and tool access\n\n**Use introspect ONLY when:**\n- User explicitly asks about Kiro itself (mentions \"Kiro\" by name, or is clearly asking about Kiro's own features rather than general programming)\n- User asks about a Kiro slash command (/rewind, /compact, /tools, /model, etc.)\n- User asks about .kiro/ configuration files (steering, agents, hooks, skills)\n- Do NOT use introspect for general programming questions, even if they involve concepts that overlap with Kiro features (e.g. \"hooks\" could mean React hooks)\n- When in doubt, do NOT invoke introspect -- answer normally\n\n## Sub-Agent Best Practices\n\n- Check available sub-agents using the invoke_sub_agent tool description\n- Choose the most specific sub-agent for the task (e.g., context-gatherer over general-task-execution for codebase exploration)\n- Don't overuse sub-agents for simple tasks you can handle directly\n- Trust sub-agent output - avoid redundantly re-reading files they've already analyzed\n- Sub-agents are only available in Autopilot mode.\n</subagents>\n\n<current_context>\n\nMachine ID: acp-client\n\nWhen the user refers to \"this file\", \"current file\", or similar phrases without specifying a file name, they are referring to the active editor file from the last message.\n\n</current_context>\nThe current model is Auto (model selected dynamically on the server).\n\n<session_start_snapshot captured=\"session-start\">\nThis file tree was captured at session start. Treat it as accurate unless a later action (file edits, file operations, or elapsed time) suggests it may have changed; only then re-read with list_directory or read_file.\n<file_tree>\nYou are operating in a workspace with files and folders. Below is the known structure of the workspace. If a directory is marked closed, you can use the 'list_directory' tool to dig in deeper.\n\n<fileTree>\n<folder name='/home/dwalleck/.claude/tmp/mem-on-ws-z8ba6ham/.git' closed />\n</fileTree>\n</file_tree>\n</session_start_snapshot>",
+      "modelId": "auto",
+      "origin": "AI_EDITOR"
+     }
+    },
+    {
+     "assistantResponseMessage": {
+      "content": "I will follow these instructions."
+     }
+    },
+    {
+     "userInputMessage": {
+      "content": "Please remember this for future sessions: I prefer TABS over spaces in all code, and I want commit messages in imperative mood. Use your memory tool to store it (if you have one), then reply with exactly: SAVED\n\n<EnvironmentContext>\nThis information is provided as context about user environment. Only consider it if it's relevant to the user request ignore it otherwise.\n\n<OPEN-EDITOR-FILES>\nNo files are open\n</OPEN-EDITOR-FILES>\n\n<ACTIVE-EDITOR-FILE>\nNo file is active in editor\n</ACTIVE-EDITOR-FILE>\n</EnvironmentContext>",
+      "modelId": "auto",
+      "origin": "AI_EDITOR"
+     }
+    },
+    {
+     "assistantResponseMessage": {
+      "content": "I'll store both preferences in memory.",
+      "toolUses": [
+       {
+        "toolUseId": "toolu_bdrk_01Khv79tAMWc2iKkxfT3z2g9",
+        "name": "memory",
+        "input": {
+         "command": "add",
+         "memoryType": "USER_PREFERENCE",
+         "scope": "global",
+         "title": "Indentation: tabs, not spaces",
+         "summary": "Use TABS for indentation in all code, never spaces.",
+         "content": "The user prefers TABS over spaces for indentation in all code, across all languages and projects.",
+         "howToApply": "When writing or editing any code, indent with tabs rather than spaces."
+        }
+       },
+       {
+        "toolUseId": "toolu_bdrk_014d4wCwN92bjwF7WusRd3mu",
+        "name": "memory",
+        "input": {
+         "command": "add",
+         "memoryType": "USER_PREFERENCE",
+         "scope": "global",
+         "title": "Commit messages in imperative mood",
+         "summary": "Write git commit messages in imperative mood.",
+         "content": "The user wants git commit messages written in the imperative mood (e.g. \"Add feature\", \"Fix bug\", not \"Added feature\" or \"Fixes bug\").",
+         "howToApply": "When composing any git commit message, phrase it in the imperative mood."
+        }
+       }
+      ],
+      "reasoningContent": {
+       "reasoningText": {
+        "text": "...",
+        "signature": ".KTR~~eyJlbmNyeXB0aW9uUmVnaW9uIjpudWxsLCJtb2RlbEhhc2giOiJDbENnZFliRHhtMjAiLCJzbG90cyI6W10sInYiOjF9"
+       }
+      }
+     }
+    },
+    {
+     "userInputMessage": {
+      "content": "",
+      "modelId": "auto",
+      "origin": "AI_EDITOR",
+      "userInputMessageContext": {
+       "toolResults": [
+        {
+         "toolUseId": "toolu_bdrk_01Khv79tAMWc2iKkxfT3z2g9",
+         "content": [
+          {
+           "text": "Added memory \"Indentation: tabs, not spaces\" (scope: Global)."
+          }
+         ],
+         "status": "success"
+        },
+        {
+         "toolUseId": "toolu_bdrk_014d4wCwN92bjwF7WusRd3mu",
+         "content": [
+          {
+           "text": "Added memory \"Commit messages in imperative mood\" (scope: Global)."
+          }
+         ],
+         "status": "success"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "assistantResponseMessage": {
+      "content": "SAVED",
+      "reasoningContent": {
+       "reasoningText": {
+        "text": "...",
+        "signature": ".KTR~~eyJlbmNyeXB0aW9uUmVnaW9uIjpudWxsLCJtb2RlbEhhc2giOiJDbENnZFliRHhtMjAiLCJzbG90cyI6W10sInYiOjF9"
+       }
+      }
+     }
+    },
+    {
+     "userInputMessage": {
+      "content": "One more durable fact about this project: the build command is `cargo build --release` and tests run with `cargo nextest run`. Store it too, then reply with exactly: OK\n\n<EnvironmentContext>\nThis information is provided as context about user environment. Only consider it if it's relevant to the user request ignore it otherwise.\n\n<OPEN-EDITOR-FILES>\nNo files are open\n</OPEN-EDITOR-FILES>\n\n<ACTIVE-EDITOR-FILE>\nNo file is active in editor\n</ACTIVE-EDITOR-FILE>\n</EnvironmentContext>",
+      "modelId": "auto",
+      "origin": "AI_EDITOR"
+     }
+    },
+    {
+     "assistantResponseMessage": {
+      "content": "",
+      "toolUses": [
+       {
+        "toolUseId": "toolu_bdrk_01Gjp4GhviZjAFC1XmH6jR1X",
+        "name": "memory",
+        "input": {
+         "summary": "Build with `cargo build --release`; run tests with `cargo nextest run`.",
+         "scope": "repo",
+         "path": "/home/dwalleck/.claude/tmp/mem-on-ws-z8ba6ham",
+         "howToApply": "When building or testing this project, use these commands instead of the defaults.",
+         "memoryType": "SEMANTIC",
+         "title": "Build and test commands",
+         "command": "add",
+         "content": "This is a Rust project. Build with `cargo build --release`. Run tests with `cargo nextest run` (not `cargo test`)."
+        }
+       }
+      ],
+      "reasoningContent": {
+       "reasoningText": {
+        "text": "...",
+        "signature": ".KTR~~eyJlbmNyeXB0aW9uUmVnaW9uIjpudWxsLCJtb2RlbEhhc2giOiJDbENnZFliRHhtMjAiLCJzbG90cyI6W10sInYiOjF9"
+       }
+      }
+     }
+    },
+    {
+     "userInputMessage": {
+      "content": "",
+      "modelId": "auto",
+      "origin": "AI_EDITOR",
+      "userInputMessageContext": {
+       "toolResults": [
+        {
+         "toolUseId": "toolu_bdrk_01Gjp4GhviZjAFC1XmH6jR1X",
+         "content": [
+          {
+           "text": "Added memory \"Build and test commands\" (scope: repo:example.invalid/cyril-audit/memprobe)."
+          }
+         ],
+         "status": "success"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "assistantResponseMessage": {
+      "content": "OK",
+      "reasoningContent": {
+       "reasoningText": {
+        "text": "...",
+        "signature": ".KTR~~eyJlbmNyeXB0aW9uUmVnaW9uIjpudWxsLCJtb2RlbEhhc2giOiJDbENnZFliRHhtMjAiLCJzbG90cyI6W10sInYiOjF9"
+       }
+      }
+     }
+    }
+   ],
+   "chatTriggerType": "MANUAL"
+  }
+ }
+}

@@ -93,7 +93,7 @@ Everything else is quiet: notification field-paths identical (`commands/availabl
 
 ## 5. `--output-format stream-json` (non-interactive) — LIVE on v2 and v3
 
-`kiro-cli chat --no-interactive --output-format stream-json [--agent-engine v2|v3] "<prompt>"` emits JSON Lines `{type, data}`; `stream-json` implies `--no-interactive`; v1 refuses (`runError {stage:"engine", message:"…not supported on the v1 engine. Pass --agent-engine v2 (or v3)."}`). Captures: `stream-json-{v2,v3}-2.19.2.jsonl`.
+`kiro-cli chat --no-interactive --output-format stream-json [--agent-engine v2|v3] "<prompt>"` emits JSON Lines `{type, data}`; `stream-json` implies `--no-interactive`; v1 refuses (`runError {stage:"engine", message:"…not supported on the v1 engine. Pass --agent-engine v2 (or v3)."}`). Captures: `stream-json-{v2,v3}-2.19.2.jsonl`, `kas-memory-external-{on,off}-2.19.2.jsonl`, `reqdump-kas-memory-extraction-000{2,5}-2.19.2.json` (extraction requests, response stripped).
 
 ```
 runStarted    {payloadSchema:"acp", acpProtocolVersion:1, engine:"v2"|"v3"}
@@ -126,15 +126,40 @@ Versus the 08-21 capture, `initialize.agentCapabilities._meta.kiro` now shows `s
 - **Doc manifest**: zero drift — 2.19.2 embeds the same 2026-08-17 generation as 2.19.1 (103/138 nodes; only `session-management.md` `validated` flip). No baselines committed.
 - Announced items with no wire footprint: subagents inheriting `/tools trust-all` (v2 crew, `trust_all_tools` string re-glue only), streamed-code-fence and escape-sequence sanitizing (TUI), Windows `cmd` fail-closed parsing (`splitOnOperators` single-quote tracking), `grep_search`/`file_search` read-allow and separator fixes (tool-internal).
 
+## 11. Live follow-up: `AB_MEMORY_EXTERNAL` — KAS persistent agent memory, switched on for a look
+
+`AB_MEMORY_EXTERNAL` (`clientConfig` key `memory_external_enabled`, default `false`) is the **external-user rollout switch for KAS's built-in persistent memory**; `AB_MEMORY_INTERNAL` (`memory_internal_enabled`, default `"disabled"`, values `disabled|insider|all`) is the internal ramp and wins when set. `resolveMemoryEnabled`: `experimentValue = INTERNAL !== "disabled" ? INTERNAL : EXTERNAL`; `isMemoryEnabled` = (boolean → as-is; `"all"` → yes; `"insider"` → only on the insider/nightly channel) **and** `userOptIn !== false` (`initialize._meta.kiro.settings.userMemoryOptIn`, which the host maps from a `memory.enabled` kiro-cli setting that the 2.19.2 registry does not know yet — "not a valid setting" — so opt-in is `undefined`, not a veto). Both flags existed in 0.48.0; 0.52.1 adds the env override `KIRO_FEATURE_MEMORY_EXTERNAL_ENABLED` and the extraction subagent. Off for everyone by default.
+
+A/B (`probe-kas-memory-external-2.19.2.py`; captures `kas-memory-external-{on,off}-2.19.2.jsonl`, `reqdump-kas-memory-extraction-000{2,5}-2.19.2.json`): fresh HOME per arm, `KIRO_DUMP_REQUESTS` on, workspace with a fake git remote.
+
+| | `on` (`KIRO_FEATURE_MEMORY_EXTERNAL_ENABLED=true`) | `off` (control) |
+|---|---|---|
+| model tool roster | **17** — `memory` present | 16 |
+| "remember: tabs, imperative commits" | 2× `Memory add` (`scope: global`, `USER_PREFERENCE`) | model wrote `.kiro/steering/preferences.md` via `Write File` instead |
+| "build/test commands" | 1× `Memory add` (`scope: repo`, `SEMANTIC`, `path` given) | — |
+| store | `~/.kiro/memories/memories.jsonl`, 3 records | none |
+| session #2 msg0 | **`# Memory` block with the index** (`# Memory Index` / `## Global (2)` / `## repo:example.invalid/cyril-audit/memprobe (1)`); model answered "You prefer git commit messages in imperative mood, and tabs…" | no block |
+| ACP wire | identical notification set; **no memory-specific `_kiro/*` method exists**; `session/new._meta` unchanged | — |
+
+What the subsystem is (static, `src/memory/*`):
+
+- **Tool `memory`** — `list | get | add | update | delete`, memories addressed by **title** (unique per scope, no ids exposed), `memoryType: USER_PREFERENCE | SEMANTIC`, `scope: global | workspace | repo` (+ `path` for multi-repo workspaces; the repo tag is derived from the git remote: `repo:<host>/<owner>/<name>`), fields `title ≤200`, `summary ≤500`, `content ≤20k`, `why`, `howToApply`, `sessionId`. Store is one JSON record per line, user-editable, per-line-resilient: `{memoryType, scopes[], title, summary, content, why?, howToApply?, sessionId, id, createdAt, updatedAt}` (live records carry `sessionId: "unknown"` — the main agent never passed it).
+- **msg0 injection** — `renderScopedIndex` at session start: `Global` (newest 75) + the session's repo/workspace scopes (newest 25) as `- [TYPE] title — summary` lines, every other scope as a one-line manifest; frozen into `globalLearnings`, never recomputed mid-session; empty store → byte-identical prompt (cache baseline preserved). The block instructs the model to apply `USER_PREFERENCE` entries as rules and to `memory update`/`delete` stale entries.
+- **Remote `searchMemories`** is added to the kiro-cli remote-tool allowlist when enabled (IDE: insider only) — **not observed** in either arm's roster (backend offered none).
+- **Extraction subagent (NEW in 0.52.1)** — `spawnMemoryExtraction` at turn end when ≥ 4 new non-forced messages since the watermark: a nested `custom-agent` (`agentName: "memory-extraction"`, `skipHooks`, Autopilot, parent's model, 90 s timeout, 10 iterations, previous extraction aborted as "superseded" by a newer turn) whose context is the **parent's full history + a `[Background task: memory extraction]` instruction** (rubric: worth-saving / the bar / consolidation / never-store) with a memory-tool-only workspace (`memory` + `disclose_context`). **Live: it fired after BOTH turns** (dumps `0002`, `0005`, ~1.5–2.7 s after each turn's last model call, 6 and 10 history messages), added nothing new (the main agent had already stored everything; consolidation held), and was **completely invisible on the ACP wire** — zero frames between turn A's response and turn B's prompt, one `context_usage` update in the 45 s after turn B. So enabling memory costs **one hidden model call per qualifying turn** with no `turn_completion`/credit frame attributing it.
+
+Cyril relevance: this is the same product surface as `cyril-memory` (scoped, title-addressed lessons injected at session start, plus capture) — agent-owned, dark, JSONL-backed, model-driven capture at turn end. Nothing to consume today (no wire vocabulary), but two things to track: the hidden per-turn extraction call once it ramps (a credit-attribution gap cyril cannot see), and positioning — the vendor-neutral, explicit-trust argument for `cyril-memory` strengthens as each agent grows its own silo. Tracked as **cyril-s21o**.
+
 ## 9. Follow-ups filed
 
 - **cyril-7cnh** (P3) — render the KAS tool-result wire cap marker (since 0.46.1) and consume `_meta.kiro.outputTransformation` when it lights up.
 - **cyril-mxc7** (P4) — subscribe to `_kiro/spec/taskStatusChanged`.
 - **cyril-6s21** (P4) — expose KAS's per-session `disableAutoCompaction` (first honored compaction knob on v3).
+- **cyril-s21o** (P4) — track KAS native memory (`AB_MEMORY_EXTERNAL`) vs cyril-memory: hidden extraction cost + positioning.
 - Notes added to **cyril-zd8u** (capturedOutput is model-dependent-non-empty; expect the post-tool restatement in step streams).
 
 ## 10. Artifacts
 
-- Probes: `experiments/conductor-spike/probe-kas-surface-2.19.2.py` (surface + `disableAutoCompaction` leg; run twice, once with `KIRO_KAS_SERVER_PATH` pinning 0.48.0), `probe-kas-workflow-live-2.19.2.py` (two-step run + bogus/parentless `workflow/new` legs; run on both builds), `probe-kas-output-transform-{,lth-,lth-init-}2.19.2.py` (default / session-level / initialize-level `largeToolOutputHandler`), `probe-v2-ext-methods-ab-2.19.2.py` (crash-resilient same-day v2 A/B), `probe-v2-message-send-shape-ab-2.19.2.py`, `probe-stream-json-2.19.2.sh`.
-- Captures (token-scrubbed): `kas-surface-{2.19.2,0.48.0pin-2.19.2}.jsonl`, `kas-workflow-live-{0.52.1,0.48.0pin}-2.19.2.jsonl`, `kas-output-transform-{,lth-init-}2.19.2.jsonl`, `v2-ext-ab-{2.19.1,2.19.2}-2.19.2.jsonl`, `stream-json-{v2,v3}-2.19.2.jsonl`.
+- Probes: `experiments/conductor-spike/probe-kas-surface-2.19.2.py` (surface + `disableAutoCompaction` leg; run twice, once with `KIRO_KAS_SERVER_PATH` pinning 0.48.0), `probe-kas-workflow-live-2.19.2.py` (two-step run + bogus/parentless `workflow/new` legs; run on both builds), `probe-kas-output-transform-{,lth-,lth-init-}2.19.2.py` (default / session-level / initialize-level `largeToolOutputHandler`), `probe-v2-ext-methods-ab-2.19.2.py` (crash-resilient same-day v2 A/B), `probe-v2-message-send-shape-ab-2.19.2.py`, `probe-stream-json-2.19.2.sh`, `probe-kas-memory-external-2.19.2.py` (memory dark-feature A/B).
+- Captures (token-scrubbed): `kas-surface-{2.19.2,0.48.0pin-2.19.2}.jsonl`, `kas-workflow-live-{0.52.1,0.48.0pin}-2.19.2.jsonl`, `kas-output-transform-{,lth-init-}2.19.2.jsonl`, `v2-ext-ab-{2.19.1,2.19.2}-2.19.2.jsonl`, `stream-json-{v2,v3}-2.19.2.jsonl`, `kas-memory-external-{on,off}-2.19.2.jsonl`, `reqdump-kas-memory-extraction-000{2,5}-2.19.2.json` (extraction requests, response stripped).
 - Archive: binaries + `BUILD-INFO` + `SHA256SUMS` at `~/.local/share/kiro-research/binaries/2.19.2/`; `tui-bundles/kiro-tui-2.19.2.js` (+ `.sha256`); KAS bundles self-extracted at `~/.local/share/kiro-cli/kas/2.19.{1,2}-*/`.
