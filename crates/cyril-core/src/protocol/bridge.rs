@@ -853,10 +853,12 @@ async fn run_bridge(
     run_loop(
         std::rc::Rc::new(conn),
         channels,
-        cwd.to_path_buf(),
         engine,
-        config.present_as,
-        config.stall_threshold,
+        BridgeLoopConfig {
+            cwd: cwd.to_path_buf(),
+            present_as: config.present_as,
+            stall_threshold: config.stall_threshold,
+        },
         InternalChannels {
             inbound_tx,
             inbound_rx,
@@ -1314,6 +1316,12 @@ pub(crate) fn client_info(
         .title("Cyril".to_string())
 }
 
+struct BridgeLoopConfig {
+    cwd: std::path::PathBuf,
+    present_as: Option<PresentAs>,
+    stall_threshold: std::time::Duration,
+}
+
 /// Handshake + the single-consumer command loop, split out of `run_bridge` so
 /// tests can drive it against an in-process fake agent (no `kiro-cli`
 /// subprocess). `conn` is `Rc` so a prompt future can be driven off this loop
@@ -1321,12 +1329,15 @@ pub(crate) fn client_info(
 async fn run_loop(
     conn: std::rc::Rc<agent_client_protocol::ClientSideConnection>,
     mut channels: BridgeChannels,
-    cwd: std::path::PathBuf,
     engine: std::rc::Rc<dyn Engine>,
-    present_as: Option<PresentAs>,
-    stall_threshold: std::time::Duration,
+    config: BridgeLoopConfig,
     internal: InternalChannels,
 ) -> crate::Result<()> {
+    let BridgeLoopConfig {
+        cwd,
+        present_as,
+        stall_threshold,
+    } = config;
     // cyril-3lh8: the shared terminal-registry handle for the CancelRequest
     // arm's reap, cloned out before the destructure (a `#[cfg]`'d field can't
     // appear in the struct pattern below without gating the whole binding).
@@ -4054,7 +4065,7 @@ mod tests {
             tokio::task::JoinHandle<crate::Result<()>>,
             AgentKill,
         ) -> Fut,
-        Fut: std::future::Future<Output = ()>,
+        Fut: Future<Output = ()>,
     {
         let gate = Rc::new(tokio::sync::Notify::new());
         // Default the fake's wire personality to the bound engine (cyril-6iek)
@@ -4135,14 +4146,16 @@ mod tests {
                 let loop_handle = tokio::task::spawn_local(run_loop(
                     Rc::new(conn),
                     channels,
-                    std::env::temp_dir(),
                     engine,
-                    // None = "not configured", the shape a real spawn has
-                    // unless the user names a persona.
-                    None,
-                    // The production default; stall-signal tests drive it with
-                    // paused time (start_paused), so no tiny override needed.
-                    DEFAULT_STALL_THRESHOLD,
+                    BridgeLoopConfig {
+                        cwd: std::env::temp_dir(),
+                        // None = "not configured", the shape a real spawn has
+                        // unless the user names a persona.
+                        present_as: None,
+                        // The production default; stall-signal tests drive it with
+                        // paused time (start_paused), so no tiny override needed.
+                        stall_threshold: DEFAULT_STALL_THRESHOLD,
+                    },
                     InternalChannels {
                         inbound_tx,
                         inbound_rx,

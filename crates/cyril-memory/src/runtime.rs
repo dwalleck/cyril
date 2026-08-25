@@ -8,11 +8,12 @@ use tokio::process::Command;
 
 use crate::client::{AdminCredential, ClientError};
 use crate::ipc::{self, IpcError, MemoryEndpoint};
+use crate::lesson::LESSON_PREVIEW_CHARS;
 use crate::protocol::{
-    HealthResponse, MemoryErrorCode, MemoryProtocolError, MemoryRequest, MemoryResponse,
-    PROTOCOL_VERSION,
+    HealthResponse, LessonListResponse, LessonRecord, LessonRecordMetadata, MemoryErrorCode,
+    MemoryProtocolError, MemoryRequest, MemoryResponse, PROTOCOL_VERSION, TeachResponse,
 };
-use crate::store::{StoreError, StoreSet};
+use crate::store::{StoreError, StoreSet, StoredLesson};
 use crate::wire::{BoxedStream, WireError};
 use crate::{MemoryPaths, PathError};
 
@@ -137,11 +138,19 @@ pub async fn run_runtime(config: RuntimeLaunchConfig) -> Result<(), RuntimeError
             (None, health)
         }
     };
-    let _stores = stores;
+    let mut stores = stores;
 
     loop {
         let stream = listener.accept().await?;
-        if handle_connection(stream, &config.credential, &health, config.request_timeout).await {
+        if handle_connection(
+            stream,
+            &config.credential,
+            &health,
+            stores.as_mut(),
+            config.request_timeout,
+        )
+        .await
+        {
             return Ok(());
         }
     }
@@ -151,6 +160,7 @@ async fn handle_connection(
     mut stream: BoxedStream,
     credential: &AdminCredential,
     health: &HealthResponse,
+    mut stores: Option<&mut StoreSet>,
     request_timeout: Duration,
 ) -> bool {
     let mut previous_id = None;
@@ -167,10 +177,8 @@ async fn handle_connection(
         match read {
             Ok(request) => {
                 previous_id = Some(request.id);
-                let (response, shutdown) = match request.request {
-                    MemoryRequest::Health => (MemoryResponse::Health(health.clone()), false),
-                    MemoryRequest::Shutdown => (MemoryResponse::Shutdown, true),
-                };
+                let (response, shutdown) =
+                    execute_request(request.request, stores.as_deref_mut(), health);
                 let send = tokio::time::timeout(
                     request_timeout,
                     crate::wire::send_response(
@@ -216,6 +224,117 @@ async fn handle_connection(
     }
 }
 
+fn execute_request(
+    request: MemoryRequest,
+    stores: Option<&mut StoreSet>,
+    health: &HealthResponse,
+) -> (MemoryResponse, bool) {
+    match request {
+        MemoryRequest::Health => (MemoryResponse::Health(health.clone()), false),
+        MemoryRequest::Shutdown => (MemoryResponse::Shutdown, true),
+        request => (execute_store_request(request, stores, health), false),
+    }
+}
+
+fn execute_store_request(
+    request: MemoryRequest,
+    stores: Option<&mut StoreSet>,
+    health: &HealthResponse,
+) -> MemoryResponse {
+    let Some(stores) = stores else {
+        let code = health
+            .error()
+            .map(MemoryProtocolError::code)
+            .unwrap_or(MemoryErrorCode::Internal);
+        return MemoryResponse::Error(MemoryProtocolError::new(code));
+    };
+    match request {
+        MemoryRequest::Teach { project, text } => match stores.teach_lesson(&project, &text) {
+            Ok(result) => MemoryResponse::Taught(TeachResponse::new(
+                lesson_record(result.lesson(), None),
+                result.created(),
+            )),
+            Err(error) => operation_error(error),
+        },
+        MemoryRequest::Replace {
+            project,
+            replaced_id,
+            text,
+        } => match stores.replace_lesson(&project, replaced_id, &text) {
+            Ok(result) => MemoryResponse::Taught(TeachResponse::new(
+                lesson_record(result.lesson(), None),
+                result.created(),
+            )),
+            Err(error) => operation_error(error),
+        },
+        MemoryRequest::List { project } => match stores.list_lessons(&project, 100) {
+            Ok(result) => MemoryResponse::Lessons(LessonListResponse::new(
+                result
+                    .lessons()
+                    .iter()
+                    .map(|lesson| lesson_record(lesson, Some(LESSON_PREVIEW_CHARS)))
+                    .collect(),
+                result.omitted_count(),
+                result.corrupt_count(),
+            )),
+            Err(error) => operation_error(error),
+        },
+        MemoryRequest::Inspect { project, id } => match stores.inspect_lesson(&project, id) {
+            Ok(lesson) => MemoryResponse::Lesson(lesson_record(&lesson, None)),
+            Err(error) => operation_error(error),
+        },
+        MemoryRequest::Context { project, max_chars } => {
+            match stores.context(&project, usize::from(max_chars)) {
+                Ok(block) => MemoryResponse::Context(block),
+                Err(error) => operation_error(error),
+            }
+        }
+        MemoryRequest::Health | MemoryRequest::Shutdown => {
+            MemoryResponse::Error(MemoryProtocolError::new(MemoryErrorCode::Internal))
+        }
+    }
+}
+
+fn lesson_record(lesson: &StoredLesson, preview_chars: Option<usize>) -> LessonRecord {
+    let content = match preview_chars {
+        Some(limit) => bounded_preview(lesson.text().redacted(), limit),
+        None => lesson.text().redacted().to_owned(),
+    };
+    LessonRecord::new(
+        lesson.id(),
+        content,
+        LessonRecordMetadata::new(
+            lesson.provenance(),
+            lesson.trust(),
+            lesson.status(),
+            lesson.supersedes_id(),
+            lesson.created_at_ms(),
+            lesson.updated_at_ms(),
+        ),
+    )
+}
+
+fn bounded_preview(content: &str, limit: usize) -> String {
+    if content.chars().count() <= limit {
+        return content.to_owned();
+    }
+    let mut preview: String = content.chars().take(limit.saturating_sub(1)).collect();
+    preview.push('…');
+    preview
+}
+
+fn operation_error(error: StoreError) -> MemoryResponse {
+    let code = match error {
+        StoreError::LessonNotFound => MemoryErrorCode::NotFound,
+        StoreError::LessonSuperseded => MemoryErrorCode::AlreadySuperseded,
+        StoreError::CorruptLesson { .. } => MemoryErrorCode::CorruptLesson,
+        StoreError::Permission { .. } => MemoryErrorCode::PermissionDenied,
+        _ => MemoryErrorCode::Internal,
+    };
+    tracing::warn!(error = %error, "memory store operation failed");
+    MemoryResponse::Error(MemoryProtocolError::new(code))
+}
+
 fn required_env(variable: &'static str) -> Result<OsString, RuntimeError> {
     env::var_os(variable).ok_or(RuntimeError::MissingEnvironment { variable })
 }
@@ -239,6 +358,11 @@ fn map_store_error(error: &StoreError) -> MemoryErrorCode {
         | StoreError::CorruptSchema { .. }
         | StoreError::DuplicateMetadata { .. }
         | StoreError::UnsupportedSchema { .. }
+        | StoreError::LessonNotFound
+        | StoreError::LessonSuperseded
+        | StoreError::Random(_)
+        | StoreError::Clock(_)
+        | StoreError::CorruptLesson { .. }
         | StoreError::Sqlite { .. } => MemoryErrorCode::MigrationFailed,
     }
 }

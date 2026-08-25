@@ -8,8 +8,12 @@ use ratatui::DefaultTerminal;
 use serde::Deserialize;
 use tokio::sync::mpsc;
 
-use crate::memory_runtime::MemoryRuntimeHandle;
-use cyril_core::commands::{CommandContext, CommandRegistry, CommandResult, CommandResultKind};
+use crate::memory_runtime::{
+    FirstPromptContextError, MemoryRuntimeHandle, ProjectBinding, ProjectMemory,
+};
+use cyril_core::commands::{
+    CommandContext, CommandRegistry, CommandResult, CommandResultKind, MemoryCommandAction,
+};
 use cyril_core::protocol::bridge::{BridgeHandle, BridgeSender};
 use cyril_core::session::SessionController;
 use cyril_core::types::*;
@@ -76,6 +80,19 @@ pub struct App {
     voice: Option<cyril_core::voice::VoiceHandle>,
     memory_runtime: Option<MemoryRuntimeHandle>,
     memory_status: MemoryStatusView,
+    /// How the startup workspace resolved against project memory. Lesson
+    /// commands and first-prompt injection need `Bound`; the other states
+    /// carry the reason the user sees.
+    project_binding: ProjectBinding,
+    /// Results of memory work that ran off the event loop (`/memory`
+    /// commands, first-prompt lesson lookups). The `select!` arm drains it;
+    /// nothing awaits the companion inline.
+    memory_task_tx: mpsc::UnboundedSender<MemoryTaskResult>,
+    memory_task_rx: mpsc::UnboundedReceiver<MemoryTaskResult>,
+    /// The session whose next non-empty prompt gets the project-lessons
+    /// block prepended. Armed on `SessionCreated`, consumed by the first
+    /// prompt, and re-armed only when the companion was still starting.
+    first_prompt_lessons_pending: Option<SessionId>,
     /// Authoritative "is voice capturing?" intent. Flipped on each successful
     /// Start/Stop send (and cleared on engine `Error`). Toggling reads this —
     /// NOT the lagging `ui_state.voice_status()` projection — so rapid `/voice`
@@ -110,6 +127,111 @@ pub struct App {
     #[cfg(test)]
     ui_apply_calls: u64,
 }
+/// Outcome of memory work that ran on a spawned task. Delivered back to the
+/// event loop over `App::memory_task_rx`.
+enum MemoryTaskResult {
+    /// Rendered `/memory` command output, ready to show.
+    CommandOutput(String),
+    /// A fresh session's first prompt, held back while its lessons loaded.
+    FirstPromptContext {
+        session_id: SessionId,
+        content_blocks: Vec<String>,
+        outcome: Result<Option<String>, FirstPromptContextError>,
+    },
+}
+
+// The persistence boundary: memory-domain enums become core view enums here
+// and nowhere else. Each side keeps its own single-variant vocabulary so a
+// future provenance is an additive change on both.
+fn memory_lesson_view(lesson: &cyril_memory::LessonRecord) -> MemoryLessonView {
+    let provenance = match lesson.provenance() {
+        cyril_memory::LessonProvenance::UserExplicit => MemoryLessonProvenance::UserExplicit,
+    };
+    let trust = match lesson.trust() {
+        cyril_memory::LessonTrust::Instruction => MemoryLessonTrust::Instruction,
+    };
+    let status = match lesson.status() {
+        cyril_memory::LessonStatus::Active => MemoryLessonStatus::Active,
+        cyril_memory::LessonStatus::Invalidated => MemoryLessonStatus::Invalidated,
+    };
+    MemoryLessonView::new(
+        lesson.id().to_string(),
+        lesson.content().to_owned(),
+        cyril_core::types::MemoryLessonMetadataView::new(
+            provenance,
+            trust,
+            status,
+            lesson.supersedes_id().map(|id| id.to_string()),
+            lesson.created_at_ms(),
+            lesson.updated_at_ms(),
+        ),
+    )
+}
+
+fn memory_teach_view(
+    result: &cyril_memory::TeachResponse,
+    operation: MemoryTeachOperation,
+) -> MemoryTeachView {
+    MemoryTeachView::new(
+        operation,
+        memory_lesson_view(result.lesson()),
+        result.created(),
+    )
+}
+
+/// Execute one `/memory` lesson command against the bound project and render
+/// the outcome. Runs on a spawned task so the companion round trip (a connect
+/// and a request, each bounded by the runtime request timeout) never stalls
+/// the event loop; the text comes back as `MemoryTaskResult::CommandOutput`.
+async fn run_memory_action(memory: ProjectMemory, action: MemoryCommandAction) -> String {
+    match action {
+        MemoryCommandAction::Teach { text } => match cyril_memory::LessonText::new(&text) {
+            Ok(text) => match memory.teach(text).await {
+                Ok(result) => cyril_ui::memory_format::format_memory_teach(&memory_teach_view(
+                    &result,
+                    MemoryTeachOperation::Teach,
+                )),
+                Err(error) => format!("Memory error: {error}"),
+            },
+            Err(error) => format!("Memory lesson rejected: {error}"),
+        },
+        MemoryCommandAction::Replace { lesson_id, text } => {
+            match (
+                lesson_id.parse::<cyril_memory::LessonId>(),
+                cyril_memory::LessonText::new(&text),
+            ) {
+                (Ok(lesson_id), Ok(text)) => match memory.replace(lesson_id, text).await {
+                    Ok(result) => cyril_ui::memory_format::format_memory_teach(&memory_teach_view(
+                        &result,
+                        MemoryTeachOperation::Replace,
+                    )),
+                    Err(error) => format!("Memory error: {error}"),
+                },
+                (Err(error), _) => format!("Memory lesson ID rejected: {error}"),
+                (_, Err(error)) => format!("Memory lesson rejected: {error}"),
+            }
+        }
+        MemoryCommandAction::List => match memory.list().await {
+            Ok(result) => cyril_ui::memory_format::format_memory_list(&MemoryLessonListView::new(
+                result.lessons().iter().map(memory_lesson_view).collect(),
+                result.omitted_count(),
+                result.corrupt_count(),
+            )),
+            Err(error) => format!("Memory error: {error}"),
+        },
+        MemoryCommandAction::Inspect { lesson_id } => {
+            match lesson_id.parse::<cyril_memory::LessonId>() {
+                Ok(lesson_id) => match memory.inspect(lesson_id).await {
+                    Ok(result) => {
+                        cyril_ui::memory_format::format_memory_lesson(&memory_lesson_view(&result))
+                    }
+                    Err(error) => format!("Memory error: {error}"),
+                },
+                Err(error) => format!("Memory lesson ID rejected: {error}"),
+            }
+        }
+    }
+}
 
 impl App {
     /// Build the app from the UI config.
@@ -136,6 +258,7 @@ impl App {
         } = ui;
         let (bridge_sender, notification_rx, permission_rx) = bridge.split();
         let (usage_enrichment, usage_enrichment_rx) = spawn_usage_enrichment_worker();
+        let (memory_task_tx, memory_task_rx) = mpsc::unbounded_channel();
         let commands = CommandRegistry::with_builtins_and_usage(
             hooks,
             workflows,
@@ -180,6 +303,10 @@ impl App {
             voice: spawn_voice_engine(),
             memory_runtime: None,
             memory_status: MemoryStatusView::default(),
+            project_binding: ProjectBinding::Disabled,
+            memory_task_tx,
+            memory_task_rx,
+            first_prompt_lessons_pending: None,
             voice_active: false,
             startup_prompt: None,
             workflow_tracker: WorkflowTracker::new(),
@@ -235,29 +362,137 @@ impl App {
     async fn dispatch_deferred_command(&mut self, deferred: BridgeCommand) {
         // SendPrompt triggers a real turn → mark session Busy. Session-management
         // commands do not. See `/code` (busy) versus `/rewind` (not busy).
-        let turn_session = match &deferred {
-            BridgeCommand::SendPrompt { session_id, .. } => Some(session_id.clone()),
-            _ => None,
-        };
-        let usage_started = turn_session
-            .as_ref()
-            .is_some_and(|session_id| self.begin_usage_turn(session_id));
-        match self.bridge_sender.send(deferred).await {
-            Ok(()) => {
-                if turn_session.is_some() {
-                    self.session.set_status(SessionStatus::Busy);
-                }
-            }
-            Err(error) => {
-                if usage_started && let Some(session_id) = turn_session.as_ref() {
-                    self.usage_observer.abort_turn(session_id);
-                }
-                tracing::warn!(error = %error, "failed to send deferred bridge command");
+        if let BridgeCommand::SendPrompt {
+            session_id,
+            content_blocks,
+        } = deferred
+        {
+            if let Err(error) = self.send_prompt(session_id, content_blocks).await {
+                tracing::warn!(error = %error, "failed to send deferred prompt");
                 self.ui_state.set_activity(Activity::Idle);
                 self.ui_state
                     .add_system_message("Failed to dispatch follow-up command to agent.".into());
             }
+            return;
         }
+        if let Err(error) = self.bridge_sender.send(deferred).await {
+            tracing::warn!(error = %error, "failed to send deferred bridge command");
+            self.ui_state.set_activity(Activity::Idle);
+            self.ui_state
+                .add_system_message("Failed to dispatch follow-up command to agent.".into());
+        }
+    }
+
+    /// The one seam every prompt leaves through — typed submit, the startup
+    /// `--prompt`, and `/code` follow-ups all land here — so first-prompt
+    /// project lessons (cyril-ezgo) are prepended in exactly one place.
+    ///
+    /// A fresh session's first non-empty prompt is held while its lessons
+    /// load on a spawned task (bounded by
+    /// [`crate::memory_runtime::FIRST_PROMPT_CONTEXT_TIMEOUT`]); the event
+    /// loop keeps servicing input and agent traffic, and the prompt goes out
+    /// from `handle_memory_task_result`. Every other prompt is sent directly.
+    async fn send_prompt(
+        &mut self,
+        session_id: SessionId,
+        content_blocks: Vec<String>,
+    ) -> cyril_core::Result<()> {
+        if self.first_prompt_lessons_pending.as_ref() == Some(&session_id)
+            && !content_blocks.is_empty()
+            && let Some(memory) = self.project_binding.memory()
+        {
+            // Consumed now — the result handler re-arms it only when the
+            // companion had not finished starting, so a second Enter in the
+            // window is a plain prompt (it will be routed as a steer while
+            // the session is Busy).
+            self.first_prompt_lessons_pending = None;
+            self.session.set_status(SessionStatus::Busy);
+            let memory = memory.clone();
+            let results = self.memory_task_tx.clone();
+            tokio::spawn(async move {
+                let outcome = memory.first_prompt_context().await;
+                if results
+                    .send(MemoryTaskResult::FirstPromptContext {
+                        session_id,
+                        content_blocks,
+                        outcome,
+                    })
+                    .is_err()
+                {
+                    tracing::debug!("first-prompt lessons dropped: app is gone");
+                }
+            });
+            return Ok(());
+        }
+        self.dispatch_prompt(session_id, content_blocks).await
+    }
+
+    /// Send a prompt to the bridge now, with usage bookkeeping. Busy is set
+    /// only once the bridge accepted it.
+    async fn dispatch_prompt(
+        &mut self,
+        session_id: SessionId,
+        content_blocks: Vec<String>,
+    ) -> cyril_core::Result<()> {
+        let usage_started = self.begin_usage_turn(&session_id);
+        if let Err(error) = self
+            .bridge_sender
+            .send(BridgeCommand::SendPrompt {
+                session_id: session_id.clone(),
+                content_blocks,
+            })
+            .await
+        {
+            if usage_started {
+                self.usage_observer.abort_turn(&session_id);
+            }
+            return Err(error);
+        }
+        self.session.set_status(SessionStatus::Busy);
+        Ok(())
+    }
+
+    /// Apply the outcome of memory work that ran off the event loop.
+    async fn handle_memory_task_result(&mut self, result: MemoryTaskResult) {
+        match result {
+            MemoryTaskResult::CommandOutput(text) => {
+                self.ui_state.add_system_message(text);
+            }
+            MemoryTaskResult::FirstPromptContext {
+                session_id,
+                mut content_blocks,
+                outcome,
+            } => {
+                match outcome {
+                    Ok(Some(context)) => content_blocks.insert(0, context),
+                    Ok(None) => {}
+                    Err(error) => {
+                        // Fail open with the concrete cause on record; the
+                        // prompt itself is never delayed past the bound.
+                        tracing::warn!(
+                            session_id = %session_id,
+                            error = %error,
+                            "first-prompt lessons unavailable; prompt sent without them"
+                        );
+                        if error.retry_on_next_prompt()
+                            && self.session.id() == Some(&session_id)
+                            && self.first_prompt_lessons_pending.is_none()
+                        {
+                            self.first_prompt_lessons_pending = Some(session_id.clone());
+                        }
+                    }
+                }
+                if let Err(error) = self.dispatch_prompt(session_id, content_blocks).await {
+                    tracing::warn!(error = %error, "failed to send prompt after lesson lookup");
+                    // Busy was taken optimistically when the lookup started.
+                    self.session.set_status(SessionStatus::Active);
+                    self.ui_state.set_activity(Activity::Idle);
+                    self.ui_state
+                        .add_system_message("Failed to send prompt to agent.".into());
+                }
+            }
+        }
+        self.redraw_needed = true;
     }
     /// Whether mouse capture should be active, per `ui.mouse_capture`.
     ///
@@ -279,7 +514,11 @@ impl App {
     pub fn set_mouse_captured(&mut self, captured: bool) {
         self.ui_state.set_mouse_captured(captured);
     }
-    pub(crate) fn set_memory_runtime(&mut self, memory_runtime: MemoryRuntimeHandle) {
+    pub(crate) fn set_memory_runtime(
+        &mut self,
+        memory_runtime: MemoryRuntimeHandle,
+        project_binding: ProjectBinding,
+    ) {
         match memory_runtime.status() {
             crate::memory_runtime::MemoryRuntimeStatus::Failed(failure)
             | crate::memory_runtime::MemoryRuntimeStatus::Degraded(failure) => {
@@ -289,10 +528,26 @@ impl App {
             | crate::memory_runtime::MemoryRuntimeStatus::Starting
             | crate::memory_runtime::MemoryRuntimeStatus::Ready(_) => {}
         }
-        let status = memory_runtime.status_view();
+        self.project_binding = project_binding;
+        let status = self.with_project_binding(memory_runtime.status_view());
         self.ui_state.set_memory_status(status.clone());
         self.memory_status = status;
         self.memory_runtime = Some(memory_runtime);
+    }
+
+    /// Every memory status the App publishes carries the project axis, so
+    /// `/memory status` can say "ready, but this workspace is unbound".
+    fn with_project_binding(&self, status: MemoryStatusView) -> MemoryStatusView {
+        status.with_project(self.project_binding.status_view())
+    }
+
+    /// Stop the companion gracefully. Idempotent; `run` calls it on quit and
+    /// `main` calls it on every other exit path so an error return never
+    /// falls through to the abort-only `Drop`.
+    pub(crate) async fn shutdown_memory_runtime(&mut self) {
+        if let Some(mut memory_runtime) = self.memory_runtime.take() {
+            memory_runtime.shutdown().await;
+        }
     }
 
     /// Kick off the initial session. `oneshot_prompt` is the parsed `--prompt`
@@ -377,6 +632,11 @@ impl App {
                 Some(result) = self.usage_enrichment_rx.recv() => {
                     self.handle_usage_enrichment(result);
                 }
+                // Memory work that ran off-loop (`/memory` commands, first-prompt
+                // lesson lookups). The App holds the sender, so this never closes.
+                Some(result) = self.memory_task_rx.recv() => {
+                    self.handle_memory_task_result(result).await;
+                }
 
 
                 // Priority 3: Permission requests from bridge
@@ -398,6 +658,7 @@ impl App {
                 memory_status = Self::next_memory_status(&mut self.memory_runtime) => {
                     match memory_status {
                         Some(status) => {
+                            let status = self.with_project_binding(status);
                             self.memory_status = status.clone();
                             if self.ui_state.set_memory_status(status) {
                                 self.redraw_needed = true;
@@ -456,9 +717,7 @@ impl App {
                 if let Err(e) = self.bridge_sender.send(BridgeCommand::Shutdown).await {
                     tracing::warn!(error = %e, "failed to send shutdown to bridge");
                 }
-                if let Some(mut memory_runtime) = self.memory_runtime.take() {
-                    memory_runtime.shutdown().await;
-                }
+                self.shutdown_memory_runtime().await;
                 break;
             }
         }
@@ -901,6 +1160,15 @@ impl App {
         // command-output path. See `dispatch_command_executed` for the rules.
         let mut deferred_commands: Vec<BridgeCommand> = Vec::new();
 
+        // A fresh session's first prompt carries the project lessons
+        // (cyril-ezgo). Armed here — the one place a session becomes current —
+        // and consumed by `send_prompt`. A resumed session counts as fresh
+        // for this process: whatever an earlier process injected is not
+        // visible here, and lessons may have been taught since.
+        if let Notification::SessionCreated { session_id, .. } = &notification {
+            self.first_prompt_lessons_pending = Some(session_id.clone());
+        }
+
         // One-shot `--prompt` (cyril-0ffy): the initial session is ready, so
         // submit the startup prompt. Deferred through the same bridge-command
         // path as `/code` follow-ups — the run loop sends it, marks the session
@@ -1274,6 +1542,30 @@ impl App {
         Ok(())
     }
 
+    /// Start a `/memory` lesson command. Returns immediately: the companion
+    /// round trip runs on a spawned task and its rendered output arrives via
+    /// `memory_task_rx` (the event loop must never block on a command).
+    fn handle_memory_action(&mut self, action: MemoryCommandAction) {
+        let Some(memory) = self.project_binding.memory().cloned() else {
+            let message = self
+                .project_binding
+                .unavailable_message()
+                .unwrap_or_else(|| "Memory is unavailable for this project.".to_owned());
+            self.ui_state.add_system_message(message);
+            return;
+        };
+        let results = self.memory_task_tx.clone();
+        tokio::spawn(async move {
+            let rendered = run_memory_action(memory, action).await;
+            if results
+                .send(MemoryTaskResult::CommandOutput(rendered))
+                .is_err()
+            {
+                tracing::debug!("memory command output dropped: app is gone");
+            }
+        });
+    }
+
     async fn submit_input(&mut self) -> cyril_core::Result<()> {
         let text = self.ui_state.take_input();
         if text.is_empty() {
@@ -1285,6 +1577,7 @@ impl App {
         // Try as slash command
         if let Some((cmd, args)) = self.commands.parse(&text) {
             let ctx = CommandContext {
+                workspace: &self.cwd,
                 session: &self.session,
                 bridge: &self.bridge_sender,
                 subagent_tracker: Some(self.ui_state.subagent_tracker()),
@@ -1317,6 +1610,12 @@ impl App {
                         &self.bridge_sender,
                     )
                     .await;
+                }
+                Ok(CommandResult {
+                    kind: CommandResultKind::MemoryAction(action),
+                }) => {
+                    self.handle_memory_action(action);
+                    return Ok(());
                 }
                 Ok(result) => self.handle_command_result(result),
                 Err(e) => {
@@ -1376,22 +1675,7 @@ impl App {
             }
         }
 
-        let usage_started = self.begin_usage_turn(&session_id);
-        if let Err(error) = self
-            .bridge_sender
-            .send(BridgeCommand::SendPrompt {
-                session_id: session_id.clone(),
-                content_blocks,
-            })
-            .await
-        {
-            if usage_started {
-                self.usage_observer.abort_turn(&session_id);
-            }
-            return Err(error);
-        }
-
-        Ok(())
+        self.send_prompt(session_id, content_blocks).await
     }
 
     fn handle_command_result(&mut self, result: CommandResult) {
@@ -1429,6 +1713,9 @@ impl App {
                 let rendered = cyril_ui::memory_format::format_memory_status(&status);
                 self.ui_state
                     .add_command_output("memory".to_owned(), rendered);
+            }
+            CommandResultKind::MemoryAction(_) => {
+                tracing::error!("MemoryAction reached synchronous result routing");
             }
             CommandResultKind::ShowUsage {
                 account_query_started,
@@ -2486,7 +2773,7 @@ mod tests {
         ));
 
         let (mut app, mut commands) = test_app_with_command_rx();
-        app.set_memory_runtime(memory_runtime);
+        app.set_memory_runtime(memory_runtime, ProjectBinding::Disabled);
         app.create_initial_session(root.path().to_path_buf(), None)
             .await;
         let command = tokio::time::timeout(Duration::from_secs(1), commands.recv())
@@ -3306,6 +3593,242 @@ mod tests {
                 _ => None,
             })
             .collect()
+    }
+
+    /// Drive one off-loop memory result the way the `select!` arm would.
+    async fn drain_one_memory_result(app: &mut App) {
+        let result = tokio::time::timeout(Duration::from_secs(5), app.memory_task_rx.recv())
+            .await
+            .expect("memory task result within bound")
+            .expect("memory task result");
+        app.handle_memory_task_result(result).await;
+    }
+
+    async fn recv_prompt(
+        commands: &mut tokio::sync::mpsc::Receiver<BridgeCommand>,
+    ) -> (SessionId, Vec<String>) {
+        match tokio::time::timeout(Duration::from_secs(5), commands.recv())
+            .await
+            .expect("bridge command within bound")
+            .expect("bridge command")
+        {
+            BridgeCommand::SendPrompt {
+                session_id,
+                content_blocks,
+            } => (session_id, content_blocks),
+            other => panic!("expected SendPrompt, got {other:?}"),
+        }
+    }
+
+    fn last_system_message(app: &App) -> String {
+        app.ui_state
+            .messages()
+            .iter()
+            .rev()
+            .find_map(|message| match message.kind() {
+                ChatMessageKind::System(text) => Some(text.clone()),
+                _ => None,
+            })
+            .expect("a system message")
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn injected_context_is_wire_only_for_interactive_prompts() {
+        let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
+        let workspace = tempfile::tempdir().expect("workspace");
+        let memory = runtime.bind(workspace.path());
+        memory
+            .teach(cyril_memory::LessonText::new("prefer boring Rust").expect("lesson"))
+            .await
+            .expect("teach");
+
+        let main = SessionId::new("sess_interactive");
+        let (mut app, mut commands) = test_app_with_command_rx();
+        app.set_memory_runtime(
+            MemoryRuntimeHandle::start(cyril_memory::MemoryConfigState::Absent),
+            ProjectBinding::Bound(memory),
+        );
+        assert!(
+            app.handle_notification(session_created_frame(&main))
+                .is_empty()
+        );
+        let original = "Original Ω prompt with attachment semantics";
+        app.ui_state.insert_text(original);
+        app.submit_input().await.expect("submit original");
+
+        // The lesson lookup runs off the event loop: nothing has reached the
+        // bridge yet, and the session already refuses a second prompt.
+        assert!(commands.try_recv().is_err());
+        assert!(matches!(app.session.status(), SessionStatus::Busy));
+        drain_one_memory_result(&mut app).await;
+
+        let (session_id, content_blocks) = recv_prompt(&mut commands).await;
+        assert_eq!(session_id, main);
+        assert_eq!(content_blocks.len(), 2, "{content_blocks:?}");
+        assert!(content_blocks[0].starts_with("<CYRIL_LESSONS"));
+        assert!(content_blocks[0].contains("- prefer boring Rust"));
+        assert_eq!(content_blocks[1], original);
+        // The transcript shows the user's text only; the block is wire-only.
+        assert!(app.ui_state.messages().iter().any(
+            |message| matches!(message.kind(), ChatMessageKind::UserText(text) if text == original)
+        ));
+        assert!(!app.ui_state.messages().iter().any(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::UserText(text) if text.contains("<CYRIL_LESSONS")
+            )
+        }));
+
+        // Exactly once per session: the next prompt goes out untouched and
+        // synchronously.
+        app.session.set_status(SessionStatus::Active);
+        app.ui_state.insert_text("second prompt");
+        app.submit_input().await.expect("submit second");
+        let (_, content_blocks) = recv_prompt(&mut commands).await;
+        assert_eq!(content_blocks, ["second prompt".to_owned()]);
+        runtime.shutdown().await;
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn first_prompt_lessons_wait_for_a_starting_companion() {
+        let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
+        let workspace = tempfile::tempdir().expect("workspace");
+        let memory = runtime.bind(workspace.path());
+        memory
+            .teach(cyril_memory::LessonText::new("prefer boring Rust").expect("lesson"))
+            .await
+            .expect("teach");
+        runtime.set_starting();
+
+        let main = SessionId::new("sess_cold");
+        let (mut app, mut commands) = test_app_with_command_rx();
+        app.set_memory_runtime(
+            MemoryRuntimeHandle::start(cyril_memory::MemoryConfigState::Absent),
+            ProjectBinding::Bound(memory),
+        );
+        app.handle_notification(session_created_frame(&main));
+
+        // Cold machine: the companion is still starting when the first prompt
+        // is typed. The prompt goes out without lessons, and the session
+        // stays eligible.
+        app.ui_state.insert_text("first");
+        app.submit_input().await.expect("submit first");
+        drain_one_memory_result(&mut app).await;
+        let (_, content_blocks) = recv_prompt(&mut commands).await;
+        assert_eq!(content_blocks, ["first".to_owned()]);
+        assert_eq!(app.first_prompt_lessons_pending.as_ref(), Some(&main));
+
+        runtime.set_ready();
+        app.session.set_status(SessionStatus::Active);
+        app.ui_state.insert_text("second");
+        app.submit_input().await.expect("submit second");
+        drain_one_memory_result(&mut app).await;
+        let (_, content_blocks) = recv_prompt(&mut commands).await;
+        assert_eq!(content_blocks.len(), 2, "{content_blocks:?}");
+        assert!(content_blocks[0].contains("- prefer boring Rust"));
+        assert_eq!(content_blocks[1], "second");
+        assert!(app.first_prompt_lessons_pending.is_none());
+
+        app.session.set_status(SessionStatus::Active);
+        app.ui_state.insert_text("third");
+        app.submit_input().await.expect("submit third");
+        let (_, content_blocks) = recv_prompt(&mut commands).await;
+        assert_eq!(content_blocks, ["third".to_owned()]);
+        runtime.shutdown().await;
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn memory_commands_run_off_the_event_loop() {
+        let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
+        let workspace = tempfile::tempdir().expect("workspace");
+        let memory = runtime.bind(workspace.path());
+        let (mut app, _commands) = test_app_with_command_rx();
+        app.set_memory_runtime(
+            MemoryRuntimeHandle::start(cyril_memory::MemoryConfigState::Absent),
+            ProjectBinding::Bound(memory),
+        );
+        let before = app.ui_state.messages().len();
+        app.ui_state.insert_text("/memory list");
+        app.submit_input().await.expect("submit list");
+        // The command returned without touching the transcript: the round
+        // trip is in flight on a task, not awaited on the loop.
+        assert_eq!(app.ui_state.messages().len(), before);
+        drain_one_memory_result(&mut app).await;
+        assert_eq!(last_system_message(&app), "No active project lessons.");
+
+        app.ui_state.insert_text("/memory teach prefer boring Rust");
+        app.submit_input().await.expect("submit teach");
+        drain_one_memory_result(&mut app).await;
+        assert!(last_system_message(&app).starts_with("Lesson created:"));
+
+        app.ui_state.insert_text("/memory list");
+        app.submit_input().await.expect("submit list again");
+        drain_one_memory_result(&mut app).await;
+        assert!(last_system_message(&app).contains("prefer boring Rust"));
+        runtime.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn lesson_commands_report_why_the_project_is_unbound() {
+        let (mut app, _commands) = test_app_with_command_rx();
+        let reason = "Git metadata file /work/proj/.git is invalid";
+        app.set_memory_runtime(
+            MemoryRuntimeHandle::start(cyril_memory::MemoryConfigState::Absent),
+            ProjectBinding::Unbound {
+                reason: reason.to_owned(),
+            },
+        );
+        app.ui_state.insert_text("/memory teach prefer boring Rust");
+        app.submit_input().await.expect("submit teach");
+        assert_eq!(
+            last_system_message(&app),
+            format!("Memory is unavailable for this project: {reason}")
+        );
+        app.ui_state.insert_text("/memory status");
+        app.submit_input().await.expect("submit status");
+        let status = match app
+            .ui_state
+            .messages()
+            .last()
+            .expect("status output")
+            .kind()
+        {
+            ChatMessageKind::CommandOutput { text, .. } => text.clone(),
+            other => panic!("expected command output, got {other:?}"),
+        };
+        assert!(
+            status.contains(&format!("Project: unbound — {reason}")),
+            "{status}"
+        );
+
+        app.set_memory_runtime(
+            MemoryRuntimeHandle::start(cyril_memory::MemoryConfigState::Absent),
+            ProjectBinding::Disabled,
+        );
+        app.ui_state.insert_text("/memory list");
+        app.submit_input().await.expect("submit list");
+        assert!(
+            last_system_message(&app).starts_with("Memory is disabled."),
+            "{}",
+            last_system_message(&app)
+        );
+    }
+
+    #[tokio::test]
+    async fn memory_runtime_shutdown_is_explicit_and_idempotent() {
+        let (mut app, _commands) = test_app_with_command_rx();
+        app.set_memory_runtime(
+            MemoryRuntimeHandle::start(cyril_memory::MemoryConfigState::Absent),
+            ProjectBinding::Disabled,
+        );
+        assert!(app.memory_runtime.is_some());
+        app.shutdown_memory_runtime().await;
+        assert!(app.memory_runtime.is_none());
+        app.shutdown_memory_runtime().await;
+        assert!(app.memory_runtime.is_none());
     }
 
     #[tokio::test]

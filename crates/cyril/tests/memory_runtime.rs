@@ -5,8 +5,9 @@ use anyhow::{Context, Result, bail};
 #[cfg(windows)]
 use cyril_memory::ClientError;
 use cyril_memory::{
-    AdminClient, AdminCredential, HealthResponse, MemoryEndpoint, MemoryErrorCode, MemoryPaths,
-    PROTOCOL_VERSION, RuntimeHealth, RuntimeLaunchConfig,
+    AdminClient, AdminCredential, HealthResponse, LessonStatus, LessonText, MemoryEndpoint,
+    MemoryErrorCode, MemoryPaths, PROTOCOL_VERSION, ProjectScope, RuntimeHealth,
+    RuntimeLaunchConfig,
 };
 use tempfile::TempDir;
 use tokio::process::{Child, Command};
@@ -14,6 +15,8 @@ use tokio::time::{sleep, timeout};
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(5);
 const ATTEMPT_TIMEOUT: Duration = Duration::from_millis(250);
+// Only the Unix-socket raw-wire helpers use this; Windows builds it dead otherwise.
+#[cfg(unix)]
 const RAW_TIMEOUT: Duration = Duration::from_secs(2);
 const FRAME_CAP: usize = 1_048_576;
 
@@ -126,7 +129,7 @@ fn assert_ready(health: &HealthResponse) -> Result<()> {
     let Some(versions) = health.store_versions() else {
         bail!("ready health omitted store versions");
     };
-    assert_eq!(versions.memory(), 1);
+    assert_eq!(versions.memory(), 2);
     assert_eq!(versions.knowledge(), 1);
     assert!(health.error().is_none());
     Ok(())
@@ -141,8 +144,12 @@ async fn real_process_reports_ready_v1_and_exact_store_schema() -> Result<()> {
         let health = client.health().await?;
         assert_ready(&health)?;
     }
-    assert_store_schema(paths.memory_store_path())?;
-    assert_store_schema(paths.knowledge_store_path())?;
+    assert_store_schema(
+        paths.memory_store_path(),
+        2,
+        &["lessons", "memory_audit", "projects", "schema_version"],
+    )?;
+    assert_store_schema(paths.knowledge_store_path(), 1, &["schema_version"])?;
     runtime.shutdown().await
 }
 
@@ -153,8 +160,83 @@ async fn real_process_shutdown_and_restart_preserve_stores() -> Result<()> {
 
     let restarted = RunningRuntime::start_in_roots(data_root, runtime_root).await?;
     let paths = restarted.paths()?;
-    assert_store_schema(paths.memory_store_path())?;
-    assert_store_schema(paths.knowledge_store_path())?;
+    assert_store_schema(
+        paths.memory_store_path(),
+        2,
+        &["lessons", "memory_audit", "projects", "schema_version"],
+    )?;
+    assert_store_schema(paths.knowledge_store_path(), 1, &["schema_version"])?;
+    restarted.shutdown().await
+}
+
+#[tokio::test]
+async fn real_runtime_restart_preserves_lessons_and_audit() -> Result<()> {
+    let workspace = TempDir::new()?;
+    let project = ProjectScope::resolve(workspace.path())?;
+    let runtime = RunningRuntime::start_in_roots(TempDir::new()?, TempDir::new()?).await?;
+    let memory_path = runtime.paths()?.memory_store_path().to_path_buf();
+    let mut client = runtime.client().await?;
+    let first = client
+        .teach(
+            &project,
+            LessonText::new("use password=hunter2 only in fixtures")?,
+        )
+        .await?;
+    assert!(first.created());
+    assert_eq!(
+        first.lesson().content(),
+        "use password=[REDACTED] only in fixtures"
+    );
+    let duplicate = client
+        .teach(
+            &project,
+            LessonText::new("use password=hunter2 only in fixtures")?,
+        )
+        .await?;
+    assert!(!duplicate.created());
+    assert_eq!(duplicate.lesson().id(), first.lesson().id());
+    let replacement = client
+        .replace(
+            &project,
+            first.lesson().id(),
+            LessonText::new("prefer boring Rust")?,
+        )
+        .await?;
+    let replacement_id = replacement.lesson().id();
+    let first_id = first.lesson().id();
+    drop(client);
+    let (data_root, runtime_root) = runtime.shutdown_with_roots().await?;
+
+    let restarted = RunningRuntime::start_in_roots(data_root, runtime_root).await?;
+    let mut client = restarted.client().await?;
+    assert_eq!(
+        client.inspect(&project, first_id).await?.status(),
+        LessonStatus::Invalidated
+    );
+    let replacement = client.inspect(&project, replacement_id).await?;
+    assert_eq!(replacement.content(), "prefer boring Rust");
+    let listed = client.list(&project).await?;
+    assert_eq!(listed.lessons().len(), 1);
+    assert_eq!(listed.lessons()[0].id(), replacement_id);
+    let context = client
+        .context(&project, 4_000)
+        .await?
+        .context("context block")?;
+    assert!(context.text().contains("prefer boring Rust"));
+    assert!(!context.text().contains("hunter2"));
+
+    let direct = rusqlite::Connection::open_with_flags(
+        memory_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )?;
+    assert_eq!(
+        direct.query_row(
+            "SELECT COUNT(*) FROM memory_audit WHERE project_id = ?1",
+            [project.project_id().to_string()],
+            |row| row.get::<_, i64>(0),
+        )?,
+        3
+    );
     restarted.shutdown().await
 }
 
@@ -230,19 +312,22 @@ async fn wait_for_client(
     }
 }
 
-fn assert_store_schema(path: &Path) -> Result<()> {
+fn assert_store_schema(path: &Path, version: i64, expected_tables: &[&str]) -> Result<()> {
     let connection = rusqlite::Connection::open(path)?;
     let journal_mode: String = connection.query_row("PRAGMA journal_mode", [], |row| row.get(0))?;
     assert_eq!(journal_mode.to_ascii_lowercase(), "wal");
 
     let table_names = {
-        let mut statement = connection
-            .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")?;
+        let mut statement = connection.prepare(
+            "SELECT name FROM sqlite_master
+             WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+             ORDER BY name",
+        )?;
         statement
             .query_map([], |row| row.get::<_, String>(0))?
             .collect::<rusqlite::Result<Vec<_>>>()?
     };
-    assert_eq!(table_names, ["schema_version"]);
+    assert_eq!(table_names, expected_tables);
 
     let columns = {
         let mut statement = connection.prepare("PRAGMA table_info(schema_version)")?;
@@ -282,7 +367,7 @@ fn assert_store_schema(path: &Path) -> Result<()> {
         connection.query_row("SELECT singleton, version FROM schema_version", [], |row| {
             Ok((row.get(0)?, row.get(1)?))
         })?;
-    assert_eq!(row, (1, 1));
+    assert_eq!(row, (1, version));
     Ok(())
 }
 

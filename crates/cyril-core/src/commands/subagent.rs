@@ -240,6 +240,7 @@ mod tests {
         tracker: Option<&'a SubagentTracker>,
     ) -> CommandContext<'a> {
         CommandContext {
+            workspace: std::path::Path::new("."),
             session,
             bridge: sender,
             subagent_tracker: tracker,

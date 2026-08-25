@@ -1,8 +1,11 @@
-use cyril_core::types::{MemoryDisabledReason, MemoryStatus, MemoryStatusView};
+use cyril_core::types::{
+    MemoryDisabledReason, MemoryLessonListView, MemoryLessonView, MemoryProjectBinding,
+    MemoryStatus, MemoryStatusView, MemoryTeachOperation, MemoryTeachView,
+};
 
 /// Format `/memory status` from the immutable domain view.
 pub fn format_memory_status(status: &MemoryStatusView) -> String {
-    match status.status() {
+    let mut rendered = match status.status() {
         MemoryStatus::Disabled => match status.disabled_reason() {
             Some(MemoryDisabledReason::Absent) => {
                 "Memory: disabled\nAdd `[memory] enabled = true` to Cyril's config to enable it."
@@ -42,13 +45,101 @@ pub fn format_memory_status(status: &MemoryStatusView) -> String {
             "Memory: failed\n{}\nFix the memory configuration or runtime and restart Cyril; ordinary chat remains available.",
             status.detail().unwrap_or("Runtime startup failed.")
         ),
+    };
+    // The project axis is independent of runtime health: a Ready runtime
+    // with an unbound project cannot serve lesson commands, and this is the
+    // one place the user can see why.
+    match status.project() {
+        Some(MemoryProjectBinding::Bound { display_path }) => {
+            rendered.push_str("\nProject: ");
+            rendered.push_str(display_path);
+        }
+        Some(MemoryProjectBinding::Unbound { reason }) => {
+            rendered.push_str("\nProject: unbound — ");
+            rendered.push_str(reason);
+            rendered.push_str("\nLesson commands and first-prompt lessons are unavailable.");
+        }
+        None => {}
+    }
+    rendered
+}
+
+/// Format the outcome of `/memory teach` or `/memory teach --replace`.
+pub fn format_memory_teach(result: &MemoryTeachView) -> String {
+    let action = match (result.operation(), result.created()) {
+        (MemoryTeachOperation::Teach, true) => "Lesson created",
+        (MemoryTeachOperation::Teach, false) => "Lesson already active",
+        (MemoryTeachOperation::Replace, true) => "Lesson replaced",
+        (MemoryTeachOperation::Replace, false) => {
+            "Lesson replaced; the new text matches this already-active lesson"
+        }
+    };
+    format!("{action}:\n{}", format_memory_lesson(result.lesson()))
+}
+
+pub fn format_memory_list(result: &MemoryLessonListView) -> String {
+    if result.lessons().is_empty() && result.corrupt_count() == 0 {
+        return "No active project lessons.".to_owned();
+    }
+    let mut lines = Vec::with_capacity(result.lessons().len() + 3);
+    lines.push("Active project lessons:".to_owned());
+    lines.extend(result.lessons().iter().map(|lesson| {
+        format!(
+            "{} [{} / {} / {}] {}",
+            lesson.id(),
+            lesson.provenance().as_str(),
+            lesson.trust().as_str(),
+            lesson.status().as_str(),
+            single_line(lesson.content())
+        )
+    }));
+    if result.omitted_count() > 0 {
+        lines.push(format!("+{} more", result.omitted_count()));
+    }
+    if result.corrupt_count() > 0 {
+        lines.push(format!(
+            "{} corrupt lesson row(s) skipped — see cyril.log",
+            result.corrupt_count()
+        ));
+    }
+    lines.join("\n")
+}
+
+pub fn format_memory_lesson(lesson: &MemoryLessonView) -> String {
+    let supersedes = lesson.supersedes_id().unwrap_or("none");
+    format!(
+        "ID: {}\nProvenance: {}\nTrust: {}\nStatus: {}\nSupersedes: {}\nCreated: {}\nUpdated: {}\nContent: {}",
+        lesson.id(),
+        lesson.provenance().as_str(),
+        lesson.trust().as_str(),
+        lesson.status().as_str(),
+        supersedes,
+        lesson.created_at_ms(),
+        lesson.updated_at_ms(),
+        lesson.content()
+    )
+}
+
+/// One list row stays one row: multi-line content shows its first line plus
+/// how many lines follow, so a lesson cannot masquerade as several entries.
+fn single_line(content: &str) -> String {
+    let mut lines = content.lines();
+    let first = lines.next().unwrap_or_default();
+    let more = lines.count();
+    if more == 0 {
+        first.to_owned()
+    } else {
+        format!("{first} (+{more} more line(s))")
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cyril_core::types::MemoryStoreVersions;
+    use cyril_core::types::{
+        MemoryLessonMetadataView, MemoryLessonProvenance, MemoryLessonStatus, MemoryLessonTrust,
+        MemoryStoreVersions,
+    };
 
     #[test]
     fn five_state_table_is_explicit_and_actionable() {
@@ -75,6 +166,7 @@ mod tests {
             let rendered = format_memory_status(&status);
             assert!(rendered.starts_with(label));
             assert!(!rendered.trim().is_empty());
+            assert!(!rendered.contains("Project:"));
         }
     }
 
@@ -88,5 +180,122 @@ mod tests {
         assert!(rendered.contains("Protocol: 1"));
         assert!(rendered.contains("memory 2, knowledge 3"));
         assert!(rendered.contains("instance-1"));
+    }
+
+    #[test]
+    fn project_binding_is_shown_with_its_cause() {
+        let ready = MemoryStatusView::ready("instance-1", 1, MemoryStoreVersions::new(2, 1));
+        let bound = format_memory_status(
+            &ready
+                .clone()
+                .with_project(Some(MemoryProjectBinding::bound("/work/proj"))),
+        );
+        assert!(bound.ends_with("Project: /work/proj"), "{bound}");
+        let unbound = format_memory_status(&ready.with_project(Some(
+            MemoryProjectBinding::unbound("Git metadata file /work/proj/.git is invalid"),
+        )));
+        assert!(unbound.starts_with("Memory: ready"), "{unbound}");
+        assert!(
+            unbound.contains("Project: unbound — Git metadata file /work/proj/.git is invalid"),
+            "{unbound}"
+        );
+        assert!(unbound.contains("Lesson commands and first-prompt lessons are unavailable."));
+    }
+
+    fn lesson(index: usize, status: MemoryLessonStatus) -> MemoryLessonView {
+        lesson_with_content(index, status, &format!("lesson {index}"))
+    }
+
+    fn lesson_with_content(
+        index: usize,
+        status: MemoryLessonStatus,
+        content: &str,
+    ) -> MemoryLessonView {
+        MemoryLessonView::new(
+            format!("{index:032x}"),
+            content.to_owned(),
+            MemoryLessonMetadataView::new(
+                MemoryLessonProvenance::UserExplicit,
+                MemoryLessonTrust::Instruction,
+                status,
+                (index > 0).then(|| format!("{:032x}", index - 1)),
+                1_000,
+                2_000,
+            ),
+        )
+    }
+
+    #[test]
+    fn lesson_command_matrix_is_bounded_and_typed() {
+        let active = lesson(1, MemoryLessonStatus::Active);
+        let created = format_memory_teach(&MemoryTeachView::new(
+            MemoryTeachOperation::Teach,
+            active.clone(),
+            true,
+        ));
+        assert!(created.starts_with("Lesson created:"));
+        let replaced = format_memory_teach(&MemoryTeachView::new(
+            MemoryTeachOperation::Replace,
+            active.clone(),
+            true,
+        ));
+        assert!(replaced.starts_with("Lesson replaced:"));
+        let resolved = format_memory_teach(&MemoryTeachView::new(
+            MemoryTeachOperation::Replace,
+            active.clone(),
+            false,
+        ));
+        assert!(
+            resolved
+                .starts_with("Lesson replaced; the new text matches this already-active lesson:"),
+            "{resolved}"
+        );
+        assert!(created.contains("Provenance: user_explicit"));
+        assert!(created.contains("Trust: instruction"));
+        assert!(created.contains("Status: active"));
+
+        let duplicate = format_memory_teach(&MemoryTeachView::new(
+            MemoryTeachOperation::Teach,
+            active.clone(),
+            false,
+        ));
+        assert!(duplicate.starts_with("Lesson already active:"));
+        assert_eq!(
+            format_memory_list(&MemoryLessonListView::new(Vec::new(), 0, 0)),
+            "No active project lessons."
+        );
+
+        let many: Vec<_> = (0..100)
+            .map(|index| lesson(index, MemoryLessonStatus::Active))
+            .collect();
+        let rendered = format_memory_list(&MemoryLessonListView::new(many, 1, 0));
+        assert!(rendered.contains("+1 more"));
+        assert!(!rendered.contains("corrupt"));
+        assert!(rendered.len() <= 20 * 1_024);
+
+        let invalidated = format_memory_lesson(&lesson(2, MemoryLessonStatus::Invalidated));
+        assert!(invalidated.contains("Status: invalidated"));
+        assert!(invalidated.contains("Supersedes: 00000000000000000000000000000001"));
+    }
+
+    #[test]
+    fn list_rows_stay_single_line_and_report_corrupt_rows() {
+        let multi = lesson_with_content(
+            3,
+            MemoryLessonStatus::Active,
+            "first line\nsecond line\nthird line",
+        );
+        let rendered = format_memory_list(&MemoryLessonListView::new(vec![multi], 0, 2));
+        let rows: Vec<&str> = rendered.lines().collect();
+        assert_eq!(rows.len(), 3, "{rendered}");
+        assert!(
+            rows[1].ends_with("first line (+2 more line(s))"),
+            "{rendered}"
+        );
+        assert!(!rendered.contains("second line"));
+        assert_eq!(rows[2], "2 corrupt lesson row(s) skipped — see cyril.log");
+
+        let only_corrupt = format_memory_list(&MemoryLessonListView::new(Vec::new(), 0, 1));
+        assert!(only_corrupt.contains("1 corrupt lesson row(s) skipped"));
     }
 }

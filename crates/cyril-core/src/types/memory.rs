@@ -35,6 +35,32 @@ impl MemoryStoreVersions {
     }
 }
 
+/// How the startup workspace is bound to project memory. Orthogonal to the
+/// runtime lifecycle: a Ready runtime with an unbound project still cannot
+/// serve lesson commands, and the user needs to see why.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MemoryProjectBinding {
+    /// The workspace resolved to a project; `display_path` is its canonical
+    /// location.
+    Bound { display_path: String },
+    /// The workspace could not be resolved; `reason` is the cause.
+    Unbound { reason: String },
+}
+
+impl MemoryProjectBinding {
+    pub fn bound(display_path: impl AsRef<str>) -> Self {
+        Self::Bound {
+            display_path: bound_text(display_path.as_ref()),
+        }
+    }
+
+    pub fn unbound(reason: impl AsRef<str>) -> Self {
+        Self::Unbound {
+            reason: bound_text(reason.as_ref()),
+        }
+    }
+}
+
 /// Immutable, engine-neutral memory status projected into commands and UI.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MemoryStatusView {
@@ -44,6 +70,7 @@ pub struct MemoryStatusView {
     instance_id: Option<String>,
     protocol_version: Option<u16>,
     store_versions: Option<MemoryStoreVersions>,
+    project: Option<MemoryProjectBinding>,
 }
 
 impl Default for MemoryStatusView {
@@ -61,6 +88,7 @@ impl MemoryStatusView {
             instance_id: None,
             protocol_version: None,
             store_versions: None,
+            project: None,
         }
     }
 
@@ -72,6 +100,7 @@ impl MemoryStatusView {
             instance_id: None,
             protocol_version: None,
             store_versions: None,
+            project: None,
         }
     }
 
@@ -92,6 +121,7 @@ impl MemoryStatusView {
             instance_id: Some(bound_text(&instance_id)),
             protocol_version: Some(protocol_version),
             store_versions: Some(store_versions),
+            project: None,
         }
     }
 
@@ -111,7 +141,15 @@ impl MemoryStatusView {
             instance_id: None,
             protocol_version: None,
             store_versions: None,
+            project: None,
         }
+    }
+
+    /// Attach the project-binding axis (absent when memory is disabled).
+    #[must_use]
+    pub fn with_project(mut self, project: Option<MemoryProjectBinding>) -> Self {
+        self.project = project;
+        self
     }
 
     pub const fn status(&self) -> MemoryStatus {
@@ -136,6 +174,221 @@ impl MemoryStatusView {
 
     pub const fn store_versions(&self) -> Option<MemoryStoreVersions> {
         self.store_versions
+    }
+
+    pub const fn project(&self) -> Option<&MemoryProjectBinding> {
+        self.project.as_ref()
+    }
+}
+
+/// Where a lesson came from. Only explicit user teaching exists today.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemoryLessonProvenance {
+    UserExplicit,
+}
+
+impl MemoryLessonProvenance {
+    /// Display vocabulary — the one place the UI spelling lives.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::UserExplicit => "user_explicit",
+        }
+    }
+}
+
+/// How a lesson is presented to the model. Only instructions exist today.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemoryLessonTrust {
+    Instruction,
+}
+
+impl MemoryLessonTrust {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Instruction => "instruction",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemoryLessonStatus {
+    Active,
+    Invalidated,
+}
+
+impl MemoryLessonStatus {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Invalidated => "invalidated",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryLessonMetadataView {
+    provenance: MemoryLessonProvenance,
+    trust: MemoryLessonTrust,
+    status: MemoryLessonStatus,
+    supersedes_id: Option<String>,
+    created_at_ms: i64,
+    updated_at_ms: i64,
+}
+
+impl MemoryLessonMetadataView {
+    pub fn new(
+        provenance: MemoryLessonProvenance,
+        trust: MemoryLessonTrust,
+        status: MemoryLessonStatus,
+        supersedes_id: Option<String>,
+        created_at_ms: i64,
+        updated_at_ms: i64,
+    ) -> Self {
+        Self {
+            provenance,
+            trust,
+            status,
+            supersedes_id,
+            created_at_ms,
+            updated_at_ms,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryLessonView {
+    id: String,
+    content: String,
+    provenance: MemoryLessonProvenance,
+    trust: MemoryLessonTrust,
+    status: MemoryLessonStatus,
+    supersedes_id: Option<String>,
+    created_at_ms: i64,
+    updated_at_ms: i64,
+}
+
+impl MemoryLessonView {
+    pub fn new(id: String, content: String, metadata: MemoryLessonMetadataView) -> Self {
+        Self {
+            id,
+            content,
+            provenance: metadata.provenance,
+            trust: metadata.trust,
+            status: metadata.status,
+            supersedes_id: metadata.supersedes_id,
+            created_at_ms: metadata.created_at_ms,
+            updated_at_ms: metadata.updated_at_ms,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn content(&self) -> &str {
+        &self.content
+    }
+
+    pub const fn provenance(&self) -> MemoryLessonProvenance {
+        self.provenance
+    }
+
+    pub const fn trust(&self) -> MemoryLessonTrust {
+        self.trust
+    }
+
+    pub const fn status(&self) -> MemoryLessonStatus {
+        self.status
+    }
+
+    pub fn supersedes_id(&self) -> Option<&str> {
+        self.supersedes_id.as_deref()
+    }
+
+    pub const fn created_at_ms(&self) -> i64 {
+        self.created_at_ms
+    }
+
+    pub const fn updated_at_ms(&self) -> i64 {
+        self.updated_at_ms
+    }
+}
+
+/// Which lesson-writing operation produced a [`MemoryTeachView`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemoryTeachOperation {
+    Teach,
+    Replace,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryTeachView {
+    operation: MemoryTeachOperation,
+    lesson: MemoryLessonView,
+    created: bool,
+}
+
+impl MemoryTeachView {
+    pub const fn new(
+        operation: MemoryTeachOperation,
+        lesson: MemoryLessonView,
+        created: bool,
+    ) -> Self {
+        Self {
+            operation,
+            lesson,
+            created,
+        }
+    }
+
+    pub const fn operation(&self) -> MemoryTeachOperation {
+        self.operation
+    }
+
+    pub const fn lesson(&self) -> &MemoryLessonView {
+        &self.lesson
+    }
+
+    /// `true` when a new lesson row was written; `false` when the text
+    /// matched an already-active lesson, which is the lesson carried here.
+    pub const fn created(&self) -> bool {
+        self.created
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryLessonListView {
+    lessons: Vec<MemoryLessonView>,
+    omitted_count: usize,
+    corrupt_count: usize,
+}
+
+impl MemoryLessonListView {
+    pub const fn new(
+        lessons: Vec<MemoryLessonView>,
+        omitted_count: usize,
+        corrupt_count: usize,
+    ) -> Self {
+        Self {
+            lessons,
+            omitted_count,
+            corrupt_count,
+        }
+    }
+
+    pub fn lessons(&self) -> &[MemoryLessonView] {
+        &self.lessons
+    }
+
+    /// Active lessons beyond the list cap.
+    pub const fn omitted_count(&self) -> usize {
+        self.omitted_count
+    }
+
+    /// Active rows the runtime skipped because their stored integrity check
+    /// failed.
+    pub const fn corrupt_count(&self) -> usize {
+        self.corrupt_count
     }
 }
 
@@ -181,7 +434,33 @@ mod tests {
         assert_eq!(versions.knowledge(), 2);
         assert_eq!(rows[4].detail(), Some("health unavailable"));
         assert_eq!(rows[5].status(), MemoryStatus::Failed);
+        assert!(rows.iter().all(|row| row.project().is_none()));
         assert_send_sync::<MemoryStatusView>();
+    }
+
+    #[test]
+    fn project_binding_is_an_orthogonal_axis() {
+        let ready = MemoryStatusView::ready("instance", 1, MemoryStoreVersions::new(2, 1));
+        let bound = ready
+            .clone()
+            .with_project(Some(MemoryProjectBinding::bound("/work/proj")));
+        assert_eq!(
+            bound.project(),
+            Some(&MemoryProjectBinding::Bound {
+                display_path: "/work/proj".to_owned()
+            })
+        );
+        assert_eq!(bound.status(), MemoryStatus::Ready);
+        let unbound = ready.with_project(Some(MemoryProjectBinding::unbound(
+            "Git metadata file /work/proj/.git is invalid",
+        )));
+        assert_eq!(
+            unbound.project(),
+            Some(&MemoryProjectBinding::Unbound {
+                reason: "Git metadata file /work/proj/.git is invalid".to_owned()
+            })
+        );
+        assert_ne!(bound, unbound);
     }
 
     #[test]
@@ -190,5 +469,22 @@ mod tests {
         let detail = view.detail().expect("detail");
         assert!(detail.len() <= MAX_DETAIL_BYTES);
         assert!(detail.ends_with("..."));
+        let MemoryProjectBinding::Unbound { reason } =
+            MemoryProjectBinding::unbound("Ω".repeat(300))
+        else {
+            panic!("unbound expected");
+        };
+        assert!(reason.len() <= MAX_DETAIL_BYTES);
+    }
+
+    #[test]
+    fn lesson_vocabulary_is_spelled_once() {
+        assert_eq!(
+            MemoryLessonProvenance::UserExplicit.as_str(),
+            "user_explicit"
+        );
+        assert_eq!(MemoryLessonTrust::Instruction.as_str(), "instruction");
+        assert_eq!(MemoryLessonStatus::Active.as_str(), "active");
+        assert_eq!(MemoryLessonStatus::Invalidated.as_str(), "invalidated");
     }
 }

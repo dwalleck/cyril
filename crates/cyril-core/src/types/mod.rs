@@ -33,7 +33,11 @@ pub use event::{
 };
 pub use hook::HookInfo;
 pub use kas_spawn::KasSpawn;
-pub use memory::{MemoryDisabledReason, MemoryStatus, MemoryStatusView, MemoryStoreVersions};
+pub use memory::{
+    MemoryDisabledReason, MemoryLessonListView, MemoryLessonMetadataView, MemoryLessonProvenance,
+    MemoryLessonStatus, MemoryLessonTrust, MemoryLessonView, MemoryProjectBinding, MemoryStatus,
+    MemoryStatusView, MemoryStoreVersions, MemoryTeachOperation, MemoryTeachView,
+};
 pub use message::{AgentMessage, AgentThought, UserMessage};
 pub use plan::{Plan, PlanEntry, PlanEntryPriority, PlanEntryStatus};
 pub use present_as::PresentAs;

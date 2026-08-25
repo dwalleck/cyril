@@ -16,6 +16,8 @@ constant_time_eq = { workspace = true }
 getrandom = { workspace = true }
 hex = { workspace = true }
 rusqlite = { workspace = true }
+regex = { workspace = true }
+sha2 = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_path_to_error = { workspace = true }

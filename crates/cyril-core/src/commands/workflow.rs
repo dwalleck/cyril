@@ -199,6 +199,7 @@ mod tests {
 
     async fn run(harness: &mut Harness, args: &str) -> CommandResult {
         let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
             session: &harness.session,
             bridge: &harness.bridge,
             subagent_tracker: None,

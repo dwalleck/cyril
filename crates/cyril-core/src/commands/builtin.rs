@@ -1,4 +1,6 @@
-use crate::commands::{Command, CommandContext, CommandResult, UsageAccountCommandSource};
+use crate::commands::{
+    Command, CommandContext, CommandResult, MemoryCommandAction, UsageAccountCommandSource,
+};
 use crate::types::BridgeCommand;
 
 /// /help — show available commands
@@ -174,9 +176,10 @@ impl Command for UsageCommand {
         Ok(CommandResult::show_usage(account_query_requested))
     }
 }
-/// `/memory status` — report Cyril's local memory runtime state without a
-/// bridge or runtime round-trip.
+/// `/memory` — typed project lesson operations. The binary owns persistence.
 pub struct MemoryCommand;
+
+const MEMORY_USAGE: &str = "Usage: /memory status | teach <text> | teach --replace <lesson-id> <text> | list | inspect <lesson-id>";
 
 #[async_trait::async_trait]
 impl Command for MemoryCommand {
@@ -185,22 +188,66 @@ impl Command for MemoryCommand {
     }
 
     fn description(&self) -> &str {
-        "Show local memory runtime status"
+        "Show memory status or manage explicit project lessons"
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
-        if args.trim() != "status" {
-            return Ok(CommandResult::system_message(
-                "Usage: /memory status".to_owned(),
-            ));
+        // Tokenized on any whitespace run, never on a literal single space:
+        // `teach  --replace <id> <text>` (double space, or a pasted tab) must
+        // be a replacement, not a new lesson whose text starts with
+        // `--replace`.
+        let (subcommand, rest) = split_token(args);
+        if subcommand == "status" && rest.is_empty() {
+            let Some(status) = ctx.memory_status else {
+                tracing::error!("CommandContext.memory_status is None — wiring error in App");
+                return Ok(CommandResult::system_message(
+                    "Memory status unavailable.".to_owned(),
+                ));
+            };
+            return Ok(CommandResult::memory_status(status.clone()));
         }
-        let Some(status) = ctx.memory_status else {
-            tracing::error!("CommandContext.memory_status is None — wiring error in App");
-            return Ok(CommandResult::system_message(
-                "Memory status unavailable.".to_owned(),
-            ));
+        let action = match (subcommand, rest) {
+            ("list", "") => Some(MemoryCommandAction::List),
+            ("inspect", rest) => match split_token(rest) {
+                (lesson_id, "") if !lesson_id.is_empty() => Some(MemoryCommandAction::Inspect {
+                    lesson_id: lesson_id.to_owned(),
+                }),
+                _ => None,
+            },
+            ("teach", rest) => match split_token(rest) {
+                ("--replace", replacement) => match split_token(replacement) {
+                    (lesson_id, text) if !lesson_id.is_empty() && !text.is_empty() => {
+                        Some(MemoryCommandAction::Replace {
+                            lesson_id: lesson_id.to_owned(),
+                            text: text.to_owned(),
+                        })
+                    }
+                    _ => None,
+                },
+                (first, _) if !first.is_empty() => Some(MemoryCommandAction::Teach {
+                    text: rest.to_owned(),
+                }),
+                _ => None,
+            },
+            _ => None,
         };
-        Ok(CommandResult::memory_status(status.clone()))
+        Ok(action.map_or_else(
+            || CommandResult::system_message(MEMORY_USAGE.to_owned()),
+            CommandResult::memory_action,
+        ))
+    }
+}
+
+/// Split the leading whitespace-delimited token from `input`.
+///
+/// Returns `(token, remainder)` with the remainder trimmed at both ends so
+/// internal spacing of lesson text is preserved while surrounding whitespace
+/// (including a tab or a double space after the token) is not.
+fn split_token(input: &str) -> (&str, &str) {
+    let input = input.trim();
+    match input.split_once(char::is_whitespace) {
+        Some((token, rest)) => (token, rest.trim()),
+        None => (input, ""),
     }
 }
 
@@ -218,15 +265,11 @@ impl Command for NewCommand {
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, _args: &str) -> crate::Result<CommandResult> {
-        let cwd = std::env::current_dir().map_err(|e| {
-            crate::Error::with_source(
-                crate::ErrorKind::CommandFailed {
-                    detail: "could not determine current working directory".into(),
-                },
-                e,
-            )
-        })?;
-        ctx.bridge.send(BridgeCommand::NewSession { cwd }).await?;
+        ctx.bridge
+            .send(BridgeCommand::NewSession {
+                cwd: ctx.workspace.to_path_buf(),
+            })
+            .await?;
         Ok(CommandResult::dispatched())
     }
 }

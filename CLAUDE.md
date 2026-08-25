@@ -144,8 +144,8 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 - **Must NOT:** Import any UI crate. Reference ratatui, crossterm, or any rendering concept. Know how content is displayed.
 - **Dependency rule:** Only crate that imports `agent-client-protocol`. No other crate may reference `acp::` types.
 **`cyril-memory`** — Local memory domain and runtime.
-- **Owns:** Presence-aware `[memory]` validation, canonical private data paths, versioned SQLite stores, exclusive ownership, authenticated local IPC, and the `MemoryRequest → MemoryResponse` admin protocol.
-- **Responsibility:** Hide storage, framing, authentication, migrations, and platform IPC behind `AdminClient::{health, shutdown}` and the companion runtime entrypoint.
+- **Owns:** Presence-aware `[memory]` validation, canonical project identity, explicit-lesson validation/trust policy, private versioned SQLite stores, exclusive ownership, authenticated local IPC, and the `MemoryRequest → MemoryResponse` admin protocol.
+- **Responsibility:** Hide lesson history/audit, storage, framing, authentication, migrations, and platform IPC behind typed `AdminClient` project operations plus health/shutdown and the companion runtime entrypoint.
 - **Must NOT:** Import ACP, MCP, ratatui, or native-model types. Add retrieval/content/job schema before a production consumer. Define a backend trait or selector while local is the only implementation.
 - **Dependency rule:** `cyril` may depend on `cyril-memory`; core and UI remain persistence-free.
 
@@ -158,7 +158,7 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 
 **`cyril`** — Thin orchestrator binary.
 - **Owns:** `App` (event loop), CLI args, terminal setup, companion-process startup and bounded shutdown, wiring between modules
-- **Responsibility:** Wire `cyril-core`, `cyril-memory`, and `cyril-ui` together. Run the `tokio::select!` event loop. Route typed memory status without making ACP session state depend on it.
+- **Responsibility:** Wire `cyril-core`, `cyril-memory`, and `cyril-ui` together. Run the `tokio::select!` event loop. Bind the canonical startup project and route typed memory status, lesson commands, and first-prompt context without making ACP session state depend on persistence. Memory round trips run on spawned tasks and report back through the loop; nothing awaits the companion inline.
 - **Must NOT:** Contain memory storage/protocol logic. Parse JSON responses. Make rendering decisions.
 
 ### Component Separation Within Crates

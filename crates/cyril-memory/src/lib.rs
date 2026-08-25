@@ -5,9 +5,12 @@
 
 mod client;
 mod config;
+mod encoding;
 mod ipc;
+mod lesson;
 mod paths;
 mod permissions;
+mod project;
 mod protocol;
 mod runtime;
 mod store;
@@ -18,10 +21,15 @@ pub use config::{
     ConfigDiagnostic, ConfigLoadReport, MemoryConfig, MemoryConfigState, load_config_report,
 };
 pub use ipc::{IpcError, MemoryEndpoint};
+pub use lesson::{
+    ContextBlock, LESSON_PREVIEW_CHARS, LessonError, LessonId, LessonIdParseError,
+    LessonProvenance, LessonStatus, LessonText, LessonTrust, MAX_CONTEXT_CHARS, MAX_LESSON_CHARS,
+};
 pub use paths::{MemoryPaths, PathError};
+pub use project::{ProjectError, ProjectId, ProjectScope};
 pub use protocol::{
-    HealthResponse, MemoryErrorCode, MemoryProtocolError, MemoryRequest, MemoryResponse,
-    PROTOCOL_VERSION, RuntimeHealth,
+    HealthResponse, LessonListResponse, LessonRecord, MemoryErrorCode, MemoryProtocolError,
+    MemoryRequest, MemoryResponse, PROTOCOL_VERSION, RuntimeHealth, TeachResponse,
 };
 pub use runtime::{RuntimeError, RuntimeLaunchConfig, run_runtime};
 pub use store::{MemoryStoreVersions, StoreError, StoreSet};

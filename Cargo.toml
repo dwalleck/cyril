@@ -32,6 +32,7 @@ hex = "0.4"
 interprocess = { version = "2.4.3", default-features = false, features = ["tokio"] }
 serde_path_to_error = { version = "0.1", default-features = false }
 regex = { version = "1", default-features = false, features = ["std", "perf"] }
+sha2 = "0.10"
 thiserror = "2"
 tracing = "0.1"
 anyhow = "1"
