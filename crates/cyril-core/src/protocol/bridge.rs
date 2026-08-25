@@ -3227,25 +3227,15 @@ mod tests {
     // delivers it LAST (after the backlog, in channel order).
     #[cfg(feature = "kas")]
     #[tokio::test]
-    /// REGRESSION FENCE (pre-PR review). An unstamped terminal that matches NO
-    /// companion expectation and has NO active turn must be DROPPED.
+    /// REGRESSION FENCE. A foreign terminal that enters before the owner
+    /// response is forwarded without the main turn stamp; the owner response
+    /// still releases the main turn exactly once.
     ///
-    /// Slice 7 broke this: writing the foreign-forwarding arm, I gave the
-    /// no-active arm the same treatment (`None => {}`) reasoning it should reach
-    /// "the routed consumer". The foreign case HAS a consumer; this one does not
-    /// -- it is a late or duplicate terminal for a turn that already ended, and
-    /// forwarding makes the App commit streaming and metering twice. `main`
-    /// dropped it; spec.md:242 requires Drop.
-    ///
-    /// Reaching that arm needs care. The harness delivers the prompt RESPONSE
-    /// before the turn_end (more hops on the notification path), so the response
-    /// releases the turn and registers a `Wire` expectation scoped to the MAIN
-    /// session. A main-scoped turn_end would then be absorbed by the ledger and
-    /// never reach the no-active arm at all -- which is exactly why a first
-    /// attempt at this fence passed under mutation. Scoping the turn_end to a
-    /// FOREIGN session defeats the absorb check (session mismatch) and leaves it
-    /// with no active turn to own it, which is the branch under test.
-    async fn unowned_terminal_with_no_active_turn_is_dropped() {
+    /// The source-capture ingress barrier deliberately waits for callbacks
+    /// already in flight before handling the prompt response. The scripted KAS
+    /// turn_end therefore reaches mediation first. This complements the pure
+    /// `TurnMediator` fences for the later no-active `DropUnowned` branch.
+    async fn foreign_terminal_precedes_owner_response_under_ingress_barrier() {
         let script = Rc::new(RefCell::new(Script {
             emit_turn_end: true,
             turn_end_session: Some("sess_foreign".into()),
@@ -3264,21 +3254,27 @@ mod tests {
                     .await
                     .unwrap();
 
-                // The response releases the turn and stamps its own completion.
+                let foreign = drain_to_turn_envelope(&mut rx).await;
+                assert_eq!(
+                    foreign.session_id.as_ref().map(|id| id.as_str()),
+                    Some("sess_foreign")
+                );
+                assert!(
+                    foreign.turn.is_none(),
+                    "foreign terminal must not carry the main turn stamp"
+                );
+
                 let released = drain_to_turn_envelope(&mut rx).await;
                 assert!(
                     released.turn.is_some(),
-                    "released by the owner-stamped response"
+                    "owner-stamped response releases the main turn"
                 );
-
-                // The foreign turn_end now has no active turn and no matching
-                // expectation. It must be dropped, not forwarded.
                 assert!(
                     !matches!(
                         recv_notif(&mut rx, 1).await,
                         Some(Notification::TurnCompleted { .. })
                     ),
-                    "an unowned terminal with no active turn must be dropped"
+                    "owner response must not produce a duplicate completion"
                 );
             },
         )

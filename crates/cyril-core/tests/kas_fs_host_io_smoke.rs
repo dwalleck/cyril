@@ -49,7 +49,7 @@ async fn fs_read_write_served_by_cyril() {
         dir.path().to_path_buf(),
     )
     .expect("spawn_bridge");
-    let (sender, mut notif_rx, mut perm_rx) = bridge.split();
+    let (sender, mut notif_rx, mut perm_rx, _source_rx, _completion_rx) = bridge.split();
 
     // Auto-approve permissions; record tool-call titles so we can verify the WRITE
     // was gated (C9). KAS auto-allows reads, so no read permission is expected.

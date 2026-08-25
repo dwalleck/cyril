@@ -12,10 +12,30 @@
 use agent_client_protocol::{self as acp, Client as _};
 use tokio::sync::mpsc;
 
-use crate::protocol::client::KiroClient;
-use crate::protocol::engine::V2Engine;
+use crate::protocol::client::{HostCallbackItem, KiroClient};
+use crate::protocol::engine::{Engine, V2Engine};
+use crate::protocol::source_observer::{IngressTracker, SourceObserver};
 use crate::types::AgentEngine;
 
+fn test_client(
+    notification_tx: mpsc::Sender<crate::types::RoutedNotification>,
+    permission_tx: mpsc::Sender<crate::types::PermissionRequest>,
+    engine: std::rc::Rc<dyn Engine>,
+    host_tx: mpsc::Sender<HostCallbackItem>,
+    cwd: &std::path::Path,
+) -> KiroClient {
+    let (source_tx, _source_rx) =
+        mpsc::channel(crate::types::source_turn::SOURCE_EVENT_CHANNEL_CAPACITY);
+    KiroClient::new(
+        notification_tx,
+        permission_tx,
+        SourceObserver::new(source_tx),
+        IngressTracker::new(),
+        engine,
+        host_tx,
+        cwd,
+    )
+}
 #[derive(Debug, PartialEq)]
 enum Disposition {
     /// JSON-RPC method-not-found — the post-fix shape for un-adaptered families.
@@ -41,7 +61,7 @@ fn v2_client_in_kas_build(cwd: &std::path::Path) -> KiroClient {
     let (ntx, _nrx) = mpsc::channel(4);
     let (ptx, _prx) = mpsc::channel(1);
     // V2 binding mirrors bridge.rs::resolve_host_shell: V2 => no host shell.
-    KiroClient::new(
+    test_client(
         ntx,
         ptx,
         std::rc::Rc::new(V2Engine),
@@ -162,7 +182,7 @@ async fn v2_bound_client_refuses_every_unadapted_family() {
 /// capability override could introduce (C8) fails its named cell here.
 #[tokio::test]
 async fn adapter_matrix_advertise_iff_answer() {
-    use crate::protocol::engine::{Engine, KasEngine, client_capabilities};
+    use crate::protocol::engine::{KasEngine, client_capabilities};
     use crate::types::kas_hooks::KasHooksMode;
 
     let engines: Vec<(&str, std::rc::Rc<dyn Engine>)> = vec![
@@ -199,7 +219,7 @@ async fn adapter_matrix_advertise_iff_answer() {
         // The mediation seam loads an (empty) hooks registry from the tempdir,
         // so a Host-mode engine's inbound list SERVES `{hooks:[]}`; engines
         // that don't serve inbound refuse at the client gate before dispatch.
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             engine.clone(),
@@ -390,7 +410,7 @@ async fn kas_outbound_hooks_mode_refuses_inbound_serving() {
     let dir = tempfile::tempdir().unwrap();
     let (ntx, _nrx) = mpsc::channel(4);
     let (ptx, _prx) = mpsc::channel(1);
-    let client = KiroClient::new(
+    let client = test_client(
         ntx,
         ptx,
         std::rc::Rc::new(crate::protocol::engine::KasEngine {

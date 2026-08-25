@@ -39,7 +39,7 @@ async fn freepath_turn_completes_through_bridge() {
         cwd.clone(),
     )
     .expect("spawn_bridge");
-    let (sender, mut notif_rx, _perm_rx) = bridge.split();
+    let (sender, mut notif_rx, _perm_rx, _source_rx, _completion_rx) = bridge.split();
 
     sender
         .send(BridgeCommand::NewSession { cwd })

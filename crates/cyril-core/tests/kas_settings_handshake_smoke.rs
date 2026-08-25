@@ -45,7 +45,7 @@ async fn settings_handshake_turn_completes_and_orchestrates() {
         dir.path().to_path_buf(),
     )
     .expect("spawn_bridge");
-    let (sender, mut notif_rx, mut perm_rx) = bridge.split();
+    let (sender, mut notif_rx, mut perm_rx, _source_rx, _completion_rx) = bridge.split();
 
     // Auto-approve any permission the delegation turn raises.
     let approver = tokio::spawn(async move {
