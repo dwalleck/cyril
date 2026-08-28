@@ -4148,8 +4148,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn kiro_snapshot_remains_bounded_at_100k() {
+    /// Seeds 100,000 turns across one provider/model/folder/agent group, with
+    /// 1,000 tool rows and one context sample. Shared by the shape fence below
+    /// and the wall-clock fence that follows it.
+    fn seed_hundred_thousand_turns() -> UsageLog {
         let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
         let transaction = must_succeed(log.connection.transaction(), "bulk transaction");
         {
@@ -4200,9 +4202,24 @@ mod tests {
             ),
             "seed context",
         );
-        let started = Instant::now();
+        log
+    }
+
+    /// The snapshot stays bounded in SIZE at 100,000 rows: `recent` and
+    /// `errors` clamp to `RECENT_LIMIT`, the rollups collapse to their one
+    /// real group, and the tool rollup carries exactly what was seeded.
+    ///
+    /// The wall-clock half of this test moved to the `#[ignore]`d fence below
+    /// (cyril-9kyk review). It asserted `snapshot()` completes in under two
+    /// seconds, in the ordinary suite, on shared CI runners — and it failed on
+    /// the ubuntu leg for machine load. Because nextest cancels on first
+    /// failure, that one stopwatch aborted the job and every alphabetically
+    /// later test never ran. The size assertions below are deterministic and
+    /// belong in CI; the stopwatch does not.
+    #[test]
+    fn kiro_snapshot_remains_bounded_at_100k() {
+        let log = seed_hundred_thousand_turns();
         let snapshot = must_succeed(log.snapshot(), "bounded snapshot");
-        assert!(started.elapsed() <= Duration::from_secs(2));
         assert_eq!(snapshot.overview.requests, 100_000);
         assert_eq!(snapshot.recent.len(), 20);
         assert_eq!(snapshot.errors.len(), 20);
@@ -4217,6 +4234,35 @@ mod tests {
                 .as_ref()
                 .map(|value| value.percentage),
             Some(50.0)
+        );
+    }
+
+    /// The same 100k fixture, timed. `#[ignore]` for the reason above: run it
+    /// deliberately, on a machine that is not also building three other jobs.
+    ///
+    /// ```sh
+    /// cargo test -p cyril-core --lib -- --ignored kiro_snapshot_100k_budget
+    /// ```
+    ///
+    /// The two-second bound is unchanged from when this assertion lived in the
+    /// test above. What changed is the headroom: adding p90/max took a local
+    /// run from ~342 ms to ~700-760 ms (cyril-9kyk), which is why the CI leg
+    /// started tipping over. Reducing it is cyril-nanu, not a wider bound.
+    #[test]
+    #[ignore = "reference-workstation 100k snapshot budget"]
+    fn kiro_snapshot_100k_budget_reference() {
+        let log = seed_hundred_thousand_turns();
+        let started = Instant::now();
+        let snapshot = must_succeed(log.snapshot(), "bounded snapshot");
+        let elapsed = started.elapsed();
+        println!("snapshot() at 100k rows: {elapsed:?} (bound 2s)");
+        assert!(
+            elapsed <= Duration::from_secs(2),
+            "snapshot() at 100k rows took {elapsed:?}, over the 2s bound"
+        );
+        assert_eq!(
+            snapshot.overview.requests, 100_000,
+            "positive control: the measured call really did read the fixture"
         );
     }
 
@@ -4777,8 +4823,7 @@ mod tests {
     /// them directly is both tighter and less noisy than differencing two
     /// whole-snapshot runs.
     #[test]
-    #[ignore = "wall-clock fence: nextest cancels on first failure, so a loaded \
-                CI runner would abort the job; run it explicitly"]
+    #[ignore = "reference-workstation grouped-percentile budget"]
     fn grouped_percentile_stays_within_budget() {
         const ROWS: i64 = 100_000;
         const GROUPS: i64 = 20;
