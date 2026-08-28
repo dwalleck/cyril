@@ -102,4 +102,8 @@ This change does NOT include:
 | **Edge — cache invalidation** | The dirty flag of D4 is the invalidation, and the held snapshot of D6 is the only cache. | Requester decisions D4 and D6. | A held snapshot is superseded only by a newer completed one; it is never invalidated into an empty state after the first open. |
 
 ## Approval
-_(pending — step 10)_
+
+Requester approval (verbatim): "yes"
+Date: 2026-08-28
+
+Approval covers: the seven behaviors B1–B7, the seven success criteria, the out-of-scope list, and Decisions D1–D6 plus the derived and prior-art-adopted rows presented in summary — the visible in-flight marker, asynchronous panel open with last-values-on-reopen, off-loop-only scope with `snapshot()` unchanged, dirty-flag coalescing, the single deferred read transaction, the cyril-kryv-adopted failure status, and trigger-driven rather than timer-driven retry.
