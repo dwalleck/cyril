@@ -701,6 +701,18 @@ pub struct UsageSummary {
     pub avg_duration_ms: Option<f64>,
     pub avg_ttft_ms: Option<f64>,
     pub avg_tokens_per_second: Option<f64>,
+    /// Nearest-rank 90th percentile of `duration_ms` — the value at 1-based
+    /// ordered position `ceil(0.9 * N)`, so it is always a duration some turn
+    /// actually took. `None` when the group holds no rows.
+    pub p90_duration_ms: Option<f64>,
+    /// Largest observed `duration_ms`. `None` when the group holds no rows.
+    pub max_duration_ms: Option<f64>,
+    /// Nearest-rank 90th percentile of `ttft_ms`, ranked over the non-NULL
+    /// rows only — `ttft_ms` is nullable, and NULL rows never enter the rank
+    /// denominator. `None` when no row in the group reported a ttft.
+    pub p90_ttft_ms: Option<f64>,
+    /// Largest observed `ttft_ms`. `None` when no row in the group reported one.
+    pub max_ttft_ms: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

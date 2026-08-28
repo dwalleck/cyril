@@ -633,6 +633,10 @@ mod tests {
             cache_rate: Some(0.25),
             avg_duration_ms: Some(150.0),
             avg_ttft_ms: Some(25.0),
+            p90_duration_ms: Some(180.0),
+            max_duration_ms: Some(240.0),
+            p90_ttft_ms: Some(40.0),
+            max_ttft_ms: Some(55.0),
             avg_tokens_per_second: Some(200.0),
         };
         UsageSnapshot {

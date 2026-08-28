@@ -1744,7 +1744,11 @@ const SUMMARY_COLUMNS: &str = "
     COALESCE(SUM(CASE WHEN token_availability = 'backend_gated' THEN 1 ELSE 0 END), 0),
     COALESCE(SUM(CASE WHEN cost_availability = 'observed' THEN 1 ELSE 0 END), 0),
     COALESCE(SUM(CASE WHEN cost_availability = 'unreported' THEN 1 ELSE 0 END), 0),
-    COALESCE(SUM(CASE WHEN cost_availability = 'backend_gated' THEN 1 ELSE 0 END), 0)";
+    COALESCE(SUM(CASE WHEN cost_availability = 'backend_gated' THEN 1 ELSE 0 END), 0),
+    NULL AS p90_duration,
+    NULL AS max_duration,
+    NULL AS p90_ttft,
+    NULL AS max_ttft";
 
 fn summary_from_row(
     row: &Row<'_>,
@@ -1802,6 +1806,10 @@ fn summary_from_row(
         avg_duration_ms: row.get(base + 14)?,
         avg_ttft_ms: row.get(base + 15)?,
         avg_tokens_per_second: row.get(base + 16)?,
+        p90_duration_ms: row.get(base + 23)?,
+        max_duration_ms: row.get(base + 24)?,
+        p90_ttft_ms: row.get(base + 25)?,
+        max_ttft_ms: row.get(base + 26)?,
     })
 }
 
@@ -3998,5 +4006,137 @@ mod tests {
                 .map(|value| value.percentage),
             Some(50.0)
         );
+    }
+
+    /// C7 — every rollup site maps every `UsageSummary` field at its declared
+    /// offset. `summary_from_row` reads by positional index and rusqlite
+    /// coerces between INTEGER and REAL, so a misaligned column returns a
+    /// plausible wrong number rather than an error. The destructure is
+    /// exhaustive on purpose: a new field added without a mapping fails to
+    /// compile here rather than silently reading `None`.
+    #[test]
+    fn all_rollup_sites_map_every_summary_field() {
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        for (session, model, duration, ttft) in [
+            ("s1", Some("p1/m1"), 100_u64, Some(10_u64)),
+            ("s2", Some("p1/m1"), 300, Some(30)),
+            ("s3", Some("p2/m2"), 500, None),
+        ] {
+            must_succeed(
+                log.append(&record(
+                    session,
+                    model,
+                    (None, None, None),
+                    (duration, ttft),
+                    Vec::new(),
+                )),
+                "append record",
+            );
+        }
+        let snapshot = must_succeed(log.snapshot(), "snapshot");
+
+        let assert_summary = |label: &str, summary: &UsageSummary, requests: u64| {
+            let UsageSummary {
+                requests: got_requests,
+                successes,
+                cancelled,
+                errors,
+                provider_requests,
+                retries,
+                tokens,
+                token_coverage: _,
+                costs,
+                cost_coverage: _,
+                charges,
+                cache_rate,
+                avg_duration_ms,
+                avg_ttft_ms,
+                avg_tokens_per_second,
+                p90_duration_ms,
+                max_duration_ms,
+                p90_ttft_ms,
+                max_ttft_ms,
+            } = summary;
+            assert_eq!(*got_requests, requests, "{label}: requests");
+            assert_eq!(*successes, requests, "{label}: successes");
+            assert_eq!(*cancelled, 0, "{label}: cancelled");
+            assert_eq!(*errors, 0, "{label}: errors");
+            assert_eq!(*provider_requests, None, "{label}: provider_requests");
+            assert_eq!(*retries, None, "{label}: retries");
+            assert_eq!(*tokens, None, "{label}: tokens");
+            assert!(costs.is_empty(), "{label}: costs");
+            assert!(charges.is_empty(), "{label}: charges");
+            assert_eq!(*cache_rate, None, "{label}: cache_rate");
+            assert!(
+                avg_duration_ms.is_some(),
+                "{label}: avg_duration_ms present"
+            );
+            assert!(
+                avg_ttft_ms.is_some() || requests == 1,
+                "{label}: avg_ttft_ms"
+            );
+            assert_eq!(
+                *avg_tokens_per_second, None,
+                "{label}: avg_tokens_per_second"
+            );
+            // Slice 1 pins the column positions without computing the values.
+            assert_eq!(*p90_duration_ms, None, "{label}: p90_duration_ms");
+            assert_eq!(*max_duration_ms, None, "{label}: max_duration_ms");
+            assert_eq!(*p90_ttft_ms, None, "{label}: p90_ttft_ms");
+            assert_eq!(*max_ttft_ms, None, "{label}: max_ttft_ms");
+        };
+
+        assert_summary("overview", &snapshot.overview, 3);
+        assert_eq!(snapshot.providers.len(), 2, "provider group count");
+        for group in &snapshot.providers {
+            let expected = if group.name.as_deref() == Some("p1") {
+                2
+            } else {
+                1
+            };
+            assert_summary("providers", &group.summary, expected);
+        }
+        for group in &snapshot.models {
+            let expected = if group.model.as_deref() == Some("m1") {
+                2
+            } else {
+                1
+            };
+            assert_summary("models", &group.summary, expected);
+        }
+        for group in &snapshot.agent_types {
+            assert_summary("agent_types", &group.summary, 3);
+        }
+        for group in &snapshot.folders {
+            assert_summary("folders", &group.summary, 3);
+        }
+    }
+
+    /// C10 — the tools rollup carries no `UsageSummary` and gains no latency
+    /// statistics. The destructure is exhaustive: adding a field to
+    /// `ToolUsageGroup` fails to compile here.
+    #[test]
+    fn tool_usage_group_has_no_latency_fields() {
+        fn assert_shape(group: &ToolUsageGroup) {
+            let ToolUsageGroup {
+                name: _,
+                kind: _,
+                calls: _,
+                errors: _,
+                argument_chars: _,
+                result_chars: _,
+                last_used_ms: _,
+                total_tokens_share: _,
+                output_tokens_share: _,
+                costs: _,
+                charges: _,
+                models: _,
+            } = group;
+        }
+        let log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        let snapshot = must_succeed(log.snapshot(), "snapshot");
+        for group in &snapshot.tools {
+            assert_shape(group);
+        }
     }
 }
