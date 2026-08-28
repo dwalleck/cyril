@@ -728,6 +728,32 @@ impl UsageLog {
         Ok(Self { connection })
     }
 
+    /// Opens a second connection to an existing log, for reading only.
+    ///
+    /// Deliberately NOT `from_connection`: that path runs `migrate_schema`,
+    /// and a reader must never advance the schema — the writer owns
+    /// migrations, and a reader that migrated could race the writer's own
+    /// migration on startup (cyril-nanu C7). It also skips the `journal_mode`
+    /// pragma: WAL is a persistent property of the database file that the
+    /// writer already set, not something each connection re-establishes.
+    ///
+    /// The caller is responsible for the file existing; this never creates a
+    /// schema, so a missing or empty database surfaces as a query error rather
+    /// than as a silently empty snapshot.
+    fn open_reader(path: &Path) -> Result<Self, UsageError> {
+        let connection = Connection::open(path).map_err(|source| UsageError::Open {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        connection
+            .busy_timeout(BUSY_TIMEOUT)
+            .map_err(UsageError::Configure)?;
+        connection
+            .execute_batch("PRAGMA foreign_keys = ON;")
+            .map_err(UsageError::Configure)?;
+        Ok(Self { connection })
+    }
+
     fn migrate_schema(connection: &mut Connection) -> Result<(), UsageError> {
         let transaction = connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -1803,6 +1829,111 @@ fn insert_usage_tool(
         )
         .map_err(UsageError::Write)?;
     Ok(())
+}
+
+/// The outcome of one off-loop snapshot attempt, as it reaches the App.
+#[derive(Debug)]
+pub enum UsageSnapshotResult {
+    /// A completed snapshot. Boxed because `UsageSnapshot` is a large value
+    /// and this enum crosses a channel.
+    Ready(Box<UsageSnapshot>),
+    /// The snapshot could not be produced. Carries the rendered error so the
+    /// panel can state the failure beside the values it already holds, rather
+    /// than showing a silently stale panel (cyril-nanu B6).
+    Failed(String),
+}
+
+/// Asks the snapshot worker for a fresh snapshot.
+#[derive(Debug, Clone)]
+pub struct UsageSnapshotHandle {
+    sender: std::sync::mpsc::Sender<()>,
+}
+
+impl UsageSnapshotHandle {
+    /// Requests a snapshot.
+    ///
+    /// Returns `false` when the worker is gone. The caller surfaces that as
+    /// the panel's failure status: a dropped request that reported success
+    /// would leave the panel waiting for a result that can never arrive
+    /// (cyril-nanu C9).
+    pub fn request(&self) -> bool {
+        self.sender.send(()).is_ok()
+    }
+}
+
+/// Spawns the thread that computes usage snapshots off the App event loop.
+///
+/// Mirrors `spawn_usage_enrichment_worker`: a named OS thread owning its own
+/// resource, `std::sync::mpsc` for requests in, `tokio::sync::mpsc` for results
+/// out, consumed by the App's `select!`. The thread owns its connection
+/// outright, so no lock sits between the reader and the writer — an
+/// `Arc<Mutex<UsageLog>>` would have let a long snapshot block the *write* the
+/// event loop performs, reintroducing the stall from the other side.
+///
+/// A worker that cannot open its reader does not exit: it answers every
+/// request with `Failed`, because a silent exit leaves the panel in its
+/// computing state forever.
+pub fn spawn_usage_snapshot_worker(
+    path: PathBuf,
+) -> (
+    UsageSnapshotHandle,
+    tokio::sync::mpsc::UnboundedReceiver<UsageSnapshotResult>,
+) {
+    let (command_tx, command_rx) = std::sync::mpsc::channel();
+    let (result_tx, result_rx) = tokio::sync::mpsc::unbounded_channel();
+    if let Err(error) = std::thread::Builder::new()
+        .name("cyril-usage-snapshot".to_owned())
+        .spawn(move || match UsageLog::open_reader(&path) {
+            Ok(reader) => run_snapshot_worker(
+                move || reader.snapshot().map_err(|error| error.to_string()),
+                command_rx,
+                result_tx,
+            ),
+            Err(error) => {
+                let message = error.to_string();
+                tracing::warn!(
+                    path = %path.display(),
+                    error = %message,
+                    "usage snapshot worker could not open its reader; the usage \
+                     panel will report refreshes as unavailable"
+                );
+                run_snapshot_worker(move || Err(message.clone()), command_rx, result_tx);
+            }
+        })
+    {
+        tracing::error!(error = %error, "usage snapshot worker thread failed to spawn");
+    }
+    (UsageSnapshotHandle { sender: command_tx }, result_rx)
+}
+
+/// The worker loop, generic over its snapshot source so the coalescing
+/// behavior can be driven deterministically in tests.
+///
+/// The request channel IS the dirty flag of the design's coalescing rule: any
+/// requests that queue while a snapshot runs are drained before the next one
+/// starts, so a burst of N produces exactly one further snapshot rather than N
+/// (cyril-nanu C3). The measured worst case is 18 refresh triggers in one KAS
+/// turn, which without this would be ~12 s of recompute for one turn.
+fn run_snapshot_worker<S>(
+    mut source: S,
+    command_rx: std::sync::mpsc::Receiver<()>,
+    result_tx: tokio::sync::mpsc::UnboundedSender<UsageSnapshotResult>,
+) where
+    S: FnMut() -> Result<UsageSnapshot, String>,
+{
+    while command_rx.recv().is_ok() {
+        // Collapse everything queued behind this request; they all ask for the
+        // same thing, and the snapshot about to run answers all of them.
+        while command_rx.try_recv().is_ok() {}
+        let result = match source() {
+            Ok(snapshot) => UsageSnapshotResult::Ready(Box::new(snapshot)),
+            Err(message) => UsageSnapshotResult::Failed(message),
+        };
+        if result_tx.send(result).is_err() {
+            // The App is gone; nothing left to serve.
+            break;
+        }
+    }
 }
 
 /// The seed INSERT shared by the scale fixtures and cyril-nanu's concurrency
@@ -4763,6 +4894,144 @@ mod tests {
         assert_eq!(solo.summary.max_duration_ms, Some(77.0), "n=1 max duration");
         assert_eq!(solo.summary.p90_ttft_ms, Some(11.0), "n=1 p90 ttft");
         assert_eq!(solo.summary.requests, 1, "the solo group holds one row");
+    }
+
+    /// cyril-nanu C3 — a burst of requests collapses to one further snapshot.
+    ///
+    /// P1 measured 18 refresh triggers inside a single KAS turn. Without
+    /// coalescing each would queue its own recompute — ~12 s of work for one
+    /// turn at the measured ~700 ms per snapshot. The oracle is a hand-derived
+    /// table: 0 requests during the run yield 1 execution, and any N >= 1 yield
+    /// exactly 2.
+    ///
+    /// The source blocks on a gate channel, so "during the run" is a real
+    /// state the test controls rather than a sleep-and-hope.
+    #[test]
+    fn snapshot_worker_coalesces_a_burst_to_one_followup() {
+        fn executions_for(requests_during_run: usize) -> u64 {
+            let (command_tx, command_rx) = std::sync::mpsc::channel();
+            let (result_tx, _result_rx) = tokio::sync::mpsc::unbounded_channel();
+            let (gate_tx, gate_rx) = std::sync::mpsc::channel::<()>();
+            let calls = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+            let worker_calls = std::sync::Arc::clone(&calls);
+
+            let worker = std::thread::spawn(move || {
+                run_snapshot_worker(
+                    move || {
+                        worker_calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        // Hold the "snapshot" open until the test releases it.
+                        let _ = gate_rx.recv();
+                        Ok(UsageSnapshot::default())
+                    },
+                    command_rx,
+                    result_tx,
+                );
+            });
+
+            must_succeed(command_tx.send(()), "first request");
+            // Wait until the source is actually executing, so the requests
+            // below really do arrive mid-run.
+            while calls.load(std::sync::atomic::Ordering::SeqCst) < 1 {
+                std::thread::yield_now();
+            }
+            for _ in 0..requests_during_run {
+                must_succeed(command_tx.send(()), "request during run");
+            }
+            // Dropping the sender lets the worker exit once the queue drains;
+            // queued items are still delivered after a sender drop.
+            drop(command_tx);
+            // Enough tokens for any number of runs this can legitimately do.
+            for _ in 0..16 {
+                let _ = gate_tx.send(());
+            }
+            must_succeed(worker.join().map_err(|_| "worker panicked"), "join worker");
+            calls.load(std::sync::atomic::Ordering::SeqCst)
+        }
+
+        assert_eq!(
+            executions_for(0),
+            1,
+            "no requests during the run: one execution"
+        );
+        assert_eq!(
+            executions_for(1),
+            2,
+            "one request during the run: exactly one follow-up"
+        );
+        assert_eq!(
+            executions_for(10),
+            2,
+            "ten requests during the run must still collapse to exactly one follow-up"
+        );
+    }
+
+    /// cyril-nanu C7 — the worker's reader never takes a write lock.
+    ///
+    /// Migrations belong to the writer. `from_connection` opens
+    /// `migrate_schema`'s IMMEDIATE transaction *before* it reads the version,
+    /// so a reader built that way acquires a write lock on every open — which
+    /// is exactly the race the design forbids, and which fails outright while
+    /// the writer holds one.
+    ///
+    /// **Fence corrected during the slice-2 gate.** It first rewound
+    /// `user_version` and asserted the reader left it alone. Under the named
+    /// mutation that went red for the wrong reason: re-running migration 3
+    /// against an already-migrated schema died on `duplicate column name:
+    /// call_id`, so the fence was satisfied by a crash rather than by the
+    /// property it claims. On an up-to-date database the version is not an
+    /// observable of migrating-vs-not at all — `migrate_schema` is a no-op
+    /// read once the version matches. The write lock is the real observable,
+    /// and it is the one the claim is about.
+    ///
+    /// The oracle is a writer holding an IMMEDIATE transaction on a third
+    /// connection: independent of the reader, and it makes the lock visible.
+    #[test]
+    fn snapshot_worker_reader_takes_no_write_lock() {
+        let dir = must_succeed(tempfile::tempdir(), "tempdir");
+        let path = dir.path().join("usage.sqlite3");
+        let mut writer = must_succeed(UsageLog::open(&path), "writer creates the schema");
+
+        let before: i64 = must_succeed(
+            writer
+                .connection
+                .query_row("PRAGMA user_version", [], |row| row.get(0)),
+            "read user_version before",
+        );
+
+        // The writer holds a write lock for the whole of the reader's open and
+        // snapshot below.
+        let held = must_succeed(
+            writer
+                .connection
+                .transaction_with_behavior(TransactionBehavior::Immediate),
+            "writer takes the write lock",
+        );
+
+        let reader = must_succeed(
+            UsageLog::open_reader(&path),
+            "reader opens while the writer holds the write lock",
+        );
+        let snapshot = must_succeed(
+            reader.snapshot(),
+            "reader snapshots while the writer holds the write lock",
+        );
+        assert_eq!(
+            snapshot.overview.requests, 0,
+            "positive control: the reader really did read the database"
+        );
+        drop(reader);
+        must_succeed(held.rollback(), "release the write lock");
+
+        let after: i64 = must_succeed(
+            writer
+                .connection
+                .query_row("PRAGMA user_version", [], |row| row.get(0)),
+            "read user_version after",
+        );
+        assert_eq!(
+            after, before,
+            "the reader must leave the schema version exactly as it found it"
+        );
     }
 
     /// cyril-nanu C2/C10 — one `snapshot()` observes ONE point in time.
