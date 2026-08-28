@@ -2,7 +2,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use crate::theme::Theme;
-use crate::traits::{UsageAccountStatus, UsagePage, UsagePanelState};
+use crate::traits::{UsageAccountStatus, UsagePage, UsagePanelState, UsageRefreshStatus};
 
 const MAX_DATA_ROWS: usize = 18;
 
@@ -24,7 +24,11 @@ pub fn render(
 
     let block = Block::default()
         .title(Span::styled(
-            format!(" /usage · {} ", state.page.title()),
+            format!(
+                " /usage · {}{} ",
+                state.page.title(),
+                refresh_suffix(&state.refresh)
+            ),
             Style::default()
                 .fg(theme.accent_quinary)
                 .add_modifier(Modifier::BOLD),
@@ -49,7 +53,40 @@ pub fn render(
     frame.render_widget(Paragraph::new(lines).block(block), popup_area);
 }
 
+/// The panel-wide refresh status as it appears in the title.
+///
+/// Empty when idle: a marker that is always present says nothing. The failure
+/// reason is truncated so a long database error cannot push the page name off
+/// the border.
+fn refresh_suffix(status: &UsageRefreshStatus) -> String {
+    const REASON_BUDGET: usize = 40;
+    match status {
+        UsageRefreshStatus::Idle => String::new(),
+        UsageRefreshStatus::Computing => " · computing…".to_owned(),
+        UsageRefreshStatus::Refreshing => " · refreshing…".to_owned(),
+        UsageRefreshStatus::Failed(reason) => {
+            let mut shown: String = reason.chars().take(REASON_BUDGET).collect();
+            if reason.chars().count() > REASON_BUDGET {
+                shown.push('…');
+            }
+            format!(" · refresh failed: {shown}")
+        }
+    }
+}
+
 fn page_lines(state: &UsagePanelState, theme: &Theme) -> Vec<Line<'static>> {
+    // Nothing has been read yet. Deliberately NOT the "no usage recorded"
+    // placeholder: an empty log and an unread log are different facts and must
+    // not render the same (cyril-nanu S11). Keyed on `has_snapshot` rather than
+    // on the status, because a FAILED first read also has no data to show while
+    // its status is `Failed`, not `Computing`.
+    if !state.has_snapshot {
+        let message = match &state.refresh {
+            UsageRefreshStatus::Failed(_) => "Usage could not be loaded",
+            _ => "Computing usage…",
+        };
+        return vec![Line::styled(message, Style::default().fg(theme.subdued))];
+    }
     match state.page {
         UsagePage::Overview => overview_lines(state, theme),
         UsagePage::Costs => cost_lines(state, theme),
@@ -727,6 +764,8 @@ mod tests {
                 let input_top = height.saturating_sub(3);
                 let state = UsagePanelState {
                     snapshot: sample_snapshot(),
+                    refresh: UsageRefreshStatus::Idle,
+                    has_snapshot: true,
                     page,
                     scroll_offset: 0,
                     account: None,
@@ -765,6 +804,8 @@ mod tests {
         };
         let state = UsagePanelState {
             snapshot: UsageSnapshot::default(),
+            refresh: UsageRefreshStatus::Idle,
+            has_snapshot: true,
             page: UsagePage::Overview,
             scroll_offset: 0,
             account: None,
@@ -893,6 +934,8 @@ mod tests {
         ] {
             let state = UsagePanelState {
                 snapshot: snapshot.clone(),
+                refresh: UsageRefreshStatus::Idle,
+                has_snapshot: true,
                 page,
                 scroll_offset: 0,
                 account: Some(account.clone()),
@@ -933,6 +976,8 @@ mod tests {
         for page in [UsagePage::Costs, UsagePage::Context] {
             let state = UsagePanelState {
                 snapshot: cyril_core::types::UsageSnapshot::default(),
+                refresh: UsageRefreshStatus::Idle,
+                has_snapshot: true,
                 page,
                 scroll_offset: 0,
                 account: None,
@@ -956,6 +1001,8 @@ mod tests {
             };
             let state = UsagePanelState {
                 snapshot,
+                refresh: UsageRefreshStatus::Idle,
+                has_snapshot: true,
                 page: UsagePage::Overview,
                 scroll_offset: 0,
                 account: None,
@@ -990,6 +1037,8 @@ mod tests {
         };
         let state = UsagePanelState {
             snapshot,
+            refresh: UsageRefreshStatus::Idle,
+            has_snapshot: true,
             page: UsagePage::Models,
             scroll_offset: 0,
             account: None,
@@ -1017,6 +1066,8 @@ mod tests {
         let theme = crate::traits::test_support::marker_theme();
         let state = UsagePanelState {
             snapshot: sample_snapshot(),
+            refresh: UsageRefreshStatus::Idle,
+            has_snapshot: true,
             page: UsagePage::Overview,
             scroll_offset: 0,
             account: None,
@@ -1049,6 +1100,8 @@ mod tests {
             };
             let state = UsagePanelState {
                 snapshot: sample_snapshot(),
+                refresh: UsageRefreshStatus::Idle,
+                has_snapshot: true,
                 page,
                 scroll_offset: 0,
                 account: None,
@@ -1088,5 +1141,193 @@ mod tests {
     fn absent_latency_tail_collapses_to_a_single_dash() {
         assert_eq!(latency_tail(None, None), "—");
         assert_eq!(latency_tail(Some(12.0), None), "12ms p90 · — max");
+    }
+
+    fn render_with(
+        refresh: UsageRefreshStatus,
+        snapshot: UsageSnapshot,
+        has_snapshot: bool,
+    ) -> String {
+        let theme = crate::traits::test_support::marker_theme();
+        let backend = TestBackend::new(120, 30);
+        let mut terminal = match Terminal::new(backend) {
+            Ok(terminal) => terminal,
+            Err(error) => panic!("test terminal: {error}"),
+        };
+        let state = UsagePanelState {
+            snapshot,
+            refresh,
+            has_snapshot,
+            page: UsagePage::Overview,
+            scroll_offset: 0,
+            account: None,
+            account_fetched_at_ms: None,
+            account_status: UsageAccountStatus::Idle,
+        };
+        match terminal.draw(|frame| render(frame, frame.area(), 27, &state, &theme)) {
+            Ok(_) => {}
+            Err(error) => panic!("draw usage panel: {error}"),
+        }
+        rows(&terminal).join("\n")
+    }
+
+    /// cyril-nanu C4 — each refresh state renders its own marker and no other.
+    ///
+    /// The panel may show values a turn behind the log; that is only
+    /// acceptable because it says so. A marker that is always present, or one
+    /// that never appears, both fail the contract, so every state asserts both
+    /// what must appear AND what must not — the absence assertions carry their
+    /// own positive control that way.
+    #[test]
+    fn refresh_marker_matches_panel_state() {
+        let computing = render_with(
+            UsageRefreshStatus::Computing,
+            UsageSnapshot::default(),
+            false,
+        );
+        assert!(
+            computing.contains("computing"),
+            "the computing state must say so; got:\n{computing}"
+        );
+        assert!(
+            !computing.contains("refreshing"),
+            "the computing state must not claim to be refreshing; got:\n{computing}"
+        );
+        assert!(
+            !computing.contains("No usage recorded yet"),
+            "an unfinished first snapshot must NOT render the empty-log placeholder — \
+             they are different facts; got:\n{computing}"
+        );
+
+        let refreshing = render_with(UsageRefreshStatus::Refreshing, sample_snapshot(), true);
+        assert!(
+            refreshing.contains("refreshing"),
+            "an in-flight recompute must be visible; got:\n{refreshing}"
+        );
+        assert!(
+            refreshing.contains("Turns"),
+            "the held values stay on screen while refreshing; got:\n{refreshing}"
+        );
+
+        let idle = render_with(UsageRefreshStatus::Idle, sample_snapshot(), true);
+        assert!(
+            !idle.contains("refreshing") && !idle.contains("computing"),
+            "an idle panel must carry no marker at all; got:\n{idle}"
+        );
+
+        // Positive control for the empty-log case: a COMPLETED snapshot over an
+        // empty log renders the placeholder, which is what makes the computing
+        // assertion above meaningful rather than vacuous.
+        let empty_done = render_with(UsageRefreshStatus::Idle, UsageSnapshot::default(), true);
+        assert!(
+            empty_done.contains("No usage recorded yet"),
+            "a completed snapshot over an empty log renders the placeholder; got:\n{empty_done}"
+        );
+    }
+
+    /// cyril-nanu C6 — a failed refresh keeps the values and states the failure.
+    ///
+    /// Today the failure is a `tracing::warn!` the operator never sees, so the
+    /// panel silently shows stale numbers. The discriminating assertion is the
+    /// status text: a handler that ignored errors entirely would also leave the
+    /// values intact.
+    #[test]
+    fn failed_refresh_keeps_values_and_states_the_failure() {
+        let failed = render_with(
+            UsageRefreshStatus::Failed("database is locked".to_owned()),
+            sample_snapshot(),
+            true,
+        );
+        assert!(
+            failed.contains("refresh failed"),
+            "the failure must be stated on screen; got:\n{failed}"
+        );
+        assert!(
+            failed.contains("database is locked"),
+            "the reason must be shown, not swallowed; got:\n{failed}"
+        );
+        assert!(
+            failed.contains("Turns"),
+            "the last successful values stay on screen; got:\n{failed}"
+        );
+
+        // A long reason is truncated rather than pushing the page name off the
+        // border.
+        let long = "x".repeat(300);
+        let truncated = render_with(UsageRefreshStatus::Failed(long), sample_snapshot(), true);
+        assert!(
+            truncated.contains("Overview"),
+            "a long failure reason must not displace the page name; got:\n{truncated}"
+        );
+    }
+
+    /// cyril-nanu, pre-PR review finding 2/3 — an unread log never renders as
+    /// an empty one.
+    ///
+    /// Sequence that produced the bug: first `/usage` opens with a placeholder
+    /// snapshot while the first read runs; the operator presses Esc before it
+    /// lands; the reopen took that placeholder out of the cache and paired it
+    /// with `Refreshing`, so the body rendered "No usage recorded yet" for a
+    /// log nobody had read. A failed first read reached the same place by a
+    /// different route, because `Failed` is not `Computing` either.
+    ///
+    /// The oracle is the rendered buffer through the real `UiState`
+    /// transitions, not the panel struct — the bug lived in which snapshot got
+    /// cached, which a struct-level assertion would have missed.
+    #[test]
+    fn an_unread_log_never_renders_as_an_empty_one() {
+        let theme = crate::traits::test_support::marker_theme();
+        let render_state = |state: &crate::state::UiState| -> String {
+            let Some(panel) = crate::traits::TuiState::usage_panel(state).cloned() else {
+                panic!("usage panel must be open for this assertion")
+            };
+            let backend = TestBackend::new(120, 30);
+            let mut terminal = match Terminal::new(backend) {
+                Ok(terminal) => terminal,
+                Err(error) => panic!("test terminal: {error}"),
+            };
+            match terminal.draw(|frame| render(frame, frame.area(), 27, &panel, &theme)) {
+                Ok(_) => {}
+                Err(error) => panic!("draw: {error}"),
+            }
+            rows(&terminal).join("\n")
+        };
+
+        // Open, close before the first read lands, reopen.
+        let mut state = crate::state::UiState::new(100);
+        state.open_usage_panel();
+        state.hide_usage_panel();
+        state.open_usage_panel();
+        let reopened = render_state(&state);
+        assert!(
+            !reopened.contains("No usage recorded yet"),
+            "a log that was never read must not render as an empty one; got:\n{reopened}"
+        );
+
+        // A first read that FAILS is also not an empty log.
+        let mut state = crate::state::UiState::new(100);
+        state.open_usage_panel();
+        state.mark_usage_panel_failed("database is locked".to_owned());
+        let failed_first = render_state(&state);
+        assert!(
+            !failed_first.contains("No usage recorded yet"),
+            "a failed first read must not render as an empty log; got:\n{failed_first}"
+        );
+        assert!(
+            failed_first.contains("refresh failed"),
+            "and it must say the read failed; got:\n{failed_first}"
+        );
+
+        // Positive control: a log that really IS empty still says so, so the
+        // assertions above are about provenance and not about the string being
+        // unreachable.
+        let mut state = crate::state::UiState::new(100);
+        state.open_usage_panel();
+        state.refresh_usage_panel(UsageSnapshot::default());
+        let genuinely_empty = render_state(&state);
+        assert!(
+            genuinely_empty.contains("No usage recorded yet"),
+            "a completed read of an empty log still renders the placeholder; got:\n{genuinely_empty}"
+        );
     }
 }

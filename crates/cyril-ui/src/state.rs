@@ -98,6 +98,9 @@ pub struct UiState {
     hooks_panel: Option<HooksPanelState>,
     code_panel: Option<cyril_core::types::CodePanelData>,
     usage_panel: Option<UsagePanelState>,
+    /// The last completed snapshot, kept across a panel close so a reopen is
+    /// never empty (cyril-nanu D6).
+    last_usage_snapshot: Option<cyril_core::types::UsageSnapshot>,
     usage_account: Option<cyril_core::types::UsageAccount>,
     usage_account_fetched_at_ms: Option<u64>,
     usage_account_status: UsageAccountStatus,
@@ -368,6 +371,7 @@ impl UiState {
             hooks_panel: None,
             code_panel: None,
             usage_panel: None,
+            last_usage_snapshot: None,
             usage_account: None,
             usage_account_fetched_at_ms: None,
             usage_account_status: UsageAccountStatus::Idle,
@@ -2288,9 +2292,58 @@ impl UiState {
 
     // --- Usage panel ---
 
+    /// Opens the panel without waiting for a snapshot.
+    ///
+    /// The process's first open has nothing to show and renders the computing
+    /// state; every later open carries the last completed snapshot with the
+    /// refreshing marker, because `hide_usage_panel` kept it (cyril-nanu D6).
+    /// Re-opening an already-open panel is simply another refresh.
+    pub fn open_usage_panel(&mut self) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            panel.refresh = UsageRefreshStatus::Refreshing;
+            return;
+        }
+        let (snapshot, refresh, has_snapshot) = match self.last_usage_snapshot.take() {
+            Some(snapshot) => (snapshot, UsageRefreshStatus::Refreshing, true),
+            None => (
+                cyril_core::types::UsageSnapshot::default(),
+                UsageRefreshStatus::Computing,
+                false,
+            ),
+        };
+        self.usage_panel = Some(UsagePanelState {
+            snapshot,
+            refresh,
+            has_snapshot,
+            page: UsagePage::Overview,
+            scroll_offset: 0,
+            account: self.usage_account.clone(),
+            account_fetched_at_ms: self.usage_account_fetched_at_ms,
+            account_status: self.usage_account_status.clone(),
+        });
+    }
+
+    /// Marks an in-flight recompute. Keeps whatever the panel already shows.
+    pub fn mark_usage_panel_refreshing(&mut self) {
+        if let Some(panel) = self.usage_panel.as_mut()
+            && panel.refresh != UsageRefreshStatus::Computing
+        {
+            panel.refresh = UsageRefreshStatus::Refreshing;
+        }
+    }
+
+    /// Records a failed recompute. The held values stay; the reason is shown.
+    pub fn mark_usage_panel_failed(&mut self, reason: String) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            panel.refresh = UsageRefreshStatus::Failed(reason);
+        }
+    }
+
     pub fn show_usage_panel(&mut self, snapshot: cyril_core::types::UsageSnapshot) {
         self.usage_panel = Some(UsagePanelState {
             snapshot,
+            refresh: UsageRefreshStatus::Idle,
+            has_snapshot: true,
             page: UsagePage::Overview,
             scroll_offset: 0,
             account: self.usage_account.clone(),
@@ -2302,6 +2355,8 @@ impl UiState {
     pub fn refresh_usage_panel(&mut self, snapshot: cyril_core::types::UsageSnapshot) {
         if let Some(panel) = self.usage_panel.as_mut() {
             panel.snapshot = snapshot;
+            panel.refresh = UsageRefreshStatus::Idle;
+            panel.has_snapshot = true;
             panel.account = self.usage_account.clone();
             panel.account_fetched_at_ms = self.usage_account_fetched_at_ms;
             panel.account_status = self.usage_account_status.clone();
@@ -2326,8 +2381,24 @@ impl UiState {
         }
     }
 
+    /// Closes the panel, keeping its snapshot so a reopen shows the last known
+    /// values rather than an empty computing state (cyril-nanu D6). Only the
+    /// process's first open is ever empty.
     pub fn hide_usage_panel(&mut self) {
-        self.usage_panel = None;
+        if let Some(panel) = self.usage_panel.take()
+            && panel.has_snapshot
+        {
+            // Only a real snapshot is worth keeping. Storing the placeholder a
+            // Computing panel carries would make the next open render the
+            // empty-log message for a log that was never read.
+            self.last_usage_snapshot = Some(panel.snapshot);
+        }
+    }
+
+    /// Keeps a snapshot that finished after the panel closed, so the next open
+    /// starts from it rather than from an older one — or from nothing.
+    pub fn store_usage_snapshot(&mut self, snapshot: cyril_core::types::UsageSnapshot) {
+        self.last_usage_snapshot = Some(snapshot);
     }
 
     pub fn has_usage_panel(&self) -> bool {
