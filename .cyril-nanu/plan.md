@@ -29,7 +29,7 @@ Churn margin: **40% (456 lines)**, giving **1,596**. Rationale for 40%: the prec
 **Regression fence:** `crates/cyril-core/src/usage.rs` → `usage::tests::snapshot_is_atomic_under_concurrent_append` (created in this slice)
 **Named mutation:** In `usage.rs`, remove the `unchecked_transaction()` wrapper and run the rollups on the bare connection. Expected red: Overview count exceeds the summed per-model counts by the number of mid-snapshot commits.
 **Complexity/production scale:** `N/A — no new loop; this slice wraps the existing nine rollup queries in one transaction and adds no iteration.`
-**Wall budget/phase:** always-on — every snapshot pays it. Budget: ≤ 5 ms added at 100,000 rows. Rationale: a `BEGIN DEFERRED`/`COMMIT` pair is constant-time work independent of row count, so anything beyond a few milliseconds means the transaction is doing something it should not; the whole-snapshot bound remains the existing 2 s fence.
+**Wall budget/phase:** always-on — every snapshot pays it. Budget: the existing `kiro_snapshot_100k_budget_reference` 2 s bound at 100,000 rows still holds, and the measured snapshot time stays inside the run-to-run spread recorded before the change (565–601 ms over four runs on this workstation, `usage.rs` C9 doc comment). Rationale — **revised at the plan critique**: the field first read "≤ 5 ms added at 100,000 rows", which is not measurable. A `BEGIN`/`COMMIT` pair genuinely is constant-time, but run-to-run variance on this fixture is ±40 ms, so a 5 ms delta is below the noise floor and any "PASS" against it would have been an eyeball dressed as a measurement. The checkable claim is that the transaction introduces no regression distinguishable from noise against a bound that already exists.
 **Files:** `crates/cyril-core/src/usage.rs`
 **Estimate:** 1–2 hours
 **Diff estimate:** 120 (impl ~40, test ~80)
@@ -104,6 +104,15 @@ Churn margin: **40% (456 lines)**, giving **1,596**. Rationale for 40%: the prec
 - `cargo test --workspace && cargo clippy --all-targets -- -D warnings > /dev/null 2>&1 && echo OK && cargo fmt --all --check` → the whole workspace is green, clippy prints OK, formatting is clean.
 
 ---
+
+## Plan critique (before the first slice)
+
+Run against the plan as written; findings applied above rather than carried into the build.
+
+- **Slice 1 wall budget was unmeasurable** — "≤ 5 ms added at 100,000 rows" sits below this fixture's ±40 ms run-to-run spread, so no honest measurement could have discharged it. Replaced with a bound that is checkable: the existing 2 s fence holds and the time stays inside the recorded 565–601 ms spread. Fixed above.
+- **Slice 1 oracle checked for implementation coupling** — reconciling Overview against summed provider and model counts uses three separate SQL aggregations from one snapshot call, so it is an internal-consistency relation rather than a second copy of the same computation; a write landing between rollups breaks the relation, which is exactly the bug class. It is additionally backed by `probe_wal.py`/`oracle_wal.sh`, which share no code with cyril. Accepted as independent.
+- **Slice 3 introduces state nothing sets until slice 4** — checked against the repo's staged-module convention, which applies to whole modules rather than struct fields; fields on an existing `pub` struct raise no dead-code warning and are exercised by that slice's own render fences. No change needed.
+- **Stress fixtures checked for gentleness** — slice 1's writer runs a continuous append loop for the whole snapshot rather than a fixed three inserts, and slice 2 exercises N = 0, 1, 10 rather than a single burst. Both can fail under the bug class they target. No change needed.
 
 ## Self-review
 
