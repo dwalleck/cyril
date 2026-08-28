@@ -1141,8 +1141,32 @@ impl UsageLog {
         transaction.commit().map_err(UsageError::Write)
     }
 
+    /// One point-in-time aggregate of the whole usage log.
+    ///
+    /// The nine rollups run inside a single deferred read transaction, so they
+    /// all describe the same instant. This is load-bearing rather than
+    /// belt-and-braces: `snapshot()` is computed off the App event loop
+    /// (cyril-nanu), which removed the single-threaded serialization that used
+    /// to make internal agreement free. Without the transaction a turn
+    /// committed between the overview and the model rollup is counted by one
+    /// and missed by the other, and the panel renders an Overview total that
+    /// contradicts its own per-model page — fenced by
+    /// `snapshot_is_atomic_under_concurrent_append`.
+    ///
+    /// `unchecked_transaction` rather than `transaction`: the latter takes
+    /// `&mut self`, which would ripple through every call site and through the
+    /// snapshot worker's ownership. The receiver stays `&self`. Under WAL —
+    /// enabled at open — a deferred read never blocks the writer, so making
+    /// this atomic costs the append path nothing.
+    ///
+    /// The transaction is read-only; an early `?` drops it, which rolls back a
+    /// transaction that wrote nothing.
     pub fn snapshot(&self) -> Result<UsageSnapshot, UsageError> {
-        Ok(UsageSnapshot {
+        let read = self
+            .connection
+            .unchecked_transaction()
+            .map_err(UsageError::Query)?;
+        let snapshot = UsageSnapshot {
             overview: self.overview()?,
             providers: self.named_groups("provider")?,
             models: self.model_groups()?,
@@ -1152,7 +1176,9 @@ impl UsageLog {
             context: self.context_summary()?,
             recent: self.recent(false)?,
             errors: self.recent(true)?,
-        })
+        };
+        read.commit().map_err(UsageError::Query)?;
+        Ok(snapshot)
     }
 
     fn context_summary(&self) -> Result<UsageContextSummary, UsageError> {
@@ -1778,6 +1804,14 @@ fn insert_usage_tool(
         .map_err(UsageError::Write)?;
     Ok(())
 }
+
+/// The seed INSERT shared by the scale fixtures and cyril-nanu's concurrency
+/// fence, so a schema change breaks one place rather than three.
+#[cfg(test)]
+const SEED_TURN_SQL: &str = "INSERT INTO usage_turns (
+        session_id, folder, model, provider, agent_type,
+        timestamp_ms, duration_ms, ttft_ms, stop_reason, outcome, token_availability
+     ) VALUES (?, '/tmp', ?, ?, 'main', ?, ?, ?, 'end_turn', 'success', 'unreported')";
 
 const SUMMARY_COLUMNS: &str = "
     COUNT(*) AS requests,
@@ -4729,6 +4763,126 @@ mod tests {
         assert_eq!(solo.summary.max_duration_ms, Some(77.0), "n=1 max duration");
         assert_eq!(solo.summary.p90_ttft_ms, Some(11.0), "n=1 p90 ttft");
         assert_eq!(solo.summary.requests, 1, "the solo group holds one row");
+    }
+
+    /// cyril-nanu C2/C10 — one `snapshot()` observes ONE point in time.
+    ///
+    /// `snapshot()` issues nine separate rollup queries. While it ran on the
+    /// App event loop no write could interleave them, so internal agreement
+    /// came free. cyril-nanu moves it off that loop, which removes the
+    /// serialization: without a read transaction a turn committed between the
+    /// overview and the model rollup is counted by one and missed by the
+    /// other, and the panel shows an Overview total that contradicts its own
+    /// per-model page.
+    ///
+    /// The oracle is an internal-consistency relation across three
+    /// independently-computed SQL aggregations, not a second copy of one
+    /// computation: overview `COUNT(*)`, the per-provider `GROUP BY`, and the
+    /// per-model `GROUP BY` must sum to the same number. WAL isolation itself
+    /// was established independently in `.cyril-nanu/{probe,oracle}_wal.*`.
+    #[test]
+    fn snapshot_is_atomic_under_concurrent_append() {
+        const SEED: i64 = 5_000;
+        let dir = must_succeed(tempfile::tempdir(), "tempdir");
+        let path = dir.path().join("usage.sqlite3");
+        let log = must_succeed(UsageLog::open(&path), "open log");
+
+        {
+            let seed = must_succeed(Connection::open(&path), "open seeder");
+            must_succeed(
+                seed.execute_batch("PRAGMA busy_timeout = 5000;"),
+                "seeder busy timeout",
+            );
+            let transaction = must_succeed(seed.unchecked_transaction(), "seed transaction");
+            {
+                let mut statement =
+                    must_succeed(transaction.prepare(SEED_TURN_SQL), "prepare seed");
+                for index in 0..SEED {
+                    must_succeed(
+                        statement.execute(params![
+                            format!("s{index}"),
+                            format!("m{}", index % 6),
+                            format!("p{}", index % 3),
+                            index,
+                            index % 5_000,
+                            index % 900
+                        ]),
+                        "seed row",
+                    );
+                }
+            }
+            must_succeed(transaction.commit(), "commit seed");
+        }
+
+        // A writer committing continuously for the whole duration of every
+        // snapshot below, so a commit lands between rollups by construction
+        // rather than by luck.
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let written = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+        let writer_stop = std::sync::Arc::clone(&stop);
+        let writer_count = std::sync::Arc::clone(&written);
+        let writer_path = path.clone();
+        let writer = std::thread::spawn(move || {
+            let conn = match Connection::open(&writer_path) {
+                Ok(conn) => conn,
+                Err(error) => panic!("writer open: {error}"),
+            };
+            if let Err(error) = conn.execute_batch("PRAGMA busy_timeout = 5000;") {
+                panic!("writer busy timeout: {error}");
+            }
+            let mut index = SEED;
+            while !writer_stop.load(std::sync::atomic::Ordering::Relaxed) {
+                match conn.execute(
+                    SEED_TURN_SQL,
+                    params![
+                        format!("w{index}"),
+                        format!("m{}", index % 6),
+                        format!("p{}", index % 3),
+                        index,
+                        index % 5_000,
+                        index % 900
+                    ],
+                ) {
+                    Ok(_) => {
+                        writer_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    }
+                    Err(error) => panic!("writer insert: {error}"),
+                }
+                index += 1;
+            }
+        });
+
+        for round in 0..8 {
+            let snapshot = must_succeed(log.snapshot(), "snapshot under concurrent append");
+            let overview = snapshot.overview.requests;
+            let providers: u64 = snapshot
+                .providers
+                .iter()
+                .map(|group| group.summary.requests)
+                .sum();
+            let models: u64 = snapshot
+                .models
+                .iter()
+                .map(|group| group.summary.requests)
+                .sum();
+            assert_eq!(
+                overview, providers,
+                "round {round}: overview turn count must equal the summed provider counts"
+            );
+            assert_eq!(
+                overview, models,
+                "round {round}: overview turn count must equal the summed model counts"
+            );
+        }
+
+        stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        must_succeed(writer.join().map_err(|_| "writer panicked"), "join writer");
+        // Positive control: the reconciliation above proves nothing unless the
+        // writer really was committing during those snapshots.
+        assert!(
+            written.load(std::sync::atomic::Ordering::Relaxed) > 0,
+            "the concurrent writer must actually have committed rows"
+        );
     }
 
     /// C12 — a rollup group with no latency row is an invariant violation, and
