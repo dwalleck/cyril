@@ -86,6 +86,12 @@ pub enum UsageError {
     Write(#[source] rusqlite::Error),
     #[error("query usage database: {0}")]
     Query(#[source] rusqlite::Error),
+    /// The log is not in WAL mode, so a second reader would block the writer.
+    #[error(
+        "usage log is in {mode} mode, not wal; a background reader would block \
+         writes, so snapshots stay unavailable"
+    )]
+    ReaderWouldBlockWrites { mode: String },
     #[error("usage field {field} exceeds SQLite's signed integer range: {value}")]
     IntegerRange { field: &'static str, value: u64 },
     #[error("unsupported usage database schema version {0}")]
@@ -751,6 +757,25 @@ impl UsageLog {
         connection
             .execute_batch("PRAGMA foreign_keys = ON;")
             .map_err(UsageError::Configure)?;
+
+        // The whole no-blocking argument rests on WAL, and WAL is not
+        // guaranteed to have engaged. `from_connection` sets it with
+        // `execute_batch`, which discards the mode SQLite actually returns, and
+        // the pragma is a silent no-op on filesystems without shared-memory
+        // support — network and SMB mounts, DrvFs paths under WSL (a supported
+        // cyril platform), some container overlays. In rollback-journal mode
+        // this reader's transaction would hold a SHARED lock for the whole
+        // ~700 ms snapshot, the event loop's `append` could not reach
+        // EXCLUSIVE inside its 250 ms busy timeout, and every turn overlapping
+        // a snapshot would lose its usage row. Refusing to read is the safe
+        // failure: the panel says refreshes are unavailable, and no data is
+        // lost. Found by the cyril-nanu pre-PR review.
+        let mode: String = connection
+            .query_row("PRAGMA journal_mode", [], |row| row.get(0))
+            .map_err(UsageError::Configure)?;
+        if !mode.eq_ignore_ascii_case("wal") {
+            return Err(UsageError::ReaderWouldBlockWrites { mode });
+        }
         Ok(Self { connection })
     }
 
@@ -4903,6 +4928,57 @@ mod tests {
         assert_eq!(solo.summary.max_duration_ms, Some(77.0), "n=1 max duration");
         assert_eq!(solo.summary.p90_ttft_ms, Some(11.0), "n=1 p90 ttft");
         assert_eq!(solo.summary.requests, 1, "the solo group holds one row");
+    }
+
+    /// cyril-nanu, pre-PR review finding 1 — a reader refuses to open unless
+    /// WAL actually engaged.
+    ///
+    /// Without WAL a background reader holds a SHARED lock for the whole
+    /// snapshot, the event-loop writer cannot reach EXCLUSIVE inside its
+    /// 250 ms busy timeout, and turns lose their usage rows. The oracle is the
+    /// writer itself: in the mode this guard rejects, an append during an open
+    /// read really does fail.
+    #[test]
+    fn reader_refuses_to_open_a_log_that_is_not_in_wal_mode() {
+        let dir = must_succeed(tempfile::tempdir(), "tempdir");
+
+        // Positive control: on a normal WAL log the reader opens fine, so the
+        // rejection below is about the mode and not about the path.
+        let wal_path = dir.path().join("wal.sqlite3");
+        drop(must_succeed(
+            UsageLog::open(&wal_path),
+            "writer creates wal log",
+        ));
+        must_succeed(
+            UsageLog::open_reader(&wal_path),
+            "reader opens a wal-mode log",
+        );
+
+        // Force the log back to rollback-journal mode, as a filesystem without
+        // shared-memory support would leave it.
+        let rollback_path = dir.path().join("rollback.sqlite3");
+        drop(must_succeed(
+            UsageLog::open(&rollback_path),
+            "writer creates schema",
+        ));
+        let downgrade = must_succeed(Connection::open(&rollback_path), "open downgrader");
+        let mode: String = must_succeed(
+            downgrade.query_row("PRAGMA journal_mode = DELETE", [], |row| row.get(0)),
+            "downgrade journal mode",
+        );
+        assert_eq!(mode, "delete", "control: the log really is not in WAL mode");
+        drop(downgrade);
+
+        match UsageLog::open_reader(&rollback_path) {
+            Err(UsageError::ReaderWouldBlockWrites { mode }) => {
+                assert_eq!(mode, "delete", "the error names the mode it found");
+            }
+            Err(other) => panic!("expected ReaderWouldBlockWrites, got {other:?}"),
+            Ok(_) => panic!(
+                "a reader must refuse a non-WAL log: it would block the writer \
+                 and cost turns their usage rows"
+            ),
+        }
     }
 
     /// cyril-nanu C3 — a burst of requests collapses to one further snapshot.

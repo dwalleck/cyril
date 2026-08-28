@@ -448,6 +448,7 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
                 state.usage_panel = Some(UsagePanelState {
                     snapshot: cyril_core::types::UsageSnapshot::default(),
                     refresh: UsageRefreshStatus::Idle,
+                    has_snapshot: true,
                     page: UsagePage::Overview,
                     scroll_offset: 0,
                     account: None,

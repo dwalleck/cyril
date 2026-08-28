@@ -606,6 +606,14 @@ pub struct UsagePanelState {
     pub snapshot: cyril_core::types::UsageSnapshot,
     /// See [`UsageRefreshStatus`]. Rendered in the panel title.
     pub refresh: UsageRefreshStatus,
+    /// Whether `snapshot` came from a completed read rather than being the
+    /// placeholder a not-yet-computed panel is opened with.
+    ///
+    /// The status alone cannot answer this: a first snapshot that FAILS leaves
+    /// a `Failed` status over a default snapshot, and rendering that as the
+    /// empty-log placeholder would report "no usage recorded" for a log nobody
+    /// has read yet — the exact conflation this change exists to avoid.
+    pub has_snapshot: bool,
     pub page: UsagePage,
     pub scroll_offset: usize,
     pub account: Option<cyril_core::types::UsageAccount>,
@@ -615,8 +623,8 @@ pub struct UsagePanelState {
 
 impl UsagePanelState {
     pub fn row_count(&self) -> usize {
-        // Nothing has been computed yet, so no page has rows to count.
-        if self.refresh == UsageRefreshStatus::Computing {
+        // Nothing has been read yet, so no page has rows to count.
+        if !self.has_snapshot {
             return 1;
         }
         match self.page {

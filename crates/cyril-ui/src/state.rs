@@ -2303,16 +2303,18 @@ impl UiState {
             panel.refresh = UsageRefreshStatus::Refreshing;
             return;
         }
-        let (snapshot, refresh) = match self.last_usage_snapshot.take() {
-            Some(snapshot) => (snapshot, UsageRefreshStatus::Refreshing),
+        let (snapshot, refresh, has_snapshot) = match self.last_usage_snapshot.take() {
+            Some(snapshot) => (snapshot, UsageRefreshStatus::Refreshing, true),
             None => (
                 cyril_core::types::UsageSnapshot::default(),
                 UsageRefreshStatus::Computing,
+                false,
             ),
         };
         self.usage_panel = Some(UsagePanelState {
             snapshot,
             refresh,
+            has_snapshot,
             page: UsagePage::Overview,
             scroll_offset: 0,
             account: self.usage_account.clone(),
@@ -2341,6 +2343,7 @@ impl UiState {
         self.usage_panel = Some(UsagePanelState {
             snapshot,
             refresh: UsageRefreshStatus::Idle,
+            has_snapshot: true,
             page: UsagePage::Overview,
             scroll_offset: 0,
             account: self.usage_account.clone(),
@@ -2353,6 +2356,7 @@ impl UiState {
         if let Some(panel) = self.usage_panel.as_mut() {
             panel.snapshot = snapshot;
             panel.refresh = UsageRefreshStatus::Idle;
+            panel.has_snapshot = true;
             panel.account = self.usage_account.clone();
             panel.account_fetched_at_ms = self.usage_account_fetched_at_ms;
             panel.account_status = self.usage_account_status.clone();
@@ -2381,9 +2385,20 @@ impl UiState {
     /// values rather than an empty computing state (cyril-nanu D6). Only the
     /// process's first open is ever empty.
     pub fn hide_usage_panel(&mut self) {
-        if let Some(panel) = self.usage_panel.take() {
+        if let Some(panel) = self.usage_panel.take()
+            && panel.has_snapshot
+        {
+            // Only a real snapshot is worth keeping. Storing the placeholder a
+            // Computing panel carries would make the next open render the
+            // empty-log message for a log that was never read.
             self.last_usage_snapshot = Some(panel.snapshot);
         }
+    }
+
+    /// Keeps a snapshot that finished after the panel closed, so the next open
+    /// starts from it rather than from an older one — or from nothing.
+    pub fn store_usage_snapshot(&mut self, snapshot: cyril_core::types::UsageSnapshot) {
+        self.last_usage_snapshot = Some(snapshot);
     }
 
     pub fn has_usage_panel(&self) -> bool {

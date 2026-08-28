@@ -994,6 +994,13 @@ impl App {
     /// lands with no panel open is discarded and starts nothing.
     fn handle_usage_snapshot(&mut self, result: UsageSnapshotResult) {
         if !self.ui_state.has_usage_panel() {
+            // The panel closed while this ran. Keep a completed snapshot rather
+            // than discarding ~700 ms of work: the next open starts from it
+            // instead of from an older one, or from nothing at all. A failure
+            // has nothing to keep.
+            if let UsageSnapshotResult::Ready(snapshot) = result {
+                self.ui_state.store_usage_snapshot(*snapshot);
+            }
             return;
         }
         match result {
@@ -6247,6 +6254,18 @@ mod tests {
             !app.ui_state.has_usage_panel(),
             "a result must not resurrect a panel the operator closed"
         );
+
+        // ...but the work is kept: reopening starts from that snapshot rather
+        // than from nothing (pre-PR review finding 5).
+        app.ui_state.open_usage_panel();
+        assert_eq!(
+            app.ui_state
+                .usage_panel()
+                .map(|panel| panel.snapshot.overview.requests),
+            Some(99),
+            "a snapshot that landed while closed is kept for the next open"
+        );
+        app.ui_state.hide_usage_panel();
 
         // Closed then reopened: a later result is welcome again.
         app.ui_state.open_usage_panel();
