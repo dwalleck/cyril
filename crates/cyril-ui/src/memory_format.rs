@@ -1,6 +1,7 @@
 use cyril_core::types::{
     MemoryDisabledReason, MemoryLessonListView, MemoryLessonView, MemoryProjectBinding,
-    MemoryStatus, MemoryStatusView, MemoryTeachOperation, MemoryTeachView,
+    MemorySourceTurnListView, MemorySourceTurnView, MemoryStatus, MemoryStatusView,
+    MemoryTeachOperation, MemoryTeachView,
 };
 
 /// Format `/memory status` from the immutable domain view.
@@ -120,6 +121,78 @@ pub fn format_memory_lesson(lesson: &MemoryLessonView) -> String {
     )
 }
 
+pub fn format_memory_turn_list(result: &MemorySourceTurnListView) -> String {
+    if result.turns().is_empty() && result.corrupt_count() == 0 {
+        return "No captured project source turns.".to_owned();
+    }
+    let mut lines = Vec::with_capacity(result.turns().len() + 3);
+    lines.push("Captured project source turns:".to_owned());
+    lines.extend(result.turns().iter().map(|turn| {
+        format!(
+            "{} [{}] session={} bridge_turn={} started={} {}",
+            turn.id(),
+            turn.status().as_str(),
+            turn.session_id(),
+            turn.bridge_turn_id(),
+            turn.started_at_ms(),
+            single_line(turn.prompt_preview())
+        )
+    }));
+    if result.omitted_count() > 0 {
+        lines.push(format!("+{} more", result.omitted_count()));
+    }
+    if result.corrupt_count() > 0 {
+        lines.push(format!(
+            "{} corrupt source turn row(s) skipped — see cyril.log",
+            result.corrupt_count()
+        ));
+    }
+    lines.join("\n")
+}
+
+fn format_memory_tools(turn: &MemorySourceTurnView) -> String {
+    let tools = turn
+        .tools()
+        .iter()
+        .map(|tool| {
+            serde_json::json!({
+                "tool_id": tool.tool_id(),
+                "name": tool.name().text(),
+                "name_truncated_chars": tool.name().truncated_chars(),
+                "status": tool.status(),
+                "input": tool.input().text(),
+                "input_truncated_chars": tool.input().truncated_chars(),
+                "result": tool.result().text(),
+                "result_truncated_chars": tool.result().truncated_chars(),
+                "capture_truncated_chars": tool.capture_truncated_chars(),
+            })
+        })
+        .collect();
+    let mut rendered = serde_json::Value::Array(tools).to_string();
+    if turn.omitted_tool_count() > 0 {
+        rendered.push_str(&format!("\n+{} omitted tool(s)", turn.omitted_tool_count()));
+    }
+    rendered
+}
+
+pub fn format_memory_turn(turn: &MemorySourceTurnView) -> String {
+    format!(
+        "ID: {}\nSession: {}\nBridge turn: {}\nStatus: {}\nStarted: {}\nFinished: {}\nNext sequence: {}\nSource hash: {}\nPrompt:\n{}\nAssistant:\n{}\nTools:\n{}",
+        turn.id(),
+        turn.session_id(),
+        turn.bridge_turn_id(),
+        turn.status().as_str(),
+        turn.started_at_ms(),
+        turn.finished_at_ms()
+            .map_or_else(|| "none".to_owned(), |value| value.to_string()),
+        turn.next_sequence(),
+        turn.source_hash().unwrap_or("none"),
+        turn.prompt(),
+        turn.assistant(),
+        format_memory_tools(turn),
+    )
+}
+
 /// One list row stays one row: multi-line content shows its first line plus
 /// how many lines follow, so a lesson cannot masquerade as several entries.
 fn single_line(content: &str) -> String {
@@ -137,8 +210,10 @@ fn single_line(content: &str) -> String {
 mod tests {
     use super::*;
     use cyril_core::types::{
-        MemoryLessonMetadataView, MemoryLessonProvenance, MemoryLessonStatus, MemoryLessonTrust,
-        MemoryStoreVersions,
+        MemoryBoundedTextView, MemoryLessonMetadataView, MemoryLessonProvenance,
+        MemoryLessonStatus, MemoryLessonTrust, MemorySourceToolView, MemorySourceTurnListView,
+        MemorySourceTurnMetadataView, MemorySourceTurnStatus, MemorySourceTurnSummaryMetadataView,
+        MemorySourceTurnSummaryView, MemorySourceTurnView, MemoryStoreVersions,
     };
 
     #[test]
@@ -297,5 +372,114 @@ mod tests {
 
         let only_corrupt = format_memory_list(&MemoryLessonListView::new(Vec::new(), 0, 1));
         assert!(only_corrupt.contains("1 corrupt lesson row(s) skipped"));
+    }
+    #[test]
+    fn c7_turn_inspection_survives_ui_retention_and_is_scoped() {
+        let turn = MemorySourceTurnView::new(
+            "00112233445566778899aabbccddeeff".to_owned(),
+            "first line\nsecond line".to_owned(),
+            "assistant output".to_owned(),
+            vec![MemorySourceToolView::new(
+                "tool-1".to_owned(),
+                MemoryBoundedTextView::new("read".to_owned(), 0),
+                "completed".to_owned(),
+                MemoryBoundedTextView::new("/tmp/input".to_owned(), 0),
+                MemoryBoundedTextView::new("file contents".to_owned(), 0),
+                0,
+            )],
+            0,
+            MemorySourceTurnMetadataView::new(
+                "session-1".to_owned(),
+                42,
+                MemorySourceTurnStatus::Completed,
+                Some("deadbeef".to_owned()),
+                1_000,
+                Some(2_000),
+                5,
+            ),
+        );
+        let summary = MemorySourceTurnSummaryView::new(
+            "00112233445566778899aabbccddeeff".to_owned(),
+            "first line\nsecond line".to_owned(),
+            1,
+            MemorySourceTurnSummaryMetadataView::new(
+                "session-1".to_owned(),
+                42,
+                MemorySourceTurnStatus::Completed,
+                1_000,
+                Some(2_000),
+            ),
+        );
+        assert_eq!(summary.tool_count(), 1);
+        assert_eq!(summary.finished_at_ms(), Some(2_000));
+        let list = format_memory_turn_list(&MemorySourceTurnListView::new(vec![summary], 2, 1));
+        assert!(list.contains("[completed] session=session-1 bridge_turn=42"));
+        assert!(list.contains("first line (+1 more line(s))"));
+        assert!(!list.contains("second line"));
+        assert!(list.contains("+2 more"));
+        assert!(list.contains("1 corrupt source turn row(s) skipped"));
+
+        let inspection = format_memory_turn(&turn);
+        for expected in [
+            "ID: 00112233445566778899aabbccddeeff",
+            "Session: session-1",
+            "Bridge turn: 42",
+            "Status: completed",
+            "Finished: 2000",
+            "Source hash: deadbeef",
+            "Prompt:\nfirst line\nsecond line",
+            "Assistant:\nassistant output",
+            "Tools:\n[",
+            "\"name\":\"read\"",
+            "\"tool_id\":\"tool-1\"",
+        ] {
+            assert!(
+                inspection.contains(expected),
+                "missing {expected}: {inspection}"
+            );
+        }
+
+        let large_turn = MemorySourceTurnView::new(
+            "ffeeddccbbaa99887766554433221100".to_owned(),
+            "p".repeat(6 * 1024),
+            "a".repeat(6 * 1024),
+            Vec::new(),
+            0,
+            MemorySourceTurnMetadataView::new(
+                "session-performance".to_owned(),
+                99,
+                MemorySourceTurnStatus::Completed,
+                Some("deadbeef".to_owned()),
+                1_000,
+                Some(2_000),
+                5,
+            ),
+        );
+        let large_summary = MemorySourceTurnSummaryView::new(
+            "ffeeddccbbaa99887766554433221100".to_owned(),
+            "p".repeat(6 * 1024),
+            0,
+            MemorySourceTurnSummaryMetadataView::new(
+                "session-performance".to_owned(),
+                99,
+                MemorySourceTurnStatus::Completed,
+                1_000,
+                Some(2_000),
+            ),
+        );
+        let render_started = std::time::Instant::now();
+        let list = format_memory_turn_list(&MemorySourceTurnListView::new(
+            vec![large_summary; 100],
+            0,
+            0,
+        ));
+        let detail = format_memory_turn(&large_turn);
+        let render_elapsed = render_started.elapsed();
+        assert_eq!(list.lines().count(), 101);
+        assert!(detail.contains("session-performance"));
+        assert!(
+            render_elapsed <= std::time::Duration::from_millis(50),
+            "C7 source turn render budget exceeded: {render_elapsed:?}"
+        );
     }
 }

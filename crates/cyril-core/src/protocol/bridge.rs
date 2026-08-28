@@ -3,10 +3,11 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use agent_client_protocol::Agent as _;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
 use crate::protocol::convert::{session_created_from_response, to_config_options, to_token_usage};
 use crate::protocol::engine::{Engine, V2Engine};
+use crate::protocol::source_observer::{IngressTracker, SourceObserver};
 use crate::protocol::turn_mediator::{BeginTurn, Disposition, TurnMediator};
 use crate::types::agent_command::AgentCommand;
 use crate::types::agent_engine::AgentEngine;
@@ -24,7 +25,19 @@ const PERMISSION_CAPACITY: usize = 16;
 /// User-facing notice when the backend lacks `_session/steer` (-32601).
 const STEERING_UNSUPPORTED_MSG: &str = "steering requires kiro-cli 2.7.0+";
 
-/// User-facing notice when the backend lacks `_session/steer/clear` (-32601).
+/// Map the authoritative prompt response into durable source eligibility.
+pub(crate) const fn source_disposition(
+    stop_reason: crate::types::StopReason,
+) -> crate::types::SourceTurnDisposition {
+    match stop_reason {
+        crate::types::StopReason::EndTurn => crate::types::SourceTurnDisposition::Completed,
+        crate::types::StopReason::Cancelled => crate::types::SourceTurnDisposition::Interrupted,
+        crate::types::StopReason::MaxTokens
+        | crate::types::StopReason::MaxTurnRequests
+        | crate::types::StopReason::Refusal => crate::types::SourceTurnDisposition::Failed,
+    }
+}
+
 /// A DIFFERENT message from `STEERING_UNSUPPORTED_MSG` on purpose (cyril-vgcm
 /// C12): steer still works on such a session — reusing the steer text would
 /// tell the user steering is dead when only bulk-clear is.
@@ -36,6 +49,8 @@ pub struct BridgeHandle {
     command_tx: mpsc::Sender<BridgeCommand>,
     pub(crate) notification_rx: mpsc::Receiver<RoutedNotification>,
     pub(crate) permission_rx: mpsc::Receiver<PermissionRequest>,
+    source_rx: mpsc::Receiver<crate::types::SourceTurnEvent>,
+    completion_rx: oneshot::Receiver<()>,
 }
 
 impl BridgeHandle {
@@ -86,11 +101,16 @@ impl BridgeHandle {
         let (command_tx, command_rx) = mpsc::channel(COMMAND_CAPACITY);
         let (_notification_tx, notification_rx) = mpsc::channel(NOTIFICATION_CAPACITY);
         let (_permission_tx, permission_rx) = mpsc::channel(PERMISSION_CAPACITY);
+        let (_source_tx, source_rx) =
+            mpsc::channel(crate::types::source_turn::SOURCE_EVENT_CHANNEL_CAPACITY);
+        let (_completion_tx, completion_rx) = oneshot::channel();
         (
             Self {
                 command_tx,
                 notification_rx,
                 permission_rx,
+                source_rx,
+                completion_rx,
             },
             command_rx,
         )
@@ -104,6 +124,8 @@ impl BridgeHandle {
         BridgeSender,
         mpsc::Receiver<RoutedNotification>,
         mpsc::Receiver<PermissionRequest>,
+        mpsc::Receiver<crate::types::SourceTurnEvent>,
+        oneshot::Receiver<()>,
     ) {
         (
             BridgeSender {
@@ -111,6 +133,8 @@ impl BridgeHandle {
             },
             self.notification_rx,
             self.permission_rx,
+            self.source_rx,
+            self.completion_rx,
         )
     }
 }
@@ -156,6 +180,8 @@ pub(crate) struct BridgeChannels {
     pub command_rx: mpsc::Receiver<BridgeCommand>,
     pub notification_tx: mpsc::Sender<RoutedNotification>,
     pub permission_tx: mpsc::Sender<PermissionRequest>,
+    pub source_tx: mpsc::Sender<crate::types::SourceTurnEvent>,
+    pub completion_tx: Option<oneshot::Sender<()>>,
 }
 
 /// Host-callback mediation ingress bound (cyril-g9vt design C5): small — the
@@ -168,17 +194,24 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     let (command_tx, command_rx) = mpsc::channel(COMMAND_CAPACITY);
     let (notification_tx, notification_rx) = mpsc::channel(NOTIFICATION_CAPACITY);
     let (permission_tx, permission_rx) = mpsc::channel(PERMISSION_CAPACITY);
+    let (source_tx, source_rx) =
+        mpsc::channel(crate::types::source_turn::SOURCE_EVENT_CHANNEL_CAPACITY);
+    let (completion_tx, completion_rx) = oneshot::channel();
 
     let handle = BridgeHandle {
         command_tx,
         notification_rx,
         permission_rx,
+        source_rx,
+        completion_rx,
     };
 
     let channels = BridgeChannels {
         command_rx,
         notification_tx,
         permission_tx,
+        source_tx,
+        completion_tx: Some(completion_tx),
     };
 
     (handle, channels)
@@ -256,10 +289,11 @@ pub fn spawn_bridge(
     // the bridge thread, or the agent process. V2 returns the real absence and
     // performs no shell/environment probes.
     let host_shell = resolve_host_shell(&config)?;
-    let (handle, channels) = create_channel_pair();
+    let (handle, mut channels) = create_channel_pair();
     // Cloned before `channels` is moved into the thread so that fail-stop
     // paths can still emit a final disconnect notification.
     let disconnect_tx = channels.notification_tx.clone();
+    let completion_tx = channels.completion_tx.take();
 
     std::thread::Builder::new()
         .name("acp-bridge".into())
@@ -295,6 +329,11 @@ pub fn spawn_bridge(
                     reason,
                     FAILSTOP_SEND_TIMEOUT,
                 );
+            }
+            if let Some(completion_tx) = completion_tx
+                && completion_tx.send(()).is_err()
+            {
+                tracing::debug!("bridge completion receiver dropped");
             }
         })
         .map_err(|e| {
@@ -790,7 +829,17 @@ async fn run_bridge(
     // acp request tasks await capacity; the loop accepts in channel order.
     let (host_tx, host_rx) =
         mpsc::channel::<crate::protocol::client::HostCallbackItem>(HOST_CAPACITY);
-    let client = KiroClient::new(inbound_tx.clone(), req_tx, engine.clone(), host_tx, cwd);
+    let source_observer = SourceObserver::new(channels.source_tx.clone());
+    let ingress = IngressTracker::new();
+    let client = KiroClient::new(
+        inbound_tx.clone(),
+        req_tx,
+        source_observer.clone(),
+        ingress.clone(),
+        engine.clone(),
+        host_tx,
+        cwd,
+    );
     // cyril-g9vt slice 5: the terminal registry is constructed HERE and lives
     // loop-side (threaded via InternalChannels into the dispatch ctx) — the
     // cyril-3lh8 "grab it out of the client" escape is gone. Still the sole
@@ -865,6 +914,8 @@ async fn run_bridge(
             req_rx,
             io_done: io_done_rx,
             host_rx,
+            source_observer,
+            ingress,
             #[cfg(feature = "kas")]
             terminals,
         },
@@ -896,6 +947,8 @@ struct InternalChannels {
     /// order. Un-gated — the item type is uninhabited in a default build, so
     /// the arm compiles while no traffic can exist (ADR-0002).
     host_rx: mpsc::Receiver<crate::protocol::client::HostCallbackItem>,
+    source_observer: SourceObserver,
+    ingress: IngressTracker,
     #[cfg(feature = "kas")]
     terminals: std::rc::Rc<crate::protocol::kas::terminal_io::TerminalRegistry>,
 }
@@ -1349,6 +1402,8 @@ async fn run_loop(
         mut req_rx,
         mut io_done,
         host_rx,
+        source_observer,
+        ingress,
         ..
     } = internal;
     use acp::Agent;
@@ -1617,10 +1672,7 @@ async fn run_loop(
                     }
                 }
             }
-            BridgeCommand::SendPrompt {
-                session_id,
-                content_blocks,
-            } => {
+            BridgeCommand::SendPrompt { session_id, prompt } => {
                 // cyril-84ca / ADR-0004: at most one turn in flight; cyril-a71q
                 // C8: the owner is allocated BEFORE dispatch and fails closed
                 // at exhaustion. Both guards live in the mediator (cyril-b4y4);
@@ -1658,8 +1710,16 @@ async fn run_loop(
                     }
                 };
                 liveness.begin(now_std());
+                if let Err(error) = source_observer.begin(
+                    session_id.clone(),
+                    turn_owner,
+                    prompt.original_blocks(),
+                ) {
+                    tracing::error!(%error, "failed to allocate durable source-turn identity");
+                }
                 let acp_session_id = acp::SessionId::new(session_id.as_str());
-                let prompt: Vec<acp::ContentBlock> = content_blocks
+                let prompt: Vec<acp::ContentBlock> = prompt
+                    .into_wire_blocks()
                     .into_iter()
                     .map(acp::ContentBlock::from)
                     .collect();
@@ -1676,6 +1736,8 @@ async fn run_loop(
                 // channel, so the loop is the single observer that clears the flag.
                 let turn_tx = inbound_tx.clone();
                 let usage_session_id = session_id.clone();
+                let turn_source_observer = source_observer.clone();
+                let turn_ingress = ingress.clone();
                 let handle = tokio::task::spawn_local(async move {
                     // One TurnCompleted construction for both arms (success and
                     // transport error) so the terminal marker can't drift between
@@ -1683,32 +1745,50 @@ async fn run_loop(
                     // RoutedNotification envelope rather than inside TurnCompleted,
                     // so this construction stayed single and the stamp is applied
                     // once, below.
-                    let (stop_reason, usage) = match turn_conn.prompt(request).await {
-                        Ok(response) => (
-                            crate::protocol::convert::to_stop_reason(response.stop_reason),
-                            response.usage.as_ref().map(to_token_usage),
-                        ),
-                        Err(e) => {
-                            tracing::error!(error = %e, "prompt failed");
-                            // cyril-l7tw C1: surface the failure to the App BEFORE
-                            // the terminal marker (CLAUDE.md: bridge errors must
-                            // notify the App — logging alone is invisible). Same
-                            // task + channel as the TurnCompleted below, so the
-                            // error-before-completion order is deterministic.
-                            let err_note = Notification::BridgeError {
-                                operation: "prompt".into(),
-                                message: e.to_string(),
-                            };
-                            if let Err(send_err) = turn_tx.send(err_note.into()).await {
-                                tracing::debug!(error = %send_err, "BridgeError send failed (App gone)");
+                    let (stop_reason, usage, disposition) =
+                        match turn_conn.prompt(request).await {
+                            Ok(response) => {
+                                let stop_reason = crate::protocol::convert::to_stop_reason(
+                                    response.stop_reason,
+                                );
+                                let disposition = source_disposition(stop_reason);
+                                (
+                                    stop_reason,
+                                    response.usage.as_ref().map(to_token_usage),
+                                    disposition,
+                                )
                             }
-                            // No PromptResponse on a failed turn; EndTurn frees the
-                            // UI from "busy". App-gone is detected by the command
-                            // loop's own recv() ending, so a failed send here only
-                            // means the App already left.
-                            (StopReason::EndTurn, None)
-                        }
-                    };
+                            Err(e) => {
+                                tracing::error!(error = %e, "prompt failed");
+                                // cyril-l7tw C1: surface the failure to the App BEFORE
+                                // the terminal marker (CLAUDE.md: bridge errors must
+                                // notify the App — logging alone is invisible). Same
+                                // task + channel as the TurnCompleted below, so the
+                                // error-before-completion order is deterministic.
+                                let err_note = Notification::BridgeError {
+                                    operation: "prompt".into(),
+                                    message: e.to_string(),
+                                };
+                                if let Err(send_err) = turn_tx.send(err_note.into()).await {
+                                    tracing::debug!(error = %send_err, "BridgeError send failed (App gone)");
+                                }
+                                (
+                                    StopReason::EndTurn,
+                                    None,
+                                    crate::types::SourceTurnDisposition::Failed,
+                                )
+                            }
+                        };
+                    if tokio::time::timeout(
+                        std::time::Duration::from_millis(50),
+                        turn_ingress.wait_quiescent(),
+                    )
+                    .await
+                    .is_err()
+                    {
+                        tracing::warn!("source observer quiescence timed out");
+                    }
+                    turn_source_observer.finish(disposition);
                     if let Some(usage) = usage {
                         let routed = RoutedNotification::scoped(
                             usage_session_id,
@@ -2851,6 +2931,7 @@ async fn run_loop(
             }
         } // select!
     } // loop
+    source_observer.finish(crate::types::SourceTurnDisposition::Abandoned);
 
     Ok(())
 }
@@ -2895,7 +2976,40 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::types::SourceTurnEventKind;
     use crate::types::turn::TurnId;
+    #[test]
+    fn c2_terminal_disposition_never_false_completes() {
+        let rows = [
+            (
+                StopReason::EndTurn,
+                crate::types::SourceTurnDisposition::Completed,
+            ),
+            (
+                StopReason::Cancelled,
+                crate::types::SourceTurnDisposition::Interrupted,
+            ),
+            (
+                StopReason::MaxTokens,
+                crate::types::SourceTurnDisposition::Failed,
+            ),
+            (
+                StopReason::MaxTurnRequests,
+                crate::types::SourceTurnDisposition::Failed,
+            ),
+            (
+                StopReason::Refusal,
+                crate::types::SourceTurnDisposition::Failed,
+            ),
+        ];
+        for (stop_reason, expected) in rows {
+            assert_eq!(
+                source_disposition(stop_reason),
+                expected,
+                "C2 authoritative terminal mapping"
+            );
+        }
+    }
 
     // cyril-nd4h: `for_tests()` exists only to make `App` constructible in unit
     // tests, and its doc comment promises there is no bridge behind it. Fence
@@ -3113,25 +3227,15 @@ mod tests {
     // delivers it LAST (after the backlog, in channel order).
     #[cfg(feature = "kas")]
     #[tokio::test]
-    /// REGRESSION FENCE (pre-PR review). An unstamped terminal that matches NO
-    /// companion expectation and has NO active turn must be DROPPED.
+    /// REGRESSION FENCE. A foreign terminal that enters before the owner
+    /// response is forwarded without the main turn stamp; the owner response
+    /// still releases the main turn exactly once.
     ///
-    /// Slice 7 broke this: writing the foreign-forwarding arm, I gave the
-    /// no-active arm the same treatment (`None => {}`) reasoning it should reach
-    /// "the routed consumer". The foreign case HAS a consumer; this one does not
-    /// -- it is a late or duplicate terminal for a turn that already ended, and
-    /// forwarding makes the App commit streaming and metering twice. `main`
-    /// dropped it; spec.md:242 requires Drop.
-    ///
-    /// Reaching that arm needs care. The harness delivers the prompt RESPONSE
-    /// before the turn_end (more hops on the notification path), so the response
-    /// releases the turn and registers a `Wire` expectation scoped to the MAIN
-    /// session. A main-scoped turn_end would then be absorbed by the ledger and
-    /// never reach the no-active arm at all -- which is exactly why a first
-    /// attempt at this fence passed under mutation. Scoping the turn_end to a
-    /// FOREIGN session defeats the absorb check (session mismatch) and leaves it
-    /// with no active turn to own it, which is the branch under test.
-    async fn unowned_terminal_with_no_active_turn_is_dropped() {
+    /// The source-capture ingress barrier deliberately waits for callbacks
+    /// already in flight before handling the prompt response. The scripted KAS
+    /// turn_end therefore reaches mediation first. This complements the pure
+    /// `TurnMediator` fences for the later no-active `DropUnowned` branch.
+    async fn foreign_terminal_precedes_owner_response_under_ingress_barrier() {
         let script = Rc::new(RefCell::new(Script {
             emit_turn_end: true,
             turn_end_session: Some("sess_foreign".into()),
@@ -3145,26 +3249,32 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["one".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["one".into()]),
                     })
                     .await
                     .unwrap();
 
-                // The response releases the turn and stamps its own completion.
+                let foreign = drain_to_turn_envelope(&mut rx).await;
+                assert_eq!(
+                    foreign.session_id.as_ref().map(|id| id.as_str()),
+                    Some("sess_foreign")
+                );
+                assert!(
+                    foreign.turn.is_none(),
+                    "foreign terminal must not carry the main turn stamp"
+                );
+
                 let released = drain_to_turn_envelope(&mut rx).await;
                 assert!(
                     released.turn.is_some(),
-                    "released by the owner-stamped response"
+                    "owner-stamped response releases the main turn"
                 );
-
-                // The foreign turn_end now has no active turn and no matching
-                // expectation. It must be dropped, not forwarded.
                 assert!(
                     !matches!(
                         recv_notif(&mut rx, 1).await,
                         Some(Notification::TurnCompleted { .. })
                     ),
-                    "an unowned terminal with no active turn must be dropped"
+                    "owner response must not produce a duplicate completion"
                 );
             },
         )
@@ -3192,7 +3302,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["park".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["park".into()]),
                     })
                     .await
                     .unwrap();
@@ -3251,7 +3361,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["park".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["park".into()]),
                     })
                     .await
                     .unwrap();
@@ -3359,7 +3469,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -3381,7 +3491,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["second".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["second".into()]),
                     })
                     .await
                     .unwrap();
@@ -3449,7 +3559,7 @@ mod tests {
         );
 
         drop(channels);
-        let (_sender, mut rx, _perm) = handle.split();
+        let (_sender, mut rx, _perm, _source_rx, _completion_rx) = handle.split();
         let mut received = Vec::new();
         while let Ok(r) = rx.try_recv() {
             received.push(r.turn.expect("every stamped frame keeps its owner"));
@@ -3497,7 +3607,7 @@ mod tests {
                 .is_err(),
             "channel is verifiably full — the pre-l7tw try_send would drop here"
         );
-        let (_sender, mut rx, _perm) = handle.split();
+        let (_sender, mut rx, _perm, _source_rx, _completion_rx) = handle.split();
         let drainer = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(300));
             let mut total = 0usize;
@@ -3596,7 +3706,7 @@ mod tests {
             .expect("argv");
         let handle = spawn_bridge(cmd, SpawnConfig::default(), std::env::temp_dir())
             .expect("bridge thread spawns");
-        let (_sender, mut rx, _perm) = handle.split();
+        let (_sender, mut rx, _perm, _source_rx, _completion_rx) = handle.split();
         let routed = tokio::time::timeout(Duration::from_secs(10), rx.recv())
             .await
             .expect("notification within 10s of spawn failure")
@@ -3703,6 +3813,7 @@ mod tests {
         /// ledger's dangling `Wire` entry from latent into harmful, so it is
         /// the only way to observe the ledger, which is a `run_loop` local.
         inbound: Option<mpsc::Sender<RoutedNotification>>,
+        source_events: Rc<RefCell<Vec<crate::types::SourceTurnEvent>>>,
         /// When set, `prompt` issues a server->client `terminal/create` with this
         /// `(command, args, cwd)` BEFORE parking — models a KAS turn mid-shell-
         /// command so the cancel-orphan fence can observe the spawned child
@@ -4090,9 +4201,13 @@ mod tests {
                 let (req_tx, req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
                 let (host_tx, host_rx) =
                     mpsc::channel::<crate::protocol::client::HostCallbackItem>(HOST_CAPACITY);
+                let source_observer = SourceObserver::new(channels.source_tx.clone());
+                let ingress = IngressTracker::new();
                 let client = KiroClient::new(
                     inbound_tx.clone(),
                     req_tx,
+                    source_observer.clone(),
+                    ingress.clone(),
                     engine.clone(),
                     host_tx,
                     &std::env::temp_dir(),
@@ -4114,6 +4229,7 @@ mod tests {
                     });
                 let agent_conn_cell: Rc<RefCell<Option<Rc<acp::AgentSideConnection>>>> =
                     Rc::new(RefCell::new(None));
+                let source_events = Rc::clone(&script.borrow().source_events);
                 let fake = FakeAgent {
                     script,
                     gate: gate.clone(),
@@ -4162,11 +4278,18 @@ mod tests {
                         req_rx,
                         io_done: io_done_rx,
                         host_rx,
+                        source_observer,
+                        ingress,
                         #[cfg(feature = "kas")]
                         terminals,
                     },
                 ));
-                let (sender, notif_rx, perm_rx) = handle.split();
+                let (sender, notif_rx, perm_rx, mut source_rx, _completion_rx) = handle.split();
+                tokio::task::spawn_local(async move {
+                    while let Some(event) = source_rx.recv().await {
+                        source_events.borrow_mut().push(event);
+                    }
+                });
                 body(sender, notif_rx, perm_rx, gate, loop_handle, kill).await;
             })
             .await;
@@ -4213,6 +4336,77 @@ mod tests {
                 _ => panic!("no TurnCompleted within 5s"),
             }
         }
+    }
+
+    #[tokio::test]
+    async fn c1_accepted_prompt_capture_precedes_ui_and_excludes_context() {
+        let script = Rc::new(RefCell::new(Script {
+            emit_chunks: 2,
+            ..Script::default()
+        }));
+        let observed = Rc::clone(&script);
+        with_harness(
+            script,
+            move |sender, mut rx, _perm, _gate, loop_handle| async move {
+                let session_id = start_session(&sender, &mut rx).await;
+                sender
+                    .send(BridgeCommand::SendPrompt {
+                        session_id,
+                        prompt: crate::types::PromptEnvelope::prepared(
+                            vec!["original prompt".to_owned()],
+                            Some("<CYRIL_LESSONS>wire only</CYRIL_LESSONS>".to_owned()),
+                        ),
+                    })
+                    .await
+                    .expect("accepted prompt");
+                let _terminal = drain_to_turn_envelope(&mut rx).await;
+                sender
+                    .send(BridgeCommand::Shutdown)
+                    .await
+                    .expect("shutdown");
+                loop_handle.await.expect("loop task").expect("loop result");
+                tokio::task::yield_now().await;
+            },
+        )
+        .await;
+        let events = observed.borrow().source_events.borrow().clone();
+        let kinds: Vec<_> = events
+            .iter()
+            .map(crate::types::SourceTurnEvent::kind)
+            .collect();
+        assert!(matches!(
+            kinds.first(),
+            Some(SourceTurnEventKind::Started { .. })
+        ));
+        assert!(matches!(
+            kinds.get(1),
+            Some(SourceTurnEventKind::PromptFragment { text, .. }) if text == "original prompt"
+        ));
+        assert!(matches!(
+            kinds.get(2),
+            Some(SourceTurnEventKind::AssistantFragment { text, .. }) if text == "c0"
+        ));
+        assert!(matches!(
+            kinds.get(3),
+            Some(SourceTurnEventKind::AssistantFragment { text, .. }) if text == "c1"
+        ));
+        assert!(matches!(
+            kinds.last(),
+            Some(SourceTurnEventKind::Finished {
+                disposition: crate::types::SourceTurnDisposition::Completed,
+                ..
+            })
+        ));
+        assert!(
+            !events.iter().any(|event| match event.kind() {
+                SourceTurnEventKind::PromptFragment { text, .. }
+                | SourceTurnEventKind::AssistantFragment { text, .. } => {
+                    text.contains("CYRIL_LESSONS")
+                }
+                _ => false,
+            }),
+            "C1 enriched context entered source capture"
+        );
     }
 
     /// Drain notifications until the first `TurnCompleted` and return its stop
@@ -4454,9 +4648,13 @@ mod tests {
                 let (notif_tx, _notif_rx) =
                     mpsc::channel::<RoutedNotification>(NOTIFICATION_CAPACITY);
                 let (req_tx, _req_rx) = mpsc::channel::<PermissionRequest>(PERMISSION_CAPACITY);
+                let (source_tx, _source_rx) =
+                    mpsc::channel(crate::types::source_turn::SOURCE_EVENT_CHANNEL_CAPACITY);
                 let client = KiroClient::new(
                     notif_tx,
                     req_tx,
+                    SourceObserver::new(source_tx),
+                    IngressTracker::new(),
                     Rc::new(V2Engine),
                     crate::protocol::client::test_host_tx(),
                     &std::env::temp_dir(),
@@ -4520,7 +4718,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["p".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["p".into()]),
                     })
                     .await
                     .unwrap();
@@ -4609,7 +4807,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["hi".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["hi".into()]),
                     })
                     .await
                     .unwrap();
@@ -4652,10 +4850,7 @@ mod tests {
         with_harness(script, |sender, mut rx, _perm_rx, gate, _loop| async move {
             let sid = start_session(&sender, &mut rx).await;
             sender
-                .send(BridgeCommand::SendPrompt {
-                    session_id: sid,
-                    content_blocks: vec!["go".into()],
-                })
+                .send(BridgeCommand::SendPrompt { session_id: sid, prompt: crate::types::PromptEnvelope::original(vec!["go".into()]) })
                 .await
                 .unwrap();
             sender.send(BridgeCommand::ListSettings).await.unwrap();
@@ -4701,7 +4896,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -4768,7 +4963,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -4832,7 +5027,9 @@ mod tests {
                 let send_result = sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["anyone there?".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec![
+                            "anyone there?".into(),
+                        ]),
                     })
                     .await;
                 assert!(
@@ -4922,7 +5119,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -4961,7 +5158,7 @@ mod tests {
                 let send_result = sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: crate::types::SessionId::new("s-dead"),
-                        content_blocks: vec!["hello?".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["hello?".into()]),
                     })
                     .await;
                 assert!(
@@ -4996,7 +5193,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -5049,7 +5246,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -5086,7 +5283,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -5129,7 +5326,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["one".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["one".into()]),
                     })
                     .await
                     .unwrap();
@@ -5145,7 +5342,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["two".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["two".into()]),
                     })
                     .await
                     .unwrap();
@@ -5184,7 +5381,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -5217,10 +5414,7 @@ mod tests {
             |sender, mut rx, mut perm_rx, _gate, _loop| async move {
                 let sid = start_session(&sender, &mut rx).await;
                 sender
-                    .send(BridgeCommand::SendPrompt {
-                        session_id: sid,
-                        content_blocks: vec!["go".into()],
-                    })
+                    .send(BridgeCommand::SendPrompt { session_id: sid, prompt: crate::types::PromptEnvelope::original(vec!["go".into()]) })
                     .await
                     .unwrap();
                 // The agent's prompt issues request_permission; the loop FORWARDS it
@@ -5278,7 +5472,7 @@ mod tests {
             sender
                 .send(BridgeCommand::SendPrompt {
                     session_id: sid.clone(),
-                    content_blocks: vec!["one".into()],
+                    prompt: crate::types::PromptEnvelope::original(vec!["one".into()]),
                 })
                 .await
                 .unwrap();
@@ -5286,7 +5480,7 @@ mod tests {
             sender
                 .send(BridgeCommand::SendPrompt {
                     session_id: sid.clone(),
-                    content_blocks: vec!["two".into()],
+                    prompt: crate::types::PromptEnvelope::original(vec!["two".into()]),
                 })
                 .await
                 .unwrap();
@@ -5307,7 +5501,7 @@ mod tests {
             sender
                 .send(BridgeCommand::SendPrompt {
                     session_id: sid,
-                    content_blocks: vec!["three".into()],
+                    prompt: crate::types::PromptEnvelope::original(vec!["three".into()]),
                 })
                 .await
                 .unwrap();
@@ -5339,7 +5533,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["forever".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["forever".into()]),
                     })
                     .await
                     .unwrap();
@@ -5372,7 +5566,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -5413,7 +5607,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["forever".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["forever".into()]),
                     })
                     .await
                     .unwrap();
@@ -5477,7 +5671,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["go".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["go".into()]),
                     })
                     .await
                     .unwrap();
@@ -5556,7 +5750,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["A".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["A".into()]),
                     })
                     .await
                     .unwrap();
@@ -5573,7 +5767,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["B".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["B".into()]),
                     })
                     .await
                     .unwrap();
@@ -5630,7 +5824,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["A".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["A".into()]),
                     })
                     .await
                     .unwrap();
@@ -5641,7 +5835,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["B".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["B".into()]),
                     })
                     .await
                     .unwrap();
@@ -5702,7 +5896,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["one".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["one".into()]),
                     })
                     .await
                     .unwrap();
@@ -5717,7 +5911,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["two".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["two".into()]),
                     })
                     .await
                     .unwrap();
@@ -5763,7 +5957,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["three".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["three".into()]),
                     })
                     .await
                     .unwrap();
@@ -5846,7 +6040,7 @@ mod tests {
                 };
                 let prompt = |text: &str| BridgeCommand::SendPrompt {
                     session_id: sid.clone(),
-                    content_blocks: vec![text.into()],
+                    prompt: crate::types::PromptEnvelope::original(vec![text.into()]),
                 };
 
                 // Turn 1 — live-confirmed order: wire turn_end (f1) releases,
@@ -5959,7 +6153,7 @@ mod tests {
                     sender
                         .send(BridgeCommand::SendPrompt {
                             session_id: sid.clone(),
-                            content_blocks: vec![label.into()],
+                            prompt: crate::types::PromptEnvelope::original(vec![label.into()]),
                         })
                         .await
                         .unwrap();
@@ -6025,7 +6219,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["A".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["A".into()]),
                     })
                     .await
                     .unwrap();
@@ -6040,7 +6234,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["B".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["B".into()]),
                     })
                     .await
                     .unwrap();
@@ -6088,7 +6282,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid.clone(),
-                        content_blocks: vec!["one".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["one".into()]),
                     })
                     .await
                     .unwrap();
@@ -6097,7 +6291,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["two".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["two".into()]),
                     })
                     .await
                     .unwrap();
@@ -6132,7 +6326,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: s1.clone(),
-                        content_blocks: vec!["forever".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["forever".into()]),
                     })
                     .await
                     .unwrap();
@@ -6218,7 +6412,7 @@ mod tests {
                 sender
                     .send(BridgeCommand::SendPrompt {
                         session_id: sid,
-                        content_blocks: vec!["run it".into()],
+                        prompt: crate::types::PromptEnvelope::original(vec!["run it".into()]),
                     })
                     .await
                     .unwrap();
@@ -6358,10 +6552,14 @@ mod tests {
         let (_, notif_rx) = tokio::sync::mpsc::channel(1);
         let (_, perm_rx) = tokio::sync::mpsc::channel(1);
 
+        let (_, source_rx) = tokio::sync::mpsc::channel(1);
+        let (_completion_tx, completion_rx) = tokio::sync::oneshot::channel();
         let bridge_handle = BridgeHandle {
             command_tx: cmd_tx,
             notification_rx: notif_rx,
             permission_rx: perm_rx,
+            source_rx,
+            completion_rx,
         };
 
         let sender = bridge_handle.sender();

@@ -49,7 +49,7 @@ async fn fs_read_write_served_by_cyril() {
         dir.path().to_path_buf(),
     )
     .expect("spawn_bridge");
-    let (sender, mut notif_rx, mut perm_rx) = bridge.split();
+    let (sender, mut notif_rx, mut perm_rx, _source_rx, _completion_rx) = bridge.split();
 
     // Auto-approve permissions; record tool-call titles so we can verify the WRITE
     // was gated (C9). KAS auto-allows reads, so no read permission is expected.
@@ -90,12 +90,12 @@ async fn fs_read_write_served_by_cyril() {
     sender
         .send(BridgeCommand::SendPrompt {
             session_id,
-            content_blocks: vec![
+            prompt: cyril_core::types::PromptEnvelope::original(vec![
                 "Using your tools, do BOTH, one tool call at a time: \
-                 1) read the file magic.txt and tell me the magic number it contains; \
-                 2) write a file summary.txt whose entire contents are exactly: done-4242"
+             1) read the file magic.txt and tell me the magic number it contains; \
+             2) write a file summary.txt whose entire contents are exactly: done-4242"
                     .into(),
-            ],
+            ]),
         })
         .await
         .expect("send SendPrompt");

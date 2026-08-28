@@ -37,3 +37,12 @@ prove-it-prototype → falsifiable-design → budgeted-plan → checkpointed-bui
 ## Terminal criterion
 
 Empirical — `evidence.md` records PASS for the exact bundled-rusqlite FTS5 capability and project-filtered literal-token ranking premise, every later artifact satisfies its owning stage's completion criterion, and checkpointed-build records no FAIL.
+
+## Terminal result
+
+**PASS — 2026-08-25.** `evidence.md` records PASS for both empirical premises.
+`design.md`, `plan.md`, and `checkpoints.md` satisfy their owning gates.
+Checkpointed build records all eight gate items as PASS or the plan-backed
+one-off-phase N/A, with no FAIL. Claims C1–C13, their independent oracles,
+falsifiers, permanent regression fences, production budgets, the full Rust
+suite, formatting, and warning-denied Clippy are green.

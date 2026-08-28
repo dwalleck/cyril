@@ -392,6 +392,333 @@ impl MemoryLessonListView {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemorySourceTurnStatus {
+    Incomplete,
+    Completed,
+    Interrupted,
+    Failed,
+    Abandoned,
+    CaptureOverflow,
+}
+
+impl MemorySourceTurnStatus {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Incomplete => "incomplete",
+            Self::Completed => "completed",
+            Self::Interrupted => "interrupted",
+            Self::Failed => "failed",
+            Self::Abandoned => "abandoned",
+            Self::CaptureOverflow => "capture_overflow",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemorySourceTurnSummaryMetadataView {
+    session_id: String,
+    bridge_turn_id: u64,
+    status: MemorySourceTurnStatus,
+    started_at_ms: i64,
+    finished_at_ms: Option<i64>,
+}
+
+impl MemorySourceTurnSummaryMetadataView {
+    pub fn new(
+        session_id: String,
+        bridge_turn_id: u64,
+        status: MemorySourceTurnStatus,
+        started_at_ms: i64,
+        finished_at_ms: Option<i64>,
+    ) -> Self {
+        Self {
+            session_id,
+            bridge_turn_id,
+            status,
+            started_at_ms,
+            finished_at_ms,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemorySourceTurnSummaryView {
+    id: String,
+    prompt_preview: String,
+    tool_count: usize,
+    metadata: MemorySourceTurnSummaryMetadataView,
+}
+
+impl MemorySourceTurnSummaryView {
+    pub fn new(
+        id: String,
+        prompt_preview: String,
+        tool_count: usize,
+        metadata: MemorySourceTurnSummaryMetadataView,
+    ) -> Self {
+        Self {
+            id,
+            prompt_preview,
+            tool_count,
+            metadata,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn session_id(&self) -> &str {
+        &self.metadata.session_id
+    }
+
+    pub const fn bridge_turn_id(&self) -> u64 {
+        self.metadata.bridge_turn_id
+    }
+
+    pub const fn status(&self) -> MemorySourceTurnStatus {
+        self.metadata.status
+    }
+
+    pub fn prompt_preview(&self) -> &str {
+        &self.prompt_preview
+    }
+
+    pub const fn tool_count(&self) -> usize {
+        self.tool_count
+    }
+
+    pub const fn started_at_ms(&self) -> i64 {
+        self.metadata.started_at_ms
+    }
+
+    pub const fn finished_at_ms(&self) -> Option<i64> {
+        self.metadata.finished_at_ms
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemorySourceTurnMetadataView {
+    session_id: String,
+    bridge_turn_id: u64,
+    status: MemorySourceTurnStatus,
+    source_hash: Option<String>,
+    started_at_ms: i64,
+    finished_at_ms: Option<i64>,
+    next_sequence: u64,
+}
+
+impl MemorySourceTurnMetadataView {
+    pub fn new(
+        session_id: String,
+        bridge_turn_id: u64,
+        status: MemorySourceTurnStatus,
+        source_hash: Option<String>,
+        started_at_ms: i64,
+        finished_at_ms: Option<i64>,
+        next_sequence: u64,
+    ) -> Self {
+        Self {
+            session_id,
+            bridge_turn_id,
+            status,
+            source_hash,
+            started_at_ms,
+            finished_at_ms,
+            next_sequence,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoryBoundedTextView {
+    text: String,
+    truncated_chars: usize,
+}
+
+impl MemoryBoundedTextView {
+    pub fn new(text: String, truncated_chars: usize) -> Self {
+        Self {
+            text,
+            truncated_chars,
+        }
+    }
+
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub const fn truncated_chars(&self) -> usize {
+        self.truncated_chars
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemorySourceToolView {
+    tool_id: String,
+    name: MemoryBoundedTextView,
+    status: String,
+    input: MemoryBoundedTextView,
+    result: MemoryBoundedTextView,
+    capture_truncated_chars: usize,
+}
+
+impl MemorySourceToolView {
+    pub fn new(
+        tool_id: String,
+        name: MemoryBoundedTextView,
+        status: String,
+        input: MemoryBoundedTextView,
+        result: MemoryBoundedTextView,
+        capture_truncated_chars: usize,
+    ) -> Self {
+        Self {
+            tool_id,
+            name,
+            status,
+            input,
+            result,
+            capture_truncated_chars,
+        }
+    }
+
+    pub fn tool_id(&self) -> &str {
+        &self.tool_id
+    }
+
+    pub fn name(&self) -> &MemoryBoundedTextView {
+        &self.name
+    }
+
+    pub fn status(&self) -> &str {
+        &self.status
+    }
+
+    pub fn input(&self) -> &MemoryBoundedTextView {
+        &self.input
+    }
+
+    pub fn result(&self) -> &MemoryBoundedTextView {
+        &self.result
+    }
+
+    pub const fn capture_truncated_chars(&self) -> usize {
+        self.capture_truncated_chars
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemorySourceTurnView {
+    id: String,
+    prompt: String,
+    assistant: String,
+    tools: Vec<MemorySourceToolView>,
+    omitted_tool_count: usize,
+    metadata: MemorySourceTurnMetadataView,
+}
+
+impl MemorySourceTurnView {
+    pub fn new(
+        id: String,
+        prompt: String,
+        assistant: String,
+        tools: Vec<MemorySourceToolView>,
+        omitted_tool_count: usize,
+        metadata: MemorySourceTurnMetadataView,
+    ) -> Self {
+        Self {
+            id,
+            prompt,
+            assistant,
+            tools,
+            omitted_tool_count,
+            metadata,
+        }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn session_id(&self) -> &str {
+        &self.metadata.session_id
+    }
+
+    pub const fn bridge_turn_id(&self) -> u64 {
+        self.metadata.bridge_turn_id
+    }
+
+    pub const fn status(&self) -> MemorySourceTurnStatus {
+        self.metadata.status
+    }
+
+    pub fn prompt(&self) -> &str {
+        &self.prompt
+    }
+
+    pub fn assistant(&self) -> &str {
+        &self.assistant
+    }
+
+    pub fn tools(&self) -> &[MemorySourceToolView] {
+        &self.tools
+    }
+
+    pub const fn omitted_tool_count(&self) -> usize {
+        self.omitted_tool_count
+    }
+
+    pub fn source_hash(&self) -> Option<&str> {
+        self.metadata.source_hash.as_deref()
+    }
+
+    pub const fn started_at_ms(&self) -> i64 {
+        self.metadata.started_at_ms
+    }
+
+    pub const fn finished_at_ms(&self) -> Option<i64> {
+        self.metadata.finished_at_ms
+    }
+
+    pub const fn next_sequence(&self) -> u64 {
+        self.metadata.next_sequence
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemorySourceTurnListView {
+    turns: Vec<MemorySourceTurnSummaryView>,
+    omitted_count: usize,
+    corrupt_count: usize,
+}
+
+impl MemorySourceTurnListView {
+    pub const fn new(
+        turns: Vec<MemorySourceTurnSummaryView>,
+        omitted_count: usize,
+        corrupt_count: usize,
+    ) -> Self {
+        Self {
+            turns,
+            omitted_count,
+            corrupt_count,
+        }
+    }
+
+    pub fn turns(&self) -> &[MemorySourceTurnSummaryView] {
+        &self.turns
+    }
+
+    pub const fn omitted_count(&self) -> usize {
+        self.omitted_count
+    }
+
+    pub const fn corrupt_count(&self) -> usize {
+        self.corrupt_count
+    }
+}
+
 fn bound_text(value: &str) -> String {
     if value.len() <= MAX_DETAIL_BYTES {
         return value.to_owned();

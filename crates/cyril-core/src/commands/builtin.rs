@@ -179,7 +179,7 @@ impl Command for UsageCommand {
 /// `/memory` — typed project lesson operations. The binary owns persistence.
 pub struct MemoryCommand;
 
-const MEMORY_USAGE: &str = "Usage: /memory status | teach <text> | teach --replace <lesson-id> <text> | list | inspect <lesson-id>";
+const MEMORY_USAGE: &str = "Usage: /memory status | teach <text> | teach --replace <lesson-id> <text> | list | inspect <lesson-id> | turns | inspect-turn <source-turn-id>";
 
 #[async_trait::async_trait]
 impl Command for MemoryCommand {
@@ -188,7 +188,7 @@ impl Command for MemoryCommand {
     }
 
     fn description(&self) -> &str {
-        "Show memory status or manage explicit project lessons"
+        "Show memory status, lessons, or captured source turns"
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
@@ -208,6 +208,15 @@ impl Command for MemoryCommand {
         }
         let action = match (subcommand, rest) {
             ("list", "") => Some(MemoryCommandAction::List),
+            ("turns", "") => Some(MemoryCommandAction::Turns),
+            ("inspect-turn", rest) => match split_token(rest) {
+                (source_turn_id, "") if !source_turn_id.is_empty() => {
+                    Some(MemoryCommandAction::InspectTurn {
+                        source_turn_id: source_turn_id.to_owned(),
+                    })
+                }
+                _ => None,
+            },
             ("inspect", rest) => match split_token(rest) {
                 (lesson_id, "") if !lesson_id.is_empty() => Some(MemoryCommandAction::Inspect {
                     lesson_id: lesson_id.to_owned(),

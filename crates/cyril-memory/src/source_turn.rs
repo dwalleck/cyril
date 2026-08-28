@@ -311,6 +311,7 @@ pub enum SourceTurnEventKind {
         status: String,
         input: String,
         result: String,
+        source_truncated_chars: usize,
     },
     Finished {
         disposition: SourceTurnDisposition,
@@ -431,6 +432,7 @@ fn normalize_kind(kind: SourceTurnEventKind) -> Result<SourceTurnEventKind, Sour
             status,
             input,
             result,
+            source_truncated_chars,
         } => {
             if !tool_id.is_valid() {
                 return Err(SourceTurnError::InvalidEvent);
@@ -446,6 +448,7 @@ fn normalize_kind(kind: SourceTurnEventKind) -> Result<SourceTurnEventKind, Sour
                 status,
                 input: normalized_source_text(&input)?,
                 result: normalized_source_text(&result)?,
+                source_truncated_chars,
             }
         }
         SourceTurnEventKind::Finished {
@@ -740,6 +743,16 @@ pub(crate) struct SourceTurnDraft {
     assembly: SourceTurnAssembly,
 }
 
+struct ToolSnapshotParts<'a> {
+    tool_index: usize,
+    tool_id: &'a SourceToolId,
+    name: &'a str,
+    status: &'a str,
+    input: &'a str,
+    result: &'a str,
+    source_truncated_chars: usize,
+}
+
 impl SourceTurnDraft {
     /// Open an empty draft from the `Started` header of a turn's first batch.
     /// The batch is NOT applied: the caller applies it exactly once.
@@ -941,7 +954,16 @@ impl SourceTurnDraft {
                 status,
                 input,
                 result,
-            } => self.merge_tool(*tool_index, tool_id, name, status, input, result)?,
+                source_truncated_chars,
+            } => self.merge_tool(ToolSnapshotParts {
+                tool_index: *tool_index,
+                tool_id,
+                name,
+                status,
+                input,
+                result,
+                source_truncated_chars: *source_truncated_chars,
+            })?,
             SourceTurnEventKind::Finished {
                 disposition,
                 finished_at_ms,
@@ -958,15 +980,16 @@ impl SourceTurnDraft {
         Ok(())
     }
 
-    fn merge_tool(
-        &mut self,
-        tool_index: usize,
-        tool_id: &SourceToolId,
-        name: &str,
-        status: &str,
-        input: &str,
-        result: &str,
-    ) -> Result<(), SourceTurnError> {
+    fn merge_tool(&mut self, snapshot: ToolSnapshotParts<'_>) -> Result<(), SourceTurnError> {
+        let ToolSnapshotParts {
+            tool_index,
+            tool_id,
+            name,
+            status,
+            input,
+            result,
+            source_truncated_chars,
+        } = snapshot;
         if tool_index >= MAX_TOOLS {
             self.assembly.omitted_tool_indices.insert(tool_index);
             return Ok(());
@@ -984,7 +1007,10 @@ impl SourceTurnDraft {
         let used_without_existing = self.tool_chars.saturating_sub(existing_chars);
         let remaining_total = MAX_TOTAL_TOOL_CHARS.saturating_sub(used_without_existing);
         let budget = MAX_TOOL_CHARS.min(remaining_total);
-        let record = bounded_tool_record(tool_id, name, status, input, result, budget);
+        let mut record = bounded_tool_record(tool_id, name, status, input, result, budget);
+        record.truncated_chars = record
+            .truncated_chars
+            .saturating_add(source_truncated_chars);
         self.tool_chars = used_without_existing.saturating_add(record.retained_chars);
         if tool_index == self.tools.len() {
             self.tools.push(record);
@@ -1468,6 +1494,7 @@ mod tests {
                 status: "completed\r\n".to_owned(),
                 input: "cargo build".to_owned(),
                 result: "   Compiling foo\r\n\u{1b}[1mFinished\u{1b}[0m".to_owned(),
+                source_truncated_chars: 0,
             },
         );
         match snapshot.kind() {
@@ -1489,6 +1516,7 @@ mod tests {
                     status: "\u{1b}[0m".to_owned(),
                     input: String::new(),
                     result: String::new(),
+                    source_truncated_chars: 0,
                 },
             ),
             Err(SourceTurnError::InvalidEvent)
@@ -1511,6 +1539,7 @@ mod tests {
                     status: "completed".to_owned(),
                     input: "x".repeat(MAX_TOOL_CHARS),
                     result: "y".repeat(MAX_TOOL_CHARS),
+                    source_truncated_chars: 0,
                 },
             )
         };
@@ -1633,5 +1662,76 @@ mod tests {
             ),
             Err(SourceTurnError::InvalidEvent)
         ));
+    }
+    #[test]
+    fn c6_stream_tool_tail_assembles_without_thoughts_or_secrets() {
+        let session = SourceSessionId::new("session-redaction").expect("session identity");
+        let id = SourceTurnId::from_bytes([9; 16]);
+        let secret = "ghp_abcdefghijklmnopqrstuvwxyz123456";
+        let batch = CaptureBatch::new(vec![
+            event(
+                &session,
+                id,
+                0,
+                SourceTurnEventKind::Started {
+                    bridge_turn_id: 9,
+                    started_at_ms: 1,
+                    block_count: 1,
+                },
+            ),
+            event(
+                &session,
+                id,
+                1,
+                SourceTurnEventKind::PromptFragment {
+                    block_index: 0,
+                    fragment_index: 0,
+                    text: format!("prompt token: {secret}"),
+                    is_last: true,
+                },
+            ),
+            event(
+                &session,
+                id,
+                2,
+                SourceTurnEventKind::AssistantFragment {
+                    fragment_index: 0,
+                    text: format!("assistant token: {secret}"),
+                },
+            ),
+            event(
+                &session,
+                id,
+                3,
+                SourceTurnEventKind::ToolSnapshot {
+                    tool_index: 0,
+                    tool_id: SourceToolId::new("tool-1").expect("tool id"),
+                    name: "read".to_owned(),
+                    status: "completed".to_owned(),
+                    input: format!("token={secret}"),
+                    result: format!("token={secret}"),
+                    source_truncated_chars: 0,
+                },
+            ),
+        ])
+        .expect("redaction batch");
+        let mut draft = SourceTurnDraft::begin(&batch).expect("redacted draft");
+        draft.apply_batch(&batch).expect("applied redacted batch");
+        let (prompt, assistant) = draft.redacted_view();
+        let combined = format!(
+            "{}\n{}\n{}\n{}",
+            prompt,
+            assistant,
+            draft.tools()[0].input,
+            draft.tools()[0].result,
+        );
+        assert!(
+            !combined.contains(secret),
+            "C6 secret persisted: {combined}"
+        );
+        assert!(
+            combined.contains("[REDACTED]"),
+            "C6 redaction marker missing"
+        );
     }
 }

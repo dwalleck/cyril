@@ -37,7 +37,8 @@ async fn main() -> anyhow::Result<()> {
         cyril_core::protocol::bridge::SpawnConfig::default(),
         cwd.clone(),
     )?;
-    let (sender, mut notification_rx, mut permission_rx) = bridge.split();
+    let (sender, mut notification_rx, mut permission_rx, _source_rx, _completion_rx) =
+        bridge.split();
 
     sender.send(BridgeCommand::NewSession { cwd }).await?;
     let session_id = record(&mut notification_rx, &mut permission_rx, 8, "SETUP", None).await;
@@ -48,7 +49,9 @@ async fn main() -> anyhow::Result<()> {
     sender
         .send(BridgeCommand::SendPrompt {
             session_id: session_id.clone(),
-            content_blocks: vec!["Count from 1 to 40, one number per line, no other text.".into()],
+            prompt: cyril_core::types::PromptEnvelope::original(vec![
+                "Count from 1 to 40, one number per line, no other text.".into(),
+            ]),
         })
         .await?;
     record(
@@ -64,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
     sender
         .send(BridgeCommand::SendPrompt {
             session_id,
-            content_blocks: vec!["Say hello.".into()],
+            prompt: cyril_core::types::PromptEnvelope::original(vec!["Say hello.".into()]),
         })
         .await?;
     record(

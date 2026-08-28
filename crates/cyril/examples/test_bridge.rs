@@ -65,7 +65,8 @@ async fn main() -> anyhow::Result<()> {
         },
         cwd.clone(),
     )?;
-    let (sender, mut notification_rx, mut permission_rx) = bridge.split();
+    let (sender, mut notification_rx, mut permission_rx, _source_rx, _completion_rx) =
+        bridge.split();
     println!("[OK] Bridge spawned\n");
 
     // --- Test 1: Create session ---
@@ -219,7 +220,7 @@ async fn main() -> anyhow::Result<()> {
     sender
         .send(BridgeCommand::SendPrompt {
             session_id: session_id.clone(),
-            content_blocks: vec![prompt],
+            prompt: cyril_core::types::PromptEnvelope::original(vec![prompt]),
         })
         .await?;
     drain_notifications(

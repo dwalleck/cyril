@@ -137,3 +137,15 @@ Approved design exclusions cite verified `cyril-xajq`, `cyril-nxq5`, `cyril-s7gn
 - [x] 6,000 + 25%/1,500 = 7,500 projected lines; three increments are independently green and below 4,000 with local margin.
 - [x] Tracker taxonomy is applied.
 - [x] No slice is declared complete; checkpointed-build exclusively judges completion.
+
+## Checkpoint partition adjustment
+
+Reality reduced the review partition from three PR increments to two without
+changing any claim or acceptance criterion. The durable substrate is 3,920
+changed lines (`main...ddc7343a`). The dependent capture plus inspection
+increment is 2,550 changed lines (`ddc7343a...babd588`). Capture and inspection
+share the binary's concrete `App`/`ProjectMemory` adapter boundary; separating
+that mutation would duplicate an intermediate adapter, while the combined
+increment remains independently green and below the 4,000-line tripwire. The
+delivery therefore uses two stacked review increments, each below 4,000 changed
+lines, rather than the projected three.

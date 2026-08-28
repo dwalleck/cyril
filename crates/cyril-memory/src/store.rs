@@ -805,15 +805,18 @@ impl StoreSet {
         let mut statement = self
             ._memory
             .prepare(
-                "SELECT st.source_turn_id, st.session_id, st.bridge_turn_id, st.state,
+                "WITH matches AS MATERIALIZED (
+                     SELECT rowid, bm25(source_turns_fts, 0.0, 1.0, 1.0, 1.0) AS rank
+                     FROM source_turns_fts
+                     WHERE source_turns_fts MATCH ?1
+                 )
+                 SELECT st.source_turn_id, st.session_id, st.bridge_turn_id, st.state,
                         st.started_at_ms, st.finished_at_ms, st.block_count, st.next_sequence,
                         st.assistant, st.tools, st.source_hash, st.assembly
-                 FROM (SELECT rowid, bm25(source_turns_fts, 0.0, 1.0, 1.0, 1.0) AS rank
-                       FROM source_turns_fts
-                       WHERE source_turns_fts MATCH ?1) AS hit
-                 JOIN source_turns AS st ON st.rowid = hit.rowid
+                 FROM matches
+                 JOIN source_turns AS st ON st.rowid = matches.rowid
                  WHERE st.project_id = ?2 AND st.state = 'completed'
-                 ORDER BY hit.rank ASC, st.finished_at_ms DESC, st.source_turn_id ASC
+                 ORDER BY matches.rank ASC, st.finished_at_ms DESC, st.source_turn_id ASC
                  LIMIT ?3",
             )
             .map_err(|source| map_sqlite(&self.memory_path, source))?;
@@ -2084,6 +2087,7 @@ mod tests {
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
+    use std::time::{Duration, Instant};
 
     use rusqlite::Connection;
     use tempfile::TempDir;
@@ -2555,6 +2559,7 @@ mod tests {
                 status: "completed".to_owned(),
                 input: input.to_owned(),
                 result: result.to_owned(),
+                source_truncated_chars: 0,
             },
         )
     }
@@ -3074,6 +3079,210 @@ mod tests {
         assert_eq!(
             stores.inspect_turn(&project, id).unwrap().status(),
             crate::SourceTurnStatus::Finished(crate::SourceTurnDisposition::Completed)
+        );
+    }
+
+    #[test]
+    fn c7_source_turn_list_and_inspection_are_bounded() {
+        let (_root, project, mut stores) = project_store();
+        let empty = stores.list_turns(&project).unwrap();
+        assert!(empty.turns().is_empty());
+        assert_eq!(empty.omitted_count(), 0);
+        let id = SourceTurnId::from_bytes([4; 16]);
+        let session = SourceSessionId::new("bounded-view").unwrap();
+        let batch = CaptureBatch::new(vec![
+            SourceTurnEvent::new(
+                session.clone(),
+                id,
+                0,
+                crate::SourceTurnEventKind::Started {
+                    bridge_turn_id: 4,
+                    started_at_ms: 1,
+                    block_count: 1,
+                },
+            )
+            .unwrap(),
+            SourceTurnEvent::new(
+                session.clone(),
+                id,
+                1,
+                crate::SourceTurnEventKind::PromptFragment {
+                    block_index: 0,
+                    fragment_index: 0,
+                    text: "p".repeat(20_000),
+                    is_last: true,
+                },
+            )
+            .unwrap(),
+            SourceTurnEvent::new(
+                session.clone(),
+                id,
+                2,
+                crate::SourceTurnEventKind::AssistantFragment {
+                    fragment_index: 0,
+                    text: "a".repeat(20_000),
+                },
+            )
+            .unwrap(),
+            SourceTurnEvent::new(
+                session,
+                id,
+                3,
+                crate::SourceTurnEventKind::Finished {
+                    disposition: crate::SourceTurnDisposition::Completed,
+                    finished_at_ms: 2,
+                },
+            )
+            .unwrap(),
+        ])
+        .unwrap();
+        stores.capture_batch(&project, &batch).unwrap();
+
+        let list = stores.list_turns(&project).unwrap();
+        let listed = &list.turns()[0];
+        assert!(listed.prompt_preview().chars().count() <= SOURCE_TURN_PREVIEW_CHARS);
+        assert_eq!(listed.tool_count(), 0);
+
+        let inspected = stores.inspect_turn(&project, id).unwrap();
+        assert!(inspected.prompt().text().chars().count() <= INSPECT_TEXT_CHARS);
+        assert!(inspected.assistant().text().chars().count() <= INSPECT_TEXT_CHARS);
+        assert!(inspected.tools().is_empty());
+        assert!(inspected.prompt().is_truncated());
+        assert!(inspected.assistant().is_truncated());
+    }
+    #[test]
+    #[ignore = "production-scale performance gate"]
+    fn source_turn_operations_meet_production_scale_budgets() {
+        let (_root, project, mut stores) = project_store();
+        let large_id = SourceTurnId::from_bytes([5; 16]);
+        let session = SourceSessionId::new("capture-budget").unwrap();
+        let mut events = vec![
+            SourceTurnEvent::new(
+                session.clone(),
+                large_id,
+                0,
+                crate::SourceTurnEventKind::Started {
+                    bridge_turn_id: 5,
+                    started_at_ms: 1,
+                    block_count: 1,
+                },
+            )
+            .unwrap(),
+        ];
+        for fragment_index in 0..4 {
+            events.push(
+                SourceTurnEvent::new(
+                    session.clone(),
+                    large_id,
+                    u64::try_from(fragment_index).unwrap() + 1,
+                    crate::SourceTurnEventKind::PromptFragment {
+                        block_index: 0,
+                        fragment_index,
+                        text: "p".repeat(60_000),
+                        is_last: fragment_index == 3,
+                    },
+                )
+                .unwrap(),
+            );
+        }
+        events.push(
+            SourceTurnEvent::new(
+                session,
+                large_id,
+                5,
+                crate::SourceTurnEventKind::Finished {
+                    disposition: crate::SourceTurnDisposition::Completed,
+                    finished_at_ms: 2,
+                },
+            )
+            .unwrap(),
+        );
+        let batch = CaptureBatch::new(events).unwrap();
+        let capture_started = Instant::now();
+        stores.capture_batch(&project, &batch).unwrap();
+        let capture_elapsed = capture_started.elapsed();
+        assert!(
+            capture_elapsed <= Duration::from_millis(100),
+            "capture batch budget exceeded: {capture_elapsed:?}"
+        );
+
+        let filler_id = SourceTurnId::from_bytes([6; 16]);
+        stores
+            .capture_batch(
+                &project,
+                &completed_source_batch(filler_id, "performance", "filler source turn", 3),
+            )
+            .unwrap();
+        let needle_id = SourceTurnId::from_bytes([7; 16]);
+        stores
+            .capture_batch(
+                &project,
+                &completed_source_batch(needle_id, "performance", "production scale needle", 4),
+            )
+            .unwrap();
+        let filler_source_id = filler_id.to_string();
+
+        let transaction = stores._memory.transaction().unwrap();
+        {
+            let mut statement = transaction
+                .prepare(
+                    "INSERT INTO source_turns (
+                         source_turn_id, project_id, session_id, bridge_turn_id, state,
+                         started_at_ms, finished_at_ms, block_count, next_sequence,
+                         prompt, assistant, tools, tools_text, tool_count, source_hash,
+                         assembly, created_at_ms, updated_at_ms
+                     )
+                     SELECT ?1, project_id, session_id, bridge_turn_id, state,
+                            started_at_ms, finished_at_ms, block_count, next_sequence,
+                            prompt, assistant, tools, tools_text, tool_count, source_hash,
+                            assembly, created_at_ms, updated_at_ms
+                     FROM source_turns WHERE source_turn_id = ?2",
+                )
+                .unwrap();
+            for index in 0_i64..99_998 {
+                statement
+                    .execute(params![format!("{index:032x}"), &filler_source_id])
+                    .unwrap();
+            }
+        }
+        transaction.commit().unwrap();
+
+        let recall_started = Instant::now();
+        let context = stores
+            .prepare_prompt(&project, &query("production scale needle"))
+            .unwrap();
+        let recall_elapsed = recall_started.elapsed();
+        assert!(context.is_some());
+        assert!(
+            recall_elapsed <= Duration::from_millis(50),
+            "recall budget exceeded: {recall_elapsed:?}"
+        );
+
+        let list_started = Instant::now();
+        let list = stores.list_turns(&project).unwrap();
+        let list_elapsed = list_started.elapsed();
+        assert_eq!(list.turns().len(), 100);
+        assert_eq!(list.omitted_count(), 99_901);
+        assert!(
+            list_elapsed <= Duration::from_millis(50),
+            "list budget exceeded: {list_elapsed:?}"
+        );
+        let inspect_started = Instant::now();
+        let inspected = stores.inspect_turn(&project, large_id).unwrap();
+        let inspect_elapsed = inspect_started.elapsed();
+        assert!(inspected.prompt().text().chars().count() <= INSPECT_TEXT_CHARS);
+        assert!(inspected.assistant().text().chars().count() <= INSPECT_TEXT_CHARS);
+        assert!(inspected.tools().iter().all(|tool| {
+            tool.name().text().chars().count() <= INSPECT_TOOL_TEXT_CHARS
+                && tool.input().text().chars().count() <= INSPECT_TOOL_TEXT_CHARS
+                && tool.result().text().chars().count() <= INSPECT_TOOL_TEXT_CHARS
+        }));
+        assert!(
+            inspect_elapsed <= Duration::from_millis(50),
+            "inspection budget exceeded: {inspect_elapsed:?}"
+        );
+        eprintln!(
+            "capture={capture_elapsed:?} recall={recall_elapsed:?} list={list_elapsed:?} inspect={inspect_elapsed:?}"
         );
     }
 

@@ -1,3 +1,4 @@
+use crate::protocol::source_observer::{IngressTracker, SourceObserver};
 use agent_client_protocol as acp;
 use async_trait::async_trait;
 use tokio::sync::mpsc;
@@ -119,6 +120,8 @@ pub(crate) fn test_host_shell(engine: crate::types::AgentEngine) -> ResolvedHost
 pub(crate) struct KiroClient {
     notification_tx: mpsc::Sender<RoutedNotification>,
     permission_tx: mpsc::Sender<PermissionRequest>,
+    source_observer: SourceObserver,
+    ingress: IngressTracker,
     tool_call_ledger: ToolCallLedger,
     /// The bound engine (ADR-0001): all wire→internal conversion dispatches
     /// through it, so v2 and KAS share this client unchanged.
@@ -136,6 +139,8 @@ impl KiroClient {
     pub fn new(
         notification_tx: mpsc::Sender<RoutedNotification>,
         permission_tx: mpsc::Sender<PermissionRequest>,
+        source_observer: SourceObserver,
+        ingress: IngressTracker,
         engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
         host_tx: mpsc::Sender<HostCallbackItem>,
         cwd: &std::path::Path,
@@ -146,6 +151,8 @@ impl KiroClient {
         Self {
             notification_tx,
             permission_tx,
+            source_observer,
+            ingress,
             tool_call_ledger: ToolCallLedger::new(),
             engine,
             #[cfg(feature = "kas")]
@@ -259,6 +266,7 @@ impl acp::Client for KiroClient {
     }
 
     async fn session_notification(&self, args: acp::SessionNotification) -> acp::Result<()> {
+        let _ingress = self.ingress.enter();
         // Log tool call details for debugging content/locations/diff availability
         match &args.update {
             acp::SessionUpdate::ToolCall(tc) => {
@@ -310,6 +318,7 @@ impl acp::Client for KiroClient {
             // envelope. The App routes based on whether this matches the main
             // session or a known subagent.
             let routed = RoutedNotification::scoped(session_id, notification);
+            self.source_observer.observe(&routed);
             self.notification_tx
                 .send(routed)
                 .await
@@ -320,6 +329,7 @@ impl acp::Client for KiroClient {
     }
 
     async fn ext_notification(&self, args: acp::ExtNotification) -> acp::Result<()> {
+        let _ingress = self.ingress.enter();
         let params: serde_json::Value = match serde_json::from_str(args.params.get()) {
             Ok(v) => v,
             Err(e) => {
@@ -402,6 +412,7 @@ impl acp::Client for KiroClient {
                     } => RoutedNotification::scoped(sid.clone(), notification),
                     _ => RoutedNotification::global(notification),
                 };
+                self.source_observer.observe(&routed);
                 self.notification_tx
                     .send(routed)
                     .await
@@ -749,6 +760,25 @@ mod tests {
     use super::*;
     use agent_client_protocol::Client as _;
 
+    fn test_client(
+        notification_tx: mpsc::Sender<RoutedNotification>,
+        permission_tx: mpsc::Sender<PermissionRequest>,
+        engine: std::rc::Rc<dyn crate::protocol::engine::Engine>,
+        host_tx: mpsc::Sender<HostCallbackItem>,
+        cwd: &std::path::Path,
+    ) -> KiroClient {
+        let (source_tx, _source_rx) =
+            mpsc::channel(crate::types::source_turn::SOURCE_EVENT_CHANNEL_CAPACITY);
+        KiroClient::new(
+            notification_tx,
+            permission_tx,
+            SourceObserver::new(source_tx),
+            IngressTracker::new(),
+            engine,
+            host_tx,
+            cwd,
+        )
+    }
     #[tokio::test]
     async fn read_text_file_override_returns_content() {
         // KAS-5a / claim C2 fence: a KAS `fs/read_text_file` reaches KiroClient's
@@ -756,7 +786,7 @@ mod tests {
         // file's content end-to-end. Fails if the override is missing/miswired.
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
@@ -779,7 +809,7 @@ mod tests {
         // typed override and writes to disk (not method_not_found).
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
@@ -830,7 +860,7 @@ mod tests {
         let (ntx, _nrx) = mpsc::channel(8);
         let (ptx, _prx) = mpsc::channel(1);
         let (mntx, _mnrx) = mpsc::channel(8);
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
@@ -1040,7 +1070,7 @@ mod tests {
     fn v2_bound_client() -> (KiroClient, mpsc::Receiver<RoutedNotification>) {
         let (ntx, nrx) = mpsc::channel(4);
         let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
@@ -1102,7 +1132,7 @@ mod tests {
         // The shell now belongs to the mediation side (the registry lives in
         // the dispatch ctx since slice 5); hooks paths stay direct and simply
         // never send.
-        KiroClient::new(
+        test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
@@ -1135,7 +1165,7 @@ mod tests {
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
         let (mediation_ntx, _mnrx) = mpsc::channel(4);
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
@@ -1186,7 +1216,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
@@ -1251,7 +1281,7 @@ mod tests {
 
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
@@ -1441,7 +1471,7 @@ mod tests {
         let gate_for = |mode| {
             let (ntx, _nrx) = mpsc::channel(1);
             let (ptx, _prx) = mpsc::channel(1);
-            KiroClient::new(
+            test_client(
                 ntx,
                 ptx,
                 std::rc::Rc::new(crate::protocol::engine::KasEngine { hooks_mode: mode }),
@@ -1490,7 +1520,7 @@ mod tests {
         // HooksChanged now travels the mediation seam's notify channel (in the
         // real bridge: inbound → run_loop → App). Point it at the SAME
         // receiver so this unit test observes the Outbound emission.
-        let outbound = KiroClient::new(
+        let outbound = test_client(
             ntx.clone(),
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
@@ -1551,7 +1581,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine {
@@ -1639,7 +1669,7 @@ mod tests {
     async fn shell_type_refuses_a_missing_kas_snapshot() {
         let (ntx, _nrx) = mpsc::channel(1);
         let (ptx, _prx) = mpsc::channel(1);
-        let client = KiroClient::new(
+        let client = test_client(
             ntx,
             ptx,
             std::rc::Rc::new(crate::protocol::engine::KasEngine::default()),
@@ -1679,9 +1709,13 @@ mod metadata_routing_tests {
         ntx: mpsc::Sender<RoutedNotification>,
         ptx: mpsc::Sender<PermissionRequest>,
     ) -> KiroClient {
+        let (source_tx, _source_rx) =
+            mpsc::channel(crate::types::source_turn::SOURCE_EVENT_CHANNEL_CAPACITY);
         KiroClient::new(
             ntx,
             ptx,
+            SourceObserver::new(source_tx),
+            IngressTracker::new(),
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
             test_host_tx(),
             std::path::Path::new("/tmp"),
@@ -1856,9 +1890,13 @@ mod approval_join_tests {
     ) {
         let (ntx, nrx) = mpsc::channel(8);
         let (ptx, prx) = mpsc::channel(4);
+        let (source_tx, _source_rx) =
+            mpsc::channel(crate::types::source_turn::SOURCE_EVENT_CHANNEL_CAPACITY);
         let client = KiroClient::new(
             ntx,
             ptx,
+            SourceObserver::new(source_tx),
+            IngressTracker::new(),
             std::rc::Rc::new(crate::protocol::engine::V2Engine),
             test_host_tx(),
             std::path::Path::new("/tmp"),

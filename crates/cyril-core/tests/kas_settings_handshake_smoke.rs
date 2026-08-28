@@ -45,7 +45,7 @@ async fn settings_handshake_turn_completes_and_orchestrates() {
         dir.path().to_path_buf(),
     )
     .expect("spawn_bridge");
-    let (sender, mut notif_rx, mut perm_rx) = bridge.split();
+    let (sender, mut notif_rx, mut perm_rx, _source_rx, _completion_rx) = bridge.split();
 
     // Auto-approve any permission the delegation turn raises.
     let approver = tokio::spawn(async move {
@@ -82,13 +82,13 @@ async fn settings_handshake_turn_completes_and_orchestrates() {
     sender
         .send(BridgeCommand::SendPrompt {
             session_id,
-            content_blocks: vec![
+            prompt: cyril_core::types::PromptEnvelope::original(vec![
                 "This is a test of your sub-agent delegation capability. You MUST use \
-                 your sub-agent delegation capability and MUST NOT answer directly. \
-                 Delegate a subtask to a sub-agent: have the sub-agent reply with \
-                 exactly the word BANANA. Then tell me the single word it returned."
+             your sub-agent delegation capability and MUST NOT answer directly. \
+             Delegate a subtask to a sub-agent: have the sub-agent reply with \
+             exactly the word BANANA. Then tell me the single word it returned."
                     .into(),
-            ],
+            ]),
         })
         .await
         .expect("send SendPrompt");

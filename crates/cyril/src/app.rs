@@ -6,8 +6,9 @@ use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers, Mous
 use futures_util::{FutureExt, StreamExt};
 use ratatui::DefaultTerminal;
 use serde::Deserialize;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
+use crate::capture_forwarder::CaptureForwarder;
 use crate::memory_runtime::{
     FirstPromptContextError, MemoryRuntimeHandle, ProjectBinding, ProjectMemory,
 };
@@ -57,6 +58,9 @@ pub struct App {
     bridge_sender: BridgeSender,
     notification_rx: mpsc::Receiver<RoutedNotification>,
     permission_rx: mpsc::Receiver<PermissionRequest>,
+    source_rx: Option<mpsc::Receiver<SourceTurnEvent>>,
+    bridge_completion_rx: Option<oneshot::Receiver<()>>,
+    capture_forwarder: Option<CaptureForwarder>,
     ui_state: UiState,
     session: SessionController,
     commands: CommandRegistry,
@@ -179,6 +183,71 @@ fn memory_teach_view(
         result.created(),
     )
 }
+fn memory_source_turn_status(status: cyril_memory::SourceTurnStatus) -> MemorySourceTurnStatus {
+    match status {
+        cyril_memory::SourceTurnStatus::Incomplete => MemorySourceTurnStatus::Incomplete,
+        cyril_memory::SourceTurnStatus::Finished(disposition) => match disposition {
+            cyril_memory::SourceTurnDisposition::Completed => MemorySourceTurnStatus::Completed,
+            cyril_memory::SourceTurnDisposition::Interrupted => MemorySourceTurnStatus::Interrupted,
+            cyril_memory::SourceTurnDisposition::Failed => MemorySourceTurnStatus::Failed,
+            cyril_memory::SourceTurnDisposition::Abandoned => MemorySourceTurnStatus::Abandoned,
+            cyril_memory::SourceTurnDisposition::CaptureOverflow => {
+                MemorySourceTurnStatus::CaptureOverflow
+            }
+        },
+    }
+}
+
+fn memory_source_turn_summary_view(
+    turn: &cyril_memory::SourceTurnSummary,
+) -> MemorySourceTurnSummaryView {
+    MemorySourceTurnSummaryView::new(
+        turn.id().to_string(),
+        turn.prompt_preview().to_owned(),
+        turn.tool_count(),
+        MemorySourceTurnSummaryMetadataView::new(
+            turn.session_id().as_str().to_owned(),
+            turn.bridge_turn_id(),
+            memory_source_turn_status(turn.status()),
+            turn.started_at_ms(),
+            turn.finished_at_ms(),
+        ),
+    )
+}
+
+fn memory_bounded_text_view(value: &cyril_memory::BoundedText) -> MemoryBoundedTextView {
+    MemoryBoundedTextView::new(value.text().to_owned(), value.truncated_chars())
+}
+
+fn memory_source_tool_view(tool: &cyril_memory::ToolSummary) -> MemorySourceToolView {
+    MemorySourceToolView::new(
+        tool.tool_id().as_str().to_owned(),
+        memory_bounded_text_view(tool.name()),
+        tool.status().to_owned(),
+        memory_bounded_text_view(tool.input()),
+        memory_bounded_text_view(tool.result()),
+        tool.capture_truncated_chars(),
+    )
+}
+
+fn memory_source_turn_view(turn: &cyril_memory::SourceTurnRecord) -> MemorySourceTurnView {
+    MemorySourceTurnView::new(
+        turn.id().to_string(),
+        turn.prompt().text().to_owned(),
+        turn.assistant().text().to_owned(),
+        turn.tools().iter().map(memory_source_tool_view).collect(),
+        turn.omitted_tool_count(),
+        MemorySourceTurnMetadataView::new(
+            turn.session_id().as_str().to_owned(),
+            turn.bridge_turn_id(),
+            memory_source_turn_status(turn.status()),
+            turn.source_hash().map(hex::encode),
+            turn.started_at_ms(),
+            turn.finished_at_ms(),
+            turn.next_sequence(),
+        ),
+    )
+}
 
 /// Execute one `/memory` lesson command against the bound project and render
 /// the outcome. Runs on a spawned task so the companion round trip (a connect
@@ -231,6 +300,31 @@ async fn run_memory_action(memory: ProjectMemory, action: MemoryCommandAction) -
                 Err(error) => format!("Memory lesson ID rejected: {error}"),
             }
         }
+        MemoryCommandAction::Turns => match memory.list_turns().await {
+            Ok(result) => {
+                cyril_ui::memory_format::format_memory_turn_list(&MemorySourceTurnListView::new(
+                    result
+                        .turns()
+                        .iter()
+                        .map(memory_source_turn_summary_view)
+                        .collect(),
+                    result.omitted_count(),
+                    result.corrupt_count(),
+                ))
+            }
+            Err(error) => format!("Memory error: {error}"),
+        },
+        MemoryCommandAction::InspectTurn { source_turn_id } => {
+            match source_turn_id.parse::<cyril_memory::SourceTurnId>() {
+                Ok(source_turn_id) => match memory.inspect_turn(source_turn_id).await {
+                    Ok(result) => cyril_ui::memory_format::format_memory_turn(
+                        &memory_source_turn_view(&result),
+                    ),
+                    Err(error) => format!("Memory error: {error}"),
+                },
+                Err(error) => format!("Memory source turn ID rejected: {error}"),
+            }
+        }
     }
 }
 
@@ -257,7 +351,8 @@ impl App {
             max_messages,
             mouse_capture,
         } = ui;
-        let (bridge_sender, notification_rx, permission_rx) = bridge.split();
+        let (bridge_sender, notification_rx, permission_rx, source_rx, bridge_completion_rx) =
+            bridge.split();
         let (usage_enrichment, usage_enrichment_rx) = spawn_usage_enrichment_worker();
         let (memory_task_tx, memory_task_rx) = mpsc::unbounded_channel();
         let commands = CommandRegistry::with_builtins_and_usage(
@@ -287,6 +382,9 @@ impl App {
             bridge_sender,
             notification_rx,
             permission_rx,
+            source_rx: Some(source_rx),
+            bridge_completion_rx: Some(bridge_completion_rx),
+            capture_forwarder: None,
             ui_state,
             session: SessionController::new(),
             commands,
@@ -363,12 +461,11 @@ impl App {
     async fn dispatch_deferred_command(&mut self, deferred: BridgeCommand) {
         // SendPrompt triggers a real turn → mark session Busy. Session-management
         // commands do not. See `/code` (busy) versus `/rewind` (not busy).
-        if let BridgeCommand::SendPrompt {
-            session_id,
-            content_blocks,
-        } = deferred
-        {
-            if let Err(error) = self.send_prompt(session_id, content_blocks).await {
+        if let BridgeCommand::SendPrompt { session_id, prompt } = deferred {
+            if let Err(error) = self
+                .send_prompt(session_id, prompt.original_blocks().to_vec())
+                .await
+            {
                 tracing::warn!(error = %error, "failed to send deferred prompt");
                 self.ui_state.set_activity(Activity::Idle);
                 self.ui_state
@@ -425,7 +522,8 @@ impl App {
             });
             return Ok(());
         }
-        self.dispatch_prompt(session_id, content_blocks).await
+        self.dispatch_prompt(session_id, PromptEnvelope::original(content_blocks))
+            .await
     }
 
     /// Send a prompt to the bridge now, with usage bookkeeping. Busy is set
@@ -433,14 +531,14 @@ impl App {
     async fn dispatch_prompt(
         &mut self,
         session_id: SessionId,
-        content_blocks: Vec<String>,
+        prompt: PromptEnvelope,
     ) -> cyril_core::Result<()> {
         let usage_started = self.begin_usage_turn(&session_id);
         if let Err(error) = self
             .bridge_sender
             .send(BridgeCommand::SendPrompt {
                 session_id: session_id.clone(),
-                content_blocks,
+                prompt,
             })
             .await
         {
@@ -461,12 +559,12 @@ impl App {
             }
             MemoryTaskResult::FirstPromptContext {
                 session_id,
-                mut content_blocks,
+                content_blocks,
                 outcome,
             } => {
-                match outcome {
-                    Ok(Some(context)) => content_blocks.insert(0, context.text().to_owned()),
-                    Ok(None) => {}
+                let prepared_context = match outcome {
+                    Ok(Some(context)) => Some(context.text().to_owned()),
+                    Ok(None) => None,
                     Err(error) => {
                         tracing::warn!(
                             session_id = %session_id,
@@ -479,9 +577,11 @@ impl App {
                         {
                             self.first_prompt_lessons_pending = Some(session_id.clone());
                         }
+                        None
                     }
-                }
-                if let Err(error) = self.dispatch_prompt(session_id, content_blocks).await {
+                };
+                let prompt = PromptEnvelope::prepared(content_blocks, prepared_context);
+                if let Err(error) = self.dispatch_prompt(session_id, prompt).await {
                     tracing::warn!(error = %error, "failed to send prompt after lesson lookup");
                     // Busy was taken optimistically when the lookup started.
                     self.session.set_status(SessionStatus::Active);
@@ -527,10 +627,17 @@ impl App {
             | crate::memory_runtime::MemoryRuntimeStatus::Starting
             | crate::memory_runtime::MemoryRuntimeStatus::Ready(_) => {}
         }
+        let capture_memory = project_binding.memory().cloned();
         self.project_binding = project_binding;
         let status = self.with_project_binding(memory_runtime.status_view());
         self.ui_state.set_memory_status(status.clone());
         self.memory_status = status;
+        if let Some(source_rx) = self.source_rx.take() {
+            self.capture_forwarder = Some(match capture_memory {
+                Some(memory) => CaptureForwarder::spawn(source_rx, memory),
+                None => CaptureForwarder::discard(source_rx),
+            });
+        }
         self.memory_runtime = Some(memory_runtime);
     }
 
@@ -544,6 +651,16 @@ impl App {
     /// `main` calls it on every other exit path so an error return never
     /// falls through to the abort-only `Drop`.
     pub(crate) async fn shutdown_memory_runtime(&mut self) {
+        if let Some(completion_rx) = self.bridge_completion_rx.take()
+            && tokio::time::timeout(Duration::from_secs(2), completion_rx)
+                .await
+                .is_err()
+        {
+            tracing::warn!("bridge completion timed out before capture drain");
+        }
+        if let Some(forwarder) = self.capture_forwarder.take() {
+            forwarder.drain().await;
+        }
         if let Some(mut memory_runtime) = self.memory_runtime.take() {
             memory_runtime.shutdown().await;
         }
@@ -1187,7 +1304,7 @@ impl App {
                         self.ui_state.set_activity(Activity::Sending);
                         deferred_commands.push(BridgeCommand::SendPrompt {
                             session_id,
-                            content_blocks: vec![text],
+                            prompt: PromptEnvelope::original(vec![text]),
                         });
                     }
                 }
@@ -2378,7 +2495,7 @@ fn dispatch_code_command(
 
             vec![BridgeCommand::SendPrompt {
                 session_id,
-                content_blocks: vec![text],
+                prompt: PromptEnvelope::original(vec![text]),
             }]
         }
         CodeCommandResponse::Unknown(ref value) => {
@@ -3580,15 +3697,14 @@ mod tests {
         })
     }
 
-    /// The `SendPrompt` payloads among `deferred`, as (session_id, blocks).
+    /// The original `SendPrompt` payloads among `deferred`.
     fn sent_prompts(deferred: &[BridgeCommand]) -> Vec<(&SessionId, &[String])> {
         deferred
             .iter()
             .filter_map(|cmd| match cmd {
-                BridgeCommand::SendPrompt {
-                    session_id,
-                    content_blocks,
-                } => Some((session_id, content_blocks.as_slice())),
+                BridgeCommand::SendPrompt { session_id, prompt } => {
+                    Some((session_id, prompt.original_blocks()))
+                }
                 _ => None,
             })
             .collect()
@@ -3605,16 +3721,16 @@ mod tests {
 
     async fn recv_prompt(
         commands: &mut tokio::sync::mpsc::Receiver<BridgeCommand>,
-    ) -> (SessionId, Vec<String>) {
+    ) -> (SessionId, Vec<String>, Vec<String>) {
         match tokio::time::timeout(Duration::from_secs(5), commands.recv())
             .await
             .expect("bridge command within bound")
             .expect("bridge command")
         {
-            BridgeCommand::SendPrompt {
-                session_id,
-                content_blocks,
-            } => (session_id, content_blocks),
+            BridgeCommand::SendPrompt { session_id, prompt } => {
+                let original = prompt.original_blocks().to_vec();
+                (session_id, original, prompt.into_wire_blocks())
+            }
             other => panic!("expected SendPrompt, got {other:?}"),
         }
     }
@@ -3633,7 +3749,7 @@ mod tests {
 
     #[cfg(unix)]
     #[tokio::test]
-    async fn injected_context_is_wire_only_for_interactive_prompts() {
+    async fn c5_first_prompt_is_ordered_exactly_once_and_source_clean() {
         let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
         let workspace = tempfile::tempdir().expect("workspace");
         let memory = runtime.bind(workspace.path());
@@ -3662,8 +3778,13 @@ mod tests {
         assert!(matches!(app.session.status(), SessionStatus::Busy));
         drain_one_memory_result(&mut app).await;
 
-        let (session_id, content_blocks) = recv_prompt(&mut commands).await;
+        let (session_id, original_blocks, content_blocks) = recv_prompt(&mut commands).await;
         assert_eq!(session_id, main);
+        assert_eq!(
+            original_blocks,
+            [original.to_owned()],
+            "C5 source prompt polluted"
+        );
         assert_eq!(content_blocks.len(), 2, "{content_blocks:?}");
         assert!(content_blocks[0].starts_with("<CYRIL_LESSONS"));
         assert!(content_blocks[0].contains("- prefer boring Rust"));
@@ -3684,8 +3805,103 @@ mod tests {
         app.session.set_status(SessionStatus::Active);
         app.ui_state.insert_text("second prompt");
         app.submit_input().await.expect("submit second");
-        let (_, content_blocks) = recv_prompt(&mut commands).await;
+        let (_, original_blocks, content_blocks) = recv_prompt(&mut commands).await;
+        assert_eq!(original_blocks, ["second prompt".to_owned()]);
         assert_eq!(content_blocks, ["second prompt".to_owned()]);
+        runtime.shutdown().await;
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn c7_turn_inspection_survives_ui_retention_and_is_scoped() {
+        let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
+        let workspace = tempfile::tempdir().expect("workspace");
+        let foreign_workspace = tempfile::tempdir().expect("foreign workspace");
+        let memory = runtime.bind(workspace.path());
+        let foreign = runtime.bind(foreign_workspace.path());
+        let source_turn_id = cyril_memory::SourceTurnId::from_bytes([0x17; 16]);
+        let session_id = cyril_memory::SourceSessionId::new("source-session").expect("session id");
+        let events = vec![
+            cyril_memory::SourceTurnEvent::new(
+                session_id.clone(),
+                source_turn_id,
+                0,
+                cyril_memory::SourceTurnEventKind::Started {
+                    bridge_turn_id: 42,
+                    started_at_ms: 1_000,
+                    block_count: 1,
+                },
+            )
+            .expect("started"),
+            cyril_memory::SourceTurnEvent::new(
+                session_id.clone(),
+                source_turn_id,
+                1,
+                cyril_memory::SourceTurnEventKind::PromptFragment {
+                    block_index: 0,
+                    fragment_index: 0,
+                    text: "distinctive retained decision".to_owned(),
+                    is_last: true,
+                },
+            )
+            .expect("prompt"),
+            cyril_memory::SourceTurnEvent::new(
+                session_id.clone(),
+                source_turn_id,
+                2,
+                cyril_memory::SourceTurnEventKind::AssistantFragment {
+                    fragment_index: 0,
+                    text: "use the boring implementation".to_owned(),
+                },
+            )
+            .expect("assistant"),
+            cyril_memory::SourceTurnEvent::new(
+                session_id,
+                source_turn_id,
+                3,
+                cyril_memory::SourceTurnEventKind::Finished {
+                    disposition: cyril_memory::SourceTurnDisposition::Completed,
+                    finished_at_ms: 2_000,
+                },
+            )
+            .expect("finished"),
+        ];
+        memory
+            .capture_batch(cyril_memory::CaptureBatch::new(events).expect("capture batch"))
+            .await
+            .expect("capture");
+
+        let (mut app, _commands) = test_app_with_command_rx();
+        for index in 0..200 {
+            app.ui_state
+                .add_system_message(format!("unrelated retained UI row {index}"));
+        }
+        let listed = run_memory_action(memory.clone(), MemoryCommandAction::Turns).await;
+        assert!(listed.contains(&source_turn_id.to_string()), "C7 {listed}");
+        let inspected = run_memory_action(
+            memory,
+            MemoryCommandAction::InspectTurn {
+                source_turn_id: source_turn_id.to_string(),
+            },
+        )
+        .await;
+        assert!(
+            inspected.contains("Prompt:\ndistinctive retained decision")
+                && inspected.contains("Session: source-session")
+                && inspected.contains("Bridge turn: 42"),
+            "C7 {inspected}"
+        );
+        let foreign_result = run_memory_action(
+            foreign,
+            MemoryCommandAction::InspectTurn {
+                source_turn_id: source_turn_id.to_string(),
+            },
+        )
+        .await;
+        assert!(
+            foreign_result.starts_with("Memory error:"),
+            "C7 foreign scope leaked: {foreign_result}"
+        );
         runtime.shutdown().await;
     }
 
@@ -3715,7 +3931,8 @@ mod tests {
         app.ui_state.insert_text("first");
         app.submit_input().await.expect("submit first");
         drain_one_memory_result(&mut app).await;
-        let (_, content_blocks) = recv_prompt(&mut commands).await;
+        let (_, original_blocks, content_blocks) = recv_prompt(&mut commands).await;
+        assert_eq!(original_blocks, ["first".to_owned()]);
         assert_eq!(content_blocks, ["first".to_owned()]);
         assert_eq!(app.first_prompt_lessons_pending.as_ref(), Some(&main));
 
@@ -3724,7 +3941,8 @@ mod tests {
         app.ui_state.insert_text("second");
         app.submit_input().await.expect("submit second");
         drain_one_memory_result(&mut app).await;
-        let (_, content_blocks) = recv_prompt(&mut commands).await;
+        let (_, original_blocks, content_blocks) = recv_prompt(&mut commands).await;
+        assert_eq!(original_blocks, ["second".to_owned()]);
         assert_eq!(content_blocks.len(), 2, "{content_blocks:?}");
         assert!(content_blocks[0].contains("- prefer boring Rust"));
         assert_eq!(content_blocks[1], "second");
@@ -3733,7 +3951,8 @@ mod tests {
         app.session.set_status(SessionStatus::Active);
         app.ui_state.insert_text("third");
         app.submit_input().await.expect("submit third");
-        let (_, content_blocks) = recv_prompt(&mut commands).await;
+        let (_, original_blocks, content_blocks) = recv_prompt(&mut commands).await;
+        assert_eq!(original_blocks, ["third".to_owned()]);
         assert_eq!(content_blocks, ["third".to_owned()]);
         runtime.shutdown().await;
     }
