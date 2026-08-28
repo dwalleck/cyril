@@ -183,24 +183,64 @@ fn memory_teach_view(
         result.created(),
     )
 }
-fn memory_source_turn_view(turn: &cyril_memory::SourceTurnRecord) -> MemorySourceTurnView {
-    let status = match turn.status() {
+fn memory_source_turn_status(status: cyril_memory::SourceTurnStatus) -> MemorySourceTurnStatus {
+    match status {
         cyril_memory::SourceTurnStatus::Incomplete => MemorySourceTurnStatus::Incomplete,
-        cyril_memory::SourceTurnStatus::Completed => MemorySourceTurnStatus::Completed,
-        cyril_memory::SourceTurnStatus::Interrupted => MemorySourceTurnStatus::Interrupted,
-        cyril_memory::SourceTurnStatus::Failed => MemorySourceTurnStatus::Failed,
-        cyril_memory::SourceTurnStatus::Abandoned => MemorySourceTurnStatus::Abandoned,
-        cyril_memory::SourceTurnStatus::CaptureOverflow => MemorySourceTurnStatus::CaptureOverflow,
-    };
+        cyril_memory::SourceTurnStatus::Finished(disposition) => match disposition {
+            cyril_memory::SourceTurnDisposition::Completed => MemorySourceTurnStatus::Completed,
+            cyril_memory::SourceTurnDisposition::Interrupted => MemorySourceTurnStatus::Interrupted,
+            cyril_memory::SourceTurnDisposition::Failed => MemorySourceTurnStatus::Failed,
+            cyril_memory::SourceTurnDisposition::Abandoned => MemorySourceTurnStatus::Abandoned,
+            cyril_memory::SourceTurnDisposition::CaptureOverflow => {
+                MemorySourceTurnStatus::CaptureOverflow
+            }
+        },
+    }
+}
+
+fn memory_source_turn_summary_view(
+    turn: &cyril_memory::SourceTurnSummary,
+) -> MemorySourceTurnSummaryView {
+    MemorySourceTurnSummaryView::new(
+        turn.id().to_string(),
+        turn.prompt_preview().to_owned(),
+        turn.tool_count(),
+        MemorySourceTurnSummaryMetadataView::new(
+            turn.session_id().as_str().to_owned(),
+            turn.bridge_turn_id(),
+            memory_source_turn_status(turn.status()),
+            turn.started_at_ms(),
+            turn.finished_at_ms(),
+        ),
+    )
+}
+
+fn memory_bounded_text_view(value: &cyril_memory::BoundedText) -> MemoryBoundedTextView {
+    MemoryBoundedTextView::new(value.text().to_owned(), value.truncated_chars())
+}
+
+fn memory_source_tool_view(tool: &cyril_memory::ToolSummary) -> MemorySourceToolView {
+    MemorySourceToolView::new(
+        tool.tool_id().as_str().to_owned(),
+        memory_bounded_text_view(tool.name()),
+        tool.status().to_owned(),
+        memory_bounded_text_view(tool.input()),
+        memory_bounded_text_view(tool.result()),
+        tool.capture_truncated_chars(),
+    )
+}
+
+fn memory_source_turn_view(turn: &cyril_memory::SourceTurnRecord) -> MemorySourceTurnView {
     MemorySourceTurnView::new(
         turn.id().to_string(),
-        turn.prompt().to_owned(),
-        turn.assistant().to_owned(),
-        turn.tools().to_owned(),
+        turn.prompt().text().to_owned(),
+        turn.assistant().text().to_owned(),
+        turn.tools().iter().map(memory_source_tool_view).collect(),
+        turn.omitted_tool_count(),
         MemorySourceTurnMetadataView::new(
             turn.session_id().as_str().to_owned(),
             turn.bridge_turn_id(),
-            status,
+            memory_source_turn_status(turn.status()),
             turn.source_hash().map(hex::encode),
             turn.started_at_ms(),
             turn.finished_at_ms(),
@@ -263,7 +303,11 @@ async fn run_memory_action(memory: ProjectMemory, action: MemoryCommandAction) -
         MemoryCommandAction::Turns => match memory.list_turns().await {
             Ok(result) => {
                 cyril_ui::memory_format::format_memory_turn_list(&MemorySourceTurnListView::new(
-                    result.turns().iter().map(memory_source_turn_view).collect(),
+                    result
+                        .turns()
+                        .iter()
+                        .map(memory_source_turn_summary_view)
+                        .collect(),
                     result.omitted_count(),
                     result.corrupt_count(),
                 ))

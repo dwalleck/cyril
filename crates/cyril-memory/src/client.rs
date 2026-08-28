@@ -12,6 +12,7 @@ use crate::protocol::{
     HealthResponse, LessonListResponse, LessonRecord, MemoryProtocolError, MemoryRequest,
     MemoryResponse, PromptContext, SourceTurnListResponse, SourceTurnRecord, TeachResponse,
 };
+use crate::source_turn::{CaptureBatch, PromptQuery, SourceTurnId};
 use crate::wire::{BoxedStream, WireError};
 
 /// The orchestration-only 256-bit runtime administrator credential.
@@ -178,15 +179,18 @@ impl AdminClient {
         }
     }
 
+    /// Prepare first-prompt context for `prompt`, the user's original first
+    /// block. Any text is accepted: the query is normalized here so a pasted
+    /// stack trace or a long prompt can never be rejected by the runtime.
     pub async fn prepare_prompt(
         &mut self,
         project: &ProjectScope,
-        query: String,
+        prompt: &str,
     ) -> Result<Option<PromptContext>, ClientError> {
         match self
             .request(MemoryRequest::PreparePrompt {
                 project: project.clone(),
-                query,
+                query: PromptQuery::from_prompt(prompt),
             })
             .await?
         {
@@ -198,7 +202,7 @@ impl AdminClient {
     pub async fn capture_batch(
         &mut self,
         project: &ProjectScope,
-        batch: crate::CaptureBatch,
+        batch: CaptureBatch,
     ) -> Result<(), ClientError> {
         match self
             .request(MemoryRequest::CaptureBatch {
@@ -208,10 +212,10 @@ impl AdminClient {
             .await?
         {
             MemoryResponse::Captured => Ok(()),
-            MemoryResponse::Error(error) => Err(ClientError::Protocol(error)),
             _ => Err(ClientError::UnexpectedResponse),
         }
     }
+
     pub async fn list_turns(
         &mut self,
         project: &ProjectScope,
@@ -230,7 +234,7 @@ impl AdminClient {
     pub async fn inspect_turn(
         &mut self,
         project: &ProjectScope,
-        id: crate::SourceTurnId,
+        id: SourceTurnId,
     ) -> Result<SourceTurnRecord, ClientError> {
         match self
             .request(MemoryRequest::InspectTurn {

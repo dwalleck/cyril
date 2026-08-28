@@ -135,7 +135,7 @@ pub fn format_memory_turn_list(result: &MemorySourceTurnListView) -> String {
             turn.session_id(),
             turn.bridge_turn_id(),
             turn.started_at_ms(),
-            single_line(turn.prompt())
+            single_line(turn.prompt_preview())
         )
     }));
     if result.omitted_count() > 0 {
@@ -148,6 +148,31 @@ pub fn format_memory_turn_list(result: &MemorySourceTurnListView) -> String {
         ));
     }
     lines.join("\n")
+}
+
+fn format_memory_tools(turn: &MemorySourceTurnView) -> String {
+    let tools = turn
+        .tools()
+        .iter()
+        .map(|tool| {
+            serde_json::json!({
+                "tool_id": tool.tool_id(),
+                "name": tool.name().text(),
+                "name_truncated_chars": tool.name().truncated_chars(),
+                "status": tool.status(),
+                "input": tool.input().text(),
+                "input_truncated_chars": tool.input().truncated_chars(),
+                "result": tool.result().text(),
+                "result_truncated_chars": tool.result().truncated_chars(),
+                "capture_truncated_chars": tool.capture_truncated_chars(),
+            })
+        })
+        .collect();
+    let mut rendered = serde_json::Value::Array(tools).to_string();
+    if turn.omitted_tool_count() > 0 {
+        rendered.push_str(&format!("\n+{} omitted tool(s)", turn.omitted_tool_count()));
+    }
+    rendered
 }
 
 pub fn format_memory_turn(turn: &MemorySourceTurnView) -> String {
@@ -164,7 +189,7 @@ pub fn format_memory_turn(turn: &MemorySourceTurnView) -> String {
         turn.source_hash().unwrap_or("none"),
         turn.prompt(),
         turn.assistant(),
-        turn.tools(),
+        format_memory_tools(turn),
     )
 }
 
@@ -185,9 +210,10 @@ fn single_line(content: &str) -> String {
 mod tests {
     use super::*;
     use cyril_core::types::{
-        MemoryLessonMetadataView, MemoryLessonProvenance, MemoryLessonStatus, MemoryLessonTrust,
-        MemorySourceTurnListView, MemorySourceTurnMetadataView, MemorySourceTurnStatus,
-        MemorySourceTurnView, MemoryStoreVersions,
+        MemoryBoundedTextView, MemoryLessonMetadataView, MemoryLessonProvenance,
+        MemoryLessonStatus, MemoryLessonTrust, MemorySourceToolView, MemorySourceTurnListView,
+        MemorySourceTurnMetadataView, MemorySourceTurnStatus, MemorySourceTurnSummaryMetadataView,
+        MemorySourceTurnSummaryView, MemorySourceTurnView, MemoryStoreVersions,
     };
 
     #[test]
@@ -353,7 +379,15 @@ mod tests {
             "00112233445566778899aabbccddeeff".to_owned(),
             "first line\nsecond line".to_owned(),
             "assistant output".to_owned(),
-            "[{\"name\":\"read\"}]".to_owned(),
+            vec![MemorySourceToolView::new(
+                "tool-1".to_owned(),
+                MemoryBoundedTextView::new("read".to_owned(), 0),
+                "completed".to_owned(),
+                MemoryBoundedTextView::new("/tmp/input".to_owned(), 0),
+                MemoryBoundedTextView::new("file contents".to_owned(), 0),
+                0,
+            )],
+            0,
             MemorySourceTurnMetadataView::new(
                 "session-1".to_owned(),
                 42,
@@ -364,8 +398,21 @@ mod tests {
                 5,
             ),
         );
-        let list =
-            format_memory_turn_list(&MemorySourceTurnListView::new(vec![turn.clone()], 2, 1));
+        let summary = MemorySourceTurnSummaryView::new(
+            "00112233445566778899aabbccddeeff".to_owned(),
+            "first line\nsecond line".to_owned(),
+            1,
+            MemorySourceTurnSummaryMetadataView::new(
+                "session-1".to_owned(),
+                42,
+                MemorySourceTurnStatus::Completed,
+                1_000,
+                Some(2_000),
+            ),
+        );
+        assert_eq!(summary.tool_count(), 1);
+        assert_eq!(summary.finished_at_ms(), Some(2_000));
+        let list = format_memory_turn_list(&MemorySourceTurnListView::new(vec![summary], 2, 1));
         assert!(list.contains("[completed] session=session-1 bridge_turn=42"));
         assert!(list.contains("first line (+1 more line(s))"));
         assert!(!list.contains("second line"));
@@ -382,7 +429,9 @@ mod tests {
             "Source hash: deadbeef",
             "Prompt:\nfirst line\nsecond line",
             "Assistant:\nassistant output",
-            "Tools:\n[{\"name\":\"read\"}]",
+            "Tools:\n[",
+            "\"name\":\"read\"",
+            "\"tool_id\":\"tool-1\"",
         ] {
             assert!(
                 inspection.contains(expected),
@@ -394,7 +443,8 @@ mod tests {
             "ffeeddccbbaa99887766554433221100".to_owned(),
             "p".repeat(6 * 1024),
             "a".repeat(6 * 1024),
-            "t".repeat(4 * 1024),
+            Vec::new(),
+            0,
             MemorySourceTurnMetadataView::new(
                 "session-performance".to_owned(),
                 99,
@@ -405,9 +455,21 @@ mod tests {
                 5,
             ),
         );
+        let large_summary = MemorySourceTurnSummaryView::new(
+            "ffeeddccbbaa99887766554433221100".to_owned(),
+            "p".repeat(6 * 1024),
+            0,
+            MemorySourceTurnSummaryMetadataView::new(
+                "session-performance".to_owned(),
+                99,
+                MemorySourceTurnStatus::Completed,
+                1_000,
+                Some(2_000),
+            ),
+        );
         let render_started = std::time::Instant::now();
         let list = format_memory_turn_list(&MemorySourceTurnListView::new(
-            vec![large_turn.clone(); 100],
+            vec![large_summary; 100],
             0,
             0,
         ));

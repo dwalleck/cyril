@@ -6,8 +6,8 @@ use cyril_core::types::{
     SourceTurnEventKind as CoreEventKind,
 };
 use cyril_memory::{
-    CaptureBatch, SourceSessionId, SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind,
-    SourceTurnId,
+    CaptureBatch, SourceSessionId, SourceToolId, SourceTurnDisposition, SourceTurnEvent,
+    SourceTurnEventKind, SourceTurnId,
 };
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -151,7 +151,8 @@ fn convert_event(event: CoreEvent) -> Result<SourceTurnEvent, cyril_memory::Sour
             source_truncated_chars,
         } => SourceTurnEventKind::ToolSnapshot {
             tool_index,
-            tool_id,
+            tool_id: SourceToolId::new(tool_id)
+                .map_err(|_| cyril_memory::SourceTurnError::InvalidEvent)?,
             name,
             status,
             input,
@@ -267,10 +268,12 @@ mod tests {
             ))
             .await
             .expect("forwarded turn");
-        assert_eq!(stored.prompt(), "forward this decision", "C9 prompt");
+        assert_eq!(stored.prompt().text(), "forward this decision", "C9 prompt");
         assert_eq!(
             stored.status(),
-            cyril_memory::SourceTurnStatus::Completed,
+            cyril_memory::SourceTurnStatus::Finished(
+                cyril_memory::SourceTurnDisposition::Completed
+            ),
             "C9 terminal"
         );
         runtime.shutdown().await;
