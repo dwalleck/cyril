@@ -143,8 +143,18 @@ fn overview_lines(state: &UsagePanelState, theme: &Theme) -> Vec<Line<'static>> 
             theme,
         ),
         metric_line(
+            "TTFT tail",
+            latency_tail(summary.p90_ttft_ms, summary.max_ttft_ms),
+            theme,
+        ),
+        metric_line(
             "Average duration",
             optional_f64(summary.avg_duration_ms, "ms", 1),
+            theme,
+        ),
+        metric_line(
+            "Duration tail",
+            latency_tail(summary.p90_duration_ms, summary.max_duration_ms),
             theme,
         ),
         metric_line(
@@ -412,11 +422,12 @@ fn summary_line(
         ),
         Span::styled(
             format!(
-                "{} turns · {tokens} tokens · {} err · {} · {}",
+                "{} turns · {tokens} tokens · {} err · {} · {} · p90 {}",
                 summary.requests,
                 summary.errors,
                 format_charges(&summary.charges),
-                monetary_metric(summary, &summary.costs)
+                monetary_metric(summary, &summary.costs),
+                optional_f64(summary.p90_duration_ms, "ms", 0)
             ),
             Style::default().fg(theme.text_secondary),
         ),
@@ -475,6 +486,23 @@ fn optional_u64(value: Option<u64>) -> String {
     value
         .map(|value| value.to_string())
         .unwrap_or_else(|| "—".to_owned())
+}
+
+/// The latency tail for one metric: the nearest-rank p90 next to the largest
+/// observed value. Both come from `cyril-core` already computed; this renders
+/// them and derives nothing (see `tests/no_percentile_computation.rs`).
+///
+/// Collapses to a single "—" when neither was observed, rather than printing
+/// "— p90 · — max", so absence reads as absence.
+fn latency_tail(p90: Option<f64>, max: Option<f64>) -> String {
+    if p90.is_none() && max.is_none() {
+        return "—".to_owned();
+    }
+    format!(
+        "{} p90 · {} max",
+        optional_f64(p90, "ms", 0),
+        optional_f64(max, "ms", 0)
+    )
 }
 
 fn optional_f64(value: Option<f64>, suffix: &str, precision: usize) -> String {
@@ -633,6 +661,10 @@ mod tests {
             cache_rate: Some(0.25),
             avg_duration_ms: Some(150.0),
             avg_ttft_ms: Some(25.0),
+            p90_duration_ms: Some(180.0),
+            max_duration_ms: Some(240.0),
+            p90_ttft_ms: Some(40.0),
+            max_ttft_ms: Some(55.0),
             avg_tokens_per_second: Some(200.0),
         };
         UsageSnapshot {
@@ -975,5 +1007,86 @@ mod tests {
             elapsed <= std::time::Duration::from_millis(16),
             "10,000-group usage frame exceeded 16ms: {elapsed:?}"
         );
+    }
+
+    /// The Overview page sizes its modal from a hardcoded `row_count()`, so
+    /// that constant can silently drift from the lines actually rendered —
+    /// and adding the two latency-tail lines is exactly the edit that does it.
+    #[test]
+    fn overview_row_count_matches_rendered_lines() {
+        let theme = crate::traits::test_support::marker_theme();
+        let state = UsagePanelState {
+            snapshot: sample_snapshot(),
+            page: UsagePage::Overview,
+            scroll_offset: 0,
+            account: None,
+            account_fetched_at_ms: None,
+            account_status: UsageAccountStatus::Idle,
+        };
+        assert_eq!(
+            state.row_count(),
+            page_lines(&state, &theme).len(),
+            "Overview row_count must equal the lines it renders"
+        );
+    }
+
+    /// C11 — the p90/max fields reach the screen.
+    ///
+    /// They were computed by `cyril-core` and then dropped on the floor: this
+    /// widget rendered only `avg_ttft_ms` and `avg_duration_ms`, so every
+    /// `/usage` open and every panel refresh paid for statistics no user could
+    /// see, and the latency-tail invisibility the work set out to fix stayed
+    /// invisible (cyril-9kyk review). Asserted on rendered characters, not on
+    /// the struct, because the struct was never the part that was missing.
+    #[test]
+    fn latency_tail_is_rendered_on_overview_and_grouped_pages() {
+        let theme = crate::traits::test_support::marker_theme();
+        let render_page = |page: UsagePage| -> String {
+            let backend = TestBackend::new(120, 30);
+            let mut terminal = match Terminal::new(backend) {
+                Ok(terminal) => terminal,
+                Err(error) => panic!("test terminal: {error}"),
+            };
+            let state = UsagePanelState {
+                snapshot: sample_snapshot(),
+                page,
+                scroll_offset: 0,
+                account: None,
+                account_fetched_at_ms: None,
+                account_status: UsageAccountStatus::Idle,
+            };
+            match terminal.draw(|frame| render(frame, frame.area(), 27, &state, &theme)) {
+                Ok(_) => {}
+                Err(error) => panic!("draw usage page: {error}"),
+            }
+            rows(&terminal).join("\n")
+        };
+
+        let overview = render_page(UsagePage::Overview);
+        for needle in ["180ms p90", "240ms max", "40ms p90", "55ms max"] {
+            assert!(
+                overview.contains(needle),
+                "overview must render {needle}; got:\n{overview}"
+            );
+        }
+
+        // Folders is omitted on purpose: its fixture name is a deliberate
+        // width-stress string (`.repeat(20)`), so every row on that page is
+        // clipped by design and would prove nothing about the p90 segment.
+        for page in [UsagePage::Models, UsagePage::Providers] {
+            let rendered = render_page(page);
+            assert!(
+                rendered.contains("p90 180ms"),
+                "{page:?} rows must carry the duration p90; got:\n{rendered}"
+            );
+        }
+    }
+
+    /// Absence stays legible: a summary with no observed latency renders one
+    /// "—", not "— p90 · — max".
+    #[test]
+    fn absent_latency_tail_collapses_to_a_single_dash() {
+        assert_eq!(latency_tail(None, None), "—");
+        assert_eq!(latency_tail(Some(12.0), None), "12ms p90 · — max");
     }
 }

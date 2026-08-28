@@ -595,7 +595,10 @@ impl UsagePanelState {
                 if self.snapshot.overview.requests == 0 {
                     1
                 } else {
-                    16
+                    // 16 metric lines + the two latency-tail lines added with
+                    // p90/max (cyril-9kyk). Asserted against the rendered line
+                    // count by `overview_row_count_matches_rendered_lines`.
+                    18
                 }
             }
             UsagePage::Costs => {
