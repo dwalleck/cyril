@@ -112,4 +112,9 @@ This change is **subtractive**. The removed constraint: *the App event loop's si
 
 ## Approval
 
-_(pending — step 11)_
+Requester approval (verbatim): "yes"
+Date: 2026-08-28
+
+Approved: claims C1–C11 with their falsifiers, oracles, named mutations and regression fences; the placement decisions for capabilities A, B and C including the rejection of `Arc<Mutex<UsageLog>>` + `spawn_blocking`; the subtractive sweep's six replacements; the non-goals and the two deferrals to cyril-b163 and cyril-c6la; and the C10 falsifier result.
+
+Risk acceptances approved: **None** — no row carries `Regression fence: N/A — approved risk`.

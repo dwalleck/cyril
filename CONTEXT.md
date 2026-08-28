@@ -10,6 +10,14 @@ Cyril is a polished terminal interface for the Agent Client Protocol (ACP) ecosy
 The percentage of an agent session's available context window that has been consumed. Higher values mean less context remains.
 _Avoid_: context remaining, context left
 
+**Usage snapshot**:
+One point-in-time aggregate of the whole usage log — overview, provider/model/folder/agent rollups, tools, context, recent and errors — computed by a single read and rendered as a unit. Every rollup in one snapshot describes the same instant, so figures on different pages always reconcile; a snapshot may be older than the newest recorded turn, but is never a mixture of two instants.
+_Avoid_: usage stats, usage data, the usage numbers
+
+**Refresh trigger**:
+An event that requests a new usage snapshot — a recorded turn, a context sample, a sidecar enrichment, or opening the panel. A trigger requests; it does not itself compute, and several arriving together yield at most one further snapshot.
+_Avoid_: refresh event, update tick, reload
+
 ### Presentation
 
 **Semantic theme**:
