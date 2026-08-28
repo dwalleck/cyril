@@ -1,0 +1,12 @@
+{
+  "leg": "control",
+  "warnMs": "100",
+  "timeoutMs": "300",
+  "pin": "2.19.2",
+  "elapsed": 5.02,
+  "terminal_result": {
+    "stopReason": "end_turn"
+  },
+  "terminal_error": null,
+  "notify": []
+}

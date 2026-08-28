@@ -1,0 +1,413 @@
+{
+  "list_empty": {
+    "powers": [
+      {
+        "name": "aws-infrastructure-as-code",
+        "description": "Build well-architected AWS infrastructure with CDK using latest documentation, best practices, and code samples. Validate CloudFormation templates, check resource configuration security compliance, and troubleshoot deployments.",
+        "displayName": "Build AWS infrastructure with CDK and CloudFormation",
+        "keywords": [
+          "aws",
+          "cdk",
+          "cloudformation",
+          "troubleshoot",
+          "validate",
+          "compliance",
+          "cfn-lint",
+          "cfn-guard",
+          "infrastructure",
+          "iac",
+          "template",
+          "stack",
+          "construct",
+          "resource",
+          "deployment"
+        ],
+        "mcpServerNames": [
+          "awslabs.aws-iac-mcp-server"
+        ],
+        "hasSteeringFiles": false,
+        "isAgentPlugin": false,
+        "_meta": {
+          "kiro": {
+            "resource": {
+              "resourceType": "power",
+              "source": {
+                "origin": "user"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "datadog",
+        "description": "Query logs, metrics, traces, RUM events, incidents, and monitors from Datadog for production debugging and performance analysis",
+        "displayName": "Datadog Observability",
+        "keywords": [
+          "datadog",
+          "observability",
+          "monitoring",
+          "logs",
+          "metrics",
+          "apm",
+          "traces",
+          "rum",
+          "incidents"
+        ],
+        "mcpServerNames": [
+          "datadog"
+        ],
+        "hasSteeringFiles": true,
+        "isAgentPlugin": false,
+        "_meta": {
+          "kiro": {
+            "resource": {
+              "resourceType": "power",
+              "source": {
+                "origin": "user"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "markdownlint",
+        "description": "Lint, validate, and auto-fix Markdown files using markdownlint rules. Enforces writing best practices including language consistency, fenced code language tags, image alt text, and table of contents for long documents.",
+        "displayName": "Markdownlint",
+        "keywords": [
+          "markdownlint",
+          "markdown",
+          "linting",
+          "formatting",
+          "commonmark"
+        ],
+        "mcpServerNames": [
+          "markdownlint"
+        ],
+        "hasSteeringFiles": true,
+        "isAgentPlugin": false,
+        "_meta": {
+          "kiro": {
+            "resource": {
+              "resourceType": "power",
+              "source": {
+                "origin": "user"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "errors": []
+  },
+  "refresh": {
+    "code": -32603,
+    "message": "Internal error",
+    "data": {
+      "details": "Unknown ext method: _kiro/powers/refresh"
+    }
+  },
+  "list_after": {
+    "powers": [
+      {
+        "name": "aws-infrastructure-as-code",
+        "description": "Build well-architected AWS infrastructure with CDK using latest documentation, best practices, and code samples. Validate CloudFormation templates, check resource configuration security compliance, and troubleshoot deployments.",
+        "displayName": "Build AWS infrastructure with CDK and CloudFormation",
+        "keywords": [
+          "aws",
+          "cdk",
+          "cloudformation",
+          "troubleshoot",
+          "validate",
+          "compliance",
+          "cfn-lint",
+          "cfn-guard",
+          "infrastructure",
+          "iac",
+          "template",
+          "stack",
+          "construct",
+          "resource",
+          "deployment"
+        ],
+        "mcpServerNames": [
+          "awslabs.aws-iac-mcp-server"
+        ],
+        "hasSteeringFiles": false,
+        "isAgentPlugin": false,
+        "_meta": {
+          "kiro": {
+            "resource": {
+              "resourceType": "power",
+              "source": {
+                "origin": "user"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "datadog",
+        "description": "Query logs, metrics, traces, RUM events, incidents, and monitors from Datadog for production debugging and performance analysis",
+        "displayName": "Datadog Observability",
+        "keywords": [
+          "datadog",
+          "observability",
+          "monitoring",
+          "logs",
+          "metrics",
+          "apm",
+          "traces",
+          "rum",
+          "incidents"
+        ],
+        "mcpServerNames": [
+          "datadog"
+        ],
+        "hasSteeringFiles": true,
+        "isAgentPlugin": false,
+        "_meta": {
+          "kiro": {
+            "resource": {
+              "resourceType": "power",
+              "source": {
+                "origin": "user"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "markdownlint",
+        "description": "Lint, validate, and auto-fix Markdown files using markdownlint rules. Enforces writing best practices including language consistency, fenced code language tags, image alt text, and table of contents for long documents.",
+        "displayName": "Markdownlint",
+        "keywords": [
+          "markdownlint",
+          "markdown",
+          "linting",
+          "formatting",
+          "commonmark"
+        ],
+        "mcpServerNames": [
+          "markdownlint"
+        ],
+        "hasSteeringFiles": true,
+        "isAgentPlugin": false,
+        "_meta": {
+          "kiro": {
+            "resource": {
+              "resourceType": "power",
+              "source": {
+                "origin": "user"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "errors": []
+  },
+  "items_changed": [
+    {
+      "sessionId": "sess_81248c7a-a034-4952-953c-ed2b8f56c6db",
+      "status": "success",
+      "powers": [
+        {
+          "name": "aws-infrastructure-as-code",
+          "description": "Build well-architected AWS infrastructure with CDK using latest documentation, best practices, and code samples. Validate CloudFormation templates, check resource configuration security compliance, and troubleshoot deployments.",
+          "displayName": "Build AWS infrastructure with CDK and CloudFormation",
+          "keywords": [
+            "aws",
+            "cdk",
+            "cloudformation",
+            "troubleshoot",
+            "validate",
+            "compliance",
+            "cfn-lint",
+            "cfn-guard",
+            "infrastructure",
+            "iac",
+            "template",
+            "stack",
+            "construct",
+            "resource",
+            "deployment"
+          ],
+          "mcpServerNames": [
+            "awslabs.aws-iac-mcp-server"
+          ],
+          "hasSteeringFiles": false,
+          "isAgentPlugin": false,
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "power",
+                "source": {
+                  "origin": "user"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "datadog",
+          "description": "Query logs, metrics, traces, RUM events, incidents, and monitors from Datadog for production debugging and performance analysis",
+          "displayName": "Datadog Observability",
+          "keywords": [
+            "datadog",
+            "observability",
+            "monitoring",
+            "logs",
+            "metrics",
+            "apm",
+            "traces",
+            "rum",
+            "incidents"
+          ],
+          "mcpServerNames": [
+            "datadog"
+          ],
+          "hasSteeringFiles": true,
+          "isAgentPlugin": false,
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "power",
+                "source": {
+                  "origin": "user"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "markdownlint",
+          "description": "Lint, validate, and auto-fix Markdown files using markdownlint rules. Enforces writing best practices including language consistency, fenced code language tags, image alt text, and table of contents for long documents.",
+          "displayName": "Markdownlint",
+          "keywords": [
+            "markdownlint",
+            "markdown",
+            "linting",
+            "formatting",
+            "commonmark"
+          ],
+          "mcpServerNames": [
+            "markdownlint"
+          ],
+          "hasSteeringFiles": true,
+          "isAgentPlugin": false,
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "power",
+                "source": {
+                  "origin": "user"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "sessionId": "sess_81248c7a-a034-4952-953c-ed2b8f56c6db",
+      "status": "success",
+      "powers": [
+        {
+          "name": "aws-infrastructure-as-code",
+          "description": "Build well-architected AWS infrastructure with CDK using latest documentation, best practices, and code samples. Validate CloudFormation templates, check resource configuration security compliance, and troubleshoot deployments.",
+          "displayName": "Build AWS infrastructure with CDK and CloudFormation",
+          "keywords": [
+            "aws",
+            "cdk",
+            "cloudformation",
+            "troubleshoot",
+            "validate",
+            "compliance",
+            "cfn-lint",
+            "cfn-guard",
+            "infrastructure",
+            "iac",
+            "template",
+            "stack",
+            "construct",
+            "resource",
+            "deployment"
+          ],
+          "mcpServerNames": [
+            "awslabs.aws-iac-mcp-server"
+          ],
+          "hasSteeringFiles": false,
+          "isAgentPlugin": false,
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "power",
+                "source": {
+                  "origin": "user"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "datadog",
+          "description": "Query logs, metrics, traces, RUM events, incidents, and monitors from Datadog for production debugging and performance analysis",
+          "displayName": "Datadog Observability",
+          "keywords": [
+            "datadog",
+            "observability",
+            "monitoring",
+            "logs",
+            "metrics",
+            "apm",
+            "traces",
+            "rum",
+            "incidents"
+          ],
+          "mcpServerNames": [
+            "datadog"
+          ],
+          "hasSteeringFiles": true,
+          "isAgentPlugin": false,
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "power",
+                "source": {
+                  "origin": "user"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "markdownlint",
+          "description": "Lint, validate, and auto-fix Markdown files using markdownlint rules. Enforces writing best practices including language consistency, fenced code language tags, image alt text, and table of contents for long documents.",
+          "displayName": "Markdownlint",
+          "keywords": [
+            "markdownlint",
+            "markdown",
+            "linting",
+            "formatting",
+            "commonmark"
+          ],
+          "mcpServerNames": [
+            "markdownlint"
+          ],
+          "hasSteeringFiles": true,
+          "isAgentPlugin": false,
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "power",
+                "source": {
+                  "origin": "user"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
