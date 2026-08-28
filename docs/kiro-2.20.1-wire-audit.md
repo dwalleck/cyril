@@ -361,8 +361,89 @@ position and could silently rewrite a user's `fs_write` parameters.
 
 ---
 
+## 8. New-field sweep — nothing new, including on usage
+
+Targeted probes answer their own hypothesis and will not notice a field nobody
+asked about, so this pass was run **retroactively over every capture** with
+`sweep-new-fields.py` (now a standing tool — run it at the end of every audit).
+
+**Method.** Collapse array indices to `[]`, take the distinct JSON path set per
+capture, then diff the **same workload** across 0.54.3 and a pinned 0.52.1.
+
+**Result: no shape change.** The workflow pair — identical recipe, identical
+prompts — is **413 paths on both, with an exactly empty diff in both
+directions**. The watchdog pair's 16 live-only paths are entirely the watchdog's
+own surface (the `-32000` error object, `params.level`/`message` from
+`_kiro/system/notify`, and `displayError`); its 4 pinned-only paths are just
+coverage, because the 0.54.3 leg errored out before the turn-completion frame
+the 0.52.1 leg reached.
+
+### Usage/metering specifically — populated, but long-standing
+
+21 of the 492 paths are usage/token/credit-shaped. The substantive one is
+carried on `session/update` → `session_info_update` → `_meta.kiro`, `kind:
+"turn_completion"`:
+
+```json
+{"promptTurnSummaries": [{"unit": "credit", "unitPlural": "credits",
+                          "usage": 0.15044080762852408,
+                          "usedTools": ["execute_bash", "fs_write", "send_message"]}],
+ "elapsedTime": 9209, "status": "success", "requestIds": ["…", "…"]}
+```
+
+Real, non-zero, **per-turn credit** consumption with fractional precision plus
+the tools used — but **not new**: it is present in the pinned 0.52.1 capture and
+in committed captures back to **2.11.0**. **Token counts remain absent**, which
+matches the earlier finding that the backend strips them and only telemetry
+carries `tokenUsage`.
+
+So: nothing arrived on the usage wire in 2.20.x. The credit channel that exists
+is the one already known.
+
+### Three incidental finds worth keeping
+
+**1. The stall error arrives TWICE, and the second copy is session-scoped.**
+Besides the JSON-RPC `-32000` response, the same error rides `session/update` →
+`session_info_update` with `kind: "display_error"`, carrying the fields both
+nested and flattened:
+
+```json
+{"displayError": {"message": "The model response stalled and timed out…",
+                  "errorType": "StreamIdleTimeoutError",
+                  "retryErrorType": "TRANSIENT"},
+ "kind": "display_error", "message": "…",
+ "errorType": "StreamIdleTimeoutError", "retryErrorType": "TRANSIENT"}
+```
+
+Unlike `_kiro/system/notify` (§ 2, session-less), this one **is** session-scoped
+— so the *terminal* stall error can be attributed to a session even with peers
+in flight. It only mitigates the terminal case; the soft warnings remain
+unattributable (cyril-fvht).
+
+**2. There is a settings-echo channel on `session/new`.** `result._meta` carries
+`*Enabled` confirmations for the gates that actually took effect:
+
+```json
+{"semanticReviewEnabled": true, "ftaEnabled": false, "workflowsEnabled": false,
+ "specPlanEnabled": false, "specSkipClarificationEnabled": true,
+ "steeringSupervisorEnabled": true}
+```
+
+This is how to verify a gate rather than assume it — and it is what confirmed
+§ 7's supervisor was genuinely active. Note there is **no** entry for the
+stream-idle watchdog, consistent with it not being an `AgentSettings` knob.
+
+**3. Client `_meta` is echoed back verbatim** under `result._meta._meta.kiro` —
+the § 5 `clientmeta` leg's five injected shapes all came back unchanged while
+having no effect. Concrete proof of "accepted silently": the echo is not
+acknowledgement.
+
+---
+
 ## Artifacts
 
+* New-field sweep (run at the end of every audit):
+  `experiments/conductor-spike/sweep-new-fields.py` (inventory, or `--diff live pinned`).
 * Steering-supervisor probe: `experiments/conductor-spike/probe-kas-steering-supervisor-2.20.1.py`
   (legs `on` / `param`; needs `KIRO_SUPERVISOR_DEBUG=1`).
 * Workflow channel probe: `experiments/conductor-spike/probe-kas-workflow-channels-2.20.1.py`
