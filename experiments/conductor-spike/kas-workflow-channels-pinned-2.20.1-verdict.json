@@ -1,0 +1,13 @@
+{
+  "leg": "pinned",
+  "bundle": "2.19.2",
+  "status": "completed",
+  "capturedOutputs": {
+    "s1": "ALPHA",
+    "s2": "DONE"
+  },
+  "channelA": "ALPHA",
+  "channelB": "ALPHA",
+  "channelA_worked": true,
+  "channelB_worked": true
+}

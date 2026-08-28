@@ -179,8 +179,84 @@ Item schema (live, real installation):
 
 ---
 
+## 6. Workflow inter-step data passing — capture is PROMPT-SHAPE controlled, and now fails WRONG rather than empty
+
+Re-verification of the `{{id.output}}` series on 0.54.3, with the artifacts file
+channel measured **side by side in the same run** (same model, same session,
+same hour) rather than separately.
+
+Series to date:
+
+| binary / KAS | `capturedOutput` | reading |
+|---|---|---|
+| 2.19.0 / 0.46.1 | `""` everywhere | `{{id.output}}` broken |
+| 2.19.2 / 0.52.1 (+0.48.0 pin) | `"ALPHA"` | model/backend turn shape, not an engine fix |
+| **2.20.1 / 0.54.3 (+0.52.1 pin)** | **depends on the step's prompt** | **see below** |
+
+Probe: `probe-kas-workflow-channels-2.20.1.py`. Two steps; `s1` writes the token
+to a file *and* is asked for it in text; `s2` receives **both** channels and
+writes what it actually saw to `result.json`, which is read off disk afterwards:
+
+* **CHANNEL A** — `{{s1.output}}` template capture
+* **CHANNEL B** — `{{artifacts.value}}` path registry + a real file
+
+Only `s1`'s prompt shape differs between the two styles:
+
+* `restate` — "…then reply with exactly this single word and nothing else"
+* `terse` — "…that is the entire task. Do not write any summary, explanation or
+  closing message; signal completion and stop."
+
+### Results
+
+| style | bundle | runs | `capturedOutputs.s1` | what `s2` received as A | B |
+|---|---|---|---|---|---|
+| `restate` | 0.54.3 live | 4 | `"ALPHA"` | `"ALPHA"` ✅ | `"ALPHA"` ✅ |
+| `restate` | 0.52.1 pinned | 1 | `"ALPHA"` | `"ALPHA"` ✅ | `"ALPHA"` ✅ |
+| `terse` | 0.54.3 live | 4 | **`"Done."`** ×3, empty ×1 | **`"Done.\n"`** ❌ | `"ALPHA"` ✅ |
+
+**Channel B was correct in 8/8 runs across both bundles and both styles.**
+
+### The two findings that matter
+
+**1. Capture correctness is controlled by prompt shape, not luck.** The
+"roulette" framing is now too pessimistic *and* too optimistic. A step whose
+prompt explicitly demands a trailing restatement captured correctly in every
+observation; a step that does its work and ends its turn on the completion tool
+never did. The extractor takes the last assistant message's text entries — so
+whether the payload is there is a direct, controllable consequence of how the
+step is told to finish. Identical behaviour on the 0.52.1 pin re-confirms this
+is model/turn-shape, not engine.
+
+**2. The failure mode has changed character, and is now far more dangerous.**
+2.19.0 failed *empty* — visibly, loudly: the consuming step saw a hole, asked
+via `send_message need_input`, and **paused the run**. On 0.54.3 the terse step
+captured **`"Done."`** — the model's closing pleasantry — and handed that to
+`s2` as the payload. `s2` accepted it, wrote it into `result.json`, and the run
+finished **`status: "completed"`** with no error, no warning, and no pause.
+
+That is **silent inter-stage data corruption**: a plausible-looking wrong value
+propagating through the DAG under a green run status. An empty capture is a
+detectable bug; `"Done."` is not distinguishable from a legitimate one-word
+payload by any client-side check.
+
+> A verdict heuristic of "capture is non-empty ⇒ capture worked" is unsafe —
+> it scored the corrupted run as a pass during this audit before the check was
+> tightened to compare against the expected value.
+
+### Guidance (unchanged conclusion, much stronger reason)
+
+Use **`artifacts` + files** for anything load-bearing — 8/8 correct, immune to
+turn shape. If `{{id.output}}` is used at all, the producing step's prompt
+**must** explicitly require a trailing restatement of exactly the payload, and
+the consuming step should validate the value rather than trust it. Do not treat
+a non-empty capture as evidence of a correct one.
+
+---
+
 ## Artifacts
 
+* Workflow channel probe: `experiments/conductor-spike/probe-kas-workflow-channels-2.20.1.py`
+  (`WF_STYLE=restate|terse`, `KAS_PIN=<ver>` for the bundle control).
 * Flag-table extractor (re-run each release):
   `experiments/conductor-spike/extract-kas-feature-flags.py`.
 * Probes: `experiments/conductor-spike/probe-kas-stall-watchdog-2.20.1.py`

@@ -1,0 +1,15 @@
+{
+  "leg": "live-terse",
+  "style": "terse",
+  "bundle": "0.54.3-live",
+  "status": "completed",
+  "capturedOutputs": {
+    "s1": "Done.",
+    "s2": "DONE"
+  },
+  "channelA": "Done.\n",
+  "channelB": "ALPHA\n",
+  "channelA_nonempty": true,
+  "channelA_CORRECT": false,
+  "channelB_CORRECT": true
+}
