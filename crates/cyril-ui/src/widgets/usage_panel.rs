@@ -2,7 +2,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use crate::theme::Theme;
-use crate::traits::{UsageAccountStatus, UsagePage, UsagePanelState};
+use crate::traits::{UsageAccountStatus, UsagePage, UsagePanelState, UsageRefreshStatus};
 
 const MAX_DATA_ROWS: usize = 18;
 
@@ -24,7 +24,11 @@ pub fn render(
 
     let block = Block::default()
         .title(Span::styled(
-            format!(" /usage · {} ", state.page.title()),
+            format!(
+                " /usage · {}{} ",
+                state.page.title(),
+                refresh_suffix(&state.refresh)
+            ),
             Style::default()
                 .fg(theme.accent_quinary)
                 .add_modifier(Modifier::BOLD),
@@ -49,7 +53,37 @@ pub fn render(
     frame.render_widget(Paragraph::new(lines).block(block), popup_area);
 }
 
+/// The panel-wide refresh status as it appears in the title.
+///
+/// Empty when idle: a marker that is always present says nothing. The failure
+/// reason is truncated so a long database error cannot push the page name off
+/// the border.
+fn refresh_suffix(status: &UsageRefreshStatus) -> String {
+    const REASON_BUDGET: usize = 40;
+    match status {
+        UsageRefreshStatus::Idle => String::new(),
+        UsageRefreshStatus::Computing => " · computing…".to_owned(),
+        UsageRefreshStatus::Refreshing => " · refreshing…".to_owned(),
+        UsageRefreshStatus::Failed(reason) => {
+            let mut shown: String = reason.chars().take(REASON_BUDGET).collect();
+            if reason.chars().count() > REASON_BUDGET {
+                shown.push('…');
+            }
+            format!(" · refresh failed: {shown}")
+        }
+    }
+}
+
 fn page_lines(state: &UsagePanelState, theme: &Theme) -> Vec<Line<'static>> {
+    // Nothing has been computed yet. Deliberately NOT the "no usage recorded"
+    // placeholder: an empty log and an unfinished first snapshot are different
+    // facts and must not render the same (cyril-nanu S11).
+    if state.refresh == UsageRefreshStatus::Computing {
+        return vec![Line::styled(
+            "Computing usage…",
+            Style::default().fg(theme.subdued),
+        )];
+    }
     match state.page {
         UsagePage::Overview => overview_lines(state, theme),
         UsagePage::Costs => cost_lines(state, theme),
@@ -727,6 +761,7 @@ mod tests {
                 let input_top = height.saturating_sub(3);
                 let state = UsagePanelState {
                     snapshot: sample_snapshot(),
+                    refresh: UsageRefreshStatus::Idle,
                     page,
                     scroll_offset: 0,
                     account: None,
@@ -765,6 +800,7 @@ mod tests {
         };
         let state = UsagePanelState {
             snapshot: UsageSnapshot::default(),
+            refresh: UsageRefreshStatus::Idle,
             page: UsagePage::Overview,
             scroll_offset: 0,
             account: None,
@@ -893,6 +929,7 @@ mod tests {
         ] {
             let state = UsagePanelState {
                 snapshot: snapshot.clone(),
+                refresh: UsageRefreshStatus::Idle,
                 page,
                 scroll_offset: 0,
                 account: Some(account.clone()),
@@ -933,6 +970,7 @@ mod tests {
         for page in [UsagePage::Costs, UsagePage::Context] {
             let state = UsagePanelState {
                 snapshot: cyril_core::types::UsageSnapshot::default(),
+                refresh: UsageRefreshStatus::Idle,
                 page,
                 scroll_offset: 0,
                 account: None,
@@ -956,6 +994,7 @@ mod tests {
             };
             let state = UsagePanelState {
                 snapshot,
+                refresh: UsageRefreshStatus::Idle,
                 page: UsagePage::Overview,
                 scroll_offset: 0,
                 account: None,
@@ -990,6 +1029,7 @@ mod tests {
         };
         let state = UsagePanelState {
             snapshot,
+            refresh: UsageRefreshStatus::Idle,
             page: UsagePage::Models,
             scroll_offset: 0,
             account: None,
@@ -1017,6 +1057,7 @@ mod tests {
         let theme = crate::traits::test_support::marker_theme();
         let state = UsagePanelState {
             snapshot: sample_snapshot(),
+            refresh: UsageRefreshStatus::Idle,
             page: UsagePage::Overview,
             scroll_offset: 0,
             account: None,
@@ -1049,6 +1090,7 @@ mod tests {
             };
             let state = UsagePanelState {
                 snapshot: sample_snapshot(),
+                refresh: UsageRefreshStatus::Idle,
                 page,
                 scroll_offset: 0,
                 account: None,
@@ -1088,5 +1130,113 @@ mod tests {
     fn absent_latency_tail_collapses_to_a_single_dash() {
         assert_eq!(latency_tail(None, None), "—");
         assert_eq!(latency_tail(Some(12.0), None), "12ms p90 · — max");
+    }
+
+    fn render_with(refresh: UsageRefreshStatus, snapshot: UsageSnapshot) -> String {
+        let theme = crate::traits::test_support::marker_theme();
+        let backend = TestBackend::new(120, 30);
+        let mut terminal = match Terminal::new(backend) {
+            Ok(terminal) => terminal,
+            Err(error) => panic!("test terminal: {error}"),
+        };
+        let state = UsagePanelState {
+            snapshot,
+            refresh,
+            page: UsagePage::Overview,
+            scroll_offset: 0,
+            account: None,
+            account_fetched_at_ms: None,
+            account_status: UsageAccountStatus::Idle,
+        };
+        match terminal.draw(|frame| render(frame, frame.area(), 27, &state, &theme)) {
+            Ok(_) => {}
+            Err(error) => panic!("draw usage panel: {error}"),
+        }
+        rows(&terminal).join("\n")
+    }
+
+    /// cyril-nanu C4 — each refresh state renders its own marker and no other.
+    ///
+    /// The panel may show values a turn behind the log; that is only
+    /// acceptable because it says so. A marker that is always present, or one
+    /// that never appears, both fail the contract, so every state asserts both
+    /// what must appear AND what must not — the absence assertions carry their
+    /// own positive control that way.
+    #[test]
+    fn refresh_marker_matches_panel_state() {
+        let computing = render_with(UsageRefreshStatus::Computing, UsageSnapshot::default());
+        assert!(
+            computing.contains("computing"),
+            "the computing state must say so; got:\n{computing}"
+        );
+        assert!(
+            !computing.contains("refreshing"),
+            "the computing state must not claim to be refreshing; got:\n{computing}"
+        );
+        assert!(
+            !computing.contains("No usage recorded yet"),
+            "an unfinished first snapshot must NOT render the empty-log placeholder — \
+             they are different facts; got:\n{computing}"
+        );
+
+        let refreshing = render_with(UsageRefreshStatus::Refreshing, sample_snapshot());
+        assert!(
+            refreshing.contains("refreshing"),
+            "an in-flight recompute must be visible; got:\n{refreshing}"
+        );
+        assert!(
+            refreshing.contains("Turns"),
+            "the held values stay on screen while refreshing; got:\n{refreshing}"
+        );
+
+        let idle = render_with(UsageRefreshStatus::Idle, sample_snapshot());
+        assert!(
+            !idle.contains("refreshing") && !idle.contains("computing"),
+            "an idle panel must carry no marker at all; got:\n{idle}"
+        );
+
+        // Positive control for the empty-log case: a COMPLETED snapshot over an
+        // empty log renders the placeholder, which is what makes the computing
+        // assertion above meaningful rather than vacuous.
+        let empty_done = render_with(UsageRefreshStatus::Idle, UsageSnapshot::default());
+        assert!(
+            empty_done.contains("No usage recorded yet"),
+            "a completed snapshot over an empty log renders the placeholder; got:\n{empty_done}"
+        );
+    }
+
+    /// cyril-nanu C6 — a failed refresh keeps the values and states the failure.
+    ///
+    /// Today the failure is a `tracing::warn!` the operator never sees, so the
+    /// panel silently shows stale numbers. The discriminating assertion is the
+    /// status text: a handler that ignored errors entirely would also leave the
+    /// values intact.
+    #[test]
+    fn failed_refresh_keeps_values_and_states_the_failure() {
+        let failed = render_with(
+            UsageRefreshStatus::Failed("database is locked".to_owned()),
+            sample_snapshot(),
+        );
+        assert!(
+            failed.contains("refresh failed"),
+            "the failure must be stated on screen; got:\n{failed}"
+        );
+        assert!(
+            failed.contains("database is locked"),
+            "the reason must be shown, not swallowed; got:\n{failed}"
+        );
+        assert!(
+            failed.contains("Turns"),
+            "the last successful values stay on screen; got:\n{failed}"
+        );
+
+        // A long reason is truncated rather than pushing the page name off the
+        // border.
+        let long = "x".repeat(300);
+        let truncated = render_with(UsageRefreshStatus::Failed(long), sample_snapshot());
+        assert!(
+            truncated.contains("Overview"),
+            "a long failure reason must not displace the page name; got:\n{truncated}"
+        );
     }
 }

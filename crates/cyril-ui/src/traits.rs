@@ -578,9 +578,34 @@ pub enum UsageAccountStatus {
     Stale(String),
 }
 
+/// Whether the panel's usage snapshot is current, being recomputed, or failed.
+///
+/// Snapshots are computed off the App event loop (cyril-nanu), so the values on
+/// screen can be a turn behind the log. That is acceptable only because it is
+/// stated: this status is what makes the lag visible rather than silent.
+/// Mirrors `UsageAccountStatus`, which cyril-kryv established for the same
+/// shape on the account query.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum UsageRefreshStatus {
+    /// No snapshot has completed yet in this process, so there is nothing to
+    /// show. Distinct from a completed snapshot over an empty log, which
+    /// renders the "no usage recorded" placeholder instead.
+    Computing,
+    /// A snapshot is held and a newer one is in flight.
+    Refreshing,
+    /// A snapshot is held and nothing is in flight.
+    #[default]
+    Idle,
+    /// The last attempt failed. The held values stay on screen beside the
+    /// reason, rather than the panel silently showing stale numbers.
+    Failed(String),
+}
+
 #[derive(Debug, Clone)]
 pub struct UsagePanelState {
     pub snapshot: cyril_core::types::UsageSnapshot,
+    /// See [`UsageRefreshStatus`]. Rendered in the panel title.
+    pub refresh: UsageRefreshStatus,
     pub page: UsagePage,
     pub scroll_offset: usize,
     pub account: Option<cyril_core::types::UsageAccount>,
@@ -590,6 +615,10 @@ pub struct UsagePanelState {
 
 impl UsagePanelState {
     pub fn row_count(&self) -> usize {
+        // Nothing has been computed yet, so no page has rows to count.
+        if self.refresh == UsageRefreshStatus::Computing {
+            return 1;
+        }
         match self.page {
             UsagePage::Overview => {
                 if self.snapshot.overview.requests == 0 {

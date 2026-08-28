@@ -2288,9 +2288,48 @@ impl UiState {
 
     // --- Usage panel ---
 
+    /// Opens the panel with no data yet, while the first snapshot is computed.
+    ///
+    /// Only reachable before any snapshot has completed in this process; a
+    /// reopen carries the last known values instead (cyril-nanu D6).
+    pub fn show_usage_panel_computing(&mut self) {
+        match self.usage_panel.as_mut() {
+            // Already open — an extra open is just another refresh request.
+            Some(panel) => panel.refresh = UsageRefreshStatus::Refreshing,
+            None => {
+                self.usage_panel = Some(UsagePanelState {
+                    snapshot: cyril_core::types::UsageSnapshot::default(),
+                    refresh: UsageRefreshStatus::Computing,
+                    page: UsagePage::Overview,
+                    scroll_offset: 0,
+                    account: self.usage_account.clone(),
+                    account_fetched_at_ms: self.usage_account_fetched_at_ms,
+                    account_status: self.usage_account_status.clone(),
+                });
+            }
+        }
+    }
+
+    /// Marks an in-flight recompute. Keeps whatever the panel already shows.
+    pub fn mark_usage_panel_refreshing(&mut self) {
+        if let Some(panel) = self.usage_panel.as_mut()
+            && panel.refresh != UsageRefreshStatus::Computing
+        {
+            panel.refresh = UsageRefreshStatus::Refreshing;
+        }
+    }
+
+    /// Records a failed recompute. The held values stay; the reason is shown.
+    pub fn mark_usage_panel_failed(&mut self, reason: String) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            panel.refresh = UsageRefreshStatus::Failed(reason);
+        }
+    }
+
     pub fn show_usage_panel(&mut self, snapshot: cyril_core::types::UsageSnapshot) {
         self.usage_panel = Some(UsagePanelState {
             snapshot,
+            refresh: UsageRefreshStatus::Idle,
             page: UsagePage::Overview,
             scroll_offset: 0,
             account: self.usage_account.clone(),
@@ -2302,6 +2341,7 @@ impl UiState {
     pub fn refresh_usage_panel(&mut self, snapshot: cyril_core::types::UsageSnapshot) {
         if let Some(panel) = self.usage_panel.as_mut() {
             panel.snapshot = snapshot;
+            panel.refresh = UsageRefreshStatus::Idle;
             panel.account = self.usage_account.clone();
             panel.account_fetched_at_ms = self.usage_account_fetched_at_ms;
             panel.account_status = self.usage_account_status.clone();
