@@ -50,6 +50,11 @@ CFG = {
     "soft":    dict(warn="250", timeout="600000", pin=None),
     "hard":    dict(warn="250", timeout="4000",   pin=None),
     "control": dict(warn="250", timeout="4000",   pin="2.19.2"),
+    # cyril-34yq: does the env provider gate the watchdog, and are the declared
+    # `client` / `session` providers actually wired?
+    "envoff":     dict(warn="100", timeout="300", pin=None, envflag="false"),
+    "envon":      dict(warn="100", timeout="300", pin=None, envflag="true"),
+    "clientmeta": dict(warn="100", timeout="300", pin=None, meta=True),
 }[LEG]
 # allow per-run override so the hard path can be tuned onto the real gap profile
 CFG["warn"] = os.environ.get("WD_WARN", CFG["warn"])
@@ -75,8 +80,12 @@ env["KIRO_STREAM_IDLE_WARN_MS"] = CFG["warn"]
 env["KIRO_STREAM_IDLE_TIMEOUT_MS"] = CFG["timeout"]
 if CFG["pin"]:
     env["KIRO_KAS_SERVER_PATH"] = bundle(CFG["pin"])
+if CFG.get("envflag") is not None:
+    env["KIRO_FEATURE_STREAM_IDLE_WATCHDOG_ENABLED"] = CFG["envflag"]
+USE_META = CFG.get("meta", False)
 
-print(f"== leg={LEG} warn={CFG['warn']}ms timeout={CFG['timeout']}ms pin={CFG['pin'] or 'live 0.54.3'}")
+print(f"== leg={LEG} warn={CFG['warn']}ms timeout={CFG['timeout']}ms "
+      f"pin={CFG['pin'] or 'live 0.54.3'} envflag={CFG.get('envflag')} meta={CFG.get('meta', False)}")
 
 def read_token():
     c = sqlite3.connect(AUTH_DB)
@@ -161,14 +170,28 @@ def pump(until_id=None, timeout=40, idle_exit=None):
             return o
     return None
 
-iid = req("initialize", {"protocolVersion": 1,
-                         "clientInfo": {"name": "cyril-audit-probe", "version": "0.0.1"},
-                         "clientCapabilities": {"fs": {"readTextFile": False, "writeTextFile": False}}})
+# Every plausible client-side shape for the flag, tried at once. The declared
+# provider precedence is [governance, env, client, session, experiment]; if a
+# `client` provider existed, one of these should reach it.
+FLAG_META = {"kiro": {"settings": {"streamIdleWatchdog": {"enabled": False},
+                                   "stream_idle_watchdog": False,
+                                   "featureConfig": {"stream_idle_watchdog": False}},
+                      "featureConfig": {"stream_idle_watchdog": False},
+                      "features": {"stream_idle_watchdog": False}}}
+init_params = {"protocolVersion": 1,
+               "clientInfo": {"name": "cyril-audit-probe", "version": "0.0.1"},
+               "clientCapabilities": {"fs": {"readTextFile": False, "writeTextFile": False}}}
+if USE_META:
+    init_params["_meta"] = FLAG_META
+iid = req("initialize", init_params)
 init = pump(iid, 60)
 ai = ((init or {}).get("result") or {}).get("agentInfo")
 print("== agentInfo:", json.dumps(ai))
 
-nid = req("session/new", {"cwd": CWD, "mcpServers": []})
+new_params = {"cwd": CWD, "mcpServers": []}
+if USE_META:
+    new_params["_meta"] = FLAG_META
+nid = req("session/new", new_params)
 new = pump(nid, 60)
 sid = ((new or {}).get("result") or {}).get("sessionId")
 print("== sessionId:", (sid or "")[:16])

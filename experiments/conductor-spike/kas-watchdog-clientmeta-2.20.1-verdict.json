@@ -1,0 +1,47 @@
+{
+  "leg": "clientmeta",
+  "warnMs": "100",
+  "timeoutMs": "300",
+  "pin": "0.54.3-live",
+  "elapsed": 3.78,
+  "terminal_result": null,
+  "terminal_error": {
+    "code": -32000,
+    "message": "The model response stalled and timed out. Please try again. (Request ID: d53f407e-d6e9-4c2e-8fa9-728634020fb7)",
+    "data": {
+      "errorType": "StreamIdleTimeoutError",
+      "retryErrorType": "TRANSIENT",
+      "requestId": "d53f407e-d6e9-4c2e-8fa9-728634020fb7"
+    }
+  },
+  "notify": [
+    {
+      "atSec": 1.51,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    },
+    {
+      "atSec": 1.71,
+      "params": {
+        "level": "warning",
+        "message": "The connection to the model was interrupted. Retrying\u2026"
+      }
+    },
+    {
+      "atSec": 1.8,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    },
+    {
+      "atSec": 3.57,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    }
+  ]
+}

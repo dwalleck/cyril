@@ -171,10 +171,6 @@ Item schema (live, real installation):
   carries **no `[V3]` tag**, so it is a **v2-engine** change; the KAS static
   signal was the JSDoc artefact debunked in §1. Needs a v2 probe with a genuine
   context overflow — not attempted.
-* **`FeatureConfigRegistry` `client` / `session` providers.** The precedence
-  list includes `client` and `session`, which suggests an ACP client may be able
-  to set `stream_idle_watchdog` (and the retry flags) over the wire. Not probed;
-  potentially a real cyril lever.
 * **`_kiro/governance/state`, `_kiro/policy/*`, `_kiro/sandbox/status`,
   `_kiro/progressive_context/items_changed`** — in the 110-method census, never
   audited. Same "dark surface we never covered" class as powers.
@@ -186,10 +182,99 @@ Item schema (live, real installation):
 ## Artifacts
 
 * Probes: `experiments/conductor-spike/probe-kas-stall-watchdog-2.20.1.py`
-  (legs `soft` / `hard` / `control`, thresholds overridable via `WD_WARN` /
-  `WD_TIMEOUT`), `experiments/conductor-spike/probe-kas-powers-2.20.1.py`
+  (legs `soft` / `hard` / `control` / `envoff` / `envon` / `clientmeta`,
+  thresholds overridable via `WD_WARN` / `WD_TIMEOUT`), `experiments/conductor-spike/probe-kas-powers-2.20.1.py`
   (`SEED_POWERS=1` copies the real powers tree into the throwaway HOME).
-* Captures: `kas-watchdog-{soft,hard,control}-2.20.1.jsonl` + `-verdict.json`,
+* Captures: `kas-watchdog-{soft,hard,control,envoff,envon,clientmeta}-2.20.1.jsonl` + `-verdict.json`,
   `kas-powers-2.20.1.jsonl` + `-verdict.json`.
 * Bundle pin for controls: `KIRO_KAS_SERVER_PATH=<kas>/2.19.2-*/…/acp-server.js`
   (exclude the sibling `*.lock` directory when globbing).
+
+---
+
+## 5. Feature-config providers — `client` / `session` are NOT wired (cyril-34yq)
+
+The provider precedence array reads
+`["governance","env","client","session","experiment"]`, which suggested an ACP
+client might set `stream_idle_watchdog` over the wire. **It cannot.**
+
+Static: there is exactly **one** registry construction, and it passes **two**
+providers:
+
+```js
+buildFeatureConfigRegistry(t){
+  let r = new QNe(this.getExperimentConfigService()),  // source = "experiment"
+      n = new bhe(process.env);                        // source = "env"
+  return new ZNe({sessionId: t, providers: [n, r]});   // env + experiment ONLY
+}
+```
+
+Only two provider classes exist (`bhe` `source="env"`, `QNe`
+`source="experiment"`). Nothing declares `source` `client`, `session`, or
+`governance` — the array is a **sort key over a forward-looking vocabulary**,
+and three of its five sources have no implementation.
+
+Live confirmation (`clientmeta` leg): five plausible shapes injected on **both**
+`initialize._meta` and `session/new._meta` —
+`kiro.settings.streamIdleWatchdog{enabled:false}`,
+`kiro.settings.stream_idle_watchdog`, `kiro.settings.featureConfig.*`,
+`kiro.featureConfig.*`, `kiro.features.*` — produced **4 notifies and the
+`-32000` terminal**, identical to the no-meta baseline. The meta is **accepted
+silently**: no error, no echo, no indication it was ignored (another
+schema-accepted ≠ functional case).
+
+### The env provider IS the lever — flag names recovered
+
+`bhe` maps flags to env vars (accepts only `"true"` / `"false"`; anything else
+logs `featureConfig.env.unparsable` and falls through to the default):
+
+| flag | env var |
+|---|---|
+| `stream_idle_watchdog` | `KIRO_FEATURE_STREAM_IDLE_WATCHDOG_ENABLED` |
+| `auth_expiry_retry` | `KIRO_FEATURE_AUTH_EXPIRY_RETRY_ENABLED` |
+| `session_title_llm` | `KIRO_FEATURE_SESSION_TITLE_LLM_ENABLED` |
+| `steering_supervisor` | `KIRO_FEATURE_STEERING_SUPERVISOR_ENABLED` |
+| `cgs_delegation_v2` | `KIRO_FEATURE_CGS_DELEGATION_V2_ENABLED` |
+| `user_agent_refactoring_enabled` | `KIRO_FEATURE_USER_AGENT_REFACTORING_ENABLED` |
+| `kiroInfraSafetyMonitor` | `KIRO_FEATURE_KIRO_INFRA_SAFETY_MONITOR_ENABLED` |
+| `memory_external_enabled` | `KIRO_FEATURE_MEMORY_EXTERNAL_ENABLED` |
+| `fta_vibe` | `KIRO_FEATURE_FTA_VIBE_ENABLED` |
+
+**Only 9 of the 15 flags are env-reachable.** The retry family
+(`empty_response_retry`, `truncated_response_retry`, `stream_error_retry`) and
+`memory_internal_enabled` have **no env var** — they are experiment-only, i.e.
+backend-controlled and not client-influenceable at all.
+
+### Live: the env flag works on the main path but leaks a residual warning
+
+Same thresholds (`warn=100ms`, `timeout=300ms`) throughout:
+
+| leg | notifies | terminal |
+|---|---|---|
+| no flag (baseline) | 4 | `-32000` |
+| `…WATCHDOG_ENABLED=true` | 4 | `-32000` |
+| `…WATCHDOG_ENABLED=false` ×3 runs | **1, 0, 1** | `end_turn` every time |
+
+So `false` reliably kills the hard timeout, the retry storm and the `-32000`
+terminal — but an **intermittent single soft warning still escapes**.
+
+Cause is visible in the accessor:
+
+```js
+streamIdleWatchdogThresholds(){
+  return this.featureConfigRegistry?.get(Fo.STREAM_IDLE_WATCHDOG)
+      ?? $O[Fo.STREAM_IDLE_WATCHDOG].default   // true
+      ? Z7i() : {warnMs:0, timeoutMs:0}
+}
+```
+
+A model instance on which `setFeatureConfig` was never called has
+`featureConfigRegistry === undefined`, so `undefined ?? true` → **watchdog
+enabled**, and it still picks up the `KIRO_STREAM_IDLE_*` thresholds. The flag
+is therefore honoured per-model-instance, not globally; at least one secondary
+call path is unregistered.
+
+**Consequence for cyril: disabling the flag does NOT guarantee zero
+`_kiro/system/notify` frames.** Cyril must handle the notification regardless of
+how the watchdog is configured.
+

@@ -1,0 +1,20 @@
+{
+  "leg": "envoff",
+  "warnMs": "100",
+  "timeoutMs": "300",
+  "pin": "0.54.3-live",
+  "elapsed": 5.53,
+  "terminal_result": {
+    "stopReason": "end_turn"
+  },
+  "terminal_error": null,
+  "notify": [
+    {
+      "atSec": 2.02,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    }
+  ]
+}

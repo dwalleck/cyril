@@ -1,0 +1,47 @@
+{
+  "leg": "envon",
+  "warnMs": "100",
+  "timeoutMs": "300",
+  "pin": "0.54.3-live",
+  "elapsed": 4.65,
+  "terminal_result": null,
+  "terminal_error": {
+    "code": -32000,
+    "message": "The model response stalled and timed out. Please try again. (Request ID: ff1bec22-706f-4cc0-acbe-e85216289550)",
+    "data": {
+      "errorType": "StreamIdleTimeoutError",
+      "retryErrorType": "TRANSIENT",
+      "requestId": "ff1bec22-706f-4cc0-acbe-e85216289550"
+    }
+  },
+  "notify": [
+    {
+      "atSec": 2.02,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    },
+    {
+      "atSec": 2.34,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    },
+    {
+      "atSec": 2.55,
+      "params": {
+        "level": "warning",
+        "message": "The connection to the model was interrupted. Retrying\u2026"
+      }
+    },
+    {
+      "atSec": 4.44,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    }
+  ]
+}
