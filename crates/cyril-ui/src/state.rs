@@ -98,6 +98,9 @@ pub struct UiState {
     hooks_panel: Option<HooksPanelState>,
     code_panel: Option<cyril_core::types::CodePanelData>,
     usage_panel: Option<UsagePanelState>,
+    /// The last completed snapshot, kept across a panel close so a reopen is
+    /// never empty (cyril-nanu D6).
+    last_usage_snapshot: Option<cyril_core::types::UsageSnapshot>,
     usage_account: Option<cyril_core::types::UsageAccount>,
     usage_account_fetched_at_ms: Option<u64>,
     usage_account_status: UsageAccountStatus,
@@ -368,6 +371,7 @@ impl UiState {
             hooks_panel: None,
             code_panel: None,
             usage_panel: None,
+            last_usage_snapshot: None,
             usage_account: None,
             usage_account_fetched_at_ms: None,
             usage_account_status: UsageAccountStatus::Idle,
@@ -2288,26 +2292,33 @@ impl UiState {
 
     // --- Usage panel ---
 
-    /// Opens the panel with no data yet, while the first snapshot is computed.
+    /// Opens the panel without waiting for a snapshot.
     ///
-    /// Only reachable before any snapshot has completed in this process; a
-    /// reopen carries the last known values instead (cyril-nanu D6).
-    pub fn show_usage_panel_computing(&mut self) {
-        match self.usage_panel.as_mut() {
-            // Already open — an extra open is just another refresh request.
-            Some(panel) => panel.refresh = UsageRefreshStatus::Refreshing,
-            None => {
-                self.usage_panel = Some(UsagePanelState {
-                    snapshot: cyril_core::types::UsageSnapshot::default(),
-                    refresh: UsageRefreshStatus::Computing,
-                    page: UsagePage::Overview,
-                    scroll_offset: 0,
-                    account: self.usage_account.clone(),
-                    account_fetched_at_ms: self.usage_account_fetched_at_ms,
-                    account_status: self.usage_account_status.clone(),
-                });
-            }
+    /// The process's first open has nothing to show and renders the computing
+    /// state; every later open carries the last completed snapshot with the
+    /// refreshing marker, because `hide_usage_panel` kept it (cyril-nanu D6).
+    /// Re-opening an already-open panel is simply another refresh.
+    pub fn open_usage_panel(&mut self) {
+        if let Some(panel) = self.usage_panel.as_mut() {
+            panel.refresh = UsageRefreshStatus::Refreshing;
+            return;
         }
+        let (snapshot, refresh) = match self.last_usage_snapshot.take() {
+            Some(snapshot) => (snapshot, UsageRefreshStatus::Refreshing),
+            None => (
+                cyril_core::types::UsageSnapshot::default(),
+                UsageRefreshStatus::Computing,
+            ),
+        };
+        self.usage_panel = Some(UsagePanelState {
+            snapshot,
+            refresh,
+            page: UsagePage::Overview,
+            scroll_offset: 0,
+            account: self.usage_account.clone(),
+            account_fetched_at_ms: self.usage_account_fetched_at_ms,
+            account_status: self.usage_account_status.clone(),
+        });
     }
 
     /// Marks an in-flight recompute. Keeps whatever the panel already shows.
@@ -2366,8 +2377,13 @@ impl UiState {
         }
     }
 
+    /// Closes the panel, keeping its snapshot so a reopen shows the last known
+    /// values rather than an empty computing state (cyril-nanu D6). Only the
+    /// process's first open is ever empty.
     pub fn hide_usage_panel(&mut self) {
-        self.usage_panel = None;
+        if let Some(panel) = self.usage_panel.take() {
+            self.last_usage_snapshot = Some(panel.snapshot);
+        }
     }
 
     pub fn has_usage_panel(&self) -> bool {

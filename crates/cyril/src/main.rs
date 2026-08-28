@@ -77,7 +77,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Bound outside the async block: `cli` is already partially moved (cwd,
     // agent_command), and an async block would capture the whole struct.
     let oneshot_prompt = cli.prompt;
-    let usage_log = cyril_core::usage::UsageLog::open(&config_dir().join("usage.sqlite3"))?;
+    let usage_path = config_dir().join("usage.sqlite3");
+    let usage_log = cyril_core::usage::UsageLog::open(&usage_path)?;
+    // Snapshots are computed on this worker, never on the event loop
+    // (cyril-nanu). The reader opens its own connection to the same file.
+    let (usage_snapshot, usage_snapshot_rx) =
+        cyril_core::usage::spawn_usage_snapshot_worker(usage_path);
 
     // Build and run TUI.
 
@@ -100,7 +105,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cwd.clone(),
             hooks_source,
             workflow_source,
-            usage_log,
+            app::UsageWiring {
+                log: usage_log,
+                snapshot: usage_snapshot,
+                snapshot_rx: usage_snapshot_rx,
+            },
             agent_engine,
         );
 

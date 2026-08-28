@@ -1850,6 +1850,15 @@ pub struct UsageSnapshotHandle {
 }
 
 impl UsageSnapshotHandle {
+    /// Builds a handle over an existing request channel.
+    ///
+    /// `spawn_usage_snapshot_worker` uses this internally; it is public so a
+    /// test can drive the App's snapshot path deterministically, delivering
+    /// results by hand instead of racing a real worker thread.
+    pub fn for_channel(sender: std::sync::mpsc::Sender<()>) -> Self {
+        Self { sender }
+    }
+
     /// Requests a snapshot.
     ///
     /// Returns `false` when the worker is gone. The caller surfaces that as
@@ -1903,7 +1912,7 @@ pub fn spawn_usage_snapshot_worker(
     {
         tracing::error!(error = %error, "usage snapshot worker thread failed to spawn");
     }
-    (UsageSnapshotHandle { sender: command_tx }, result_rx)
+    (UsageSnapshotHandle::for_channel(command_tx), result_rx)
 }
 
 /// The worker loop, generic over its snapshot source so the coalescing

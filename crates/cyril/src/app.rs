@@ -20,7 +20,7 @@ use cyril_core::session::SessionController;
 use cyril_core::types::*;
 use cyril_core::usage::{
     KiroSidecarKind, UsageEnrichmentHandle, UsageEnrichmentResult, UsageLog, UsageObserver,
-    UsageWrite, spawn_usage_enrichment_worker,
+    UsageSnapshotHandle, UsageSnapshotResult, UsageWrite, spawn_usage_enrichment_worker,
 };
 use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
@@ -74,6 +74,10 @@ pub struct App {
     usage_log: UsageLog,
     usage_enrichment: UsageEnrichmentHandle,
     usage_enrichment_rx: mpsc::UnboundedReceiver<UsageEnrichmentResult>,
+    /// Requests snapshots off the event loop. The loop never computes one
+    /// itself (cyril-nanu C1).
+    usage_snapshot: UsageSnapshotHandle,
+    usage_snapshot_rx: mpsc::UnboundedReceiver<UsageSnapshotResult>,
     agent_engine: AgentEngine,
     enrichment_requests: HashMap<UsageRecordId, (SessionId, KiroSidecarKind)>,
     failed_enrichments: BTreeSet<UsageRecordId>,
@@ -328,6 +332,19 @@ async fn run_memory_action(memory: ProjectMemory, action: MemoryCommandAction) -
     }
 }
 
+/// Everything the App needs to record and display usage.
+///
+/// Bundled because the three always travel together and are always built in
+/// the same place. Passing them separately pushed `App::new` past clippy's
+/// argument limit, and the limit was making a fair point: this is one concern
+/// — the usage log, the worker that reads it, and the channel its results
+/// arrive on — not three unrelated parameters.
+pub struct UsageWiring {
+    pub log: UsageLog,
+    pub snapshot: UsageSnapshotHandle,
+    pub snapshot_rx: mpsc::UnboundedReceiver<UsageSnapshotResult>,
+}
+
 impl App {
     /// Build the app from the UI config.
     ///
@@ -342,9 +359,14 @@ impl App {
         cwd: PathBuf,
         hooks: cyril_core::commands::HooksCommandSource,
         workflows: cyril_core::commands::WorkflowCommandSource,
-        usage_log: UsageLog,
+        usage: UsageWiring,
         agent_engine: AgentEngine,
     ) -> Self {
+        let UsageWiring {
+            log: usage_log,
+            snapshot: usage_snapshot,
+            snapshot_rx: usage_snapshot_rx,
+        } = usage;
         // EXHAUSTIVE ON PURPOSE -- no `..`. Adding a UiConfig field must fail
         // compilation here rather than join the ranks of the silently ignored.
         let &config::UiConfig {
@@ -398,6 +420,8 @@ impl App {
             usage_log,
             usage_enrichment,
             usage_enrichment_rx,
+            usage_snapshot,
+            usage_snapshot_rx,
             agent_engine,
             voice: spawn_voice_engine(),
             memory_runtime: None,
@@ -748,6 +772,11 @@ impl App {
                 Some(result) = self.usage_enrichment_rx.recv() => {
                     self.handle_usage_enrichment(result);
                 }
+                // Snapshots computed off this loop (cyril-nanu). The App holds
+                // the handle, so this closes only when the worker thread dies.
+                Some(result) = self.usage_snapshot_rx.recv() => {
+                    self.handle_usage_snapshot(result);
+                }
                 // Memory work that ran off-loop (`/memory` commands, first-prompt
                 // lesson lookups). The App holds the sender, so this never closes.
                 Some(result) = self.memory_task_rx.recv() => {
@@ -933,19 +962,50 @@ impl App {
     #[cfg(not(test))]
     fn record_ui_apply(&mut self) {}
 
+    /// Asks the worker for a fresh snapshot. Never computes one here: at
+    /// 100,000 rows that is ~700 ms of event loop, and this path fires per
+    /// turn, per context sample and per sidecar enrichment (cyril-nanu C1).
     fn refresh_usage_panel_from_log(&mut self) {
         if !self.ui_state.has_usage_panel() {
             return;
         }
-        match self.usage_log.snapshot() {
-            Ok(snapshot) => {
-                self.ui_state.refresh_usage_panel(snapshot);
-                self.redraw_needed = true;
+        self.request_usage_snapshot();
+    }
+
+    /// Sends a snapshot request and reflects the outcome in the panel.
+    ///
+    /// A failed send means the worker is gone; the panel says so rather than
+    /// waiting for a result that can never arrive (cyril-nanu C9).
+    fn request_usage_snapshot(&mut self) {
+        if self.usage_snapshot.request() {
+            self.ui_state.mark_usage_panel_refreshing();
+        } else {
+            self.ui_state
+                .mark_usage_panel_failed("usage snapshot worker is unavailable".to_owned());
+        }
+        self.redraw_needed = true;
+    }
+
+    /// Applies a snapshot that finished off the event loop.
+    ///
+    /// Re-checks that a panel is open: the guard in
+    /// `refresh_usage_panel_from_log` ran when the request was *sent*, and the
+    /// operator may have closed the panel since (cyril-nanu C5). A result that
+    /// lands with no panel open is discarded and starts nothing.
+    fn handle_usage_snapshot(&mut self, result: UsageSnapshotResult) {
+        if !self.ui_state.has_usage_panel() {
+            return;
+        }
+        match result {
+            UsageSnapshotResult::Ready(snapshot) => {
+                self.ui_state.refresh_usage_panel(*snapshot);
             }
-            Err(error) => {
-                tracing::warn!(error = %error, "usage panel refresh failed");
+            UsageSnapshotResult::Failed(reason) => {
+                tracing::warn!(error = %reason, "usage panel refresh failed");
+                self.ui_state.mark_usage_panel_failed(reason);
             }
         }
+        self.redraw_needed = true;
     }
 
     fn handle_usage_enrichment(&mut self, result: UsageEnrichmentResult) {
@@ -1835,37 +1895,33 @@ impl App {
             }
             CommandResultKind::ShowUsage {
                 account_query_started,
-            } => match self.usage_log.snapshot() {
-                Ok(snapshot) => {
-                    self.ui_state.show_usage_panel(snapshot);
-                    if account_query_started {
-                        self.ui_state.mark_usage_account_loading();
-                        if let Err(error) = self
-                            .bridge_sender
-                            .try_send(BridgeCommand::QueryUsageAccount)
-                        {
-                            self.ui_state.apply_notification(
-                                &Notification::UsageAccountQueryFailed {
-                                    message: error.to_string(),
-                                },
-                            );
-                        }
-                    }
-                    let retry_ids = std::mem::take(&mut self.failed_enrichments);
-                    for record_id in retry_ids {
-                        if let Some((session_id, kind)) =
-                            self.enrichment_requests.get(&record_id).cloned()
-                        {
-                            self.usage_enrichment.enrich(record_id, session_id, kind);
-                        }
+            } => {
+                // The panel opens on this frame and fills in when the snapshot
+                // lands (cyril-nanu D2). Computing it here cost ~700 ms of
+                // frozen terminal at 100,000 rows.
+                self.ui_state.open_usage_panel();
+                self.request_usage_snapshot();
+                if account_query_started {
+                    self.ui_state.mark_usage_account_loading();
+                    if let Err(error) = self
+                        .bridge_sender
+                        .try_send(BridgeCommand::QueryUsageAccount)
+                    {
+                        self.ui_state
+                            .apply_notification(&Notification::UsageAccountQueryFailed {
+                                message: error.to_string(),
+                            });
                     }
                 }
-                Err(error) => {
-                    tracing::error!(error = %error, "load usage dashboard failed");
-                    self.ui_state
-                        .add_system_message(format!("Usage dashboard failed: {error}"));
+                let retry_ids = std::mem::take(&mut self.failed_enrichments);
+                for record_id in retry_ids {
+                    if let Some((session_id, kind)) =
+                        self.enrichment_requests.get(&record_id).cloned()
+                    {
+                        self.usage_enrichment.enrich(record_id, session_id, kind);
+                    }
                 }
-            },
+            }
             CommandResultKind::Quit => {
                 self.ui_state.request_quit();
             }
@@ -2642,6 +2698,34 @@ mod tests {
         UsageLog::open_in_memory().expect("in-memory usage log")
     }
 
+    /// A live snapshot request handle with no worker behind it.
+    ///
+    /// The request receiver is leaked on purpose so the sender stays open and
+    /// `request()` succeeds: a dropped receiver makes every request fail, which
+    /// silently routes every test through the worker-unavailable path instead
+    /// of the one it means to exercise. That is exactly what an earlier version
+    /// of this helper did.
+    fn live_snapshot_handle() -> UsageSnapshotHandle {
+        let (request_tx, request_rx) = std::sync::mpsc::channel();
+        std::mem::forget(request_rx);
+        UsageSnapshotHandle::for_channel(request_tx)
+    }
+
+    /// A snapshot handle whose worker is gone: every `request()` fails.
+    fn dead_snapshot_handle() -> UsageSnapshotHandle {
+        let (request_tx, request_rx) = std::sync::mpsc::channel();
+        drop(request_rx);
+        UsageSnapshotHandle::for_channel(request_tx)
+    }
+
+    /// A result receiver nothing sends to. The sender is leaked so the channel
+    /// never closes and the App's `select!` arm simply stays pending.
+    fn idle_snapshot_rx() -> mpsc::UnboundedReceiver<UsageSnapshotResult> {
+        let (result_tx, result_rx) = mpsc::unbounded_channel();
+        std::mem::forget(result_tx);
+        result_rx
+    }
+
     #[test]
     fn enrichment_retry_budget_allows_one_transient_retry_only() {
         let mut transient_attempts = 0;
@@ -2674,7 +2758,11 @@ mod tests {
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
-            test_usage_log(),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
             AgentEngine::V2,
         )
     }
@@ -2703,7 +2791,11 @@ mod tests {
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
-            test_usage_log(),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
             AgentEngine::V2,
         );
         assert!(app.mouse_captured());
@@ -2843,7 +2935,11 @@ mod tests {
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
-            test_usage_log(),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
             AgentEngine::V2,
         )
     }
@@ -2865,12 +2961,44 @@ mod tests {
                 PathBuf::from("/tmp"),
                 cyril_core::commands::HooksCommandSource::Agent,
                 cyril_core::commands::WorkflowCommandSource::None,
-                test_usage_log(),
+                UsageWiring {
+                    log: test_usage_log(),
+                    snapshot: live_snapshot_handle(),
+                    snapshot_rx: idle_snapshot_rx(),
+                },
                 engine,
             ),
             rx,
         )
     }
+
+    fn app_with_snapshot_handle(handle: UsageSnapshotHandle) -> App {
+        App::new(
+            BridgeHandle::for_tests(),
+            &config::UiConfig::default(),
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: handle,
+                snapshot_rx: idle_snapshot_rx(),
+            },
+            AgentEngine::V2,
+        )
+    }
+
+    /// An App whose snapshot requests succeed and whose results the test
+    /// delivers by hand.
+    fn app_for_tests() -> App {
+        app_with_snapshot_handle(live_snapshot_handle())
+    }
+
+    /// An App whose snapshot worker is gone.
+    fn app_for_tests_without_snapshot_worker() -> App {
+        app_with_snapshot_handle(dead_snapshot_handle())
+    }
+
     #[tokio::test]
     async fn memory_failure_does_not_block_initial_session_dispatch() {
         let root = tempfile::tempdir().expect("root");
@@ -3070,8 +3198,12 @@ mod tests {
             command_rx.try_recv(),
             Ok(BridgeCommand::SendPrompt { .. })
         ));
-        app.ui_state
-            .show_usage_panel(app.usage_log.snapshot().expect("initial usage snapshot"));
+        app.ui_state.open_usage_panel();
+        // Land a first snapshot so the panel holds values and is Idle. Without
+        // this it sits in Computing, where a refresh request deliberately does
+        // NOT overwrite the status — nothing has been computed to refresh yet.
+        let first = app.usage_log.snapshot().expect("initial usage snapshot");
+        app.handle_usage_snapshot(UsageSnapshotResult::Ready(Box::new(first)));
         app.redraw_needed = false;
 
         app.handle_notification(RoutedNotification::scoped(
@@ -3084,11 +3216,24 @@ mod tests {
                 stop_reason: StopReason::EndTurn,
             },
         ));
+        // cyril-nanu: the write still lands in the log synchronously, but the
+        // panel is now REFRESHED off the loop — so the observable here is the
+        // request and the marker, not an updated snapshot on this frame.
         assert_eq!(
-            app.ui_state
-                .usage_panel()
-                .map(|panel| panel.snapshot.overview.requests),
-            Some(1)
+            app.usage_log
+                .snapshot()
+                .expect("log readable")
+                .overview
+                .requests,
+            1,
+            "the turn is persisted synchronously; only the panel refresh moved"
+        );
+        assert!(
+            matches!(
+                app.ui_state.usage_panel().map(|panel| &panel.refresh),
+                Some(cyril_ui::traits::UsageRefreshStatus::Refreshing)
+            ),
+            "a turn write marks the panel as refreshing"
         );
         assert!(app.redraw_needed);
 
@@ -3101,11 +3246,22 @@ mod tests {
             },
         ));
         assert_eq!(
-            app.ui_state
-                .usage_panel()
-                .and_then(|panel| panel.snapshot.context.latest.as_ref())
+            app.usage_log
+                .snapshot()
+                .expect("log readable")
+                .context
+                .latest
+                .as_ref()
                 .map(|sample| sample.percentage),
-            Some(42.0)
+            Some(42.0),
+            "the context sample is persisted synchronously"
+        );
+        assert!(
+            matches!(
+                app.ui_state.usage_panel().map(|panel| &panel.refresh),
+                Some(cyril_ui::traits::UsageRefreshStatus::Refreshing)
+            ),
+            "a context sample marks the panel as refreshing"
         );
         assert!(app.redraw_needed);
     }
@@ -3195,7 +3351,11 @@ mod tests {
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
-            test_usage_log(),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
             AgentEngine::V2,
         );
         establish_main_session(&mut failed, &session_id);
@@ -3380,7 +3540,11 @@ mod tests {
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
-            test_usage_log(),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
             AgentEngine::V2,
         );
         let main_id = SessionId::new("main-session");
@@ -3448,7 +3612,11 @@ mod tests {
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
-            test_usage_log(),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
             AgentEngine::V2,
         );
         app.session.apply_notification(&Notification::ModeChanged {
@@ -3490,7 +3658,11 @@ mod tests {
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
-            test_usage_log(),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
             AgentEngine::V2,
         );
         app.session
@@ -6005,6 +6177,109 @@ mod tests {
             app.effective_activity(),
             Activity::Streaming,
             "a settled workflow step must release the fast tick"
+        );
+    }
+
+    /// cyril-nanu C1 — no event-loop path computes a snapshot.
+    ///
+    /// **Fence shape deviates from the plan, deliberately.** The plan proposed
+    /// blocking a snapshot on a barrier and asserting the loop iteration still
+    /// completed. That is unreachable by construction now: the App holds no
+    /// snapshot source to block, only a channel sender. The plan's alternative,
+    /// a wall-clock bound on the trigger path, would have put a stopwatch back
+    /// into the ordinary suite — the exact flake this repo removed from CI
+    /// twice this week. So the claim is fenced two ways, both deterministic:
+    /// behaviorally, the trigger sends a request and marks the panel; and
+    /// structurally, the one call this claim forbids is absent from the file.
+    /// The structural half is statement-precise (an exact call expression), not
+    /// a substring heuristic.
+    #[test]
+    fn usage_refresh_does_not_block_the_event_loop() {
+        let source = include_str!("app.rs");
+        // Built by concatenation on purpose: spelled literally, this needle
+        // would match its own assertion and the check could never pass. The
+        // same self-match bit `no_percentile_computation.rs` on its first
+        // attempt.
+        let forbidden = format!("self.usage_log.{}()", "snapshot");
+        assert!(
+            !source.contains(&forbidden),
+            "no event-loop path may compute a snapshot inline; that call is what \
+             froze the terminal for ~700ms per refresh at 100,000 rows"
+        );
+        // Positive control: the forbidden call is spelled the way the assertion
+        // looks for it, so the check cannot pass merely by looking for
+        // something that never existed.
+        assert!(
+            source.contains(&format!("self.usage_log.{}(", "append")),
+            "control: `self.usage_log.<method>()` really is how this file calls \
+             the usage log, so the absence above is meaningful"
+        );
+    }
+
+    /// cyril-nanu C5 — a completed snapshot applies only while a panel is open.
+    ///
+    /// The `has_usage_panel()` guard runs when the request is SENT; the
+    /// operator can close the panel before the result lands. A result applied
+    /// to a closed panel would reopen it behind their back.
+    #[tokio::test]
+    async fn snapshot_result_applies_only_while_a_panel_is_open() {
+        let mut app = app_for_tests();
+        app.ui_state.open_usage_panel();
+        assert!(app.ui_state.has_usage_panel(), "panel opens");
+
+        let mut ready = cyril_core::types::UsageSnapshot::default();
+        ready.overview.requests = 7;
+        app.handle_usage_snapshot(UsageSnapshotResult::Ready(Box::new(ready.clone())));
+        assert_eq!(
+            app.ui_state
+                .usage_panel()
+                .map(|panel| panel.snapshot.overview.requests),
+            Some(7),
+            "an open panel takes the result"
+        );
+
+        // Closed: the result must change nothing and must not reopen the panel.
+        app.ui_state.hide_usage_panel();
+        let mut later = cyril_core::types::UsageSnapshot::default();
+        later.overview.requests = 99;
+        app.handle_usage_snapshot(UsageSnapshotResult::Ready(Box::new(later.clone())));
+        assert!(
+            !app.ui_state.has_usage_panel(),
+            "a result must not resurrect a panel the operator closed"
+        );
+
+        // Closed then reopened: a later result is welcome again.
+        app.ui_state.open_usage_panel();
+        app.handle_usage_snapshot(UsageSnapshotResult::Ready(Box::new(later)));
+        assert_eq!(
+            app.ui_state
+                .usage_panel()
+                .map(|panel| panel.snapshot.overview.requests),
+            Some(99),
+            "a reopened panel takes the newer result"
+        );
+    }
+
+    /// cyril-nanu C9 — an unavailable worker is stated, not waited on.
+    ///
+    /// A dropped request that reported success would leave the panel in its
+    /// computing state forever, which is worse than the stall being fixed.
+    #[tokio::test]
+    async fn snapshot_worker_unavailable_surfaces_as_failure_status() {
+        let mut app = app_for_tests_without_snapshot_worker();
+        app.ui_state.open_usage_panel();
+        // Positive control: the panel really did open, so the status assertion
+        // below is about the status and not about an absent panel.
+        assert!(app.ui_state.has_usage_panel(), "panel opens");
+
+        app.request_usage_snapshot();
+        assert!(
+            matches!(
+                app.ui_state.usage_panel().map(|panel| &panel.refresh),
+                Some(cyril_ui::traits::UsageRefreshStatus::Failed(_))
+            ),
+            "a worker that cannot be reached must surface as the panel's failure \
+             status rather than a permanent computing state"
         );
     }
 }
