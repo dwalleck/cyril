@@ -4591,4 +4591,103 @@ mod tests {
         assert_eq!(solo.summary.p90_ttft_ms, Some(11.0), "n=1 p90 ttft");
         assert_eq!(solo.summary.requests, 1, "the solo group holds one row");
     }
+
+    /// C9 — the grouped nearest-rank computation stays inside its production
+    /// budget. This is a wall-clock measurement with a deterministic assertion
+    /// of the bound, not an eyeball.
+    ///
+    /// The bound is 700 ms, revised from 250 ms on 2026-08-28 after measurement
+    /// (`.cyril-9kyk/spec.md`): the baseline `snapshot()` already costs ~342 ms
+    /// at this scale on the same always-on refresh path, so 250 ms was
+    /// unreachable by any version of this change. The always-on recompute shape
+    /// itself is tracked at cyril-nanu, and the unbounded row growth that makes
+    /// 100k rows reachable at all is cyril-b163.
+    ///
+    /// The latency queries are pure additions to `snapshot()` — they touch no
+    /// other query — so their total IS the delta the budget governs. Measuring
+    /// them directly is both tighter and less noisy than differencing two
+    /// whole-snapshot runs.
+    #[test]
+    fn grouped_percentile_stays_within_budget() {
+        const ROWS: i64 = 100_000;
+        const GROUPS: i64 = 20;
+        const BUDGET: Duration = Duration::from_millis(700);
+
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        {
+            let transaction = must_succeed(log.connection.transaction(), "bulk transaction");
+            {
+                let mut statement = must_succeed(
+                    transaction.prepare(
+                        "INSERT INTO usage_turns (
+                            session_id, folder, model, provider, agent_type,
+                            timestamp_ms, duration_ms, ttft_ms, stop_reason, outcome,
+                            token_availability
+                         ) VALUES (?, '/tmp', ?, ?, 'main', ?, ?, ?, 'end_turn', 'success', 'unreported')",
+                    ),
+                    "prepare seed",
+                );
+                for index in 0..ROWS {
+                    // Skewed on purpose: one group holds ~40% of the rows, so a
+                    // per-partition sort cannot be flattered by uniform groups.
+                    let group = if index % 10 < 4 {
+                        0
+                    } else {
+                        (index / 10) % GROUPS
+                    };
+                    // ~40% of rows report no ttft, so the filtered subquery does
+                    // real work and its rank denominator differs from duration's.
+                    let ttft: Option<i64> = if index % 10 < 4 {
+                        None
+                    } else {
+                        Some(index % 900)
+                    };
+                    must_succeed(
+                        statement.execute(params![
+                            format!("s{index}"),
+                            format!("m{group}"),
+                            format!("p{}", group % 4),
+                            index,
+                            index % 5_000,
+                            ttft
+                        ]),
+                        "seed row",
+                    );
+                }
+            }
+            must_succeed(transaction.commit(), "commit seed");
+        }
+
+        // Identical warm-up before the measured run, so a cold page cache
+        // cannot be mistaken for percentile cost.
+        let warm = must_succeed(log.snapshot(), "warm snapshot");
+        assert_eq!(
+            warm.overview.requests,
+            u64::try_from(ROWS).unwrap_or_default(),
+            "fixture seeded"
+        );
+        assert!(
+            warm.models.len() >= usize::try_from(GROUPS).unwrap_or_default(),
+            "fixture must span at least {GROUPS} (provider, model) groups, saw {}",
+            warm.models.len()
+        );
+        assert!(
+            warm.overview.p90_duration_ms.is_some(),
+            "positive control: the measured work actually produces a percentile"
+        );
+
+        let started = Instant::now();
+        must_succeed(log.overview_latency(), "overview latency");
+        must_succeed(log.named_latency("provider"), "provider latency");
+        must_succeed(log.named_latency("folder"), "folder latency");
+        must_succeed(log.named_latency("agent_type"), "agent latency");
+        must_succeed(log.model_latency(), "model latency");
+        let added = started.elapsed();
+
+        assert!(
+            added <= BUDGET,
+            "grouped percentile cost {added:?} exceeds the {BUDGET:?} budget at \
+             {ROWS} rows across {GROUPS} groups"
+        );
+    }
 }
