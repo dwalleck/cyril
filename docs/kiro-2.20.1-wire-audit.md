@@ -181,6 +181,8 @@ Item schema (live, real installation):
 
 ## Artifacts
 
+* Flag-table extractor (re-run each release):
+  `experiments/conductor-spike/extract-kas-feature-flags.py`.
 * Probes: `experiments/conductor-spike/probe-kas-stall-watchdog-2.20.1.py`
   (legs `soft` / `hard` / `control` / `envoff` / `envon` / `clientmeta`,
   thresholds overridable via `WD_WARN` / `WD_TIMEOUT`), `experiments/conductor-spike/probe-kas-powers-2.20.1.py`
@@ -223,27 +225,64 @@ Live confirmation (`clientmeta` leg): five plausible shapes injected on **both**
 silently**: no error, no echo, no indication it was ignored (another
 schema-accepted ≠ functional case).
 
-### The env provider IS the lever — flag names recovered
+### The env provider IS the lever — full flag map
 
-`bhe` maps flags to env vars (accepts only `"true"` / `"false"`; anything else
-logs `featureConfig.env.unparsable` and falls through to the default):
+The complete registry, cross-referenced from the three source objects in the
+bundle: const → wire key, wire key → default, const → env var. **15 flags; 9 are
+env-reachable.**
 
-| flag | env var |
-|---|---|
-| `stream_idle_watchdog` | `KIRO_FEATURE_STREAM_IDLE_WATCHDOG_ENABLED` |
-| `auth_expiry_retry` | `KIRO_FEATURE_AUTH_EXPIRY_RETRY_ENABLED` |
-| `session_title_llm` | `KIRO_FEATURE_SESSION_TITLE_LLM_ENABLED` |
-| `steering_supervisor` | `KIRO_FEATURE_STEERING_SUPERVISOR_ENABLED` |
-| `cgs_delegation_v2` | `KIRO_FEATURE_CGS_DELEGATION_V2_ENABLED` |
-| `user_agent_refactoring_enabled` | `KIRO_FEATURE_USER_AGENT_REFACTORING_ENABLED` |
-| `kiroInfraSafetyMonitor` | `KIRO_FEATURE_KIRO_INFRA_SAFETY_MONITOR_ENABLED` |
-| `memory_external_enabled` | `KIRO_FEATURE_MEMORY_EXTERNAL_ENABLED` |
-| `fta_vibe` | `KIRO_FEATURE_FTA_VIBE_ENABLED` |
+Regenerate with `experiments/conductor-spike/extract-kas-feature-flags.py`
+(defaults to the newest installed bundle). It anchors on **string literals**,
+never on the objects' variable names — those are minifier-assigned (`Fo`, `$O`,
+`UAi` in 0.54.3) and will be reassigned in later builds.
 
-**Only 9 of the 15 flags are env-reachable.** The retry family
-(`empty_response_retry`, `truncated_response_retry`, `stream_error_retry`) and
-`memory_internal_enabled` have **no env var** — they are experiment-only, i.e.
-backend-controlled and not client-influenceable at all.
+| wire key | default | env var |
+|---|---|---|
+| `system_field_injection` | `false` | — none — |
+| `system_prompt_migration` | `false` | — none — |
+| `steering_supervisor` | `false` | `KIRO_FEATURE_STEERING_SUPERVISOR_ENABLED` |
+| `cgs_delegation_v2` | `false` | `KIRO_FEATURE_CGS_DELEGATION_V2_ENABLED` |
+| `session_title_llm` | `false` | `KIRO_FEATURE_SESSION_TITLE_LLM_ENABLED` |
+| `user_agent_refactoring_enabled` | `false` | `KIRO_FEATURE_USER_AGENT_REFACTORING_ENABLED` |
+| `kiroInfraSafetyMonitor` | `false` | `KIRO_FEATURE_KIRO_INFRA_SAFETY_MONITOR_ENABLED` |
+| `fta_vibe` | `false` | `KIRO_FEATURE_FTA_VIBE_ENABLED` |
+| `empty_response_retry` | **`true`** | — none — |
+| `truncated_response_retry` | **`true`** | — none — |
+| `stream_error_retry` | **`true`** | — none — |
+| `stream_idle_watchdog` | **`true`** | `KIRO_FEATURE_STREAM_IDLE_WATCHDOG_ENABLED` |
+| `auth_expiry_retry` | **`true`** | `KIRO_FEATURE_AUTH_EXPIRY_RETRY_ENABLED` |
+| `memory_internal_enabled` | **`"disabled"`** (tri-state) | — none — |
+| `memory_external_enabled` | `false` | `KIRO_FEATURE_MEMORY_EXTERNAL_ENABLED` |
+
+**The 6 without an env var are experiment-only** — resolvable solely through the
+backend `experiment` provider, so neither cyril nor spawn-time env can influence
+them by any route: `system_field_injection`, `system_prompt_migration`, the
+retry family (`empty_response_retry`, `truncated_response_retry`,
+`stream_error_retry`), and `memory_internal_enabled`.
+
+Notes that matter when using this table:
+
+* **Value parsing is strict and fails open.** The `bhe` provider accepts exactly
+  `"true"` or `"false"` (after `.trim()`). Anything else logs
+  `featureConfig.env.unparsable` and **falls through to the default** — no error,
+  so a typo silently yields default behaviour.
+* **Do NOT derive the env var from the wire key — three different transforms are
+  in play.** `cgs_delegation_v2` keeps everything; `kiroInfraSafetyMonitor` is
+  camelCase→SCREAMING_SNAKE; `user_agent_refactoring_enabled` *drops* its
+  trailing `_enabled` before `_ENABLED` is appended. `UAi` is the only
+  authority, and a generated name no-ops silently down the `undefined → default`
+  path.
+* **`memory_internal_enabled` is tri-state (`disabled|insider|all`), which is
+  probably why it has no env var** — the env provider is hardcoded boolean-only,
+  so a tri-state flag cannot be expressed through it. A type constraint, not an
+  oversight.
+* **The defaults split by intent:** every `false` default is an unshipped
+  feature awaiting rollout; every `true` default is a resilience mechanism (the
+  retry family plus the watchdog) exposed so it can be turned *off*.
+
+Separately, the watchdog's two **threshold** vars are not feature flags and are
+parsed as integers, not booleans: `KIRO_STREAM_IDLE_WARN_MS` (default 60000) and
+`KIRO_STREAM_IDLE_TIMEOUT_MS` (default 300000).
 
 ### Live: the env flag works on the main path but leaks a residual warning
 
@@ -277,4 +316,3 @@ call path is unregistered.
 **Consequence for cyril: disabling the flag does NOT guarantee zero
 `_kiro/system/notify` frames.** Cyril must handle the notification regardless of
 how the watchdog is configured.
-
