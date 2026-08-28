@@ -1210,6 +1210,81 @@ impl UsageLog {
             .map_err(UsageError::Query)
     }
 
+    /// Ungrouped nearest-rank latency statistics.
+    fn overview_latency(&self) -> Result<LatencyStats, UsageError> {
+        let mut stats = LatencyStats::default();
+        for metric in ["duration_ms", "ttft_ms"] {
+            let sql = latency_sql(&[], metric);
+            let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
+            let (p90, max) = statement
+                .query_row([], |row| {
+                    Ok((row.get::<_, Option<f64>>(0)?, row.get::<_, Option<f64>>(1)?))
+                })
+                .map_err(UsageError::Query)?;
+            stats.apply(metric, p90, max);
+        }
+        Ok(stats)
+    }
+
+    /// Per-group nearest-rank latency statistics keyed by a single column,
+    /// merged in Rust exactly as `named_cost_totals` does.
+    fn named_latency(
+        &self,
+        column: &'static str,
+    ) -> Result<HashMap<Option<String>, LatencyStats>, UsageError> {
+        let mut result: HashMap<Option<String>, LatencyStats> = HashMap::new();
+        for metric in ["duration_ms", "ttft_ms"] {
+            let sql = latency_sql(&[column], metric);
+            let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
+            let rows = statement
+                .query_map([], |row| {
+                    Ok((
+                        row.get::<_, Option<String>>(0)?,
+                        row.get::<_, Option<f64>>(1)?,
+                        row.get::<_, Option<f64>>(2)?,
+                    ))
+                })
+                .map_err(UsageError::Query)?;
+            for row in rows {
+                let (key, p90, max) = row.map_err(UsageError::Query)?;
+                result.entry(key).or_default().apply(metric, p90, max);
+            }
+        }
+        Ok(result)
+    }
+
+    /// Per-(provider, model) nearest-rank latency statistics, keyed the same
+    /// way `model_cost_totals` keys its map.
+    fn model_latency(&self) -> Result<HashMap<ModelGroupKey, LatencyStats>, UsageError> {
+        const KEYS: [&str; 2] = [
+            "COALESCE(billed_provider, provider)",
+            "COALESCE(billed_model, model)",
+        ];
+        let mut result: HashMap<ModelGroupKey, LatencyStats> = HashMap::new();
+        for metric in ["duration_ms", "ttft_ms"] {
+            let sql = latency_sql(&KEYS, metric);
+            let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
+            let rows = statement
+                .query_map([], |row| {
+                    Ok((
+                        row.get::<_, Option<String>>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, Option<f64>>(2)?,
+                        row.get::<_, Option<f64>>(3)?,
+                    ))
+                })
+                .map_err(UsageError::Query)?;
+            for row in rows {
+                let (provider, model, p90, max) = row.map_err(UsageError::Query)?;
+                result
+                    .entry((provider, model))
+                    .or_default()
+                    .apply(metric, p90, max);
+            }
+        }
+        Ok(result)
+    }
+
     fn overview(&self) -> Result<UsageSummary, UsageError> {
         let mut statement = self
             .connection
@@ -1217,8 +1292,9 @@ impl UsageLog {
             .map_err(UsageError::Query)?;
         let costs = self.cost_totals(None)?;
         let charges = self.charge_totals(None)?;
+        let latency = self.overview_latency()?;
         statement
-            .query_row([], |row| summary_from_row(row, 0, costs, charges))
+            .query_row([], |row| summary_from_row(row, 0, costs, charges, latency))
             .map_err(UsageError::Query)
     }
 
@@ -1229,6 +1305,7 @@ impl UsageLog {
         let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
         let costs = self.named_cost_totals(column)?;
         let charges = self.named_charge_totals(column)?;
+        let latency = self.named_latency(column)?;
         let rows = statement
             .query_map([], |row| {
                 let name: Option<String> = row.get(0)?;
@@ -1237,6 +1314,7 @@ impl UsageLog {
                     1,
                     costs.get(&name).cloned().unwrap_or_default(),
                     charges.get(&name).cloned().unwrap_or_default(),
+                    latency.get(&name).copied().unwrap_or_default(),
                 )?;
                 Ok(NamedUsageGroup { name, summary })
             })
@@ -1256,6 +1334,7 @@ impl UsageLog {
         let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
         let costs = self.model_cost_totals()?;
         let charges = self.model_charge_totals()?;
+        let latency = self.model_latency()?;
         let rows = statement
             .query_map([], |row| {
                 let provider: Option<String> = row.get(0)?;
@@ -1266,6 +1345,7 @@ impl UsageLog {
                     2,
                     costs.get(&key).cloned().unwrap_or_default(),
                     charges.get(&key).cloned().unwrap_or_default(),
+                    latency.get(&key).copied().unwrap_or_default(),
                 )?;
                 Ok(ModelUsageGroup {
                     provider,
@@ -1285,6 +1365,7 @@ impl UsageLog {
         let mut statement = self.connection.prepare(&sql).map_err(UsageError::Query)?;
         let costs = self.named_cost_totals("agent_type")?;
         let charges = self.named_charge_totals("agent_type")?;
+        let latency = self.named_latency("agent_type")?;
         let rows = statement
             .query_map([], |row| {
                 let raw: String = row.get(0)?;
@@ -1295,11 +1376,13 @@ impl UsageLog {
                         Box::new(StoredValueError::new("agent_type", raw.clone())),
                     )
                 })?;
+                let latency_key = Some(raw.clone());
                 let summary = summary_from_row(
                     row,
                     1,
-                    costs.get(&Some(raw.clone())).cloned().unwrap_or_default(),
+                    costs.get(&latency_key).cloned().unwrap_or_default(),
                     charges.get(&Some(raw)).cloned().unwrap_or_default(),
+                    latency.get(&latency_key).copied().unwrap_or_default(),
                 )?;
                 Ok(AgentUsageGroup {
                     agent_type,
@@ -1744,17 +1827,85 @@ const SUMMARY_COLUMNS: &str = "
     COALESCE(SUM(CASE WHEN token_availability = 'backend_gated' THEN 1 ELSE 0 END), 0),
     COALESCE(SUM(CASE WHEN cost_availability = 'observed' THEN 1 ELSE 0 END), 0),
     COALESCE(SUM(CASE WHEN cost_availability = 'unreported' THEN 1 ELSE 0 END), 0),
-    COALESCE(SUM(CASE WHEN cost_availability = 'backend_gated' THEN 1 ELSE 0 END), 0),
-    NULL AS p90_duration,
-    NULL AS max_duration,
-    NULL AS p90_ttft,
-    NULL AS max_ttft";
+    COALESCE(SUM(CASE WHEN cost_availability = 'backend_gated' THEN 1 ELSE 0 END), 0)";
+
+/// Nearest-rank latency statistics for one rollup group.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct LatencyStats {
+    p90_duration_ms: Option<f64>,
+    max_duration_ms: Option<f64>,
+    p90_ttft_ms: Option<f64>,
+    max_ttft_ms: Option<f64>,
+}
+
+impl LatencyStats {
+    /// Folds one metric's `(p90, max)` pair into the struct. Keyed on the same
+    /// metric string the query was built from, so the two cannot drift apart.
+    fn apply(&mut self, metric: &str, p90: Option<f64>, max: Option<f64>) {
+        if metric == "duration_ms" {
+            self.p90_duration_ms = p90;
+            self.max_duration_ms = max;
+        } else {
+            self.p90_ttft_ms = p90;
+            self.max_ttft_ms = max;
+        }
+    }
+}
+
+/// Builds a lean per-group nearest-rank query for one latency column.
+///
+/// `keys` are the grouping expressions — empty for the ungrouped overview.
+/// They are aliased to `k0`, `k1`, … in the inner select because a grouping
+/// key can be an expression (`COALESCE(billed_provider, provider)`), and an
+/// unnamed expression column is not resolvable from the outer query.
+/// `metric` is `duration_ms` or `ttft_ms`.
+///
+/// `WHERE {metric} IS NOT NULL` is what keeps the ttft rank honest: `ttft_ms`
+/// is nullable, and letting NULL rows into the partition inflates the rank
+/// denominator and shifts the percentile. It is a no-op for `duration_ms`,
+/// which the schema declares NOT NULL, so both metrics share one code path.
+///
+/// This deliberately runs as a SIBLING query merged in Rust — the same idiom
+/// as `named_cost_totals` — rather than joining the ranked subqueries into
+/// `SUMMARY_COLUMNS`. The join version measured `snapshot()` at 1.31 s over
+/// 100k rows against a 250 ms budget, because every rollup query then dragged
+/// both window sorts through the whole aggregate.
+fn latency_sql(keys: &[&str], metric: &str) -> String {
+    let stats = format!(
+        "CAST(MIN(CASE WHEN cd >= 0.9 THEN {metric} END) AS REAL), \
+         CAST(MAX({metric}) AS REAL)"
+    );
+    if keys.is_empty() {
+        return format!(
+            "SELECT {stats} \
+             FROM (SELECT {metric}, CUME_DIST() OVER (ORDER BY {metric}) AS cd \
+                   FROM usage_turns WHERE {metric} IS NOT NULL)"
+        );
+    }
+    let aliased: Vec<String> = keys
+        .iter()
+        .enumerate()
+        .map(|(index, key)| format!("{key} AS k{index}"))
+        .collect();
+    let aliases: Vec<String> = (0..keys.len()).map(|index| format!("k{index}")).collect();
+    let aliases = aliases.join(", ");
+    format!(
+        "SELECT {aliases}, {stats} \
+         FROM (SELECT {inner}, {metric}, \
+                      CUME_DIST() OVER (PARTITION BY {partition} ORDER BY {metric}) AS cd \
+               FROM usage_turns WHERE {metric} IS NOT NULL) \
+         GROUP BY {aliases}",
+        inner = aliased.join(", "),
+        partition = keys.join(", "),
+    )
+}
 
 fn summary_from_row(
     row: &Row<'_>,
     base: usize,
     costs: Vec<Money>,
     charges: Vec<MeteredAmount>,
+    latency: LatencyStats,
 ) -> rusqlite::Result<UsageSummary> {
     let requests = row_u64(row, base, "requests")?;
     let successes = row_u64(row, base + 1, "successes")?;
@@ -1806,10 +1957,10 @@ fn summary_from_row(
         avg_duration_ms: row.get(base + 14)?,
         avg_ttft_ms: row.get(base + 15)?,
         avg_tokens_per_second: row.get(base + 16)?,
-        p90_duration_ms: row.get(base + 23)?,
-        max_duration_ms: row.get(base + 24)?,
-        p90_ttft_ms: row.get(base + 25)?,
-        max_ttft_ms: row.get(base + 26)?,
+        p90_duration_ms: latency.p90_duration_ms,
+        max_duration_ms: latency.max_duration_ms,
+        p90_ttft_ms: latency.p90_ttft_ms,
+        max_ttft_ms: latency.max_ttft_ms,
     })
 }
 
@@ -4035,7 +4186,11 @@ mod tests {
         }
         let snapshot = must_succeed(log.snapshot(), "snapshot");
 
-        let assert_summary = |label: &str, summary: &UsageSummary, requests: u64| {
+        let assert_summary = |label: &str,
+                              summary: &UsageSummary,
+                              requests: u64,
+                              durations: Vec<u64>,
+                              ttfts: Vec<u64>| {
             let UsageSummary {
                 requests: got_requests,
                 successes,
@@ -4079,36 +4234,71 @@ mod tests {
                 *avg_tokens_per_second, None,
                 "{label}: avg_tokens_per_second"
             );
-            // Slice 1 pins the column positions without computing the values.
-            assert_eq!(*p90_duration_ms, None, "{label}: p90_duration_ms");
-            assert_eq!(*max_duration_ms, None, "{label}: max_duration_ms");
-            assert_eq!(*p90_ttft_ms, None, "{label}: p90_ttft_ms");
-            assert_eq!(*max_ttft_ms, None, "{label}: max_ttft_ms");
+            assert_eq!(
+                *p90_duration_ms,
+                nearest_rank_p90(durations.clone()),
+                "{label}: p90_duration_ms"
+            );
+            assert_eq!(
+                *max_duration_ms,
+                durations.iter().max().map(|value| *value as f64),
+                "{label}: max_duration_ms"
+            );
+            assert_eq!(
+                *p90_ttft_ms,
+                nearest_rank_p90(ttfts.clone()),
+                "{label}: p90_ttft_ms"
+            );
+            assert_eq!(
+                *max_ttft_ms,
+                ttfts.iter().max().map(|value| *value as f64),
+                "{label}: max_ttft_ms"
+            );
         };
 
-        assert_summary("overview", &snapshot.overview, 3);
+        let all_durations = vec![100, 300, 500];
+        let all_ttfts = vec![10, 30];
+        let split = |first: bool| -> (u64, Vec<u64>, Vec<u64>) {
+            if first {
+                (2, vec![100, 300], vec![10, 30])
+            } else {
+                (1, vec![500], Vec::new())
+            }
+        };
+
+        assert_summary(
+            "overview",
+            &snapshot.overview,
+            3,
+            all_durations.clone(),
+            all_ttfts.clone(),
+        );
         assert_eq!(snapshot.providers.len(), 2, "provider group count");
         for group in &snapshot.providers {
-            let expected = if group.name.as_deref() == Some("p1") {
-                2
-            } else {
-                1
-            };
-            assert_summary("providers", &group.summary, expected);
+            let (requests, durations, ttfts) = split(group.name.as_deref() == Some("p1"));
+            assert_summary("providers", &group.summary, requests, durations, ttfts);
         }
         for group in &snapshot.models {
-            let expected = if group.model.as_deref() == Some("m1") {
-                2
-            } else {
-                1
-            };
-            assert_summary("models", &group.summary, expected);
+            let (requests, durations, ttfts) = split(group.model.as_deref() == Some("m1"));
+            assert_summary("models", &group.summary, requests, durations, ttfts);
         }
         for group in &snapshot.agent_types {
-            assert_summary("agent_types", &group.summary, 3);
+            assert_summary(
+                "agent_types",
+                &group.summary,
+                3,
+                all_durations.clone(),
+                all_ttfts.clone(),
+            );
         }
         for group in &snapshot.folders {
-            assert_summary("folders", &group.summary, 3);
+            assert_summary(
+                "folders",
+                &group.summary,
+                3,
+                all_durations.clone(),
+                all_ttfts.clone(),
+            );
         }
     }
 
@@ -4138,5 +4328,267 @@ mod tests {
         for group in &snapshot.tools {
             assert_shape(group);
         }
+    }
+
+    /// Independent oracle for the approved nearest-rank definition: the value
+    /// at 1-based ordered position `ceil(0.9 * N)`. Sorts a Vec in memory with
+    /// no SQL involvement, so it shares no failure mechanism with the query.
+    fn nearest_rank_p90(mut values: Vec<u64>) -> Option<f64> {
+        if values.is_empty() {
+            return None;
+        }
+        values.sort_unstable();
+        let position = (0.9_f64 * values.len() as f64).ceil() as usize;
+        values.get(position - 1).map(|value| *value as f64)
+    }
+
+    /// Seeds one turn per (session, model, duration, ttft) tuple.
+    fn seed_latency(log: &mut UsageLog, rows: &[(&str, Option<&str>, u64, Option<u64>)]) {
+        for (session, model, duration, ttft) in rows {
+            must_succeed(
+                log.append(&record(
+                    session,
+                    *model,
+                    (None, None, None),
+                    (*duration, *ttft),
+                    Vec::new(),
+                )),
+                "append latency record",
+            );
+        }
+    }
+
+    /// C1 — SQL nearest-rank p90 and max equal the independent sorted oracle,
+    /// including at N=2 where `ceil(0.9*N)` and `floor((N-1)*0.9)` disagree
+    /// (60 vs 50) and on a duplicate-heavy group.
+    #[test]
+    fn p90_matches_sorted_oracle_per_group() {
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        let group_a: Vec<u64> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 100];
+        let group_b: Vec<u64> = vec![50, 60];
+        let group_c: Vec<u64> = vec![5, 5, 5, 5, 9];
+        let mut rows = Vec::new();
+        for (index, duration) in group_a.iter().enumerate() {
+            rows.push((format!("a{index}"), "pa/ma", *duration));
+        }
+        for (index, duration) in group_b.iter().enumerate() {
+            rows.push((format!("b{index}"), "pb/mb", *duration));
+        }
+        for (index, duration) in group_c.iter().enumerate() {
+            rows.push((format!("c{index}"), "pc/mc", *duration));
+        }
+        for (session, model, duration) in &rows {
+            must_succeed(
+                log.append(&record(
+                    session,
+                    Some(model),
+                    (None, None, None),
+                    (*duration, None),
+                    Vec::new(),
+                )),
+                "append record",
+            );
+        }
+        let snapshot = must_succeed(log.snapshot(), "snapshot");
+
+        for (model, values) in [("ma", &group_a), ("mb", &group_b), ("mc", &group_c)] {
+            let group = snapshot
+                .models
+                .iter()
+                .find(|candidate| candidate.model.as_deref() == Some(model))
+                .unwrap_or_else(|| panic!("model group {model} missing"));
+            assert_eq!(
+                group.summary.p90_duration_ms,
+                nearest_rank_p90(values.to_vec()),
+                "model {model}: p90 must equal the sorted oracle"
+            );
+            assert_eq!(
+                group.summary.max_duration_ms,
+                values.iter().max().map(|value| *value as f64),
+                "model {model}: max"
+            );
+        }
+
+        let mut all: Vec<u64> = group_a.clone();
+        all.extend(group_b.iter().copied());
+        all.extend(group_c.iter().copied());
+        assert_eq!(
+            snapshot.overview.p90_duration_ms,
+            nearest_rank_p90(all.clone()),
+            "overview p90 must equal the sorted oracle over every row"
+        );
+        assert_eq!(
+            snapshot.overview.max_duration_ms,
+            all.iter().max().map(|value| *value as f64),
+            "overview max"
+        );
+    }
+
+    /// C2 — `ttft_ms` is nullable; NULL rows must never enter the rank
+    /// denominator. With four NULL and six reported ttft values the correct
+    /// answer (1000) differs from the answer NULLs would produce (90).
+    #[test]
+    fn ttft_p90_excludes_nulls_from_denominator() {
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        seed_latency(
+            &mut log,
+            &[
+                ("n1", Some("p/m"), 1, None),
+                ("n2", Some("p/m"), 2, None),
+                ("n3", Some("p/m"), 3, None),
+                ("n4", Some("p/m"), 4, None),
+                ("t1", Some("p/m"), 5, Some(50)),
+                ("t2", Some("p/m"), 6, Some(60)),
+                ("t3", Some("p/m"), 7, Some(70)),
+                ("t4", Some("p/m"), 8, Some(80)),
+                ("t5", Some("p/m"), 9, Some(90)),
+                ("t6", Some("p/m"), 10, Some(1000)),
+            ],
+        );
+        let snapshot = must_succeed(log.snapshot(), "snapshot");
+        let reported = vec![50_u64, 60, 70, 80, 90, 1000];
+        assert_eq!(
+            snapshot.overview.p90_ttft_ms,
+            nearest_rank_p90(reported.clone()),
+            "ttft p90 must rank over the six reported values only"
+        );
+        assert_eq!(
+            snapshot.overview.max_ttft_ms,
+            Some(1000.0),
+            "ttft max over reported values"
+        );
+        assert_eq!(
+            snapshot.overview.requests, 10,
+            "every row still counts toward requests"
+        );
+    }
+
+    /// C3 — each group ranks over its own rows; no group inherits the
+    /// overview's value.
+    #[test]
+    fn grouped_p90_is_group_local() {
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        seed_latency(
+            &mut log,
+            &[
+                ("a1", Some("pa/ma"), 1, None),
+                ("a2", Some("pa/ma"), 2, None),
+                ("a3", Some("pa/ma"), 3, None),
+                ("b1", Some("pb/mb"), 500, None),
+                ("b2", Some("pb/mb"), 600, None),
+            ],
+        );
+        let snapshot = must_succeed(log.snapshot(), "snapshot");
+        let find = |model: &str| {
+            snapshot
+                .models
+                .iter()
+                .find(|candidate| candidate.model.as_deref() == Some(model))
+                .unwrap_or_else(|| panic!("model {model} missing"))
+                .summary
+                .p90_duration_ms
+        };
+        let a = find("ma");
+        let b = find("mb");
+        assert_eq!(a, nearest_rank_p90(vec![1, 2, 3]), "group a is local");
+        assert_eq!(b, nearest_rank_p90(vec![500, 600]), "group b is local");
+        assert_ne!(a, b, "groups with different distributions must differ");
+        assert_ne!(
+            a, snapshot.overview.p90_duration_ms,
+            "a group must not inherit the overview value"
+        );
+    }
+
+    /// C4 — `provider` and `model` are nullable, so a NULL grouping key is
+    /// reachable in production. It forms its own group and ranks normally.
+    #[test]
+    fn null_group_key_gets_its_own_p90() {
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        seed_latency(
+            &mut log,
+            &[
+                ("k1", Some("p/m"), 10, None),
+                ("k2", Some("p/m"), 20, None),
+                ("u1", None, 700, None),
+                ("u2", None, 800, None),
+            ],
+        );
+        let snapshot = must_succeed(log.snapshot(), "snapshot");
+        let unnamed = snapshot
+            .models
+            .iter()
+            .find(|candidate| candidate.model.is_none())
+            .unwrap_or_else(|| panic!("NULL-key model group missing"));
+        assert_eq!(
+            unnamed.summary.p90_duration_ms,
+            nearest_rank_p90(vec![700, 800]),
+            "the NULL-key group ranks over its own rows"
+        );
+        assert_eq!(unnamed.summary.max_duration_ms, Some(800.0));
+    }
+
+    /// C5 — absence is reported as absence. Carries a positive control first,
+    /// because an assertion that something is missing proves nothing unless
+    /// the same code path can be shown to produce it.
+    #[test]
+    fn absent_latency_data_is_none_not_zero() {
+        let mut populated = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        seed_latency(&mut populated, &[("p1", Some("p/m"), 42, Some(7))]);
+        let control = must_succeed(populated.snapshot(), "populated snapshot");
+        assert!(
+            control.overview.p90_duration_ms.is_some() && control.overview.p90_ttft_ms.is_some(),
+            "positive control: the fields can be populated at all"
+        );
+
+        let empty = must_succeed(UsageLog::open_in_memory(), "empty log");
+        let snapshot = must_succeed(empty.snapshot(), "empty snapshot");
+        assert_eq!(
+            snapshot.overview.p90_duration_ms, None,
+            "empty: p90 duration"
+        );
+        assert_eq!(
+            snapshot.overview.max_duration_ms, None,
+            "empty: max duration"
+        );
+        assert_eq!(snapshot.overview.p90_ttft_ms, None, "empty: p90 ttft");
+        assert_eq!(snapshot.overview.max_ttft_ms, None, "empty: max ttft");
+
+        let mut no_ttft = must_succeed(UsageLog::open_in_memory(), "no-ttft log");
+        seed_latency(
+            &mut no_ttft,
+            &[("x1", Some("p/m"), 10, None), ("x2", Some("p/m"), 20, None)],
+        );
+        let snapshot = must_succeed(no_ttft.snapshot(), "no-ttft snapshot");
+        assert!(
+            snapshot.overview.p90_duration_ms.is_some(),
+            "duration is still reported when ttft is absent"
+        );
+        assert_eq!(snapshot.overview.p90_ttft_ms, None, "all-NULL ttft: p90");
+        assert_eq!(snapshot.overview.max_ttft_ms, None, "all-NULL ttft: max");
+    }
+
+    /// C6 — nearest rank is defined at N=1; no minimum-sample threshold
+    /// suppresses it, matching how the existing averages behave.
+    #[test]
+    fn single_row_group_reports_its_own_value() {
+        let mut log = must_succeed(UsageLog::open_in_memory(), "in-memory log");
+        seed_latency(
+            &mut log,
+            &[
+                ("solo", Some("ps/ms"), 77, Some(11)),
+                ("big1", Some("pb/mb"), 500, Some(90)),
+                ("big2", Some("pb/mb"), 600, Some(95)),
+            ],
+        );
+        let snapshot = must_succeed(log.snapshot(), "snapshot");
+        let solo = snapshot
+            .models
+            .iter()
+            .find(|candidate| candidate.model.as_deref() == Some("ms"))
+            .unwrap_or_else(|| panic!("solo group missing"));
+        assert_eq!(solo.summary.p90_duration_ms, Some(77.0), "n=1 p90 duration");
+        assert_eq!(solo.summary.max_duration_ms, Some(77.0), "n=1 max duration");
+        assert_eq!(solo.summary.p90_ttft_ms, Some(11.0), "n=1 p90 ttft");
+        assert_eq!(solo.summary.requests, 1, "the solo group holds one row");
     }
 }
