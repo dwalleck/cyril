@@ -44,7 +44,9 @@ Referenced ticket cyril-9kyk: "Usage aggregation: add p90 (and max) latency perc
 - **Binary / structural**: for an empty `usage_turns` and for an all-NULL-`ttft_ms` table, every new field is `None`, checked by two unit tests asserting `is_none()`.
 - **Binary / structural**: for a fixture with two groups whose distributions differ (group `a` = 1..9,100 → p90 9; group `b` = 50,60 → p90 60), each group's `summary.p90_duration_ms` equals its own group oracle and neither equals the overview's, checked by a unit test over provider-grouped rollups.
 - **Binary / structural**: `ToolUsageGroup` gains no fields, checked by the existing tools-rollup tests passing unchanged.
-- **Quantitative**: with 100,000 rows in `usage_turns` spread across ≥ 20 distinct `(provider, model)` groups, the added p90/max computation increases `UsageLog::snapshot()` wall-clock by ≤ 250 ms, measured by a timed test that runs `snapshot()` against a generated fixture with and without the new statistics.
+- **Quantitative**: with 100,000 rows in `usage_turns` spread across ≥ 20 distinct `(provider, model)` groups, the added p90/max computation increases `UsageLog::snapshot()` wall-clock by ≤ 700 ms, measured by a timed test that runs `snapshot()` against a generated fixture with and without the new statistics.
+
+  **Revised 2026-08-28 from 250 ms, after the build measured the real cost.** The original figure was chosen when writing the spec, not measured. Two facts moved it: (a) the implementation was already rewritten once to fit — from ranked subqueries joined into `SUMMARY_COLUMNS` (~1,100 ms added) to lean sibling queries merged in Rust (600 ms added), so the number is not covering a lazy implementation; (b) the **baseline** `snapshot()` already costs ~342 ms at this scale on the same always-on refresh path, so 250 ms was never achievable by any version of this change. 700 ms is the measured 600 ms plus ~17% headroom. The scale point itself is a worst case that only arises because `usage_turns` has no retention (cyril-b163), and the always-on recompute shape is filed separately as cyril-nanu.
 
 ## Out of scope
 
@@ -91,4 +93,8 @@ Date: 2026-08-28
 
 Re-approval after revision (verbatim): "yes"
 Date: 2026-08-28
+
+Second re-approval after revision (verbatim): "Raise budget + ticket the refresh"
+Date: 2026-08-28
+Revision covered: the quantitative latency criterion moved from ≤ 250 ms to ≤ 700 ms added at 100,000 rows, after the build measured 600 ms and found ~342 ms of pre-existing baseline cost on the same path. Presented with the measurement table and four options; the requester chose to raise the budget and file the always-on refresh defect separately (cyril-nanu).
 Revision covered: the nearest-rank formula was corrected from `floor((N-1)×0.9)` to `ceil(0.9 × N)` after the design stage's cheapest falsifier showed the two agree only at N=1 and N=10. Presented with `design.md` and approved in the same response. The decision (nearest-rank) was never in question — only its transcription.
