@@ -1,3 +1,34 @@
+//! Per-turn usage observation and the local usage log.
+//!
+//! The observer records one [`UsageRecord`] per **turn**: timing
+//! ([`UsageTiming::duration_ms`], [`UsageTiming::ttft_ms`]), outcome, metered
+//! charges, and the tools the turn used. Records persist to a local SQLite log
+//! and are rolled up by [`UsageLog::snapshot`].
+//!
+//! # Non-goal: per-provider-request granularity
+//!
+//! Cyril records turns, **not individual provider requests, and cannot record
+//! them.** This is an architectural boundary, not a missing feature.
+//!
+//! A single turn fans out into several backend requests — one captured
+//! `turn_completion` carried four `requestIds`. kiro-cli's own hidden `/stats`
+//! panel shows one row per request with its own duration and time-to-first-chunk
+//! because *it* issues those calls and instruments them
+//! (`chat_cli_v2::agent::acp::request_stats`, a process-local ring buffer).
+//!
+//! Cyril sits one layer above, on ACP. It observes the turn boundary and, at
+//! turn end, an aggregate `requestIds[]` — never the individual requests, their
+//! start times, or their first bytes. No amount of observer work recovers that;
+//! the information is not on the wire cyril reads. `provider_requests` is
+//! therefore a *count*, and turn-level `duration_ms` / `ttft_ms` cannot be
+//! decomposed per request.
+//!
+//! Persisting the request IDs themselves is separately tracked (cyril-uefh) and
+//! is worth doing — it enables correlating a turn with backend-side records —
+//! but it does not and cannot yield per-request timings.
+//!
+//! See `docs/kiro-2.20.1-wire-audit.md` § 8 for the wire evidence.
+
 use std::collections::HashMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
