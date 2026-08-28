@@ -1,0 +1,14 @@
+{
+  "leg": "param",
+  "verifier_dispatched": true,
+  "verifier_fired": true,
+  "verdicts": [
+    "PASS \"execute_bash\" (args unchanged)"
+  ],
+  "hello_py_written": false,
+  "marker_txt_created_despite_forbidden_touch": false,
+  "shadow_confirmed": false,
+  "approvals": [
+    "touch out.txt"
+  ]
+}
