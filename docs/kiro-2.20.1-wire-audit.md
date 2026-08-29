@@ -255,6 +255,12 @@ a non-empty capture as evidence of a correct one.
 
 ## 7. `steering_supervisor` — a shadow-mode tool-call verifier (LIVE)
 
+> **Not the same thing as a `preToolUse` hook (§ 9).** Both sit in the
+> `PreToolUse` position and both fire on `execute_bash`, but this one is
+> **agent-internal** (a second model call whose verdict KAS discards) while a
+> hook is a **host callback** (`_kiro/hooks/executeHook`) whose `exitCode: 2`
+> genuinely stops the tool. This section is the no-op; § 9 is the gate.
+
 What the flag from § 5 gates. It is **not** an advisor watching the output
 stream; it is a **pre-execution verifier on individual tool calls**, sitting in
 the `PreToolUse` position.
@@ -441,6 +447,12 @@ acknowledgement.
 ---
 
 ## 9. `preToolUse` hooks GATE tool calls — exit-2 block LIVE-PROVEN on 0.54.3
+
+> **Do not conflate this with `steering_supervisor` (§ 7).** That is an
+> agent-internal verifier KAS dispatches fire-and-forget and whose verdict it
+> never reads — a no-op by construction. This section is a **host callback**:
+> KAS blocks on the client's `_kiro/hooks/executeHook` reply and honours it.
+> Same lifecycle position, same `execute_bash` trigger, opposite authority.
 
 ADR-0010 and `types/kas_hooks.rs` both assert that "a `preToolUse` hook exiting
 2 blocks the tool (the org write/exec-policy gate)", but `.cyril-jiyn/findings.md`
