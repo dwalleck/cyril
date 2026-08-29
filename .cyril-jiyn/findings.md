@@ -58,6 +58,9 @@ key. The getAccessToken responder shape that works live (this probe):
    continuity (the 2.13.0 carve shows the same
    `_kiro/hooks/list(preToolUse)` + executor call sites). The build phase
    fences preToolUse blocking at cyril's executor level regardless.
+   **RESOLVED 2026-08-29:** re-probed live on 2.20.1 / KAS 0.54.3 as a matched
+   observe/block pair — exit 2 blocks the tool, and the hook `output` reaches
+   the model verbatim. See `docs/kiro-2.20.1-wire-audit.md` §9.
 2. The v2 arm's zero-callbacks finding is for turn/session-driven paths.
    The carve shows `_kiro/hooks/triggerHook` (client→agent) can still cause
    an agent→client `executeHook` callback for runCommand hooks in v2 mode —

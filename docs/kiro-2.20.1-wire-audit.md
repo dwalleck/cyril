@@ -440,6 +440,96 @@ acknowledgement.
 
 ---
 
+## 9. `preToolUse` hooks GATE tool calls — exit-2 block LIVE-PROVEN on 0.54.3
+
+ADR-0010 and `types/kas_hooks.rs` both assert that "a `preToolUse` hook exiting
+2 blocks the tool (the org write/exec-policy gate)", but `.cyril-jiyn/findings.md`
+caveat 1 is honest that the claim rested on a **2026-06-16 2.7.1 capture that is
+not in the repo**, plus source continuity. It is now **directly verified on
+2.20.1 / KAS 0.54.3**, as a matched observe/block pair.
+
+Host mode only (`_meta.kiro.hooks = {enabled: true}`, object, **no** `v2` — v2
+hands execution to KAS wholesale and the host gate disappears).
+
+### Q1 — does exit 2 still stop the tool? YES
+
+Three independent oracles, all flipping together between arms:
+
+| oracle | observe (exit 0) | block (exit 2) |
+|---|---|---|
+| `terminal/create` carrying the marker | ran | never sent |
+| marker file on disk | exists | absent |
+| `postToolUse` queried | yes | no |
+
+`hooks/list` in the block arm is queried for `promptSubmit`, `preToolUse`,
+`agentStop` only — no `postToolUse`, no second `preToolUse`.
+
+### Q2 — does the hook's `output` reach the MODEL? YES, verbatim
+
+The block arm returned `{"output": "DENY: shell blocked by probe policy - use
+the read tool instead of cat", "exitCode": 2}`. The agent's own message:
+
+> The command was blocked by a PreToolUse hook, so it did not run. The hook
+> denied the shell execution with exit code 2:
+> `DENY: shell blocked by probe policy - use the read tool instead of cat`
+> **Per the hook policy, I'm forbidden from retrying the tool call after an
+> explicit denial.**
+
+So a hook can **redirect**, not merely refuse — the denial string becomes the
+model's stated reason, and an explicit denial is treated as non-retryable.
+
+Two riders, both load-bearing for any policy gate built on this:
+
+* **The model audits the redirect.** The probe deliberately shipped a mismatched
+  message (suggesting `read` for a *write*); the agent caught it — "the hook
+  suggests using the read tool instead, but that applies to reading files, not
+  creating them" — and proposed the correct alternative. Redirect text must fit
+  the matched command, or the model argues with it in front of the user.
+* **An exit-0 hook that returns no verdict ALSO blocks the first attempt.** In
+  the observe arm the tool did not run on attempt 1; the agent said the hook
+  "did not return any output granting or denying permission, and critically it
+  prevented the tool from executing… since the hook output shows no explicit
+  denial, I would normally retry", then retried and succeeded. **A registry that
+  answers `executeHook` for non-matching commands costs a wasted round trip per
+  tool call.** Serve no hook, or return an explicit allow.
+
+### `_kiro/hooks/*` is functional but UNADVERTISED
+
+The `initialize` reply's `agentCapabilities._meta.kiro.extensionMethods` on
+0.54.3 lists knowledge, codeIntelligence, `session/*`, `workflow/*`,
+`sourceProviders` — and **no `_kiro/hooks/*`** — yet the full host-callback flow
+(`list` → `executeHook`) works. Anything gating hook support on that array would
+wrongly conclude hooks were removed in 0.54.3.
+
+### `preToolUse` payload shape (per tool, pre-execution)
+
+`hooks/list` arrives scoped: `toolId='execute_bash'`,
+`toolTags=['shell','@builtin']`. `executeHook`'s `userPrompt` carries the tool
+arguments as JSON — everything an argument-matching policy needs, before the
+call runs:
+
+```
+preToolUse  execute_bash  {"command":"echo TOOLRAN-9f3c1d > tool-ran.txt","cwd":"…","run_in_background":false,"timeout":null}
+preToolUse  read_file     {"path":"…/tool-ran.txt","offset":null,"limit":null}
+postToolUse execute_bash  {"toolName":"execute_bash","toolArgs":{…},"toolResult":"Output:\n\n\nExit Code: 0","toolSuccess":true}
+```
+
+### Harness gotchas (cost two dead runs)
+
+* **`--agent-engine kas` is gone** — 2.8.0 renamed it `v3`
+  (`protocol/kas/version.rs:32`); 2.20.1's clap accepts `v1|v2|v3`.
+* **The odic access token cannot be cached at process start.** It is refreshed
+  in place, and a token read at startup was already stale by turn time —
+  `session/new` still succeeded, then `session/prompt` failed with
+  `ModelRegistryUnauthenticatedError` / `TokenInvalidError`. Re-read the DB on
+  every `_kiro/auth/getAccessToken`, running `kiro-cli whoami` near expiry.
+* **Do not send agent stderr to `DEVNULL`** — that error was otherwise invisible,
+  and the first run's block arm produced a *false positive* ("blocked") because
+  the turn never happened. **The observe arm is what caught it**; a block-only
+  run is not interpretable.
+
+---
+
 ## Artifacts
 
 * New-field sweep (run at the end of every audit):
@@ -456,6 +546,11 @@ acknowledgement.
   (`SEED_POWERS=1` copies the real powers tree into the throwaway HOME).
 * Captures: `kas-watchdog-{soft,hard,control,envoff,envon,clientmeta}-2.20.1.jsonl` + `-verdict.json`,
   `kas-powers-2.20.1.jsonl` + `-verdict.json`.
+* preToolUse gating probe: `experiments/conductor-spike/probe-kas-hooks-block-2.20.1.py`
+  (`HOOK_BLOCK=1` for the deny arm, unset for the benign control; `ENGINE=` overrides
+  the engine flag). Logs: `logs/probe-kas-hooks-block-2.20.1-{observe,block}.log`
+  (+ `.stderr`). Ports the HOOK_BLOCK arm of `probe-kas-hooks-host-2.7.1.py` onto
+  current auth + fs/terminal responders.
 * Bundle pin for controls: `KIRO_KAS_SERVER_PATH=<kas>/2.19.2-*/…/acp-server.js`
   (exclude the sibling `*.lock` directory when globbing).
 

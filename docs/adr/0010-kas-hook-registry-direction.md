@@ -96,3 +96,15 @@ execution in the transcript.
 - **Follow-up (cyril-mq15) is load-bearing, not optional.** Until
   `workspaceTrusted` is wired, the trust story is "you opted in globally" plus
   an incomplete transcript.
+- **The exit-2 gate is now live-verified (2026-08-29).** This ADR's premise —
+  that `host` mode buys an org write/exec-policy gate — rested on a 2.7.1
+  capture absent from the repo (`.cyril-jiyn/findings.md` caveat 1). A matched
+  observe/block pair on 2.20.1 / KAS 0.54.3 confirms it: exit 2 stops the tool
+  on three independent oracles, and the hook's `output` reaches the model
+  verbatim as the denial reason, treated as non-retryable — so a host-mode hook
+  can redirect, not only refuse. Two riders qualify the gate: an exit-0 hook
+  returning no verdict still blocks the *first* attempt and the model retries
+  (so answering `executeHook` for non-matching commands costs a round trip per
+  tool call), and `_kiro/hooks/*` is absent from 0.54.3's advertised
+  `extensionMethods` while remaining fully functional. Evidence and probe:
+  `docs/kiro-2.20.1-wire-audit.md` §9.
