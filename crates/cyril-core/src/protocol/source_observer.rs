@@ -781,4 +781,5 @@ mod tests {
             .collect();
         assert_eq!(started_ids, [first, second], "C12 prior turn replayed");
     }
+    mod current_runtime_contract;
 }
