@@ -134,6 +134,10 @@ pub struct App {
     session_apply_calls: u64,
     #[cfg(test)]
     ui_apply_calls: u64,
+    #[cfg(test)]
+    apply_order: Vec<&'static str>,
+    #[cfg(test)]
+    shutdown_order: Vec<&'static str>,
 }
 /// Outcome of memory work that ran on a spawned task. Delivered back to the
 /// event loop over `App::memory_task_rx`.
@@ -443,6 +447,10 @@ impl App {
             session_apply_calls: 0,
             #[cfg(test)]
             ui_apply_calls: 0,
+            #[cfg(test)]
+            apply_order: Vec::new(),
+            #[cfg(test)]
+            shutdown_order: Vec::new(),
         }
     }
 
@@ -682,12 +690,18 @@ impl App {
         {
             tracing::warn!("bridge completion timed out before capture drain");
         }
+        #[cfg(test)]
+        self.shutdown_order.push("bridge-complete");
         if let Some(forwarder) = self.capture_forwarder.take() {
             forwarder.drain().await;
         }
+        #[cfg(test)]
+        self.shutdown_order.push("capture-drained");
         if let Some(mut memory_runtime) = self.memory_runtime.take() {
             memory_runtime.shutdown().await;
         }
+        #[cfg(test)]
+        self.shutdown_order.push("memory-stopped");
     }
 
     /// Kick off the initial session. `oneshot_prompt` is the parsed `--prompt`
@@ -949,6 +963,7 @@ impl App {
     #[cfg(test)]
     fn record_session_apply(&mut self) {
         self.session_apply_calls += 1;
+        self.apply_order.push("session");
     }
 
     #[cfg(not(test))]
@@ -957,6 +972,7 @@ impl App {
     #[cfg(test)]
     fn record_ui_apply(&mut self) {
         self.ui_apply_calls += 1;
+        self.apply_order.push("ui");
     }
 
     #[cfg(not(test))]
@@ -6301,4 +6317,5 @@ mod tests {
              status rather than a permanent computing state"
         );
     }
+    mod current_runtime_contract;
 }
