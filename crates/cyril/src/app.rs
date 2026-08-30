@@ -134,6 +134,10 @@ pub struct App {
     session_apply_calls: u64,
     #[cfg(test)]
     ui_apply_calls: u64,
+    #[cfg(test)]
+    apply_order: Vec<&'static str>,
+    #[cfg(test)]
+    shutdown_order: Vec<&'static str>,
 }
 /// Outcome of memory work that ran on a spawned task. Delivered back to the
 /// event loop over `App::memory_task_rx`.
@@ -443,6 +447,10 @@ impl App {
             session_apply_calls: 0,
             #[cfg(test)]
             ui_apply_calls: 0,
+            #[cfg(test)]
+            apply_order: Vec::new(),
+            #[cfg(test)]
+            shutdown_order: Vec::new(),
         }
     }
 
@@ -675,20 +683,37 @@ impl App {
     /// `main` calls it on every other exit path so an error return never
     /// falls through to the abort-only `Drop`.
     pub(crate) async fn shutdown_memory_runtime(&mut self) {
-        if let Some(completion_rx) = self.bridge_completion_rx.take()
-            && tokio::time::timeout(Duration::from_secs(2), completion_rx)
-                .await
-                .is_err()
-        {
-            tracing::warn!("bridge completion timed out before capture drain");
-        }
+        // The C10 ledger records WHICH branch ran — a timeout fallback must
+        // never masquerade as genuine bridge completion.
+        let bridge_phase = match self.bridge_completion_rx.take() {
+            None => "bridge-skipped",
+            Some(completion_rx) => {
+                match tokio::time::timeout(Duration::from_secs(2), completion_rx).await {
+                    Ok(_) => "bridge-complete",
+                    Err(_) => {
+                        tracing::warn!("bridge completion timed out before capture drain");
+                        "bridge-timeout"
+                    }
+                }
+            }
+        };
+        self.record_shutdown_phase(bridge_phase);
         if let Some(forwarder) = self.capture_forwarder.take() {
             forwarder.drain().await;
         }
+        self.record_shutdown_phase("capture-drained");
         if let Some(mut memory_runtime) = self.memory_runtime.take() {
             memory_runtime.shutdown().await;
         }
+        self.record_shutdown_phase("memory-stopped");
     }
+
+    #[cfg(test)]
+    fn record_shutdown_phase(&mut self, phase: &'static str) {
+        self.shutdown_order.push(phase);
+    }
+    #[cfg(not(test))]
+    fn record_shutdown_phase(&mut self, _phase: &'static str) {}
 
     /// Kick off the initial session. `oneshot_prompt` is the parsed `--prompt`
     /// value (cyril-0ffy): held until the session is ready and then submitted
@@ -949,6 +974,7 @@ impl App {
     #[cfg(test)]
     fn record_session_apply(&mut self) {
         self.session_apply_calls += 1;
+        self.apply_order.push("session");
     }
 
     #[cfg(not(test))]
@@ -957,6 +983,7 @@ impl App {
     #[cfg(test)]
     fn record_ui_apply(&mut self) {
         self.ui_apply_calls += 1;
+        self.apply_order.push("ui");
     }
 
     #[cfg(not(test))]
@@ -6301,4 +6328,5 @@ mod tests {
              status rather than a permanent computing state"
         );
     }
+    mod current_runtime_contract;
 }

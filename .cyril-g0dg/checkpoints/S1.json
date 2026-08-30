@@ -1,0 +1,57 @@
+{
+  "claim_ids": ["C2", "C3", "C8", "C9", "C13"],
+  "slice": "Slice 1: Pin process ingress and source behavior outside oversized modules",
+  "status": "pass",
+  "date": "2026-08-30",
+  "impact_analysis": {
+    "status": "PASS",
+    "callers": "N/A — brand-new child test modules; no existing function signature, name, or semantics changed",
+    "production_changes": "Only child-module declarations inside existing cfg(test) modules"
+  },
+  "helper_search": {
+    "status": "PASS",
+    "reused": [
+      "AgentProcess and existing transport lifecycle helpers",
+      "SourceObserver, drain, PromptEnvelope, and source event types",
+      "workspace sha2 dependency"
+    ],
+    "new": "Independent raw fixture assembly and matrix expectations only; no production utility duplicated"
+  },
+  "tdd_scoped": {
+    "status": "PASS",
+    "red": "C2 fixture 1e400→1e40 failed at exact byte 564; the first C8 mutation exposed an oracle coupled to the production constant and stayed green, so the fixture was corrected to independent fixed limits; the repeated C8 mutation then failed at tool.input.exact; C9 overflow→Failed failed at source.full.disposition; C13 current_dir removal failed at cwd_unicode_spaces; C3 capacity 50→49 failed retained-tail assertions",
+    "green": "cargo test -p cyril-core current_runtime_contract -- --nocapture: 4 passed",
+    "budget": "PASS — test-only O(B + E + T), bounded by 64 KiB raw source, 32 events, and 129 tool rows; focused execution 0.01s excluding compilation, below 30s",
+    "refactor": "Decoupled C8 expected limits from production constants; fixed nested module lookup; applied clippy slice-reference fix"
+  },
+  "symmetry_audit": {
+    "status": "N/A — no production branch or parallel runtime path added"
+  },
+  "gate": {
+    "1_affected_unit_tests": "PASS — cargo test --all-targets: 1,599 passed across 24 suites, 8 ignored",
+    "2_pending_falsifiers": "PASS — C2/C8/C9/C13 contract tests and existing C3 retained-tail test agree with independent expectations",
+    "3_stress_fixture": "PASS — exact raw ACP bytes, Unicode/space cwd/argv/env, UTF-8 and tool boundaries, all dispositions/identity shapes, and full source channels produced planned outcomes",
+    "4_implementation_vs_oracle": "PASS — raw byte vector/digest, OS outputs/status, fixed budget ledger, and monotonic event IDs agreed item by item",
+    "5_budget": {
+      "loop_budget": "PASS — focused contract suite completed in 0.01s excluding compilation, below 30s",
+      "production_scale": "N/A — test-only loops; no production loop changed",
+      "always_on_wall": "N/A — one-off test phases; no production phase"
+    },
+    "6_regression_fence": "PASS — restored focused contract suite green; full workspace tests green",
+    "7_named_mutation": "PASS — C2, C3, C8, C9, and C13 each went red with claim-local output; the initially blind C8 mutation was repaired rather than waived",
+    "8_fence_restored": "PASS — all production constants/behavior restored; focused and full tests green"
+  },
+  "quality": {
+    "format": "PASS — cargo fmt --all -- --check",
+    "clippy": "PASS — cargo clippy --all-targets -- -D warnings",
+    "stale_reference_sweep": "PASS — no TODO, slice, follow-up, deferred, later, out-of-scope, or tracked-at references in affected files",
+    "primary_checkout": "PASS — no tracked/staged changes after relocating isolated-agent output; pre-existing 34 untracked user paths untouched"
+  },
+  "mutations": [
+    {"claim": "C2", "mutation": "fixture 1e400→1e40", "expected_red": "C2 exact preparse bytes differ at byte 564", "result": "PASS"},
+    {"claim": "C3", "mutation": "STDERR_TAIL_CAPACITY 50→49", "expected_red": "retained tail last value line 53 != line 54", "result": "PASS"},
+    {"claim": "C8", "mutation": "TOOL_INPUT_BYTES 24576→24575", "expected_red": "C8 tool.input.exact", "result": "PASS"},
+    {"claim": "C9", "mutation": "CaptureOverflow→Failed", "expected_red": "C9 source.full.disposition", "result": "PASS"},
+    {"claim": "C13", "mutation": "remove current_dir(cwd)", "expected_red": "C13 cwd_unicode_spaces", "result": "PASS"}
+  ]
+}

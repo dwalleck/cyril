@@ -247,6 +247,9 @@ mod tests {
 
     use super::*;
 
+    #[cfg(unix)]
+    mod current_runtime_contract;
+
     /// Regression fence for the stderr-pipe wedge (cyril-0gke bug class): a
     /// child that writes far more than the 64KB Linux pipe buffer to stderr
     /// must still be able to finish. Without a drain task, its stderr writes
