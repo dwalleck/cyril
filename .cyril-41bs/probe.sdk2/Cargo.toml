@@ -1,0 +1,24 @@
+[package]
+name = "cyril-sdk2-probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+agent-client-protocol = { version = "=2.0.0", features = ["unstable_protocol_v2"] }
+agent-client-protocol-conductor = "=2.0.0"
+anyhow = "1"
+futures-util = "0.3"
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+tempfile = "3"
+tokio = { version = "1", features = ["fs", "io-util", "macros", "process", "rt", "rt-multi-thread", "sync", "time"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+
+[workspace]
