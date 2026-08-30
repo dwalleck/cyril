@@ -3778,6 +3778,8 @@ mod tests {
         /// (`-32603`) instead of `{}` — e.g. `"kiro/workflow/new"` for the
         /// C6 failed-`new` fixture (cyril-0qe6).
         ext_err: Vec<String>,
+        /// Exact extension calls observed on the fake wire.
+        ext_calls: Vec<(String, serde_json::Value)>,
         prompt_count: usize,
         block_prompt: bool,
         /// When set, account usage extension RPC parks on the gate until release.
@@ -4104,12 +4106,16 @@ mod tests {
         async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {
             // Record by stripped method name (e.g. "ext:session/steer"); the ACP
             // library already stripped the leading `_` before dispatch.
+            let params: serde_json::Value =
+                serde_json::from_str(args.params.get()).expect("fake receives JSON params");
+            let method = args.method.to_string();
             let (scripted_err, block_account) = {
                 let mut s = self.script.borrow_mut();
-                s.received.push(format!("ext:{}", args.method));
+                s.received.push(format!("ext:{method}"));
+                s.ext_calls.push((method.clone(), params));
                 (
-                    s.ext_err.iter().any(|m| m == args.method.as_ref()),
-                    s.block_account_usage && args.method.as_ref() == "kiro/account/getUsage",
+                    s.ext_err.iter().any(|m| m == method.as_str()),
+                    s.block_account_usage && method == "kiro/account/getUsage",
                 )
             };
             if block_account {
@@ -7031,4 +7037,5 @@ mod tests {
             );
         }
     }
+    mod current_runtime_contract;
 }

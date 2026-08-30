@@ -1,0 +1,61 @@
+{
+  "claim_ids": ["C5", "C6"],
+  "slice": "Slice 2: Pin every command, route, saturation, and disconnect output",
+  "status": "pass",
+  "date": "2026-08-30",
+  "impact_analysis": {
+    "status": "PASS",
+    "callers": "N/A — new bridge child test modules plus one private Script.ext_calls observation field used only by FakeAgent",
+    "production_changes": "None; bridge.rs changes remain inside cfg(test) mod tests"
+  },
+  "helper_search": {
+    "status": "PASS",
+    "reused": [
+      "with_harness/with_engine_harness and FakeAgent",
+      "create_channel_pair and BridgeHandle::for_tests_with_command_rx",
+      "recv_notif/start_session",
+      "existing BridgeCommand, RoutedNotification, and PermissionRequest domain types"
+    ],
+    "new": "Only claim-local exhaustive ledger, exact ext-call recorder, and child-module assertion helpers"
+  },
+  "tdd_scoped": {
+    "status": "PASS",
+    "red": "Removing QueryCommandOptions.partial failed C5 exact extension params. The first command-capacity mutation exposed a coupled oracle and stayed green; fixed expectations to independent 32/256/16 values, repeated 32→31 mutation, then failed at C6 command capacity accepts exactly 32.",
+    "green": "cargo test -p cyril-core protocol::bridge::tests::current_runtime_contract -- --nocapture: 6 passed",
+    "budget": "PASS — bounded fixtures enqueue at most 256 notifications, 32 commands, and 16 permissions; focused execution 0.16s excluding compilation, below 30s",
+    "refactor": "Split commands, routing, and saturation into child files; no test bodies added to 7k-line bridge.rs"
+  },
+  "symmetry_audit": {
+    "status": "PASS",
+    "axes": [
+      "all 20 BridgeCommand variants",
+      "typed output and intentional no-output success",
+      "global/main/subagent envelopes",
+      "full/released/closed command, notification, and permission channels",
+      "agent EOF and UI notification receiver disconnect"
+    ]
+  },
+  "gate": {
+    "1_affected_unit_tests": "PASS — cargo test --all-targets: 1,605 passed across 24 suites, 8 ignored",
+    "2_pending_falsifiers": "PASS — C5 exact method/params/order and C6 routing/capacity/disconnect tests agree with independent ledgers",
+    "3_stress_fixture": "PASS — exhaustive 20-command queue, 256 notifications, 32 commands, 16 permissions, three route identities, two disconnect origins",
+    "4_implementation_vs_oracle": "PASS — every command was named exhaustively; exact notifications or intentional silence, extension calls, route fields, FIFO order, and unsent payloads agreed",
+    "5_budget": {
+      "loop_budget": "PASS — focused suite execution below 30s",
+      "production_scale": "N/A — test-only bounded queues; no production loop changed",
+      "always_on_wall": "N/A — one-off test phases; no production phase"
+    },
+    "6_regression_fence": "PASS — focused bridge contract suite and full workspace suite green",
+    "7_named_mutation": "PASS — C5 missing partial and C6 capacity 31 each went red after independent-oracle correction",
+    "8_fence_restored": "PASS — partial and capacity restored; focused and full suites green"
+  },
+  "quality": {
+    "format": "PASS — cargo fmt --all -- --check",
+    "clippy": "PASS — cargo clippy --all-targets -- -D warnings",
+    "stale_reference_sweep": "PASS — no TODO, slice, follow-up, deferred, later, out-of-scope, or tracked-at references in bridge oracle child directory"
+  },
+  "mutations": [
+    {"claim": "C5", "mutation": "remove QueryCommandOptions partial field", "expected_red": "C5 exact extension methods, order, and params", "result": "PASS"},
+    {"claim": "C6", "mutation": "COMMAND_CAPACITY 32→31", "expected_red": "C6 command capacity accepts exactly 32", "result": "PASS"}
+  ]
+}
