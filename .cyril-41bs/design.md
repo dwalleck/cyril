@@ -8,7 +8,7 @@
 - **Empirical premises:** P1–P10 in [`evidence.md`](evidence.md) all pass. Reproducers are under [`probe.sdk2/`](probe.sdk2/).
 - **Independent oracles:** standalone `rustc` ownership controls; Python JSON/`Decimal`; direct OS subprocess checks; exact upstream SDK/conductor tests; committed Kiro v2/KAS captures and the KAS covenant; Python queue timing; and Cyril's existing source/memory contract tests. Exact comparisons are in `evidence.md`.
 - **Selected architecture:** **Option C — conductor-first production topology.** E5/E6 proved transparent direct/conductor parity for Kiro v2 and KAS, and E7 proved useful bidirectional transformation without moving `Engine`, host-callback, or normalized-observer ownership into a proxy.
-- **Route deliverables:** an approved ADR must amend or supersede ADR-0003; blocking upstream gaps receive issue/PR proposals; independently green follow-on work uses verified Rivets records; only reproducible probes remain; no speculative production crate/trait/migration or disposable prototype survives. C14 owns the pending ADR/cleanup checkpoint.
+- **Route deliverables:** an approved ADR must amend or supersede ADR-0003; blocking upstream gaps receive issue/PR proposals; independently green follow-on work uses verified Rivets records; only reproducible probes remain; no speculative production crate/trait/migration or disposable prototype survives. C14 is discharged by `.cyril-41bs/checkpoints/C14.json`.
 
 ## Input shapes
 
@@ -29,7 +29,7 @@
 | I13 | Error/termination ordering: initialize error, prompt error, KAS `turn_end` before prompt response, callback error, clean EOF idle/mid-turn/after-turn, crash, deferred disconnect, user shutdown. | Current SDK/process behavior is covered by C5/C6; post-migration App projection is pending C8. |
 | I14 | Dependency placement: SDK core/conductor in `cyril-core`; App/UI/memory/voice see only Cyril domain types; old ACP 0.10 and schema 0.11 absent after the migration clean cutover. | Current direction is covered by C3/C11; post-migration App direction/cutover are pending C8/C12. |
 | I15 | Production migration observer API: no observer/inspection/tracing registration parameter; no multi-client broadcaster in this migration. | Assigned to pending C10. Future multi-client behavior is intended work in verified `cyril-5g2o`. |
-| I16 | Route deliverables: approved ADR-0003 amendment/supersession; blocking upstream proposal disposition; verified green follow-on issues; reproducible-probe retention; no speculative production code or disposable prototype. | Assigned to pending C14. |
+| I16 | Route deliverables: approved ADR-0003 amendment/supersession; blocking upstream proposal disposition; verified green follow-on issues; reproducible-probe retention; no speculative production code or disposable prototype. | Discharged by C14 and `.cyril-41bs/checkpoints/C14.json`. |
 
 ### Removed invariants
 

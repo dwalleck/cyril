@@ -1,0 +1,86 @@
+{
+  "claim_id": "C14",
+  "slice": "Slice 2: Harden the C14 decision fence after review",
+  "status": "pass",
+  "date": "2026-08-30",
+  "review_findings": {
+    "refuted": ["F1"],
+    "accepted": ["F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "F13", "F14"]
+  },
+  "plan_gate": {
+    "status": "pass",
+    "reviewer": "FinalReviewFixPlanGate",
+    "confidence": 0.97
+  },
+  "named_mutations": [
+    {
+      "mutation": "ADR Supersedes changed to Related",
+      "red_evidence": "supersedes_adr_0003=false",
+      "restored_green": true
+    },
+    {
+      "mutation": "probe.sdk2/target/stale.bin retained",
+      "red_evidence": "exact stale probe and artifact path",
+      "restored_green": true
+    },
+    {
+      "mutation": "first decisive P1 verdict changed to FAIL",
+      "red_evidence": "premise_statuses.P1=FAIL",
+      "restored_green": true
+    },
+    {
+      "mutation": ".cyril-41bs/prototype.tmp retained",
+      "red_evidence": "exact stale artifact path",
+      "restored_green": true
+    },
+    {
+      "mutation": "production prototype_migration.rs contains ConductorImpl",
+      "red_evidence": "exact production path and marker",
+      "restored_green": true
+    },
+    {
+      "mutation": "F13 review-decision row removed",
+      "red_evidence": "review_decisions_complete=false",
+      "restored_green": true
+    },
+    {
+      "mutation": "conductor dependency added to cyril-core manifest",
+      "red_evidence": "manifest marker and parsed conductor dependency",
+      "restored_green": true
+    },
+    {
+      "mutation": "multiline target SDK2 dependency added to cyril-ui manifest",
+      "red_evidence": "crates/cyril-ui/Cargo.toml:agent-client-protocol=2.0.0",
+      "restored_green": true
+    },
+    {
+      "mutation": "C14 design status changed to PENDING",
+      "red_evidence": "c14_design_status=PENDING and design_c14_discharged=false",
+      "restored_green": true
+    },
+    {
+      "mutation": "ADR memory-move supersession phrase removed",
+      "red_evidence": "supersedes_memory_move_promise=false",
+      "restored_green": true
+    },
+    {
+      "mutation": "stale pending-C14 design prose restored",
+      "red_evidence": "design_c14_discharged=false",
+      "restored_green": true
+    }
+  ],
+  "final_gate": {
+    "python_compileall": "pass",
+    "live_direct_vs_conductor_cells": 6,
+    "live_direct_vs_conductor_equivalent": true,
+    "c14_passed": true,
+    "retained_path_count": 165,
+    "maximum_path_count": 500,
+    "elapsed_ms": 18.255,
+    "maximum_elapsed_ms": 1000,
+    "review_decisions_complete": true,
+    "manifest_sdk2_dependencies": [],
+    "unexpected_production_markers": []
+  },
+  "checkpoint_owner": "checkpointed-build"
+}
