@@ -1,0 +1,132 @@
+[
+  {
+    "id": "M-C2-RAW-BYTE",
+    "claim": "C2",
+    "target": "crates/cyril-core/src/protocol/transport/tests/current_runtime_contract.rs",
+    "mutation": "change fixture exponent 1e400 to 1e40",
+    "command": "cargo test -p cyril-core protocol::transport::tests::current_runtime_contract::c2_exact_preparse_bytes -- --exact",
+    "expected_failure": "C2 exact preparse bytes differ at byte 564",
+    "checkpoint": "S1",
+    "observed": true
+  },
+  {
+    "id": "M-C3-STDERR-CAP",
+    "claim": "C3",
+    "target": "crates/cyril-core/src/protocol/transport.rs",
+    "mutation": "change STDERR_TAIL_CAPACITY from 50 to 49",
+    "command": "cargo test -p cyril-core protocol::transport::tests::stderr_tail_keeps_only_last_n_lines -- --exact",
+    "expected_failure": "left line 53, right line 54",
+    "checkpoint": "S1",
+    "observed": true
+  },
+  {
+    "id": "M-C4-APP-APPLY-ORDER",
+    "claim": "C4",
+    "target": "crates/cyril/src/app.rs",
+    "mutation": "apply UiState before SessionController",
+    "command": "cargo test -p cyril app::tests::current_runtime_contract::ordering::c4_app_applies_session_before_ui_and_preserves_terminal_sequence -- --exact",
+    "expected_failure": "C4 each typed frame applies SessionController before UiState",
+    "checkpoint": "S3",
+    "observed": true
+  },
+  {
+    "id": "M-C5-OPTIONS-PARAM",
+    "claim": "C5",
+    "target": "crates/cyril-core/src/protocol/bridge.rs",
+    "mutation": "remove QueryCommandOptions partial field",
+    "command": "cargo test -p cyril-core protocol::bridge::tests::current_runtime_contract::commands::c5_every_bridge_command_has_an_explicit_current_runtime_outcome -- --exact",
+    "expected_failure": "C5 exact extension methods, order, and params",
+    "checkpoint": "S2",
+    "observed": true
+  },
+  {
+    "id": "M-C6-COMMAND-CAP",
+    "claim": "C6",
+    "target": "crates/cyril-core/src/protocol/bridge.rs",
+    "mutation": "change COMMAND_CAPACITY from 32 to 31",
+    "command": "cargo test -p cyril-core protocol::bridge::tests::current_runtime_contract::saturation::c6_command_channel_capacity_fifo_and_closed_errors_are_exact -- --exact",
+    "expected_failure": "C6 command capacity accepts exactly 32",
+    "checkpoint": "S2",
+    "observed": true
+  },
+  {
+    "id": "M-C7-CONTEXT-OMISSION",
+    "claim": "C7",
+    "target": "crates/cyril/src/app.rs",
+    "mutation": "construct original PromptEnvelope instead of prepared envelope",
+    "command": "cargo test -p cyril app::tests::current_runtime_contract::memory::c7_ready_memory_matrix_preserves_blocks_sessions_and_project_scope -- --exact",
+    "expected_failure": "C7 ready.first.multiblock: exactly one prepared context block",
+    "checkpoint": "S3",
+    "observed": true
+  },
+  {
+    "id": "M-C8-TOOL-BOUND",
+    "claim": "C8",
+    "target": "crates/cyril-core/src/protocol/source_observer.rs",
+    "mutation": "change TOOL_INPUT_BYTES from 24576 to 24575",
+    "command": "cargo test -p cyril-core protocol::source_observer::tests::current_runtime_contract::c8_source_contract_matrix -- --exact",
+    "expected_failure": "C8 tool.input.exact",
+    "checkpoint": "S1",
+    "observed": true
+  },
+  {
+    "id": "M-C9-OVERFLOW-DISPOSITION",
+    "claim": "C9",
+    "target": "crates/cyril-core/src/protocol/source_observer.rs",
+    "mutation": "map lost capture to Failed instead of CaptureOverflow",
+    "command": "cargo test -p cyril-core protocol::source_observer::tests::current_runtime_contract::c9_bounded_pressure_contract -- --exact",
+    "expected_failure": "C9 source.full.disposition",
+    "checkpoint": "S1",
+    "observed": true
+  },
+  {
+    "id": "M-C10-SHUTDOWN-ORDER",
+    "claim": "C10",
+    "target": "crates/cyril/src/app.rs",
+    "mutation": "drain capture before awaiting bridge completion",
+    "command": "cargo test -p cyril app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory -- --exact",
+    "expected_failure": "C10 exact shutdown phase order",
+    "checkpoint": "S3",
+    "observed": true
+  },
+  {
+    "id": "M-C13-CWD",
+    "claim": "C13",
+    "target": "crates/cyril-core/src/protocol/transport.rs",
+    "mutation": "remove current_dir(cwd) from AgentProcess spawn",
+    "command": "cargo test -p cyril-core protocol::transport::tests::current_runtime_contract::c13_process_contract_matrix -- --exact",
+    "expected_failure": "C13 cwd_unicode_spaces: stdout bytes differ",
+    "checkpoint": "S1",
+    "observed": true
+  },
+  {
+    "id": "M-C1-PARENT-BODY",
+    "claim": "C1",
+    "target": "crates/cyril/src/app.rs",
+    "mutation": "append a test body to the oversized parent module",
+    "command": "python3 .cyril-g0dg/oracles/scope.py",
+    "expected_failure": "C1 oversized parent diff changed",
+    "checkpoint": "S4",
+    "observed": true
+  },
+  {
+    "id": "M-C11-SDK-PATH",
+    "claim": "C11",
+    "target": "crates/cyril-core/src/sdk2_runtime.rs",
+    "mutation": "add an SDK2 runtime source file",
+    "command": "python3 .cyril-g0dg/oracles/scope.py",
+    "expected_failure": "C11 unexpected changed path",
+    "checkpoint": "S4",
+    "observed": true
+  },
+  {
+    "id": "M-C12-LEDGER-HOLE",
+    "claim": "C12",
+    "target": ".cyril-g0dg/oracles/mutations.json",
+    "mutation": "clear one expected_failure value",
+    "command": "python3 .cyril-g0dg/oracles/mutations.py",
+    "expected_failure": "C12 mutation missing expected_failure",
+    "checkpoint": "S4",
+    "observed": true
+  }
+]

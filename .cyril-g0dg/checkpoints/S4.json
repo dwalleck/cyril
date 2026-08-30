@@ -1,0 +1,60 @@
+{
+  "claim_ids": ["C1", "C11", "C12"],
+  "slice": "Slice 4: Lock scope, module size, and mutation evidence",
+  "status": "pass",
+  "date": "2026-08-30",
+  "impact_analysis": {
+    "status": "PASS",
+    "callers": "N/A — standalone Python verification oracles and JSON evidence only",
+    "production_changes": "None"
+  },
+  "helper_search": {
+    "status": "PASS",
+    "reused": [
+      "git merge-base/diff/numstat/ls-files",
+      "slice checkpoint JSON",
+      "standard-library pathlib/json/subprocess"
+    ],
+    "new": "Two issue-local fail-closed verification scripts; no reusable production abstraction introduced"
+  },
+  "tdd_scoped": {
+    "status": "PASS",
+    "red": "Appending a test body to app.rs failed the exact +17/-0 parent budget; adding sdk2_runtime.rs failed as an unexpected path; clearing one expected_failure failed the mutation ledger.",
+    "green": "scope.py and mutations.py pass after each mutation was restored",
+    "budget": "PASS — one bounded git diff over the issue change set, 10 child files capped at 600 lines, 13 JSON rows; each oracle executes under 0.3s",
+    "refactor": "Scope checks are data-driven; mutation evidence is a single machine-readable ledger"
+  },
+  "symmetry_audit": {
+    "status": "PASS",
+    "axes": [
+      "all 13 design claims have one named mutation",
+      "all four oversized parents have exact diff budgets",
+      "all 10 test bodies live in child modules",
+      "manifests/toolchain/SDK2/runtime traits/conductor/production observers are forbidden"
+    ]
+  },
+  "gate": {
+    "1_affected_unit_tests": "PASS — scope.py and mutations.py",
+    "2_pending_falsifiers": "PASS — scope and mutation ledgers agree with repository/checkpoints",
+    "3_stress_fixture": "PASS — virtual boundary is the full changed-path set and full 13-claim mutation ledger",
+    "4_implementation_vs_oracle": "PASS — exact parent numstat, child existence/line limits, forbidden concepts, unique mutation ids, exact commands, and checkpoint PASS entries agreed",
+    "5_budget": {
+      "loop_budget": "PASS — each oracle below 0.3s",
+      "production_scale": "N/A — verification-only scripts",
+      "always_on_wall": "N/A — one-off verification"
+    },
+    "6_regression_fence": "PASS — restored scope and ledger pass",
+    "7_named_mutation": "PASS — parent-body, SDK path, and ledger-hole probes each failed at the named C1/C11/C12 assertion",
+    "8_fence_restored": "PASS — temporary body/file/hole removed; both oracles pass"
+  },
+  "quality": {
+    "modularity": "PASS — child modules max 600 lines; transport/source parents only module declarations; bridge/app parent additions limited to cfg(test) observation support",
+    "scope": "PASS — no Cargo manifest, Cargo.lock, toolchain, SDK2, runtime trait, ConductorImpl, production observer, or production behavior change",
+    "mutation_coverage": "PASS — C1 through C13 each present exactly once in the named ledger"
+  },
+  "mutations": [
+    {"claim": "C1", "mutation": "append test body to oversized app.rs parent", "expected_red": "C1 oversized parent diff changed", "result": "PASS"},
+    {"claim": "C11", "mutation": "add crates/cyril-core/src/sdk2_runtime.rs", "expected_red": "C11 unexpected changed path", "result": "PASS"},
+    {"claim": "C12", "mutation": "clear one mutation expected_failure", "expected_red": "C12 mutation missing expected_failure", "result": "PASS"}
+  ]
+}
