@@ -1,0 +1,27 @@
+{
+  "claim_ids": ["C2", "C5"],
+  "slice": "Slice 4: Preserve structured E6 error evidence",
+  "status": "pass",
+  "date": "2026-08-30",
+  "review_findings": ["F18", "F20", "F21"],
+  "controls": {
+    "typed_internal_error_code": "pass",
+    "structured_agent_crash_leaf": "pass",
+    "wrong_cancellation_event": "caught",
+    "cancellation_timeout": "caught",
+    "cancellation_channel_closed": "caught",
+    "malformed_wire_entry": "caught with index and direction",
+    "wrong_terminal_data": "caught",
+    "wrong_response_id": "caught",
+    "wire_entry_limit": 1000,
+    "wire_parse_budget_ms": 100
+  },
+  "verification": {
+    "oracle": "e6.py",
+    "pinned_upstream_tests": 5,
+    "cargo_fmt_check": "pass",
+    "cargo_clippy_all_targets_deny_warnings": "pass",
+    "cargo_test_all_targets": "10 suites pass"
+  },
+  "checkpoint_owner": "checkpointed-build"
+}

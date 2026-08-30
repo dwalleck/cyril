@@ -1,0 +1,27 @@
+{
+  "claim_ids": ["C1", "C5", "C6"],
+  "slice": "Slice 3: Harden lifecycle and process evidence",
+  "status": "pass",
+  "date": "2026-08-30",
+  "review_findings": ["F15", "F19", "F22", "F23"],
+  "plan_gate": {
+    "status": "pass",
+    "reviewer": "FinalCorrectionPlanRecheck"
+  },
+  "controls": {
+    "e1_closed_receiver_nonpanic_error": "pass",
+    "e1_rc_send_compile_failure": "pass",
+    "e3_exact_containment": "pass",
+    "e3_wrong_expectation": "caught",
+    "e3_closed_channel": "caught",
+    "e3_unexpected_event": "caught",
+    "e4_unexpected_process_success": "caught"
+  },
+  "verification": {
+    "oracles": ["e1.py", "e3.py", "e4.py"],
+    "cargo_fmt_check": "pass",
+    "cargo_clippy_all_targets_deny_warnings": "pass",
+    "cargo_test_all_targets": "10 suites pass"
+  },
+  "checkpoint_owner": "checkpointed-build"
+}
