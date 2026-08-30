@@ -13,7 +13,22 @@ async fn send_command(
         .unwrap_or_else(|error| panic!("C5 accepted command send failed: {error}"));
 }
 
-#[cfg(not(feature = "kas"))]
+async fn assert_notification_quiet(cell: &str, rx: &mut mpsc::Receiver<RoutedNotification>) {
+    assert!(
+        tokio::time::timeout(Duration::from_millis(25), rx.recv())
+            .await
+            .is_err(),
+        "C5 {cell}: command promised no immediate notification"
+    );
+}
+
+fn assert_bridge_error(cell: &str, notification: &Notification, operation: &str) {
+    assert!(
+        matches!(notification, Notification::BridgeError { operation: actual, .. } if actual == operation),
+        "C5 {cell}: expected BridgeError operation {operation:?}, got {notification:?}"
+    );
+}
+
 #[tokio::test]
 async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
     let script = Rc::new(RefCell::new(Script::default()));

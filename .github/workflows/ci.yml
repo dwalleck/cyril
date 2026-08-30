@@ -149,6 +149,29 @@ jobs:
       - name: Test (--features kas)
         run: cargo nextest run -p cyril -p cyril-core --features kas
 
+  default-features:
+    name: Default Features
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      # The mirror image of the kas-feature job (ADR-0002): every other lane
+      # enables `kas` (--all-features or --features kas), so `#[cfg(not(feature
+      # = "kas"))]` code and tests — the C5 bridge-command contract fence among
+      # them — would otherwise never lint or run in CI.
+      - name: Clippy (default features)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test (default features)
+        run: cargo nextest run --workspace
+
   # cyril-4rc1: the worktree helper + guard are dev tooling (bash), not product
   # code, so they ride an ubuntu-only shell job rather than the Rust matrix.
   worktree-tooling:
@@ -166,7 +189,7 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [commitlint, format, lint, test, build, kas-feature, worktree-tooling]
+    needs: [commitlint, format, lint, test, build, kas-feature, default-features, worktree-tooling]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs
@@ -182,6 +205,7 @@ jobs:
              [[ "${{ needs.test.result }}" != "success" ]] || \
              [[ "${{ needs.build.result }}" != "success" ]] || \
              [[ "${{ needs.kas-feature.result }}" != "success" ]] || \
+             [[ "${{ needs.default-features.result }}" != "success" ]] || \
              [[ "${{ needs.worktree-tooling.result }}" != "success" ]]; then
             echo "One or more CI jobs failed"
             exit 1

@@ -54,7 +54,6 @@ fn assert_context_absent(cell: &str, wire: &[String], originals: &[String]) {
     );
 }
 
-#[cfg(unix)]
 #[tokio::test]
 async fn c7_ready_memory_matrix_preserves_blocks_sessions_and_project_scope() {
     let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
@@ -143,7 +142,6 @@ async fn c7_ready_memory_matrix_preserves_blocks_sessions_and_project_scope() {
     runtime.shutdown().await;
 }
 
-#[cfg(unix)]
 #[tokio::test]
 async fn c7_starting_retries_once_then_ready_context_is_exactly_once() {
     let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
@@ -215,7 +213,6 @@ async fn c7_starting_retries_once_then_ready_context_is_exactly_once() {
     runtime.shutdown().await;
 }
 
-#[cfg(unix)]
 #[tokio::test]
 async fn c7_unavailable_disabled_and_unbound_memory_degrade_without_prompt_loss() {
     let dead_runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
