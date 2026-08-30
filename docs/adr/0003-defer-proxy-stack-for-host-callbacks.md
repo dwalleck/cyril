@@ -1,8 +1,9 @@
 # Defer the sacp-proxy/conductor stack; KAS host callbacks are the near-term interception mechanism
 
-Status: accepted (2026-06-17); extended by
-[ADR-0009](0009-kiro-fs-dialect.md) and
-[ADR-0010](0010-kas-hook-registry-direction.md) (2026-08-01)
+Status: superseded (2026-08-30) by
+[ADR-0012](0012-conductor-first-acp-sdk-2-runtime.md). Previously accepted
+(2026-06-17) and extended by [ADR-0009](0009-kiro-fs-dialect.md) and
+[ADR-0010](0010-kas-hook-registry-direction.md) (2026-08-01).
 
 **Scope note added 2026-08-01.** The Context below lists "org write/exec policy"
 among the concerns host callbacks deliver. As implemented, the fs responders

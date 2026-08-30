@@ -1,0 +1,68 @@
+{
+  "slice": "ADR and spike cleanup",
+  "claim_ids": ["C14"],
+  "recorded_at": "2026-08-30",
+  "impact_analysis": {
+    "state": "PASS",
+    "detail": "New ADR and standalone oracle have no existing code callers. ADR-0003 status is the only modified existing contract and now links forward to ADR-0012."
+  },
+  "helper_search": {
+    "state": "PASS",
+    "detail": "Reused repository ADR status/link conventions and Python stdlib pathlib/json/time; no dependency or duplicate utility added."
+  },
+  "tdd_cycle": {
+    "red": "PASS — c14.py failed with every ADR decision cell false before ADR-0012 existed.",
+    "green": "PASS — ADR-0012 plus ADR-0003 forward link made every decision and census cell true.",
+    "budget": "PASS — one O(n) repository/path census visited 163 artifact, production-source, and manifest paths, below the 500-path bound, in 20.410 ms, below 1 second.",
+    "refactor": "PASS — whitespace-normalized ADR prose checks avoid line-wrap coupling; read_if_present accurately names its behavior."
+  },
+  "symmetry_audit": {
+    "state": "N/A — reason: documentation and one-shot repository fence add no parallel production path."
+  },
+  "gate": {
+    "affected_unit_tests": {
+      "state": "PASS",
+      "evidence": "C14 fence green; workspace cargo test --all-targets passed 1595 tests across 24 suites with 8 ignored."
+    },
+    "pending_falsifier": {
+      "state": "PASS",
+      "evidence": "c14.py emitted claim_ids [C14], c14_passed true, all decision/follow-on-citation/retained-path cells true, and no unexpected changed path; primary Rivets commands verified the cited owners."
+    },
+    "stress_fixture": {
+      "state": "PASS",
+      "evidence": "Changing Supersedes to Related made supersedes_adr_0003 false; target/stale.bin appeared exactly in stale_probe_files. Additional hardening controls detected a spike-root prototype, a production-source file, and an exact P1 verdict flip."
+    },
+    "implementation_vs_oracle": {
+      "state": "PASS",
+      "evidence": "ADR-0012/ADR-0003, approved design, exact evidence P1-P10 statuses, route T4, repository-wide changed-path census, and primary Rivets records agreed item by item."
+    },
+    "production_scale_budget": {
+      "loop": "PASS — 163 paths <= 500 accepted maximum; 20.410 ms <= 1 second complexity bound.",
+      "always_on_wall": "N/A — reason: one-off checkpoint phase; no production runtime wall budget."
+    },
+    "regression_fence": {
+      "state": "PASS",
+      "evidence": "Final repository-wide c14.py run green after workspace and Python verification."
+    },
+    "named_mutation": {
+      "state": "PASS",
+      "evidence": "Both design-named mutations went red: the missing supersession link reported its exact false cell and the stale target artifact reported its exact path."
+    },
+    "fence_restored": {
+      "state": "PASS",
+      "evidence": "Restoring the supersession link and removing target returned c14.py to green after each named mutation; all additional hardening controls were also removed and restored green."
+    }
+  },
+  "tracker_verification": {
+    "state": "PASS",
+    "owners": {
+      "cyril-gl5s": "C1-C13 conductor-first SDK 2 clean cutover",
+      "cyril-5g2o": "bounded multi-client observer topology",
+      "cyril-1ixa": "unbounded-pressure trigger"
+    }
+  },
+  "stale_reference_sweep": {
+    "state": "PASS",
+    "detail": "ADR future-work references cite verified Rivets IDs; permanent non-goals carry rationale; no anonymous TODO, compatibility promise, or speculative production code remains."
+  }
+}
