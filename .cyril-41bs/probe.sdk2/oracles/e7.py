@@ -1,68 +1,104 @@
 #!/usr/bin/env python3
+"""Independent C7 proxy-leverage and ownership oracle.
+
+This deliberately does not consume Rust output. It models the bidirectional
+stage algebra and checks that the probe uses the official conductor without
+reintroducing production abstractions.
+"""
+
 import json
+import re
 from pathlib import Path
 
-request = {
-    "jsonrpc": "2.0",
-    "id": "outer-7",
-    "method": "_kiro/probe",
-    "params": {"value": "client"},
-}
-proxied_request = json.loads(json.dumps(request))
-proxied_request["id"] = "inner-19"
-proxied_request["params"]["value"] = "proxy:request:client"
-agent_response = {
-    "jsonrpc": "2.0",
-    "id": "inner-19",
-    "result": {"value": "agent:response:proxy:request:client"},
-}
-outer_response = json.loads(json.dumps(agent_response))
-outer_response["id"] = request["id"]
-notification = {
-    "jsonrpc": "2.0",
-    "method": "_kiro/probe-notification",
-    "params": {"value": "agent:notify:proxy:request:client"},
-}
-notification["params"]["value"] = (
-    "proxy:notification:" + notification["params"]["value"]
-)
+probe = Path(__file__).resolve().parents[1]
+e5_source = (probe / "src/bin/e5.rs").read_text()
+e6_live_source = (probe / "src/bin/e6_live.rs").read_text()
+support_source = (probe / "src/live_support.rs").read_text()
 
-def apply_stage(value, label):
+
+def apply_stage(value: str, label: str) -> str:
     return f"{label}:{value}"
 
-distinct_chain = "client"
-for stage_label in ["alpha", "beta"]:
-    distinct_chain = apply_stage(distinct_chain, stage_label)
 
-repeated_chain = "client"
-for instance_label in ["repeat-1", "repeat-2"]:
-    repeated_chain = apply_stage(repeated_chain, instance_label)
+def forward_request(value: str, stages: list[str]) -> str:
+    for label in stages:
+        value = apply_stage(value, label)
+    return value
 
-probe_source = (Path(__file__).resolve().parents[1] / "src/bin/e6.rs").read_text()
+
+def reverse_response(value: str, stages: list[str]) -> str:
+    for label in reversed(stages):
+        value = apply_stage(value, label)
+    return value
+
+
+request = {"jsonrpc": "2.0", "id": "outer-7", "params": {"value": "client"}}
+inner = dict(request)
+inner["id"] = "inner-19"
+inner["params"] = {"value": forward_request(request["params"]["value"], ["alpha", "beta"])}
+agent_response = {"jsonrpc": "2.0", "id": inner["id"], "result": {"value": inner["params"]["value"]}}
+outer_response = dict(agent_response)
+outer_response["id"] = request["id"]
+outer_response["result"] = {
+    "value": reverse_response(
+        agent_response["result"]["value"],
+        ["alpha-response", "beta-response"],
+    )
+}
+notification = forward_request("agent:notify:client", ["proxy-notification"])
+
+stage_order_ok = forward_request("client", ["alpha", "beta"]) == "beta:alpha:client"
+repeated_order_ok = forward_request("client", ["repeat-1", "repeat-2"]) == "repeat-2:repeat-1:client"
+response_restored = outer_response["id"] == request["id"]
+response_transformed = (
+    outer_response["result"]["value"]
+    == "alpha-response:beta-response:beta:alpha:client"
+)
+notification_transformed = notification == "proxy-notification:agent:notify:client"
+
+ownership_markers = {
+    "e5_imports_support": "mod live_support" in e5_source,
+    "e6_live_imports_support": "mod live_support" in e6_live_source,
+    "support_defines_events": "pub struct Events" in support_source,
+    "support_defines_auth_loader": "pub fn load_auth_response" in support_source,
+    "support_defines_callback_mapping": "pub fn callback_result" in support_source,
+    "e5_does_not_define_events": "struct Events" not in e5_source,
+    "e6_live_does_not_define_events": "struct Events" not in e6_live_source,
+    "e5_does_not_define_auth_loader": "fn load_auth_response" not in e5_source,
+    "e6_live_does_not_define_auth_loader": "fn load_auth_response" not in e6_live_source,
+    "official_conductor": "ConductorImpl::new_agent" in e6_live_source,
+    "forward_response_to": ".forward_response_to(responder)" in e6_live_source,
+    "no_new_engine_abstraction": all(
+        re.search(r"\b(?:trait|struct|enum)\s+Engine\b", source) is None
+        for source in (e5_source, e6_live_source, support_source)
+    ),
+    "no_new_host_callback_abstraction": all(
+        re.search(r"\b(?:trait|struct|enum)\s+HostCallback\b", source) is None
+        for source in (e5_source, e6_live_source, support_source)
+    ),
+}
+
 facts = {
     "claim_ids": ["C2", "C7"],
-    "multiple_distinct_stages_preserve_order": distinct_chain == "beta:alpha:client",
-    "repeated_stage_instances_preserve_order": repeated_chain == "repeat-2:repeat-1:client",
-    "request_transformed": proxied_request["params"]["value"] == "proxy:request:client",
-    "response_identity_restored": outer_response["id"] == "outer-7",
-    "notification_transformed": notification["params"]["value"].startswith(
-        "proxy:notification:"
-    ),
-    "probe_uses_official_conductor": "ConductorImpl::new_agent" in probe_source,
-    "probe_uses_forward_response_to": ".forward_response_to(responder)" in probe_source,
-    "probe_duplicates_engine_conversion": "Engine" in probe_source,
-    "probe_duplicates_host_callback_ownership": "HostCallback" in probe_source,
+    "evidence_phases": ["deterministic stage algebra", "source ownership census"],
+    "multiple_distinct_stages_preserve_order": stage_order_ok,
+    "repeated_stage_instances_preserve_order": repeated_order_ok,
+    "request_transformed": inner["params"]["value"] == "beta:alpha:client",
+    "response_identity_restored": response_restored,
+    "response_transformed": response_transformed,
+    "notification_transformed": notification_transformed,
+    "ownership": ownership_markers,
 }
-facts["independent_oracle_passed"] = (
-    facts["request_transformed"]
-    and facts["response_identity_restored"]
-    and facts["notification_transformed"]
-    and facts["multiple_distinct_stages_preserve_order"]
-    and facts["repeated_stage_instances_preserve_order"]
-    and facts["probe_uses_official_conductor"]
-    and facts["probe_uses_forward_response_to"]
-    and not facts["probe_duplicates_engine_conversion"]
-    and not facts["probe_duplicates_host_callback_ownership"]
+facts["independent_oracle_passed"] = all(
+    [
+        facts["multiple_distinct_stages_preserve_order"],
+        facts["repeated_stage_instances_preserve_order"],
+        facts["request_transformed"],
+        facts["response_identity_restored"],
+        facts["response_transformed"],
+        facts["notification_transformed"],
+        all(ownership_markers.values()),
+    ]
 )
 print(json.dumps(facts, indent=2, sort_keys=True))
 if not facts["independent_oracle_passed"]:

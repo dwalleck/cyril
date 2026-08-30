@@ -1,0 +1,51 @@
+{
+  "claim_ids": ["C2", "C7"],
+  "slice": "Slice 5: Complete composed live parity evidence",
+  "status": "pass",
+  "date": "2026-08-30",
+  "review_findings": ["F16", "F17", "F24", "F26"],
+  "evidence_layers": {
+    "deterministic_matrix": {
+      "request_methods": 18,
+      "notification_methods": 2,
+      "topologies": ["direct", "zero-proxy", "no-op-proxy", "transforming-proxy"],
+      "typed_error_code": -32602,
+      "typed_error_data": {"probe": "invalid-params"},
+      "response_ids_preserved": true,
+      "response_ids_source": "observed JSON-RPC wire request/response frames",
+      "transformed_payloads_observed": 18,
+      "transform_markers": 18
+    },
+    "authenticated_live": {
+      "engines": ["v2", "kas"],
+      "direct_cells": 2,
+      "conductor_cells": 6,
+      "equivalent": true,
+      "lifecycle_sequence": "exact first-occurrence ordering of stable lifecycle milestones",
+      "kas_required_host_families": ["auth", "filesystem", "terminal", "permission", "hooks"],
+      "kas_turn_end_before_prompt_response": true,
+      "permission_before_terminal_create": true,
+      "not_exercised": ["typed_error", "outer_response_id", "cancellation"],
+      "v2_named_na": "host callbacks not live-proven without a tool trigger"
+    },
+    "capture_backed": "versioned extension references only; not parity substitutes"
+  },
+  "comparator_self_tests": [
+    "missing_callback",
+    "terminal_order",
+    "missing_agent_message",
+    "typed_error_data",
+    "outer_response_id",
+    "cancellation_count",
+    "transform_marker",
+    "transform_marker_extra"
+  ],
+  "verification": {
+    "e5_oracle": "pass",
+    "e7_oracle": "pass",
+    "c14_oracle": "pass",
+    "comparator_self_test": "pass",
+    "authenticated_live_comparator": "pass"
+  },
+  "checkpoint_owner": "checkpointed-build"
+}

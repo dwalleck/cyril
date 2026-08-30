@@ -13,7 +13,7 @@
   "tdd_cycle": {
     "red": "PASS — c14.py failed with every ADR decision cell false before ADR-0012 existed.",
     "green": "PASS — ADR-0012 plus ADR-0003 forward link made every decision and census cell true.",
-    "budget": "PASS — one O(n) repository/path census visited 163 artifact, production-source, and manifest paths, below the 500-path bound, in 20.410 ms, below 1 second.",
+    "budget": "HISTORICAL PASS — the original Slice 1 census visited 163 paths in 20.410 ms; final review-fix evidence is the 169-path gate in C14-review-fix.json.",
     "refactor": "PASS — whitespace-normalized ADR prose checks avoid line-wrap coupling; read_if_present accurately names its behavior."
   },
   "symmetry_audit": {
@@ -37,7 +37,7 @@
       "evidence": "ADR-0012/ADR-0003, approved design, exact evidence P1-P10 statuses, route T4, repository-wide changed-path census, and primary Rivets records agreed item by item."
     },
     "production_scale_budget": {
-      "loop": "PASS — 163 paths <= 500 accepted maximum; 20.410 ms <= 1 second complexity bound.",
+      "loop": "HISTORICAL PASS — original Slice 1 measured 163 paths and 20.410 ms; C14-review-fix.json records the final 169-path census below the same 500-path/1-second bounds.",
       "always_on_wall": "N/A — reason: one-off checkpoint phase; no production runtime wall budget."
     },
     "regression_fence": {

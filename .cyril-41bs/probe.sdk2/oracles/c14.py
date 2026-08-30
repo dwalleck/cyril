@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+"""Portable C14 census for the approved SDK 2 architecture spike."""
+
 import json
+import re
 import time
 import tomllib
 from pathlib import Path
@@ -27,6 +30,7 @@ required_probe_files = {
     "oracles/e7.py",
     "oracles/e8.py",
     "oracles/e9.py",
+    "src/live_support.rs",
     "src/bin/e1.rs",
     "src/bin/e10.rs",
     "src/bin/e2.rs",
@@ -54,13 +58,18 @@ required_artifacts = [
     "plan.md",
     "checkpoints/C14.json",
     "checkpoints/C14-review-fix.json",
+    "checkpoints/C1-C5-C6-review-fix.json",
+    "checkpoints/C2-C5-review-fix.json",
+    "checkpoints/C2-C7-live-review-fix.json",
 ]
 missing_artifacts = sorted(
     name for name in required_artifacts if not (artifact_dir / name).is_file()
 )
 
+
 def read_if_present(path: Path) -> str:
     return path.read_text() if path.is_file() else ""
+
 
 def dependency_specs(manifest: dict) -> list[tuple[str, object]]:
     specs = []
@@ -68,10 +77,54 @@ def dependency_specs(manifest: dict) -> list[tuple[str, object]]:
         if key in {"dependencies", "dev-dependencies", "build-dependencies"}:
             if isinstance(value, dict):
                 specs.extend(value.items())
+            continue
+        if key == "patch" and isinstance(value, dict):
+            for source_dependencies in value.values():
+                if isinstance(source_dependencies, dict):
+                    specs.extend(source_dependencies.items())
+            continue
+        if key == "replace" and isinstance(value, dict):
+            specs.extend(
+                (dependency_name.split(":", 1)[0], spec)
+                for dependency_name, spec in value.items()
+            )
+            continue
         if isinstance(value, dict):
             specs.extend(dependency_specs(value))
     return specs
 
+
+PRE_MIGRATION_ACP_REQUIREMENT = re.compile(
+    r"\s*(?:[=^~]\s*)?0\.10(?:\.\d+)?\s*"
+)
+ACP_SOURCE_OVERRIDE_KEYS = {
+    "git",
+    "path",
+    "registry",
+    "registry-index",
+    "branch",
+    "tag",
+    "rev",
+}
+
+
+def is_pre_migration_acp_requirement(version: object) -> bool:
+    """Accept only simple Cargo requirements confined to the 0.10 SDK line."""
+    return (
+        isinstance(version, str)
+        and PRE_MIGRATION_ACP_REQUIREMENT.fullmatch(version) is not None
+    )
+
+
+def is_pre_migration_acp_spec(spec: object) -> bool:
+    """Accept crates.io 0.10 requirements or an inherited workspace dependency."""
+    if isinstance(spec, str):
+        return is_pre_migration_acp_requirement(spec)
+    if not isinstance(spec, dict) or ACP_SOURCE_OVERRIDE_KEYS.intersection(spec):
+        return False
+    if spec.get("workspace") is True:
+        return "version" not in spec
+    return is_pre_migration_acp_requirement(spec.get("version"))
 
 
 adr = read_if_present(adr_path)
@@ -150,11 +203,16 @@ for manifest_path in [workspace_manifest_path, *member_manifests]:
         version = spec.get("version") if isinstance(spec, dict) else spec
         if package_name == "agent-client-protocol-conductor" or (
             package_name == "agent-client-protocol"
-            and isinstance(version, str)
-            and version.startswith("2")
+            and not is_pre_migration_acp_spec(spec)
         ):
+            source = version
+            if isinstance(spec, dict) and source is None:
+                source = next(
+                    (f"{key}:{spec[key]}" for key in ("git", "path") if key in spec),
+                    "explicit-nonworkspace",
+                )
             manifest_sdk2_dependencies.append(
-                f"{manifest_path.relative_to(repo).as_posix()}:{package_name}={version}"
+                f"{manifest_path.relative_to(repo).as_posix()}:{package_name}={source}"
             )
 manifest_sdk2_dependencies.sort()
 workspace_manifest = workspace_manifest_path.read_text()
@@ -162,7 +220,44 @@ pre_migration_manifest_intact = (
     'agent-client-protocol = { version = "0.10"' in workspace_manifest
     and not manifest_sdk2_dependencies
 )
+
+# The source-only helper census is deliberately exact: all shared live support
+# symbols belong to one private file, and a prepended `struct Events;` in e5 or
+# e6_live must name that duplicate rather than silently pass the allowlist.
+support_path = probe_dir / "src/live_support.rs"
+helper_markers = {
+    "Events": "struct Events",
+    "load_auth_response": "fn load_auth_response",
+    "callback_result": "fn callback_result",
+    "capabilities": "fn capabilities",
+    "normalize_events": "fn normalize_events",
+}
+support_text = support_path.read_text() if support_path.is_file() else ""
+missing_helper_owners = sorted(
+    helper for helper, marker in helper_markers.items() if marker not in support_text
+)
+helper_duplicate_locations = []
+for path in (
+    probe_dir / "src/bin/e5.rs",
+    probe_dir / "src/bin/e6_live.rs",
+):
+    text = path.read_text() if path.is_file() else ""
+    for helper, marker in helper_markers.items():
+        if marker in text:
+            helper_duplicate_locations.append(
+                f"{path.relative_to(probe_dir).as_posix()}:{helper}"
+            )
+helper_duplicate_locations.sort()
+helper_duplication_diagnostic = {
+    "owner": "src/live_support.rs",
+    "symbols": sorted(helper_markers),
+    "duplicates": helper_duplicate_locations,
+    "missing_owner_symbols": missing_helper_owners,
+}
+helper_duplication_passed = not missing_helper_owners and not helper_duplicate_locations
+
 census_path_count = len(actual_artifact_files) + len(production_contract_files)
+retained_path_count_expected = 169
 
 premise_statuses = {}
 for line in evidence.splitlines():
@@ -186,7 +281,7 @@ design_c14_discharged = (
     and "Assigned to pending C14" not in design
 )
 
-expected_review_ids = {f"F{number}" for number in range(1, 15)}
+expected_review_ids = {f"F{number}" for number in range(1, 30)}
 valid_evidence_states = {"Verified", "Refuted", "Unverified", "Not-applicable"}
 valid_decisions = {"Accept", "Modify", "Reject"}
 review_rows = []
@@ -211,7 +306,6 @@ review_decisions_complete = (
     )
 )
 
-
 facts = {
     "claim_ids": ["C14"],
     "adr_checks": adr_checks,
@@ -226,6 +320,7 @@ facts = {
     ),
     "c14_design_status": c14_design_status,
     "design_c14_discharged": design_c14_discharged,
+    "review_decisions_expected": sorted(expected_review_ids),
     "review_decisions_complete": review_decisions_complete,
     "missing_artifacts": missing_artifacts,
     "missing_probe_files": missing_probe_files,
@@ -235,7 +330,11 @@ facts = {
     "unexpected_production_markers": unexpected_production_markers,
     "manifest_sdk2_dependencies": manifest_sdk2_dependencies,
     "pre_migration_manifest_intact": pre_migration_manifest_intact,
+    "helper_duplication": helper_duplication_diagnostic,
+    "helper_duplication_passed": helper_duplication_passed,
     "retained_path_count": census_path_count,
+    "retained_path_count_expected": retained_path_count_expected,
+    "retained_path_count_exact": census_path_count == retained_path_count_expected,
 }
 facts["census_within_500_paths"] = census_path_count <= 500
 facts["elapsed_ms"] = round((time.monotonic() - started) * 1000, 3)
@@ -255,9 +354,12 @@ facts["c14_passed"] = (
     and not unexpected_production_markers
     and not manifest_sdk2_dependencies
     and pre_migration_manifest_intact
+    and facts["helper_duplication_passed"]
+    and facts["retained_path_count_exact"]
     and facts["census_within_500_paths"]
     and facts["within_one_second"]
 )
+
 
 print(json.dumps(facts, indent=2, sort_keys=True))
 if not facts["c14_passed"]:

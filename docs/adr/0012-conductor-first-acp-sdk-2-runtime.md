@@ -133,10 +133,16 @@ The retained probes establish:
   a slow handler blocks later dispatch, requiring enqueue-and-return handlers.
 - **E4:** `AgentProcess` owns required cwd, diagnostics, stall, and lifecycle
   behavior that `AcpAgent` does not expose.
-- **E5/E6:** live Kiro v2 and KAS sessions on stable wire v1 matched direct and
-  conductor contracts across all six zero/no-op/transform cells.
-- **E7:** a real bidirectional transform changed requests and notifications
-  while terminal components retained vendor conversion and host ownership.
+- **E5/E6:** authenticated Kiro v2 and KAS sessions used stable wire v1 and
+  matched direct/conductor lifecycle milestones across all six
+  zero/no-op/transform cells. KAS exercised auth, filesystem, terminal,
+  permission, hooks, and structural turn-end ordering; v2 host callbacks are a
+  named live N/A. Separate deterministic matrices proved exhaustive callbacks,
+  actual response IDs, typed errors, cancellation/failure, and transformed
+  payloads rather than filling unexercised live cells with defaults.
+- **E7:** bidirectional transforms changed requests, responses, and
+  notifications while terminal components retained vendor conversion and host
+  ownership.
 - **E8:** two composed inline observers demonstrated slow-observer coupling,
   permission-path coupling, disconnect failure, and no replay.
 - **E9:** a wire tap sees the prepared prompt and lacks Cyril's normalized
@@ -145,8 +151,10 @@ The retained probes establish:
   production-disabled; ACP imports remain confined to `cyril-core`.
 
 The direct/conductor live comparator reports `contract_matches_direct: true` for
-all six v2/KAS topology cells. Independent source/capture/oracle checks are
-recorded in [evidence.md](../../.cyril-41bs/evidence.md).
+all six v2/KAS lifecycle cells, with live typed-error, outer-ID, and
+cancellation evidence explicitly marked not exercised. Deterministic matrices
+own those contracts. Independent source/capture/oracle checks are recorded in
+[evidence.md](../../.cyril-41bs/evidence.md).
 
 ## Upstream proposal disposition
 

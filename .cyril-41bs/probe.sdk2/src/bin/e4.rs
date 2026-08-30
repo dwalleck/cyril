@@ -87,6 +87,11 @@ async fn connected(config: AcpAgentConfig) -> Result<(), agent_client_protocol::
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let unexpected_success_control = match std::env::args().nth(1).as_deref() {
+        None => false,
+        Some("unexpected-success-control") => true,
+        Some(mode) => bail!("unknown e4 mode: {mode}"),
+    };
     let temp = TempDir::new().context("create process probe tempdir")?;
 
     let cwd_marker = temp.path().join("cwd.txt");
@@ -104,11 +109,21 @@ async fn main() -> Result<()> {
     let inherited_cwd = wait_for_file(&cwd_marker).await?.trim().to_owned();
     let expected_cwd = std::env::current_dir()?.display().to_string();
 
-    let stderr_error = connected(
-        AcpAgentConfig::new("sh").args(["-c", "printf process-probe-diagnostic >&2; exit 17"]),
-    )
-    .await
-    .expect_err("non-zero helper must fail the connected component");
+    let stderr_command = if unexpected_success_control {
+        "printf process-probe-diagnostic >&2; exit 0"
+    } else {
+        "printf process-probe-diagnostic >&2; exit 17"
+    };
+    let stderr_error = match connected(AcpAgentConfig::new("sh").args(["-c", stderr_command])).await
+    {
+        Ok(()) => {
+            if unexpected_success_control {
+                bail!("C6 unexpected-success-control: non-zero helper unexpectedly succeeded")
+            }
+            bail!("C6 non-zero helper unexpectedly succeeded")
+        }
+        Err(error) => error,
+    };
     let stderr_error_debug = format!("{stderr_error:?}");
     let stderr_error_data = serde_json::to_string(&stderr_error.data)?;
     let stderr_evidence = format!("{stderr_error_debug}\n{stderr_error_data}");

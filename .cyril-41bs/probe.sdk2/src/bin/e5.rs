@@ -1,265 +1,105 @@
-use std::{
-    collections::BTreeSet,
-    env,
-    path::PathBuf,
-    sync::{Arc, Mutex, MutexGuard},
-};
+#[path = "../live_support.rs"]
+mod live_support;
+
+use std::{collections::BTreeSet, env};
 
 use agent_client_protocol::schema::{
     ProtocolVersion,
     v1::{
-        ContentBlock, Implementation, InitializeRequest, NewSessionRequest, PromptRequest,
-        SessionNotification, TextContent,
+        ClientCapabilities, ContentBlock, Implementation, InitializeRequest, NewSessionRequest,
+        PromptRequest, TextContent,
     },
 };
-use agent_client_protocol::{
-    AcpAgent, AcpAgentConfig, Agent, Channel, Client, ConnectTo, ConnectionTo, Handled,
-    RawJsonRpcMessage, Responder, TransportFrame, UntypedMessage, schema::v1::RequestId,
-};
+use agent_client_protocol::{AcpAgent, AcpAgentConfig};
 use anyhow::{Context, Result, bail};
-use futures_util::StreamExt as _;
-use rusqlite::Connection;
 use serde_json::{Value, json};
 use tempfile::TempDir;
 use tokio::time::{Duration, timeout};
 
-#[derive(Clone)]
-struct Events(Arc<Mutex<Vec<String>>>);
-
-impl Events {
-    fn new() -> Self {
-        Self(Arc::new(Mutex::new(Vec::new())))
-    }
-
-    fn lock(&self) -> MutexGuard<'_, Vec<String>> {
-        match self.0.lock() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        }
-    }
-
-    fn push(&self, value: impl Into<String>) {
-        self.lock().push(value.into());
-    }
-
-    fn snapshot(&self) -> Vec<String> {
-        self.lock().clone()
-    }
+fn live_capabilities(engine: live_support::EngineKind) -> Result<ClientCapabilities> {
+    live_support::capabilities(engine)
 }
 
-fn sqlite_json(value: rusqlite::types::Value) -> Result<Value> {
-    let text = match value {
-        rusqlite::types::Value::Text(text) => text,
-        rusqlite::types::Value::Blob(bytes) => {
-            String::from_utf8(bytes).context("credential row is not UTF-8")?
-        }
-        other => bail!("credential row has unexpected SQLite type: {other:?}"),
-    };
-    serde_json::from_str(&text).context("parse credential row JSON")
-}
-
-fn load_auth_response() -> Result<Value> {
-    let home = env::var_os("HOME").context("HOME is unset")?;
-    let db_path = PathBuf::from(home).join(".local/share/kiro-cli/data.sqlite3");
-    let connection = Connection::open(&db_path)
-        .with_context(|| format!("open Kiro credential database {}", db_path.display()))?;
-    let token_value = connection
-        .query_row(
-            "select value from auth_kv where key in ('kirocli:odic:token','kirocli:social:token') order by key asc limit 1",
-            [],
-            |row| row.get::<_, rusqlite::types::Value>(0),
-        )
-        .context("read current Kiro token")?;
-    let token = sqlite_json(token_value)?;
-    let profile_from_token = token.get("profile_arn").and_then(Value::as_str);
-    let profile = if let Some(profile) = profile_from_token {
-        profile.to_owned()
-    } else {
-        let profile_value = connection
-            .query_row(
-                "select value from state where key='api.codewhisperer.profile'",
-                [],
-                |row| row.get::<_, rusqlite::types::Value>(0),
-            )
-            .context("read active Kiro profile")?;
-        sqlite_json(profile_value)?
-            .get("arn")
-            .and_then(Value::as_str)
-            .context("active Kiro profile has no arn")?
-            .to_owned()
-    };
-    Ok(json!({
-        "accessToken": token.get("access_token").context("token has no access_token")?,
-        "expiresAt": token.get("expires_at").context("token has no expires_at")?,
-        "profileArn": profile,
-    }))
-}
-
-fn request_result(method: &str, params: &Value, auth: &Value) -> Value {
-    match method {
-        "_kiro/auth/getAccessToken" | "kiro/auth/getAccessToken" => auth.clone(),
-        "_kiro/terminal/shell_type" | "kiro/terminal/shell_type" => {
-            json!({"shellType": "bash"})
-        }
-        "fs/read_text_file" | "_kiro/fs/read_file" | "kiro/fs/read_file" => {
-            json!({"content": "probe-content"})
-        }
-        "fs/write_text_file"
-        | "_kiro/fs/write_file"
-        | "kiro/fs/write_file"
-        | "_kiro/fs/delete"
-        | "kiro/fs/delete"
-        | "terminal/release"
-        | "terminal/kill"
-        | "_kiro/hooks/executeHook"
-        | "kiro/hooks/executeHook"
-        | "_kiro/hooks/sessionStart"
-        | "kiro/hooks/sessionStart" => json!({}),
-        "_kiro/fs/read_directory" | "kiro/fs/read_directory" => json!({"entries": []}),
-        "_kiro/fs/stat" | "kiro/fs/stat" => json!({"type": "file", "size": 0}),
-        "terminal/create" => json!({"terminalId": "probe-terminal"}),
-        "terminal/output" => {
-            json!({"output": "", "truncated": false, "exitStatus": {"exitCode": 0}})
-        }
-        "terminal/wait_for_exit" => {
-            json!({"exitStatus": {"exitCode": 0, "signal": null}})
-        }
-        "session/request_permission" => {
-            let option_id = params
-                .get("options")
-                .and_then(Value::as_array)
-                .and_then(|options| options.first())
-                .and_then(|option| option.get("optionId"))
-                .cloned();
-            match option_id {
-                Some(option_id) => {
-                    json!({"outcome": {"outcome": "selected", "optionId": option_id}})
-                }
-                None => json!({"outcome": {"outcome": "cancelled"}}),
-            }
-        }
-        "_kiro/hooks/list" | "kiro/hooks/list" => json!({"hooks": []}),
-        _ => json!({}),
-    }
-}
-
-macro_rules! build_client {
-    ($events:expr, $auth:expr) => {{
-        let events: Events = $events;
-        let auth: Value = $auth;
-        let request_events = events.clone();
-        let unknown_events = events.clone();
-        let session_events = events.clone();
-        let notification_events = events;
-        Client
-            .builder()
-            .on_receive_request(
-                async move |request: UntypedMessage,
-                            responder: Responder<Value>,
-                            _cx: ConnectionTo<Agent>| {
-                    request_events.push(format!("request:{}", request.method));
-                    responder.respond(request_result(&request.method, &request.params, &auth))
-                },
-                agent_client_protocol::on_receive_request!(),
-            )
-            .on_receive_notification(
-                async move |message: UntypedMessage, cx: ConnectionTo<Agent>| {
-                    if message.method == "session/update"
-                        && serde_json::from_value::<SessionNotification>(message.params.clone())
-                            .is_err()
-                    {
-                        unknown_events.push("notification:session/update:unknown-contained");
-                        return Ok(Handled::Yes);
-                    }
-                    Ok(Handled::No {
-                        message: (message, cx),
-                        retry: false,
-                    })
-                },
-                agent_client_protocol::on_receive_notification!(),
-            )
-            .on_receive_notification(
-                async move |notification: SessionNotification, _cx: ConnectionTo<Agent>| {
-                    session_events.push(format!(
-                        "notification:session/update:{:?}",
-                        notification.update
-                    ));
-                    Ok(())
-                },
-                agent_client_protocol::on_receive_notification!(),
-            )
-            .on_receive_notification(
-                async move |message: UntypedMessage, _cx: ConnectionTo<Agent>| {
-                    notification_events.push(format!("notification:{}", message.method));
-                    Ok(())
-                },
-                agent_client_protocol::on_receive_notification!(),
-            )
-    }};
-}
-
-fn direct_client(events: Events, auth: Value) -> impl ConnectTo<Agent> {
-    build_client!(events, auth)
-}
-
-async fn run_live(name: &'static str, config: AcpAgentConfig, auth: Value) -> Result<Value> {
+async fn run_live(
+    name: &'static str,
+    engine: live_support::EngineKind,
+    config: AcpAgentConfig,
+    auth: Value,
+) -> Result<Value> {
     let scratch = TempDir::new().context("create live Kiro scratch directory")?;
     std::fs::write(scratch.path().join("README.md"), "SDK2 parity probe\n")?;
-    let events = Events::new();
+    let events = live_support::Events::new();
     let events_after = events.clone();
-    let events_for_run = events_after.clone();
-    let client = build_client!(events, auth);
-    let response = timeout(
-        Duration::from_secs(180),
-        client.connect_with(AcpAgent::new(config), async move |connection| {
-            let initialize = connection
-                .send_request(
-                    InitializeRequest::new(ProtocolVersion::V1)
-                        .client_info(Implementation::new("cyril", "0").title("Cyril")),
-                )
-                .block_task()
-                .await?;
-            events_for_run.push("response:initialize");
-            let session = connection
-                .send_request(NewSessionRequest::new(scratch.path()))
-                .block_task()
-                .await?;
-            events_for_run.push("response:session/new");
-            let prompt = connection
-                .send_request(PromptRequest::new(
-                    session.session_id,
-                    vec![ContentBlock::Text(TextContent::new(
-                        "Reply exactly SDK2_PARITY. Do not use tools.",
-                    ))],
-                ))
-                .block_task()
-                .await?;
-            events_for_run.push("response:session/prompt");
-            Ok::<_, agent_client_protocol::Error>((
-                initialize.protocol_version,
-                prompt.stop_reason,
-                true,
-            ))
-        }),
+    let capabilities = live_capabilities(engine)?;
+    let capability_shape = serde_json::to_value(&capabilities)?;
+    let result = timeout(
+        Duration::from_secs(live_support::MAX_SESSION_SECONDS),
+        live_support::connect_client_with(
+            events.clone(),
+            auth,
+            AcpAgent::new(config),
+            async move |connection| {
+                let initialize = connection
+                    .send_request(
+                        InitializeRequest::new(ProtocolVersion::V1)
+                            .client_info(Implementation::new("cyril", "0").title("Cyril"))
+                            .client_capabilities(capabilities),
+                    )
+                    .block_task()
+                    .await?;
+                events_after.push("response:initialize");
+                let session = connection
+                    .send_request(NewSessionRequest::new(scratch.path()))
+                    .block_task()
+                    .await?;
+                events_after.push("response:session/new");
+                let prompt_text = live_support::live_prompt(engine);
+                let prompt = connection
+                    .send_request(PromptRequest::new(
+                        session.session_id.clone(),
+                        vec![ContentBlock::Text(TextContent::new(prompt_text))],
+                    ))
+                    .block_task()
+                    .await?;
+                events_after.push("response:session/prompt");
+                Ok::<_, agent_client_protocol::Error>((initialize, session, prompt))
+            },
+        ),
     )
     .await
-    .with_context(|| format!("{name} live SDK path timed out"))?
+    .with_context(|| format!("{name} live SDK path timed out after 60 seconds"))?
     .map_err(|error| anyhow::anyhow!("{name} live SDK path failed: {error:?}"))?;
-    let observed = events_after.snapshot();
-    let prompt_response_last = observed
+
+    let observed = events.snapshot();
+    if observed.len() > live_support::MAX_EVENTS
+        || observed
+            .last()
+            .is_some_and(|event| event == "error:event-limit")
+    {
+        bail!(
+            "{name} captured {} events, exceeding the 1000-event bound",
+            observed.len()
+        );
+    }
+    let normalized_events = live_support::normalize_events(&observed);
+    let prompt_response_last = normalized_events
         .last()
         .is_some_and(|event| event == "response:session/prompt");
     if !prompt_response_last {
-        bail!("{name} emitted traffic after the prompt response");
+        let last = normalized_events
+            .last()
+            .cloned()
+            .unwrap_or_else(|| "<none>".to_owned());
+        bail!("{name} emitted traffic after the prompt response; last event: {last}");
     }
     let agent_message_chunks = observed
         .iter()
-        .filter(|event| event.contains("AgentMessageChunk"))
+        .filter(|event| event.contains(r#""sessionUpdate":"agent_message_chunk""#))
         .count();
     if agent_message_chunks == 0 {
         bail!("{name} completed without an agent message chunk");
     }
-    let observed_methods = observed
+    let observed_methods = normalized_events
         .iter()
         .filter_map(|event| {
             event
@@ -268,147 +108,115 @@ async fn run_live(name: &'static str, config: AcpAgentConfig, auth: Value) -> Re
                 .and_then(|rest| rest.split(':').next())
         })
         .collect::<BTreeSet<_>>();
+    let permission_index = normalized_events
+        .iter()
+        .position(|event| event.starts_with("request:session/request_permission"));
+    let first_permissioned_tool_index = normalized_events
+        .iter()
+        .position(|event| event.starts_with("request:terminal/create"));
+    let permission_before_tool = match (permission_index, first_permissioned_tool_index) {
+        (Some(permission), Some(tool)) => Some(permission < tool),
+        _ => None,
+    };
+    let kas_turn_end_observed = live_support::kas_turn_end_observed(&observed);
+    let turn_end_index = observed.iter().position(|event| {
+        event.starts_with("notification:session/update:")
+            && event.contains(r#""kind":"turn_end""#)
+            && event.contains(r#""stopReason":"end_turn""#)
+    });
+    let response_index = observed
+        .iter()
+        .position(|event| event == "response:session/prompt");
+    let terminal_before_prompt_response = if engine.is_kas() {
+        matches!(
+            (turn_end_index, response_index),
+            (Some(terminal), Some(response)) if terminal < response
+        )
+    } else {
+        response_index.is_some()
+    };
+    let kas_host_families = live_support::kas_host_families(&observed);
+    if engine.is_kas() && !kas_host_families.values().all(|observed| *observed) {
+        bail!("{name} did not exercise every KAS host callback family: {kas_host_families:?}");
+    }
+    if engine.is_kas() && permission_before_tool != Some(true) {
+        bail!("{name} did not request permission before the first host tool callback");
+    }
+    if engine.is_kas() && (!kas_turn_end_observed || !terminal_before_prompt_response) {
+        bail!("{name} did not observe KAS end_turn before the prompt response");
+    }
+    let mut divergences = Vec::new();
+    if !engine.is_kas() {
+        divergences.push("v2:host-callbacks-not-live-proven-without-tool-trigger".to_owned());
+    }
     Ok(json!({
         "engine": name,
-        "protocol_version": format!("{:?}", response.0),
-        "stop_reason": format!("{:?}", response.1),
-        "session_id_present": response.2,
+        "protocol_version": result.0.protocol_version,
+        "client_capabilities": capability_shape,
+        "session_id_present": !result.1.session_id.to_string().is_empty(),
+        "stop_reason": format!("{:?}", result.2.stop_reason),
         "event_count": observed.len(),
+        "events": observed,
+        "normalized_events": normalized_events,
         "observed_methods": observed_methods,
+        "method_counts": live_support::method_counts(&events.snapshot()),
         "agent_message_chunks": agent_message_chunks,
-        "unknown_updates_contained": observed.iter().any(|event| event == "notification:session/update:unknown-contained"),
         "prompt_response_last": prompt_response_last,
-    }))
-}
-
-async fn run_callback_matrix(auth: Value) -> Result<Value> {
-    let methods = [
-        "_kiro/auth/getAccessToken",
-        "_kiro/terminal/shell_type",
-        "fs/read_text_file",
-        "fs/write_text_file",
-        "_kiro/fs/read_file",
-        "_kiro/fs/write_file",
-        "_kiro/fs/stat",
-        "_kiro/fs/read_directory",
-        "_kiro/fs/delete",
-        "terminal/create",
-        "terminal/output",
-        "terminal/wait_for_exit",
-        "terminal/release",
-        "terminal/kill",
-        "session/request_permission",
-        "_kiro/hooks/list",
-        "_kiro/hooks/executeHook",
-        "_kiro/hooks/sessionStart",
-    ];
-    let notification_methods = ["_kiro/hooks/cancel", "_kiro/hooks/didChange"];
-    let events = Events::new();
-    let client = direct_client(events.clone(), auth);
-    let (transport, mut fake_agent) = Channel::duplex();
-    let client_task = tokio::spawn(client.connect_to(transport));
-    let mut response_ids = BTreeSet::new();
-    for (index, method) in methods.iter().enumerate() {
-        let id = RequestId::Number(i64::try_from(index + 1)?);
-        let request = RawJsonRpcMessage::request(
-            (*method).to_owned(),
-            if *method == "session/request_permission" {
-                json!({"options": [{"optionId": "allow-once"}]})
-            } else {
-                json!({})
-            },
-            id,
-        )?;
-        fake_agent
-            .tx
-            .unbounded_send(TransportFrame::Single(request))
-            .context("send fake host callback")?;
-        let response = fake_agent
-            .rx
-            .next()
-            .await
-            .context("receive fake callback response")?;
-        let serialized = match response {
-            TransportFrame::Single(message) => serde_json::to_value(message)?,
-            other => bail!("callback response changed frame shape: {other:?}"),
-        };
-        if serialized.get("error").is_some() {
-            bail!("callback {method} returned error: {serialized}");
-        }
-        response_ids.insert(serde_json::to_string(
-            serialized
-                .get("id")
-                .context("callback response has no id")?,
-        )?);
-    }
-    for method in notification_methods {
-        fake_agent
-            .tx
-            .unbounded_send(TransportFrame::Single(RawJsonRpcMessage::notification(
-                method.to_owned(),
-                json!({}),
-            )?))
-            .context("send fake host notification")?;
-    }
-    drop(fake_agent);
-    client_task.await.context("join callback matrix client")??;
-    let observed = events.snapshot();
-    Ok(json!({
-        "request_methods": methods,
-        "notification_methods": notification_methods,
-        "request_response_count": response_ids.len(),
-        "all_requests_answered": response_ids.len() == methods.len(),
-        "observed_events": observed,
+        "permission_before_tool": permission_before_tool,
+        "terminal_before_prompt_response": terminal_before_prompt_response,
+        "kas_turn_end_observed": kas_turn_end_observed,
+        "kas_host_families": kas_host_families,
+        "not_exercised": ["typed_error", "outer_response_id", "cancellation"],
+        "evidence_layers": {
+            "authenticated_live": true,
+            "deterministic_matrix": false,
+            "capture_backed": false,
+            "divergences": divergences,
+        },
+        "within_event_bound": observed.len() <= live_support::MAX_EVENTS,
     }))
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mode = env::args().nth(1).unwrap_or_else(|| "all".to_owned());
-    let auth = if mode == "matrix" {
-        json!({
-            "accessToken": "<in-memory-probe>",
-            "expiresAt": "2099-01-01T00:00:00Z",
-            "profileArn": "<in-memory-probe>",
-        })
-    } else {
-        load_auth_response()?
-    };
-    let callbacks = run_callback_matrix(auth.clone()).await?;
-    let live = match mode.as_str() {
-        "matrix" => Vec::new(),
-        "v2" => vec![
-            run_live(
-                "kiro-v2",
-                AcpAgentConfig::new("kiro-cli").arg("acp"),
-                auth.clone(),
-            )
-            .await?,
-        ],
-        "kas" => vec![
-            run_live(
-                "kiro-kas",
-                AcpAgentConfig::new("kiro-cli").args(["acp", "--agent-engine", "v3"]),
-                auth.clone(),
-            )
-            .await?,
-        ],
-        "all" => vec![
-            run_live(
-                "kiro-v2",
-                AcpAgentConfig::new("kiro-cli").arg("acp"),
-                auth.clone(),
-            )
-            .await?,
-            run_live(
-                "kiro-kas",
-                AcpAgentConfig::new("kiro-cli").args(["acp", "--agent-engine", "v3"]),
-                auth,
-            )
-            .await?,
-        ],
+    let matrix_auth = json!({
+        "accessToken": "<in-memory-probe>",
+        "expiresAt": "2099-01-01T00:00:00Z",
+        "profileArn": "<in-memory-probe>",
+    });
+    let (auth, run_v2, run_kas) = match mode.as_str() {
+        "matrix" => (None, false, false),
+        "v2" => (Some(live_support::load_auth_response()?), true, false),
+        "kas" => (Some(live_support::load_auth_response()?), false, true),
+        "all" => (Some(live_support::load_auth_response()?), true, true),
         other => bail!("unknown mode `{other}`; expected matrix, v2, kas, or all"),
     };
+    let callback_matrix = live_support::run_direct_matrix(matrix_auth).await?;
+    let mut live = Vec::new();
+    if run_v2 {
+        live.push(
+            run_live(
+                live_support::EngineKind::V2.label(),
+                live_support::EngineKind::V2,
+                AcpAgentConfig::new("kiro-cli").arg("acp"),
+                auth.clone()
+                    .context("v2 live authentication was not loaded")?,
+            )
+            .await?,
+        );
+    }
+    if run_kas {
+        live.push(
+            run_live(
+                live_support::EngineKind::Kas.label(),
+                live_support::EngineKind::Kas,
+                AcpAgentConfig::new("kiro-cli").args(["acp", "--agent-engine", "v3"]),
+                auth.context("KAS live authentication was not loaded")?,
+            )
+            .await?,
+        );
+    }
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
@@ -416,8 +224,13 @@ async fn main() -> Result<()> {
             "sdk_version": "2.0.0",
             "wire_version": "V1",
             "mode": mode,
-            "callback_matrix": callbacks,
+            "callback_matrix": callback_matrix,
             "live": live,
+            "evidence_phases": [
+                "authenticated stable-v1 lifecycle/tool-prompt",
+                "deterministic direct SDK callback matrix",
+                "capture-backed versioned extension references",
+            ],
             "credential_logged": false,
             "production_state_modified": false,
         }))?
