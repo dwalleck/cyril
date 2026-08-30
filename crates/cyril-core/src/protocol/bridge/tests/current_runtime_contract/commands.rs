@@ -13,15 +13,6 @@ async fn send_command(
         .unwrap_or_else(|error| panic!("C5 accepted command send failed: {error}"));
 }
 
-async fn assert_notification_quiet(cell: &str, rx: &mut mpsc::Receiver<RoutedNotification>) {
-    assert!(
-        tokio::time::timeout(Duration::from_millis(25), rx.recv())
-            .await
-            .is_err(),
-        "C5 {cell}: command promised no immediate notification"
-    );
-}
-
 fn assert_bridge_error(cell: &str, notification: &Notification, operation: &str) {
     assert!(
         matches!(notification, Notification::BridgeError { operation: actual, .. } if actual == operation),
@@ -87,8 +78,13 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 "C5 SendPrompt: {completed:?}"
             );
 
+            // Quiet cells (CancelRequest, ExtMethod, SendMessage, SteerSession,
+            // ClearSteering) are asserted STRUCTURALLY, not with wall-clock
+            // holds: the channel is FIFO and every later notification is
+            // exact-matched, so a stray frame from a quiet command surfaces as
+            // a mismatch in the very next assertion — and the post-shutdown
+            // drain below catches a stray after the last matched frame.
             send_command(&sender, &mut ledger, BridgeCommand::CancelRequest).await;
-            assert_notification_quiet("CancelRequest", &mut rx).await;
 
             send_command(
                 &sender,
@@ -127,7 +123,6 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 },
             )
             .await;
-            assert_notification_quiet("ExtMethod", &mut rx).await;
 
             send_command(
                 &sender,
@@ -199,7 +194,6 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 },
             )
             .await;
-            assert_notification_quiet("SendMessage", &mut rx).await;
 
             send_command(&sender, &mut ledger, BridgeCommand::QueryUsageAccount).await;
             let usage = next_notification("QueryUsageAccount", &mut rx).await;
@@ -224,7 +218,6 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 },
             )
             .await;
-            assert_notification_quiet("SteerSession", &mut rx).await;
 
             send_command(
                 &sender,
@@ -234,7 +227,6 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 },
             )
             .await;
-            assert_notification_quiet("ClearSteering", &mut rx).await;
 
             send_command(
                 &sender,
@@ -305,6 +297,15 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 .await
                 .expect("C5 Shutdown: loop task joined")
                 .expect("C5 Shutdown: loop returned Ok");
+
+            // The loop has exited and dropped its sender: recv drains any
+            // buffered stray frame before yielding None, closing the quiet
+            // contract for the commands after the last matched notification.
+            let trailing = rx.recv().await;
+            assert!(
+                trailing.is_none(),
+                "C5 quiet: stray notification after the final matched frame: {trailing:?}"
+            );
 
             assert_eq!(
                 ledger,

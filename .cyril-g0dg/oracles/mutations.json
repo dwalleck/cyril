@@ -104,7 +104,7 @@
     "claim": "C1",
     "target": "crates/cyril/src/app.rs",
     "mutation": "append a test body to the oversized parent module",
-    "command": "python3 .cyril-g0dg/oracles/scope.py",
+    "command": "python3 .cyril-g0dg/oracles/scope.py --claim C1",
     "expected_failure": "C1 oversized parent diff changed",
     "checkpoint": "S4",
     "observed": true
@@ -114,7 +114,7 @@
     "claim": "C11",
     "target": "crates/cyril-core/src/sdk2_runtime.rs",
     "mutation": "add an SDK2 runtime source file",
-    "command": "python3 .cyril-g0dg/oracles/scope.py",
+    "command": "python3 .cyril-g0dg/oracles/scope.py --claim C11",
     "expected_failure": "C11 unexpected changed path",
     "checkpoint": "S4",
     "observed": true
@@ -127,6 +127,26 @@
     "command": "python3 .cyril-g0dg/oracles/mutations.py",
     "expected_failure": "C12 mutation missing expected_failure",
     "checkpoint": "S4",
+    "observed": true
+  },
+  {
+    "id": "M-C6-LOSSY-FORWARD",
+    "claim": "C6",
+    "target": "crates/cyril-core/src/protocol/bridge.rs",
+    "mutation": "make run_loop's inbound->App pump forward with lossy try_send instead of bounded send",
+    "command": "cargo test -p cyril-core protocol::bridge::tests::current_runtime_contract::saturation::c6_run_loop_forwarding_preserves_every_frame_through_a_full_channel -- --exact",
+    "expected_failure": "C6 flood: bridge wedged on the full App channel",
+    "checkpoint": "S2",
+    "observed": true
+  },
+  {
+    "id": "M-C10-FAKE-COMPLETE",
+    "claim": "C10",
+    "target": "crates/cyril/src/app.rs",
+    "mutation": "push bridge-complete on the timed-out bridge gate branch",
+    "command": "cargo test -p cyril app::tests::current_runtime_contract::shutdown::c10_bridge_timeout_is_recorded_distinctly_from_completion -- --exact",
+    "expected_failure": "C10 a timed-out bridge gate must never ledger as bridge-complete",
+    "checkpoint": "S3",
     "observed": true
   }
 ]

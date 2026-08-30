@@ -102,6 +102,94 @@ fn routed_message(index: usize) -> RoutedNotification {
     }))
 }
 
+/// C6's named mutation fence (design falsification table): make `run_loop`'s
+/// inbound→App pump forward lossily (`try_send` instead of the fail-stop
+/// bounded `send`) and this test goes red.
+///
+/// Saturation must be REAL, not assumed: frames buffer in the notification
+/// channel (256), the pump's held slot (1), the inbound channel (256), and
+/// the harness's 64KB duplex (~410 chunk frames), so a flood must exceed
+/// their SUM (~930) before any bounded send anywhere can park. With the
+/// App-side receiver deliberately undrained, a flood past that sum wedges the
+/// cascade — and the only way the pump can be part of that wedge is parked on
+/// the FULL App channel, the one state where `try_send` and `send` differ.
+#[tokio::test]
+async fn c6_run_loop_forwarding_preserves_every_frame_through_a_full_channel() {
+    const FLOOD: usize = 4 * EXPECTED_NOTIFICATION_CAPACITY;
+
+    let script = Rc::new(RefCell::new(Script {
+        emit_chunks: FLOOD,
+        ..Script::default()
+    }));
+    let observed = Rc::clone(&script);
+    with_harness(
+        script,
+        move |sender, mut rx, _permission_rx, _gate, loop_handle| async move {
+            let session_id = start_session(&sender, &mut rx).await;
+
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id,
+                    prompt: crate::types::PromptEnvelope::prepared(vec!["flood".to_owned()], None),
+                })
+                .await
+                .expect("C6 flood SendPrompt send");
+
+            // Wait for the wedge: inbound pinned at zero remaining capacity
+            // means the pump has stopped pulling — parked on the full App
+            // channel — while the fake still has frames to push. A lossy pump
+            // never wedges (it drains inbound by dropping), so the mutation
+            // fails here on the timeout, or below in the reconciliation.
+            let inbound = observed
+                .borrow()
+                .inbound
+                .clone()
+                .expect("C6 harness wires the inbound seam");
+            tokio::time::timeout(Duration::from_secs(5), async {
+                while inbound.capacity() > 0 {
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .expect("C6 flood: bridge wedged on the full App channel");
+
+            for index in 0..FLOOD {
+                let frame = recv_notif(&mut rx, 5)
+                    .await
+                    .unwrap_or_else(|| panic!("C6 flood frame {index} lost"));
+                assert!(
+                    matches!(frame, Notification::AgentMessage(ref message) if message.text == format!("c{index}")),
+                    "C6 flood frame {index} out of order or rewritten: {frame:?}"
+                );
+            }
+            let completed = recv_notif(&mut rx, 5).await;
+            assert!(
+                matches!(
+                    completed,
+                    Some(Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn
+                    })
+                ),
+                "C6 flood terminal after every frame: {completed:?}"
+            );
+
+            sender
+                .send(BridgeCommand::Shutdown)
+                .await
+                .expect("C6 flood Shutdown send");
+            loop_handle
+                .await
+                .expect("C6 flood loop joined")
+                .expect("C6 flood loop Ok");
+            assert!(
+                rx.recv().await.is_none(),
+                "C6 flood: duplicated or trailing frame after reconciliation"
+            );
+        },
+    )
+    .await;
+}
+
 #[tokio::test]
 async fn c6_command_channel_capacity_fifo_and_closed_errors_are_exact() {
     let (handle, mut command_rx) = BridgeHandle::for_tests_with_command_rx();

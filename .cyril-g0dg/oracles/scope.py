@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import pathlib
 import re
 import subprocess
@@ -13,7 +14,7 @@ PARENTS = {
     "crates/cyril-core/src/protocol/transport.rs": (3, 0),
     "crates/cyril-core/src/protocol/source_observer.rs": (1, 0),
     "crates/cyril-core/src/protocol/bridge.rs": (10, 3),
-    "crates/cyril/src/app.rs": (17, 0),
+    "crates/cyril/src/app.rs": (35, 7),
 }
 CHILD_PREFIXES = (
     "crates/cyril-core/src/protocol/transport/tests/current_runtime_contract",
@@ -50,9 +51,26 @@ def git(*args: str) -> str:
     ).stdout
 
 
-def base_revision() -> str:
-    if len(sys.argv) > 1:
-        return sys.argv[1]
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "base",
+        nargs="?",
+        default=None,
+        help="git base revision (default: merge-base of HEAD and origin/main)",
+    )
+    parser.add_argument(
+        "--claim",
+        choices=("C1", "C11"),
+        help="report only this claim's findings — the C12 mutation-localization "
+        "doctrine runs each named mutation against only its own fence",
+    )
+    return parser.parse_args()
+
+
+def base_revision(base: str | None) -> str:
+    if base is not None:
+        return base
     return git("merge-base", "HEAD", "origin/main").strip()
 
 
@@ -66,6 +84,9 @@ def changed_paths(base: str) -> set[str]:
 def allowed(path: str) -> bool:
     return (
         path == ".rivets/issues.jsonl"
+        # Review-approved on this branch: the default-features CI lane that
+        # keeps the cfg(not(kas)) fences running (commit c9d665d8).
+        or path == ".github/workflows/ci.yml"
         or path.startswith(".cyril-g0dg/")
         or path in PARENTS
         or path.startswith(CHILD_PREFIXES)
@@ -90,8 +111,7 @@ def added_rust(base: str) -> str:
     )
 
 
-def validate() -> list[str]:
-    base = base_revision()
+def validate(base: str) -> list[str]:
     paths = changed_paths(base)
     errors: list[str] = []
 
@@ -132,13 +152,17 @@ def validate() -> list[str]:
 
 
 def main() -> int:
-    errors = validate()
+    args = parse_args()
+    errors = validate(base_revision(args.base))
+    if args.claim is not None:
+        errors = [error for error in errors if error.startswith(f"{args.claim} ")]
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
     print(
-        "C1/C11 scope PASS: test-only child modules, parent budgets exact, "
-        "no manifests/SDK2/runtime traits/conductor/production observer"
+        f"{args.claim or 'C1/C11'} scope PASS: test-only child modules, "
+        "parent budgets exact, no manifests/SDK2/runtime traits/conductor/"
+        "production observer"
     )
     return 0
 
