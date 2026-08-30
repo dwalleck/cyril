@@ -664,12 +664,36 @@ assuming. *"Silence is not an answer."*
    `todo_list`.
 4. **`_meta.kiro.settings` memory note** should read `clientCapabilities._meta.kiro.settings` (the code
    is already correct).
-5. **Probe isolation.** Cyril's rule (`HOME=<tmp>` + real `XDG_DATA_HOME`) is coarser than KiroCrew's,
-   which pins `KIRO_HOME` as a **separate axis** because *"that directory is kiro-cli's own home, shared
-   with the real installed agent."* A blanket `HOME=<tmp>` relocates `~/.kiro`, so the spawned kiro-cli
-   finds an empty `~/.kiro/agents/` — meaning **past cyril probes of `--agent`, `set_mode`, or mode
-   advertisement may have measured an artificially empty world**, and a `Mode 'x' not found` result may
-   be an artifact of the isolation rather than a finding. Note the binding is captured at process start.
+5. **Probe isolation — investigated 2026-08-30, NOT a defect in cyril.** The concern was that cyril's
+   `HOME=<tmp>` rule also relocates `~/.kiro`, so a spawned kiro-cli would find an empty
+   `~/.kiro/agents/` and any probe of `--agent` / `set_mode` / mode advertisement would measure an
+   artificial world. KiroCrew pins `KIRO_HOME` as a **separate** axis for exactly this reason
+   (`AGENTS.md:381-390`), and `KIRO_HOME` is confirmed to be a real kiro-cli variable — it appears in
+   Kiro's own embedded doc index under `commands/chat.md` keywords beside `KIRO_DATA_DIR`.
+
+   **Audited all ~140 probes in `experiments/conductor-spike/`. No past finding is affected.**
+
+   - Exactly **one** isolated probe spawns `--agent <name>`: `probe-v2-tar-allowlist-ab-2.18.1.py`, and
+     it **seeds `$HOME/.kiro/agents/tartest.json` itself before spawning** (lines 32-48). Hermetic —
+     arguably better than the `KIRO_HOME` split, since nothing leaks in from the real home.
+   - All five probes exercising `session/set_mode` or `customAgents`
+     (`probe-kas-plan-handoff{,2}-2.11.0`, `probe-kas-plan-to-custom-2.11.0`,
+     `probe-kas-client-agent-2.7.1`) except that one ran with the **real** `HOME`.
+   - Every other `--agent`-looking hit is `--agent-engine` (engine selection), which does not read the
+     agents dir.
+   - KAS custom agents ride the wire as `_meta.kiro.customAgents`, never `~/.kiro/agents/` — so home
+     isolation is irrelevant to the KAS agent path regardless.
+   - The same risk class in other `~/.kiro` subtrees is handled correctly too:
+     `probe-kas-powers-2.20.1.py` explicitly **seeds the throwaway HOME with the real powers tree**;
+     `probe-kas-v2hooks-2.16.0.py` creates `<workspace>/.kiro/hooks/` (v2 hooks are workspace-relative,
+     not HOME); `probe-kas-nested-agentsmd-2.18.0.py` deliberately wants an empty home-steering dir so
+     the test isolates *workspace* steering.
+
+   **Residual (small):** the house rule as written says only "`HOME=<tmp>` + real `XDG_DATA_HOME`" and
+   does not say "seed under the fake HOME whatever the probe needs to observe." Every author has done it
+   anyway; making it explicit is cheap insurance. `KIRO_HOME` is worth knowing as an alternative axis
+   when a probe wants the real `~/.kiro` *and* an isolated home.
+
 6. **Context buckets.** Cyril's note that KAS pushes 5 buckets via `session_info_update` is worth
    re-checking: the vendor's own client gets no breakdown and estimates it.
 
