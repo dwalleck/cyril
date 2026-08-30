@@ -389,14 +389,15 @@ A notification (fire-and-forget, no response expected). Cyril sends this on Esc 
 
 Includes more than just `session_id`:
 - `modes` — `SessionModeState` with `current_mode_id` and `available_modes` list (displayed in toolbar)
-- `config_options` — always `null` on the v1/v2 engine (`session/set_config_option` not implemented). **KAS populates it** (`mode`/`autopilot`/`contentCollection`) and `set_config_option` works there.
+- `config_options` — **absent entirely** on the v1/v2 engine (re-verified 2.20.1: the `session/new` result carries only `['models', 'modes', 'sessionId']` — the key is not present, not `null`), and `session/set_config_option` returns `-32601 Method not found` with `data: "session/set_config_option"`. **KAS populates it** (`mode`/`autopilot`/`contentCollection`) and `set_config_option` works there.
+- `models` — v1/v2 DOES return `{currentModelId, availableModels[{modelId, name, description}]}` on `session/new` (19 models on 2.20.1). The `description` carries the context window in prose ("...with 1M context window", `gpt-5.6-*` "272k context window"), so a model→window map is available without `--list-models`. No `current` flag on `commands/options` entries (cyril-imjx).
 
 ### Methods NOT implemented by the v1/v2 engine (KAS differs — see the KAS audit)
 
 These hold for the default v1/v2 (Rust) engine. **KAS implements several of them** — verify against `docs/kiro-2.7.1-wire-audit.md` before assuming a method is unavailable when running `--agent-engine kas`.
 
 - `session/set_config_option` — v1/v2: "Method not found" (use `kiro.dev/commands/execute` with `model`). **KAS: works** (`{sessionId, configId, value}` → rebuilt `configOptions`).
-- `session/set_model` — behind unstable feature flag, not advertised in capabilities.
+- `session/set_model` — **works on v1/v2** (live-probed 2.20.1: served id acked in **1.4 ms** with an empty `{}` result, and the session sidecar confirms the turn billed the new model). It is *not* advertised — `agentCapabilities.sessionCapabilities` is `{}` — so absence from capabilities is not absence of the method. **It does NOT validate**: a bogus `modelId` is accepted in 0.4 ms, and the *next* `session/prompt` fails in 0.4 s with `-32603` → `"Encountered an error in the response stream: The model 'X' is not available..."` and zero `session/update` frames. Guard picks against `session/new`'s `models.availableModels` (cyril-fj6j). Probe: `experiments/conductor-spike/probe-v2-set-model-2.20.1.py`.
 - `session/fork`, `session/resume`, `session/list` — v1/v2: unstable, `sessionCapabilities: {}`. **KAS: `sessionCapabilities {list, fork}` are non-empty and functional.**
 
 ## Adding New Features
