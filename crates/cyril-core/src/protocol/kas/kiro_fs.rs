@@ -72,7 +72,7 @@
 //! [`to_native_checked`] requires only an absolute path, so an approved delete
 //! is unconfined and recurses. The approval is the gate; cyril adds none.
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 use serde::Deserialize;
 
 use super::host_io::{io_err, to_native_checked, write_atomic};

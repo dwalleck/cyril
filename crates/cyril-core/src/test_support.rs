@@ -207,7 +207,7 @@ impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
 pub fn kas_capture_to_routed(
     capture: &str,
 ) -> Vec<(Option<crate::types::SessionId>, crate::types::Notification)> {
-    use agent_client_protocol as acp;
+    use agent_client_protocol::schema::v1 as acp;
 
     use crate::protocol::engine::{Engine, KasEngine};
 

@@ -206,30 +206,31 @@ The crate boundaries enforce dependency rules, but equally important is the sepa
 
 ```
 User input → CommandRegistry::parse() → Command::execute() → BridgeSender::send(BridgeCommand)
-                                                                    ↓ (mpsc channel)
-                                                              Bridge thread (dedicated OS thread)
-                                                                    ↓ (JSON-RPC over stdio)
-                                                              kiro-cli acp
-                                                                    ↓ (ACP callbacks)
-                                                              KiroClient (protocol/client.rs)
-                                                                    ↓ (mpsc channels)
-                                                    Notification / PermissionRequest
+                                                                    ↓ (bounded mpsc)
+                                                     serial DomainMediator (`!Send`)
                                                                     ↓
-App event loop (tokio::select!):
-  ├─ Notification → SessionController::apply_notification()
-  │               → UiState::apply_notification()
-  │               → cross-cutting handlers (CommandOptionsReceived, CommandExecuted, etc.)
-  ├─ PermissionRequest → UiState::show_approval()
-  └─ Terminal Event → layered key dispatch
+                                                   SDK2 `ConnectionTo<Agent>`
                                                                     ↓
-                                              ratatui render (adaptive frame rate)
+                                     `ConductorImpl` (zero or more ordered stages)
+                                                                    ↓
+                                      ProcessAdapter → AgentProcess → kiro-cli acp
+                                                                    ↓
+                                         ordered SDK Client handlers (`Send`)
+                                                                    ↓ (bounded DomainChannels)
+                                                     serial DomainMediator (`!Send`)
+                                                                    ↓
+App event loop → SessionController + UiState → ratatui render
 ```
 
 ### Key Boundaries
 
-**Bridge thread (`protocol/bridge.rs`):** Runs `!Send` ACP types in a quarantined `current_thread` + `LocalSet` runtime. All communication is via three bounded mpsc channels: commands in, notifications out, permission requests out. The bridge MUST send a notification for every command it processes — including error cases — so the App never gets stuck.
+**Bridge thread (`protocol/bridge.rs`):** Owns the dedicated `current_thread` + `LocalSet`, process selection, bounded App channels, and fail-stop delivery. It constructs one `AgentProcess → SdkRuntime → DomainMediator` path; there is no direct-connect fallback.
 
-**Conversion boundary (`protocol/convert/`):** Directory module that imports both `acp::` and internal types. `mod.rs` handles generic ACP; `kiro.rs` handles Kiro-specific extensions. No other file should import `acp::` types.
+**SDK runtime (`protocol/sdk_runtime/` and `protocol/client.rs`):** `ProcessAdapter` implements the official SDK2 `ConnectTo<Client>` role over the retained `AgentProcess`. `SdkRuntime::start(AgentProcess, DomainChannels, StageChain)` always constructs `ConductorImpl`, including an empty production stage chain. Ordered client handlers enqueue owned typed work and return; the unknown `session/update` handler precedes the strict typed handler.
+
+**Serial domain owner (`protocol/domain_mediator/`):** Owns `Rc<dyn Engine>`, turn/source/tool ledgers, command dispatch, responder routing, and host-effect lifecycle. A separate bounded host-request drain starts before `initialize` so KAS authentication and host callbacks cannot deadlock the command/domain loop; callback results re-enter the ordered domain queue. SDK handlers must not capture or execute serial domain state.
+
+**Conversion boundary (`protocol/convert/`):** Converts SDK schema values into Cyril domain types. `mod.rs` handles generic ACP, `kiro.rs` handles Kiro extensions, and `kas.rs` handles KAS. SDK/schema types remain confined to `cyril-core`.
 
 **TuiState trait (`cyril-ui/traits.rs`):** Read-only interface the renderer uses. Every method returns a reference or Copy type — compile-time guarantee that rendering cannot mutate state. The renderer receives `&dyn TuiState`, never `&App` or `&mut UiState`.
 
@@ -330,7 +331,7 @@ For the comprehensive protocol reference with example requests/responses, see **
 > **⚠️ Two engines as of kiro-cli 2.7.1.** Everything in this section describes the **v1/v2 (Rust) engine** — cyril's current default (`kiro-cli acp`). 2.7.1 embeds a **second engine, KAS** (`acp --agent-engine kas` / hidden `chat --v3`), a TypeScript/LangGraph agent with its own **`_kiro/*` dialect** that differs on several points below. KAS is reachable over ACP today and is the strategic direction. Several v2-only claims in this section are **not** true for KAS — they're flagged inline. **Full KAS wire reference: [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md)** (auth contract, subagent/crew model, fs+terminal host callbacks, hooks, bundled agents, steering fileMatch, agent-config migration). **Authoritative `_kiro/*` type contract: [docs/kiro-kas-acp-covenant.md](docs/kiro-kas-acp-covenant.md)** — the curated `@kiro/acp-type-covenant` reference (full method catalog, `KiroClientMeta` handshake flags, `AgentSettings`, `session_info_update` union, host-callback signatures). **For any KAS `_kiro/*` question, read the covenant doc/package FIRST** — it is the wire contract; `@kiro/agent` is only the implementation, and reading it instead produced wrong conclusions. The KAS integration plan is **ROADMAP "KAS engine integration track" (KAS-1…6)**.
 
 - **Protocol**: JSON-RPC 2.0 over stdio (ACP v2025-01-01)
-- The `agent-client-protocol` crate (v0.10.2; schema `agent-client-protocol-schema` v0.11.2) from crates.io is the source of truth for ACP types. Actual type definitions live in the schema crate (transitive dependency). Note: `SessionUpdate` is a serde-tagged enum with no `#[serde(other)]` catch-all, so an unknown typed `session/update` variant hard-fails at deserialization before reaching `convert/`; the `_kiro.dev/*` / `_kiro/*` ext dialects ride the raw-JSON `ext_notification` path and are not subject to this.
+- `cyril-core` pins `agent-client-protocol` 2.0.0, `agent-client-protocol-schema` 1.5.0 transitively, and `agent-client-protocol-conductor` 2.0.0. Production negotiates stable wire v1; draft wire v2 is not enabled. `SessionUpdate` remains a strict serde-tagged enum, so the SDK Client registers an untyped unknown-update fence before the typed `SessionNotification` handler to keep future variants from closing the connection. `_kiro.dev/*` and `_kiro/*` continue through extension handlers.
 - Tool calls with `kind == ToolKind::Other` are "planning" steps from the agent and are filtered from display.
 - **Kiro logs**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux). Set `KIRO_LOG_LEVEL=debug` for verbose output.
 - **Wire format = binary × backend.** What kiro-cli emits depends on both the binary version and the AWS backend's current behavior. Same-day captures with different binaries isolate binary changes; same-binary captures across time isolate backend rollouts. Mixing the axes conflates both — the metering fields appearing on `_kiro.dev/metadata` between April and May 2026 was a backend rollout, not a binary change.

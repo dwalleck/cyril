@@ -108,7 +108,7 @@ fn spawn_stderr_drain(stderr: ChildStderr, tail: StderrTail) {
 /// bridge moves `stdin`/`stdout` out of `AgentProcess` by field access, and
 /// partial moves are illegal on types that implement `Drop`.
 #[cfg(unix)]
-struct ProcessGroupGuard {
+pub(crate) struct ProcessGroupGuard {
     /// Always positive when present — captured from the child's pid right
     /// after spawn. `None` disables the group kill entirely: `killpg` with
     /// pgid 0 would signal OUR OWN process group.
@@ -236,6 +236,38 @@ impl AgentProcess {
     pub(crate) fn stderr_tail(&self) -> StderrTail {
         self.stderr_tail.clone()
     }
+
+    /// Transfer all process resources to the SDK adapter without changing
+    /// ownership or drop behavior.
+    pub(crate) fn into_parts(self) -> AgentProcessParts {
+        let AgentProcess {
+            stdin,
+            stdout,
+            stderr_tail,
+            _child,
+            #[cfg(unix)]
+            _group_guard,
+        } = self;
+        drop(stderr_tail);
+        AgentProcessParts {
+            stdin,
+            stdout,
+            _child,
+            #[cfg(unix)]
+            _group_guard,
+        }
+    }
+}
+
+/// Owned process resources handed to the SDK transport adapter. Keeping the
+/// child and process-group guard together with the pipes preserves the
+/// `AgentProcess` lifetime and cleanup guarantees while the SDK drives I/O.
+pub(crate) struct AgentProcessParts {
+    pub(crate) stdin: ChildStdin,
+    pub(crate) stdout: ChildStdout,
+    pub(crate) _child: Child,
+    #[cfg(unix)]
+    pub(crate) _group_guard: ProcessGroupGuard,
 }
 
 #[cfg(test)]

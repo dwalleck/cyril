@@ -1,7 +1,9 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::io::{self, Write};
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sha2::{Digest, Sha256};
@@ -19,49 +21,50 @@ const TOOL_STATUS_BYTES: usize = 256;
 const TOOL_INPUT_BYTES: usize = 24 * 1024;
 const TOOL_RESULT_BYTES: usize = 24 * 1024;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct IngressTracker {
-    state: Rc<IngressState>,
+    state: Arc<IngressState>,
 }
 
+#[derive(Debug)]
 struct IngressState {
-    active: Cell<usize>,
-    epoch: Cell<u64>,
+    active: AtomicUsize,
+    epoch: AtomicU64,
     notify: Notify,
 }
 
 pub(crate) struct IngressGuard {
-    state: Rc<IngressState>,
+    state: Arc<IngressState>,
 }
 
 impl IngressTracker {
     pub(crate) fn new() -> Self {
         Self {
-            state: Rc::new(IngressState {
-                active: Cell::new(0),
-                epoch: Cell::new(0),
+            state: Arc::new(IngressState {
+                active: AtomicUsize::new(0),
+                epoch: AtomicU64::new(0),
                 notify: Notify::new(),
             }),
         }
     }
 
     pub(crate) fn enter(&self) -> IngressGuard {
-        self.state
-            .active
-            .set(self.state.active.get().saturating_add(1));
-        self.state.epoch.set(self.state.epoch.get().wrapping_add(1));
+        self.state.active.fetch_add(1, Ordering::AcqRel);
+        self.state.epoch.fetch_add(1, Ordering::AcqRel);
         IngressGuard {
-            state: Rc::clone(&self.state),
+            state: Arc::clone(&self.state),
         }
     }
 
     pub(crate) async fn wait_quiescent(&self) {
         loop {
             tokio::task::yield_now().await;
-            let epoch = self.state.epoch.get();
-            if self.state.active.get() == 0 {
+            let epoch = self.state.epoch.load(Ordering::Acquire);
+            if self.state.active.load(Ordering::Acquire) == 0 {
                 tokio::task::yield_now().await;
-                if self.state.active.get() == 0 && self.state.epoch.get() == epoch {
+                if self.state.active.load(Ordering::Acquire) == 0
+                    && self.state.epoch.load(Ordering::Acquire) == epoch
+                {
                     return;
                 }
             } else {
@@ -73,10 +76,8 @@ impl IngressTracker {
 
 impl Drop for IngressGuard {
     fn drop(&mut self) {
-        self.state
-            .active
-            .set(self.state.active.get().saturating_sub(1));
-        self.state.epoch.set(self.state.epoch.get().wrapping_add(1));
+        self.state.active.fetch_sub(1, Ordering::AcqRel);
+        self.state.epoch.fetch_add(1, Ordering::AcqRel);
         self.state.notify.notify_waiters();
     }
 }

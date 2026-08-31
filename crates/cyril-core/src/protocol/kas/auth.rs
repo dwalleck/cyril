@@ -15,7 +15,7 @@
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 
 /// The method string cyril receives for the wire request `_kiro/auth/getAccessToken`.
 /// The ACP library strips the single leading `_` before dispatch (same as it

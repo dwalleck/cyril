@@ -6,7 +6,7 @@
 //! signal that drives turn completion under KAS, in place of v2's prompt
 //! response — and map it to [`Notification::TurnCompleted`].
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{

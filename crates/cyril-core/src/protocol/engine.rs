@@ -14,7 +14,7 @@
 //! [`client_capabilities`] free function — engines cannot hand-write (and
 //! therefore cannot desynchronize) their advertised capability set.
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 
 use crate::protocol::convert;
 use crate::types::{AgentEngine, Notification};

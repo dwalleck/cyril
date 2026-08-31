@@ -16,14 +16,6 @@ use std::collections::HashMap;
 
 use crate::types::SessionId;
 
-/// The default (non-kas) build's channel item: uninhabited, so the host
-/// channel and the drain task compile while NO callback traffic can exist
-/// (ADR-0002; the `probe_g9vt_c13` fence pattern). It needs no `CallbackMeta`
-/// impl — the default-build drain matches it exhaustively (`match cb {}`)
-/// rather than accepting it, since a value can never arrive.
-#[cfg(not(feature = "kas"))]
-pub(crate) enum NeverCallback {}
-
 /// Resolve one callback outcome with the ADR-0004 failure ordering: the
 /// user-visible notification is enqueued BEFORE the agent-facing reply
 /// resolves (design C6). The mediator owns this ORDER; dispatch supplies the
@@ -31,12 +23,17 @@ pub(crate) enum NeverCallback {}
 /// loop (this runs inside the spawned resolution task, never on `run_loop`).
 #[cfg(feature = "kas")]
 pub(crate) async fn finish(
-    notify_tx: &tokio::sync::mpsc::Sender<crate::types::RoutedNotification>,
+    notify_tx: &crate::protocol::domain_mediator::DomainChannels,
     notify: Option<crate::types::Notification>,
     resolve: impl FnOnce(),
 ) {
-    if let Some(n) = notify
-        && notify_tx.send(n.into()).await.is_err()
+    if let Some(notification) = notify
+        && notify_tx
+            .enqueue(crate::protocol::domain_mediator::DomainWork::Routed(
+                notification.into(),
+            ))
+            .await
+            .is_err()
     {
         tracing::debug!("callback notification dropped (bridge closing)");
     }
@@ -329,17 +326,21 @@ mod tests {
     #[cfg(feature = "kas")]
     #[tokio::test]
     async fn finish_notifies_before_resolving() {
-        let (ntx, mut nrx) = tokio::sync::mpsc::channel(4);
+        let (channels, mut work_rx, _host_rx) =
+            crate::protocol::domain_mediator::DomainChannels::new(
+                crate::protocol::source_observer::IngressTracker::new(),
+            )
+            .unwrap_or_else(|error| panic!("first host-mediator channels: {error}"));
         let (seen_tx, seen_rx) = std::sync::mpsc::channel();
         finish(
-            &ntx,
+            &channels,
             Some(crate::types::Notification::BridgeError {
                 operation: "auth".into(),
                 message: "boom".into(),
             }),
             move || {
                 // At resolve time the notification MUST already be enqueued.
-                seen_tx.send(nrx.try_recv().is_ok()).unwrap();
+                seen_tx.send(work_rx.try_recv().is_ok()).unwrap();
             },
         )
         .await;
@@ -349,9 +350,13 @@ mod tests {
         );
 
         // No notification → resolve still runs (the reply-only outcome).
-        let (ntx2, _nrx2) = tokio::sync::mpsc::channel(1);
+        let (channels2, _work_rx2, _host_rx2) =
+            crate::protocol::domain_mediator::DomainChannels::new(
+                crate::protocol::source_observer::IngressTracker::new(),
+            )
+            .unwrap_or_else(|error| panic!("second host-mediator channels: {error}"));
         let (t2, r2) = std::sync::mpsc::channel();
-        finish(&ntx2, None, move || t2.send(true).unwrap()).await;
+        finish(&channels2, None, move || t2.send(true).unwrap()).await;
         assert!(r2.recv().unwrap());
     }
 

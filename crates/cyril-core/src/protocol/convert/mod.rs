@@ -1,4 +1,4 @@
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 
 use crate::types::*;
 
@@ -10,17 +10,15 @@ mod probe_j1b3;
 #[cfg(test)]
 mod probe_qo13;
 
-pub(crate) fn to_tool_kind(kind: agent_client_protocol::ToolKind) -> ToolKind {
+pub(crate) fn to_tool_kind(kind: acp::ToolKind) -> ToolKind {
     match kind {
-        agent_client_protocol::ToolKind::Read => ToolKind::Read,
-        agent_client_protocol::ToolKind::Edit
-        | agent_client_protocol::ToolKind::Delete
-        | agent_client_protocol::ToolKind::Move => ToolKind::Write,
-        agent_client_protocol::ToolKind::Execute => ToolKind::Execute,
-        agent_client_protocol::ToolKind::Search => ToolKind::Search,
-        agent_client_protocol::ToolKind::Think => ToolKind::Think,
-        agent_client_protocol::ToolKind::Fetch => ToolKind::Fetch,
-        agent_client_protocol::ToolKind::SwitchMode => ToolKind::SwitchMode,
+        acp::ToolKind::Read => ToolKind::Read,
+        acp::ToolKind::Edit | acp::ToolKind::Delete | acp::ToolKind::Move => ToolKind::Write,
+        acp::ToolKind::Execute => ToolKind::Execute,
+        acp::ToolKind::Search => ToolKind::Search,
+        acp::ToolKind::Think => ToolKind::Think,
+        acp::ToolKind::Fetch => ToolKind::Fetch,
+        acp::ToolKind::SwitchMode => ToolKind::SwitchMode,
         _ => ToolKind::Other,
     }
 }
@@ -49,14 +47,6 @@ pub(crate) fn to_session_mode(mode: &acp::SessionMode) -> SessionMode {
     .with_welcome_message(welcome)
 }
 
-/// Convert an ACP `ModelInfo` into cyril's domain type.
-pub(crate) fn to_model_info(info: &acp::ModelInfo) -> ModelInfo {
-    ModelInfo::new(
-        ModelId::new(info.model_id.to_string()),
-        info.name.clone(),
-        info.description.clone(),
-    )
-}
 /// Convert standard ACP prompt-response usage without leaking ACP types.
 pub(crate) fn to_token_usage(usage: &acp::Usage) -> TokenUsage {
     TokenUsage::new(
@@ -111,22 +101,51 @@ pub(crate) fn to_config_options(options: &[acp::SessionConfigOption]) -> Vec<Con
         .collect()
 }
 
-/// Build a `SessionCreated` notification from the mode/model state returned
-/// by `session/new` or `session/load`. Consolidates the ACP→cyril conversion
-/// in one place alongside the per-item converters it calls.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireSessionModelState {
+    current_model_id: String,
+    available_models: Vec<WireModelInfo>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireModelInfo {
+    model_id: String,
+    name: String,
+    description: Option<String>,
+}
+
+/// Build a `SessionCreated` notification from standard mode state plus Kiro's
+/// stable-wire-v1 model catalog, which SDK2's Rust v1 response omits.
 pub(crate) fn session_created_from_response(
     session_id: String,
     modes: Option<&acp::SessionModeState>,
-    models: Option<&acp::SessionModelState>,
+    models: Option<&serde_json::Value>,
 ) -> Notification {
     let current_mode = modes.map(|m| ModeId::new(m.current_mode_id.to_string()));
     let available_modes: Vec<SessionMode> = modes
         .map(|m| m.available_modes.iter().map(to_session_mode).collect())
         .unwrap_or_default();
-    let current_model = models.map(|m| m.current_model_id.to_string());
-    let available_models: Vec<ModelInfo> = models
-        .map(|m| m.available_models.iter().map(to_model_info).collect())
-        .unwrap_or_default();
+    let (current_model, available_models) = match models {
+        None | Some(serde_json::Value::Null) => (None, Vec::new()),
+        Some(value) => match serde_json::from_value::<WireSessionModelState>(value.clone()) {
+            Ok(state) => (
+                Some(state.current_model_id),
+                state
+                    .available_models
+                    .into_iter()
+                    .map(|model| {
+                        ModelInfo::new(ModelId::new(model.model_id), model.name, model.description)
+                    })
+                    .collect(),
+            ),
+            Err(error) => {
+                tracing::warn!(%error, "invalid session model catalog; ignoring catalog");
+                (None, Vec::new())
+            }
+        },
+    };
     Notification::SessionCreated {
         session_id: SessionId::new(session_id),
         current_mode,
@@ -136,13 +155,13 @@ pub(crate) fn session_created_from_response(
     }
 }
 
-pub(crate) fn to_stop_reason(reason: agent_client_protocol::StopReason) -> StopReason {
+pub(crate) fn to_stop_reason(reason: acp::StopReason) -> StopReason {
     match reason {
-        agent_client_protocol::StopReason::EndTurn => StopReason::EndTurn,
-        agent_client_protocol::StopReason::MaxTokens => StopReason::MaxTokens,
-        agent_client_protocol::StopReason::MaxTurnRequests => StopReason::MaxTurnRequests,
-        agent_client_protocol::StopReason::Refusal => StopReason::Refusal,
-        agent_client_protocol::StopReason::Cancelled => StopReason::Cancelled,
+        acp::StopReason::EndTurn => StopReason::EndTurn,
+        acp::StopReason::MaxTokens => StopReason::MaxTokens,
+        acp::StopReason::MaxTurnRequests => StopReason::MaxTurnRequests,
+        acp::StopReason::Refusal => StopReason::Refusal,
+        acp::StopReason::Cancelled => StopReason::Cancelled,
         _ => {
             tracing::warn!(?reason, "unknown StopReason variant, defaulting to EndTurn");
             StopReason::EndTurn
@@ -150,16 +169,16 @@ pub(crate) fn to_stop_reason(reason: agent_client_protocol::StopReason) -> StopR
     }
 }
 
-pub(crate) fn to_tool_call_status(status: agent_client_protocol::ToolCallStatus) -> ToolCallStatus {
+pub(crate) fn to_tool_call_status(status: acp::ToolCallStatus) -> ToolCallStatus {
     match status {
-        agent_client_protocol::ToolCallStatus::InProgress => ToolCallStatus::InProgress,
-        agent_client_protocol::ToolCallStatus::Pending => ToolCallStatus::Pending,
-        agent_client_protocol::ToolCallStatus::Completed => ToolCallStatus::Completed,
+        acp::ToolCallStatus::InProgress => ToolCallStatus::InProgress,
+        acp::ToolCallStatus::Pending => ToolCallStatus::Pending,
+        acp::ToolCallStatus::Completed => ToolCallStatus::Completed,
         _ => ToolCallStatus::Failed,
     }
 }
 
-pub(crate) fn to_tool_call(acp_call: &agent_client_protocol::ToolCall) -> ToolCall {
+pub(crate) fn to_tool_call(acp_call: &acp::ToolCall) -> ToolCall {
     let id_str = acp_call.tool_call_id.to_string();
 
     let content = convert_tool_call_content(&acp_call.content);
@@ -210,7 +229,7 @@ fn convert_tool_call_locations(acp_locations: &[acp::ToolCallLocation]) -> Vec<T
         .collect()
 }
 
-pub(crate) fn to_tool_call_update(update: &agent_client_protocol::ToolCallUpdate) -> ToolCall {
+pub(crate) fn to_tool_call_update(update: &acp::ToolCallUpdate) -> ToolCall {
     let id_str = update.tool_call_id.to_string();
     let title = update.fields.title.clone().unwrap_or_default();
     let kind = update
@@ -508,80 +527,53 @@ mod tests {
 
     #[test]
     fn to_tool_kind_read() {
-        assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::Read),
-            ToolKind::Read
-        );
+        assert_eq!(to_tool_kind(acp::ToolKind::Read), ToolKind::Read);
     }
 
     #[test]
     fn to_tool_kind_edit_maps_to_write() {
-        assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::Edit),
-            ToolKind::Write
-        );
+        assert_eq!(to_tool_kind(acp::ToolKind::Edit), ToolKind::Write);
     }
 
     #[test]
     fn to_tool_kind_delete_maps_to_write() {
-        assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::Delete),
-            ToolKind::Write
-        );
+        assert_eq!(to_tool_kind(acp::ToolKind::Delete), ToolKind::Write);
     }
 
     #[test]
     fn to_tool_kind_move_maps_to_write() {
-        assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::Move),
-            ToolKind::Write
-        );
+        assert_eq!(to_tool_kind(acp::ToolKind::Move), ToolKind::Write);
     }
 
     #[test]
     fn to_tool_kind_execute() {
-        assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::Execute),
-            ToolKind::Execute
-        );
+        assert_eq!(to_tool_kind(acp::ToolKind::Execute), ToolKind::Execute);
     }
 
     #[test]
     fn to_tool_kind_other() {
-        assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::Other),
-            ToolKind::Other
-        );
+        assert_eq!(to_tool_kind(acp::ToolKind::Other), ToolKind::Other);
     }
 
     #[test]
     fn to_tool_kind_search() {
-        assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::Search),
-            ToolKind::Search
-        );
+        assert_eq!(to_tool_kind(acp::ToolKind::Search), ToolKind::Search);
     }
 
     #[test]
     fn to_tool_kind_think() {
-        assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::Think),
-            ToolKind::Think
-        );
+        assert_eq!(to_tool_kind(acp::ToolKind::Think), ToolKind::Think);
     }
 
     #[test]
     fn to_tool_kind_fetch() {
-        assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::Fetch),
-            ToolKind::Fetch
-        );
+        assert_eq!(to_tool_kind(acp::ToolKind::Fetch), ToolKind::Fetch);
     }
 
     #[test]
     fn to_tool_call_status_in_progress() {
         assert_eq!(
-            to_tool_call_status(agent_client_protocol::ToolCallStatus::InProgress),
+            to_tool_call_status(acp::ToolCallStatus::InProgress),
             ToolCallStatus::InProgress
         );
     }
@@ -589,7 +581,7 @@ mod tests {
     #[test]
     fn to_tool_call_status_pending() {
         assert_eq!(
-            to_tool_call_status(agent_client_protocol::ToolCallStatus::Pending),
+            to_tool_call_status(acp::ToolCallStatus::Pending),
             ToolCallStatus::Pending
         );
     }
@@ -597,7 +589,7 @@ mod tests {
     #[test]
     fn to_tool_call_status_completed() {
         assert_eq!(
-            to_tool_call_status(agent_client_protocol::ToolCallStatus::Completed),
+            to_tool_call_status(acp::ToolCallStatus::Completed),
             ToolCallStatus::Completed
         );
     }
@@ -605,7 +597,7 @@ mod tests {
     #[test]
     fn to_tool_call_status_failed() {
         assert_eq!(
-            to_tool_call_status(agent_client_protocol::ToolCallStatus::Failed),
+            to_tool_call_status(acp::ToolCallStatus::Failed),
             ToolCallStatus::Failed
         );
     }
@@ -1374,9 +1366,9 @@ mod tests {
 
     #[test]
     fn to_tool_call_carries_frame_raw_input() {
-        let acp_call = agent_client_protocol::ToolCall::new("tc_1", "Read file")
-            .kind(agent_client_protocol::ToolKind::Read)
-            .status(agent_client_protocol::ToolCallStatus::InProgress)
+        let acp_call = acp::ToolCall::new("tc_1", "Read file")
+            .kind(acp::ToolKind::Read)
+            .status(acp::ToolCallStatus::InProgress)
             .raw_input(serde_json::json!({"path": "original.rs"}));
 
         let result = to_tool_call(&acp_call);
@@ -1389,11 +1381,11 @@ mod tests {
 
     #[test]
     fn to_tool_call_update_carries_frame_raw_input() {
-        let update = agent_client_protocol::ToolCallUpdate::new(
+        let update = acp::ToolCallUpdate::new(
             "tc_2",
-            agent_client_protocol::ToolCallUpdateFields::new()
-                .kind(agent_client_protocol::ToolKind::Execute)
-                .status(agent_client_protocol::ToolCallStatus::Completed)
+            acp::ToolCallUpdateFields::new()
+                .kind(acp::ToolKind::Execute)
+                .status(acp::ToolCallStatus::Completed)
                 .raw_input(serde_json::json!({"cmd": "ls"})),
         );
         let result = to_tool_call_update(&update);
@@ -1500,11 +1492,7 @@ mod tests {
 
     /// Helper to build a `RequestPermissionRequest` with given option kinds.
     fn make_permission_request(
-        options: Vec<(
-            &'static str,
-            &'static str,
-            agent_client_protocol::PermissionOptionKind,
-        )>,
+        options: Vec<(&'static str, &'static str, acp::PermissionOptionKind)>,
     ) -> acp::RequestPermissionRequest {
         let tool_call_update = acp::ToolCallUpdate::new(
             "tc_perm",
@@ -1523,7 +1511,7 @@ mod tests {
     #[test]
     fn to_tool_kind_switch_mode() {
         assert_eq!(
-            to_tool_kind(agent_client_protocol::ToolKind::SwitchMode),
+            to_tool_kind(acp::ToolKind::SwitchMode),
             ToolKind::SwitchMode
         );
     }
@@ -2443,26 +2431,6 @@ mod tests {
         assert_eq!(mode.description(), Some("General chat"));
     }
 
-    #[test]
-    fn to_model_info_round_trip() {
-        let acp_info = acp::ModelInfo::new(
-            acp::ModelId::new("claude-sonnet-4".to_string()),
-            "Claude Sonnet 4",
-        )
-        .description(Some("Fast model".to_string()));
-        let info = to_model_info(&acp_info);
-        assert_eq!(info.id().as_str(), "claude-sonnet-4");
-        assert_eq!(info.name(), "Claude Sonnet 4");
-        assert_eq!(info.description(), Some("Fast model"));
-    }
-
-    #[test]
-    fn to_model_info_no_description() {
-        let acp_info = acp::ModelInfo::new(acp::ModelId::new("claude-haiku".to_string()), "Haiku");
-        let info = to_model_info(&acp_info);
-        assert_eq!(info.description(), None);
-    }
-
     // --- session_created_from_response helper tests ---
 
     fn acp_mode_with_welcome(id: &str, name: &str, welcome: Option<&str>) -> acp::SessionMode {
@@ -2516,31 +2484,35 @@ mod tests {
     }
 
     #[test]
-    fn session_created_from_response_populates_models() {
-        let model_state = acp::SessionModelState::new(
-            acp::ModelId::new("claude-sonnet-4".to_string()),
-            vec![
-                acp::ModelInfo::new(acp::ModelId::new("claude-sonnet-4".to_string()), "Sonnet"),
-                acp::ModelInfo::new(acp::ModelId::new("claude-haiku".to_string()), "Haiku"),
-            ],
-        );
-
-        let notif = session_created_from_response("s1".into(), None, Some(&model_state));
-        match notif {
-            Notification::SessionCreated {
-                current_model,
-                available_modes,
-                available_models,
-                ..
-            } => {
-                assert_eq!(current_model.as_deref(), Some("claude-sonnet-4"));
-                assert!(available_modes.is_empty());
-                assert_eq!(available_models.len(), 2);
-                assert_eq!(available_models[0].id().as_str(), "claude-sonnet-4");
-                assert_eq!(available_models[1].name(), "Haiku");
-            }
-            other => panic!("expected SessionCreated, got {other:?}"),
-        }
+    fn session_created_from_response_preserves_kiro_model_catalog() {
+        let models = serde_json::json!({
+            "currentModelId": "auto",
+            "availableModels": [
+                {
+                    "modelId": "auto",
+                    "name": "Auto",
+                    "description": "Select by task"
+                },
+                {
+                    "modelId": "claude-sonnet-4",
+                    "name": "Sonnet",
+                    "description": null
+                }
+            ]
+        });
+        let notification = session_created_from_response("s1".into(), None, Some(&models));
+        let Notification::SessionCreated {
+            current_model,
+            available_models,
+            ..
+        } = notification
+        else {
+            panic!("expected SessionCreated");
+        };
+        assert_eq!(current_model.as_deref(), Some("auto"));
+        assert_eq!(available_models.len(), 2);
+        assert_eq!(available_models[0].id().as_str(), "auto");
+        assert_eq!(available_models[1].name(), "Sonnet");
     }
 
     #[test]

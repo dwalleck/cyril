@@ -9,7 +9,7 @@
 //! - [`terminal_io`] — the `terminal/*` host-callback responders (KAS-5b, cyril-ufie).
 //! - [`settings`] — the `_meta.kiro.settings` (AgentSettings) handshake (cyril-nhzw).
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 
 pub(crate) mod auth;
 /// Typed host callbacks + adapter-side dispatch for the mediation seam

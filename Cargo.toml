@@ -46,10 +46,11 @@ process-wrap = { version = "9.1", default-features = false, features = ["creatio
 toml = "1"
 clap = { version = "4", features = ["derive"] }
 tracing-subscriber = { version = "0.3", features = ["json"] }
-agent-client-protocol = { version = "0.10", features = ["unstable_session_model", "unstable_session_usage"] }
+agent-client-protocol = { version = "=2.0.0", default-features = false, features = ["unstable_end_turn_token_usage"] }
+agent-client-protocol-conductor = { version = "=2.0.0", default-features = false }
 async-trait = "0.1"
 tokio-util = { version = "0.7", default-features = false, features = ["compat"] }
-futures-util = { version = "0.3", default-features = false }
+futures-util = { version = "0.3", default-features = false, features = ["io", "sink"] }
 unicode-width = "0.2"
 rstest = "0.25"
 insta = "1.42"

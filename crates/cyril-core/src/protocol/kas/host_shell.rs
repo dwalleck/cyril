@@ -135,7 +135,7 @@ impl HostShell {
     /// Fixture for tests that actually SPAWN the shell: `/bin/sh` does not
     /// exist on Windows, so those tests need a per-platform executable while
     /// routing/serialization tests keep the stable `test_posix` fixture.
-    #[cfg(test)]
+    #[cfg(all(test, windows))]
     pub(crate) fn test_runnable_on_host() -> Self {
         if cfg!(windows) {
             let windir = std::env::var_os("WINDIR")

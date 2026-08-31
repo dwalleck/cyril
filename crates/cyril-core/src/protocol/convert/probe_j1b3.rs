@@ -1,6 +1,6 @@
 #![allow(clippy::expect_used)]
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 use serde_json::Value;
 
 use crate::protocol::tool_call_ledger::ToolCallLedger;

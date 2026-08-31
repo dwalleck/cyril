@@ -1,0 +1,392 @@
+{
+  "contracts": {
+    "app_memory_shutdown_contract": {
+      "claims": [
+        "C8",
+        "C9"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "current_runtime_contract"
+      ],
+      "executed_tests": 6,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "current_runtime_contract::"
+      ]
+    },
+    "bounded_handoff_contract": {
+      "claims": [
+        "C1"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "domain_work_capacity_is_exact_and_lossless_until_full"
+      ],
+      "executed_tests": 1,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "domain_work_capacity_is_exact_and_lossless_until_full"
+      ]
+    },
+    "callback_ownership_contract": {
+      "claims": [
+        "C7"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "--all-features",
+        "adapter_matrix_advertises_if_and_only_if_the_mediator_answers"
+      ],
+      "executed_tests": 1,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "adapter_matrix_advertises_if_and_only_if_the_mediator_answers"
+      ]
+    },
+    "disconnect_diagnostics_contract": {
+      "claims": [
+        "C6"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "initialization_failure_preserves_last_five_agent_stderr_lines"
+      ],
+      "executed_tests": 1,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "initialization_failure_preserves_last_five_agent_stderr_lines"
+      ]
+    },
+    "host_handoff_contract": {
+      "claims": [
+        "C1",
+        "C7"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "host_work_capacity_is_exact_and_fifo"
+      ],
+      "executed_tests": 1,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "host_work_capacity_is_exact_and_fifo"
+      ]
+    },
+    "kas_runtime_contract": {
+      "claims": [
+        "C7",
+        "C8",
+        "C9",
+        "C13"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "--all-features",
+        "kas_runtime_preserves_callbacks_commands_and_wire_terminal_order"
+      ],
+      "executed_tests": 1,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "kas_runtime_preserves_callbacks_commands_and_wire_terminal_order"
+      ]
+    },
+    "process_adapter_contract": {
+      "claims": [
+        "C4",
+        "C6",
+        "C13"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "process_adapter_preserves_raw_ingress_and_clean_eof"
+      ],
+      "executed_tests": 1,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "process_adapter_preserves_raw_ingress_and_clean_eof"
+      ]
+    },
+    "process_lifecycle_contract": {
+      "claims": [
+        "C6"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "protocol::transport::tests::current_runtime_contract"
+      ],
+      "executed_tests": 2,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "protocol::transport::tests::current_runtime_contract::"
+      ]
+    },
+    "raw_ingress_contract": {
+      "claims": [
+        "C4"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "c4_"
+      ],
+      "executed_tests": 2,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "c4_recording_reader_preserves_segmented_batch_malformed_and_numeric_bytes",
+        "c4_process_adapter_captures_invalid_frames_before_sdk_rejection"
+      ]
+    },
+    "sdk2_bridge_contract": {
+      "claims": [
+        "C1",
+        "C5",
+        "C6",
+        "C7",
+        "C8",
+        "C11",
+        "C13"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "protocol::bridge::tests::current_runtime_contract"
+      ],
+      "executed_tests": 16,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "c5_every_bridge_command_has_an_explicit_current_runtime_outcome",
+        "c5_new_session_rpc_failure_is_fatal",
+        "c5_command_failures_preserve_legacy_operation_labels",
+        "c1_c5_c6_sdk_handler_backpressure_preserves_every_frame",
+        "c6_unknown_update_handler_precedes_typed_handler_without_poisoning_connection",
+        "c7_malformed_standard_request_is_rejected_before_extension_fallback",
+        "c7_unknown_standard_request_returns_method_not_found",
+        "c8_host_request_drain_is_live_during_initialize",
+        "c13_pending_permission_response_does_not_block_shutdown",
+        "c11_sdk_runtime_negotiates_stable_wire_v1",
+        "c13_extension_params_preserve_array_and_null_shapes"
+      ]
+    },
+    "serial_mediator_contract": {
+      "claims": [
+        "C7",
+        "C8",
+        "C9"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "protocol::domain_mediator::tests::serial"
+      ],
+      "executed_tests": 4,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "initialization_failure_drains_queued_callback_error",
+        "prompt_terminal_is_processed_after_queued_source_frames"
+      ]
+    },
+    "session_model_contract": {
+      "claims": [
+        "C13"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "session_created_from_response_preserves_kiro_model_catalog"
+      ],
+      "executed_tests": 1,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "session_created_from_response_preserves_kiro_model_catalog"
+      ]
+    },
+    "source_contract": {
+      "claims": [
+        "C9"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "protocol::source_observer::tests::current_runtime_contract"
+      ],
+      "executed_tests": 2,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "protocol::source_observer::tests::current_runtime_contract::"
+      ]
+    },
+    "stage_chain_contract": {
+      "claims": [
+        "C2",
+        "C3"
+      ],
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "protocol::sdk_runtime::tests::topology"
+      ],
+      "executed_tests": 3,
+      "missing_tests": [],
+      "passed": true,
+      "required_tests": [
+        "zero_stage_runtime_still_has_a_conductor_stage_chain",
+        "ordered_stage_chain_preserves_runtime_frame_order"
+      ]
+    }
+  },
+  "phase": "runtime",
+  "runtime_source_sha256": {
+    "crates/cyril-core/src/commands/builtin.rs": "dc0babc46ad9b2a36e31c5c28f3d0040fdb80ce7faafb3936c2726482efd5ed4",
+    "crates/cyril-core/src/commands/mod.rs": "7fe3f6b93c22b4a9579c9a2415b05db64877730a9b734e4c5ba7df1506d17185",
+    "crates/cyril-core/src/commands/subagent.rs": "8ee7b51826f5a15276993c4a198268fc9fdd2b029c9181263a5c8d0c11daa14e",
+    "crates/cyril-core/src/commands/workflow.rs": "180ed0ae573f9f8af9940c4eb88510e2d58bd8ccd61bfde235d8289b567eddf2",
+    "crates/cyril-core/src/error.rs": "1f5dbca48ee29c43c8123e1ed54e2063cb3da6fcafdaa0c18e814ecc49db7f59",
+    "crates/cyril-core/src/kiro_agent_config.rs": "e4fe9ccf63dddcc064b009ee9f57f1161fbe1918b24aa64712ba41e681461bc9",
+    "crates/cyril-core/src/lib.rs": "3ac7c0abca734b08d8eeecfc06e3a532d16b967590c26057b5a214db6ec2202d",
+    "crates/cyril-core/src/platform/mod.rs": "9e0fcdae9e8d930d5472a5e203cb6c4e11f7e720c1dd16f909829c759215080c",
+    "crates/cyril-core/src/platform/path.rs": "1c0fe90ffc0af8511cea838e5732e18d776bd095077e195a7f667a78024fc1ca",
+    "crates/cyril-core/src/protocol/bridge.rs": "19b8c87161130ae1e4dc60a159f688c6191b0205cee0d53685ef43f9775d2ea2",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/commands.rs": "2fe15551c099baeddd624f56561614fb5dc73e455a06e81a17ba39f19eba3d0f",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs": "05084be925510b20f73993b20c3b6c79fb36387801e7eaa3a3acd61a536908ba",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/routing.rs": "8868bbf6cd76f0a43acdfc0362528a75009b7fe347c9cac03dda9168992b242b",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/saturation.rs": "7146a13fb271dd0cc9b1b4b036459e90ae41f13cc03ab9f09cead64fa2577e99",
+    "crates/cyril-core/src/protocol/bridge/tests/harness.rs": "9f04fc56c0991b3eb572888d48d83e41c311a6d20857ebb08a49760feed217e0",
+    "crates/cyril-core/src/protocol/client.rs": "a91150d8b8db11168dd1413963bbb1be5f405f383cd6683ec4c24dab1dfc903e",
+    "crates/cyril-core/src/protocol/convert/kas.rs": "440d0db6b9f8fe271510b69022bca80ef375dd5ec40891b413e2c97e110de883",
+    "crates/cyril-core/src/protocol/convert/kas/workflow.rs": "868104d16ea822c9222ebec0997f1bc08c4c497079655f2c559ee1eac846a087",
+    "crates/cyril-core/src/protocol/convert/kiro.rs": "fd6dec39fb7ed6139d87e2d181ee032ee85bb65eae693f3ac63c2ba05bc5a532",
+    "crates/cyril-core/src/protocol/convert/mod.rs": "0627148b20c03fff214a6b71ade9e28c32a02af207b321acb5780fc84ff6dad3",
+    "crates/cyril-core/src/protocol/convert/probe_j1b3.rs": "080737cfe7237c611d7be662c887efe57ce09a1f099509e741bd7091bc475f88",
+    "crates/cyril-core/src/protocol/convert/probe_qo13.rs": "35c8e348f5a846c0edfa6bba9958e769c263866b23046ab0fede9fdddd86c738",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/extensions.rs": "3e2eb37a1d8d907bc258d62d5001ef4e12b43b40d74e59509ee3063fe4a86021",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs": "62670aebfe99ee886606135e334c92b1bd1d6f6a20041dbb139692ed7e5c8d48",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs": "d01c2eb1b11b72f2b98acb0204f88f5b45fc3d62f17ed3dae8d4adc923420711",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs": "c917302f8cd00f6010adffee963a8e2f98a0fb72ab3e77fd74c6a840502a52c2",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/subagents.rs": "ce9f8752d09fae09fa8d596f5ad35423fd5b40ded2465ee427ac6efc839feb6e",
+    "crates/cyril-core/src/protocol/domain_mediator/host.rs": "64444fe1cb97faabd3584360adf0da54e49ec49cf9d068b0cabe9bd6d9c3b3d1",
+    "crates/cyril-core/src/protocol/domain_mediator/inbound.rs": "dbf6251d79c594e59232893f286c7023deb5f57cc3897659b991b437a2875854",
+    "crates/cyril-core/src/protocol/domain_mediator/mod.rs": "d5420de99b0ac6ae1604d6c3f3e55bbdc02c315a20fd2765e4ee3c182e878e95",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/handlers.rs": "8b1e1bf3bafc4a2c3de0fb19545d78fe38c12fede00c673682012fbeb3c798a7",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs": "9c797d98f45355a4c9bac99f301fe09cb8ccae6f0ea0f0de244bf387b440ae58",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/serial.rs": "9bf340bb126213b873f91c74fd10fc953b18c5f4dee691b418e4309e32dc9552",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/topology.rs": "e0a01a8ce645a28a85381b25b2d15a9816bcb8d8af16fe806aca0de716f48246",
+    "crates/cyril-core/src/protocol/engine.rs": "39904eb78e323e2de0fe5ac85b73ced307a3f5f0bfbd5e3c21785347bc2ffb0b",
+    "crates/cyril-core/src/protocol/fingerprint.rs": "5337c5b3615bc461d345e2370057a3c92c8a03b50f258eadfb5ecd9fcfc83dfe",
+    "crates/cyril-core/src/protocol/host_mediator.rs": "3a1fb15b45b0d93b5ea55636ec8e62218be91ee9c934d2383f33bddb9789b9ea",
+    "crates/cyril-core/src/protocol/identity.rs": "c13b94a396493d5048dc3c2165a4c6ecb01d138dba783bb79999cac49794f12a",
+    "crates/cyril-core/src/protocol/kas/auth.rs": "31bd19cf60333afa5db2929a2738eb0526953c50ee8fae4ff675bd277238412e",
+    "crates/cyril-core/src/protocol/kas/callbacks.rs": "722c82a58ab65d32544d3eed03cef63697089434c9c63e17ed026a0bffa55585",
+    "crates/cyril-core/src/protocol/kas/discovery.rs": "f40a53babca3b856ba2fb2eedda6a0cacb25c08e45e3c7607fb0c3779607a1f0",
+    "crates/cyril-core/src/protocol/kas/hooks.rs": "1614b68e0a28e7c2c2b022d6dbffbc2008361362709bd140e626775f4f8a8e0b",
+    "crates/cyril-core/src/protocol/kas/host_io.rs": "f879aea163acda60984486290599d8f7bf97608949d46dfa5d988f10321f74a2",
+    "crates/cyril-core/src/protocol/kas/host_shell.rs": "e8f0b54420c58616a4a1ac405d5f982ee9d556582770039f8217bc653bde1659",
+    "crates/cyril-core/src/protocol/kas/kiro_fs.rs": "1c59f492443ca1bcb534d807dc7d43a14f77785cf4be677aba76c27bbd69b97a",
+    "crates/cyril-core/src/protocol/kas/mod.rs": "0e5cf5c9a2f40a6ad13dcce128ad680ecdbaa96d7af647d65a266927cba3fea5",
+    "crates/cyril-core/src/protocol/kas/settings.rs": "fc9a034c756a68e966fadab579050b0e737700f6416c93fccf273d3fd627c514",
+    "crates/cyril-core/src/protocol/kas/terminal_io.rs": "20dc83b520c7011bfc19ed09671269bb7ea8ef92c4e409d680a1c44f2a804b3d",
+    "crates/cyril-core/src/protocol/kas/version.rs": "e9614d3ebf1a5652c83f7a9c765b56372b6ae381b977e6539443b3ae99e87e77",
+    "crates/cyril-core/src/protocol/mod.rs": "4080c3099b693cf73fb23c6ba04969e364f94581bd0571c0ee2d486744856ae2",
+    "crates/cyril-core/src/protocol/probe_dn91.rs": "ca54486cfa7e561c7456dc03a66e9a632de41ffe2c2b2329df48cef22af17e17",
+    "crates/cyril-core/src/protocol/probe_g9vt_c13.rs": "ce25944a50b4376efc7a80341e48a4d6b32346af78397d15c88e08ed6b472eea",
+    "crates/cyril-core/src/protocol/sdk_runtime/mod.rs": "5c17048c3c99ca2ace54625fd9a341f1db5fede8118596b03912c620bd40798b",
+    "crates/cyril-core/src/protocol/sdk_runtime/process.rs": "ab158720e94729bdee19eec04308f291ad093eca64ab3eab5c4d7941933e1415",
+    "crates/cyril-core/src/protocol/sdk_runtime/tests/handlers.rs": "3a8ae0ad0eddb866fbca3fdf2c419f58f1452a80e9f7cc5eb489af62f694af70",
+    "crates/cyril-core/src/protocol/sdk_runtime/tests/mod.rs": "ceff635842ae8ae31b77a3ca0f26b2cff36576fb3c97096d955c697e92ff8442",
+    "crates/cyril-core/src/protocol/sdk_runtime/tests/process.rs": "a9302cefc1f4b1cd82b53276fbd5316f60373598c0199accec54976733eeb7df",
+    "crates/cyril-core/src/protocol/sdk_runtime/tests/topology.rs": "7a8c9fcfe6500c2639365183f8ff31f9c547a68cfad84b8dececc167656d34a2",
+    "crates/cyril-core/src/protocol/source_observer.rs": "e0e99d2faf170f7e7f60741d406490cb6c94f00930cacb04c87e4aabb1e2ef31",
+    "crates/cyril-core/src/protocol/source_observer/tests/current_runtime_contract.rs": "1e18fa111dafd447a262c12bf2ab60a1c6a32b3d740001ced60d3fe36d3c3728",
+    "crates/cyril-core/src/protocol/tool_call_ledger.rs": "977ea75e575dcee78d35ab9c79d2831203a9e8d125743ac98bc492468e6ff6dc",
+    "crates/cyril-core/src/protocol/transport.rs": "e08965af154e2d0f444e3f3c5363a1ee18db62b40d83fe01ba259c9aca2abfb1",
+    "crates/cyril-core/src/protocol/transport/tests/current_runtime_contract.rs": "0ada6b058c35525f1cc20a4957da95f09ab284eeca91b9db35d67ac6827e7c52",
+    "crates/cyril-core/src/protocol/turn_liveness.rs": "5daf83c6cb0a0d899840d370e391d9adb0477f8220a2710ae8667dd1f159e7a1",
+    "crates/cyril-core/src/protocol/turn_mediator.rs": "113deaa8f6aa55e675927743e9781c9fa7cd50865b01c5216b2259873205a38c",
+    "crates/cyril-core/src/session.rs": "d1455a2068bfb546dfda53e30cbe8b1cd20b5c1029a7e7f9d538e0bfaa55b0e0",
+    "crates/cyril-core/src/subagent.rs": "51647413b0d2b5f79a94d38bcd8a72944e0e52b563651ed07f3285d1d2d8d241",
+    "crates/cyril-core/src/test_support.rs": "81856df68b06a46bc28847864a30898f86610f2b915578fe1bde92047023fdfb",
+    "crates/cyril-core/src/types/agent_command.rs": "a912465e68967e3527b6509a397df51fd29bd9f76aff8dff2d43338940ffac4f",
+    "crates/cyril-core/src/types/agent_engine.rs": "38b6621941f545af0e0c2660a747b9c65c78d21e93c0aa23e29e905a890045e6",
+    "crates/cyril-core/src/types/code_panel.rs": "550d91a290e5deb63de57efa09d7837d8443a9e85bb04cdac283b1268a6f5db8",
+    "crates/cyril-core/src/types/command.rs": "c6e173e4d33dedc5cde4c4cb0fcd8c497cc621be9792a0da0781d7a3b2430450",
+    "crates/cyril-core/src/types/config.rs": "c5ec9e4cec4f039b012a21ea1c1ac5ab2306da51619d8d307625edd175fc4a65",
+    "crates/cyril-core/src/types/event.rs": "b96d787cefacf8f7d34e1af1aa55e23b1fdd65932f4300e63721fce034a9e64d",
+    "crates/cyril-core/src/types/hook.rs": "f7d141c9e4a6e3a3dd5fa3b78f8b5d6c724af57559045f548019de29c0393050",
+    "crates/cyril-core/src/types/kas_hooks.rs": "7217ce9a68c29ff32f9f63637cd5dcb2ec4d1910e3c1a9ea23867a257f4b1ddb",
+    "crates/cyril-core/src/types/kas_spawn.rs": "e33324396c1c5b2a50d989144a1b5bd8f12f1cbd51f91386bb2d73f4099f0cbd",
+    "crates/cyril-core/src/types/memory.rs": "e63580f06bc56e1a09c1fdf1a700f41fffd3d5d154ccb8c615e32b45e972fae2",
+    "crates/cyril-core/src/types/message.rs": "abe86fbe8ac6522c7020f06a9b2a8af4b82ca911f7a7382080eede7f6ad642d5",
+    "crates/cyril-core/src/types/mod.rs": "37190f5d40752e2adc0fd61875aded6fa866b78e97d80139a57c760ec7631565",
+    "crates/cyril-core/src/types/plan.rs": "a510a77adca1fb403f87e7bcb601cb212ca58ccba84f9ca46b5f2ff2ec1acaca",
+    "crates/cyril-core/src/types/present_as.rs": "cbf85e6f3dff868f2cfceff74b84029e3c2b34f63f9c6336df50742d802f96bb",
+    "crates/cyril-core/src/types/prompt.rs": "b4505e07824666eddbf5af5ce313cf8999f62c5520f0905e44277feef82010ff",
+    "crates/cyril-core/src/types/session.rs": "e2dd1415cdcb9c6618ae1bedb712647bc1d60947990f042a20de3c16faa8d972",
+    "crates/cyril-core/src/types/source_turn.rs": "eff536d0c920b26b25cdf5073b66393ce4ad63268bc643145f167ecb74e89ad3",
+    "crates/cyril-core/src/types/steer_receipt.rs": "b34cc12d1530076b6ca5cd02155b6582eb1af4a6298ef372da19a7da054d5809",
+    "crates/cyril-core/src/types/subagent.rs": "2b9fc7cca0bdf0dd962543e99e25c743f835ed42550b26ac56592f37bd8dc56f",
+    "crates/cyril-core/src/types/tool_call.rs": "4b431e966b6c1c7a18f7e55c8cdbe462e12170aeb15bbd41d93a5013c780faf4",
+    "crates/cyril-core/src/types/turn.rs": "eb2d4d5754420299b7a13672c78b658550a01f172e332a717e34fc820afeb36c",
+    "crates/cyril-core/src/types/usage.rs": "7fa1e8b4953b3dbe2034bbca6a43deea317246bc2798d83975fe4f09e9f61de2",
+    "crates/cyril-core/src/types/voice.rs": "02e8e3900b36ee05e589aebc0ffb63e9956477b2a0e65ebba2c6e507305d92b7",
+    "crates/cyril-core/src/types/workflow.rs": "0141364bdb23a34e5db86e32896299a36505f00c0fbfe82bbd8496ee9d8770f6",
+    "crates/cyril-core/src/types/workflow_command.rs": "9f81c156ffaafb1824a69aa0ca8858169f6e7bddebefbd0b95fb6f91dd8def10",
+    "crates/cyril-core/src/usage.rs": "8bd51a0e9b1f1d7fc72bb5540786bb832af5d9b84d2bea710dcae364bcaa267c",
+    "crates/cyril-core/src/usage/kiro_sidecar.rs": "b86b656b04485f2440731cb8d9880ad648b288de6e9e2a18acc517037a2739b0",
+    "crates/cyril-core/src/voice.rs": "c19f494481f66bf7bb7aa410ba9ff8a3f306766d506644dd53e73f15c2279e04",
+    "crates/cyril-core/src/workflow.rs": "3fb2e268851a3d3d5b8e08c1a98ac38758d8c7894d4c973e9738bf1e26cdeac8",
+    "crates/cyril/src/app.rs": "4437cc309b759efe40ca90a7b8cafa9439122c68f7174324d4677b863bfe831c",
+    "crates/cyril/tests/architecture_tests.rs": "9dd9fe452548bb2b78d04408618ad4add11ced81131a0fb9605d8ec6bac0e635",
+    "crates/cyril/tests/event_routing.rs": "4b41d9fa98b367b5c45adeba0a9fc3e11f81c7a3cc8e22d7ca77ac53a1a17bb8",
+    "crates/cyril/tests/memory_runtime.rs": "d32fcdf0548a63a0797496b345c8cc65aebb6b9bde5292bfefb763c26a120c76",
+    "crates/cyril/tests/nd4h_source_fences.rs": "aa286a8465ad4d9506acc0213e3b8df672a2de41cb8cd3a7263ab416a669113a"
+  }
+}
