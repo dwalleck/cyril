@@ -3,10 +3,14 @@ use agent_client_protocol_conductor::{ConductorImpl, ProxiesAndAgent};
 use tokio::sync::oneshot;
 
 use crate::protocol::domain_mediator::DomainChannels;
-use crate::protocol::transport::AgentProcess;
+use crate::protocol::transport::{AgentProcess, AgentProcessLifecycle};
 
 mod process;
 const REASON_TAIL_LINES: usize = 5;
+/// Clean-shutdown grace between stdin EOF and the process-group SIGKILL
+/// (cyril-hb0k): KAS flushes exit-time persistence (memories.jsonl) on EOF,
+/// and killing instantly lost it. A dead agent's wait resolves immediately.
+const SHUTDOWN_GRACE: std::time::Duration = std::time::Duration::from_secs(2);
 
 /// Ordered SDK conductor stages. Empty is intentional: even a zero-stage
 /// connection is still owned by `ConductorImpl`, so there is one runtime path.
@@ -31,6 +35,10 @@ pub(crate) struct SdkRuntimeHandle {
     task: Option<tokio::task::JoinHandle<()>>,
     done_rx: Option<oneshot::Receiver<String>>,
     stderr_tail: Option<crate::protocol::transport::StderrTail>,
+    /// The child + group-kill guard, held HERE (not in the cancellable
+    /// connection future) so shutdown grants the cyril-hb0k grace before the
+    /// drop-fired SIGKILL.
+    lifecycle: Option<AgentProcessLifecycle>,
 }
 
 impl SdkRuntimeHandle {
@@ -93,6 +101,13 @@ impl SdkRuntimeHandle {
         {
             tracing::debug!(%error, "SDK runtime task join failed");
         }
+        // The connection is down and the agent's stdin dropped: give it the
+        // bounded window to flush and exit before `lifecycle` drops and the
+        // process group is killed (still required even after a clean exit —
+        // kiro-cli leaves its node grandchild running).
+        if let Some(mut lifecycle) = self.lifecycle.take() {
+            lifecycle.grace_wait(SHUTDOWN_GRACE).await;
+        }
     }
 }
 
@@ -106,9 +121,14 @@ impl SdkRuntime {
         stages: StageChain,
     ) -> crate::Result<SdkRuntimeHandle> {
         let stderr_tail = process.stderr_tail();
+        let (pipes, lifecycle) = process.into_parts();
         let process_adapter =
-            process::ProcessAdapter::new(process, domain_channels.transport_closed_line());
-        Self::start_connector(process_adapter, domain_channels, stages, Some(stderr_tail)).await
+            process::ProcessAdapter::new(pipes, domain_channels.transport_closed_line());
+        let mut handle =
+            Self::start_connector(process_adapter, domain_channels, stages, Some(stderr_tail))
+                .await?;
+        handle.lifecycle = Some(lifecycle);
+        Ok(handle)
     }
 
     #[cfg(test)]
@@ -128,12 +148,17 @@ impl SdkRuntime {
         capture: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
     ) -> crate::Result<SdkRuntimeHandle> {
         let stderr_tail = process.stderr_tail();
+        let (pipes, lifecycle) = process.into_parts();
         let process_adapter = process::ProcessAdapter::new_recording(
-            process,
+            pipes,
             domain_channels.transport_closed_line(),
             capture,
         );
-        Self::start_connector(process_adapter, domain_channels, stages, Some(stderr_tail)).await
+        let mut handle =
+            Self::start_connector(process_adapter, domain_channels, stages, Some(stderr_tail))
+                .await?;
+        handle.lifecycle = Some(lifecycle);
+        Ok(handle)
     }
 
     async fn start_connector(
@@ -185,6 +210,7 @@ impl SdkRuntime {
             task: Some(task),
             done_rx: Some(done_rx),
             stderr_tail,
+            lifecycle: None,
         })
     }
 }

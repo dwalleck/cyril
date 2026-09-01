@@ -275,9 +275,12 @@ impl AgentProcess {
         self.stderr_tail.clone()
     }
 
-    /// Transfer all process resources to the SDK adapter without changing
-    /// ownership or drop behavior.
-    pub(crate) fn into_parts(self) -> AgentProcessParts {
+    /// Split the process into its transport pipes and its lifecycle owner.
+    /// The pipes go to the SDK adapter (whose future the conductor may cancel
+    /// at teardown); the lifecycle stays with the runtime HANDLE so the
+    /// shutdown path — not a cancellable future — controls when the child and
+    /// its process group die (cyril-hb0k).
+    pub(crate) fn into_parts(self) -> (AgentProcessPipes, AgentProcessLifecycle) {
         let AgentProcess {
             stdin,
             stdout,
@@ -287,25 +290,44 @@ impl AgentProcess {
             _group_guard,
         } = self;
         drop(stderr_tail);
-        AgentProcessParts {
-            stdin,
-            stdout,
-            _child,
-            #[cfg(unix)]
-            _group_guard,
-        }
+        (
+            AgentProcessPipes { stdin, stdout },
+            AgentProcessLifecycle {
+                child: _child,
+                #[cfg(unix)]
+                _group_guard,
+            },
+        )
     }
 }
 
-/// Owned process resources handed to the SDK transport adapter. Keeping the
-/// child and process-group guard together with the pipes preserves the
-/// `AgentProcess` lifetime and cleanup guarantees while the SDK drives I/O.
-pub(crate) struct AgentProcessParts {
+/// The transport pipes handed to the SDK adapter.
+pub(crate) struct AgentProcessPipes {
     pub(crate) stdin: ChildStdin,
     pub(crate) stdout: ChildStdout,
-    pub(crate) _child: Child,
+}
+
+/// The process lifecycle owner: dropping it fires `kill_on_drop` and the
+/// process-group SIGKILL. Held by the runtime handle so shutdown — not a
+/// cancellable connection future — decides when that happens.
+pub(crate) struct AgentProcessLifecycle {
+    pub(crate) child: Child,
     #[cfg(unix)]
     pub(crate) _group_guard: ProcessGroupGuard,
+}
+
+impl AgentProcessLifecycle {
+    /// Bounded window for the agent to flush and exit after stdin EOF before
+    /// drop SIGKILLs its process group (cyril-hb0k). A dead child resolves
+    /// immediately.
+    pub(crate) async fn grace_wait(&mut self, bound: Duration) {
+        if tokio::time::timeout(bound, self.child.wait())
+            .await
+            .is_err()
+        {
+            tracing::debug!("agent still running after the shutdown grace; killing process group");
+        }
+    }
 }
 
 #[cfg(test)]

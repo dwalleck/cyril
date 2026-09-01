@@ -341,3 +341,46 @@ done | tee "$1"
         assert_eq!(lines[3], PROCESS_BATCH);
     });
 }
+
+/// cyril-hb0k: a CLEAN shutdown closes the agent's stdin and grants a
+/// bounded grace before the process-group SIGKILL, so exit-time persistence
+/// (KAS memories.jsonl flushes) survives. The fixture writes its marker only
+/// after seeing stdin EOF — an instant kill loses it.
+#[cfg(unix)]
+#[test]
+fn clean_shutdown_grants_stdin_eof_grace_before_group_kill() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap_or_else(|error| panic!("grace fixture runtime build: {error}"));
+    let local = tokio::task::LocalSet::new();
+    local.block_on(&runtime, async {
+        let directory =
+            tempfile::tempdir().unwrap_or_else(|error| panic!("grace fixture tempdir: {error}"));
+        let marker = directory.path().join("flushed-at-exit");
+        // Consume stdin to EOF, then persist the marker — the shape of an
+        // agent flushing state on a clean quit.
+        let script = r#"while IFS= read -r line; do :; done; echo done > "$1""#;
+        let command = AgentCommand::new("sh").with_args(vec![
+            "-c".to_owned(),
+            script.to_owned(),
+            "cyril-grace-fixture".to_owned(),
+            marker.to_string_lossy().into_owned(),
+        ]);
+        let process = AgentProcess::spawn(&command, directory.path())
+            .await
+            .unwrap_or_else(|error| panic!("grace fixture spawn: {error}"));
+        let (channels, _work_rx, _host_rx) = DomainChannels::new(IngressTracker::new())
+            .unwrap_or_else(|error| panic!("grace fixture channels: {error}"));
+        let sdk = SdkRuntime::start(process, channels, StageChain::default())
+            .await
+            .unwrap_or_else(|error| panic!("grace fixture runtime: {error}"));
+        tokio::time::timeout(Duration::from_secs(10), sdk.shutdown())
+            .await
+            .unwrap_or_else(|_| panic!("grace fixture shutdown timed out"));
+        assert!(
+            marker.exists(),
+            "clean shutdown must let the agent flush after stdin EOF before the group kill"
+        );
+    });
+}

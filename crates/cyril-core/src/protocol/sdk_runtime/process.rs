@@ -9,7 +9,7 @@ use futures_util::{AsyncBufReadExt as _, AsyncWriteExt as _, Stream};
 use tokio::io::{AsyncRead, ReadBuf};
 use tokio_util::compat::{TokioAsyncReadCompatExt as _, TokioAsyncWriteCompatExt as _};
 
-use crate::protocol::transport::AgentProcess;
+use crate::protocol::transport::AgentProcessPipes;
 
 /// The official SDK transport component for Cyril's retained process owner.
 ///
@@ -18,16 +18,16 @@ use crate::protocol::transport::AgentProcess;
 /// SDK's `Lines` role. No JSON parsing or frame rewriting occurs before the
 /// official SDK transport owns the stream.
 pub(crate) struct ProcessAdapter {
-    process: AgentProcess,
+    pipes: AgentProcessPipes,
     eof_line: String,
     #[cfg(test)]
     capture: Option<Arc<Mutex<Vec<u8>>>>,
 }
 
 impl ProcessAdapter {
-    pub(crate) fn new(process: AgentProcess, eof_line: String) -> Self {
+    pub(crate) fn new(pipes: AgentProcessPipes, eof_line: String) -> Self {
         Self {
-            process,
+            pipes,
             eof_line,
             #[cfg(test)]
             capture: None,
@@ -36,12 +36,12 @@ impl ProcessAdapter {
 
     #[cfg(test)]
     pub(super) fn new_recording(
-        process: AgentProcess,
+        pipes: AgentProcessPipes,
         eof_line: String,
         capture: Arc<Mutex<Vec<u8>>>,
     ) -> Self {
         Self {
-            process,
+            pipes,
             eof_line,
             capture: Some(capture),
         }
@@ -143,21 +143,7 @@ impl ConnectTo<Client> for ProcessAdapter {
         #[cfg(test)]
         let capture = self.capture;
         let eof_line = self.eof_line;
-        let parts = self.process.into_parts();
-        let crate::protocol::transport::AgentProcessParts {
-            stdin,
-            stdout,
-            _child,
-            #[cfg(unix)]
-            _group_guard,
-        } = parts;
-        // Keep these resources alive until the SDK connection has completely
-        // shut down. Dropping either early would alter lifecycle and
-        // grandchild cleanup semantics.
-        let _child = _child;
-        #[cfg(unix)]
-        let _group_guard = _group_guard;
-
+        let AgentProcessPipes { stdin, stdout } = self.pipes;
         #[cfg(test)]
         let stdout = RecordingReader::new(stdout, capture);
         let incoming = EofMarkerStream::new(
