@@ -101,23 +101,9 @@ pub(crate) fn to_config_options(options: &[acp::SessionConfigOption]) -> Vec<Con
         .collect()
 }
 
-#[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct WireSessionModelState {
-    current_model_id: String,
-    available_models: Vec<WireModelInfo>,
-}
-
-#[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct WireModelInfo {
-    model_id: String,
-    name: String,
-    description: Option<String>,
-}
-
 /// Build a `SessionCreated` notification from standard mode state plus Kiro's
-/// stable-wire-v1 model catalog, which SDK2's Rust v1 response omits.
+/// off-schema model catalog. The catalog is a Kiro wire deviation, so its
+/// parsing lives in `kiro` per the conversion-boundary rule.
 pub(crate) fn session_created_from_response(
     session_id: String,
     modes: Option<&acp::SessionModeState>,
@@ -129,22 +115,7 @@ pub(crate) fn session_created_from_response(
         .unwrap_or_default();
     let (current_model, available_models) = match models {
         None | Some(serde_json::Value::Null) => (None, Vec::new()),
-        Some(value) => match serde_json::from_value::<WireSessionModelState>(value.clone()) {
-            Ok(state) => (
-                Some(state.current_model_id),
-                state
-                    .available_models
-                    .into_iter()
-                    .map(|model| {
-                        ModelInfo::new(ModelId::new(model.model_id), model.name, model.description)
-                    })
-                    .collect(),
-            ),
-            Err(error) => {
-                tracing::warn!(%error, "invalid session model catalog; ignoring catalog");
-                (None, Vec::new())
-            }
-        },
+        Some(value) => kiro::parse_model_catalog(value),
     };
     Notification::SessionCreated {
         session_id: SessionId::new(session_id),

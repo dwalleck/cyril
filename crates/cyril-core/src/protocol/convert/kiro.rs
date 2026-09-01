@@ -1111,6 +1111,63 @@ pub(crate) fn to_ext_notification(
     }
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WireModelInfo {
+    model_id: String,
+    name: String,
+    description: Option<String>,
+}
+
+/// Parse Kiro's off-schema `models` catalog from a `session/new` /
+/// `session/load` response: `{currentModelId, availableModels[{modelId,
+/// name, description}]}`. The catalog is backend-served and drifts over time
+/// (19 models on 2.20.1), so it is parsed per entry — one malformed entry is
+/// skipped with a warn instead of discarding the whole catalog — and
+/// `currentModelId` is read independently of `availableModels`, so the
+/// toolbar's served model survives a broken listing (guard-partial-updates).
+pub(crate) fn parse_model_catalog(value: &serde_json::Value) -> (Option<String>, Vec<ModelInfo>) {
+    let current_model = match value.get("currentModelId") {
+        Some(serde_json::Value::String(id)) => Some(id.clone()),
+        Some(other) => {
+            tracing::warn!(%other, "model catalog currentModelId is not a string; ignoring");
+            None
+        }
+        None => {
+            tracing::warn!("model catalog carries no currentModelId");
+            None
+        }
+    };
+    let available_models = match value.get("availableModels") {
+        Some(serde_json::Value::Array(entries)) => entries
+            .iter()
+            .enumerate()
+            .filter_map(|(index, entry)| {
+                match serde_json::from_value::<WireModelInfo>(entry.clone()) {
+                    Ok(model) => Some(ModelInfo::new(
+                        ModelId::new(model.model_id),
+                        model.name,
+                        model.description,
+                    )),
+                    Err(error) => {
+                        tracing::warn!(%error, index, "skipping malformed model catalog entry");
+                        None
+                    }
+                }
+            })
+            .collect(),
+        Some(other) => {
+            tracing::warn!(%other, "model catalog availableModels is not an array; ignoring");
+            Vec::new()
+        }
+        None => {
+            tracing::warn!("model catalog carries no availableModels");
+            Vec::new()
+        }
+    };
+    (current_model, available_models)
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -1764,5 +1821,41 @@ mod tests {
                 ..
             }))
         ));
+    }
+
+    // --- parse_model_catalog tests (PR #115 review, finding 11) ---
+
+    #[test]
+    fn model_catalog_skips_malformed_entries_and_keeps_valid_ones() {
+        let (current, models) = parse_model_catalog(&json!({
+            "currentModelId": "auto",
+            "availableModels": [
+                {"modelId": "auto", "name": "Auto", "description": "pick"},
+                {"modelId": "broken", "name": null},
+                {"modelId": "sonnet", "name": "Sonnet"}
+            ]
+        }));
+        assert_eq!(current.as_deref(), Some("auto"));
+        assert_eq!(
+            models.iter().map(|m| m.id().as_str()).collect::<Vec<_>>(),
+            ["auto", "sonnet"],
+            "one malformed entry must not discard the catalog"
+        );
+    }
+
+    #[test]
+    fn model_catalog_current_model_survives_broken_listing() {
+        let (current, models) = parse_model_catalog(&json!({
+            "currentModelId": "auto",
+            "availableModels": "not-an-array"
+        }));
+        assert_eq!(current.as_deref(), Some("auto"));
+        assert!(models.is_empty());
+
+        let (current, models) = parse_model_catalog(&json!({
+            "currentModelId": "auto"
+        }));
+        assert_eq!(current.as_deref(), Some("auto"));
+        assert!(models.is_empty());
     }
 }
