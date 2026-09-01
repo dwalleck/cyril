@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-#[cfg(not(feature = "kas"))]
 use agent_client_protocol::ConnectionTo;
 use agent_client_protocol::schema::v1 as acp;
 use agent_client_protocol::{
@@ -18,7 +17,6 @@ fn zero_stage_runtime_still_has_a_conductor_stage_chain() {
     assert!(stages.stages.is_empty());
 }
 
-#[cfg(not(feature = "kas"))]
 #[tokio::test]
 async fn unknown_standard_notification_does_not_enter_domain_queue() {
     tokio::task::LocalSet::new()

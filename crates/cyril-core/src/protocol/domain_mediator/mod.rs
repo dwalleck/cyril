@@ -92,7 +92,7 @@ pub(crate) enum HostWork {
     },
     #[cfg(feature = "kas")]
     Callback(crate::protocol::kas::callbacks::HostCallback),
-    #[cfg(all(test, not(feature = "kas")))]
+    #[cfg(test)]
     Probe { index: usize, _padding: [u8; 288] },
 }
 
@@ -169,12 +169,12 @@ impl DomainChannels {
             && message.params.get("token") == Some(&serde_json::json!(self.transport_token))
     }
 
-    #[cfg(all(test, not(feature = "kas")))]
+    #[cfg(test)]
     pub(crate) fn remaining_capacity(&self) -> usize {
         self.work_tx.capacity()
     }
 
-    #[cfg(all(test, not(feature = "kas")))]
+    #[cfg(test)]
     pub(crate) async fn inject(
         &self,
         routed: RoutedNotification,

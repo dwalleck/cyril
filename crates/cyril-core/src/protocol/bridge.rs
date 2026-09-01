@@ -367,15 +367,12 @@ pub(crate) fn client_info(
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(not(feature = "kas"))]
     use crate::protocol::engine::V2Engine;
     #[cfg(not(feature = "kas"))]
-    use crate::types::{SessionOrigin, StopReason, TurnId};
-    #[cfg(not(feature = "kas"))]
+    use crate::types::SessionOrigin;
+    use crate::types::{StopReason, TurnId};
     use std::cell::RefCell;
-    #[cfg(not(feature = "kas"))]
     use std::rc::Rc;
-    #[cfg(not(feature = "kas"))]
     use std::time::Duration;
 
     #[test]
@@ -448,10 +445,7 @@ mod tests {
             routed.notification
         );
     }
-    #[cfg(not(feature = "kas"))]
     mod harness;
-    #[cfg(not(feature = "kas"))]
     use harness::*;
-    #[cfg(not(feature = "kas"))]
     mod current_runtime_contract;
 }

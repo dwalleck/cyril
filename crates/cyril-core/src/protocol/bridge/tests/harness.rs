@@ -51,6 +51,8 @@ impl Script {
         lock(&self.received)
     }
 
+    /// Only the v2-only C5 command oracle reads the exact call ledger.
+    #[cfg(not(feature = "kas"))]
     pub(super) fn ext_calls(&self) -> MutexGuard<'_, Vec<(String, serde_json::Value)>> {
         lock(&self.ext_calls)
     }
@@ -405,6 +407,8 @@ pub(super) async fn with_engine_harness<F, Fut>(
                 cwd: std::env::temp_dir(),
                 present_as: None,
                 stall_threshold: Duration::from_secs(30),
+                #[cfg(feature = "kas")]
+                host_shell: None,
             };
             let (mediator, domain_channels) = DomainMediator::new(config, bridge_channels)
                 .unwrap_or_else(|error| panic!("SDK2 harness domain channels: {error}"));

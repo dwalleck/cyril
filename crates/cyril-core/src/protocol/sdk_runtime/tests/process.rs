@@ -1,5 +1,3 @@
-#![cfg(not(feature = "kas"))]
-
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -209,6 +207,8 @@ done | tee "$1"
             cwd: directory.path().to_path_buf(),
             present_as: None,
             stall_threshold: Duration::from_secs(30),
+            #[cfg(feature = "kas")]
+            host_shell: None,
         };
         let (mediator, channels) = DomainMediator::new(config, bridge)
             .unwrap_or_else(|error| panic!("process fixture domain channels: {error}"));

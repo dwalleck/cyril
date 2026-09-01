@@ -40,7 +40,7 @@ impl SdkRuntimeHandle {
     pub(crate) fn take_done_rx(&mut self) -> Option<oneshot::Receiver<String>> {
         self.done_rx.take()
     }
-    #[cfg(all(test, not(feature = "kas")))]
+    #[cfg(test)]
     pub(crate) fn abort_handle(&self) -> Option<tokio::task::AbortHandle> {
         self.task
             .as_ref()
@@ -111,7 +111,7 @@ impl SdkRuntime {
         Self::start_connector(agent, domain_channels, stages, None).await
     }
 
-    #[cfg(all(test, not(feature = "kas")))]
+    #[cfg(test)]
     pub(super) async fn start_recording_process_for_test(
         process: AgentProcess,
         domain_channels: DomainChannels,

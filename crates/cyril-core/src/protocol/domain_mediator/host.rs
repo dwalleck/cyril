@@ -27,7 +27,7 @@ pub(super) fn run(
                         &ctx,
                     );
                 }
-                #[cfg(all(test, not(feature = "kas")))]
+                #[cfg(test)]
                 HostWork::Probe { .. } => {}
                 #[cfg(feature = "kas")]
                 HostWork::Callback(callback) => {

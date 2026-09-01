@@ -34,7 +34,7 @@ impl ProcessAdapter {
         }
     }
 
-    #[cfg(all(test, not(feature = "kas")))]
+    #[cfg(test)]
     pub(super) fn new_recording(
         process: AgentProcess,
         eof_line: String,

@@ -1,7 +1,6 @@
 use agent_client_protocol::UntypedMessage;
 
 use super::super::{DomainChannels, DomainWork, WORK_CAPACITY};
-#[cfg(not(feature = "kas"))]
 use super::super::{HOST_CAPACITY, HostWork};
 use crate::protocol::source_observer::IngressTracker;
 
@@ -32,7 +31,6 @@ fn domain_work_capacity_is_exact_and_lossless_until_full() {
     ));
 }
 
-#[cfg(not(feature = "kas"))]
 fn host_work(index: usize) -> HostWork {
     HostWork::Probe {
         index,
@@ -40,7 +38,6 @@ fn host_work(index: usize) -> HostWork {
     }
 }
 
-#[cfg(not(feature = "kas"))]
 #[test]
 fn host_work_capacity_is_exact_and_fifo() {
     let (channels, _work_rx, mut host_rx) = DomainChannels::new(IngressTracker::new())
