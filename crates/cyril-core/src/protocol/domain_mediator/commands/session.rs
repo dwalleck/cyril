@@ -161,9 +161,14 @@ impl DomainMediator {
                             created,
                         }))
                     }
-                    Err(error) => CommandOutcome::FatalDisconnect {
+                    // Unlike session/new (deliberately fatal, fenced by
+                    // c5_new_session_rpc_failure_is_fatal), a failed load is
+                    // recoverable: the id may be a typo or expired, and any
+                    // live session must survive it. Main-line behavior: the
+                    // App is told, the bridge keeps running.
+                    Err(error) => CommandOutcome::notify(Notification::BridgeDisconnected {
                         reason: format!("Failed to load session: {error}"),
-                    },
+                    }),
                 };
                 channels.enqueue_outcome(outcome).await;
             }),
@@ -171,7 +176,9 @@ impl DomainMediator {
                 let reason = format!("Failed to load session: {error}");
                 self.spawn_command(async move {
                     channels
-                        .enqueue_outcome(CommandOutcome::FatalDisconnect { reason })
+                        .enqueue_outcome(CommandOutcome::notify(Notification::BridgeDisconnected {
+                            reason,
+                        }))
                         .await;
                 });
             }

@@ -293,14 +293,24 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 "C5 LoadSession: {load:?}"
             );
 
+            // A failed load is RECOVERABLE (only session/new failure is
+            // fatal): the loop must still serve commands afterwards.
+            send_command(&sender, &mut ledger, BridgeCommand::ListSettings).await;
+            let after_load = next_notification("ListSettings after failed load", &mut rx).await;
+            assert!(
+                matches!(after_load, Notification::SettingsList { ref settings } if settings == &serde_json::json!({})),
+                "C5 failed LoadSession must not kill the bridge: {after_load:?}"
+            );
+
+            send_command(&sender, &mut ledger, BridgeCommand::Shutdown).await;
             loop_handle
                 .await
-                .expect_contract("C5 LoadSession: loop task joined")
-                .expect_contract("C5 LoadSession: loop returned Ok");
+                .expect_contract("C5 Shutdown after failed load: loop task joined")
+                .expect_contract("C5 Shutdown after failed load: loop returned Ok");
             let closed = sender
                 .send(BridgeCommand::Shutdown)
                 .await
-                .expect_err_contract("C5 fatal LoadSession closes command channel");
+                .expect_err_contract("C5 shutdown closes command channel");
             assert_eq!(closed.to_string(), "bridge channel closed");
 
             // The loop has exited and dropped its sender: recv drains any
@@ -334,6 +344,8 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                     "SetKasHookEnabled",
                     "Workflow",
                     "LoadSession",
+                    "ListSettings",
+                    "Shutdown",
                 ],
                 "C5 exhaustive BridgeCommand ledger"
             );
@@ -395,6 +407,7 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 "session/steer/clear".to_owned(),
                 serde_json::json!({"sessionId": "fake-0"}),
             ),
+            ("kiro.dev/settings/list".to_owned(), serde_json::json!({})),
         ],
         "C5 exact extension methods, order, and params"
     );
@@ -414,6 +427,7 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
             "ext:kiro.dev/settings/list",
             "ext:session/steer",
             "ext:session/steer/clear",
+            "ext:kiro.dev/settings/list",
         ],
         "C5 exact fake-agent call order"
     );
