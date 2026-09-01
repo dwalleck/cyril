@@ -453,6 +453,7 @@ async fn c5_command_failures_preserve_legacy_operation_labels() {
     let script = Rc::new(RefCell::new(Script {
         fail_extensions: vec![
             "oracle/error".to_owned(),
+            "kiro.dev/commands/options".to_owned(),
             "kiro.dev/session/terminate".to_owned(),
             "message/send".to_owned(),
             "session/steer".to_owned(),
@@ -480,6 +481,23 @@ async fn c5_command_failures_preserve_legacy_operation_labels() {
                 "ExtMethod label",
                 &next_notification("ExtMethod label", &mut rx).await,
                 "ext_method 'oracle/error'",
+            );
+
+            // cyril-tr0a: a failed options query is a visible error, never an
+            // empty picker.
+            send_command(
+                &sender,
+                &mut ledger,
+                BridgeCommand::QueryCommandOptions {
+                    command: "model".to_owned(),
+                    session_id: session_id.clone(),
+                },
+            )
+            .await;
+            assert_bridge_error(
+                "QueryCommandOptions label",
+                &next_notification("QueryCommandOptions label", &mut rx).await,
+                "options 'model'",
             );
 
             send_command(

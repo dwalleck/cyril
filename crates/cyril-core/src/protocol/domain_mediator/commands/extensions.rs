@@ -87,16 +87,20 @@ impl DomainMediator {
             "kiro.dev/commands/options",
             params,
             move |result| {
-                let options = match result {
-                    Ok(value) => crate::protocol::convert::kiro::parse_options_response(&value),
-                    Err(error) => {
-                        tracing::warn!(%error, %command, "command option query failed");
-                        Vec::new()
-                    }
-                };
-                Some(CommandOutcome::notify(
-                    Notification::CommandOptionsReceived { command, options },
-                ))
+                // cyril-tr0a: a failed RPC must not masquerade as a command
+                // with no options — the App would open an empty picker
+                // indistinguishable from the genuine empty case. Errors are
+                // not default values.
+                Some(CommandOutcome::notify(match result {
+                    Ok(value) => Notification::CommandOptionsReceived {
+                        options: crate::protocol::convert::kiro::parse_options_response(&value),
+                        command,
+                    },
+                    Err(error) => Notification::BridgeError {
+                        operation: format!("options '{command}'"),
+                        message: error.to_string(),
+                    },
+                }))
             },
         );
     }
