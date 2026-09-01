@@ -59,6 +59,14 @@ impl IngressTracker {
     pub(crate) async fn wait_quiescent(&self) {
         loop {
             tokio::task::yield_now().await;
+            // cyril-p3t3: create-then-check. The Notified future must be
+            // REGISTERED (enable) before the `active` load, or a guard
+            // dropping between the load and the await is a lost wakeup —
+            // `notify_waiters` stores no permit for late registrants, and
+            // only the caller's rescue timeout would end the sleep.
+            let notified = self.state.notify.notified();
+            tokio::pin!(notified);
+            notified.as_mut().enable();
             let epoch = self.state.epoch.load(Ordering::Acquire);
             if self.state.active.load(Ordering::Acquire) == 0 {
                 tokio::task::yield_now().await;
@@ -68,7 +76,7 @@ impl IngressTracker {
                     return;
                 }
             } else {
-                self.state.notify.notified().await;
+                notified.await;
             }
         }
     }
