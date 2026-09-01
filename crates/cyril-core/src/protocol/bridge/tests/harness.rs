@@ -44,6 +44,23 @@ pub(super) struct Script {
     pub(super) request_permission_on_prompt: bool,
     pub(super) fail_extensions: Vec<String>,
     pub(super) fail_new_session: bool,
+    /// Park the prompt response until the harness gate is notified.
+    pub(super) block_prompt: bool,
+    /// Answer the prompt RPC with a scripted error ("boom").
+    pub(super) prompt_err: bool,
+    /// Some(true): the initialize response carries `_meta.kiro` (KAS wire);
+    /// Some(false)/None: plain v2 initialize.
+    pub(super) wire_kas: Option<bool>,
+    /// Some(true): minted session ids are KAS-shaped (`sess_fake-N`);
+    /// Some(false): bare (`fake-N`); None: follow `wire_kas`.
+    pub(super) sess_ids: Option<bool>,
+    /// Emit a `session_info_update{kind:"turn_end"}` before parking/answering
+    /// the prompt, scoped to `turn_end_session` or the prompt's own session.
+    pub(super) emit_turn_end: bool,
+    pub(super) turn_end_session: Option<String>,
+    /// Set by `fake_agent`: lets a running test flip `emit_turn_end` for the
+    /// NEXT prompt (the harness snapshot is taken at agent build time).
+    pub(super) emit_turn_end_live: Option<Arc<std::sync::atomic::AtomicBool>>,
 }
 
 impl Script {
@@ -84,11 +101,15 @@ impl AgentKill {
     }
 }
 
-fn fake_agent(script: &Rc<RefCell<Script>>) -> impl ConnectTo<Client> + 'static {
+fn fake_agent(
+    script: &Rc<RefCell<Script>>,
+    gate: &Arc<tokio::sync::Notify>,
+) -> impl ConnectTo<Client> + 'static {
     let received_initialize = Arc::clone(&script.borrow().received);
     let received_new = Arc::clone(&script.borrow().received);
     let received_prompt = Arc::clone(&script.borrow().received);
     let received_cancel = Arc::clone(&script.borrow().received);
+    let received_load = Arc::clone(&script.borrow().received);
     let received_ext = Arc::clone(&script.borrow().received);
     let ext_calls = Arc::clone(&script.borrow().ext_calls);
     let negotiated_protocol = Arc::clone(&script.borrow().negotiated_protocol);
@@ -103,6 +124,18 @@ fn fake_agent(script: &Rc<RefCell<Script>>) -> impl ConnectTo<Client> + 'static 
     let request_permission_on_prompt = script.borrow().request_permission_on_prompt;
     let fail_extensions = script.borrow().fail_extensions.clone();
     let fail_new_session = script.borrow().fail_new_session;
+    let prompt_gate = Arc::clone(gate);
+    let block_prompt = script.borrow().block_prompt;
+    let prompt_err = script.borrow().prompt_err;
+    let wire_kas = script.borrow().wire_kas.unwrap_or(false);
+    let kas_session_ids = script.borrow().sess_ids.unwrap_or(wire_kas);
+    let emit_turn_end = Arc::new(std::sync::atomic::AtomicBool::new(
+        script.borrow().emit_turn_end,
+    ));
+    script.borrow_mut().emit_turn_end_live = Some(Arc::clone(&emit_turn_end));
+    let turn_end_session = script.borrow().turn_end_session.clone();
+    let (cancel_tx, cancel_rx) = tokio::sync::watch::channel(false);
+    let prompt_cancel_rx = cancel_rx;
 
     Agent
         .builder()
@@ -201,11 +234,12 @@ fn fake_agent(script: &Rc<RefCell<Script>>) -> impl ConnectTo<Client> + 'static 
                                 }
                             }
                         }
-                        responder.respond(acp::InitializeResponse::new(request.protocol_version))
+                        responder
+                            .respond(initialize_response(request.protocol_version, wire_kas)?)
                     })?;
                     Ok(())
                 } else {
-                    responder.respond(acp::InitializeResponse::new(request.protocol_version))
+                    responder.respond(initialize_response(request.protocol_version, wire_kas)?)
                 }
             },
             agent_client_protocol::on_receive_request!(),
@@ -219,7 +253,12 @@ fn fake_agent(script: &Rc<RefCell<Script>>) -> impl ConnectTo<Client> + 'static 
                         agent_client_protocol::Error::internal_error().data("scripted new failure"),
                     );
                 }
-                responder.respond(acp::NewSessionResponse::new(format!("fake-{index}")))
+                let session_id = if kas_session_ids {
+                    format!("sess_fake-{index}")
+                } else {
+                    format!("fake-{index}")
+                };
+                responder.respond(acp::NewSessionResponse::new(session_id))
             },
             agent_client_protocol::on_receive_request!(),
         )
@@ -273,13 +312,55 @@ fn fake_agent(script: &Rc<RefCell<Script>>) -> impl ConnectTo<Client> + 'static 
                         })?;
                     connection.send_notification(notification)?;
                 }
-                responder.respond(acp::PromptResponse::new(acp::StopReason::EndTurn))
+                if emit_turn_end.load(std::sync::atomic::Ordering::Acquire) {
+                    let session = turn_end_session
+                        .clone()
+                        .unwrap_or_else(|| request.session_id.to_string());
+                    let terminal: acp::SessionNotification =
+                        serde_json::from_value(serde_json::json!({
+                            "sessionId": session,
+                            "update": {
+                                "sessionUpdate": "session_info_update",
+                                "_meta": {"kiro": {"kind": "turn_end", "stopReason": "end_turn"}}
+                            }
+                        }))
+                        .map_err(|error| {
+                            agent_client_protocol::Error::internal_error().data(error.to_string())
+                        })?;
+                    connection.send_notification(terminal)?;
+                }
+                // Respond from a spawned task: a parked prompt must not block
+                // the fake agent's own serial dispatch chain, or mid-turn
+                // commands could never reach it (the very property the
+                // lifecycle fences assert about cyril's loop).
+                let gate = Arc::clone(&prompt_gate);
+                let mut cancel_rx = prompt_cancel_rx.clone();
+                connection.spawn(async move {
+                    if block_prompt && !*cancel_rx.borrow_and_update() {
+                        tokio::select! {
+                            () = gate.notified() => {}
+                            _ = cancel_rx.changed() => {}
+                        }
+                    }
+                    if *cancel_rx.borrow() {
+                        return responder
+                            .respond(acp::PromptResponse::new(acp::StopReason::Cancelled));
+                    }
+                    if prompt_err {
+                        return responder.respond_with_error(
+                            agent_client_protocol::Error::internal_error().data("boom"),
+                        );
+                    }
+                    responder.respond(acp::PromptResponse::new(acp::StopReason::EndTurn))
+                })?;
+                Ok(())
             },
             agent_client_protocol::on_receive_request!(),
         )
         .on_receive_notification(
             async move |_notification: acp::CancelNotification, _connection| {
                 record(&received_cancel, "cancel");
+                cancel_tx.send_replace(true);
                 Ok(())
             },
             agent_client_protocol::on_receive_notification!(),
@@ -292,6 +373,7 @@ fn fake_agent(script: &Rc<RefCell<Script>>) -> impl ConnectTo<Client> + 'static 
         )
         .on_receive_request(
             async move |_request: acp::LoadSessionRequest, responder, _connection| {
+                record(&received_load, "load_session");
                 responder.respond_with_error(agent_client_protocol::Error::method_not_found())
             },
             agent_client_protocol::on_receive_request!(),
@@ -358,13 +440,67 @@ pub(super) async fn start_session(
     }
 }
 
+/// The last stop reason the App saw before the turn completed.
+pub(super) async fn drain_to_turn(rx: &mut mpsc::Receiver<RoutedNotification>) -> StopReason {
+    loop {
+        match recv_notif(rx, 10).await {
+            Some(Notification::TurnCompleted { stop_reason }) => break stop_reason,
+            Some(_) => {}
+            None => panic!("timed out waiting for TurnCompleted"),
+        }
+    }
+}
+
+/// True once the fake agent's ledger contains `marker` (bounded wait).
+pub(super) async fn wait_for_received(
+    probe: &Rc<RefCell<Script>>,
+    marker: &str,
+    secs: u64,
+) -> bool {
+    tokio::time::timeout(Duration::from_secs(secs), async {
+        loop {
+            if probe
+                .borrow()
+                .received()
+                .iter()
+                .any(|entry| entry == marker)
+            {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .is_ok()
+}
+
+fn initialize_response(
+    protocol_version: agent_client_protocol::schema::ProtocolVersion,
+    wire_kas: bool,
+) -> agent_client_protocol::Result<acp::InitializeResponse> {
+    if !wire_kas {
+        return Ok(acp::InitializeResponse::new(protocol_version));
+    }
+    serde_json::from_value(serde_json::json!({
+        "protocolVersion": protocol_version,
+        "agentCapabilities": {
+            "loadSession": true,
+            "_meta": {"kiro": {}}
+        }
+    }))
+    .map_err(|error| {
+        agent_client_protocol::Error::internal_error()
+            .data(format!("KAS initialize fixture: {error}"))
+    })
+}
+
 pub(super) async fn with_harness<F, Fut>(script: Rc<RefCell<Script>>, body: F)
 where
     F: FnOnce(
         BridgeSender,
         mpsc::Receiver<RoutedNotification>,
         mpsc::Receiver<PermissionRequest>,
-        Rc<tokio::sync::Notify>,
+        Arc<tokio::sync::Notify>,
         tokio::task::JoinHandle<crate::Result<()>>,
     ) -> Fut,
     Fut: Future<Output = ()>,
@@ -389,7 +525,7 @@ pub(super) async fn with_engine_harness<F, Fut>(
         BridgeSender,
         mpsc::Receiver<RoutedNotification>,
         mpsc::Receiver<PermissionRequest>,
-        Rc<tokio::sync::Notify>,
+        Arc<tokio::sync::Notify>,
         tokio::task::JoinHandle<crate::Result<()>>,
         AgentKill,
     ) -> Fut,
@@ -398,7 +534,8 @@ pub(super) async fn with_engine_harness<F, Fut>(
     let local = tokio::task::LocalSet::new();
     local
         .run_until(async move {
-            let agent = fake_agent(&script);
+            let gate = Arc::new(tokio::sync::Notify::new());
+            let agent = fake_agent(&script, &gate);
             let (handle, bridge_channels) = create_channel_pair();
             let (sender, notification_rx, permission_rx, _source_rx, _completion_rx) =
                 handle.split();
@@ -428,7 +565,7 @@ pub(super) async fn with_engine_harness<F, Fut>(
                 sender,
                 notification_rx,
                 permission_rx,
-                Rc::new(tokio::sync::Notify::new()),
+                gate,
                 loop_handle,
                 AgentKill { abort },
             )

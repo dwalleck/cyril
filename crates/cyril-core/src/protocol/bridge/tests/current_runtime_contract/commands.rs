@@ -427,6 +427,7 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
             "ext:kiro.dev/settings/list",
             "ext:session/steer",
             "ext:session/steer/clear",
+            "load_session",
             "ext:kiro.dev/settings/list",
         ],
         "C5 exact fake-agent call order"

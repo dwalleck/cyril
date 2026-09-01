@@ -41,8 +41,12 @@ impl<T: std::fmt::Debug, E> ExpectErrContract<E> for Result<T, E> {
 // default-features CI lane is what keeps it running.
 #[cfg(not(feature = "kas"))]
 mod commands;
+mod death;
+mod fingerprint_stops;
+mod lifecycle;
 mod routing;
 mod saturation;
+mod stall;
 
 fn command_name(command: &BridgeCommand) -> &'static str {
     match command {
