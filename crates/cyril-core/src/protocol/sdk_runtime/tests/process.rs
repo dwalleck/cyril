@@ -228,42 +228,42 @@ done | tee "$1"
             })
             .await
             .unwrap_or_else(|error| panic!("process fixture session command: {error}"));
-        let session_id = loop {
+        // The fixture emits the batch chunks right after the session/new
+        // response; the chunks ride the notification path while the response
+        // resolves on a spawned command task, so their interleaving with
+        // SessionCreated is not fixed. Batch ORDER among chunks still is.
+        let mut session_id = None;
+        let mut batches = Vec::new();
+        while session_id.is_none() || batches.len() < 2 {
             let routed = tokio::time::timeout(Duration::from_secs(5), notifications.recv())
                 .await
                 .unwrap_or_else(|_| panic!("process fixture session notification timeout"))
                 .unwrap_or_else(|| panic!("process fixture session channel closed"));
             match routed.notification {
                 Notification::SessionCreated {
-                    session_id,
+                    session_id: created,
                     current_model,
                     available_models,
                     ..
                 } => {
-                    assert_eq!(session_id.as_str(), "process-fixture");
+                    assert_eq!(created.as_str(), "process-fixture");
                     assert_eq!(current_model.as_deref(), Some("process-model"));
                     assert_eq!(available_models.len(), 1);
                     assert_eq!(available_models[0].id().as_str(), "process-model");
-                    break session_id;
+                    session_id = Some(created);
                 }
+                Notification::AgentMessage(message) => batches.push(message.text),
                 Notification::UsageSessionStarted { .. } => {}
                 other => panic!("unexpected process fixture session notification: {other:?}"),
             }
-        };
-        for expected in ["batch-0", "batch-1"] {
-            let routed = tokio::time::timeout(Duration::from_secs(5), notifications.recv())
-                .await
-                .unwrap_or_else(|_| panic!("process fixture batch notification timeout"))
-                .unwrap_or_else(|| panic!("process fixture batch notification channel closed"));
-            assert!(
-                matches!(
-                    routed.notification,
-                    Notification::AgentMessage(ref message) if message.text == expected
-                ),
-                "ProcessAdapter batch member order changed: expected {expected}, got {:?}",
-                routed.notification
-            );
         }
+        let session_id =
+            session_id.unwrap_or_else(|| panic!("process fixture session never created"));
+        assert_eq!(
+            batches,
+            ["batch-0", "batch-1"],
+            "ProcessAdapter batch member order changed"
+        );
         sender
             .send(BridgeCommand::SendPrompt {
                 session_id,

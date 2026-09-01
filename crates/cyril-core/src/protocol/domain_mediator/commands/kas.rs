@@ -14,7 +14,8 @@ async fn send_extension(
         format!("_{method}")
     };
     let request = UntypedMessage::new(&wire_method, params)?;
-    connection.send_request(request).block_task().await
+    let sent = connection.send_request(request).block_task();
+    super::await_response(sent, &wire_method, super::COMMAND_RPC_TIMEOUT).await
 }
 
 async fn notify_or_closed(

@@ -1,11 +1,11 @@
 use agent_client_protocol::{Agent, ConnectionTo, ErrorCode};
 
-use super::super::DomainMediator;
+use super::super::{CommandOutcome, DomainMediator};
 use crate::types::{Notification, SessionId};
 
 impl DomainMediator {
     pub(super) async fn spawn_session(
-        &self,
+        &mut self,
         connection: &ConnectionTo<Agent>,
         task: String,
         name: String,
@@ -27,180 +27,132 @@ impl DomainMediator {
             "task": task,
             "name": name
         });
-        match self
-            .call_extension(connection, "session/spawn", params)
-            .await
-        {
-            Ok(value) => {
-                if let Some(id) = value.get("sessionId").and_then(serde_json::Value::as_str) {
-                    self.notify(
-                        Notification::SubagentSpawned {
-                            session_id: SessionId::new(id),
-                            name,
-                        }
-                        .into(),
-                    )
-                    .await
-                } else {
-                    self.notify(
-                        Notification::BridgeError {
-                            operation,
-                            message: "response missing sessionId".into(),
-                        }
-                        .into(),
-                    )
-                    .await
-                }
-            }
-            Err(error) => {
-                self.notify(
-                    Notification::BridgeError {
+        self.spawn_extension_command(connection, "session/spawn", params, move |result| {
+            Some(CommandOutcome::notify(match result {
+                Ok(value) => match value.get("sessionId").and_then(serde_json::Value::as_str) {
+                    Some(id) => Notification::SubagentSpawned {
+                        session_id: SessionId::new(id),
+                        name,
+                    },
+                    None => Notification::BridgeError {
                         operation,
-                        message: error.to_string(),
-                    }
-                    .into(),
-                )
-                .await
-            }
-        }
-    }
-
-    pub(super) async fn terminate_session(
-        &self,
-        connection: &ConnectionTo<Agent>,
-        session_id: SessionId,
-    ) -> crate::Result<()> {
-        let operation = format!("terminate_session '{}'", session_id.as_str());
-        match self
-            .call_extension(
-                connection,
-                "kiro.dev/session/terminate",
-                serde_json::json!({"sessionId": session_id.as_str()}),
-            )
-            .await
-        {
-            Ok(_) => {
-                self.notify(Notification::SubagentTerminated { session_id }.into())
-                    .await
-            }
-            Err(error) => {
-                self.notify(
-                    Notification::BridgeError {
-                        operation,
-                        message: error.to_string(),
-                    }
-                    .into(),
-                )
-                .await
-            }
-        }
-    }
-
-    pub(super) async fn send_message(
-        &self,
-        connection: &ConnectionTo<Agent>,
-        session_id: SessionId,
-        content: String,
-    ) -> crate::Result<()> {
-        let operation = format!("send_message to '{}'", session_id.as_str());
-        if let Err(error) = self
-            .call_extension(
-                connection,
-                "message/send",
-                serde_json::json!({
-                    "sessionId": session_id.as_str(),
-                    "content": content
-                }),
-            )
-            .await
-        {
-            self.notify(
-                Notification::BridgeError {
+                        message: "response missing sessionId".into(),
+                    },
+                },
+                Err(error) => Notification::BridgeError {
                     operation,
                     message: error.to_string(),
-                }
-                .into(),
-            )
-            .await?;
-        }
+                },
+            }))
+        });
         Ok(())
     }
 
-    pub(super) async fn steer_session(
+    pub(super) fn terminate_session(
+        &mut self,
+        connection: &ConnectionTo<Agent>,
+        session_id: SessionId,
+    ) {
+        let operation = format!("terminate_session '{}'", session_id.as_str());
+        let params = serde_json::json!({"sessionId": session_id.as_str()});
+        self.spawn_extension_command(
+            connection,
+            "kiro.dev/session/terminate",
+            params,
+            move |result| {
+                Some(CommandOutcome::notify(match result {
+                    Ok(_) => Notification::SubagentTerminated { session_id },
+                    Err(error) => Notification::BridgeError {
+                        operation,
+                        message: error.to_string(),
+                    },
+                }))
+            },
+        );
+    }
+
+    pub(super) fn send_message(
+        &mut self,
+        connection: &ConnectionTo<Agent>,
+        session_id: SessionId,
+        content: String,
+    ) {
+        let operation = format!("send_message to '{}'", session_id.as_str());
+        let params = serde_json::json!({
+            "sessionId": session_id.as_str(),
+            "content": content
+        });
+        self.spawn_extension_command(
+            connection,
+            "message/send",
+            params,
+            move |result| match result {
+                Ok(_) => None,
+                Err(error) => Some(CommandOutcome::notify(Notification::BridgeError {
+                    operation,
+                    message: error.to_string(),
+                })),
+            },
+        );
+    }
+
+    pub(super) fn steer_session(
         &mut self,
         connection: &ConnectionTo<Agent>,
         session_id: SessionId,
         message: String,
-    ) -> crate::Result<()> {
+    ) {
         let operation = format!("steer '{}'", session_id.as_str());
         if self.steering_unsupported.contains(&session_id) {
-            return Ok(());
+            return;
         }
-        match self
-            .call_extension(
-                connection,
-                "session/steer",
-                serde_json::json!({
-                    "sessionId": session_id.as_str(),
-                    "message": message
-                }),
-            )
-            .await
-        {
-            Ok(_) => Ok(()),
-            Err(error) if error.code == ErrorCode::MethodNotFound => {
-                self.steering_unsupported.insert(session_id);
-                self.notify(
-                    Notification::SteeringUnsupported {
-                        message: "steering requires kiro-cli 2.7.0+".into(),
-                    }
-                    .into(),
-                )
-                .await
-            }
-            Err(error) => {
-                self.notify(
-                    Notification::BridgeError {
-                        operation,
-                        message: error.to_string(),
-                    }
-                    .into(),
-                )
-                .await
-            }
-        }
+        let params = serde_json::json!({
+            "sessionId": session_id.as_str(),
+            "message": message
+        });
+        self.spawn_extension_command(
+            connection,
+            "session/steer",
+            params,
+            move |result| match result {
+                Ok(_) => None,
+                Err(error) if error.code == ErrorCode::MethodNotFound => {
+                    Some(CommandOutcome::SteeringUnsupported { session_id })
+                }
+                Err(error) => Some(CommandOutcome::notify(Notification::BridgeError {
+                    operation,
+                    message: error.to_string(),
+                })),
+            },
+        );
     }
 
-    pub(super) async fn clear_steering(
-        &self,
+    pub(super) fn clear_steering(
+        &mut self,
         connection: &ConnectionTo<Agent>,
         session_id: SessionId,
-    ) -> crate::Result<()> {
+    ) {
         if self.steering_unsupported.contains(&session_id) {
-            return Ok(());
+            return;
         }
-        if let Err(error) = self
-            .call_extension(
-                connection,
-                "session/steer/clear",
-                serde_json::json!({"sessionId": session_id.as_str()}),
-            )
-            .await
-        {
-            let notification = if error.code == ErrorCode::MethodNotFound {
-                Notification::SteeringClearUnsupported {
-                    message:
-                        "steer/clear isn't supported by this backend — queued steers still apply"
-                            .into(),
+        let params = serde_json::json!({"sessionId": session_id.as_str()});
+        self.spawn_extension_command(connection, "session/steer/clear", params, move |result| {
+            match result {
+                Ok(_) => None,
+                Err(error) if error.code == ErrorCode::MethodNotFound => {
+                    Some(CommandOutcome::notify(
+                        Notification::SteeringClearUnsupported {
+                            message:
+                                "steer/clear isn't supported by this backend — queued steers still apply"
+                                    .into(),
+                        },
+                    ))
                 }
-            } else {
-                Notification::BridgeError {
+                Err(error) => Some(CommandOutcome::notify(Notification::BridgeError {
                     operation: format!("steer/clear '{}'", session_id.as_str()),
                     message: error.to_string(),
-                }
-            };
-            self.notify(notification.into()).await?;
-        }
-        Ok(())
+                })),
+            }
+        });
     }
 }

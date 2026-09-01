@@ -1,29 +1,44 @@
-use std::time::Duration;
+use std::future::Future;
 
 use agent_client_protocol::{Agent, ConnectionTo, UntypedMessage, schema::v1 as acp};
 
-use super::super::{DomainMediator, DomainWork};
+use super::super::{CommandOutcome, DomainMediator, SessionStart};
+use super::{COMMAND_RPC_TIMEOUT, SESSION_RPC_TIMEOUT, await_response};
 use crate::protocol::bridge::source_disposition;
 use crate::protocol::turn_mediator::BeginTurn;
 use crate::types::{
     Notification, RoutedNotification, SessionId, SessionOrigin, SourceTurnDisposition, StopReason,
 };
 
-async fn call_standard<Request, Response>(
+/// Serialize and send one standard-method request synchronously — the frame
+/// is on the wire (in send order) when this returns — yielding the future
+/// that resolves to the raw JSON response. Awaiting that future belongs on a
+/// spawned task, never in the mediator loop.
+fn send_standard<Request>(
     connection: &ConnectionTo<Agent>,
     method: &str,
     request: Request,
-) -> agent_client_protocol::Result<(Response, serde_json::Value)>
+) -> agent_client_protocol::Result<
+    impl Future<Output = agent_client_protocol::Result<serde_json::Value>> + 'static,
+>
 where
     Request: serde::Serialize,
-    Response: serde::de::DeserializeOwned,
 {
     let params = serde_json::to_value(request).map_err(|error| {
         agent_client_protocol::Error::internal_error()
             .data(format!("serialize {method} request: {error}"))
     })?;
     let message = UntypedMessage::new(method, params)?;
-    let value = connection.send_request(message).block_task().await?;
+    Ok(connection.send_request(message).block_task())
+}
+
+fn parse_standard<Response>(
+    method: &str,
+    value: serde_json::Value,
+) -> agent_client_protocol::Result<(Response, serde_json::Value)>
+where
+    Response: serde::de::DeserializeOwned,
+{
     let response = serde_json::from_value(value.clone()).map_err(|error| {
         agent_client_protocol::Error::internal_error()
             .data(format!("deserialize {method} response: {error}"))
@@ -31,56 +46,75 @@ where
     Ok((response, value))
 }
 
+fn session_started_outcome(
+    session_id: SessionId,
+    origin: SessionOrigin,
+    response: &acp::NewSessionResponse,
+    raw_response: &serde_json::Value,
+) -> CommandOutcome {
+    let config_options = response.config_options.as_deref().map(|options| {
+        Notification::ConfigOptionsUpdated(crate::protocol::convert::to_config_options(options))
+    });
+    let created = crate::protocol::convert::session_created_from_response(
+        session_id.as_str().to_owned(),
+        response.modes.as_ref(),
+        raw_response.get("models"),
+    );
+    CommandOutcome::SessionStarted(Box::new(SessionStart {
+        session_id,
+        origin,
+        config_options,
+        created,
+    }))
+}
+
 impl DomainMediator {
-    pub(super) async fn new_session(
+    pub(super) fn new_session(
         &mut self,
         connection: &ConnectionTo<Agent>,
         cwd: std::path::PathBuf,
-    ) -> crate::Result<bool> {
+    ) -> crate::Result<()> {
         let request = acp::NewSessionRequest::new(crate::platform::path::to_agent(&cwd));
-        match call_standard::<_, acp::NewSessionResponse>(connection, "session/new", request).await
-        {
-            Ok((response, raw_response)) => {
-                if let Some(reason) = crate::protocol::fingerprint::session_id_mismatch(
-                    self.config.engine.kind(),
-                    &response.session_id.to_string(),
-                    cfg!(feature = "kas"),
-                ) {
-                    self.notify(Notification::BridgeDisconnected { reason }.into())
-                        .await?;
-                    return Ok(true);
-                }
-                let session_id = SessionId::new(response.session_id.to_string());
-                let config_options = response.config_options.as_deref().map(|options| {
-                    Notification::ConfigOptionsUpdated(crate::protocol::convert::to_config_options(
-                        options,
-                    ))
-                });
-                let created = crate::protocol::convert::session_created_from_response(
-                    session_id.as_str().to_owned(),
-                    response.modes.as_ref(),
-                    raw_response.get("models"),
-                );
-                self.publish_session_start(
-                    session_id,
-                    SessionOrigin::Fresh,
-                    config_options,
-                    created,
-                )
-                .await?;
-            }
-            Err(error) => {
-                self.notify(
-                    Notification::BridgeDisconnected {
-                        reason: format!("Failed to create session: {error}"),
+        let engine_kind = self.config.engine.kind();
+        let channels = self.channels.clone();
+        match send_standard(connection, "session/new", request) {
+            Ok(sent) => self.spawn_command(async move {
+                let outcome = match await_response(sent, "session/new", SESSION_RPC_TIMEOUT)
+                    .await
+                    .and_then(|value| {
+                        parse_standard::<acp::NewSessionResponse>("session/new", value)
+                    }) {
+                    Ok((response, raw_response)) => {
+                        match crate::protocol::fingerprint::session_id_mismatch(
+                            engine_kind,
+                            &response.session_id.to_string(),
+                            cfg!(feature = "kas"),
+                        ) {
+                            Some(reason) => CommandOutcome::FatalDisconnect { reason },
+                            None => session_started_outcome(
+                                SessionId::new(response.session_id.to_string()),
+                                SessionOrigin::Fresh,
+                                &response,
+                                &raw_response,
+                            ),
+                        }
                     }
-                    .into(),
-                )
-                .await?;
-                return Ok(true);
+                    Err(error) => CommandOutcome::FatalDisconnect {
+                        reason: format!("Failed to create session: {error}"),
+                    },
+                };
+                channels.enqueue_outcome(outcome).await;
+            }),
+            Err(error) => {
+                let reason = format!("Failed to create session: {error}");
+                self.spawn_command(async move {
+                    channels
+                        .enqueue_outcome(CommandOutcome::FatalDisconnect { reason })
+                        .await;
+                });
             }
         }
-        Ok(false)
+        Ok(())
     }
 
     pub(super) async fn load_session(
@@ -101,43 +135,51 @@ impl DomainMediator {
             acp::SessionId::new(session_id.as_str()),
             crate::platform::path::to_agent(&self.config.cwd),
         );
-        match call_standard::<_, acp::LoadSessionResponse>(connection, "session/load", request)
-            .await
-        {
-            Ok((response, raw_response)) => {
-                let config_options = response.config_options.as_deref().map(|options| {
-                    Notification::ConfigOptionsUpdated(crate::protocol::convert::to_config_options(
-                        options,
-                    ))
-                });
-                let created = crate::protocol::convert::session_created_from_response(
-                    session_id.as_str().to_owned(),
-                    response.modes.as_ref(),
-                    raw_response.get("models"),
-                );
-                self.publish_session_start(
-                    session_id,
-                    SessionOrigin::Loaded,
-                    config_options,
-                    created,
-                )
-                .await?;
-            }
-            Err(error) => {
-                self.notify(
-                    Notification::BridgeDisconnected {
-                        reason: format!("Failed to load session: {error}"),
+        let channels = self.channels.clone();
+        match send_standard(connection, "session/load", request) {
+            Ok(sent) => self.spawn_command(async move {
+                let outcome = match await_response(sent, "session/load", SESSION_RPC_TIMEOUT)
+                    .await
+                    .and_then(|value| {
+                        parse_standard::<acp::LoadSessionResponse>("session/load", value)
+                    }) {
+                    Ok((response, raw_response)) => {
+                        let config_options = response.config_options.as_deref().map(|options| {
+                            Notification::ConfigOptionsUpdated(
+                                crate::protocol::convert::to_config_options(options),
+                            )
+                        });
+                        let created = crate::protocol::convert::session_created_from_response(
+                            session_id.as_str().to_owned(),
+                            response.modes.as_ref(),
+                            raw_response.get("models"),
+                        );
+                        CommandOutcome::SessionStarted(Box::new(SessionStart {
+                            session_id,
+                            origin: SessionOrigin::Loaded,
+                            config_options,
+                            created,
+                        }))
                     }
-                    .into(),
-                )
-                .await?;
-                return Ok(true);
+                    Err(error) => CommandOutcome::FatalDisconnect {
+                        reason: format!("Failed to load session: {error}"),
+                    },
+                };
+                channels.enqueue_outcome(outcome).await;
+            }),
+            Err(error) => {
+                let reason = format!("Failed to load session: {error}");
+                self.spawn_command(async move {
+                    channels
+                        .enqueue_outcome(CommandOutcome::FatalDisconnect { reason })
+                        .await;
+                });
             }
         }
         Ok(false)
     }
 
-    async fn publish_session_start(
+    pub(crate) async fn publish_session_start(
         &mut self,
         session_id: SessionId,
         origin: SessionOrigin,
@@ -176,7 +218,7 @@ impl DomainMediator {
     }
 
     pub(super) async fn set_mode(
-        &self,
+        &mut self,
         connection: &ConnectionTo<Agent>,
         mode_id: String,
     ) -> crate::Result<()> {
@@ -196,21 +238,25 @@ impl DomainMediator {
             acp::SessionId::new(session_id.as_str()),
             acp::SessionModeId::new(mode_id),
         );
-        if let Err(error) = connection.send_request(request).block_task().await {
-            self.notify(
-                Notification::BridgeError {
-                    operation,
-                    message: error.to_string(),
-                }
-                .into(),
-            )
-            .await?;
-        }
+        let sent = connection.send_request(request);
+        let channels = self.channels.clone();
+        self.spawn_command(async move {
+            if let Err(error) =
+                await_response(sent.block_task(), &operation, COMMAND_RPC_TIMEOUT).await
+            {
+                channels
+                    .enqueue_outcome(CommandOutcome::notify(Notification::BridgeError {
+                        operation,
+                        message: error.to_string(),
+                    }))
+                    .await;
+            }
+        });
         Ok(())
     }
 
     pub(super) async fn set_model(
-        &self,
+        &mut self,
         connection: &ConnectionTo<Agent>,
         model_id: String,
     ) -> crate::Result<()> {
@@ -238,16 +284,20 @@ impl DomainMediator {
                 message: format!("failed to build {operation}: {error}"),
             })
         })?;
-        if let Err(error) = connection.send_request(request).block_task().await {
-            self.notify(
-                Notification::BridgeError {
-                    operation,
-                    message: error.to_string(),
-                }
-                .into(),
-            )
-            .await?;
-        }
+        let sent = connection.send_request(request);
+        let channels = self.channels.clone();
+        self.spawn_command(async move {
+            if let Err(error) =
+                await_response(sent.block_task(), &operation, COMMAND_RPC_TIMEOUT).await
+            {
+                channels
+                    .enqueue_outcome(CommandOutcome::notify(Notification::BridgeError {
+                        operation,
+                        message: error.to_string(),
+                    }))
+                    .await;
+            }
+        });
         Ok(())
     }
 
@@ -298,40 +348,45 @@ impl DomainMediator {
                 .map(acp::ContentBlock::from)
                 .collect(),
         );
+        // Send synchronously so the prompt keeps wire order with commands
+        // dispatched around it; only the (unbounded) response await is spawned.
+        let sent = connection.send_request(request);
         let task = tokio::task::spawn_local(async move {
-            let (stop_reason, usage, disposition) =
-                match connection.send_request(request).block_task().await {
-                    Ok(response) => {
-                        let stop_reason =
-                            crate::protocol::convert::to_stop_reason(response.stop_reason);
-                        (
-                            stop_reason,
-                            response
-                                .usage
-                                .as_ref()
-                                .map(crate::protocol::convert::to_token_usage),
-                            source_disposition(stop_reason),
-                        )
+            let (stop_reason, usage, disposition) = match sent.block_task().await {
+                Ok(response) => {
+                    let stop_reason =
+                        crate::protocol::convert::to_stop_reason(response.stop_reason);
+                    (
+                        stop_reason,
+                        response
+                            .usage
+                            .as_ref()
+                            .map(crate::protocol::convert::to_token_usage),
+                        source_disposition(stop_reason),
+                    )
+                }
+                Err(error) => {
+                    if let Err(send_error) = channels
+                        .enqueue(super::super::DomainWork::Routed(
+                            Notification::BridgeError {
+                                operation: "prompt".into(),
+                                message: error.to_string(),
+                            }
+                            .into(),
+                        ))
+                        .await
+                    {
+                        tracing::debug!(%send_error, "prompt error notification dropped");
                     }
-                    Err(error) => {
-                        if let Err(send_error) = channels
-                            .enqueue(DomainWork::Routed(
-                                Notification::BridgeError {
-                                    operation: "prompt".into(),
-                                    message: error.to_string(),
-                                }
-                                .into(),
-                            ))
-                            .await
-                        {
-                            tracing::debug!(%send_error, "prompt error notification dropped");
-                        }
-                        (StopReason::EndTurn, None, SourceTurnDisposition::Failed)
-                    }
-                };
-            if tokio::time::timeout(Duration::from_millis(50), ingress.wait_quiescent())
-                .await
-                .is_err()
+                    (StopReason::EndTurn, None, SourceTurnDisposition::Failed)
+                }
+            };
+            if tokio::time::timeout(
+                std::time::Duration::from_millis(50),
+                ingress.wait_quiescent(),
+            )
+            .await
+            .is_err()
             {
                 tracing::warn!("source observer quiescence timed out");
             }
@@ -341,14 +396,17 @@ impl DomainMediator {
                     Notification::TurnUsageCaptured(usage),
                 )
                 .with_turn(owner);
-                if let Err(error) = channels.enqueue(DomainWork::Routed(routed)).await {
+                if let Err(error) = channels
+                    .enqueue(super::super::DomainWork::Routed(routed))
+                    .await
+                {
                     tracing::debug!(%error, "turn usage notification dropped");
                 }
             }
             let routed = RoutedNotification::from(Notification::TurnCompleted { stop_reason })
                 .with_turn(owner);
             if let Err(error) = channels
-                .enqueue(DomainWork::PromptTerminal {
+                .enqueue(super::super::DomainWork::PromptTerminal {
                     routed,
                     source_disposition: disposition,
                 })

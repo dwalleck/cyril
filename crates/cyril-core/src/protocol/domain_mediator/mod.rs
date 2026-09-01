@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashSet;
+use std::future::Future;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
@@ -41,6 +42,45 @@ pub(crate) enum DomainWork {
         routed: RoutedNotification,
         source_disposition: crate::types::SourceTurnDisposition,
     },
+    CommandOutcome(CommandOutcome),
+}
+
+/// The serial follow-up of a command RPC awaited on a spawned task.
+///
+/// Command RPCs must never be awaited inside the mediator select loop: the
+/// SDK's incoming actor dispatches every frame — responses included — through
+/// one serial chain whose notification handlers park on the bounded
+/// [`WORK_CAPACITY`] channel. A loop that blocks on a response while that
+/// channel is full deadlocks the bridge (a `session/load` replaying more than
+/// 256 frames is enough). RPCs therefore send synchronously in
+/// `handle_command` (preserving wire order), await on a spawned task, and
+/// re-enter the loop as one of these variants for the `&mut self` follow-up.
+#[derive(Debug)]
+pub(crate) enum CommandOutcome {
+    /// Deliver one notification to the App exactly as `notify` would have.
+    Notify(Box<Notification>),
+    /// A `session/new` or `session/load` RPC succeeded: bind the session.
+    SessionStarted(Box<SessionStart>),
+    /// A fail-stop condition: notify `BridgeDisconnected` and exit the loop.
+    FatalDisconnect { reason: String },
+    /// The agent answered `session/steer` with -32601: mark the session and
+    /// tell the App once.
+    SteeringUnsupported { session_id: SessionId },
+}
+
+impl CommandOutcome {
+    pub(crate) fn notify(notification: Notification) -> Self {
+        Self::Notify(Box::new(notification))
+    }
+}
+
+/// Payload of [`CommandOutcome::SessionStarted`].
+#[derive(Debug)]
+pub(crate) struct SessionStart {
+    pub(crate) session_id: SessionId,
+    pub(crate) origin: crate::types::SessionOrigin,
+    pub(crate) config_options: Option<Notification>,
+    pub(crate) created: Notification,
 }
 #[derive(Debug)]
 pub(crate) enum HostWork {
@@ -102,6 +142,14 @@ impl DomainChannels {
         })
     }
 
+    /// Best-effort enqueue of a command RPC's serial follow-up. A closed work
+    /// channel means the mediator is already gone; the outcome is moot.
+    pub(crate) async fn enqueue_outcome(&self, outcome: CommandOutcome) {
+        if let Err(error) = self.enqueue(DomainWork::CommandOutcome(outcome)).await {
+            tracing::debug!(%error, "command outcome dropped after bridge closure");
+        }
+    }
+
     pub(crate) fn enter_ingress(&self) -> crate::protocol::source_observer::IngressGuard {
         self.ingress.enter()
     }
@@ -160,6 +208,7 @@ pub(crate) struct DomainMediator {
     host_mediator: Rc<RefCell<crate::protocol::host_mediator::HostMediator>>,
     prompt_tasks: Vec<tokio::task::JoinHandle<()>>,
     permission_tasks: Vec<tokio::task::JoinHandle<()>>,
+    command_tasks: Vec<tokio::task::JoinHandle<()>>,
     #[cfg(feature = "kas")]
     host_ctx: Rc<crate::protocol::kas::callbacks::DispatchCtx>,
 }
@@ -211,6 +260,7 @@ impl DomainMediator {
                 )),
                 prompt_tasks: Vec::new(),
                 permission_tasks: Vec::new(),
+                command_tasks: Vec::new(),
                 #[cfg(feature = "kas")]
                 host_ctx,
             },
@@ -279,7 +329,10 @@ impl DomainMediator {
                         }
                         continue;
                     }
-                    let completed_turn = self.handle_work(work).await?;
+                    let completed_turn = match self.handle_work(work).await? {
+                        std::ops::ControlFlow::Break(()) => break Ok(()),
+                        std::ops::ControlFlow::Continue(completed_turn) => completed_turn,
+                    };
                     if completed_turn
                         && let Some(reason) = deferred_disconnect.take()
                     {
@@ -349,41 +402,107 @@ impl DomainMediator {
         for task in self.permission_tasks.drain(..) {
             task.abort();
         }
+        for task in self.command_tasks.drain(..) {
+            task.abort();
+        }
         self.host_mediator.borrow_mut().shutdown();
         host_task.abort();
         runtime.shutdown().await;
     }
 
-    async fn handle_work(&mut self, work: DomainWork) -> crate::Result<bool> {
+    async fn handle_work(
+        &mut self,
+        work: DomainWork,
+    ) -> crate::Result<std::ops::ControlFlow<(), bool>> {
+        use std::ops::ControlFlow;
         match work {
             DomainWork::UnknownSessionUpdate(message) => {
                 tracing::debug!(
                     method = %message.method(),
                     "unknown session update retained by untyped fence"
                 );
-                Ok(false)
+                Ok(ControlFlow::Continue(false))
             }
-            DomainWork::Session(notification) => self.handle_session(notification).await,
-            DomainWork::ExtensionNotification(notification) => {
-                self.handle_extension_notification(notification).await
-            }
+            DomainWork::Session(notification) => self
+                .handle_session(notification)
+                .await
+                .map(ControlFlow::Continue),
+            DomainWork::ExtensionNotification(notification) => self
+                .handle_extension_notification(notification)
+                .await
+                .map(ControlFlow::Continue),
             DomainWork::TransportClosed => {
                 tracing::debug!("duplicate transport-close marker ignored");
-                Ok(false)
+                Ok(ControlFlow::Continue(false))
             }
             DomainWork::Permission { request, responder } => {
                 self.handle_permission(request, responder);
-                Ok(false)
+                Ok(ControlFlow::Continue(false))
             }
-            DomainWork::Routed(routed) => self.handle_routed(routed).await,
+            DomainWork::Routed(routed) => {
+                self.handle_routed(routed).await.map(ControlFlow::Continue)
+            }
             DomainWork::PromptTerminal {
                 routed,
                 source_disposition,
-            } => {
-                self.handle_routed_with_source_disposition(routed, Some(source_disposition))
-                    .await
+            } => self
+                .handle_routed_with_source_disposition(routed, Some(source_disposition))
+                .await
+                .map(ControlFlow::Continue),
+            DomainWork::CommandOutcome(outcome) => self.apply_command_outcome(outcome).await,
+        }
+    }
+
+    /// Apply the serial follow-up of a command RPC that completed on a
+    /// spawned task. `Break` exits the mediator loop (fail-stop).
+    async fn apply_command_outcome(
+        &mut self,
+        outcome: CommandOutcome,
+    ) -> crate::Result<std::ops::ControlFlow<(), bool>> {
+        use std::ops::ControlFlow;
+        match outcome {
+            CommandOutcome::Notify(notification) => {
+                self.notify((*notification).into()).await?;
+                Ok(ControlFlow::Continue(false))
+            }
+            CommandOutcome::SessionStarted(start) => {
+                let SessionStart {
+                    session_id,
+                    origin,
+                    config_options,
+                    created,
+                } = *start;
+                self.publish_session_start(session_id, origin, config_options, created)
+                    .await?;
+                Ok(ControlFlow::Continue(false))
+            }
+            CommandOutcome::FatalDisconnect { reason } => {
+                self.notify(Notification::BridgeDisconnected { reason }.into())
+                    .await?;
+                Ok(ControlFlow::Break(()))
+            }
+            CommandOutcome::SteeringUnsupported { session_id } => {
+                if self.steering_unsupported.insert(session_id) {
+                    self.notify(
+                        Notification::SteeringUnsupported {
+                            message: "steering requires kiro-cli 2.7.0+".into(),
+                        }
+                        .into(),
+                    )
+                    .await?;
+                }
+                Ok(ControlFlow::Continue(false))
             }
         }
+    }
+
+    /// Spawn one command RPC's await + outcome enqueue, tracked so shutdown
+    /// aborts it. The RPC's request frame must already be on the wire (the
+    /// synchronous `send_request` half) before this is called.
+    fn spawn_command(&mut self, task: impl Future<Output = ()> + 'static) {
+        let handle = tokio::task::spawn_local(task);
+        self.command_tasks.retain(|task| !task.is_finished());
+        self.command_tasks.push(handle);
     }
 
     async fn drain_work_dropping_turn_completion(&mut self) -> crate::Result<()> {
@@ -399,7 +518,9 @@ impl DomainMediator {
             ) {
                 continue;
             }
-            self.handle_work(work).await?;
+            if self.handle_work(work).await?.is_break() {
+                break;
+            }
         }
         Ok(())
     }

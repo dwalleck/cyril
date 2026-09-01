@@ -1,126 +1,159 @@
+use std::future::Future;
 use std::time::Duration;
 
 use agent_client_protocol::{Agent, ConnectionTo, UntypedMessage};
 
-use super::super::{DomainMediator, DomainWork};
+use super::super::{CommandOutcome, DomainMediator, DomainWork};
+use super::{COMMAND_RPC_TIMEOUT, await_response};
 use crate::types::{AgentEngine, Notification, SessionId};
 
+/// Send one `_`-prefixed extension request synchronously (the frame is on
+/// the wire, in order, when this returns) and yield the response future for
+/// a spawned task to await.
+pub(super) fn send_extension(
+    connection: &ConnectionTo<Agent>,
+    method: &str,
+    params: serde_json::Value,
+) -> agent_client_protocol::Result<
+    impl Future<Output = agent_client_protocol::Result<serde_json::Value>> + 'static,
+> {
+    let wire_method = if method.starts_with('_') {
+        method.to_owned()
+    } else {
+        format!("_{method}")
+    };
+    let request = UntypedMessage::new(&wire_method, params)?;
+    Ok(connection.send_request(request).block_task())
+}
+
 impl DomainMediator {
-    pub(super) async fn call_extension(
-        &self,
+    /// Send an extension RPC and hand its result to `outcome` on a spawned
+    /// task. A send/serialize failure produces the same outcome path with the
+    /// error, so every command still reports exactly once.
+    pub(super) fn spawn_extension_command(
+        &mut self,
         connection: &ConnectionTo<Agent>,
         method: &str,
         params: serde_json::Value,
-    ) -> Result<serde_json::Value, agent_client_protocol::Error> {
-        let wire_method = if method.starts_with('_') {
-            method.to_owned()
-        } else {
-            format!("_{method}")
-        };
-        let request = UntypedMessage::new(&wire_method, params)?;
-        connection.send_request(request).block_task().await
+        outcome: impl FnOnce(agent_client_protocol::Result<serde_json::Value>) -> Option<CommandOutcome>
+        + 'static,
+    ) {
+        let what = format!("'{method}'");
+        let channels = self.channels.clone();
+        match send_extension(connection, method, params) {
+            Ok(sent) => self.spawn_command(async move {
+                let result = await_response(sent, &what, COMMAND_RPC_TIMEOUT).await;
+                if let Some(outcome) = outcome(result) {
+                    channels.enqueue_outcome(outcome).await;
+                }
+            }),
+            Err(error) => self.spawn_command(async move {
+                if let Some(outcome) = outcome(Err(error)) {
+                    channels.enqueue_outcome(outcome).await;
+                }
+            }),
+        }
     }
 
-    pub(super) async fn execute_extension(
-        &self,
+    pub(super) fn execute_extension(
+        &mut self,
         connection: &ConnectionTo<Agent>,
         method: String,
         params: serde_json::Value,
-    ) -> crate::Result<()> {
+    ) {
         let operation = format!("ext_method '{method}'");
-        if let Err(error) = self.call_extension(connection, &method, params).await {
-            self.notify(
-                Notification::BridgeError {
-                    operation,
-                    message: error.to_string(),
-                }
-                .into(),
-            )
-            .await?;
-        }
-        Ok(())
+        self.spawn_extension_command(connection, &method, params, move |result| match result {
+            Ok(_) => None,
+            Err(error) => Some(CommandOutcome::notify(Notification::BridgeError {
+                operation,
+                message: error.to_string(),
+            })),
+        });
     }
 
-    pub(super) async fn query_command_options(
-        &self,
+    pub(super) fn query_command_options(
+        &mut self,
         connection: &ConnectionTo<Agent>,
         command: String,
         session_id: SessionId,
-    ) -> crate::Result<()> {
+    ) {
         let params = serde_json::json!({
             "command": command,
             "sessionId": session_id.as_str(),
             "partial": ""
         });
-        let options = match self
-            .call_extension(connection, "kiro.dev/commands/options", params)
-            .await
-        {
-            Ok(value) => crate::protocol::convert::kiro::parse_options_response(&value),
-            Err(error) => {
-                tracing::warn!(%error, %command, "command option query failed");
-                Vec::new()
-            }
-        };
-        self.notify(Notification::CommandOptionsReceived { command, options }.into())
-            .await
+        self.spawn_extension_command(
+            connection,
+            "kiro.dev/commands/options",
+            params,
+            move |result| {
+                let options = match result {
+                    Ok(value) => crate::protocol::convert::kiro::parse_options_response(&value),
+                    Err(error) => {
+                        tracing::warn!(%error, %command, "command option query failed");
+                        Vec::new()
+                    }
+                };
+                Some(CommandOutcome::notify(
+                    Notification::CommandOptionsReceived { command, options },
+                ))
+            },
+        );
     }
 
-    pub(super) async fn execute_command(
-        &self,
+    pub(super) fn execute_command(
+        &mut self,
         connection: &ConnectionTo<Agent>,
         command: String,
         session_id: SessionId,
         args: serde_json::Value,
-    ) -> crate::Result<()> {
+    ) {
         let params = serde_json::json!({
             "sessionId": session_id.as_str(),
             "command": {"command": command, "args": args}
         });
-        let response = match self
-            .call_extension(connection, "kiro.dev/commands/execute", params)
-            .await
-        {
-            Ok(response) => response,
-            Err(error) => serde_json::json!({
-                "success": false,
-                "error": error.to_string()
-            }),
-        };
-        self.notify(Notification::CommandExecuted { command, response }.into())
-            .await
+        self.spawn_extension_command(
+            connection,
+            "kiro.dev/commands/execute",
+            params,
+            move |result| {
+                let response = match result {
+                    Ok(response) => response,
+                    Err(error) => serde_json::json!({
+                        "success": false,
+                        "error": error.to_string()
+                    }),
+                };
+                Some(CommandOutcome::notify(Notification::CommandExecuted {
+                    command,
+                    response,
+                }))
+            },
+        );
     }
 
-    pub(super) async fn list_settings(
-        &self,
-        connection: &ConnectionTo<Agent>,
-    ) -> crate::Result<()> {
-        match self
-            .call_extension(connection, "kiro.dev/settings/list", serde_json::json!({}))
-            .await
-        {
-            Ok(settings) => {
-                self.notify(Notification::SettingsList { settings }.into())
-                    .await
-            }
-            Err(error) => {
-                self.notify(
-                    Notification::BridgeError {
+    pub(super) fn list_settings(&mut self, connection: &ConnectionTo<Agent>) {
+        self.spawn_extension_command(
+            connection,
+            "kiro.dev/settings/list",
+            serde_json::json!({}),
+            |result| {
+                Some(CommandOutcome::notify(match result {
+                    Ok(settings) => Notification::SettingsList { settings },
+                    Err(error) => Notification::BridgeError {
                         operation: "settings/list".into(),
                         message: error.to_string(),
-                    }
-                    .into(),
-                )
-                .await
-            }
-        }
+                    },
+                }))
+            },
+        );
     }
 
-    pub(super) fn query_usage_account(&self, connection: &ConnectionTo<Agent>) {
+    pub(super) fn query_usage_account(&mut self, connection: &ConnectionTo<Agent>) {
         let connection = connection.clone();
         let engine = self.config.engine.kind();
         let channels = self.channels.clone();
-        tokio::task::spawn_local(async move {
+        self.spawn_command(async move {
             let notification = match tokio::time::timeout(
                 Duration::from_secs(5),
                 fetch_usage_account(connection, engine),
