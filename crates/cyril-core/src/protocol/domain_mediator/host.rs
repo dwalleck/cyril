@@ -60,13 +60,16 @@ fn dispatch_extension(
 
     #[cfg(feature = "kas")]
     {
-        use crate::protocol::engine::HooksAdapter;
         use crate::protocol::kas::{callbacks, hooks, kiro_fs, terminal_io};
 
         let params = request.params;
         let adapters = _engine.adapters();
+        use crate::protocol::kas::callbacks::HostFamily;
+        // Every branch gates through the SAME fenced `supports()` predicate
+        // the HostWork::Callback path uses (cyril-dn91): a gate change in one
+        // place cannot silently diverge the two dispatch paths.
         let callback_and_reply = if method == crate::protocol::kas::auth::GET_ACCESS_TOKEN_METHOD {
-            if adapters.auth.is_none() {
+            if !supports(adapters, HostFamily::Auth) {
                 respond_extension_error(
                     responder,
                     &method,
@@ -80,7 +83,7 @@ fn dispatch_extension(
                 response_rx,
             )
         } else if method == terminal_io::SHELL_TYPE_METHOD {
-            if adapters.host_io.is_none() {
+            if !supports(adapters, HostFamily::HostIo) {
                 respond_extension_error(
                     responder,
                     &method,
@@ -98,7 +101,7 @@ fn dispatch_extension(
                 response_rx,
             )
         } else if method == hooks::LIST_METHOD {
-            if adapters.hooks != HooksAdapter::Inbound {
+            if !supports(adapters, HostFamily::HooksInbound) {
                 respond_extension_error(
                     responder,
                     &method,
@@ -122,7 +125,7 @@ fn dispatch_extension(
                 response_rx,
             )
         } else if method == hooks::EXECUTE_METHOD {
-            if adapters.hooks != HooksAdapter::Inbound {
+            if !supports(adapters, HostFamily::HooksInbound) {
                 respond_extension_error(
                     responder,
                     &method,
@@ -147,7 +150,7 @@ fn dispatch_extension(
                 response_rx,
             )
         } else if method == hooks::SESSION_START_METHOD {
-            if adapters.hooks != HooksAdapter::Inbound {
+            if !supports(adapters, HostFamily::HooksInbound) {
                 respond_extension_error(
                     responder,
                     &method,
@@ -161,7 +164,7 @@ fn dispatch_extension(
                 response_rx,
             )
         } else if let Some(operation) = kiro_fs::op_for_method(&method) {
-            if adapters.host_io.is_none() {
+            if !supports(adapters, HostFamily::HostIo) {
                 respond_extension_error(
                     responder,
                     &method,

@@ -776,3 +776,143 @@ async fn foreign_turn_end_does_not_finalize_main_source_capture() {
         })
         .await;
 }
+
+/// cyril-dn91 wiring fence (PR #115 review, finding 13): a V2-BOUND bridge on
+/// a kas build must REFUSE inbound `_kiro` host requests end-to-end — the
+/// request travels the real path (client catch-all → host channel →
+/// `dispatch_extension` → the fenced `supports()` gate) and comes back
+/// -32601. The unit half (`probe_dn91`) only pairs derived bits; this drives
+/// the wire, the defect class where a v2-bound build answered KAS host
+/// callbacks (executeHook ran arbitrary commands).
+#[cfg(feature = "kas")]
+#[tokio::test]
+async fn v2_bound_bridge_refuses_inbound_kiro_host_requests_end_to_end() {
+    use std::rc::Rc;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
+
+    use agent_client_protocol::schema::v1 as acp;
+    use agent_client_protocol::{Agent, Client, ConnectionTo, UntypedMessage};
+
+    use super::super::{DomainConfig, DomainMediator};
+    use crate::protocol::bridge::create_channel_pair;
+    use crate::protocol::engine::V2Engine;
+    use crate::protocol::sdk_runtime::{SdkRuntime, StageChain};
+    use crate::types::BridgeCommand;
+
+    let local = tokio::task::LocalSet::new();
+    local
+        .run_until(async {
+            let refused = Arc::new(AtomicUsize::new(0));
+            let observed = Arc::clone(&refused);
+            let agent = Agent
+                .builder()
+                .name("dn91-wiring-test-agent")
+                .on_receive_request(
+                    async move |request: acp::InitializeRequest,
+                                responder,
+                                connection: ConnectionTo<Client>| {
+                        let probe_connection = connection.clone();
+                        let refused = Arc::clone(&refused);
+                        connection.spawn(async move {
+                            for method in [
+                                "_kiro/auth/getAccessToken",
+                                "_kiro/hooks/executeHook",
+                                "_kiro/fs/stat",
+                            ] {
+                                let probe =
+                                    UntypedMessage::new(method, serde_json::json!({}))?;
+                                match probe_connection.send_request(probe).block_task().await {
+                                    Err(error)
+                                        if error.code
+                                            == agent_client_protocol::ErrorCode::MethodNotFound =>
+                                    {
+                                        refused.fetch_add(1, Ordering::Release);
+                                    }
+                                    Ok(response) => {
+                                        return Err(
+                                            agent_client_protocol::Error::internal_error().data(
+                                                format!(
+                                                    "{method} unexpectedly answered on a v2-bound bridge: {response}"
+                                                ),
+                                            ),
+                                        );
+                                    }
+                                    Err(error) => {
+                                        return Err(
+                                            agent_client_protocol::Error::internal_error().data(
+                                                format!("{method} wrong refusal: {error}"),
+                                            ),
+                                        );
+                                    }
+                                }
+                            }
+                            responder
+                                .respond(acp::InitializeResponse::new(request.protocol_version))
+                        })?;
+                        Ok(())
+                    },
+                    agent_client_protocol::on_receive_request!(),
+                )
+                .on_receive_request(
+                    async move |_request: acp::NewSessionRequest, responder, _connection| {
+                        responder.respond(acp::NewSessionResponse::new("dn91-wire"))
+                    },
+                    agent_client_protocol::on_receive_request!(),
+                );
+
+            let directory = tempfile::tempdir()
+                .unwrap_or_else(|error| panic!("dn91 wiring tempdir: {error}"));
+            let (handle, bridge) = create_channel_pair();
+            let (sender, mut notification_rx, _permission_rx, _source_rx, _completion_rx) =
+                handle.split();
+            let config = DomainConfig {
+                engine: Rc::new(V2Engine),
+                cwd: directory.path().to_path_buf(),
+                present_as: None,
+                stall_threshold: Duration::from_secs(30),
+                host_shell: None,
+            };
+            let (mediator, channels) = DomainMediator::new(config, bridge)
+                .unwrap_or_else(|error| panic!("dn91 wiring mediator: {error}"));
+            let runtime = SdkRuntime::start_for_test(agent, channels, StageChain::default())
+                .await
+                .unwrap_or_else(|error| panic!("dn91 wiring runtime: {error}"));
+            let loop_handle = tokio::task::spawn_local(mediator.run(runtime));
+
+            sender
+                .send(BridgeCommand::NewSession {
+                    cwd: directory.path().to_path_buf(),
+                })
+                .await
+                .unwrap_or_else(|error| panic!("dn91 wiring session send: {error}"));
+            loop {
+                let routed = tokio::time::timeout(Duration::from_secs(5), notification_rx.recv())
+                    .await
+                    .unwrap_or_else(|_| panic!("dn91 wiring session timeout"))
+                    .unwrap_or_else(|| panic!("dn91 wiring channel closed"));
+                if matches!(
+                    routed.notification,
+                    crate::types::Notification::SessionCreated { .. }
+                ) {
+                    break;
+                }
+            }
+            assert_eq!(
+                observed.load(Ordering::Acquire),
+                3,
+                "every inbound _kiro host request must be refused before initialize completes"
+            );
+
+            sender
+                .send(BridgeCommand::Shutdown)
+                .await
+                .unwrap_or_else(|error| panic!("dn91 wiring shutdown send: {error}"));
+            loop_handle
+                .await
+                .unwrap_or_else(|error| panic!("dn91 wiring loop join: {error}"))
+                .unwrap_or_else(|error| panic!("dn91 wiring loop: {error}"));
+        })
+        .await;
+}
