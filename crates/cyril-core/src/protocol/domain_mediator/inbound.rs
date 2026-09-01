@@ -10,6 +10,17 @@ pub(super) fn session_id(notification: &acp::SessionNotification) -> SessionId {
     SessionId::new(notification.session_id.to_string())
 }
 
+#[cfg(feature = "kas")]
+fn host_channel_error(_: agent_client_protocol::Error) -> crate::Error {
+    // NOT ErrorKind::BridgeClosed: that means "the App dropped its
+    // receivers" and run() treats it as a clean exit. A dead host drain task
+    // while the App is alive is a bridge failure the App must hear about —
+    // a Transport error propagates to run_bridge's fail-stop disconnect.
+    crate::Error::from_kind(crate::ErrorKind::Transport {
+        detail: "host mediator task stopped while the bridge was serving".into(),
+    })
+}
+
 impl DomainMediator {
     pub(super) async fn handle_routed(
         &mut self,
@@ -36,7 +47,12 @@ impl DomainMediator {
             Disposition::ForwardTurnComplete => true,
             Disposition::Forward => false,
         };
-        if let Notification::TurnCompleted { stop_reason } = &routed.notification {
+        // Only the MAIN turn's own release finalizes source capture: a
+        // forwarded foreign-session terminal (a KAS workflow step or subagent
+        // peer ending its turn) must not steal the single active slot and
+        // truncate the main turn's record mid-stream.
+        if completed_turn && let Notification::TurnCompleted { stop_reason } = &routed.notification
+        {
             self.source_observer.finish(
                 terminal_disposition
                     .unwrap_or_else(|| crate::protocol::bridge::source_disposition(*stop_reason)),
@@ -132,7 +148,7 @@ impl DomainMediator {
                             operation_id: operation_id.to_owned(),
                         }))
                         .await
-                        .map_err(|_| crate::Error::from_kind(crate::ErrorKind::BridgeClosed))?;
+                        .map_err(host_channel_error)?;
                 }
                 return Ok(false);
             }
@@ -146,7 +162,7 @@ impl DomainMediator {
                         hooks: crate::protocol::kas::hooks::parse_wire_hooks(params),
                     }))
                     .await
-                    .map_err(|_| crate::Error::from_kind(crate::ErrorKind::BridgeClosed))?;
+                    .map_err(host_channel_error)?;
                 return Ok(false);
             }
         }

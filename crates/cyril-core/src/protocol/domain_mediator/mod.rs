@@ -320,7 +320,10 @@ impl DomainMediator {
                             "agent connection closed unexpectedly".to_owned(),
                         );
                         if self.turn_mediator.is_busy() {
-                            deferred_disconnect = Some(reason);
+                            // io_done may already have deferred a richer
+                            // reason (run_client's error detail + stderr
+                            // tail); the generic sentinel must not clobber it.
+                            deferred_disconnect.get_or_insert(reason);
                         } else {
                             self.drain_work_dropping_turn_completion().await?;
                             self.notify(Notification::BridgeDisconnected { reason }.into())

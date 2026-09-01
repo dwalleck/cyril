@@ -583,3 +583,196 @@ async fn kas_runtime_preserves_callbacks_commands_and_wire_terminal_order() {
         })
         .await;
 }
+
+/// cyril PR #115 review, finding 3: a FOREIGN session's `turn_end` forwarded
+/// mid-turn (Disposition::Forward — a workflow-step or subagent peer ending
+/// its own turn) must NOT finalize the MAIN turn's source capture. Before the
+/// fix, any forwarded `TurnCompleted` took the observer's single active slot
+/// with the peer's stop reason, so every later main-turn fragment was
+/// silently dropped and the real terminal's `finish` no-oped.
+#[cfg(feature = "kas")]
+#[tokio::test]
+async fn foreign_turn_end_does_not_finalize_main_source_capture() {
+    use std::rc::Rc;
+    use std::time::Duration;
+
+    use agent_client_protocol::schema::v1 as acp;
+    use agent_client_protocol::{Agent, Client, ConnectionTo};
+
+    use super::super::{DomainConfig, DomainMediator};
+    use crate::protocol::bridge::create_channel_pair;
+    use crate::protocol::engine::KasEngine;
+    use crate::protocol::sdk_runtime::{SdkRuntime, StageChain};
+    use crate::types::{BridgeCommand, SourceTurnDisposition, SourceTurnEventKind, StopReason};
+
+    fn turn_end(session: &str) -> acp::SessionNotification {
+        match serde_json::from_value(serde_json::json!({
+            "sessionId": session,
+            "update": {
+                "sessionUpdate": "session_info_update",
+                "_meta": {"kiro": {"kind": "turn_end", "stopReason": "end_turn"}}
+            }
+        })) {
+            Ok(notification) => notification,
+            Err(error) => panic!("turn_end fixture: {error}"),
+        }
+    }
+
+    fn chunk(session: &str, text: &str) -> acp::SessionNotification {
+        match serde_json::from_value(serde_json::json!({
+            "sessionId": session,
+            "update": {
+                "sessionUpdate": "agent_message_chunk",
+                "content": {"type": "text", "text": text}
+            }
+        })) {
+            Ok(notification) => notification,
+            Err(error) => panic!("chunk fixture: {error}"),
+        }
+    }
+
+    let local = tokio::task::LocalSet::new();
+    local
+        .run_until(async {
+            let directory = tempfile::tempdir()
+                .unwrap_or_else(|error| panic!("foreign-terminal tempdir: {error}"));
+            let agent = Agent
+                .builder()
+                .name("foreign-terminal-test-agent")
+                .on_receive_request(
+                    async move |request: acp::InitializeRequest, responder, _connection| {
+                        let initialize = serde_json::from_value(serde_json::json!({
+                            "protocolVersion": request.protocol_version,
+                            "agentCapabilities": {
+                                "loadSession": true,
+                                "_meta": {"kiro": {}}
+                            }
+                        }))
+                        .map_err(|error| {
+                            agent_client_protocol::Error::internal_error()
+                                .data(format!("initialize fixture: {error}"))
+                        })?;
+                        responder.respond(initialize)
+                    },
+                    agent_client_protocol::on_receive_request!(),
+                )
+                .on_receive_request(
+                    async move |_request: acp::NewSessionRequest, responder, _connection| {
+                        responder.respond(acp::NewSessionResponse::new("sess_foreign-terminal"))
+                    },
+                    agent_client_protocol::on_receive_request!(),
+                )
+                .on_receive_request(
+                    async move |request: acp::PromptRequest,
+                                responder,
+                                connection: ConnectionTo<Client>| {
+                        let main = request.session_id.to_string();
+                        connection.send_notification(chunk(&main, "before"))?;
+                        // A peer session ends its turn while the main turn
+                        // is still streaming.
+                        connection.send_notification(turn_end("sess_peer-step"))?;
+                        connection.send_notification(chunk(&main, "after"))?;
+                        connection.send_notification(turn_end(&main))?;
+                        responder.respond(acp::PromptResponse::new(acp::StopReason::EndTurn))
+                    },
+                    agent_client_protocol::on_receive_request!(),
+                );
+
+            let (handle, bridge) = create_channel_pair();
+            let (sender, mut notification_rx, _permission_rx, mut source_rx, _completion_rx) =
+                handle.split();
+            let config = DomainConfig {
+                engine: Rc::new(KasEngine::default()),
+                cwd: directory.path().to_path_buf(),
+                present_as: None,
+                stall_threshold: Duration::from_secs(30),
+                host_shell: None,
+            };
+            let (mediator, channels) = DomainMediator::new(config, bridge)
+                .unwrap_or_else(|error| panic!("foreign-terminal mediator: {error}"));
+            let runtime = SdkRuntime::start_for_test(agent, channels, StageChain::default())
+                .await
+                .unwrap_or_else(|error| panic!("foreign-terminal runtime: {error}"));
+            let loop_handle = tokio::task::spawn_local(mediator.run(runtime));
+
+            sender
+                .send(BridgeCommand::NewSession {
+                    cwd: directory.path().to_path_buf(),
+                })
+                .await
+                .unwrap_or_else(|error| panic!("foreign-terminal session send: {error}"));
+            let session_id = loop {
+                let routed = tokio::time::timeout(Duration::from_secs(5), notification_rx.recv())
+                    .await
+                    .unwrap_or_else(|_| panic!("foreign-terminal session timeout"))
+                    .unwrap_or_else(|| panic!("foreign-terminal session channel closed"));
+                if let crate::types::Notification::SessionCreated { session_id, .. } =
+                    routed.notification
+                {
+                    break session_id;
+                }
+            };
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id: session_id.clone(),
+                    prompt: crate::types::PromptEnvelope::prepared(
+                        vec!["stream across a peer terminal".to_owned()],
+                        None,
+                    ),
+                })
+                .await
+                .unwrap_or_else(|error| panic!("foreign-terminal prompt send: {error}"));
+
+            // Wait for the MAIN turn's completion on the notification side.
+            loop {
+                let routed = tokio::time::timeout(Duration::from_secs(5), notification_rx.recv())
+                    .await
+                    .unwrap_or_else(|_| panic!("foreign-terminal turn timeout"))
+                    .unwrap_or_else(|| panic!("foreign-terminal channel closed"));
+                if matches!(
+                    routed.notification,
+                    crate::types::Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn
+                    }
+                ) {
+                    break;
+                }
+            }
+
+            sender
+                .send(BridgeCommand::Shutdown)
+                .await
+                .unwrap_or_else(|error| panic!("foreign-terminal shutdown send: {error}"));
+            loop_handle
+                .await
+                .unwrap_or_else(|error| panic!("foreign-terminal loop join: {error}"))
+                .unwrap_or_else(|error| panic!("foreign-terminal loop: {error}"));
+
+            // Drain the capture stream: both fragments must precede exactly
+            // one Finished, and its disposition is the MAIN turn's.
+            let mut fragments = Vec::new();
+            let mut finishes = Vec::new();
+            while let Ok(event) = source_rx.try_recv() {
+                match event.kind() {
+                    SourceTurnEventKind::AssistantFragment { text, .. } => {
+                        fragments.push(text.clone());
+                    }
+                    SourceTurnEventKind::Finished { disposition, .. } => {
+                        finishes.push(*disposition);
+                        assert_eq!(
+                            fragments,
+                            ["before", "after"],
+                            "a forwarded peer terminal truncated main-turn capture"
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            assert_eq!(
+                finishes,
+                [SourceTurnDisposition::Completed],
+                "exactly one Finished, owned by the main turn"
+            );
+        })
+        .await;
+}
