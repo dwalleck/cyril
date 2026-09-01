@@ -25,6 +25,12 @@ impl ToolCallLedger {
     /// `kind_present`/`status_present` carry wire-level presence from the
     /// originating frame: KAS omits `kind` on `tool_call_update`s, and an
     /// unconditional overwrite would downgrade a tracked `Write` to `Other`.
+    ///
+    /// Eviction (cyril-imj9): a call whose merged status is terminal is
+    /// removed — permission requests only ever reference calls still awaiting
+    /// execution, and retaining completed calls (full diff text, raw
+    /// input/output, across every peer session) grew without bound for the
+    /// connection's lifetime.
     pub(crate) fn merge(
         &self,
         session_id: SessionId,
@@ -34,13 +40,21 @@ impl ToolCallLedger {
     ) {
         let key = (session_id, update.id().clone());
         let mut calls = self.calls.borrow_mut();
-        match calls.get_mut(&key) {
+        let status = match calls.get_mut(&key) {
             Some(existing) => {
-                existing.merge_update_with_presence(update, kind_present, status_present)
+                existing.merge_update_with_presence(update, kind_present, status_present);
+                existing.status()
             }
             None => {
-                calls.insert(key, update.clone());
+                calls.insert(key.clone(), update.clone());
+                update.status()
             }
+        };
+        if matches!(
+            status,
+            crate::types::ToolCallStatus::Completed | crate::types::ToolCallStatus::Failed
+        ) {
+            calls.remove(&key);
         }
     }
 
@@ -104,7 +118,7 @@ mod tests {
             &call(
                 "tc",
                 "second",
-                ToolCallStatus::Completed,
+                ToolCallStatus::InProgress,
                 Some(serde_json::json!({"path": "two.py"})),
             ),
             true,
@@ -177,5 +191,47 @@ mod tests {
             Some(&serde_json::json!({"message": "ok"}))
         );
         assert_eq!(snapshot.status(), ToolCallStatus::Pending);
+    }
+
+    /// cyril-imj9: terminal calls are evicted — the ledger holds only calls
+    /// still awaiting execution, so growth is bounded by in-flight work, not
+    /// the connection's lifetime.
+    #[test]
+    fn ledger_evicts_calls_on_terminal_status() {
+        let ledger = ToolCallLedger::new();
+        let session = SessionId::new("s");
+        let id = ToolCallId::new("tc");
+        ledger.merge(
+            session.clone(),
+            &call("tc", "Write File", ToolCallStatus::Pending, None),
+            true,
+            true,
+        );
+        assert!(ledger.snapshot(&session, &id).is_some(), "pending retained");
+
+        let done = ToolCall::new(
+            id.clone(),
+            String::new(),
+            ToolKind::Other,
+            ToolCallStatus::Completed,
+            None,
+        );
+        ledger.merge(session.clone(), &done, false, true);
+        assert!(
+            ledger.snapshot(&session, &id).is_none(),
+            "completed call must be evicted"
+        );
+
+        // A call that arrives already terminal never sticks either.
+        ledger.merge(
+            session.clone(),
+            &call("tc2", "one-shot", ToolCallStatus::Failed, None),
+            true,
+            true,
+        );
+        assert!(
+            ledger.snapshot(&session, &ToolCallId::new("tc2")).is_none(),
+            "failed call must be evicted"
+        );
     }
 }

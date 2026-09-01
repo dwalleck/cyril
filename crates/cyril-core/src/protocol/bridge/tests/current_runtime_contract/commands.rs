@@ -6,11 +6,12 @@ async fn send_command(
     ledger: &mut Vec<&'static str>,
     command: BridgeCommand,
 ) {
-    ledger.push(command_name(&command));
+    let name = command_name(&command);
+    ledger.push(name);
     sender
         .send(command)
         .await
-        .unwrap_or_else(|error| panic!("C5 accepted command send failed: {error}"));
+        .unwrap_or_else(|error| panic!("C5 {name} command send failed: {error}"));
 }
 
 fn assert_bridge_error(cell: &str, notification: &Notification, operation: &str) {
@@ -292,11 +293,25 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 "C5 LoadSession: {load:?}"
             );
 
+            // A failed load is RECOVERABLE (only session/new failure is
+            // fatal): the loop must still serve commands afterwards.
+            send_command(&sender, &mut ledger, BridgeCommand::ListSettings).await;
+            let after_load = next_notification("ListSettings after failed load", &mut rx).await;
+            assert!(
+                matches!(after_load, Notification::SettingsList { ref settings } if settings == &serde_json::json!({})),
+                "C5 failed LoadSession must not kill the bridge: {after_load:?}"
+            );
+
             send_command(&sender, &mut ledger, BridgeCommand::Shutdown).await;
             loop_handle
                 .await
-                .expect("C5 Shutdown: loop task joined")
-                .expect("C5 Shutdown: loop returned Ok");
+                .expect_contract("C5 Shutdown after failed load: loop task joined")
+                .expect_contract("C5 Shutdown after failed load: loop returned Ok");
+            let closed = sender
+                .send(BridgeCommand::Shutdown)
+                .await
+                .expect_err_contract("C5 shutdown closes command channel");
+            assert_eq!(closed.to_string(), "bridge channel closed");
 
             // The loop has exited and dropped its sender: recv drains any
             // buffered stray frame before yielding None, closing the quiet
@@ -329,6 +344,7 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                     "SetKasHookEnabled",
                     "Workflow",
                     "LoadSession",
+                    "ListSettings",
                     "Shutdown",
                 ],
                 "C5 exhaustive BridgeCommand ledger"
@@ -338,8 +354,15 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
     .await;
 
     assert_eq!(
-        observed.borrow().ext_calls,
+        observed.borrow().ext_calls().clone(),
         [
+            (
+                "session/set_model".to_owned(),
+                serde_json::json!({
+                    "sessionId": "fake-0",
+                    "modelId": "oracle-model",
+                }),
+            ),
             (
                 "oracle/exact".to_owned(),
                 serde_json::json!({"nested": [1, "two"]}),
@@ -384,15 +407,17 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                 "session/steer/clear".to_owned(),
                 serde_json::json!({"sessionId": "fake-0"}),
             ),
+            ("kiro.dev/settings/list".to_owned(), serde_json::json!({})),
         ],
         "C5 exact extension methods, order, and params"
     );
     assert_eq!(
-        observed.borrow().received,
+        observed.borrow().received().clone(),
         [
             "new_session",
             "prompt",
             "cancel",
+            "set_model",
             "ext:oracle/exact",
             "ext:kiro.dev/commands/options",
             "ext:kiro.dev/commands/execute",
@@ -402,7 +427,229 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
             "ext:kiro.dev/settings/list",
             "ext:session/steer",
             "ext:session/steer/clear",
+            "load_session",
+            "ext:kiro.dev/settings/list",
         ],
         "C5 exact fake-agent call order"
     );
+
+    with_harness(
+        Rc::new(RefCell::new(Script::default())),
+        |sender, _rx, _permission_rx, _gate, loop_handle| async move {
+            let mut ledger = Vec::new();
+            send_command(&sender, &mut ledger, BridgeCommand::Shutdown).await;
+            loop_handle
+                .await
+                .expect_contract("C5 Shutdown: loop task joined")
+                .expect_contract("C5 Shutdown: loop returned Ok");
+            assert_eq!(ledger, ["Shutdown"], "C5 explicit Shutdown outcome");
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn c5_command_failures_preserve_legacy_operation_labels() {
+    let script = Rc::new(RefCell::new(Script {
+        fail_extensions: vec![
+            "oracle/error".to_owned(),
+            "kiro.dev/commands/options".to_owned(),
+            "kiro.dev/session/terminate".to_owned(),
+            "message/send".to_owned(),
+            "session/steer".to_owned(),
+            "session/steer/clear".to_owned(),
+        ],
+        ..Script::default()
+    }));
+    with_harness(
+        script,
+        |sender, mut rx, _permission_rx, _gate, loop_handle| async move {
+            let session_id = start_session(&sender, &mut rx).await;
+            let child_id = crate::types::SessionId::new("label-child");
+            let mut ledger = Vec::new();
+
+            send_command(
+                &sender,
+                &mut ledger,
+                BridgeCommand::ExtMethod {
+                    method: "oracle/error".to_owned(),
+                    params: serde_json::json!({}),
+                },
+            )
+            .await;
+            assert_bridge_error(
+                "ExtMethod label",
+                &next_notification("ExtMethod label", &mut rx).await,
+                "ext_method 'oracle/error'",
+            );
+
+            // cyril-tr0a: a failed options query is a visible error, never an
+            // empty picker.
+            send_command(
+                &sender,
+                &mut ledger,
+                BridgeCommand::QueryCommandOptions {
+                    command: "model".to_owned(),
+                    session_id: session_id.clone(),
+                },
+            )
+            .await;
+            assert_bridge_error(
+                "QueryCommandOptions label",
+                &next_notification("QueryCommandOptions label", &mut rx).await,
+                "options 'model'",
+            );
+
+            send_command(
+                &sender,
+                &mut ledger,
+                BridgeCommand::TerminateSession {
+                    session_id: child_id.clone(),
+                },
+            )
+            .await;
+            assert_bridge_error(
+                "TerminateSession label",
+                &next_notification("TerminateSession label", &mut rx).await,
+                "terminate_session 'label-child'",
+            );
+
+            send_command(
+                &sender,
+                &mut ledger,
+                BridgeCommand::SendMessage {
+                    session_id: child_id,
+                    content: "message".to_owned(),
+                },
+            )
+            .await;
+            assert_bridge_error(
+                "SendMessage label",
+                &next_notification("SendMessage label", &mut rx).await,
+                "send_message to 'label-child'",
+            );
+
+            send_command(
+                &sender,
+                &mut ledger,
+                BridgeCommand::SteerSession {
+                    session_id: session_id.clone(),
+                    message: "steer".to_owned(),
+                },
+            )
+            .await;
+            assert_bridge_error(
+                "SteerSession label",
+                &next_notification("SteerSession label", &mut rx).await,
+                "steer 'fake-0'",
+            );
+
+            send_command(
+                &sender,
+                &mut ledger,
+                BridgeCommand::ClearSteering { session_id },
+            )
+            .await;
+            assert_bridge_error(
+                "ClearSteering label",
+                &next_notification("ClearSteering label", &mut rx).await,
+                "steer/clear 'fake-0'",
+            );
+
+            send_command(&sender, &mut ledger, BridgeCommand::Shutdown).await;
+            loop_handle
+                .await
+                .expect_contract("C5 label loop joined")
+                .expect_contract("C5 label loop result");
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn c13_extension_params_preserve_array_and_null_shapes() {
+    let script = Rc::new(RefCell::new(Script::default()));
+    let observed = Rc::clone(&script);
+    with_harness(
+        script,
+        |sender, mut rx, _permission_rx, _gate, loop_handle| async move {
+            let _session_id = start_session(&sender, &mut rx).await;
+            let mut ledger = Vec::new();
+            for (method, params) in [
+                ("oracle/array", serde_json::json!([1, {"nested": true}])),
+                ("oracle/null", serde_json::Value::Null),
+            ] {
+                send_command(
+                    &sender,
+                    &mut ledger,
+                    BridgeCommand::ExtMethod {
+                        method: method.to_owned(),
+                        params,
+                    },
+                )
+                .await;
+            }
+            send_command(&sender, &mut ledger, BridgeCommand::QueryUsageAccount).await;
+            let delimiter = next_notification("C13 extension params delimiter", &mut rx).await;
+            assert!(matches!(
+                delimiter,
+                Notification::UsageAccountQueryFailed { .. }
+            ));
+            send_command(&sender, &mut ledger, BridgeCommand::Shutdown).await;
+            loop_handle
+                .await
+                .expect_contract("C13 extension params loop joined")
+                .expect_contract("C13 extension params loop result");
+        },
+    )
+    .await;
+    assert_eq!(
+        observed.borrow().ext_calls().as_slice(),
+        [
+            (
+                "oracle/array".to_owned(),
+                serde_json::json!([1, {"nested": true}]),
+            ),
+            ("oracle/null".to_owned(), serde_json::Value::Null),
+        ],
+        "C13 extension params must remain exact JSON values"
+    );
+}
+
+#[tokio::test]
+async fn c5_new_session_rpc_failure_is_fatal() {
+    let script = Rc::new(RefCell::new(Script {
+        fail_new_session: true,
+        ..Script::default()
+    }));
+    with_harness(
+        script,
+        |sender, mut rx, _permission_rx, _gate, loop_handle| async move {
+            sender
+                .send(BridgeCommand::NewSession {
+                    cwd: std::env::temp_dir(),
+                })
+                .await
+                .expect_contract("C5 failing NewSession command accepted");
+            let notification = next_notification("NewSession fatal", &mut rx).await;
+            assert!(
+                matches!(
+                    notification,
+                    Notification::BridgeDisconnected { ref reason }
+                        if reason.starts_with("Failed to create session:")
+                ),
+                "C5 NewSession failure must disconnect: {notification:?}"
+            );
+            loop_handle
+                .await
+                .expect_contract("C5 NewSession fatal loop joined")
+                .expect_contract("C5 NewSession fatal loop result");
+            let closed = sender
+                .send(BridgeCommand::Shutdown)
+                .await
+                .expect_err_contract("C5 NewSession failure closes commands");
+            assert_eq!(closed.to_string(), "bridge channel closed");
+        },
+    )
+    .await;
 }

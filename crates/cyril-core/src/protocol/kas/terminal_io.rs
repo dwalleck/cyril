@@ -36,7 +36,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 use tokio::process::Child;
 use tokio::sync::Notify;
 

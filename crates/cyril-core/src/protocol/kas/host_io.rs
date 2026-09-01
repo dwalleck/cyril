@@ -19,7 +19,7 @@
 //! would pin the bridge thread and starve the loop. (The central loop-mediation
 //! *gate* seam is deferred to its first consumer — cyril-g9vt.)
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 
 /// Answer `fs/read_text_file`: read the file at the (translated) path and return
 /// its content, honoring the request's 1-based `line` start and `limit` line count.

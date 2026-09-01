@@ -20,7 +20,7 @@
 //! presence is meaningful); v2 sends no `_meta` at all (2.4.1→2.12.0). KAS
 //! session ids are `sess_`-prefixed; v2 ids are bare UUIDs.
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 
 use crate::types::AgentEngine;
 

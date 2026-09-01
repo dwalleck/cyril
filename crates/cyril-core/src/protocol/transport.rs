@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::Duration;
 
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
@@ -23,9 +24,23 @@ const MAX_LINE_LEN: u64 = 8192;
 /// the agent dies so its final words (crash traceback, refusal reason) aren't
 /// lost. `Arc<Mutex>` because the drain runs on a plain `tokio::spawn` (pipe
 /// reads are `Send`) while readers live on the bridge's LocalSet thread.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub(crate) struct StderrTail {
     lines: Arc<Mutex<VecDeque<String>>>,
+    /// Flipped exactly once, when the drain reaches stderr EOF (or gives up):
+    /// the "final words" guarantee needs disconnect paths to wait for this,
+    /// or the snapshot races the drain and loses the crash traceback.
+    eof: tokio::sync::watch::Sender<bool>,
+}
+
+impl Default for StderrTail {
+    fn default() -> Self {
+        let (eof, _) = tokio::sync::watch::channel(false);
+        Self {
+            lines: Arc::new(Mutex::new(VecDeque::new())),
+            eof,
+        }
+    }
 }
 
 impl StderrTail {
@@ -36,6 +51,28 @@ impl StderrTail {
             lines.pop_front();
         }
         lines.push_back(line);
+    }
+
+    /// Mark the drain finished; snapshots after this see the complete tail.
+    fn mark_eof(&self) {
+        self.eof.send_replace(true);
+    }
+
+    /// Wait (bounded) for the drain to reach stderr EOF so a disconnect
+    /// snapshot carries the agent's final words instead of racing them.
+    pub(crate) async fn wait_eof(&self, bound: Duration) {
+        let mut rx = self.eof.subscribe();
+        let drained = tokio::time::timeout(bound, async {
+            while !*rx.borrow_and_update() {
+                if rx.changed().await.is_err() {
+                    break;
+                }
+            }
+        })
+        .await;
+        if drained.is_err() {
+            tracing::debug!("stderr drain still open at disconnect; tail may be partial");
+        }
     }
 
     /// The retained tail, oldest line first.
@@ -92,6 +129,7 @@ fn spawn_stderr_drain(stderr: ChildStderr, tail: StderrTail) {
                 }
             }
         }
+        tail.mark_eof();
     });
 }
 
@@ -108,7 +146,7 @@ fn spawn_stderr_drain(stderr: ChildStderr, tail: StderrTail) {
 /// bridge moves `stdin`/`stdout` out of `AgentProcess` by field access, and
 /// partial moves are illegal on types that implement `Drop`.
 #[cfg(unix)]
-struct ProcessGroupGuard {
+pub(crate) struct ProcessGroupGuard {
     /// Always positive when present — captured from the child's pid right
     /// after spawn. `None` disables the group kill entirely: `killpg` with
     /// pgid 0 would signal OUR OWN process group.
@@ -235,6 +273,60 @@ impl AgentProcess {
     /// moved into the ACP connection (full UI surfacing is cyril-l7tw).
     pub(crate) fn stderr_tail(&self) -> StderrTail {
         self.stderr_tail.clone()
+    }
+
+    /// Split the process into its transport pipes and its lifecycle owner.
+    /// The pipes go to the SDK adapter (whose future the conductor may cancel
+    /// at teardown); the lifecycle stays with the runtime HANDLE so the
+    /// shutdown path — not a cancellable future — controls when the child and
+    /// its process group die (cyril-hb0k).
+    pub(crate) fn into_parts(self) -> (AgentProcessPipes, AgentProcessLifecycle) {
+        let AgentProcess {
+            stdin,
+            stdout,
+            stderr_tail,
+            _child,
+            #[cfg(unix)]
+            _group_guard,
+        } = self;
+        drop(stderr_tail);
+        (
+            AgentProcessPipes { stdin, stdout },
+            AgentProcessLifecycle {
+                child: _child,
+                #[cfg(unix)]
+                _group_guard,
+            },
+        )
+    }
+}
+
+/// The transport pipes handed to the SDK adapter.
+pub(crate) struct AgentProcessPipes {
+    pub(crate) stdin: ChildStdin,
+    pub(crate) stdout: ChildStdout,
+}
+
+/// The process lifecycle owner: dropping it fires `kill_on_drop` and the
+/// process-group SIGKILL. Held by the runtime handle so shutdown — not a
+/// cancellable connection future — decides when that happens.
+pub(crate) struct AgentProcessLifecycle {
+    pub(crate) child: Child,
+    #[cfg(unix)]
+    pub(crate) _group_guard: ProcessGroupGuard,
+}
+
+impl AgentProcessLifecycle {
+    /// Bounded window for the agent to flush and exit after stdin EOF before
+    /// drop SIGKILLs its process group (cyril-hb0k). A dead child resolves
+    /// immediately.
+    pub(crate) async fn grace_wait(&mut self, bound: Duration) {
+        if tokio::time::timeout(bound, self.child.wait())
+            .await
+            .is_err()
+        {
+            tracing::debug!("agent still running after the shutdown grace; killing process group");
+        }
     }
 }
 

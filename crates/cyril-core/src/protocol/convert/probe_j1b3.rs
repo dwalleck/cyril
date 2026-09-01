@@ -1,6 +1,6 @@
 #![allow(clippy::expect_used)]
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 use serde_json::Value;
 
 use crate::protocol::tool_call_ledger::ToolCallLedger;
@@ -53,8 +53,28 @@ fn probe_kas_write_permission_join() {
                     other => panic!("tool call frame must convert, got {other:?}"),
                 }
             }
+            // Join AT ARRIVAL, exactly as production does: the permission
+            // request references a call still awaiting execution, so the
+            // snapshot must be live at this stream position (cyril-imj9
+            // evicts calls once their status turns terminal).
             "session/request_permission" if params["toolCall"]["title"] == "Write File" => {
-                permission_params.push(params.clone());
+                let req: acp::RequestPermissionRequest =
+                    serde_json::from_value(params.clone()).expect("permission frame must parse");
+                let session = SessionId::new(req.session_id.to_string());
+                let tool_call_id = ToolCallId::new(req.tool_call.tool_call_id.to_string());
+                let snapshot = ledger
+                    .snapshot(&session, &tool_call_id)
+                    .expect("ledger must hold the joined snapshot");
+                let input = snapshot.raw_input().expect("joined raw_input");
+                let path = input["path"].as_str().expect("joined path");
+                let text = input["text"].as_str().expect("joined text");
+                assert!(!path.is_empty() && !text.is_empty());
+                permission_params.push(format!(
+                    "id={} path={} text_bytes={}",
+                    snapshot.id(),
+                    path,
+                    text.len()
+                ));
             }
             _ => {}
         }
@@ -65,26 +85,7 @@ fn probe_kas_write_permission_join() {
         4,
         "fixture's four Write File requests"
     );
-    let mut output = Vec::new();
-    for params in permission_params {
-        let req: acp::RequestPermissionRequest =
-            serde_json::from_value(params).expect("permission frame must parse");
-        let session = SessionId::new(req.session_id.to_string());
-        let tool_call_id = ToolCallId::new(req.tool_call.tool_call_id.to_string());
-        let snapshot = ledger
-            .snapshot(&session, &tool_call_id)
-            .expect("ledger must hold the joined snapshot");
-        let input = snapshot.raw_input().expect("joined raw_input");
-        let path = input["path"].as_str().expect("joined path");
-        let text = input["text"].as_str().expect("joined text");
-        assert!(!path.is_empty() && !text.is_empty());
-        output.push(format!(
-            "id={} path={} text_bytes={}",
-            snapshot.id(),
-            path,
-            text.len()
-        ));
-    }
+    let output = permission_params;
     let output_path = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../.cyril-j1b3/probe-output.txt"

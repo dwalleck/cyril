@@ -1,0 +1,51 @@
+{
+  "required_paths": [
+    "crates/cyril-core/src/protocol/sdk_runtime/mod.rs",
+    "crates/cyril-core/src/protocol/sdk_runtime/process.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/mod.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/extensions.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/subagents.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs",
+    "crates/cyril-core/src/protocol/bridge/tests/harness.rs",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/commands.rs",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/routing.rs",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/saturation.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/handlers.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/serial.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/tests/topology.rs",
+    "crates/cyril-core/src/protocol/sdk_runtime/tests/mod.rs",
+    "crates/cyril-core/src/protocol/sdk_runtime/tests/handlers.rs",
+    "crates/cyril-core/src/protocol/sdk_runtime/tests/process.rs",
+    "crates/cyril-core/src/protocol/sdk_runtime/tests/topology.rs",
+    "crates/cyril-core/src/protocol/source_observer/tests/current_runtime_contract.rs",
+    "crates/cyril-core/src/protocol/transport/tests/current_runtime_contract.rs"
+  ],
+  "line_ranges": {
+    "crates/cyril-core/src/protocol/bridge.rs": [300, 500],
+    "crates/cyril-core/src/protocol/client.rs": [220, 350],
+    "crates/cyril-core/src/protocol/sdk_runtime/mod.rs": [150, 250],
+    "crates/cyril-core/src/protocol/sdk_runtime/process.rs": [120, 220],
+    "crates/cyril-core/src/protocol/domain_mediator/mod.rs": [350, 650],
+    "crates/cyril-core/src/protocol/domain_mediator/inbound.rs": [120, 300],
+    "crates/cyril-core/src/protocol/domain_mediator/host.rs": [180, 320],
+    "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs": [120, 250],
+    "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs": [120, 420],
+    "crates/cyril-core/src/protocol/domain_mediator/commands/extensions.rs": [120, 250],
+    "crates/cyril-core/src/protocol/domain_mediator/commands/subagents.rs": [120, 250],
+    "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs": [300, 450]
+  },
+  "exact_lines": {
+    "crates/cyril-core/src/protocol/mod.rs": 37,
+    "Cargo.toml": 87,
+    "crates/cyril-core/Cargo.toml": 68
+  },
+  "unchanged_production_prefixes": {
+    "crates/cyril/src/app.rs": 2723
+  }
+}

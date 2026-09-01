@@ -17,7 +17,7 @@
 //!
 //! Run: cargo test -p cyril-core probe_qo13
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 
 use super::{from_permission_response, to_permission_options};
 use crate::types::PermissionResponse;

@@ -2973,10 +2973,12 @@ mod tests {
                 observer.begin_turn(context("captured", Some("auto")), start, index as u64, None),
                 "begin captured turn",
             );
-            let notification: agent_client_protocol::SessionNotification =
+            let notification: agent_client_protocol::schema::v1::SessionNotification =
                 must_succeed(serde_json::from_str(line), "fixture deserializes");
             let update = match &notification.update {
-                agent_client_protocol::SessionUpdate::SessionInfoUpdate(update) => update,
+                agent_client_protocol::schema::v1::SessionUpdate::SessionInfoUpdate(update) => {
+                    update
+                }
                 other => panic!("expected session_info_update, got {other:?}"),
             };
             let Some(metering) =

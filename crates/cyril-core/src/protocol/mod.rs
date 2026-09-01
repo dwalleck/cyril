@@ -1,6 +1,7 @@
 pub mod bridge;
 pub(crate) mod client;
 pub(crate) mod convert;
+pub(crate) mod domain_mediator;
 pub(crate) mod engine;
 pub(crate) mod fingerprint;
 /// Host-callback mediation (cyril-g9vt): the pure state machine behind the
@@ -22,6 +23,7 @@ mod probe_dn91;
 /// (the default build is the point).
 #[cfg(test)]
 mod probe_g9vt_c13;
+pub(crate) mod sdk_runtime;
 pub(crate) mod source_observer;
 pub(crate) mod tool_call_ledger;
 pub(crate) mod transport;

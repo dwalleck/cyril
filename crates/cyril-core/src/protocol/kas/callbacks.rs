@@ -12,7 +12,7 @@
 //! (`.cyril-dn91/findings.md`) throughout, fenced by
 //! [`tests::census_matches_the_dn91_count`].
 
-use agent_client_protocol as acp;
+use agent_client_protocol::schema::v1 as acp;
 
 use crate::protocol::host_mediator::{CallbackMeta, CancelKey, finish};
 use crate::protocol::kas::kiro_fs;
@@ -100,6 +100,64 @@ pub(crate) enum HostCallback {
     HooksDidChange {
         hooks: Option<Vec<crate::types::HookInfo>>,
     },
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum HostFamily {
+    Auth,
+    HostIo,
+    HooksInbound,
+    HooksAny,
+}
+
+impl HostCallback {
+    pub(crate) const fn family(&self) -> HostFamily {
+        match self {
+            Self::GetAccessToken { .. } => HostFamily::Auth,
+            Self::ReadTextFile { .. }
+            | Self::WriteTextFile { .. }
+            | Self::KiroFs { .. }
+            | Self::CreateTerminal { .. }
+            | Self::WaitForTerminalExit { .. }
+            | Self::TerminalOutput { .. }
+            | Self::ReleaseTerminal { .. }
+            | Self::KillTerminal { .. }
+            | Self::ShellType { .. } => HostFamily::HostIo,
+            Self::HooksList { .. }
+            | Self::HooksExecute { .. }
+            | Self::HooksSessionStart { .. }
+            | Self::HooksCancel { .. } => HostFamily::HooksInbound,
+            Self::HooksDidChange { .. } => HostFamily::HooksAny,
+        }
+    }
+
+    pub(crate) fn refuse(self) {
+        let error = || agent_client_protocol::Error::method_not_found();
+        macro_rules! reject {
+            ($reply:expr) => {
+                if $reply.send(Err(error())).is_err() {
+                    tracing::debug!("host callback refusal receiver dropped");
+                }
+            };
+        }
+        match self {
+            Self::GetAccessToken { reply }
+            | Self::KiroFs { reply, .. }
+            | Self::ShellType { reply, .. }
+            | Self::HooksList { reply, .. }
+            | Self::HooksExecute { reply, .. }
+            | Self::HooksSessionStart { reply } => reject!(reply),
+            Self::ReadTextFile { reply, .. } => reject!(reply),
+            Self::WriteTextFile { reply, .. } => reject!(reply),
+            Self::CreateTerminal { reply, .. } => reject!(reply),
+            Self::WaitForTerminalExit { reply, .. } => reject!(reply),
+            Self::TerminalOutput { reply, .. } => reject!(reply),
+            Self::ReleaseTerminal { reply, .. } => reject!(reply),
+            Self::KillTerminal { reply, .. } => reject!(reply),
+            Self::HooksCancel { .. } | Self::HooksDidChange { .. } => {
+                tracing::debug!("host control notification refused by engine adapter gate");
+            }
+        }
+    }
 }
 
 /// `executeHook` typed params. Semantic defaults (missing command → exit 127
@@ -285,9 +343,9 @@ impl CallbackMeta for HostCallback {
 /// adapter family as its cutover slice lands; the mediator never sees it
 /// (design C12).
 pub(crate) struct DispatchCtx {
-    /// The bridge's internal notification sender — [`finish`]'s ordering
-    /// channel for user-visible callback failures.
-    pub(crate) notify_tx: tokio::sync::mpsc::Sender<crate::types::RoutedNotification>,
+    /// The serial domain mediator ingress — [`finish`]'s ordering channel for
+    /// user-visible callback failures.
+    pub(crate) notify_tx: crate::protocol::domain_mediator::DomainChannels,
     /// The terminal registry (KAS-5b), loop-side since cyril-g9vt slice 5 —
     /// constructed in `run_bridge` and owned by the dispatch context, deleting
     /// the cyril-3lh8 escape (the `Rc` formerly grabbed out of `KiroClient`).
@@ -428,7 +486,9 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
                 tracing::debug!(count = hooks.len(), "KAS hook registry changed");
                 if ctx
                     .notify_tx
-                    .send(crate::types::Notification::HooksChanged { hooks }.into())
+                    .enqueue(crate::protocol::domain_mediator::DomainWork::Routed(
+                        crate::types::Notification::HooksChanged { hooks }.into(),
+                    ))
                     .await
                     .is_err()
                 {

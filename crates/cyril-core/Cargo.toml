@@ -42,6 +42,7 @@ tokio = { workspace = true, features = ["sync", "rt", "macros", "time", "process
 tracing = { workspace = true }
 toml = { workspace = true }
 agent-client-protocol = { workspace = true }
+agent-client-protocol-conductor = { workspace = true }
 async-trait = { workspace = true }
 tokio-util = { workspace = true }
 futures-util = { workspace = true }

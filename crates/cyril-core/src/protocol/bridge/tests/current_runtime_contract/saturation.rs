@@ -102,9 +102,9 @@ fn routed_message(index: usize) -> RoutedNotification {
     }))
 }
 
-/// C6's named mutation fence (design falsification table): make `run_loop`'s
-/// inbound→App pump forward lossily (`try_send` instead of the fail-stop
-/// bounded `send`) and this test goes red.
+/// C1/C5/C6's named mutation fence: every frame enters through the real SDK
+/// handler, crosses its bounded domain enqueue, and reaches the App channel.
+/// Replacing either bounded `send` with lossy `try_send` makes this test red.
 ///
 /// Saturation must be REAL, not assumed: frames buffer in the notification
 /// channel (256), the pump's held slot (1), the inbound channel (256), and
@@ -114,7 +114,7 @@ fn routed_message(index: usize) -> RoutedNotification {
 /// cascade — and the only way the pump can be part of that wedge is parked on
 /// the FULL App channel, the one state where `try_send` and `send` differ.
 #[tokio::test]
-async fn c6_run_loop_forwarding_preserves_every_frame_through_a_full_channel() {
+async fn c1_c5_c6_sdk_handler_backpressure_preserves_every_frame() {
     const FLOOD: usize = 4 * EXPECTED_NOTIFICATION_CAPACITY;
 
     let script = Rc::new(RefCell::new(Script {
@@ -132,8 +132,7 @@ async fn c6_run_loop_forwarding_preserves_every_frame_through_a_full_channel() {
                     session_id,
                     prompt: crate::types::PromptEnvelope::prepared(vec!["flood".to_owned()], None),
                 })
-                .await
-                .expect("C6 flood SendPrompt send");
+                .await.expect_contract("C6 flood SendPrompt send");
 
             // Wait for the wedge: inbound pinned at zero remaining capacity
             // means the pump has stopped pulling — parked on the full App
@@ -143,15 +142,13 @@ async fn c6_run_loop_forwarding_preserves_every_frame_through_a_full_channel() {
             let inbound = observed
                 .borrow()
                 .inbound
-                .clone()
-                .expect("C6 harness wires the inbound seam");
+                .clone().expect_contract("C6 harness wires the inbound seam");
             tokio::time::timeout(Duration::from_secs(5), async {
                 while inbound.capacity() > 0 {
                     tokio::task::yield_now().await;
                 }
             })
-            .await
-            .expect("C6 flood: bridge wedged on the full App channel");
+            .await.expect_contract("C6 flood: bridge wedged on the full App channel");
 
             for index in 0..FLOOD {
                 let frame = recv_notif(&mut rx, 5)
@@ -175,12 +172,9 @@ async fn c6_run_loop_forwarding_preserves_every_frame_through_a_full_channel() {
 
             sender
                 .send(BridgeCommand::Shutdown)
-                .await
-                .expect("C6 flood Shutdown send");
+                .await.expect_contract("C6 flood Shutdown send");
             loop_handle
-                .await
-                .expect("C6 flood loop joined")
-                .expect("C6 flood loop Ok");
+                .await.expect_contract("C6 flood loop joined").expect_contract("C6 flood loop Ok");
             assert!(
                 rx.recv().await.is_none(),
                 "C6 flood: duplicated or trailing frame after reconciliation"
@@ -200,16 +194,16 @@ async fn c6_command_channel_capacity_fifo_and_closed_errors_are_exact() {
     for command in commands {
         sender
             .try_send(command)
-            .expect("C6 first 20 exhaustive commands fit");
+            .expect_contract("C6 first 20 exhaustive commands fit");
     }
     for _ in expected.len()..EXPECTED_COMMAND_CAPACITY {
         sender
             .try_send(BridgeCommand::ListSettings)
-            .expect("C6 command capacity accepts exactly 32");
+            .expect_contract("C6 command capacity accepts exactly 32");
     }
     let full = sender
         .try_send(BridgeCommand::ListSettings)
-        .expect_err("C6 command 33 must report full");
+        .expect_err_contract("C6 command 33 must report full");
     assert_eq!(full.to_string(), "bridge channel closed", "C6 command full");
 
     let mut drained = Vec::new();
@@ -217,7 +211,7 @@ async fn c6_command_channel_capacity_fifo_and_closed_errors_are_exact() {
         let command = command_rx
             .recv()
             .await
-            .expect("C6 drain full command queue");
+            .expect_contract("C6 drain full command queue");
         drained.push(command_name(&command));
     }
     assert_eq!(
@@ -234,15 +228,20 @@ async fn c6_command_channel_capacity_fifo_and_closed_errors_are_exact() {
 
     sender
         .try_send(BridgeCommand::ListSettings)
-        .expect("C6 capacity is released by one receive");
+        .expect_contract("C6 capacity is released by one receive");
     assert_eq!(
-        command_name(&command_rx.recv().await.expect("C6 released slot payload")),
+        command_name(
+            &command_rx
+                .recv()
+                .await
+                .expect_contract("C6 released slot payload")
+        ),
         "ListSettings"
     );
     drop(command_rx);
     let closed = sender
         .try_send(BridgeCommand::Shutdown)
-        .expect_err("C6 dropped command receiver reports closed");
+        .expect_err_contract("C6 dropped command receiver reports closed");
     assert_eq!(
         closed.to_string(),
         "bridge channel closed",
@@ -260,7 +259,7 @@ async fn c6_notification_and_permission_channels_bound_preserve_and_close() {
         channels
             .notification_tx
             .try_send(routed_message(index))
-            .expect("C6 notification within capacity");
+            .expect_contract("C6 notification within capacity");
     }
     match channels
         .notification_tx
@@ -276,7 +275,7 @@ async fn c6_notification_and_permission_channels_bound_preserve_and_close() {
         let routed = notification_rx
             .recv()
             .await
-            .expect("C6 notification FIFO drain");
+            .expect_contract("C6 notification FIFO drain");
         assert!(
             matches!(routed.notification, Notification::AgentMessage(message) if message.text == index.to_string()),
             "C6 notification FIFO index {index}"
@@ -295,7 +294,7 @@ async fn c6_notification_and_permission_channels_bound_preserve_and_close() {
         channels
             .permission_tx
             .try_send(permission(index))
-            .expect("C6 permission within capacity");
+            .expect_contract("C6 permission within capacity");
     }
     match channels
         .permission_tx
@@ -312,7 +311,7 @@ async fn c6_notification_and_permission_channels_bound_preserve_and_close() {
         let request = permission_rx
             .recv()
             .await
-            .expect("C6 permission FIFO drain");
+            .expect_contract("C6 permission FIFO drain");
         assert_eq!(
             request.session_id.as_str(),
             format!("permission-{index}"),
@@ -327,4 +326,44 @@ async fn c6_notification_and_permission_channels_bound_preserve_and_close() {
         ),
         "C6 permission closed is typed"
     );
+}
+
+#[tokio::test]
+async fn c13_pending_permission_response_does_not_block_shutdown() {
+    let script = Rc::new(RefCell::new(Script {
+        request_permission_on_prompt: true,
+        ..Script::default()
+    }));
+    with_harness(
+        script,
+        |sender, mut rx, mut permission_rx, _gate, loop_handle| async move {
+            let session_id = start_session(&sender, &mut rx).await;
+            sender
+                .send(BridgeCommand::SendPrompt {
+                    session_id,
+                    prompt: crate::types::PromptEnvelope::prepared(
+                        vec!["request permission".to_owned()],
+                        None,
+                    ),
+                })
+                .await
+                .expect_contract("C13 prompt command accepted");
+            let pending_request =
+                tokio::time::timeout(Duration::from_secs(5), permission_rx.recv())
+                    .await
+                    .expect_contract("C13 permission request timeout")
+                    .expect_contract("C13 permission request channel");
+            sender
+                .send(BridgeCommand::Shutdown)
+                .await
+                .expect_contract("C13 shutdown command accepted");
+            tokio::time::timeout(Duration::from_secs(1), loop_handle)
+                .await
+                .expect_contract("C13 shutdown blocked on permission response")
+                .expect_contract("C13 loop task joined")
+                .expect_contract("C13 loop result");
+            drop(pending_request);
+        },
+    )
+    .await;
 }
