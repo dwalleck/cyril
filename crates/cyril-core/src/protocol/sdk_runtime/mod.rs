@@ -47,6 +47,15 @@ impl SdkRuntimeHandle {
             .map(tokio::task::JoinHandle::abort_handle)
     }
 
+    /// Bounded wait for the stderr drain to reach EOF, so a following
+    /// `disconnect_reason` snapshot carries the agent's final words instead
+    /// of racing the drain task for them.
+    pub(crate) async fn await_stderr_eof(&self) {
+        if let Some(tail) = &self.stderr_tail {
+            tail.wait_eof(std::time::Duration::from_millis(250)).await;
+        }
+    }
+
     pub(crate) fn disconnect_reason(&self, reason: String) -> String {
         let snapshot = self
             .stderr_tail

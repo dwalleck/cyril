@@ -294,6 +294,7 @@ impl DomainMediator {
             Rc::clone(&self.host_ctx),
         );
         if let Err(error) = self.initialize(&connection).await {
+            runtime.await_stderr_eof().await;
             let detail = runtime.disconnect_reason(error.to_string());
             let drain_result = self.drain_work_dropping_turn_completion().await;
             self.shutdown_runtime(runtime, host_task).await;
@@ -318,6 +319,7 @@ impl DomainMediator {
                     let Some(work) = work else { break Ok(()) };
                     if matches!(&work, DomainWork::TransportClosed) {
                         runtime.request_shutdown();
+                        runtime.await_stderr_eof().await;
                         let reason = runtime.disconnect_reason(
                             "agent connection closed unexpectedly".to_owned(),
                         );
@@ -374,6 +376,7 @@ impl DomainMediator {
                         tracing::warn!("SDK runtime completion sender dropped");
                         "agent connection closed unexpectedly".into()
                     });
+                    runtime.await_stderr_eof().await;
                     let reason = runtime.disconnect_reason(reason);
                     if self.turn_mediator.is_busy() {
                         deferred_disconnect = Some(reason);

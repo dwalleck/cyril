@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::Duration;
 
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
@@ -23,9 +24,23 @@ const MAX_LINE_LEN: u64 = 8192;
 /// the agent dies so its final words (crash traceback, refusal reason) aren't
 /// lost. `Arc<Mutex>` because the drain runs on a plain `tokio::spawn` (pipe
 /// reads are `Send`) while readers live on the bridge's LocalSet thread.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub(crate) struct StderrTail {
     lines: Arc<Mutex<VecDeque<String>>>,
+    /// Flipped exactly once, when the drain reaches stderr EOF (or gives up):
+    /// the "final words" guarantee needs disconnect paths to wait for this,
+    /// or the snapshot races the drain and loses the crash traceback.
+    eof: tokio::sync::watch::Sender<bool>,
+}
+
+impl Default for StderrTail {
+    fn default() -> Self {
+        let (eof, _) = tokio::sync::watch::channel(false);
+        Self {
+            lines: Arc::new(Mutex::new(VecDeque::new())),
+            eof,
+        }
+    }
 }
 
 impl StderrTail {
@@ -36,6 +51,28 @@ impl StderrTail {
             lines.pop_front();
         }
         lines.push_back(line);
+    }
+
+    /// Mark the drain finished; snapshots after this see the complete tail.
+    fn mark_eof(&self) {
+        self.eof.send_replace(true);
+    }
+
+    /// Wait (bounded) for the drain to reach stderr EOF so a disconnect
+    /// snapshot carries the agent's final words instead of racing them.
+    pub(crate) async fn wait_eof(&self, bound: Duration) {
+        let mut rx = self.eof.subscribe();
+        let drained = tokio::time::timeout(bound, async {
+            while !*rx.borrow_and_update() {
+                if rx.changed().await.is_err() {
+                    break;
+                }
+            }
+        })
+        .await;
+        if drained.is_err() {
+            tracing::debug!("stderr drain still open at disconnect; tail may be partial");
+        }
     }
 
     /// The retained tail, oldest line first.
@@ -92,6 +129,7 @@ fn spawn_stderr_drain(stderr: ChildStderr, tail: StderrTail) {
                 }
             }
         }
+        tail.mark_eof();
     });
 }
 
