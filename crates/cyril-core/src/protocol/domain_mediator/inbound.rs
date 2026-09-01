@@ -113,7 +113,7 @@ impl DomainMediator {
         args: UntypedMessage,
     ) -> crate::Result<bool> {
         let method = canonical_extension_method(args.method());
-        let params = args.params.clone();
+        let params = &args.params;
         #[cfg(feature = "kas")]
         {
             use crate::protocol::engine::HooksAdapter;
@@ -143,7 +143,7 @@ impl DomainMediator {
                 }
                 self.channels
                     .enqueue_host(HostWork::Callback(HostCallback::HooksDidChange {
-                        hooks: crate::protocol::kas::hooks::parse_wire_hooks(&params),
+                        hooks: crate::protocol::kas::hooks::parse_wire_hooks(params),
                     }))
                     .await
                     .map_err(|_| crate::Error::from_kind(crate::ErrorKind::BridgeClosed))?;
@@ -151,7 +151,7 @@ impl DomainMediator {
             }
         }
 
-        match self.config.engine.convert_ext_notification(method, &params) {
+        match self.config.engine.convert_ext_notification(method, params) {
             Ok(Some(notification)) => {
                 let routed = match &notification {
                     Notification::ToolCallChunk {

@@ -418,8 +418,13 @@ impl DomainMediator {
         match work {
             DomainWork::UnknownSessionUpdate(message) => {
                 tracing::debug!(
-                    method = %message.method(),
-                    "unknown session update retained by untyped fence"
+                    tag = %message
+                        .params
+                        .get("update")
+                        .and_then(|update| update.get("sessionUpdate"))
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("<missing>"),
+                    "unknown session/update variant dropped (no consumer in this build)"
                 );
                 Ok(ControlFlow::Continue(false))
             }

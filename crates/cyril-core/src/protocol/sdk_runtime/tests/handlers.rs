@@ -38,20 +38,6 @@ fn unknown_session_update_fence_claims_only_undecodable_standard_updates() {
         &extension
     ));
 
-    for tag in crate::protocol::client::KNOWN_SESSION_UPDATE_TAGS {
-        let catalog_entry = message(
-            "session/update",
-            serde_json::json!({
-                "sessionId": "s",
-                "update": {"sessionUpdate": tag},
-            }),
-        );
-        assert!(
-            !crate::protocol::client::is_unknown_session_update(&catalog_entry),
-            "stable v1 tag {tag} must reach the typed decoder"
-        );
-    }
-
     let missing_session = message(
         "session/update",
         serde_json::json!({
@@ -83,10 +69,59 @@ fn unknown_session_update_fence_claims_only_undecodable_standard_updates() {
     assert!(!crate::protocol::client::is_unknown_session_update(
         &malformed_known
     ));
-    let error = crate::protocol::client::malformed_session_update(&malformed_known);
-    assert_eq!(error.code, agent_client_protocol::ErrorCode::InvalidParams);
-    assert!(error.data.as_ref().is_some_and(|data| {
-        data.to_string()
-            .contains("malformed standard session/update")
-    }));
+}
+
+/// The tag list is a hand-maintained mirror of the schema's `SessionUpdate`
+/// variants; keep it honest by constructing one instance of every stable
+/// variant and asserting exact SET equality with the list — a stale or
+/// misspelled entry fails here instead of silently misclassifying frames.
+/// (A variant the SDK adds later needs no list entry to route correctly: it
+/// decodes typed and never consults the list.)
+#[test]
+fn known_session_update_tags_match_the_schema() {
+    use agent_client_protocol::schema::v1 as acp;
+
+    let text = || acp::ContentChunk::new(acp::ContentBlock::from("x".to_owned()));
+    let variants = vec![
+        acp::SessionUpdate::UserMessageChunk(text()),
+        acp::SessionUpdate::AgentMessageChunk(text()),
+        acp::SessionUpdate::AgentThoughtChunk(text()),
+        acp::SessionUpdate::ToolCall(acp::ToolCall::new("t1", "title")),
+        acp::SessionUpdate::ToolCallUpdate(acp::ToolCallUpdate::new(
+            "t1",
+            acp::ToolCallUpdateFields::new(),
+        )),
+        acp::SessionUpdate::Plan(acp::Plan::new(Vec::new())),
+        acp::SessionUpdate::AvailableCommandsUpdate(acp::AvailableCommandsUpdate::new(Vec::new())),
+        acp::SessionUpdate::CurrentModeUpdate(acp::CurrentModeUpdate::new("m")),
+        acp::SessionUpdate::ConfigOptionUpdate(acp::ConfigOptionUpdate::new(Vec::new())),
+        acp::SessionUpdate::SessionInfoUpdate(acp::SessionInfoUpdate::new()),
+        acp::SessionUpdate::UsageUpdate(acp::UsageUpdate::new(0, 1)),
+    ];
+    let mut schema_tags: Vec<String> = variants
+        .iter()
+        .map(|variant| {
+            let value = match serde_json::to_value(variant) {
+                Ok(value) => value,
+                Err(error) => panic!("schema variant must serialize: {error}"),
+            };
+            match value
+                .get("sessionUpdate")
+                .and_then(serde_json::Value::as_str)
+            {
+                Some(tag) => tag.to_owned(),
+                None => panic!("schema variant carried no sessionUpdate tag: {value}"),
+            }
+        })
+        .collect();
+    schema_tags.sort_unstable();
+    let mut listed: Vec<String> = crate::protocol::client::KNOWN_SESSION_UPDATE_TAGS
+        .iter()
+        .map(|tag| (*tag).to_owned())
+        .collect();
+    listed.sort_unstable();
+    assert_eq!(
+        listed, schema_tags,
+        "KNOWN_SESSION_UPDATE_TAGS drifted from the schema's SessionUpdate variants"
+    );
 }

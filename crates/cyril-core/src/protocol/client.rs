@@ -1,5 +1,5 @@
 use agent_client_protocol::schema::v1 as acp;
-use agent_client_protocol::{Client, ConnectTo, ConnectionTo, Handled, UntypedMessage};
+use agent_client_protocol::{Client, ConnectTo, ConnectionTo, UntypedMessage};
 use tokio::sync::oneshot;
 
 use crate::protocol::domain_mediator::{DomainChannels, DomainWork, HostWork};
@@ -10,9 +10,9 @@ pub(crate) type ResolvedHostShell = Option<crate::protocol::kas::host_shell::Hos
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ResolvedHostShell;
 
-/// Build the stable SDK2 client. The untyped notification handler is first so
-/// future `session/update` variants are retained rather than rejected by the
-/// strict v1 decoder; every typed handler only enqueues bounded domain work.
+/// Build the stable SDK2 client. One untyped notification handler decodes
+/// each frame exactly once and retains unknown `session/update` variants
+/// through the untyped fence; every handler only enqueues bounded domain work.
 #[cfg(feature = "kas")]
 async fn forward_host_response<T>(
     responder: agent_client_protocol::Responder<T>,
@@ -31,6 +31,12 @@ where
     }
 }
 
+/// The stable v1 `session/update` discriminator tags, consulted only AFTER a
+/// typed decode fails: an unknown tag is retained through the untyped fence,
+/// a known tag with an undecodable payload is a malformed frame worth a warn.
+/// Routing never depends on this list — a frame that decodes is handled typed
+/// regardless — so an SDK bump adding a variant flows through automatically;
+/// `known_session_update_tags_match_the_schema` keeps the list itself honest.
 pub(crate) const KNOWN_SESSION_UPDATE_TAGS: &[&str] = &[
     "user_message_chunk",
     "agent_message_chunk",
@@ -63,39 +69,13 @@ pub(crate) fn is_unknown_session_update(message: &UntypedMessage) -> bool {
         .is_some_and(|tag| !KNOWN_SESSION_UPDATE_TAGS.contains(&tag))
 }
 
-pub(crate) fn malformed_session_update(message: &UntypedMessage) -> agent_client_protocol::Error {
-    let detail =
-        match <acp::SessionNotification as serde::Deserialize>::deserialize(&message.params) {
-            Ok(_) => "typed session/update unexpectedly reached the untyped fallback".to_owned(),
-            Err(error) => error.to_string(),
-        };
-    agent_client_protocol::Error::invalid_params()
-        .data(format!("malformed standard session/update: {detail}"))
-}
-fn is_known_client_request(method: &str) -> bool {
-    let methods = acp::CLIENT_METHOD_NAMES;
-    [
-        methods.session_request_permission,
-        methods.fs_write_text_file,
-        methods.fs_read_text_file,
-        methods.terminal_create,
-        methods.terminal_output,
-        methods.terminal_release,
-        methods.terminal_wait_for_exit,
-        methods.terminal_kill,
-    ]
-    .contains(&method)
-}
-
 pub(crate) async fn run_client(
     agent: impl ConnectTo<Client> + 'static,
     channels: DomainChannels,
     connection_tx: oneshot::Sender<ConnectionTo<agent_client_protocol::Agent>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> agent_client_protocol::Result<()> {
-    let unknown_channels = channels.clone();
-    let session_channels = channels.clone();
-    let ext_notification_channels = channels.clone();
+    let notification_channels = channels.clone();
     let permission_channels = channels.clone();
     #[cfg(feature = "kas")]
     let read_channels = channels.clone();
@@ -115,38 +95,43 @@ pub(crate) async fn run_client(
         .builder()
         .name("cyril")
         .on_receive_notification(
-            async move |message: UntypedMessage, cx| {
-                if unknown_channels.is_transport_closed(&message) {
-                    unknown_channels
-                        .enqueue(DomainWork::TransportClosed)
-                        .await?;
-                    return Ok(Handled::Yes);
-                }
-                if is_unknown_session_update(&message) {
-                    let _ingress = unknown_channels.enter_ingress();
-                    unknown_channels
-                        .enqueue(DomainWork::UnknownSessionUpdate(message))
-                        .await?;
-                    return Ok(Handled::Yes);
-                }
-                Ok(Handled::No {
-                    message: (message, cx),
-                    retry: false,
-                })
-            },
-            agent_client_protocol::on_receive_notification!(),
-        )
-        .on_receive_notification(
-            async move |message: acp::SessionNotification, _cx| {
-                let _ingress = session_channels.enter_ingress();
-                session_channels.enqueue(DomainWork::Session(message)).await
-            },
-            agent_client_protocol::on_receive_notification!(),
-        )
-        .on_receive_notification(
+            // One untyped handler decodes each frame exactly once: `session/update`
+            // is borrow-decoded from `params` in place (no per-frame
+            // `to_untyped_message` rebuild between chained handlers), unknown
+            // tags are retained through the untyped fence, and a known tag
+            // whose payload fails the typed decode is dropped with a warn —
+            // JSON-RPC notifications have no reply target, so a log is the
+            // only possible diagnostic for a malformed update.
             async move |message: UntypedMessage, _cx| {
+                if notification_channels.is_transport_closed(&message) {
+                    return notification_channels
+                        .enqueue(DomainWork::TransportClosed)
+                        .await;
+                }
                 if message.method() == "session/update" {
-                    return Err(malformed_session_update(&message));
+                    return match <acp::SessionNotification as serde::Deserialize>::deserialize(
+                        &message.params,
+                    ) {
+                        Ok(notification) => {
+                            let _ingress = notification_channels.enter_ingress();
+                            notification_channels
+                                .enqueue(DomainWork::Session(notification))
+                                .await
+                        }
+                        Err(_) if is_unknown_session_update(&message) => {
+                            let _ingress = notification_channels.enter_ingress();
+                            notification_channels
+                                .enqueue(DomainWork::UnknownSessionUpdate(message))
+                                .await
+                        }
+                        Err(error) => {
+                            tracing::warn!(
+                                %error,
+                                "malformed standard session/update dropped"
+                            );
+                            Ok(())
+                        }
+                    };
                 }
                 if !message.method().starts_with('_') {
                     tracing::debug!(
@@ -155,8 +140,8 @@ pub(crate) async fn run_client(
                     );
                     return Ok(());
                 }
-                let _ingress = ext_notification_channels.enter_ingress();
-                ext_notification_channels
+                let _ingress = notification_channels.enter_ingress();
+                notification_channels
                     .enqueue(DomainWork::ExtensionNotification(message))
                     .await
             },
@@ -287,12 +272,12 @@ pub(crate) async fn run_client(
         );
     let ext_request_channels = channels;
     let builder = builder.on_receive_request(
+        // A standard-namespace request reaching this catch-all has no typed
+        // handler on THIS build (e.g. fs/terminal without `kas`): answer the
+        // truthful -32601 so agents can capability-fall-back, never a false
+        // "malformed" -32602 — the request was never parsed at all.
         async move |request: UntypedMessage, responder, _cx| {
             if !request.method().starts_with('_') {
-                if is_known_client_request(request.method()) {
-                    return Err(agent_client_protocol::Error::invalid_params()
-                        .data(format!("malformed standard request: {}", request.method())));
-                }
                 return Err(agent_client_protocol::Error::method_not_found());
             }
             ext_request_channels
