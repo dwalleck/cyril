@@ -48,6 +48,24 @@ impl ProcessAdapter {
     }
 }
 
+/// Appends one private `_cyril.internal/transport_closed` frame when the
+/// agent's stdout reaches EOF, converting "the transport died" into an
+/// ordered IN-BAND event.
+///
+/// Deliberate design (PR #115 review, finding 12): SDK 2.0 offers
+/// `Builder::on_close` as the out-of-band alternative — "pending requests are
+/// failed before callbacks begin" — and for a DIRECT transport its ordering
+/// is documented. Cyril's client, however, sits above a
+/// `ConductorImpl` stage chain (the platform's whole point), and nothing in
+/// the conductor documents that a close on the agent-side transport reaches
+/// the client-side connection only AFTER every already-received frame has
+/// been dispatched through every stage. The in-band marker keeps that FIFO
+/// property by construction: it rides the same serial line as the data
+/// frames, so any stage that forwards frames in order preserves
+/// "all-frames-then-close" end to end. The random token (generated per
+/// connection in `DomainChannels::new`) prevents the agent from spoofing the
+/// marker; proxy stages will observe the clearly-namespaced frame, which is
+/// part of the contract, not leakage.
 struct EofMarkerStream<S> {
     inner: Pin<Box<S>>,
     marker: Option<String>,

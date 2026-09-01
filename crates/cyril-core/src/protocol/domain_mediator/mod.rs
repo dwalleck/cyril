@@ -22,6 +22,8 @@ pub(crate) mod inbound;
 
 const WORK_CAPACITY: usize = 256;
 const HOST_CAPACITY: usize = 16;
+/// In-band EOF marker appended by `sdk_runtime::process::EofMarkerStream`;
+/// see its doc for why this is deliberately NOT `Builder::on_close`.
 const TRANSPORT_CLOSED_METHOD: &str = "_cyril.internal/transport_closed";
 
 /// Work accepted by SDK handlers and consumed by the serial domain owner.
