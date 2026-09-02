@@ -175,7 +175,47 @@ credits, `elapsedTime`, `requestIds`). Zero `_kiro/system/notify` on any leg.
 `available_commands_update` still advertises only the five bundled skills.
 
 **Models on the wire (KAS):** the `model` configOption is the same 19 ids /
-display names / descriptions as the 08-27 capture on both bundles.
+display names / descriptions as the 08-27 capture on both bundles, and every
+option still carries `_meta.kiro {rateMultiplier, rateUnit, hasEffort,
+effortSchemaPath, effortLevels, defaultEffortLevel}` (checked per capture back
+to 2.19.2 — when the sweep lists those paths as "only under pinned" it is the
+cold-registry race moving the option from the `session/new` result to a
+`config_option_update` notification, not a removal).
+
+### 4b. Workflow leg — node output values and turn ends: no new behaviour
+
+`probe-kas-workflow-channels-2.21.0.py` is the 2.20.1 two-step recipe
+unchanged (s1 writes `{{token}}` to a file and either restates it or signals
+completion tersely; s2 reports `{{s1.output}}` vs the `{{artifacts.value}}`
+file), three legs in one hour:
+
+| leg | bundle | s1 style | `capturedOutputs` | channel A (`{{s1.output}}`) | channel B (artifact file) |
+|---|---|---|---|---|---|
+| live | 0.54.8 | restate | `{s1:"ALPHA", s2:"DONE"}` | `ALPHA` correct | `ALPHA` correct |
+| live-terse | 0.54.8 | terse | `{s1:"Done.", s2:"DONE"}` | **`Done.`** — silent corruption, `status:"completed"` | `ALPHA` correct |
+| pinned | 0.54.3 | restate | `{s1:"ALPHA", s2:"DONE"}` | `ALPHA` correct | `ALPHA` correct |
+
+Identical to the 08-27 results on 0.54.3: capture is still prompt-shape
+controlled, the terse shape still hands the next step the model's sign-off
+under a green status, and the artifact channel is still the only reliable one
+(cyril-srp6 stands). Event stream per leg is the same eight frames
+(`run_start`, `node_start`×2 per step, `node_complete`, `run_complete`) with
+`capturedOutput` on `node_complete` and on
+`run_complete.finalState.{capturedOutputs, root.children[]}`; no
+`_kiro/system/notify`, no `session/prompt` responses (steps are engine-driven
+peer sessions).
+
+Per-step turn ends are unchanged too. For each step session the order is
+`session_info_update kind:turn_completion` → `kind:turn_end` (1–2 ms later) →
+`_kiro/workflow/node_complete` (2 ms later), on all three legs and on the
+2.20.1 captures. On the four single-prompt legs of § 4, `turn_completion` and
+`turn_end` both precede the `session/prompt` response by 5–12 ms — the
+[turn-end ordering doctrine](kiro-2.19.2-wire-audit.md) holds.
+
+Same-day sweep of the workflow pair (live 0.54.8 vs pinned 0.54.3) differs
+only by the § 5 tool-call paths plus workload variance (s1 chose a shell
+command on one run and `fs_write` on another, which adds/removes
+`rawInput.command` / `rawOutput.exitCode`).
 
 ---
 
@@ -339,6 +379,10 @@ disappear) — no source-path change backs any of it.
   (+ `-verdict.json`), access tokens redacted.
 * v2 A/B: `probe-v2-ext-methods-ab-2.19.2.py` reused unchanged →
   `v2-ab-2.21.0-{old,new}.jsonl`; catalog `v2-list-models-2.21.0.json`.
+* Workflow channels: `probe-kas-workflow-channels-2.21.0.py` (the 2.20.1 probe
+  with renamed outputs; `WF_STYLE=restate|terse`, `KAS_PIN=2.20.1` for the
+  0.54.3 control) → `kas-workflow-channels-{live,live-terse,pinned}-2.21.0.jsonl`
+  (+ `-verdict.json`), tokens redacted.
 * Sweeps: `sweep-new-fields.py --diff` on `v2-ab new/old` (120 = 120),
   `kas-baseline live/pinned` (253 = 253), `kas-baseline live/host2201`
   (+7 paths, all the § 5 tool call).

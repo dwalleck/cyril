@@ -1,0 +1,15 @@
+{
+  "leg": "live",
+  "style": "restate",
+  "bundle": "0.54.8-live",
+  "status": "completed",
+  "capturedOutputs": {
+    "s1": "ALPHA",
+    "s2": "DONE"
+  },
+  "channelA": "ALPHA",
+  "channelB": "ALPHA",
+  "channelA_nonempty": true,
+  "channelA_CORRECT": true,
+  "channelB_CORRECT": true
+}
