@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::path::PathBuf;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -31,6 +31,9 @@ use cyril_core::types::code_panel::CodeCommandResponse;
 /// Lines per mouse wheel tick (finer-grained than keyboard half-page scroll).
 const MOUSE_SCROLL_LINES: usize = 3;
 const MAX_ENRICHMENT_RETRIES: u8 = 1;
+/// Matches the bridge's bounded notification channel: App can hold at most
+/// one channelful of unattributed startup frames while `session/new` resolves.
+const MAX_PENDING_SESSION_NOTIFICATIONS: usize = 256;
 
 fn reserve_enrichment_retry(retryable: bool, attempts: &mut u8) -> bool {
     if !retryable || *attempts >= MAX_ENRICHMENT_RETRIES {
@@ -115,6 +118,9 @@ pub struct App {
     /// receives exactly one `session/prompt` and a later `/new` never replays
     /// it. `None` for interactive startup.
     startup_prompt: Option<String>,
+    /// Session-scoped frames that arrived before `SessionCreated` made their
+    /// owner attributable. Replayed exactly once after the main id is known.
+    pending_session_notifications: VecDeque<RoutedNotification>,
     /// Workspace-global workflow lifecycle state (cyril-6beh C12). Every
     /// `Notification::Workflow` frame is applied here — exactly once, by
     /// value — before any SessionController/UiState consumer sees it, and
@@ -436,6 +442,7 @@ impl App {
             first_prompt_lessons_pending: None,
             voice_active: false,
             startup_prompt: None,
+            pending_session_notifications: VecDeque::new(),
             workflow_tracker: WorkflowTracker::new(),
             #[cfg(test)]
             workflow_apply_calls: 0,
@@ -1088,51 +1095,64 @@ impl App {
     }
 
     fn handle_notification(&mut self, routed: RoutedNotification) -> Vec<BridgeCommand> {
+        self.handle_notification_inner(routed, true)
+    }
+
+    fn handle_notification_inner(
+        &mut self,
+        routed: RoutedNotification,
+        observe_usage: bool,
+    ) -> Vec<BridgeCommand> {
         let usage_only = matches!(
             &routed.notification,
             Notification::UsageSessionStarted { .. } | Notification::TurnUsageCaptured(_)
         );
-        if let Notification::UsageSessionStarted { session_id, origin } = &routed.notification {
-            let kind = match self.agent_engine {
-                AgentEngine::V2 => cyril_core::usage::KiroSidecarKind::V2,
-                AgentEngine::Kas => cyril_core::usage::KiroSidecarKind::Kas,
-            };
-            self.usage_enrichment
-                .session_started(session_id.clone(), kind, *origin);
-        }
-        if let Some(write) = self.usage_observer.apply(&routed, Instant::now()) {
-            match write {
-                UsageWrite::Turn {
-                    record,
-                    sidecar_kind,
-                } => match self.usage_log.append(&record) {
-                    Ok(record_id) => {
-                        self.refresh_usage_panel_from_log();
-                        if let Some(kind) = sidecar_kind {
-                            self.enrichment_requests
-                                .insert(record_id, (record.context().session_id().clone(), kind));
-                            self.enrichment_attempts.insert(record_id, 0);
-                            self.usage_enrichment.enrich(
-                                record_id,
-                                record.context().session_id().clone(),
-                                kind,
-                            );
+        if observe_usage {
+            if let Notification::UsageSessionStarted { session_id, origin } = &routed.notification {
+                let kind = match self.agent_engine {
+                    AgentEngine::V2 => cyril_core::usage::KiroSidecarKind::V2,
+                    AgentEngine::Kas => cyril_core::usage::KiroSidecarKind::Kas,
+                };
+                self.usage_enrichment
+                    .session_started(session_id.clone(), kind, *origin);
+            }
+            if let Some(write) = self.usage_observer.apply(&routed, Instant::now()) {
+                match write {
+                    UsageWrite::Turn {
+                        record,
+                        sidecar_kind,
+                    } => match self.usage_log.append(&record) {
+                        Ok(record_id) => {
+                            self.refresh_usage_panel_from_log();
+                            if let Some(kind) = sidecar_kind {
+                                self.enrichment_requests.insert(
+                                    record_id,
+                                    (record.context().session_id().clone(), kind),
+                                );
+                                self.enrichment_attempts.insert(record_id, 0);
+                                self.usage_enrichment.enrich(
+                                    record_id,
+                                    record.context().session_id().clone(),
+                                    kind,
+                                );
+                            }
                         }
-                    }
-                    Err(error) => {
-                        tracing::error!(error = %error, "persist usage turn failed");
-                        self.ui_state
-                            .add_system_message(format!("Usage recording failed: {error}"));
-                    }
-                },
-                UsageWrite::Context { sample, compaction } => {
-                    if let Err(error) = self.usage_log.record_context(&sample, compaction.as_ref())
-                    {
-                        tracing::error!(error = %error, "persist usage context failed");
-                        self.ui_state
-                            .add_system_message(format!("Usage recording failed: {error}"));
-                    } else {
-                        self.refresh_usage_panel_from_log();
+                        Err(error) => {
+                            tracing::error!(error = %error, "persist usage turn failed");
+                            self.ui_state
+                                .add_system_message(format!("Usage recording failed: {error}"));
+                        }
+                    },
+                    UsageWrite::Context { sample, compaction } => {
+                        if let Err(error) =
+                            self.usage_log.record_context(&sample, compaction.as_ref())
+                        {
+                            tracing::error!(error = %error, "persist usage context failed");
+                            self.ui_state
+                                .add_system_message(format!("Usage recording failed: {error}"));
+                        } else {
+                            self.refresh_usage_panel_from_log();
+                        }
                     }
                 }
             }
@@ -1145,7 +1165,7 @@ impl App {
             // gets forwarded. The App therefore has no ownership decision left to
             // make and deliberately ignores the stamp. Bound explicitly rather
             // than `..` so a rename breaks loudly here.
-            turn: _,
+            turn,
         } = routed;
 
         if usage_only {
@@ -1261,14 +1281,29 @@ impl App {
                     self.redraw_needed = true;
                     return Vec::new();
                 }
-                NotificationRoute::Drop => {
-                    // `warn!`, not `debug!`: no shipped engine produces this
-                    // ordering, so a line here means the wire contract moved.
-                    tracing::warn!(
+                NotificationRoute::Pending => {
+                    if self.pending_session_notifications.len() == MAX_PENDING_SESSION_NOTIFICATIONS
+                    {
+                        let dropped = self.pending_session_notifications.pop_front();
+                        debug_assert!(
+                            dropped.is_some(),
+                            "a full pending-session queue must contain an oldest frame"
+                        );
+                        tracing::warn!(
+                            capacity = MAX_PENDING_SESSION_NOTIFICATIONS,
+                            "pending session notification buffer full; dropping oldest frame"
+                        );
+                    }
+                    tracing::debug!(
                         session_id = sid.as_str(),
-                        "scoped notification arrived before any main session exists; \
-                         unattributable, dropping (cyril-tglp)"
+                        "scoped notification arrived before main session; buffering until attributable"
                     );
+                    self.pending_session_notifications
+                        .push_back(RoutedNotification {
+                            session_id,
+                            notification,
+                            turn,
+                        });
                     return Vec::new();
                 }
                 NotificationRoute::Main => {}
@@ -1462,6 +1497,11 @@ impl App {
         }
 
         self.redraw_needed = self.redraw_needed || session_changed || ui_changed || tracker_changed;
+        if matches!(notification, Notification::SessionCreated { .. }) {
+            while let Some(pending) = self.pending_session_notifications.pop_front() {
+                deferred_commands.extend(self.handle_notification_inner(pending, false));
+            }
+        }
         deferred_commands
     }
 
@@ -2062,10 +2102,10 @@ enum NotificationRoute {
     /// stream store — never to `SubagentUiState` or the crew panel, which no
     /// engine ever names workflow steps into.
     Workflow,
-    /// Unattributable — discard. Scoped to a session that nothing has yet
-    /// identified, while no main session exists to compare it against. See the
-    /// drop-vs-buffer rationale on `classify_notification_route`.
-    Drop,
+    /// Not yet attributable. Scoped to a session that nothing has identified,
+    /// while no main session exists to compare it against. Hold it until
+    /// `SessionCreated` makes the ownership decision deterministic.
+    Pending,
 }
 
 /// Classify a session-scoped notification. Total over its four inputs so the
@@ -2084,7 +2124,7 @@ enum NotificationRoute {
 /// protecting main-pipeline continuity wins there (cyril-a71q C7); it beats
 /// `tracked_subagent` because ownership is a positive per-id claim while no
 /// shipped engine ever lists a workflow step in a `list_update`; and it makes
-/// a pre-main frame attributable, so the Drop arm never fires for it.
+/// a pre-main frame attributable, so the Pending arm never fires for it.
 fn classify_notification_route(
     scope: Option<&SessionId>,
     main: Option<&SessionId>,
@@ -2113,19 +2153,15 @@ fn classify_notification_route(
         // flight, or the main session's own first frame racing SessionCreated —
         // and the two are indistinguishable from here.
         //
-        // DROP, not buffer, and not "guess subagent" (cyril-tglp):
+        // BUFFER, not "guess subagent" (cyril-tglp):
         //  - Guessing subagent keys a stream by an id that may turn out to BE
         //    main, leaving a phantom stream that the crew panel (which reads the
         //    tracker, not the streams) never renders.
-        //  - Buffering needs a bounded queue plus a replay trigger on
-        //    SessionCreated: new state and new lifecycle logic inside a
-        //    deliberately thin orchestrator, to recover frames from an ordering
-        //    no shipped engine produces — both scoped producers, `ToolCallChunk`
-        //    and `MetadataUpdated`, follow session creation.
-        //  - Dropping forfeits at most one currently-unreachable frame and says
-        //    so at `warn!`, so an engine that ever does produce this ordering
-        //    surfaces as a log line rather than as corrupted main state.
-        (Some(_), None) => NotificationRoute::Drop,
+        //  - KAS 2.21.0's launcher path emits its deterministic
+        //    `fetch_cloud_config` tool call before session/new returns. App
+        //    therefore holds a bounded arrival-ordered queue and replays it
+        //    after SessionCreated, when main-vs-foreign is decidable.
+        (Some(_), None) => NotificationRoute::Pending,
     }
 }
 
@@ -2876,13 +2912,12 @@ mod tests {
             "no main session yet must not mean 'main' -- that reroutes a tracked \
              subagent's frames into main state"
         );
-        // cyril-tglp: same, but nothing has named the id. Unattributable ->
-        // dropped. Returning Main here is the defect; returning Subagent would
-        // key a stream by an id that may yet turn out to BE main.
+        // cyril-tglp: same, but nothing has named the id. Unattributable now,
+        // so hold it until SessionCreated makes main-vs-foreign decidable.
         assert_eq!(
             classify_notification_route(Some(&foreign), None, false, false),
-            NotificationRoute::Drop,
-            "an unidentified scope with no main session is unattributable, not main"
+            NotificationRoute::Pending,
+            "an unidentified scope with no main session must wait for attribution"
         );
         // Adversarial: equal ids that are distinct objects still compare as main.
         assert_eq!(
@@ -2920,7 +2955,7 @@ mod tests {
                  store, not the subagent stream (tracked={tracked})"
             );
             // C1: attributable WITHOUT a main session — the claim itself is
-            // the attribution, so the Drop arm must never fire here.
+            // the attribution, so the Pending arm must never fire here.
             assert_eq!(
                 classify_notification_route(Some(&foreign), None, tracked, true),
                 NotificationRoute::Workflow,
@@ -3737,6 +3772,80 @@ mod tests {
         }
     }
 
+    // cyril-68ag: extracted verbatim from the ordering-bearing frames in
+    // experiments/conductor-spike/kas-baseline-live-2.21.0.jsonl (8, 17, 20).
+    // The production KAS converter handles both tool frames; the middle
+    // session/new response is projected into the same SessionCreated event the
+    // bridge emits after resolving that response.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn startup_cloud_config_frame_is_buffered_and_replayed_without_warning() {
+        const CAPTURE: &str =
+            include_str!("../../cyril-core/tests/fixtures/kas/startup-cloud-config-2.21.0.jsonl");
+
+        let mut app = test_app();
+        let baseline_session_applies = app.session_apply_calls;
+        let baseline_ui_applies = app.ui_apply_calls;
+        let ((), logs) = with_captured_logs(|| {
+            for line in CAPTURE.lines() {
+                let frame: serde_json::Value =
+                    serde_json::from_str(line).expect("startup fixture line is valid JSON");
+                if frame.get("method").and_then(serde_json::Value::as_str) == Some("session/update")
+                {
+                    let converted = cyril_core::test_support::kas_capture_to_routed(line);
+                    assert_eq!(
+                        converted.len(),
+                        1,
+                        "each fixture session/update must survive production conversion"
+                    );
+                    for (scope, notification) in converted {
+                        app.handle_notification(match scope {
+                            Some(session_id) => {
+                                RoutedNotification::scoped(session_id, notification)
+                            }
+                            None => RoutedNotification::global(notification),
+                        });
+                    }
+                } else {
+                    let session_id = frame
+                        .get("result")
+                        .and_then(|result| result.get("sessionId"))
+                        .and_then(serde_json::Value::as_str)
+                        .expect("fixture session/new response carries sessionId");
+                    assert_eq!(
+                        app.pending_session_notifications.len(),
+                        1,
+                        "the pre-SessionCreated tool_call must wait for attribution"
+                    );
+                    app.handle_notification(session_created_frame(&SessionId::new(session_id)));
+                }
+            }
+        });
+
+        assert_eq!(
+            app.session.id().map(SessionId::as_str),
+            Some("sess_b8497059-ddae-4e37-8068-bece383c216f")
+        );
+        assert!(
+            app.pending_session_notifications.is_empty(),
+            "SessionCreated must drain the pending startup frames"
+        );
+        assert_eq!(
+            app.session_apply_calls,
+            baseline_session_applies + 3,
+            "SessionCreated and both tool lifecycle frames reach the main session exactly once"
+        );
+        assert_eq!(
+            app.ui_apply_calls,
+            baseline_ui_applies + 3,
+            "SessionCreated and both tool lifecycle frames reach the main UI exactly once"
+        );
+        assert!(
+            !logs.contains("unattributable, dropping"),
+            "the observed KAS startup ordering is valid and must not warn: {logs}"
+        );
+    }
+
     #[test]
     fn pre_session_scoped_frame_spares_main() {
         let foreign = SessionId::new("sess_foreign");
@@ -3751,7 +3860,12 @@ mod tests {
             metadata_frame(&foreign),
         ));
 
-        assert!(deferred.is_empty(), "a dropped frame defers no commands");
+        assert!(deferred.is_empty(), "a buffered frame defers no commands");
+        assert_eq!(
+            app.pending_session_notifications.len(),
+            1,
+            "the unattributable frame must be retained until main is known"
+        );
         assert!(
             app.session.context_usage().is_none(),
             "a scoped frame arriving before SessionCreated must not mutate the \
@@ -3768,6 +3882,74 @@ mod tests {
              may yet turn out to BE main, which would key a phantom stream by \
              the main session id"
         );
+    }
+
+    #[test]
+    fn buffered_foreign_frame_routes_after_main_becomes_known() {
+        let main = SessionId::new("sess_main");
+        let foreign = SessionId::new("sess_foreign");
+        let mut app = test_app();
+
+        app.handle_notification(RoutedNotification::scoped(
+            foreign.clone(),
+            Notification::AgentMessage(AgentMessage {
+                text: "before main".into(),
+                is_streaming: true,
+            }),
+        ));
+        assert_eq!(app.pending_session_notifications.len(), 1);
+        assert!(app.ui_state.subagent_ui().streams().is_empty());
+
+        app.handle_notification(session_created_frame(&main));
+
+        assert!(app.pending_session_notifications.is_empty());
+        let stream = app
+            .ui_state
+            .subagent_ui()
+            .streams()
+            .get(&foreign)
+            .expect("the now-foreign frame must replay into its optimistic stream");
+        assert_eq!(stream.streaming_text(), "before main");
+        assert!(
+            app.ui_state.streaming_text().is_empty(),
+            "foreign replay must still spare main"
+        );
+    }
+
+    #[test]
+    fn pending_session_buffer_is_bounded_and_drops_oldest() {
+        let mut app = test_app();
+        let ((), logs) = with_captured_logs(|| {
+            for index in 0..=MAX_PENDING_SESSION_NOTIFICATIONS {
+                app.handle_notification(RoutedNotification::scoped(
+                    SessionId::new(format!("foreign-{index}")),
+                    Notification::AgentMessage(AgentMessage {
+                        text: index.to_string(),
+                        is_streaming: true,
+                    }),
+                ));
+            }
+        });
+
+        assert_eq!(
+            app.pending_session_notifications.len(),
+            MAX_PENDING_SESSION_NOTIFICATIONS
+        );
+        assert!(
+            logs.contains("pending session notification buffer full; dropping oldest frame"),
+            "overflow must be visible: {logs}"
+        );
+
+        app.handle_notification(session_created_frame(&SessionId::new("main")));
+        let streams = app.ui_state.subagent_ui().streams();
+        assert!(
+            !streams.contains_key(&SessionId::new("foreign-0")),
+            "the oldest frame is the one discarded at capacity"
+        );
+        assert!(streams.contains_key(&SessionId::new("foreign-1")));
+        assert!(streams.contains_key(&SessionId::new(format!(
+            "foreign-{MAX_PENDING_SESSION_NOTIFICATIONS}"
+        ))));
     }
 
     #[test]
