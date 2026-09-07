@@ -1,0 +1,71 @@
+{
+  "checkpoint": "PR116 generic core review runtime increment",
+  "date": "2026-09-07",
+  "platform": "Linux x86_64",
+  "base": "44bcf1ec27c242234b34cfa128a36539e39e3993",
+  "status": "PASS",
+  "workbench_member_or_dependency": false,
+  "commands": [
+    {
+      "command": "cargo test --workspace",
+      "passed": 1604,
+      "ignored": 8,
+      "filtered": 1
+    },
+    {
+      "command": "cargo test -p cyril-core --features kas",
+      "passed": 1012,
+      "ignored": 9,
+      "filtered": 24
+    },
+    {
+      "command": "cargo clippy --workspace --all-targets -- -D warnings",
+      "status": "PASS"
+    },
+    {
+      "command": "cargo clippy -p cyril-core --features kas --all-targets -- -D warnings",
+      "status": "PASS"
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "status": "PASS"
+    },
+    {
+      "command": "python3 .cyril-jlxx/oracles/shape.py --mutation-check",
+      "status": "PASS"
+    }
+  ],
+  "regressions": [
+    "Returned grouped model catalog differs from requested value and is preserved",
+    "Malformed currentValue produces operation failure, not an empty acknowledgement",
+    "Malformed grouped choice produces operation failure, not a partial acknowledgement",
+    "Valid unsolicited configuration is not a command acknowledgement",
+    "Last client drop cancels unanswered initialize; retained clone prevents premature cancellation",
+    "Fingerprint fail-stop fixture retains a live client until rejection"
+  ],
+  "negative_controls": {
+    "sdk_tolerant_response_decoder": "RED; typed operation failure assertion",
+    "nested_group_tolerant_decoder": "RED; malformed grouped choice assertion",
+    "removed_client_lifetime_observation": "RED; completion deadline elapsed",
+    "shape_body_dependency_and_rename_mutations": "DETECTED"
+  },
+  "smoke": {
+    "initialize_drop_baseline_seconds": 6.994686628,
+    "initialize_drop_baseline_peer_self_exit": true,
+    "initialize_drop_corrected_seconds": 2.002220404,
+    "initialize_drop_corrected_peer_self_exit": false
+  },
+  "limits": {
+    "session_commands_prefix": 516,
+    "session_commands_maximum": 550,
+    "mediator_lines": 713,
+    "mediator_maximum": 735
+  },
+  "qualification": "Independent Linux core increment proof; no workbench consumer required. Native Windows and cloud enforcement are not established by this checkpoint.",
+  "fixture_followup": {
+    "observation": "Concurrent cargo-test cases can inherit a peer executable write descriptor and produce ETXTBSY.",
+    "independent_posix_control": "Reproduced ETXTBSY after parent close; execution succeeded after inherited writer release.",
+    "change": "Serialize fixture creation/process lifetime across cases; construct both scripts before intentional concurrent launches. No production retry.",
+    "verification": "spawn_isolation with KAS: 12 passed including nested cases; KAS all-targets clippy and fmt PASS."
+  }
+}
