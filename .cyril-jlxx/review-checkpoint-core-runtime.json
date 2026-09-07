@@ -63,9 +63,30 @@
   },
   "qualification": "Independent Linux core increment proof; no workbench consumer required. Native Windows and cloud enforcement are not established by this checkpoint.",
   "fixture_followup": {
-    "observation": "Concurrent cargo-test cases can inherit a peer executable write descriptor and produce ETXTBSY.",
+    "observation": "Observed ETXTBSY in the verbose fixture. Inter-case inherited-writer overlap is a source-inferred hypothesis, not an original failing PID/fd trace.",
     "independent_posix_control": "Reproduced ETXTBSY after parent close; execution succeeded after inherited writer release.",
     "change": "Serialize fixture creation/process lifetime across cases; construct both scripts before intentional concurrent launches. No production retry.",
     "verification": "spawn_isolation with KAS: 12 passed including nested cases; KAS all-targets clippy and fmt PASS."
+  },
+  "fixture_portability_repair": {
+    "finding": "APython",
+    "caller": "configuration_peer has one caller: the existing standard configuration exchange test",
+    "change": "Resolve runnable host Python before environment replacement; pass -I and script via AgentCommand argv. No production changes.",
+    "baseline_control": {"peer_test_exit": 0, "host_python_selected": false, "control_exit": 1},
+    "corrected_control": {"peer_test_exit": 0, "host_python_selected": true, "control_exit": 0},
+    "local_verification": "Non-KAS and KAS configuration exchanges PASS; both core all-targets clippy selections and formatting PASS (artifact558).",
+    "gate": {
+      "affected_tests": "PASS",
+      "falsifier": "PASS: runnable host entry point selected before private environment",
+      "stress": "PASS: version-manager-style PATH shim absent from peer replacement PATH",
+      "oracle": "PASS: external marker plus the real protocol exchange",
+      "module_shape": "PASS: production tree and dependency direction unchanged from prior shape proof",
+      "production_scale": "N/A: test-only, one-off host interpreter selection",
+      "fence": "PASS: unchanged configuration response assertions",
+      "mutation": "PASS: old fixed shebang leaves host marker absent",
+      "restored": "PASS: host-selected interpreter completes the same exchange"
+    },
+    "retained_evidence": "Production/decoder inputs and assertions unchanged; prior decoder mutations, workspace integration and shape controls remain applicable. Unix CI is refreshed on the amended assembled head.",
+    "native_acceptance": "Still blocked on user sign-in; no native result upgraded."
   }
 }

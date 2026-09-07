@@ -102,6 +102,8 @@ Input: all 54 records in `review-decisions.md`, assessed against `1136dabd`. Ori
 
 Partition: archive PR #117 retains 3,454 historical-proof/roadmap lines (3,754 with margin). PR #118 is the independently verified generic core increment, with no workbench member/dependency. It also owns the 512 lines of generic configuration, initialize-drop and executable-fixture control artifacts; project 2,300 lines including that proof. The assembled reviewer delta was 4,219 lines before this ownership correction; moving those core artifacts into #118 leaves 3,707 reviewer/current-native-proof lines, with a 293-line margin. PR #116 descends from #118. Recompute actual deltas before publishing; no increment may exceed 4,000. No evidence is removed or relabeled as a newer execution.
 
+Measured publication checkpoint (APlan): archive `44bcf1ec` to core `62437d73` is 2,012 insertions + 90 deletions = 2,102 lines across 35 files; core `62437d73` to reviewer `a1ac53c7` is 3,705 insertions across 32 files. These immutable revision-pair measurements are distinct from the projections above. The staged APython fixture/proof repair measures 2,080 insertions + 90 deletions = 2,170 core lines across 36 files, including the new selection control. It retains the 2,300-line core projection and 4,000-line increment cap; recompute the reviewer delta after integration.
+
 Additional bounded owners: `types/event.rs` 650→680 (command/response declarations); `commands/mod.rs` 182→190 (one dispatch arm); `commands/session.rs` 435→550 (standard config RPC and required-choice loss validation only); core `session.rs` 373→380 and UI `state.rs` 2481→2490 (existing configuration arms only). Reviewer projection becomes 250–540 for response-qualified readiness and typed failures; other workbench projections remain unchanged. Add these exact body/path allowances to the shape oracle; do not remove existing MAX_PREFIX entries or permit unrelated protected bodies.
 
 V12 adds only lifetime wiring to bridge's existing handles/factory (404→440 prefix limit) and an initialization-vs-final-client-closure select in `DomainMediator::run` (703→735 whole-file limit; the early cfg(test) variant makes a prefix-only count unsuitable). Preserve every old allowance. Add a separately measured total-file cap for this one owner and allow no other mediator-root body change. Core source partition is independent of the workbench: caller loss cancels an already observable public bridge operation without a reviewer consumer.
@@ -120,7 +122,7 @@ V12 adds only lifetime wiring to bridge's existing handles/factory (404→440 pr
 **Files:** `.github/workflows/ci.yml`; core `protocol/bridge.rs`, `protocol/kas/version.rs`, `types/spawn_environment.rs`, `tests/spawn_isolation.rs`.
 **Estimate:** One atomic startup/feature-selection correction.
 **Diff estimate:** 140 lines including controlled-environment test adjustments.
-**PR increment:** #116, based on #117.
+**PR increment:** #118 generic core prerequisite, based on #117.
 **Commands and expected results:** `cargo test -p cyril-core --features kas --test spawn_isolation` → explicit isolation/diagnostic/deadline observations; `cargo test -p cyril-core --no-default-features --test spawn_isolation` and core-only clippy → no hidden KAS unification; named mutations red, restored fences green; workspace tests/clippy after this logical set.
 
 ### Slice 4: Restore review readiness, diagnostics and evidence ownership (S1, S4, S5, V10, V12, V13, V14, V22, C8, C10, C14, C15, C17a, C7)
