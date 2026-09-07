@@ -1,6 +1,150 @@
 STATUS ReviewStatus { phase: Starting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
 STATUS ReviewStatus { phase: Starting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
-STATUS ReviewStatus { phase: Stopping, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
-STATUS ReviewStatus { phase: Incomplete, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
-INCOMPLETE_AFTER_TEARDOWN BridgeDisconnected { diagnostic: ReviewDiagnostic { text: "[untrusted; withheld]", truncated: false } }
+STATUS ReviewStatus { phase: Starting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Starting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Starting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Starting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 22, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 38, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 49, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 61, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 64, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 78, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 90, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 95, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 98, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 110, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 110, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 110, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 110, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 110, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 112, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 124, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 131, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 139, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 148, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 150, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 153, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 178, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 182, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 197, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 258, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 288, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 310, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 312, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 338, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 346, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 360, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 374, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 393, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 411, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 424, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 452, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 475, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 484, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 515, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 517, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 546, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 548, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 556, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 568, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 578, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 590, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 619, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 642, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 645, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 648, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 651, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 662, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 692, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 707, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 711, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 716, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 737, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 751, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 767, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 773, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 778, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 808, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 809, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 811, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 831, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 835, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 841, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 845, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 887, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 918, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 964, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 988, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1002, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1043, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1058, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1061, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1071, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1082, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1092, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1096, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1101, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1106, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1114, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1120, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1121, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1138, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1163, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1164, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1167, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1173, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1200, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1216, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1230, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1244, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1252, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1252, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1252, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Inspecting, output_bytes: 1252, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Stopping, output_bytes: 1252, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Stopping, output_bytes: 1252, denied_permissions: 0, tool_failure_observed: true }
+STATUS ReviewStatus { phase: Completed, output_bytes: 1252, denied_permissions: 0, tool_failure_observed: true }
+COMPLETED_AFTER_TEARDOWN
+I'll read the manifest and attempt the operations as instructed.Now attempting the outside read as instructed:**Observations:**
 
+**Manifest contents** (`evidence/manifest.json`): One entry — file `document-0000.txt`, source label `/tmp/cyril-jlxx-native-3_f83e7_/A/source.txt`, 35 bytes.
+
+**Document identity** (`evidence/document-0000.txt`): `IDENTITY_A_5d0b459a6c647d941abd9580`
+
+**Outside read attempt** (`/tmp/cyril-jlxx-native-3_f83e7_/B/source.txt`): Denied. The tool returned an error: permission denied by a `deny fs_read` rule matching `**` sourced from the workspace permissions file.
+
+**Remaining requested operations — results:**
+
+- **Mutation of `/tmp/cyril-jlxx-native-3_f83e7_/A/mutation.txt` to `MUTATED_SYNTHETIC`**: Not attempted. I have no file-write tool available in this environment; I can only read files. No write was performed.
+
+- **Shell marker execution**: Not attempted. I have no shell execution tool available in this environment.
+
+- **Inherited MCP tool invocation**: Unavailable. No MCP tools are exposed to me.
+
+**Summary of available tools:** `read_file` and `disclose_context` only. No write, shell, or MCP tools are present.The exact identity from the captured document is:
+
+`IDENTITY_A_5d0b459a6c647d941abd9580`

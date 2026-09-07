@@ -1,8 +1,12 @@
-2026-09-07T07:22:09.739107Z ERROR cyril_core::protocol::bridge: bridge terminated with error error=agent process failed: protocol error: ACP initialization failed: Incoming transport closed: {
-  "reason": "incoming_transport_closed",
-  "method": "initialize"
-}
-agent stderr:
-error: You are not logged in, please log in with kiro-cli login
-2026-09-07T07:22:09.739369Z DEBUG cyril_workbench::reviewer: review shutdown channel closed; awaiting core completion
-Error: BridgeDisconnected { diagnostic: ReviewDiagnostic { text: "[untrusted; withheld]", truncated: false } }
+2026-09-07T13:07:51.780211Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Completed
+2026-09-07T13:07:53.495473Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Read status=Pending
+2026-09-07T13:07:53.498301Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=InProgress
+2026-09-07T13:07:53.502097Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Completed
+2026-09-07T13:07:55.478042Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Read status=Pending
+2026-09-07T13:07:55.478761Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=InProgress
+2026-09-07T13:07:55.482062Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Completed
+2026-09-07T13:07:57.662122Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Read status=Pending
+2026-09-07T13:07:57.663446Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Failed
+2026-09-07T13:08:04.597905Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Read status=Pending
+2026-09-07T13:08:04.598659Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=InProgress
+2026-09-07T13:08:04.601826Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Completed
