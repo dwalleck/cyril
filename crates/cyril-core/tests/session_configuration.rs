@@ -2,8 +2,8 @@
 #![cfg(unix)]
 
 use std::collections::BTreeMap;
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use anyhow::{Context, Result, bail, ensure};
@@ -18,11 +18,23 @@ const SESSION_ID: &str = "configuration-peer";
 const WAIT: Duration = Duration::from_secs(10);
 
 fn configuration_peer(root: &Path) -> Result<AgentCommand> {
+    // Resolve host version-manager shims before replacing HOME/PATH. Keep the
+    // actual peer isolated with explicit interpreter arguments, not a shebang.
+    let python = Command::new("python3")
+        .args(["-I", "-c", "import sys; sys.stdout.write(sys.executable)"])
+        .stdin(Stdio::null())
+        .output()
+        .context("resolve runnable host Python 3")?;
+    ensure!(python.status.success(), "host Python 3 probe failed");
+    let python = String::from_utf8(python.stdout).context("non-UTF-8 Python executable")?;
+    ensure!(
+        Path::new(&python).is_absolute(),
+        "host Python 3 must report an absolute executable"
+    );
     let path = root.join("configuration-peer.py");
     std::fs::write(
         &path,
-        r#"#!/usr/bin/python3 -I
-import json
+        r#"import json
 import signal
 import sys
 
@@ -99,10 +111,10 @@ for line in sys.stdin:
         }})
 "#,
     )?;
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700))?;
-    Ok(AgentCommand::new(
-        path.to_str().context("non-UTF-8 fixture path")?,
-    ))
+    Ok(AgentCommand::new(python).with_args(vec![
+        "-I".into(),
+        path.to_str().context("non-UTF-8 fixture path")?.into(),
+    ]))
 }
 
 async fn next_notification(rx: &mut Receiver<RoutedNotification>) -> Result<Notification> {
