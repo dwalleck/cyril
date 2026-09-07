@@ -1,0 +1,9 @@
+{
+  "source_revision": "686d509d4461b0760e6347aea8df4d0bf0fe9656",
+  "kind": "actual isolated Reviewer agent round-trip immediately before native campaign",
+  "reply": "I'll read the manifest file first.The exact text of the document is:\n\n```\nPREFLIGHT_cyril-pr116-preflight-2gmf4fvu\n```",
+  "completed_after_teardown": true,
+  "private_roots_removed": true,
+  "wall_time_ms": 7707.22958599776,
+  "expected_identity": "PREFLIGHT_cyril-pr116-preflight-2gmf4fvu"
+}
