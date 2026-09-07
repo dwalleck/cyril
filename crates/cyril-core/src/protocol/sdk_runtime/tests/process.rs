@@ -96,7 +96,7 @@ sleep 0.05
                 "cyril-parser-fixture".to_owned(),
                 expected_path.to_string_lossy().into_owned(),
             ]);
-            let process = AgentProcess::spawn(&command, directory.path())
+            let process = AgentProcess::spawn(&command, directory.path(), &crate::types::SpawnEnvironment::Inherit)
                 .await
                 .unwrap_or_else(|error| panic!("{name} process spawn: {error}"));
             let capture = Arc::new(Mutex::new(Vec::new()));
@@ -195,7 +195,7 @@ done | tee "$1"
             "cyril-process-fixture".to_owned(),
             expected_path.to_string_lossy().into_owned(),
         ]);
-        let process = AgentProcess::spawn(&command, directory.path())
+        let process = AgentProcess::spawn(&command, directory.path(), &crate::types::SpawnEnvironment::Inherit)
             .await
             .unwrap_or_else(|error| panic!("process fixture spawn: {error}"));
         let stderr_tail = process.stderr_tail();
@@ -367,9 +367,13 @@ fn clean_shutdown_grants_stdin_eof_grace_before_group_kill() {
             "cyril-grace-fixture".to_owned(),
             marker.to_string_lossy().into_owned(),
         ]);
-        let process = AgentProcess::spawn(&command, directory.path())
-            .await
-            .unwrap_or_else(|error| panic!("grace fixture spawn: {error}"));
+        let process = AgentProcess::spawn(
+            &command,
+            directory.path(),
+            &crate::types::SpawnEnvironment::Inherit,
+        )
+        .await
+        .unwrap_or_else(|error| panic!("grace fixture spawn: {error}"));
         let (channels, _work_rx, _host_rx) = DomainChannels::new(IngressTracker::new())
             .unwrap_or_else(|error| panic!("grace fixture channels: {error}"));
         let sdk = SdkRuntime::start(process, channels, StageChain::default())

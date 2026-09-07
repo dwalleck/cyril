@@ -95,3 +95,74 @@ Native Windows behavior is UNVERIFIED on this Linux workstation; separate verifi
 ## Self-review
 
 Each design claim has exactly one owning slice (C2 in 1; C1/C3–C7 in 2). Slice 1 verification requires no future workbench code. Slice 2 delivers the whole concrete operation; no uncallable scaffold. Every slice has all fourteen fields, fences/mutations, cost bounds and module projections. Complete shape proof and behavioral/mutation/native gates precede completion. Projection arithmetic includes churn. No slice is declared complete by this plan; checkpointed-build owns that decision.
+
+## Review re-entry (2026-09-07)
+
+Input: all 54 records in `review-decisions.md`, assessed against `1136dabd`. Original slices/approval remain historical records. These slices repair their committed implementation facets; no new architecture or risk waiver is selected. Integration uses the linked `pr-116` worktree, not the primary checkout.
+
+Partition: archive PR #117 retains 3,454 historical-proof/roadmap lines (3,754 with margin). PR #118 is the independently verified generic core increment, with no workbench member/dependency. It also owns the 512 lines of generic configuration, initialize-drop and executable-fixture control artifacts; project 2,300 lines including that proof. The assembled reviewer delta was 4,219 lines before this ownership correction; moving those core artifacts into #118 leaves 3,707 reviewer/current-native-proof lines, with a 293-line margin. PR #116 descends from #118. Recompute actual deltas before publishing; no increment may exceed 4,000. No evidence is removed or relabeled as a newer execution.
+
+Measured publication checkpoint (APlan): archive `44bcf1ec` to core `62437d73` is 2,012 insertions + 90 deletions = 2,102 lines across 35 files; core `62437d73` to reviewer `a1ac53c7` is 3,705 insertions across 32 files. These immutable revision-pair measurements are distinct from the projections above. The staged APython fixture/proof repair measures 2,080 insertions + 90 deletions = 2,170 core lines across 36 files, including the new selection control. It retains the 2,300-line core projection and 4,000-line increment cap; recompute the reviewer delta after integration.
+
+Additional bounded owners: `types/event.rs` 650→680 (command/response declarations); `commands/mod.rs` 182→190 (one dispatch arm); `commands/session.rs` 435→550 (standard config RPC and required-choice loss validation only); core `session.rs` 373→380 and UI `state.rs` 2481→2490 (existing configuration arms only). Reviewer projection becomes 250–540 for response-qualified readiness and typed failures; other workbench projections remain unchanged. Add these exact body/path allowances to the shape oracle; do not remove existing MAX_PREFIX entries or permit unrelated protected bodies.
+
+V12 adds only lifetime wiring to bridge's existing handles/factory (404→440 prefix limit) and an initialization-vs-final-client-closure select in `DomainMediator::run` (703→735 whole-file limit; the early cfg(test) variant makes a prefix-only count unsuitable). Preserve every old allowance. Add a separately measured total-file cap for this one owner and allow no other mediator-root body change. Core source partition is independent of the workbench: caller loss cancels an already observable public bridge operation without a reviewer consumer.
+
+### Slice 3: Correct bounded startup and isolated feature coverage (V5, V8, V19, V21, S3)
+
+**Claim IDs:** C2, C6; repairs to original slice 1.
+**Expected behavior:** Replace+Host is rejected before discovery/probe/agent start; timeout retains already-read bounded diagnostics; nested isolation checks prove their inner body ran; non-KAS core remains independently tested.
+**Oracle:** External process environment/initialize journals, pre-timeout diagnostic canary, parent-observed completion files and explicit core-only build selection.
+**Stress fixture:** Both version pipes exceed 1 MiB, descendant retains a pipe, hanging peer emits diagnostic then stalls; Inherit+Host positive control uses a private HOME. Existing three-second probe plus bounded reap remains.
+**Regression fence:** `crates/cyril-core/tests/spawn_isolation.rs`; preserve verbose/inherited-pipe/Free rejection fences and strengthen timeout/nested execution checks.
+**Named mutation:** Remove Host rejection → probe/agent marker appears; discard timeout stderr → diagnostic canary missing; stale inner --exact filter → outer completion-file assertion fails. Run host-hook negative controls with private HOME, never the user's registry.
+**Complexity/production scale:** Two concurrent bounded captures, at most 1 MiB each; draining is O(total output), never retained beyond caps. Each hanging/held-pipe case must finish within ten seconds including existing teardown.
+**Wall budget/phase:** One-off startup; N/A — no always-on work.
+**Module shape:** Existing bridge validation/version/environment owners only; existing body allowances and maxima stay sufficient. Shape oracle PASS.
+**Files:** `.github/workflows/ci.yml`; core `protocol/bridge.rs`, `protocol/kas/version.rs`, `types/spawn_environment.rs`, `tests/spawn_isolation.rs`.
+**Estimate:** One atomic startup/feature-selection correction.
+**Diff estimate:** 140 lines including controlled-environment test adjustments.
+**PR increment:** #118 generic core prerequisite, based on #117.
+**Commands and expected results:** `cargo test -p cyril-core --features kas --test spawn_isolation` → explicit isolation/diagnostic/deadline observations; `cargo test -p cyril-core --no-default-features --test spawn_isolation` and core-only clippy → no hidden KAS unification; named mutations red, restored fences green; workspace tests/clippy after this logical set.
+
+### Slice 4: Restore review readiness, diagnostics and evidence ownership (S1, S4, S5, V10, V12, V13, V14, V22, C8, C10, C14, C15, C17a, C7)
+
+**Claim IDs:** C1, C2, C4, C5, C6, C7; repairs to original slice 2.
+**Expected behavior:** No evidence prompt before response-confirmed disabled collection and post-profile model confirmation; late disconnect/error cannot erase authoritative completion; failures retain private bounded diagnostics; failed native tools are observed without inventing policy verdicts; executor destruction cannot delete a live child's evidence.
+**Oracle:** Peer's ordered wire/prompt journal, independent direct/descendant process and filesystem observations, captured tracing output, and live pinned-KAS configuration/allowed-read/denied-read results.
+**Stress fixture:** Wrong-mode model followed by mode-only switch; unsolicited disabled update before rejected/coerced response; missing/malformed configuration response; privacy drift; delayed terminal/disconnect; dropped/unpolled driver; 4096-byte UTF-8 diagnostic boundary and secret canaries; original 1024-document/64 MiB staging and 8 MiB output bounds.
+**Regression fence:** Workbench public-operation peer tests plus focused private diagnostic/cleanup/logging boundary tests; existing core command-contract inventory and generic configuration consumers migrate atomically.
+**Named mutation:** Remove response readiness guard → early prompt journaled; retain wrong-profile model → early prompt; restore late-error demotion → complete becomes incomplete; restore raw tool logging → private canary logged; remove cleanup guard → evidence disappears before completion; expose diagnostic Debug → canary leaks. Uncertain response decoding must fail closed under the SDK's tolerant-response mutation.
+**Complexity/production scale:** Configuration is O(options + choices), without copying whole catalogs per notification; diagnostics retain at most 4096 bytes each; status O(1). Original C6 staging/drain bounds remain. Cleanup adds one OS waiter only when the caller executor drops ownership; no retry/sweep service.
+**Wall budget/phase:** Initial native configuration is one-off under existing startup deadline; active drain remains <=10 ms synchronous work per <=64 KiB fixture chunk and <=1 second cancellation dispatch. No inference timeout or new successful-silence rule.
+**Module shape:** Standard configuration stays in existing core command owners; generic cached-model consumers only add response handling. Review policy/diagnostics/evidence lifecycle stay in workbench. Bridge handles/factory retain a closure-only client-lifetime guard; only the mediator root's existing run body may observe that guard during initialization and call existing teardown. No process/SDK implementation delta or new runtime.
+**Files:** core `protocol/bridge.rs`, `protocol/domain_mediator/mod.rs`, `tests/{spawn_isolation,session_configuration}.rs`, `types/event.rs`, `protocol/domain_mediator/commands/{mod,session}.rs`, command-contract test inventory, `session.rs`; UI `state.rs`; bridge example; workbench `reviewer.rs`, `reviewer/{types,evidence,runtime}.rs`, peer fixtures/tests and smoke-example removal after capture; shape/design/plan/decision records.
+**Estimate:** One complete backend-operation correction with its prerequisite standard command.
+**Diff estimate:** Agent reviewer patch is 766 insertions/108 deletions before response-qualified readiness adjustments; these are existing additions in #116, so the final workbench increment uses their resulting file sizes, not cumulative edit churn. Generic core/configuration/lifetime changes belong to the independently verified core increment; respect the revised per-increment totals above.
+**PR increment:** `core-review-runtime` for generic core corrections, then #116 for the complete reviewer operation; both descend from #117.
+**Commands and expected results:** `cargo test -p cyril-workbench` → readiness/terminal/cleanup/privacy observations; targeted generic-consumer and command-contract cases → returned catalog applied, malformed responses rejected; actual `review_smoke` against CLI 2.21.1 → disabled collection, Sonnet 4.6, allowed synthetic evidence, refused outside read and observed teardown; named mutations red/restored green; workspace tests, clippy, fmt and complete shape oracle PASS.
+
+V12 additional oracle/fence: the peer independently attests initialize receipt, remains open while a sender clone is retained, and writes a natural-exit marker before its finite safety exit. Dropping the last clone must yield core completion via existing teardown before that marker exists. Removing lifetime observation must turn the fence red. Baseline public probe: completion=false at three seconds, natural exit=true at 6.9947 seconds; do not treat awaiting completion as proof of timely cancellation.
+
+Final-review grouped-choice fence: the SDK's nested group decoder also drops malformed required choices. Decode the catalog once from a borrowed raw value, then compare each decoded group's choice count with its raw array before acknowledging. Valid grouped catalogs remain supported; malformed flat current values and malformed grouped choices must both produce the typed operation failure. Optional presentation metadata retains SDK extensibility. No new schema clone, helper owner or duplicate catalog allocation.
+
+### Slice 5: Correct native Windows path/auth construction (V15, V9)
+
+**Claim IDs:** C1, C2, C3; platform-bound construction correction, not native acceptance.
+**Expected behavior:** Ordinary canonical Windows paths no longer fail solely on a verbatim prefix; semantically necessary extended paths remain fail-closed. A requested auth parent inconsistent with the native OS Known Folder is rejected rather than silently ignored.
+**Oracle:** `dunce` compatible canonicalization and `dirs::data_local_dir` use the actual native path/Known Folder APIs; Windows CI constructs the public Reviewer with a temporary executable/runtime and verifies an alternate auth directory is rejected.
+**Stress fixture:** Spaces/Unicode runtime parents, ordinary canonical drive paths, alternate native-auth parent; Unix glob-escape paths remain rejected. No credentials are opened or copied.
+**Regression fence:** Platform-qualified constructor tests under `reviewer/runtime.rs`; Windows CI executes Windows branches. The Linux machine does not claim native Windows KAS/process acceptance.
+**Named mutation:** Restore raw std canonicalization → Windows valid-construction case fails; remove Known Folder equality guard → alternate-auth case succeeds incorrectly. The same Windows CI matrix carries these platform-specific controls.
+**Complexity/production scale:** O(path length) compatible normalization plus a fixed number of canonicalization/Known Folder calls; no new event-loop or per-notification IO.
+**Wall budget/phase:** One-off constructor; N/A — no always-on phase.
+**Module shape:** Runtime configuration owner only; centrally declared `dunce` and Windows-only `dirs` dependencies provide safe OS wrappers, not a copied platform subsystem.
+**Files:** root Cargo manifests/lock; workbench manifest, `reviewer/runtime.rs`, auth-parent field documentation in `reviewer/types.rs`; `.github/workflows/ci.yml` and `.cyril-jlxx/oracles/windows-construction.py` execute the two native-platform mutation controls and restore the source even on failure.
+**Estimate:** One bounded native-construction correction.
+**Diff estimate:** 180 lines including Windows tests, mutation instrument/CI invocation and lockfile updates.
+**PR increment:** #116, based on #117.
+**Commands and expected results:** Linux constructor/behavior checks remain green; Windows CI valid-construction/alternate-auth cases distinguish the fixed and mutated behavior; full CI matrix green. Live Windows enforcement/descendant acceptance remains cyril-6y1s/cyril-jlw9, not asserted by this slice.
+
+Review-plan check: all accepted behavior changes have an owning slice and explicit oracle/fence; generic command plus every consumer is atomic. Historical records stay unchanged above. Unverified findings are rejected with named existing acceptance ownership, not smuggled into new behavior. Final integration and cleanup follow the exercised surfaces; historical gates do not substitute for current proof.
+
+Evidence-only reconciliation: the post-shlex control result and exact CI checkout/head tree are pinned in the core checkpoint and `review-native/python-selection-postquote.json`. The prepared core increment including these records is 2,198 changed lines; executable sources remain those verified at core7477df72/reviewera8577505. The 2,300-line core projection and 4,000-line cap are unchanged.

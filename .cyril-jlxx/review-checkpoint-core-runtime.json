@@ -1,0 +1,102 @@
+{
+  "checkpoint": "PR116 generic core review runtime increment",
+  "date": "2026-09-07",
+  "platform": "Linux x86_64",
+  "base": "44bcf1ec27c242234b34cfa128a36539e39e3993",
+  "status": "PASS",
+  "workbench_member_or_dependency": false,
+  "commands": [
+    {
+      "command": "cargo test --workspace",
+      "passed": 1604,
+      "ignored": 8,
+      "filtered": 1
+    },
+    {
+      "command": "cargo test -p cyril-core --features kas",
+      "passed": 1012,
+      "ignored": 9,
+      "filtered": 24
+    },
+    {
+      "command": "cargo clippy --workspace --all-targets -- -D warnings",
+      "status": "PASS"
+    },
+    {
+      "command": "cargo clippy -p cyril-core --features kas --all-targets -- -D warnings",
+      "status": "PASS"
+    },
+    {
+      "command": "cargo fmt --all -- --check",
+      "status": "PASS"
+    },
+    {
+      "command": "python3 .cyril-jlxx/oracles/shape.py --mutation-check",
+      "status": "PASS"
+    }
+  ],
+  "regressions": [
+    "Returned grouped model catalog differs from requested value and is preserved",
+    "Malformed currentValue produces operation failure, not an empty acknowledgement",
+    "Malformed grouped choice produces operation failure, not a partial acknowledgement",
+    "Valid unsolicited configuration is not a command acknowledgement",
+    "Last client drop cancels unanswered initialize; retained clone prevents premature cancellation",
+    "Fingerprint fail-stop fixture retains a live client until rejection"
+  ],
+  "negative_controls": {
+    "sdk_tolerant_response_decoder": "RED; typed operation failure assertion",
+    "nested_group_tolerant_decoder": "RED; malformed grouped choice assertion",
+    "removed_client_lifetime_observation": "RED; completion deadline elapsed",
+    "shape_body_dependency_and_rename_mutations": "DETECTED"
+  },
+  "smoke": {
+    "initialize_drop_baseline_seconds": 6.994686628,
+    "initialize_drop_baseline_peer_self_exit": true,
+    "initialize_drop_corrected_seconds": 2.002220404,
+    "initialize_drop_corrected_peer_self_exit": false
+  },
+  "limits": {
+    "session_commands_prefix": 516,
+    "session_commands_maximum": 550,
+    "mediator_lines": 713,
+    "mediator_maximum": 735
+  },
+  "qualification": "Independent Linux core increment proof; no workbench consumer required. Native Windows and cloud enforcement are not established by this checkpoint.",
+  "fixture_followup": {
+    "observation": "Observed ETXTBSY in the verbose fixture. Inter-case inherited-writer overlap is a source-inferred hypothesis, not an original failing PID/fd trace.",
+    "independent_posix_control": "Reproduced ETXTBSY after parent close; execution succeeded after inherited writer release.",
+    "change": "Serialize fixture creation/process lifetime across cases; construct both scripts before intentional concurrent launches. No production retry.",
+    "verification": "spawn_isolation with KAS: 12 passed including nested cases; KAS all-targets clippy and fmt PASS."
+  },
+  "fixture_portability_repair": {
+    "finding": "APython",
+    "caller": "configuration_peer has one caller: the existing standard configuration exchange test",
+    "change": "Resolve runnable host Python before environment replacement; pass -I and script via AgentCommand argv. No production changes.",
+    "baseline_control": {"peer_test_exit": 0, "host_python_selected": false, "control_exit": 1},
+    "corrected_control": {"peer_test_exit": 0, "host_python_selected": true, "control_exit": 0},
+    "postquote_execution": "review-native/python-selection-postquote.json",
+    "local_verification": "Non-KAS and KAS configuration exchanges PASS; both core all-targets clippy selections and formatting PASS (artifact558).",
+    "gate": {
+      "affected_tests": "PASS",
+      "falsifier": "PASS: runnable host entry point selected before private environment",
+      "stress": "PASS: version-manager-style PATH shim absent from peer replacement PATH",
+      "oracle": "PASS: external marker plus the real protocol exchange",
+      "module_shape": "PASS: production tree and dependency direction unchanged from prior shape proof",
+      "production_scale": "N/A: test-only, one-off host interpreter selection",
+      "fence": "PASS: unchanged configuration response assertions",
+      "mutation": "PASS: old fixed shebang leaves host marker absent",
+      "restored": "PASS: host-selected interpreter completes the same exchange"
+    },
+    "retained_evidence": "Production/decoder inputs and assertions unchanged. CI34102117724 passed all 13 jobs on assembled a8577505, including the macOS configuration exchange. Later changes are evidence records only.",
+    "native_acceptance": "The 07:22 UTC replay was blocked on sign-in. The separate final-reviewer replay on 686d509d passed at 13:08 UTC; review-native/native-acceptance.json and auth-preflight.json retain it without relabeling historical runs. This is assembled reviewer proof, not a core-only native run.",
+    "ci_provenance": {
+      "run": "https://github.com/dwalleck/cyril/actions/runs/34102117724",
+      "temporary_base": "2e56ed603ea3685ceb656dfdc4ec515cfd659d93",
+      "head": "a85775058110b141fd682deb512633bdec1002a4",
+      "checkout_merge": "d5afbef7bd75203211086cd537c13f60f48fa136",
+      "checkout_and_head_tree": "86066a6ff6228081a7c4ff79da7c29d2c2f80019",
+      "checkout_log": "macOS job101678701599; artifact598",
+      "result": "PASS; identical merge/head trees; PR116 stacked base restored after CI"
+    }
+  }
+}

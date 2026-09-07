@@ -23,18 +23,21 @@ fn adapter_matrix_advertises_if_and_only_if_the_mediator_answers() {
             "kas-off",
             Box::new(KasEngine {
                 hooks_mode: KasHooksMode::Off,
+                ..Default::default()
             }),
         ),
         (
             "kas-host",
             Box::new(KasEngine {
                 hooks_mode: KasHooksMode::Host,
+                ..Default::default()
             }),
         ),
         (
             "kas-kas",
             Box::new(KasEngine {
                 hooks_mode: KasHooksMode::Kas,
+                ..Default::default()
             }),
         ),
     ];
@@ -97,7 +100,10 @@ fn advertisement_is_fully_determined_by_presence_direction_and_settings() {
     assert_eq!(v2, empty, "V2 must advertise the empty capability set");
 
     for mode in [KasHooksMode::Off, KasHooksMode::Host, KasHooksMode::Kas] {
-        let actual = serialized_capabilities(&KasEngine { hooks_mode: mode });
+        let actual = serialized_capabilities(&KasEngine {
+            hooks_mode: mode,
+            ..Default::default()
+        });
         let settings = actual["_meta"]["kiro"]["settings"].clone();
         assert!(settings.is_object(), "settings extra present under KAS");
 

@@ -244,7 +244,8 @@ impl SessionController {
                     TurnMetering::merge_pending(self.pending_metering.take(), Some(metering), None);
                 true
             }
-            Notification::ConfigOptionsUpdated(options) => {
+            Notification::ConfigOptionsUpdated(options)
+            | Notification::ConfigOptionSet { options, .. } => {
                 if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
                     self.cached_model = model_opt.value.clone();
                 }

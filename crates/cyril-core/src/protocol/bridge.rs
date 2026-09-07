@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::protocol::engine::{Engine, V2Engine};
 use crate::types::agent_command::AgentCommand;
@@ -29,6 +29,7 @@ pub(crate) const fn source_disposition(
 
 pub struct BridgeHandle {
     command_tx: mpsc::Sender<BridgeCommand>,
+    client_lifetime_tx: Option<watch::Sender<()>>,
     pub(crate) notification_rx: mpsc::Receiver<RoutedNotification>,
     pub(crate) permission_rx: mpsc::Receiver<PermissionRequest>,
     source_rx: mpsc::Receiver<crate::types::SourceTurnEvent>,
@@ -47,6 +48,7 @@ impl BridgeHandle {
     pub fn sender(&self) -> BridgeSender {
         BridgeSender {
             command_tx: self.command_tx.clone(),
+            _client_lifetime_tx: self.client_lifetime_tx.clone(),
         }
     }
 
@@ -66,6 +68,7 @@ impl BridgeHandle {
         (
             Self {
                 command_tx,
+                client_lifetime_tx: None,
                 notification_rx,
                 permission_rx,
                 source_rx,
@@ -87,6 +90,7 @@ impl BridgeHandle {
         (
             BridgeSender {
                 command_tx: self.command_tx,
+                _client_lifetime_tx: self.client_lifetime_tx,
             },
             self.notification_rx,
             self.permission_rx,
@@ -99,11 +103,16 @@ impl BridgeHandle {
 #[derive(Clone)]
 pub struct BridgeSender {
     command_tx: mpsc::Sender<BridgeCommand>,
+    // Ownership only: the final real client closes initialization's watch channel.
+    _client_lifetime_tx: Option<watch::Sender<()>>,
 }
 
 impl BridgeSender {
     pub fn from_sender(tx: mpsc::Sender<BridgeCommand>) -> Self {
-        Self { command_tx: tx }
+        Self {
+            command_tx: tx,
+            _client_lifetime_tx: None,
+        }
     }
 
     pub async fn send(&self, cmd: BridgeCommand) -> crate::Result<()> {
@@ -122,6 +131,7 @@ impl BridgeSender {
 
 pub(crate) struct BridgeChannels {
     pub command_rx: mpsc::Receiver<BridgeCommand>,
+    pub client_lifetime_rx: watch::Receiver<()>,
     pub notification_tx: mpsc::Sender<RoutedNotification>,
     pub permission_tx: mpsc::Sender<PermissionRequest>,
     pub source_tx: mpsc::Sender<crate::types::SourceTurnEvent>,
@@ -130,6 +140,7 @@ pub(crate) struct BridgeChannels {
 
 pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     let (command_tx, command_rx) = mpsc::channel(COMMAND_CAPACITY);
+    let (client_lifetime_tx, client_lifetime_rx) = watch::channel(());
     let (notification_tx, notification_rx) = mpsc::channel(NOTIFICATION_CAPACITY);
     let (permission_tx, permission_rx) = mpsc::channel(PERMISSION_CAPACITY);
     let (source_tx, source_rx) =
@@ -138,6 +149,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     (
         BridgeHandle {
             command_tx,
+            client_lifetime_tx: Some(client_lifetime_tx),
             notification_rx,
             permission_rx,
             source_rx,
@@ -145,6 +157,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
         },
         BridgeChannels {
             command_rx,
+            client_lifetime_rx,
             notification_tx,
             permission_tx,
             source_tx,
@@ -161,6 +174,12 @@ pub struct SpawnConfig {
     pub present_as: Option<PresentAs>,
     pub kas_hooks: KasHooksMode,
     pub stall_threshold: std::time::Duration,
+    /// Environment used by both the agent and the existing CLI version probe.
+    /// KAS Free launches and Host hooks require `Inherit`; use Wrapper without
+    /// Host hooks with `Replace`. See `SpawnEnvironment` for PATH lookup rules.
+    pub environment: crate::types::SpawnEnvironment,
+    /// Exact CLI version token required for KAS Wrapper launches.
+    pub required_cli_version: Option<String>,
 }
 
 pub const DEFAULT_STALL_THRESHOLD: std::time::Duration = std::time::Duration::from_secs(30);
@@ -174,6 +193,8 @@ impl Default for SpawnConfig {
             present_as: None,
             kas_hooks: KasHooksMode::default(),
             stall_threshold: DEFAULT_STALL_THRESHOLD,
+            environment: crate::types::SpawnEnvironment::Inherit,
+            required_cli_version: None,
         }
     }
 }
@@ -257,6 +278,7 @@ fn engine_for(config: &SpawnConfig) -> Result<std::rc::Rc<dyn Engine>, String> {
         #[cfg(feature = "kas")]
         AgentEngine::Kas => Ok(std::rc::Rc::new(crate::protocol::engine::KasEngine {
             hooks_mode: config.kas_hooks,
+            settings: crate::protocol::kas::settings::settings_extra_value(&config.environment),
         })),
         #[cfg(not(feature = "kas"))]
         AgentEngine::Kas => Err("KAS engine requires a build with --features kas".to_string()),
@@ -292,18 +314,41 @@ fn resolve_host_shell(
 }
 
 #[cfg(feature = "kas")]
-fn resolve_spawn_command(
+async fn resolve_spawn_command(
     agent_command: &AgentCommand,
-    agent_engine: AgentEngine,
-    kas_spawn: KasSpawn,
+    config: &SpawnConfig,
 ) -> Result<AgentCommand, String> {
-    match agent_engine {
-        AgentEngine::Kas => match kas_spawn {
-            KasSpawn::Free => {
-                crate::protocol::kas::discovery::resolve_kas_command().map_err(|m| m.reason())
-            }
+    if config.engine == AgentEngine::Kas
+        && (config.kas_spawn == KasSpawn::Free || config.kas_hooks == KasHooksMode::Host)
+        && matches!(
+            config.environment,
+            crate::types::SpawnEnvironment::Replace(_)
+        )
+    {
+        return Err(if config.kas_spawn == KasSpawn::Free {
+            "KAS Free launches require an inherited environment; use Wrapper for a replacement environment"
+        } else {
+            "KAS Host hooks require an inherited environment; disable host hooks for a replacement environment"
+        }
+        .into());
+    }
+    if config.required_cli_version.is_some()
+        && (config.engine != AgentEngine::Kas || config.kas_spawn != KasSpawn::Wrapper)
+    {
+        return Err("required_cli_version requires the KAS Wrapper launch path".into());
+    }
+    match config.engine {
+        AgentEngine::Kas => match config.kas_spawn {
+            KasSpawn::Free => crate::protocol::kas::discovery::resolve_kas_command()
+                .await
+                .map_err(|m| m.reason()),
             KasSpawn::Wrapper => {
-                crate::protocol::kas::version::build_wrapper_command(agent_command)
+                crate::protocol::kas::version::build_wrapper_command(
+                    agent_command,
+                    &config.environment,
+                    config.required_cli_version.as_deref(),
+                )
+                .await
             }
         },
         AgentEngine::V2 => Ok(agent_command.clone()),
@@ -311,11 +356,15 @@ fn resolve_spawn_command(
 }
 
 #[cfg(not(feature = "kas"))]
-fn resolve_spawn_command(
+async fn resolve_spawn_command(
     agent_command: &AgentCommand,
-    _agent_engine: AgentEngine,
-    _kas_spawn: KasSpawn,
+    config: &SpawnConfig,
 ) -> Result<AgentCommand, String> {
+    if config.required_cli_version.is_some() {
+        return Err(
+            "required_cli_version requires a build with --features kas and KAS Wrapper".into(),
+        );
+    }
     Ok(agent_command.clone())
 }
 
@@ -328,10 +377,12 @@ async fn run_bridge(
 ) -> crate::Result<()> {
     let engine = engine_for(&config)
         .map_err(|detail| crate::Error::from_kind(crate::ErrorKind::InvalidConfig { detail }))?;
-    let command = resolve_spawn_command(agent_command, config.engine, config.kas_spawn)
+    let command = resolve_spawn_command(agent_command, &config)
+        .await
         .map_err(|detail| crate::Error::from_kind(crate::ErrorKind::InvalidConfig { detail }))?;
     crate::platform::path::bind_agent_location(command.program());
-    let process = crate::protocol::transport::AgentProcess::spawn(&command, cwd).await?;
+    let process =
+        crate::protocol::transport::AgentProcess::spawn(&command, cwd, &config.environment).await?;
     #[cfg(not(feature = "kas"))]
     let _host_shell = host_shell;
     let domain_config = crate::protocol::domain_mediator::DomainConfig {

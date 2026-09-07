@@ -1,7 +1,18 @@
 //! KAS wrapper spawn: version→flag resolution + the `kiro-cli acp
 //! --agent-engine <flag>` command (KAS-1 Part B, cyril-evwh).
 
+use std::process::Stdio;
+use std::time::Duration;
+
+use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::process::Command;
+use tokio::time::timeout;
+
 use crate::types::AgentCommand;
+
+const VERSION_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+const VERSION_REAP_TIMEOUT: Duration = Duration::from_secs(1);
+const VERSION_PIPE_LIMIT: u64 = 1024 * 1024;
 
 /// Parse the leading `MAJOR.MINOR.PATCH` of a version string into a tuple,
 /// ignoring any pre-release/build suffix on the patch (e.g. `2.8.1-beta` →
@@ -42,24 +53,99 @@ pub(crate) fn flag_for_version(version: &str) -> Result<&'static str, String> {
     }
 }
 
-/// Read the installed kiro-cli version by running `<program> --version` and
-/// pulling the first digit-leading token (`kiro-cli 2.8.1` → `2.8.1`).
-pub(crate) fn kiro_cli_version(program: &str) -> Result<String, String> {
-    let out = std::process::Command::new(program)
+async fn read_limited(
+    mut pipe: impl AsyncRead + Unpin,
+    bytes: &mut Vec<u8>,
+) -> std::io::Result<()> {
+    (&mut pipe)
+        .take(VERSION_PIPE_LIMIT)
+        .read_to_end(bytes)
+        .await?;
+    // Keep draining after the capture cap so verbose probes can still exit.
+    tokio::io::copy(&mut pipe, &mut tokio::io::sink()).await?;
+    Ok(())
+}
+
+/// Read the installed kiro-cli version through a bounded child lifecycle.
+/// One deadline covers process exit and both pipe EOFs. Cleanup gets a separate
+/// bounded reap; inherited descendant pipes cannot park the bridge indefinitely.
+pub(crate) async fn kiro_cli_version(
+    program: &str,
+    environment: &crate::types::SpawnEnvironment,
+) -> Result<String, String> {
+    let mut command = Command::new(program);
+    environment.apply(command.as_std_mut());
+    command
         .arg("--version")
-        .output()
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    #[cfg(unix)]
+    {
+        command.process_group(0);
+    }
+    let mut child = command
+        .spawn()
         .map_err(|e| format!("run `{program} --version`: {e}"))?;
-    // A non-zero exit (crashed binary, wrong program, re-login prompt) would
-    // otherwise surface as a generic "could not parse" — report the real cause.
-    if !out.status.success() {
-        let stderr = String::from_utf8_lossy(&out.stderr);
+    #[cfg(unix)]
+    let group = crate::protocol::transport::ProcessGroupGuard::new(child.id());
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| format!("failed to capture stdout from `{program} --version`"))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| format!("failed to capture stderr from `{program} --version`"))?;
+    // Keep captured bytes outside the cancellable reads so a deadline retains
+    // diagnostics already received, without waiting again for pipe EOF.
+    let mut stdout_bytes = Vec::new();
+    let mut stderr_bytes = Vec::new();
+    let output = timeout(VERSION_PROBE_TIMEOUT, async {
+        tokio::try_join!(
+            child.wait(),
+            read_limited(stdout, &mut stdout_bytes),
+            read_limited(stderr, &mut stderr_bytes)
+        )
+    })
+    .await
+    .map_err(|_| {
+        format!(
+            "`{program} --version` exceeded the {} second startup probe deadline",
+            VERSION_PROBE_TIMEOUT.as_secs()
+        )
+    })
+    .and_then(|result| {
+        result.map_err(|error| format!("read or wait for `{program} --version`: {error}"))
+    });
+    // Also kill descendants when the wrapper has already exited normally.
+    #[cfg(unix)]
+    drop(group);
+    let status = match output {
+        Ok((status, (), ())) => status,
+        Err(reason) => {
+            match timeout(VERSION_REAP_TIMEOUT, child.kill()).await {
+                Ok(Ok(())) => {}
+                Ok(Err(error)) => tracing::debug!(program, %error, "failed to reap version probe"),
+                Err(error) => {
+                    tracing::warn!(program, %error, "version probe reap deadline elapsed")
+                }
+            }
+            return Err(match String::from_utf8_lossy(&stderr_bytes).trim() {
+                "" => reason,
+                diagnostic => format!("{reason}: {diagnostic}"),
+            });
+        }
+    };
+    if !status.success() {
+        let stderr = String::from_utf8_lossy(&stderr_bytes);
         return Err(format!(
-            "`{program} --version` exited {}: {}",
-            out.status,
+            "`{program} --version` exited {status}: {}",
             stderr.trim()
         ));
     }
-    let text = String::from_utf8_lossy(&out.stdout);
+    let text = String::from_utf8_lossy(&stdout_bytes);
     text.split_whitespace()
         .find(|t| t.starts_with(|c: char| c.is_ascii_digit()))
         .map(|v| v.to_string())
@@ -69,8 +155,20 @@ pub(crate) fn kiro_cli_version(program: &str) -> Result<String, String> {
 /// Build the wrapper spawn command: the bound agent command (`kiro-cli acp`)
 /// with `--agent-engine <flag>` appended, the flag resolved from the installed
 /// version. Custom `agent_command` args are preserved (the flag is appended).
-pub(crate) fn build_wrapper_command(agent_command: &AgentCommand) -> Result<AgentCommand, String> {
-    let version = kiro_cli_version(agent_command.program())?;
+pub(crate) async fn build_wrapper_command(
+    agent_command: &AgentCommand,
+    environment: &crate::types::SpawnEnvironment,
+    required_version: Option<&str>,
+) -> Result<AgentCommand, String> {
+    let version = kiro_cli_version(agent_command.program(), environment).await?;
+    if let Some(required) = required_version
+        && version != required
+    {
+        return Err(format!(
+            "this launch requires kiro-cli {required}, found {version} at {}; install the required version or select its executable",
+            agent_command.program(),
+        ));
+    }
     let flag = flag_for_version(&version)?;
     let mut args = agent_command.args().to_vec();
     args.push("--agent-engine".to_string());

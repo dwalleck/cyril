@@ -14,6 +14,7 @@ pub mod present_as;
 pub mod prompt;
 pub mod session;
 pub mod source_turn;
+pub mod spawn_environment;
 pub mod steer_receipt;
 pub mod subagent;
 pub mod tool_call;
@@ -54,6 +55,7 @@ pub use session::{
 pub use source_turn::{
     PromptEnvelope, SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind, SourceTurnId,
 };
+pub use spawn_environment::SpawnEnvironment;
 pub use steer_receipt::SteerReceipt;
 pub use subagent::{LoopState, PendingStage, SubagentInfo, SubagentStatus};
 pub use tool_call::{

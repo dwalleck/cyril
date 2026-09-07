@@ -56,6 +56,7 @@ fn command_name(command: &BridgeCommand) -> &'static str {
         BridgeCommand::CancelRequest => "CancelRequest",
         BridgeCommand::SetMode { .. } => "SetMode",
         BridgeCommand::SetModel { .. } => "SetModel",
+        BridgeCommand::SetConfigOption { .. } => "SetConfigOption",
         BridgeCommand::ExtMethod { .. } => "ExtMethod",
         BridgeCommand::ListSettings => "ListSettings",
         BridgeCommand::QueryUsageAccount => "QueryUsageAccount",

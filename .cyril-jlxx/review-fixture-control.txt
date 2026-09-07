@@ -1,0 +1,307 @@
+Observed workspace failure:
+   Compiling cyril-workbench v0.2.0-alpha.1 (${HOME}/.omp/wt/116-2a29f01/crates/cyril-workbench)
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.88s
+     Running unittests src/main.rs (target/debug/deps/cyril-ae87909786ef832e)
+
+running 128 tests
+test app::tests::chat_scroll_non_scroll_key_not_consumed ... ok
+test app::tests::chat_scroll_pageup_consumed_and_enters_browse_mode ... ok
+test app::tests::chat_scroll_pagedown_consumed ... ok
+test app::tests::classify_notification_route_truth_table ... ok
+test app::tests::chat_scroll_pageup_uses_half_terminal_height ... ok
+test app::tests::classify_submit_truth_table ... ok
+test app::tests::dispatch_clear_steer_gates_and_never_mutates ... ok
+test app::tests::dispatch_code_panel_failed_does_not_set_active ... ok
+test app::tests::dispatch_code_panel_failed_resets_active_flag ... ok
+test app::tests::dispatch_code_panel_opens_overlay ... ok
+test app::tests::dispatch_code_panel_opens_when_busy ... ok
+test app::tests::dispatch_code_prompt_busy_advises ... ok
+test app::tests::dispatch_code_prompt_busy_commits_no_user_message ... ok
+test app::tests::dispatch_code_prompt_busy_drops_no_send ... ok
+test app::tests::dispatch_code_prompt_no_session_shows_error ... ok
+test app::tests::dispatch_code_prompt_busy_leaves_activity ... ok
+test app::tests::dispatch_code_prompt_returns_deferred_command ... ok
+test app::tests::dispatch_code_success_false_falls_through_to_message ... ok
+test app::tests::dispatch_code_prompt_without_label_uses_default ... ok
+test app::tests::dispatch_code_unknown_adds_command_output ... ok
+test app::tests::dispatch_hooks_malformed_entry_falls_through_to_message ... ok
+test app::tests::dispatch_hooks_success_false_surfaces_error_message ... ok
+test app::tests::dispatch_hooks_missing_data_falls_through_to_message ... ok
+test app::tests::dispatch_hooks_valid_response_opens_panel_and_adds_no_message ... ok
+test app::tests::dispatch_non_hooks_command_adds_message ... ok
+test app::tests::dispatch_rewind_panel_data_returns_empty ... ok
+test app::tests::dispatch_rewind_switch_session_emits_load_and_terminate ... ok
+test app::tests::dispatch_rewind_success_false_returns_empty ... ok
+test app::tests::dispatch_rewind_switch_session_without_active_session_is_noop ... ok
+test app::tests::dispatch_rewind_switch_session_without_sessionid_is_noop ... ok
+test app::tests::enrichment_retry_budget_allows_one_transient_retry_only ... ok
+test app::tests::format_response_context_breakdown_lists_files ... ok
+test app::tests::format_response_context_breakdown ... ok
+test app::tests::format_response_plain_message ... ok
+test app::tests::format_response_failure_fallback ... ok
+test app::tests::hooks_panel_key_esc_closes_panel ... ok
+test app::tests::format_response_tools_builtin_source_omitted ... ok
+test app::tests::hooks_panel_key_pgdown_scrolls_down_ten ... ok
+test app::tests::format_response_null_data ... ok
+test app::tests::format_response_success_fallback ... ok
+test app::tests::hooks_panel_key_scroll_down_on_empty_panel_is_noop ... ok
+test app::tests::hooks_panel_key_unknown_is_noop ... ok
+test app::tests::format_response_usage_breakdowns ... ok
+test app::tests::hooks_panel_key_pgup_scrolls_up_ten ... ok
+test app::tests::hooks_panel_key_down_scrolls_down_one ... ok
+test app::tests::is_success_explicit_false ... ok
+test app::tests::is_success_missing_field_defaults_true ... ok
+test app::tests::hooks_panel_key_up_scrolls_up_one ... ok
+test app::tests::is_success_wrong_type_defaults_true ... ok
+test app::tests::format_response_tools_list ... ok
+test app::tests::is_success_explicit_true ... ok
+test app::tests::parse_hooks_response_data_without_hooks_field ... ok
+test app::tests::parse_hooks_response_hooks_wrong_type_returns_none ... ok
+test app::tests::parse_hooks_response_empty_array ... ok
+test app::tests::parse_hooks_response_missing_data_returns_none ... ok
+test app::tests::parse_hooks_response_preserves_ordering ... ok
+test app::tests::parse_hooks_response_rejects_any_malformed_entry ... ok
+test app::tests::parse_hooks_response_rejects_entry_with_empty_command ... ok
+test app::tests::parse_hooks_response_rejects_entry_missing_required_field ... ok
+test app::tests::parse_hooks_response_rejects_entry_with_empty_trigger ... ok
+test app::tests::parse_hooks_response_rejects_mixed_valid_and_empty_entries ... ok
+test app::tests::parse_hooks_response_well_formed ... ok
+test app::tests::dispatch_steer_unsupported_sends_nothing_no_echo ... ok
+test app::tests::dispatch_steer_busy_sends_steer_and_echoes ... ok
+test app::tests::failed_steer_send_leaves_no_phantom_chip ... ok
+test app::tests::buffered_input_stops_before_promoted_approval ... ok
+test app::tests::current_runtime_contract::ordering::c4_app_applies_session_before_ui_and_preserves_terminal_sequence ... ok
+test app::tests::claim_before_any_frame_routes_directly_to_workflow ... ok
+test app::tests::steer_gate_truth_table ... ok
+test app::tests::duplicate_claim_keeps_invariant_clean ... ok
+test app::tests::summarize_description_joins_hard_wrapped_first_sentence ... ok
+test app::tests::summarize_description_no_sentence_boundary_returns_paragraph ... ok
+test app::tests::summarize_description_truncates_at_question_or_exclamation ... ok
+test app::tests::late_claim_reparents_optimistic_stream_with_history ... ok
+test app::tests::mouse_capture_false_is_honored ... ok
+test app::tests::usage_prompt_coordination_budget_reference ... ignored, reference-workstation prompt coordination budget
+test app::tests::usage_refresh_does_not_block_the_event_loop ... ok
+test app::tests::post_session_main_scoped_frame_updates_main ... ok
+test app::tests::mouse_capture_absent_defaults_to_enabled ... ok
+test app::tests::post_session_untracked_frame_still_streams_optimistically ... ok
+test app::tests::mouse_capture_true_is_honored ... ok
+test app::tests::lesson_commands_report_why_the_project_is_unbound ... ok
+test app::tests::pre_session_tracked_subagent_frame_still_streams ... ok
+test app::tests::foreign_approval_trust_is_not_persisted_to_main_agent ... ok
+test app::tests::pre_session_scoped_frame_spares_main ... ok
+test app::tests::snapshot_result_applies_only_while_a_panel_is_open ... ok
+test memory_runtime::tests::disabled_and_invalid_states_never_launch ... ok
+test memory_runtime::tests::executable_validation_rejects_relative_and_directory_paths ... ok
+test app::tests::oneshot_prompt_submitted_after_session_ready ... ok
+test app::tests::memory_runtime_shutdown_is_explicit_and_idempotent ... ok
+test memory_runtime::tests::closed_status_channel_transitions_once ... ok
+test memory_runtime::tests::project_access_tracks_runtime_lifecycle_without_exposing_admin ... ok
+test app::tests::empty_origin_cannot_authorize_main_config_persistence ... ok
+test memory_runtime::tests::unavailability_reads_as_a_sentence_not_a_variant_name ... ok
+test tests::cli_agent_engine_flag ... ok
+test memory_runtime::tests::project_binding_reports_its_cause_and_never_falls_back ... ok
+test tests::lexical_normalization_keeps_the_root_and_drops_dots ... ok
+test tests::configured_startup_cwd_is_absolute_normalized_and_names_the_path_on_error ... ok
+test app::tests::pre_main_approval_trust_is_session_scoped ... ok
+test app::tests::memory_failure_does_not_block_initial_session_dispatch ... ok
+test app::tests::snapshot_worker_unavailable_surfaces_as_failure_status ... ok
+test app::tests::startup_without_prompt_submits_nothing ... ok
+test app::tests::workflow_command_outcome_rides_normal_routing ... ok
+test app::tests::workflow_notification_is_consumed_exactly_once ... ok
+test app::tests::usage_modal_command_and_key_priority ... ok
+test memory_runtime::tests::missing_runtime_is_a_failed_status_not_an_error ... ok
+test app::tests::typed_memory_result_formats_through_ui_command_output ... ok
+test app::tests::workflow_notification_branches_before_other_consumers ... ok
+test app::tests::workflow_snapshot_seeds_tracker_and_is_not_forwarded ... ok
+test app::tests::workflow_snapshot_terminal_conflict_changes_nothing ... ok
+test app::tests::workflow_state_error_isolated_by_app ... ok
+test app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory ... ok
+test app::tests::workflow_stream_activity_holds_fast_tick ... ok
+test app::tests::c7_turn_inspection_survives_ui_retention_and_is_scoped ... ok
+test app::tests::open_usage_panel_refreshes_on_turn_and_context_writes ... ok
+test app::tests::usage_account_query_order_and_state_matrix ... ok
+test app::tests::all_prompt_paths_start_and_failed_send_aborts_usage ... ok
+test app::tests::esc_marks_cancel_sent_during_stall ... ok
+test app::tests::c5_first_prompt_is_ordered_exactly_once_and_source_clean ... ok
+test app::tests::current_runtime_contract::memory::c7_starting_retries_once_then_ready_context_is_exactly_once ... ok
+test app::tests::first_prompt_lessons_wait_for_a_starting_companion ... ok
+test app::tests::current_runtime_contract::memory::c7_unavailable_disabled_and_unbound_memory_degrade_without_prompt_loss ... ok
+test app::tests::memory_commands_run_off_the_event_loop ... ok
+test app::tests::current_runtime_contract::memory::c7_ready_memory_matrix_preserves_blocks_sessions_and_project_scope ... ok
+test capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown ... ok
+test memory_runtime::tests::in_process_runtime_serves_first_prompt_context_and_reports_starting ... ok
+test app::tests::current_runtime_contract::shutdown::c10_bridge_timeout_is_recorded_distinctly_from_completion ... ok
+test memory_runtime::tests::shutdown_reaps_runtime_process_group_within_bound ... ok
+
+test result: ok. 127 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.23s
+
+     Running unittests src/bin/cyril-memory-runtime.rs (target/debug/deps/cyril_memory_runtime-417c683b46622b5b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/architecture_tests.rs (target/debug/deps/architecture_tests-50a6232e27890e32)
+
+running 2 tests
+test c10_core_and_ui_remain_persistence_free ... ok
+test c13_memory_policy_stays_behind_runtime_interface ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/event_routing.rs (target/debug/deps/event_routing-ee8bb90223cf5ead)
+
+running 18 tests
+test agent_message_streams_to_ui_state ... ok
+test agent_switched_shows_message_and_activates ... ok
+test code_intelligence_active_set_on_initialized_panel ... ok
+test bridge_disconnect_updates_both ... ok
+test code_command_prompt_response_detected ... ok
+test code_command_panel_response_opens_overlay ... ok
+test code_intelligence_not_set_on_initializing_panel ... ok
+test commands_updated_stores_in_session ... ok
+test context_usage_flows_to_both ... ok
+test command_registry_with_builtins_resolves ... ok
+test kas_context_breakdown_usage_flows_to_both ... ok
+test mode_change_updates_session ... ok
+test message_limit_enforced ... ok
+test session_created_activates_both_controllers ... ok
+test streaming_chunks_append_not_replace ... ok
+test tool_call_lifecycle ... ok
+test turn_completed_commits_streaming_and_updates_session ... ok
+test new_command_uses_bound_workspace ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/memory_runtime.rs (target/debug/deps/memory_runtime-96440287de600ac6)
+
+running 8 tests
+test unix_protocol::unix_socket_modes_are_private ... ok
+test real_process_reports_ready_v3_and_exact_store_schema ... ok
+test forced_kill_allows_reopen_with_same_roots ... ok
+test second_runtime_same_data_root_reports_typed_already_running ... ok
+test real_process_shutdown_and_restart_preserve_stores ... ok
+test real_runtime_restart_preserves_lessons_and_audit ... ok
+test c3_real_runtime_restart_replay_is_exact_once_and_conflict_safe ... ok
+test unix_protocol::offender_matrix_keeps_runtime_healthy ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+
+     Running tests/nd4h_source_fences.rs (target/debug/deps/nd4h_source_fences-bae4be35b687a9a0)
+
+running 7 tests
+test c3_scanner_detects_a_second_config_read ... ok
+test scanner_verdict_is_line_ending_agnostic ... ok
+test highlight_and_markdown_caches_still_hold_256 ... ok
+test main_does_not_read_mouse_capture_directly ... ok
+test docs_do_not_advertise_removed_config_keys ... ok
+test app_new_destructures_ui_config_exhaustively ... ok
+test docs_do_not_call_the_hash_cache_an_lru ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/cyril_core-11d73e0073dd04b3)
+
+running 998 tests
+test commands::hooks_source_tests::only_kas_engine_with_kas_hooks_gets_the_builtin ... ok
+test commands::hooks_source_tests::builtin_hooks_registered_only_for_the_kas_source ... ok
+test commands::hooks_source_tests::workflow_command_is_kas_engine_only ... ok
+test commands::subagent::tests::kill_command_requires_name ... ok
+test commands::subagent::tests::kill_command_reports_unknown_name ... ok
+test commands::subagent::tests::msg_command_dispatches_send_message ... ok
+test commands::subagent::tests::kill_command_dispatches_terminate_for_known_name ... ok
+test commands::subagent::tests::sessions_command_handles_empty_tracker ... ok
+test commands::subagent::tests::msg_command_reports_unknown_name ... ok
+test commands::subagent::tests::msg_command_requires_name_and_text ... ok
+test commands::subagent::tests::sessions_command_handles_missing_tracker ... ok
+test commands::subagent::tests::spawn_command_requires_name_and_task ... ok
+test commands::subagent::tests::sessions_command_lists_active_and_pending ... ok
+test commands::subagent::tests::spawn_command_dispatches_bridge_command ... ok
+test commands::tests::agent_command_execute_sends_correct_command_and_format ... ok
+test commands::tests::agent_command_selection_no_args_sends_query_command_options ... ok
+test commands::tests::agent_command_fails_without_session ... ok
+test commands::tests::aliases_resolve_to_command ... ok
+test commands::tests::all_commands_deduplicates_aliases ... ok
+test commands::tests::agent_command_execute_with_args_sends_value_field ... ok
+test commands::tests::command_result_variants ... ok
+test commands::tests::clear_command_returns_system_message ... ok
+test commands::tests::command_with_no_args ... ok
+test commands::tests::default_registry_has_builtins ... ok
+test commands::tests::empty_registry_returns_none ... ok
+test commands::tests::help_command_returns_system_message ... ok
+test commands::tests::execute_command_returns_result ... ok
+test commands::tests::kas_usage_marks_account_query_for_app_dispatch ... ok
+test commands::tests::memory_commands_emit_typed_actions ... ok
+test commands::tests::memory_status_command_is_local_and_typed ... ok
+test commands::tests::non_slash_input_returns_none ... ok
+test commands::tests::new_command_sends_bridge_command ... ok
+test commands::tests::quit_command_returns_quit ... ok
+test commands::tests::register_agent_commands_keeps_local_selection ... ok
+test commands::tests::register_agent_commands_skips_builtin_names ... ok
+test commands::tests::register_agent_commands_skips_local_non_selection ... ok
+test commands::tests::registered_command_found_by_name ... ok
+test commands::tests::steer_clear_subcommand_parses ... ok
+test commands::tests::steer_command_parses_message_and_rejects_empty ... ok
+test commands::tests::steer_command_registered_and_parses_args ... ok
+test commands::tests::usage_command_is_local_without_a_session ... ok
+test commands::tests::voice_command_registered_and_parses ... ok
+test commands::tests::voice_command_returns_toggle_voice ... ok
+test commands::workflow::tests::bad_input_token_is_a_message_not_a_send ... ok
+test commands::workflow::tests::empty_and_unknown_subcommands_usage_without_sending ... ok
+test commands::workflow::tests::id_verbs_without_id_usage_without_sending ... ok
+test commands::workflow::tests::no_session_is_a_message_not_a_send ... ok
+test commands::workflow::tests::run_maps_ref_and_inputs_into_one_bridge_op ... ok
+test commands::workflow::tests::status_no_arg_renders_tracker_without_sending ... ok
+test commands::workflow::tests::status_no_arg_lists_seeded_runs ... ok
+test commands::workflow::tests::status_with_id_dispatches_inspect_op ... ok
+test error::tests::error_displays_kind_message ... ok
+test error::tests::all_error_kinds_display ... ok
+test error::tests::error_kind_accessible ... ok
+test error::tests::error_with_source_chains ... ok
+test error::tests::protocol_error_displays_message ... ok
+test error::tests::result_alias_error ... ok
+test error::tests::result_alias_works ... ok
+test platform::path::tests::agent_location_env_override_wins ... ok
+test platform::path::tests::agent_location_env_empty_and_invalid_fall_back ... ok
+test platform::path::tests::agent_location_heuristic_table ... ok
+test platform::path::tests::foreign_distro_passthrough ... ok
+test platform::path::tests::json_win_to_wsl_unc ... ok
+test platform::path::tests::json_wsl_to_win_ignores_bare_posix ... ok
+test platform::path::tests::gate_matrix_only_windows_wsl_activates ... ok
+test platform::path::tests::no_distro_is_passthrough_reverse ... ok
+test platform::path::tests::resolve_distro_env_taken_literally ... ok
+test platform::path::tests::no_distro_is_passthrough_forward ... ok
+test platform::path::tests::resolve_distro_env_wins_over_cwd ... ok
+test platform::path::tests::resolve_distro_cwd_derivation_both_prefixes ... ok
+test platform::path::tests::roundtrip_wsl_internal_capture_paths ... ok
+test platform::path::tests::test_roundtrip_extended_prefix ... ok
+test platform::path::tests::test_roundtrip_win_wsl_win ... ok
+test platform::path::tests::resolve_distro_none_paths ... ok
+test platform::path::tests::test_translate_json_extended_prefix ... ok
+test platform::path::tests::test_translate_json_unc_path_not_translated ... ok
+test platform::path::tests::test_translate_json_win_to_wsl ... ok
+test platform::path::tests::test_translate_json_wsl_to_win ... ok
+test platform::path::tests::test_unc_path_not_mangled ... ok
+test platform::path::tests::test_win_to_wsl_c_drive ... ok
+test platform::path::tests::test_win_to_wsl_d_drive ... ok
+test platform::path::tests::test_win_to_wsl_extended_prefix_root ... ok
+test platform::path::tests::test_win_to_wsl_forward_slashes ... ok
+test platform::path::tests::test_win_to_wsl_root ... ok
+test platform::path::tests::test_win_to_wsl_strips_extended_prefix ... ok
+test platform::path::tests::test_win_to_wsl_strips_extended_prefix_d_drive ... ok
+test platform::path::tests::test_wsl_to_win_basic ... ok
+test platform::path::tests::test_wsl_to_win_d_drive ... ok
+test platform::path::tests::test_wsl_to_win_non_mount_path ... ok
+test platform::path::tests::test_wsl_to_win_root ... ok
+test platform::path::tests::unc_to_wsl_both_prefixes_and_slash_kinds ... ok
+test kiro_agent_config::tests::persist_errors_on_unknown_setting_key ... ok
+test platform::path::tests::unc_to_wsl_legacy_branches_untouched ... ok
+test kiro_agent_config::tests::persist_errors_on_corrupt_config_without_clobbering ... ok
+test kiro_agent_config::tests::persist_refuses_builtin_agents ... ok
+test platform::path::tests::unc_to_wsl_root_forms ... ok
+
+[Artifact storage: ~/.omp/agent/sessions/-repos-cyril/2026-09-06T22-21-00-516Z_01a078cf-82e4-73ad-b9aa-7564da4980dd/509.bash-original.log (93.4KB). Use artifact://509:N-M to page, artifact://509:raw:N-M for verbatim chunks, and the artifact file path for search/copy workflows.]
+
+[Showing lines 1-300 of 1294. Use :301 to continue]
+Independent POSIX experiment: parent writer closed; inherited writable descriptor still causes ETXTBSY; execution succeeds after child releases it.
+Correction: serialize fixture creation/process lifetime between cases, and create both executables before intentionally concurrent launches. No production retry.

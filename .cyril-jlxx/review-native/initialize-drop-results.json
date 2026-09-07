@@ -1,0 +1,18 @@
+{
+  "command": "cargo run -p cyril-core --features kas --example initialize_drop_probe",
+  "baseline": {
+    "completion_within_three_seconds": false,
+    "peer_self_exit_observed": true,
+    "elapsed_seconds": 6.994686628
+  },
+  "corrected": {
+    "completion_within_three_seconds": true,
+    "peer_self_exit_observed": false,
+    "elapsed_seconds": 2.002220404
+  },
+  "both_runs": {
+    "initialize_received": true,
+    "all_command_senders_dropped": true,
+    "cleanup_completion_observed": true
+  }
+}

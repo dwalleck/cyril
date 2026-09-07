@@ -20,9 +20,13 @@ async fn agent_process_preserves_wire_bytes_before_sdk2_runtime() {
         "wire-fixture".to_string(),
     ];
     args.extend(SEGMENTS.iter().map(|segment| (*segment).to_owned()));
-    let mut process = AgentProcess::spawn(&AgentCommand::new("sh").with_args(args), root.path())
-        .await
-        .expect("fixture spawn");
+    let mut process = AgentProcess::spawn(
+        &AgentCommand::new("sh").with_args(args),
+        root.path(),
+        &crate::types::SpawnEnvironment::Inherit,
+    )
+    .await
+    .expect("fixture spawn");
     let mut stdout = Vec::new();
     tokio::time::timeout(
         Duration::from_secs(5),
@@ -46,9 +50,13 @@ async fn agent_process_uses_requested_working_directory_and_arguments() {
         "argv-fixture".to_string(),
         "argument with spaces – α".to_string(),
     ]);
-    let mut process = AgentProcess::spawn(&command, Path::new(&cwd))
-        .await
-        .expect("fixture spawn");
+    let mut process = AgentProcess::spawn(
+        &command,
+        Path::new(&cwd),
+        &crate::types::SpawnEnvironment::Inherit,
+    )
+    .await
+    .expect("fixture spawn");
     let mut stdout = Vec::new();
     process
         .stdout
