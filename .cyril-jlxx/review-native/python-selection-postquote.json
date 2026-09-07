@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-07",
+  "source_revision": "7477df722988556f47306874cb197f5a82724ffb",
+  "platform": "Linux x86_64",
+  "python_version": "3.14.7",
+  "command": "python3 .cyril-jlxx/review-native/python-selection-probe.py target/debug/deps/session_configuration-daa34a38f44a6d3b",
+  "control_source_sha256": "53e049c4a47e24d76ce394388bddaaa3642665d13d5a7d5391f411f75ea449bd",
+  "fixture_source_sha256": "14ce2f49d471a4525e1523ac55faf0ee6c475cefe8dafff1c89fa240527feb7c",
+  "shell_quoting": "shlex.quote",
+  "peer_test_exit": 0,
+  "host_python_selected": true,
+  "control_exit": 0,
+  "test_summary": "1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out",
+  "test_seconds": 0.03,
+  "qualification": "Fresh post-shlex execution. Artifact558 remains test/clippy evidence, not this oracle revision. Baseline protocol succeeded; its host-selection control failed. No missing-interpreter or macOS runtime failure is claimed."
+}
